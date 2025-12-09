@@ -21,10 +21,13 @@
     "papaparse": "^5.4.1",
     "jspdf": "^2.5.1",
     "jspdf-autotable": "^3.8.1",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "react-window": "^1.8.10",
+    "react-virtualized-auto-sizer": "^1.0.24"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
+    "@types/react-window": "^1.8.8",
     "@vitejs/plugin-react": "^5.0.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"

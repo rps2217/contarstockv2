@@ -1,8 +1,9 @@
 
 import React, { useState } from 'react';
-import { Settings as SettingsIcon, Volume2, VolumeX, Vibrate, Zap, Moon, Sun, Monitor, AlertTriangle, ArrowLeft, Cloud, Key, Database, Lock, Check, Eye, Shield, FileText, Package, AlertOctagon, Activity, CheckCircle, XCircle, Share2, Download, QrCode, Copy } from 'lucide-react';
+import { Settings as SettingsIcon, Volume2, VolumeX, Vibrate, Zap, Moon, Sun, Monitor, AlertTriangle, ArrowLeft, Cloud, Key, Database, Lock, Check, Eye, Shield, FileText, Package, AlertOctagon, Activity, CheckCircle, XCircle, Share2, Download, QrCode, Copy, Save, Upload } from 'lucide-react';
 import * as storage from '../services/storage';
 import * as settingsService from '../services/settings';
+import { createFullBackup, restoreFullBackup } from '../services/backupService';
 import { AppSettings, Theme } from '../types';
 import { runSystemDiagnostics } from '../services/businessLogic.test';
 
@@ -25,6 +26,10 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
   // Diagnostics State
   const [diagResults, setDiagResults] = useState<{ passed: number, failed: number, logs: string[] } | null>(null);
 
+  // Backup State
+  const [isBackingUp, setIsBackingUp] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+
   const updateSetting = (key: keyof AppSettings, value: any) => {
     const newSettings = { ...settings, [key]: value };
     setSettings(newSettings);
@@ -42,6 +47,40 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
   const handleRunDiagnostics = () => {
       const results = runSystemDiagnostics();
       setDiagResults(results);
+  };
+
+  // --- BACKUP HANDLERS ---
+  const handleBackup = async () => {
+      setIsBackingUp(true);
+      try {
+          await createFullBackup();
+      } catch (e) {
+          alert("Error al crear copia de seguridad");
+      } finally {
+          setIsBackingUp(false);
+      }
+  };
+
+  const handleRestoreFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      if (!confirm("⚠️ ADVERTENCIA: Esta acción REEMPLAZARÁ todos los datos actuales con los del archivo de respaldo. ¿Está seguro?")) {
+          e.target.value = ''; // Reset input
+          return;
+      }
+
+      setIsRestoring(true);
+      try {
+          const count = await restoreFullBackup(file);
+          alert(`Restauración exitosa. ${count} registros de escaneo recuperados. La aplicación se reiniciará.`);
+          window.location.reload();
+      } catch (err: any) {
+          alert(`Error al restaurar: ${err.message}`);
+      } finally {
+          setIsRestoring(false);
+          e.target.value = ''; // Reset
+      }
   };
 
   // --- SHARE LOGIC ---
@@ -157,6 +196,31 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
                         <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.confirmDelete ? 'left-7' : 'left-1'}`} />
                     </button>
                 </div>
+            </div>
+        </section>
+
+        {/* DATA SECURITY */}
+        <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <h2 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
+                <Shield className="w-5 h-5 text-emerald-600" /> Seguridad de Datos
+            </h2>
+            <p className="text-sm text-slate-500 mb-4">Gestione copias de seguridad locales para evitar pérdida de datos.</p>
+            
+            <div className="flex flex-col gap-3">
+                <button 
+                    onClick={handleBackup}
+                    disabled={isBackingUp}
+                    className="w-full flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition-colors border border-slate-200"
+                >
+                    {isBackingUp ? <div className="w-4 h-4 border-2 border-slate-600 border-t-transparent rounded-full animate-spin"></div> : <Save className="w-4 h-4" />}
+                    Crear Copia de Seguridad
+                </button>
+                
+                <label className={`w-full flex items-center justify-center gap-2 bg-white hover:bg-emerald-50 text-emerald-700 font-bold py-3 rounded-xl transition-colors border-2 border-dashed border-emerald-200 cursor-pointer ${isRestoring ? 'opacity-50 pointer-events-none' : ''}`}>
+                    {isRestoring ? <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></div> : <Upload className="w-4 h-4" />}
+                    {isRestoring ? 'Restaurando...' : 'Restaurar desde Copia'}
+                    <input type="file" accept=".json" onChange={handleRestoreFile} className="hidden" disabled={isRestoring} />
+                </label>
             </div>
         </section>
 

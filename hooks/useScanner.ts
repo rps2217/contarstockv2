@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import Dexie from 'dexie';
@@ -122,21 +123,34 @@ export const useScanner = (
     useEffect(() => {
         const handleGlobalKeyDown = (e: KeyboardEvent) => {
             const target = e.target as HTMLElement;
+            // Ignore typing in input fields
             if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return; 
-            if (showConfirmModal || showExpirationModal || isMultiplierOpen) return;
+            
+            // Ignore if modals are open
+            if (showConfirmModal || showExpirationModal || isMultiplierOpen || manualMode) return;
 
             const now = Date.now();
             const timeDiff = now - lastKeyTime.current;
             lastKeyTime.current = now;
 
-            if (timeDiff > 100) scannerBuffer.current = ''; 
+            // Scanner Logic:
+            // Scanners send keys very fast (< 30-50ms). Humans type slower.
+            // If timeDiff is large, it's likely a manual keypress or start of a new scan.
+            // We reset buffer if gap is too big to prevent phantom characters.
+            if (timeDiff > 50) {
+                scannerBuffer.current = ''; 
+            }
 
             if (e.key === 'Enter') {
+                // HID Scanners send 'Enter' at the end.
                 const code = scannerBuffer.current;
-                if (code.length > 1) processScan(code);
+                if (code.length > 1) { // Min length check
+                    processScan(code);
+                }
                 scannerBuffer.current = '';
                 e.preventDefault(); 
             } else if (e.key.length === 1) {
+                // Only append printable characters
                 scannerBuffer.current += e.key;
             }
         };

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { ViewState, CountingSession, AppSettings } from './types';
 import { Dashboard } from './components/Dashboard';
@@ -12,6 +13,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import * as storage from './services/storage';
 import { db } from './db';
 import { SYNC_ENGINE_VERSION } from './services/appsheet';
+import { initPersistence } from './services/backupService';
 import { LayoutGrid, Database as DbIcon, History, Home, Box, AlertTriangle } from 'lucide-react';
 
 const AppContent: React.FC = () => {
@@ -31,6 +33,8 @@ const AppContent: React.FC = () => {
         try {
             await (db as any).open();
             setDbReady(true);
+            // 2. Request Persistence
+            await initPersistence();
         } catch (e: any) {
             console.error("DB Failed to open:", e);
             setDbError(`Error crítico de base de datos: ${e.message}. Intente recargar.`);
@@ -38,13 +42,13 @@ const AppContent: React.FC = () => {
     };
     initDb();
 
-    // 2. Auth Check
+    // 3. Auth Check
     const auth = localStorage.getItem('logicount_auth');
     if (auth === 'true') {
         setIsAuthenticated(true);
     }
 
-    // 3. Restore Session
+    // 4. Restore Session
     const restoreSession = async () => {
         try {
             if (!(db as any).isOpen()) await (db as any).open();

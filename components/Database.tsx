@@ -12,8 +12,6 @@ import { ProductList } from './database/ProductList';
 import { ProductForm } from './database/ProductForm';
 import { ImportTools } from './database/ImportTools';
 
-const PAGE_SIZE = 50;
-
 interface DatabaseProps {
     onBack?: () => void;
 }
@@ -21,7 +19,7 @@ interface DatabaseProps {
 export const Database: React.FC<DatabaseProps> = ({ onBack }) => {
   // UI States
   const [debouncedQuery, setDebouncedQuery] = useState(''); 
-  const [page, setPage] = useState(0);
+  // REMOVED: Pagination State (Virtualization handles all items)
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error', msg: string } | null>(null);
@@ -31,7 +29,7 @@ export const Database: React.FC<DatabaseProps> = ({ onBack }) => {
   // Form State Control
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
-  // --- LIVE QUERY (OPTIMIZED) ---
+  // --- LIVE QUERY (OPTIMIZED FOR VIRTUALIZATION) ---
   const products = useLiveQuery(async () => {
     const cleanFilter = sanitizeBarcode(debouncedQuery);
     
@@ -40,16 +38,12 @@ export const Database: React.FC<DatabaseProps> = ({ onBack }) => {
         return await db.products
             .where('barcode').startsWithIgnoreCase(cleanFilter)
             .or('name').startsWithIgnoreCase(debouncedQuery)
-            .limit(PAGE_SIZE) 
-            .toArray();
+            .toArray(); // Get ALL matches, VirtualList handles rendering
     } else {
-        // Pagination Mode
-        return await db.products
-            .offset(page * PAGE_SIZE)
-            .limit(PAGE_SIZE)
-            .toArray();
+        // Full List Mode
+        return await db.products.toArray(); // Get ALL items
     }
-  }, [page, debouncedQuery], []);
+  }, [debouncedQuery], []);
 
   const totalCount = useLiveQuery(() => db.products.count(), [], 0);
   
@@ -61,7 +55,6 @@ export const Database: React.FC<DatabaseProps> = ({ onBack }) => {
 
   const handleSearch = useCallback((query: string) => {
       setDebouncedQuery(query);
-      setPage(0);
   }, []);
 
   const showFeedback = (type: 'success' | 'error', msg: string) => {
@@ -130,10 +123,10 @@ export const Database: React.FC<DatabaseProps> = ({ onBack }) => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto pb-24 px-4 pt-6 min-h-screen bg-slate-50/50">
+    <div className="flex flex-col h-screen bg-slate-50/50 pb-24 md:pb-0">
       
       {/* HEADER & TOOLS */}
-      <div className="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-sm py-4 -mx-4 px-4 border-b border-slate-200/50 mb-6 transition-all">
+      <div className="shrink-0 z-30 bg-slate-50/95 backdrop-blur-sm py-4 px-4 border-b border-slate-200/50">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 max-w-6xl mx-auto">
             <div className="flex items-center gap-3">
                 {onBack && (
@@ -208,18 +201,16 @@ export const Database: React.FC<DatabaseProps> = ({ onBack }) => {
           </div>
       )}
 
-      {/* CONTENT: PRODUCT LIST */}
-      <ProductList 
-        products={products}
-        page={page}
-        totalCount={totalCount || 0}
-        pageSize={PAGE_SIZE}
-        onPageChange={setPage}
-        onEdit={handleOpenEdit}
-        onDelete={handleDelete}
-        onDeleteAll={handleDeleteAll}
-        hasFilter={!!debouncedQuery}
-      />
+      {/* CONTENT: PRODUCT LIST (Now takes available space) */}
+      <div className="flex-1 min-h-0 w-full max-w-6xl mx-auto px-4 py-4">
+          <ProductList 
+            products={products}
+            onEdit={handleOpenEdit}
+            onDelete={handleDelete}
+            onDeleteAll={handleDeleteAll}
+            hasFilter={!!debouncedQuery}
+          />
+      </div>
 
       {/* FLOATING ACTION BUTTON (Mobile) */}
       <div className="md:hidden fixed bottom-24 right-5 flex flex-col gap-3 z-30">
