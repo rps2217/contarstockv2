@@ -3,11 +3,12 @@ import React from 'react';
 import { Product } from '../../types';
 import { Pencil, Trash2, Package, Globe, Factory, AlertTriangle } from 'lucide-react';
 import * as ReactWindow from 'react-window';
-import AutoSizer from 'react-virtualized-auto-sizer';
+import AutoSizerPkg from 'react-virtualized-auto-sizer';
 
-// Fix for ESM/CJS interop issues with react-window in some environments (CDN/Vite)
-// If the module doesn't provide named exports, we fall back to the default export.
-const List = (ReactWindow as any).FixedSizeList || (ReactWindow as any).default?.FixedSizeList;
+// --- ROBUST IMPORT LOGIC ---
+// Handle various bundler/environment structures (ESM vs CJS vs Browser Globals)
+const FixedSizeList = (ReactWindow as any).FixedSizeList || (ReactWindow as any).default?.FixedSizeList || (ReactWindow as any).default;
+const AutoSizer = (AutoSizerPkg as any).default || (AutoSizerPkg as any).AutoSizer || AutoSizerPkg;
 
 interface ProductListProps {
   products?: Product[];
@@ -48,12 +49,45 @@ export const ProductList: React.FC<ProductListProps> = ({
     );
   }
 
-  // Row Renderer for react-window
+  // --- FALLBACK MODE ---
+  // If virtualization libraries failed to load, render a standard list to prevent crashing.
+  const isVirtualizationReady = !!FixedSizeList && !!AutoSizer;
+
+  if (!isVirtualizationReady) {
+      return (
+        <div className="h-full flex flex-col">
+            {/* Standard Header */}
+            <div className="hidden md:flex bg-slate-50/80 border-b border-slate-200 px-6 py-4 rounded-t-2xl">
+                <div className="w-40 text-xs font-bold text-slate-500 uppercase tracking-wider">CODIGO</div>
+                <div className="flex-1 text-xs font-bold text-slate-500 uppercase tracking-wider">DESCRIPCION</div>
+                <div className="w-24 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">ACCIONES</div>
+            </div>
+            {/* Simple List Implementation */}
+            <div className="flex-1 overflow-y-auto bg-white p-4">
+                <div className="mb-2 bg-yellow-50 text-yellow-800 text-xs p-2 rounded border border-yellow-100">
+                    Modo de compatibilidad activo (Virtualización desactivada).
+                </div>
+                {products.map(p => (
+                    <div key={p.barcode} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-2 flex flex-col md:flex-row md:items-center gap-2">
+                        <div className="w-40 font-mono text-blue-600 font-bold text-sm">{p.barcode}</div>
+                        <div className="flex-1 font-bold text-slate-800">{p.name}</div>
+                        <div className="flex gap-2 justify-end">
+                            <button onClick={() => onEdit(p)} className="p-2 text-slate-400 hover:text-blue-600 bg-slate-50 rounded-lg"><Pencil className="w-4 h-4" /></button>
+                            <button onClick={() => onDelete(p.barcode)} className="p-2 text-slate-400 hover:text-red-600 bg-slate-50 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+      );
+  }
+
+  // --- VIRTUALIZED ROW RENDERER ---
   const Row = ({ index, style, data }: { index: number; style: React.CSSProperties; data: { isMobile: boolean; items: Product[] } }) => {
     const p = data.items[index];
     const isMobile = data.isMobile;
 
-    // --- MOBILE CARD VIEW ---
+    // MOBILE CARD
     if (isMobile) {
         return (
             <div style={style} className="p-2">
@@ -88,7 +122,7 @@ export const ProductList: React.FC<ProductListProps> = ({
         );
     }
 
-    // --- DESKTOP TABLE ROW VIEW ---
+    // DESKTOP ROW
     return (
         <div style={style} className="flex items-center border-b border-slate-100 hover:bg-blue-50/30 transition-colors px-6 bg-white">
             <div className="w-40 shrink-0 flex items-center gap-2">
@@ -150,17 +184,16 @@ export const ProductList: React.FC<ProductListProps> = ({
             <div className="w-24 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Acciones</div>
         </div>
 
-        <div className="flex-1 bg-white md:rounded-b-2xl md:border-x md:border-b md:border-slate-200 overflow-hidden">
+        <div className="flex-1 bg-white md:rounded-b-2xl md:border-x md:border-b md:border-slate-200 overflow-hidden relative">
             <AutoSizer>
                 {({ height, width }) => {
-                    // Simple breakpoint check for layout switching
-                    // NOTE: This assumes standard tailwind md breakpoint (768px). 
-                    // For perfect sync with CSS, use a useMediaQuery hook, but this is performant.
+                    if (!height || !width) return null;
+                    
                     const isMobile = width < 768; 
                     const itemSize = isMobile ? 130 : 60; // Card height vs Row height
 
                     return (
-                        <List
+                        <FixedSizeList
                             height={height}
                             width={width}
                             itemCount={products.length}
@@ -168,14 +201,13 @@ export const ProductList: React.FC<ProductListProps> = ({
                             itemData={{ isMobile, items: products }}
                         >
                             {Row}
-                        </List>
+                        </FixedSizeList>
                     );
                 }}
             </AutoSizer>
         </div>
 
-        {/* Danger Zone moved to bottom of list if filtered/populated not ideal in virtual list, 
-            so we put a small "N items" indicator instead */}
+        {/* Footer info */}
         <div className="text-center py-2 text-xs text-slate-400 bg-slate-50">
             {products.length} registros cargados
             { !hasFilter && products.length > 0 && (
