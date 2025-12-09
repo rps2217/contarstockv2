@@ -87,14 +87,14 @@ export const useScanner = (
 
     const completeScan = async (code: string, mm?: number, yyyy?: number) => {
         try {
-            // Apply multiplier
-            const qtyToAdd = multiplier;
+            // Apply multiplier (Default to 1 if user left it at 0)
+            const qtyToAdd = multiplier > 0 ? multiplier : 1;
             const newScan = await storage.addScan(session.id, code, qtyToAdd, mm, yyyy);
             setLastScanId(newScan.id);
             triggerFeedback('success');
             
             // Reset multiplier after successful scan for safety
-            if (multiplier > 1) setMultiplier(1);
+            if (multiplier !== 1) setMultiplier(1);
         } catch (err) {
             triggerFeedback('error');
         }

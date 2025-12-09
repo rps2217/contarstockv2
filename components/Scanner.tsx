@@ -38,6 +38,12 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
   const isUnknown = data.activeProductStats.isUnknown;
   const isLastScanIncident = !!data.lastScan?.isIncident;
 
+  const handleCloseMultiplier = () => {
+      // Safety: If user leaves it at 0, default to 1 on close
+      if (state.multiplier === 0) state.setMultiplier(1);
+      state.setIsMultiplierOpen(false);
+  };
+
   return (
     <div className={`fixed inset-0 z-50 flex flex-col text-white overflow-hidden font-sans transition-colors duration-200 ${getBgClass()}`}>
       
@@ -190,18 +196,21 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
                           <span className="text-slate-400 text-xs font-bold uppercase tracking-wider">Multiplicador de Escaneo</span>
                           <span className="text-4xl font-black text-white">x{state.multiplier}</span>
                       </div>
-                      <button onClick={() => state.setIsMultiplierOpen(false)} className="p-2 bg-slate-800 rounded-full text-slate-400"><X className="w-6 h-6"/></button>
+                      <button onClick={handleCloseMultiplier} className="p-2 bg-slate-800 rounded-full text-slate-400"><X className="w-6 h-6"/></button>
                   </div>
                   <NumericKeypad 
                     isOpen={true} 
                     embedded={true}
                     onInput={(val) => {
-                        const newVal = parseInt(state.multiplier.toString() + val);
+                        const current = state.multiplier;
+                        // If current is 0, replace it with the new digit. Otherwise append.
+                        const newValStr = current === 0 ? val : current.toString() + val;
+                        const newVal = parseInt(newValStr);
                         if (newVal < 9999) state.setMultiplier(newVal);
                     }}
-                    onDelete={() => state.setMultiplier(Math.floor(state.multiplier / 10) || 1)}
+                    onDelete={() => state.setMultiplier(Math.floor(state.multiplier / 10))}
                   />
-                  <button onClick={() => state.setIsMultiplierOpen(false)} className="w-full mt-4 bg-blue-600 text-white font-bold py-4 rounded-xl text-lg shadow-lg shadow-blue-900/50">Confirmar</button>
+                  <button onClick={handleCloseMultiplier} className="w-full mt-4 bg-blue-600 text-white font-bold py-4 rounded-xl text-lg shadow-lg shadow-blue-900/50">Confirmar</button>
               </div>
           </div>
       )}
