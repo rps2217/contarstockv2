@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Pause, Package, Zap, Keyboard, AlertTriangle, Check, Volume2, Save, XCircle, X } from 'lucide-react';
+import { Pause, Package, Zap, Keyboard, AlertTriangle, Check, Volume2, Save, XCircle, X, RotateCcw } from 'lucide-react';
 import { CountingSession } from '../types';
 import { ExpirationModal } from './ExpirationModal';
 import { useScanner } from '../hooks/useScanner';
@@ -20,110 +20,175 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
       actions 
   } = useScanner(session, onCloseSession, onDiscardSession);
 
-  return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-slate-950 text-white overflow-hidden font-sans">
-      <div className={`fixed inset-0 pointer-events-none z-[100] transition-colors duration-200 ${state.feedback === 'success' ? 'bg-green-500/25' : state.feedback === 'error' ? 'bg-red-500/25' : 'bg-transparent'}`} />
+  // Determine Background Color based on Feedback State (Zen Mode Flash)
+  const getBgClass = () => {
+      if (state.feedback === 'success') {
+          // If the scanned item is an incident, show Amber/Orange instead of Green
+          if (data.lastScan?.isIncident) return 'bg-amber-600';
+          return 'bg-emerald-600';
+      }
+      if (state.feedback === 'error') return 'bg-red-600';
+      if (state.feedback === 'undo') return 'bg-purple-600';
+      
+      // Idle states
+      if (data.lastScan?.isIncident) return 'bg-amber-700'; // Keep amber if looking at an incident
+      return 'bg-slate-950'; // Default Zen Dark Mode
+  };
 
-      {/* HEADER */}
-      <header className="h-16 px-4 bg-slate-900 border-b border-slate-800 flex justify-between items-center z-20 shadow-xl shrink-0">
-        <div className="flex items-center gap-3">
-             <div className="bg-blue-600/20 text-blue-400 p-2 rounded-lg border border-blue-600/30"><Package className="w-5 h-5" /></div>
-             <div><div className="text-[10px] uppercase text-slate-400 font-bold tracking-wider">Orden ERP</div><div className="font-mono font-bold text-lg leading-none">{session.erpOrder}</div></div>
+  const isUnknown = data.activeProductStats.isUnknown;
+  const isLastScanIncident = !!data.lastScan?.isIncident;
+
+  return (
+    <div className={`fixed inset-0 z-50 flex flex-col text-white overflow-hidden font-sans transition-colors duration-200 ${getBgClass()}`}>
+      
+      {/* --- HEADER (Minimalist) --- */}
+      <header className="h-14 px-4 flex justify-between items-center z-20 shrink-0 bg-black/20 backdrop-blur-sm">
+        <div className="flex items-center gap-3 opacity-80">
+             <div className="bg-white/10 p-1.5 rounded-lg"><Package className="w-4 h-4" /></div>
+             <div className="font-mono font-bold text-sm tracking-widest">{session.erpOrder}</div>
         </div>
         <button 
             onClick={() => state.setShowConfirmModal(true)} 
-            className="bg-slate-800 hover:bg-red-900/30 text-slate-300 hover:text-red-400 px-3 py-1.5 rounded border border-slate-700 hover:border-red-800 text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-colors"
+            className="bg-white/10 hover:bg-red-500/80 text-white/80 hover:text-white px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all backdrop-blur-md"
         >
-            <Pause className="w-3 h-3" /> Terminar
+            <Pause className="w-3 h-3" /> <span className="hidden md:inline">Pausar</span>
         </button>
       </header>
 
-      {/* STATS BAR + MULTIPLIER BUTTON */}
-      <div className="grid grid-cols-3 divide-x divide-slate-800 bg-slate-900/50 border-b border-slate-800 shrink-0">
-          <div className="p-2 text-center flex flex-col justify-center items-center">
-              <div className="text-[9px] uppercase text-slate-500 font-bold tracking-widest mb-1">Unidades</div>
-              <div className="text-2xl font-bold text-white tracking-tighter leading-none">{data.sessionStats.totalQty}</div>
-          </div>
-          <div className="p-2 text-center flex flex-col justify-center items-center">
-              <div className="text-[9px] uppercase text-slate-500 font-bold tracking-widest mb-1">SKUs</div>
-              <div className="text-2xl font-bold text-blue-400 tracking-tighter leading-none">{data.sessionStats.uniqueSkus}</div>
-          </div>
-          
-          {/* MULTIPLIER TOGGLE */}
-          <button 
-            onClick={() => state.setIsMultiplierOpen(true)}
-            className={`p-2 flex flex-col justify-center items-center active:bg-slate-800 transition-colors ${state.multiplier > 1 ? 'bg-blue-900/30' : ''}`}
-          >
-              <div className="text-[9px] uppercase text-slate-500 font-bold tracking-widest mb-1">Cant/Scan</div>
-              <div className={`text-2xl font-bold tracking-tighter leading-none ${state.multiplier > 1 ? 'text-yellow-400' : 'text-slate-600'}`}>
-                  x{state.multiplier}
-              </div>
-          </button>
-      </div>
-
-      {/* MAIN CONTENT */}
-      <div className="flex-1 relative flex flex-col items-center justify-start pt-6 pb-2 min-h-0">
-        <div className="w-full max-w-md px-6 z-10 text-center mb-4 relative shrink-0">
-            <div className="py-4">
-                {data.lastScan ? (
-                    <div className="animate-in zoom-in-95 duration-200">
-                        {data.activeProductStats.isUnknown ? (
-                            <div className="bg-amber-500/10 border border-amber-500/50 p-4 rounded-xl mb-4">
-                                <div className="text-amber-500 font-bold text-lg flex items-center justify-center gap-2 mb-2"><AlertTriangle className="w-6 h-6" /> Producto Desconocido</div>
-                                <div className="font-mono text-xl text-slate-300 mb-4">{data.lastScan.barcode}</div>
-                                <button onClick={actions.handleRegisterPending} className="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 rounded-lg shadow-lg active:scale-95 transition-all">Registrar como PENDIENTE</button>
+      {/* --- MAIN ZEN AREA --- */}
+      <div className="flex-1 flex flex-col relative min-h-0">
+        
+        {/* CENTER CONTENT */}
+        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center z-10">
+            {state.feedback === 'undo' ? (
+                 <div className="flex flex-col items-center animate-in zoom-in">
+                    <RotateCcw className="w-32 h-32 text-white mb-4" />
+                    <h2 className="text-4xl font-black uppercase tracking-widest">Deshecho</h2>
+                    <p className="text-white/70 mt-2">El último registro ha sido eliminado.</p>
+                 </div>
+            ) : data.lastScan ? (
+                <div className="animate-in zoom-in-95 duration-150 w-full max-w-2xl flex flex-col items-center">
+                    {isUnknown ? (
+                        /* UNKNOWN PRODUCT STATE */
+                        <div className="bg-amber-500/90 text-black p-8 rounded-3xl shadow-2xl border-4 border-amber-300 w-full">
+                            <div className="flex flex-col items-center gap-4 mb-6">
+                                <AlertTriangle className="w-20 h-20 animate-pulse" />
+                                <h2 className="text-3xl font-black uppercase tracking-tight">Producto Desconocido</h2>
                             </div>
-                        ) : (
-                            <>
-                                <div className="inline-block bg-green-500/20 text-green-400 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest mb-4 border border-green-500/30">Escaneo Correcto</div>
-                                <h1 className="text-2xl md:text-3xl font-black text-white leading-tight mb-2 line-clamp-2 break-words">{data.activeProductStats.name}</h1>
-                                <div className="font-mono text-xl text-slate-400 mb-4">{data.lastScan.barcode}</div>
-                                <div className="flex flex-col items-center justify-center">
-                                    <span className="text-[10px] uppercase text-slate-500 font-bold tracking-widest">Acumulado este item</span>
-                                    <div className="text-5xl font-black text-blue-500 tracking-tighter mt-1">{data.activeProductStats.totalQty}</div>
+                            <div className="font-mono text-3xl font-bold mb-8 bg-black/10 py-2 rounded-xl">{data.lastScan.barcode}</div>
+                            <button 
+                                onClick={actions.handleRegisterPending} 
+                                className="w-full bg-black text-amber-500 hover:bg-slate-900 font-black text-xl py-5 rounded-2xl shadow-lg active:scale-95 transition-all"
+                            >
+                                REGISTRAR COMO PENDIENTE
+                            </button>
+                        </div>
+                    ) : (
+                        /* SUCCESS SCAN STATE */
+                        <>
+                            {/* Product Name */}
+                            <h1 className="text-3xl md:text-5xl font-black leading-tight mb-4 text-white drop-shadow-md break-words line-clamp-3">
+                                {data.activeProductStats.name}
+                            </h1>
+                            
+                            {/* Metadata Row: Barcode & Incident Toggle */}
+                            <div className="flex flex-wrap justify-center items-center gap-3 mb-8">
+                                {/* Barcode Badge */}
+                                <div className="bg-white/10 px-4 py-2 rounded-xl font-mono text-sm md:text-base text-white/80 border border-white/5">
+                                    {data.lastScan.barcode}
                                 </div>
-                            </>
-                        )}
-                    </div>
-                ) : (
-                    <div className="opacity-50 flex flex-col items-center py-6">
-                        <Zap className="w-16 h-16 text-slate-600 mb-4 animate-pulse" />
-                        <h2 className="text-2xl font-bold text-slate-500">LISTO PARA ESCANEAR</h2>
-                        <p className="text-sm text-slate-600 mt-2">Use el lector físico en cualquier momento</p>
-                    </div>
-                )}
-            </div>
+
+                                {/* Incident Toggle Button */}
+                                <button 
+                                    onClick={(e) => actions.handleToggleIncident(e, data.lastScan!.id, isLastScanIncident)}
+                                    className={`px-4 py-2 rounded-xl font-bold text-sm md:text-base flex items-center gap-2 transition-all active:scale-95 border border-white/10 shadow-lg ${
+                                        isLastScanIncident 
+                                        ? 'bg-white text-amber-700 shadow-amber-900/20' 
+                                        : 'bg-white/10 text-white/60 hover:bg-white/20'
+                                    }`}
+                                >
+                                    <AlertTriangle className={`w-5 h-5 ${isLastScanIncident ? 'fill-amber-700' : ''}`} />
+                                    {isLastScanIncident ? 'CON INCIDENCIA' : 'MARCAR FRC'}
+                                </button>
+                            </div>
+
+                            {/* QUANTITY DISPLAY (HERO) */}
+                            <div className="flex flex-col items-center">
+                                <div className="text-[10px] md:text-xs font-bold uppercase tracking-[0.3em] text-white/50 mb-1">Total Acumulado</div>
+                                <div className="text-[7rem] md:text-[9rem] leading-none font-black tracking-tighter text-white drop-shadow-2xl">
+                                    {data.activeProductStats.totalQty}
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </div>
+            ) : (
+                /* IDLE / READY STATE */
+                <div className="flex flex-col items-center opacity-20">
+                    <Zap className="w-32 h-32 mb-6" />
+                    <h2 className="text-4xl font-black tracking-widest uppercase">Listo</h2>
+                    <p className="mt-2 text-sm font-mono">Esperando Escáner...</p>
+                </div>
+            )}
         </div>
 
-        {/* RECENT LIST */}
-        <div className="w-full max-w-md px-4 mt-auto flex-1 overflow-y-auto no-scrollbar pb-16 relative z-30 pointer-events-auto">
-            <div className="text-xs font-bold text-slate-600 uppercase tracking-widest mb-3 pl-1 sticky top-0 bg-slate-950/95 py-2 z-10 flex justify-between items-center backdrop-blur-sm">
-                <span>Actividad Reciente</span><Volume2 className="w-3 h-3 text-slate-600" />
+        {/* --- FLOATING UNDO ACTION --- */}
+        {state.lastScanId && !state.isMultiplierOpen && !state.manualMode && (
+            <div className="absolute bottom-24 left-0 right-0 flex justify-center z-30 pointer-events-none animate-in slide-in-from-bottom-4 fade-in">
+                <button 
+                    onClick={actions.handleUndoLastScan}
+                    className="pointer-events-auto bg-slate-800/90 backdrop-blur-md border border-slate-700 hover:bg-red-900/90 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 font-bold transition-all active:scale-95 group"
+                >
+                    <RotateCcw className="w-5 h-5 text-slate-400 group-hover:text-white group-hover:-rotate-180 transition-all duration-300" />
+                    <span>Deshacer Último</span>
+                </button>
             </div>
-            <div className="space-y-4">
-                {data.recentScans?.map((scan, i) => (
-                    <ScanItem 
-                        key={scan.id} 
-                        scan={scan} 
-                        productName={actions.getProductName(scan.barcode)} 
-                        isLatest={i === 0} 
-                        onDelete={actions.handleDeleteScan} 
-                        onQuantityChange={actions.handleQuantityChange}
-                        onToggleIncident={actions.handleToggleIncident}
-                    />
-                ))}
+        )}
+
+        {/* --- FOOTER STATS & CONTROLS --- */}
+        <div className="shrink-0 pb-safe-area px-4 pb-4 relative z-40">
+            <div className="max-w-md mx-auto bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-2 flex justify-between items-center shadow-lg">
+                
+                {/* Stats */}
+                <div className="flex gap-6 px-4">
+                    <div className="flex flex-col">
+                        <span className="text-[9px] uppercase font-bold text-white/40">Unidades</span>
+                        <span className="text-xl font-bold tabular-nums">{data.sessionStats.totalQty}</span>
+                    </div>
+                    <div className="flex flex-col">
+                        <span className="text-[9px] uppercase font-bold text-white/40">SKUs</span>
+                        <span className="text-xl font-bold tabular-nums text-blue-400">{data.sessionStats.uniqueSkus}</span>
+                    </div>
+                </div>
+
+                {/* Controls */}
+                <div className="flex gap-2">
+                    <button 
+                        onClick={() => state.setIsMultiplierOpen(true)}
+                        className={`h-12 px-4 rounded-xl font-bold text-lg flex items-center justify-center transition-all ${state.multiplier > 1 ? 'bg-yellow-500 text-black' : 'bg-white/10 text-white hover:bg-white/20'}`}
+                    >
+                        <span className="text-xs mr-1 opacity-60">x</span>{state.multiplier}
+                    </button>
+                    
+                    <button 
+                        onClick={() => state.setManualMode(true)}
+                        className="h-12 w-12 rounded-xl bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center shadow-lg active:scale-95 transition-all"
+                    >
+                        <Keyboard className="w-6 h-6" />
+                    </button>
+                </div>
             </div>
         </div>
       </div>
 
       {/* MULTIPLIER KEYPAD MODAL */}
       {state.isMultiplierOpen && (
-          <div className="absolute inset-0 z-[60] flex flex-col justify-end bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="absolute inset-0 z-[60] flex flex-col justify-end bg-black/80 backdrop-blur-md animate-in fade-in">
               <div className="bg-slate-900 border-t border-slate-700 rounded-t-3xl shadow-2xl p-4 w-full animate-in slide-in-from-bottom-full">
                   <div className="flex justify-between items-center mb-4 px-2">
                       <div className="flex flex-col">
                           <span className="text-slate-400 text-xs font-bold uppercase tracking-wider">Multiplicador de Escaneo</span>
-                          <span className="text-3xl font-black text-white">x{state.multiplier}</span>
+                          <span className="text-4xl font-black text-white">x{state.multiplier}</span>
                       </div>
                       <button onClick={() => state.setIsMultiplierOpen(false)} className="p-2 bg-slate-800 rounded-full text-slate-400"><X className="w-6 h-6"/></button>
                   </div>
@@ -136,36 +201,49 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
                     }}
                     onDelete={() => state.setMultiplier(Math.floor(state.multiplier / 10) || 1)}
                   />
-                  <button onClick={() => state.setIsMultiplierOpen(false)} className="w-full mt-4 bg-blue-600 text-white font-bold py-4 rounded-xl text-lg">Confirmar (x{state.multiplier})</button>
+                  <button onClick={() => state.setIsMultiplierOpen(false)} className="w-full mt-4 bg-blue-600 text-white font-bold py-4 rounded-xl text-lg shadow-lg shadow-blue-900/50">Confirmar</button>
               </div>
           </div>
       )}
 
-      {/* EXISTING MODALS... */}
+      {/* CONFIRM / EXIT MODAL */}
       {state.showConfirmModal && (
-            <div className="absolute inset-0 bg-slate-950/90 z-50 flex items-center justify-center p-6 backdrop-blur-md animate-in fade-in">
+            <div className="absolute inset-0 bg-black/90 z-[70] flex items-center justify-center p-6 backdrop-blur-md animate-in fade-in">
                 <div className="w-full max-w-sm bg-slate-900 p-8 rounded-3xl border border-slate-700 shadow-2xl text-center">
                     <div className="w-16 h-16 bg-blue-500/10 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-6"><Save className="w-8 h-8" /></div>
                     <h3 className="text-2xl font-bold text-white mb-2">¿Finalizar Sesión?</h3>
                     <div className="grid grid-cols-1 gap-3 mt-6">
-                        <button onClick={onCloseSession} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2"><Check className="w-5 h-5" /> Guardar y Finalizar</button>
-                        <button onClick={actions.handleDiscard} className="w-full bg-red-950/30 hover:bg-red-900/50 text-red-500 border border-red-900/50 py-3 rounded-xl font-bold flex items-center justify-center gap-2"><XCircle className="w-5 h-5" /> Descartar</button>
-                        <button onClick={() => state.setShowConfirmModal(false)} className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 py-3 rounded-xl font-bold mt-2">Cancelar</button>
+                        <button onClick={onCloseSession} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2"><Check className="w-5 h-5" /> Guardar y Salir</button>
+                        <button onClick={actions.handleDiscard} className="w-full bg-red-950/30 hover:bg-red-900/50 text-red-500 border border-red-900/50 py-3 rounded-xl font-bold flex items-center justify-center gap-2"><XCircle className="w-5 h-5" /> Descartar Datos</button>
+                        <button onClick={() => state.setShowConfirmModal(false)} className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 py-3 rounded-xl font-bold mt-2">Continuar Contando</button>
                     </div>
                 </div>
             </div>
       )}
 
+      {/* MANUAL ENTRY MODAL */}
       {state.manualMode && (
-             <div className="absolute inset-0 bg-slate-950/90 z-30 flex items-center justify-center p-6 backdrop-blur-sm animate-in fade-in">
-                 <form onSubmit={actions.handleManualSubmit} className="w-full max-w-sm bg-slate-900 p-6 rounded-2xl border border-slate-700 shadow-2xl">
-                     <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2"><Keyboard className="w-5 h-5" /> Ingreso Manual</h3>
+             <div className="absolute inset-0 bg-black/90 z-[60] flex items-center justify-center p-6 backdrop-blur-md animate-in fade-in">
+                 <form onSubmit={actions.handleManualSubmit} className="w-full max-w-sm bg-slate-900 p-6 rounded-3xl border border-slate-700 shadow-2xl">
+                     <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-3"><Keyboard className="w-6 h-6 text-blue-500" /> Ingreso Manual</h3>
                      <div className="relative">
-                        <input id="manual-barcode-input" name="barcode" type="text" inputMode="numeric" pattern="[0-9]*" value={state.manualInput} onChange={(e) => state.setManualInput(e.target.value.replace(/[^0-9]/g, ''))} className="w-full bg-slate-950 border border-slate-700 rounded-xl p-4 text-xl font-mono text-white focus:border-blue-500 outline-none mb-4" placeholder="Escriba el código..." autoFocus autoComplete="off" />
+                        <input 
+                            id="manual-barcode-input" 
+                            name="barcode" 
+                            type="text" 
+                            inputMode="numeric" 
+                            pattern="[0-9]*" 
+                            value={state.manualInput} 
+                            onChange={(e) => state.setManualInput(e.target.value.replace(/[^0-9]/g, ''))} 
+                            className="w-full bg-slate-950 border border-slate-700 rounded-2xl p-5 text-2xl font-mono text-center text-white focus:border-blue-500 outline-none mb-6 tracking-widest placeholder:tracking-normal" 
+                            placeholder="Escanee o Digite" 
+                            autoFocus 
+                            autoComplete="off" 
+                        />
                      </div>
-                     <div className="grid grid-cols-2 gap-3">
-                         <button type="button" onClick={() => { state.setManualMode(false); state.setManualInput(''); }} className="py-3 rounded-xl font-bold text-slate-400 hover:bg-slate-800 transition-colors">Cancelar</button>
-                         <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-bold transition-colors">Registrar</button>
+                     <div className="grid grid-cols-2 gap-4">
+                         <button type="button" onClick={() => { state.setManualMode(false); state.setManualInput(''); }} className="py-4 rounded-xl font-bold text-slate-400 hover:bg-slate-800 transition-colors">Cancelar</button>
+                         <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-xl font-bold transition-colors shadow-lg shadow-blue-900/50">Registrar</button>
                      </div>
                  </form>
              </div>
@@ -175,10 +253,6 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
           <div className="contents">
             <ExpirationModal productName={state.pendingProductName} onComplete={actions.handleExpirationComplete} />
           </div>
-      )}
-
-      {!state.showConfirmModal && !state.showExpirationModal && !state.isMultiplierOpen && (
-        <button onClick={() => state.setManualMode(true)} className="fixed bottom-6 right-6 w-14 h-14 bg-slate-800 border border-slate-700 text-white rounded-full shadow-lg shadow-black/50 flex items-center justify-center z-40 hover:bg-slate-700 active:scale-95 transition-all md:hidden"><Keyboard className="w-6 h-6" /></button>
       )}
     </div>
   );

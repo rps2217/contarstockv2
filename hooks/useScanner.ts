@@ -16,7 +16,7 @@ export const useScanner = (
     // --- STATE ---
     const [manualInput, setManualInput] = useState('');
     const [lastScanId, setLastScanId] = useState<string | null>(null);
-    const [feedback, setFeedback] = useState<'idle' | 'success' | 'error'>('idle');
+    const [feedback, setFeedback] = useState<'idle' | 'success' | 'error' | 'undo'>('idle');
     const [manualMode, setManualMode] = useState(false);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     
@@ -78,11 +78,11 @@ export const useScanner = (
 
     // --- ACTIONS & LOGIC ---
 
-    const triggerFeedback = useCallback((type: 'success' | 'error') => {
+    const triggerFeedback = useCallback((type: 'success' | 'error' | 'undo') => {
         setFeedback(type);
-        SoundFX.play(type);
+        SoundFX.play(type === 'undo' ? 'delete' : type);
         if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
-        feedbackTimer.current = setTimeout(() => setFeedback('idle'), 500);
+        feedbackTimer.current = setTimeout(() => setFeedback('idle'), type === 'undo' ? 1000 : 500);
     }, []);
 
     const completeScan = async (code: string, mm?: number, yyyy?: number) => {
@@ -185,6 +185,18 @@ export const useScanner = (
         }
     }, []);
 
+    // NEW: Undo Logic
+    const handleUndoLastScan = useCallback(async () => {
+        if (!lastScanId) return;
+        try {
+            await storage.deleteScan(lastScanId);
+            setLastScanId(null);
+            triggerFeedback('undo');
+        } catch (e) {
+            console.error("Undo failed", e);
+        }
+    }, [lastScanId, triggerFeedback]);
+
     const handleQuantityChange = useCallback(async (scanId: string, currentQty: number, delta: number) => {
         if (currentQty + delta <= 0) {
             const settings = storage.getSettings();
@@ -233,17 +245,19 @@ export const useScanner = (
             showExpirationModal,
             isMultiplierOpen, setIsMultiplierOpen,
             multiplier, setMultiplier,
-            pendingProductName
+            pendingProductName,
+            lastScanId // Exported for UI conditional rendering
         },
         data: { sessionStats, activeProductStats, lastScan, recentScans },
         actions: {
             handleManualSubmit,
             handleDeleteScan,
+            handleUndoLastScan, // Exported
             handleQuantityChange,
             handleRegisterPending,
             handleDiscard,
             handleExpirationComplete,
-            handleToggleIncident, // New action
+            handleToggleIncident,
             getProductName,
         }
     };
