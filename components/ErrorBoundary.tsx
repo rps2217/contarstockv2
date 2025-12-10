@@ -1,4 +1,4 @@
-import React, { ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 
 interface Props {
@@ -11,7 +11,7 @@ interface State {
   errorInfo: ErrorInfo | null;
 }
 
-export class ErrorBoundary extends React.Component<Props, State> {
+export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
     error: null,
@@ -29,11 +29,13 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   private handleReload = () => {
+    // Force reload from server to clear any transient UI states
     window.location.reload();
   };
 
   private handleClearCacheAndReload = () => {
-    if (window.confirm("¿Estás seguro? Esto reiniciará la aplicación pero mantendrá tus datos guardados.")) {
+    if (window.confirm("¿Estás seguro? Esto forzará una recarga completa de la aplicación.")) {
+        // Simple redirect to root can sometimes solve state getting stuck in sub-routes or props
         window.location.href = '/';
     }
   };
