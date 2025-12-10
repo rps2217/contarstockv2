@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { X, Sparkles, Keyboard, History as HistoryIcon, ArrowLeft, PackageCheck } from 'lucide-react';
 import { CountingSession } from '../types';
 import * as storage from '../services/storage';
@@ -17,6 +17,9 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
   const [erpOrder, setErpOrder] = useState('');
   const [labelId, setLabelId] = useState('');
   const [error, setError] = useState('');
+
+  // Refs for focus management
+  const erpInputRef = useRef<HTMLInputElement>(null);
 
   // Keypad State
   const [showKeypad, setShowKeypad] = useState(true);
@@ -104,6 +107,14 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
       }
   };
 
+  const handleLabelKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+          e.preventDefault(); // Prevent form submission
+          erpInputRef.current?.focus();
+          setActiveKeypadField('erp');
+      }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       if (!erpOrder.trim() || !labelId.trim()) {
@@ -177,7 +188,8 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
                         placeholder="Ej: 12345" 
                         value={labelId} 
                         onFocus={() => setActiveKeypadField('label')}
-                        onChange={(e) => handleNumericInputChange(setLabelId, e.target.value)} 
+                        onChange={(e) => handleNumericInputChange(setLabelId, e.target.value)}
+                        onKeyDown={handleLabelKeyDown} 
                         autoFocus
                     />
                 </div>
@@ -217,6 +229,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Orden Erp <span className="text-red-500">*</span></label>
                     <div className="flex gap-2">
                         <input 
+                            ref={erpInputRef}
                             type="text" 
                             inputMode="numeric"
                             className={`w-full p-3.5 font-bold text-xl rounded-xl outline-none transition-all border-2 placeholder:text-slate-300 placeholder:font-normal placeholder:text-base ${
