@@ -64,22 +64,17 @@ export class ErrorBoundary extends Component<Props, State> {
               <div className="space-y-3">
                 <button 
                   onClick={this.handleReload}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-200 active:scale-95 transition-all"
                 >
-                  <RefreshCw className="w-5 h-5" /> Recargar Aplicación
+                  <RefreshCw className="w-5 h-5" /> Recargar
                 </button>
-                
                 <button 
-                  onClick={this.handleClearCacheAndReload}
-                  className="w-full bg-white hover:bg-slate-50 text-slate-600 border-2 border-slate-200 font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2"
+                   onClick={this.handleClearCacheAndReload}
+                   className="w-full bg-white hover:bg-slate-50 text-slate-600 font-bold py-3 rounded-xl flex items-center justify-center gap-2 border border-slate-200 transition-all active:scale-95"
                 >
-                  <Home className="w-5 h-5" /> Ir al Inicio
+                   <Home className="w-5 h-5" /> Ir al Inicio
                 </button>
               </div>
-            </div>
-            
-            <div className="bg-slate-50 p-3 text-center border-t border-slate-100">
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">LogiCount Pro System Protection</p>
             </div>
           </div>
         </div>

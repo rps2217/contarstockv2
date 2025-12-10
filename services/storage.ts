@@ -1,3 +1,4 @@
+
 import { CountingSession } from '../types';
 import { db } from '../db';
 import { generateUUID, sanitizeBarcode } from './utils';
@@ -33,6 +34,38 @@ export const createSession = async (erpOrder: string, logisticsLabel: string): P
   return newSession;
 };
 
+// NEW: For Blind Reception
+export const createDraftSession = async (logisticsLabel: string): Promise<CountingSession> => {
+    // Check duplication to avoid double scanning the same label in reception mode
+    const existing = await db.sessions.where('logisticsLabel').equals(logisticsLabel).first();
+    if (existing) {
+        throw new Error('Etiqueta ya registrada');
+    }
+
+    const newSession: CountingSession = {
+        id: generateUUID(),
+        erpOrder: 'PENDIENTE',
+        logisticsLabel: logisticsLabel.trim(),
+        createdAt: Date.now(),
+        status: 'draft',
+        totalUnits: 0,
+        totalSKUs: 0,
+        lastSyncTimestamp: 0 // Explicitly 0 to denote not synced to reception table
+    };
+    await db.sessions.add(newSession);
+    return newSession;
+};
+
+// NEW: Activate a draft session when starting count
+export const activateDraftSession = async (draftSessionId: string, erpOrder: string): Promise<CountingSession> => {
+    await db.sessions.update(draftSessionId, {
+        status: 'active',
+        erpOrder: erpOrder.trim(),
+        // We do NOT update timestamp, to keep the original reception time
+    });
+    return (await db.sessions.get(draftSessionId)) as CountingSession;
+};
+
 export const closeSession = async (sessionId: string) => { 
     await db.sessions.update(sessionId, { status: 'completed' }); 
     await sessionService.updateSessionStats(sessionId); 
@@ -54,6 +87,11 @@ export const markErpSessionsAsSynced = async (erpOrder: string) => {
     if (sessions.length > 0) { 
         await db.sessions.where('id').anyOf(sessions.map(s => s.id)).modify({ lastSyncTimestamp: Date.now() }); 
     }
+};
+
+export const markDraftsAsSynced = async (sessionIds: string[]) => {
+    if (sessionIds.length === 0) return;
+    await db.sessions.where('id').anyOf(sessionIds).modify({ lastSyncTimestamp: Date.now() });
 };
 
 // --- ADVANCED EDITING ---

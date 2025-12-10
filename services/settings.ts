@@ -14,7 +14,8 @@ const DEFAULT_SETTINGS: AppSettings = {
       appId: '',
       accessKey: '',
       countsTableName: '',
-      productsTableName: ''
+      productsTableName: '',
+      receptionTableName: '' // Default empty
   }
 };
 

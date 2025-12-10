@@ -8,6 +8,7 @@ import { Reports } from './components/Reports';
 import { Consolidated } from './components/Consolidated';
 import { Conciliator } from './components/Conciliator';
 import { Settings } from './components/Settings';
+import { Reception } from './components/Reception';
 import { Login } from './components/Login';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import * as storage from './services/storage';
@@ -145,6 +146,15 @@ const AppContent: React.FC = () => {
         />
       </div>
     );
+  }
+
+  // NEW: Reception Full Screen Mode
+  if (view === 'reception') {
+      return (
+          <div className="h-screen bg-slate-900">
+              <Reception onBack={() => setView('dashboard')} />
+          </div>
+      );
   }
 
   return (

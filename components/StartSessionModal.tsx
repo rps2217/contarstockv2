@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Sparkles, Keyboard, History as HistoryIcon, ArrowLeft } from 'lucide-react';
+import { X, Sparkles, Keyboard, History as HistoryIcon, ArrowLeft, PackageCheck } from 'lucide-react';
 import { CountingSession } from '../types';
 import * as storage from '../services/storage';
 import { db } from '../db';
@@ -22,6 +22,9 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
   const [showKeypad, setShowKeypad] = useState(true);
   const [activeKeypadField, setActiveKeypadField] = useState<'label' | 'erp'>('label');
 
+  // Lazy Linking State
+  const [draftSessionId, setDraftSessionId] = useState<string | null>(null);
+
   // --- INTELLIGENCE LOGIC ---
   const recentSessionsForAi = useLiveQuery(() => db.sessions.orderBy('createdAt').reverse().limit(50).toArray(), [], []);
 
@@ -33,11 +36,11 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
     const correlations = new Map<string, string>();
 
     for (const s of recentSessionsForAi) {
-        if (!unique.has(s.erpOrder) && recents.length < 4) {
+        if (!unique.has(s.erpOrder) && recents.length < 4 && s.erpOrder !== 'PENDIENTE') {
             unique.add(s.erpOrder);
             recents.push(s.erpOrder);
         }
-        if (s.logisticsLabel.length >= 3) {
+        if (s.logisticsLabel.length >= 3 && s.erpOrder !== 'PENDIENTE') {
             const prefix = s.logisticsLabel.substring(0, 3).toUpperCase();
             if (!correlations.has(prefix)) {
                 correlations.set(prefix, s.erpOrder);
@@ -46,6 +49,28 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
     }
     return { recentErps: recents, correlationMap: correlations };
   }, [recentSessionsForAi]);
+
+  // Check for Draft Sessions when labelId changes
+  useEffect(() => {
+      const checkDraft = async () => {
+          if (!labelId || labelId.length < 3) {
+              setDraftSessionId(null);
+              return;
+          }
+          
+          const cleanLabel = storage.sanitizeBarcode(labelId);
+          const draft = await db.sessions.where('logisticsLabel').equals(cleanLabel).and(s => s.status === 'draft').first();
+          
+          if (draft) {
+              setDraftSessionId(draft.id);
+          } else {
+              setDraftSessionId(null);
+          }
+      };
+      
+      const timer = setTimeout(checkDraft, 300); // Debounce check
+      return () => clearTimeout(timer);
+  }, [labelId]);
 
   const getSuggestedErp = () => {
       if (labelId.length < 3) return null;
@@ -87,8 +112,15 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
       }
 
       try {
-          // Attempt to create session in DB
-          const session = await storage.createSession(erpOrder, labelId);
+          let session: CountingSession;
+
+          if (draftSessionId) {
+              // LAZY LINKING: Activate the existing draft session
+              session = await storage.activateDraftSession(draftSessionId, erpOrder);
+          } else {
+              // CREATE NEW
+              session = await storage.createSession(erpOrder, labelId);
+          }
           
           // If successful, trigger start
           onSessionStart(session);
@@ -96,6 +128,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
           // Cleanup
           setErpOrder('');
           setLabelId('');
+          setDraftSessionId(null);
           onClose();
       } catch (err: any) {
           console.error("Error creating session:", err);
@@ -149,8 +182,21 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
                     />
                 </div>
 
+                {/* DRAFT FOUND ALERT */}
+                {draftSessionId && (
+                    <div className="bg-emerald-50 border border-emerald-100 p-3 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+                        <div className="bg-emerald-100 text-emerald-600 p-2 rounded-lg">
+                            <PackageCheck className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1">
+                            <div className="text-sm font-bold text-emerald-800">Bulto Recepcionado</div>
+                            <div className="text-xs text-emerald-600">Se vinculará el inventario a este registro previo.</div>
+                        </div>
+                    </div>
+                )}
+
                  {/* SUGGESTION ALERT */}
-                 {suggestedErp && suggestedErp !== erpOrder && (
+                 {suggestedErp && suggestedErp !== erpOrder && !draftSessionId && (
                     <button 
                         type="button"
                         onClick={() => setErpOrder(suggestedErp)}
@@ -240,7 +286,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
                     onClick={handleSubmit}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg py-4 rounded-xl shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 active:scale-95 transition-all"
                 >
-                    Comenzar Conteo
+                    {draftSessionId ? 'Vincular y Comenzar' : 'Comenzar Conteo'}
                 </button>
             </div>
         </div>

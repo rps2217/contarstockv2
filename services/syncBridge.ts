@@ -1,4 +1,4 @@
-import { fetchProductsFromCloud, fetchCloudData, SHEET_COLUMNS, syncToAppSheet, syncProductsToAppSheet } from './appsheet';
+import { fetchProductsFromCloud, fetchCloudData, SHEET_COLUMNS, syncToAppSheet, syncProductsToAppSheet, syncReceptionToAppSheet } from './appsheet';
 import { db } from '../db';
 import { sanitizeBarcode, generateUUID } from './utils';
 import { Product, CountingSession, ScanRecord } from '../types';
@@ -6,7 +6,7 @@ import * as sessionService from './sessionService';
 import * as productService from './productService';
 
 // Re-export core sync functions for UI components to avoid split dependencies
-export { syncToAppSheet, syncProductsToAppSheet };
+export { syncToAppSheet, syncProductsToAppSheet, syncReceptionToAppSheet };
 
 /**
  * Imports products from AppSheet and saves them to the local DB.

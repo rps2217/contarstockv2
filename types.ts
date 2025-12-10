@@ -14,7 +14,7 @@ export interface CountingSession {
   erpOrder: string;
   logisticsLabel: string;
   createdAt: number;
-  status: 'active' | 'completed';
+  status: 'active' | 'completed' | 'draft'; // Added 'draft' for Reception Mode
   totalUnits?: number;
   totalSKUs?: number;
   lastSyncTimestamp?: number; // New: Tracks when this session was uploaded
@@ -42,7 +42,7 @@ export interface ConsolidatedItem {
   isIncident?: boolean; // Aggregate flag
 }
 
-export type ViewState = 'dashboard' | 'counting' | 'database' | 'reports' | 'settings' | 'consolidated' | 'conciliator';
+export type ViewState = 'dashboard' | 'counting' | 'database' | 'reports' | 'settings' | 'consolidated' | 'conciliator' | 'reception';
 
 export type Theme = 'light' | 'dark' | 'contrast' | 'warm' | 'navy';
 
@@ -51,6 +51,7 @@ export interface AppSheetConfig {
   accessKey: string;
   countsTableName: string;   // Table for Transactional Data (Counts)
   productsTableName: string; // Table for Master Data (Products)
+  receptionTableName?: string; // New: Table for Reception Logs
 }
 
 export interface AppSettings {

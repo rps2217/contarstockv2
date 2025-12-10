@@ -4,11 +4,12 @@ import { getSettings } from "./settings";
 import { generateUUID, sanitizeBarcode } from "./utils";
 import { getUnsyncedScans, markScansAsSynced, addScan, updateSessionStats } from "./sessionService"; 
 import { markProductsAsSynced, saveProductBatch } from "./productService";
+import { markDraftsAsSynced } from "./storage";
 import { db } from "../db";
 import { aggregateScans } from "./aggregator";
 import { sendToAppSheet, AppSheetPayload } from "../infrastructure/api/appsheetClient";
 
-export const SYNC_ENGINE_VERSION = "5.0.5-REL-PATH-FIX";
+export const SYNC_ENGINE_VERSION = "6.0.0-BLIND-RECEPTION";
 
 // --- CONFIG & MAPPING ---
 
@@ -111,6 +112,30 @@ export const syncProductsToAppSheet = async (products: Product[]): Promise<void>
     });
     if (adds.length > 0) { await sendToAppSheet(config, config.productsTableName, { Action: "Add", Properties: { Locale: "es-CL", Timezone: "UTC" }, Rows: adds }); await markProductsAsSynced(addIds); }
     if (edits.length > 0) { await sendToAppSheet(config, config.productsTableName, { Action: "Edit", Properties: { Locale: "es-CL", Timezone: "UTC" }, Rows: edits }); await markProductsAsSynced(editIds); }
+};
+
+export const syncReceptionToAppSheet = async (sessions: CountingSession[]): Promise<void> => {
+    const settings = getSettings(); const config = settings.appSheetConfig;
+    if (!config?.appId || !config?.accessKey || !config?.receptionTableName) throw new Error("Config incompleta: Falta nombre de tabla de Recepción.");
+    
+    // Only upload drafts (status 'draft') or sessions that were drafts recently
+    // We map fields: ID_RECEPCION, FECHA_HORA, ETIQUETA, ESTADO
+    
+    const rows = sessions.map(s => ({
+        "ID_RECEPCION": s.id,
+        "FECHA_HORA": new Date(s.createdAt).toISOString(),
+        "ETIQUETA": s.logisticsLabel,
+        "ESTADO": s.status === 'draft' ? 'PENDIENTE' : 'PROCESADO'
+    }));
+
+    if (rows.length > 0) {
+        await sendToAppSheet(config, config.receptionTableName, { 
+            Action: "Add", 
+            Properties: { Locale: "es-CL", Timezone: "UTC" }, 
+            Rows: rows 
+        });
+        await markDraftsAsSynced(sessions.map(s => s.id));
+    }
 };
 
 export const fetchProductsFromCloud = async (): Promise<any[]> => {

@@ -15,7 +15,7 @@ interface SettingsProps {
 export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged }) => {
   // FIXED: Use settingsService instead of storage for getSettings to avoid circular dependency chain
   const [settings, setSettings] = useState<AppSettings>(settingsService.getSettings());
-  const [appSheetConfig, setAppSheetConfig] = useState(settings.appSheetConfig || { appId: '', accessKey: '', countsTableName: '', productsTableName: '' });
+  const [appSheetConfig, setAppSheetConfig] = useState(settings.appSheetConfig || { appId: '', accessKey: '', countsTableName: '', productsTableName: '', receptionTableName: '' });
   const [showSaveFeedback, setShowSaveFeedback] = useState(false);
   
   // Share/Import State
@@ -251,20 +251,27 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
                     <label className="text-xs font-bold text-slate-500 uppercase mb-1.5 block">App ID</label>
                     <input className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono" value={appSheetConfig.appId} onChange={e => setAppSheetConfig({...appSheetConfig, appId: e.target.value})} placeholder="xxxxxxxx..." />
                 </div>
-                <div className="grid md:grid-cols-2 gap-4">
-                    <div className="md:col-span-2">
-                        <label className="text-xs font-bold text-slate-500 uppercase mb-1.5 block">Tabla de Consolidados (Bitácora)</label>
-                        <input className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm" value={appSheetConfig.countsTableName} onChange={e => setAppSheetConfig({...appSheetConfig, countsTableName: e.target.value})} placeholder="Ej. CONSOLIDADOS" />
-                    </div>
-                    <div className="md:col-span-2">
-                        <label className="text-xs font-bold text-slate-500 uppercase mb-1.5 block">Tabla de Productos (Maestra)</label>
-                        <input className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm" value={appSheetConfig.productsTableName} onChange={e => setAppSheetConfig({...appSheetConfig, productsTableName: e.target.value})} placeholder="Ej. PRODUCTOS" />
-                    </div>
-                </div>
                 <div>
                     <label className="text-xs font-bold text-slate-500 uppercase mb-1.5 block">Access Key</label>
                     <input type="password" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono" value={appSheetConfig.accessKey} onChange={e => setAppSheetConfig({...appSheetConfig, accessKey: e.target.value})} placeholder="V2-..." />
                 </div>
+                
+                {/* Tables Grid */}
+                <div className="grid md:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
+                    <div className="md:col-span-2">
+                        <label className="text-xs font-bold text-slate-500 uppercase mb-1.5 block">Tabla de Conteos (Bitácora)</label>
+                        <input className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm" value={appSheetConfig.countsTableName} onChange={e => setAppSheetConfig({...appSheetConfig, countsTableName: e.target.value})} placeholder="Ej. CONSOLIDADOS" />
+                    </div>
+                    <div>
+                        <label className="text-xs font-bold text-slate-500 uppercase mb-1.5 block">Tabla de Productos</label>
+                        <input className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm" value={appSheetConfig.productsTableName} onChange={e => setAppSheetConfig({...appSheetConfig, productsTableName: e.target.value})} placeholder="Ej. PRODUCTOS" />
+                    </div>
+                    <div>
+                        <label className="text-xs font-bold text-indigo-500 uppercase mb-1.5 block">Tabla de Recepción (Check-in)</label>
+                        <input className="w-full p-3 bg-indigo-50 border border-indigo-200 rounded-lg text-sm" value={appSheetConfig.receptionTableName || ''} onChange={e => setAppSheetConfig({...appSheetConfig, receptionTableName: e.target.value})} placeholder="Ej. BITACORA_RECEPCION" />
+                    </div>
+                </div>
+
                 <button type="submit" className={`w-full p-3.5 rounded-xl font-bold shadow-md flex justify-center items-center gap-2 ${showSaveFeedback ? 'bg-green-600 text-white' : 'bg-indigo-600 text-white'}`}>
                     {showSaveFeedback ? <Check className="w-4 h-4" /> : <Cloud className="w-4 h-4" />} {showSaveFeedback ? 'Guardado' : 'Guardar Configuración'}
                 </button>
