@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { Pause, Package, Zap, Keyboard, AlertTriangle, Check, Volume2, Save, XCircle, X, RotateCcw, Camera } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { Pause, Package, Zap, Keyboard, AlertTriangle, Check, Volume2, Save, XCircle, X, RotateCcw, Camera, Ban } from 'lucide-react';
 import { CountingSession } from '../types';
 import { ExpirationModal } from './ExpirationModal';
 import { useScanner } from '../hooks/useScanner';
@@ -38,6 +38,28 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
 
   const isUnknown = data.activeProductStats.isUnknown;
   const isLastScanIncident = !!data.lastScan?.isIncident;
+
+  // SECURITY CHECK: Verify if browser allows Camera access (HTTPS required)
+  const hasCameraSupport = useMemo(() => {
+    if (typeof navigator === 'undefined') return false;
+    
+    // Check for Secure Context (HTTPS or localhost)
+    // We explicitly check window to avoid SSR issues, though this is a client app
+    const isSecure = typeof window !== 'undefined' ? window.isSecureContext : false;
+    
+    // Check for API existence
+    const hasApi = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+    
+    return isSecure && hasApi;
+  }, []);
+
+  const handleCameraClick = () => {
+      if (!hasCameraSupport) {
+          alert("⚠️ CÁMARA BLOQUEADA POR EL NAVEGADOR\n\nCausa: Estás accediendo por una conexión no segura (HTTP).\n\nSolución:\n1. Usa 'localhost' si estás en el PC.\n2. Configura HTTPS para acceso móvil.\n3. O habilita las flags de 'Insecure origins' en chrome://flags.");
+          return;
+      }
+      state.setIsCameraOpen(true);
+  };
 
   const handleCloseMultiplier = () => {
       // Safety: If user leaves it at 0, default to 1 on close
@@ -173,13 +195,17 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
 
                 {/* Controls */}
                 <div className="flex gap-2">
-                    {/* CAMERA BUTTON (Moved to footer for accessibility) */}
+                    {/* CAMERA BUTTON (With Error Handling) */}
                     <button 
-                        onClick={() => state.setIsCameraOpen(true)}
-                        className="h-12 w-12 rounded-xl bg-slate-800 text-blue-400 border border-slate-700 hover:bg-slate-700 flex items-center justify-center shadow-lg active:scale-95 transition-all"
-                        title="Cámara"
+                        onClick={handleCameraClick}
+                        className={`h-12 w-12 rounded-xl border flex items-center justify-center shadow-lg active:scale-95 transition-all ${
+                            hasCameraSupport 
+                            ? 'bg-slate-800 text-blue-400 border-slate-700 hover:bg-slate-700' 
+                            : 'bg-red-900/50 text-red-400 border-red-800 hover:bg-red-900'
+                        }`}
+                        title={hasCameraSupport ? "Abrir Cámara" : "Cámara bloqueada (Requiere HTTPS)"}
                     >
-                        <Camera className="w-6 h-6" />
+                        {hasCameraSupport ? <Camera className="w-6 h-6" /> : <Ban className="w-6 h-6" />}
                     </button>
 
                     <button 
