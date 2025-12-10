@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { ChevronLeft, Barcode, CheckCircle2, WifiOff, CloudUpload, CloudDownload, Box, Zap, Layers, Hash, Loader2, List, Trash2, X, AlertTriangle } from 'lucide-react';
+import { ChevronLeft, Barcode, CheckCircle2, WifiOff, CloudUpload, CloudDownload, Box, Zap, Layers, Hash, Loader2 } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import * as storage from '../services/storage';
@@ -17,7 +17,6 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack }) => {
     const [error, setError] = useState<string | null>(null);
     const [isSyncing, setIsSyncing] = useState(false);
     const [isRestoring, setIsRestoring] = useState(false);
-    const [showList, setShowList] = useState(false);
 
     // Queries
     // Count ONLY sessions that are in 'draft' mode (not yet activated)
@@ -109,32 +108,10 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack }) => {
         }
     };
 
-    // --- DELETE LOGIC ---
-    const handleDeleteDraft = async (sessionId: string) => {
-        if (window.confirm('¿Eliminar esta etiqueta de la lista de recepción?')) {
-            await storage.deleteSession(sessionId);
-            SoundFX.play('delete');
-            if (unsyncedDrafts.length <= 1) setShowList(false); // Close if empty
-        }
-    };
-
-    const handleClearAllDrafts = async () => {
-        if (window.confirm('⚠️ ¿ESTÁS SEGURO? ⚠️\n\nEsto eliminará TODAS las etiquetas escaneadas que no se han sincronizado.\nEsta acción no se puede deshacer.')) {
-            const ids = unsyncedDrafts.map(s => s.id);
-            // Use storage.deleteSession for each to ensure cleanup
-            await Promise.all(ids.map(id => storage.deleteSession(id)));
-            SoundFX.play('delete');
-            setShowList(false);
-            setLastScanned(null);
-        }
-    };
-
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             const target = e.target as HTMLElement;
             if (target.tagName === 'INPUT') return;
-            // Disable scanner if list modal is open to prevent accidental background scans
-            if (showList) return;
 
             const now = Date.now();
             if (now - lastKeyTime.current > 50) buffer.current = '';
@@ -150,10 +127,10 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack }) => {
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [showList]); // Depend on showList to toggle listener logic
+    }, []);
 
     return (
-        <div className="flex flex-col h-screen bg-slate-900 text-white relative">
+        <div className="flex flex-col h-screen bg-slate-900 text-white">
             {/* Header */}
             <div className="p-4 flex items-center justify-between bg-slate-800/50">
                 <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full transition-colors">
@@ -251,21 +228,13 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack }) => {
                 </div>
             </div>
 
-            {/* Footer with Sync and Review */}
+            {/* Sync Footer */}
             {unsyncedDrafts.length > 0 && (
-                <div className="p-4 bg-slate-800 border-t border-slate-700 animate-in slide-in-from-bottom-full shrink-0 flex gap-3">
-                     <button 
-                        onClick={() => setShowList(true)}
-                        className="bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold px-4 rounded-xl border border-slate-600 flex items-center justify-center transition-all active:scale-95"
-                        title="Ver lista y editar"
-                    >
-                        <List className="w-6 h-6" />
-                    </button>
-
+                <div className="p-4 bg-slate-800 border-t border-slate-700 animate-in slide-in-from-bottom-full shrink-0">
                     <button 
                         onClick={handleSync}
                         disabled={isSyncing}
-                        className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-900/50 flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-50"
+                        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-900/50 flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-50"
                     >
                         {isSyncing ? (
                             <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
@@ -274,54 +243,6 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack }) => {
                         )}
                         Sincronizar Bitácora ({unsyncedDrafts.length})
                     </button>
-                </div>
-            )}
-
-            {/* --- LIST / MANAGEMENT MODAL --- */}
-            {showList && (
-                <div className="absolute inset-0 z-50 bg-slate-900/90 backdrop-blur-md flex flex-col animate-in slide-in-from-bottom-full duration-300">
-                    {/* Modal Header */}
-                    <div className="p-4 bg-slate-800 border-b border-slate-700 flex justify-between items-center shrink-0">
-                        <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                            <List className="w-5 h-5 text-indigo-400" />
-                            Borradores Pendientes
-                        </h3>
-                        <button onClick={() => setShowList(false)} className="p-2 bg-slate-700 rounded-full text-slate-400 hover:text-white">
-                            <X className="w-6 h-6" />
-                        </button>
-                    </div>
-
-                    {/* List Content */}
-                    <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                        {unsyncedDrafts.sort((a,b) => b.createdAt - a.createdAt).map(draft => (
-                            <div key={draft.id} className="bg-slate-800 border border-slate-700 p-4 rounded-xl flex justify-between items-center animate-in fade-in slide-in-from-bottom-2">
-                                <div>
-                                    <div className="font-mono font-bold text-lg text-white">{draft.logisticsLabel}</div>
-                                    <div className="text-xs text-slate-500 flex items-center gap-2">
-                                        {new Date(draft.createdAt).toLocaleTimeString()}
-                                        <span className="bg-indigo-500/20 text-indigo-300 px-1.5 rounded text-[10px]">Pendiente</span>
-                                    </div>
-                                </div>
-                                <button 
-                                    onClick={() => handleDeleteDraft(draft.id)}
-                                    className="p-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-colors active:scale-95 border border-red-500/20"
-                                >
-                                    <Trash2 className="w-5 h-5" />
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Modal Footer (Clear All) */}
-                    <div className="p-4 bg-slate-800 border-t border-slate-700 shrink-0">
-                        <button 
-                            onClick={handleClearAllDrafts}
-                            className="w-full bg-red-950/50 hover:bg-red-900/50 border border-red-900 text-red-400 font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95"
-                        >
-                            <AlertTriangle className="w-5 h-5" />
-                            Descartar Todo ({unsyncedDrafts.length})
-                        </button>
-                    </div>
                 </div>
             )}
         </div>

@@ -1,11 +1,12 @@
 
 import React from 'react';
-import { Pause, Package, Zap, Keyboard, AlertTriangle, Check, Volume2, Save, XCircle, X, RotateCcw } from 'lucide-react';
+import { Pause, Package, Zap, Keyboard, AlertTriangle, Check, Volume2, Save, XCircle, X, RotateCcw, Camera } from 'lucide-react';
 import { CountingSession } from '../types';
 import { ExpirationModal } from './ExpirationModal';
 import { useScanner } from '../hooks/useScanner';
 import { ScanItem } from './ScanItem';
 import { NumericKeypad } from './NumericKeypad';
+import { CameraScanner } from './CameraScanner';
 
 interface ScannerProps {
   session: CountingSession;
@@ -53,12 +54,22 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
              <div className="bg-white/10 p-1.5 rounded-lg"><Package className="w-4 h-4" /></div>
              <div className="font-mono font-bold text-sm tracking-widest">{session.erpOrder}</div>
         </div>
-        <button 
-            onClick={() => state.setShowConfirmModal(true)} 
-            className="bg-white/10 hover:bg-red-500/80 text-white/80 hover:text-white px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all backdrop-blur-md"
-        >
-            <Pause className="w-3 h-3" /> <span className="hidden md:inline">Pausar</span>
-        </button>
+        <div className="flex items-center gap-2">
+            {/* CAMERA BUTTON (EMERGENCY) */}
+            <button 
+                onClick={() => state.setIsCameraOpen(true)}
+                className="bg-white/10 hover:bg-white/20 text-white p-2 rounded-lg transition-all backdrop-blur-md"
+                title="Cámara (Emergencia)"
+            >
+                <Camera className="w-4 h-4" />
+            </button>
+            <button 
+                onClick={() => state.setShowConfirmModal(true)} 
+                className="bg-white/10 hover:bg-red-500/80 text-white/80 hover:text-white px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all backdrop-blur-md"
+            >
+                <Pause className="w-3 h-3" /> <span className="hidden md:inline">Pausar</span>
+            </button>
+        </div>
       </header>
 
       {/* --- MAIN ZEN AREA --- */}
@@ -139,7 +150,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
         </div>
 
         {/* --- FLOATING UNDO ACTION --- */}
-        {state.lastScanId && !state.isMultiplierOpen && !state.manualMode && (
+        {state.lastScanId && !state.isMultiplierOpen && !state.manualMode && !state.isCameraOpen && (
             <div className="absolute bottom-24 left-0 right-0 flex justify-center z-30 pointer-events-none animate-in slide-in-from-bottom-4 fade-in">
                 <button 
                     onClick={actions.handleUndoLastScan}
@@ -186,6 +197,14 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
             </div>
         </div>
       </div>
+
+      {/* CAMERA SCANNER MODAL */}
+      {state.isCameraOpen && (
+        <CameraScanner 
+            onScan={(code) => actions.handleExternalScan(code)} 
+            onClose={() => state.setIsCameraOpen(false)}
+        />
+      )}
 
       {/* MULTIPLIER KEYPAD MODAL */}
       {state.isMultiplierOpen && (

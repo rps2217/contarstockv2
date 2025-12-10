@@ -20,6 +20,9 @@ export const useScanner = (
     const [manualMode, setManualMode] = useState(false);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     
+    // NEW: Camera Mode
+    const [isCameraOpen, setIsCameraOpen] = useState(false);
+
     // NEW: Multiplier Mode
     const [multiplier, setMultiplier] = useState(1);
     const [isMultiplierOpen, setIsMultiplierOpen] = useState(false);
@@ -127,7 +130,7 @@ export const useScanner = (
             if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return; 
             
             // Ignore if modals are open
-            if (showConfirmModal || showExpirationModal || isMultiplierOpen || manualMode) return;
+            if (showConfirmModal || showExpirationModal || isMultiplierOpen || manualMode || isCameraOpen) return;
 
             const now = Date.now();
             const timeDiff = now - lastKeyTime.current;
@@ -157,7 +160,7 @@ export const useScanner = (
 
         window.addEventListener('keydown', handleGlobalKeyDown);
         return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-    }, [showConfirmModal, showExpirationModal, manualMode, isMultiplierOpen, multiplier]); 
+    }, [showConfirmModal, showExpirationModal, manualMode, isMultiplierOpen, multiplier, isCameraOpen]); 
 
 
     // --- HANDLERS ---
@@ -236,6 +239,11 @@ export const useScanner = (
 
     const getProductName = (code: string) => productsMap?.[code]?.name || 'Producto Desconocido';
 
+    // Helper to process a scan from an external source (like Camera)
+    const handleExternalScan = (code: string) => {
+        processScan(code);
+    };
+
     return {
         state: {
             feedback,
@@ -245,6 +253,7 @@ export const useScanner = (
             showExpirationModal,
             isMultiplierOpen, setIsMultiplierOpen,
             multiplier, setMultiplier,
+            isCameraOpen, setIsCameraOpen, // Exported
             pendingProductName,
             lastScanId // Exported for UI conditional rendering
         },
@@ -252,13 +261,14 @@ export const useScanner = (
         actions: {
             handleManualSubmit,
             handleDeleteScan,
-            handleUndoLastScan, // Exported
+            handleUndoLastScan,
             handleQuantityChange,
             handleRegisterPending,
             handleDiscard,
             handleExpirationComplete,
             handleToggleIncident,
             getProductName,
+            handleExternalScan // Exported
         }
     };
 };
