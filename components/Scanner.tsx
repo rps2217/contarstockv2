@@ -55,14 +55,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
              <div className="font-mono font-bold text-sm tracking-widest">{session.erpOrder}</div>
         </div>
         <div className="flex items-center gap-2">
-            {/* CAMERA BUTTON (EMERGENCY) */}
-            <button 
-                onClick={() => state.setIsCameraOpen(true)}
-                className="bg-white/10 hover:bg-white/20 text-white p-2 rounded-lg transition-all backdrop-blur-md"
-                title="Cámara (Emergencia)"
-            >
-                <Camera className="w-4 h-4" />
-            </button>
+            {/* PAUSE BUTTON (Right Aligned) */}
             <button 
                 onClick={() => state.setShowConfirmModal(true)} 
                 className="bg-white/10 hover:bg-red-500/80 text-white/80 hover:text-white px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all backdrop-blur-md"
@@ -180,6 +173,15 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
 
                 {/* Controls */}
                 <div className="flex gap-2">
+                    {/* CAMERA BUTTON (Moved to footer for accessibility) */}
+                    <button 
+                        onClick={() => state.setIsCameraOpen(true)}
+                        className="h-12 w-12 rounded-xl bg-slate-800 text-blue-400 border border-slate-700 hover:bg-slate-700 flex items-center justify-center shadow-lg active:scale-95 transition-all"
+                        title="Cámara"
+                    >
+                        <Camera className="w-6 h-6" />
+                    </button>
+
                     <button 
                         onClick={() => state.setIsMultiplierOpen(true)}
                         className={`h-12 px-4 rounded-xl font-bold text-lg flex items-center justify-center transition-all ${state.multiplier > 1 ? 'bg-yellow-500 text-black' : 'bg-white/10 text-white hover:bg-white/20'}`}
