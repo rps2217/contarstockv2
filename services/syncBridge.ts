@@ -1,4 +1,5 @@
-import { fetchProductsFromCloud, fetchCloudData, SHEET_COLUMNS, syncToAppSheet, syncProductsToAppSheet, syncReceptionToAppSheet } from './appsheet';
+
+import { fetchProductsFromCloud, fetchCloudData, fetchReceptionData, SHEET_COLUMNS, syncToAppSheet, syncProductsToAppSheet, syncReceptionToAppSheet } from './appsheet';
 import { db } from '../db';
 import { sanitizeBarcode, generateUUID } from './utils';
 import { Product, CountingSession, ScanRecord } from '../types';
@@ -28,6 +29,54 @@ export const importProductsFromAppSheet = async (): Promise<number> => {
     }
     return products.length;
 };
+
+export const restoreReceptionFromCloud = async (): Promise<number> => {
+    const rows = await fetchReceptionData();
+    let restoredCount = 0;
+
+    for (const row of rows) {
+        const id = row["ID_RECEPCION"];
+        const label = row["ETIQUETA"];
+        const status = row["ESTADO"]; // 'PENDIENTE' or 'PROCESADO'
+        const dateStr = row["FECHA_HORA"];
+
+        if (!id || !label) continue;
+
+        // Check if exists locally
+        const exists = await db.sessions.get(id);
+        if (exists) {
+            // Optional: Update status if cloud says it's processed but local says draft
+            if (status === 'PROCESADO' && exists.status === 'draft') {
+                await db.sessions.update(id, { status: 'completed' });
+            }
+            continue;
+        }
+
+        // Create new session from cloud data
+        // If 'PENDIENTE', we create it as 'draft' so the user can start counting it.
+        // If 'PROCESADO', we create it as 'completed' just for history (or 'active' if you want to edit).
+        // Safest is to treat PROCESADO as completed.
+        
+        const localStatus = status === 'PENDIENTE' ? 'draft' : 'completed';
+        
+        const newSession: CountingSession = {
+            id: id,
+            erpOrder: 'PENDIENTE', // Reception doesn't necessarily have ERP yet
+            logisticsLabel: label,
+            createdAt: dateStr ? new Date(dateStr).getTime() : Date.now(),
+            status: localStatus,
+            totalUnits: 0,
+            totalSKUs: 0,
+            lastSyncTimestamp: Date.now() // It came from cloud, so it is synced
+        };
+
+        await db.sessions.add(newSession);
+        restoredCount++;
+    }
+
+    return restoredCount;
+};
+
 
 // Helper for date parsing
 const parseFlexibleDate = (dateVal: any): number => {

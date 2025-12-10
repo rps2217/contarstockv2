@@ -1,10 +1,10 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { ChevronLeft, Barcode, CheckCircle2, WifiOff, CloudUpload, Box, Zap, Layers, Hash } from 'lucide-react';
+import { ChevronLeft, Barcode, CheckCircle2, WifiOff, CloudUpload, CloudDownload, Box, Zap, Layers, Hash, Loader2 } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import * as storage from '../services/storage';
-import { syncReceptionToAppSheet } from '../services/syncBridge';
+import { syncReceptionToAppSheet, restoreReceptionFromCloud } from '../services/syncBridge';
 import { SoundFX } from '../services/audio';
 
 interface ReceptionProps {
@@ -16,6 +16,7 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack }) => {
     const [lastScanned, setLastScanned] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [isSyncing, setIsSyncing] = useState(false);
+    const [isRestoring, setIsRestoring] = useState(false);
 
     // Queries
     // Count ONLY sessions that are in 'draft' mode (not yet activated)
@@ -94,6 +95,19 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack }) => {
         }
     };
 
+    const handleRestore = async () => {
+        if (!confirm('¿Descargar historial de recepción desde la nube? Esto traerá bultos escaneados en otros dispositivos.')) return;
+        setIsRestoring(true);
+        try {
+            const count = await restoreReceptionFromCloud();
+            alert(`Descarga completada. ${count} nuevos registros importados.`);
+        } catch (e: any) {
+            alert(`Error de descarga: ${e.message}`);
+        } finally {
+            setIsRestoring(false);
+        }
+    };
+
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             const target = e.target as HTMLElement;
@@ -123,7 +137,15 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack }) => {
                     <ChevronLeft className="w-6 h-6" />
                 </button>
                 <div className="font-bold uppercase tracking-widest text-sm text-slate-400">Recepción Ciega</div>
-                <div className="w-10"></div>
+                
+                <button 
+                    onClick={handleRestore}
+                    disabled={isRestoring}
+                    className="p-2 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white rounded-lg transition-colors flex items-center gap-2 text-xs font-bold border border-indigo-500/30 disabled:opacity-50"
+                >
+                    {isRestoring ? <Loader2 className="w-4 h-4 animate-spin" /> : <CloudDownload className="w-4 h-4" />}
+                    <span className="hidden md:inline">Descargar Bitácora</span>
+                </button>
             </div>
 
             {/* Main Content */}

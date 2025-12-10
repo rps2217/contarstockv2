@@ -138,6 +138,19 @@ export const syncReceptionToAppSheet = async (sessions: CountingSession[]): Prom
     }
 };
 
+export const fetchReceptionData = async (): Promise<any[]> => {
+    const settings = getSettings();
+    const config = settings.appSheetConfig;
+    if (!config?.receptionTableName) throw new Error("Falta configurar la Tabla de Recepción en Ajustes.");
+    
+    const result = await sendToAppSheet(config, config.receptionTableName, {
+        Action: "Find",
+        Properties: { Locale: "es-CL", Timezone: "UTC" },
+        Rows: []
+    });
+    return Array.isArray(result) ? result : [];
+};
+
 export const fetchProductsFromCloud = async (): Promise<any[]> => {
     const settings = getSettings(); const config = settings.appSheetConfig;
     if (!config?.productsTableName) throw new Error("Falta tabla de productos.");
