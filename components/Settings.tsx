@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Settings as SettingsIcon, Volume2, VolumeX, Vibrate, Zap, Moon, Sun, Monitor, AlertTriangle, ArrowLeft, Cloud, Key, Database, Lock, Check, Eye, Shield, FileText, Package, AlertOctagon, Activity, CheckCircle, XCircle, Share2, Download, QrCode, Copy, Save, Upload } from 'lucide-react';
+import { Settings as SettingsIcon, Volume2, VolumeX, Vibrate, Zap, Moon, Sun, Monitor, AlertTriangle, ArrowLeft, Cloud, Key, Database, Lock, Check, Eye, Shield, FileText, Package, AlertOctagon, Activity, CheckCircle, XCircle, Share2, Download, QrCode, Copy, Save, Upload, RefreshCw } from 'lucide-react';
 import * as storage from '../services/storage';
 import * as settingsService from '../services/settings';
 import { createFullBackup, restoreFullBackup } from '../services/backupService';
@@ -81,6 +81,14 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
           setIsRestoring(false);
           e.target.value = ''; // Reset
       }
+  };
+
+  // --- HARD RESET HANDLER ---
+  const handleHardReset = () => {
+    if (confirm("¿Forzar actualización?\n\nEsto recargará la aplicación ignorando el caché del navegador para asegurar que tengas la última versión.")) {
+        // Cache busting reload technique
+        window.location.href = '/?t=' + Date.now();
+    }
   };
 
   // --- SHARE LOGIC ---
@@ -278,16 +286,21 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
             </form>
         </section>
 
-        {/* DIAGNOSTICS */}
+        {/* DIAGNOSTICS & MAINTENANCE */}
         <section className="bg-slate-50 rounded-2xl border border-slate-200 p-6">
             <h2 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
                 <Activity className="w-5 h-5 text-emerald-600" /> Diagnóstico y Mantenimiento
             </h2>
-            <p className="text-sm text-slate-500 mb-4">Ejecute pruebas unitarias para verificar la integridad lógica del sistema.</p>
+            <p className="text-sm text-slate-500 mb-4">Herramientas para verificar integridad y actualizar la aplicación.</p>
             
-            <button onClick={handleRunDiagnostics} className="bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 font-bold py-2 px-4 rounded-lg text-sm shadow-sm transition-colors">
-                Ejecutar Pruebas del Sistema v1.0
-            </button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <button onClick={handleRunDiagnostics} className="bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 font-bold py-3 px-4 rounded-xl text-sm shadow-sm transition-colors flex items-center justify-center gap-2">
+                    <Activity className="w-4 h-4" /> Ejecutar Pruebas
+                </button>
+                <button onClick={handleHardReset} className="bg-white border border-red-200 text-red-600 hover:bg-red-50 font-bold py-3 px-4 rounded-xl text-sm shadow-sm transition-colors flex items-center justify-center gap-2">
+                    <RefreshCw className="w-4 h-4" /> Forzar Actualización
+                </button>
+            </div>
 
             {diagResults && (
                 <div className="mt-4 bg-white p-4 rounded-xl border border-slate-200 animate-in fade-in">
