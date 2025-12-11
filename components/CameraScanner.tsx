@@ -1,6 +1,6 @@
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
+import { Html5Qrcode } from 'html5-qrcode';
 import { X, Camera, Zap, AlertTriangle } from 'lucide-react';
 
 interface CameraScannerProps {
@@ -15,41 +15,45 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose })
     const [lastScanned, setLastScanned] = useState<string | null>(null);
 
     useEffect(() => {
+        // Initialize scanner instance
+        const scannerId = "reader";
+        // Ensure we don't create multiple instances if re-renders happen quickly
+        if (!scannerRef.current) {
+             scannerRef.current = new Html5Qrcode(scannerId);
+        }
+        
         const startScanner = async () => {
-            try {
-                // Initialize the scanner with specific formats to improve performance
-                const scanner = new Html5Qrcode("reader");
-                scannerRef.current = scanner;
+            if (!scannerRef.current) return;
 
+            try {
                 const config = {
-                    fps: 10, // Frame per second
+                    fps: 10,
                     qrbox: { width: 250, height: 250 },
                     aspectRatio: 1.0
                 };
 
-                await scanner.start(
-                    { facingMode: "environment" }, // Rear camera
+                await scannerRef.current.start(
+                    { facingMode: "environment" }, 
                     config,
                     (decodedText) => {
-                        // Success callback
                         if (decodedText !== lastScanned) {
                             setLastScanned(decodedText);
-                            // Slight vibration for feedback
                             if (navigator.vibrate) navigator.vibrate(50);
                             onScan(decodedText);
-                            
-                            // Prevent rapid duplicate scans of the same code immediately
+                            // Prevent rapid duplicates
                             setTimeout(() => setLastScanned(null), 2000);
                         }
                     },
                     (errorMessage) => {
-                        // Error callback (ignore frequent scanning errors)
+                        // Ignore frame parse errors
                     }
                 );
             } catch (err: any) {
                 console.error("Error starting camera:", err);
-                setError("No se pudo acceder a la cámara. Verifique permisos o use HTTPS.");
-                setIsScanning(false);
+                // Only set error if we are still mounted/scanning
+                if (isScanning) {
+                    setError("No se pudo acceder a la cámara. Verifique permisos o use HTTPS.");
+                }
             }
         };
 
@@ -58,13 +62,18 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose })
         }
 
         return () => {
-            // Cleanup: Stop scanning when component unmounts
-            if (scannerRef.current) {
-                scannerRef.current.stop().catch(err => console.error("Error stopping scanner", err));
-                scannerRef.current.clear();
+            // FIX: Handle async stop properly before clearing
+            if (scannerRef.current && scannerRef.current.isScanning) {
+                scannerRef.current.stop()
+                    .then(() => {
+                        return scannerRef.current?.clear();
+                    })
+                    .catch((err) => {
+                        console.warn("Scanner stop/clear warning:", err);
+                    });
             }
         };
-    }, [isScanning]);
+    }, [isScanning]); // Removed lastScanned from dependency to prevent restart loops
 
     return (
         <div className="fixed inset-0 z-[80] bg-black flex flex-col animate-in fade-in duration-300">
@@ -93,6 +102,7 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose })
                     </div>
                 ) : (
                     <>
+                        {/* The HTML element where scanner renders */}
                         <div id="reader" className="w-full h-full object-cover"></div>
                         
                         {/* Overlay Guidelines */}
