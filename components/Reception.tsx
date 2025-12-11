@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { ChevronLeft, Barcode, CheckCircle2, WifiOff, CloudUpload, CloudDownload, Box, Zap, Layers, Hash, Loader2, Camera, Ban } from 'lucide-react';
+import { ChevronLeft, Barcode, CheckCircle2, WifiOff, CloudUpload, CloudDownload, Box, Zap, Layers, Hash, Loader2, Camera, Ban, List, Trash2, X, Eye } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import * as storage from '../services/storage';
@@ -19,11 +19,12 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack }) => {
     const [isSyncing, setIsSyncing] = useState(false);
     const [isRestoring, setIsRestoring] = useState(false);
     const [isCameraOpen, setIsCameraOpen] = useState(false);
+    const [showQueueModal, setShowQueueModal] = useState(false);
 
     // Queries
     // Count ONLY sessions that are in 'draft' mode (not yet activated)
     const draftCount = useLiveQuery(() => db.sessions.where('status').equals('draft').count(), [], 0);
-    const unsyncedDrafts = useLiveQuery(() => db.sessions.where('status').equals('draft').and(s => !s.lastSyncTimestamp).toArray(), [], []);
+    const unsyncedDrafts = useLiveQuery(() => db.sessions.where('status').equals('draft').and(s => !s.lastSyncTimestamp).reverse().toArray(), [], []);
 
     // --- SMART GROUPING LOGIC ---
     // Detects lots based on common prefixes
@@ -100,8 +101,32 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack }) => {
         setInputValue('');
     };
 
+    // --- QUEUE MANAGEMENT ---
+    const handleDeleteDraft = async (id: string) => {
+        try {
+            await db.sessions.delete(id);
+            SoundFX.play('delete');
+        } catch (e) {
+            console.error("Error deleting draft", e);
+        }
+    };
+
+    const handleDiscardQueue = async () => {
+        if (!unsyncedDrafts || unsyncedDrafts.length === 0) return;
+        if (!confirm(`¿Estás seguro de eliminar los ${unsyncedDrafts.length} bultos de la cola? Esta acción no se puede deshacer.`)) return;
+        
+        try {
+            const ids = unsyncedDrafts.map(s => s.id);
+            await db.sessions.bulkDelete(ids);
+            SoundFX.play('delete');
+            setShowQueueModal(false);
+        } catch (e) {
+            alert("Error al vaciar la cola");
+        }
+    };
+
     const handleSync = async () => {
-        if (unsyncedDrafts.length === 0) return;
+        if (!unsyncedDrafts || unsyncedDrafts.length === 0) return;
         setIsSyncing(true);
         try {
             await syncReceptionToAppSheet(unsyncedDrafts);
@@ -130,7 +155,7 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack }) => {
         const handleKeyDown = (e: KeyboardEvent) => {
             const target = e.target as HTMLElement;
             // Don't capture keys if camera is open to avoid conflicts
-            if (isCameraOpen) return;
+            if (isCameraOpen || showQueueModal) return;
             if (target.tagName === 'INPUT') return;
 
             const now = Date.now();
@@ -147,7 +172,7 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack }) => {
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isCameraOpen]);
+    }, [isCameraOpen, showQueueModal]);
 
     return (
         <div className="flex flex-col h-screen bg-slate-900 text-white">
@@ -187,9 +212,20 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack }) => {
                         </div>
                     )}
 
-                    {/* Counter */}
+                    {/* Counter Card */}
                     <div className="bg-white/5 rounded-3xl p-6 w-full max-w-sm border border-white/10 relative overflow-hidden group mb-8">
                         <div className="absolute top-0 right-0 p-16 bg-blue-500/20 rounded-full blur-3xl -mr-8 -mt-8"></div>
+                        
+                        {/* Queue Management Button */}
+                        <div className="absolute top-4 right-4 z-20">
+                            <button 
+                                onClick={() => setShowQueueModal(true)}
+                                className="p-2 bg-white/10 hover:bg-blue-600 rounded-lg text-slate-300 hover:text-white transition-all flex items-center gap-2 text-xs font-bold"
+                            >
+                                <List className="w-4 h-4" /> <span className="hidden sm:inline">Ver Lista</span>
+                            </button>
+                        </div>
+
                         <div className="relative z-10 text-center">
                             <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Bultos Recibidos</div>
                             <div className="text-7xl font-black text-white flex items-center justify-center gap-2">
@@ -262,7 +298,7 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack }) => {
             </div>
 
             {/* Sync Footer */}
-            {unsyncedDrafts.length > 0 && (
+            {unsyncedDrafts && unsyncedDrafts.length > 0 && (
                 <div className="p-4 bg-slate-800 border-t border-slate-700 animate-in slide-in-from-bottom-full shrink-0">
                     <button 
                         onClick={handleSync}
@@ -288,6 +324,74 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack }) => {
                     }} 
                     onClose={() => setIsCameraOpen(false)}
                 />
+            )}
+
+            {/* QUEUE MANAGEMENT MODAL */}
+            {showQueueModal && (
+                <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-slate-900 w-full max-w-lg rounded-3xl shadow-2xl border border-slate-800 flex flex-col max-h-[85vh] animate-in slide-in-from-bottom-8">
+                        {/* Header */}
+                        <div className="p-4 border-b border-slate-800 flex justify-between items-center">
+                            <div>
+                                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                                    <List className="w-5 h-5 text-blue-500" /> Cola de Recepción
+                                </h2>
+                                <p className="text-slate-400 text-xs">Items pendientes de sincronización</p>
+                            </div>
+                            <button onClick={() => setShowQueueModal(false)} className="p-2 text-slate-400 hover:text-white rounded-full hover:bg-slate-800">
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+
+                        {/* List */}
+                        <div className="flex-1 overflow-y-auto p-4 space-y-2 no-scrollbar">
+                            {(!unsyncedDrafts || unsyncedDrafts.length === 0) ? (
+                                <div className="text-center py-12 text-slate-500">
+                                    <Box className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                                    <p>La cola está vacía.</p>
+                                </div>
+                            ) : (
+                                unsyncedDrafts.map((draft, idx) => (
+                                    <div key={draft.id} className="bg-slate-800 p-3 rounded-xl flex justify-between items-center group animate-in slide-in-from-right-2" style={{ animationDelay: `${Math.min(idx * 0.05, 0.5)}s` }}>
+                                        <div className="flex items-center gap-3 overflow-hidden">
+                                            <div className="bg-slate-700 text-slate-400 w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0">
+                                                {unsyncedDrafts.length - idx}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <div className="font-mono font-bold text-white truncate text-sm">{draft.logisticsLabel}</div>
+                                                <div className="text-[10px] text-slate-500">{new Date(draft.createdAt).toLocaleTimeString()}</div>
+                                            </div>
+                                        </div>
+                                        <button 
+                                            onClick={() => handleDeleteDraft(draft.id)}
+                                            className="p-2 text-slate-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                                            title="Eliminar este bulto"
+                                        >
+                                            <Trash2 className="w-5 h-5" />
+                                        </button>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+                        {/* Footer Actions */}
+                        <div className="p-4 border-t border-slate-800 grid grid-cols-2 gap-3 bg-slate-900/50 rounded-b-3xl">
+                             <button 
+                                onClick={handleDiscardQueue}
+                                disabled={!unsyncedDrafts || unsyncedDrafts.length === 0}
+                                className="bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/20 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <Trash2 className="w-4 h-4" /> Vaciar Todo
+                            </button>
+                            <button 
+                                onClick={() => setShowQueueModal(false)}
+                                className="bg-slate-800 text-white hover:bg-slate-700 py-3 rounded-xl font-bold text-sm transition-all"
+                            >
+                                Cerrar
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
