@@ -14,7 +14,10 @@ export default defineConfig(({ mode }) => {
         react(),
         VitePWA({
           registerType: 'autoUpdate',
-          includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+          devOptions: {
+            enabled: true
+          },
+          includeAssets: ['favicon.ico', 'pwa-icon.svg'],
           manifest: {
             name: 'LogiCount Pro',
             short_name: 'LogiCount',
@@ -23,17 +26,18 @@ export default defineConfig(({ mode }) => {
             background_color: '#0f172a',
             display: 'standalone',
             orientation: 'portrait',
+            start_url: '/',
             icons: [
               {
-                src: 'pwa-192x192.png',
+                src: 'pwa-icon.svg',
                 sizes: '192x192',
-                type: 'image/png',
+                type: 'image/svg+xml',
                 purpose: 'any maskable'
               },
               {
-                src: 'pwa-512x512.png',
+                src: 'pwa-icon.svg',
                 sizes: '512x512',
-                type: 'image/png',
+                type: 'image/svg+xml',
                 purpose: 'any maskable'
               }
             ]

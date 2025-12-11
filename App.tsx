@@ -11,6 +11,7 @@ import { Settings } from './components/Settings';
 import { Reception } from './components/Reception';
 import { Login } from './components/Login';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { InstallPrompt } from './components/InstallPrompt';
 import * as storage from './services/storage';
 import { db } from './db';
 import { SYNC_ENGINE_VERSION } from './services/appsheet';
@@ -132,7 +133,12 @@ const AppContent: React.FC = () => {
 
   // --- AUTH CHECK ---
   if (!isAuthenticated) {
-      return <Login onLoginSuccess={handleLoginSuccess} />;
+      return (
+        <>
+            <Login onLoginSuccess={handleLoginSuccess} />
+            <InstallPrompt />
+        </>
+      );
   }
 
   // --- APP RENDER ---
@@ -170,6 +176,7 @@ const AppContent: React.FC = () => {
         {view === 'settings' && <Settings onBack={() => setView('dashboard')} onSettingsChanged={updateSettings} />}
       </main>
 
+      <InstallPrompt />
       <MobileNav view={view} setView={setView} settings={settings} />
     </div>
   );
