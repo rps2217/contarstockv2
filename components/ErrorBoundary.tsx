@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 
 interface Props {
@@ -11,19 +11,19 @@ interface State {
   errorInfo: ErrorInfo | null;
 }
 
-export class ErrorBoundary extends Component<Props, State> {
-  public state: State = {
+export class ErrorBoundary extends React.Component<Props, State> {
+  state: State = {
     hasError: false,
     error: null,
     errorInfo: null
   };
 
-  public static getDerivedStateFromError(error: Error): Partial<State> {
+  static getDerivedStateFromError(error: Error): Partial<State> {
     // Update state so the next render will show the fallback UI.
     return { hasError: true, error };
   }
 
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
     this.setState({ errorInfo });
   }
@@ -34,13 +34,15 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   private handleClearCacheAndReload = () => {
-    if (window.confirm("¿Estás seguro? Esto forzará una recarga completa de la aplicación.")) {
-        // Simple redirect to root can sometimes solve state getting stuck in sub-routes or props
-        window.location.href = '/';
+    if (window.confirm("¿Estás seguro? Esto forzará una recarga completa de la aplicación y limpieza de caché.")) {
+        // Clear session storage as well
+        sessionStorage.clear();
+        // Force a fresh request by appending a timestamp, bypassing browser cache
+        window.location.href = '/?t=' + Date.now();
     }
   };
 
-  public render() {
+  render() {
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-sans">
@@ -74,7 +76,7 @@ export class ErrorBoundary extends Component<Props, State> {
                    onClick={this.handleClearCacheAndReload}
                    className="w-full bg-white hover:bg-slate-50 text-slate-600 font-bold py-3 rounded-xl flex items-center justify-center gap-2 border border-slate-200 transition-all active:scale-95"
                 >
-                   <Home className="w-5 h-5" /> Ir al Inicio
+                   <Home className="w-5 h-5" /> Borrar Caché y Reiniciar
                 </button>
               </div>
             </div>
