@@ -1,3 +1,4 @@
+
 {
   "name": "logicount-pro",
   "private": true,
@@ -23,7 +24,9 @@
     "jspdf-autotable": "^3.8.1",
     "xlsx": "^0.18.5",
     "react-window": "^1.8.10",
-    "react-virtualized-auto-sizer": "^1.0.24"
+    "react-virtualized-auto-sizer": "^1.0.24",
+    "html5-qrcode": "^2.3.8",
+    "jszip": "^3.10.1"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
