@@ -1,11 +1,12 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { ChevronLeft, Barcode, CheckCircle2, WifiOff, CloudUpload, CloudDownload, Box, Zap, Layers, Hash, Loader2 } from 'lucide-react';
+import { ChevronLeft, Barcode, CheckCircle2, WifiOff, CloudUpload, CloudDownload, Box, Zap, Layers, Hash, Loader2, Camera, Ban } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import * as storage from '../services/storage';
 import { syncReceptionToAppSheet, restoreReceptionFromCloud } from '../services/syncBridge';
 import { SoundFX } from '../services/audio';
+import { CameraScanner } from './CameraScanner';
 
 interface ReceptionProps {
     onBack: () => void;
@@ -17,6 +18,7 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack }) => {
     const [error, setError] = useState<string | null>(null);
     const [isSyncing, setIsSyncing] = useState(false);
     const [isRestoring, setIsRestoring] = useState(false);
+    const [isCameraOpen, setIsCameraOpen] = useState(false);
 
     // Queries
     // Count ONLY sessions that are in 'draft' mode (not yet activated)
@@ -60,6 +62,14 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack }) => {
     const buffer = useRef('');
     const lastKeyTime = useRef(0);
 
+    // --- SECURITY CHECK ---
+    const hasCameraSupport = useMemo(() => {
+        if (typeof navigator === 'undefined') return false;
+        const isSecure = typeof window !== 'undefined' ? window.isSecureContext : false;
+        const hasApi = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+        return isSecure && hasApi;
+    }, []);
+
     // --- SCANNER LOGIC ---
     const handleScan = async (code: string) => {
         const cleanCode = storage.sanitizeBarcode(code);
@@ -74,6 +84,14 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack }) => {
             setError(err.message === 'Etiqueta ya registrada' ? '¡Duplicado! Ya escaneado.' : 'Error al guardar');
             SoundFX.play('error');
         }
+    };
+
+    const handleCameraClick = () => {
+        if (!hasCameraSupport) {
+            alert("⚠️ CÁMARA BLOQUEADA POR EL NAVEGADOR\n\nCausa: Estás accediendo por una conexión no segura (HTTP).\n\nSolución:\n1. Usa 'localhost' si estás en el PC.\n2. Configura HTTPS para acceso móvil.\n3. O habilita las flags de 'Insecure origins' en chrome://flags.");
+            return;
+        }
+        setIsCameraOpen(true);
     };
 
     const handleManualSubmit = (e: React.FormEvent) => {
@@ -111,6 +129,8 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack }) => {
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             const target = e.target as HTMLElement;
+            // Don't capture keys if camera is open to avoid conflicts
+            if (isCameraOpen) return;
             if (target.tagName === 'INPUT') return;
 
             const now = Date.now();
@@ -127,7 +147,7 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack }) => {
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, []);
+    }, [isCameraOpen]);
 
     return (
         <div className="flex flex-col h-screen bg-slate-900 text-white">
@@ -212,9 +232,9 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack }) => {
                         </div>
                     )}
 
-                    {/* Manual Input */}
-                    <form onSubmit={handleManualSubmit} className="w-full max-w-sm">
-                        <div className="relative">
+                    {/* Input Area with Camera */}
+                    <div className="w-full max-w-sm flex gap-2">
+                         <form onSubmit={handleManualSubmit} className="flex-1 relative">
                             <Barcode className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5" />
                             <input 
                                 value={inputValue}
@@ -223,8 +243,21 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack }) => {
                                 className="w-full bg-slate-800 border border-slate-700 rounded-xl py-4 pl-12 pr-4 text-white placeholder:text-slate-600 outline-none focus:border-blue-500 transition-all font-mono"
                                 autoFocus
                             />
-                        </div>
-                    </form>
+                        </form>
+                        <button 
+                            type="button"
+                            onClick={handleCameraClick}
+                            className={`w-14 rounded-xl flex items-center justify-center transition-all border ${
+                                hasCameraSupport 
+                                ? 'bg-slate-800 text-blue-400 border-slate-700 hover:bg-slate-700' 
+                                : 'bg-red-900/20 text-red-500 border-red-900/50 cursor-not-allowed'
+                            }`}
+                            title={hasCameraSupport ? "Abrir Cámara" : "Cámara no disponible (Requiere HTTPS)"}
+                        >
+                            {hasCameraSupport ? <Camera className="w-6 h-6" /> : <Ban className="w-6 h-6" />}
+                        </button>
+                    </div>
+
                 </div>
             </div>
 
@@ -244,6 +277,17 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack }) => {
                         Sincronizar Bitácora ({unsyncedDrafts.length})
                     </button>
                 </div>
+            )}
+
+            {/* Camera Modal */}
+            {isCameraOpen && (
+                <CameraScanner 
+                    onScan={(code) => {
+                        setIsCameraOpen(false);
+                        handleScan(code);
+                    }} 
+                    onClose={() => setIsCameraOpen(false)}
+                />
             )}
         </div>
     );
