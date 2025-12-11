@@ -21,19 +21,20 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
       actions 
   } = useScanner(session, onCloseSession, onDiscardSession);
 
-  // Determine Background Color based on Feedback State (Zen Mode Flash)
-  const getBgClass = () => {
+  // PERFORMANCE OPTIMIZATION: 
+  // Instead of changing the root container class (which triggers layout recalc for children),
+  // we use a dedicated absolute background layer for visual feedback.
+  const getFeedbackLayerClass = () => {
       if (state.feedback === 'success') {
-          // If the scanned item is an incident, show Amber/Orange instead of Green
-          if (data.lastScan?.isIncident) return 'bg-amber-600';
-          return 'bg-emerald-600';
+          if (data.lastScan?.isIncident) return 'bg-amber-600 opacity-100';
+          return 'bg-emerald-600 opacity-100';
       }
-      if (state.feedback === 'error') return 'bg-red-600';
-      if (state.feedback === 'undo') return 'bg-purple-600';
+      if (state.feedback === 'error') return 'bg-red-600 opacity-100';
+      if (state.feedback === 'undo') return 'bg-purple-600 opacity-100';
       
-      // Idle states
-      if (data.lastScan?.isIncident) return 'bg-amber-700'; // Keep amber if looking at an incident
-      return 'bg-slate-950'; // Default Zen Dark Mode
+      // Idle states (Backgrounds)
+      if (data.lastScan?.isIncident) return 'bg-amber-900 opacity-100'; 
+      return 'bg-slate-950 opacity-100'; 
   };
 
   const isUnknown = data.activeProductStats.isUnknown;
@@ -42,14 +43,8 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
   // SECURITY CHECK: Verify if browser allows Camera access (HTTPS required)
   const hasCameraSupport = useMemo(() => {
     if (typeof navigator === 'undefined') return false;
-    
-    // Check for Secure Context (HTTPS or localhost)
-    // We explicitly check window to avoid SSR issues, though this is a client app
     const isSecure = typeof window !== 'undefined' ? window.isSecureContext : false;
-    
-    // Check for API existence
     const hasApi = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
-    
     return isSecure && hasApi;
   }, []);
 
@@ -62,14 +57,19 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
   };
 
   const handleCloseMultiplier = () => {
-      // Safety: If user leaves it at 0, default to 1 on close
       if (state.multiplier === 0) state.setMultiplier(1);
       state.setIsMultiplierOpen(false);
   };
 
   return (
-    <div className={`fixed inset-0 z-50 flex flex-col text-white overflow-hidden font-sans transition-colors duration-200 ${getBgClass()}`}>
+    <div className="fixed inset-0 z-50 flex flex-col text-white overflow-hidden font-sans">
       
+      {/* 1. FEEDBACK LAYER (Separated for Performance) */}
+      <div 
+        className={`absolute inset-0 z-0 transition-colors duration-200 ease-out ${getFeedbackLayerClass()}`} 
+        style={{ willChange: 'background-color' }}
+      />
+
       {/* --- HEADER (Minimalist) --- */}
       <header className="h-14 px-4 flex justify-between items-center z-20 shrink-0 bg-black/20 backdrop-blur-sm">
         <div className="flex items-center gap-3 opacity-80">
@@ -77,7 +77,6 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
              <div className="font-mono font-bold text-sm tracking-widest">{session.erpOrder}</div>
         </div>
         <div className="flex items-center gap-2">
-            {/* PAUSE BUTTON (Right Aligned) */}
             <button 
                 onClick={() => state.setShowConfirmModal(true)} 
                 className="bg-white/10 hover:bg-red-500/80 text-white/80 hover:text-white px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all backdrop-blur-md"
@@ -88,12 +87,12 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
       </header>
 
       {/* --- MAIN ZEN AREA --- */}
-      <div className="flex-1 flex flex-col relative min-h-0">
+      <div className="flex-1 flex flex-col relative min-h-0 z-10">
         
         {/* CENTER CONTENT */}
-        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center z-10">
+        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
             {state.feedback === 'undo' ? (
-                 <div className="flex flex-col items-center animate-in zoom-in">
+                 <div className="flex flex-col items-center animate-in zoom-in duration-200">
                     <RotateCcw className="w-32 h-32 text-white mb-4" />
                     <h2 className="text-4xl font-black uppercase tracking-widest">Deshecho</h2>
                     <p className="text-white/70 mt-2">El último registro ha sido eliminado.</p>
@@ -147,7 +146,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
                             {/* QUANTITY DISPLAY (HERO) */}
                             <div className="flex flex-col items-center">
                                 <div className="text-[10px] md:text-xs font-bold uppercase tracking-[0.3em] text-white/50 mb-1">Total Acumulado</div>
-                                <div className="text-[7rem] md:text-[9rem] leading-none font-black tracking-tighter text-white drop-shadow-2xl">
+                                <div className="text-[7rem] md:text-[9rem] leading-none font-black tracking-tighter text-white drop-shadow-2xl font-mono">
                                     {data.activeProductStats.totalQty}
                                 </div>
                             </div>
@@ -195,7 +194,6 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
 
                 {/* Controls */}
                 <div className="flex gap-2">
-                    {/* CAMERA BUTTON (With Error Handling) */}
                     <button 
                         onClick={handleCameraClick}
                         className={`h-12 w-12 rounded-xl border flex items-center justify-center shadow-lg active:scale-95 transition-all ${
@@ -226,7 +224,8 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
         </div>
       </div>
 
-      {/* CAMERA SCANNER MODAL */}
+      {/* MODALS RENDER (Z-INDEX > 50) */}
+      
       {state.isCameraOpen && (
         <CameraScanner 
             onScan={(code) => actions.handleExternalScan(code)} 
@@ -234,7 +233,6 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
         />
       )}
 
-      {/* MULTIPLIER KEYPAD MODAL */}
       {state.isMultiplierOpen && (
           <div className="absolute inset-0 z-[60] flex flex-col justify-end bg-black/80 backdrop-blur-md animate-in fade-in">
               <div className="bg-slate-900 border-t border-slate-700 rounded-t-3xl shadow-2xl p-4 w-full animate-in slide-in-from-bottom-full">
@@ -250,7 +248,6 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
                     embedded={true}
                     onInput={(val) => {
                         const current = state.multiplier;
-                        // If current is 0, replace it with the new digit. Otherwise append.
                         const newValStr = current === 0 ? val : current.toString() + val;
                         const newVal = parseInt(newValStr);
                         if (newVal < 9999) state.setMultiplier(newVal);
@@ -262,7 +259,6 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
           </div>
       )}
 
-      {/* CONFIRM / EXIT MODAL */}
       {state.showConfirmModal && (
             <div className="absolute inset-0 bg-black/90 z-[70] flex items-center justify-center p-6 backdrop-blur-md animate-in fade-in">
                 <div className="w-full max-w-sm bg-slate-900 p-8 rounded-3xl border border-slate-700 shadow-2xl text-center">
@@ -277,15 +273,12 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
             </div>
       )}
 
-      {/* MANUAL ENTRY MODAL */}
       {state.manualMode && (
              <div className="absolute inset-0 bg-black/90 z-[60] flex items-center justify-center p-6 backdrop-blur-md animate-in fade-in">
                  <form onSubmit={actions.handleManualSubmit} className="w-full max-w-sm bg-slate-900 p-6 rounded-3xl border border-slate-700 shadow-2xl">
                      <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-3"><Keyboard className="w-6 h-6 text-blue-500" /> Ingreso Manual</h3>
                      <div className="relative">
                         <input 
-                            id="manual-barcode-input" 
-                            name="barcode" 
                             type="text" 
                             inputMode="numeric" 
                             pattern="[0-9]*" 

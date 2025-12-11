@@ -21,6 +21,15 @@
       /* Prevent pull-to-refresh on mobile which can disrupt scanning */
       body {
         overscroll-behavior-y: contain;
+        /* PERFORMANCE: Removes 300ms delay on touch devices */
+        touch-action: manipulation;
+        /* PERFORMANCE: Prevents text inflation on rotation */
+        -webkit-text-size-adjust: 100%;
+      }
+      
+      /* Hardware acceleration hints */
+      .transform-gpu {
+        transform: translateZ(0);
       }
     </style>
   <script type="importmap">

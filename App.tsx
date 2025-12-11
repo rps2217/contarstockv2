@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, memo } from 'react';
 import { ViewState, CountingSession, AppSettings } from './types';
 import { Dashboard } from './components/Dashboard';
 import { Scanner } from './components/Scanner';
@@ -102,7 +102,8 @@ const AppContent: React.FC = () => {
       setSettings(newSettings);
   };
 
-  const getThemeClass = () => {
+  // Performance: Memoize theme class to prevent recalculation on every render
+  const themeClass = useMemo(() => {
       switch (settings.theme) {
           case 'dark': return 'bg-slate-950 text-slate-200 selection:bg-blue-900 selection:text-white';
           case 'contrast': return 'bg-black text-yellow-400 font-mono tracking-wide selection:bg-yellow-400 selection:text-black';
@@ -110,7 +111,7 @@ const AppContent: React.FC = () => {
           case 'navy': return 'bg-[#0B1121] text-slate-300 selection:bg-indigo-900 selection:text-indigo-200 antialiased';
           default: return 'bg-[#eff3f8] text-slate-600 antialiased selection:bg-blue-100 selection:text-blue-800';
       }
-  };
+  }, [settings.theme]);
 
   // --- DB CRITICAL ERROR STATE ---
   if (dbError) {
@@ -164,7 +165,7 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className={`min-h-screen font-sans ${getThemeClass()} transition-colors duration-300`}>
+    <div className={`min-h-screen font-sans ${themeClass} transition-colors duration-300`}>
       <DesktopNav view={view} setView={setView} settings={settings} />
       
       <main className="w-full animate-in fade-in zoom-in-95 duration-300">
@@ -190,7 +191,7 @@ const App: React.FC = () => {
     );
 };
 
-// --- Extracted Components ---
+// --- Extracted Components (Memoized) ---
 
 interface NavProps {
   view: ViewState;
@@ -198,7 +199,7 @@ interface NavProps {
   settings: AppSettings;
 }
 
-const MobileNav: React.FC<NavProps> = ({ view, setView, settings }) => {
+const MobileNav = memo(({ view, setView, settings }: NavProps) => {
   const t = settings.theme;
   
   let navClass = "bg-white/90 border-white/20 text-slate-400 shadow-2xl shadow-slate-200/50"; 
@@ -217,9 +218,9 @@ const MobileNav: React.FC<NavProps> = ({ view, setView, settings }) => {
         </div>
     </nav>
   );
-};
+});
 
-const DesktopNav: React.FC<NavProps> = ({ view, setView, settings }) => {
+const DesktopNav = memo(({ view, setView, settings }: NavProps) => {
   const t = settings.theme;
   
   let navClass = "bg-white border-slate-200 text-slate-600";
@@ -248,7 +249,7 @@ const DesktopNav: React.FC<NavProps> = ({ view, setView, settings }) => {
       </div>
     </nav>
   );
-};
+});
 
 const NavButton = ({ active, onClick, icon, label, theme }: any) => {
     let activeColor = 'text-blue-600';
