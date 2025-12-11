@@ -14,7 +14,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { InstallPrompt } from './components/InstallPrompt';
 import * as storage from './services/storage';
 import { db } from './db';
-import { SYNC_ENGINE_VERSION } from './services/appsheet';
+import { SYNC_ENGINE_VERSION, processSyncQueue } from './services/appsheet';
 import { initPersistence } from './services/backupService';
 import { LayoutGrid, Database as DbIcon, History, Home, Box, AlertTriangle } from 'lucide-react';
 
@@ -64,6 +64,25 @@ const AppContent: React.FC = () => {
         }
     };
     restoreSession();
+
+    // 5. SYNC HEARTBEAT (ROBUSTNESS IMPROVEMENT)
+    // Check for pending items in queue every 60 seconds and try to push them if online
+    const syncInterval = setInterval(async () => {
+        if (navigator.onLine) {
+            const pending = await db.syncQueue.where('status').equals('pending').count();
+            if (pending > 0) {
+                console.log(`[Heartbeat] Intentando sincronizar ${pending} elementos pendientes...`);
+                try {
+                    await processSyncQueue();
+                } catch (e) {
+                    console.warn("[Heartbeat] Sync failed, will retry next cycle.");
+                }
+            }
+        }
+    }, 60000); // 1 minute
+
+    return () => clearInterval(syncInterval);
+
   }, []);
 
   const handleLoginSuccess = () => {

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { ChevronLeft, Barcode, CheckCircle2, WifiOff, CloudUpload, CloudDownload, Box, Zap, Layers, Hash, Loader2, Camera, Ban, List, Trash2, X, Eye } from 'lucide-react';
+import { ChevronLeft, Barcode, CheckCircle2, WifiOff, CloudUpload, CloudDownload, Box, Zap, Layers, Hash, Loader2, Camera, Ban, List, Trash2, X, Eye, Keyboard } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import * as storage from '../services/storage';
@@ -20,6 +20,7 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack }) => {
     const [isRestoring, setIsRestoring] = useState(false);
     const [isCameraOpen, setIsCameraOpen] = useState(false);
     const [showQueueModal, setShowQueueModal] = useState(false);
+    const [showManualInput, setShowManualInput] = useState(false);
 
     // Queries
     // Count ONLY sessions that are in 'draft' mode (not yet activated)
@@ -27,7 +28,6 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack }) => {
     const unsyncedDrafts = useLiveQuery(() => db.sessions.where('status').equals('draft').and(s => !s.lastSyncTimestamp).reverse().toArray(), [], []);
 
     // --- SMART GROUPING LOGIC ---
-    // Detects lots based on common prefixes
     const detectedLots = useMemo(() => {
         if (!unsyncedDrafts || unsyncedDrafts.length === 0) return [];
 
@@ -37,31 +37,25 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack }) => {
             const label = s.logisticsLabel;
             let groupKey = label;
 
-            // Logic adjusted for 26-digit standard
             if (label.length === 26) {
-                // Caso Estándar: 26 dígitos. Usamos los primeros 23 como Lote.
-                // Ignoramos los últimos 3 (secuencial 001, 002...)
                 groupKey = label.substring(0, 23);
             } else if (label.length > 8) {
-                // Heurística genérica para etiquetas largas
                 groupKey = label.substring(0, label.length - 3); 
             } else if (label.length > 5) {
-                // Etiquetas cortas
                 groupKey = label.substring(0, label.length - 1);
             }
 
             groups.set(groupKey, (groups.get(groupKey) || 0) + 1);
         });
 
-        // Convert to array and sort by count (descending)
         return Array.from(groups.entries())
             .map(([prefix, count]) => ({ prefix, count }))
             .sort((a, b) => b.count - a.count);
     }, [unsyncedDrafts]);
 
-    // Buffer for scanner
     const buffer = useRef('');
     const lastKeyTime = useRef(0);
+    const inputRef = useRef<HTMLInputElement>(null);
 
     // --- SECURITY CHECK ---
     const hasCameraSupport = useMemo(() => {
@@ -99,6 +93,14 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack }) => {
         e.preventDefault();
         handleScan(inputValue);
         setInputValue('');
+        setShowManualInput(false); // Hide keyboard after submit
+    };
+
+    const handleToggleManualInput = () => {
+        setShowManualInput(prev => !prev);
+        if (!showManualInput) {
+            setTimeout(() => inputRef.current?.focus(), 100);
+        }
     };
 
     // --- QUEUE MANAGEMENT ---
@@ -156,6 +158,7 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack }) => {
             const target = e.target as HTMLElement;
             // Don't capture keys if camera is open to avoid conflicts
             if (isCameraOpen || showQueueModal) return;
+            // If typing in the manual input, let it be
             if (target.tagName === 'INPUT') return;
 
             const now = Date.now();
@@ -195,7 +198,7 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack }) => {
 
             {/* Main Content */}
             <div className="flex-1 overflow-y-auto p-4 md:p-6 no-scrollbar">
-                <div className="flex flex-col items-center justify-center min-h-full">
+                <div className="flex flex-col items-center justify-center min-h-full pb-12">
                 
                     {lastScanned ? (
                         <div className="mb-8 animate-in zoom-in slide-in-from-bottom-4 duration-300 text-center">
@@ -268,30 +271,51 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack }) => {
                         </div>
                     )}
 
-                    {/* Input Area with Camera */}
-                    <div className="w-full max-w-sm flex gap-2">
-                         <form onSubmit={handleManualSubmit} className="flex-1 relative">
-                            <Barcode className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5" />
-                            <input 
-                                value={inputValue}
-                                onChange={(e) => setInputValue(e.target.value)}
-                                placeholder="Entrada Manual..."
-                                className="w-full bg-slate-800 border border-slate-700 rounded-xl py-4 pl-12 pr-4 text-white placeholder:text-slate-600 outline-none focus:border-blue-500 transition-all font-mono"
-                                autoFocus
-                            />
-                        </form>
-                        <button 
-                            type="button"
-                            onClick={handleCameraClick}
-                            className={`w-14 rounded-xl flex items-center justify-center transition-all border ${
-                                hasCameraSupport 
-                                ? 'bg-slate-800 text-blue-400 border-slate-700 hover:bg-slate-700' 
-                                : 'bg-red-900/20 text-red-500 border-red-900/50 cursor-not-allowed'
-                            }`}
-                            title={hasCameraSupport ? "Abrir Cámara" : "Cámara no disponible (Requiere HTTPS)"}
-                        >
-                            {hasCameraSupport ? <Camera className="w-6 h-6" /> : <Ban className="w-6 h-6" />}
-                        </button>
+                    {/* Input Controls */}
+                    <div className="w-full max-w-sm flex flex-col gap-3">
+                        {/* Toggle Manual Input - Prevents Virtual Keyboard on Mobile when not needed */}
+                        {!showManualInput ? (
+                             <div className="grid grid-cols-2 gap-3">
+                                <button 
+                                    onClick={handleToggleManualInput}
+                                    className="bg-slate-800 hover:bg-slate-700 text-white p-4 rounded-xl font-bold flex items-center justify-center gap-2 border border-slate-700 shadow-sm"
+                                >
+                                    <Keyboard className="w-5 h-5" /> Teclado
+                                </button>
+                                <button 
+                                    onClick={handleCameraClick}
+                                    className={`p-4 rounded-xl font-bold flex items-center justify-center gap-2 border shadow-sm transition-all ${
+                                        hasCameraSupport 
+                                        ? 'bg-slate-800 text-blue-400 border-slate-700 hover:bg-slate-700' 
+                                        : 'bg-red-900/10 text-red-500 border-red-900/30 opacity-50'
+                                    }`}
+                                >
+                                    {hasCameraSupport ? <Camera className="w-5 h-5" /> : <Ban className="w-5 h-5" />} Cámara
+                                </button>
+                             </div>
+                        ) : (
+                            <form onSubmit={handleManualSubmit} className="relative animate-in slide-in-from-bottom-2">
+                                <Barcode className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5" />
+                                <input 
+                                    ref={inputRef}
+                                    value={inputValue}
+                                    onChange={(e) => setInputValue(e.target.value)}
+                                    placeholder="Escriba código..."
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-xl py-4 pl-12 pr-12 text-white placeholder:text-slate-600 outline-none focus:border-blue-500 transition-all font-mono"
+                                />
+                                <button 
+                                    type="button" 
+                                    onClick={() => setShowManualInput(false)}
+                                    className="absolute right-2 top-2 p-2 text-slate-500 hover:text-white"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </form>
+                        )}
+                        
+                        <p className="text-center text-xs text-slate-600 mt-2">
+                            {showManualInput ? 'Presione Enter para registrar' : 'Escáner físico siempre activo'}
+                        </p>
                     </div>
 
                 </div>

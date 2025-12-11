@@ -31,7 +31,29 @@ export const useScanner = (
     const [pendingScanCode, setPendingScanCode] = useState<string | null>(null);
     const [showExpirationModal, setShowExpirationModal] = useState(false);
 
-    // Refs
+    // --- REFS FOR EVENT LISTENER STABILITY ---
+    // We use refs to track state inside the global event listener without triggering
+    // a re-bind of the listener on every state change. This is critical for scanner performance.
+    const stateRef = useRef({
+        showConfirmModal,
+        showExpirationModal,
+        manualMode,
+        isMultiplierOpen,
+        isCameraOpen
+    });
+
+    // Update ref whenever state changes
+    useEffect(() => {
+        stateRef.current = {
+            showConfirmModal,
+            showExpirationModal,
+            manualMode,
+            isMultiplierOpen,
+            isCameraOpen
+        };
+    }, [showConfirmModal, showExpirationModal, manualMode, isMultiplierOpen, isCameraOpen]);
+
+    // Refs for buffer
     const scannerBuffer = useRef<string>('');
     const lastKeyTime = useRef<number>(0);
     const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -129,38 +151,34 @@ export const useScanner = (
             // Ignore typing in input fields
             if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return; 
             
-            // Ignore if modals are open
-            if (showConfirmModal || showExpirationModal || isMultiplierOpen || manualMode || isCameraOpen) return;
+            // CHECK REFS INSTEAD OF DIRECT STATE DEPENDENCIES
+            const s = stateRef.current;
+            if (s.showConfirmModal || s.showExpirationModal || s.isMultiplierOpen || s.manualMode || s.isCameraOpen) return;
 
             const now = Date.now();
             const timeDiff = now - lastKeyTime.current;
             lastKeyTime.current = now;
 
-            // Scanner Logic:
-            // Scanners send keys very fast (< 30-50ms). Humans type slower.
-            // If timeDiff is large, it's likely a manual keypress or start of a new scan.
-            // We reset buffer if gap is too big to prevent phantom characters.
             if (timeDiff > 50) {
                 scannerBuffer.current = ''; 
             }
 
             if (e.key === 'Enter') {
-                // HID Scanners send 'Enter' at the end.
                 const code = scannerBuffer.current;
-                if (code.length > 1) { // Min length check
+                if (code.length > 1) { 
                     processScan(code);
                 }
                 scannerBuffer.current = '';
                 e.preventDefault(); 
             } else if (e.key.length === 1) {
-                // Only append printable characters
                 scannerBuffer.current += e.key;
             }
         };
 
         window.addEventListener('keydown', handleGlobalKeyDown);
         return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-    }, [showConfirmModal, showExpirationModal, manualMode, isMultiplierOpen, multiplier, isCameraOpen]); 
+        // Dependencies are now empty because we use refs! The listener is mounted once.
+    }, []); 
 
 
     // --- HANDLERS ---
@@ -239,7 +257,6 @@ export const useScanner = (
 
     const getProductName = (code: string) => productsMap?.[code]?.name || 'Producto Desconocido';
 
-    // Helper to process a scan from an external source (like Camera)
     const handleExternalScan = (code: string) => {
         processScan(code);
     };
@@ -253,9 +270,9 @@ export const useScanner = (
             showExpirationModal,
             isMultiplierOpen, setIsMultiplierOpen,
             multiplier, setMultiplier,
-            isCameraOpen, setIsCameraOpen, // Exported
+            isCameraOpen, setIsCameraOpen, 
             pendingProductName,
-            lastScanId // Exported for UI conditional rendering
+            lastScanId 
         },
         data: { sessionStats, activeProductStats, lastScan, recentScans },
         actions: {
@@ -268,7 +285,7 @@ export const useScanner = (
             handleExpirationComplete,
             handleToggleIncident,
             getProductName,
-            handleExternalScan // Exported
+            handleExternalScan 
         }
     };
 };
