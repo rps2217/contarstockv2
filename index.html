@@ -1,9 +1,12 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="version" content="1.12.7" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="description" content="LogiCount Pro - Gestión de inventario local-first" />
+    <meta name="version" content="1.14.0" />
     <title>LogiCount Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -14,6 +17,10 @@
       .no-scrollbar {
           -ms-overflow-style: none;
           scrollbar-width: none;
+      }
+      /* Prevent pull-to-refresh on mobile which can disrupt scanning */
+      body {
+        overscroll-behavior-y: contain;
       }
     </style>
   <script type="importmap">
@@ -39,7 +46,8 @@
     "path": "https://aistudiocdn.com/path@^0.12.7",
     "react-window": "https://esm.sh/react-window@1.8.10?external=react,react-dom",
     "react-virtualized-auto-sizer": "https://esm.sh/react-virtualized-auto-sizer@1.0.24?external=react,react-dom",
-    "html5-qrcode": "https://esm.sh/html5-qrcode@2.3.8"
+    "html5-qrcode": "https://esm.sh/html5-qrcode@2.3.8",
+    "vite-plugin-pwa": "https://esm.sh/vite-plugin-pwa@0.21.1"
   }
 }
 </script>
