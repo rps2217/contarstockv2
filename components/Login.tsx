@@ -18,20 +18,25 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     setIsLoading(true);
 
     setTimeout(() => {
-      // Defensive Logic: Safe check for Environment Variables
-      let validUser = 'rps241061';
-      let validPass = '241061';
+      // SECURITY FIX: Removed hardcoded fallbacks.
+      // Credentials must be supplied via build environment variables (Vite).
+      let validUser = '';
+      let validPass = '';
 
       try {
-          // Check if import.meta and import.meta.env exist before accessing
-          // This prevents the "Cannot read properties of undefined" error
+          // Access env vars safely
           if (typeof import.meta !== 'undefined' && (import.meta as any).env) {
-              validUser = (import.meta as any).env.VITE_APP_USER || 'rps241061';
-              validPass = (import.meta as any).env.VITE_APP_PASS || '241061';
+              validUser = (import.meta as any).env.VITE_APP_USER;
+              validPass = (import.meta as any).env.VITE_APP_PASS;
           }
       } catch (err) {
-          // If env access fails, we implicitly use the default values set above
-          console.warn("Environment variables access failed, using default credentials.");
+          console.error("Error reading environment variables.");
+      }
+
+      if (!validUser || !validPass) {
+          setError('Error de configuración: Credenciales no definidas en el sistema.');
+          setIsLoading(false);
+          return;
       }
 
       if (username === validUser && password === validPass) {

@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useId } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { X, Camera, Zap, AlertTriangle } from 'lucide-react';
 
@@ -13,13 +13,14 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose })
     const [error, setError] = useState<string | null>(null);
     const [isScanning, setIsScanning] = useState(true);
     const [lastScanned, setLastScanned] = useState<string | null>(null);
+    
+    // QA FIX: Use a stable ID component-scoped to prevent collisions if multiple instances existed
+    const uniqueId = useRef(`scanner-${Math.random().toString(36).substr(2, 9)}`).current;
 
     useEffect(() => {
-        // Initialize scanner instance
-        const scannerId = "reader";
         // Ensure we don't create multiple instances if re-renders happen quickly
         if (!scannerRef.current) {
-             scannerRef.current = new Html5Qrcode(scannerId);
+             scannerRef.current = new Html5Qrcode(uniqueId);
         }
         
         const startScanner = async () => {
@@ -62,7 +63,7 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose })
         }
 
         return () => {
-            // FIX: Handle async stop properly before clearing
+            // QA FIX: Robust async cleanup
             if (scannerRef.current && scannerRef.current.isScanning) {
                 scannerRef.current.stop()
                     .then(() => {
@@ -70,10 +71,13 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose })
                     })
                     .catch((err) => {
                         console.warn("Scanner stop/clear warning:", err);
+                    })
+                    .finally(() => {
+                        scannerRef.current = null;
                     });
             }
         };
-    }, [isScanning]); // Removed lastScanned from dependency to prevent restart loops
+    }, [isScanning, uniqueId]); 
 
     return (
         <div className="fixed inset-0 z-[80] bg-black flex flex-col animate-in fade-in duration-300">
@@ -102,8 +106,8 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose })
                     </div>
                 ) : (
                     <>
-                        {/* The HTML element where scanner renders */}
-                        <div id="reader" className="w-full h-full object-cover"></div>
+                        {/* The HTML element where scanner renders. Uses Unique ID. */}
+                        <div id={uniqueId} className="w-full h-full object-cover"></div>
                         
                         {/* Overlay Guidelines */}
                         <div className="absolute inset-0 pointer-events-none flex items-center justify-center">

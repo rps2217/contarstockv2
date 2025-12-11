@@ -9,7 +9,7 @@ import { db } from "../db";
 import { aggregateScans } from "./aggregator";
 import { sendToAppSheet, AppSheetPayload } from "../infrastructure/api/appsheetClient";
 
-export const SYNC_ENGINE_VERSION = "6.0.0-BLIND-RECEPTION";
+export const SYNC_ENGINE_VERSION = "6.0.1-DEFENSIVE";
 
 // --- CONFIG & MAPPING ---
 
@@ -62,14 +62,25 @@ const aggregateScansForSync = async (session: CountingSession, scans: ScanRecord
         const uniqueKey = `${session.erpOrder}_${label}_${scan.barcode}_${dateKeySuffix}`;
         const incidentStatus = scan.isIncident ? "FRC" : "";
 
+        // Defensive: Ensure Qty is a number
+        const safeQty = Number(scan.quantity) || 0;
+
         if (grouped[uniqueKey]) {
-            grouped[uniqueKey][SHEET_COLUMNS.QUANTITY] += scan.quantity;
+            grouped[uniqueKey][SHEET_COLUMNS.QUANTITY] += safeQty;
             if (scan.isIncident) grouped[uniqueKey][SHEET_COLUMNS.INCIDENT] = "FRC"; 
         } else {
             grouped[uniqueKey] = {
-                [SHEET_COLUMNS.ID]: generateUUID(), [SHEET_COLUMNS.UNIQUE_KEY]: uniqueKey, [SHEET_COLUMNS.DATE]: new Date(session.createdAt).toISOString().split('T')[0],
-                [SHEET_COLUMNS.ERP_ORDER]: session.erpOrder, [SHEET_COLUMNS.BARCODE]: scan.barcode, [SHEET_COLUMNS.PRODUCT_NAME]: productNames[scan.barcode] || "Desconocido",
-                [SHEET_COLUMNS.QUANTITY]: scan.quantity, [SHEET_COLUMNS.LABEL]: label, [SHEET_COLUMNS.MONTH]: scan.mm || "", [SHEET_COLUMNS.YEAR]: scan.yyyy || "", [SHEET_COLUMNS.INCIDENT]: incidentStatus
+                [SHEET_COLUMNS.ID]: generateUUID(), 
+                [SHEET_COLUMNS.UNIQUE_KEY]: uniqueKey, 
+                [SHEET_COLUMNS.DATE]: new Date(session.createdAt).toISOString().split('T')[0],
+                [SHEET_COLUMNS.ERP_ORDER]: session.erpOrder, 
+                [SHEET_COLUMNS.BARCODE]: scan.barcode, 
+                [SHEET_COLUMNS.PRODUCT_NAME]: productNames[scan.barcode] || "Desconocido",
+                [SHEET_COLUMNS.QUANTITY]: safeQty, 
+                [SHEET_COLUMNS.LABEL]: label, 
+                [SHEET_COLUMNS.MONTH]: scan.mm || "", 
+                [SHEET_COLUMNS.YEAR]: scan.yyyy || "", 
+                [SHEET_COLUMNS.INCIDENT]: incidentStatus
             };
         }
     });
@@ -85,17 +96,30 @@ export const syncToAppSheet = async (session: CountingSession, _ignoredItems?: C
   if (unsyncedScans.length === 0) { console.log("[Sync] Nada nuevo."); return; }
   try {
     const aggregatedRows = await aggregateScansForSync(session, unsyncedScans);
-    const selector = `[${SHEET_COLUMNS.ERP_ORDER}] = '${session.erpOrder}'`;
+    // Sanitize selector just in case ERP has weird chars
+    const safeErp = session.erpOrder.replace(/'/g, "");
+    const selector = `[${SHEET_COLUMNS.ERP_ORDER}] = '${safeErp}'`;
+    
     const existingData = await sendToAppSheet(config, config.countsTableName, { Action: "Find", Properties: { Locale: "es-CL", Timezone: "UTC", Selector: selector }, Rows: [] });
     const existingMap = new Map<string, {id: string, qty: number}>();
     if (Array.isArray(existingData)) { existingData.forEach((r: any) => { if (r[SHEET_COLUMNS.UNIQUE_KEY]) existingMap.set(r[SHEET_COLUMNS.UNIQUE_KEY], { id: r[SHEET_COLUMNS.ID], qty: Number(r[SHEET_COLUMNS.QUANTITY]) || 0 }); }); }
+    
     const batchAdd: any[] = []; const batchEdit: any[] = [];
+    
     aggregatedRows.forEach(row => {
         const key = row[SHEET_COLUMNS.UNIQUE_KEY]; const existing = existingMap.get(key);
-        if (existing) { row[SHEET_COLUMNS.ID] = existing.id; row[SHEET_COLUMNS.QUANTITY] += existing.qty; batchEdit.push(row); } else { batchAdd.push(row); }
+        if (existing) { 
+            row[SHEET_COLUMNS.ID] = existing.id; 
+            row[SHEET_COLUMNS.QUANTITY] += existing.qty; 
+            batchEdit.push(row); 
+        } else { 
+            batchAdd.push(row); 
+        }
     });
+    
     if (batchAdd.length > 0) await sendToAppSheet(config, config.countsTableName, { Action: "Add", Properties: { Locale: "es-CL", Timezone: "UTC" }, Rows: batchAdd });
     if (batchEdit.length > 0) await sendToAppSheet(config, config.countsTableName, { Action: "Edit", Properties: { Locale: "es-CL", Timezone: "UTC" }, Rows: batchEdit });
+    
     await markScansAsSynced(unsyncedScans.map(s => s.id));
     console.log(`[Sync] Exitosa.`);
   } catch (error: any) { console.error("[Sync] Error:", error); throw error; }
@@ -162,7 +186,7 @@ export const fetchCloudData = async (options?: { erpFilter?: string; dateRange?:
   const settings = getSettings(); const config = settings.appSheetConfig;
   if (!config?.countsTableName) throw new Error("Falta tabla de consolidados.");
   let selector = "";
-  if (options?.erpFilter) { selector = `[${SHEET_COLUMNS.ERP_ORDER}] = '${options.erpFilter}'`; } 
+  if (options?.erpFilter) { selector = `[${SHEET_COLUMNS.ERP_ORDER}] = '${options.erpFilter.replace(/'/g, "")}'`; } 
   else if (options?.dateRange) {
       const formatDateForLocale = (isoDate: string) => { const [y, m, d] = isoDate.split('-'); return `${d}/${m}/${y}`; };
       const startLatam = formatDateForLocale(options.dateRange.start); const endLatam = formatDateForLocale(options.dateRange.end);
