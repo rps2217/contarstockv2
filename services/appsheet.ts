@@ -9,7 +9,7 @@ import { db } from "../db";
 import { aggregateScans } from "./aggregator";
 import { sendToAppSheet, AppSheetPayload } from "../infrastructure/api/appsheetClient";
 
-export const SYNC_ENGINE_VERSION = "6.0.2-DATEFIX";
+export const SYNC_ENGINE_VERSION = "6.0.3-DATEFIX";
 
 // --- CONFIG & MAPPING ---
 
@@ -190,10 +190,9 @@ export const fetchCloudData = async (options?: { erpFilter?: string; dateRange?:
   if (options?.erpFilter) { 
       selector = `[${SHEET_COLUMNS.ERP_ORDER}] = '${options.erpFilter.replace(/'/g, "")}'`; 
   } else if (options?.dateRange) {
-      // FIX: Use standard YYYY-MM-DD format for API comparisons. 
-      // Do NOT convert to DD/MM/YYYY as it breaks the API query parser for date ranges.
-      // The inputs from the UI (options.dateRange) are already in YYYY-MM-DD.
-      selector = `AND([${SHEET_COLUMNS.DATE}] >= "${options.dateRange.start}", [${SHEET_COLUMNS.DATE}] <= "${options.dateRange.end}")`;
+      // FIX: Use DATE() function to strip time components for robust daily comparison.
+      // AppSheet's DATE() casts timestamps to pure dates, ensuring inclusive matching for "Today" and "Yesterday".
+      selector = `AND(DATE([${SHEET_COLUMNS.DATE}]) >= DATE("${options.dateRange.start}"), DATE([${SHEET_COLUMNS.DATE}]) <= DATE("${options.dateRange.end}"))`;
   }
   
   console.log("[AppSheet] Fetching with selector:", selector || "ALL");
