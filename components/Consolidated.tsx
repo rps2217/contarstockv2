@@ -1,5 +1,6 @@
+
 import React, { useState, useMemo } from 'react';
-import { Layers, ChevronLeft, Package, Box, FileSpreadsheet, FileText, ArrowRight, CloudUpload, Loader2, CloudDownload, RefreshCw, Calendar, X } from 'lucide-react';
+import { Layers, ChevronLeft, Package, Box, FileSpreadsheet, FileText, ArrowRight, CloudUpload, Loader2, CloudDownload, RefreshCw, Calendar, X, Clock, CalendarDays, CalendarRange } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { ConsolidatedItem, CountingSession } from '../types';
@@ -21,10 +22,8 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack }) => {
     const [isSyncing, setIsSyncing] = useState(false);
     const [isRestoring, setIsRestoring] = useState(false);
 
-    // --- DATE RANGE MODAL STATE ---
-    const [showDateModal, setShowDateModal] = useState(false);
-    const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
-    const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+    // --- DOWNLOAD MENU STATE ---
+    const [showDownloadMenu, setShowDownloadMenu] = useState(false);
 
     const handleSearch = (query: string) => {
         setSearchQuery(query);
@@ -165,25 +164,61 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack }) => {
         }
     };
 
-    const handleOpenDateModal = () => { setShowDateModal(true); };
+    // --- DATE LOGIC ---
+    // Helper to get local date string YYYY-MM-DD correctly handling timezone
+    const getLocalDateString = (date: Date) => {
+        const offset = date.getTimezoneOffset();
+        const local = new Date(date.getTime() - (offset * 60 * 1000));
+        return local.toISOString().split('T')[0];
+    };
 
-    const handleConfirmRestore = async () => {
-        setShowDateModal(false);
+    const executeDownload = async (start: string, end: string, label: string) => {
+        setShowDownloadMenu(false);
+        if(!confirm(`¿Descargar datos de: ${label}?\nRango: ${start} al ${end}`)) return;
+
         setIsRestoring(true);
         try {
+            console.log(`[Cloud] Requesting range: ${start} to ${end}`);
             const result = await restoreFromCloud({
-                dateRange: { start: startDate, end: endDate }
+                dateRange: { start, end }
             });
             if (result.sessions > 0) {
-                alert(`¡Éxito!\nSe descargaron ${result.sessions} sesiones del periodo seleccionado.`);
+                alert(`¡Éxito!\nSe descargaron ${result.sessions} sesiones.`);
             } else {
-                alert("No se encontraron nuevos datos en ese rango de fechas.");
+                alert("No se encontraron nuevos datos en este periodo.");
             }
         } catch (err: any) {
             alert(`Error de conexión: ${err.message}`);
         } finally {
             setIsRestoring(false);
         }
+    };
+
+    const handleDownloadToday = () => {
+        const today = new Date();
+        const str = getLocalDateString(today);
+        executeDownload(str, str, "HOY");
+    };
+
+    const handleDownloadYesterday = () => {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const str = getLocalDateString(yesterday);
+        executeDownload(str, str, "AYER");
+    };
+
+    const handleDownloadThisMonth = () => {
+        const now = new Date();
+        const start = new Date(now.getFullYear(), now.getMonth(), 1);
+        const end = new Date(now.getFullYear(), now.getMonth() + 1, 0); // Last day of month
+        executeDownload(getLocalDateString(start), getLocalDateString(end), "ESTE MES");
+    };
+    
+    const handleDownloadLastMonth = () => {
+        const now = new Date();
+        const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const end = new Date(now.getFullYear(), now.getMonth(), 0); 
+        executeDownload(getLocalDateString(start), getLocalDateString(end), "MES PASADO");
     };
 
     const handleSingleErpRestore = async (erp: string) => {
@@ -284,7 +319,7 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack }) => {
                 </div>
                 
                 <button 
-                    onClick={handleOpenDateModal}
+                    onClick={() => setShowDownloadMenu(true)}
                     disabled={isRestoring}
                     className="bg-indigo-50 border border-indigo-200 text-indigo-700 font-bold py-2 px-4 rounded-xl hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 text-xs md:text-sm"
                 >
@@ -338,37 +373,54 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack }) => {
                 )}
             </div>
 
-            {/* DATE RANGE MODAL */}
-            {showDateModal && (
+            {/* QUICK DOWNLOAD MENU */}
+            {showDownloadMenu && (
                 <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
                     <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-6 relative animate-in zoom-in-95">
-                        <button onClick={() => setShowDateModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-2 rounded-full hover:bg-slate-100 transition-colors"><X className="w-5 h-5" /></button>
+                        <button onClick={() => setShowDownloadMenu(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-2 rounded-full hover:bg-slate-100 transition-colors"><X className="w-5 h-5" /></button>
                         
                         <div className="text-center mb-6">
                             <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                                <Calendar className="w-6 h-6" />
+                                <CloudDownload className="w-6 h-6" />
                             </div>
-                            <h3 className="text-lg font-bold text-slate-900">Rango de Descarga</h3>
-                            <p className="text-xs text-slate-500">Seleccione el periodo de datos a sincronizar.</p>
+                            <h3 className="text-lg font-bold text-slate-900">Descarga Rápida</h3>
+                            <p className="text-xs text-slate-500">Seleccione el periodo a sincronizar.</p>
                         </div>
 
-                        <div className="space-y-4">
-                            <div>
-                                <label className="text-xs font-bold text-slate-500 uppercase ml-1 mb-1 block">Desde</label>
-                                <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all" />
-                            </div>
-                            <div>
-                                <label className="text-xs font-bold text-slate-500 uppercase ml-1 mb-1 block">Hasta</label>
-                                <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all" />
-                            </div>
+                        <div className="grid grid-cols-1 gap-3">
+                            <button onClick={handleDownloadToday} className="bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 p-4 rounded-xl flex items-center gap-4 transition-all group text-left">
+                                <div className="bg-white p-2 rounded-lg shadow-sm group-hover:text-indigo-600"><Clock className="w-5 h-5" /></div>
+                                <div>
+                                    <div className="font-bold text-slate-900 group-hover:text-indigo-700">Solo Hoy</div>
+                                    <div className="text-xs text-slate-400">Descargar conteos del día actual</div>
+                                </div>
+                            </button>
+                            
+                            <button onClick={handleDownloadYesterday} className="bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 p-4 rounded-xl flex items-center gap-4 transition-all group text-left">
+                                <div className="bg-white p-2 rounded-lg shadow-sm group-hover:text-indigo-600"><Calendar className="w-5 h-5" /></div>
+                                <div>
+                                    <div className="font-bold text-slate-900 group-hover:text-indigo-700">Ayer</div>
+                                    <div className="text-xs text-slate-400">Recuperar día anterior</div>
+                                </div>
+                            </button>
+
+                            <button onClick={handleDownloadThisMonth} className="bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 p-4 rounded-xl flex items-center gap-4 transition-all group text-left">
+                                <div className="bg-white p-2 rounded-lg shadow-sm group-hover:text-indigo-600"><CalendarDays className="w-5 h-5" /></div>
+                                <div>
+                                    <div className="font-bold text-slate-900 group-hover:text-indigo-700">Este Mes</div>
+                                    <div className="text-xs text-slate-400">Todo el mes en curso</div>
+                                </div>
+                            </button>
+
+                            <button onClick={handleDownloadLastMonth} className="bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 p-4 rounded-xl flex items-center gap-4 transition-all group text-left">
+                                <div className="bg-white p-2 rounded-lg shadow-sm group-hover:text-indigo-600"><CalendarRange className="w-5 h-5" /></div>
+                                <div>
+                                    <div className="font-bold text-slate-900 group-hover:text-indigo-700">Mes Pasado</div>
+                                    <div className="text-xs text-slate-400">Datos del mes anterior</div>
+                                </div>
+                            </button>
                         </div>
 
-                        <button 
-                            onClick={handleConfirmRestore}
-                            className="w-full mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center justify-center gap-2"
-                        >
-                            <CloudDownload className="w-5 h-5" /> Confirmar Descarga
-                        </button>
                     </div>
                 </div>
             )}
