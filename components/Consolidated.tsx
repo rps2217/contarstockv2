@@ -1,12 +1,12 @@
 
 import React, { useState, useMemo } from 'react';
-import { Layers, ChevronLeft, Package, Box, FileSpreadsheet, FileText, ArrowRight, CloudUpload, Loader2, CloudDownload, RefreshCw, Calendar, X, Clock, CalendarDays, CalendarRange, Database } from 'lucide-react';
+import { Layers, ChevronLeft, Package, Box, FileSpreadsheet, FileText, ArrowRight, CloudUpload, Loader2, CloudDownload, RefreshCw, Calendar, X, Clock, CalendarDays, CalendarRange, Database, CheckCircle2 } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { ConsolidatedItem, CountingSession } from '../types';
 import { exportToExcel, exportToPDF } from '../services/export';
-// UPDATED: Import syncToAppSheet from syncBridge facade
-import { syncToAppSheet, restoreFromCloud } from '../services/syncBridge';
+// UPDATED: Import syncToAppSheet and syncAllPendingData
+import { syncToAppSheet, restoreFromCloud, syncAllPendingData } from '../services/syncBridge';
 import * as storage from '../services/storage';
 import { aggregateScans } from '../services/aggregator';
 import { SearchBar } from './SearchBar';
@@ -20,7 +20,9 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [detailSearchQuery, setDetailSearchQuery] = useState('');
     const [isSyncing, setIsSyncing] = useState(false);
+    const [isGlobalSyncing, setIsGlobalSyncing] = useState(false); // New state for bulk sync
     const [isRestoring, setIsRestoring] = useState(false);
+    const [globalSyncProgress, setGlobalSyncProgress] = useState<{current: number, total: number} | null>(null);
 
     // --- DOWNLOAD MENU STATE ---
     const [showDownloadMenu, setShowDownloadMenu] = useState(false);
@@ -116,6 +118,10 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack }) => {
         );
     }, [details, detailSearchQuery]);
 
+    // Check if there are any pending items globally
+    const pendingGlobalCount = useLiveQuery(() => db.scans.where('synced').equals(0).count(), [], 0);
+
+
     // ... (Export and Sync Handlers remain unchanged) ...
     const handleExportExcel = () => {
         if (!selectedErp || !details) return;
@@ -161,6 +167,36 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack }) => {
             alert(`Error: ${err.message}`);
         } finally {
             setIsSyncing(false);
+        }
+    };
+
+    // NEW: Handle Global Sync
+    const handleGlobalSync = async () => {
+        if (pendingGlobalCount === 0) {
+            alert("No hay registros pendientes de sincronización.");
+            return;
+        }
+
+        if (!confirm(`Se detectaron items sin sincronizar.\n¿Desea subir TODOS los cambios pendientes a AppSheet ahora?`)) return;
+
+        setIsGlobalSyncing(true);
+        setGlobalSyncProgress({ current: 0, total: 0 }); // Will update
+
+        try {
+            const syncedCount = await syncAllPendingData((current, total) => {
+                setGlobalSyncProgress({ current, total });
+            });
+
+            if (syncedCount > 0) {
+                alert(`¡Proceso completado!\nSe sincronizaron ${syncedCount} bultos/sesiones.`);
+            } else {
+                alert("Todo ya estaba sincronizado.");
+            }
+        } catch (err: any) {
+            alert(`Error durante la sincronización masiva: ${err.message}`);
+        } finally {
+            setIsGlobalSyncing(false);
+            setGlobalSyncProgress(null);
         }
     };
 
@@ -315,14 +351,32 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack }) => {
                     </div>
                 </div>
                 
-                <button 
-                    onClick={() => setShowDownloadMenu(true)}
-                    disabled={isRestoring}
-                    className="bg-indigo-50 border border-indigo-200 text-indigo-700 font-bold py-2 px-4 rounded-xl hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 text-xs md:text-sm"
-                >
-                    {isRestoring ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CloudDownload className="w-4 h-4" />}
-                    Descargar de Nube
-                </button>
+                <div className="flex gap-2">
+                    {/* GLOBAL SYNC BUTTON - Visible only if there are pending items */}
+                    {pendingGlobalCount > 0 && (
+                        <button 
+                            onClick={handleGlobalSync}
+                            disabled={isGlobalSyncing}
+                            className="bg-green-600 text-white border border-green-700 font-bold py-2 px-4 rounded-xl hover:bg-green-500 transition-colors flex items-center justify-center gap-2 shadow-sm shadow-green-200 disabled:opacity-50 text-xs md:text-sm animate-in zoom-in"
+                        >
+                            {isGlobalSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <CloudUpload className="w-4 h-4" />}
+                            {isGlobalSyncing ? (
+                                <span>{globalSyncProgress ? `${globalSyncProgress.current}/${globalSyncProgress.total}` : 'Subiendo...'}</span>
+                            ) : (
+                                <span>Subir Todo (Nuevos)</span>
+                            )}
+                        </button>
+                    )}
+
+                    <button 
+                        onClick={() => setShowDownloadMenu(true)}
+                        disabled={isRestoring}
+                        className="bg-indigo-50 border border-indigo-200 text-indigo-700 font-bold py-2 px-4 rounded-xl hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 text-xs md:text-sm"
+                    >
+                        {isRestoring ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CloudDownload className="w-4 h-4" />}
+                        Descargar
+                    </button>
+                </div>
             </div>
 
             <div className="mb-6">

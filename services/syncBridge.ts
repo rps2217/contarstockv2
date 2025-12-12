@@ -10,6 +10,49 @@ import * as productService from './productService';
 export { syncToAppSheet, syncProductsToAppSheet, syncReceptionToAppSheet };
 
 /**
+ * INTELLIGENT BATCH SYNC
+ * Scans the entire local DB for unsynced items (synced = 0)
+ * and uploads them session by session.
+ */
+export const syncAllPendingData = async (onProgress?: (current: number, total: number) => void): Promise<number> => {
+    // 1. Identify sessions that have unsynced items
+    // We query the scans table for synced=0 (falsey)
+    const unsyncedScans = await db.scans.where('synced').equals(0).toArray();
+    
+    if (unsyncedScans.length === 0) return 0;
+
+    // Get unique session IDs involved
+    const uniqueSessionIds = Array.from(new Set(unsyncedScans.map(s => s.sessionId)));
+    
+    // Fetch the actual session objects
+    const sessionsToSync = await db.sessions.where('id').anyOf(uniqueSessionIds).toArray();
+
+    console.log(`[Global Sync] Found ${uniqueSessionIds.length} sessions with pending items.`);
+
+    let processedCount = 0;
+
+    for (const session of sessionsToSync) {
+        try {
+            // Re-use the robust syncToAppSheet logic (it handles aggregation and deltas)
+            await syncToAppSheet(session);
+            
+            // Mark session as synced in local DB to update UI (Green Cloud Icon)
+            await db.sessions.update(session.id, { lastSyncTimestamp: Date.now() });
+            
+            processedCount++;
+            if (onProgress) {
+                onProgress(processedCount, sessionsToSync.length);
+            }
+        } catch (error) {
+            console.error(`[Global Sync] Failed for session ${session.erpOrder}:`, error);
+            // We continue to the next session even if one fails
+        }
+    }
+
+    return processedCount;
+};
+
+/**
  * Imports products from AppSheet and saves them to the local DB.
  * Acts as a bridge between API and DB to prevent circular deps in lower-level services.
  */
