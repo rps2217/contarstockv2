@@ -9,7 +9,7 @@ import { db } from "../db";
 import { aggregateScans } from "./aggregator";
 import { sendToAppSheet, AppSheetPayload } from "../infrastructure/api/appsheetClient";
 
-export const SYNC_ENGINE_VERSION = "6.0.1-DEFENSIVE";
+export const SYNC_ENGINE_VERSION = "6.0.2-DATEFIX";
 
 // --- CONFIG & MAPPING ---
 
@@ -185,13 +185,19 @@ export const fetchProductsFromCloud = async (): Promise<any[]> => {
 export const fetchCloudData = async (options?: { erpFilter?: string; dateRange?: { start: string, end: string } }): Promise<any[]> => {
   const settings = getSettings(); const config = settings.appSheetConfig;
   if (!config?.countsTableName) throw new Error("Falta tabla de consolidados.");
+  
   let selector = "";
-  if (options?.erpFilter) { selector = `[${SHEET_COLUMNS.ERP_ORDER}] = '${options.erpFilter.replace(/'/g, "")}'`; } 
-  else if (options?.dateRange) {
-      const formatDateForLocale = (isoDate: string) => { const [y, m, d] = isoDate.split('-'); return `${d}/${m}/${y}`; };
-      const startLatam = formatDateForLocale(options.dateRange.start); const endLatam = formatDateForLocale(options.dateRange.end);
-      selector = `AND([${SHEET_COLUMNS.DATE}] >= "${startLatam}", [${SHEET_COLUMNS.DATE}] <= "${endLatam}")`;
+  if (options?.erpFilter) { 
+      selector = `[${SHEET_COLUMNS.ERP_ORDER}] = '${options.erpFilter.replace(/'/g, "")}'`; 
+  } else if (options?.dateRange) {
+      // FIX: Use standard YYYY-MM-DD format for API comparisons. 
+      // Do NOT convert to DD/MM/YYYY as it breaks the API query parser for date ranges.
+      // The inputs from the UI (options.dateRange) are already in YYYY-MM-DD.
+      selector = `AND([${SHEET_COLUMNS.DATE}] >= "${options.dateRange.start}", [${SHEET_COLUMNS.DATE}] <= "${options.dateRange.end}")`;
   }
+  
+  console.log("[AppSheet] Fetching with selector:", selector || "ALL");
+
   const payload: AppSheetPayload = { Action: "Find", Properties: { Locale: "es-CL", Timezone: "UTC", Selector: selector || undefined }, Rows: [] };
   const result = await sendToAppSheet(config, config.countsTableName, payload);
   return Array.isArray(result) ? result : [];
