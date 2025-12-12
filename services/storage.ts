@@ -1,15 +1,15 @@
-
 import { CountingSession } from '../types';
 import { db } from '../db';
 import { generateUUID, sanitizeBarcode } from './utils';
 import * as sessionService from './sessionService'; 
 import { getSettings, saveSettings } from './settings';
 
-// Re-export common utilities and settings for UI components
+// Re-export common utilities and settings for UI components (Helper facades are okay for Utils)
 export { generateUUID, sanitizeBarcode, getSettings, saveSettings };
 
-// Re-export session functions directly
-export * from './sessionService';
+// ARCHITECTURE FIX: 
+// Removed `export * from './sessionService'` to prevent circular dependencies 
+// and force explicit imports in the application layer.
 
 // --- SESSIONS ---
 

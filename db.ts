@@ -1,7 +1,7 @@
 import Dexie, { type Table } from 'dexie';
 import { Product, CountingSession, ScanRecord, SyncJob, ExpectedOrder } from './types';
 
-// Define the DB structure by extending Dexie class
+// Define the DB structure by extending Dexie class correctly
 export class LogiCountDB extends Dexie {
   products!: Table<Product>;
   sessions!: Table<CountingSession>;
@@ -12,11 +12,7 @@ export class LogiCountDB extends Dexie {
   constructor() {
     super('LogiCountDB');
     
-    // Historical versions kept for reference, but we define the latest comprehensive schema
-    // to ensure all tables exist even if previous versions were skipped/incomplete.
-    
     // Version 12: Comprehensive schema definition covering all application features
-    // Fix: Cast 'this' to 'any' to resolve TS error "Property 'version' does not exist on type 'LogiCountDB'"
     (this as any).version(12).stores({
       // Products: indexed by barcode (primary), name (search), and syncStatus (cloud sync)
       products: '&barcode, name, syncStatus', 

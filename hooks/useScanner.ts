@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import Dexie from 'dexie';
 import { db } from '../db';
 import * as storage from '../services/storage';
+import * as sessionService from '../services/sessionService'; // Direct Import
 import * as productService from '../services/productService';
 import { SoundFX } from '../services/audio';
 import { CountingSession, Product } from '../types';
@@ -114,7 +114,8 @@ export const useScanner = (
         try {
             // Apply multiplier (Default to 1 if user left it at 0)
             const qtyToAdd = multiplier > 0 ? multiplier : 1;
-            const newScan = await storage.addScan(session.id, code, qtyToAdd, mm, yyyy);
+            // ARCHITECTURE FIX: Use sessionService directly
+            const newScan = await sessionService.addScan(session.id, code, qtyToAdd, mm, yyyy);
             setLastScanId(newScan.id);
             triggerFeedback('success');
             
@@ -177,7 +178,6 @@ export const useScanner = (
 
         window.addEventListener('keydown', handleGlobalKeyDown);
         return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-        // Dependencies are now empty because we use refs! The listener is mounted once.
     }, []); 
 
 
@@ -201,7 +201,8 @@ export const useScanner = (
         e.preventDefault(); e.stopPropagation();
         const settings = storage.getSettings();
         if (!settings.confirmDelete || window.confirm('¿Confirmar eliminación del registro?')) {
-            await storage.deleteScan(scanId);
+            // ARCHITECTURE FIX: Use sessionService directly
+            await sessionService.deleteScan(scanId);
             SoundFX.play('delete');
         }
     }, []);
@@ -210,7 +211,8 @@ export const useScanner = (
     const handleUndoLastScan = useCallback(async () => {
         if (!lastScanId) return;
         try {
-            await storage.deleteScan(lastScanId);
+            // ARCHITECTURE FIX: Use sessionService directly
+            await sessionService.deleteScan(lastScanId);
             setLastScanId(null);
             triggerFeedback('undo');
         } catch (e) {
@@ -222,16 +224,19 @@ export const useScanner = (
         if (currentQty + delta <= 0) {
             const settings = storage.getSettings();
             if (!settings.confirmDelete || window.confirm('¿Eliminar registro?')) {
-                await storage.deleteScan(scanId); SoundFX.play('delete');
+                // ARCHITECTURE FIX: Use sessionService directly
+                await sessionService.deleteScan(scanId); SoundFX.play('delete');
             }
         } else {
-            await storage.updateScanQuantity(scanId, currentQty + delta);
+            // ARCHITECTURE FIX: Use sessionService directly
+            await sessionService.updateScanQuantity(scanId, currentQty + delta);
         }
     }, []);
 
     const handleToggleIncident = useCallback(async (e: React.MouseEvent, scanId: string, currentStatus: boolean) => {
         e.stopPropagation();
-        await storage.updateScanIncident(scanId, !currentStatus);
+        // ARCHITECTURE FIX: Use sessionService directly
+        await sessionService.updateScanIncident(scanId, !currentStatus);
         SoundFX.play('success'); // Feedback sound
     }, []);
 
