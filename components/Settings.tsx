@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Settings as SettingsIcon, Volume2, VolumeX, Vibrate, Zap, Moon, Sun, Monitor, AlertTriangle, ArrowLeft, Cloud, Key, Database, Lock, Check, Eye, Shield, FileText, Package, AlertOctagon, Activity, CheckCircle, XCircle, Share2, Download, QrCode, Copy, Save, Upload, RefreshCw } from 'lucide-react';
+import { Settings as SettingsIcon, Volume2, VolumeX, Vibrate, Zap, Moon, Sun, Monitor, AlertTriangle, ArrowLeft, Cloud, Key, Database, Lock, Check, Eye, Shield, FileText, Package, AlertOctagon, Activity, CheckCircle, XCircle, Share2, Download, QrCode, Copy, Save, Upload, RefreshCw, Loader2 } from 'lucide-react';
 import * as storage from '../services/storage';
 import * as settingsService from '../services/settings';
 import { createFullBackup, restoreFullBackup } from '../services/backupService';
@@ -25,6 +25,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
   
   // Diagnostics State
   const [diagResults, setDiagResults] = useState<{ passed: number, failed: number, logs: string[] } | null>(null);
+  const [isRunningDiag, setIsRunningDiag] = useState(false);
 
   // Backup State
   const [isBackingUp, setIsBackingUp] = useState(false);
@@ -44,9 +45,17 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
       setTimeout(() => setShowSaveFeedback(false), 3000);
   };
 
-  const handleRunDiagnostics = () => {
-      const results = runSystemDiagnostics();
-      setDiagResults(results);
+  const handleRunDiagnostics = async () => {
+      setIsRunningDiag(true);
+      setDiagResults(null);
+      try {
+        const results = await runSystemDiagnostics();
+        setDiagResults(results);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setIsRunningDiag(false);
+      }
   };
 
   // --- BACKUP HANDLERS ---
@@ -294,8 +303,13 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
             <p className="text-sm text-slate-500 mb-4">Herramientas para verificar integridad y actualizar la aplicación.</p>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <button onClick={handleRunDiagnostics} className="bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 font-bold py-3 px-4 rounded-xl text-sm shadow-sm transition-colors flex items-center justify-center gap-2">
-                    <Activity className="w-4 h-4" /> Ejecutar Pruebas
+                <button 
+                    onClick={handleRunDiagnostics} 
+                    disabled={isRunningDiag}
+                    className="bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 font-bold py-3 px-4 rounded-xl text-sm shadow-sm transition-colors flex items-center justify-center gap-2"
+                >
+                    {isRunningDiag ? <Loader2 className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />} 
+                    Ejecutar Pruebas
                 </button>
                 <button onClick={handleHardReset} className="bg-white border border-red-200 text-red-600 hover:bg-red-50 font-bold py-3 px-4 rounded-xl text-sm shadow-sm transition-colors flex items-center justify-center gap-2">
                     <RefreshCw className="w-4 h-4" /> Forzar Actualización

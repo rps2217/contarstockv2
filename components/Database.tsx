@@ -34,11 +34,19 @@ export const Database: React.FC<DatabaseProps> = ({ onBack }) => {
     const cleanFilter = sanitizeBarcode(debouncedQuery);
     
     if (cleanFilter || debouncedQuery.length > 0) {
-        // Search Mode
+        // Search Mode: Polished to use "Filter" instead of just Index for better UX
+        // allowing "Contains" search on names.
+        const lowerQuery = debouncedQuery.toLowerCase();
+        
         return await db.products
-            .where('barcode').startsWithIgnoreCase(cleanFilter)
-            .or('name').startsWithIgnoreCase(debouncedQuery)
-            .toArray(); // Get ALL matches, VirtualList handles rendering
+            .filter(p => {
+                // Priority 1: Barcode Starts With (Fast)
+                if (p.barcode.startsWith(cleanFilter)) return true;
+                // Priority 2: Name Contains (Flexible)
+                if (p.name.toLowerCase().includes(lowerQuery)) return true;
+                return false;
+            })
+            .toArray(); 
     } else {
         // Full List Mode
         return await db.products.toArray(); // Get ALL items

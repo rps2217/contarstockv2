@@ -1,5 +1,5 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useEffect } from 'react';
 import { Pause, Package, Zap, Keyboard, AlertTriangle, Check, Volume2, Save, XCircle, X, RotateCcw, Camera, Ban } from 'lucide-react';
 import { CountingSession } from '../types';
 import { ExpirationModal } from './ExpirationModal';
@@ -20,6 +20,9 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
       data, 
       actions 
   } = useScanner(session, onCloseSession, onDiscardSession);
+
+  // Focus ref for manual input
+  const manualInputRef = useRef<HTMLInputElement>(null);
 
   // PERFORMANCE OPTIMIZATION: 
   // Instead of changing the root container class (which triggers layout recalc for children),
@@ -60,6 +63,15 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
       if (state.multiplier === 0) state.setMultiplier(1);
       state.setIsMultiplierOpen(false);
   };
+
+  // POLISH: Ensure focus on mount for manual input
+  useEffect(() => {
+      if (state.manualMode) {
+          setTimeout(() => {
+              manualInputRef.current?.focus();
+          }, 100);
+      }
+  }, [state.manualMode]);
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col text-white overflow-hidden font-sans">
@@ -279,6 +291,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
                      <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-3"><Keyboard className="w-6 h-6 text-blue-500" /> Ingreso Manual</h3>
                      <div className="relative">
                         <input 
+                            ref={manualInputRef}
                             type="text" 
                             inputMode="numeric" 
                             pattern="[0-9]*" 

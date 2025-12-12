@@ -2,6 +2,7 @@
 import { sanitizeBarcode } from './utils';
 import { calculateOrderMatch } from './matcher';
 import { ConsolidatedItem, ExpectedOrder } from '../types';
+import { db } from '../db';
 
 // --- MOCK DATA ---
 
@@ -28,7 +29,7 @@ const mockOrderPartial: ExpectedOrder = {
 
 // --- RUNNER ---
 
-export const runSystemDiagnostics = () => {
+export const runSystemDiagnostics = async () => {
     let passed = 0;
     let failed = 0;
     const logs: string[] = [];
@@ -38,7 +39,7 @@ export const runSystemDiagnostics = () => {
         if (isError) failed++; else passed++;
     };
 
-    // 1. Sanitize Test
+    // 1. Sanitize Test (Sync)
     try {
         const t1 = sanitizeBarcode(' abc ') === 'ABC';
         const t2 = sanitizeBarcode('a\u200Bb') === 'AB';
@@ -46,7 +47,7 @@ export const runSystemDiagnostics = () => {
         else log("❌ Limpieza de Códigos: FALLÓ", true);
     } catch (e) { log(`❌ Error Sanitize: ${e}`, true); }
 
-    // 2. Matcher Test
+    // 2. Matcher Test (Sync)
     try {
         const exactResult = calculateOrderMatch(mockPhysical, mockOrderExact);
         if (exactResult.status === 'exact' && exactResult.matchScore > 99) {
@@ -62,6 +63,27 @@ export const runSystemDiagnostics = () => {
             log("❌ Algoritmo Detective (Parcial): FALLÓ", true);
         }
     } catch (e) { log(`❌ Error Matcher: ${e}`, true); }
+
+    // 3. Database Health Check (Async)
+    try {
+        const start = performance.now();
+        // Check 1: Can we count items?
+        const productCount = await db.products.count();
+        // Check 2: Can we write/delete? (Ephemeral test)
+        const testKey = '__DIAGNOSTIC_TEST__';
+        await db.products.put({ barcode: testKey, name: 'TEST', category: 'TEST', syncStatus: 'synced' });
+        const retrieved = await db.products.get(testKey);
+        await db.products.delete(testKey);
+        const duration = (performance.now() - start).toFixed(1);
+
+        if (retrieved && retrieved.name === 'TEST') {
+            log(`✅ Base de Datos: SALUDABLE (${productCount} items, ${duration}ms)`);
+        } else {
+            log(`❌ Base de Datos: ERROR DE ESCRITURA`, true);
+        }
+    } catch (e: any) {
+        log(`❌ Base de Datos: CRÍTICO - ${e.message}`, true);
+    }
 
     return { passed, failed, logs };
 };
