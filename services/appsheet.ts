@@ -9,7 +9,7 @@ import { db } from "../db";
 import { aggregateScans } from "./aggregator";
 import { sendToAppSheet, AppSheetPayload } from "../infrastructure/api/appsheetClient";
 
-export const SYNC_ENGINE_VERSION = "6.0.3-DATEFIX";
+export const SYNC_ENGINE_VERSION = "6.0.4-SIMPLE";
 
 // --- CONFIG & MAPPING ---
 
@@ -190,12 +190,19 @@ export const fetchCloudData = async (options?: { erpFilter?: string; dateRange?:
   if (options?.erpFilter) { 
       selector = `[${SHEET_COLUMNS.ERP_ORDER}] = '${options.erpFilter.replace(/'/g, "")}'`; 
   } else if (options?.dateRange) {
-      // FIX: Use DATE() function to strip time components for robust daily comparison.
-      // AppSheet's DATE() casts timestamps to pure dates, ensuring inclusive matching for "Today" and "Yesterday".
-      selector = `AND(DATE([${SHEET_COLUMNS.DATE}]) >= DATE("${options.dateRange.start}"), DATE([${SHEET_COLUMNS.DATE}]) <= DATE("${options.dateRange.end}"))`;
+      // FIX: Robust date filtering using String Comparison instead of DATE() casting.
+      // Based on screenshot, FECHA column is YYYY-MM-DD.
+      if (options.dateRange.start === options.dateRange.end) {
+          // Exact Match for single day
+          selector = `[${SHEET_COLUMNS.DATE}] = "${options.dateRange.start}"`;
+      } else {
+          // Range Match
+          selector = `AND([${SHEET_COLUMNS.DATE}] >= "${options.dateRange.start}", [${SHEET_COLUMNS.DATE}] <= "${options.dateRange.end}")`;
+      }
   }
-  
-  console.log("[AppSheet] Fetching with selector:", selector || "ALL");
+  // If no options provided, selector remains "" which downloads EVERYTHING.
+
+  console.log("[AppSheet] Fetching with selector:", selector || "ALL (No Filter)");
 
   const payload: AppSheetPayload = { Action: "Find", Properties: { Locale: "es-CL", Timezone: "UTC", Selector: selector || undefined }, Rows: [] };
   const result = await sendToAppSheet(config, config.countsTableName, payload);

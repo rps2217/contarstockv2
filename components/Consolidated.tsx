@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { Layers, ChevronLeft, Package, Box, FileSpreadsheet, FileText, ArrowRight, CloudUpload, Loader2, CloudDownload, RefreshCw, Calendar, X, Clock, CalendarDays, CalendarRange } from 'lucide-react';
+import { Layers, ChevronLeft, Package, Box, FileSpreadsheet, FileText, ArrowRight, CloudUpload, Loader2, CloudDownload, RefreshCw, Calendar, X, Clock, CalendarDays, CalendarRange, Database } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { ConsolidatedItem, CountingSession } from '../types';
@@ -172,20 +172,20 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack }) => {
         return local.toISOString().split('T')[0];
     };
 
-    const executeDownload = async (start: string, end: string, label: string) => {
+    const executeDownload = async (start: string | null, end: string | null, label: string) => {
         setShowDownloadMenu(false);
-        if(!confirm(`¿Descargar datos de: ${label}?\nRango: ${start} al ${end}`)) return;
+        if(!confirm(`¿Descargar datos de: ${label}?\n${start ? `Rango: ${start} al ${end}` : 'Descarga COMPLETA (Puede tardar)'}`)) return;
 
         setIsRestoring(true);
         try {
-            console.log(`[Cloud] Requesting range: ${start} to ${end}`);
-            const result = await restoreFromCloud({
-                dateRange: { start, end }
-            });
+            console.log(`[Cloud] Requesting download: ${label}`);
+            const options = (start && end) ? { dateRange: { start, end } } : undefined;
+            const result = await restoreFromCloud(options);
+            
             if (result.sessions > 0) {
                 alert(`¡Éxito!\nSe descargaron ${result.sessions} sesiones.`);
             } else {
-                alert("No se encontraron nuevos datos en este periodo.");
+                alert("No se encontraron nuevos datos.");
             }
         } catch (err: any) {
             alert(`Error de conexión: ${err.message}`);
@@ -214,11 +214,8 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack }) => {
         executeDownload(getLocalDateString(start), getLocalDateString(end), "ESTE MES");
     };
     
-    const handleDownloadLastMonth = () => {
-        const now = new Date();
-        const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        const end = new Date(now.getFullYear(), now.getMonth(), 0); 
-        executeDownload(getLocalDateString(start), getLocalDateString(end), "MES PASADO");
+    const handleDownloadAll = () => {
+        executeDownload(null, null, "TODO (Sin Filtros)");
     };
 
     const handleSingleErpRestore = async (erp: string) => {
@@ -376,7 +373,7 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack }) => {
             {/* QUICK DOWNLOAD MENU */}
             {showDownloadMenu && (
                 <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-                    <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-6 relative animate-in zoom-in-95">
+                    <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-6 relative animate-in zoom-in-95 overflow-y-auto max-h-[85vh]">
                         <button onClick={() => setShowDownloadMenu(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-2 rounded-full hover:bg-slate-100 transition-colors"><X className="w-5 h-5" /></button>
                         
                         <div className="text-center mb-6">
@@ -411,12 +408,13 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack }) => {
                                     <div className="text-xs text-slate-400">Todo el mes en curso</div>
                                 </div>
                             </button>
-
-                            <button onClick={handleDownloadLastMonth} className="bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 p-4 rounded-xl flex items-center gap-4 transition-all group text-left">
-                                <div className="bg-white p-2 rounded-lg shadow-sm group-hover:text-indigo-600"><CalendarRange className="w-5 h-5" /></div>
+                            
+                            {/* FALLBACK OPTION */}
+                            <button onClick={handleDownloadAll} className="bg-red-50 hover:bg-red-100 border border-red-100 hover:border-red-200 p-4 rounded-xl flex items-center gap-4 transition-all group text-left">
+                                <div className="bg-white p-2 rounded-lg shadow-sm group-hover:text-red-600"><Database className="w-5 h-5" /></div>
                                 <div>
-                                    <div className="font-bold text-slate-900 group-hover:text-indigo-700">Mes Pasado</div>
-                                    <div className="text-xs text-slate-400">Datos del mes anterior</div>
+                                    <div className="font-bold text-slate-900 group-hover:text-red-700">Todo (Sin Filtros)</div>
+                                    <div className="text-xs text-slate-400">Descargar base completa (Lento)</div>
                                 </div>
                             </button>
                         </div>
