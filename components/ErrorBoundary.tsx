@@ -11,16 +11,12 @@ interface State {
   errorInfo: ErrorInfo | null;
 }
 
-export class ErrorBoundary extends Component<Props, State> {
+export class ErrorBoundary extends React.Component<Props, State> {
   public state: State = {
     hasError: false,
     error: null,
     errorInfo: null
   };
-
-  constructor(props: Props) {
-    super(props);
-  }
 
   public static getDerivedStateFromError(error: Error): Partial<State> {
     // Update state so the next render will show the fallback UI.
@@ -32,12 +28,12 @@ export class ErrorBoundary extends Component<Props, State> {
     this.setState({ errorInfo });
   }
 
-  private handleReload = () => {
+  handleReload = () => {
     // Force reload from server to clear any transient UI states
     window.location.reload();
   };
 
-  private handleClearCacheAndReload = () => {
+  handleClearCacheAndReload = () => {
     if (window.confirm("¿Estás seguro? Esto forzará una recarga completa de la aplicación y limpieza de caché.")) {
         // Clear session storage as well
         sessionStorage.clear();

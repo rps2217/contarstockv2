@@ -1,5 +1,5 @@
 
-import { fetchProductsFromCloud, fetchCloudData, fetchReceptionData, SHEET_COLUMNS, syncToAppSheet, syncProductsToAppSheet, syncReceptionToAppSheet } from './appsheet';
+import { fetchProductsFromCloud, fetchCloudData, fetchReceptionData, SHEET_COLUMNS, syncToAppSheet, syncProductsToAppSheet, syncReceptionToAppSheet, parseFlexibleDate } from './appsheet';
 import { db } from '../db';
 import { sanitizeBarcode, generateUUID } from './utils';
 import { Product, CountingSession, ScanRecord } from '../types';
@@ -25,7 +25,7 @@ export const importProductsFromAppSheet = async (): Promise<number> => {
     }));
 
     if (products.length > 0) {
-        await db.products.bulkPut(products);
+        await productService.saveProductBatch(products);
     }
     return products.length;
 };
@@ -37,37 +37,30 @@ export const restoreReceptionFromCloud = async (): Promise<number> => {
     for (const row of rows) {
         const id = row["ID_RECEPCION"];
         const label = row["ETIQUETA"];
-        const status = row["ESTADO"]; // 'PENDIENTE' or 'PROCESADO'
+        const status = row["ESTADO"]; 
         const dateStr = row["FECHA_HORA"];
 
         if (!id || !label) continue;
 
-        // Check if exists locally
         const exists = await db.sessions.get(id);
         if (exists) {
-            // Optional: Update status if cloud says it's processed but local says draft
             if (status === 'PROCESADO' && exists.status === 'draft') {
                 await db.sessions.update(id, { status: 'completed' });
             }
             continue;
         }
-
-        // Create new session from cloud data
-        // If 'PENDIENTE', we create it as 'draft' so the user can start counting it.
-        // If 'PROCESADO', we create it as 'completed' just for history (or 'active' if you want to edit).
-        // Safest is to treat PROCESADO as completed.
         
         const localStatus = status === 'PENDIENTE' ? 'draft' : 'completed';
         
         const newSession: CountingSession = {
             id: id,
-            erpOrder: 'PENDIENTE', // Reception doesn't necessarily have ERP yet
+            erpOrder: 'PENDIENTE',
             logisticsLabel: label,
             createdAt: dateStr ? new Date(dateStr).getTime() : Date.now(),
             status: localStatus,
             totalUnits: 0,
             totalSKUs: 0,
-            lastSyncTimestamp: Date.now() // It came from cloud, so it is synced
+            lastSyncTimestamp: Date.now()
         };
 
         await db.sessions.add(newSession);
@@ -78,20 +71,7 @@ export const restoreReceptionFromCloud = async (): Promise<number> => {
 };
 
 
-// Helper for date parsing
-const parseFlexibleDate = (dateVal: any): number => {
-    if (!dateVal) return Date.now();
-    if (typeof dateVal === 'number') return dateVal; 
-    const s = String(dateVal).trim();
-    if (s.match(/^\d{4}-\d{2}-\d{2}/)) { const ts = new Date(s).getTime(); if (!isNaN(ts)) return ts; }
-    const parts = s.split(/[\/\-]/);
-    if (parts.length === 3) {
-        const d = parseInt(parts[0], 10); const m = parseInt(parts[1], 10) - 1; const y = parseInt(parts[2], 10);
-        if (d > 0 && d <= 31 && m >= 0 && m <= 11) { const ts = new Date(y, m, d).getTime(); if (!isNaN(ts)) return ts; }
-    }
-    const ts = new Date(s).getTime(); return isNaN(ts) ? Date.now() : ts;
-};
-
+// Main Restore Logic - Optimized
 export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange?: { start: string, end: string } }): Promise<{ sessions: number, items: number }> => {
   const rows = await fetchCloudData(options);
   if (rows.length === 0) return { sessions: 0, items: 0 };
@@ -99,14 +79,15 @@ export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange
   let sessionsProcessed = 0;
   let itemsRestored = 0;
 
+  // 1. Group Rows by Session (Key: ERP_LABEL)
   const sessionsMap = new Map<string, any[]>();
-  
   rows.forEach(row => {
     let erp = row[SHEET_COLUMNS.ERP_ORDER];
     let label = row[SHEET_COLUMNS.LABEL];
+    
+    // Safety handling for empty values
     erp = erp ? String(erp).trim() : "";
-    if (!label || String(label).trim() === "") label = "GENERAL"; else label = String(label).trim();
-    if (options?.erpFilter && erp !== options.erpFilter) return;
+    label = (!label || String(label).trim() === "") ? "GENERAL" : String(label).trim();
 
     if (erp) {
         const key = `${erp}_${label}`;
@@ -115,23 +96,34 @@ export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange
     }
   });
 
+  // 2. Prefetch existing sessions to reduce DB calls inside loop
+  const erpList = Array.from(new Set(rows.map(r => r[SHEET_COLUMNS.ERP_ORDER])));
+  const existingSessions = await db.sessions.where('erpOrder').anyOf(erpList).toArray();
+  const existingSessionMap = new Map<string, CountingSession>();
+  
+  existingSessions.forEach(s => {
+      existingSessionMap.set(`${s.erpOrder}_${s.logisticsLabel}`, s);
+  });
+
+  // 3. Process Groups
   for (const [key, sessionRows] of sessionsMap.entries()) {
     const firstRow = sessionRows[0];
     const erp = String(firstRow[SHEET_COLUMNS.ERP_ORDER]).trim();
-    const labelRaw = firstRow[SHEET_COLUMNS.LABEL];
-    const label = (!labelRaw || String(labelRaw).trim() === "") ? "GENERAL" : String(labelRaw).trim();
+    const label = String(firstRow[SHEET_COLUMNS.LABEL] || "GENERAL").trim();
 
     let sessionId: string;
-    const existingSession = await db.sessions
-      .where('erpOrder').equals(erp)
-      .and(s => s.logisticsLabel === label)
-      .first();
+    let isNewSession = false;
+
+    // Check pre-fetched map
+    const existingSession = existingSessionMap.get(key);
 
     if (existingSession) {
         sessionId = existingSession.id;
+        // Just update sync timestamp to keep it alive
         await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
     } else {
         const dateStr = firstRow[SHEET_COLUMNS.DATE];
+        // Use the robust parser from appsheet.ts
         const sessionCreatedAt = parseFlexibleDate(dateStr);
         sessionId = generateUUID();
         
@@ -146,27 +138,18 @@ export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange
             lastSyncTimestamp: Date.now()
         });
         sessionsProcessed++;
+        isNewSession = true;
     }
 
-    const scansToAdd: ScanRecord[] = [];
-    const productsToAdd: Map<string, Product> = new Map();
+    // 4. Calculate Cloud Aggregates
+    interface AggregatedItem { qty: number; name: string; mm?: number; yyyy?: number; isIncident?: boolean; }
+    const cloudAggregated = new Map<string, AggregatedItem>();
 
-    const localScans = await db.scans.where('sessionId').equals(sessionId).toArray();
-    const localQtyMap = new Map<string, number>();
-    
     const getCompositeKey = (barcode: string, mm: any, yyyy: any) => {
         const m = mm ? Number(mm) : 0;
         const y = yyyy ? Number(yyyy) : 0;
         return `${sanitizeBarcode(barcode)}_${m}_${y}`;
     };
-    
-    localScans.forEach(s => {
-        const dateKey = getCompositeKey(s.barcode, s.mm, s.yyyy);
-        localQtyMap.set(dateKey, (localQtyMap.get(dateKey) || 0) + s.quantity);
-    });
-
-    interface AggregatedItem { qty: number; name: string; mm?: number; yyyy?: number; isIncident?: boolean; }
-    const cloudAggregated = new Map<string, AggregatedItem>();
 
     for (const row of sessionRows) {
         const barcodeRaw = row[SHEET_COLUMNS.BARCODE];
@@ -174,7 +157,7 @@ export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange
         const rawQty = row[SHEET_COLUMNS.QUANTITY];
         const qty = typeof rawQty === 'number' ? rawQty : Number(String(rawQty).replace(/,/g, ''));
         
-        if (!qty || isNaN(qty) || qty <= 0) continue;
+        if (!barcode || !qty || isNaN(qty) || qty <= 0) continue;
 
         const mm = row[SHEET_COLUMNS.MONTH] ? Number(row[SHEET_COLUMNS.MONTH]) : undefined;
         const yyyy = row[SHEET_COLUMNS.YEAR] ? Number(row[SHEET_COLUMNS.YEAR]) : undefined;
@@ -192,6 +175,21 @@ export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange
         }
     }
 
+    // 5. Compare with Local Data (Only if session existed previously, otherwise local is 0)
+    const localQtyMap = new Map<string, number>();
+    
+    if (!isNewSession) {
+        const localScans = await db.scans.where('sessionId').equals(sessionId).toArray();
+        localScans.forEach(s => {
+            const dateKey = getCompositeKey(s.barcode, s.mm, s.yyyy);
+            localQtyMap.set(dateKey, (localQtyMap.get(dateKey) || 0) + s.quantity);
+        });
+    }
+
+    // 6. Generate Diff Scans
+    const scansToAdd: ScanRecord[] = [];
+    const productsToAdd: Map<string, Product> = new Map();
+
     for (const [dateKey, cloudData] of cloudAggregated.entries()) {
         const localQty = localQtyMap.get(dateKey) || 0;
         const [barcode] = dateKey.split('_');
@@ -199,8 +197,11 @@ export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange
         if (cloudData.qty > localQty) {
             const quantityToAdd = cloudData.qty - localQty;
 
-            const existingProduct = await db.products.get(barcode);
-            if (!existingProduct && !productsToAdd.has(barcode)) {
+            // Check if product exists in DB efficiently? 
+            // We can assume it does or we add it safely via batch later.
+            // For optimized flow, we just accumulate products to add.
+            if (!productsToAdd.has(barcode)) {
+                 // Note: We check DB existence later in batch
                 productsToAdd.set(barcode, {
                     barcode: barcode,
                     name: cloudData.name,
@@ -217,21 +218,25 @@ export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange
                 timestamp: Date.now(),
                 mm: cloudData.mm,
                 yyyy: cloudData.yyyy,
-                synced: 1,
+                synced: 1, // Mark as synced so we don't re-upload it
                 isIncident: cloudData.isIncident
             });
             itemsRestored += quantityToAdd;
         }
     }
 
-    if (productsToAdd.size > 0) {
-        await productService.saveProductBatch(Array.from(productsToAdd.values()));
-    }
+    // 7. Commit Changes for this session
     if (scansToAdd.length > 0) {
         await db.scans.bulkAdd(scansToAdd);
-    }
+        
+        // Save new products (service handles existing check)
+        const productsArray = Array.from(productsToAdd.values());
+        if (productsArray.length > 0) {
+            await productService.saveProductBatch(productsArray);
+        }
 
-    await sessionService.updateSessionStats(sessionId);
+        await sessionService.updateSessionStats(sessionId);
+    }
   }
 
   return { sessions: sessionsProcessed, items: itemsRestored };

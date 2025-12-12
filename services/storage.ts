@@ -1,3 +1,4 @@
+
 import { CountingSession } from '../types';
 import { db } from '../db';
 import { generateUUID, sanitizeBarcode } from './utils';
@@ -58,6 +59,13 @@ export const createDraftSession = async (logisticsLabel: string): Promise<Counti
 
 // NEW: Activate a draft session when starting count
 export const activateDraftSession = async (draftSessionId: string, erpOrder: string): Promise<CountingSession> => {
+    // CRITICAL FIX: Close any existing active sessions before activating the draft
+    // This prevents "Multiple Active Sessions" state which breaks the scanner.
+    const activeSessions = await db.sessions.where('status').equals('active').toArray();
+    if (activeSessions.length > 0) { 
+        await Promise.all(activeSessions.map(s => db.sessions.update(s.id, { status: 'completed' }))); 
+    }
+
     await db.sessions.update(draftSessionId, {
         status: 'active',
         erpOrder: erpOrder.trim(),

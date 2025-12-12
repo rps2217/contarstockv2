@@ -9,7 +9,7 @@ import { db } from "../db";
 import { aggregateScans } from "./aggregator";
 import { sendToAppSheet, AppSheetPayload } from "../infrastructure/api/appsheetClient";
 
-export const SYNC_ENGINE_VERSION = "6.0.4-SIMPLE";
+export const SYNC_ENGINE_VERSION = "6.1.0-ROBUST-DATE";
 
 // --- CONFIG & MAPPING ---
 
@@ -29,17 +29,42 @@ export const SHEET_COLUMNS = {
 
 // --- HELPERS ---
 
-const parseFlexibleDate = (dateVal: any): number => {
+// Exported so syncBridge can use it for consistency
+export const parseFlexibleDate = (dateVal: any): number => {
     if (!dateVal) return Date.now();
-    if (typeof dateVal === 'number') return dateVal; 
+    if (typeof dateVal === 'number') {
+        // Excel serial date check (approximate, for serials > 30000 which are years > 1982)
+        if (dateVal > 30000 && dateVal < 60000) {
+            // Convert Excel serial to JS Date
+            return new Date((dateVal - (25567 + 2)) * 86400 * 1000).getTime();
+        }
+        return dateVal; 
+    }
+    
     const s = String(dateVal).trim();
-    if (s.match(/^\d{4}-\d{2}-\d{2}/)) { const ts = new Date(s).getTime(); if (!isNaN(ts)) return ts; }
+    
+    // ISO Format YYYY-MM-DD
+    if (s.match(/^\d{4}-\d{2}-\d{2}/)) { 
+        // Force replace - with / to avoid timezone issues in some browsers
+        const ts = new Date(s.replace(/-/g, '/')).getTime(); 
+        if (!isNaN(ts)) return ts; 
+    }
+    
+    // Latam Format DD/MM/YYYY or DD-MM-YYYY
     const parts = s.split(/[\/\-]/);
     if (parts.length === 3) {
-        const d = parseInt(parts[0], 10); const m = parseInt(parts[1], 10) - 1; const y = parseInt(parts[2], 10);
-        if (d > 0 && d <= 31 && m >= 0 && m <= 11) { const ts = new Date(y, m, d).getTime(); if (!isNaN(ts)) return ts; }
+        // Detect if first part is Year (YYYY/MM/DD) or Day (DD/MM/YYYY)
+        if (parts[0].length === 4) {
+             const y = parseInt(parts[0], 10); const m = parseInt(parts[1], 10) - 1; const d = parseInt(parts[2], 10);
+             const ts = new Date(y, m, d).getTime(); if (!isNaN(ts)) return ts;
+        } else {
+             const d = parseInt(parts[0], 10); const m = parseInt(parts[1], 10) - 1; const y = parseInt(parts[2], 10);
+             const ts = new Date(y, m, d).getTime(); if (!isNaN(ts)) return ts;
+        }
     }
-    const ts = new Date(s).getTime(); return isNaN(ts) ? Date.now() : ts;
+    
+    const ts = new Date(s).getTime(); 
+    return isNaN(ts) ? Date.now() : ts;
 };
 
 const aggregateScansForSync = async (session: CountingSession, scans: ScanRecord[]): Promise<any[]> => {
@@ -182,31 +207,50 @@ export const fetchProductsFromCloud = async (): Promise<any[]> => {
     return Array.isArray(result) ? result : [];
 };
 
+/**
+ * Fetches data from cloud. 
+ * CRITICAL FIX: Moves Date Filtering to CLIENT-SIDE.
+ * AppSheet API selectors for Dates are extremely fragile due to locale mismatch.
+ * It's safer to download the dataset (if not massive) and filter in JS.
+ */
 export const fetchCloudData = async (options?: { erpFilter?: string; dateRange?: { start: string, end: string } }): Promise<any[]> => {
   const settings = getSettings(); const config = settings.appSheetConfig;
   if (!config?.countsTableName) throw new Error("Falta tabla de consolidados.");
   
   let selector = "";
+  
+  // Only use Selector for ERP (String match is safe)
   if (options?.erpFilter) { 
       selector = `[${SHEET_COLUMNS.ERP_ORDER}] = '${options.erpFilter.replace(/'/g, "")}'`; 
-  } else if (options?.dateRange) {
-      // FIX: Robust date filtering using String Comparison instead of DATE() casting.
-      // Based on screenshot, FECHA column is YYYY-MM-DD.
-      if (options.dateRange.start === options.dateRange.end) {
-          // Exact Match for single day
-          selector = `[${SHEET_COLUMNS.DATE}] = "${options.dateRange.start}"`;
-      } else {
-          // Range Match
-          selector = `AND([${SHEET_COLUMNS.DATE}] >= "${options.dateRange.start}", [${SHEET_COLUMNS.DATE}] <= "${options.dateRange.end}")`;
-      }
   }
-  // If no options provided, selector remains "" which downloads EVERYTHING.
+  
+  // If DateRange is present, we DO NOT add it to selector. We fetch all (or erp filtered) and filter later.
+  // This prevents the "0 results" bug caused by date format mismatch.
 
-  console.log("[AppSheet] Fetching with selector:", selector || "ALL (No Filter)");
+  console.log("[AppSheet] Fetching with selector:", selector || "ALL (Client-side filtering enabled)");
 
   const payload: AppSheetPayload = { Action: "Find", Properties: { Locale: "es-CL", Timezone: "UTC", Selector: selector || undefined }, Rows: [] };
   const result = await sendToAppSheet(config, config.countsTableName, payload);
-  return Array.isArray(result) ? result : [];
+  
+  if (!Array.isArray(result)) return [];
+
+  // CLIENT-SIDE FILTERING (Robust)
+  if (options?.dateRange) {
+      console.log(`[AppSheet] Filtering ${result.length} rows by date locally...`);
+      const startTs = parseFlexibleDate(options.dateRange.start);
+      // End date needs to include the whole day, so add 24h or compare carefully.
+      // parseFlexibleDate returns midnight of that day.
+      const endTs = parseFlexibleDate(options.dateRange.end) + (24 * 60 * 60 * 1000) - 1; 
+
+      return result.filter(row => {
+          const rowDateRaw = row[SHEET_COLUMNS.DATE];
+          if (!rowDateRaw) return false;
+          const rowTs = parseFlexibleDate(rowDateRaw);
+          return rowTs >= startTs && rowTs <= endTs;
+      });
+  }
+
+  return result;
 };
 
 export const queueSync = async (session: CountingSession, items: ConsolidatedItem[]) => { await db.syncQueue.add({ session, items, createdAt: Date.now(), status: 'pending', retryCount: 0 }); };

@@ -6,6 +6,8 @@ import { db } from '../db';
 import * as matcher from '../services/matcher';
 import { CountingSession, MatchResult, ConsolidatedItem } from '../types';
 import * as storage from '../services/storage';
+// ARCHITECTURE FIX: Import centralized aggregator
+import { aggregateScans } from '../services/aggregator';
 
 interface ConciliatorProps {
   onBack: () => void;
@@ -48,18 +50,9 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
       // 1. Get physical items for this session
       const scans = await db.scans.where('sessionId').equals(sessionId).toArray();
       
-      // Aggregate physical items
-      const map = new Map<string, ConsolidatedItem>();
-      const allProducts = await db.products.toArray();
-      const productNames = allProducts.reduce((acc, p) => ({...acc, [p.barcode]: p.name}), {} as Record<string, string>);
-
-      scans.forEach(s => {
-        const existing = map.get(s.barcode);
-        if (existing) existing.totalQuantity += s.quantity;
-        else map.set(s.barcode, { barcode: s.barcode, productName: productNames[s.barcode] || 'Desconocido', totalQuantity: s.quantity, scans: 1 });
-      });
-
-      const physicalItems = Array.from(map.values());
+      // ARCHITECTURE FIX: Use centralized Aggregator logic instead of manual map/reduce.
+      // This guarantees that the Conciliator sees exactly the same quantities as the Reports.
+      const physicalItems = await aggregateScans(scans);
 
       // 2. Run Algorithm
       const results = await matcher.findMatches(physicalItems);
