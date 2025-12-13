@@ -11,6 +11,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   hapticsEnabled: true,
   ttsEnabled: false, // Default DISABLED as requested
   ttsMode: 'count',  // Default mode is the new efficient Counting mode
+  speedometerEnabled: false, // Default DISABLED as requested
   confirmDelete: true,
   appSheetConfig: {
       appId: '',

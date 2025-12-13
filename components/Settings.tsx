@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Settings as SettingsIcon, Volume2, VolumeX, Vibrate, Zap, Moon, Sun, Monitor, AlertTriangle, ArrowLeft, Cloud, Key, Database, Lock, Check, Eye, Shield, FileText, Package, AlertOctagon, Activity, CheckCircle, XCircle, Share2, Download, QrCode, Copy, Save, Upload, RefreshCw, Loader2, Speech, Hash, Type } from 'lucide-react';
+import { Settings as SettingsIcon, Volume2, VolumeX, Vibrate, Zap, Moon, Sun, Monitor, AlertTriangle, ArrowLeft, Cloud, Key, Database, Lock, Check, Eye, Shield, FileText, Package, AlertOctagon, Activity, CheckCircle, XCircle, Share2, Download, QrCode, Copy, Save, Upload, RefreshCw, Loader2, Speech, Hash, Type, Gauge } from 'lucide-react';
 import * as storage from '../services/storage';
 import * as settingsService from '../services/settings';
 import { createFullBackup, restoreFullBackup } from '../services/backupService';
@@ -244,6 +244,22 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
                             </button>
                         </div>
                     )}
+                </div>
+
+                {/* Speedometer Toggle */}
+                <div className="flex items-center justify-between p-2">
+                    <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${settings.speedometerEnabled ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400'}`}>
+                            <Gauge className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <div className="font-bold text-slate-900">Velocímetro</div>
+                            <div className="text-xs text-slate-400">Mostrar items por minuto</div>
+                        </div>
+                    </div>
+                    <button onClick={() => updateSetting('speedometerEnabled', !settings.speedometerEnabled)} className={`w-12 h-6 rounded-full transition-colors relative ${settings.speedometerEnabled ? 'bg-blue-500' : 'bg-slate-300'}`}>
+                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.speedometerEnabled ? 'left-7' : 'left-1'}`} />
+                    </button>
                 </div>
 
                 <div className="flex items-center justify-between p-2">

@@ -8,6 +8,7 @@ import { ScanItem } from './ScanItem';
 import { NumericKeypad } from './NumericKeypad';
 import { CameraScanner } from './CameraScanner';
 import { SoundFX } from '../services/audio';
+import * as storage from '../services/storage';
 
 interface ScannerProps {
   session: CountingSession;
@@ -22,6 +23,9 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
       actions 
   } = useScanner(session, onCloseSession, onDiscardSession);
 
+  // Read settings once on mount to determine feature flags
+  const settings = useMemo(() => storage.getSettings(), []);
+
   // Focus ref for manual input
   const manualInputRef = useRef<HTMLInputElement>(null);
 
@@ -29,9 +33,9 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
   const [scansPerMinute, setScansPerMinute] = useState(0);
   const scanTimestampsRef = useRef<number[]>([]);
 
-  // Update speed whenever a scan happens
+  // Update speed whenever a scan happens - Only if enabled
   useEffect(() => {
-    if (data.lastScan) {
+    if (settings.speedometerEnabled && data.lastScan) {
         const now = Date.now();
         // Add current timestamp
         scanTimestampsRef.current.push(now);
@@ -40,13 +44,13 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
         scanTimestampsRef.current = scanTimestampsRef.current.filter(t => t > cutoff);
         // Update State
         setScansPerMinute(scanTimestampsRef.current.length);
-        
-        // TTS logic moved to useScanner hook to access streak state correctly
     }
-  }, [data.lastScan]);
+  }, [data.lastScan, settings.speedometerEnabled]);
 
-  // Decay speedometer if idle
+  // Decay speedometer if idle - Only if enabled
   useEffect(() => {
+      if (!settings.speedometerEnabled) return;
+
       const interval = setInterval(() => {
           const now = Date.now();
           const cutoff = now - 60000;
@@ -57,7 +61,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
           }
       }, 5000);
       return () => clearInterval(interval);
-  }, []);
+  }, [settings.speedometerEnabled]);
 
 
   // PERFORMANCE OPTIMIZATION: 
@@ -125,11 +129,13 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
              <div className="font-mono font-bold text-sm tracking-widest">{session.erpOrder}</div>
         </div>
         <div className="flex items-center gap-2">
-            {/* PERFORMANCE PILL */}
-            <div className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${scansPerMinute > 20 ? 'bg-green-500/20 border-green-500/50 text-green-300' : 'bg-white/10 border-white/10 text-slate-300'}`}>
-                <Gauge className="w-3 h-3" />
-                <span>{scansPerMinute} ipm</span>
-            </div>
+            {/* PERFORMANCE PILL - Conditional Render */}
+            {settings.speedometerEnabled && (
+                <div className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${scansPerMinute > 20 ? 'bg-green-500/20 border-green-500/50 text-green-300' : 'bg-white/10 border-white/10 text-slate-300'}`}>
+                    <Gauge className="w-3 h-3" />
+                    <span>{scansPerMinute} ipm</span>
+                </div>
+            )}
 
             <button 
                 onClick={() => state.setShowConfirmModal(true)} 
@@ -236,11 +242,13 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
                 
                 {/* Stats */}
                 <div className="flex gap-4 px-3 items-center">
-                     {/* Mobile Speedometer */}
-                    <div className="md:hidden flex flex-col items-center justify-center mr-2 w-10">
-                        <Gauge className={`w-5 h-5 ${scansPerMinute > 20 ? 'text-green-400' : 'text-slate-500'}`} />
-                        <span className={`text-[9px] font-bold ${scansPerMinute > 20 ? 'text-green-400' : 'text-slate-500'}`}>{scansPerMinute}</span>
-                    </div>
+                     {/* Mobile Speedometer - Conditional Render */}
+                    {settings.speedometerEnabled && (
+                        <div className="md:hidden flex flex-col items-center justify-center mr-2 w-10">
+                            <Gauge className={`w-5 h-5 ${scansPerMinute > 20 ? 'text-green-400' : 'text-slate-500'}`} />
+                            <span className={`text-[9px] font-bold ${scansPerMinute > 20 ? 'text-green-400' : 'text-slate-500'}`}>{scansPerMinute}</span>
+                        </div>
+                    )}
 
                     <div className="flex flex-col">
                         <span className="text-[9px] uppercase font-bold text-white/40">Unidades</span>

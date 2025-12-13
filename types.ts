@@ -61,6 +61,7 @@ export interface AppSettings {
   hapticsEnabled: boolean;
   ttsEnabled: boolean; // NEW: Text to Speech enabled
   ttsMode: 'product' | 'count'; // NEW: Voice Mode (Read Name vs Count Streak)
+  speedometerEnabled: boolean; // NEW: Show scans per minute
   confirmDelete: boolean;
   appSheetConfig?: AppSheetConfig;
 }
