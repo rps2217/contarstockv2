@@ -8,6 +8,13 @@ import * as productService from './productService';
 // Re-export core sync functions for UI components to avoid split dependencies
 export { syncToAppSheet, syncProductsToAppSheet, syncReceptionToAppSheet };
 
+// --- HELPER FOR KEY NORMALIZATION ---
+const normalizeKey = (str: any) => String(str || '').trim().toUpperCase();
+const generateCompositeKey = (erp: any, label: any) => {
+    const l = (!label || String(label).trim() === "") ? "GENERAL" : String(label).trim();
+    return `${normalizeKey(erp)}_${normalizeKey(l)}`;
+};
+
 /**
  * INTELLIGENT BATCH SYNC
  */
@@ -94,23 +101,26 @@ export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange
   const rows = await fetchCloudData(options);
   if (rows.length === 0) return { sessions: 0, items: 0 };
 
+  // --- PREPARE LOCAL REFERENCE MAP ---
+  // We fetch ALL local sessions to build a robust, case-insensitive existence map.
+  // This prevents creating duplicates if "ORD-123" exists locally but cloud sends "ord-123".
+  const allLocalSessions = await db.sessions.toArray();
+  const localSessionMap = new Map<string, CountingSession>();
+  
+  allLocalSessions.forEach(s => {
+      localSessionMap.set(generateCompositeKey(s.erpOrder, s.logisticsLabel), s);
+  });
+
   // --- FILTER: DISCARD EXISTING LOCAL SESSIONS ---
   let rowsToProcess = rows;
   
   // If skipExisting is true (default for bulk download), we filter out data we already have locally.
   if (options?.skipExisting) {
       console.log("[Restore] Applying 'Skip Existing' filter...");
-      const cloudErps = Array.from(new Set(rows.map(r => String(r[SHEET_COLUMNS.ERP_ORDER]).trim())));
-      const localSessions = await db.sessions.where('erpOrder').anyOf(cloudErps).toArray();
-      
-      // Create a signature set of "ERP_LABEL" that exists locally
-      const localSignatures = new Set(localSessions.map(s => `${s.erpOrder}_${s.logisticsLabel}`));
       
       rowsToProcess = rows.filter(row => {
-          const erp = String(row[SHEET_COLUMNS.ERP_ORDER]).trim();
-          const label = String(row[SHEET_COLUMNS.LABEL] || "GENERAL").trim();
-          const signature = `${erp}_${label}`;
-          return !localSignatures.has(signature);
+          const key = generateCompositeKey(row[SHEET_COLUMNS.ERP_ORDER], row[SHEET_COLUMNS.LABEL]);
+          return !localSessionMap.has(key);
       });
       console.log(`[Restore] Filtered out ${rows.length - rowsToProcess.length} rows that already exist locally.`);
   }
@@ -125,23 +135,17 @@ export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange
   rowsToProcess.forEach(row => {
     let erp = row[SHEET_COLUMNS.ERP_ORDER];
     let label = row[SHEET_COLUMNS.LABEL];
-    erp = erp ? String(erp).trim() : "";
-    label = (!label || String(label).trim() === "") ? "GENERAL" : String(label).trim();
+    
+    // Normalize logic
+    const key = generateCompositeKey(erp, label);
 
     if (erp) {
-        const key = `${erp}_${label}`;
         if (!sessionsMap.has(key)) sessionsMap.set(key, []);
         sessionsMap.get(key)?.push(row);
     }
   });
 
-  // 2. Batch Prefetch (Only needed if we didn't fully skip, or for delta syncs)
-  const erpList = Array.from(new Set(rowsToProcess.map(r => r[SHEET_COLUMNS.ERP_ORDER])));
-  const existingSessions = await db.sessions.where('erpOrder').anyOf(erpList).toArray();
-  const existingSessionMap = new Map<string, CountingSession>();
-  existingSessions.forEach(s => existingSessionMap.set(`${s.erpOrder}_${s.logisticsLabel}`, s));
-
-  // 3. Process Groups
+  // 2. Process Groups
   for (const [key, sessionRows] of sessionsMap.entries()) {
     const firstRow = sessionRows[0];
     const erp = String(firstRow[SHEET_COLUMNS.ERP_ORDER]).trim();
@@ -152,22 +156,23 @@ export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange
     let sessionTotalUnits = 0;
     let sessionTotalSKUs = 0;
 
-    const existingSession = existingSessionMap.get(key);
+    // Use our robust map to find if it exists
+    const existingSession = localSessionMap.get(key);
 
     if (existingSession) {
-        // If we are here, it means skipExisting was FALSE, or the signature matching logic missed it.
-        // We proceed with Delta Sync logic.
+        // Delta Sync Logic
         sessionId = existingSession.id;
         sessionTotalUnits = existingSession.totalUnits || 0;
         sessionTotalSKUs = existingSession.totalSKUs || 0;
         await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
     } else {
+        // New Session Logic
         sessionId = generateUUID();
         isNewSession = true;
         sessionsProcessed++;
     }
 
-    // 4. Calculate Aggregates
+    // 4. Calculate Aggregates from Cloud Data
     interface AggregatedItem { qty: number; name: string; mm?: number; yyyy?: number; isIncident?: boolean; }
     const cloudAggregated = new Map<string, AggregatedItem>();
     const getCompositeKey = (barcode: string, mm: any, yyyy: any) => `${sanitizeBarcode(barcode)}_${mm ? Number(mm) : 0}_${yyyy ? Number(yyyy) : 0}`;
@@ -216,6 +221,7 @@ export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange
         
         uniqueSKUsSet.add(barcode);
 
+        // Only add if cloud has MORE than local
         if (cloudData.qty > localQty) {
             const quantityToAdd = cloudData.qty - localQty;
 

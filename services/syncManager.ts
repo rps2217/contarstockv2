@@ -1,3 +1,4 @@
+
 import { db } from '../db';
 import { fetchCloudData, syncToAppSheet, SHEET_COLUMNS, parseFlexibleDate } from './appsheet';
 import { CountingSession, ScanRecord } from '../types';
@@ -21,6 +22,14 @@ export interface CloudItem {
     status: 'new' | 'exists_identical' | 'exists_different';
     rawRow: any;
 }
+
+// --- HELPER ---
+const normalizeKey = (str: any) => String(str || '').trim().toUpperCase();
+const generateCompositeKey = (erp: any, label: any) => {
+    // Handle default/empty label logic consistently
+    const l = (!label || String(label).trim() === "") ? "GENERAL" : String(label).trim();
+    return `${normalizeKey(erp)}_${normalizeKey(l)}`;
+};
 
 // --- UPLOAD LOGIC ---
 
@@ -106,28 +115,30 @@ export const analyzeCloudDifferences = async (startDate: string, endDate: string
     if (cloudRows.length === 0) return [];
 
     // 2. Get Local Sessions for comparison
+    // We fetch all to ensure we don't miss anything due to case sensitivity in specific queries
     const localSessions = await db.sessions.toArray();
-    const localSignatures = new Set(localSessions.map(s => `${s.erpOrder}_${s.logisticsLabel}`));
+    const localSignatures = new Set(localSessions.map(s => generateCompositeKey(s.erpOrder, s.logisticsLabel)));
 
     // 3. Process and Compare
     const results: CloudItem[] = [];
     const processedKeys = new Set<string>(); // To avoid duplicates in the list if cloud has multiple rows per session
 
     for (const row of cloudRows) {
-        const erp = String(row[SHEET_COLUMNS.ERP_ORDER] || '').trim();
-        const label = String(row[SHEET_COLUMNS.LABEL] || 'GENERAL').trim();
-        const key = `${erp}_${label}`;
+        const erp = row[SHEET_COLUMNS.ERP_ORDER];
+        const label = row[SHEET_COLUMNS.LABEL];
+        const key = generateCompositeKey(erp, label);
 
+        // Skip invalid rows or already processed sessions within this batch
         if (!erp || processedKeys.has(key)) continue;
         processedKeys.add(key);
 
         const existsLocal = localSignatures.has(key);
         
         results.push({
-            erpOrder: erp,
-            label: label,
+            erpOrder: String(erp).trim(),
+            label: String(label || 'GENERAL').trim(),
             date: new Date(parseFlexibleDate(row[SHEET_COLUMNS.DATE])),
-            totalQty: 0, // We could sum this up if needed, but iterating all rows is expensive
+            totalQty: 0, 
             status: existsLocal ? 'exists_identical' : 'new',
             rawRow: row
         });
