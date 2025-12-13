@@ -1,11 +1,11 @@
 
 import React, { useState, useMemo } from 'react';
-import { Layers, ChevronLeft, Package, Box, FileSpreadsheet, FileText, ArrowRight, CloudUpload, Loader2, CloudDownload, RefreshCw, Calendar, X, Clock, CalendarDays, CalendarRange, Database, CheckCircle2 } from 'lucide-react';
+import { Layers, ChevronLeft, Package, Box, FileSpreadsheet, FileText, ArrowRight, CloudUpload, Loader2 } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { ConsolidatedItem, CountingSession } from '../types';
 import { exportToExcel, exportToPDF } from '../services/export';
-import { syncToAppSheet, restoreFromCloud, syncAllPendingData } from '../services/syncBridge';
+import { syncToAppSheet } from '../services/syncBridge';
 import * as storage from '../services/storage';
 import { aggregateScans } from '../services/aggregator';
 import { SearchBar } from './SearchBar';
@@ -19,12 +19,6 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [detailSearchQuery, setDetailSearchQuery] = useState('');
     const [isSyncing, setIsSyncing] = useState(false);
-    const [isGlobalSyncing, setIsGlobalSyncing] = useState(false); // New state for bulk sync
-    const [isRestoring, setIsRestoring] = useState(false);
-    const [globalSyncProgress, setGlobalSyncProgress] = useState<{current: number, total: number} | null>(null);
-
-    // --- DOWNLOAD MENU STATE ---
-    const [showDownloadMenu, setShowDownloadMenu] = useState(false);
 
     const handleSearch = (query: string) => {
         setSearchQuery(query);
@@ -40,18 +34,14 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack }) => {
     };
 
     // 1. OPTIMIZED LIST QUERY
-    // Instead of loading all sessions, we load only recent ones OR filtered ones.
     const erpGroups = useLiveQuery(async () => {
         let sessions: CountingSession[];
 
         if (searchQuery) {
-            // If searching, use Index to find matches
             sessions = await db.sessions
                 .where('erpOrder').startsWithIgnoreCase(searchQuery)
                 .toArray();
         } else {
-            // Default view: ONLY LAST 100 SESSIONS
-            // This prevents UI freeze when database grows large
             sessions = await db.sessions
                 .orderBy('createdAt')
                 .reverse()
@@ -88,10 +78,7 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack }) => {
         const sessions = await db.sessions.where('erpOrder').equals(selectedErp).toArray();
         const sessionIds = sessions.map(s => s.id);
         
-        // Fetch all scans for this ERP
         const scans = await db.scans.where('sessionId').anyOf(sessionIds).toArray();
-        
-        // Use Centralized Logic for consistency
         const items = await aggregateScans(scans);
 
         const logisticsLabels = sessions.map(s => s.logisticsLabel).join(', ');
@@ -117,11 +104,7 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack }) => {
         );
     }, [details, detailSearchQuery]);
 
-    // Check if there are any pending items globally
-    const pendingGlobalCount = useLiveQuery(() => db.scans.where('synced').equals(0).count(), [], 0);
-
-
-    // ... (Export and Sync Handlers remain unchanged) ...
+    // ... (Export Handlers) ...
     const handleExportExcel = () => {
         if (!selectedErp || !details) return;
         const virtualSession: CountingSession = {
@@ -169,107 +152,6 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack }) => {
         }
     };
 
-    // NEW: Handle Global Sync
-    const handleGlobalSync = async () => {
-        if (pendingGlobalCount === 0) {
-            alert("No hay registros pendientes de sincronización.");
-            return;
-        }
-
-        if (!confirm(`Se detectaron items sin sincronizar.\n¿Desea subir TODOS los cambios pendientes a AppSheet ahora?`)) return;
-
-        setIsGlobalSyncing(true);
-        setGlobalSyncProgress({ current: 0, total: 0 }); // Will update
-
-        try {
-            const syncedCount = await syncAllPendingData((current, total) => {
-                setGlobalSyncProgress({ current, total });
-            });
-
-            if (syncedCount > 0) {
-                alert(`¡Proceso completado!\nSe sincronizaron ${syncedCount} bultos/sesiones.`);
-            } else {
-                alert("Todo ya estaba sincronizado.");
-            }
-        } catch (err: any) {
-            alert(`Error durante la sincronización masiva: ${err.message}`);
-        } finally {
-            setIsGlobalSyncing(false);
-            setGlobalSyncProgress(null);
-        }
-    };
-
-    // --- DATE LOGIC ---
-    // Helper to get local date string YYYY-MM-DD correctly handling timezone
-    const getLocalDateString = (date: Date) => {
-        const offset = date.getTimezoneOffset();
-        const local = new Date(date.getTime() - (offset * 60 * 1000));
-        return local.toISOString().split('T')[0];
-    };
-
-    const executeDownload = async (start: string | null, end: string | null, label: string) => {
-        setShowDownloadMenu(false);
-        // Prompt refined: "Descargar SOLO NUEVOS"
-        if(!confirm(`¿Descargar datos de: ${label}?\n(Solo se importarán conteos que NO existan en el dispositivo)`)) return;
-
-        setIsRestoring(true);
-        try {
-            console.log(`[Cloud] Requesting download: ${label}`);
-            const options = (start && end) ? { dateRange: { start, end }, skipExisting: true } : { skipExisting: true };
-            const result = await restoreFromCloud(options);
-            
-            if (result.sessions > 0) {
-                alert(`¡Éxito!\nSe descargaron ${result.sessions} sesiones nuevas.`);
-            } else {
-                alert("No se encontraron registros nuevos (todo lo existente fue omitido).");
-            }
-        } catch (err: any) {
-            alert(`Error de conexión: ${err.message}`);
-        } finally {
-            setIsRestoring(false);
-        }
-    };
-
-    const handleDownloadToday = () => {
-        const today = new Date();
-        const str = getLocalDateString(today);
-        executeDownload(str, str, "HOY");
-    };
-
-    const handleDownloadYesterday = () => {
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        const str = getLocalDateString(yesterday);
-        executeDownload(str, str, "AYER");
-    };
-
-    const handleDownloadThisMonth = () => {
-        const now = new Date();
-        const start = new Date(now.getFullYear(), now.getMonth(), 1);
-        const end = new Date(now.getFullYear(), now.getMonth() + 1, 0); // Last day of month
-        executeDownload(getLocalDateString(start), getLocalDateString(end), "ESTE MES");
-    };
-    
-    const handleDownloadAll = () => {
-        executeDownload(null, null, "TODO (Sin Filtros)");
-    };
-
-    const handleSingleErpRestore = async (erp: string) => {
-        // EXPLICIT REFRESH: Allows updating existing (Delta Sync)
-        if (!confirm(`¿Actualizar Orden ${erp}?\nEsto buscará cambios en la nube y los fusionará con lo local.`)) return;
-        
-        setIsRestoring(true);
-        try {
-            const result = await restoreFromCloud({ erpFilter: erp, skipExisting: false });
-            if (result.sessions > 0 || result.items > 0) alert(`Se actualizaron ${result.sessions} bultos (${result.items} items).`);
-            else alert("Sin cambios encontrados.");
-        } catch (err: any) {
-            alert(`Error: ${err.message}`);
-        } finally {
-            setIsRestoring(false);
-        }
-    };
-
     if (selectedErp) {
         return (
             <div className="flex flex-col h-[calc(100vh-64px)] bg-slate-50">
@@ -279,9 +161,6 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack }) => {
                         <h2 className="font-bold text-slate-900 leading-tight flex items-center gap-2"><Layers className="w-4 h-4 text-purple-600" /> Consolidado ERP</h2>
                         <div className="text-xs text-slate-500 font-mono font-bold">{selectedErp}</div>
                     </div>
-                    <button onClick={() => handleSingleErpRestore(selectedErp)} disabled={isRestoring} className="text-indigo-600 hover:bg-indigo-50 p-2 rounded-full transition-colors disabled:opacity-50" title="Actualizar esta orden (Fusionar)">
-                        {isRestoring ? <RefreshCw className="w-5 h-5 animate-spin" /> : <RefreshCw className="w-5 h-5" />}
-                    </button>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-24">
@@ -297,7 +176,7 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack }) => {
                                 </div>
                                 <div className="flex flex-wrap gap-2">
                                     <button onClick={handleSync} disabled={isSyncing} className="bg-indigo-600 text-white hover:bg-indigo-700 px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-2 transition-colors shadow-md shadow-indigo-200 disabled:opacity-50">
-                                        {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <CloudUpload className="w-4 h-4" />} Subir a AppSheet
+                                        {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <CloudUpload className="w-4 h-4" />} Subir Manual
                                     </button>
                                     <button onClick={handleExportExcel} className="bg-green-50 text-green-700 hover:bg-green-100 px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-2 transition-colors border border-green-200"><FileSpreadsheet className="w-4 h-4" /> Excel</button>
                                     <button onClick={handleExportPDF} className="bg-red-50 text-red-700 hover:bg-red-100 px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-2 transition-colors border border-red-200"><FileText className="w-4 h-4" /> PDF</button>
@@ -339,7 +218,6 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack }) => {
         );
     }
 
-    // MAIN LIST VIEW (Optimized with Limit 100)
     return (
         <div className="max-w-3xl mx-auto pb-24 px-4 pt-6">
              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
@@ -351,33 +229,6 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack }) => {
                         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Consolidados ERP</h1>
                         <p className="text-slate-500 text-sm">Agrupación de conteos por Orden de Compra.</p>
                     </div>
-                </div>
-                
-                <div className="flex gap-2">
-                    {/* GLOBAL SYNC BUTTON - Visible only if there are pending items */}
-                    {pendingGlobalCount > 0 && (
-                        <button 
-                            onClick={handleGlobalSync}
-                            disabled={isGlobalSyncing}
-                            className="bg-green-600 text-white border border-green-700 font-bold py-2 px-4 rounded-xl hover:bg-green-500 transition-colors flex items-center justify-center gap-2 shadow-sm shadow-green-200 disabled:opacity-50 text-xs md:text-sm animate-in zoom-in"
-                        >
-                            {isGlobalSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <CloudUpload className="w-4 h-4" />}
-                            {isGlobalSyncing ? (
-                                <span>{globalSyncProgress ? `${globalSyncProgress.current}/${globalSyncProgress.total}` : 'Subiendo...'}</span>
-                            ) : (
-                                <span>Subir Todo (Nuevos)</span>
-                            )}
-                        </button>
-                    )}
-
-                    <button 
-                        onClick={() => setShowDownloadMenu(true)}
-                        disabled={isRestoring}
-                        className="bg-indigo-50 border border-indigo-200 text-indigo-700 font-bold py-2 px-4 rounded-xl hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 text-xs md:text-sm"
-                    >
-                        {isRestoring ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CloudDownload className="w-4 h-4" />}
-                        Descargar
-                    </button>
                 </div>
             </div>
 
@@ -425,59 +276,6 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack }) => {
                     ))
                 )}
             </div>
-
-            {/* QUICK DOWNLOAD MENU */}
-            {showDownloadMenu && (
-                <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-                    <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-6 relative animate-in zoom-in-95 overflow-y-auto max-h-[85vh]">
-                        <button onClick={() => setShowDownloadMenu(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-2 rounded-full hover:bg-slate-100 transition-colors"><X className="w-5 h-5" /></button>
-                        
-                        <div className="text-center mb-6">
-                            <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                                <CloudDownload className="w-6 h-6" />
-                            </div>
-                            <h3 className="text-lg font-bold text-slate-900">Descarga Rápida</h3>
-                            <p className="text-xs text-slate-500">Solo se descargarán registros NUEVOS.</p>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-3">
-                            <button onClick={handleDownloadToday} className="bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 p-4 rounded-xl flex items-center gap-4 transition-all group text-left">
-                                <div className="bg-white p-2 rounded-lg shadow-sm group-hover:text-indigo-600"><Clock className="w-5 h-5" /></div>
-                                <div>
-                                    <div className="font-bold text-slate-900 group-hover:text-indigo-700">Solo Hoy</div>
-                                    <div className="text-xs text-slate-400">Descargar conteos del día actual</div>
-                                </div>
-                            </button>
-                            
-                            <button onClick={handleDownloadYesterday} className="bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 p-4 rounded-xl flex items-center gap-4 transition-all group text-left">
-                                <div className="bg-white p-2 rounded-lg shadow-sm group-hover:text-indigo-600"><Calendar className="w-5 h-5" /></div>
-                                <div>
-                                    <div className="font-bold text-slate-900 group-hover:text-indigo-700">Ayer</div>
-                                    <div className="text-xs text-slate-400">Recuperar día anterior</div>
-                                </div>
-                            </button>
-
-                            <button onClick={handleDownloadThisMonth} className="bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 p-4 rounded-xl flex items-center gap-4 transition-all group text-left">
-                                <div className="bg-white p-2 rounded-lg shadow-sm group-hover:text-indigo-600"><CalendarDays className="w-5 h-5" /></div>
-                                <div>
-                                    <div className="font-bold text-slate-900 group-hover:text-indigo-700">Este Mes</div>
-                                    <div className="text-xs text-slate-400">Todo el mes en curso</div>
-                                </div>
-                            </button>
-                            
-                            {/* FALLBACK OPTION */}
-                            <button onClick={handleDownloadAll} className="bg-red-50 hover:bg-red-100 border border-red-100 hover:border-red-200 p-4 rounded-xl flex items-center gap-4 transition-all group text-left">
-                                <div className="bg-white p-2 rounded-lg shadow-sm group-hover:text-red-600"><Database className="w-5 h-5" /></div>
-                                <div>
-                                    <div className="font-bold text-slate-900 group-hover:text-red-700">Todo (Sin Filtros)</div>
-                                    <div className="text-xs text-slate-400">Descargar base completa (Lento)</div>
-                                </div>
-                            </button>
-                        </div>
-
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

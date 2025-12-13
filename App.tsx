@@ -12,13 +12,15 @@ import { Reception } from './components/Reception';
 import { Login } from './components/Login';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { InstallPrompt } from './components/InstallPrompt';
-import { NetworkStatus } from './components/NetworkStatus'; // New Import
+import { NetworkStatus } from './components/NetworkStatus'; 
+import { SyncManagerUI } from './components/SyncManagerUI'; // NEW IMPORT
 import * as storage from './services/storage';
 import { getSettings } from './services/settings';
 import { db } from './db';
 import { SYNC_ENGINE_VERSION, processSyncQueue } from './services/appsheet';
 import { initPersistence } from './services/backupService';
-import { LayoutGrid, Database as DbIcon, History, Home, Box, AlertTriangle } from 'lucide-react';
+import { LayoutGrid, Database as DbIcon, History, Home, Box, AlertTriangle, Cloud, CloudOff } from 'lucide-react';
+import { useLiveQuery } from 'dexie-react-hooks';
 
 const AppContent: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -27,9 +29,10 @@ const AppContent: React.FC = () => {
   const [settings, setSettings] = useState<AppSettings>(getSettings());
   const [dbReady, setDbReady] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
+  const [showSyncManager, setShowSyncManager] = useState(false); // NEW STATE
 
   useEffect(() => {
-    console.log(`LogiCount Pro v3.0.2 System Initialized.`);
+    console.log(`LogiCount Pro v3.1.0 System Initialized.`);
     console.log(`Sync Engine: ${SYNC_ENGINE_VERSION}`);
     
     // 1. DB Integrity Check
@@ -134,6 +137,9 @@ const AppContent: React.FC = () => {
       }
   }, [settings.theme]);
 
+  // Global Sync Status Query
+  const pendingSyncCount = useLiveQuery(() => db.scans.where('synced').equals(0).count(), [], 0);
+
   // --- DB CRITICAL ERROR STATE ---
   if (dbError) {
       return (
@@ -190,7 +196,15 @@ const AppContent: React.FC = () => {
   return (
     <div className={`min-h-screen font-sans ${themeClass} transition-colors duration-300`}>
       <NetworkStatus />
-      <DesktopNav view={view} setView={setView} settings={settings} />
+      
+      {/* HEADER NAV with Sync Button */}
+      <DesktopNav 
+        view={view} 
+        setView={setView} 
+        settings={settings} 
+        onOpenSync={() => setShowSyncManager(true)} 
+        pendingCount={pendingSyncCount} 
+      />
       
       <main className="w-full animate-in fade-in zoom-in-95 duration-300">
         {view === 'dashboard' && <Dashboard onNavigate={setView} />}
@@ -202,7 +216,10 @@ const AppContent: React.FC = () => {
       </main>
 
       <InstallPrompt />
-      <MobileNav view={view} setView={setView} settings={settings} />
+      <MobileNav view={view} setView={setView} settings={settings} onOpenSync={() => setShowSyncManager(true)} pendingCount={pendingSyncCount} />
+      
+      {/* SYNC MANAGER MODAL */}
+      <SyncManagerUI isOpen={showSyncManager} onClose={() => setShowSyncManager(false)} />
     </div>
   );
 };
@@ -221,9 +238,11 @@ interface NavProps {
   view: ViewState;
   setView: (v: ViewState) => void;
   settings: AppSettings;
+  onOpenSync?: () => void;
+  pendingCount?: number;
 }
 
-const MobileNav = memo(({ view, setView, settings }: NavProps) => {
+const MobileNav = memo(({ view, setView, settings, onOpenSync, pendingCount }: NavProps) => {
   const t = settings.theme;
   
   let navClass = "bg-white/90 border-white/20 text-slate-400 shadow-2xl shadow-slate-200/50"; 
@@ -238,13 +257,23 @@ const MobileNav = memo(({ view, setView, settings }: NavProps) => {
         <div className={`flex justify-around items-center h-16 px-2 rounded-2xl border backdrop-blur-md ${navClass}`}>
             <NavButton active={view === 'dashboard'} onClick={() => setView('dashboard')} icon={<Home className="w-6 h-6" />} label="Inicio" theme={settings.theme} />
             <NavButton active={view === 'database'} onClick={() => setView('database')} icon={<DbIcon className="w-6 h-6" />} label="Datos" theme={settings.theme} />
+            {/* Sync Button integrated into Mobile Nav */}
+            <button onClick={onOpenSync} className="relative flex flex-col items-center justify-center text-slate-400 active:text-blue-500 transition-colors group">
+                <div className={`p-1 rounded-full ${pendingCount && pendingCount > 0 ? 'bg-orange-100 text-orange-600' : ''}`}>
+                    {pendingCount && pendingCount > 0 ? <CloudOff className="w-6 h-6" /> : <Cloud className="w-6 h-6" />}
+                </div>
+                <span className="text-[10px] font-bold mt-0.5">Nube</span>
+                {pendingCount && pendingCount > 0 ? (
+                    <span className="absolute top-0 right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
+                ) : null}
+            </button>
             <NavButton active={view === 'reports' || view === 'consolidated'} onClick={() => setView('reports')} icon={<History className="w-6 h-6" />} label="Historial" theme={settings.theme} />
         </div>
     </nav>
   );
 });
 
-const DesktopNav = memo(({ view, setView, settings }: NavProps) => {
+const DesktopNav = memo(({ view, setView, settings, onOpenSync, pendingCount }: NavProps) => {
   const t = settings.theme;
   
   let navClass = "bg-white border-slate-200 text-slate-600";
@@ -270,6 +299,19 @@ const DesktopNav = memo(({ view, setView, settings }: NavProps) => {
         <DesktopNavButton active={view === 'dashboard'} onClick={() => setView('dashboard')} label="Dashboard" icon={<LayoutGrid className="w-4 h-4" />} theme={settings.theme} />
         <DesktopNavButton active={view === 'database'} onClick={() => setView('database')} label="Base de Datos" icon={<DbIcon className="w-4 h-4" />} theme={settings.theme} />
         <DesktopNavButton active={view === 'reports' || view === 'consolidated'} onClick={() => setView('reports')} label="Historial" icon={<History className="w-4 h-4" />} theme={settings.theme} />
+        
+        {/* DESKTOP SYNC INDICATOR */}
+        <button 
+            onClick={onOpenSync}
+            className={`ml-4 px-3 py-1.5 rounded-lg flex items-center gap-2 text-sm font-bold transition-all border ${
+                pendingCount && pendingCount > 0 
+                ? 'bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100' 
+                : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+            }`}
+        >
+            {pendingCount && pendingCount > 0 ? <CloudOff className="w-4 h-4" /> : <Cloud className="w-4 h-4" />}
+            <span>{pendingCount && pendingCount > 0 ? `${pendingCount} Pendientes` : 'Sincronizado'}</span>
+        </button>
       </div>
     </nav>
   );
