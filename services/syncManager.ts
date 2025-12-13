@@ -24,10 +24,10 @@ export interface CloudItem {
 }
 
 // --- HELPER ROBUST NORMALIZATION ---
+// FIX: Aggressive normalization. Removes ALL whitespace to match "Orden 123" with "Orden123".
 const normalizeKey = (str: any) => {
-    // Explicitly handle null/undefined, but preserve '0' or 0
     if (str === null || str === undefined) return '';
-    return String(str).trim().toUpperCase();
+    return String(str).replace(/\s+/g, '').toUpperCase();
 };
 
 const generateCompositeKey = (erp: any, label: any) => {

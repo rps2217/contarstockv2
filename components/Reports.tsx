@@ -6,7 +6,6 @@ import * as storage from '../services/storage';
 import { analyzeConsolidation } from '../services/gemini';
 import { exportToExcel, exportToPDF } from '../services/export';
 import { processSyncQueue } from '../services/appsheet';
-import { restoreFromCloud } from '../services/syncBridge';
 import { aggregateScans } from '../services/aggregator';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
@@ -202,19 +201,20 @@ export const Reports: React.FC<ReportsProps> = ({ onSessionStart, onNavigate }) 
                 <SearchBar onSearch={handleSearch} placeholder="Buscar por Orden ERP o Etiqueta..." />
             </div>
 
+            {/* ACTION BUTTONS */}
             <div className="grid grid-cols-2 gap-2 mb-8">
                 <button 
                     onClick={handleCleanSynced} 
                     disabled={isCleaning} 
-                    className="col-span-2 bg-slate-50 border border-slate-200 text-slate-600 font-bold py-2.5 rounded-xl hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
+                    className="col-span-2 bg-slate-50 border border-slate-200 text-slate-600 font-bold py-2.5 rounded-xl hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 active:scale-95"
                 >
                     {isCleaning ? <div className="w-4 h-4 border-2 border-slate-600 border-t-transparent rounded-full animate-spin" /> : <Eraser className="w-4 h-4" />}
                     Limpiar Sincronizados
                 </button>
-                <button onClick={() => onNavigate('consolidated')} className="bg-white border border-slate-200 text-purple-700 font-bold py-2.5 rounded-xl hover:bg-purple-50 hover:border-purple-200 transition-colors flex items-center justify-center gap-2 shadow-sm">
+                <button onClick={() => onNavigate('consolidated')} className="bg-white border border-slate-200 text-purple-700 font-bold py-2.5 rounded-xl hover:bg-purple-50 hover:border-purple-200 transition-colors flex items-center justify-center gap-2 shadow-sm active:scale-95">
                     <Layers className="w-4 h-4" /> Consolidados
                 </button>
-                <button onClick={() => setIsStartModalOpen(true)} className="bg-blue-600 text-white font-bold py-2.5 rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 shadow-md shadow-blue-200 active:scale-[0.98]">
+                <button onClick={() => setIsStartModalOpen(true)} className="bg-blue-600 text-white font-bold py-2.5 rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 shadow-md shadow-blue-200 active:scale-95">
                     <Plus className="w-5 h-5" /> Iniciar Conteo
                 </button>
             </div>

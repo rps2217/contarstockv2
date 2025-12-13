@@ -84,12 +84,10 @@ export const deleteSession = async (sessionId: string) => {
         await db.sessions.delete(sessionId); 
 
         // 3. Delete Orphaned Sync Jobs (Cleanup)
-        // Since syncQueue stores the session object inside, we can't query by index directly easily without a schema change.
-        // Given syncQueue is usually small, we filter in memory.
         const pendingJobs = await db.syncQueue.toArray();
         const jobsToDelete = pendingJobs
             .filter(job => job.session && job.session.id === sessionId)
-            .map(job => job.id as number); // id is auto-increment number
+            .map(job => job.id as number); 
         
         if (jobsToDelete.length > 0) {
             await db.syncQueue.bulkDelete(jobsToDelete);
@@ -97,8 +95,12 @@ export const deleteSession = async (sessionId: string) => {
     }); 
 };
 
+/**
+ * Removes all sessions that have been successfully synced to the cloud.
+ * This is a "Housekeeping" function to free up space and declutter the device.
+ */
 export const cleanSyncedSessions = async (): Promise<number> => {
-    // Find all sessions that have a valid lastSyncTimestamp (meaning they are in the cloud)
+    // Find all sessions that have a valid lastSyncTimestamp
     const syncedSessions = await db.sessions
         .filter(s => !!s.lastSyncTimestamp && s.lastSyncTimestamp > 0)
         .toArray();
@@ -106,7 +108,8 @@ export const cleanSyncedSessions = async (): Promise<number> => {
     if (syncedSessions.length === 0) return 0;
 
     let deletedCount = 0;
-    // We iterate and delete to ensure cascading deletes of scans work correctly via the existing logic
+    // We execute deletion via the standard deleteSession to ensure scans are also removed (cascade)
+    // Using a transaction for safety would be ideal, but iterative delete is safer for large datasets to avoid blocking UI
     for (const session of syncedSessions) {
         await deleteSession(session.id);
         deletedCount++;

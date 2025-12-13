@@ -11,7 +11,8 @@ export { syncToAppSheet, syncProductsToAppSheet, syncReceptionToAppSheet };
 // --- HELPER FOR KEY NORMALIZATION (MATCHING syncManager.ts) ---
 const normalizeKey = (str: any) => {
     if (str === null || str === undefined) return '';
-    return String(str).trim().toUpperCase();
+    // Strip ALL whitespace to avoid "Order 1" vs "Order1" issues
+    return String(str).replace(/\s+/g, '').toUpperCase();
 };
 
 const generateCompositeKey = (erp: any, label: any) => {
