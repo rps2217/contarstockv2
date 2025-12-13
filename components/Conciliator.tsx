@@ -1,11 +1,12 @@
 
 import React, { useState } from 'react';
-import { Upload, ChevronLeft, Search, FileSpreadsheet, CheckCircle2, AlertTriangle, XCircle, ArrowRight, Fingerprint, RefreshCw } from 'lucide-react';
+import { Upload, ChevronLeft, Search, FileSpreadsheet, CheckCircle2, AlertTriangle, XCircle, ArrowRight, Fingerprint, RefreshCw, Filter, FileText, Link, Eye, EyeOff } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import * as matcher from '../services/matcher';
 import { CountingSession, MatchResult, ConsolidatedItem } from '../types';
 import * as storage from '../services/storage';
+import { exportDiscrepancyPDF } from '../services/export';
 // ARCHITECTURE FIX: Import centralized aggregator
 import { aggregateScans } from '../services/aggregator';
 
@@ -20,6 +21,9 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
   const [matches, setMatches] = useState<MatchResult[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<MatchResult | null>(null);
+  
+  // New UI States
+  const [viewMode, setViewMode] = useState<'all' | 'diff'>('diff');
 
   // Queries
   const sessions = useLiveQuery(() => db.sessions.orderBy('createdAt').reverse().toArray(), [], []);
@@ -50,8 +54,7 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
       // 1. Get physical items for this session
       const scans = await db.scans.where('sessionId').equals(sessionId).toArray();
       
-      // ARCHITECTURE FIX: Use centralized Aggregator logic instead of manual map/reduce.
-      // This guarantees that the Conciliator sees exactly the same quantities as the Reports.
+      // ARCHITECTURE FIX: Use centralized Aggregator logic
       const physicalItems = await aggregateScans(scans);
 
       // 2. Run Algorithm
@@ -65,6 +68,26 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
     } finally {
       setIsAnalyzing(false);
     }
+  };
+
+  const handleAssignOrder = async () => {
+      if (!selectedMatch || !currentSession) return;
+      
+      const newErp = selectedMatch.expectedOrder.internalId;
+      if (!confirm(`¿Estás seguro de vincular este conteo físico a la Orden ${newErp}?\n\nEsto actualizará el nombre de la sesión.`)) return;
+
+      try {
+          await db.sessions.update(currentSession.id, { erpOrder: newErp });
+          alert("¡Vinculación exitosa! Caso cerrado.");
+          onBack(); // Go back to dashboard/menu
+      } catch (e) {
+          alert("Error al actualizar la sesión.");
+      }
+  };
+
+  const handleExportPDF = () => {
+      if (!selectedMatch || !currentSession) return;
+      exportDiscrepancyPDF(selectedMatch, currentSession.logisticsLabel);
   };
 
   const currentSession = sessions?.find(s => s.id === selectedSessionId);
@@ -120,13 +143,35 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
 
   // --- VIEW: RESULTS / DETAIL ---
   if (step === 'results' && selectedMatch) {
+      
+      const displayedDetails = viewMode === 'diff' 
+        ? selectedMatch.details.filter(d => d.difference !== 0) 
+        : selectedMatch.details;
+
       return (
         <div className="flex flex-col h-[calc(100vh-64px)] bg-slate-50">
-            <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center gap-3 shadow-sm sticky top-0 z-20">
-                <button onClick={() => setSelectedMatch(null)} className="p-2 hover:bg-slate-100 rounded-full text-slate-600 transition-colors"><ChevronLeft className="w-5 h-5" /></button>
-                <div>
-                    <h2 className="font-bold text-slate-900 leading-tight">Comparativa de Pedido</h2>
-                    <div className="text-xs text-slate-500">Físico ({currentSession?.erpOrder}) vs Esperado ({selectedMatch.expectedOrder.internalId})</div>
+            <div className="bg-white border-b border-slate-200 px-4 py-3 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm sticky top-0 z-20">
+                <div className="flex items-center gap-3">
+                    <button onClick={() => setSelectedMatch(null)} className="p-2 hover:bg-slate-100 rounded-full text-slate-600 transition-colors"><ChevronLeft className="w-5 h-5" /></button>
+                    <div>
+                        <h2 className="font-bold text-slate-900 leading-tight">Comparativa de Pedido</h2>
+                        <div className="text-xs text-slate-500">Físico ({currentSession?.erpOrder}) vs Esperado ({selectedMatch.expectedOrder.internalId})</div>
+                    </div>
+                </div>
+                
+                <div className="flex gap-2">
+                    <button 
+                        onClick={handleExportPDF}
+                        className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-200 transition-colors"
+                    >
+                        <FileText className="w-4 h-4" /> Informe Quiebres
+                    </button>
+                    <button 
+                        onClick={handleAssignOrder}
+                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 shadow-md shadow-indigo-200 transition-colors"
+                    >
+                        <Link className="w-4 h-4" /> Asignar Orden
+                    </button>
                 </div>
             </div>
 
@@ -147,41 +192,65 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
                         </div>
                     </div>
 
+                    {/* FILTER TABS */}
+                    <div className="flex gap-2 mb-4">
+                        <button 
+                            onClick={() => setViewMode('diff')}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${viewMode === 'diff' ? 'bg-slate-800 text-white shadow-lg' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'}`}
+                        >
+                            <AlertTriangle className="w-4 h-4" /> Solo Diferencias
+                        </button>
+                        <button 
+                            onClick={() => setViewMode('all')}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${viewMode === 'all' ? 'bg-slate-800 text-white shadow-lg' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'}`}
+                        >
+                            <Eye className="w-4 h-4" /> Ver Todo
+                        </button>
+                    </div>
+
                     {/* COMPARISON TABLE */}
                     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-slate-50 border-b border-slate-200">
-                                <tr>
-                                    <th className="px-4 py-3 font-bold text-slate-500">Producto</th>
-                                    <th className="px-4 py-3 font-bold text-slate-500 text-center">Físico</th>
-                                    <th className="px-4 py-3 font-bold text-slate-500 text-center">Esperado</th>
-                                    <th className="px-4 py-3 font-bold text-slate-500 text-right">Diferencia</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {selectedMatch.details.map(row => (
-                                    <tr key={row.barcode} className={`
-                                        ${row.difference === 0 ? 'bg-white' : row.difference < 0 ? 'bg-red-50/50' : 'bg-blue-50/50'}
-                                    `}>
-                                        <td className="px-4 py-3">
-                                            <div className="font-bold text-slate-800">{row.name}</div>
-                                            <div className="text-xs text-slate-400 font-mono">{row.barcode}</div>
-                                        </td>
-                                        <td className="px-4 py-3 text-center font-bold">{row.physicalQty}</td>
-                                        <td className="px-4 py-3 text-center text-slate-500">{row.expectedQty}</td>
-                                        <td className="px-4 py-3 text-right">
-                                            {row.difference === 0 ? (
-                                                <span className="text-green-600 font-bold flex items-center justify-end gap-1"><CheckCircle2 className="w-4 h-4"/> OK</span>
-                                            ) : (
-                                                <span className={`font-bold px-2 py-1 rounded text-xs ${row.difference < 0 ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
-                                                    {row.difference > 0 ? '+' : ''}{row.difference}
-                                                </span>
-                                            )}
-                                        </td>
+                        {displayedDetails.length === 0 ? (
+                            <div className="p-12 text-center text-slate-400">
+                                <CheckCircle2 className="w-12 h-12 mx-auto mb-2 text-green-500" />
+                                <p className="font-bold text-slate-600">¡Todo Perfecto!</p>
+                                <p className="text-sm">No hay diferencias entre lo físico y lo esperado.</p>
+                            </div>
+                        ) : (
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-slate-50 border-b border-slate-200">
+                                    <tr>
+                                        <th className="px-4 py-3 font-bold text-slate-500">Producto</th>
+                                        <th className="px-4 py-3 font-bold text-slate-500 text-center">Físico</th>
+                                        <th className="px-4 py-3 font-bold text-slate-500 text-center">Esperado</th>
+                                        <th className="px-4 py-3 font-bold text-slate-500 text-right">Diferencia</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {displayedDetails.map(row => (
+                                        <tr key={row.barcode} className={`
+                                            ${row.difference === 0 ? 'bg-white' : row.difference < 0 ? 'bg-red-50/50' : 'bg-blue-50/50'}
+                                        `}>
+                                            <td className="px-4 py-3">
+                                                <div className="font-bold text-slate-800">{row.name}</div>
+                                                <div className="text-xs text-slate-400 font-mono">{row.barcode}</div>
+                                            </td>
+                                            <td className="px-4 py-3 text-center font-bold">{row.physicalQty}</td>
+                                            <td className="px-4 py-3 text-center text-slate-500">{row.expectedQty}</td>
+                                            <td className="px-4 py-3 text-right">
+                                                {row.difference === 0 ? (
+                                                    <span className="text-green-600 font-bold flex items-center justify-end gap-1"><CheckCircle2 className="w-4 h-4"/> OK</span>
+                                                ) : (
+                                                    <span className={`font-bold px-2 py-1 rounded text-xs ${row.difference < 0 ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
+                                                        {row.difference > 0 ? '+' : ''}{row.difference}
+                                                    </span>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        )}
                     </div>
                 </div>
             </div>
@@ -220,7 +289,7 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
             <>
                 <button onClick={() => setStep('select')} className="flex items-center gap-2 text-slate-500 mb-6 hover:text-slate-900"><ChevronLeft className="w-5 h-5"/> Volver a selección</button>
                 
-                <div className="mb-6 bg-slate-900 text-white p-6 rounded-2xl">
+                <div className="mb-6 bg-slate-900 text-white p-6 rounded-2xl shadow-lg">
                     <h2 className="text-xl font-bold mb-1">Resultados de Investigación</h2>
                     <p className="text-slate-400 text-sm">Candidatos más probables para el conteo <strong>{currentSession?.erpOrder}</strong></p>
                 </div>
@@ -240,7 +309,7 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
                             >
                                 {/* Progress Bar Background */}
                                 <div 
-                                    className={`absolute bottom-0 left-0 h-1 transition-all duration-1000 ${
+                                    className={`absolute bottom-0 left-0 h-1.5 transition-all duration-1000 ${
                                         match.status === 'exact' ? 'bg-green-500' : match.status === 'partial' ? 'bg-yellow-500' : 'bg-red-500'
                                     }`} 
                                     style={{ width: `${match.matchScore}%` }} 
@@ -258,9 +327,9 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
                                     </div>
                                 </div>
 
-                                <div className="text-sm text-slate-600 flex gap-4">
-                                    <span>Esperado: <strong>{match.expectedOrder.totalExpectedUnits}</strong> u.</span>
-                                    <span>Coincidencias: <strong>{match.details.filter(d => d.physicalQty > 0 && d.expectedQty > 0).length}</strong> SKUs</span>
+                                <div className="text-sm text-slate-600 flex gap-4 mt-2">
+                                    <span className="bg-slate-100 px-2 py-1 rounded text-slate-700 text-xs font-bold">Esperado: {match.expectedOrder.totalExpectedUnits} u.</span>
+                                    <span className="bg-slate-100 px-2 py-1 rounded text-slate-700 text-xs font-bold">Matches: {match.details.filter(d => d.physicalQty > 0 && d.expectedQty > 0).length} SKUs</span>
                                 </div>
                             </button>
                         ))

@@ -2,7 +2,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
-import { CountingSession, ConsolidatedItem } from '../types';
+import { CountingSession, ConsolidatedItem, MatchResult } from '../types';
 
 /**
  * Generates and downloads an Excel file (.xlsx) containing the session data.
@@ -137,3 +137,76 @@ export const exportToPDF = (session: CountingSession, items: ConsolidatedItem[])
   // Save
   doc.save(`Manifiesto_${session.erpOrder}.pdf`);
 };
+
+/**
+ * Generates a specific Discrepancy Report from the Detective/Conciliator module.
+ */
+export const exportDiscrepancyPDF = (match: MatchResult, sessionLabel: string) => {
+    const doc = new jsPDF();
+    
+    // --- Header ---
+    doc.setFontSize(18);
+    doc.setTextColor(220, 53, 69); // Red color for alert
+    doc.text("INFORME DE DISCREPANCIAS", 105, 20, { align: "center" });
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Generado: ${new Date().toLocaleString()}`, 105, 26, { align: "center" });
+  
+    // --- Summary Block ---
+    doc.setFontSize(11);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Orden Esperada: ${match.expectedOrder.internalId}`, 14, 40);
+    doc.text(`Bulto Físico: ${sessionLabel}`, 14, 46);
+    doc.text(`Nivel de Coincidencia: ${match.matchScore.toFixed(1)}%`, 14, 52);
+  
+    // --- Table ---
+    const tableColumn = ["SKU", "Producto", "Físico", "Esperado", "Diferencia"];
+    const tableRows: any[] = [];
+  
+    // Sort to show errors first
+    const sortedDetails = [...match.details].sort((a, b) => {
+        const aDiff = Math.abs(a.difference);
+        const bDiff = Math.abs(b.difference);
+        return bDiff - aDiff;
+    });
+  
+    sortedDetails.forEach(row => {
+      // Only include if there is a difference or it's a key item
+      if (row.difference !== 0) {
+          const itemData = [
+            row.barcode,
+            row.name,
+            row.physicalQty,
+            row.expectedQty,
+            row.difference > 0 ? `+${row.difference}` : `${row.difference}`
+          ];
+          tableRows.push(itemData);
+      }
+    });
+  
+    (autoTable as any)(doc, {
+      startY: 60,
+      head: [tableColumn],
+      body: tableRows,
+      theme: 'grid',
+      headStyles: { fillColor: [220, 53, 69], textColor: 255, fontStyle: 'bold' }, // Red Header
+      styles: { fontSize: 9, cellPadding: 3 },
+      // Highlight rows logic
+      didParseCell: function (data: any) {
+          if (data.section === 'body' && data.column.index === 4) {
+              const val = parseInt(data.cell.raw);
+              if (val < 0) {
+                  data.cell.styles.textColor = [220, 53, 69]; // Red text for missing
+                  data.cell.styles.fontStyle = 'bold';
+              } else if (val > 0) {
+                  data.cell.styles.textColor = [40, 167, 69]; // Green text for surplus
+                  data.cell.styles.fontStyle = 'bold';
+              }
+          }
+      }
+    });
+  
+    // Save
+    doc.save(`Discrepancias_${match.expectedOrder.internalId}.pdf`);
+  };
