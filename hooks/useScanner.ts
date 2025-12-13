@@ -3,9 +3,10 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks';
 import Dexie from 'dexie';
 import { db } from '../db';
-import * as storage from '../services/storage';
-import * as sessionService from '../services/sessionService'; // Direct Import
+import * as sessionService from '../services/sessionService'; 
 import * as productService from '../services/productService';
+import { sanitizeBarcode } from '../services/utils';
+import { getSettings } from '../services/settings';
 import { SoundFX } from '../services/audio';
 import { CountingSession, Product } from '../types';
 
@@ -123,7 +124,7 @@ export const useScanner = (
             triggerFeedback('success');
 
             // --- TTS LOGIC (Improved Streak Counter) ---
-            const settings = storage.getSettings();
+            const settings = getSettings();
             if (settings.ttsEnabled) {
                 // Determine Mode
                 if (settings.ttsMode === 'count') {
@@ -149,9 +150,7 @@ export const useScanner = (
                     SoundFX.speak(nameToSpeak);
                 }
             } else {
-                // If TTS Disabled, reset streak silently so next time voice is enabled it starts fresh
-                // or just keep it sync'd logic.
-                // It's safer to track streaks anyway in case they toggle it mid-session (unlikely but possible)
+                // If TTS Disabled, reset streak silently
                 if (code !== streakRef.current.barcode) {
                     streakRef.current.barcode = code;
                     streakRef.current.count = 0; 
@@ -168,7 +167,7 @@ export const useScanner = (
     };
 
     const processScan = async (code: string) => {
-        const cleanCode = storage.sanitizeBarcode(code);
+        const cleanCode = sanitizeBarcode(code);
         if (!cleanCode) { triggerFeedback('error'); return; }
     
         try {
@@ -232,7 +231,7 @@ export const useScanner = (
 
     const handleManualSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        const cleanCode = storage.sanitizeBarcode(manualInput);
+        const cleanCode = sanitizeBarcode(manualInput);
         if (cleanCode) processScan(cleanCode); else triggerFeedback('error');
         setManualInput(''); 
         setManualMode(false);
@@ -240,10 +239,8 @@ export const useScanner = (
 
     const handleDeleteScan = useCallback(async (e: React.MouseEvent, scanId: string) => {
         e.preventDefault(); e.stopPropagation();
-        const settings = storage.getSettings();
+        const settings = getSettings();
         if (!settings.confirmDelete || window.confirm('¿Confirmar eliminación del registro?')) {
-            // Decrement streak if this was the last item, logic complex so mostly we leave it
-            // because physical count usually moves forward. 
             await sessionService.deleteScan(scanId);
             SoundFX.play('delete');
         }
@@ -269,7 +266,7 @@ export const useScanner = (
 
     const handleQuantityChange = useCallback(async (scanId: string, currentQty: number, delta: number) => {
         if (currentQty + delta <= 0) {
-            const settings = storage.getSettings();
+            const settings = getSettings();
             if (!settings.confirmDelete || window.confirm('¿Eliminar registro?')) {
                 await sessionService.deleteScan(scanId); SoundFX.play('delete');
             }

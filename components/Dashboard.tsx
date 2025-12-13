@@ -3,7 +3,7 @@ import React, { useMemo } from 'react';
 import { Database, ScanLine, Settings, ArrowRight, Box, Layers, Fingerprint, Container, Calendar, PackageCheck, WifiOff } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
-import * as storage from '../services/storage';
+import { getSettings } from '../services/settings';
 
 interface DashboardProps {
   onNavigate: (view: any) => void;
@@ -11,7 +11,7 @@ interface DashboardProps {
 
 export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   // Read settings (No need for full reactivity loop here, useMemo is fine as Dashboard remounts often)
-  const settings = useMemo(() => storage.getSettings(), []);
+  const settings = useMemo(() => getSettings(), []);
 
   // --- REAL-TIME STATS LOGIC ---
   const todayStart = useMemo(() => {

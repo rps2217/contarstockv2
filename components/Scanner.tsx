@@ -8,7 +8,7 @@ import { ScanItem } from './ScanItem';
 import { NumericKeypad } from './NumericKeypad';
 import { CameraScanner } from './CameraScanner';
 import { SoundFX } from '../services/audio';
-import * as storage from '../services/storage';
+import * as settingsService from '../services/settings';
 
 interface ScannerProps {
   session: CountingSession;
@@ -24,7 +24,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
   } = useScanner(session, onCloseSession, onDiscardSession);
 
   // Read settings once on mount to determine feature flags
-  const settings = useMemo(() => storage.getSettings(), []);
+  const settings = useMemo(() => settingsService.getSettings(), []);
 
   // Focus ref for manual input
   const manualInputRef = useRef<HTMLInputElement>(null);

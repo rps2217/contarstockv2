@@ -4,10 +4,8 @@ import { Upload, ChevronLeft, Search, FileSpreadsheet, CheckCircle2, AlertTriang
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import * as matcher from '../services/matcher';
-import { CountingSession, MatchResult, ConsolidatedItem } from '../types';
-import * as storage from '../services/storage';
+import { MatchResult } from '../types';
 import { exportDiscrepancyPDF } from '../services/export';
-// ARCHITECTURE FIX: Import centralized aggregator
 import { aggregateScans } from '../services/aggregator';
 
 interface ConciliatorProps {

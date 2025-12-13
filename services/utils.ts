@@ -1,20 +1,29 @@
 
+/**
+ * Generates a cryptographically strong UUID.
+ * Falls back to a timestamp-based random string only if crypto is unavailable (rare).
+ */
 export const generateUUID = (): string => {
-  // Use modern crypto API if available
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
     return crypto.randomUUID();
   }
   
-  // Fallback for older environments (though minimal risk in modern browsers)
+  // Fallback for very old browsers (Safety net)
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+    const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
     return v.toString(16);
   });
 };
 
+/**
+ * Standardizes barcode input:
+ * - Uppercase
+ * - Trims whitespace
+ * - Removes invisible control characters
+ * - Removes zero-width spaces
+ */
 export const sanitizeBarcode = (code: string): string => {
     if (!code) return "";
-    // Remove invisible characters, zero-width spaces, control chars, and trim
     return code
         .trim()
         .toUpperCase()

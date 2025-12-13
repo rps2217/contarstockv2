@@ -14,6 +14,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { InstallPrompt } from './components/InstallPrompt';
 import { NetworkStatus } from './components/NetworkStatus'; // New Import
 import * as storage from './services/storage';
+import { getSettings } from './services/settings';
 import { db } from './db';
 import { SYNC_ENGINE_VERSION, processSyncQueue } from './services/appsheet';
 import { initPersistence } from './services/backupService';
@@ -23,7 +24,7 @@ const AppContent: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [view, setView] = useState<ViewState>('dashboard');
   const [activeSession, setActiveSession] = useState<CountingSession | null>(null);
-  const [settings, setSettings] = useState<AppSettings>(storage.getSettings());
+  const [settings, setSettings] = useState<AppSettings>(getSettings());
   const [dbReady, setDbReady] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
 

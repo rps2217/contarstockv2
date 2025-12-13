@@ -2,14 +2,14 @@
 import { ConsolidatedItem, CountingSession, Product, ScanRecord } from "../types";
 import { getSettings } from "./settings"; 
 import { generateUUID, sanitizeBarcode } from "./utils";
-import { getUnsyncedScans, markScansAsSynced, addScan, updateSessionStats } from "./sessionService"; 
+import { getUnsyncedScans, markScansAsSynced } from "./sessionService"; 
 import { markProductsAsSynced, saveProductBatch } from "./productService";
 import { markDraftsAsSynced } from "./storage";
 import { db } from "../db";
-import { aggregateScans } from "./aggregator";
 import { sendToAppSheet, AppSheetPayload } from "../infrastructure/api/appsheetClient";
+import * as sessionService from "./sessionService"; // Needed for updates
 
-export const SYNC_ENGINE_VERSION = "6.1.0-ROBUST-DATE";
+export const SYNC_ENGINE_VERSION = "6.2.0-CLEAN";
 
 // --- CONFIG & MAPPING ---
 
@@ -29,13 +29,11 @@ export const SHEET_COLUMNS = {
 
 // --- HELPERS ---
 
-// Exported so syncBridge can use it for consistency
 export const parseFlexibleDate = (dateVal: any): number => {
     if (!dateVal) return Date.now();
     if (typeof dateVal === 'number') {
-        // Excel serial date check (approximate, for serials > 30000 which are years > 1982)
+        // Excel serial date check (years > 1982)
         if (dateVal > 30000 && dateVal < 60000) {
-            // Convert Excel serial to JS Date
             return new Date((dateVal - (25567 + 2)) * 86400 * 1000).getTime();
         }
         return dateVal; 
@@ -45,7 +43,6 @@ export const parseFlexibleDate = (dateVal: any): number => {
     
     // ISO Format YYYY-MM-DD
     if (s.match(/^\d{4}-\d{2}-\d{2}/)) { 
-        // Force replace - with / to avoid timezone issues in some browsers
         const ts = new Date(s.replace(/-/g, '/')).getTime(); 
         if (!isNaN(ts)) return ts; 
     }
@@ -53,11 +50,12 @@ export const parseFlexibleDate = (dateVal: any): number => {
     // Latam Format DD/MM/YYYY or DD-MM-YYYY
     const parts = s.split(/[\/\-]/);
     if (parts.length === 3) {
-        // Detect if first part is Year (YYYY/MM/DD) or Day (DD/MM/YYYY)
         if (parts[0].length === 4) {
+             // YYYY/MM/DD
              const y = parseInt(parts[0], 10); const m = parseInt(parts[1], 10) - 1; const d = parseInt(parts[2], 10);
              const ts = new Date(y, m, d).getTime(); if (!isNaN(ts)) return ts;
         } else {
+             // DD/MM/YYYY
              const d = parseInt(parts[0], 10); const m = parseInt(parts[1], 10) - 1; const y = parseInt(parts[2], 10);
              const ts = new Date(y, m, d).getTime(); if (!isNaN(ts)) return ts;
         }
@@ -81,13 +79,20 @@ const aggregateScansForSync = async (session: CountingSession, scans: ScanRecord
     sessions.forEach(s => sessionLabelMap.set(s.id, s.logisticsLabel));
 
     scans.forEach(scan => {
-        const mm = scan.mm || 0; const yyyy = scan.yyyy || 0; let dateKeySuffix = "SIN_FECHA";
-        if (mm && yyyy) { const lastDay = new Date(yyyy, mm, 0); const dStr = String(lastDay.getDate()).padStart(2, '0'); const mStr = String(mm).padStart(2, '0'); dateKeySuffix = `${yyyy}${mStr}${dStr}`; }
+        const mm = scan.mm || 0; 
+        const yyyy = scan.yyyy || 0; 
+        let dateKeySuffix = "SIN_FECHA";
+        
+        if (mm && yyyy) { 
+            const lastDay = new Date(yyyy, mm, 0); 
+            const dStr = String(lastDay.getDate()).padStart(2, '0'); 
+            const mStr = String(mm).padStart(2, '0'); 
+            dateKeySuffix = `${yyyy}${mStr}${dStr}`; 
+        }
+        
         const label = sessionLabelMap.get(scan.sessionId) || session.logisticsLabel;
         const uniqueKey = `${session.erpOrder}_${label}_${scan.barcode}_${dateKeySuffix}`;
         const incidentStatus = scan.isIncident ? "FRC" : "";
-
-        // Defensive: Ensure Qty is a number
         const safeQty = Number(scan.quantity) || 0;
 
         if (grouped[uniqueKey]) {
@@ -121,7 +126,6 @@ export const syncToAppSheet = async (session: CountingSession, _ignoredItems?: C
   if (unsyncedScans.length === 0) { console.log("[Sync] Nada nuevo."); return; }
   try {
     const aggregatedRows = await aggregateScansForSync(session, unsyncedScans);
-    // Sanitize selector just in case ERP has weird chars
     const safeErp = session.erpOrder.replace(/'/g, "");
     const selector = `[${SHEET_COLUMNS.ERP_ORDER}] = '${safeErp}'`;
     
@@ -167,9 +171,6 @@ export const syncReceptionToAppSheet = async (sessions: CountingSession[]): Prom
     const settings = getSettings(); const config = settings.appSheetConfig;
     if (!config?.appId || !config?.accessKey || !config?.receptionTableName) throw new Error("Config incompleta: Falta nombre de tabla de Recepción.");
     
-    // Only upload drafts (status 'draft') or sessions that were drafts recently
-    // We map fields: ID_RECEPCION, FECHA_HORA, ETIQUETA, ESTADO
-    
     const rows = sessions.map(s => ({
         "ID_RECEPCION": s.id,
         "FECHA_HORA": new Date(s.createdAt).toISOString(),
@@ -207,26 +208,15 @@ export const fetchProductsFromCloud = async (): Promise<any[]> => {
     return Array.isArray(result) ? result : [];
 };
 
-/**
- * Fetches data from cloud. 
- * CRITICAL FIX: Moves Date Filtering to CLIENT-SIDE.
- * AppSheet API selectors for Dates are extremely fragile due to locale mismatch.
- * It's safer to download the dataset (if not massive) and filter in JS.
- */
 export const fetchCloudData = async (options?: { erpFilter?: string; dateRange?: { start: string, end: string } }): Promise<any[]> => {
   const settings = getSettings(); const config = settings.appSheetConfig;
   if (!config?.countsTableName) throw new Error("Falta tabla de consolidados.");
   
   let selector = "";
-  
-  // Only use Selector for ERP (String match is safe)
   if (options?.erpFilter) { 
       selector = `[${SHEET_COLUMNS.ERP_ORDER}] = '${options.erpFilter.replace(/'/g, "")}'`; 
   }
   
-  // If DateRange is present, we DO NOT add it to selector. We fetch all (or erp filtered) and filter later.
-  // This prevents the "0 results" bug caused by date format mismatch.
-
   console.log("[AppSheet] Fetching with selector:", selector || "ALL (Client-side filtering enabled)");
 
   const payload: AppSheetPayload = { Action: "Find", Properties: { Locale: "es-CL", Timezone: "UTC", Selector: selector || undefined }, Rows: [] };
@@ -234,12 +224,9 @@ export const fetchCloudData = async (options?: { erpFilter?: string; dateRange?:
   
   if (!Array.isArray(result)) return [];
 
-  // CLIENT-SIDE FILTERING (Robust)
   if (options?.dateRange) {
       console.log(`[AppSheet] Filtering ${result.length} rows by date locally...`);
       const startTs = parseFlexibleDate(options.dateRange.start);
-      // End date needs to include the whole day, so add 24h or compare carefully.
-      // parseFlexibleDate returns midnight of that day.
       const endTs = parseFlexibleDate(options.dateRange.end) + (24 * 60 * 60 * 1000) - 1; 
 
       return result.filter(row => {

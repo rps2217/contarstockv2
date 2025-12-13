@@ -3,19 +3,16 @@ import { CountingSession } from '../types';
 import { db } from '../db';
 import { generateUUID, sanitizeBarcode } from './utils';
 import * as sessionService from './sessionService'; 
-import { getSettings, saveSettings } from './settings';
 
-// Re-export common utilities and settings for UI components (Helper facades are okay for Utils)
-export { generateUUID, sanitizeBarcode, getSettings, saveSettings };
-
-// ARCHITECTURE FIX: 
-// Removed `export * from './sessionService'` to prevent circular dependencies 
-// and force explicit imports in the application layer.
+// ARCHITECTURE NOTE:
+// We explicitly DO NOT re-export utils or settings here.
+// Components should import 'sanitizeBarcode' from './utils' and 'getSettings' from './settings' directly.
+// This prevents circular dependencies and reduces bundle size for components that don't need DB access.
 
 // --- SESSIONS ---
 
 export const createSession = async (erpOrder: string, logisticsLabel: string): Promise<CountingSession> => {
-  // Ensure previous sessions are closed
+  // Ensure previous active sessions are closed to maintain single-session integrity
   const activeSessions = await db.sessions.where('status').equals('active').toArray();
   if (activeSessions.length > 0) { 
       await Promise.all(activeSessions.map(s => db.sessions.update(s.id, { status: 'completed' }))); 
@@ -60,7 +57,6 @@ export const createDraftSession = async (logisticsLabel: string): Promise<Counti
 // NEW: Activate a draft session when starting count
 export const activateDraftSession = async (draftSessionId: string, erpOrder: string): Promise<CountingSession> => {
     // CRITICAL FIX: Close any existing active sessions before activating the draft
-    // This prevents "Multiple Active Sessions" state which breaks the scanner.
     const activeSessions = await db.sessions.where('status').equals('active').toArray();
     if (activeSessions.length > 0) { 
         await Promise.all(activeSessions.map(s => db.sessions.update(s.id, { status: 'completed' }))); 
@@ -121,7 +117,7 @@ export const adjustSessionItemQuantity = async (sessionId: string, barcode: stri
       // Add new scan
       await sessionService.addScan(sessionId, cleanCode, delta, lastScan?.mm, lastScan?.yyyy, 0);
   } else {
-    // Remove scans LIFO
+    // Remove scans LIFO (Last In First Out)
     let remainingToRemove = Math.abs(delta); 
     const scans = await db.scans.where('[sessionId+barcode]').equals([sessionId, cleanCode]).reverse().sortBy('timestamp'); 
     

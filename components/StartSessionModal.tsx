@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { X, Sparkles, Keyboard, History as HistoryIcon, ArrowLeft, PackageCheck } from 'lucide-react';
 import { CountingSession } from '../types';
 import * as storage from '../services/storage';
+import { sanitizeBarcode } from '../services/utils';
 import { db } from '../db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { NumericKeypad } from './NumericKeypad';
@@ -61,7 +62,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
               return;
           }
           
-          const cleanLabel = storage.sanitizeBarcode(labelId);
+          const cleanLabel = sanitizeBarcode(labelId);
           const draft = await db.sessions.where('logisticsLabel').equals(cleanLabel).and(s => s.status === 'draft').first();
           
           if (draft) {

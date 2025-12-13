@@ -1,5 +1,5 @@
 
-import * as storage from './storage';
+import { getSettings } from './settings';
 
 class AudioService {
   private ctx: AudioContext | null = null;
@@ -25,7 +25,7 @@ class AudioService {
   }
 
   public speak(text: string) {
-      const settings = storage.getSettings();
+      const settings = getSettings();
       if (!settings.ttsEnabled || !this.synth) return;
 
       // Cancel previous utterance to avoid queue buildup
@@ -48,7 +48,7 @@ class AudioService {
   }
 
   public play(type: 'success' | 'error' | 'delete') {
-    const settings = storage.getSettings();
+    const settings = getSettings();
     
     // Haptics
     if (settings.hapticsEnabled && navigator.vibrate) {

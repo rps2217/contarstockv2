@@ -4,6 +4,7 @@ import { ChevronLeft, Barcode, CheckCircle2, WifiOff, CloudUpload, CloudDownload
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import * as storage from '../services/storage';
+import { sanitizeBarcode } from '../services/utils';
 import { syncReceptionToAppSheet, restoreReceptionFromCloud } from '../services/syncBridge';
 import { SoundFX } from '../services/audio';
 import { CameraScanner } from './CameraScanner';
@@ -67,7 +68,7 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack }) => {
 
     // --- SCANNER LOGIC ---
     const handleScan = async (code: string) => {
-        const cleanCode = storage.sanitizeBarcode(code);
+        const cleanCode = sanitizeBarcode(code);
         if (!cleanCode) return;
 
         try {

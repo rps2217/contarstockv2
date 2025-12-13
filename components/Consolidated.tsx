@@ -5,7 +5,6 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { ConsolidatedItem, CountingSession } from '../types';
 import { exportToExcel, exportToPDF } from '../services/export';
-// UPDATED: Import syncToAppSheet and syncAllPendingData
 import { syncToAppSheet, restoreFromCloud, syncAllPendingData } from '../services/syncBridge';
 import * as storage from '../services/storage';
 import { aggregateScans } from '../services/aggregator';
@@ -398,7 +397,7 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack }) => {
                             onClick={() => setSelectedErp(group.erp)}
                             className={`bg-white p-6 rounded-2xl shadow-sm border hover:shadow-md transition-all text-left group w-full relative overflow-hidden ${group.allSynced ? 'border-green-200 hover:border-green-300' : 'border-slate-200 hover:border-purple-200'}`}
                         >
-                            <div className="absolute right-0 top-0 p-16 bg-purple-50 rounded-full -mr-8 -mt-8 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                            <div className="absolute right-0 top-0 p-16 bg-purple-50 rounded-full -mr-8 -mt-8 opacity-0 group-hover:opacity-10 transition-opacity duration-500"></div>
 
                             <div className="relative z-10 flex justify-between items-center">
                                 <div>
