@@ -27,10 +27,12 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose })
             if (!scannerRef.current) return;
 
             try {
+                // Configuración ajustada para pantalla completa
                 const config = {
                     fps: 10,
                     qrbox: { width: 250, height: 250 },
-                    aspectRatio: 1.0
+                    // Eliminamos aspectRatio fijo para permitir que la cámara use su nativo
+                    // y nosotros lo forzamos con CSS a cubrir el contenedor
                 };
 
                 await scannerRef.current.start(
@@ -107,7 +109,7 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose })
                 ) : (
                     <>
                         {/* The HTML element where scanner renders. Uses Unique ID. */}
-                        <div id={uniqueId} className="w-full h-full object-cover"></div>
+                        <div id={uniqueId} className="w-full h-full"></div>
                         
                         {/* Overlay Guidelines */}
                         <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
@@ -142,6 +144,14 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose })
                 /* Hide HTML5-QRCode default elements we don't want */
                 #reader__scan_region img { display: none; }
                 #reader__dashboard_section_csr button { display: none; }
+                
+                /* FORCE VIDEO TO FILL CONTAINER */
+                #${uniqueId} video {
+                    width: 100% !important;
+                    height: 100% !important;
+                    object-fit: cover !important;
+                    border-radius: 0 !important;
+                }
             `}</style>
         </div>
     );
