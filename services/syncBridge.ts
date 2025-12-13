@@ -90,16 +90,39 @@ export const restoreReceptionFromCloud = async (): Promise<number> => {
 
 
 // OPTIMIZED RESTORE LOGIC
-export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange?: { start: string, end: string } }): Promise<{ sessions: number, items: number }> => {
+export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange?: { start: string, end: string }, skipExisting?: boolean }): Promise<{ sessions: number, items: number }> => {
   const rows = await fetchCloudData(options);
   if (rows.length === 0) return { sessions: 0, items: 0 };
+
+  // --- FILTER: DISCARD EXISTING LOCAL SESSIONS ---
+  let rowsToProcess = rows;
+  
+  // If skipExisting is true (default for bulk download), we filter out data we already have locally.
+  if (options?.skipExisting) {
+      console.log("[Restore] Applying 'Skip Existing' filter...");
+      const cloudErps = Array.from(new Set(rows.map(r => String(r[SHEET_COLUMNS.ERP_ORDER]).trim())));
+      const localSessions = await db.sessions.where('erpOrder').anyOf(cloudErps).toArray();
+      
+      // Create a signature set of "ERP_LABEL" that exists locally
+      const localSignatures = new Set(localSessions.map(s => `${s.erpOrder}_${s.logisticsLabel}`));
+      
+      rowsToProcess = rows.filter(row => {
+          const erp = String(row[SHEET_COLUMNS.ERP_ORDER]).trim();
+          const label = String(row[SHEET_COLUMNS.LABEL] || "GENERAL").trim();
+          const signature = `${erp}_${label}`;
+          return !localSignatures.has(signature);
+      });
+      console.log(`[Restore] Filtered out ${rows.length - rowsToProcess.length} rows that already exist locally.`);
+  }
+
+  if (rowsToProcess.length === 0) return { sessions: 0, items: 0 };
 
   let sessionsProcessed = 0;
   let itemsRestored = 0;
 
   // 1. Group Rows by Session
   const sessionsMap = new Map<string, any[]>();
-  rows.forEach(row => {
+  rowsToProcess.forEach(row => {
     let erp = row[SHEET_COLUMNS.ERP_ORDER];
     let label = row[SHEET_COLUMNS.LABEL];
     erp = erp ? String(erp).trim() : "";
@@ -112,8 +135,8 @@ export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange
     }
   });
 
-  // 2. Batch Prefetch
-  const erpList = Array.from(new Set(rows.map(r => r[SHEET_COLUMNS.ERP_ORDER])));
+  // 2. Batch Prefetch (Only needed if we didn't fully skip, or for delta syncs)
+  const erpList = Array.from(new Set(rowsToProcess.map(r => r[SHEET_COLUMNS.ERP_ORDER])));
   const existingSessions = await db.sessions.where('erpOrder').anyOf(erpList).toArray();
   const existingSessionMap = new Map<string, CountingSession>();
   existingSessions.forEach(s => existingSessionMap.set(`${s.erpOrder}_${s.logisticsLabel}`, s));
@@ -132,6 +155,8 @@ export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange
     const existingSession = existingSessionMap.get(key);
 
     if (existingSession) {
+        // If we are here, it means skipExisting was FALSE, or the signature matching logic missed it.
+        // We proceed with Delta Sync logic.
         sessionId = existingSession.id;
         sessionTotalUnits = existingSession.totalUnits || 0;
         sessionTotalSKUs = existingSession.totalSKUs || 0;
@@ -170,7 +195,7 @@ export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange
         }
     }
 
-    // 5. Compare with Local Data
+    // 5. Compare with Local Data (Delta Logic)
     const localQtyMap = new Map<string, number>();
     if (!isNewSession) {
         const localScans = await db.scans.where('sessionId').equals(sessionId).toArray();
@@ -223,21 +248,10 @@ export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange
 
     if (isNewSession) {
         sessionTotalSKUs = uniqueSKUsSet.size;
-    } else {
-        // For existing sessions, SKUs might overlap, so simple addition isn't 100% accurate without a full distinct query,
-        // but for restore logic, a rough update is better than a slow read. 
-        // We will assume 'uniqueSKUsSet' contains new items mostly. 
-        // Correct approach for existing: Read once is unavoidable if we want perfect SKU count,
-        // BUT we can skip it and just update units for performance, letting the user do a manual refresh if needed.
-        // Or better: We trust our local calculation if we added scans.
-        if (scansToAdd.length > 0) {
-             // Approximation for performance or just leave as is until user opens session
-        }
     }
 
     // 7. Commit
     if (isNewSession) {
-         // Create the session object now that we have stats
          await db.sessions.add({
             id: sessionId,
             erpOrder: erp,

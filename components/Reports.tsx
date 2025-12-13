@@ -175,20 +175,22 @@ export const Reports: React.FC<ReportsProps> = ({ onSessionStart, onNavigate }) 
 
   const executeDownload = async (start: string | null, end: string | null, label: string) => {
       setShowDownloadMenu(false);
-      if(!confirm(`¿Buscar historial de: ${label} en la nube?\n${start ? `Rango: ${start} al ${end}` : 'Descarga COMPLETA (Puede tardar)'}`)) return;
+      // Prompt refined
+      if(!confirm(`¿Buscar historial de: ${label} en la nube?\n(Solo se importarán conteos que NO existan en el dispositivo)`)) return;
 
       setRestoringCloud(true);
       try {
           console.log(`[Cloud] Requesting download: ${label}`);
-          const options = (start && end) ? { dateRange: { start, end } } : undefined;
+          // Default to skipExisting: true for bulk actions
+          const options = (start && end) ? { dateRange: { start, end }, skipExisting: true } : { skipExisting: true };
           
           const result = await restoreFromCloud(options);
           
           if (result.sessions > 0) {
-              alert(`¡Éxito!\nSe descargaron ${result.sessions} sesiones.`);
+              alert(`¡Éxito!\nSe descargaron ${result.sessions} sesiones nuevas.`);
               window.location.reload();
           } else {
-              alert("No se encontraron nuevos datos.");
+              alert("No se encontraron registros nuevos.");
           }
       } catch (err: any) {
           alert(`Error de conexión: ${err.message}`);
@@ -355,7 +357,7 @@ export const Reports: React.FC<ReportsProps> = ({ onSessionStart, onNavigate }) 
                                 <CloudDownload className="w-6 h-6" />
                             </div>
                             <h3 className="text-lg font-bold text-slate-900">Restauración Selectiva</h3>
-                            <p className="text-xs text-slate-500">Recupere conteos anteriores de la nube.</p>
+                            <p className="text-xs text-slate-500">Solo se descargarán registros NUEVOS.</p>
                         </div>
 
                         <div className="grid grid-cols-1 gap-3">

@@ -209,18 +209,19 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack }) => {
 
     const executeDownload = async (start: string | null, end: string | null, label: string) => {
         setShowDownloadMenu(false);
-        if(!confirm(`¿Descargar datos de: ${label}?\n${start ? `Rango: ${start} al ${end}` : 'Descarga COMPLETA (Puede tardar)'}`)) return;
+        // Prompt refined: "Descargar SOLO NUEVOS"
+        if(!confirm(`¿Descargar datos de: ${label}?\n(Solo se importarán conteos que NO existan en el dispositivo)`)) return;
 
         setIsRestoring(true);
         try {
             console.log(`[Cloud] Requesting download: ${label}`);
-            const options = (start && end) ? { dateRange: { start, end } } : undefined;
+            const options = (start && end) ? { dateRange: { start, end }, skipExisting: true } : { skipExisting: true };
             const result = await restoreFromCloud(options);
             
             if (result.sessions > 0) {
-                alert(`¡Éxito!\nSe descargaron ${result.sessions} sesiones.`);
+                alert(`¡Éxito!\nSe descargaron ${result.sessions} sesiones nuevas.`);
             } else {
-                alert("No se encontraron nuevos datos.");
+                alert("No se encontraron registros nuevos (todo lo existente fue omitido).");
             }
         } catch (err: any) {
             alert(`Error de conexión: ${err.message}`);
@@ -254,11 +255,13 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack }) => {
     };
 
     const handleSingleErpRestore = async (erp: string) => {
-        if (!confirm(`¿Buscar actualizaciones específicas para Orden ${erp}?`)) return;
+        // EXPLICIT REFRESH: Allows updating existing (Delta Sync)
+        if (!confirm(`¿Actualizar Orden ${erp}?\nEsto buscará cambios en la nube y los fusionará con lo local.`)) return;
+        
         setIsRestoring(true);
         try {
-            const result = await restoreFromCloud({ erpFilter: erp });
-            if (result.sessions > 0) alert(`Se actualizaron ${result.sessions} bultos.`);
+            const result = await restoreFromCloud({ erpFilter: erp, skipExisting: false });
+            if (result.sessions > 0 || result.items > 0) alert(`Se actualizaron ${result.sessions} bultos (${result.items} items).`);
             else alert("Sin cambios encontrados.");
         } catch (err: any) {
             alert(`Error: ${err.message}`);
@@ -276,7 +279,7 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack }) => {
                         <h2 className="font-bold text-slate-900 leading-tight flex items-center gap-2"><Layers className="w-4 h-4 text-purple-600" /> Consolidado ERP</h2>
                         <div className="text-xs text-slate-500 font-mono font-bold">{selectedErp}</div>
                     </div>
-                    <button onClick={() => handleSingleErpRestore(selectedErp)} disabled={isRestoring} className="text-indigo-600 hover:bg-indigo-50 p-2 rounded-full transition-colors disabled:opacity-50" title="Actualizar esta orden">
+                    <button onClick={() => handleSingleErpRestore(selectedErp)} disabled={isRestoring} className="text-indigo-600 hover:bg-indigo-50 p-2 rounded-full transition-colors disabled:opacity-50" title="Actualizar esta orden (Fusionar)">
                         {isRestoring ? <RefreshCw className="w-5 h-5 animate-spin" /> : <RefreshCw className="w-5 h-5" />}
                     </button>
                 </div>
@@ -434,7 +437,7 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack }) => {
                                 <CloudDownload className="w-6 h-6" />
                             </div>
                             <h3 className="text-lg font-bold text-slate-900">Descarga Rápida</h3>
-                            <p className="text-xs text-slate-500">Seleccione el periodo a sincronizar.</p>
+                            <p className="text-xs text-slate-500">Solo se descargarán registros NUEVOS.</p>
                         </div>
 
                         <div className="grid grid-cols-1 gap-3">
