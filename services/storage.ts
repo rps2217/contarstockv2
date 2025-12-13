@@ -97,6 +97,23 @@ export const deleteSession = async (sessionId: string) => {
     }); 
 };
 
+export const cleanSyncedSessions = async (): Promise<number> => {
+    // Find all sessions that have a valid lastSyncTimestamp (meaning they are in the cloud)
+    const syncedSessions = await db.sessions
+        .filter(s => !!s.lastSyncTimestamp && s.lastSyncTimestamp > 0)
+        .toArray();
+
+    if (syncedSessions.length === 0) return 0;
+
+    let deletedCount = 0;
+    // We iterate and delete to ensure cascading deletes of scans work correctly via the existing logic
+    for (const session of syncedSessions) {
+        await deleteSession(session.id);
+        deletedCount++;
+    }
+    return deletedCount;
+};
+
 export const getActiveSession = async (): Promise<CountingSession | undefined> => { 
     return await db.sessions.where('status').equals('active').first(); 
 };

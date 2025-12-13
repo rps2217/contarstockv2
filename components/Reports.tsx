@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { FileText, Sparkles, Truck, Calendar, ChevronLeft, Package, CheckCircle2, ScanLine, Layers, Plus, MoreVertical, Trash2, Minus, FileSpreadsheet, ChevronRight as ChevronRightIcon, CloudDownload, WifiOff, Cloud, Check, Clock, CalendarDays, CalendarRange, X, Database } from 'lucide-react';
+import { FileText, Sparkles, Truck, Calendar, ChevronLeft, Package, CheckCircle2, ScanLine, Layers, Plus, MoreVertical, Trash2, Minus, FileSpreadsheet, ChevronRight as ChevronRightIcon, CloudDownload, WifiOff, Cloud, Check, Clock, CalendarDays, CalendarRange, X, Database, Eraser } from 'lucide-react';
 import { CountingSession, ConsolidatedItem, ViewState } from '../types';
 import * as storage from '../services/storage';
 import { analyzeConsolidation } from '../services/gemini';
@@ -25,15 +25,12 @@ export const Reports: React.FC<ReportsProps> = ({ onSessionStart, onNavigate }) 
   const [aiReport, setAiReport] = useState<string>('');
   const [loadingAi, setLoadingAi] = useState(false);
   const [syncingAppSheet, setSyncingAppSheet] = useState(false);
-  const [restoringCloud, setRestoringCloud] = useState(false);
+  const [isCleaning, setIsCleaning] = useState(false);
   const [page, setPage] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [isStartModalOpen, setIsStartModalOpen] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   
-  // --- DOWNLOAD MENU STATE ---
-  const [showDownloadMenu, setShowDownloadMenu] = useState(false);
-
   // Monitor Sync Queue
   const pendingSyncCount = useLiveQuery(() => db.syncQueue.where('status').equals('pending').count(), [], 0);
 
@@ -166,61 +163,23 @@ export const Reports: React.FC<ReportsProps> = ({ onSessionStart, onNavigate }) 
       }
   };
 
-  // --- DATE DOWNLOAD LOGIC ---
-  const getLocalDateString = (date: Date) => {
-      const offset = date.getTimezoneOffset();
-      const local = new Date(date.getTime() - (offset * 60 * 1000));
-      return local.toISOString().split('T')[0];
-  };
-
-  const executeDownload = async (start: string | null, end: string | null, label: string) => {
-      setShowDownloadMenu(false);
-      // Prompt refined
-      if(!confirm(`¿Buscar historial de: ${label} en la nube?\n(Solo se importarán conteos que NO existan en el dispositivo)`)) return;
-
-      setRestoringCloud(true);
+  // --- CLEAN UP LOGIC ---
+  const handleCleanSynced = async () => {
+      if (!confirm("¿Desea eliminar del dispositivo los conteos que YA están respaldados en la nube?\n\nEsta acción liberará espacio pero mantendrá los datos pendientes de subida.")) return;
+      
+      setIsCleaning(true);
       try {
-          console.log(`[Cloud] Requesting download: ${label}`);
-          // Default to skipExisting: true for bulk actions
-          const options = (start && end) ? { dateRange: { start, end }, skipExisting: true } : { skipExisting: true };
-          
-          const result = await restoreFromCloud(options);
-          
-          if (result.sessions > 0) {
-              alert(`¡Éxito!\nSe descargaron ${result.sessions} sesiones nuevas.`);
-              window.location.reload();
+          const count = await storage.cleanSyncedSessions();
+          if (count > 0) {
+              alert(`Limpieza completada.\nSe eliminaron ${count} sesiones locales respaldadas.`);
           } else {
-              alert("No se encontraron registros nuevos.");
+              alert("No hay sesiones sincronizadas para limpiar.");
           }
       } catch (err: any) {
-          alert(`Error de conexión: ${err.message}`);
+          alert(`Error durante la limpieza: ${err.message}`);
       } finally {
-          setRestoringCloud(false);
+          setIsCleaning(false);
       }
-  };
-
-  const handleDownloadToday = () => {
-      const today = new Date();
-      const str = getLocalDateString(today);
-      executeDownload(str, str, "HOY");
-  };
-
-  const handleDownloadYesterday = () => {
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      const str = getLocalDateString(yesterday);
-      executeDownload(str, str, "AYER");
-  };
-
-  const handleDownloadThisMonth = () => {
-      const now = new Date();
-      const start = new Date(now.getFullYear(), now.getMonth(), 1);
-      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0); 
-      executeDownload(getLocalDateString(start), getLocalDateString(end), "ESTE MES");
-  };
-  
-  const handleDownloadAll = () => {
-      executeDownload(null, null, "TODO (Sin Filtros)");
   };
 
   const fullSelectedSession = useLiveQuery(() => selectedSessionId ? db.sessions.get(selectedSessionId) : undefined, [selectedSessionId]);
@@ -245,12 +204,12 @@ export const Reports: React.FC<ReportsProps> = ({ onSessionStart, onNavigate }) 
 
             <div className="grid grid-cols-2 gap-2 mb-8">
                 <button 
-                    onClick={() => setShowDownloadMenu(true)} 
-                    disabled={restoringCloud} 
-                    className="col-span-2 bg-indigo-50 border border-indigo-200 text-indigo-700 font-bold py-2.5 rounded-xl hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
+                    onClick={handleCleanSynced} 
+                    disabled={isCleaning} 
+                    className="col-span-2 bg-slate-50 border border-slate-200 text-slate-600 font-bold py-2.5 rounded-xl hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
                 >
-                    {restoringCloud ? <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" /> : <CloudDownload className="w-4 h-4" />}
-                    Restaurar Nube
+                    {isCleaning ? <div className="w-4 h-4 border-2 border-slate-600 border-t-transparent rounded-full animate-spin" /> : <Eraser className="w-4 h-4" />}
+                    Limpiar Sincronizados
                 </button>
                 <button onClick={() => onNavigate('consolidated')} className="bg-white border border-slate-200 text-purple-700 font-bold py-2.5 rounded-xl hover:bg-purple-50 hover:border-purple-200 transition-colors flex items-center justify-center gap-2 shadow-sm">
                     <Layers className="w-4 h-4" /> Consolidados
@@ -345,59 +304,6 @@ export const Reports: React.FC<ReportsProps> = ({ onSessionStart, onNavigate }) 
             )}
             
             <StartSessionModal isOpen={isStartModalOpen} onClose={() => setIsStartModalOpen(false)} onSessionStart={(s) => { setIsStartModalOpen(false); onSessionStart(s); }} />
-
-            {/* QUICK DOWNLOAD MENU */}
-            {showDownloadMenu && (
-                <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-                    <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-6 relative animate-in zoom-in-95 overflow-y-auto max-h-[85vh]">
-                        <button onClick={() => setShowDownloadMenu(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-2 rounded-full hover:bg-slate-100 transition-colors"><X className="w-5 h-5" /></button>
-                        
-                        <div className="text-center mb-6">
-                            <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                                <CloudDownload className="w-6 h-6" />
-                            </div>
-                            <h3 className="text-lg font-bold text-slate-900">Restauración Selectiva</h3>
-                            <p className="text-xs text-slate-500">Solo se descargarán registros NUEVOS.</p>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-3">
-                            <button onClick={handleDownloadToday} className="bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 p-4 rounded-xl flex items-center gap-4 transition-all group text-left">
-                                <div className="bg-white p-2 rounded-lg shadow-sm group-hover:text-indigo-600"><Clock className="w-5 h-5" /></div>
-                                <div>
-                                    <div className="font-bold text-slate-900 group-hover:text-indigo-700">Solo Hoy</div>
-                                    <div className="text-xs text-slate-400">Restaurar conteos del día</div>
-                                </div>
-                            </button>
-                            
-                            <button onClick={handleDownloadYesterday} className="bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 p-4 rounded-xl flex items-center gap-4 transition-all group text-left">
-                                <div className="bg-white p-2 rounded-lg shadow-sm group-hover:text-indigo-600"><Calendar className="w-5 h-5" /></div>
-                                <div>
-                                    <div className="font-bold text-slate-900 group-hover:text-indigo-700">Ayer</div>
-                                    <div className="text-xs text-slate-400">Recuperar día anterior</div>
-                                </div>
-                            </button>
-
-                            <button onClick={handleDownloadThisMonth} className="bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 p-4 rounded-xl flex items-center gap-4 transition-all group text-left">
-                                <div className="bg-white p-2 rounded-lg shadow-sm group-hover:text-indigo-600"><CalendarDays className="w-5 h-5" /></div>
-                                <div>
-                                    <div className="font-bold text-slate-900 group-hover:text-indigo-700">Este Mes</div>
-                                    <div className="text-xs text-slate-400">Todo el mes en curso</div>
-                                </div>
-                            </button>
-                            
-                            {/* FALLBACK OPTION */}
-                            <button onClick={handleDownloadAll} className="bg-red-50 hover:bg-red-100 border border-red-100 hover:border-red-200 p-4 rounded-xl flex items-center gap-4 transition-all group text-left">
-                                <div className="bg-white p-2 rounded-lg shadow-sm group-hover:text-red-600"><Database className="w-5 h-5" /></div>
-                                <div>
-                                    <div className="font-bold text-slate-900 group-hover:text-red-700">Todo (Sin Filtros)</div>
-                                    <div className="text-xs text-slate-400">Descargar base completa (Lento)</div>
-                                </div>
-                            </button>
-                        </div>
-
-                    </div>
-                </div>
-            )}
         </div>
     );
   }
