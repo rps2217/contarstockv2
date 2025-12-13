@@ -3,6 +3,7 @@ import { db } from '../db';
 import { fetchCloudData, syncToAppSheet, SHEET_COLUMNS, parseFlexibleDate } from './appsheet';
 import { CountingSession, ScanRecord } from '../types';
 import * as sessionService from './sessionService';
+import { generateCompositeKey, normalizeKey } from './utils';
 
 // --- TYPES ---
 
@@ -22,20 +23,6 @@ export interface CloudItem {
     status: 'new' | 'exists_identical' | 'exists_different';
     rawRow: any;
 }
-
-// --- HELPER ROBUST NORMALIZATION ---
-// FIX: Aggressive normalization. Removes ALL whitespace to match "Orden 123" with "Orden123".
-const normalizeKey = (str: any) => {
-    if (str === null || str === undefined) return '';
-    return String(str).replace(/\s+/g, '').toUpperCase();
-};
-
-const generateCompositeKey = (erp: any, label: any) => {
-    // Standardize logic: Missing label means "GENERAL"
-    const l = normalizeKey(label);
-    const finalLabel = (l === '' || l === 'NULL' || l === 'UNDEFINED') ? "GENERAL" : l;
-    return `${normalizeKey(erp)}_${finalLabel}`;
-};
 
 // --- UPLOAD LOGIC ---
 
@@ -135,7 +122,7 @@ export const analyzeCloudDifferences = async (startDate: string, endDate: string
         const key = generateCompositeKey(erp, label);
 
         // Skip invalid rows or already processed sessions within this batch
-        if (!erp || processedKeys.has(key)) continue;
+        if (normalizeKey(erp).length === 0 || processedKeys.has(key)) continue;
         processedKeys.add(key);
 
         const existsLocal = localSignatures.has(key);

@@ -30,3 +30,32 @@ export const sanitizeBarcode = (code: string): string => {
         .replace(/[\x00-\x1F\x7F-\x9F]/g, "")
         .replace(/[\u200B-\u200D\uFEFF]/g, "");
 };
+
+/**
+ * ULTRA-AGGRESSIVE NORMALIZATION FOR MATCHING
+ * Used to compare ERP Orders and Labels between Local DB and Cloud.
+ * 1. Converts to String.
+ * 2. Removes Accents (NFD normalization).
+ * 3. Uppercases.
+ * 4. Removes ALL whitespace and non-alphanumeric chars (except hyphens).
+ * 
+ * Example: "  Caja N° 1  " -> "CAJAN1"
+ */
+export const normalizeKey = (str: any): string => {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove accents (é -> e, ñ -> n)
+        .toUpperCase()
+        .replace(/[^A-Z0-9-]/g, ""); // Keep only Letters, Numbers, and Hyphens. Strip spaces, dots, #, etc.
+};
+
+/**
+ * Generates a unique signature for a session based on ERP and Label.
+ * Handles empty/null labels by defaulting to "GENERAL".
+ */
+export const generateCompositeKey = (erp: any, label: any): string => {
+    const l = normalizeKey(label);
+    // Treat empty, NULL, or UNDEFINED strings as the "GENERAL" group
+    const finalLabel = (l === '' || l === 'NULL' || l === 'UNDEFINED') ? "GENERAL" : l;
+    return `${normalizeKey(erp)}_${finalLabel}`;
+};

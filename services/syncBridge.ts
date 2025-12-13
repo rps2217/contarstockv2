@@ -1,25 +1,12 @@
 
 import { fetchProductsFromCloud, fetchCloudData, fetchReceptionData, SHEET_COLUMNS, syncToAppSheet, syncProductsToAppSheet, syncReceptionToAppSheet, parseFlexibleDate } from './appsheet';
 import { db } from '../db';
-import { sanitizeBarcode, generateUUID } from './utils';
+import { sanitizeBarcode, generateUUID, generateCompositeKey, normalizeKey } from './utils';
 import { Product, CountingSession, ScanRecord } from '../types';
 import * as productService from './productService';
 
 // Re-export core sync functions for UI components to avoid split dependencies
 export { syncToAppSheet, syncProductsToAppSheet, syncReceptionToAppSheet };
-
-// --- HELPER FOR KEY NORMALIZATION (MATCHING syncManager.ts) ---
-const normalizeKey = (str: any) => {
-    if (str === null || str === undefined) return '';
-    // Strip ALL whitespace to avoid "Order 1" vs "Order1" issues
-    return String(str).replace(/\s+/g, '').toUpperCase();
-};
-
-const generateCompositeKey = (erp: any, label: any) => {
-    const l = normalizeKey(label);
-    const finalLabel = (l === '' || l === 'NULL' || l === 'UNDEFINED') ? "GENERAL" : l;
-    return `${normalizeKey(erp)}_${finalLabel}`;
-};
 
 /**
  * INTELLIGENT BATCH SYNC
@@ -113,6 +100,7 @@ export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange
   const localSessionMap = new Map<string, CountingSession>();
   
   allLocalSessions.forEach(s => {
+      // Use central generator to ensure keys match exactly what we generate for cloud rows
       localSessionMap.set(generateCompositeKey(s.erpOrder, s.logisticsLabel), s);
   });
 
@@ -144,7 +132,8 @@ export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange
     // Normalize logic
     const key = generateCompositeKey(erp, label);
 
-    if (erp) {
+    // Only process valid ERPs (ignore garbage rows)
+    if (normalizeKey(erp).length > 0) {
         if (!sessionsMap.has(key)) sessionsMap.set(key, []);
         sessionsMap.get(key)?.push(row);
     }
@@ -165,12 +154,13 @@ export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange
     // First, try the fast Map lookup
     let existingSession = localSessionMap.get(key);
 
-    // SAFETY FALLBACK: If map fails, check the full array manually
-    // This catches edge cases where map keys might differ slightly due to encoding
+    // SAFETY FALLBACK: If map fails (rare edge case), check the full array manually
     if (!existingSession) {
         const normErp = normalizeKey(erp);
         const normLabel = normalizeKey(label);
         
+        // This handles cases where 'label' might be resolved to 'GENERAL' internally
+        // matching a local session that effectively maps to the same key
         existingSession = allLocalSessions.find(s => 
             normalizeKey(s.erpOrder) === normErp && 
             normalizeKey(s.logisticsLabel) === normLabel
