@@ -64,6 +64,7 @@ export interface AppSettings {
   controlTowerEnabled: boolean; // NEW: Show Dashboard Widgets
   confirmDelete: boolean;
   appSheetConfig?: AppSheetConfig;
+  mobileNavConfig?: ViewState[]; // NEW: Customizable Mobile Navigation
 }
 
 export interface SyncJob {

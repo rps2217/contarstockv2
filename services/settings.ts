@@ -20,7 +20,8 @@ const DEFAULT_SETTINGS: AppSettings = {
       countsTableName: '',
       productsTableName: '',
       receptionTableName: '' // Default empty
-  }
+  },
+  mobileNavConfig: ['dashboard', 'database', 'reports'] // Default Mobile Items
 };
 
 export const getSettings = (): AppSettings => {
@@ -41,7 +42,9 @@ export const getSettings = (): AppSettings => {
         appSheetConfig: {
             ...DEFAULT_SETTINGS.appSheetConfig,
             ...config
-        }
+        },
+        // Ensure mobileNavConfig exists if loading from old settings
+        mobileNavConfig: parsed.mobileNavConfig || DEFAULT_SETTINGS.mobileNavConfig
     };
   } catch (e) {
     console.error("Error reading settings", e);

@@ -1,10 +1,10 @@
 
 import React, { useState } from 'react';
-import { Settings as SettingsIcon, Volume2, VolumeX, Vibrate, Zap, Moon, Sun, Monitor, AlertTriangle, ArrowLeft, Cloud, Key, Database, Lock, Check, Eye, Shield, FileText, Package, AlertOctagon, Activity, CheckCircle, XCircle, Share2, Download, QrCode, Copy, Save, Upload, RefreshCw, Loader2, Speech, Hash, Type, Gauge, BarChart3 } from 'lucide-react';
+import { Settings as SettingsIcon, Volume2, VolumeX, Vibrate, Zap, Moon, Sun, Monitor, AlertTriangle, ArrowLeft, Cloud, Key, Database, Lock, Check, Eye, Shield, FileText, Package, AlertOctagon, Activity, CheckCircle, XCircle, Share2, Download, QrCode, Copy, Save, Upload, RefreshCw, Loader2, Speech, Hash, Type, Gauge, BarChart3, Smartphone, LayoutTemplate } from 'lucide-react';
 import * as storage from '../services/storage';
 import * as settingsService from '../services/settings';
 import { createFullBackup, restoreFullBackup } from '../services/backupService';
-import { AppSettings, Theme } from '../types';
+import { AppSettings, ViewState } from '../types';
 import { runSystemDiagnostics } from '../services/businessLogic.test';
 import { SoundFX } from '../services/audio';
 
@@ -41,6 +41,35 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
     if (key === 'ttsEnabled' && value === true) {
         SoundFX.speak("Voz activada");
     }
+  };
+
+  // --- MOBILE NAV CONFIG ---
+  const availableNavItems: {id: ViewState, label: string}[] = [
+      { id: 'dashboard', label: 'Inicio' },
+      { id: 'database', label: 'Datos' },
+      { id: 'reports', label: 'Historial' },
+      { id: 'consolidated', label: 'Consolidados' },
+      { id: 'reception', label: 'Recepción' },
+      { id: 'conciliator', label: 'Detective' },
+      { id: 'sync', label: 'Nube' },
+  ];
+
+  const toggleNavOption = (id: ViewState) => {
+      let current = settings.mobileNavConfig || ['dashboard', 'database', 'reports'];
+      
+      if (current.includes(id)) {
+          // Prevent removing if only 1 item left (sanity check)
+          if (current.length <= 1) return;
+          current = current.filter(i => i !== id);
+      } else {
+          // Limit to 5 items to fit on screen
+          if (current.length >= 5) {
+              alert("Máximo 5 elementos permitidos en la barra móvil.");
+              return;
+          }
+          current = [...current, id];
+      }
+      updateSetting('mobileNavConfig', current);
   };
 
   const handleAppSheetSave = (e: React.FormEvent) => {
@@ -187,6 +216,33 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
                 <button onClick={() => updateSetting('theme', 'contrast')} className={`p-4 rounded-xl border-2 text-left transition-all ${settings.theme === 'contrast' ? 'border-yellow-400 bg-black' : 'border-slate-100 hover:border-slate-300 bg-black'}`}>
                     <div className="font-bold text-yellow-400">Contraste</div>
                 </button>
+            </div>
+        </section>
+
+        {/* MOBILE NAVIGATION CONFIG (NEW) */}
+        <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+             <h2 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
+                <Smartphone className="w-5 h-5 text-purple-500" /> Navegación Móvil
+            </h2>
+            <p className="text-sm text-slate-500 mb-4">Seleccione los accesos directos que aparecerán en la barra inferior (Máx 5).</p>
+            
+            <div className="grid grid-cols-2 gap-3">
+                {availableNavItems.map(item => {
+                    const isSelected = (settings.mobileNavConfig || ['dashboard', 'database', 'reports']).includes(item.id);
+                    return (
+                        <button 
+                            key={item.id}
+                            onClick={() => toggleNavOption(item.id)}
+                            className={`p-3 rounded-xl border text-sm font-bold flex items-center justify-between transition-all ${isSelected ? 'bg-purple-50 border-purple-500 text-purple-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'}`}
+                        >
+                            <span className="flex items-center gap-2">
+                                <LayoutTemplate className="w-4 h-4 opacity-70" />
+                                {item.label}
+                            </span>
+                            {isSelected && <CheckCircle className="w-4 h-4 text-purple-600" />}
+                        </button>
+                    );
+                })}
             </div>
         </section>
 

@@ -19,7 +19,7 @@ import { getSettings } from './services/settings';
 import { db } from './db';
 import { SYNC_ENGINE_VERSION, processSyncQueue } from './services/appsheet';
 import { initPersistence } from './services/backupService';
-import { LayoutGrid, Database as DbIcon, History, Home, Box, AlertTriangle, Cloud, CloudOff } from 'lucide-react';
+import { LayoutGrid, Database as DbIcon, History, Home, Box, AlertTriangle, Cloud, CloudOff, Container, Fingerprint, Layers } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 
 const AppContent: React.FC = () => {
@@ -181,6 +181,7 @@ const AppContent: React.FC = () => {
     );
   }
 
+  // NOTE: Reception View is fullscreen, handles its own layout
   if (view === 'reception') {
       return (
           <div className="h-screen bg-slate-900">
@@ -235,6 +236,17 @@ interface NavProps {
   pendingCount?: number;
 }
 
+// CONFIGURATION FOR NAV ITEMS
+const NAV_CONFIG: Record<string, { label: string, icon: React.ReactNode }> = {
+    'dashboard': { label: 'Inicio', icon: <Home className="w-6 h-6" /> },
+    'database': { label: 'Datos', icon: <DbIcon className="w-6 h-6" /> },
+    'reports': { label: 'Historial', icon: <History className="w-6 h-6" /> },
+    'consolidated': { label: 'Consolidado', icon: <Layers className="w-6 h-6" /> },
+    'reception': { label: 'Recepción', icon: <Container className="w-6 h-6" /> },
+    'conciliator': { label: 'Detective', icon: <Fingerprint className="w-6 h-6" /> },
+    'sync': { label: 'Nube', icon: <Cloud className="w-6 h-6" /> },
+};
+
 const MobileNav = memo(({ view, setView, settings }: NavProps) => {
   const t = settings.theme;
   
@@ -245,12 +257,31 @@ const MobileNav = memo(({ view, setView, settings }: NavProps) => {
   else if (t === 'navy') navClass = "bg-[#151f32]/90 border-[#1e293b] text-slate-500 shadow-black/50";
   else if (t === 'warm') navClass = "bg-[#f5efe6]/90 border-[#e7e0d3] text-[#a8a29e] shadow-orange-900/10";
 
+  // Use configured items or fallback to default
+  const navItems = settings.mobileNavConfig || ['dashboard', 'database', 'reports'];
+
   return (
     <nav className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-sm z-40 transition-all duration-500 ease-out">
         <div className={`flex justify-around items-center h-16 px-2 rounded-2xl border backdrop-blur-md ${navClass}`}>
-            <NavButton active={view === 'dashboard'} onClick={() => setView('dashboard')} icon={<Home className="w-6 h-6" />} label="Inicio" theme={settings.theme} />
-            <NavButton active={view === 'database'} onClick={() => setView('database')} icon={<DbIcon className="w-6 h-6" />} label="Datos" theme={settings.theme} />
-            <NavButton active={view === 'reports' || view === 'consolidated'} onClick={() => setView('reports')} icon={<History className="w-6 h-6" />} label="Historial" theme={settings.theme} />
+            {navItems.map((itemKey) => {
+                const config = NAV_CONFIG[itemKey];
+                if (!config) return null;
+                
+                // Active state logic handles combined views (e.g. reports active when consolidated is shown)
+                let isActive = view === itemKey;
+                if (itemKey === 'reports' && view === 'consolidated') isActive = true;
+
+                return (
+                    <NavButton 
+                        key={itemKey}
+                        active={isActive} 
+                        onClick={() => setView(itemKey as ViewState)} 
+                        icon={config.icon} 
+                        label={config.label} 
+                        theme={settings.theme} 
+                    />
+                );
+            })}
         </div>
     </nav>
   );
