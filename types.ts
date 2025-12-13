@@ -1,5 +1,4 @@
 
-
 export interface Product {
   barcode: string;      // Mapped from: CODIGO
   name: string;         // Mapped from: DESCRIPCION
@@ -43,7 +42,7 @@ export interface ConsolidatedItem {
   isIncident?: boolean; // Aggregate flag
 }
 
-export type ViewState = 'dashboard' | 'counting' | 'database' | 'reports' | 'settings' | 'consolidated' | 'conciliator' | 'reception';
+export type ViewState = 'dashboard' | 'counting' | 'database' | 'reports' | 'settings' | 'consolidated' | 'conciliator' | 'reception' | 'sync';
 
 export type Theme = 'light' | 'dark' | 'contrast' | 'warm' | 'navy';
 

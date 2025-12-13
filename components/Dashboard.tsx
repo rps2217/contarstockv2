@@ -1,6 +1,6 @@
 
 import React, { useMemo } from 'react';
-import { Database, ScanLine, Settings, ArrowRight, Box, Layers, Fingerprint, Container, Calendar, PackageCheck, WifiOff } from 'lucide-react';
+import { Database, ScanLine, Settings, ArrowRight, Box, Layers, Fingerprint, Container, Calendar, PackageCheck, WifiOff, Cloud } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { getSettings } from '../services/settings';
@@ -10,7 +10,7 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
-  // Read settings (No need for full reactivity loop here, useMemo is fine as Dashboard remounts often)
+  // Read settings
   const settings = useMemo(() => getSettings(), []);
 
   // --- REAL-TIME STATS LOGIC ---
@@ -130,12 +130,31 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             </button>
         </div>
 
-        {/* ROW 2: ANALYSIS TOOLS */}
+        {/* ROW 2: CLOUD & ANALYSIS */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* TARJETA 3: CONSOLIDADOS ERP */}
+            {/* TARJETA 3: CLOUD SYNC MANAGER (NEW MODULE) */}
+            <button 
+                onClick={() => onNavigate('sync')}
+                className="group relative overflow-hidden bg-gradient-to-br from-indigo-500 to-violet-600 rounded-[2rem] shadow-lg shadow-indigo-200 p-6 text-left transition-all hover:shadow-xl hover:scale-[1.01] flex flex-col justify-between h-48"
+            >
+                <div className="absolute top-0 right-0 p-24 bg-white rounded-full blur-3xl -mr-12 -mt-12 opacity-10 group-hover:opacity-20 transition-opacity"></div>
+
+                <div className="bg-white/20 backdrop-blur-md w-12 h-12 rounded-2xl flex items-center justify-center text-white border border-white/10 shrink-0 z-10 mb-4">
+                    <Cloud className="w-6 h-6" />
+                </div>
+                
+                <div className="z-10">
+                    <h2 className="text-xl font-bold text-white mb-1">Gestor Nube</h2>
+                    <p className="font-medium text-indigo-100 text-xs opacity-90">
+                        Sincronización Avanzada.
+                    </p>
+                </div>
+            </button>
+
+            {/* TARJETA 4: CONSOLIDADOS ERP */}
             <button 
                 onClick={() => onNavigate('consolidated')}
-                className="group relative overflow-hidden bg-gradient-to-br from-purple-600 to-indigo-700 rounded-[2rem] shadow-lg shadow-purple-200 p-6 text-left transition-all hover:shadow-xl hover:scale-[1.01] flex flex-col justify-between h-48"
+                className="group relative overflow-hidden bg-gradient-to-br from-purple-600 to-fuchsia-700 rounded-[2rem] shadow-lg shadow-purple-200 p-6 text-left transition-all hover:shadow-xl hover:scale-[1.01] flex flex-col justify-between h-48"
             >
                 <div className="absolute top-0 right-0 p-24 bg-white rounded-full blur-3xl -mr-12 -mt-12 opacity-10 group-hover:opacity-20 transition-opacity"></div>
 
@@ -144,70 +163,59 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 </div>
                 
                 <div className="z-10">
-                    <h2 className="text-xl font-bold text-white mb-1">Consolidados ERP</h2>
+                    <h2 className="text-xl font-bold text-white mb-1">Consolidados</h2>
                     <p className="font-medium text-purple-100 text-xs opacity-90">
                         Agrupación por Orden.
                     </p>
                 </div>
             </button>
-
-            {/* TARJETA 4: DETECTIVE / CONCILIADOR */}
-            <button 
-                onClick={() => onNavigate('conciliator')}
-                className="group relative overflow-hidden bg-gradient-to-br from-emerald-600 to-teal-700 rounded-[2rem] shadow-lg shadow-emerald-200 p-6 text-left transition-all hover:shadow-xl hover:scale-[1.01] flex flex-col justify-between h-48"
-            >
-                <div className="absolute top-0 right-0 p-24 bg-white rounded-full blur-3xl -mr-12 -mt-12 opacity-10 group-hover:opacity-20 transition-opacity"></div>
-
-                <div className="bg-white/20 backdrop-blur-md w-12 h-12 rounded-2xl flex items-center justify-center text-white border border-white/10 shrink-0 z-10 mb-4">
-                    <Fingerprint className="w-6 h-6" />
-                </div>
-                
-                <div className="z-10">
-                    <h2 className="text-xl font-bold text-white mb-1">Detective</h2>
-                    <p className="font-medium text-emerald-100 text-xs opacity-90">
-                        Conciliación Inteligente.
-                    </p>
-                </div>
-            </button>
         </div>
 
-        {/* ROW 3: SYSTEM */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* TARJETA 5: DATOS MAESTROS */}
+        {/* ROW 3: TOOLS & SYSTEM */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            {/* TARJETA 5: DETECTIVE */}
+            <button 
+                onClick={() => onNavigate('conciliator')}
+                className="group relative overflow-hidden bg-gradient-to-br from-emerald-600 to-teal-700 rounded-[2rem] shadow-lg shadow-emerald-200 p-6 text-left transition-all hover:shadow-xl hover:scale-[1.01] flex flex-col justify-between h-40"
+            >
+                <div className="absolute top-0 right-0 p-24 bg-white rounded-full blur-3xl -mr-12 -mt-12 opacity-10 group-hover:opacity-20 transition-opacity"></div>
+                <div className="bg-white/20 backdrop-blur-md w-10 h-10 rounded-xl flex items-center justify-center text-white border border-white/10 shrink-0 z-10 mb-3">
+                    <Fingerprint className="w-5 h-5" />
+                </div>
+                <div className="z-10">
+                    <h2 className="text-lg font-bold text-white">Detective</h2>
+                    <p className="font-medium text-emerald-100 text-[10px] opacity-90">Conciliación.</p>
+                </div>
+            </button>
+
+            {/* TARJETA 6: DATOS MAESTROS */}
             <button 
                 onClick={() => onNavigate('database')}
                 className="group relative overflow-hidden bg-gradient-to-br from-cyan-500 to-blue-600 rounded-[2rem] shadow-lg shadow-cyan-200/50 p-6 text-left transition-all hover:shadow-xl hover:scale-[1.01] flex flex-col justify-between h-40"
             >
                 <div className="absolute top-0 right-0 p-24 bg-white rounded-full blur-3xl -mr-12 -mt-12 opacity-10 group-hover:opacity-20 transition-opacity"></div>
-
-                <div className="bg-white/20 backdrop-blur-md w-12 h-12 rounded-2xl flex items-center justify-center text-white border border-white/10 shrink-0 z-10 mb-4">
-                    <Database className="w-6 h-6" />
+                <div className="bg-white/20 backdrop-blur-md w-10 h-10 rounded-xl flex items-center justify-center text-white border border-white/10 shrink-0 z-10 mb-3">
+                    <Database className="w-5 h-5" />
                 </div>
-                
                 <div className="z-10">
-                    <h2 className="text-xl font-bold text-white mb-1">Base de Datos</h2>
-                    <p className="font-medium text-cyan-50 text-xs opacity-90">
-                        Catálogo de productos.
-                    </p>
+                    <h2 className="text-lg font-bold text-white">Base Datos</h2>
+                    <p className="font-medium text-cyan-50 text-[10px] opacity-90">Catálogo.</p>
                 </div>
             </button>
 
-            {/* TARJETA 6: AJUSTES */}
+            {/* TARJETA 7: AJUSTES */}
             <button 
                 onClick={() => onNavigate('settings')}
                 className="group relative overflow-hidden bg-gradient-to-br from-slate-700 to-zinc-800 rounded-[2rem] shadow-lg shadow-slate-300 p-6 text-left transition-all hover:shadow-xl hover:scale-[1.01] flex flex-col justify-between h-40"
             >
                 <div className="absolute top-0 right-0 p-24 bg-white rounded-full blur-3xl -mr-12 -mt-12 opacity-5 group-hover:opacity-10 transition-opacity"></div>
-
-                <div className="bg-white/10 backdrop-blur-md w-12 h-12 rounded-2xl flex items-center justify-center text-white border border-white/10 shrink-0 z-10 mb-4">
-                    <Settings className="w-6 h-6" />
+                <div className="bg-white/10 backdrop-blur-md w-10 h-10 rounded-xl flex items-center justify-center text-white border border-white/10 shrink-0 z-10 mb-3">
+                    <Settings className="w-5 h-5" />
                 </div>
-                
                 <div className="z-10">
-                    <h2 className="text-xl font-bold text-white mb-1">Ajustes</h2>
-                    <p className="font-medium text-slate-300 text-xs opacity-90">
-                        Configuración global.
-                    </p>
+                    <h2 className="text-lg font-bold text-white">Ajustes</h2>
+                    <p className="font-medium text-slate-300 text-[10px] opacity-90">Configuración.</p>
                 </div>
             </button>
         </div>
@@ -215,7 +223,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       </div>
 
       <div className="text-center text-xs opacity-30 mt-12 font-mono">
-        LogiCount Pro v1.15.0
+        LogiCount Pro v1.16.0
       </div>
 
     </div>
