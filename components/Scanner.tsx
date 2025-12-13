@@ -1,12 +1,13 @@
 
-import React, { useMemo, useRef, useEffect } from 'react';
-import { Pause, Package, Zap, Keyboard, AlertTriangle, Check, Volume2, Save, XCircle, X, RotateCcw, Camera, Ban } from 'lucide-react';
+import React, { useMemo, useRef, useEffect, useState } from 'react';
+import { Pause, Package, Zap, Keyboard, AlertTriangle, Check, Volume2, Save, XCircle, X, RotateCcw, Camera, Ban, Gauge } from 'lucide-react';
 import { CountingSession } from '../types';
 import { ExpirationModal } from './ExpirationModal';
 import { useScanner } from '../hooks/useScanner';
 import { ScanItem } from './ScanItem';
 import { NumericKeypad } from './NumericKeypad';
 import { CameraScanner } from './CameraScanner';
+import { SoundFX } from '../services/audio';
 
 interface ScannerProps {
   session: CountingSession;
@@ -23,6 +24,41 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
 
   // Focus ref for manual input
   const manualInputRef = useRef<HTMLInputElement>(null);
+
+  // --- PERFORMANCE TRACKING (SPEEDOMETER) ---
+  const [scansPerMinute, setScansPerMinute] = useState(0);
+  const scanTimestampsRef = useRef<number[]>([]);
+
+  // Update speed whenever a scan happens
+  useEffect(() => {
+    if (data.lastScan) {
+        const now = Date.now();
+        // Add current timestamp
+        scanTimestampsRef.current.push(now);
+        // Clean old timestamps (> 60s)
+        const cutoff = now - 60000;
+        scanTimestampsRef.current = scanTimestampsRef.current.filter(t => t > cutoff);
+        // Update State
+        setScansPerMinute(scanTimestampsRef.current.length);
+        
+        // TTS logic moved to useScanner hook to access streak state correctly
+    }
+  }, [data.lastScan]);
+
+  // Decay speedometer if idle
+  useEffect(() => {
+      const interval = setInterval(() => {
+          const now = Date.now();
+          const cutoff = now - 60000;
+          const countBefore = scanTimestampsRef.current.length;
+          scanTimestampsRef.current = scanTimestampsRef.current.filter(t => t > cutoff);
+          if (scanTimestampsRef.current.length !== countBefore) {
+              setScansPerMinute(scanTimestampsRef.current.length);
+          }
+      }, 5000);
+      return () => clearInterval(interval);
+  }, []);
+
 
   // PERFORMANCE OPTIMIZATION: 
   // Instead of changing the root container class (which triggers layout recalc for children),
@@ -89,6 +125,12 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
              <div className="font-mono font-bold text-sm tracking-widest">{session.erpOrder}</div>
         </div>
         <div className="flex items-center gap-2">
+            {/* PERFORMANCE PILL */}
+            <div className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${scansPerMinute > 20 ? 'bg-green-500/20 border-green-500/50 text-green-300' : 'bg-white/10 border-white/10 text-slate-300'}`}>
+                <Gauge className="w-3 h-3" />
+                <span>{scansPerMinute} ipm</span>
+            </div>
+
             <button 
                 onClick={() => state.setShowConfirmModal(true)} 
                 className="bg-white/10 hover:bg-red-500/80 text-white/80 hover:text-white px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all backdrop-blur-md"
@@ -193,7 +235,13 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
             <div className="max-w-md mx-auto bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-2 flex justify-between items-center shadow-lg">
                 
                 {/* Stats */}
-                <div className="flex gap-6 px-4">
+                <div className="flex gap-4 px-3 items-center">
+                     {/* Mobile Speedometer */}
+                    <div className="md:hidden flex flex-col items-center justify-center mr-2 w-10">
+                        <Gauge className={`w-5 h-5 ${scansPerMinute > 20 ? 'text-green-400' : 'text-slate-500'}`} />
+                        <span className={`text-[9px] font-bold ${scansPerMinute > 20 ? 'text-green-400' : 'text-slate-500'}`}>{scansPerMinute}</span>
+                    </div>
+
                     <div className="flex flex-col">
                         <span className="text-[9px] uppercase font-bold text-white/40">Unidades</span>
                         <span className="text-xl font-bold tabular-nums">{data.sessionStats.totalQty}</span>

@@ -1,11 +1,12 @@
 
 import React, { useState } from 'react';
-import { Settings as SettingsIcon, Volume2, VolumeX, Vibrate, Zap, Moon, Sun, Monitor, AlertTriangle, ArrowLeft, Cloud, Key, Database, Lock, Check, Eye, Shield, FileText, Package, AlertOctagon, Activity, CheckCircle, XCircle, Share2, Download, QrCode, Copy, Save, Upload, RefreshCw, Loader2 } from 'lucide-react';
+import { Settings as SettingsIcon, Volume2, VolumeX, Vibrate, Zap, Moon, Sun, Monitor, AlertTriangle, ArrowLeft, Cloud, Key, Database, Lock, Check, Eye, Shield, FileText, Package, AlertOctagon, Activity, CheckCircle, XCircle, Share2, Download, QrCode, Copy, Save, Upload, RefreshCw, Loader2, Speech, Hash, Type } from 'lucide-react';
 import * as storage from '../services/storage';
 import * as settingsService from '../services/settings';
 import { createFullBackup, restoreFullBackup } from '../services/backupService';
 import { AppSettings, Theme } from '../types';
 import { runSystemDiagnostics } from '../services/businessLogic.test';
+import { SoundFX } from '../services/audio';
 
 interface SettingsProps {
   onBack: () => void;
@@ -36,6 +37,10 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
     setSettings(newSettings);
     settingsService.saveSettings(newSettings);
     onSettingsChanged(newSettings);
+
+    if (key === 'ttsEnabled' && value === true) {
+        SoundFX.speak("Voz activada");
+    }
   };
 
   const handleAppSheetSave = (e: React.FormEvent) => {
@@ -202,6 +207,45 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
                         <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.soundEnabled ? 'left-7' : 'left-1'}`} />
                     </button>
                 </div>
+                
+                {/* TTS Toggle */}
+                <div className="border border-slate-100 rounded-xl p-3">
+                    <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-lg ${settings.ttsEnabled ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-400'}`}>
+                                <Speech className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <div className="font-bold text-slate-900">Asistente de Voz</div>
+                                <div className="text-xs text-slate-400">Confirmación auditiva</div>
+                            </div>
+                        </div>
+                        <button onClick={() => updateSetting('ttsEnabled', !settings.ttsEnabled)} className={`w-12 h-6 rounded-full transition-colors relative ${settings.ttsEnabled ? 'bg-purple-500' : 'bg-slate-300'}`}>
+                            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.ttsEnabled ? 'left-7' : 'left-1'}`} />
+                        </button>
+                    </div>
+
+                    {/* TTS MODE SELECTION (Visible only if enabled) */}
+                    {settings.ttsEnabled && (
+                        <div className="grid grid-cols-2 gap-2 mt-2 pl-12 animate-in fade-in slide-in-from-top-2">
+                            <button 
+                                onClick={() => updateSetting('ttsMode', 'count')}
+                                className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all ${settings.ttsMode === 'count' ? 'bg-purple-50 border-purple-300 text-purple-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'}`}
+                            >
+                                <Hash className="w-5 h-5" />
+                                <span className="text-xs font-bold">Contador (1, 2...)</span>
+                            </button>
+                            <button 
+                                onClick={() => updateSetting('ttsMode', 'product')}
+                                className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all ${settings.ttsMode === 'product' ? 'bg-purple-50 border-purple-300 text-purple-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'}`}
+                            >
+                                <Type className="w-5 h-5" />
+                                <span className="text-xs font-bold">Leer Nombre</span>
+                            </button>
+                        </div>
+                    )}
+                </div>
+
                 <div className="flex items-center justify-between p-2">
                     <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-lg ${settings.confirmDelete ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>

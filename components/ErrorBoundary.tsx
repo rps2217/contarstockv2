@@ -18,12 +18,12 @@ export class ErrorBoundary extends Component<Props, State> {
     errorInfo: null
   };
 
-  public static getDerivedStateFromError(error: Error): Partial<State> {
+  static getDerivedStateFromError(error: Error): Partial<State> {
     // Update state so the next render will show the fallback UI.
     return { hasError: true, error };
   }
 
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
     this.setState({ errorInfo });
   }
@@ -42,7 +42,7 @@ export class ErrorBoundary extends Component<Props, State> {
     }
   };
 
-  public render(): ReactNode {
+  render(): ReactNode {
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-sans">

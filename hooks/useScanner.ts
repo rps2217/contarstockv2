@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import Dexie from 'dexie';
@@ -32,8 +33,6 @@ export const useScanner = (
     const [showExpirationModal, setShowExpirationModal] = useState(false);
 
     // --- REFS FOR EVENT LISTENER STABILITY ---
-    // We use refs to track state inside the global event listener without triggering
-    // a re-bind of the listener on every state change. This is critical for scanner performance.
     const stateRef = useRef({
         showConfirmModal,
         showExpirationModal,
@@ -41,6 +40,9 @@ export const useScanner = (
         isMultiplierOpen,
         isCameraOpen
     });
+
+    // --- STREAK COUNTER LOGIC ---
+    const streakRef = useRef({ barcode: '', count: 0 });
 
     // Update ref whenever state changes
     useEffect(() => {
@@ -112,15 +114,54 @@ export const useScanner = (
 
     const completeScan = async (code: string, mm?: number, yyyy?: number) => {
         try {
-            // Apply multiplier (Default to 1 if user left it at 0)
+            // Apply multiplier
             const qtyToAdd = multiplier > 0 ? multiplier : 1;
-            // ARCHITECTURE FIX: Use sessionService directly
+            
+            // DB Save
             const newScan = await sessionService.addScan(session.id, code, qtyToAdd, mm, yyyy);
             setLastScanId(newScan.id);
             triggerFeedback('success');
+
+            // --- TTS LOGIC (Improved Streak Counter) ---
+            const settings = storage.getSettings();
+            if (settings.ttsEnabled) {
+                // Determine Mode
+                if (settings.ttsMode === 'count') {
+                    // STREAK MODE
+                    if (code === streakRef.current.barcode) {
+                        streakRef.current.count += qtyToAdd;
+                    } else {
+                        // New product, reset streak
+                        streakRef.current.barcode = code;
+                        streakRef.current.count = qtyToAdd; // Start at 1 (or multiplier value)
+                    }
+                    SoundFX.speak(streakRef.current.count.toString());
+                } else {
+                    // PRODUCT NAME MODE
+                    // We need the name asynchronously, so we do a quick fetch
+                    // Optimistic lookup from existing map if possible
+                    let nameToSpeak = "Producto";
+                    const cachedProduct = await db.products.get(code);
+                    
+                    if (cachedProduct) nameToSpeak = cachedProduct.name;
+                    else nameToSpeak = "Producto Desconocido";
+
+                    SoundFX.speak(nameToSpeak);
+                }
+            } else {
+                // If TTS Disabled, reset streak silently so next time voice is enabled it starts fresh
+                // or just keep it sync'd logic.
+                // It's safer to track streaks anyway in case they toggle it mid-session (unlikely but possible)
+                if (code !== streakRef.current.barcode) {
+                    streakRef.current.barcode = code;
+                    streakRef.current.count = 0; 
+                }
+                streakRef.current.count += qtyToAdd;
+            }
             
             // Reset multiplier after successful scan for safety
             if (multiplier !== 1) setMultiplier(1);
+
         } catch (err) {
             triggerFeedback('error');
         }
@@ -201,7 +242,8 @@ export const useScanner = (
         e.preventDefault(); e.stopPropagation();
         const settings = storage.getSettings();
         if (!settings.confirmDelete || window.confirm('¿Confirmar eliminación del registro?')) {
-            // ARCHITECTURE FIX: Use sessionService directly
+            // Decrement streak if this was the last item, logic complex so mostly we leave it
+            // because physical count usually moves forward. 
             await sessionService.deleteScan(scanId);
             SoundFX.play('delete');
         }
@@ -211,9 +253,14 @@ export const useScanner = (
     const handleUndoLastScan = useCallback(async () => {
         if (!lastScanId) return;
         try {
-            // ARCHITECTURE FIX: Use sessionService directly
             await sessionService.deleteScan(lastScanId);
             setLastScanId(null);
+            
+            // Adjust streak if undoing the immediate last one
+            if (streakRef.current.count > 0) {
+                streakRef.current.count--;
+            }
+
             triggerFeedback('undo');
         } catch (e) {
             console.error("Undo failed", e);
@@ -224,20 +271,17 @@ export const useScanner = (
         if (currentQty + delta <= 0) {
             const settings = storage.getSettings();
             if (!settings.confirmDelete || window.confirm('¿Eliminar registro?')) {
-                // ARCHITECTURE FIX: Use sessionService directly
                 await sessionService.deleteScan(scanId); SoundFX.play('delete');
             }
         } else {
-            // ARCHITECTURE FIX: Use sessionService directly
             await sessionService.updateScanQuantity(scanId, currentQty + delta);
         }
     }, []);
 
     const handleToggleIncident = useCallback(async (e: React.MouseEvent, scanId: string, currentStatus: boolean) => {
         e.stopPropagation();
-        // ARCHITECTURE FIX: Use sessionService directly
         await sessionService.updateScanIncident(scanId, !currentStatus);
-        SoundFX.play('success'); // Feedback sound
+        SoundFX.play('success'); 
     }, []);
 
     const handleDiscard = () => {

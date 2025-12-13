@@ -1,4 +1,5 @@
 
+
 export interface Product {
   barcode: string;      // Mapped from: CODIGO
   name: string;         // Mapped from: DESCRIPCION
@@ -58,6 +59,8 @@ export interface AppSettings {
   theme: Theme;
   soundEnabled: boolean;
   hapticsEnabled: boolean;
+  ttsEnabled: boolean; // NEW: Text to Speech enabled
+  ttsMode: 'product' | 'count'; // NEW: Voice Mode (Read Name vs Count Streak)
   confirmDelete: boolean;
   appSheetConfig?: AppSheetConfig;
 }

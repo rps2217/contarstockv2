@@ -9,6 +9,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   theme: 'light',
   soundEnabled: true,
   hapticsEnabled: true,
+  ttsEnabled: false, // Default DISABLED as requested
+  ttsMode: 'count',  // Default mode is the new efficient Counting mode
   confirmDelete: true,
   appSheetConfig: {
       appId: '',

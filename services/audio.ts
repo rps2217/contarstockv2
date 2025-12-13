@@ -3,6 +3,13 @@ import * as storage from './storage';
 
 class AudioService {
   private ctx: AudioContext | null = null;
+  private synth: SpeechSynthesis | null = null;
+
+  constructor() {
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+        this.synth = window.speechSynthesis;
+    }
+  }
 
   private getContext(): AudioContext | null {
     if (!this.ctx) {
@@ -15,6 +22,29 @@ class AudioService {
       this.ctx.resume().catch(console.error);
     }
     return this.ctx;
+  }
+
+  public speak(text: string) {
+      const settings = storage.getSettings();
+      if (!settings.ttsEnabled || !this.synth) return;
+
+      // Cancel previous utterance to avoid queue buildup
+      this.synth.cancel();
+
+      // Simple cleanup of product names for better speech
+      // e.g. "BEB. COCA COLA 1.5L" -> "Bebida Coca Cola uno punto cinco litros"
+      const cleanText = text
+        .toLowerCase()
+        .replace(/beb\./g, 'bebida')
+        .replace(/unid\./g, 'unidades')
+        .substring(0, 60); // Limit length
+
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.rate = 1.1; // Slightly faster
+      utterance.pitch = 1.0;
+      utterance.lang = 'es-ES'; // Default Spanish
+
+      this.synth.speak(utterance);
   }
 
   public play(type: 'success' | 'error' | 'delete') {
