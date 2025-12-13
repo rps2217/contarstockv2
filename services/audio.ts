@@ -4,6 +4,8 @@ import { getSettings } from './settings';
 class AudioService {
   private ctx: AudioContext | null = null;
   private synth: SpeechSynthesis | null = null;
+  // SECURITY: Keep reference to prevent Garbage Collection from cutting audio short on Android/Chrome
+  private activeUtterance: SpeechSynthesisUtterance | null = null;
 
   constructor() {
     if (typeof window !== 'undefined' && window.speechSynthesis) {
@@ -32,17 +34,30 @@ class AudioService {
       this.synth.cancel();
 
       // Simple cleanup of product names for better speech
-      // e.g. "BEB. COCA COLA 1.5L" -> "Bebida Coca Cola uno punto cinco litros"
       const cleanText = text
         .toLowerCase()
         .replace(/beb\./g, 'bebida')
         .replace(/unid\./g, 'unidades')
-        .substring(0, 60); // Limit length
+        .replace(/\./g, ' punto ')
+        .substring(0, 80); // Limit length
 
+      // Create new utterance
       const utterance = new SpeechSynthesisUtterance(cleanText);
       utterance.rate = 1.1; // Slightly faster
       utterance.pitch = 1.0;
       utterance.lang = 'es-ES'; // Default Spanish
+
+      // BINDING: Hold reference
+      this.activeUtterance = utterance;
+
+      // CLEANUP: Release reference when done
+      utterance.onend = () => {
+          this.activeUtterance = null;
+      };
+      utterance.onerror = (e) => {
+          console.warn("TTS Error:", e);
+          this.activeUtterance = null;
+      };
 
       this.synth.speak(utterance);
   }

@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react';
+
+import React, { useMemo, useRef, useEffect } from 'react';
 import { Product } from '../../types';
 import { Pencil, Trash2, Package, Globe, Factory, AlertTriangle } from 'lucide-react';
 import { FixedSizeList } from 'react-window';
@@ -87,6 +88,8 @@ export const ProductList: React.FC<ProductListProps> = ({
   onDeleteAll,
   hasFilter
 }) => {
+  const listRef = useRef<FixedSizeList>(null);
+
   // Memoize item data to prevent unnecessary re-renders inside FixedSizeList
   const itemData = useMemo(() => ({
       items: products || [],
@@ -94,6 +97,14 @@ export const ProductList: React.FC<ProductListProps> = ({
       onDelete,
       isMobile: false // Placeholder, overwritten inside AutoSizer
   }), [products, onEdit, onDelete]);
+
+  // SCROLL RESET: When filter changes (hasFilter toggles) or data length changes dramatically
+  // we should scroll to top to ensure the user sees results.
+  useEffect(() => {
+    if (listRef.current) {
+        listRef.current.scrollTo(0);
+    }
+  }, [hasFilter, products?.length]);
 
   if (!products || products.length === 0) {
     return (
@@ -144,6 +155,7 @@ export const ProductList: React.FC<ProductListProps> = ({
 
                     return (
                         <FixedSizeList
+                            ref={listRef}
                             height={height}
                             width={width}
                             itemCount={products.length}

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { ChevronLeft, Barcode, CheckCircle2, WifiOff, CloudUpload, CloudDownload, Box, Zap, Layers, Hash, Loader2, Camera, Ban, List, Trash2, X, Eye, Keyboard } from 'lucide-react';
+import { ChevronLeft, Barcode, CheckCircle2, WifiOff, CloudUpload, CloudDownload, Box, Zap, Layers, Hash, Loader2, Camera, Ban, List, Trash2, X, Eye, Keyboard, AlertTriangle } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import * as storage from '../services/storage';
@@ -51,7 +51,8 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack }) => {
 
         return Array.from(groups.entries())
             .map(([prefix, count]) => ({ prefix, count }))
-            .sort((a, b) => b.count - a.count);
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 4); // Top 4 lots only
     }, [unsyncedDrafts]);
 
     const buffer = useRef('');
@@ -177,6 +178,13 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack }) => {
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [isCameraOpen, showQueueModal]);
+
+    // Optimize Queue Rendering: Only show last 100 items to prevent UI lag on massive queues
+    const visibleDrafts = useMemo(() => {
+        return unsyncedDrafts ? unsyncedDrafts.slice(0, 100) : [];
+    }, [unsyncedDrafts]);
+
+    const hiddenCount = (unsyncedDrafts?.length || 0) - visibleDrafts.length;
 
     return (
         <div className="flex flex-col h-screen bg-slate-900 text-white">
@@ -368,34 +376,41 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack }) => {
                             </button>
                         </div>
 
-                        {/* List */}
+                        {/* List - PERFORMANCE: Render only visible drafts */}
                         <div className="flex-1 overflow-y-auto p-4 space-y-2 no-scrollbar">
-                            {(!unsyncedDrafts || unsyncedDrafts.length === 0) ? (
+                            {(!visibleDrafts || visibleDrafts.length === 0) ? (
                                 <div className="text-center py-12 text-slate-500">
                                     <Box className="w-12 h-12 mx-auto mb-3 opacity-20" />
                                     <p>La cola está vacía.</p>
                                 </div>
                             ) : (
-                                unsyncedDrafts.map((draft, idx) => (
-                                    <div key={draft.id} className="bg-slate-800 p-3 rounded-xl flex justify-between items-center group animate-in slide-in-from-right-2" style={{ animationDelay: `${Math.min(idx * 0.05, 0.5)}s` }}>
-                                        <div className="flex items-center gap-3 overflow-hidden">
-                                            <div className="bg-slate-700 text-slate-400 w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0">
-                                                {unsyncedDrafts.length - idx}
+                                <>
+                                    {visibleDrafts.map((draft, idx) => (
+                                        <div key={draft.id} className="bg-slate-800 p-3 rounded-xl flex justify-between items-center group animate-in slide-in-from-right-2" style={{ animationDelay: `${Math.min(idx * 0.05, 0.5)}s` }}>
+                                            <div className="flex items-center gap-3 overflow-hidden">
+                                                <div className="bg-slate-700 text-slate-400 w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0">
+                                                    {unsyncedDrafts!.length - idx}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <div className="font-mono font-bold text-white truncate text-sm">{draft.logisticsLabel}</div>
+                                                    <div className="text-[10px] text-slate-500">{new Date(draft.createdAt).toLocaleTimeString()}</div>
+                                                </div>
                                             </div>
-                                            <div className="min-w-0">
-                                                <div className="font-mono font-bold text-white truncate text-sm">{draft.logisticsLabel}</div>
-                                                <div className="text-[10px] text-slate-500">{new Date(draft.createdAt).toLocaleTimeString()}</div>
-                                            </div>
+                                            <button 
+                                                onClick={() => handleDeleteDraft(draft.id)}
+                                                className="p-2 text-slate-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                                                title="Eliminar este bulto"
+                                            >
+                                                <Trash2 className="w-5 h-5" />
+                                            </button>
                                         </div>
-                                        <button 
-                                            onClick={() => handleDeleteDraft(draft.id)}
-                                            className="p-2 text-slate-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
-                                            title="Eliminar este bulto"
-                                        >
-                                            <Trash2 className="w-5 h-5" />
-                                        </button>
-                                    </div>
-                                ))
+                                    ))}
+                                    {hiddenCount > 0 && (
+                                        <div className="text-center py-4 text-slate-500 text-xs font-bold bg-slate-800/50 rounded-xl">
+                                            + {hiddenCount} bultos más en cola...
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
 

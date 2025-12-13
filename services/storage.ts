@@ -76,9 +76,24 @@ export const closeSession = async (sessionId: string) => {
 };
 
 export const deleteSession = async (sessionId: string) => { 
-    await (db as any).transaction('rw', db.sessions, db.scans, async () => { 
+    await (db as any).transaction('rw', db.sessions, db.scans, db.syncQueue, async () => { 
+        // 1. Delete Scans
         await db.scans.where('sessionId').equals(sessionId).delete(); 
+        
+        // 2. Delete Session
         await db.sessions.delete(sessionId); 
+
+        // 3. Delete Orphaned Sync Jobs (Cleanup)
+        // Since syncQueue stores the session object inside, we can't query by index directly easily without a schema change.
+        // Given syncQueue is usually small, we filter in memory.
+        const pendingJobs = await db.syncQueue.toArray();
+        const jobsToDelete = pendingJobs
+            .filter(job => job.session && job.session.id === sessionId)
+            .map(job => job.id as number); // id is auto-increment number
+        
+        if (jobsToDelete.length > 0) {
+            await db.syncQueue.bulkDelete(jobsToDelete);
+        }
     }); 
 };
 
