@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef, useState, useId } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { X, Camera, Zap, AlertTriangle } from 'lucide-react';
 
@@ -18,6 +18,8 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose })
     const uniqueId = useRef(`scanner-${Math.random().toString(36).substr(2, 9)}`).current;
 
     useEffect(() => {
+        let isMounted = true;
+
         // Ensure we don't create multiple instances if re-renders happen quickly
         if (!scannerRef.current) {
              scannerRef.current = new Html5Qrcode(uniqueId);
@@ -39,12 +41,15 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose })
                     { facingMode: "environment" }, 
                     config,
                     (decodedText) => {
+                        if (!isMounted) return;
                         if (decodedText !== lastScanned) {
                             setLastScanned(decodedText);
                             if (navigator.vibrate) navigator.vibrate(50);
                             onScan(decodedText);
                             // Prevent rapid duplicates
-                            setTimeout(() => setLastScanned(null), 2000);
+                            setTimeout(() => {
+                                if (isMounted) setLastScanned(null);
+                            }, 2000);
                         }
                     },
                     (errorMessage) => {
@@ -54,7 +59,7 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose })
             } catch (err: any) {
                 console.error("Error starting camera:", err);
                 // Only set error if we are still mounted/scanning
-                if (isScanning) {
+                if (isMounted) {
                     setError("No se pudo acceder a la cámara. Verifique permisos o use HTTPS.");
                 }
             }
@@ -65,6 +70,7 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose })
         }
 
         return () => {
+            isMounted = false;
             // QA FIX: Robust async cleanup
             if (scannerRef.current && scannerRef.current.isScanning) {
                 scannerRef.current.stop()
@@ -75,11 +81,12 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose })
                         console.warn("Scanner stop/clear warning:", err);
                     })
                     .finally(() => {
+                        // Explicitly nullify to allow garbage collection
                         scannerRef.current = null;
                     });
             }
         };
-    }, [isScanning, uniqueId]); 
+    }, [isScanning, uniqueId, onScan, lastScanned]); // Added dependencies for stability
 
     return (
         <div className="fixed inset-0 z-[80] bg-black flex flex-col animate-in fade-in duration-300">

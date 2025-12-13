@@ -17,9 +17,8 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     setError('');
     setIsLoading(true);
 
+    // Simulate network delay for better UX (prevents instant flickering)
     setTimeout(() => {
-      // SECURITY FIX: Removed hardcoded fallbacks.
-      // Credentials must be supplied via build environment variables (Vite).
       let validUser = '';
       let validPass = '';
 
@@ -33,6 +32,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           console.error("Error reading environment variables.");
       }
 
+      // Check if credentials are set in environment
       if (!validUser || !validPass) {
           setError('Error de configuración: Credenciales no definidas en el sistema.');
           setIsLoading(false);
@@ -61,11 +61,14 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl p-8 animate-in zoom-in-95 duration-300">
         <form onSubmit={handleLogin} className="space-y-5">
             <div>
-                <label className="text-xs font-bold text-slate-500 uppercase mb-2 block ml-1">Usuario</label>
+                <label htmlFor="username" className="text-xs font-bold text-slate-500 uppercase mb-2 block ml-1">Usuario</label>
                 <div className="relative">
                     <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                     <input 
+                        id="username"
+                        name="username"
                         type="text" 
+                        autoComplete="username"
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         className="w-full bg-slate-950 border border-slate-700 text-white pl-12 pr-4 py-4 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-600"
@@ -76,11 +79,14 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             </div>
 
             <div>
-                <label className="text-xs font-bold text-slate-500 uppercase mb-2 block ml-1">Contraseña</label>
+                <label htmlFor="password" className="text-xs font-bold text-slate-500 uppercase mb-2 block ml-1">Contraseña</label>
                 <div className="relative">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                     <input 
+                        id="password"
+                        name="password"
                         type="password" 
+                        autoComplete="current-password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         className="w-full bg-slate-950 border border-slate-700 text-white pl-12 pr-4 py-4 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-600"

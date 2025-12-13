@@ -81,20 +81,32 @@ export const importExpectedOrders = async (file: File): Promise<number> => {
   });
 };
 
+/**
+ * OPTIMIZED MATCHING ALGORITHM
+ * Uses Hash Maps for O(1) lookups instead of Array.find O(N).
+ * Significantly faster for large orders.
+ */
 export const calculateOrderMatch = (physicalItems: ConsolidatedItem[], order: ExpectedOrder): MatchResult => {
-  const physicalMap = new Map(physicalItems.map(i => [i.barcode, i.totalQuantity]));
-  const physicalTotalQty = physicalItems.reduce((acc, i) => acc + i.totalQuantity, 0);
+  // 1. Create Maps for O(1) access
+  const physicalMap = new Map(physicalItems.map(i => [i.barcode, { qty: i.totalQuantity, name: i.productName }]));
+  const expectedMap = new Map(order.items.map(i => [i.barcode, { qty: i.expectedQty, name: i.name }]));
+
+  // 2. Identify all unique barcodes involved
+  const allSkus = new Set([...physicalMap.keys(), ...expectedMap.keys()]);
 
   let matchesCount = 0;
   const details = [];
 
-  const allSkus = new Set([...physicalMap.keys(), ...order.items.map(i => i.barcode)]);
-
+  // 3. Single pass comparison
   for (const sku of allSkus) {
-    const physicalQty = physicalMap.get(sku) || 0;
-    const expectedItem = order.items.find(i => i.barcode === sku);
-    const expectedQty = expectedItem?.expectedQty || 0;
-    const name = expectedItem?.name || physicalItems.find(i => i.barcode === sku)?.productName || 'Desconocido';
+    const physData = physicalMap.get(sku);
+    const expData = expectedMap.get(sku);
+
+    const physicalQty = physData?.qty || 0;
+    const expectedQty = expData?.qty || 0;
+    
+    // Fallback name logic: Expected name preferred, then physical name, then Unknown
+    const name = expData?.name || physData?.name || 'Desconocido';
 
     const diff = physicalQty - expectedQty;
 
@@ -111,6 +123,8 @@ export const calculateOrderMatch = (physicalItems: ConsolidatedItem[], order: Ex
     });
   }
 
+  // 4. Scoring Logic
+  const physicalTotalQty = physicalItems.reduce((acc, i) => acc + i.totalQuantity, 0);
   const totalUniqueSKUs = allSkus.size;
   const skuOverlapRatio = totalUniqueSKUs > 0 ? matchesCount / totalUniqueSKUs : 0;
 
@@ -128,6 +142,7 @@ export const calculateOrderMatch = (physicalItems: ConsolidatedItem[], order: Ex
       expectedOrder: order,
       matchScore,
       status,
+      // Sort: Errors first, then alphabetical
       details: details.sort((a, b) => {
           const aIsDiff = a.difference !== 0;
           const bIsDiff = b.difference !== 0;
@@ -139,12 +154,15 @@ export const calculateOrderMatch = (physicalItems: ConsolidatedItem[], order: Ex
 };
 
 export const findMatches = async (physicalItems: ConsolidatedItem[]): Promise<MatchResult[]> => {
+  // Fetch all orders efficiently
   const expectedOrders = await db.expectedOrders.toArray();
   const results: MatchResult[] = [];
 
+  // Map-reduce pattern for calculation
   for (const order of expectedOrders) {
     const result = calculateOrderMatch(physicalItems, order);
     
+    // Filter out completely irrelevant orders to keep UI clean
     if (result.matchScore > 10) { 
         results.push(result);
     }
