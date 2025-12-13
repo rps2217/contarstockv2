@@ -213,7 +213,7 @@ const AppContent: React.FC = () => {
       </main>
 
       <InstallPrompt />
-      <MobileNav view={view} setView={setView} settings={settings} pendingCount={pendingSyncCount} />
+      <MobileNav view={view} setView={setView} settings={settings} />
     </div>
   );
 };
@@ -235,7 +235,7 @@ interface NavProps {
   pendingCount?: number;
 }
 
-const MobileNav = memo(({ view, setView, settings, pendingCount }: NavProps) => {
+const MobileNav = memo(({ view, setView, settings }: NavProps) => {
   const t = settings.theme;
   
   let navClass = "bg-white/90 border-white/20 text-slate-400 shadow-2xl shadow-slate-200/50"; 
@@ -250,18 +250,6 @@ const MobileNav = memo(({ view, setView, settings, pendingCount }: NavProps) => 
         <div className={`flex justify-around items-center h-16 px-2 rounded-2xl border backdrop-blur-md ${navClass}`}>
             <NavButton active={view === 'dashboard'} onClick={() => setView('dashboard')} icon={<Home className="w-6 h-6" />} label="Inicio" theme={settings.theme} />
             <NavButton active={view === 'database'} onClick={() => setView('database')} icon={<DbIcon className="w-6 h-6" />} label="Datos" theme={settings.theme} />
-            
-            {/* Sync Button redirects to 'sync' view now */}
-            <button onClick={() => setView('sync')} className={`relative flex flex-col items-center justify-center text-slate-400 active:text-blue-500 transition-colors group ${view === 'sync' ? 'text-blue-600' : ''}`}>
-                <div className={`p-1 rounded-full ${pendingCount && pendingCount > 0 ? 'bg-orange-100 text-orange-600' : ''}`}>
-                    {pendingCount && pendingCount > 0 ? <CloudOff className="w-6 h-6" /> : <Cloud className="w-6 h-6" />}
-                </div>
-                <span className="text-[10px] font-bold mt-0.5">Nube</span>
-                {pendingCount && pendingCount > 0 ? (
-                    <span className="absolute top-0 right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
-                ) : null}
-            </button>
-
             <NavButton active={view === 'reports' || view === 'consolidated'} onClick={() => setView('reports')} icon={<History className="w-6 h-6" />} label="Historial" theme={settings.theme} />
         </div>
     </nav>
