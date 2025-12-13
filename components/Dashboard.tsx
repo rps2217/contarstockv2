@@ -3,12 +3,16 @@ import React, { useMemo } from 'react';
 import { Database, ScanLine, Settings, ArrowRight, Box, Layers, Fingerprint, Container, Calendar, PackageCheck, WifiOff } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
+import * as storage from '../services/storage';
 
 interface DashboardProps {
   onNavigate: (view: any) => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
+  // Read settings (No need for full reactivity loop here, useMemo is fine as Dashboard remounts often)
+  const settings = useMemo(() => storage.getSettings(), []);
+
   // --- REAL-TIME STATS LOGIC ---
   const todayStart = useMemo(() => {
       const date = new Date();
@@ -17,6 +21,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   }, []);
 
   const dailyStats = useLiveQuery(async () => {
+      // If disabled, skip query to save resources
+      if (!settings.controlTowerEnabled) return { bultos: 0, units: 0, pendingSync: 0 };
+
       const todaySessions = await db.sessions
           .where('createdAt')
           .aboveOrEqual(todayStart)
@@ -28,7 +35,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       const pendingSync = await db.scans.where('synced').equals(0).count();
 
       return { bultos, units, pendingSync };
-  }, [], { bultos: 0, units: 0, pendingSync: 0 });
+  }, [settings.controlTowerEnabled], { bultos: 0, units: 0, pendingSync: 0 });
 
   return (
     <div className="w-full max-w-4xl mx-auto pb-24 px-4 md:px-0 animate-in fade-in duration-500">
@@ -46,26 +53,28 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         </p>
       </div>
 
-      {/* --- CONTROL TOWER WIDGETS --- */}
-      <div className="grid grid-cols-3 gap-3 mb-8">
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col items-center justify-center text-center">
-              <div className="text-slate-400 mb-1"><Calendar className="w-5 h-5" /></div>
-              <div className="text-2xl font-black text-slate-900">{dailyStats.bultos}</div>
-              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Bultos Hoy</div>
-          </div>
-          
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col items-center justify-center text-center">
-              <div className="text-blue-500 mb-1"><PackageCheck className="w-5 h-5" /></div>
-              <div className="text-2xl font-black text-blue-600">{dailyStats.units}</div>
-              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Unidades</div>
-          </div>
+      {/* --- CONTROL TOWER WIDGETS (CONDITIONAL) --- */}
+      {settings.controlTowerEnabled && (
+        <div className="grid grid-cols-3 gap-3 mb-8 animate-in slide-in-from-top-4">
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col items-center justify-center text-center">
+                <div className="text-slate-400 mb-1"><Calendar className="w-5 h-5" /></div>
+                <div className="text-2xl font-black text-slate-900">{dailyStats.bultos}</div>
+                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Bultos Hoy</div>
+            </div>
+            
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col items-center justify-center text-center">
+                <div className="text-blue-500 mb-1"><PackageCheck className="w-5 h-5" /></div>
+                <div className="text-2xl font-black text-blue-600">{dailyStats.units}</div>
+                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Unidades</div>
+            </div>
 
-          <div className={`p-4 rounded-2xl shadow-sm border flex flex-col items-center justify-center text-center transition-colors ${dailyStats.pendingSync > 0 ? 'bg-orange-50 border-orange-200' : 'bg-emerald-50 border-emerald-200'}`}>
-              <div className={dailyStats.pendingSync > 0 ? 'text-orange-500 mb-1' : 'text-emerald-500 mb-1'}><WifiOff className="w-5 h-5" /></div>
-              <div className={`text-2xl font-black ${dailyStats.pendingSync > 0 ? 'text-orange-600' : 'text-emerald-600'}`}>{dailyStats.pendingSync}</div>
-              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Pendientes</div>
-          </div>
-      </div>
+            <div className={`p-4 rounded-2xl shadow-sm border flex flex-col items-center justify-center text-center transition-colors ${dailyStats.pendingSync > 0 ? 'bg-orange-50 border-orange-200' : 'bg-emerald-50 border-emerald-200'}`}>
+                <div className={dailyStats.pendingSync > 0 ? 'text-orange-500 mb-1' : 'text-emerald-500 mb-1'}><WifiOff className="w-5 h-5" /></div>
+                <div className={`text-2xl font-black ${dailyStats.pendingSync > 0 ? 'text-orange-600' : 'text-emerald-600'}`}>{dailyStats.pendingSync}</div>
+                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Pendientes</div>
+            </div>
+        </div>
+      )}
 
       {/* MAIN ACTIONS GRID */}
       <div className="grid grid-cols-1 gap-6 mb-8">

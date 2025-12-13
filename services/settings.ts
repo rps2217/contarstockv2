@@ -12,6 +12,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   ttsEnabled: false, // Default DISABLED as requested
   ttsMode: 'count',  // Default mode is the new efficient Counting mode
   speedometerEnabled: false, // Default DISABLED as requested
+  controlTowerEnabled: false, // Default DISABLED as requested (Widgets hidden)
   confirmDelete: true,
   appSheetConfig: {
       appId: '',

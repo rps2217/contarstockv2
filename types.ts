@@ -62,6 +62,7 @@ export interface AppSettings {
   ttsEnabled: boolean; // NEW: Text to Speech enabled
   ttsMode: 'product' | 'count'; // NEW: Voice Mode (Read Name vs Count Streak)
   speedometerEnabled: boolean; // NEW: Show scans per minute
+  controlTowerEnabled: boolean; // NEW: Show Dashboard Widgets
   confirmDelete: boolean;
   appSheetConfig?: AppSheetConfig;
 }
