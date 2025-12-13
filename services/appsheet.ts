@@ -9,7 +9,7 @@ import { db } from "../db";
 import { sendToAppSheet, AppSheetPayload } from "../infrastructure/api/appsheetClient";
 import * as sessionService from "./sessionService"; // Needed for updates
 
-export const SYNC_ENGINE_VERSION = "6.2.0-CLEAN";
+export const SYNC_ENGINE_VERSION = "6.2.1-DATEFIX";
 
 // --- CONFIG & MAPPING ---
 
@@ -28,6 +28,14 @@ export const SHEET_COLUMNS = {
 };
 
 // --- HELPERS ---
+
+// Robust date formatter for AppSheet (YYYY-MM-DD HH:mm:ss) avoiding ISO T/Z which can conflict with some Locale settings
+const formatDateTimeForAppSheet = (timestamp: number): string => {
+    const d = new Date(timestamp);
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    // Using UTC methods because we send Timezone: "UTC" in the payload properties
+    return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
+};
 
 export const parseFlexibleDate = (dateVal: any): number => {
     if (!dateVal) return Date.now();
@@ -173,7 +181,7 @@ export const syncReceptionToAppSheet = async (sessions: CountingSession[]): Prom
     
     const rows = sessions.map(s => ({
         "ID_RECEPCION": s.id,
-        "FECHA_HORA": new Date(s.createdAt).toISOString(),
+        "FECHA_HORA": formatDateTimeForAppSheet(s.createdAt),
         "ETIQUETA": s.logisticsLabel,
         "ESTADO": s.status === 'draft' ? 'PENDIENTE' : 'PROCESADO'
     }));
