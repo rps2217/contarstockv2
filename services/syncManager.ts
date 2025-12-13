@@ -23,12 +23,18 @@ export interface CloudItem {
     rawRow: any;
 }
 
-// --- HELPER ---
-const normalizeKey = (str: any) => String(str || '').trim().toUpperCase();
+// --- HELPER ROBUST NORMALIZATION ---
+const normalizeKey = (str: any) => {
+    // Explicitly handle null/undefined, but preserve '0' or 0
+    if (str === null || str === undefined) return '';
+    return String(str).trim().toUpperCase();
+};
+
 const generateCompositeKey = (erp: any, label: any) => {
-    // Handle default/empty label logic consistently
-    const l = (!label || String(label).trim() === "") ? "GENERAL" : String(label).trim();
-    return `${normalizeKey(erp)}_${normalizeKey(l)}`;
+    // Standardize logic: Missing label means "GENERAL"
+    const l = normalizeKey(label);
+    const finalLabel = (l === '' || l === 'NULL' || l === 'UNDEFINED') ? "GENERAL" : l;
+    return `${normalizeKey(erp)}_${finalLabel}`;
 };
 
 // --- UPLOAD LOGIC ---

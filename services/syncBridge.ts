@@ -8,11 +8,16 @@ import * as productService from './productService';
 // Re-export core sync functions for UI components to avoid split dependencies
 export { syncToAppSheet, syncProductsToAppSheet, syncReceptionToAppSheet };
 
-// --- HELPER FOR KEY NORMALIZATION ---
-const normalizeKey = (str: any) => String(str || '').trim().toUpperCase();
+// --- HELPER FOR KEY NORMALIZATION (MATCHING syncManager.ts) ---
+const normalizeKey = (str: any) => {
+    if (str === null || str === undefined) return '';
+    return String(str).trim().toUpperCase();
+};
+
 const generateCompositeKey = (erp: any, label: any) => {
-    const l = (!label || String(label).trim() === "") ? "GENERAL" : String(label).trim();
-    return `${normalizeKey(erp)}_${normalizeKey(l)}`;
+    const l = normalizeKey(label);
+    const finalLabel = (l === '' || l === 'NULL' || l === 'UNDEFINED') ? "GENERAL" : l;
+    return `${normalizeKey(erp)}_${finalLabel}`;
 };
 
 /**
@@ -103,7 +108,6 @@ export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange
 
   // --- PREPARE LOCAL REFERENCE MAP ---
   // We fetch ALL local sessions to build a robust, case-insensitive existence map.
-  // This prevents creating duplicates if "ORD-123" exists locally but cloud sends "ord-123".
   const allLocalSessions = await db.sessions.toArray();
   const localSessionMap = new Map<string, CountingSession>();
   
@@ -156,8 +160,21 @@ export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange
     let sessionTotalUnits = 0;
     let sessionTotalSKUs = 0;
 
-    // Use our robust map to find if it exists
-    const existingSession = localSessionMap.get(key);
+    // --- CRITICAL DUPLICATE CHECK ---
+    // First, try the fast Map lookup
+    let existingSession = localSessionMap.get(key);
+
+    // SAFETY FALLBACK: If map fails, check the full array manually
+    // This catches edge cases where map keys might differ slightly due to encoding
+    if (!existingSession) {
+        const normErp = normalizeKey(erp);
+        const normLabel = normalizeKey(label);
+        
+        existingSession = allLocalSessions.find(s => 
+            normalizeKey(s.erpOrder) === normErp && 
+            normalizeKey(s.logisticsLabel) === normLabel
+        );
+    }
 
     if (existingSession) {
         // Delta Sync Logic
