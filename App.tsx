@@ -12,6 +12,7 @@ import { Reception } from './components/Reception';
 import { Login } from './components/Login';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { InstallPrompt } from './components/InstallPrompt';
+import { NetworkStatus } from './components/NetworkStatus'; // New Import
 import * as storage from './services/storage';
 import { db } from './db';
 import { SYNC_ENGINE_VERSION, processSyncQueue } from './services/appsheet';
@@ -165,6 +166,7 @@ const AppContent: React.FC = () => {
   if (view === 'counting' && activeSession) {
     return (
       <div className="h-screen bg-slate-950">
+        <NetworkStatus />
         <Scanner 
             session={activeSession} 
             onCloseSession={handleCloseSession} 
@@ -178,6 +180,7 @@ const AppContent: React.FC = () => {
   if (view === 'reception') {
       return (
           <div className="h-screen bg-slate-900">
+              <NetworkStatus />
               <Reception onBack={() => setView('dashboard')} />
           </div>
       );
@@ -185,6 +188,7 @@ const AppContent: React.FC = () => {
 
   return (
     <div className={`min-h-screen font-sans ${themeClass} transition-colors duration-300`}>
+      <NetworkStatus />
       <DesktopNav view={view} setView={setView} settings={settings} />
       
       <main className="w-full animate-in fade-in zoom-in-95 duration-300">

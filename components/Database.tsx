@@ -1,10 +1,10 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Product } from '../types';
 import * as productService from '../services/productService';
 import { importProductsFromAppSheet, syncProductsToAppSheet } from '../services/syncBridge';
 import { sanitizeBarcode } from '../services/utils';
-import { Plus, Package, FileSpreadsheet, CheckCircle2, ChevronLeft, AlertTriangle, CloudDownload, CloudUpload, Loader2 } from 'lucide-react';
+import { Plus, Package, FileSpreadsheet, CheckCircle2, ChevronLeft, AlertTriangle, CloudDownload, CloudUpload, Loader2, HardDrive } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { SearchBar } from './SearchBar';
@@ -19,12 +19,29 @@ interface DatabaseProps {
 export const Database: React.FC<DatabaseProps> = ({ onBack }) => {
   // UI States
   const [debouncedQuery, setDebouncedQuery] = useState(''); 
-  // REMOVED: Pagination State (Virtualization handles all items)
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error', msg: string } | null>(null);
   const [isSyncingProducts, setIsSyncingProducts] = useState(false);
   const [isDownloadingProducts, setIsDownloadingProducts] = useState(false);
+  
+  // Storage Stats
+  const [storageUsage, setStorageUsage] = useState<{ used: number, quota: number } | null>(null);
+
+  useEffect(() => {
+    const checkStorage = async () => {
+        if (navigator.storage && navigator.storage.estimate) {
+            const estimate = await navigator.storage.estimate();
+            if (estimate.usage && estimate.quota) {
+                setStorageUsage({ used: estimate.usage, quota: estimate.quota });
+            }
+        }
+    };
+    checkStorage();
+  }, []);
+
+  const usagePercent = storageUsage ? Math.min(100, (storageUsage.used / storageUsage.quota) * 100) : 0;
+  const usedMb = storageUsage ? (storageUsage.used / 1024 / 1024).toFixed(1) : '0';
 
   // Form State Control
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -34,22 +51,16 @@ export const Database: React.FC<DatabaseProps> = ({ onBack }) => {
     const cleanFilter = sanitizeBarcode(debouncedQuery);
     
     if (cleanFilter || debouncedQuery.length > 0) {
-        // Search Mode: Polished to use "Filter" instead of just Index for better UX
-        // allowing "Contains" search on names.
         const lowerQuery = debouncedQuery.toLowerCase();
-        
         return await db.products
             .filter(p => {
-                // Priority 1: Barcode Starts With (Fast)
                 if (p.barcode.startsWith(cleanFilter)) return true;
-                // Priority 2: Name Contains (Flexible)
                 if (p.name.toLowerCase().includes(lowerQuery)) return true;
                 return false;
             })
             .toArray(); 
     } else {
-        // Full List Mode
-        return await db.products.toArray(); // Get ALL items
+        return await db.products.toArray(); 
     }
   }, [debouncedQuery], []);
 
@@ -60,7 +71,6 @@ export const Database: React.FC<DatabaseProps> = ({ onBack }) => {
   }, [], 0);
 
   // --- HANDLERS ---
-
   const handleSearch = useCallback((query: string) => {
       setDebouncedQuery(query);
   }, []);
@@ -146,9 +156,15 @@ export const Database: React.FC<DatabaseProps> = ({ onBack }) => {
                     <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
                         <Package className="w-6 h-6 text-blue-600" /> Base de Datos
                     </h1>
-                    <p className="text-slate-500 text-xs font-medium">
-                        {totalCount} items registrados
-                    </p>
+                    
+                    {/* STORAGE METER */}
+                    <div className="flex items-center gap-2 text-[10px] text-slate-400 font-medium mt-1">
+                        <HardDrive className="w-3 h-3" />
+                        <span>Almacenamiento: {usedMb} MB</span>
+                        <div className="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                            <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.max(5, usagePercent)}%` }}></div>
+                        </div>
+                    </div>
                 </div>
             </div>
             
