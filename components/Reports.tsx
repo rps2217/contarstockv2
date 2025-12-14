@@ -1,18 +1,16 @@
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { FileText, Sparkles, Truck, Calendar, ChevronLeft, Package, CheckCircle2, ScanLine, Layers, Plus, MoreVertical, Trash2, Minus, FileSpreadsheet, ChevronRight as ChevronRightIcon, CloudDownload, WifiOff, Cloud, Check, Clock, CalendarDays, CalendarRange, X, Database, Eraser } from 'lucide-react';
-import { CountingSession, ConsolidatedItem, ViewState } from '../types';
+import React, { useState, useCallback } from 'react';
+import { FileText, Calendar, ChevronLeft, CheckCircle2, Layers, Plus, MoreVertical, Trash2, Truck, WifiOff, Cloud, Eraser } from 'lucide-react';
+import { CountingSession, ViewState } from '../types';
 import * as sessionService from '../services/sessionService'; 
-import { analyzeConsolidation } from '../services/gemini';
-import { exportToExcel, exportToPDF } from '../services/export';
 import { processSyncQueue } from '../services/appsheet';
-import { aggregateScans } from '../services/aggregator';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { StartSessionModal } from './StartSessionModal';
 import { SearchBar } from './SearchBar';
 import { FixedSizeList } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
+import { ReportDetail } from './reports/ReportDetail';
 
 interface ReportsProps {
   onSessionStart: (session: CountingSession) => void;
@@ -20,7 +18,6 @@ interface ReportsProps {
 }
 
 // --- VIRTUALIZED ROW COMPONENT ---
-// Memoized component for rendering individual sessions in the list
 const SessionRow = ({ index, style, data }: { index: number; style: React.CSSProperties; data: { sessions: CountingSession[]; onSelect: (id: string) => void; activeMenuId: string | null; onMenuToggle: (e: any, id: string) => void; onDelete: (e: any, id: string) => void } }) => {
     const session = data.sessions[index];
     const { onSelect, activeMenuId, onMenuToggle, onDelete } = data;
@@ -84,24 +81,18 @@ const SessionRow = ({ index, style, data }: { index: number; style: React.CSSPro
 
 export const Reports: React.FC<ReportsProps> = ({ onSessionStart, onNavigate }) => {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
-  const [aiReport, setAiReport] = useState<string>('');
-  const [loadingAi, setLoadingAi] = useState(false);
   const [syncingAppSheet, setSyncingAppSheet] = useState(false);
   const [isCleaning, setIsCleaning] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isStartModalOpen, setIsStartModalOpen] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   
-  // Monitor Sync Queue
   const pendingSyncCount = useLiveQuery(() => db.syncQueue.where('status').equals('pending').count(), [], 0);
 
   const handleSearch = useCallback((query: string) => {
       setSearchQuery(query);
   }, []);
 
-  // --- LIVE QUERIES (FULL LIST FOR VIRTUALIZATION) ---
-  // Note: We remove limit() because virtualization handles the DOM load.
-  // We just need efficient DB querying.
   const sessions = useLiveQuery(async () => {
     if (searchQuery) {
         const cleanQuery = searchQuery.trim();
@@ -118,24 +109,8 @@ export const Reports: React.FC<ReportsProps> = ({ onSessionStart, onNavigate }) 
     }
   }, [searchQuery], []);
 
-  // Detail View Consolidation (Performance Optimized & Grouped by Date)
-  const consolidation = useLiveQuery(async () => {
-    if (!selectedSessionId) return [];
-    
-    // 1. Fetch Scans for this session
-    const scans = await db.scans.where('sessionId').equals(selectedSessionId).toArray();
-    
-    if (scans.length === 0) return [];
-
-    // 2. Use Centralized Aggregator
-    // This ensures that the report matches exactly what is sent to the cloud.
-    return await aggregateScans(scans);
-
-  }, [selectedSessionId], [] as ConsolidatedItem[]);
-
   const handleSelectSession = (id: string) => {
     setSelectedSessionId(id);
-    setAiReport('');
   };
 
   const handleMenuToggle = (e: React.MouseEvent, id: string) => {
@@ -150,54 +125,6 @@ export const Reports: React.FC<ReportsProps> = ({ onSessionStart, onNavigate }) 
       if (window.confirm('¿Estás seguro de que deseas eliminar este historial de conteo permanentemente? Esta acción no se puede deshacer.')) {
           await sessionService.deleteSession(sessionId); 
           setActiveMenuId(null);
-      }
-  };
-
-  const handleIncrementItem = async (barcode: string) => {
-    if (!selectedSessionId) return;
-    await sessionService.adjustSessionItemQuantity(selectedSessionId, barcode, 1); 
-  };
-
-  const handleDecrementItem = async (barcode: string, currentQty: number) => {
-    if (!selectedSessionId) return;
-    if (currentQty <= 1) {
-        if (window.confirm('¿Eliminar este item del registro?')) {
-            await sessionService.deleteSessionItem(selectedSessionId, barcode); 
-        }
-    } else {
-        await sessionService.adjustSessionItemQuantity(selectedSessionId, barcode, -1); 
-    }
-  };
-
-  const handleDeleteItem = async (barcode: string) => {
-    if (!selectedSessionId) return;
-    if (window.confirm('¿Eliminar todo el historial de este producto en esta sesión?')) {
-        await sessionService.deleteSessionItem(selectedSessionId, barcode); 
-    }
-  };
-
-  const handleGenerateAiReport = async () => {
-    if (!sessions) return;
-    const session = sessions.find(s => s.id === selectedSessionId);
-    if (!session || !consolidation || consolidation.length === 0) return;
-
-    setLoadingAi(true);
-    const result = await analyzeConsolidation(session.erpOrder, session.logisticsLabel, consolidation);
-    setAiReport(result);
-    setLoadingAi(false);
-  };
-
-  const handleExportExcel = () => {
-      const session = sessions?.find(s => s.id === selectedSessionId);
-      if (session && consolidation) {
-          exportToExcel(session, consolidation);
-      }
-  };
-
-  const handleExportPDF = () => {
-      const session = sessions?.find(s => s.id === selectedSessionId);
-      if (session && consolidation) {
-          exportToPDF(session, consolidation);
       }
   };
 
@@ -232,11 +159,13 @@ export const Reports: React.FC<ReportsProps> = ({ onSessionStart, onNavigate }) 
       }
   };
 
-  const fullSelectedSession = useLiveQuery(() => selectedSessionId ? db.sessions.get(selectedSessionId) : undefined, [selectedSessionId]);
+  // --- ROUTING: DETAIL VIEW ---
+  if (selectedSessionId) {
+      return <ReportDetail sessionId={selectedSessionId} onBack={() => setSelectedSessionId(null)} />;
+  }
 
-  // VIEW: LIST (VIRTUALIZED)
-  if (!selectedSessionId) {
-    return (
+  // --- ROUTING: LIST VIEW ---
+  return (
         <div className="flex flex-col h-[calc(100vh-64px)] max-w-3xl mx-auto w-full px-4 pt-4">
             <div className="flex-none">
                 <div className="flex items-center gap-2 mb-4">
@@ -318,70 +247,6 @@ export const Reports: React.FC<ReportsProps> = ({ onSessionStart, onNavigate }) 
             </div>
             
             <StartSessionModal isOpen={isStartModalOpen} onClose={() => setIsStartModalOpen(false)} onSessionStart={(s) => { setIsStartModalOpen(false); onSessionStart(s); }} />
-        </div>
-    );
-  }
-
-  // DETAILED VIEW (No changes needed here)
-  return (
-    <div className="flex flex-col h-[calc(100vh-64px)] bg-slate-50">
-        <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center gap-3 shadow-sm sticky top-0 z-20">
-            <button onClick={() => setSelectedSessionId(null)} className="p-2 hover:bg-slate-100 rounded-full text-slate-600 transition-colors"><ChevronLeft className="w-5 h-5" /></button>
-            <div>
-                <h2 className="font-bold text-slate-900 leading-tight">Detalle de Conteo</h2>
-                <div className="text-xs text-slate-500 font-mono">{fullSelectedSession?.erpOrder}</div>
-            </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-24">
-            <div className="max-w-4xl mx-auto space-y-6">
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    <button onClick={handleExportExcel} className="bg-green-50 border border-green-200 text-green-700 hover:bg-green-100 px-4 py-3 rounded-xl shadow-sm transition-all flex flex-col items-center justify-center gap-1"><FileSpreadsheet className="w-5 h-5" /><span className="text-xs font-bold">Excel</span></button>
-                    <button onClick={handleExportPDF} className="bg-red-50 border border-red-200 text-red-700 hover:bg-red-100 px-4 py-3 rounded-xl shadow-sm transition-all flex flex-col items-center justify-center gap-1"><FileText className="w-5 h-5" /><span className="text-xs font-bold">PDF Manifiesto</span></button>
-                    <button onClick={handleGenerateAiReport} disabled={loadingAi || !consolidation || consolidation.length === 0} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 px-4 py-3 rounded-xl shadow-sm hover:shadow transition-all flex items-center justify-center gap-2 font-bold text-sm disabled:opacity-50">
-                        {loadingAi ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Sparkles className="w-4 h-4" />} Analizar IA
-                    </button>
-                </div>
-
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                        <span className="font-bold text-slate-800 text-sm">Detalle de Productos</span>
-                        <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold">Total: {fullSelectedSession?.totalUnits || 0}</span>
-                    </div>
-                    <div className="divide-y divide-slate-100">
-                        {consolidation?.map((item) => (
-                             <div key={`${item.barcode}_${item.mm}_${item.yyyy}`} className="p-4 bg-white hover:bg-slate-50 transition-colors">
-                                {/* Product Name Row */}
-                                <div className="flex justify-between items-start mb-3 gap-3">
-                                    <div className="font-bold text-slate-800 text-lg leading-snug break-words">{item.productName}</div>
-                                    <button onClick={() => handleDeleteItem(item.barcode)} className="text-slate-300 hover:text-red-500 p-2 hover:bg-red-50 rounded-lg transition-colors shrink-0"><Trash2 className="w-5 h-5" /></button>
-                                </div>
-                                
-                                {/* Controls Row - Mobile First Design */}
-                                <div className="flex items-center justify-between">
-                                    <div className="flex flex-col gap-1">
-                                        <span className="font-mono text-slate-600 text-xs bg-slate-100 px-2 py-1 rounded w-fit font-bold border border-slate-200">{item.barcode}</span>
-                                        <div className="flex gap-2 items-center">
-                                            <span className="text-xs text-slate-400 font-medium">{item.scans} eventos</span>
-                                            {item.mm && item.yyyy && (
-                                                <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-bold border border-blue-100">
-                                                    Vence: {item.mm}/{item.yyyy}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                    
-                                    <div className="flex items-center bg-slate-50 shadow-inner rounded-xl p-1 border border-slate-200">
-                                        <button onClick={() => handleDecrementItem(item.barcode, item.totalQuantity)} className="w-12 h-12 flex items-center justify-center bg-white hover:bg-red-50 rounded-lg text-slate-500 hover:text-red-500 transition-all active:scale-95 border border-slate-200 shadow-sm"><Minus className="w-6 h-6" /></button>
-                                        <div className="min-w-[4rem] text-center font-black text-2xl text-slate-900">{item.totalQuantity}</div>
-                                        <button onClick={() => handleIncrementItem(item.barcode)} className="w-12 h-12 flex items-center justify-center bg-white hover:bg-blue-50 rounded-lg text-slate-500 hover:text-blue-600 transition-all active:scale-95 border border-slate-200 shadow-sm"><Plus className="w-6 h-6" /></button>
-                                    </div>
-                                </div>
-                             </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
         </div>
     );
 };
