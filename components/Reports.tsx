@@ -1,8 +1,8 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { FileText, Sparkles, Truck, Calendar, ChevronLeft, Package, CheckCircle2, ScanLine, Layers, Plus, MoreVertical, Trash2, Minus, FileSpreadsheet, ChevronRight as ChevronRightIcon, CloudDownload, WifiOff, Cloud, Check, Clock, CalendarDays, CalendarRange, X, Database, Eraser } from 'lucide-react';
 import { CountingSession, ConsolidatedItem, ViewState } from '../types';
-import * as sessionService from '../services/sessionService'; // Updated Import
+import * as sessionService from '../services/sessionService'; 
 import { analyzeConsolidation } from '../services/gemini';
 import { exportToExcel, exportToPDF } from '../services/export';
 import { processSyncQueue } from '../services/appsheet';
@@ -11,13 +11,76 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { StartSessionModal } from './StartSessionModal';
 import { SearchBar } from './SearchBar';
+import { FixedSizeList } from 'react-window';
+import AutoSizer from 'react-virtualized-auto-sizer';
 
 interface ReportsProps {
   onSessionStart: (session: CountingSession) => void;
   onNavigate: (view: ViewState) => void;
 }
 
-const PAGE_SIZE = 20;
+// --- VIRTUALIZED ROW COMPONENT ---
+// Memoized component for rendering individual sessions in the list
+const SessionRow = ({ index, style, data }: { index: number; style: React.CSSProperties; data: { sessions: CountingSession[]; onSelect: (id: string) => void; activeMenuId: string | null; onMenuToggle: (e: any, id: string) => void; onDelete: (e: any, id: string) => void } }) => {
+    const session = data.sessions[index];
+    const { onSelect, activeMenuId, onMenuToggle, onDelete } = data;
+
+    return (
+        <div style={style} className="px-1 py-2">
+            <div className={`bg-white rounded-2xl shadow-sm border transition-shadow relative z-0 h-full flex flex-col ${session.lastSyncTimestamp ? 'border-green-200' : 'border-slate-200 hover:shadow-md'}`}>
+                <div className="p-4 flex-1">
+                    <div className="flex justify-between items-start mb-2">
+                        <div className="flex items-center gap-2 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
+                            <Calendar className="w-3 h-3" />
+                            {new Date(session.createdAt).toLocaleDateString()}
+                        </div>
+                        <div className="flex items-center gap-1">
+                            {session.lastSyncTimestamp && (
+                                <div className="bg-green-100 text-green-700 p-1 rounded-full" title="Sincronizado con AppSheet">
+                                    <Cloud className="w-3 h-3" />
+                                </div>
+                            )}
+                            <div className="relative">
+                                <button 
+                                    type="button"
+                                    onClick={(e) => onMenuToggle(e, session.id)}
+                                    className="p-1.5 -mr-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100"
+                                >
+                                    <MoreVertical className="w-4 h-4" />
+                                </button>
+                                {activeMenuId === session.id && (
+                                    <>
+                                        <div className="fixed inset-0 z-40 bg-transparent" onClick={(e) => onMenuToggle(e, '')}></div>
+                                        <div className="absolute right-0 top-full mt-1 w-32 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden">
+                                            <button type="button" onClick={(e) => onDelete(e, session.id)} className="w-full text-left px-4 py-3 text-xs text-red-600 hover:bg-red-50 font-bold flex items-center gap-2">
+                                                <Trash2 className="w-3 h-3" /> Eliminar
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                    <h3 className="text-base font-bold text-slate-900 mb-2 tracking-tight line-clamp-1">
+                        {session.erpOrder}
+                    </h3>
+                    <div className="flex items-center gap-2 mb-1">
+                        <Truck className="w-3 h-3 text-slate-400" />
+                        <span className="text-xs text-slate-600 truncate max-w-[200px]">
+                            {session.logisticsLabel}
+                        </span>
+                    </div>
+                </div>
+                <div className="bg-slate-50 px-4 py-2 border-t border-slate-100 flex items-center justify-between rounded-b-2xl">
+                    <div className="text-xs text-slate-700">Total: <span className="font-bold">{session.totalUnits || 0}</span></div>
+                    <button onClick={() => onSelect(session.id)} className="bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-sm">
+                        Ver
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 export const Reports: React.FC<ReportsProps> = ({ onSessionStart, onNavigate }) => {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
@@ -25,7 +88,6 @@ export const Reports: React.FC<ReportsProps> = ({ onSessionStart, onNavigate }) 
   const [loadingAi, setLoadingAi] = useState(false);
   const [syncingAppSheet, setSyncingAppSheet] = useState(false);
   const [isCleaning, setIsCleaning] = useState(false);
-  const [page, setPage] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [isStartModalOpen, setIsStartModalOpen] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
@@ -35,40 +97,26 @@ export const Reports: React.FC<ReportsProps> = ({ onSessionStart, onNavigate }) 
 
   const handleSearch = useCallback((query: string) => {
       setSearchQuery(query);
-      setPage(0);
   }, []);
 
-  // --- LIVE QUERIES (OPTIMIZED) ---
+  // --- LIVE QUERIES (FULL LIST FOR VIRTUALIZATION) ---
+  // Note: We remove limit() because virtualization handles the DOM load.
+  // We just need efficient DB querying.
   const sessions = useLiveQuery(async () => {
     if (searchQuery) {
         const cleanQuery = searchQuery.trim();
         return await db.sessions
             .where('erpOrder').startsWithIgnoreCase(cleanQuery)
             .or('logisticsLabel').startsWithIgnoreCase(cleanQuery)
-            .reverse() 
-            .offset(page * PAGE_SIZE)
-            .limit(PAGE_SIZE)
+            .reverse()
             .toArray();
     } else {
         return await db.sessions
             .orderBy('createdAt')
             .reverse()
-            .offset(page * PAGE_SIZE)
-            .limit(PAGE_SIZE)
             .toArray();
     }
-  }, [page, searchQuery], []);
-
-  const totalSessionsCount = useLiveQuery(async () => {
-      if (searchQuery) {
-          const cleanQuery = searchQuery.trim();
-          return await db.sessions
-            .where('erpOrder').startsWithIgnoreCase(cleanQuery)
-            .or('logisticsLabel').startsWithIgnoreCase(cleanQuery)
-            .count();
-      }
-      return await db.sessions.count();
-  }, [searchQuery], 0);
+  }, [searchQuery], []);
 
   // Detail View Consolidation (Performance Optimized & Grouped by Date)
   const consolidation = useLiveQuery(async () => {
@@ -90,37 +138,41 @@ export const Reports: React.FC<ReportsProps> = ({ onSessionStart, onNavigate }) 
     setAiReport('');
   };
 
+  const handleMenuToggle = (e: React.MouseEvent, id: string) => {
+      e.stopPropagation(); 
+      setActiveMenuId(activeMenuId === id ? null : id);
+  };
+
   const handleDeleteSession = async (e: React.MouseEvent, sessionId: string) => {
       e.stopPropagation();
       e.preventDefault();
-      e.nativeEvent.stopImmediatePropagation();
       
       if (window.confirm('¿Estás seguro de que deseas eliminar este historial de conteo permanentemente? Esta acción no se puede deshacer.')) {
-          await sessionService.deleteSession(sessionId); // Updated usage
+          await sessionService.deleteSession(sessionId); 
           setActiveMenuId(null);
       }
   };
 
   const handleIncrementItem = async (barcode: string) => {
     if (!selectedSessionId) return;
-    await sessionService.adjustSessionItemQuantity(selectedSessionId, barcode, 1); // Updated usage
+    await sessionService.adjustSessionItemQuantity(selectedSessionId, barcode, 1); 
   };
 
   const handleDecrementItem = async (barcode: string, currentQty: number) => {
     if (!selectedSessionId) return;
     if (currentQty <= 1) {
         if (window.confirm('¿Eliminar este item del registro?')) {
-            await sessionService.deleteSessionItem(selectedSessionId, barcode); // Updated usage
+            await sessionService.deleteSessionItem(selectedSessionId, barcode); 
         }
     } else {
-        await sessionService.adjustSessionItemQuantity(selectedSessionId, barcode, -1); // Updated usage
+        await sessionService.adjustSessionItemQuantity(selectedSessionId, barcode, -1); 
     }
   };
 
   const handleDeleteItem = async (barcode: string) => {
     if (!selectedSessionId) return;
     if (window.confirm('¿Eliminar todo el historial de este producto en esta sesión?')) {
-        await sessionService.deleteSessionItem(selectedSessionId, barcode); // Updated usage
+        await sessionService.deleteSessionItem(selectedSessionId, barcode); 
     }
   };
 
@@ -162,13 +214,12 @@ export const Reports: React.FC<ReportsProps> = ({ onSessionStart, onNavigate }) 
       }
   };
 
-  // --- CLEAN UP LOGIC ---
   const handleCleanSynced = async () => {
       if (!confirm("¿Desea eliminar del dispositivo los conteos que YA están respaldados en la nube?\n\nEsta acción liberará espacio pero mantendrá los datos pendientes de subida.")) return;
       
       setIsCleaning(true);
       try {
-          const count = await sessionService.cleanSyncedSessions(); // Updated usage
+          const count = await sessionService.cleanSyncedSessions(); 
           if (count > 0) {
               alert(`Limpieza completada.\nSe eliminaron ${count} sesiones locales respaldadas.`);
           } else {
@@ -183,125 +234,88 @@ export const Reports: React.FC<ReportsProps> = ({ onSessionStart, onNavigate }) 
 
   const fullSelectedSession = useLiveQuery(() => selectedSessionId ? db.sessions.get(selectedSessionId) : undefined, [selectedSessionId]);
 
-  // VIEW: LIST
+  // VIEW: LIST (VIRTUALIZED)
   if (!selectedSessionId) {
-    const maxPage = Math.ceil((totalSessionsCount || 0) / PAGE_SIZE) - 1;
-
     return (
-        <div className="max-w-3xl mx-auto pb-24 px-4 pt-6">
-            <div className="flex items-center gap-2 mb-6">
-                <button onClick={() => onNavigate('dashboard')} className="p-2 hover:bg-slate-100 rounded-full text-slate-600 transition-colors">
-                    <ChevronLeft className="w-6 h-6" />
-                </button>
-                <div className="text-blue-600"><CheckCircle2 className="w-6 h-6" /></div>
-                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Historial de Conteos</h1>
-            </div>
-            
-            <div className="mb-6">
-                <SearchBar onSearch={handleSearch} placeholder="Buscar por Orden ERP o Etiqueta..." />
-            </div>
+        <div className="flex flex-col h-[calc(100vh-64px)] max-w-3xl mx-auto w-full px-4 pt-4">
+            <div className="flex-none">
+                <div className="flex items-center gap-2 mb-4">
+                    <button onClick={() => onNavigate('dashboard')} className="p-2 hover:bg-slate-100 rounded-full text-slate-600 transition-colors">
+                        <ChevronLeft className="w-6 h-6" />
+                    </button>
+                    <div className="text-blue-600"><CheckCircle2 className="w-6 h-6" /></div>
+                    <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Historial</h1>
+                </div>
+                
+                <div className="mb-4">
+                    <SearchBar onSearch={handleSearch} placeholder="Buscar por Orden ERP o Etiqueta..." />
+                </div>
 
-            {/* ACTION BUTTONS */}
-            <div className="grid grid-cols-2 gap-2 mb-8">
-                <button 
-                    onClick={handleCleanSynced} 
-                    disabled={isCleaning} 
-                    className="col-span-2 bg-slate-50 border border-slate-200 text-slate-600 font-bold py-2.5 rounded-xl hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 active:scale-95"
-                >
-                    {isCleaning ? <div className="w-4 h-4 border-2 border-slate-600 border-t-transparent rounded-full animate-spin" /> : <Eraser className="w-4 h-4" />}
-                    Limpiar Sincronizados
-                </button>
-                <button onClick={() => onNavigate('consolidated')} className="bg-white border border-slate-200 text-purple-700 font-bold py-2.5 rounded-xl hover:bg-purple-50 hover:border-purple-200 transition-colors flex items-center justify-center gap-2 shadow-sm active:scale-95">
-                    <Layers className="w-4 h-4" /> Consolidados
-                </button>
-                <button onClick={() => setIsStartModalOpen(true)} className="bg-blue-600 text-white font-bold py-2.5 rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 shadow-md shadow-blue-200 active:scale-95">
-                    <Plus className="w-5 h-5" /> Iniciar Conteo
-                </button>
-            </div>
+                {/* ACTION BUTTONS */}
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                    <button 
+                        onClick={handleCleanSynced} 
+                        disabled={isCleaning} 
+                        className="col-span-2 bg-slate-50 border border-slate-200 text-slate-600 font-bold py-2.5 rounded-xl hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 active:scale-95"
+                    >
+                        {isCleaning ? <div className="w-4 h-4 border-2 border-slate-600 border-t-transparent rounded-full animate-spin" /> : <Eraser className="w-4 h-4" />}
+                        Limpiar Sincronizados
+                    </button>
+                    <button onClick={() => onNavigate('consolidated')} className="bg-white border border-slate-200 text-purple-700 font-bold py-2.5 rounded-xl hover:bg-purple-50 hover:border-purple-200 transition-colors flex items-center justify-center gap-2 shadow-sm active:scale-95">
+                        <Layers className="w-4 h-4" /> Consolidados
+                    </button>
+                    <button onClick={() => setIsStartModalOpen(true)} className="bg-blue-600 text-white font-bold py-2.5 rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 shadow-md shadow-blue-200 active:scale-95">
+                        <Plus className="w-5 h-5" /> Iniciar Conteo
+                    </button>
+                </div>
 
-            {/* SYNC QUEUE ALERT */}
-            {pendingSyncCount > 0 && (
-                <button onClick={handleProcessQueue} className="w-full mb-6 bg-orange-50 border border-orange-200 p-4 rounded-xl flex items-center justify-between shadow-sm animate-in slide-in-from-top-2">
-                    <div className="flex items-center gap-3">
-                        <WifiOff className="w-5 h-5 text-orange-500" />
-                        <div className="text-left">
-                            <div className="text-sm font-bold text-orange-800">Sincronización Pendiente</div>
-                            <div className="text-xs text-orange-600">{pendingSyncCount} conteos esperando conexión</div>
+                {/* SYNC QUEUE ALERT */}
+                {pendingSyncCount > 0 && (
+                    <button onClick={handleProcessQueue} className="w-full mb-4 bg-orange-50 border border-orange-200 p-4 rounded-xl flex items-center justify-between shadow-sm animate-in slide-in-from-top-2">
+                        <div className="flex items-center gap-3">
+                            <WifiOff className="w-5 h-5 text-orange-500" />
+                            <div className="text-left">
+                                <div className="text-sm font-bold text-orange-800">Sincronización Pendiente</div>
+                                <div className="text-xs text-orange-600">{pendingSyncCount} conteos esperando conexión</div>
+                            </div>
                         </div>
-                    </div>
-                    <div className="bg-orange-100 text-orange-700 px-3 py-1.5 rounded-lg text-xs font-bold">
-                        Reintentar
-                    </div>
-                </button>
-            )}
+                        <div className="bg-orange-100 text-orange-700 px-3 py-1.5 rounded-lg text-xs font-bold">
+                            Reintentar
+                        </div>
+                    </button>
+                )}
+            </div>
             
-            <div className="space-y-4">
+            {/* VIRTUALIZED LIST CONTAINER */}
+            <div className="flex-1 min-h-0 pb-20">
                 {!sessions || sessions.length === 0 ? (
-                    <div className="text-center py-12 bg-white rounded-3xl border border-slate-100 shadow-sm">
+                    <div className="text-center py-12 bg-white rounded-3xl border border-slate-100 shadow-sm h-full flex flex-col justify-center items-center">
                         <FileText className="w-12 h-12 mx-auto text-slate-300 mb-3" />
                         <p className="text-slate-400 font-medium">No hay historial disponible.</p>
                     </div>
                 ) : (
-                    sessions.map(session => (
-                        <div key={session.id} className={`bg-white rounded-2xl shadow-sm border transition-shadow relative z-0 ${session.lastSyncTimestamp ? 'border-green-200' : 'border-slate-200 hover:shadow-md'}`}>
-                            <div className="p-5">
-                                <div className="flex justify-between items-start mb-4">
-                                    <div className="flex items-center gap-2 text-slate-500 text-xs font-bold uppercase tracking-wider">
-                                        <Calendar className="w-3.5 h-3.5" />
-                                        {new Date(session.createdAt).toLocaleDateString()}
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                        {session.lastSyncTimestamp && (
-                                            <div className="bg-green-100 text-green-700 p-1 rounded-full" title="Sincronizado con AppSheet">
-                                                <Cloud className="w-4 h-4" />
-                                            </div>
-                                        )}
-                                        <div className={`relative ${activeMenuId === session.id ? 'z-50' : 'z-10'}`}>
-                                            <button 
-                                                type="button"
-                                                onClick={(e) => { e.stopPropagation(); setActiveMenuId(activeMenuId === session.id ? null : session.id); }}
-                                                className="p-2 -mr-2 -mt-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100"
-                                            >
-                                                <MoreVertical className="w-5 h-5" />
-                                            </button>
-                                            {activeMenuId === session.id && (
-                                                <>
-                                                    <div className="fixed inset-0 z-40 bg-transparent" onClick={(e) => { e.stopPropagation(); setActiveMenuId(null); }}></div>
-                                                    <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden">
-                                                        <button type="button" onClick={(e) => handleDeleteSession(e, session.id)} className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 font-bold flex items-center gap-2">
-                                                            <Trash2 className="w-4 h-4" /> Eliminar
-                                                        </button>
-                                                    </div>
-                                                </>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                                <h3 className="text-lg font-bold text-slate-900 mb-4 tracking-tight">
-                                    CONTEO-{new Date(session.createdAt).toISOString().slice(0,10).replace(/-/g,'')}-{new Date(session.createdAt).getHours()}{new Date(session.createdAt).getMinutes()}
-                                </h3>
-                                <div className="space-y-2 mb-2">
-                                    <div className="flex items-center gap-3"><Truck className="w-4 h-4 text-slate-400" /><span className="text-sm text-slate-600">N° Correo: <span className="font-bold text-slate-900">{session.logisticsLabel}</span></span></div>
-                                    <div className="flex items-center gap-3"><FileText className="w-4 h-4 text-slate-400" /><span className="text-sm text-slate-600">Orden Erp: <span className="font-bold text-slate-900">{session.erpOrder}</span></span></div>
-                                </div>
-                            </div>
-                            <div className="bg-slate-50 px-5 py-3 border-t border-slate-100 flex items-center justify-between rounded-b-2xl">
-                                <div className="text-sm text-slate-700">Total: <span className="font-bold">{session.totalUnits || 0}</span> <span className="text-slate-500 text-xs">({session.totalSKUs || 0} artículos)</span></div>
-                                <button onClick={() => handleSelectSession(session.id)} className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm">Ver Detalles</button>
-                            </div>
-                        </div>
-                    ))
+                    <AutoSizer>
+                        {({ height, width }) => (
+                            <FixedSizeList
+                                height={height}
+                                width={width}
+                                itemCount={sessions.length}
+                                itemSize={160} // Fixed height for session card
+                                className="no-scrollbar"
+                                itemData={{
+                                    sessions,
+                                    onSelect: handleSelectSession,
+                                    activeMenuId,
+                                    onMenuToggle: handleMenuToggle,
+                                    onDelete: handleDeleteSession
+                                }}
+                            >
+                                {SessionRow}
+                            </FixedSizeList>
+                        )}
+                    </AutoSizer>
                 )}
             </div>
-
-             {/* Dynamic Pagination Controls */}
-             {(totalSessionsCount > PAGE_SIZE) && (
-                <div className="flex justify-center items-center gap-4 mt-6">
-                    <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} className="p-3 bg-white border border-slate-200 rounded-lg disabled:opacity-50 hover:bg-slate-50 shadow-sm"><ChevronLeft className="w-5 h-5" /></button>
-                    <span className="text-sm font-bold text-slate-600">Página {page + 1} de {maxPage + 1}</span>
-                    <button onClick={() => setPage(p => Math.min(maxPage, p + 1))} disabled={page >= maxPage} className="p-3 bg-white border border-slate-200 rounded-lg disabled:opacity-50 hover:bg-slate-50 shadow-sm"><ChevronRightIcon className="w-5 h-5" /></button>
-                </div>
-            )}
             
             <StartSessionModal isOpen={isStartModalOpen} onClose={() => setIsStartModalOpen(false)} onSessionStart={(s) => { setIsStartModalOpen(false); onSessionStart(s); }} />
         </div>

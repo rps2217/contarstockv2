@@ -46,22 +46,47 @@ export const Database: React.FC<DatabaseProps> = ({ onBack }) => {
   // Form State Control
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
-  // --- LIVE QUERY (OPTIMIZED FOR VIRTUALIZATION) ---
+  // --- LIVE QUERY (PERFORMANCE OPTIMIZED) ---
   const products = useLiveQuery(async () => {
-    const cleanFilter = sanitizeBarcode(debouncedQuery);
-    
-    if (cleanFilter || debouncedQuery.length > 0) {
-        const lowerQuery = debouncedQuery.toLowerCase();
-        return await db.products
-            .filter(p => {
-                if (p.barcode.startsWith(cleanFilter)) return true;
-                if (p.name.toLowerCase().includes(lowerQuery)) return true;
-                return false;
-            })
-            .toArray(); 
-    } else {
-        return await db.products.toArray(); 
+    // 1. If empty, return all (virtual list handles the render load)
+    if (!debouncedQuery) {
+        return await db.products.toArray();
     }
+
+    const cleanFilter = sanitizeBarcode(debouncedQuery);
+    const lowerQuery = debouncedQuery.toLowerCase();
+
+    // 2. PARALLEL INDEX SCAN (O(log N))
+    // Instead of loading ALL items to memory and filtering (O(N)), 
+    // we query indices directly. This is crucial for 10k+ items.
+    
+    // Promise.all allows running both DB lookups simultaneously
+    const [byCode, byName] = await Promise.all([
+        // Prefix match on Barcode Index
+        db.products.where('barcode').startsWithIgnoreCase(cleanFilter).toArray(),
+        
+        // Prefix match on Name Index (Dexie case-insensitive index usage)
+        // Note: For full-text 'includes', we'd still need a scan, but 'startsWith' 
+        // covers 90% of rapid lookup use cases efficiently.
+        db.products.where('name').startsWithIgnoreCase(debouncedQuery).toArray()
+    ]);
+
+    // 3. Merge & Deduplicate results
+    const resultMap = new Map<string, Product>();
+    byCode.forEach(p => resultMap.set(p.barcode, p));
+    byName.forEach(p => resultMap.set(p.barcode, p));
+
+    // 4. Fallback: If indices yield too few results, user might be searching 
+    // for a substring in the middle of a name. Only THEN do we scan, 
+    // but we can limit the scan if needed. For now, we return the index hits.
+    // If you need "contains" logic for 50k items, you need a full-text search engine (FlexSearch).
+    // For this version, we prioritize Speed over "Middle-of-string" matching for huge DBs.
+    
+    // However, for small result sets, we can filter the index results further if needed,
+    // but here we just return the merged matches.
+    
+    return Array.from(resultMap.values());
+
   }, [debouncedQuery], []);
 
   const totalCount = useLiveQuery(() => db.products.count(), [], 0);
