@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { X, Sparkles, Keyboard, History as HistoryIcon, ArrowLeft, PackageCheck } from 'lucide-react';
 import { CountingSession } from '../types';
-import * as storage from '../services/storage';
+import * as sessionService from '../services/sessionService'; // Updated Import
 import { sanitizeBarcode } from '../services/utils';
 import { db } from '../db';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -128,10 +128,10 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
 
           if (draftSessionId) {
               // LAZY LINKING: Activate the existing draft session
-              session = await storage.activateDraftSession(draftSessionId, erpOrder);
+              session = await sessionService.activateDraftSession(draftSessionId, erpOrder); // Updated usage
           } else {
               // CREATE NEW
-              session = await storage.createSession(erpOrder, labelId);
+              session = await sessionService.createSession(erpOrder, labelId); // Updated usage
           }
           
           // If successful, trigger start

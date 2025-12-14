@@ -1,31 +1,14 @@
 
 import { ConsolidatedItem, CountingSession, Product, ScanRecord } from "../types";
 import { getSettings } from "./settings"; 
-import { generateUUID, sanitizeBarcode } from "./utils";
-import { getUnsyncedScans, markScansAsSynced } from "./sessionService"; 
-import { markProductsAsSynced, saveProductBatch } from "./productService";
-import { markDraftsAsSynced } from "./storage";
+import { generateUUID } from "./utils";
+import { getUnsyncedScans, markScansAsSynced, markDraftsAsSynced } from "./sessionService"; 
+import { markProductsAsSynced } from "./productService";
 import { db } from "../db";
 import { sendToAppSheet, AppSheetPayload } from "../infrastructure/api/appsheetClient";
-import * as sessionService from "./sessionService"; // Needed for updates
+import { SHEET_COLUMNS, SYNC_ENGINE_VERSION } from "./constants";
 
-export const SYNC_ENGINE_VERSION = "6.2.1-DATEFIX";
-
-// --- CONFIG & MAPPING ---
-
-export const SHEET_COLUMNS = {
-    ID: "ID_REGISTRO",
-    UNIQUE_KEY: "CLAVE_UNICA",
-    DATE: "FECHA",
-    ERP_ORDER: "ERP",
-    BARCODE: "CODIGO",
-    PRODUCT_NAME: "PRODUCTO",
-    QUANTITY: "CANTIDAD",
-    LABEL: "ETIQUETAS",
-    MONTH: "MM",
-    YEAR: "YYYY",
-    INCIDENT: "FRC" 
-};
+export { SYNC_ENGINE_VERSION, SHEET_COLUMNS };
 
 // --- HELPERS ---
 

@@ -1,0 +1,16 @@
+
+export const SHEET_COLUMNS = {
+    ID: "ID_REGISTRO",
+    UNIQUE_KEY: "CLAVE_UNICA",
+    DATE: "FECHA",
+    ERP_ORDER: "ERP",
+    BARCODE: "CODIGO",
+    PRODUCT_NAME: "PRODUCTO",
+    QUANTITY: "CANTIDAD",
+    LABEL: "ETIQUETAS",
+    MONTH: "MM",
+    YEAR: "YYYY",
+    INCIDENT: "FRC" 
+};
+
+export const SYNC_ENGINE_VERSION = "6.3.0-REFACTOR";

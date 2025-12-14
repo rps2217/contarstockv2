@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { ChevronLeft, Barcode, CheckCircle2, WifiOff, CloudUpload, CloudDownload, Box, Zap, Layers, Hash, Loader2, Camera, Ban, List, Trash2, X, Eye, Keyboard, AlertTriangle } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
-import * as storage from '../services/storage';
+import * as sessionService from '../services/sessionService'; // Updated Import
 import { sanitizeBarcode } from '../services/utils';
 import { syncReceptionToAppSheet, restoreReceptionFromCloud } from '../services/syncBridge';
 import { SoundFX } from '../services/audio';
@@ -73,7 +73,7 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack }) => {
         if (!cleanCode) return;
 
         try {
-            await storage.createDraftSession(cleanCode);
+            await sessionService.createDraftSession(cleanCode); // Updated usage
             setLastScanned(cleanCode);
             setError(null);
             SoundFX.play('success');

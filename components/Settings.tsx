@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Settings as SettingsIcon, Volume2, VolumeX, Vibrate, Zap, Moon, Sun, Monitor, AlertTriangle, ArrowLeft, Cloud, Key, Database, Lock, Check, Eye, Shield, FileText, Package, AlertOctagon, Activity, CheckCircle, XCircle, Share2, Download, QrCode, Copy, Save, Upload, RefreshCw, Loader2, Speech, Hash, Type, Gauge, BarChart3, Smartphone, LayoutTemplate } from 'lucide-react';
-import * as storage from '../services/storage';
+import * as sessionService from '../services/sessionService'; // Updated Import (though not heavily used here, kept for consistency if needed later)
 import * as settingsService from '../services/settings';
 import { createFullBackup, restoreFullBackup } from '../services/backupService';
 import { AppSettings, ViewState } from '../types';

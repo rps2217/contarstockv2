@@ -14,7 +14,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { InstallPrompt } from './components/InstallPrompt';
 import { NetworkStatus } from './components/NetworkStatus'; 
 import { SyncManagerUI } from './components/SyncManagerUI'; 
-import * as storage from './services/storage';
+import * as sessionService from './services/sessionService'; // Updated Import
 import { getSettings } from './services/settings';
 import { db } from './db';
 import { SYNC_ENGINE_VERSION, processSyncQueue } from './services/appsheet';
@@ -58,7 +58,7 @@ const AppContent: React.FC = () => {
     const restoreSession = async () => {
         try {
             if (!(db as any).isOpen()) await (db as any).open();
-            const current = await storage.getActiveSession();
+            const current = await sessionService.getActiveSession(); // Updated usage
             if (current) {
                 setActiveSession(current);
                 if (auth === 'true') setView('counting');
@@ -106,7 +106,7 @@ const AppContent: React.FC = () => {
 
   const handleCloseSession = async () => {
     if (activeSession) {
-      await storage.closeSession(activeSession.id);
+      await sessionService.closeSession(activeSession.id); // Updated usage
       setActiveSession(null);
       setView('reports');
     }
@@ -114,7 +114,7 @@ const AppContent: React.FC = () => {
 
   const handleDiscardSession = async () => {
     if (activeSession) {
-        await storage.deleteSession(activeSession.id);
+        await sessionService.deleteSession(activeSession.id); // Updated usage
         setActiveSession(null);
         setView('reports');
     }

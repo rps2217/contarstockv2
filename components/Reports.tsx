@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { FileText, Sparkles, Truck, Calendar, ChevronLeft, Package, CheckCircle2, ScanLine, Layers, Plus, MoreVertical, Trash2, Minus, FileSpreadsheet, ChevronRight as ChevronRightIcon, CloudDownload, WifiOff, Cloud, Check, Clock, CalendarDays, CalendarRange, X, Database, Eraser } from 'lucide-react';
 import { CountingSession, ConsolidatedItem, ViewState } from '../types';
-import * as storage from '../services/storage';
+import * as sessionService from '../services/sessionService'; // Updated Import
 import { analyzeConsolidation } from '../services/gemini';
 import { exportToExcel, exportToPDF } from '../services/export';
 import { processSyncQueue } from '../services/appsheet';
@@ -96,31 +96,31 @@ export const Reports: React.FC<ReportsProps> = ({ onSessionStart, onNavigate }) 
       e.nativeEvent.stopImmediatePropagation();
       
       if (window.confirm('¿Estás seguro de que deseas eliminar este historial de conteo permanentemente? Esta acción no se puede deshacer.')) {
-          await storage.deleteSession(sessionId);
+          await sessionService.deleteSession(sessionId); // Updated usage
           setActiveMenuId(null);
       }
   };
 
   const handleIncrementItem = async (barcode: string) => {
     if (!selectedSessionId) return;
-    await storage.adjustSessionItemQuantity(selectedSessionId, barcode, 1);
+    await sessionService.adjustSessionItemQuantity(selectedSessionId, barcode, 1); // Updated usage
   };
 
   const handleDecrementItem = async (barcode: string, currentQty: number) => {
     if (!selectedSessionId) return;
     if (currentQty <= 1) {
         if (window.confirm('¿Eliminar este item del registro?')) {
-            await storage.deleteSessionItem(selectedSessionId, barcode);
+            await sessionService.deleteSessionItem(selectedSessionId, barcode); // Updated usage
         }
     } else {
-        await storage.adjustSessionItemQuantity(selectedSessionId, barcode, -1);
+        await sessionService.adjustSessionItemQuantity(selectedSessionId, barcode, -1); // Updated usage
     }
   };
 
   const handleDeleteItem = async (barcode: string) => {
     if (!selectedSessionId) return;
     if (window.confirm('¿Eliminar todo el historial de este producto en esta sesión?')) {
-        await storage.deleteSessionItem(selectedSessionId, barcode);
+        await sessionService.deleteSessionItem(selectedSessionId, barcode); // Updated usage
     }
   };
 
@@ -168,7 +168,7 @@ export const Reports: React.FC<ReportsProps> = ({ onSessionStart, onNavigate }) 
       
       setIsCleaning(true);
       try {
-          const count = await storage.cleanSyncedSessions();
+          const count = await sessionService.cleanSyncedSessions(); // Updated usage
           if (count > 0) {
               alert(`Limpieza completada.\nSe eliminaron ${count} sesiones locales respaldadas.`);
           } else {
@@ -369,6 +369,5 @@ export const Reports: React.FC<ReportsProps> = ({ onSessionStart, onNavigate }) 
                 </div>
             </div>
         </div>
-    </div>
-  );
+    );
 };

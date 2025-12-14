@@ -1,14 +1,18 @@
 
 import React, { useMemo, useRef, useEffect, useState } from 'react';
-import { Pause, Package, Zap, Keyboard, AlertTriangle, Check, Volume2, Save, XCircle, X, RotateCcw, Camera, Ban, Gauge } from 'lucide-react';
+import { RotateCcw, Save, XCircle, Check, Keyboard, X } from 'lucide-react';
 import { CountingSession } from '../types';
 import { ExpirationModal } from './ExpirationModal';
 import { useScanner } from '../hooks/useScanner';
-import { ScanItem } from './ScanItem';
 import { NumericKeypad } from './NumericKeypad';
 import { CameraScanner } from './CameraScanner';
-import { SoundFX } from '../services/audio';
 import * as settingsService from '../services/settings';
+
+// Sub-components
+import { ScannerFeedbackLayer } from './scanner/ScannerFeedbackLayer';
+import { ScannerHeader } from './scanner/ScannerHeader';
+import { ScannerHero } from './scanner/ScannerHero';
+import { ScannerControls } from './scanner/ScannerControls';
 
 interface ScannerProps {
   session: CountingSession;
@@ -23,34 +27,25 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
       actions 
   } = useScanner(session, onCloseSession, onDiscardSession);
 
-  // Read settings once on mount to determine feature flags
   const settings = useMemo(() => settingsService.getSettings(), []);
-
-  // Focus ref for manual input
   const manualInputRef = useRef<HTMLInputElement>(null);
 
   // --- PERFORMANCE TRACKING (SPEEDOMETER) ---
   const [scansPerMinute, setScansPerMinute] = useState(0);
   const scanTimestampsRef = useRef<number[]>([]);
 
-  // Update speed whenever a scan happens - Only if enabled
   useEffect(() => {
     if (settings.speedometerEnabled && data.lastScan) {
         const now = Date.now();
-        // Add current timestamp
         scanTimestampsRef.current.push(now);
-        // Clean old timestamps (> 60s)
         const cutoff = now - 60000;
         scanTimestampsRef.current = scanTimestampsRef.current.filter(t => t > cutoff);
-        // Update State
         setScansPerMinute(scanTimestampsRef.current.length);
     }
   }, [data.lastScan, settings.speedometerEnabled]);
 
-  // Decay speedometer if idle - Only if enabled
   useEffect(() => {
       if (!settings.speedometerEnabled) return;
-
       const interval = setInterval(() => {
           const now = Date.now();
           const cutoff = now - 60000;
@@ -63,27 +58,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
       return () => clearInterval(interval);
   }, [settings.speedometerEnabled]);
 
-
-  // PERFORMANCE OPTIMIZATION: 
-  // Instead of changing the root container class (which triggers layout recalc for children),
-  // we use a dedicated absolute background layer for visual feedback.
-  const getFeedbackLayerClass = () => {
-      if (state.feedback === 'success') {
-          if (data.lastScan?.isIncident) return 'bg-amber-600 opacity-100';
-          return 'bg-emerald-600 opacity-100';
-      }
-      if (state.feedback === 'error') return 'bg-red-600 opacity-100';
-      if (state.feedback === 'undo') return 'bg-purple-600 opacity-100';
-      
-      // Idle states (Backgrounds)
-      if (data.lastScan?.isIncident) return 'bg-amber-900 opacity-100'; 
-      return 'bg-slate-950 opacity-100'; 
-  };
-
-  const isUnknown = data.activeProductStats.isUnknown;
-  const isLastScanIncident = !!data.lastScan?.isIncident;
-
-  // SECURITY CHECK: Verify if browser allows Camera access (HTTPS required)
+  // SECURITY CHECK
   const hasCameraSupport = useMemo(() => {
     if (typeof navigator === 'undefined') return false;
     const isSecure = typeof window !== 'undefined' ? window.isSecureContext : false;
@@ -104,126 +79,44 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
       state.setIsMultiplierOpen(false);
   };
 
-  // POLISH: Ensure focus on mount for manual input
   useEffect(() => {
       if (state.manualMode) {
-          setTimeout(() => {
-              manualInputRef.current?.focus();
-          }, 100);
+          setTimeout(() => manualInputRef.current?.focus(), 100);
       }
   }, [state.manualMode]);
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col text-white overflow-hidden font-sans">
       
-      {/* 1. FEEDBACK LAYER (Separated for Performance) */}
-      <div 
-        className={`absolute inset-0 z-0 transition-colors duration-200 ease-out ${getFeedbackLayerClass()}`} 
-        style={{ willChange: 'background-color' }}
+      {/* 1. VISUAL FEEDBACK LAYER */}
+      <ScannerFeedbackLayer 
+        feedback={state.feedback} 
+        isIncident={!!data.lastScan?.isIncident} 
       />
 
-      {/* --- HEADER (Minimalist) --- */}
-      <header className="h-14 px-4 flex justify-between items-center z-20 shrink-0 bg-black/20 backdrop-blur-sm">
-        <div className="flex items-center gap-3 opacity-80">
-             <div className="bg-white/10 p-1.5 rounded-lg"><Package className="w-4 h-4" /></div>
-             <div className="font-mono font-bold text-sm tracking-widest">{session.erpOrder}</div>
-        </div>
-        <div className="flex items-center gap-2">
-            {/* PERFORMANCE PILL - Conditional Render */}
-            {settings.speedometerEnabled && (
-                <div className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${scansPerMinute > 20 ? 'bg-green-500/20 border-green-500/50 text-green-300' : 'bg-white/10 border-white/10 text-slate-300'}`}>
-                    <Gauge className="w-3 h-3" />
-                    <span>{scansPerMinute} ipm</span>
-                </div>
-            )}
+      {/* 2. HEADER */}
+      <ScannerHeader 
+        erpOrder={session.erpOrder}
+        scansPerMinute={scansPerMinute}
+        showSpeedometer={settings.speedometerEnabled}
+        onPause={() => state.setShowConfirmModal(true)}
+      />
 
-            <button 
-                onClick={() => state.setShowConfirmModal(true)} 
-                className="bg-white/10 hover:bg-red-500/80 text-white/80 hover:text-white px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all backdrop-blur-md"
-            >
-                <Pause className="w-3 h-3" /> <span className="hidden md:inline">Pausar</span>
-            </button>
-        </div>
-      </header>
-
-      {/* --- MAIN ZEN AREA --- */}
+      {/* 3. MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col relative min-h-0 z-10">
         
-        {/* CENTER CONTENT */}
+        {/* CENTER DISPLAY */}
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-            {state.feedback === 'undo' ? (
-                 <div className="flex flex-col items-center animate-in zoom-in duration-200">
-                    <RotateCcw className="w-32 h-32 text-white mb-4" />
-                    <h2 className="text-4xl font-black uppercase tracking-widest">Deshecho</h2>
-                    <p className="text-white/70 mt-2">El último registro ha sido eliminado.</p>
-                 </div>
-            ) : data.lastScan ? (
-                <div className="animate-in zoom-in-95 duration-150 w-full max-w-2xl flex flex-col items-center">
-                    {isUnknown ? (
-                        /* UNKNOWN PRODUCT STATE */
-                        <div className="bg-amber-500/90 text-black p-8 rounded-3xl shadow-2xl border-4 border-amber-300 w-full">
-                            <div className="flex flex-col items-center gap-4 mb-6">
-                                <AlertTriangle className="w-20 h-20 animate-pulse" />
-                                <h2 className="text-3xl font-black uppercase tracking-tight">Producto Desconocido</h2>
-                            </div>
-                            <div className="font-mono text-3xl font-bold mb-8 bg-black/10 py-2 rounded-xl">{data.lastScan.barcode}</div>
-                            <button 
-                                onClick={actions.handleRegisterPending} 
-                                className="w-full bg-black text-amber-500 hover:bg-slate-900 font-black text-xl py-5 rounded-2xl shadow-lg active:scale-95 transition-all"
-                            >
-                                REGISTRAR COMO PENDIENTE
-                            </button>
-                        </div>
-                    ) : (
-                        /* SUCCESS SCAN STATE */
-                        <>
-                            {/* Product Name */}
-                            <h1 className="text-3xl md:text-5xl font-black leading-tight mb-4 text-white drop-shadow-md break-words line-clamp-3">
-                                {data.activeProductStats.name}
-                            </h1>
-                            
-                            {/* Metadata Row: Barcode & Incident Toggle */}
-                            <div className="flex flex-wrap justify-center items-center gap-3 mb-8">
-                                {/* Barcode Badge */}
-                                <div className="bg-white/10 px-4 py-2 rounded-xl font-mono text-sm md:text-base text-white/80 border border-white/5">
-                                    {data.lastScan.barcode}
-                                </div>
-
-                                {/* Incident Toggle Button */}
-                                <button 
-                                    onClick={(e) => actions.handleToggleIncident(e, data.lastScan!.id, isLastScanIncident)}
-                                    className={`px-4 py-2 rounded-xl font-bold text-sm md:text-base flex items-center gap-2 transition-all active:scale-95 border border-white/10 shadow-lg ${
-                                        isLastScanIncident 
-                                        ? 'bg-white text-amber-700 shadow-amber-900/20' 
-                                        : 'bg-white/10 text-white/60 hover:bg-white/20'
-                                    }`}
-                                >
-                                    <AlertTriangle className={`w-5 h-5 ${isLastScanIncident ? 'fill-amber-700' : ''}`} />
-                                    {isLastScanIncident ? 'CON INCIDENCIA' : 'MARCAR FRC'}
-                                </button>
-                            </div>
-
-                            {/* QUANTITY DISPLAY (HERO) */}
-                            <div className="flex flex-col items-center">
-                                <div className="text-[10px] md:text-xs font-bold uppercase tracking-[0.3em] text-white/50 mb-1">Total Acumulado</div>
-                                <div className="text-[7rem] md:text-[9rem] leading-none font-black tracking-tighter text-white drop-shadow-2xl font-mono">
-                                    {data.activeProductStats.totalQty}
-                                </div>
-                            </div>
-                        </>
-                    )}
-                </div>
-            ) : (
-                /* IDLE / READY STATE */
-                <div className="flex flex-col items-center opacity-20">
-                    <Zap className="w-32 h-32 mb-6" />
-                    <h2 className="text-4xl font-black tracking-widest uppercase">Listo</h2>
-                    <p className="mt-2 text-sm font-mono">Esperando Escáner...</p>
-                </div>
-            )}
+            <ScannerHero 
+                lastScan={data.lastScan}
+                activeProductStats={data.activeProductStats}
+                feedback={state.feedback}
+                onRegisterPending={actions.handleRegisterPending}
+                onToggleIncident={actions.handleToggleIncident}
+            />
         </div>
 
-        {/* --- FLOATING UNDO ACTION --- */}
+        {/* FLOATING UNDO ACTION */}
         {state.lastScanId && !state.isMultiplierOpen && !state.manualMode && !state.isCameraOpen && (
             <div className="absolute bottom-24 left-0 right-0 flex justify-center z-30 pointer-events-none animate-in slide-in-from-bottom-4 fade-in">
                 <button 
@@ -236,63 +129,20 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
             </div>
         )}
 
-        {/* --- FOOTER STATS & CONTROLS --- */}
-        <div className="shrink-0 pb-safe-area px-4 pb-4 relative z-40">
-            <div className="max-w-md mx-auto bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-2 flex justify-between items-center shadow-lg">
-                
-                {/* Stats */}
-                <div className="flex gap-4 px-3 items-center">
-                     {/* Mobile Speedometer - Conditional Render */}
-                    {settings.speedometerEnabled && (
-                        <div className="md:hidden flex flex-col items-center justify-center mr-2 w-10">
-                            <Gauge className={`w-5 h-5 ${scansPerMinute > 20 ? 'text-green-400' : 'text-slate-500'}`} />
-                            <span className={`text-[9px] font-bold ${scansPerMinute > 20 ? 'text-green-400' : 'text-slate-500'}`}>{scansPerMinute}</span>
-                        </div>
-                    )}
-
-                    <div className="flex flex-col">
-                        <span className="text-[9px] uppercase font-bold text-white/40">Unidades</span>
-                        <span className="text-xl font-bold tabular-nums">{data.sessionStats.totalQty}</span>
-                    </div>
-                    <div className="flex flex-col">
-                        <span className="text-[9px] uppercase font-bold text-white/40">SKUs</span>
-                        <span className="text-xl font-bold tabular-nums text-blue-400">{data.sessionStats.uniqueSkus}</span>
-                    </div>
-                </div>
-
-                {/* Controls */}
-                <div className="flex gap-2">
-                    <button 
-                        onClick={handleCameraClick}
-                        className={`h-12 w-12 rounded-xl border flex items-center justify-center shadow-lg active:scale-95 transition-all ${
-                            hasCameraSupport 
-                            ? 'bg-slate-800 text-blue-400 border-slate-700 hover:bg-slate-700' 
-                            : 'bg-red-900/50 text-red-400 border-red-800 hover:bg-red-900'
-                        }`}
-                        title={hasCameraSupport ? "Abrir Cámara" : "Cámara bloqueada (Requiere HTTPS)"}
-                    >
-                        {hasCameraSupport ? <Camera className="w-6 h-6" /> : <Ban className="w-6 h-6" />}
-                    </button>
-
-                    <button 
-                        onClick={() => state.setIsMultiplierOpen(true)}
-                        className={`h-12 px-4 rounded-xl font-bold text-lg flex items-center justify-center transition-all ${state.multiplier > 1 ? 'bg-yellow-500 text-black' : 'bg-white/10 text-white hover:bg-white/20'}`}
-                    >
-                        <span className="text-xs mr-1 opacity-60">x</span>{state.multiplier}
-                    </button>
-                    
-                    <button 
-                        onClick={() => state.setManualMode(true)}
-                        className="h-12 w-12 rounded-xl bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center shadow-lg active:scale-95 transition-all"
-                    >
-                        <Keyboard className="w-6 h-6" />
-                    </button>
-                </div>
-            </div>
-        </div>
+        {/* 4. FOOTER CONTROLS */}
+        <ScannerControls 
+            sessionStats={data.sessionStats}
+            multiplier={state.multiplier}
+            scansPerMinute={scansPerMinute}
+            showSpeedometer={settings.speedometerEnabled}
+            hasCameraSupport={hasCameraSupport}
+            onCameraClick={handleCameraClick}
+            onMultiplierClick={() => state.setIsMultiplierOpen(true)}
+            onManualClick={() => state.setManualMode(true)}
+        />
       </div>
 
-      {/* MODALS RENDER (Z-INDEX > 50) */}
+      {/* --- MODALS & OVERLAYS --- */}
       
       {state.isCameraOpen && (
         <CameraScanner 

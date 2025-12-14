@@ -6,7 +6,7 @@ import { db } from '../db';
 import { ConsolidatedItem, CountingSession } from '../types';
 import { exportToExcel, exportToPDF } from '../services/export';
 import { syncToAppSheet } from '../services/syncBridge';
-import * as storage from '../services/storage';
+import * as sessionService from '../services/sessionService'; // Updated Import
 import { aggregateScans } from '../services/aggregator';
 import { SearchBar } from './SearchBar';
 
@@ -143,7 +143,7 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack }) => {
                 status: 'completed'
             };
             await syncToAppSheet(virtualSession, details.items);
-            await storage.markErpSessionsAsSynced(selectedErp);
+            await sessionService.markErpSessionsAsSynced(selectedErp); // Updated usage
             alert('¡Sincronización de consolidado exitosa!');
         } catch (err: any) {
             alert(`Error: ${err.message}`);
