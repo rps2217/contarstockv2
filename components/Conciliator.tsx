@@ -1,6 +1,5 @@
-
 import React, { useState, useMemo } from 'react';
-import { Upload, ChevronLeft, Search, FileSpreadsheet, CheckCircle2, AlertTriangle, XCircle, ArrowRight, Fingerprint, RefreshCw, Filter, FileText, Link, Eye, EyeOff, PackageMinus, PackagePlus, PackageCheck, Repeat, ArrowLeftRight, Sparkles, Save, Check } from 'lucide-react';
+import { Upload, ChevronLeft, Search, FileSpreadsheet, CheckCircle2, AlertTriangle, XCircle, ArrowRight, Fingerprint, RefreshCw, Filter, FileText, Link, Eye, EyeOff, PackageMinus, PackagePlus, PackageCheck, Repeat, ArrowLeftRight, Sparkles, Save, Check, ShieldCheck, Ban, ArrowDown } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import * as matcher from '../services/matcher';
@@ -29,6 +28,8 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
   const sessions = useLiveQuery(() => db.sessions.orderBy('createdAt').reverse().toArray(), [], []);
   const expectedOrdersCount = useLiveQuery(() => db.expectedOrders.count(), [], 0);
 
+  const currentSession = sessions?.find(s => s.id === selectedSessionId);
+
   // --- HANDLERS ---
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -54,13 +55,28 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
     try {
       const scans = await db.scans.where('sessionId').equals(sessionId).toArray();
       const physicalItems = await aggregateScans(scans);
+      
+      // Run the detective matcher
       const results = await matcher.findMatches(physicalItems);
+      
+      if (results.length === 0) {
+          alert("No se encontraron coincidencias razonables con ninguna orden cargada.");
+          setIsAnalyzing(false);
+          return;
+      }
+
       setMatches(results);
+      
+      // Auto-select the best match
+      const bestMatch = results[0];
+      setSelectedMatch(bestMatch);
       setStep('results');
       
-      // Auto-select tab logic
-      if (results.length > 0 && results[0].potentialAliases.length > 0) {
+      // Smart Tab Selection: If aliases found, show them first. If exact match, show match tab.
+      if (bestMatch.potentialAliases.length > 0) {
           setActiveTab('links');
+      } else if (bestMatch.status === 'exact') {
+          setActiveTab('match');
       } else {
           setActiveTab('missing');
       }
@@ -90,14 +106,34 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
   const handleAssignOrder = async () => {
       if (!selectedMatch || !currentSession) return;
       const newErp = selectedMatch.expectedOrder.internalId;
-      if (!confirm(`¿Vincular conteo físico a Orden ${newErp}?\n\nEl nombre de la sesión se actualizará.`)) return;
+      const score = selectedMatch.matchScore;
+
+      // Determine Audit Status
+      let auditStatus: 'verified' | 'warning' | 'failed' = 'failed';
+      if (score > 98) auditStatus = 'verified';
+      else if (score > 60) auditStatus = 'warning';
+      
+      let msg = `¿Confirmar validación?\n\nSe asignará la Guía "${newErp}" al conteo físico actual.`;
+      
+      if (score < 50) {
+          msg = `⚠️ ADVERTENCIA DE BAJA COINCIDENCIA (${score.toFixed(0)}%)\n\nEl sistema detecta muchas diferencias. ¿Estás seguro de que esta es la guía correcta?\n\nAl confirmar, se sobrescribirá el número de orden actual.`;
+      }
+
+      if (!confirm(msg)) return;
 
       try {
-          await db.sessions.update(currentSession.id, { erpOrder: newErp });
-          alert("¡Caso cerrado! Sesión actualizada.");
+          // PERSIST AUDIT DATA
+          await db.sessions.update(currentSession.id, { 
+              erpOrder: newErp,
+              auditStatus: auditStatus,
+              auditScore: parseFloat(score.toFixed(1)),
+              auditTimestamp: Date.now()
+          });
+          
+          alert("✅ Validación Completada y Guardada en Historial.");
           onBack(); 
       } catch (e) {
-          alert("Error al actualizar.");
+          alert("Error al actualizar base de datos.");
       }
   };
 
@@ -105,8 +141,6 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
       if (!selectedMatch || !currentSession) return;
       exportDiscrepancyPDF(selectedMatch, currentSession.logisticsLabel);
   };
-
-  const currentSession = sessions?.find(s => s.id === selectedSessionId);
 
   // --- DERIVED DATA FOR RESULTS ---
   const breakdown = useMemo(() => {
@@ -180,9 +214,71 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
     );
   }
 
+  // --- VIEW: SELECT SESSION ---
+  if (step === 'select') {
+      return (
+        <div className="max-w-2xl mx-auto p-4 pt-8 animate-in fade-in">
+             <button onClick={() => setStep('upload')} className="flex items-center gap-2 text-slate-500 mb-6 hover:text-slate-900"><ChevronLeft className="w-5 h-5"/> Volver</button>
+             <h1 className="text-2xl font-bold text-slate-900 mb-2">Selecciona un Conteo</h1>
+             <p className="text-slate-500 text-sm mb-6">Elige el bulto físico que deseas investigar.</p>
+             
+             <div className="space-y-3">
+                 {sessions?.map(s => (
+                     <button 
+                        key={s.id} 
+                        onClick={() => handleRunAnalysis(s.id)}
+                        disabled={isAnalyzing}
+                        className="w-full bg-white p-4 rounded-2xl border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all text-left flex justify-between items-center group relative overflow-hidden"
+                    >
+                         {/* Audit Badge if already checked */}
+                         {s.auditStatus && (
+                            <div className={`absolute top-0 right-0 w-3 h-3 rounded-bl-lg ${s.auditStatus === 'verified' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                         )}
+
+                         <div>
+                             <div className="font-bold text-slate-900 flex items-center gap-2">
+                                {s.erpOrder}
+                                {s.auditStatus === 'verified' && <ShieldCheck className="w-4 h-4 text-emerald-500" />}
+                             </div>
+                             <div className="text-xs text-slate-500 mt-1 font-mono">{s.logisticsLabel}</div>
+                         </div>
+                         {isAnalyzing && selectedSessionId === s.id ? (
+                             <RefreshCw className="w-5 h-5 text-indigo-500 animate-spin" />
+                         ) : (
+                             <ArrowRight className="w-5 h-5 text-slate-300 group-hover:text-indigo-500" />
+                         )}
+                     </button>
+                 ))}
+             </div>
+        </div>
+      );
+  }
+
   // --- VIEW: RESULTS DASHBOARD ---
   if (step === 'results' && selectedMatch) {
       
+      // Determine Verdict Style
+      const score = selectedMatch.matchScore;
+      let verdictColor = 'bg-emerald-500';
+      let verdictText = 'Coincidencia Certificada';
+      let verdictIcon = <ShieldCheck className="w-8 h-8 text-white" />;
+      let verdictBg = 'bg-emerald-50 border-emerald-100';
+      let verdictTextColor = 'text-emerald-900';
+
+      if (score < 60) {
+          verdictColor = 'bg-red-500';
+          verdictText = 'Riesgo de Incompatibilidad';
+          verdictIcon = <Ban className="w-8 h-8 text-white" />;
+          verdictBg = 'bg-red-50 border-red-100';
+          verdictTextColor = 'text-red-900';
+      } else if (score < 90) {
+          verdictColor = 'bg-amber-500';
+          verdictText = 'Probable con Desviaciones';
+          verdictIcon = <AlertTriangle className="w-8 h-8 text-white" />;
+          verdictBg = 'bg-amber-50 border-amber-100';
+          verdictTextColor = 'text-amber-900';
+      }
+
       const renderContent = () => {
           if (activeTab === 'links') {
               if (breakdown.links.length === 0) {
@@ -198,7 +294,7 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
                       <div className="bg-indigo-50 border border-indigo-200 p-4 rounded-xl text-sm text-indigo-800 flex items-start gap-3">
                           <Sparkles className="w-5 h-5 shrink-0" />
                           <div>
-                              <span className="font-bold block mb-1">Detección Inteligente</span>
+                              <span className="font-bold block mb-1">Detección Inteligente (Espejo)</span>
                               Estos productos tienen códigos diferentes pero cantidades idénticas. Confirma el vínculo para corregir tu base de datos automáticamente.
                           </div>
                       </div>
@@ -211,11 +307,11 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
                                     <div className="flex-1 p-3 bg-slate-50">
                                         <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Lo que contaste</div>
                                         <div className="font-bold text-slate-900 text-sm mb-1">{link.physicalName}</div>
-                                        <div className="font-mono text-xs text-slate-500">{link.physicalBarcode}</div>
+                                        <div className="font-mono text-xs text-slate-500 bg-white border border-slate-200 px-1 rounded w-fit">{link.physicalBarcode}</div>
                                     </div>
                                     
                                     {/* Connector */}
-                                    <div className="w-16 bg-indigo-50 flex flex-col items-center justify-center border-l border-r border-indigo-100 relative">
+                                    <div className="w-20 bg-indigo-50 flex flex-col items-center justify-center border-l border-r border-indigo-100 relative z-10">
                                         <div className="text-xl font-black text-indigo-600">{link.quantity}</div>
                                         <div className="text-[9px] text-indigo-400 uppercase font-bold">Unidades</div>
                                         <ArrowLeftRight className="w-4 h-4 text-indigo-400 absolute bottom-2" />
@@ -225,7 +321,7 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
                                     <div className="flex-1 p-3 bg-white">
                                         <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Lo que dice el Excel</div>
                                         <div className="font-bold text-slate-900 text-sm mb-1">{link.expectedName}</div>
-                                        <div className="font-mono text-xs text-slate-500">{link.expectedBarcode}</div>
+                                        <div className="font-mono text-xs text-slate-500 bg-slate-50 border border-slate-200 px-1 rounded w-fit">{link.expectedBarcode}</div>
                                     </div>
                                 </div>
                                 
@@ -262,204 +358,95 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
           }
 
           return (
-            <div className="space-y-3">
-                {activeList.map(row => (
-                    <div key={row.barcode} className={`bg-white p-4 rounded-xl border shadow-sm flex items-start gap-4 ${
-                        activeTab === 'missing' ? 'border-l-4 border-l-red-500' : 
-                        activeTab === 'extra' ? 'border-l-4 border-l-amber-500' : 
-                        'border-l-4 border-l-emerald-500'
-                    }`}>
-                        <div className="flex-1 min-w-0">
-                            <div className="font-bold text-slate-800 text-sm mb-1 leading-snug">{row.name}</div>
-                            <div className="flex items-center gap-2">
-                                <span className="font-mono text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-500 border border-slate-200">{row.barcode}</span>
-                            </div>
-                        </div>
-                        
-                        <div className="text-right shrink-0">
-                            <div className={`text-2xl font-black ${
-                                row.difference < 0 ? 'text-red-500' : 
-                                row.difference > 0 ? 'text-amber-500' : 'text-emerald-500'
-                            }`}>
-                                {row.difference > 0 ? '+' : ''}{row.difference}
-                            </div>
-                            <div className="text-[10px] text-slate-400 font-bold uppercase">
-                                {activeTab === 'missing' ? 'Faltan' : (activeTab === 'extra' ? 'Sobran' : 'Cuadra')}
-                            </div>
-                            {activeTab !== 'extra' && (
-                                <div className="text-[10px] text-slate-400 mt-1">
-                                    De {row.expectedQty} esperados
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                ))}
-            </div>
+              <div className="space-y-2">
+                  {activeList.map((item, idx) => (
+                      <div key={idx} className="bg-white p-3 rounded-xl border border-slate-100 flex justify-between items-center hover:border-slate-200 transition-colors">
+                          <div className="min-w-0 flex-1 pr-4">
+                              <div className="font-bold text-slate-900 text-sm truncate">{item.name}</div>
+                              <div className="font-mono text-xs text-slate-400">{item.barcode}</div>
+                          </div>
+                          <div className="text-right">
+                              <div className={`font-black text-lg ${item.difference === 0 ? 'text-emerald-500' : (item.difference < 0 ? 'text-red-500' : 'text-amber-500')}`}>
+                                  {item.difference > 0 ? `+${item.difference}` : item.difference}
+                              </div>
+                              <div className="text-[9px] text-slate-400 font-bold uppercase">
+                                  Esp: {item.expectedQty} | Fís: {item.physicalQty}
+                              </div>
+                          </div>
+                      </div>
+                  ))}
+              </div>
           );
       };
 
       return (
-        <div className="flex flex-col h-[calc(100vh-64px)] bg-slate-50">
-            {/* STICKY HEADER */}
-            <div className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-20">
-                <div className="px-4 py-3 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                        <button onClick={() => setSelectedMatch(null)} className="p-2 hover:bg-slate-100 rounded-full text-slate-600 transition-colors"><ChevronLeft className="w-5 h-5" /></button>
-                        <div>
-                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Candidato detectado</div>
-                            <h2 className="font-black text-slate-900 text-lg leading-none">{selectedMatch.expectedOrder.internalId}</h2>
+          <div className="bg-slate-50 min-h-screen flex flex-col">
+              <div className="bg-white px-4 py-3 border-b border-slate-200 flex items-center justify-between sticky top-0 z-20 shadow-sm">
+                  <div className="flex items-center gap-2">
+                      <button onClick={() => setStep('select')} className="p-2 hover:bg-slate-100 rounded-full"><ChevronLeft className="w-5 h-5"/></button>
+                      <span className="font-bold text-slate-900">Análisis</span>
+                  </div>
+                  <button onClick={handleExportPDF} className="text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1">
+                      <FileText className="w-4 h-4" /> PDF
+                  </button>
+              </div>
+
+              <div className="p-4 max-w-2xl mx-auto w-full flex-1 overflow-y-auto pb-20">
+                  
+                  {/* --- VERDICT PANEL --- */}
+                  <div className={`rounded-3xl p-6 shadow-sm border mb-6 relative overflow-hidden ${verdictBg}`}>
+                        <div className="flex justify-between items-start relative z-10">
+                            <div>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <div className={`p-2 rounded-xl shadow-sm ${verdictColor}`}>
+                                        {verdictIcon}
+                                    </div>
+                                    <span className={`font-black text-2xl ${verdictTextColor}`}>{score.toFixed(0)}%</span>
+                                </div>
+                                <h2 className={`text-lg font-bold ${verdictTextColor} leading-tight`}>{verdictText}</h2>
+                                <p className={`text-xs opacity-80 mt-1 ${verdictTextColor}`}>
+                                    Comparando <strong>{currentSession?.erpOrder}</strong> (Físico) con <strong>{selectedMatch.expectedOrder.internalId}</strong> (Excel)
+                                </p>
+                            </div>
+                            
+                            <div className="text-right">
+                                <button 
+                                    onClick={handleAssignOrder}
+                                    className={`px-4 py-3 rounded-xl font-bold text-sm shadow-md transition-all active:scale-95 flex items-center gap-2 ${score > 60 ? 'bg-slate-900 text-white hover:bg-slate-800' : 'bg-white border border-slate-200 text-slate-600'}`}
+                                >
+                                    {score > 90 ? <Check className="w-4 h-4" /> : <RefreshCw className="w-4 h-4" />}
+                                    Validar y Asignar
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                    <div className="flex gap-2">
-                        <button onClick={handleExportPDF} className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg" title="PDF"><FileText className="w-5 h-5" /></button>
-                        <button onClick={handleAssignOrder} className="bg-indigo-600 text-white px-3 py-2 rounded-lg text-xs font-bold shadow-md hover:bg-indigo-700 flex items-center gap-2">
-                            <Link className="w-4 h-4" /> Asignar
-                        </button>
-                    </div>
-                </div>
+                  </div>
 
-                {/* PROGRESS INDICATOR */}
-                <div className="px-6 pb-4">
-                    <div className="flex justify-between text-xs font-bold mb-1">
-                        <span className="text-slate-500">Precisión de Pedido</span>
-                        <span className={breakdown.stats.percent === 100 ? 'text-emerald-600' : 'text-slate-700'}>{breakdown.stats.percent.toFixed(0)}% Lineas Correctas</span>
-                    </div>
-                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden flex">
-                        <div style={{ width: `${(breakdown.match.length / breakdown.stats.total) * 100}%` }} className="h-full bg-emerald-500"></div>
-                        <div style={{ width: `${(breakdown.missing.length / breakdown.stats.total) * 100}%` }} className="h-full bg-red-400"></div>
-                        <div style={{ width: `${(breakdown.extra.length / breakdown.stats.total) * 100}%` }} className="h-full bg-amber-400"></div>
-                    </div>
-                </div>
+                  {/* Tabs */}
+                  <div className="flex bg-white p-1 rounded-2xl border border-slate-200 mb-4 shadow-sm">
+                      <button onClick={() => setActiveTab('links')} className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 ${activeTab === 'links' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-500 hover:bg-slate-50'}`}>
+                          <Link className="w-3 h-3" /> Sugerencias
+                          {breakdown.links.length > 0 && <span className="bg-indigo-600 text-white px-1.5 rounded-full text-[9px]">{breakdown.links.length}</span>}
+                      </button>
+                      <button onClick={() => setActiveTab('missing')} className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 ${activeTab === 'missing' ? 'bg-red-100 text-red-700' : 'text-slate-500 hover:bg-slate-50'}`}>
+                          <PackageMinus className="w-3 h-3" /> Faltantes
+                          {breakdown.missing.length > 0 && <span className="bg-red-600 text-white px-1.5 rounded-full text-[9px]">{breakdown.missing.length}</span>}
+                      </button>
+                      <button onClick={() => setActiveTab('extra')} className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 ${activeTab === 'extra' ? 'bg-amber-100 text-amber-700' : 'text-slate-500 hover:bg-slate-50'}`}>
+                          <PackagePlus className="w-3 h-3" /> Sobrantes
+                          {breakdown.extra.length > 0 && <span className="bg-amber-600 text-white px-1.5 rounded-full text-[9px]">{breakdown.extra.length}</span>}
+                      </button>
+                      <button onClick={() => setActiveTab('match')} className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 ${activeTab === 'match' ? 'bg-emerald-100 text-emerald-700' : 'text-slate-500 hover:bg-slate-50'}`}>
+                          <PackageCheck className="w-3 h-3" /> OK
+                      </button>
+                  </div>
 
-                {/* TABS */}
-                <div className="flex px-2 gap-1 overflow-x-auto no-scrollbar">
-                     <button 
-                        onClick={() => setActiveTab('links')}
-                        className={`min-w-[80px] flex-1 py-3 text-xs font-bold border-b-2 flex flex-col items-center justify-center gap-1 transition-colors ${activeTab === 'links' ? 'border-indigo-500 text-indigo-600 bg-indigo-50/50' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
-                    >
-                        <Repeat className="w-4 h-4" /> 
-                        <span>Alias ({breakdown.links.length})</span>
-                    </button>
-                    <button 
-                        onClick={() => setActiveTab('missing')}
-                        className={`min-w-[80px] flex-1 py-3 text-xs font-bold border-b-2 flex flex-col items-center justify-center gap-1 transition-colors ${activeTab === 'missing' ? 'border-red-500 text-red-600 bg-red-50/50' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
-                    >
-                        <PackageMinus className="w-4 h-4" /> 
-                        <span>Faltan ({breakdown.missing.length})</span>
-                    </button>
-                    <button 
-                        onClick={() => setActiveTab('extra')}
-                        className={`min-w-[80px] flex-1 py-3 text-xs font-bold border-b-2 flex flex-col items-center justify-center gap-1 transition-colors ${activeTab === 'extra' ? 'border-amber-500 text-amber-600 bg-amber-50/50' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
-                    >
-                        <PackagePlus className="w-4 h-4" /> 
-                        <span>Sobran ({breakdown.extra.length})</span>
-                    </button>
-                    <button 
-                        onClick={() => setActiveTab('match')}
-                        className={`min-w-[80px] flex-1 py-3 text-xs font-bold border-b-2 flex flex-col items-center justify-center gap-1 transition-colors ${activeTab === 'match' ? 'border-emerald-500 text-emerald-600 bg-emerald-50/50' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
-                    >
-                        <PackageCheck className="w-4 h-4" /> 
-                        <span>OK ({breakdown.match.length})</span>
-                    </button>
-                </div>
-            </div>
+                  {/* List Content */}
+                  {renderContent()}
 
-            {/* CONTENT LIST */}
-            <div className="flex-1 overflow-y-auto p-4 bg-slate-100">
-                {renderContent()}
-            </div>
-        </div>
+              </div>
+          </div>
       );
   }
 
-  // --- VIEW: SESSION SELECT / RESULTS LIST ---
-  return (
-    <div className="max-w-3xl mx-auto p-4 pt-6 pb-24">
-        {step === 'select' && (
-            <>
-                <button onClick={() => setStep('upload')} className="flex items-center gap-2 text-slate-500 mb-6 hover:text-slate-900"><ChevronLeft className="w-5 h-5"/> Cambiar archivo</button>
-                <h2 className="text-xl font-bold text-slate-900 mb-4 px-2">Selecciona conteo para investigar</h2>
-                <div className="grid gap-3">
-                    {sessions?.map(s => (
-                        <button key={s.id} onClick={() => handleRunAnalysis(s.id)} className="bg-white p-4 rounded-2xl border border-slate-200 hover:border-indigo-400 hover:shadow-lg transition-all text-left group relative overflow-hidden">
-                            <div className="flex justify-between items-center relative z-10">
-                                <div>
-                                    <div className="font-black text-slate-800 text-lg">{s.erpOrder}</div>
-                                    <div className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded inline-block mt-1">{s.logisticsLabel}</div>
-                                </div>
-                                {isAnalyzing && selectedSessionId === s.id ? (
-                                    <RefreshCw className="w-6 h-6 animate-spin text-indigo-600" />
-                                ) : (
-                                    <div className="bg-slate-50 p-2 rounded-full group-hover:bg-indigo-50 transition-colors">
-                                        <ArrowRight className="w-5 h-5 text-slate-300 group-hover:text-indigo-600" />
-                                    </div>
-                                )}
-                            </div>
-                        </button>
-                    ))}
-                </div>
-            </>
-        )}
-
-        {step === 'results' && (
-            <>
-                <button onClick={() => setStep('select')} className="flex items-center gap-2 text-slate-500 mb-6 hover:text-slate-900"><ChevronLeft className="w-5 h-5"/> Volver</button>
-                
-                <div className="mb-6 bg-slate-900 text-white p-6 rounded-3xl shadow-xl shadow-slate-900/20">
-                    <h2 className="text-xl font-bold mb-1">Mejores Coincidencias</h2>
-                    <p className="text-slate-400 text-sm">Basado en similitud de contenido, no solo etiquetas.</p>
-                </div>
-
-                <div className="space-y-4">
-                    {matches.length === 0 ? (
-                        <div className="text-center py-12 text-slate-400">
-                            <AlertTriangle className="w-12 h-12 mx-auto mb-2 opacity-50"/>
-                            No se encontraron coincidencias razonables.
-                        </div>
-                    ) : (
-                        matches.map(match => (
-                            <button 
-                                key={match.expectedOrder.id} 
-                                onClick={() => setSelectedMatch(match)}
-                                className="w-full bg-white rounded-2xl p-5 border border-slate-200 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all text-left relative overflow-hidden group"
-                            >
-                                <div 
-                                    className={`absolute top-0 left-0 w-1.5 h-full ${
-                                        match.status === 'exact' ? 'bg-emerald-500' : match.status === 'partial' ? 'bg-amber-500' : 'bg-red-500'
-                                    }`} 
-                                />
-
-                                <div className="flex justify-between items-start pl-3 mb-2">
-                                    <div>
-                                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Orden Sugerida</div>
-                                        <div className="text-2xl font-black text-slate-900">{match.expectedOrder.internalId}</div>
-                                    </div>
-                                    <div className={`text-xl font-black ${
-                                        match.status === 'exact' ? 'text-emerald-600' : match.status === 'partial' ? 'text-amber-500' : 'text-red-400'
-                                    }`}>
-                                        {match.matchScore.toFixed(0)}%
-                                    </div>
-                                </div>
-
-                                <div className="pl-3 text-sm text-slate-500 flex gap-2 mt-3">
-                                    <span className="bg-slate-100 px-2 py-1 rounded-lg text-xs font-bold text-slate-600 flex items-center gap-1">
-                                        <PackageMinus className="w-3 h-3" /> Faltan {match.details.filter(d => d.difference < 0).length}
-                                    </span>
-                                    <span className="bg-slate-100 px-2 py-1 rounded-lg text-xs font-bold text-slate-600 flex items-center gap-1">
-                                        <PackagePlus className="w-3 h-3" /> Sobran {match.details.filter(d => d.difference > 0).length}
-                                    </span>
-                                     {match.potentialAliases.length > 0 && (
-                                        <span className="bg-indigo-50 px-2 py-1 rounded-lg text-xs font-bold text-indigo-600 flex items-center gap-1 border border-indigo-100">
-                                            <Repeat className="w-3 h-3" /> {match.potentialAliases.length} Alias
-                                        </span>
-                                     )}
-                                </div>
-                            </button>
-                        ))
-                    )}
-                </div>
-            </>
-        )}
-    </div>
-  );
+  return null;
 };

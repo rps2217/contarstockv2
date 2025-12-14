@@ -18,6 +18,11 @@ export interface CountingSession {
   totalUnits?: number;
   totalSKUs?: number;
   lastSyncTimestamp?: number; // New: Tracks when this session was uploaded
+  
+  // Audit / Detective Fields
+  auditStatus?: 'verified' | 'warning' | 'failed' | 'pending';
+  auditScore?: number; // 0-100
+  auditTimestamp?: number;
 }
 
 export interface ScanRecord {

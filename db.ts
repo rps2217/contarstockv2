@@ -12,13 +12,13 @@ export class LogiCountDB extends Dexie {
   constructor() {
     super('LogiCountDB');
     
-    // Version 12: Comprehensive schema definition covering all application features
-    (this as any).version(12).stores({
+    // Version 13: Added auditStatus to sessions for filtering reviewed items
+    (this as any).version(13).stores({
       // Products: indexed by barcode (primary), name (search), and syncStatus (cloud sync)
       products: '&barcode, name, syncStatus', 
       
-      // Sessions: indexed for dashboard/reporting filtering
-      sessions: 'id, status, createdAt, erpOrder, logisticsLabel', 
+      // Sessions: indexed for dashboard/reporting filtering. Added auditStatus.
+      sessions: 'id, status, createdAt, erpOrder, logisticsLabel, auditStatus', 
       
       // Scans: complex indices for fast lookup by session, time, and sync status
       // [sessionId+synced] is crucial for `getUnsyncedScans`

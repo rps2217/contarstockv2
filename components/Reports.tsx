@@ -1,6 +1,5 @@
-
 import React, { useState, useCallback } from 'react';
-import { FileText, Calendar, ChevronLeft, CheckCircle2, Layers, Plus, MoreVertical, Trash2, Truck, WifiOff, Cloud, Eraser } from 'lucide-react';
+import { FileText, Calendar, ChevronLeft, CheckCircle2, Layers, Plus, MoreVertical, Trash2, Truck, WifiOff, Cloud, Eraser, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { CountingSession, ViewState } from '../types';
 import * as sessionService from '../services/sessionService'; 
 import { processSyncQueue } from '../services/appsheet';
@@ -22,6 +21,14 @@ const SessionRow = ({ index, style, data }: { index: number; style: React.CSSPro
     const session = data.sessions[index];
     const { onSelect, activeMenuId, onMenuToggle, onDelete } = data;
 
+    // Determine Status Badge
+    let AuditIcon = null;
+    if (session.auditStatus === 'verified') {
+        AuditIcon = <ShieldCheck className="w-3 h-3 text-emerald-600" />;
+    } else if (session.auditStatus === 'warning') {
+        AuditIcon = <AlertTriangle className="w-3 h-3 text-amber-500" />;
+    }
+
     return (
         <div style={style} className="px-1 py-2">
             <div className={`bg-white rounded-2xl shadow-sm border transition-shadow relative z-0 h-full flex flex-col ${session.lastSyncTimestamp ? 'border-green-200' : 'border-slate-200 hover:shadow-md'}`}>
@@ -32,6 +39,14 @@ const SessionRow = ({ index, style, data }: { index: number; style: React.CSSPro
                             {new Date(session.createdAt).toLocaleDateString()}
                         </div>
                         <div className="flex items-center gap-1">
+                            {/* AUDIT STATUS BADGE */}
+                            {session.auditStatus && (
+                                <div className={`p-1 rounded-full ${session.auditStatus === 'verified' ? 'bg-emerald-100' : 'bg-amber-100'}`} title="Auditado">
+                                    {AuditIcon}
+                                </div>
+                            )}
+
+                            {/* SYNC STATUS BADGE */}
                             {session.lastSyncTimestamp && (
                                 <div className="bg-green-100 text-green-700 p-1 rounded-full" title="Sincronizado con AppSheet">
                                     <Cloud className="w-3 h-3" />
@@ -58,7 +73,7 @@ const SessionRow = ({ index, style, data }: { index: number; style: React.CSSPro
                             </div>
                         </div>
                     </div>
-                    <h3 className="text-base font-bold text-slate-900 mb-2 tracking-tight line-clamp-1">
+                    <h3 className="text-base font-bold text-slate-900 mb-2 tracking-tight line-clamp-1 flex items-center gap-2">
                         {session.erpOrder}
                     </h3>
                     <div className="flex items-center gap-2 mb-1">
