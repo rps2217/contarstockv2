@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { Layers, ChevronLeft, Package, Box, FileSpreadsheet, FileText, ArrowRight, CloudUpload, Loader2 } from 'lucide-react';
+import { Layers, ChevronLeft, Package, Box, FileSpreadsheet, FileText, ArrowRight, CloudUpload, Loader2, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { ConsolidatedItem, CountingSession } from '../types';
@@ -49,11 +49,11 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack }) => {
                 .toArray();
         }
 
-        const groups: Record<string, { count: number, lastDate: number, totalUnits: number, sessionIds: string[], allSynced: boolean }> = {};
+        const groups: Record<string, { count: number, lastDate: number, totalUnits: number, sessionIds: string[], allSynced: boolean, verifiedCount: number, alertCount: number }> = {};
 
         for (const s of sessions) {
             if (!groups[s.erpOrder]) {
-                groups[s.erpOrder] = { count: 0, lastDate: 0, totalUnits: 0, sessionIds: [], allSynced: true };
+                groups[s.erpOrder] = { count: 0, lastDate: 0, totalUnits: 0, sessionIds: [], allSynced: true, verifiedCount: 0, alertCount: 0 };
             }
             groups[s.erpOrder].count++;
             groups[s.erpOrder].lastDate = Math.max(groups[s.erpOrder].lastDate, s.createdAt);
@@ -63,6 +63,10 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack }) => {
             if (!s.lastSyncTimestamp) {
                 groups[s.erpOrder].allSynced = false;
             }
+
+            // Audit stats
+            if (s.auditStatus === 'verified') groups[s.erpOrder].verifiedCount++;
+            else if (s.auditStatus === 'warning' || s.auditStatus === 'failed') groups[s.erpOrder].alertCount++;
         }
 
         return Object.entries(groups)
@@ -84,12 +88,17 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack }) => {
         const logisticsLabels = sessions.map(s => s.logisticsLabel).join(', ');
         const isFullySynced = sessions.every(s => !!s.lastSyncTimestamp);
 
+        // Audit details
+        const verifiedCount = sessions.filter(s => s.auditStatus === 'verified').length;
+        const totalCount = sessions.length;
+
         return {
             items,
-            sessionsCount: sessions.length,
+            sessionsCount: totalCount,
             logisticsLabels,
             lastDate: Math.max(...sessions.map(s => s.createdAt)),
-            isFullySynced
+            isFullySynced,
+            verifiedCount
         };
 
     }, [selectedErp]);
@@ -173,6 +182,13 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack }) => {
                                         {selectedErp}
                                         {details?.isFullySynced && <span className="text-sm font-bold bg-green-100 text-green-700 px-2 py-1 rounded-md border border-green-200 flex items-center gap-1"><CloudUpload className="w-3 h-3" /> Sincronizado</span>}
                                     </div>
+                                    {/* Audit Coverage Badge */}
+                                    {details && details.verifiedCount > 0 && (
+                                        <div className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-100 px-3 py-1.5 rounded-lg mt-3 text-xs font-bold shadow-sm">
+                                            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                                            <span>{details.verifiedCount} de {details.sessionsCount} bultos auditados</span>
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="flex flex-wrap gap-2">
                                     <button onClick={handleSync} disabled={isSyncing} className="bg-indigo-600 text-white hover:bg-indigo-700 px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-2 transition-colors shadow-md shadow-indigo-200 disabled:opacity-50">
@@ -266,6 +282,20 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack }) => {
                                     <div className="flex items-center gap-4 text-sm text-slate-600 mt-2">
                                         <div className="flex items-center gap-1"><Box className="w-4 h-4 text-slate-400" /> <span className="font-bold text-slate-900">{group.count}</span> Bultos</div>
                                         <div className="flex items-center gap-1"><Package className="w-4 h-4 text-slate-400" /> <span className="font-bold text-slate-900">{group.totalUnits}</span> Unidades</div>
+                                    </div>
+                                    
+                                    {/* Audit Status Indicator in List */}
+                                    <div className="flex gap-2 mt-3">
+                                        {group.verifiedCount > 0 && (
+                                            <span className="flex items-center gap-1 text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-100">
+                                                <ShieldCheck className="w-3 h-3" /> {group.verifiedCount} Certificados
+                                            </span>
+                                        )}
+                                        {group.alertCount > 0 && (
+                                            <span className="flex items-center gap-1 text-[10px] font-bold bg-amber-50 text-amber-700 px-2 py-0.5 rounded border border-amber-100">
+                                                <AlertTriangle className="w-3 h-3" /> {group.alertCount} Advertencias
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="bg-slate-50 p-3 rounded-full group-hover:bg-purple-600 group-hover:text-white transition-colors text-slate-400">

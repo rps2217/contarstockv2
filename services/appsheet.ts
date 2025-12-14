@@ -1,4 +1,3 @@
-
 import { ConsolidatedItem, CountingSession, Product, ScanRecord } from "../types";
 import { getSettings } from "./settings"; 
 import { generateUUID } from "./utils";
@@ -162,12 +161,22 @@ export const syncReceptionToAppSheet = async (sessions: CountingSession[]): Prom
     const settings = getSettings(); const config = settings.appSheetConfig;
     if (!config?.appId || !config?.accessKey || !config?.receptionTableName) throw new Error("Config incompleta: Falta nombre de tabla de Recepción.");
     
-    const rows = sessions.map(s => ({
-        "ID_RECEPCION": s.id,
-        "FECHA_HORA": formatDateTimeForAppSheet(s.createdAt),
-        "ETIQUETA": s.logisticsLabel,
-        "ESTADO": s.status === 'draft' ? 'PENDIENTE' : 'PROCESADO'
-    }));
+    const rows = sessions.map(s => {
+        // Translate local audit status to business terms for Excel/Sheet
+        let auditState = "PENDIENTE";
+        if (s.auditStatus === 'verified') auditState = "VERIFICADO_OK";
+        else if (s.auditStatus === 'warning') auditState = "CON_DIFERENCIAS";
+        else if (s.auditStatus === 'failed') auditState = "RECHAZADO";
+
+        return {
+            "ID_RECEPCION": s.id,
+            "FECHA_HORA": formatDateTimeForAppSheet(s.createdAt),
+            "ETIQUETA": s.logisticsLabel,
+            "ESTADO": s.status === 'draft' ? 'BORRADOR' : 'PROCESADO',
+            "ESTADO_AUDITORIA": auditState, // New Column
+            "PUNTAJE_AUDITORIA": s.auditScore || 0 // New Column
+        };
+    });
 
     if (rows.length > 0) {
         await sendToAppSheet(config, config.receptionTableName, { 
