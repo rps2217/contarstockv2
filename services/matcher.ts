@@ -1,7 +1,7 @@
 
 import * as XLSX from 'xlsx';
 import { db } from '../db';
-import { ExpectedOrder, MatchResult, ConsolidatedItem } from '../types';
+import { ExpectedOrder, MatchResult, ConsolidatedItem, AliasSuggestion } from '../types';
 import { sanitizeBarcode, generateUUID, normalizeSku } from './utils';
 
 /**
@@ -24,7 +24,6 @@ export const importExpectedOrders = async (file: File): Promise<number> => {
         const headers = (json[0] as string[]).map(h => String(h).toUpperCase().trim());
         
         // INTELLIGENT COLUMN DETECTION
-        // Priority: "TRASPASO" -> "AGRUPADOR" -> "ID" -> First Column
         let idIndex = headers.findIndex(h => h.includes('TRASPASO') || h.includes('AGRUPADOR') || h.includes('DOC') || h.includes('NUMERO'));
         if (idIndex === -1) idIndex = 0; // Fallback to first column
 
@@ -91,31 +90,30 @@ export const importExpectedOrders = async (file: File): Promise<number> => {
 };
 
 /**
- * OPTIMIZED MATCHING ALGORITHM (FINGERPRINTING)
- * Calculates match based on content intersection.
- * Handles "Fuzzy SKU" matching (ignores leading zeros).
+ * OPTIMIZED MATCHING ALGORITHM (FINGERPRINTING & STRUCTURAL)
+ * 1. Matches exact/fuzzy SKUs.
+ * 2. If SKUs differ, looks for "Structural Matches" (Identical quantities).
  */
 export const calculateOrderMatch = (physicalItems: ConsolidatedItem[], order: ExpectedOrder): MatchResult => {
   
-  // 1. Build Physical Map (Key = Normalized SKU)
-  const physicalMap = new Map<string, { qty: number, originalSku: string }>();
+  const physicalMap = new Map<string, { qty: number, originalSku: string, name: string }>();
   physicalItems.forEach(i => {
-      physicalMap.set(normalizeSku(i.barcode), { qty: i.totalQuantity, originalSku: i.barcode });
+      physicalMap.set(normalizeSku(i.barcode), { qty: i.totalQuantity, originalSku: i.barcode, name: i.productName });
   });
 
-  // 2. Build Expected Map (Key = Normalized SKU)
   const expectedMap = new Map<string, { qty: number, name: string, originalSku: string }>();
   order.items.forEach(i => {
       expectedMap.set(normalizeSku(i.barcode), { qty: i.expectedQty, name: i.name, originalSku: i.barcode });
   });
 
-  // 3. Union of all Keys (Normalized)
+  // --- PHASE 1: DIRECT MATCHING (SKU) ---
   const allKeys = new Set([...physicalMap.keys(), ...expectedMap.keys()]);
-
-  let matchesCount = 0;
   const details = [];
+  
+  let skuMatches = 0;
+  const unmatchedPhysical: string[] = [];
+  const unmatchedExpected: string[] = [];
 
-  // 4. Comparison Pass
   for (const key of allKeys) {
     const physData = physicalMap.get(key);
     const expData = expectedMap.get(key);
@@ -123,14 +121,16 @@ export const calculateOrderMatch = (physicalItems: ConsolidatedItem[], order: Ex
     const physicalQty = physData?.qty || 0;
     const expectedQty = expData?.qty || 0;
     
-    // Prefer the Expected SKU for display if available (usually cleaner in Excel), else Physical
-    const displaySku = expData?.originalSku || physData?.originalSku || key;
-    const name = expData?.name || 'Producto Desconocido';
+    // Tracking for Phase 2
+    if (physicalQty > 0 && expectedQty === 0) unmatchedPhysical.push(key);
+    if (expectedQty > 0 && physicalQty === 0) unmatchedExpected.push(key);
 
+    const displaySku = expData?.originalSku || physData?.originalSku || key;
+    const name = expData?.name || physData?.name || 'Producto Desconocido';
     const diff = physicalQty - expectedQty;
 
     if (physicalQty > 0 && expectedQty > 0) {
-      matchesCount++; 
+      skuMatches++;
     }
 
     details.push({
@@ -142,23 +142,65 @@ export const calculateOrderMatch = (physicalItems: ConsolidatedItem[], order: Ex
     });
   }
 
-  // 5. Scoring Logic
-  const physicalTotalQty = physicalItems.reduce((acc, i) => acc + i.totalQuantity, 0);
+  // --- PHASE 2: STRUCTURAL MATCHING (ALIAS DETECTION) ---
+  // If we have items that exist in Physical but not Expected, and vice versa,
+  // check if they share the exact same QUANTITY.
   
-  // SKUs in common
-  const totalUniqueSKUs = allKeys.size;
-  const skuOverlapRatio = totalUniqueSKUs > 0 ? matchesCount / totalUniqueSKUs : 0;
+  const potentialAliases: AliasSuggestion[] = [];
+  let structuralMatches = 0;
 
+  // Simple greedy matching by quantity
+  for (const physKey of unmatchedPhysical) {
+      const pQty = physicalMap.get(physKey)!.qty;
+      
+      // Find an unmatched expected item with same quantity
+      const matchIndex = unmatchedExpected.findIndex(expKey => expectedMap.get(expKey)!.qty === pQty);
+      
+      if (matchIndex !== -1) {
+          const expKey = unmatchedExpected[matchIndex];
+          const expData = expectedMap.get(expKey)!;
+          const physData = physicalMap.get(physKey)!;
+
+          potentialAliases.push({
+              physicalBarcode: physData.originalSku,
+              physicalName: physData.name,
+              expectedBarcode: expData.originalSku,
+              expectedName: expData.name,
+              quantity: pQty
+          });
+
+          structuralMatches++;
+          // Remove from pool to avoid double matching
+          unmatchedExpected.splice(matchIndex, 1);
+      }
+  }
+
+  // --- PHASE 3: SCORING ---
+  
+  // Base scores
+  const physicalTotalQty = physicalItems.reduce((acc, i) => acc + i.totalQuantity, 0);
+  const totalUniqueSKUs = allKeys.size;
+  const skuOverlapRatio = totalUniqueSKUs > 0 ? skuMatches / totalUniqueSKUs : 0;
+  
   // Quantity Deviation
   const totalDiff = details.reduce((acc, d) => acc + Math.abs(d.difference), 0);
   const maxQty = Math.max(physicalTotalQty, order.totalExpectedUnits);
-  
-  // Accuracy: 1.0 means perfect match (0 diff).
   const qtyAccuracy = maxQty > 0 ? Math.max(0, 1 - (totalDiff / maxQty)) : 0;
 
-  // Weighted Score: 40% SKU overlap + 60% Quantity Accuracy
-  // We prioritize quantity accuracy because if you have 100 items and get 99 right, that's a good match
-  const matchScore = ((skuOverlapRatio * 40) + (qtyAccuracy * 60)) * 100;
+  // STRUCTURAL BONUS:
+  // If we found aliases, it means the *quantities* matched perfectly even if the codes didn't.
+  // We effectively treat these as "matches" for the score calculation.
+  
+  // Recalculate diff considering aliases as "resolved" errors
+  // Each alias removes 2 errors (1 extra + 1 missing) of the same qty
+  const resolvedDiff = potentialAliases.reduce((acc, alias) => acc + (alias.quantity * 2), 0);
+  const effectiveDiff = Math.max(0, totalDiff - resolvedDiff);
+  const effectiveQtyAccuracy = maxQty > 0 ? Math.max(0, 1 - (effectiveDiff / maxQty)) : 0;
+
+  // Weighted Score
+  // 30% SKU Direct Match
+  // 70% Quantity Structure (Effective Accuracy)
+  const matchScore = ((skuOverlapRatio * 30) + (effectiveQtyAccuracy * 70)) * 100;
 
   let status: 'exact' | 'partial' | 'mismatch' = 'mismatch';
   if (matchScore > 98) status = 'exact';
@@ -168,34 +210,21 @@ export const calculateOrderMatch = (physicalItems: ConsolidatedItem[], order: Ex
       expectedOrder: order,
       matchScore,
       status,
-      // Sort: Errors first, then alphabetical
-      details: details.sort((a, b) => {
-          const aIsDiff = a.difference !== 0;
-          const bIsDiff = b.difference !== 0;
-          if (aIsDiff && !bIsDiff) return -1;
-          if (!aIsDiff && bIsDiff) return 1;
-          return 0;
-      })
+      details: details.sort((a, b) => a.difference - b.difference),
+      potentialAliases
   };
 };
 
 export const findMatches = async (physicalItems: ConsolidatedItem[]): Promise<MatchResult[]> => {
-  // Fetch all orders efficiently
   const expectedOrders = await db.expectedOrders.toArray();
   const results: MatchResult[] = [];
 
-  // Map-reduce pattern for calculation
   for (const order of expectedOrders) {
     const result = calculateOrderMatch(physicalItems, order);
-    
-    // Filter logic:
-    // If the physical count is very small (e.g. 1 item), only show very high probability matches.
-    // If the physical count is large, we can be more lenient.
     if (result.matchScore > 15) { 
         results.push(result);
     }
   }
 
-  // Return top 10 matches sorted by score
   return results.sort((a, b) => b.matchScore - a.matchScore).slice(0, 10);
 };

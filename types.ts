@@ -88,6 +88,14 @@ export interface ExpectedOrder {
   importedAt: number;
 }
 
+export interface AliasSuggestion {
+    physicalBarcode: string;
+    physicalName: string;
+    expectedBarcode: string;
+    expectedName: string;
+    quantity: number;
+}
+
 export interface MatchResult {
   expectedOrder: ExpectedOrder;
   matchScore: number; // 0-100%
@@ -99,6 +107,7 @@ export interface MatchResult {
     expectedQty: number;
     difference: number; // physical - expected
   }[];
+  potentialAliases: AliasSuggestion[]; // New: Suggestions based on quantity matching
 }
 
 // --- FILE SYSTEM TYPES ---

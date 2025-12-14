@@ -49,6 +49,32 @@ export const saveProductBatch = async (products: Product[]) => {
     }
 };
 
+/**
+ * Creates a new product record (alias) based on an existing one.
+ * Useful when physically scanning a barcode that differs from the ERP/Database one,
+ * but represents the same item.
+ */
+export const createProductAlias = async (newBarcode: string, originalBarcode: string, fallbackName: string) => {
+    const cleanNew = sanitizeBarcode(newBarcode);
+    const cleanOriginal = sanitizeBarcode(originalBarcode);
+
+    // 1. Try to find the "Master" product in our DB to copy full details (Category, Supplier, etc)
+    const masterProduct = await db.products.get(cleanOriginal);
+
+    const newProduct: Product = {
+        barcode: cleanNew,
+        name: masterProduct ? masterProduct.name : fallbackName, // Use DB name if avail, else Excel name
+        category: masterProduct?.category || 'ALIAS_DETECTADO',
+        supplier: masterProduct?.supplier || '',
+        supplierRut: masterProduct?.supplierRut || '',
+        price: masterProduct?.price,
+        syncStatus: 'add' // Mark as new so it uploads to Cloud later
+    };
+
+    await saveProduct(newProduct);
+    return !!masterProduct; // Return true if we found a master record to clone
+};
+
 export const markProductsAsSynced = async (barcodes: string[]) => {
     if (barcodes.length === 0) return;
     await db.products.where('barcode').anyOf(barcodes).modify({ syncStatus: 'synced' });

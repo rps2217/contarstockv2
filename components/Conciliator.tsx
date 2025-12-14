@@ -1,10 +1,11 @@
 
 import React, { useState, useMemo } from 'react';
-import { Upload, ChevronLeft, Search, FileSpreadsheet, CheckCircle2, AlertTriangle, XCircle, ArrowRight, Fingerprint, RefreshCw, Filter, FileText, Link, Eye, EyeOff, PackageMinus, PackagePlus, PackageCheck } from 'lucide-react';
+import { Upload, ChevronLeft, Search, FileSpreadsheet, CheckCircle2, AlertTriangle, XCircle, ArrowRight, Fingerprint, RefreshCw, Filter, FileText, Link, Eye, EyeOff, PackageMinus, PackagePlus, PackageCheck, Repeat, ArrowLeftRight, Sparkles, Save, Check } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import * as matcher from '../services/matcher';
-import { MatchResult } from '../types';
+import * as productService from '../services/productService';
+import { MatchResult, AliasSuggestion } from '../types';
 import { exportDiscrepancyPDF } from '../services/export';
 import { aggregateScans } from '../services/aggregator';
 
@@ -20,8 +21,9 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<MatchResult | null>(null);
   
-  // New UI States
-  const [activeTab, setActiveTab] = useState<'missing' | 'extra' | 'match'>('missing');
+  // UI States
+  const [activeTab, setActiveTab] = useState<'missing' | 'extra' | 'match' | 'links'>('links');
+  const [linkedAliases, setLinkedAliases] = useState<Set<string>>(new Set());
 
   // Queries
   const sessions = useLiveQuery(() => db.sessions.orderBy('createdAt').reverse().toArray(), [], []);
@@ -48,18 +50,41 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
   const handleRunAnalysis = async (sessionId: string) => {
     setSelectedSessionId(sessionId);
     setIsAnalyzing(true);
+    setLinkedAliases(new Set()); // Reset linked state
     try {
       const scans = await db.scans.where('sessionId').equals(sessionId).toArray();
       const physicalItems = await aggregateScans(scans);
       const results = await matcher.findMatches(physicalItems);
       setMatches(results);
       setStep('results');
+      
+      // Auto-select tab logic
+      if (results.length > 0 && results[0].potentialAliases.length > 0) {
+          setActiveTab('links');
+      } else {
+          setActiveTab('missing');
+      }
+
     } catch (err) {
       console.error(err);
       alert("Error en el análisis.");
     } finally {
       setIsAnalyzing(false);
     }
+  };
+
+  const handleAcceptAlias = async (alias: AliasSuggestion) => {
+      try {
+          // This will create the product in the DB cloning details from the Expected Barcode
+          await productService.createProductAlias(alias.physicalBarcode, alias.expectedBarcode, alias.expectedName);
+          
+          setLinkedAliases(prev => new Set(prev).add(alias.physicalBarcode));
+          
+          // Optional: Vibrate for feedback
+          if (navigator.vibrate) navigator.vibrate(50);
+      } catch (e: any) {
+          alert(`Error al crear alias: ${e.message}`);
+      }
   };
 
   const handleAssignOrder = async () => {
@@ -85,18 +110,23 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
 
   // --- DERIVED DATA FOR RESULTS ---
   const breakdown = useMemo(() => {
-      if (!selectedMatch) return { missing: [], extra: [], match: [], stats: { total: 0, percent: 0 } };
+      if (!selectedMatch) return { missing: [], extra: [], match: [], links: [], stats: { total: 0, percent: 0 } };
       
-      const missing = selectedMatch.details.filter(d => d.difference < 0).sort((a,b) => a.difference - b.difference); // Most missing first
-      const extra = selectedMatch.details.filter(d => d.difference > 0).sort((a,b) => b.difference - a.difference);   // Most extra first
+      // Filter out items that are suggested as aliases to avoid clutter in Missing/Extra tabs
+      const aliasPhysicals = new Set(selectedMatch.potentialAliases.map(a => a.physicalBarcode));
+      const aliasExpected = new Set(selectedMatch.potentialAliases.map(a => a.expectedBarcode));
+
+      const missing = selectedMatch.details.filter(d => d.difference < 0 && !aliasExpected.has(d.barcode)).sort((a,b) => a.difference - b.difference); 
+      const extra = selectedMatch.details.filter(d => d.difference > 0 && !aliasPhysicals.has(d.barcode)).sort((a,b) => b.difference - a.difference);   
       const match = selectedMatch.details.filter(d => d.difference === 0);
+      const links = selectedMatch.potentialAliases;
 
       // Calc exact fill rate (lines fully satisfied)
       const exactLines = match.length;
       const totalLines = selectedMatch.details.length; // Uses union of both sets
       const percent = totalLines > 0 ? (exactLines / totalLines) * 100 : 0;
 
-      return { missing, extra, match, stats: { total: totalLines, percent } };
+      return { missing, extra, match, links, stats: { total: totalLines, percent } };
   }, [selectedMatch]);
 
   // --- VIEW: UPLOAD ---
@@ -153,7 +183,120 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
   // --- VIEW: RESULTS DASHBOARD ---
   if (step === 'results' && selectedMatch) {
       
-      const activeList = activeTab === 'missing' ? breakdown.missing : (activeTab === 'extra' ? breakdown.extra : breakdown.match);
+      const renderContent = () => {
+          if (activeTab === 'links') {
+              if (breakdown.links.length === 0) {
+                  return (
+                    <div className="flex flex-col items-center justify-center h-64 text-slate-400">
+                        <CheckCircle2 className="w-12 h-12 mb-2 opacity-50" />
+                        <p className="text-sm font-bold">No se detectaron problemas de SKU.</p>
+                    </div>
+                  );
+              }
+              return (
+                  <div className="space-y-4">
+                      <div className="bg-indigo-50 border border-indigo-200 p-4 rounded-xl text-sm text-indigo-800 flex items-start gap-3">
+                          <Sparkles className="w-5 h-5 shrink-0" />
+                          <div>
+                              <span className="font-bold block mb-1">Detección Inteligente</span>
+                              Estos productos tienen códigos diferentes pero cantidades idénticas. Confirma el vínculo para corregir tu base de datos automáticamente.
+                          </div>
+                      </div>
+                      {breakdown.links.map((link, idx) => {
+                          const isLinked = linkedAliases.has(link.physicalBarcode);
+                          return (
+                            <div key={idx} className={`bg-white rounded-xl border shadow-sm overflow-hidden transition-all ${isLinked ? 'border-emerald-200 ring-2 ring-emerald-100' : 'border-indigo-100'}`}>
+                                <div className="flex items-stretch">
+                                    {/* Physical Side */}
+                                    <div className="flex-1 p-3 bg-slate-50">
+                                        <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Lo que contaste</div>
+                                        <div className="font-bold text-slate-900 text-sm mb-1">{link.physicalName}</div>
+                                        <div className="font-mono text-xs text-slate-500">{link.physicalBarcode}</div>
+                                    </div>
+                                    
+                                    {/* Connector */}
+                                    <div className="w-16 bg-indigo-50 flex flex-col items-center justify-center border-l border-r border-indigo-100 relative">
+                                        <div className="text-xl font-black text-indigo-600">{link.quantity}</div>
+                                        <div className="text-[9px] text-indigo-400 uppercase font-bold">Unidades</div>
+                                        <ArrowLeftRight className="w-4 h-4 text-indigo-400 absolute bottom-2" />
+                                    </div>
+
+                                    {/* Expected Side */}
+                                    <div className="flex-1 p-3 bg-white">
+                                        <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Lo que dice el Excel</div>
+                                        <div className="font-bold text-slate-900 text-sm mb-1">{link.expectedName}</div>
+                                        <div className="font-mono text-xs text-slate-500">{link.expectedBarcode}</div>
+                                    </div>
+                                </div>
+                                
+                                {/* Action Bar */}
+                                <div className="p-2 bg-slate-50 border-t border-slate-100 flex justify-end">
+                                    <button 
+                                        onClick={() => handleAcceptAlias(link)}
+                                        disabled={isLinked}
+                                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                                            isLinked 
+                                            ? 'bg-emerald-100 text-emerald-700 cursor-default' 
+                                            : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-200 active:scale-95'
+                                        }`}
+                                    >
+                                        {isLinked ? <Check className="w-4 h-4" /> : <Link className="w-4 h-4" />}
+                                        {isLinked ? 'Registrado en Base de Datos' : 'Vincular y Crear Registro'}
+                                    </button>
+                                </div>
+                            </div>
+                          );
+                      })}
+                  </div>
+              );
+          }
+
+          const activeList = activeTab === 'missing' ? breakdown.missing : (activeTab === 'extra' ? breakdown.extra : breakdown.match);
+          if (activeList.length === 0) {
+            return (
+                <div className="flex flex-col items-center justify-center h-64 text-slate-400">
+                    <CheckCircle2 className="w-12 h-12 mb-2 opacity-50" />
+                    <p className="text-sm font-bold">No hay items en esta categoría</p>
+                </div>
+            );
+          }
+
+          return (
+            <div className="space-y-3">
+                {activeList.map(row => (
+                    <div key={row.barcode} className={`bg-white p-4 rounded-xl border shadow-sm flex items-start gap-4 ${
+                        activeTab === 'missing' ? 'border-l-4 border-l-red-500' : 
+                        activeTab === 'extra' ? 'border-l-4 border-l-amber-500' : 
+                        'border-l-4 border-l-emerald-500'
+                    }`}>
+                        <div className="flex-1 min-w-0">
+                            <div className="font-bold text-slate-800 text-sm mb-1 leading-snug">{row.name}</div>
+                            <div className="flex items-center gap-2">
+                                <span className="font-mono text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-500 border border-slate-200">{row.barcode}</span>
+                            </div>
+                        </div>
+                        
+                        <div className="text-right shrink-0">
+                            <div className={`text-2xl font-black ${
+                                row.difference < 0 ? 'text-red-500' : 
+                                row.difference > 0 ? 'text-amber-500' : 'text-emerald-500'
+                            }`}>
+                                {row.difference > 0 ? '+' : ''}{row.difference}
+                            </div>
+                            <div className="text-[10px] text-slate-400 font-bold uppercase">
+                                {activeTab === 'missing' ? 'Faltan' : (activeTab === 'extra' ? 'Sobran' : 'Cuadra')}
+                            </div>
+                            {activeTab !== 'extra' && (
+                                <div className="text-[10px] text-slate-400 mt-1">
+                                    De {row.expectedQty} esperados
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                ))}
+            </div>
+          );
+      };
 
       return (
         <div className="flex flex-col h-[calc(100vh-64px)] bg-slate-50">
@@ -189,70 +332,41 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
                 </div>
 
                 {/* TABS */}
-                <div className="flex px-4 gap-1">
+                <div className="flex px-2 gap-1 overflow-x-auto no-scrollbar">
+                     <button 
+                        onClick={() => setActiveTab('links')}
+                        className={`min-w-[80px] flex-1 py-3 text-xs font-bold border-b-2 flex flex-col items-center justify-center gap-1 transition-colors ${activeTab === 'links' ? 'border-indigo-500 text-indigo-600 bg-indigo-50/50' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                    >
+                        <Repeat className="w-4 h-4" /> 
+                        <span>Alias ({breakdown.links.length})</span>
+                    </button>
                     <button 
                         onClick={() => setActiveTab('missing')}
-                        className={`flex-1 py-3 text-xs font-bold border-b-2 flex items-center justify-center gap-2 transition-colors ${activeTab === 'missing' ? 'border-red-500 text-red-600 bg-red-50/50' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                        className={`min-w-[80px] flex-1 py-3 text-xs font-bold border-b-2 flex flex-col items-center justify-center gap-1 transition-colors ${activeTab === 'missing' ? 'border-red-500 text-red-600 bg-red-50/50' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
                     >
-                        <PackageMinus className="w-4 h-4" /> Faltantes ({breakdown.missing.length})
+                        <PackageMinus className="w-4 h-4" /> 
+                        <span>Faltan ({breakdown.missing.length})</span>
                     </button>
                     <button 
                         onClick={() => setActiveTab('extra')}
-                        className={`flex-1 py-3 text-xs font-bold border-b-2 flex items-center justify-center gap-2 transition-colors ${activeTab === 'extra' ? 'border-amber-500 text-amber-600 bg-amber-50/50' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                        className={`min-w-[80px] flex-1 py-3 text-xs font-bold border-b-2 flex flex-col items-center justify-center gap-1 transition-colors ${activeTab === 'extra' ? 'border-amber-500 text-amber-600 bg-amber-50/50' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
                     >
-                        <PackagePlus className="w-4 h-4" /> Sobrantes ({breakdown.extra.length})
+                        <PackagePlus className="w-4 h-4" /> 
+                        <span>Sobran ({breakdown.extra.length})</span>
                     </button>
                     <button 
                         onClick={() => setActiveTab('match')}
-                        className={`flex-1 py-3 text-xs font-bold border-b-2 flex items-center justify-center gap-2 transition-colors ${activeTab === 'match' ? 'border-emerald-500 text-emerald-600 bg-emerald-50/50' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                        className={`min-w-[80px] flex-1 py-3 text-xs font-bold border-b-2 flex flex-col items-center justify-center gap-1 transition-colors ${activeTab === 'match' ? 'border-emerald-500 text-emerald-600 bg-emerald-50/50' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
                     >
-                        <PackageCheck className="w-4 h-4" /> OK ({breakdown.match.length})
+                        <PackageCheck className="w-4 h-4" /> 
+                        <span>OK ({breakdown.match.length})</span>
                     </button>
                 </div>
             </div>
 
             {/* CONTENT LIST */}
             <div className="flex-1 overflow-y-auto p-4 bg-slate-100">
-                {activeList.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-64 text-slate-400">
-                        <CheckCircle2 className="w-12 h-12 mb-2 opacity-50" />
-                        <p className="text-sm font-bold">No hay items en esta categoría</p>
-                    </div>
-                ) : (
-                    <div className="space-y-3">
-                        {activeList.map(row => (
-                            <div key={row.barcode} className={`bg-white p-4 rounded-xl border shadow-sm flex items-start gap-4 ${
-                                activeTab === 'missing' ? 'border-l-4 border-l-red-500' : 
-                                activeTab === 'extra' ? 'border-l-4 border-l-amber-500' : 
-                                'border-l-4 border-l-emerald-500'
-                            }`}>
-                                <div className="flex-1 min-w-0">
-                                    <div className="font-bold text-slate-800 text-sm mb-1 leading-snug">{row.name}</div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-mono text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-500 border border-slate-200">{row.barcode}</span>
-                                    </div>
-                                </div>
-                                
-                                <div className="text-right shrink-0">
-                                    <div className={`text-2xl font-black ${
-                                        row.difference < 0 ? 'text-red-500' : 
-                                        row.difference > 0 ? 'text-amber-500' : 'text-emerald-500'
-                                    }`}>
-                                        {row.difference > 0 ? '+' : ''}{row.difference}
-                                    </div>
-                                    <div className="text-[10px] text-slate-400 font-bold uppercase">
-                                        {activeTab === 'missing' ? 'Faltan' : (activeTab === 'extra' ? 'Sobran' : 'Cuadra')}
-                                    </div>
-                                    {activeTab !== 'extra' && (
-                                        <div className="text-[10px] text-slate-400 mt-1">
-                                            De {row.expectedQty} esperados
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
+                {renderContent()}
             </div>
         </div>
       );
@@ -334,6 +448,11 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
                                     <span className="bg-slate-100 px-2 py-1 rounded-lg text-xs font-bold text-slate-600 flex items-center gap-1">
                                         <PackagePlus className="w-3 h-3" /> Sobran {match.details.filter(d => d.difference > 0).length}
                                     </span>
+                                     {match.potentialAliases.length > 0 && (
+                                        <span className="bg-indigo-50 px-2 py-1 rounded-lg text-xs font-bold text-indigo-600 flex items-center gap-1 border border-indigo-100">
+                                            <Repeat className="w-3 h-3" /> {match.potentialAliases.length} Alias
+                                        </span>
+                                     )}
                                 </div>
                             </button>
                         ))
