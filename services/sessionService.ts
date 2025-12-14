@@ -4,7 +4,7 @@ import { ScanRecord, CountingSession } from '../types';
 import { generateUUID, sanitizeBarcode } from './utils';
 
 // ==========================================
-// SESSION MANAGEMENT (Formerly in storage.ts)
+// SESSION MANAGEMENT
 // ==========================================
 
 export const createSession = async (erpOrder: string, logisticsLabel: string): Promise<CountingSession> => {
@@ -122,10 +122,18 @@ export const markDraftsAsSynced = async (sessionIds: string[]) => {
 // ==========================================
 
 export const updateSessionStats = async (sessionId: string) => {
-  const scans = await db.scans.where('sessionId').equals(sessionId).toArray();
-  const totalUnits = scans.reduce((acc, s) => acc + s.quantity, 0);
-  const uniqueSkus = new Set(scans.map(s => s.barcode)).size;
-  await db.sessions.update(sessionId, { totalUnits, totalSKUs: uniqueSkus });
+  // PERFORMANCE FIX: Use iterate() instead of toArray() to avoid memory spikes with large sessions.
+  // This approach is O(N) but doesn't allocate objects for every row, making it faster on mobile.
+  
+  let totalUnits = 0;
+  const uniqueSkus = new Set<string>();
+
+  await db.scans.where('sessionId').equals(sessionId).each(scan => {
+      totalUnits += scan.quantity;
+      uniqueSkus.add(scan.barcode);
+  });
+
+  await db.sessions.update(sessionId, { totalUnits, totalSKUs: uniqueSkus.size });
 };
 
 export const getUnsyncedScans = async (erpOrder: string): Promise<ScanRecord[]> => {
@@ -204,6 +212,7 @@ export const deleteSessionItem = async (sessionId: string, barcode: string) => {
 export const adjustSessionItemQuantity = async (sessionId: string, barcode: string, delta: number) => {
   const cleanCode = sanitizeBarcode(barcode);
   if (delta > 0) { 
+      // Reuse existing logic, but now addScan updates stats efficiently
       const lastScan = await db.scans.where('[sessionId+barcode]').equals([sessionId, cleanCode]).last(); 
       await addScan(sessionId, cleanCode, delta, lastScan?.mm, lastScan?.yyyy, 0);
   } else {

@@ -171,15 +171,28 @@ export const useScanner = (
         if (!cleanCode) { triggerFeedback('error'); return; }
     
         try {
-            const existingScan = await db.scans.where('[sessionId+barcode]').equals([session.id, cleanCode]).first();
+            // QA FIX: Integrity check for multiple batches.
+            // We want to find the MOST RECENTLY MODIFIED scan for this product in this session.
+            // This ensures that if the user has 2 lots (Jan and Mar), and they scan again,
+            // we increment the one they were just working on, not the oldest one.
+            const existingScan = await db.scans
+                .where('[sessionId+barcode]')
+                .equals([session.id, cleanCode])
+                .reverse() // Crucial: Look at the newest first (LIFO)
+                .sortBy('timestamp')
+                .then(results => results[0]);
+
             if (existingScan) {
+                // We found a match, increment that specific batch/date
                 await completeScan(cleanCode, existingScan.mm, existingScan.yyyy);
             } else {
+                // New item for this session
                 setPendingScanCode(cleanCode);
                 setShowExpirationModal(true);
                 SoundFX.play('success');
             }
         } catch (err) {
+            console.error(err);
             triggerFeedback('error');
         }
     };
