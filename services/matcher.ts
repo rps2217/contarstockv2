@@ -2,7 +2,7 @@
 import * as XLSX from 'xlsx';
 import { db } from '../db';
 import { ExpectedOrder, MatchResult, ConsolidatedItem } from '../types';
-import { sanitizeBarcode, generateUUID } from './utils';
+import { sanitizeBarcode, generateUUID, normalizeSku } from './utils';
 
 /**
  * Imports an Excel file containing pending orders.
@@ -21,16 +21,22 @@ export const importExpectedOrders = async (file: File): Promise<number> => {
 
         if (json.length < 2) throw new Error("El archivo parece estar vacío.");
 
-        const headers = (json[0] as string[]).map(h => String(h).toUpperCase());
+        const headers = (json[0] as string[]).map(h => String(h).toUpperCase().trim());
         
-        const idIndex = 0; 
-        const skuIndex = headers.findIndex(h => h.includes('COD') || h.includes('SKU') || h.includes('ITEM') || h.includes('BARRAS'));
-        const descIndex = headers.findIndex(h => h.includes('DESC') || h.includes('NOM') || h.includes('PROD'));
-        const qtyIndex = headers.findIndex(h => h.includes('CANT') || h.includes('QTY') || h.includes('UNID') || h.includes('SOLICITADO'));
+        // INTELLIGENT COLUMN DETECTION
+        // Priority: "TRASPASO" -> "AGRUPADOR" -> "ID" -> First Column
+        let idIndex = headers.findIndex(h => h.includes('TRASPASO') || h.includes('AGRUPADOR') || h.includes('DOC') || h.includes('NUMERO'));
+        if (idIndex === -1) idIndex = 0; // Fallback to first column
+
+        const skuIndex = headers.findIndex(h => h.includes('COD') || h.includes('SKU') || h.includes('ITEM') || h.includes('BARRAS') || h.includes('MATERIAL'));
+        const descIndex = headers.findIndex(h => h.includes('DESC') || h.includes('NOM') || h.includes('PROD') || h.includes('TEXTO'));
+        const qtyIndex = headers.findIndex(h => h.includes('CANT') || h.includes('QTY') || h.includes('UNID') || h.includes('SOLICITADO') || h.includes('PENDIENTE'));
 
         if (skuIndex === -1 || qtyIndex === -1) {
-          throw new Error("No se encontraron columnas de 'CÓDIGO' o 'CANTIDAD' en el Excel.");
+          throw new Error("No se encontraron columnas de 'CÓDIGO' o 'CANTIDAD' en el Excel. Verifique los encabezados.");
         }
+
+        console.log(`[Importer] Mapped Columns: ID=${idIndex}, SKU=${skuIndex}, QTY=${qtyIndex}`);
 
         const groups = new Map<string, ExpectedOrder>();
 
@@ -38,8 +44,10 @@ export const importExpectedOrders = async (file: File): Promise<number> => {
           const row = json[i] as any[];
           if (!row || row.length === 0) continue;
 
+          // Robust reading
           const internalId = String(row[idIndex] || 'SIN_ID').trim();
-          const barcode = sanitizeBarcode(String(row[skuIndex] || ''));
+          const rawSku = String(row[skuIndex] || '');
+          const barcode = sanitizeBarcode(rawSku);
           const name = String(row[descIndex] || 'Producto Desconocido').trim();
           const qty = Number(row[qtyIndex] || 0);
 
@@ -58,6 +66,7 @@ export const importExpectedOrders = async (file: File): Promise<number> => {
 
           const group = groups.get(internalId)!;
           
+          // Check for existing item in group (sum duplicates in Excel)
           const existingItem = group.items.find(item => item.barcode === barcode);
           if (existingItem) {
             existingItem.expectedQty += qty;
@@ -82,31 +91,41 @@ export const importExpectedOrders = async (file: File): Promise<number> => {
 };
 
 /**
- * OPTIMIZED MATCHING ALGORITHM
- * Uses Hash Maps for O(1) lookups instead of Array.find O(N).
- * Significantly faster for large orders.
+ * OPTIMIZED MATCHING ALGORITHM (FINGERPRINTING)
+ * Calculates match based on content intersection.
+ * Handles "Fuzzy SKU" matching (ignores leading zeros).
  */
 export const calculateOrderMatch = (physicalItems: ConsolidatedItem[], order: ExpectedOrder): MatchResult => {
-  // 1. Create Maps for O(1) access
-  const physicalMap = new Map(physicalItems.map(i => [i.barcode, { qty: i.totalQuantity, name: i.productName }]));
-  const expectedMap = new Map(order.items.map(i => [i.barcode, { qty: i.expectedQty, name: i.name }]));
+  
+  // 1. Build Physical Map (Key = Normalized SKU)
+  const physicalMap = new Map<string, { qty: number, originalSku: string }>();
+  physicalItems.forEach(i => {
+      physicalMap.set(normalizeSku(i.barcode), { qty: i.totalQuantity, originalSku: i.barcode });
+  });
 
-  // 2. Identify all unique barcodes involved
-  const allSkus = new Set([...physicalMap.keys(), ...expectedMap.keys()]);
+  // 2. Build Expected Map (Key = Normalized SKU)
+  const expectedMap = new Map<string, { qty: number, name: string, originalSku: string }>();
+  order.items.forEach(i => {
+      expectedMap.set(normalizeSku(i.barcode), { qty: i.expectedQty, name: i.name, originalSku: i.barcode });
+  });
+
+  // 3. Union of all Keys (Normalized)
+  const allKeys = new Set([...physicalMap.keys(), ...expectedMap.keys()]);
 
   let matchesCount = 0;
   const details = [];
 
-  // 3. Single pass comparison
-  for (const sku of allSkus) {
-    const physData = physicalMap.get(sku);
-    const expData = expectedMap.get(sku);
+  // 4. Comparison Pass
+  for (const key of allKeys) {
+    const physData = physicalMap.get(key);
+    const expData = expectedMap.get(key);
 
     const physicalQty = physData?.qty || 0;
     const expectedQty = expData?.qty || 0;
     
-    // Fallback name logic: Expected name preferred, then physical name, then Unknown
-    const name = expData?.name || physData?.name || 'Desconocido';
+    // Prefer the Expected SKU for display if available (usually cleaner in Excel), else Physical
+    const displaySku = expData?.originalSku || physData?.originalSku || key;
+    const name = expData?.name || 'Producto Desconocido';
 
     const diff = physicalQty - expectedQty;
 
@@ -115,7 +134,7 @@ export const calculateOrderMatch = (physicalItems: ConsolidatedItem[], order: Ex
     }
 
     details.push({
-      barcode: sku,
+      barcode: displaySku,
       name,
       physicalQty,
       expectedQty,
@@ -123,20 +142,27 @@ export const calculateOrderMatch = (physicalItems: ConsolidatedItem[], order: Ex
     });
   }
 
-  // 4. Scoring Logic
+  // 5. Scoring Logic
   const physicalTotalQty = physicalItems.reduce((acc, i) => acc + i.totalQuantity, 0);
-  const totalUniqueSKUs = allSkus.size;
+  
+  // SKUs in common
+  const totalUniqueSKUs = allKeys.size;
   const skuOverlapRatio = totalUniqueSKUs > 0 ? matchesCount / totalUniqueSKUs : 0;
 
+  // Quantity Deviation
   const totalDiff = details.reduce((acc, d) => acc + Math.abs(d.difference), 0);
   const maxQty = Math.max(physicalTotalQty, order.totalExpectedUnits);
+  
+  // Accuracy: 1.0 means perfect match (0 diff).
   const qtyAccuracy = maxQty > 0 ? Math.max(0, 1 - (totalDiff / maxQty)) : 0;
 
-  const matchScore = (skuOverlapRatio * 60) + (qtyAccuracy * 40);
+  // Weighted Score: 40% SKU overlap + 60% Quantity Accuracy
+  // We prioritize quantity accuracy because if you have 100 items and get 99 right, that's a good match
+  const matchScore = ((skuOverlapRatio * 40) + (qtyAccuracy * 60)) * 100;
 
   let status: 'exact' | 'partial' | 'mismatch' = 'mismatch';
-  if (matchScore > 99) status = 'exact';
-  else if (matchScore > 40) status = 'partial';
+  if (matchScore > 98) status = 'exact';
+  else if (matchScore > 50) status = 'partial';
 
   return {
       expectedOrder: order,
@@ -162,11 +188,14 @@ export const findMatches = async (physicalItems: ConsolidatedItem[]): Promise<Ma
   for (const order of expectedOrders) {
     const result = calculateOrderMatch(physicalItems, order);
     
-    // Filter out completely irrelevant orders to keep UI clean
-    if (result.matchScore > 10) { 
+    // Filter logic:
+    // If the physical count is very small (e.g. 1 item), only show very high probability matches.
+    // If the physical count is large, we can be more lenient.
+    if (result.matchScore > 15) { 
         results.push(result);
     }
   }
 
-  return results.sort((a, b) => b.matchScore - a.matchScore);
+  // Return top 10 matches sorted by score
+  return results.sort((a, b) => b.matchScore - a.matchScore).slice(0, 10);
 };

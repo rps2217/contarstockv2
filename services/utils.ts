@@ -32,6 +32,19 @@ export const sanitizeBarcode = (code: string): string => {
 };
 
 /**
+ * INTELLIGENT SKU NORMALIZER
+ * Used for loose matching when strict equality fails.
+ * Removes leading zeros to match "000123" with "123".
+ */
+export const normalizeSku = (sku: string): string => {
+    if (!sku) return "";
+    // Remove all non-alphanumeric chars first to be safe
+    const clean = sku.replace(/[^a-zA-Z0-9]/g, "");
+    // Remove leading zeros
+    return clean.replace(/^0+/, "");
+};
+
+/**
  * ULTRA-AGGRESSIVE NORMALIZATION FOR MATCHING
  * Used to compare ERP Orders and Labels between Local DB and Cloud.
  * 1. Converts to String.
