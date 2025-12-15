@@ -1,12 +1,13 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { X, Sparkles, Keyboard, History as HistoryIcon, ArrowLeft, PackageCheck } from 'lucide-react';
+import { X, Sparkles, Keyboard, History as HistoryIcon, ArrowLeft, PackageCheck, Camera } from 'lucide-react';
 import { CountingSession } from '../types';
 import * as sessionService from '../services/sessionService'; // Updated Import
 import { sanitizeBarcode } from '../services/utils';
 import { db } from '../db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { NumericKeypad } from './NumericKeypad';
+import { CameraScanner } from './CameraScanner';
 
 interface StartSessionModalProps {
   isOpen: boolean;
@@ -25,6 +26,9 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
   // Keypad State
   const [showKeypad, setShowKeypad] = useState(true);
   const [activeKeypadField, setActiveKeypadField] = useState<'label' | 'erp'>('label');
+  
+  // Camera State
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
 
   // Lazy Linking State
   const [draftSessionId, setDraftSessionId] = useState<string | null>(null);
@@ -115,6 +119,20 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
           setActiveKeypadField('erp');
       }
   };
+  
+  const handleCameraScan = (code: string) => {
+      const clean = sanitizeBarcode(code);
+      if (clean) {
+          setLabelId(clean);
+          setIsCameraOpen(false);
+          // Auto-switch focus to ERP field to speed up workflow
+          setTimeout(() => {
+              setActiveKeypadField('erp');
+              // Note: We can't programmatically open the virtual keyboard easily, 
+              // but we set the active field for our custom keypad.
+          }, 500);
+      }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
@@ -178,21 +196,31 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
                 {/* INPUT 1: LOGISTICS LABEL */}
                 <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">N° de Correo <span className="text-red-500">*</span></label>
-                    <input 
-                        type="text" 
-                        inputMode="numeric"
-                        className={`w-full p-3.5 font-bold text-xl rounded-xl outline-none transition-all border-2 placeholder:text-slate-300 placeholder:font-normal placeholder:text-base ${
-                            activeKeypadField === 'label' 
-                            ? 'border-blue-600 bg-white text-slate-900 ring-2 ring-blue-100' 
-                            : 'border-slate-200 bg-slate-50 text-slate-900 hover:border-slate-300'
-                        }`}
-                        placeholder="Ej: 12345" 
-                        value={labelId} 
-                        onFocus={() => setActiveKeypadField('label')}
-                        onChange={(e) => handleNumericInputChange(setLabelId, e.target.value)}
-                        onKeyDown={handleLabelKeyDown} 
-                        autoFocus
-                    />
+                    <div className="flex gap-2">
+                        <input 
+                            type="text" 
+                            inputMode="numeric"
+                            className={`w-full p-3.5 font-bold text-xl rounded-xl outline-none transition-all border-2 placeholder:text-slate-300 placeholder:font-normal placeholder:text-base ${
+                                activeKeypadField === 'label' 
+                                ? 'border-blue-600 bg-white text-slate-900 ring-2 ring-blue-100' 
+                                : 'border-slate-200 bg-slate-50 text-slate-900 hover:border-slate-300'
+                            }`}
+                            placeholder="Ej: 12345" 
+                            value={labelId} 
+                            onFocus={() => setActiveKeypadField('label')}
+                            onChange={(e) => handleNumericInputChange(setLabelId, e.target.value)}
+                            onKeyDown={handleLabelKeyDown} 
+                            autoFocus
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setIsCameraOpen(true)}
+                            className="shrink-0 w-14 rounded-xl flex items-center justify-center transition-all border-2 bg-slate-100 text-slate-500 border-slate-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200"
+                            title="Escanear Etiqueta"
+                        >
+                            <Camera className="w-6 h-6" />
+                        </button>
+                    </div>
                 </div>
 
                 {/* DRAFT FOUND ALERT */}
@@ -304,6 +332,14 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
                 </button>
             </div>
         </div>
+
+        {/* Camera Overlay */}
+        {isCameraOpen && (
+            <CameraScanner 
+                onScan={handleCameraScan} 
+                onClose={() => setIsCameraOpen(false)} 
+            />
+        )}
     </div>
   );
 };
