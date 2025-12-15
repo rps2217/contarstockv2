@@ -1,6 +1,6 @@
 
 import React, { useMemo, useRef, useEffect, useState } from 'react';
-import { RotateCcw, Save, XCircle, Check, Keyboard, X } from 'lucide-react';
+import { RotateCcw, Save, XCircle, Check, Keyboard, X, History as HistoryIcon, ArrowLeft } from 'lucide-react';
 import { CountingSession } from '../types';
 import { ExpirationModal } from './ExpirationModal';
 import { useScanner } from '../hooks/useScanner';
@@ -13,6 +13,7 @@ import { ScannerFeedbackLayer } from './scanner/ScannerFeedbackLayer';
 import { ScannerHeader } from './scanner/ScannerHeader';
 import { ScannerHero } from './scanner/ScannerHero';
 import { ScannerControls } from './scanner/ScannerControls';
+import { ScanItem } from './ScanItem';
 
 interface ScannerProps {
   session: CountingSession;
@@ -86,9 +87,9 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
   }, [state.manualMode]);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col text-white overflow-hidden font-sans">
+    <div className="fixed inset-0 z-50 flex flex-col text-white overflow-hidden font-sans bg-slate-950">
       
-      {/* 1. VISUAL FEEDBACK LAYER */}
+      {/* 1. VISUAL FEEDBACK LAYER (Background) */}
       <ScannerFeedbackLayer 
         feedback={state.feedback} 
         isIncident={!!data.lastScan?.isIncident} 
@@ -102,44 +103,86 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
         onPause={() => state.setShowConfirmModal(true)}
       />
 
-      {/* 3. MAIN CONTENT AREA */}
-      <div className="flex-1 flex flex-col relative min-h-0 z-10">
+      {/* 3. MAIN CONTENT GRID (Responsive: 1 Col Mobile, 2 Cols Desktop) */}
+      <div className="flex-1 min-h-0 relative z-10 grid grid-cols-1 lg:grid-cols-12">
         
-        {/* CENTER DISPLAY */}
-        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-            <ScannerHero 
-                lastScan={data.lastScan}
-                activeProductStats={data.activeProductStats}
-                feedback={state.feedback}
-                onRegisterPending={actions.handleRegisterPending}
-                onToggleIncident={actions.handleToggleIncident}
-            />
+        {/* LEFT PANEL: HERO & CONTROLS (70% on Desktop) */}
+        <div className="lg:col-span-8 flex flex-col justify-center items-center relative p-6">
+            
+            {/* Center Display */}
+            <div className="flex-1 flex flex-col items-center justify-center text-center w-full max-w-3xl">
+                <ScannerHero 
+                    lastScan={data.lastScan}
+                    activeProductStats={data.activeProductStats}
+                    feedback={state.feedback}
+                    onRegisterPending={actions.handleRegisterPending}
+                    onToggleIncident={actions.handleToggleIncident}
+                />
+            </div>
+
+            {/* Floating Undo */}
+            {state.lastScanId && !state.isMultiplierOpen && !state.manualMode && !state.isCameraOpen && (
+                <div className="absolute bottom-24 lg:bottom-32 flex justify-center z-30 pointer-events-none animate-in slide-in-from-bottom-4 fade-in w-full">
+                    <button 
+                        onClick={actions.handleUndoLastScan}
+                        className="pointer-events-auto bg-slate-800/90 backdrop-blur-md border border-slate-700 hover:bg-red-900/90 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 font-bold transition-all active:scale-95 group"
+                    >
+                        <RotateCcw className="w-5 h-5 text-slate-400 group-hover:text-white group-hover:-rotate-180 transition-all duration-300" />
+                        <span>Deshacer Último</span>
+                    </button>
+                </div>
+            )}
+
+            {/* Footer Controls */}
+            <div className="w-full max-w-md">
+                <ScannerControls 
+                    sessionStats={data.sessionStats}
+                    multiplier={state.multiplier}
+                    scansPerMinute={scansPerMinute}
+                    showSpeedometer={settings.speedometerEnabled}
+                    hasCameraSupport={hasCameraSupport}
+                    onCameraClick={handleCameraClick}
+                    onMultiplierClick={() => state.setIsMultiplierOpen(true)}
+                    onManualClick={() => state.setManualMode(true)}
+                />
+            </div>
         </div>
 
-        {/* FLOATING UNDO ACTION */}
-        {state.lastScanId && !state.isMultiplierOpen && !state.manualMode && !state.isCameraOpen && (
-            <div className="absolute bottom-24 left-0 right-0 flex justify-center z-30 pointer-events-none animate-in slide-in-from-bottom-4 fade-in">
-                <button 
-                    onClick={actions.handleUndoLastScan}
-                    className="pointer-events-auto bg-slate-800/90 backdrop-blur-md border border-slate-700 hover:bg-red-900/90 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 font-bold transition-all active:scale-95 group"
-                >
-                    <RotateCcw className="w-5 h-5 text-slate-400 group-hover:text-white group-hover:-rotate-180 transition-all duration-300" />
-                    <span>Deshacer Último</span>
-                </button>
+        {/* RIGHT PANEL: LIVE HISTORY (30% on Desktop, Hidden on Mobile) */}
+        <div className="hidden lg:flex lg:col-span-4 bg-slate-900/50 border-l border-slate-800 flex-col backdrop-blur-sm">
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/30">
+                <h3 className="font-bold text-slate-400 text-sm uppercase tracking-wider flex items-center gap-2">
+                    <HistoryIcon className="w-4 h-4" /> Historial en Vivo
+                </h3>
+                <span className="text-xs bg-slate-800 text-slate-400 px-2 py-1 rounded-lg font-mono">
+                    {data.recentScans?.length || 0} registros
+                </span>
             </div>
-        )}
+            
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar scroll-smooth">
+                {data.recentScans?.map((scan, idx) => {
+                    const isLatest = idx === 0;
+                    return (
+                        <ScanItem 
+                            key={scan.id} 
+                            scan={scan} 
+                            productName={actions.getProductName(scan.barcode)} 
+                            isLatest={isLatest}
+                            onDelete={actions.handleDeleteScan}
+                            onQuantityChange={actions.handleQuantityChange}
+                            onToggleIncident={actions.handleToggleIncident}
+                        />
+                    );
+                })}
+                {(!data.recentScans || data.recentScans.length === 0) && (
+                    <div className="text-center py-12 opacity-30">
+                        <div className="w-12 h-12 border-2 border-dashed border-slate-500 rounded-xl mx-auto mb-2"></div>
+                        <p className="text-sm">Esperando escaneo...</p>
+                    </div>
+                )}
+            </div>
+        </div>
 
-        {/* 4. FOOTER CONTROLS */}
-        <ScannerControls 
-            sessionStats={data.sessionStats}
-            multiplier={state.multiplier}
-            scansPerMinute={scansPerMinute}
-            showSpeedometer={settings.speedometerEnabled}
-            hasCameraSupport={hasCameraSupport}
-            onCameraClick={handleCameraClick}
-            onMultiplierClick={() => state.setIsMultiplierOpen(true)}
-            onManualClick={() => state.setManualMode(true)}
-        />
       </div>
 
       {/* --- MODALS & OVERLAYS --- */}
@@ -153,7 +196,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
 
       {state.isMultiplierOpen && (
           <div className="absolute inset-0 z-[60] flex flex-col justify-end bg-black/80 backdrop-blur-md animate-in fade-in">
-              <div className="bg-slate-900 border-t border-slate-700 rounded-t-3xl shadow-2xl p-4 w-full animate-in slide-in-from-bottom-full">
+              <div className="bg-slate-900 border-t border-slate-700 rounded-t-3xl shadow-2xl p-4 w-full animate-in slide-in-from-bottom-full max-w-lg mx-auto lg:rounded-3xl lg:border lg:mb-10">
                   <div className="flex justify-between items-center mb-4 px-2">
                       <div className="flex flex-col">
                           <span className="text-slate-400 text-xs font-bold uppercase tracking-wider">Multiplicador de Escaneo</span>

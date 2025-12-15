@@ -14,7 +14,8 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { InstallPrompt } from './components/InstallPrompt';
 import { NetworkStatus } from './components/NetworkStatus'; 
 import { SyncManagerUI } from './components/SyncManagerUI'; 
-import * as sessionService from './services/sessionService'; // Updated Import
+import { Sidebar } from './components/Sidebar'; // New Sidebar Import
+import * as sessionService from './services/sessionService'; 
 import { getSettings } from './services/settings';
 import { db } from './db';
 import { SYNC_ENGINE_VERSION, processSyncQueue } from './services/appsheet';
@@ -58,7 +59,7 @@ const AppContent: React.FC = () => {
     const restoreSession = async () => {
         try {
             if (!(db as any).isOpen()) await (db as any).open();
-            const current = await sessionService.getActiveSession(); // Updated usage
+            const current = await sessionService.getActiveSession(); 
             if (current) {
                 setActiveSession(current);
                 if (auth === 'true') setView('counting');
@@ -106,7 +107,7 @@ const AppContent: React.FC = () => {
 
   const handleCloseSession = async () => {
     if (activeSession) {
-      await sessionService.closeSession(activeSession.id); // Updated usage
+      await sessionService.closeSession(activeSession.id); 
       setActiveSession(null);
       setView('reports');
     }
@@ -114,7 +115,7 @@ const AppContent: React.FC = () => {
 
   const handleDiscardSession = async () => {
     if (activeSession) {
-        await sessionService.deleteSession(activeSession.id); // Updated usage
+        await sessionService.deleteSession(activeSession.id); 
         setActiveSession(null);
         setView('reports');
     }
@@ -168,9 +169,11 @@ const AppContent: React.FC = () => {
   }
 
   // --- APP RENDER ---
+  
+  // Fullscreen Modes (No Sidebar)
   if (view === 'counting' && activeSession) {
     return (
-      <div className="h-screen bg-slate-950">
+      <div className="h-screen bg-slate-950 overflow-hidden">
         <NetworkStatus />
         <Scanner 
             session={activeSession} 
@@ -181,10 +184,9 @@ const AppContent: React.FC = () => {
     );
   }
 
-  // NOTE: Reception View is fullscreen, handles its own layout
   if (view === 'reception') {
       return (
-          <div className="h-screen bg-slate-900">
+          <div className="h-screen bg-slate-900 overflow-hidden">
               <NetworkStatus />
               <Reception 
                 onBack={() => setView('dashboard')} 
@@ -194,19 +196,21 @@ const AppContent: React.FC = () => {
       );
   }
 
+  // Standard Layout with Sidebar
   return (
-    <div className={`min-h-screen font-sans ${themeClass} transition-colors duration-300`}>
+    <div className={`min-h-screen font-sans ${themeClass} transition-colors duration-300 flex`}>
       <NetworkStatus />
       
-      {/* HEADER NAV */}
-      <DesktopNav 
+      {/* DESKTOP SIDEBAR */}
+      <Sidebar 
         view={view} 
         setView={setView} 
         settings={settings} 
         pendingCount={pendingSyncCount} 
       />
       
-      <main className="w-full animate-in fade-in zoom-in-95 duration-300">
+      {/* MAIN CONTENT AREA */}
+      <main className="flex-1 md:ml-64 w-full animate-in fade-in zoom-in-95 duration-300 min-h-screen relative">
         {view === 'dashboard' && <Dashboard onNavigate={setView} />}
         {view === 'database' && <Database onBack={() => setView('dashboard')} />}
         {view === 'reports' && <Reports onSessionStart={handleSessionStart} onNavigate={setView} />}
@@ -290,50 +294,6 @@ const MobileNav = memo(({ view, setView, settings }: NavProps) => {
   );
 });
 
-const DesktopNav = memo(({ view, setView, settings, pendingCount }: NavProps) => {
-  const t = settings.theme;
-  
-  let navClass = "bg-white border-slate-200 text-slate-600";
-  if (t === 'contrast') navClass = "bg-black border-yellow-400 text-yellow-400";
-  else if (t === 'dark') navClass = "bg-slate-900 border-slate-800 text-slate-200";
-  else if (t === 'navy') navClass = "bg-[#151f32] border-[#1e293b] text-slate-400";
-  else if (t === 'warm') navClass = "bg-[#fcf8f2] border-[#e7e0d3] text-[#57534e]";
-
-  const logoBg = t === 'contrast' ? 'bg-yellow-400 text-black' : (t === 'warm' ? 'bg-[#57534e] text-[#fcf8f2]' : 'bg-slate-900 text-white');
-
-  return (
-    <nav className={`hidden md:flex h-16 border-b items-center justify-between px-6 lg:px-12 sticky top-0 z-40 ${navClass}`}>
-      <div 
-        className="font-bold text-xl flex items-center gap-2.5 cursor-pointer tracking-tight"
-        onClick={() => setView('dashboard')}
-      >
-        <div className={`${logoBg} p-1.5 rounded-lg`}>
-            <Box className="w-5 h-5" /> 
-        </div>
-        LogiCount <span className="opacity-50 font-normal">Pro</span>
-      </div>
-      <div className="flex gap-2">
-        <DesktopNavButton active={view === 'dashboard'} onClick={() => setView('dashboard')} label="Dashboard" icon={<LayoutGrid className="w-4 h-4" />} theme={settings.theme} />
-        <DesktopNavButton active={view === 'database'} onClick={() => setView('database')} label="Base de Datos" icon={<DbIcon className="w-4 h-4" />} theme={settings.theme} />
-        <DesktopNavButton active={view === 'reports' || view === 'consolidated'} onClick={() => setView('reports')} label="Historial" icon={<History className="w-4 h-4" />} theme={settings.theme} />
-        
-        {/* DESKTOP SYNC BUTTON -> Navigates to Sync View */}
-        <button 
-            onClick={() => setView('sync')}
-            className={`ml-4 px-3 py-1.5 rounded-lg flex items-center gap-2 text-sm font-bold transition-all border ${
-                pendingCount && pendingCount > 0 
-                ? 'bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100' 
-                : (view === 'sync' ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100')
-            }`}
-        >
-            {pendingCount && pendingCount > 0 ? <CloudOff className="w-4 h-4" /> : <Cloud className="w-4 h-4" />}
-            <span>{pendingCount && pendingCount > 0 ? `${pendingCount} Pendientes` : 'Sincronizado'}</span>
-        </button>
-      </div>
-    </nav>
-  );
-});
-
 const NavButton = ({ active, onClick, icon, label, theme }: any) => {
     let activeColor = 'text-blue-600';
     let inactiveColor = 'text-slate-400';
@@ -376,26 +336,6 @@ const NavButton = ({ active, onClick, icon, label, theme }: any) => {
             <span className={`text-[10px] font-bold tracking-wide transition-opacity duration-300 ${active ? 'opacity-100' : 'opacity-70'}`}>
                 {label}
             </span>
-        </button>
-    );
-};
-
-const DesktopNavButton = ({ active, onClick, label, icon, theme }: any) => {
-    let baseClass = "px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ";
-    if (theme === 'contrast') {
-        baseClass += active ? "bg-yellow-400 text-black" : "text-yellow-400 hover:bg-yellow-900/30";
-    } else if (theme === 'warm') {
-        baseClass += active ? "bg-[#e7e0d3] text-[#44403c]" : "text-[#78716c] hover:bg-[#f5efe6]";
-    } else if (theme === 'navy') {
-        baseClass += active ? "bg-[#1e293b] text-sky-400" : "text-slate-400 hover:bg-[#1e293b] hover:text-slate-200";
-    } else {
-        baseClass += active ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:text-slate-900 hover:bg-slate-50";
-    }
-
-    return (
-        <button onClick={onClick} className={baseClass}>
-            {icon}
-            {label}
         </button>
     );
 };
