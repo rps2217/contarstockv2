@@ -11,12 +11,14 @@ export { SYNC_ENGINE_VERSION, SHEET_COLUMNS };
 
 // --- HELPERS ---
 
-// Robust date formatter for AppSheet (YYYY-MM-DD HH:mm:ss) avoiding ISO T/Z which can conflict with some Locale settings
+// Robust date formatter for AppSheet (DD/MM/YYYY HH:mm:ss) 
+// Fixed: Changed from ISO YYYY-MM-DD to DD/MM/YYYY to ensure compatibility with Google Sheets 'es-CL' Locale.
 const formatDateTimeForAppSheet = (timestamp: number): string => {
     const d = new Date(timestamp);
     const pad = (n: number) => n.toString().padStart(2, '0');
     // Using UTC methods because we send Timezone: "UTC" in the payload properties
-    return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
+    // DD/MM/YYYY HH:mm:ss
+    return `${pad(d.getUTCDate())}/${pad(d.getUTCMonth() + 1)}/${d.getUTCFullYear()} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
 };
 
 export const parseFlexibleDate = (dateVal: any): number => {
@@ -92,7 +94,7 @@ const aggregateScansForSync = async (session: CountingSession, scans: ScanRecord
             grouped[uniqueKey] = {
                 [SHEET_COLUMNS.ID]: generateUUID(), 
                 [SHEET_COLUMNS.UNIQUE_KEY]: uniqueKey, 
-                [SHEET_COLUMNS.DATE]: new Date(session.createdAt).toISOString().split('T')[0],
+                [SHEET_COLUMNS.DATE]: new Date(session.createdAt).toISOString().split('T')[0], // For counts table, ISO is usually fine as column is often Text
                 [SHEET_COLUMNS.ERP_ORDER]: session.erpOrder, 
                 [SHEET_COLUMNS.BARCODE]: scan.barcode, 
                 [SHEET_COLUMNS.PRODUCT_NAME]: productNames[scan.barcode] || "Desconocido",
@@ -159,7 +161,8 @@ export const syncProductsToAppSheet = async (products: Product[]): Promise<void>
 
 export const syncReceptionToAppSheet = async (sessions: CountingSession[]): Promise<void> => {
     const settings = getSettings(); const config = settings.appSheetConfig;
-    if (!config?.appId || !config?.accessKey || !config?.receptionTableName) throw new Error("Config incompleta: Falta nombre de tabla de Recepción.");
+    if (!config?.appId || !config?.accessKey) throw new Error("Configuración incompleta: Faltan credenciales.");
+    if (!config?.receptionTableName) throw new Error("Falta configurar la 'Tabla de Recepción' en Ajustes > AppSheet.");
     
     const rows = sessions.map(s => {
         // Translate local audit status to business terms for Excel/Sheet
@@ -173,17 +176,22 @@ export const syncReceptionToAppSheet = async (sessions: CountingSession[]): Prom
             "FECHA_HORA": formatDateTimeForAppSheet(s.createdAt),
             "ETIQUETA": s.logisticsLabel,
             "ESTADO": s.status === 'draft' ? 'BORRADOR' : 'PROCESADO',
-            "ESTADO_AUDITORIA": auditState, // New Column
-            "PUNTAJE_AUDITORIA": s.auditScore || 0 // New Column
+            "ESTADO_AUDITORIA": auditState, 
+            "PUNTAJE_AUDITORIA": s.auditScore || 0 
         };
     });
 
     if (rows.length > 0) {
+        console.log(`[Sync Reception] Sending ${rows.length} rows to ${config.receptionTableName}`);
+        // Action: "Add" is appropriate for Logs. 
+        // Using "es-CL" Locale combined with DD/MM/YYYY date format ensures sheets parses it correctly.
         await sendToAppSheet(config, config.receptionTableName, { 
             Action: "Add", 
             Properties: { Locale: "es-CL", Timezone: "UTC" }, 
             Rows: rows 
         });
+        
+        // Only mark as synced if the API call didn't throw an error
         await markDraftsAsSynced(sessions.map(s => s.id));
     }
 };
