@@ -183,30 +183,50 @@ export const syncReceptionToAppSheet = async (sessions: CountingSession[]): Prom
 
     if (rows.length > 0) {
         console.log(`[Sync Reception] Sending ${rows.length} rows to ${config.receptionTableName}`);
-        // Action: "Add" is appropriate for Logs. 
-        // Using "es-CL" Locale combined with DD/MM/YYYY date format ensures sheets parses it correctly.
         await sendToAppSheet(config, config.receptionTableName, { 
             Action: "Add", 
             Properties: { Locale: "es-CL", Timezone: "UTC" }, 
             Rows: rows 
         });
         
-        // Only mark as synced if the API call didn't throw an error
         await markDraftsAsSynced(sessions.map(s => s.id));
     }
 };
 
-export const fetchReceptionData = async (): Promise<any[]> => {
+export const fetchReceptionData = async (options?: { dateRange?: { start: string, end: string } }): Promise<any[]> => {
     const settings = getSettings();
     const config = settings.appSheetConfig;
     if (!config?.receptionTableName) throw new Error("Falta configurar la Tabla de Recepción en Ajustes.");
+    
+    // Optimistic fetch: Filter client-side if selector is hard, but ideally rely on dates.
+    // NOTE: AppSheet Selector for dates is tricky due to format. We fetch all (or use a slice) and filter.
+    // For robust "Senior" implementation, we fetch all and filter in memory if no range, 
+    // but ideally we would implement pagination or date filtering via API selector if formats matched 100%.
+    // Given AppSheet limitations, fetching all and filtering locally is safer unless the table is huge.
     
     const result = await sendToAppSheet(config, config.receptionTableName, {
         Action: "Find",
         Properties: { Locale: "es-CL", Timezone: "UTC" },
         Rows: []
     });
-    return Array.isArray(result) ? result : [];
+
+    if (!Array.isArray(result)) return [];
+
+    if (options?.dateRange) {
+        console.log(`[AppSheet] Filtering ${result.length} reception logs by date locally...`);
+        // We assume FECHA_HORA column exists
+        const startTs = parseFlexibleDate(options.dateRange.start);
+        const endTs = parseFlexibleDate(options.dateRange.end) + (24 * 60 * 60 * 1000) - 1;
+
+        return result.filter(row => {
+            const rowDateRaw = row["FECHA_HORA"];
+            if (!rowDateRaw) return false;
+            const rowTs = parseFlexibleDate(rowDateRaw);
+            return rowTs >= startTs && rowTs <= endTs;
+        });
+    }
+
+    return result;
 };
 
 export const fetchProductsFromCloud = async (): Promise<any[]> => {

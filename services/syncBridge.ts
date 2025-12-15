@@ -51,37 +51,61 @@ export const importProductsFromAppSheet = async (): Promise<number> => {
     return products.length;
 };
 
-export const restoreReceptionFromCloud = async (): Promise<number> => {
-    const rows = await fetchReceptionData();
+// IMPROVED RECEPTION RESTORE
+export const restoreReceptionFromCloud = async (options?: { dateRange?: { start: string, end: string } }): Promise<number> => {
+    // 1. Fetch from Cloud with Filter
+    const rows = await fetchReceptionData(options);
     let restoredCount = 0;
 
+    // 2. Load existing to prevent duplicates (Upsert logic)
+    // We check by logisticsLabel basically, assuming one entry per label in 'draft' mode conceptually
+    const existingDrafts = await db.sessions.where('status').equals('draft').toArray();
+    const existingMap = new Set(existingDrafts.map(d => d.logisticsLabel));
+
     for (const row of rows) {
-        const id = row["ID_RECEPCION"];
+        const cloudId = row["ID_RECEPCION"];
         const label = row["ETIQUETA"];
         const status = row["ESTADO"]; 
         const dateStr = row["FECHA_HORA"];
+        const auditStatusRaw = row["ESTADO_AUDITORIA"];
 
-        if (!id || !label) continue;
+        if (!label) continue;
 
-        const exists = await db.sessions.get(id);
-        if (exists) {
-            if (status === 'PROCESADO' && exists.status === 'draft') {
-                await db.sessions.update(id, { status: 'completed' });
+        // If we already have this specific ID, skip or update?
+        // Let's check if the ID exists
+        const existsById = cloudId ? await db.sessions.get(cloudId) : null;
+        
+        if (existsById) {
+            // Already have it. Maybe update status?
+            if (status === 'PROCESADO' && existsById.status === 'draft') {
+                await db.sessions.update(existsById.id, { status: 'completed' });
             }
             continue;
+        }
+
+        // If no ID match, check by label to avoid logical duplicates if user redownloads
+        if (existingMap.has(label)) {
+            continue; 
         }
         
         const localStatus = status === 'PENDIENTE' ? 'draft' : 'completed';
         
+        // Map cloud audit status to local
+        let localAudit: 'verified' | 'warning' | 'failed' | 'pending' = 'pending';
+        if (auditStatusRaw === 'VERIFICADO_OK') localAudit = 'verified';
+        else if (auditStatusRaw === 'CON_DIFERENCIAS') localAudit = 'warning';
+        else if (auditStatusRaw === 'RECHAZADO') localAudit = 'failed';
+
         await db.sessions.add({
-            id: id,
+            id: cloudId || generateUUID(),
             erpOrder: 'PENDIENTE',
             logisticsLabel: label,
-            createdAt: dateStr ? new Date(dateStr).getTime() : Date.now(),
+            createdAt: dateStr ? parseFlexibleDate(dateStr) : Date.now(),
             status: localStatus,
             totalUnits: 0,
             totalSKUs: 0,
-            lastSyncTimestamp: Date.now()
+            lastSyncTimestamp: Date.now(), // Mark as synced since it came from cloud
+            auditStatus: localAudit
         });
         restoredCount++;
     }

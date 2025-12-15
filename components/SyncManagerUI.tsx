@@ -1,8 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
-import { Cloud, Upload, Download, RefreshCw, CheckCircle2, AlertTriangle, X, Wifi, WifiOff, Package, ArrowRight, Calendar, Layers, ChevronLeft, ArrowUpCircle, ArrowDownCircle, Truck, Container } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Cloud, Upload, Download, RefreshCw, CheckCircle2, AlertTriangle, X, Wifi, WifiOff, Package, ArrowRight, Calendar, Layers, ChevronLeft, ArrowUpCircle, ArrowDownCircle, Truck, Container, Database, Terminal } from 'lucide-react';
 import * as syncManager from '../services/syncManager';
-import { restoreFromCloud } from '../services/syncBridge';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 
@@ -15,14 +14,15 @@ export const SyncManagerUI: React.FC<SyncManagerUIProps> = ({ onBack }) => {
     const [uploadGroups, setUploadGroups] = useState<syncManager.UploadGroup[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
     const [statusMsg, setStatusMsg] = useState('');
+    const [logs, setLogs] = useState<string[]>([]);
     
     // Download State
-    const [downloadList, setDownloadList] = useState<syncManager.CloudItem[]>([]);
     const [dateRange, setDateRange] = useState({ 
         start: new Date().toISOString().split('T')[0], 
         end: new Date().toISOString().split('T')[0] 
     });
-    const [hasSearched, setHasSearched] = useState(false);
+
+    const terminalRef = useRef<HTMLDivElement>(null);
 
     // Live monitor for badge (Scans + Pending Drafts)
     const pendingScans = useLiveQuery(() => db.scans.where('synced').equals(0).count(), [], 0);
@@ -37,6 +37,18 @@ export const SyncManagerUI: React.FC<SyncManagerUIProps> = ({ onBack }) => {
         }
     }, [activeTab, totalPending]);
 
+    // Auto-scroll logs
+    useEffect(() => {
+        if (terminalRef.current) {
+            terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
+        }
+    }, [logs]);
+
+    const addLog = (msg: string) => {
+        const time = new Date().toLocaleTimeString();
+        setLogs(prev => [...prev, `[${time}] ${msg}`]);
+    };
+
     const loadUploads = async () => {
         const groups = await syncManager.getPendingUploadGroups();
         setUploadGroups(groups);
@@ -49,20 +61,28 @@ export const SyncManagerUI: React.FC<SyncManagerUIProps> = ({ onBack }) => {
         if (!confirm(`¿Subir ${uploadGroups.length} grupos de datos a la nube?`)) return;
 
         setIsProcessing(true);
-        setStatusMsg('Iniciando sincronización...');
+        setStatusMsg('Iniciando carga...');
+        setLogs([]); // Clear logs for new operation
+        addLog("Iniciando secuencia de subida...");
 
         try {
             for (let i = 0; i < uploadGroups.length; i++) {
                 const group = uploadGroups[i];
+                const label = group.type === 'reception' ? 'Bitácora' : 'Inventario';
                 setStatusMsg(`Subiendo: ${group.erpOrder}...`);
+                addLog(`Subiendo ${label} -> ${group.erpOrder}`);
+                
                 await syncManager.performBatchUpload(group);
+                addLog(`✅ OK: ${group.erpOrder}`);
             }
             setStatusMsg('¡Sincronización Completada!');
+            addLog("Todos los grupos procesados correctamente.");
             await loadUploads();
             setTimeout(() => setStatusMsg(''), 2000);
         } catch (e: any) {
             console.error(e);
             setStatusMsg('Error: ' + e.message);
+            addLog(`❌ ERROR CRÍTICO: ${e.message}`);
         } finally {
             setIsProcessing(false);
         }
@@ -70,43 +90,26 @@ export const SyncManagerUI: React.FC<SyncManagerUIProps> = ({ onBack }) => {
 
     // --- DOWNLOAD HANDLERS ---
 
-    const handleSearchCloud = async () => {
-        setIsProcessing(true);
-        setStatusMsg('Analizando nube...');
-        setDownloadList([]);
-        try {
-            const results = await syncManager.analyzeCloudDifferences(dateRange.start, dateRange.end);
-            setDownloadList(results);
-            setHasSearched(true);
-            setStatusMsg('');
-        } catch (e: any) {
-            setStatusMsg('Error al conectar: ' + e.message);
-        } finally {
-            setIsProcessing(false);
-        }
-    };
-
-    const handleDownloadSelected = async () => {
-        const newItems = downloadList.filter(i => i.status === 'new');
-        if (newItems.length === 0) return;
-
-        if (!confirm(`¿Descargar ${newItems.length} sesiones nuevas?`)) return;
+    const handleDownload = async (type: 'inventory' | 'reception' | 'products') => {
+        if (!confirm("¿Iniciar descarga de datos desde la nube?")) return;
 
         setIsProcessing(true);
-        setStatusMsg('Descargando e importando...');
+        setLogs([]);
+        addLog(`Iniciando descarga: ${type.toUpperCase()}`);
+        setStatusMsg("Conectando con AppSheet...");
+
         try {
-            // Re-use existing bridge logic but with specific range
-            const res = await restoreFromCloud({ 
-                dateRange: dateRange, 
-                skipExisting: true // CRITICAL: rely on the logic we built previously
-            });
-            alert(`Se importaron ${res.sessions} bultos y ${res.items} items.`);
-            handleSearchCloud(); // Refresh list
+            const res = await syncManager.executeDownload(type, dateRange, (msg) => addLog(msg));
+            if (res.success) {
+                addLog(`✅ PROCESO COMPLETADO: ${res.message}`);
+                alert(res.message);
+            }
         } catch (e: any) {
-            alert(e.message);
+            addLog(`❌ ERROR DE DESCARGA: ${e.message}`);
+            alert("Falló la descarga. Revise el log para más detalles.");
         } finally {
             setIsProcessing(false);
-            setStatusMsg('');
+            setStatusMsg("");
         }
     };
 
@@ -237,7 +240,7 @@ export const SyncManagerUI: React.FC<SyncManagerUIProps> = ({ onBack }) => {
                         <div className="space-y-6">
                             {/* Date Filter Card */}
                             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                                <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2"><Calendar className="w-4 h-4" /> Rango de Búsqueda</h3>
+                                <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2"><Calendar className="w-4 h-4" /> Filtro de Fecha</h3>
                                 <div className="flex flex-col md:flex-row gap-4 items-end">
                                     <div className="flex-1 w-full grid grid-cols-2 gap-4">
                                         <div>
@@ -249,63 +252,97 @@ export const SyncManagerUI: React.FC<SyncManagerUIProps> = ({ onBack }) => {
                                             <input type="date" value={dateRange.end} onChange={e => setDateRange({...dateRange, end: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500" />
                                         </div>
                                     </div>
-                                    <button 
-                                        onClick={handleSearchCloud}
-                                        disabled={isProcessing}
-                                        className="w-full md:w-auto bg-slate-900 hover:bg-slate-800 text-white px-6 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-slate-200"
-                                    >
-                                        <RefreshCw className={`w-4 h-4 ${isProcessing ? 'animate-spin' : ''}`} /> Buscar en Nube
-                                    </button>
                                 </div>
                             </div>
 
-                            {/* Results List */}
-                            {downloadList.length > 0 ? (
-                                <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2">
-                                    <div className="flex justify-between items-center px-1">
-                                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{downloadList.length} Resultados</span>
-                                        <button 
-                                            onClick={handleDownloadSelected}
-                                            disabled={isProcessing || downloadList.every(i => i.status !== 'new')}
-                                            className="text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:bg-slate-300 shadow-sm"
-                                        >
-                                            Descargar Nuevos
-                                        </button>
-                                    </div>
-                                    
-                                    {downloadList.map((item, idx) => (
-                                        <div key={`${item.erpOrder}_${item.label}_${idx}`} className={`p-4 rounded-xl border flex items-center justify-between transition-colors ${item.status === 'new' ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-100 border-slate-200 opacity-60'}`}>
-                                            <div>
-                                                <div className="font-bold text-slate-900 text-sm flex items-center gap-2">
-                                                    {item.erpOrder}
-                                                    {item.status === 'exists_identical' && <span className="bg-green-100 text-green-700 text-[9px] px-1.5 py-0.5 rounded border border-green-200 uppercase tracking-wide">Ya Existe</span>}
-                                                    {item.status === 'new' && <span className="bg-blue-100 text-blue-700 text-[9px] px-1.5 py-0.5 rounded border border-blue-200 uppercase tracking-wide">Nuevo</span>}
-                                                </div>
-                                                <div className="text-xs text-slate-500 mt-1 flex items-center gap-2">
-                                                    <Layers className="w-3 h-3" />
-                                                    <span className="font-mono font-bold">{item.label}</span> 
-                                                    <span className="opacity-50">•</span>
-                                                    {item.date.toLocaleDateString()}
-                                                </div>
-                                            </div>
-                                            <div className="text-slate-400">
-                                                {item.status === 'new' ? <Download className="w-5 h-5 text-indigo-500" /> : <CheckCircle2 className="w-5 h-5 text-green-500" />}
-                                            </div>
+                            {/* Download Action Cards */}
+                            <div className="grid gap-4">
+                                {/* 1. Inventory */}
+                                <button 
+                                    onClick={() => handleDownload('inventory')}
+                                    disabled={isProcessing}
+                                    className="bg-white p-5 rounded-2xl border border-slate-200 hover:border-purple-300 hover:shadow-md transition-all text-left flex items-center justify-between group disabled:opacity-50"
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className="bg-purple-100 p-3 rounded-xl text-purple-600 group-hover:scale-110 transition-transform">
+                                            <Layers className="w-6 h-6" />
                                         </div>
-                                    ))}
-                                </div>
-                            ) : hasSearched ? (
-                                <div className="text-center py-12 opacity-50 bg-slate-100 rounded-3xl border border-slate-200 border-dashed">
-                                    <p className="text-sm font-bold text-slate-500">No se encontraron registros en este rango.</p>
-                                </div>
-                            ) : (
-                                <div className="text-center py-12 opacity-30">
-                                    <Cloud className="w-16 h-16 mx-auto mb-4 text-slate-400" />
-                                    <p className="text-sm font-medium">Seleccione fechas y busque para ver datos.</p>
-                                </div>
-                            )}
+                                        <div>
+                                            <h3 className="font-bold text-slate-900">Inventario (Conteos)</h3>
+                                            <p className="text-xs text-slate-500 mt-1">Descargar historial de escaneos según rango de fecha.</p>
+                                        </div>
+                                    </div>
+                                    <div className="bg-slate-50 p-2 rounded-full text-slate-400 group-hover:text-purple-600 transition-colors">
+                                        <Download className="w-5 h-5" />
+                                    </div>
+                                </button>
+
+                                {/* 2. Reception */}
+                                <button 
+                                    onClick={() => handleDownload('reception')}
+                                    disabled={isProcessing}
+                                    className="bg-white p-5 rounded-2xl border border-slate-200 hover:border-orange-300 hover:shadow-md transition-all text-left flex items-center justify-between group disabled:opacity-50"
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className="bg-orange-100 p-3 rounded-xl text-orange-600 group-hover:scale-110 transition-transform">
+                                            <Truck className="w-6 h-6" />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold text-slate-900">Bitácora (Recepción)</h3>
+                                            <p className="text-xs text-slate-500 mt-1">Descargar logs de check-in según rango de fecha.</p>
+                                        </div>
+                                    </div>
+                                    <div className="bg-slate-50 p-2 rounded-full text-slate-400 group-hover:text-orange-600 transition-colors">
+                                        <Download className="w-5 h-5" />
+                                    </div>
+                                </button>
+
+                                {/* 3. Products */}
+                                <button 
+                                    onClick={() => handleDownload('products')}
+                                    disabled={isProcessing}
+                                    className="bg-white p-5 rounded-2xl border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all text-left flex items-center justify-between group disabled:opacity-50"
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className="bg-blue-100 p-3 rounded-xl text-blue-600 group-hover:scale-110 transition-transform">
+                                            <Database className="w-6 h-6" />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold text-slate-900">Maestro de Productos</h3>
+                                            <p className="text-xs text-slate-500 mt-1">Actualizar catálogo completo (ignora filtro de fecha).</p>
+                                        </div>
+                                    </div>
+                                    <div className="bg-slate-50 p-2 rounded-full text-slate-400 group-hover:text-blue-600 transition-colors">
+                                        <Download className="w-5 h-5" />
+                                    </div>
+                                </button>
+                            </div>
                         </div>
                     )}
+
+                    {/* --- CONSOLE LOG (ALWAYS VISIBLE IF ACTIVE) --- */}
+                    {(isProcessing || logs.length > 0) && (
+                        <div className="mt-8 bg-slate-900 rounded-xl p-4 shadow-lg border border-slate-700 animate-in slide-in-from-bottom-4">
+                            <div className="flex items-center gap-2 mb-3 border-b border-slate-700 pb-2">
+                                <Terminal className="w-4 h-4 text-green-400" />
+                                <span className="text-xs font-mono font-bold text-slate-300 uppercase">Consola de Actividad</span>
+                            </div>
+                            <div 
+                                ref={terminalRef} 
+                                className="h-32 overflow-y-auto font-mono text-[10px] space-y-1 text-slate-400 scroll-smooth"
+                            >
+                                {logs.map((log, i) => (
+                                    <div key={i} className="break-all border-l-2 border-slate-700 pl-2">
+                                        {log}
+                                    </div>
+                                ))}
+                                {isProcessing && (
+                                    <div className="animate-pulse text-blue-400 font-bold">_ Procesando solicitud...</div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
                 </div>
             </div>
         </div>

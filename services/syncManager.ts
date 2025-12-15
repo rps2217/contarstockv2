@@ -4,6 +4,7 @@ import { fetchCloudData, syncToAppSheet, syncReceptionToAppSheet, SHEET_COLUMNS,
 import { CountingSession, ScanRecord } from '../types';
 import * as sessionService from './sessionService';
 import { generateCompositeKey, normalizeKey } from './utils';
+import { restoreFromCloud, restoreReceptionFromCloud, importProductsFromAppSheet } from './syncBridge';
 
 // --- TYPES ---
 
@@ -131,7 +132,51 @@ export const performBatchUpload = async (group: UploadGroup): Promise<void> => {
     await db.sessions.where('id').anyOf(group.sessionIds).modify({ lastSyncTimestamp: Date.now() });
 };
 
-// --- DOWNLOAD LOGIC ---
+// --- CENTRALIZED DOWNLOAD LOGIC ---
+
+/**
+ * Central Hub for downloading different types of data.
+ * Includes logging callback for UI feedback.
+ */
+export const executeDownload = async (
+    type: 'inventory' | 'reception' | 'products',
+    dateRange?: { start: string, end: string },
+    log?: (msg: string) => void
+) => {
+    const logger = log || console.log;
+
+    try {
+        if (type === 'inventory') {
+            logger(`[Inventario] Solicitando datos (${dateRange?.start} - ${dateRange?.end})...`);
+            const res = await restoreFromCloud({ 
+                dateRange: dateRange, 
+                skipExisting: true 
+            });
+            logger(`[Inventario] Procesamiento finalizado.`);
+            return { success: true, message: `Se importaron ${res.sessions} bultos y ${res.items} items.` };
+        } 
+        
+        else if (type === 'reception') {
+            logger(`[Bitácora] Solicitando logs (${dateRange?.start} - ${dateRange?.end})...`);
+            const count = await restoreReceptionFromCloud({ dateRange });
+            logger(`[Bitácora] Finalizado.`);
+            return { success: true, message: `${count} registros de recepción importados.` };
+        } 
+        
+        else if (type === 'products') {
+            logger(`[Maestro] Solicitando catálogo completo...`);
+            const count = await importProductsFromAppSheet();
+            logger(`[Maestro] Guardando en base de datos local...`);
+            return { success: true, message: `${count} productos actualizados/creados.` };
+        }
+
+        return { success: false, message: "Tipo de descarga desconocido." };
+
+    } catch (error: any) {
+        logger(`[ERROR] ${error.message}`);
+        throw error;
+    }
+};
 
 /**
  * Descarga datos de la nube y los compara con lo local.
