@@ -186,7 +186,10 @@ const AppContent: React.FC = () => {
       return (
           <div className="h-screen bg-slate-900">
               <NetworkStatus />
-              <Reception onBack={() => setView('dashboard')} />
+              <Reception 
+                onBack={() => setView('dashboard')} 
+                onGoToSync={() => setView('sync')} 
+              />
           </div>
       );
   }

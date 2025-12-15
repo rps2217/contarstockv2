@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Cloud, Upload, Download, RefreshCw, CheckCircle2, AlertTriangle, X, Wifi, WifiOff, Package, ArrowRight, Calendar, Layers, ChevronLeft, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
+import { Cloud, Upload, Download, RefreshCw, CheckCircle2, AlertTriangle, X, Wifi, WifiOff, Package, ArrowRight, Calendar, Layers, ChevronLeft, ArrowUpCircle, ArrowDownCircle, Truck, Container } from 'lucide-react';
 import * as syncManager from '../services/syncManager';
 import { restoreFromCloud } from '../services/syncBridge';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -24,15 +24,18 @@ export const SyncManagerUI: React.FC<SyncManagerUIProps> = ({ onBack }) => {
     });
     const [hasSearched, setHasSearched] = useState(false);
 
-    // Live monitor for badge
-    const pendingCount = useLiveQuery(() => db.scans.where('synced').equals(0).count(), [], 0);
+    // Live monitor for badge (Scans + Pending Drafts)
+    const pendingScans = useLiveQuery(() => db.scans.where('synced').equals(0).count(), [], 0);
+    const pendingDrafts = useLiveQuery(() => db.sessions.where('status').equals('draft').and(s => !s.lastSyncTimestamp).count(), [], 0);
+    
+    const totalPending = (pendingScans || 0) + (pendingDrafts || 0);
 
     // Initial Load
     useEffect(() => {
         if (activeTab === 'upload') {
             loadUploads();
         }
-    }, [activeTab, pendingCount]);
+    }, [activeTab, totalPending]);
 
     const loadUploads = async () => {
         const groups = await syncManager.getPendingUploadGroups();
@@ -43,7 +46,7 @@ export const SyncManagerUI: React.FC<SyncManagerUIProps> = ({ onBack }) => {
 
     const handleUploadAll = async () => {
         if (!uploadGroups.length) return;
-        if (!confirm(`¿Subir ${uploadGroups.length} órdenes consolidadas a la nube?`)) return;
+        if (!confirm(`¿Subir ${uploadGroups.length} grupos de datos a la nube?`)) return;
 
         setIsProcessing(true);
         setStatusMsg('Iniciando sincronización...');
@@ -51,13 +54,14 @@ export const SyncManagerUI: React.FC<SyncManagerUIProps> = ({ onBack }) => {
         try {
             for (let i = 0; i < uploadGroups.length; i++) {
                 const group = uploadGroups[i];
-                setStatusMsg(`Subiendo Orden ${group.erpOrder} (${i + 1}/${uploadGroups.length})...`);
+                setStatusMsg(`Subiendo: ${group.erpOrder}...`);
                 await syncManager.performBatchUpload(group);
             }
             setStatusMsg('¡Sincronización Completada!');
             await loadUploads();
             setTimeout(() => setStatusMsg(''), 2000);
         } catch (e: any) {
+            console.error(e);
             setStatusMsg('Error: ' + e.message);
         } finally {
             setIsProcessing(false);
@@ -132,7 +136,7 @@ export const SyncManagerUI: React.FC<SyncManagerUIProps> = ({ onBack }) => {
                 >
                     <ArrowUpCircle className="w-4 h-4" /> 
                     Subir Pendientes
-                    {pendingCount > 0 && <span className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full">{pendingCount}</span>}
+                    {totalPending > 0 && <span className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full">{totalPending}</span>}
                 </button>
                 <button 
                     onClick={() => setActiveTab('download')}
@@ -167,7 +171,7 @@ export const SyncManagerUI: React.FC<SyncManagerUIProps> = ({ onBack }) => {
                                             </div>
                                             <div>
                                                 <div className="font-bold text-lg">Resumen de Carga</div>
-                                                <div className="text-indigo-100 text-sm opacity-90">{uploadGroups.length} Órdenes ERP listas para subir</div>
+                                                <div className="text-indigo-100 text-sm opacity-90">{uploadGroups.length} bloques listos para subir</div>
                                             </div>
                                         </div>
                                         <button 
@@ -181,34 +185,47 @@ export const SyncManagerUI: React.FC<SyncManagerUIProps> = ({ onBack }) => {
                                     </div>
 
                                     <div className="grid gap-3">
-                                        {uploadGroups.map(group => (
-                                            <div key={group.erpOrder} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-3 group">
-                                                <div className="flex justify-between items-start">
-                                                    <div>
-                                                        <div className="flex items-center gap-2 mb-1">
-                                                            <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border border-slate-200">Orden ERP</span>
-                                                            <span className="font-black text-slate-900 text-lg">{group.erpOrder}</span>
+                                        {uploadGroups.map(group => {
+                                            const isReception = group.type === 'reception';
+                                            return (
+                                                <div key={group.erpOrder} className={`p-5 rounded-2xl border shadow-sm hover:shadow-md transition-all flex flex-col gap-3 group ${isReception ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
+                                                    <div className="flex justify-between items-start">
+                                                        <div>
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${isReception ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/50' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                                                                    {isReception ? 'Bitácora' : 'Orden ERP'}
+                                                                </span>
+                                                                <span className={`font-black text-lg ${isReception ? 'text-white' : 'text-slate-900'}`}>{group.erpOrder}</span>
+                                                            </div>
+                                                            <div className={`text-xs flex items-center gap-4 mt-2 ${isReception ? 'text-slate-400' : 'text-slate-500'}`}>
+                                                                {!isReception && <span className="flex items-center gap-1.5"><Package className="w-4 h-4 text-blue-500" /> <span className={`font-bold ${isReception ? 'text-slate-200' : 'text-slate-700'}`}>{group.totalUnits}</span> unid.</span>}
+                                                                <span className="flex items-center gap-1.5">
+                                                                    {isReception ? <Container className="w-4 h-4 text-orange-400" /> : <Layers className="w-4 h-4 text-purple-500" />} 
+                                                                    <span className={`font-bold ${isReception ? 'text-slate-200' : 'text-slate-700'}`}>{group.sessionCount}</span> bultos
+                                                                </span>
+                                                            </div>
                                                         </div>
-                                                        <div className="text-xs text-slate-500 flex items-center gap-4 mt-2">
-                                                            <span className="flex items-center gap-1.5"><Package className="w-4 h-4 text-blue-500" /> <span className="font-bold text-slate-700">{group.totalUnits}</span> unid.</span>
-                                                            <span className="flex items-center gap-1.5"><Layers className="w-4 h-4 text-purple-500" /> <span className="font-bold text-slate-700">{group.sessionCount}</span> bultos</span>
+                                                        <div className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${isReception ? 'bg-indigo-900/50 text-indigo-300' : 'bg-orange-50 text-orange-600'}`}>
+                                                            <RefreshCw className="w-3 h-3" /> Pendiente
                                                         </div>
                                                     </div>
-                                                    <div className="bg-orange-50 text-orange-600 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-                                                        <RefreshCw className="w-3 h-3" /> Pendiente
+                                                    
+                                                    <div className={`pt-3 border-t ${isReception ? 'border-slate-700' : 'border-slate-100'}`}>
+                                                        <p className={`text-[10px] font-bold uppercase mb-2 ${isReception ? 'text-slate-500' : 'text-slate-400'}`}>Etiquetas incluidas</p>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {group.logisticsLabels.slice(0, 10).map((lbl, i) => (
+                                                                <span key={i} className={`text-[10px] px-2 py-1 rounded font-mono ${isReception ? 'bg-slate-900 border-slate-700 text-slate-300 border' : 'bg-slate-50 border border-slate-200 text-slate-600'}`}>
+                                                                    {lbl}
+                                                                </span>
+                                                            ))}
+                                                            {group.logisticsLabels.length > 10 && (
+                                                                <span className="text-[10px] text-slate-400 self-center">... y {group.logisticsLabels.length - 10} más</span>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                
-                                                <div className="pt-3 border-t border-slate-100">
-                                                    <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">Etiquetas incluidas</p>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {group.logisticsLabels.map(lbl => (
-                                                            <span key={lbl} className="text-[10px] bg-slate-50 border border-slate-200 px-2 py-1 rounded text-slate-600 font-mono">{lbl}</span>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 </>
                             )}
