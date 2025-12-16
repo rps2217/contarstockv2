@@ -1,3 +1,4 @@
+
 import Dexie, { type Table } from 'dexie';
 import { Product, CountingSession, ScanRecord, SyncJob, ExpectedOrder } from './types';
 
@@ -12,16 +13,19 @@ export class LogiCountDB extends Dexie {
   constructor() {
     super('LogiCountDB');
     
-    // Version 13: Added auditStatus to sessions for filtering reviewed items
-    (this as any).version(13).stores({
+    // Version 14: Optimized indices for Dashboard & Aggregations
+    (this as any).version(14).stores({
       // Products: indexed by barcode (primary), name (search), and syncStatus (cloud sync)
       products: '&barcode, name, syncStatus', 
       
-      // Sessions: indexed for dashboard/reporting filtering. Added auditStatus.
-      sessions: 'id, status, createdAt, erpOrder, logisticsLabel, auditStatus', 
+      // Sessions: 
+      // [erpOrder+createdAt]: For fast grouping in Consolidated view
+      // [status+lastSyncTimestamp]: For finding pending drafts instantly
+      sessions: 'id, status, createdAt, erpOrder, logisticsLabel, auditStatus, [erpOrder+createdAt], [status+lastSyncTimestamp]', 
       
-      // Scans: complex indices for fast lookup by session, time, and sync status
-      // [sessionId+synced] is crucial for `getUnsyncedScans`
+      // Scans: 
+      // [sessionId+synced]: Crucial for sync delta
+      // [sessionId+timestamp]: For scanner history sorting
       scans: 'id, sessionId, barcode, timestamp, synced, isIncident, [sessionId+synced], [sessionId+barcode], [sessionId+timestamp]',
       
       // SyncQueue: for background sync tasks

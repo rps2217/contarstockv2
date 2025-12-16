@@ -32,23 +32,31 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack, onNavigate }
     };
 
     // 1. OPTIMIZED LIST QUERY
+    // Instead of loading all and reducing (which kills performance on large DBs),
+    // We fetch a limited set or use query optimization.
     const erpGroups = useLiveQuery(async () => {
         let sessions: CountingSession[];
 
         if (searchQuery) {
+            // Index 'erpOrder' is used here for prefix search
             sessions = await db.sessions
                 .where('erpOrder').startsWithIgnoreCase(searchQuery)
+                .limit(200) // Safety limit
                 .toArray();
         } else {
+            // Using compound index [erpOrder+createdAt] would be ideal, 
+            // but just limiting by recent is enough for the UI list.
             sessions = await db.sessions
                 .orderBy('createdAt')
                 .reverse()
-                .limit(100)
+                .limit(200) // Only show most recent 200 sessions to keep UI snappy
                 .toArray();
         }
 
         const groups: Record<string, { count: number, lastDate: number, totalUnits: number, sessionIds: string[], allSynced: boolean, verifiedCount: number, alertCount: number }> = {};
 
+        // Grouping in memory is fast for 200 items. 
+        // For 10,000 items, we would need a proper GROUP BY in the DB layer (which IndexedDB doesn't natively support easily).
         for (const s of sessions) {
             if (!groups[s.erpOrder]) {
                 groups[s.erpOrder] = { count: 0, lastDate: 0, totalUnits: 0, sessionIds: [], allSynced: true, verifiedCount: 0, alertCount: 0 };
@@ -77,9 +85,11 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack, onNavigate }
     const details = useLiveQuery(async () => {
         if (!selectedErp) return null;
 
+        // Use index lookup
         const sessions = await db.sessions.where('erpOrder').equals(selectedErp).toArray();
         const sessionIds = sessions.map(s => s.id);
         
+        // Use batch fetch via 'anyOf' which uses index
         const scans = await db.scans.where('sessionId').anyOf(sessionIds).toArray();
         const items = await aggregateScans(scans);
 

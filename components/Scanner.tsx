@@ -1,5 +1,5 @@
 
-import React, { useMemo, useRef, useEffect, useState } from 'react';
+import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react';
 import { RotateCcw, Save, XCircle, Check, Keyboard, X, History as HistoryIcon, ArrowLeft } from 'lucide-react';
 import { CountingSession } from '../types';
 import { ExpirationModal } from './ExpirationModal';
@@ -35,29 +35,38 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
   const [scansPerMinute, setScansPerMinute] = useState(0);
   const scanTimestampsRef = useRef<number[]>([]);
 
+  // Optimized: Only update SPM if it actually changes to prevent header re-renders
   useEffect(() => {
     if (settings.speedometerEnabled && data.lastScan) {
         const now = Date.now();
         scanTimestampsRef.current.push(now);
+        // Clean old
         const cutoff = now - 60000;
-        scanTimestampsRef.current = scanTimestampsRef.current.filter(t => t > cutoff);
-        setScansPerMinute(scanTimestampsRef.current.length);
+        const filtered = scanTimestampsRef.current.filter(t => t > cutoff);
+        scanTimestampsRef.current = filtered;
+        
+        if (filtered.length !== scansPerMinute) {
+            setScansPerMinute(filtered.length);
+        }
     }
   }, [data.lastScan, settings.speedometerEnabled]);
 
+  // Interval cleanup for SPM
   useEffect(() => {
       if (!settings.speedometerEnabled) return;
       const interval = setInterval(() => {
           const now = Date.now();
           const cutoff = now - 60000;
-          const countBefore = scanTimestampsRef.current.length;
-          scanTimestampsRef.current = scanTimestampsRef.current.filter(t => t > cutoff);
-          if (scanTimestampsRef.current.length !== countBefore) {
-              setScansPerMinute(scanTimestampsRef.current.length);
+          const prevLen = scanTimestampsRef.current.length;
+          const filtered = scanTimestampsRef.current.filter(t => t > cutoff);
+          scanTimestampsRef.current = filtered;
+          
+          if (filtered.length !== scansPerMinute) {
+              setScansPerMinute(filtered.length);
           }
       }, 5000);
       return () => clearInterval(interval);
-  }, [settings.speedometerEnabled]);
+  }, [settings.speedometerEnabled, scansPerMinute]);
 
   // SECURITY CHECK
   const hasCameraSupport = useMemo(() => {
@@ -67,13 +76,13 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
     return isSecure && hasApi;
   }, []);
 
-  const handleCameraClick = () => {
+  const handleCameraClick = useCallback(() => {
       if (!hasCameraSupport) {
           alert("⚠️ CÁMARA BLOQUEADA POR EL NAVEGADOR\n\nCausa: Estás accediendo por una conexión no segura (HTTP).\n\nSolución:\n1. Usa 'localhost' si estás en el PC.\n2. Configura HTTPS para acceso móvil.\n3. O habilita las flags de 'Insecure origins' en chrome://flags.");
           return;
       }
       state.setIsCameraOpen(true);
-  };
+  }, [hasCameraSupport, state.setIsCameraOpen]);
 
   const handleCloseMultiplier = () => {
       if (state.multiplier === 0) state.setMultiplier(1);
