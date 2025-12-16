@@ -1,12 +1,13 @@
 
 import React, { useState } from 'react';
-import { Settings as SettingsIcon, Volume2, VolumeX, Vibrate, Zap, Moon, Sun, Monitor, AlertTriangle, ArrowLeft, Cloud, Key, Database, Lock, Check, Eye, Shield, FileText, Package, AlertOctagon, Activity, CheckCircle, XCircle, Share2, Download, QrCode, Copy, Save, Upload, RefreshCw, Loader2, Speech, Hash, Type, Gauge, BarChart3, Smartphone, LayoutTemplate } from 'lucide-react';
-import * as sessionService from '../services/sessionService'; // Updated Import (though not heavily used here, kept for consistency if needed later)
+import { Settings as SettingsIcon, Volume2, VolumeX, Vibrate, Zap, Moon, Sun, Monitor, AlertTriangle, ArrowLeft, Cloud, Key, Database, Lock, Check, Eye, Shield, FileText, Package, AlertOctagon, Activity, CheckCircle, XCircle, Share2, Download, QrCode, Copy, Save, Upload, RefreshCw, Loader2, Speech, Hash, Type, Gauge, BarChart3, Smartphone, LayoutTemplate, Camera } from 'lucide-react';
+import * as sessionService from '../services/sessionService'; 
 import * as settingsService from '../services/settings';
 import { createFullBackup, restoreFullBackup } from '../services/backupService';
 import { AppSettings, ViewState } from '../types';
 import { runSystemDiagnostics } from '../services/businessLogic.test';
 import { SoundFX } from '../services/audio';
+import { CameraScanner } from './CameraScanner';
 
 interface SettingsProps {
   onBack: () => void;
@@ -23,6 +24,9 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareMode, setShareMode] = useState<'export' | 'import'>('export');
   const [importString, setImportString] = useState('');
+  
+  // Camera State
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
   
   // Diagnostics State
   const [diagResults, setDiagResults] = useState<{ passed: number, failed: number, logs: string[] } | null>(null);
@@ -503,13 +507,22 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
                           <h3 className="text-xl font-bold text-slate-900 mb-2">Importar Configuración</h3>
                           <p className="text-sm text-slate-500 mb-6">Pega el código de configuración aquí o usa tu escáner físico sobre el código QR del otro dispositivo.</p>
                           
-                          <input 
-                            autoFocus
-                            placeholder="Escanea o pega LGC://..." 
-                            value={importString}
-                            onChange={(e) => setImportString(e.target.value)}
-                            className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl p-4 text-sm font-mono focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all mb-6"
-                          />
+                          <div className="flex gap-2 mb-6">
+                              <input 
+                                autoFocus
+                                placeholder="Escanea o pega LGC://..." 
+                                value={importString}
+                                onChange={(e) => setImportString(e.target.value)}
+                                className="flex-1 bg-slate-50 border-2 border-slate-200 rounded-xl p-4 text-sm font-mono focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
+                              />
+                              <button 
+                                onClick={() => setIsCameraOpen(true)}
+                                className="aspect-square bg-slate-100 border-2 border-slate-200 text-slate-600 hover:bg-slate-200 hover:text-slate-900 rounded-xl flex items-center justify-center transition-colors px-4"
+                                title="Escanear QR con Cámara"
+                              >
+                                <Camera className="w-6 h-6" />
+                              </button>
+                          </div>
                           
                           <button onClick={handleImportConfig} disabled={!importString} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-colors disabled:opacity-50">
                               Cargar Configuración
@@ -518,6 +531,17 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
                   )}
               </div>
           </div>
+      )}
+
+      {/* Camera Overlay */}
+      {isCameraOpen && (
+          <CameraScanner 
+              onScan={(code) => {
+                  setImportString(code);
+                  setIsCameraOpen(false);
+              }} 
+              onClose={() => setIsCameraOpen(false)}
+          />
       )}
 
     </div>
