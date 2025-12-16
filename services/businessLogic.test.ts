@@ -19,11 +19,12 @@ const mockOrderExact: ExpectedOrder = {
     ]
 };
 
+// Scenario: SKUs match exactly, but quantity deviates (5 vs 8) -> True Partial Match
 const mockOrderPartial: ExpectedOrder = {
-    id: '2', internalId: 'ORD-PARTIAL', totalExpectedUnits: 20, totalExpectedSKUs: 2, importedAt: 0,
+    id: '2', internalId: 'ORD-PARTIAL', totalExpectedUnits: 18, totalExpectedSKUs: 2, importedAt: 0,
     items: [
         { barcode: 'A1', name: 'Prod A', expectedQty: 10 }, // Match
-        { barcode: 'C3', name: 'Prod C', expectedQty: 10 }  // Mismatch
+        { barcode: 'B2', name: 'Prod B', expectedQty: 8 }   // Deviation
     ]
 };
 
@@ -57,10 +58,11 @@ export const runSystemDiagnostics = async () => {
         }
 
         const partialResult = calculateOrderMatch(mockPhysical, mockOrderPartial);
-        if (partialResult.status === 'mismatch' && partialResult.matchScore < 50) {
-            log("✅ Algoritmo Detective (Parcial): OK");
+        // We expect 'partial' status because SKUs are correct but quantities differ
+        if (partialResult.status === 'partial') {
+            log(`✅ Algoritmo Detective (Parcial): OK (${partialResult.matchScore.toFixed(1)}%)`);
         } else {
-            log("❌ Algoritmo Detective (Parcial): FALLÓ", true);
+            log(`❌ Algoritmo Detective (Parcial): FALLÓ (Status: ${partialResult.status}, Score: ${partialResult.matchScore.toFixed(1)}%)`, true);
         }
     } catch (e) { log(`❌ Error Matcher: ${e}`, true); }
 

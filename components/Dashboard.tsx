@@ -14,15 +14,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const settings = useMemo(() => getSettings(), []);
 
   // --- REAL-TIME STATS LOGIC ---
-  const todayStart = useMemo(() => {
+  const dailyStats = useLiveQuery(async () => {
       const date = new Date();
       date.setHours(0, 0, 0, 0);
-      return date.getTime();
-  }, []);
+      const todayStart = date.getTime();
 
-  const dailyStats = useLiveQuery(async () => {
-      if (!settings.controlTowerEnabled) return { bultos: 0, units: 0, pendingSync: 0 };
-
+      // Simple stats for Control Tower widgets
       const todaySessions = await db.sessions
           .where('createdAt')
           .aboveOrEqual(todayStart)
@@ -34,7 +31,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       const pendingSync = await db.scans.where('synced').equals(0).count();
 
       return { bultos, units, pendingSync };
-  }, [settings.controlTowerEnabled], { bultos: 0, units: 0, pendingSync: 0 });
+  }, [], { bultos: 0, units: 0, pendingSync: 0 });
 
   // --- COMPONENT: ACTION CARD (RESPONSIVE) ---
   const ActionCard = ({ title, sub, icon: Icon, colorClass, onClick, span = 1 }: any) => (
@@ -90,7 +87,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             Centro de Control
             </h1>
             <p className="text-sm md:text-lg text-slate-500 mt-1">
-            Resumen operativo.
+            Resumen operativo del día.
             </p>
         </div>
         {/* Mobile Settings Shortcut */}
@@ -99,13 +96,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         </button>
       </div>
 
-      {/* --- CONTROL TOWER WIDGETS (CONDITIONAL) --- */}
+      {/* --- CONTROL TOWER WIDGETS --- */}
       {settings.controlTowerEnabled && (
         <div className="grid grid-cols-3 gap-2 md:gap-4 mb-6 md:mb-8 animate-in slide-in-from-top-4">
             <div className="bg-white p-3 md:p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col items-center justify-center text-center">
                 <div className="text-slate-400 mb-1 md:mb-2"><Calendar className="w-5 h-5 md:w-6 md:h-6" /></div>
                 <div className="text-xl md:text-3xl font-black text-slate-900">{dailyStats.bultos}</div>
-                <div className="text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-wide">Bultos</div>
+                <div className="text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-wide">Bultos Hoy</div>
             </div>
             
             <div className="bg-white p-3 md:p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col items-center justify-center text-center">
