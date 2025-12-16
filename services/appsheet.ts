@@ -13,7 +13,6 @@ export { SYNC_ENGINE_VERSION, SHEET_COLUMNS };
 // --- HELPERS ---
 
 // Robust date formatter for AppSheet (DD/MM/YYYY HH:mm:ss) 
-// Fixed: Changed from ISO YYYY-MM-DD to DD/MM/YYYY to ensure compatibility with Google Sheets 'es-CL' Locale.
 const formatDateTimeForAppSheet = (timestamp: number): string => {
     const d = new Date(timestamp);
     const pad = (n: number) => n.toString().padStart(2, '0');
@@ -122,9 +121,17 @@ export const syncToAppSheet = async (session: CountingSession, _ignoredItems?: C
     const safeErp = session.erpOrder.replace(/'/g, "");
     const selector = `[${SHEET_COLUMNS.ERP_ORDER}] = '${safeErp}'`;
     
-    const existingData = await sendToAppSheet(config, config.countsTableName, { Action: "Find", Properties: { Locale: "es-CL", Timezone: "UTC", Selector: selector }, Rows: [] });
-    const existingMap = new Map<string, {id: string, qty: number}>();
-    if (Array.isArray(existingData)) { existingData.forEach((r: any) => { if (r[SHEET_COLUMNS.UNIQUE_KEY]) existingMap.set(r[SHEET_COLUMNS.UNIQUE_KEY], { id: r[SHEET_COLUMNS.ID], qty: Number(r[SHEET_COLUMNS.QUANTITY]) || 0 }); }); }
+    // For regular inventory, we still try Find first as mass-Add is risky for large batches.
+    // If it fails, we fall back to Add.
+    // NOTE: Inventory keys are complex and unique (UUIDs mostly), so Add is safer here than in Reception.
+    
+    let existingMap = new Map<string, {id: string, qty: number}>();
+    try {
+        const existingData = await sendToAppSheet(config, config.countsTableName, { Action: "Find", Properties: { Locale: "es-CL", Timezone: "UTC", Selector: selector }, Rows: [] });
+        if (Array.isArray(existingData)) { existingData.forEach((r: any) => { if (r[SHEET_COLUMNS.UNIQUE_KEY]) existingMap.set(r[SHEET_COLUMNS.UNIQUE_KEY], { id: r[SHEET_COLUMNS.ID], qty: Number(r[SHEET_COLUMNS.QUANTITY]) || 0 }); }); }
+    } catch (e) {
+        console.warn("[Sync Inventory] Find failed, proceeding with blind Add/Edit", e);
+    }
     
     const batchAdd: any[] = []; const batchEdit: any[] = [];
     
@@ -160,93 +167,73 @@ export const syncProductsToAppSheet = async (products: Product[]): Promise<void>
     if (edits.length > 0) { await sendToAppSheet(config, config.productsTableName, { Action: "Edit", Properties: { Locale: "es-CL", Timezone: "UTC" }, Rows: edits }); await markProductsAsSynced(editIds); }
 };
 
-// FIXED: Robust Reception Sync with Idempotency (Find -> Add/Edit)
+// FIXED: SERIALIZED ROW-BY-ROW SYNC FOR ROBUSTNESS
+// This removes dependencies on "Find" Selectors which can be fragile, and handles duplicates gracefully.
 export const syncReceptionToAppSheet = async (sessions: CountingSession[]): Promise<void> => {
     const settings = getSettings(); 
     const config = settings.appSheetConfig;
     if (!config?.appId || !config?.accessKey) throw new Error("Configuración incompleta: Faltan credenciales.");
     if (!config?.receptionTableName) throw new Error("Falta configurar la 'Tabla de Recepción' en Ajustes > AppSheet.");
     
-    // Chunking to safe sizes for Selector URL limits
-    const CHUNK_SIZE = 30;
+    console.log(`[Sync Reception] Starting sequential sync for ${sessions.length} items...`);
 
-    for (let i = 0; i < sessions.length; i += CHUNK_SIZE) {
-        const chunk = sessions.slice(i, i + CHUNK_SIZE);
+    // Process sequentially to ensure atomic success/failure per row and robust duplicate handling
+    for (const session of sessions) {
         
-        // 1. Prepare Rows
-        const rows = chunk.map(s => {
-            let auditState = "PENDIENTE";
-            if (s.auditStatus === 'verified') auditState = "VERIFICADO_OK";
-            else if (s.auditStatus === 'warning') auditState = "CON_DIFERENCIAS";
-            else if (s.auditStatus === 'failed') auditState = "RECHAZADO";
+        // 1. Prepare Row
+        let auditState = "PENDIENTE";
+        if (session.auditStatus === 'verified') auditState = "VERIFICADO_OK";
+        else if (session.auditStatus === 'warning') auditState = "CON_DIFERENCIAS";
+        else if (session.auditStatus === 'failed') auditState = "RECHAZADO";
 
-            return {
-                "ID_RECEPCION": s.id,
-                "FECHA_HORA": formatDateTimeForAppSheet(s.createdAt),
-                "ETIQUETA": s.logisticsLabel,
-                "ESTADO": s.status === 'draft' ? 'BORRADOR' : 'PROCESADO',
-                "ESTADO_AUDITORIA": auditState, 
-                "PUNTAJE_AUDITORIA": s.auditScore || 0 
-            };
-        });
+        const row = {
+            "ID_RECEPCION": session.id,
+            "FECHA_HORA": formatDateTimeForAppSheet(session.createdAt),
+            "ETIQUETA": session.logisticsLabel,
+            "ESTADO": session.status === 'draft' ? 'BORRADOR' : 'PROCESADO',
+            "ESTADO_AUDITORIA": auditState, 
+            "PUNTAJE_AUDITORIA": session.auditScore || 0 
+        };
 
-        // 2. IDEMPOTENCY: Check which IDs already exist in AppSheet
-        const ids = chunk.map(s => s.id);
-        const existingIds = new Set<string>();
-        
         try {
-            // Selector: OR([ID_RECEPCION] = 'id1', [ID_RECEPCION] = 'id2', ...)
-            const selector = "OR(" + ids.map(id => `[ID_RECEPCION] = '${id}'`).join(", ") + ")";
-            
-            const existingData = await sendToAppSheet(config, config.receptionTableName, {
-                Action: "Find",
-                Properties: { Locale: "es-CL", Timezone: "UTC", Selector: selector },
-                Rows: []
-            });
-
-            if (Array.isArray(existingData)) {
-                existingData.forEach((r: any) => {
-                    if (r["ID_RECEPCION"]) existingIds.add(r["ID_RECEPCION"]);
+            // STRATEGY: OPTIMISTIC ADD -> FALLBACK EDIT
+            // 1. Try ADD
+            try {
+                await sendToAppSheet(config, config.receptionTableName, { 
+                    Action: "Add", 
+                    Properties: { Locale: "es-CL", Timezone: "UTC" }, 
+                    Rows: [row] 
                 });
+                console.log(`[Sync Reception] Added ${session.logisticsLabel}`);
+            } catch (addError: any) {
+                // 2. If Duplicate Error, Try EDIT
+                // AppSheet duplicate error often contains "Row having key ... already exists" or 400 Bad Request
+                const msg = addError.message || "";
+                if (msg.includes("exists") || msg.includes("Duplicate") || msg.includes("400")) {
+                    console.log(`[Sync Reception] Duplicate detected for ${session.logisticsLabel}, attempting Update...`);
+                    await sendToAppSheet(config, config.receptionTableName, { 
+                        Action: "Edit", 
+                        Properties: { Locale: "es-CL", Timezone: "UTC" }, 
+                        Rows: [row] 
+                    });
+                    console.log(`[Sync Reception] Updated ${session.logisticsLabel}`);
+                } else {
+                    // Real error (Connection, Auth, Schema)
+                    throw addError;
+                }
             }
-        } catch (e) {
-            console.warn("[Sync Reception] 'Find' check failed, falling back to direct Add (might fail on dupes)", e);
+
+            // 3. Mark Local as Synced only after success
+            await markDraftsAsSynced([session.id]);
+
+        } catch (finalError) {
+            console.error(`[Sync Reception] Failed to sync ${session.logisticsLabel}`, finalError);
+            // We do NOT throw here so that other items in the batch can still proceed.
+            // But we do NOT mark this one as synced, so it will retry later.
         }
-
-        // 3. Split into Add vs Edit
-        const batchAdd: any[] = [];
-        const batchEdit: any[] = [];
-
-        rows.forEach(row => {
-            if (existingIds.has(row["ID_RECEPCION"])) {
-                batchEdit.push(row);
-            } else {
-                batchAdd.push(row);
-            }
-        });
-
-        console.log(`[Sync Reception] Chunk ${i/CHUNK_SIZE + 1}: ${batchAdd.length} Adds, ${batchEdit.length} Edits`);
-
-        // 4. Execute
-        if (batchAdd.length > 0) {
-            await sendToAppSheet(config, config.receptionTableName, { 
-                Action: "Add", 
-                Properties: { Locale: "es-CL", Timezone: "UTC" }, 
-                Rows: batchAdd 
-            });
-        }
-        
-        if (batchEdit.length > 0) {
-            await sendToAppSheet(config, config.receptionTableName, { 
-                Action: "Edit", 
-                Properties: { Locale: "es-CL", Timezone: "UTC" }, 
-                Rows: batchEdit 
-            });
-        }
-        
-        // 5. Mark chunk as synced immediately to prevent re-processing if next chunk fails
-        await markDraftsAsSynced(chunk.map(s => s.id));
     }
+    
+    console.log(`[Sync Reception] Batch processing complete.`);
 };
 
 export const fetchReceptionData = async (options?: { dateRange?: { start: string, end: string } }): Promise<any[]> => {
@@ -255,11 +242,6 @@ export const fetchReceptionData = async (options?: { dateRange?: { start: string
     if (!config?.receptionTableName) throw new Error("Falta configurar la Tabla de Recepción en Ajustes.");
     
     // Optimistic fetch: Filter client-side if selector is hard, but ideally rely on dates.
-    // NOTE: AppSheet Selector for dates is tricky due to format. We fetch all (or use a slice) and filter.
-    // For robust "Senior" implementation, we fetch all and filter in memory if no range, 
-    // but ideally we would implement pagination or date filtering via API selector if formats matched 100%.
-    // Given AppSheet limitations, fetching all and filtering locally is safer unless the table is huge.
-    
     const result = await sendToAppSheet(config, config.receptionTableName, {
         Action: "Find",
         Properties: { Locale: "es-CL", Timezone: "UTC" },
@@ -270,7 +252,6 @@ export const fetchReceptionData = async (options?: { dateRange?: { start: string
 
     if (options?.dateRange) {
         console.log(`[AppSheet] Filtering ${result.length} reception logs by date locally...`);
-        // We assume FECHA_HORA column exists
         const startTs = parseFlexibleDate(options.dateRange.start);
         const endTs = parseFlexibleDate(options.dateRange.end) + (24 * 60 * 60 * 1000) - 1;
 

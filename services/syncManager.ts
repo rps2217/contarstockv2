@@ -1,3 +1,4 @@
+
 import { db } from '../db';
 import { fetchCloudData, syncToAppSheet, syncReceptionToAppSheet, SHEET_COLUMNS, parseFlexibleDate } from './appsheet';
 import { CountingSession, ScanRecord } from '../types';
@@ -107,12 +108,10 @@ export const performBatchUpload = async (group: UploadGroup): Promise<void> => {
         const drafts = await db.sessions.where('id').anyOf(group.sessionIds).toArray();
         if (drafts.length === 0) return;
 
-        // Use the specific service for Reception
+        // Use the specific service for Reception.
+        // It handles marking synced internally row-by-row to ensure partial success.
         await syncReceptionToAppSheet(drafts);
         
-        // Mark as synced locally is handled inside syncReceptionToAppSheet on success, 
-        // but just to be safe and consistent with this manager:
-        await sessionService.markDraftsAsSynced(group.sessionIds);
         return;
     }
 
