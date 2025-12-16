@@ -69,12 +69,20 @@ export const closeSession = async (sessionId: string) => {
     await updateSessionStats(sessionId); 
 };
 
+/**
+ * ROBUST DELETION: Uses atomic transaction to ensure all related data 
+ * (scans, session, sync jobs) are removed together.
+ */
 export const deleteSession = async (sessionId: string) => { 
-    await (db as any).transaction('rw', db.sessions, db.scans, db.syncQueue, async () => { 
+    return (db as any).transaction('rw', db.sessions, db.scans, db.syncQueue, async () => { 
+        // 1. Delete all scans associated with this session
         await db.scans.where('sessionId').equals(sessionId).delete(); 
+        
+        // 2. Delete the session itself
         await db.sessions.delete(sessionId); 
 
-        // Delete Orphaned Sync Jobs
+        // 3. Delete Orphaned Sync Jobs (Clean up the queue)
+        // Note: Dexie doesn't support complex delete queries easily inside transaction without fetching first
         const pendingJobs = await db.syncQueue.toArray();
         const jobsToDelete = pendingJobs
             .filter(job => job.session && job.session.id === sessionId)
@@ -83,7 +91,10 @@ export const deleteSession = async (sessionId: string) => {
         if (jobsToDelete.length > 0) {
             await db.syncQueue.bulkDelete(jobsToDelete);
         }
-    }); 
+    }).catch((err: any) => {
+        console.error("Critical Error during session deletion:", err);
+        throw new Error("No se pudo eliminar la sesión de forma segura. Integridad de datos protegida.");
+    });
 };
 
 export const cleanSyncedSessions = async (): Promise<number> => {
@@ -94,6 +105,7 @@ export const cleanSyncedSessions = async (): Promise<number> => {
     if (syncedSessions.length === 0) return 0;
 
     let deletedCount = 0;
+    // Execute sequentially to prevent transaction locking issues on massive deletes
     for (const session of syncedSessions) {
         await deleteSession(session.id);
         deletedCount++;
@@ -234,6 +246,7 @@ export const adjustSessionItemQuantity = async (sessionId: string, barcode: stri
         } 
     }
     
+    // Robust Transaction for Split Operations
     await (db as any).transaction('rw', db.scans, db.sessions, async () => { 
         if (toDelete.length > 0) await db.scans.bulkDelete(toDelete); 
         if (updateTarget) await db.scans.update(updateTarget.id, { quantity: updateTarget.qty, synced: 0 }); 

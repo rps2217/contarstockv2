@@ -1,27 +1,37 @@
 
-import React, { useState, useEffect, useMemo, memo } from 'react';
+import React, { useState, useEffect, useMemo, memo, Suspense } from 'react';
 import { ViewState, CountingSession, AppSettings } from './types';
 import { Dashboard } from './components/Dashboard';
-import { Scanner } from './components/Scanner';
-import { Database } from './components/Database';
-import { Reports } from './components/Reports';
-import { Consolidated } from './components/Consolidated';
-import { Conciliator } from './components/Conciliator';
-import { Settings } from './components/Settings';
-import { Reception } from './components/Reception';
 import { Login } from './components/Login';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { InstallPrompt } from './components/InstallPrompt';
 import { NetworkStatus } from './components/NetworkStatus'; 
-import { SyncManagerUI } from './components/SyncManagerUI'; 
-import { Sidebar } from './components/Sidebar'; // New Sidebar Import
+import { Sidebar } from './components/Sidebar'; 
 import * as sessionService from './services/sessionService'; 
 import { getSettings } from './services/settings';
 import { db } from './db';
 import { SYNC_ENGINE_VERSION, processSyncQueue } from './services/appsheet';
 import { initPersistence } from './services/backupService';
-import { LayoutGrid, Database as DbIcon, History, Home, Box, AlertTriangle, Cloud, CloudOff, Container, Fingerprint, Layers } from 'lucide-react';
+import { Database as DbIcon, History, Home, AlertTriangle, Cloud, Container, Fingerprint, Layers, Loader2 } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
+
+// --- LAZY LOAD HEAVY COMPONENTS ---
+// This improves initial load performance by splitting the bundle
+const Scanner = React.lazy(() => import('./components/Scanner').then(module => ({ default: module.Scanner })));
+const DatabaseView = React.lazy(() => import('./components/Database').then(module => ({ default: module.Database })));
+const Reports = React.lazy(() => import('./components/Reports').then(module => ({ default: module.Reports })));
+const Consolidated = React.lazy(() => import('./components/Consolidated').then(module => ({ default: module.Consolidated })));
+const Conciliator = React.lazy(() => import('./components/Conciliator').then(module => ({ default: module.Conciliator })));
+const SettingsView = React.lazy(() => import('./components/Settings').then(module => ({ default: module.Settings })));
+const Reception = React.lazy(() => import('./components/Reception').then(module => ({ default: module.Reception })));
+const SyncManagerUI = React.lazy(() => import('./components/SyncManagerUI').then(module => ({ default: module.SyncManagerUI })));
+
+const LoadingFallback = () => (
+  <div className="h-full w-full flex flex-col items-center justify-center text-slate-400 gap-3 animate-pulse">
+    <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
+    <span className="text-xs font-bold uppercase tracking-wider">Cargando Módulo...</span>
+  </div>
+);
 
 const AppContent: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -32,7 +42,7 @@ const AppContent: React.FC = () => {
   const [dbError, setDbError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log(`LogiCount Pro v3.1.0 System Initialized.`);
+    console.log(`LogiCount Pro v3.2.0 (Optimized) System Initialized.`);
     console.log(`Sync Engine: ${SYNC_ENGINE_VERSION}`);
     
     // 1. DB Integrity Check
@@ -175,11 +185,13 @@ const AppContent: React.FC = () => {
     return (
       <div className="h-screen bg-slate-950 overflow-hidden">
         <NetworkStatus />
-        <Scanner 
-            session={activeSession} 
-            onCloseSession={handleCloseSession} 
-            onDiscardSession={handleDiscardSession}
-        />
+        <Suspense fallback={<div className="h-screen flex items-center justify-center bg-black"><Loader2 className="w-8 h-8 text-blue-500 animate-spin"/></div>}>
+            <Scanner 
+                session={activeSession} 
+                onCloseSession={handleCloseSession} 
+                onDiscardSession={handleDiscardSession}
+            />
+        </Suspense>
       </div>
     );
   }
@@ -188,10 +200,12 @@ const AppContent: React.FC = () => {
       return (
           <div className="h-screen bg-slate-900 overflow-hidden">
               <NetworkStatus />
-              <Reception 
-                onBack={() => setView('dashboard')} 
-                onNavigate={setView} // Passed navigation prop
-              />
+              <Suspense fallback={<div className="h-screen flex items-center justify-center bg-slate-900"><Loader2 className="w-8 h-8 text-blue-500 animate-spin"/></div>}>
+                  <Reception 
+                    onBack={() => setView('dashboard')} 
+                    onNavigate={setView}
+                  />
+              </Suspense>
           </div>
       );
   }
@@ -211,13 +225,15 @@ const AppContent: React.FC = () => {
       
       {/* MAIN CONTENT AREA */}
       <main className="flex-1 md:ml-64 w-full animate-in fade-in zoom-in-95 duration-300 min-h-screen relative">
-        {view === 'dashboard' && <Dashboard onNavigate={setView} />}
-        {view === 'database' && <Database onBack={() => setView('dashboard')} />}
-        {view === 'reports' && <Reports onSessionStart={handleSessionStart} onNavigate={setView} />}
-        {view === 'consolidated' && <Consolidated onBack={() => setView('reports')} onNavigate={setView} />}
-        {view === 'conciliator' && <Conciliator onBack={() => setView('dashboard')} />}
-        {view === 'settings' && <Settings onBack={() => setView('dashboard')} onSettingsChanged={updateSettings} />}
-        {view === 'sync' && <SyncManagerUI onBack={() => setView('dashboard')} />}
+        <Suspense fallback={<LoadingFallback />}>
+            {view === 'dashboard' && <Dashboard onNavigate={setView} />}
+            {view === 'database' && <DatabaseView onBack={() => setView('dashboard')} />}
+            {view === 'reports' && <Reports onSessionStart={handleSessionStart} onNavigate={setView} />}
+            {view === 'consolidated' && <Consolidated onBack={() => setView('reports')} onNavigate={setView} />}
+            {view === 'conciliator' && <Conciliator onBack={() => setView('dashboard')} />}
+            {view === 'settings' && <SettingsView onBack={() => setView('dashboard')} onSettingsChanged={updateSettings} />}
+            {view === 'sync' && <SyncManagerUI onBack={() => setView('dashboard')} />}
+        </Suspense>
       </main>
 
       <InstallPrompt />
