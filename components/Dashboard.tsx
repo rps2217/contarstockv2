@@ -1,17 +1,14 @@
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Database, ScanLine, Settings, ArrowRight, Box, Layers, Fingerprint, Container, Calendar, PackageCheck, WifiOff, Cloud } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
-import { getSettings } from '../services/settings';
+import { useAppStore } from '../store/useAppStore';
+import { useNavigate } from 'react-router-dom';
 
-interface DashboardProps {
-  onNavigate: (view: any) => void;
-}
-
-export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
-  // Read settings
-  const settings = useMemo(() => getSettings(), []);
+export const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
+  const { settings } = useAppStore();
 
   // --- REAL-TIME STATS LOGIC ---
   const dailyStats = useLiveQuery(async () => {
@@ -34,9 +31,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   }, [], { bultos: 0, units: 0, pendingSync: 0 });
 
   // --- COMPONENT: ACTION CARD (RESPONSIVE) ---
-  const ActionCard = ({ title, sub, icon: Icon, colorClass, onClick, span = 1 }: any) => (
+  const ActionCard = ({ title, sub, icon: Icon, colorClass, to, span = 1 }: any) => (
     <button 
-        onClick={onClick}
+        onClick={() => navigate(to)}
         className={`
             group relative overflow-hidden text-left transition-all active:scale-95 duration-200
             /* MOBILE STYLES (Compact Row) */
@@ -91,7 +88,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             </p>
         </div>
         {/* Mobile Settings Shortcut */}
-        <button onClick={() => onNavigate('settings')} className="md:hidden p-2 bg-slate-100 rounded-full text-slate-600 hover:bg-slate-200">
+        <button onClick={() => navigate('/settings')} className="md:hidden p-2 bg-slate-100 rounded-full text-slate-600 hover:bg-slate-200">
             <Settings className="w-5 h-5" />
         </button>
       </div>
@@ -129,7 +126,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 sub="Iniciar inventario físico" 
                 icon={ScanLine} 
                 colorClass="md:from-blue-600 md:to-blue-700" 
-                onClick={() => onNavigate('reports')}
+                to="/reports"
                 span={2}
              />
         </div>
@@ -139,7 +136,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             sub="Check-in rápido" 
             icon={Container} 
             colorClass="md:from-slate-800 md:to-slate-900"
-            onClick={() => onNavigate('reception')}
+            to="/reception"
         />
 
         <ActionCard 
@@ -147,7 +144,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             sub="Sincronización" 
             icon={Cloud} 
             colorClass="md:from-indigo-500 md:to-violet-600"
-            onClick={() => onNavigate('sync')}
+            to="/sync"
         />
 
         <ActionCard 
@@ -155,7 +152,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             sub="Reportes por ERP" 
             icon={Layers} 
             colorClass="md:from-purple-600 md:to-fuchsia-700"
-            onClick={() => onNavigate('consolidated')}
+            to="/consolidated"
         />
 
         <ActionCard 
@@ -163,7 +160,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             sub="Conciliación Excel" 
             icon={Fingerprint} 
             colorClass="md:from-emerald-600 md:to-teal-700"
-            onClick={() => onNavigate('conciliator')}
+            to="/conciliator"
         />
 
         <ActionCard 
@@ -171,7 +168,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             sub="Maestro de Productos" 
             icon={Database} 
             colorClass="md:from-cyan-500 md:to-blue-600"
-            onClick={() => onNavigate('database')}
+            to="/database"
         />
 
       </div>

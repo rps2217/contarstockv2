@@ -1,22 +1,23 @@
 
 import React from 'react';
-import { Home, Database, History, Layers, Container, Fingerprint, Cloud, Box, Settings, LogOut } from 'lucide-react';
-import { ViewState, AppSettings } from '../types';
+import { Home, Database, History, Layers, Container, Fingerprint, Cloud, Box, Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { AppSettings } from '../types';
 
 interface SidebarProps {
-  view: ViewState;
-  setView: (v: ViewState) => void;
+  view: string;
   settings: AppSettings;
   pendingCount?: number;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ view, setView, pendingCount }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ view, pendingCount }) => {
+  const navigate = useNavigate();
   
-  const NavItem = ({ id, label, icon: Icon, badge }: { id: ViewState, label: string, icon: any, badge?: number }) => {
-    const isActive = view === id || (id === 'reports' && view === 'consolidated');
+  const NavItem = ({ path, label, icon: Icon, badge, activeKey }: { path: string, label: string, icon: any, badge?: number, activeKey: string }) => {
+    const isActive = view === activeKey;
     return (
       <button
-        onClick={() => setView(id)}
+        onClick={() => navigate(path)}
         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group relative ${
           isActive 
             ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' 
@@ -51,24 +52,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, setView, pendingCount })
       {/* Navigation */}
       <nav className="flex-1 px-4 space-y-1 overflow-y-auto no-scrollbar">
         <div className="text-xs font-bold text-slate-500 uppercase tracking-widest px-4 mb-2 mt-2">Principal</div>
-        <NavItem id="dashboard" label="Inicio" icon={Home} />
-        <NavItem id="counting" label="Scanner Activo" icon={Box} />
+        <NavItem path="/dashboard" activeKey="dashboard" label="Inicio" icon={Home} />
         
         <div className="text-xs font-bold text-slate-500 uppercase tracking-widest px-4 mb-2 mt-6">Gestión</div>
-        <NavItem id="database" label="Base de Datos" icon={Database} />
-        <NavItem id="reports" label="Historial" icon={History} />
-        <NavItem id="consolidated" label="Consolidados" icon={Layers} />
+        <NavItem path="/database" activeKey="database" label="Base de Datos" icon={Database} />
+        <NavItem path="/reports" activeKey="reports" label="Historial" icon={History} />
+        <NavItem path="/consolidated" activeKey="consolidated" label="Consolidados" icon={Layers} />
         
         <div className="text-xs font-bold text-slate-500 uppercase tracking-widest px-4 mb-2 mt-6">Herramientas</div>
-        <NavItem id="reception" label="Recepción Ciega" icon={Container} />
-        <NavItem id="conciliator" label="Detective" icon={Fingerprint} />
-        <NavItem id="sync" label="Nube / Sync" icon={Cloud} badge={pendingCount} />
+        <NavItem path="/reception" activeKey="reception" label="Recepción Ciega" icon={Container} />
+        <NavItem path="/conciliator" activeKey="conciliator" label="Detective" icon={Fingerprint} />
+        <NavItem path="/sync" activeKey="sync" label="Nube / Sync" icon={Cloud} badge={pendingCount} />
       </nav>
 
       {/* Footer */}
       <div className="p-4 border-t border-slate-800">
         <button 
-            onClick={() => setView('settings')}
+            onClick={() => navigate('/settings')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${view === 'settings' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white'}`}
         >
             <Settings className="w-5 h-5" />

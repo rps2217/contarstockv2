@@ -4,11 +4,54 @@ import { ScanRecord, CountingSession } from '../types';
 import { generateUUID, sanitizeBarcode } from './utils';
 
 // ==========================================
+// WRITE BUFFER OPTIMIZATION
+// High-speed scanners can trigger 5-10 events per second.
+// Writing to IndexedDB individually causes UI jank.
+// We buffer writes and flush every 200ms or when buffer hits 20 items.
+// ==========================================
+
+let scanBuffer: ScanRecord[] = [];
+let flushTimer: any = null;
+
+const flushBuffer = async () => {
+    if (scanBuffer.length === 0) return;
+    
+    const batch = [...scanBuffer];
+    scanBuffer = []; // Clear immediate
+    clearTimeout(flushTimer);
+    flushTimer = null;
+
+    try {
+        await db.scans.bulkAdd(batch);
+        
+        // Update stats for all affected sessions
+        const affectedSessions = new Set(batch.map(s => s.sessionId));
+        for (const sessionId of affectedSessions) {
+            await updateSessionStats(sessionId);
+        }
+    } catch (e) {
+        console.error("Buffer Flush Failed! Potential Data Loss", e);
+        // Retry logic could go here
+    }
+};
+
+const addToBuffer = (record: ScanRecord) => {
+    scanBuffer.push(record);
+    
+    // Immediate flush if buffer gets too big
+    if (scanBuffer.length >= 20) {
+        flushBuffer();
+    } else if (!flushTimer) {
+        // Debounce flush
+        flushTimer = setTimeout(flushBuffer, 200);
+    }
+};
+
+// ==========================================
 // SESSION MANAGEMENT
 // ==========================================
 
 export const createSession = async (erpOrder: string, logisticsLabel: string): Promise<CountingSession> => {
-  // Ensure previous active sessions are closed to maintain single-session integrity
   const activeSessions = await db.sessions.where('status').equals('active').toArray();
   if (activeSessions.length > 0) { 
       await Promise.all(activeSessions.map(s => db.sessions.update(s.id, { status: 'completed' }))); 
@@ -28,9 +71,7 @@ export const createSession = async (erpOrder: string, logisticsLabel: string): P
   return newSession;
 };
 
-// For Blind Reception
 export const createDraftSession = async (logisticsLabel: string): Promise<CountingSession> => {
-    // Check duplication to avoid double scanning the same label in reception mode
     const existing = await db.sessions.where('logisticsLabel').equals(logisticsLabel).first();
     if (existing) {
         throw new Error('Etiqueta ya registrada');
@@ -50,7 +91,6 @@ export const createDraftSession = async (logisticsLabel: string): Promise<Counti
     return newSession;
 };
 
-// Activate a draft session when starting count
 export const activateDraftSession = async (draftSessionId: string, erpOrder: string): Promise<CountingSession> => {
     const activeSessions = await db.sessions.where('status').equals('active').toArray();
     if (activeSessions.length > 0) { 
@@ -65,47 +105,30 @@ export const activateDraftSession = async (draftSessionId: string, erpOrder: str
 };
 
 export const closeSession = async (sessionId: string) => { 
+    // Flush pending writes before closing
+    await flushBuffer();
     await db.sessions.update(sessionId, { status: 'completed' }); 
     await updateSessionStats(sessionId); 
 };
 
-/**
- * ROBUST DELETION: Uses atomic transaction to ensure all related data 
- * (scans, session, sync jobs) are removed together.
- */
 export const deleteSession = async (sessionId: string) => { 
     return (db as any).transaction('rw', db.sessions, db.scans, db.syncQueue, async () => { 
-        // 1. Delete all scans associated with this session
         await db.scans.where('sessionId').equals(sessionId).delete(); 
-        
-        // 2. Delete the session itself
         await db.sessions.delete(sessionId); 
-
-        // 3. Delete Orphaned Sync Jobs (Clean up the queue)
-        // Note: Dexie doesn't support complex delete queries easily inside transaction without fetching first
         const pendingJobs = await db.syncQueue.toArray();
         const jobsToDelete = pendingJobs
             .filter(job => job.session && job.session.id === sessionId)
             .map(job => job.id as number); 
-        
         if (jobsToDelete.length > 0) {
             await db.syncQueue.bulkDelete(jobsToDelete);
         }
-    }).catch((err: any) => {
-        console.error("Critical Error during session deletion:", err);
-        throw new Error("No se pudo eliminar la sesión de forma segura. Integridad de datos protegida.");
     });
 };
 
 export const cleanSyncedSessions = async (): Promise<number> => {
-    const syncedSessions = await db.sessions
-        .filter(s => !!s.lastSyncTimestamp && s.lastSyncTimestamp > 0)
-        .toArray();
-
+    const syncedSessions = await db.sessions.filter(s => !!s.lastSyncTimestamp && s.lastSyncTimestamp > 0).toArray();
     if (syncedSessions.length === 0) return 0;
-
     let deletedCount = 0;
-    // Execute sequentially to prevent transaction locking issues on massive deletes
     for (const session of syncedSessions) {
         await deleteSession(session.id);
         deletedCount++;
@@ -134,9 +157,6 @@ export const markDraftsAsSynced = async (sessionIds: string[]) => {
 // ==========================================
 
 export const updateSessionStats = async (sessionId: string) => {
-  // PERFORMANCE FIX: Use iterate() instead of toArray() to avoid memory spikes with large sessions.
-  // This approach is O(N) but doesn't allocate objects for every row, making it faster on mobile.
-  
   let totalUnits = 0;
   const uniqueSkus = new Set<string>();
 
@@ -151,9 +171,7 @@ export const updateSessionStats = async (sessionId: string) => {
 export const getUnsyncedScans = async (erpOrder: string): Promise<ScanRecord[]> => {
     const sessions = await db.sessions.where('erpOrder').equals(erpOrder).toArray();
     const sessionIds = sessions.map(s => s.id);
-    
     if (sessionIds.length === 0) return [];
-
     const scans = await db.scans.where('sessionId').anyOf(sessionIds).toArray();
     return scans.filter(s => !s.synced || s.synced === 0);
 };
@@ -180,8 +198,10 @@ export const addScan = async (
         isIncident
     };
 
-    await db.scans.add(record);
-    await updateSessionStats(sessionId);
+    // OPTIMIZATION: Use Write Buffer instead of direct await
+    addToBuffer(record);
+    
+    // We return the record immediately so UI updates instantly
     return record;
 };
 
@@ -210,7 +230,6 @@ export const deleteScan = async (scanId: string) => {
     } 
 };
 
-// Advanced Item Editing (Complex Logic)
 export const deleteSessionItem = async (sessionId: string, barcode: string) => {
   const cleanCode = sanitizeBarcode(barcode); 
   const scans = await db.scans.where('[sessionId+barcode]').equals([sessionId, cleanCode]).toArray();
@@ -224,11 +243,9 @@ export const deleteSessionItem = async (sessionId: string, barcode: string) => {
 export const adjustSessionItemQuantity = async (sessionId: string, barcode: string, delta: number) => {
   const cleanCode = sanitizeBarcode(barcode);
   if (delta > 0) { 
-      // Reuse existing logic, but now addScan updates stats efficiently
       const lastScan = await db.scans.where('[sessionId+barcode]').equals([sessionId, cleanCode]).last(); 
       await addScan(sessionId, cleanCode, delta, lastScan?.mm, lastScan?.yyyy, 0);
   } else {
-    // Remove scans LIFO (Last In First Out)
     let remainingToRemove = Math.abs(delta); 
     const scans = await db.scans.where('[sessionId+barcode]').equals([sessionId, cleanCode]).reverse().sortBy('timestamp'); 
     
@@ -246,7 +263,6 @@ export const adjustSessionItemQuantity = async (sessionId: string, barcode: stri
         } 
     }
     
-    // Robust Transaction for Split Operations
     await (db as any).transaction('rw', db.scans, db.sessions, async () => { 
         if (toDelete.length > 0) await db.scans.bulkDelete(toDelete); 
         if (updateTarget) await db.scans.update(updateTarget.id, { quantity: updateTarget.qty, synced: 0 }); 

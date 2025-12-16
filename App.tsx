@@ -1,6 +1,7 @@
 
-import React, { useState, useEffect, useMemo, memo, Suspense } from 'react';
-import { ViewState, CountingSession, AppSettings } from './types';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import { Routes, Route, useNavigate, useLocation, Navigate, Outlet, HashRouter } from 'react-router-dom';
+import { CountingSession } from './types';
 import { Dashboard } from './components/Dashboard';
 import { Login } from './components/Login';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -8,15 +9,14 @@ import { InstallPrompt } from './components/InstallPrompt';
 import { NetworkStatus } from './components/NetworkStatus'; 
 import { Sidebar } from './components/Sidebar'; 
 import * as sessionService from './services/sessionService'; 
-import { getSettings } from './services/settings';
+import { useAppStore } from './store/useAppStore';
 import { db } from './db';
-import { SYNC_ENGINE_VERSION, processSyncQueue } from './services/appsheet';
+import { processSyncQueue } from './services/appsheet';
 import { initPersistence } from './services/backupService';
-import { Database as DbIcon, History, Home, AlertTriangle, Cloud, Container, Fingerprint, Layers, Loader2 } from 'lucide-react';
+import { Home, Database as DbIcon, History, Layers, Container, Fingerprint, Cloud, Loader2 } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 
-// --- LAZY LOAD HEAVY COMPONENTS ---
-// This improves initial load performance by splitting the bundle
+// Lazy Load
 const Scanner = React.lazy(() => import('./components/Scanner').then(module => ({ default: module.Scanner })));
 const DatabaseView = React.lazy(() => import('./components/Database').then(module => ({ default: module.Database })));
 const Reports = React.lazy(() => import('./components/Reports').then(module => ({ default: module.Reports })));
@@ -29,326 +29,190 @@ const SyncManagerUI = React.lazy(() => import('./components/SyncManagerUI').then
 const LoadingFallback = () => (
   <div className="h-full w-full flex flex-col items-center justify-center text-slate-400 gap-3 animate-pulse">
     <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
-    <span className="text-xs font-bold uppercase tracking-wider">Cargando Módulo...</span>
+    <span className="text-xs font-bold uppercase tracking-wider">Cargando...</span>
   </div>
 );
 
+// --- LAYOUTS ---
+
+const MainLayout = () => {
+    const { settings } = useAppStore();
+    const pendingSyncCount = useLiveQuery(() => db.scans.where('synced').equals(0).count(), [], 0);
+    const location = useLocation();
+    
+    // Determine ViewState for Sidebar highlighting based on URL
+    const currentView = location.pathname.split('/')[1] || 'dashboard';
+
+    // Theme Class
+    const themeClass = useMemo(() => {
+        switch (settings.theme) {
+            case 'dark': return 'bg-slate-950 text-slate-200';
+            case 'contrast': return 'bg-black text-yellow-400 font-mono';
+            case 'warm': return 'bg-[#fcf8f2] text-[#57534e]';
+            case 'navy': return 'bg-[#0B1121] text-slate-300';
+            default: return 'bg-[#eff3f8] text-slate-600';
+        }
+    }, [settings.theme]);
+
+    return (
+        <div className={`min-h-screen font-sans ${themeClass} transition-colors duration-300 flex`}>
+            <NetworkStatus />
+            <Sidebar view={currentView} settings={settings} pendingCount={pendingSyncCount} />
+            
+            <main className="flex-1 md:ml-64 w-full animate-in fade-in zoom-in-95 duration-300 min-h-screen relative pb-16 md:pb-0">
+                <Suspense fallback={<LoadingFallback />}>
+                    <Outlet />
+                </Suspense>
+            </main>
+
+            <InstallPrompt />
+            <MobileNav currentView={currentView} settings={settings} />
+        </div>
+    );
+};
+
+// --- APP CONTENT ---
+
 const AppContent: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [view, setView] = useState<ViewState>('dashboard');
-  const [activeSession, setActiveSession] = useState<CountingSession | null>(null);
-  const [settings, setSettings] = useState<AppSettings>(getSettings());
   const [dbReady, setDbReady] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log(`LogiCount Pro v3.2.0 (Optimized) System Initialized.`);
-    console.log(`Sync Engine: ${SYNC_ENGINE_VERSION}`);
-    
-    // 1. DB Integrity Check
     const initDb = async () => {
         try {
             await (db as any).open();
             setDbReady(true);
-            // 2. Request Persistence
             await initPersistence();
         } catch (e: any) {
-            console.error("DB Failed to open:", e);
-            setDbError(`Error crítico de base de datos: ${e.message}. Intente recargar.`);
+            setDbError(`Error crítico: ${e.message}`);
         }
     };
     initDb();
 
-    // 3. Auth Check
-    const auth = localStorage.getItem('logicount_auth');
-    if (auth === 'true') {
+    if (localStorage.getItem('logicount_auth') === 'true') {
         setIsAuthenticated(true);
     }
 
-    // 4. Restore Session
-    const restoreSession = async () => {
-        try {
-            if (!(db as any).isOpen()) await (db as any).open();
-            const current = await sessionService.getActiveSession(); 
-            if (current) {
-                setActiveSession(current);
-                if (auth === 'true') setView('counting');
-            }
-        } catch (e) {
-            console.warn("Could not restore session (DB not ready yet)");
-        }
-    };
-    restoreSession();
-
-    // 5. SYNC HEARTBEAT (ROBUSTNESS IMPROVEMENT)
     const syncInterval = setInterval(async () => {
         if (navigator.onLine) {
-            const pending = await db.syncQueue.where('status').equals('pending').count();
-            if (pending > 0) {
-                console.log(`[Heartbeat] Intentando sincronizar ${pending} elementos pendientes...`);
-                try {
-                    await processSyncQueue();
-                } catch (e) {
-                    console.warn("[Heartbeat] Sync failed, will retry next cycle.");
-                }
-            }
+            try { await processSyncQueue(); } catch (e) {}
         }
     }, 60000); 
-
     return () => clearInterval(syncInterval);
-
   }, []);
 
-  const handleLoginSuccess = () => {
-      localStorage.setItem('logicount_auth', 'true');
-      setIsAuthenticated(true);
-      if (activeSession) {
-          setView('counting');
-      } else {
-          setView('dashboard');
-      }
-  };
+  if (dbError) return <div className="p-8 text-red-600 text-center font-bold">{dbError}</div>;
+  if (!dbReady) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin w-8 h-8 text-blue-600"/></div>;
 
-  const handleSessionStart = (session: CountingSession) => {
-    console.log("Starting Session:", session.id); 
-    setActiveSession(session);
-    setView('counting');
-  };
-
-  const handleCloseSession = async () => {
-    if (activeSession) {
-      await sessionService.closeSession(activeSession.id); 
-      setActiveSession(null);
-      setView('reports');
-    }
-  };
-
-  const handleDiscardSession = async () => {
-    if (activeSession) {
-        await sessionService.deleteSession(activeSession.id); 
-        setActiveSession(null);
-        setView('reports');
-    }
-  };
-
-  const updateSettings = (newSettings: AppSettings) => {
-      setSettings(newSettings);
-  };
-
-  // Performance: Memoize theme class to prevent recalculation on every render
-  const themeClass = useMemo(() => {
-      switch (settings.theme) {
-          case 'dark': return 'bg-slate-950 text-slate-200 selection:bg-blue-900 selection:text-white';
-          case 'contrast': return 'bg-black text-yellow-400 font-mono tracking-wide selection:bg-yellow-400 selection:text-black';
-          case 'warm': return 'bg-[#fcf8f2] text-[#57534e] selection:bg-orange-100 selection:text-orange-900 antialiased';
-          case 'navy': return 'bg-[#0B1121] text-slate-300 selection:bg-indigo-900 selection:text-indigo-200 antialiased';
-          default: return 'bg-[#eff3f8] text-slate-600 antialiased selection:bg-blue-100 selection:text-blue-800';
-      }
-  }, [settings.theme]);
-
-  // Global Sync Status Query
-  const pendingSyncCount = useLiveQuery(() => db.scans.where('synced').equals(0).count(), [], 0);
-
-  // --- DB CRITICAL ERROR STATE ---
-  if (dbError) {
-      return (
-          <div className="h-screen flex items-center justify-center bg-red-50 p-6 text-center">
-              <div>
-                  <AlertTriangle className="w-12 h-12 text-red-600 mx-auto mb-4" />
-                  <h1 className="text-xl font-bold text-red-900 mb-2">Error de Sistema</h1>
-                  <p className="text-red-700">{dbError}</p>
-                  <button onClick={() => window.location.reload()} className="mt-6 bg-red-600 text-white px-6 py-2 rounded-lg font-bold">Recargar</button>
-              </div>
-          </div>
-      );
-  }
-
-  // --- LOADING STATE ---
-  if (!dbReady) {
-      return <div className="h-screen flex items-center justify-center bg-slate-50"><div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div></div>;
-  }
-
-  // --- AUTH CHECK ---
   if (!isAuthenticated) {
-      return (
-        <>
-            <Login onLoginSuccess={handleLoginSuccess} />
-            <InstallPrompt />
-        </>
-      );
+      return <Login onLoginSuccess={() => setIsAuthenticated(true)} />;
   }
 
-  // --- APP RENDER ---
-  
-  // Fullscreen Modes (No Sidebar)
-  if (view === 'counting' && activeSession) {
-    return (
-      <div className="h-screen bg-slate-950 overflow-hidden">
-        <NetworkStatus />
-        <Suspense fallback={<div className="h-screen flex items-center justify-center bg-black"><Loader2 className="w-8 h-8 text-blue-500 animate-spin"/></div>}>
-            <Scanner 
-                session={activeSession} 
-                onCloseSession={handleCloseSession} 
-                onDiscardSession={handleDiscardSession}
-            />
-        </Suspense>
-      </div>
-    );
-  }
-
-  if (view === 'reception') {
-      return (
-          <div className="h-screen bg-slate-900 overflow-hidden">
-              <NetworkStatus />
-              <Suspense fallback={<div className="h-screen flex items-center justify-center bg-slate-900"><Loader2 className="w-8 h-8 text-blue-500 animate-spin"/></div>}>
-                  <Reception 
-                    onBack={() => setView('dashboard')} 
-                    onNavigate={setView}
-                  />
-              </Suspense>
-          </div>
-      );
-  }
-
-  // Standard Layout with Sidebar
   return (
-    <div className={`min-h-screen font-sans ${themeClass} transition-colors duration-300 flex`}>
-      <NetworkStatus />
-      
-      {/* DESKTOP SIDEBAR */}
-      <Sidebar 
-        view={view} 
-        setView={setView} 
-        settings={settings} 
-        pendingCount={pendingSyncCount} 
-      />
-      
-      {/* MAIN CONTENT AREA */}
-      <main className="flex-1 md:ml-64 w-full animate-in fade-in zoom-in-95 duration-300 min-h-screen relative">
-        <Suspense fallback={<LoadingFallback />}>
-            {view === 'dashboard' && <Dashboard onNavigate={setView} />}
-            {view === 'database' && <DatabaseView onBack={() => setView('dashboard')} />}
-            {view === 'reports' && <Reports onSessionStart={handleSessionStart} onNavigate={setView} />}
-            {view === 'consolidated' && <Consolidated onBack={() => setView('reports')} onNavigate={setView} />}
-            {view === 'conciliator' && <Conciliator onBack={() => setView('dashboard')} />}
-            {view === 'settings' && <SettingsView onBack={() => setView('dashboard')} onSettingsChanged={updateSettings} />}
-            {view === 'sync' && <SyncManagerUI onBack={() => setView('dashboard')} />}
-        </Suspense>
-      </main>
-
-      <InstallPrompt />
-      <MobileNav view={view} setView={setView} settings={settings} />
-    </div>
+    <Routes>
+        <Route element={<MainLayout />}>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/database" element={<DatabaseView />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/reports/:sessionId" element={<Reports />} /> {/* Detail View handled inside Reports component for now or split */}
+            <Route path="/consolidated" element={<Consolidated />} />
+            <Route path="/conciliator" element={<Conciliator />} />
+            <Route path="/settings" element={<SettingsView />} />
+            <Route path="/sync" element={<SyncManagerUI />} />
+        </Route>
+        
+        {/* Fullscreen Routes */}
+        <Route path="/counting/:sessionId" element={
+            <Suspense fallback={<LoadingFallback />}>
+                <ScannerWrapper />
+            </Suspense>
+        } />
+        <Route path="/reception" element={
+            <Suspense fallback={<LoadingFallback />}>
+                <Reception />
+            </Suspense>
+        } />
+    </Routes>
   );
+};
+
+// --- WRAPPERS ---
+
+import { useParams } from 'react-router-dom';
+
+const ScannerWrapper = () => {
+    const { sessionId } = useParams();
+    const navigate = useNavigate();
+    const session = useLiveQuery(() => db.sessions.get(sessionId!), [sessionId]);
+
+    if (!session) return <LoadingFallback />;
+
+    return (
+        <div className="h-screen bg-slate-950 overflow-hidden">
+            <Scanner 
+                session={session} 
+                onCloseSession={async () => {
+                    await sessionService.closeSession(session.id);
+                    navigate('/reports');
+                }}
+                onDiscardSession={async () => {
+                    await sessionService.deleteSession(session.id);
+                    navigate('/reports');
+                }}
+            />
+        </div>
+    );
 };
 
 const App: React.FC = () => {
     return (
         <ErrorBoundary>
-            <AppContent />
+            <HashRouter>
+                <AppContent />
+            </HashRouter>
         </ErrorBoundary>
     );
 };
 
-// --- Extracted Components (Memoized) ---
+// --- MOBILE NAV ---
 
-interface NavProps {
-  view: ViewState;
-  setView: (v: ViewState) => void;
-  settings: AppSettings;
-  pendingCount?: number;
-}
-
-// CONFIGURATION FOR NAV ITEMS
-const NAV_CONFIG: Record<string, { label: string, icon: React.ReactNode }> = {
-    'dashboard': { label: 'Inicio', icon: <Home className="w-5 h-5" /> },
-    'database': { label: 'Datos', icon: <DbIcon className="w-5 h-5" /> },
-    'reports': { label: 'Historial', icon: <History className="w-5 h-5" /> },
-    'consolidated': { label: 'Consol.', icon: <Layers className="w-5 h-5" /> },
-    'reception': { label: 'Recep.', icon: <Container className="w-5 h-5" /> },
-    'conciliator': { label: 'Detect.', icon: <Fingerprint className="w-5 h-5" /> },
-    'sync': { label: 'Nube', icon: <Cloud className="w-5 h-5" /> },
+const NAV_CONFIG: Record<string, { label: string, icon: React.ReactNode, path: string }> = {
+    'dashboard': { label: 'Inicio', icon: <Home className="w-5 h-5" />, path: '/dashboard' },
+    'database': { label: 'Datos', icon: <DbIcon className="w-5 h-5" />, path: '/database' },
+    'reports': { label: 'Historial', icon: <History className="w-5 h-5" />, path: '/reports' },
+    'consolidated': { label: 'Consol.', icon: <Layers className="w-5 h-5" />, path: '/consolidated' },
+    'reception': { label: 'Recep.', icon: <Container className="w-5 h-5" />, path: '/reception' },
+    'conciliator': { label: 'Detect.', icon: <Fingerprint className="w-5 h-5" />, path: '/conciliator' },
+    'sync': { label: 'Nube', icon: <Cloud className="w-5 h-5" />, path: '/sync' },
 };
 
-const MobileNav = memo(({ view, setView, settings }: NavProps) => {
-  const t = settings.theme;
-  
-  let navClass = "bg-white/80 border-t border-slate-200 text-slate-400 shadow-[0_-4px_16px_rgba(0,0,0,0.05)]"; 
-  
-  if (t === 'contrast') navClass = "bg-black/90 border-t border-yellow-400/30 text-yellow-400/50";
-  else if (t === 'dark') navClass = "bg-slate-900/90 border-t border-slate-700/50 text-slate-500";
-  else if (t === 'navy') navClass = "bg-[#151f32]/90 border-t border-[#1e293b] text-slate-500";
-  else if (t === 'warm') navClass = "bg-[#f5efe6]/90 border-t border-[#e7e0d3] text-[#a8a29e]";
-
-  // Use configured items or fallback to default
+const MobileNav = ({ currentView, settings }: any) => {
+  const navigate = useNavigate();
   const navItems = settings.mobileNavConfig || ['dashboard', 'database', 'reports'];
 
   return (
-    <nav className={`md:hidden fixed bottom-0 left-0 right-0 z-40 backdrop-blur-lg pb-safe-area transition-all duration-300 ${navClass}`}>
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/90 backdrop-blur border-t border-slate-200 pb-safe-area">
         <div className="flex justify-around items-center h-16 px-1">
-            {navItems.map((itemKey) => {
-                const config = NAV_CONFIG[itemKey];
-                if (!config) return null;
-                
-                // Active state logic handles combined views
-                let isActive = view === itemKey;
-                if (itemKey === 'reports' && view === 'consolidated') isActive = true;
-
+            {navItems.map((key: string) => {
+                const conf = NAV_CONFIG[key];
+                if (!conf) return null;
+                const isActive = currentView === key;
                 return (
-                    <NavButton 
-                        key={itemKey}
-                        active={isActive} 
-                        onClick={() => setView(itemKey as ViewState)} 
-                        icon={config.icon} 
-                        label={config.label} 
-                        theme={settings.theme} 
-                    />
+                    <button 
+                        key={key}
+                        onClick={() => navigate(conf.path)}
+                        className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${isActive ? 'text-blue-600' : 'text-slate-400'}`}
+                    >
+                        <div className={`${isActive ? '-translate-y-1' : ''} transition-transform duration-200`}>{conf.icon}</div>
+                        <span className="text-[10px] font-bold leading-none">{conf.label}</span>
+                    </button>
                 );
             })}
         </div>
     </nav>
   );
-});
-
-const NavButton = ({ active, onClick, icon, label, theme }: any) => {
-    let activeColor = 'text-blue-600';
-    let inactiveColor = 'text-slate-400';
-    // Removed background shape for clearer icon focus on mobile
-    
-    if (theme === 'contrast') {
-        activeColor = 'text-yellow-400';
-        inactiveColor = 'text-yellow-400/30';
-    } else if (theme === 'warm') {
-        activeColor = 'text-[#78350f]';
-        inactiveColor = 'text-[#a8a29e]';
-    } else if (theme === 'navy') {
-        activeColor = 'text-sky-400';
-        inactiveColor = 'text-slate-500';
-    } else if (theme === 'dark') {
-        activeColor = 'text-blue-400';
-        inactiveColor = 'text-slate-600';
-    }
-
-    const handleClick = () => {
-        if (navigator.vibrate) navigator.vibrate(10);
-        onClick();
-    };
-
-    return (
-        <button 
-            onClick={handleClick}
-            className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-all duration-200 active:scale-95 group ${active ? activeColor : inactiveColor}`}
-        >
-            <div className={`transition-all duration-300 ${active ? '-translate-y-1 scale-110 drop-shadow-sm' : ''}`}>
-                {icon}
-            </div>
-            <span className={`text-[10px] font-bold tracking-tight transition-opacity duration-300 leading-none ${active ? 'opacity-100' : 'opacity-70'}`}>
-                {label}
-            </span>
-            {/* Active Indicator Dot */}
-            <div className={`w-1 h-1 rounded-full bg-current transition-all duration-300 ${active ? 'opacity-100 scale-100' : 'opacity-0 scale-0'}`} />
-        </button>
-    );
 };
 
 export default App;
