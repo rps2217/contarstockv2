@@ -1,3 +1,4 @@
+
 import { ConsolidatedItem, CountingSession, Product, ScanRecord } from "../types";
 import { getSettings } from "./settings"; 
 import { generateUUID } from "./utils";
@@ -159,37 +160,92 @@ export const syncProductsToAppSheet = async (products: Product[]): Promise<void>
     if (edits.length > 0) { await sendToAppSheet(config, config.productsTableName, { Action: "Edit", Properties: { Locale: "es-CL", Timezone: "UTC" }, Rows: edits }); await markProductsAsSynced(editIds); }
 };
 
+// FIXED: Robust Reception Sync with Idempotency (Find -> Add/Edit)
 export const syncReceptionToAppSheet = async (sessions: CountingSession[]): Promise<void> => {
-    const settings = getSettings(); const config = settings.appSheetConfig;
+    const settings = getSettings(); 
+    const config = settings.appSheetConfig;
     if (!config?.appId || !config?.accessKey) throw new Error("Configuración incompleta: Faltan credenciales.");
     if (!config?.receptionTableName) throw new Error("Falta configurar la 'Tabla de Recepción' en Ajustes > AppSheet.");
     
-    const rows = sessions.map(s => {
-        // Translate local audit status to business terms for Excel/Sheet
-        let auditState = "PENDIENTE";
-        if (s.auditStatus === 'verified') auditState = "VERIFICADO_OK";
-        else if (s.auditStatus === 'warning') auditState = "CON_DIFERENCIAS";
-        else if (s.auditStatus === 'failed') auditState = "RECHAZADO";
+    // Chunking to safe sizes for Selector URL limits
+    const CHUNK_SIZE = 30;
 
-        return {
-            "ID_RECEPCION": s.id,
-            "FECHA_HORA": formatDateTimeForAppSheet(s.createdAt),
-            "ETIQUETA": s.logisticsLabel,
-            "ESTADO": s.status === 'draft' ? 'BORRADOR' : 'PROCESADO',
-            "ESTADO_AUDITORIA": auditState, 
-            "PUNTAJE_AUDITORIA": s.auditScore || 0 
-        };
-    });
-
-    if (rows.length > 0) {
-        console.log(`[Sync Reception] Sending ${rows.length} rows to ${config.receptionTableName}`);
-        await sendToAppSheet(config, config.receptionTableName, { 
-            Action: "Add", 
-            Properties: { Locale: "es-CL", Timezone: "UTC" }, 
-            Rows: rows 
-        });
+    for (let i = 0; i < sessions.length; i += CHUNK_SIZE) {
+        const chunk = sessions.slice(i, i + CHUNK_SIZE);
         
-        await markDraftsAsSynced(sessions.map(s => s.id));
+        // 1. Prepare Rows
+        const rows = chunk.map(s => {
+            let auditState = "PENDIENTE";
+            if (s.auditStatus === 'verified') auditState = "VERIFICADO_OK";
+            else if (s.auditStatus === 'warning') auditState = "CON_DIFERENCIAS";
+            else if (s.auditStatus === 'failed') auditState = "RECHAZADO";
+
+            return {
+                "ID_RECEPCION": s.id,
+                "FECHA_HORA": formatDateTimeForAppSheet(s.createdAt),
+                "ETIQUETA": s.logisticsLabel,
+                "ESTADO": s.status === 'draft' ? 'BORRADOR' : 'PROCESADO',
+                "ESTADO_AUDITORIA": auditState, 
+                "PUNTAJE_AUDITORIA": s.auditScore || 0 
+            };
+        });
+
+        // 2. IDEMPOTENCY: Check which IDs already exist in AppSheet
+        const ids = chunk.map(s => s.id);
+        const existingIds = new Set<string>();
+        
+        try {
+            // Selector: OR([ID_RECEPCION] = 'id1', [ID_RECEPCION] = 'id2', ...)
+            const selector = "OR(" + ids.map(id => `[ID_RECEPCION] = '${id}'`).join(", ") + ")";
+            
+            const existingData = await sendToAppSheet(config, config.receptionTableName, {
+                Action: "Find",
+                Properties: { Locale: "es-CL", Timezone: "UTC", Selector: selector },
+                Rows: []
+            });
+
+            if (Array.isArray(existingData)) {
+                existingData.forEach((r: any) => {
+                    if (r["ID_RECEPCION"]) existingIds.add(r["ID_RECEPCION"]);
+                });
+            }
+        } catch (e) {
+            console.warn("[Sync Reception] 'Find' check failed, falling back to direct Add (might fail on dupes)", e);
+        }
+
+        // 3. Split into Add vs Edit
+        const batchAdd: any[] = [];
+        const batchEdit: any[] = [];
+
+        rows.forEach(row => {
+            if (existingIds.has(row["ID_RECEPCION"])) {
+                batchEdit.push(row);
+            } else {
+                batchAdd.push(row);
+            }
+        });
+
+        console.log(`[Sync Reception] Chunk ${i/CHUNK_SIZE + 1}: ${batchAdd.length} Adds, ${batchEdit.length} Edits`);
+
+        // 4. Execute
+        if (batchAdd.length > 0) {
+            await sendToAppSheet(config, config.receptionTableName, { 
+                Action: "Add", 
+                Properties: { Locale: "es-CL", Timezone: "UTC" }, 
+                Rows: batchAdd 
+            });
+        }
+        
+        if (batchEdit.length > 0) {
+            await sendToAppSheet(config, config.receptionTableName, { 
+                Action: "Edit", 
+                Properties: { Locale: "es-CL", Timezone: "UTC" }, 
+                Rows: batchEdit 
+            });
+        }
+        
+        // 5. Mark chunk as synced immediately to prevent re-processing if next chunk fails
+        await markDraftsAsSynced(chunk.map(s => s.id));
     }
 };
 
