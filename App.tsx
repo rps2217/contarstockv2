@@ -245,36 +245,36 @@ interface NavProps {
 
 // CONFIGURATION FOR NAV ITEMS
 const NAV_CONFIG: Record<string, { label: string, icon: React.ReactNode }> = {
-    'dashboard': { label: 'Inicio', icon: <Home className="w-6 h-6" /> },
-    'database': { label: 'Datos', icon: <DbIcon className="w-6 h-6" /> },
-    'reports': { label: 'Historial', icon: <History className="w-6 h-6" /> },
-    'consolidated': { label: 'Consolidado', icon: <Layers className="w-6 h-6" /> },
-    'reception': { label: 'Recepción', icon: <Container className="w-6 h-6" /> },
-    'conciliator': { label: 'Detective', icon: <Fingerprint className="w-6 h-6" /> },
-    'sync': { label: 'Nube', icon: <Cloud className="w-6 h-6" /> },
+    'dashboard': { label: 'Inicio', icon: <Home className="w-5 h-5" /> },
+    'database': { label: 'Datos', icon: <DbIcon className="w-5 h-5" /> },
+    'reports': { label: 'Historial', icon: <History className="w-5 h-5" /> },
+    'consolidated': { label: 'Consol.', icon: <Layers className="w-5 h-5" /> },
+    'reception': { label: 'Recep.', icon: <Container className="w-5 h-5" /> },
+    'conciliator': { label: 'Detect.', icon: <Fingerprint className="w-5 h-5" /> },
+    'sync': { label: 'Nube', icon: <Cloud className="w-5 h-5" /> },
 };
 
 const MobileNav = memo(({ view, setView, settings }: NavProps) => {
   const t = settings.theme;
   
-  let navClass = "bg-white/90 border-white/20 text-slate-400 shadow-2xl shadow-slate-200/50"; 
+  let navClass = "bg-white/80 border-t border-slate-200 text-slate-400 shadow-[0_-4px_16px_rgba(0,0,0,0.05)]"; 
   
-  if (t === 'contrast') navClass = "bg-black/90 border-yellow-400/50 text-yellow-400/50 shadow-yellow-900/50";
-  else if (t === 'dark') navClass = "bg-slate-900/90 border-slate-700/50 text-slate-500 shadow-black/50";
-  else if (t === 'navy') navClass = "bg-[#151f32]/90 border-[#1e293b] text-slate-500 shadow-black/50";
-  else if (t === 'warm') navClass = "bg-[#f5efe6]/90 border-[#e7e0d3] text-[#a8a29e] shadow-orange-900/10";
+  if (t === 'contrast') navClass = "bg-black/90 border-t border-yellow-400/30 text-yellow-400/50";
+  else if (t === 'dark') navClass = "bg-slate-900/90 border-t border-slate-700/50 text-slate-500";
+  else if (t === 'navy') navClass = "bg-[#151f32]/90 border-t border-[#1e293b] text-slate-500";
+  else if (t === 'warm') navClass = "bg-[#f5efe6]/90 border-t border-[#e7e0d3] text-[#a8a29e]";
 
   // Use configured items or fallback to default
   const navItems = settings.mobileNavConfig || ['dashboard', 'database', 'reports'];
 
   return (
-    <nav className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-sm z-40 transition-all duration-500 ease-out">
-        <div className={`flex justify-around items-center h-16 px-2 rounded-2xl border backdrop-blur-md ${navClass}`}>
+    <nav className={`md:hidden fixed bottom-0 left-0 right-0 z-40 backdrop-blur-lg pb-safe-area transition-all duration-300 ${navClass}`}>
+        <div className="flex justify-around items-center h-16 px-1">
             {navItems.map((itemKey) => {
                 const config = NAV_CONFIG[itemKey];
                 if (!config) return null;
                 
-                // Active state logic handles combined views (e.g. reports active when consolidated is shown)
+                // Active state logic handles combined views
                 let isActive = view === itemKey;
                 if (itemKey === 'reports' && view === 'consolidated') isActive = true;
 
@@ -297,45 +297,40 @@ const MobileNav = memo(({ view, setView, settings }: NavProps) => {
 const NavButton = ({ active, onClick, icon, label, theme }: any) => {
     let activeColor = 'text-blue-600';
     let inactiveColor = 'text-slate-400';
-    let activeBg = 'bg-blue-50';
-
+    // Removed background shape for clearer icon focus on mobile
+    
     if (theme === 'contrast') {
         activeColor = 'text-yellow-400';
         inactiveColor = 'text-yellow-400/30';
-        activeBg = 'bg-yellow-400/20';
     } else if (theme === 'warm') {
         activeColor = 'text-[#78350f]';
         inactiveColor = 'text-[#a8a29e]';
-        activeBg = 'bg-[#e7e0d3]';
     } else if (theme === 'navy') {
         activeColor = 'text-sky-400';
         inactiveColor = 'text-slate-500';
-        activeBg = 'bg-[#1e293b]';
     } else if (theme === 'dark') {
         activeColor = 'text-blue-400';
         inactiveColor = 'text-slate-600';
-        activeBg = 'bg-slate-800';
     }
 
     const handleClick = () => {
-        if (navigator.vibrate) navigator.vibrate(15);
+        if (navigator.vibrate) navigator.vibrate(10);
         onClick();
     };
 
     return (
         <button 
             onClick={handleClick}
-            className={`relative flex flex-col items-center justify-center w-full h-full space-y-1 transition-all duration-300 group ${active ? activeColor : inactiveColor}`}
+            className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-all duration-200 active:scale-95 group ${active ? activeColor : inactiveColor}`}
         >
-            {active && (
-                <span className={`absolute inset-x-2 inset-y-1 rounded-xl opacity-100 ${activeBg} -z-10 animate-in fade-in zoom-in-90 duration-300`} />
-            )}
-            <div className={`p-1 transition-transform duration-300 ${active ? 'scale-110 -translate-y-0.5' : 'group-active:scale-90'}`}>
+            <div className={`transition-all duration-300 ${active ? '-translate-y-1 scale-110 drop-shadow-sm' : ''}`}>
                 {icon}
             </div>
-            <span className={`text-[10px] font-bold tracking-wide transition-opacity duration-300 ${active ? 'opacity-100' : 'opacity-70'}`}>
+            <span className={`text-[10px] font-bold tracking-tight transition-opacity duration-300 leading-none ${active ? 'opacity-100' : 'opacity-70'}`}>
                 {label}
             </span>
+            {/* Active Indicator Dot */}
+            <div className={`w-1 h-1 rounded-full bg-current transition-all duration-300 ${active ? 'opacity-100 scale-100' : 'opacity-0 scale-0'}`} />
         </button>
     );
 };
