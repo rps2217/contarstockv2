@@ -109,8 +109,13 @@ export const performBatchUpload = async (group: UploadGroup): Promise<void> => {
         if (drafts.length === 0) return;
 
         // Use the specific service for Reception.
-        // It handles marking synced internally row-by-row to ensure partial success.
-        await syncReceptionToAppSheet(drafts);
+        const result = await syncReceptionToAppSheet(drafts);
+        
+        // Handle result logic for the UI
+        if (result.failed > 0) {
+            const errStr = result.errors.slice(0, 3).join('; ');
+            throw new Error(`Hubo fallos parciales (${result.failed} errores / ${result.success} éxitos). Info: ${errStr}`);
+        }
         
         return;
     }

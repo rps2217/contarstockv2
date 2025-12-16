@@ -168,72 +168,82 @@ export const syncProductsToAppSheet = async (products: Product[]): Promise<void>
 };
 
 // FIXED: SERIALIZED ROW-BY-ROW SYNC FOR ROBUSTNESS
-// This removes dependencies on "Find" Selectors which can be fragile, and handles duplicates gracefully.
-export const syncReceptionToAppSheet = async (sessions: CountingSession[]): Promise<void> => {
+// Now returns granular status to SyncManager
+export const syncReceptionToAppSheet = async (sessions: CountingSession[]): Promise<{ success: number; failed: number; errors: string[] }> => {
     const settings = getSettings(); 
     const config = settings.appSheetConfig;
+    
     if (!config?.appId || !config?.accessKey) throw new Error("Configuración incompleta: Faltan credenciales.");
-    if (!config?.receptionTableName) throw new Error("Falta configurar la 'Tabla de Recepción' en Ajustes > AppSheet.");
+    if (!config?.receptionTableName) throw new Error("Falta configurar la 'Tabla de Recepción' en Ajustes.");
     
     console.log(`[Sync Reception] Starting sequential sync for ${sessions.length} items...`);
+
+    let successCount = 0;
+    let failCount = 0;
+    const errors: string[] = [];
 
     // Process sequentially to ensure atomic success/failure per row and robust duplicate handling
     for (const session of sessions) {
         
-        // 1. Prepare Row
+        // 1. Prepare Row with strict casting
         let auditState = "PENDIENTE";
         if (session.auditStatus === 'verified') auditState = "VERIFICADO_OK";
         else if (session.auditStatus === 'warning') auditState = "CON_DIFERENCIAS";
         else if (session.auditStatus === 'failed') auditState = "RECHAZADO";
 
         const row = {
-            "ID_RECEPCION": session.id,
+            "ID_RECEPCION": String(session.id),
             "FECHA_HORA": formatDateTimeForAppSheet(session.createdAt),
-            "ETIQUETA": session.logisticsLabel,
+            "ETIQUETA": String(session.logisticsLabel),
             "ESTADO": session.status === 'draft' ? 'BORRADOR' : 'PROCESADO',
-            "ESTADO_AUDITORIA": auditState, 
-            "PUNTAJE_AUDITORIA": session.auditScore || 0 
+            "ESTADO_AUDITORIA": String(auditState), 
+            "PUNTAJE_AUDITORIA": Number(session.auditScore || 0) 
         };
 
         try {
             // STRATEGY: OPTIMISTIC ADD -> FALLBACK EDIT
-            // 1. Try ADD
+            // This now relies on `sendToAppSheet` throwing error if Add returns 0 rows.
+            
             try {
                 await sendToAppSheet(config, config.receptionTableName, { 
                     Action: "Add", 
                     Properties: { Locale: "es-CL", Timezone: "UTC" }, 
                     Rows: [row] 
                 });
-                console.log(`[Sync Reception] Added ${session.logisticsLabel}`);
+                console.log(`[Sync Reception] ADD Success: ${session.logisticsLabel}`);
             } catch (addError: any) {
-                // 2. If Duplicate Error, Try EDIT
-                // AppSheet duplicate error often contains "Row having key ... already exists" or 400 Bad Request
                 const msg = addError.message || "";
-                if (msg.includes("exists") || msg.includes("Duplicate") || msg.includes("400")) {
-                    console.log(`[Sync Reception] Duplicate detected for ${session.logisticsLabel}, attempting Update...`);
+                
+                // If the error suggests it already exists or it was a silent failure (rejected add)
+                if (msg.includes("exists") || msg.includes("Duplicate") || msg.includes("400") || msg.includes("Silent Failure")) {
+                    console.log(`[Sync Reception] Duplicate/Fail detected for ${session.logisticsLabel}, attempting Update...`);
+                    
                     await sendToAppSheet(config, config.receptionTableName, { 
                         Action: "Edit", 
                         Properties: { Locale: "es-CL", Timezone: "UTC" }, 
                         Rows: [row] 
                     });
-                    console.log(`[Sync Reception] Updated ${session.logisticsLabel}`);
+                    console.log(`[Sync Reception] EDIT Success: ${session.logisticsLabel}`);
                 } else {
-                    // Real error (Connection, Auth, Schema)
+                    // Fatal error (Auth, Schema, etc)
                     throw addError;
                 }
             }
 
-            // 3. Mark Local as Synced only after success
+            // 3. Mark Local as Synced only after SUCCESS
             await markDraftsAsSynced([session.id]);
+            successCount++;
 
-        } catch (finalError) {
+        } catch (finalError: any) {
             console.error(`[Sync Reception] Failed to sync ${session.logisticsLabel}`, finalError);
-            // We do NOT throw here so that other items in the batch can still proceed.
-            // But we do NOT mark this one as synced, so it will retry later.
+            failCount++;
+            errors.push(`${session.logisticsLabel}: ${finalError.message}`);
+            // Do NOT throw here, so other items can proceed
         }
     }
     
-    console.log(`[Sync Reception] Batch processing complete.`);
+    console.log(`[Sync Reception] Batch complete. Success: ${successCount}, Failed: ${failCount}`);
+    return { success: successCount, failed: failCount, errors };
 };
 
 export const fetchReceptionData = async (options?: { dateRange?: { start: string, end: string } }): Promise<any[]> => {

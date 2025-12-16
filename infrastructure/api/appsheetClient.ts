@@ -53,12 +53,32 @@ export const sendToAppSheet = async (
 
       if (!response.ok) {
         const errorBody = await response.text();
-        console.error(`[Infra] Error ${response.status}:`, errorBody);
-        throw new Error(`AppSheet API Error: ${errorBody}`);
+        console.error(`[Infra] Error HTTP ${response.status}:`, errorBody);
+        // AppSheet usually returns 400 or 404 for duplicates/keys not found
+        throw new Error(`AppSheet API Error (${response.status}): ${errorBody}`);
       }
 
       const text = await response.text();
-      return text ? JSON.parse(text) : { success: true };
+      // AppSheet sometimes returns empty string on success for some actions, but for Add/Find/Edit it usually returns JSON.
+      if (!text) return { success: true };
+
+      let json;
+      try {
+        json = JSON.parse(text);
+      } catch (e) {
+        console.warn("[Infra] Response was not JSON:", text);
+        return { success: true }; // Assume success if 200 OK but weird body (rare)
+      }
+
+      // --- CRITICAL VALIDATION (THE FIX) ---
+      // If we tried to ADD or EDIT, AppSheet MUST return the rows affected.
+      // If it returns an empty array, the operation failed silently (e.g. key mismatch, constraint violation, or duplicate key on Add without proper error code).
+      if ((payload.Action === 'Add' || payload.Action === 'Edit') && Array.isArray(json.Rows) && json.Rows.length === 0) {
+          console.warn("[Infra] AppSheet returned 200 OK but ZERO rows were affected. Treating as Silent Failure.");
+          throw new Error(`Escritura fallida (Silent Failure): AppSheet rechazó la fila pero dijo OK. Verifique Claves/Duplicados.`);
+      }
+
+      return json;
 
   } catch (error: any) {
       clearTimeout(timeoutId);
