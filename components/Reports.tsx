@@ -1,8 +1,8 @@
+
 import React, { useState, useCallback } from 'react';
-import { FileText, Calendar, ChevronLeft, CheckCircle2, Layers, Plus, MoreVertical, Trash2, Truck, WifiOff, Cloud, Eraser, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { FileText, Calendar, ChevronLeft, CheckCircle2, Layers, Plus, MoreVertical, Trash2, Truck, WifiOff, Cloud, Eraser, ShieldCheck, AlertTriangle, ExternalLink } from 'lucide-react';
 import { CountingSession, ViewState } from '../types';
 import * as sessionService from '../services/sessionService'; 
-import { processSyncQueue } from '../services/appsheet';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { StartSessionModal } from './StartSessionModal';
@@ -96,13 +96,12 @@ const SessionRow = ({ index, style, data }: { index: number; style: React.CSSPro
 
 export const Reports: React.FC<ReportsProps> = ({ onSessionStart, onNavigate }) => {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
-  const [syncingAppSheet, setSyncingAppSheet] = useState(false);
   const [isCleaning, setIsCleaning] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isStartModalOpen, setIsStartModalOpen] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   
-  const pendingSyncCount = useLiveQuery(() => db.syncQueue.where('status').equals('pending').count(), [], 0);
+  const pendingSyncCount = useLiveQuery(() => db.scans.where('synced').equals(0).count(), [], 0);
 
   const handleSearch = useCallback((query: string) => {
       setSearchQuery(query);
@@ -140,19 +139,6 @@ export const Reports: React.FC<ReportsProps> = ({ onSessionStart, onNavigate }) 
       if (window.confirm('¿Estás seguro de que deseas eliminar este historial de conteo permanentemente? Esta acción no se puede deshacer.')) {
           await sessionService.deleteSession(sessionId); 
           setActiveMenuId(null);
-      }
-  };
-
-  const handleProcessQueue = async () => {
-      if (!confirm(`Hay ${pendingSyncCount} conteos pendientes de subir. ¿Intentar sincronizar ahora?`)) return;
-      setSyncingAppSheet(true);
-      try {
-          await processSyncQueue();
-          alert('Cola procesada correctamente.');
-      } catch (e: any) {
-          alert('Error procesando cola. Verifique su conexión.');
-      } finally {
-          setSyncingAppSheet(false);
       }
   };
 
@@ -215,16 +201,19 @@ export const Reports: React.FC<ReportsProps> = ({ onSessionStart, onNavigate }) 
 
                 {/* SYNC QUEUE ALERT */}
                 {pendingSyncCount > 0 && (
-                    <button onClick={handleProcessQueue} className="w-full mb-4 bg-orange-50 border border-orange-200 p-4 rounded-xl flex items-center justify-between shadow-sm animate-in slide-in-from-top-2">
+                    <button 
+                        onClick={() => onNavigate('sync')}
+                        className="w-full mb-4 bg-orange-50 border border-orange-200 p-4 rounded-xl flex items-center justify-between shadow-sm animate-in slide-in-from-top-2 group hover:bg-orange-100 transition-colors"
+                    >
                         <div className="flex items-center gap-3">
                             <WifiOff className="w-5 h-5 text-orange-500" />
                             <div className="text-left">
                                 <div className="text-sm font-bold text-orange-800">Sincronización Pendiente</div>
-                                <div className="text-xs text-orange-600">{pendingSyncCount} conteos esperando conexión</div>
+                                <div className="text-xs text-orange-600">{pendingSyncCount} registros esperando subida</div>
                             </div>
                         </div>
-                        <div className="bg-orange-100 text-orange-700 px-3 py-1.5 rounded-lg text-xs font-bold">
-                            Reintentar
+                        <div className="bg-white text-orange-700 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 group-hover:bg-orange-200">
+                            Ir a Nube <ExternalLink className="w-3 h-3" />
                         </div>
                     </button>
                 )}

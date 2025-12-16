@@ -190,7 +190,7 @@ const AppContent: React.FC = () => {
               <NetworkStatus />
               <Reception 
                 onBack={() => setView('dashboard')} 
-                onGoToSync={() => setView('sync')} 
+                onNavigate={setView} // Passed navigation prop
               />
           </div>
       );
@@ -214,7 +214,7 @@ const AppContent: React.FC = () => {
         {view === 'dashboard' && <Dashboard onNavigate={setView} />}
         {view === 'database' && <Database onBack={() => setView('dashboard')} />}
         {view === 'reports' && <Reports onSessionStart={handleSessionStart} onNavigate={setView} />}
-        {view === 'consolidated' && <Consolidated onBack={() => setView('reports')} />}
+        {view === 'consolidated' && <Consolidated onBack={() => setView('reports')} onNavigate={setView} />}
         {view === 'conciliator' && <Conciliator onBack={() => setView('dashboard')} />}
         {view === 'settings' && <Settings onBack={() => setView('dashboard')} onSettingsChanged={updateSettings} />}
         {view === 'sync' && <SyncManagerUI onBack={() => setView('dashboard')} />}

@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { ChevronLeft, Barcode, CheckCircle2, WifiOff, CloudUpload, CloudDownload, Box, Zap, Layers, Hash, Loader2, Camera, Ban, List, Trash2, X, Eye, Keyboard, AlertTriangle, ArrowRight } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
-import * as sessionService from '../services/sessionService'; // Updated Import
+import * as sessionService from '../services/sessionService'; 
 import { sanitizeBarcode } from '../services/utils';
 import { restoreReceptionFromCloud } from '../services/syncBridge';
 import { SoundFX } from '../services/audio';
@@ -11,30 +11,10 @@ import { CameraScanner } from './CameraScanner';
 
 interface ReceptionProps {
     onBack: () => void;
-    onNavigate?: (view: string) => void; // New Prop to navigate to Sync
+    onNavigate?: (view: any) => void;
 }
 
-// NOTE: Reception View is instantiated in App.tsx. 
-// We will update App.tsx to pass onNavigate via prop drilling or assuming setView behavior is accessible via onBack if simplified, 
-// but standard prop pattern is better. For this specific request, I will assume the parent handles the redirect if I call a special function,
-// OR more simply, I will link to the 'sync' view if possible.
-// Since Reception is a fullscreen override in App.tsx: 
-// if (view === 'reception') { return ... <Reception onBack={() => setView('dashboard')} /> }
-// We need to change App.tsx slightly OR just use window.location hack (bad) OR trust the user will go back.
-// Better: Add a prop for onNavigate. *However*, the existing file doesn't have it.
-// I'll stick to a "Go Back" + Alert approach, or check if I can modify App.tsx. 
-// Ah, the user only asked to modify Reception. I'll make the button go back to Dashboard, 
-// but alert user to go to Sync. 
-// WAIT: The prompt says "centralize the upload". 
-// I will change the button to say "Ir al Gestor de Nube". 
-// And I will use `onBack` but typically that goes to Dashboard. 
-// Let's modify the component to accept onNavigate if possible, but to stay within constraints,
-// I'll use a hack: Since App.tsx renders this, and onBack sets view='dashboard', 
-// I can't easily change view to 'sync' without changing App.tsx.
-// BUT I CANNOT CHANGE APP.TSX in this turn unless I add it to the XML.
-// I will modify App.tsx as well to allow navigation.
-
-export const Reception: React.FC<ReceptionProps & { onGoToSync?: () => void }> = ({ onBack, onGoToSync }) => {
+export const Reception: React.FC<ReceptionProps> = ({ onBack, onNavigate }) => {
     const [inputValue, setInputValue] = useState('');
     const [lastScanned, setLastScanned] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -46,33 +26,6 @@ export const Reception: React.FC<ReceptionProps & { onGoToSync?: () => void }> =
     // Queries
     const draftCount = useLiveQuery(() => db.sessions.where('status').equals('draft').count(), [], 0);
     const unsyncedDrafts = useLiveQuery(() => db.sessions.where('status').equals('draft').and(s => !s.lastSyncTimestamp).reverse().toArray(), [], []);
-
-    // --- SMART GROUPING LOGIC ---
-    const detectedLots = useMemo(() => {
-        if (!unsyncedDrafts || unsyncedDrafts.length === 0) return [];
-
-        const groups = new Map<string, number>();
-
-        unsyncedDrafts.forEach(s => {
-            const label = s.logisticsLabel;
-            let groupKey = label;
-
-            if (label.length === 26) {
-                groupKey = label.substring(0, 23);
-            } else if (label.length > 8) {
-                groupKey = label.substring(0, label.length - 3); 
-            } else if (label.length > 5) {
-                groupKey = label.substring(0, label.length - 1);
-            }
-
-            groups.set(groupKey, (groups.get(groupKey) || 0) + 1);
-        });
-
-        return Array.from(groups.entries())
-            .map(([prefix, count]) => ({ prefix, count }))
-            .sort((a, b) => b.count - a.count)
-            .slice(0, 4); // Top 4 lots only
-    }, [unsyncedDrafts]);
 
     const buffer = useRef('');
     const lastKeyTime = useRef(0);
@@ -158,6 +111,15 @@ export const Reception: React.FC<ReceptionProps & { onGoToSync?: () => void }> =
             alert(`Error de descarga: ${e.message}`);
         } finally {
             setIsRestoring(false);
+        }
+    };
+
+    const handleSyncRedirect = () => {
+        if (onNavigate) {
+            onNavigate('sync');
+        } else {
+            // Fallback just in case
+            onBack();
         }
     };
 
@@ -307,7 +269,7 @@ export const Reception: React.FC<ReceptionProps & { onGoToSync?: () => void }> =
             {unsyncedDrafts && unsyncedDrafts.length > 0 && (
                 <div className="p-4 bg-slate-800 border-t border-slate-700 animate-in slide-in-from-bottom-full shrink-0">
                     <button 
-                        onClick={onGoToSync ? onGoToSync : onBack}
+                        onClick={handleSyncRedirect}
                         className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-900/50 flex items-center justify-center gap-3 transition-all active:scale-95"
                     >
                         <CloudUpload className="w-6 h-6" />

@@ -1,24 +1,22 @@
 
 import React, { useState, useMemo } from 'react';
-import { Layers, ChevronLeft, Package, Box, FileSpreadsheet, FileText, ArrowRight, CloudUpload, Loader2, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { Layers, ChevronLeft, Package, Box, FileSpreadsheet, FileText, ArrowRight, CloudUpload, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
-import { ConsolidatedItem, CountingSession } from '../types';
+import { CountingSession } from '../types';
 import { exportToExcel, exportToPDF } from '../services/export';
-import { syncToAppSheet } from '../services/syncBridge';
-import * as sessionService from '../services/sessionService'; // Updated Import
 import { aggregateScans } from '../services/aggregator';
 import { SearchBar } from './SearchBar';
 
 interface ConsolidatedProps {
     onBack: () => void;
+    onNavigate: (view: any) => void;
 }
 
-export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack }) => {
+export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack, onNavigate }) => {
     const [selectedErp, setSelectedErp] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [detailSearchQuery, setDetailSearchQuery] = useState('');
-    const [isSyncing, setIsSyncing] = useState(false);
 
     const handleSearch = (query: string) => {
         setSearchQuery(query);
@@ -138,27 +136,9 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack }) => {
         exportToPDF(virtualSession, details.items);
     };
 
-    const handleSync = async () => {
-        if (!selectedErp || !details) return;
-        if (!confirm(`¿Subir consolidado de Orden ${selectedErp} a AppSheet?`)) return;
-
-        setIsSyncing(true);
-        try {
-            const virtualSession: CountingSession = {
-                id: 'CONSOLIDATED_SYNC',
-                erpOrder: selectedErp,
-                logisticsLabel: details.logisticsLabels,
-                createdAt: details.lastDate,
-                status: 'completed'
-            };
-            await syncToAppSheet(virtualSession, details.items);
-            await sessionService.markErpSessionsAsSynced(selectedErp); // Updated usage
-            alert('¡Sincronización de consolidado exitosa!');
-        } catch (err: any) {
-            alert(`Error: ${err.message}`);
-        } finally {
-            setIsSyncing(false);
-        }
+    const handleSyncRedirect = () => {
+        // Direct the user to the specialized Sync Manager
+        onNavigate('sync');
     };
 
     if (selectedErp) {
@@ -191,8 +171,11 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack }) => {
                                     )}
                                 </div>
                                 <div className="flex flex-wrap gap-2">
-                                    <button onClick={handleSync} disabled={isSyncing} className="bg-indigo-600 text-white hover:bg-indigo-700 px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-2 transition-colors shadow-md shadow-indigo-200 disabled:opacity-50">
-                                        {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <CloudUpload className="w-4 h-4" />} Subir Manual
+                                    <button 
+                                        onClick={handleSyncRedirect}
+                                        className="bg-indigo-600 text-white hover:bg-indigo-700 px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-2 transition-colors shadow-md shadow-indigo-200"
+                                    >
+                                        <CloudUpload className="w-4 h-4" /> Ir al Gestor Nube
                                     </button>
                                     <button onClick={handleExportExcel} className="bg-green-50 text-green-700 hover:bg-green-100 px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-2 transition-colors border border-green-200"><FileSpreadsheet className="w-4 h-4" /> Excel</button>
                                     <button onClick={handleExportPDF} className="bg-red-50 text-red-700 hover:bg-red-100 px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-2 transition-colors border border-red-200"><FileText className="w-4 h-4" /> PDF</button>
