@@ -1,10 +1,11 @@
-
 import { db } from '../db';
 import { fetchCloudData, syncToAppSheet, syncReceptionToAppSheet, SHEET_COLUMNS, parseFlexibleDate } from './appsheet';
 import { CountingSession, ScanRecord } from '../types';
 import * as sessionService from './sessionService';
 import { generateCompositeKey, normalizeKey } from './utils';
 import { restoreFromCloud, restoreReceptionFromCloud, importProductsFromAppSheet } from './syncBridge';
+
+export { SYNC_ENGINE_VERSION } from './constants';
 
 // --- TYPES ---
 
