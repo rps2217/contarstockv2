@@ -19,30 +19,25 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
     // Simulate network delay for better UX (prevents instant flickering)
     setTimeout(() => {
-      let validUser = '';
-      let validPass = '';
+      let validUser = 'admin'; // Default fallback
+      let validPass = 'admin'; // Default fallback
 
       try {
-          // Access env vars safely
+          // Access env vars safely if they exist
           if (typeof import.meta !== 'undefined' && (import.meta as any).env) {
-              validUser = (import.meta as any).env.VITE_APP_USER;
-              validPass = (import.meta as any).env.VITE_APP_PASS;
+              const envUser = (import.meta as any).env.VITE_APP_USER;
+              const envPass = (import.meta as any).env.VITE_APP_PASS;
+              if (envUser) validUser = envUser;
+              if (envPass) validPass = envPass;
           }
       } catch (err) {
-          console.error("Error reading environment variables.");
-      }
-
-      // Check if credentials are set in environment
-      if (!validUser || !validPass) {
-          setError('Error de configuración: Credenciales no definidas en el sistema.');
-          setIsLoading(false);
-          return;
+          console.warn("Could not read env vars, using defaults.");
       }
 
       if (username === validUser && password === validPass) {
         onLoginSuccess();
       } else {
-        setError('Credenciales incorrectas. Verifique usuario y contraseña.');
+        setError('Credenciales incorrectas. Pruebe admin / admin');
         setIsLoading(false);
       }
     }, 600);
@@ -120,7 +115,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
       <div className="mt-8 text-center text-slate-600 text-xs">
         <p>&copy; {new Date().getFullYear()} LogiCount Systems.</p>
-        <p>Acceso restringido a personal autorizado.</p>
+        <p>Credenciales por defecto: admin / admin</p>
       </div>
     </div>
   );
