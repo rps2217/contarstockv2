@@ -1,45 +1,81 @@
-
 import { db } from '../db';
 import { ScanRecord, CountingSession } from '../types';
 import { generateUUID, sanitizeBarcode } from './utils';
 import { logger } from './logger';
 
 // ==========================================
-// WRITE BUFFER OPTIMIZATION
-// High-speed scanners can trigger 5-10 events per second.
-// Writing to IndexedDB individually causes UI jank.
-// We buffer writes and flush every 200ms or when buffer hits 20 items.
+// WRITE BUFFER OPTIMIZATION (ACID + RETRY)
 // ==========================================
 
 let scanBuffer: ScanRecord[] = [];
 let flushTimer: any = null;
+let isFlushing = false;
 
 const flushBuffer = async () => {
-    if (scanBuffer.length === 0) return;
+    // Prevent re-entry or empty flush
+    if (scanBuffer.length === 0 || isFlushing) return;
     
+    isFlushing = true;
+    
+    // Create a local copy of the batch to attempt writing
     const batch = [...scanBuffer];
-    scanBuffer = []; // Clear immediate
-    if (flushTimer) {
-        clearTimeout(flushTimer);
-        flushTimer = null;
-    }
-
+    
     try {
-        await db.scans.bulkAdd(batch);
+        // --- CRITICAL: ACID TRANSACTION ---
+        // We perform the bulk add AND the stats update in a single transaction.
+        // If any part fails, the DB rolls back completely, preventing "Ghost Scans".
+        await (db as any).transaction('rw', db.scans, db.sessions, async () => {
+            // 1. Write the raw scans
+            await db.scans.bulkAdd(batch);
+            
+            // 2. Identify affected sessions
+            const affectedSessions = new Set(batch.map(s => s.sessionId));
+            
+            // 3. Recalculate stats for affected sessions explicitly within the transaction
+            for (const sessionId of affectedSessions) {
+                // Optimization: Instead of reading full objects, we iterate keys/indices if possible
+                // or just rely on Dexie's speed for the read-aggregated-write loop inside the transaction.
+                let totalUnits = 0;
+                const uniqueSkus = new Set<string>();
+
+                await db.scans.where('sessionId').equals(sessionId).each(scan => {
+                    totalUnits += scan.quantity;
+                    uniqueSkus.add(scan.barcode);
+                });
+
+                await db.sessions.update(sessionId, { 
+                    totalUnits, 
+                    totalSKUs: uniqueSkus.size 
+                });
+            }
+        });
+
+        // SUCCESS: Only remove the successfully written items from the main buffer
+        // (We filter them out in case new items were added to scanBuffer during the await)
+        const writtenIds = new Set(batch.map(s => s.id));
+        scanBuffer = scanBuffer.filter(s => !writtenIds.has(s.id));
         
-        // Update stats for all affected sessions
-        const affectedSessions = new Set(batch.map(s => s.sessionId));
-        for (const sessionId of affectedSessions) {
-            await updateSessionStats(sessionId);
-        }
-        // logger.info('Buffer', `Flushed ${batch.length} records safely.`); // Too verbose for prod
+        // logger.info('Buffer', `Flushed ${batch.length} records safely.`);
+
     } catch (e: any) {
-        logger.error("Buffer", "Flush Failed! Potential Data Loss", e);
+        // FAILURE: We DO NOT clear the buffer. The items stay in `scanBuffer`.
+        // They will be retried on the next flush cycle or pagehide.
+        logger.error("Buffer", "Transaction Failed - Retrying next cycle", e);
+        console.error("Flush failed, data kept in buffer for retry.");
+    } finally {
+        isFlushing = false;
+        
+        // If there are still items (due to failure or new adds), schedule next flush quickly
+        if (scanBuffer.length > 0) {
+            if (flushTimer) clearTimeout(flushTimer);
+            flushTimer = setTimeout(flushBuffer, 500); // Retry/Next in 500ms
+        } else {
+            flushTimer = null;
+        }
     }
 };
 
 // --- SAFETY MECHANISM: FLUSH ON EXIT ---
-// Critical for mobile devices where the browser might be killed in background
 if (typeof window !== 'undefined') {
     // 1. Tab Hidden / Backgrounded
     window.addEventListener('visibilitychange', () => {
@@ -50,6 +86,9 @@ if (typeof window !== 'undefined') {
     
     // 2. Tab Closed / Refreshed
     window.addEventListener('pagehide', () => {
+        // Attempt a synchronous flush if possible, or trigger the async one
+        // Note: Async on pagehide is unreliable, but better than nothing.
+        // Modern browsers support 'fetch' with keepalive, but IDB is tricky.
         flushBuffer();
     });
 }
@@ -57,8 +96,8 @@ if (typeof window !== 'undefined') {
 const addToBuffer = (record: ScanRecord) => {
     scanBuffer.push(record);
     
-    // Immediate flush if buffer gets too big
-    if (scanBuffer.length >= 20) {
+    // Immediate flush if buffer gets too big to reduce transaction size
+    if (scanBuffer.length >= 50) {
         flushBuffer();
     } else if (!flushTimer) {
         // Debounce flush
@@ -126,10 +165,15 @@ export const activateDraftSession = async (draftSessionId: string, erpOrder: str
 };
 
 export const closeSession = async (sessionId: string) => { 
-    // Flush pending writes before closing
+    // Flush pending writes before closing to ensure stats are final
     await flushBuffer();
-    await db.sessions.update(sessionId, { status: 'completed' }); 
-    await updateSessionStats(sessionId); 
+    
+    // Final transactional update to ensure status and stats are consistent
+    await (db as any).transaction('rw', db.sessions, db.scans, async () => {
+        await updateSessionStatsInternal(sessionId);
+        await db.sessions.update(sessionId, { status: 'completed' }); 
+    });
+    
     logger.info('Session', `Closed: ${sessionId}`);
 };
 
@@ -150,11 +194,17 @@ export const deleteSession = async (sessionId: string) => {
 export const cleanSyncedSessions = async (): Promise<number> => {
     const syncedSessions = await db.sessions.filter(s => !!s.lastSyncTimestamp && s.lastSyncTimestamp > 0).toArray();
     if (syncedSessions.length === 0) return 0;
+    
+    // Transactional delete for safety
     let deletedCount = 0;
-    for (const session of syncedSessions) {
-        await deleteSession(session.id);
-        deletedCount++;
-    }
+    await (db as any).transaction('rw', db.sessions, db.scans, db.syncQueue, async () => {
+        for (const session of syncedSessions) {
+            await db.scans.where('sessionId').equals(session.id).delete();
+            await db.sessions.delete(session.id);
+            deletedCount++;
+        }
+    });
+    
     logger.info('Maintenance', `Cleaned ${deletedCount} synced sessions.`);
     return deletedCount;
 };
@@ -179,7 +229,8 @@ export const markDraftsAsSynced = async (sessionIds: string[]) => {
 // ITEM / SCAN MANAGEMENT
 // ==========================================
 
-export const updateSessionStats = async (sessionId: string) => {
+// Internal helper for use inside transactions
+const updateSessionStatsInternal = async (sessionId: string) => {
   let totalUnits = 0;
   const uniqueSkus = new Set<string>();
 
@@ -189,6 +240,13 @@ export const updateSessionStats = async (sessionId: string) => {
   });
 
   await db.sessions.update(sessionId, { totalUnits, totalSKUs: uniqueSkus.size });
+};
+
+// Public exposed version (wraps in transaction for consistency if called alone)
+export const updateSessionStats = async (sessionId: string) => {
+    await (db as any).transaction('rw', db.scans, db.sessions, async () => {
+        await updateSessionStatsInternal(sessionId);
+    });
 };
 
 export const getUnsyncedScans = async (erpOrder: string): Promise<ScanRecord[]> => {
@@ -221,10 +279,10 @@ export const addScan = async (
         isIncident
     };
 
-    // OPTIMIZATION: Use Write Buffer instead of direct await
+    // OPTIMIZATION: Use Write Buffer.
+    // The buffer logic now handles the Transactional Integrity during flush.
     addToBuffer(record);
     
-    // We return the record immediately so UI updates instantly
     return record;
 };
 
@@ -234,62 +292,78 @@ export const markScansAsSynced = async (scanIds: string[]) => {
 };
 
 export const updateScanIncident = async (scanId: string, isIncident: boolean) => {
+    // Incident changes don't affect totals, so single update is safe
     await db.scans.update(scanId, { isIncident: isIncident, synced: 0 });
 };
 
 export const updateScanQuantity = async (scanId: string, newQuantity: number) => {
   const scan = await db.scans.get(scanId); 
-  if (scan) { 
-      await db.scans.update(scanId, { quantity: newQuantity, synced: 0 }); 
-      await updateSessionStats(scan.sessionId); 
+  if (scan) {
+      await (db as any).transaction('rw', db.scans, db.sessions, async () => {
+          await db.scans.update(scanId, { quantity: newQuantity, synced: 0 }); 
+          await updateSessionStatsInternal(scan.sessionId); 
+      });
   }
 };
 
 export const deleteScan = async (scanId: string) => { 
     const scan = await db.scans.get(scanId); 
     if (scan) { 
-        await db.scans.delete(scanId); 
-        await updateSessionStats(scan.sessionId); 
+        await (db as any).transaction('rw', db.scans, db.sessions, async () => {
+            await db.scans.delete(scanId); 
+            await updateSessionStatsInternal(scan.sessionId); 
+        });
     } 
 };
 
 export const deleteSessionItem = async (sessionId: string, barcode: string) => {
   const cleanCode = sanitizeBarcode(barcode); 
-  const scans = await db.scans.where('[sessionId+barcode]').equals([sessionId, cleanCode]).toArray();
-  if (scans.length > 0) { 
-      const ids = scans.map(s => s.id); 
-      await db.scans.bulkDelete(ids); 
-      await updateSessionStats(sessionId); 
-  }
+  
+  await (db as any).transaction('rw', db.scans, db.sessions, async () => {
+      const scans = await db.scans.where('[sessionId+barcode]').equals([sessionId, cleanCode]).toArray();
+      if (scans.length > 0) { 
+          const ids = scans.map(s => s.id); 
+          await db.scans.bulkDelete(ids); 
+          await updateSessionStatsInternal(sessionId); 
+      }
+  });
 };
 
 export const adjustSessionItemQuantity = async (sessionId: string, barcode: string, delta: number) => {
   const cleanCode = sanitizeBarcode(barcode);
+  
+  // NOTE: Delta adjustment logic is complex, so we keep it outside the buffer for now to ensure precise control
+  // But we wrap the result in a transaction.
+  
   if (delta > 0) { 
       const lastScan = await db.scans.where('[sessionId+barcode]').equals([sessionId, cleanCode]).last(); 
+      // Reuse addScan logic (buffered) for additions as it's efficient
       await addScan(sessionId, cleanCode, delta, lastScan?.mm, lastScan?.yyyy, 0);
   } else {
+    // Removals are strict logic, run immediately in transaction
     let remainingToRemove = Math.abs(delta); 
-    const scans = await db.scans.where('[sessionId+barcode]').equals([sessionId, cleanCode]).reverse().sortBy('timestamp'); 
-    
-    const toDelete: string[] = []; 
-    let updateTarget: { id: string, qty: number } | null = null;
-    
-    for (const scan of scans) { 
-        if (remainingToRemove <= 0) break; 
-        if (scan.quantity > remainingToRemove) { 
-            updateTarget = { id: scan.id, qty: scan.quantity - remainingToRemove }; 
-            remainingToRemove = 0; 
-        } else { 
-            toDelete.push(scan.id); 
-            remainingToRemove -= scan.quantity; 
-        } 
-    }
     
     await (db as any).transaction('rw', db.scans, db.sessions, async () => { 
+        const scans = await db.scans.where('[sessionId+barcode]').equals([sessionId, cleanCode]).reverse().sortBy('timestamp'); 
+        
+        const toDelete: string[] = []; 
+        let updateTarget: { id: string, qty: number } | null = null;
+        
+        for (const scan of scans) { 
+            if (remainingToRemove <= 0) break; 
+            if (scan.quantity > remainingToRemove) { 
+                updateTarget = { id: scan.id, qty: scan.quantity - remainingToRemove }; 
+                remainingToRemove = 0; 
+            } else { 
+                toDelete.push(scan.id); 
+                remainingToRemove -= scan.quantity; 
+            } 
+        } 
+        
         if (toDelete.length > 0) await db.scans.bulkDelete(toDelete); 
         if (updateTarget) await db.scans.update(updateTarget.id, { quantity: updateTarget.qty, synced: 0 }); 
-        await updateSessionStats(sessionId); 
+        
+        await updateSessionStatsInternal(sessionId); 
     });
   }
 };
