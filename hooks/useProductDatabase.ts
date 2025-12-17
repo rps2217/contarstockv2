@@ -5,7 +5,7 @@ import { db } from '../db';
 import { Product } from '../types';
 import * as productService from '../services/productService';
 import { importProductsFromAppSheet, syncProductsToAppSheet } from '../services/syncBridge';
-import { sanitizeBarcode } from '../services/utils';
+import { fuzzySearchProducts } from '../services/search';
 
 export const useProductDatabase = () => {
     const [searchQuery, setSearchQuery] = useState('');
@@ -27,21 +27,19 @@ export const useProductDatabase = () => {
         checkStorage();
     }, []);
 
-    // --- QUERIES ---
+    // --- QUERIES WITH FUZZY SEARCH ---
     const products = useLiveQuery(async () => {
-        if (!searchQuery) return await db.products.toArray();
+        if (!searchQuery) {
+            // No search: just return first 200 items to avoid UI lag on massive DBs
+            return await db.products.limit(200).toArray();
+        }
 
-        const cleanFilter = sanitizeBarcode(searchQuery);
-        // Parallel index scan for performance
-        const [byCode, byName] = await Promise.all([
-            db.products.where('barcode').startsWithIgnoreCase(cleanFilter).toArray(),
-            db.products.where('name').startsWithIgnoreCase(searchQuery).toArray()
-        ]);
-
-        const resultMap = new Map<string, Product>();
-        byCode.forEach(p => resultMap.set(p.barcode, p));
-        byName.forEach(p => resultMap.set(p.barcode, p));
-        return Array.from(resultMap.values());
+        // IMPROVED: Load all necessary fields for fuzzy search. 
+        // IndexedDB is fast enough to load 50k items metadata (barcode, name, category) quickly.
+        const allProducts = await db.products.toArray();
+        
+        // Use the new Fuzzy Algorithm
+        return fuzzySearchProducts(allProducts, searchQuery, 50);
     }, [searchQuery], []);
 
     const pendingChangesCount = useLiveQuery(async () => {

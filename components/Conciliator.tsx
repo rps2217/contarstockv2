@@ -1,11 +1,11 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Upload, ChevronLeft, Search, FileSpreadsheet, CheckCircle2, AlertTriangle, XCircle, ArrowRight, Fingerprint, RefreshCw, Filter, FileText, Link, Eye, EyeOff, PackageMinus, PackagePlus, PackageCheck, Repeat, ArrowLeftRight, Sparkles, Save, Check, ShieldCheck, Ban, ArrowDown } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import * as matcher from '../services/matcher';
 import * as productService from '../services/productService';
-import { MatchResult, AliasSuggestion } from '../types';
+import { MatchResult, AliasSuggestion, ExpectedOrder } from '../types';
 import { exportDiscrepancyPDF } from '../services/export';
 import { aggregateScans } from '../services/aggregator';
 
@@ -19,17 +19,30 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [matches, setMatches] = useState<MatchResult[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisProgress, setAnalysisProgress] = useState('');
   const [selectedMatch, setSelectedMatch] = useState<MatchResult | null>(null);
   
   // UI States
   const [activeTab, setActiveTab] = useState<'missing' | 'extra' | 'match' | 'links'>('links');
   const [linkedAliases, setLinkedAliases] = useState<Set<string>>(new Set());
 
+  // Worker Ref
+  const workerRef = useRef<Worker | null>(null);
+
   // Queries
   const sessions = useLiveQuery(() => db.sessions.orderBy('createdAt').reverse().toArray(), [], []);
   const expectedOrdersCount = useLiveQuery(() => db.expectedOrders.count(), [], 0);
 
   const currentSession = sessions?.find(s => s.id === selectedSessionId);
+
+  // Cleanup worker on unmount
+  useEffect(() => {
+      return () => {
+          if (workerRef.current) {
+              workerRef.current.terminate();
+          }
+      };
+  }, []);
 
   // --- HANDLERS ---
 
@@ -52,52 +65,70 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
   const handleRunAnalysis = async (sessionId: string) => {
     setSelectedSessionId(sessionId);
     setIsAnalyzing(true);
-    setLinkedAliases(new Set()); // Reset linked state
+    setAnalysisProgress('Preparando datos...');
+    setLinkedAliases(new Set()); 
+
     try {
+      // 1. Prepare Data
       const scans = await db.scans.where('sessionId').equals(sessionId).toArray();
       const physicalItems = await aggregateScans(scans);
-      
-      // Run the detective matcher
-      const results = await matcher.findMatches(physicalItems);
-      
-      if (results.length === 0) {
-          alert("No se encontraron coincidencias razonables con ninguna orden cargada.");
-          setIsAnalyzing(false);
-          return;
+      const expectedOrders = await db.expectedOrders.toArray();
+
+      if (expectedOrders.length === 0) {
+          throw new Error("No hay órdenes maestras cargadas.");
       }
 
-      setMatches(results);
-      
-      // Auto-select the best match
-      const bestMatch = results[0];
-      setSelectedMatch(bestMatch);
-      setStep('results');
-      
-      // Smart Tab Selection: If aliases found, show them first. If exact match, show match tab.
-      if (bestMatch.potentialAliases.length > 0) {
-          setActiveTab('links');
-      } else if (bestMatch.status === 'exact') {
-          setActiveTab('match');
-      } else {
-          setActiveTab('missing');
+      setAnalysisProgress(`Analizando ${physicalItems.length} productos contra ${expectedOrders.length} guías...`);
+
+      // 2. Initialize Worker
+      if (!workerRef.current) {
+          workerRef.current = new Worker(new URL('../workers/detective.worker.ts', import.meta.url), { type: 'module' });
       }
 
-    } catch (err) {
+      // 3. Post Message
+      workerRef.current.postMessage({ physicalItems, expectedOrders });
+
+      // 4. Handle Response
+      workerRef.current.onmessage = (e) => {
+          const { success, results, error } = e.data;
+          
+          if (error) {
+              alert("Error en análisis: " + error);
+              setIsAnalyzing(false);
+              return;
+          }
+
+          if (success) {
+              if (results.length === 0) {
+                  alert("No se encontraron coincidencias razonables.");
+                  setIsAnalyzing(false);
+                  return;
+              }
+
+              setMatches(results);
+              const bestMatch = results[0];
+              setSelectedMatch(bestMatch);
+              setStep('results');
+              
+              if (bestMatch.potentialAliases.length > 0) setActiveTab('links');
+              else if (bestMatch.status === 'exact') setActiveTab('match');
+              else setActiveTab('missing');
+              
+              setIsAnalyzing(false);
+          }
+      };
+
+    } catch (err: any) {
       console.error(err);
-      alert("Error en el análisis.");
-    } finally {
+      alert("Error crítico: " + err.message);
       setIsAnalyzing(false);
     }
   };
 
   const handleAcceptAlias = async (alias: AliasSuggestion) => {
       try {
-          // This will create the product in the DB cloning details from the Expected Barcode
           await productService.createProductAlias(alias.physicalBarcode, alias.expectedBarcode, alias.expectedName);
-          
           setLinkedAliases(prev => new Set(prev).add(alias.physicalBarcode));
-          
-          // Optional: Vibrate for feedback
           if (navigator.vibrate) navigator.vibrate(50);
       } catch (e: any) {
           alert(`Error al crear alias: ${e.message}`);
@@ -109,29 +140,25 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
       const newErp = selectedMatch.expectedOrder.internalId;
       const score = selectedMatch.matchScore;
 
-      // Determine Audit Status
       let auditStatus: 'verified' | 'warning' | 'failed' = 'failed';
       if (score > 98) auditStatus = 'verified';
       else if (score > 60) auditStatus = 'warning';
       
       let msg = `¿Confirmar validación?\n\nSe asignará la Guía "${newErp}" al conteo físico actual.`;
-      
       if (score < 50) {
-          msg = `⚠️ ADVERTENCIA DE BAJA COINCIDENCIA (${score.toFixed(0)}%)\n\nEl sistema detecta muchas diferencias. ¿Estás seguro de que esta es la guía correcta?\n\nAl confirmar, se sobrescribirá el número de orden actual.`;
+          msg = `⚠️ ADVERTENCIA DE BAJA COINCIDENCIA (${score.toFixed(0)}%)\n\nEl sistema detecta muchas diferencias. ¿Estás seguro?`;
       }
 
       if (!confirm(msg)) return;
 
       try {
-          // PERSIST AUDIT DATA
           await db.sessions.update(currentSession.id, { 
               erpOrder: newErp,
               auditStatus: auditStatus,
               auditScore: parseFloat(score.toFixed(1)),
               auditTimestamp: Date.now()
           });
-          
-          alert("✅ Validación Completada y Guardada en Historial.");
+          alert("✅ Validación Completada.");
           onBack(); 
       } catch (e) {
           alert("Error al actualizar base de datos.");
@@ -143,11 +170,10 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
       exportDiscrepancyPDF(selectedMatch, currentSession.logisticsLabel);
   };
 
-  // --- DERIVED DATA FOR RESULTS ---
+  // --- DERIVED DATA ---
   const breakdown = useMemo(() => {
       if (!selectedMatch) return { missing: [], extra: [], match: [], links: [], stats: { total: 0, percent: 0 } };
       
-      // Filter out items that are suggested as aliases to avoid clutter in Missing/Extra tabs
       const aliasPhysicals = new Set(selectedMatch.potentialAliases.map(a => a.physicalBarcode));
       const aliasExpected = new Set(selectedMatch.potentialAliases.map(a => a.expectedBarcode));
 
@@ -156,15 +182,15 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
       const match = selectedMatch.details.filter(d => d.difference === 0);
       const links = selectedMatch.potentialAliases;
 
-      // Calc exact fill rate (lines fully satisfied)
       const exactLines = match.length;
-      const totalLines = selectedMatch.details.length; // Uses union of both sets
+      const totalLines = selectedMatch.details.length;
       const percent = totalLines > 0 ? (exactLines / totalLines) * 100 : 0;
 
       return { missing, extra, match, links, stats: { total: totalLines, percent } };
   }, [selectedMatch]);
 
-  // --- VIEW: UPLOAD ---
+  // --- RENDERERS ---
+
   if (step === 'upload') {
     return (
       <div className="max-w-2xl mx-auto p-4 pt-8 animate-in fade-in">
@@ -204,7 +230,7 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
                         <FileSpreadsheet className="w-8 h-8 text-slate-400 group-hover:text-indigo-500 transition-colors"/>
                     </div>
                     <span className="text-lg font-bold text-slate-700 group-hover:text-indigo-700">Subir Excel (.xlsx)</span>
-                    <span className="text-xs text-slate-400 mt-2">Columnas requeridas: ID Agrupador, Código, Cantidad</span>
+                    <span className="text-xs text-slate-400 mt-2">Columnas: ID Agrupador, Código, Cantidad</span>
                 </div>
               )}
             </div>
@@ -215,7 +241,6 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
     );
   }
 
-  // --- VIEW: SELECT SESSION ---
   if (step === 'select') {
       return (
         <div className="max-w-2xl mx-auto p-4 pt-8 animate-in fade-in">
@@ -223,6 +248,14 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
              <h1 className="text-2xl font-bold text-slate-900 mb-2">Selecciona un Conteo</h1>
              <p className="text-slate-500 text-sm mb-6">Elige el bulto físico que deseas investigar.</p>
              
+             {isAnalyzing && (
+                 <div className="fixed inset-0 z-50 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center p-8 text-center animate-in fade-in">
+                     <RefreshCw className="w-12 h-12 text-indigo-600 animate-spin mb-4" />
+                     <h3 className="text-xl font-bold text-slate-900">Detective Trabajando</h3>
+                     <p className="text-slate-500 mt-2">{analysisProgress}</p>
+                 </div>
+             )}
+
              <div className="space-y-3">
                  {sessions?.map(s => (
                      <button 
@@ -231,11 +264,9 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
                         disabled={isAnalyzing}
                         className="w-full bg-white p-4 rounded-2xl border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all text-left flex justify-between items-center group relative overflow-hidden"
                     >
-                         {/* Audit Badge if already checked */}
                          {s.auditStatus && (
                             <div className={`absolute top-0 right-0 w-3 h-3 rounded-bl-lg ${s.auditStatus === 'verified' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
                          )}
-
                          <div>
                              <div className="font-bold text-slate-900 flex items-center gap-2">
                                 {s.erpOrder}
@@ -243,11 +274,7 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
                              </div>
                              <div className="text-xs text-slate-500 mt-1 font-mono">{s.logisticsLabel}</div>
                          </div>
-                         {isAnalyzing && selectedSessionId === s.id ? (
-                             <RefreshCw className="w-5 h-5 text-indigo-500 animate-spin" />
-                         ) : (
-                             <ArrowRight className="w-5 h-5 text-slate-300 group-hover:text-indigo-500" />
-                         )}
+                         <ArrowRight className="w-5 h-5 text-slate-300 group-hover:text-indigo-500" />
                      </button>
                  ))}
              </div>
@@ -255,10 +282,9 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
       );
   }
 
-  // --- VIEW: RESULTS DASHBOARD ---
+  // --- VIEW: RESULTS ---
   if (step === 'results' && selectedMatch) {
-      
-      // Determine Verdict Style
+      // Determine Verdict (Same logic as before)
       const score = selectedMatch.matchScore;
       let verdictColor = 'bg-emerald-500';
       let verdictText = 'Coincidencia Certificada';
@@ -280,108 +306,11 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
           verdictTextColor = 'text-amber-900';
       }
 
-      const renderContent = () => {
-          if (activeTab === 'links') {
-              if (breakdown.links.length === 0) {
-                  return (
-                    <div className="flex flex-col items-center justify-center h-64 text-slate-400">
-                        <CheckCircle2 className="w-12 h-12 mb-2 opacity-50" />
-                        <p className="text-sm font-bold">No se detectaron problemas de SKU.</p>
-                    </div>
-                  );
-              }
-              return (
-                  <div className="space-y-4">
-                      <div className="bg-indigo-50 border border-indigo-200 p-4 rounded-xl text-sm text-indigo-800 flex items-start gap-3">
-                          <Sparkles className="w-5 h-5 shrink-0" />
-                          <div>
-                              <span className="font-bold block mb-1">Detección Inteligente (Espejo)</span>
-                              Estos productos tienen códigos diferentes pero cantidades idénticas. Confirma el vínculo para corregir tu base de datos automáticamente.
-                          </div>
-                      </div>
-                      {breakdown.links.map((link, idx) => {
-                          const isLinked = linkedAliases.has(link.physicalBarcode);
-                          return (
-                            <div key={idx} className={`bg-white rounded-xl border shadow-sm overflow-hidden transition-all ${isLinked ? 'border-emerald-200 ring-2 ring-emerald-100' : 'border-indigo-100'}`}>
-                                <div className="flex items-stretch">
-                                    {/* Physical Side */}
-                                    <div className="flex-1 p-3 bg-slate-50">
-                                        <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Lo que contaste</div>
-                                        <div className="font-bold text-slate-900 text-sm mb-1">{link.physicalName}</div>
-                                        <div className="font-mono text-xs text-slate-500 bg-white border border-slate-200 px-1 rounded w-fit">{link.physicalBarcode}</div>
-                                    </div>
-                                    
-                                    {/* Connector */}
-                                    <div className="w-20 bg-indigo-50 flex flex-col items-center justify-center border-l border-r border-indigo-100 relative z-10">
-                                        <div className="text-xl font-black text-indigo-600">{link.quantity}</div>
-                                        <div className="text-[9px] text-indigo-400 uppercase font-bold">Unidades</div>
-                                        <ArrowLeftRight className="w-4 h-4 text-indigo-400 absolute bottom-2" />
-                                    </div>
-
-                                    {/* Expected Side */}
-                                    <div className="flex-1 p-3 bg-white">
-                                        <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Lo que dice el Excel</div>
-                                        <div className="font-bold text-slate-900 text-sm mb-1">{link.expectedName}</div>
-                                        <div className="font-mono text-xs text-slate-500 bg-slate-50 border border-slate-200 px-1 rounded w-fit">{link.expectedBarcode}</div>
-                                    </div>
-                                </div>
-                                
-                                {/* Action Bar */}
-                                <div className="p-2 bg-slate-50 border-t border-slate-100 flex justify-end">
-                                    <button 
-                                        onClick={() => handleAcceptAlias(link)}
-                                        disabled={isLinked}
-                                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                                            isLinked 
-                                            ? 'bg-emerald-100 text-emerald-700 cursor-default' 
-                                            : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-200 active:scale-95'
-                                        }`}
-                                    >
-                                        {isLinked ? <Check className="w-4 h-4" /> : <Link className="w-4 h-4" />}
-                                        {isLinked ? 'Registrado en Base de Datos' : 'Vincular y Crear Registro'}
-                                    </button>
-                                </div>
-                            </div>
-                          );
-                      })}
-                  </div>
-              );
-          }
-
-          const activeList = activeTab === 'missing' ? breakdown.missing : (activeTab === 'extra' ? breakdown.extra : breakdown.match);
-          if (activeList.length === 0) {
-            return (
-                <div className="flex flex-col items-center justify-center h-64 text-slate-400">
-                    <CheckCircle2 className="w-12 h-12 mb-2 opacity-50" />
-                    <p className="text-sm font-bold">No hay items en esta categoría</p>
-                </div>
-            );
-          }
-
-          return (
-              <div className="space-y-2">
-                  {activeList.map((item, idx) => (
-                      <div key={idx} className="bg-white p-3 rounded-xl border border-slate-100 flex justify-between items-center hover:border-slate-200 transition-colors">
-                          <div className="min-w-0 flex-1 pr-4">
-                              <div className="font-bold text-slate-900 text-sm truncate">{item.name}</div>
-                              <div className="font-mono text-xs text-slate-400">{item.barcode}</div>
-                          </div>
-                          <div className="text-right">
-                              <div className={`font-black text-lg ${item.difference === 0 ? 'text-emerald-500' : (item.difference < 0 ? 'text-red-500' : 'text-amber-500')}`}>
-                                  {item.difference > 0 ? `+${item.difference}` : item.difference}
-                              </div>
-                              <div className="text-[9px] text-slate-400 font-bold uppercase">
-                                  Esp: {item.expectedQty} | Fís: {item.physicalQty}
-                              </div>
-                          </div>
-                      </div>
-                  ))}
-              </div>
-          );
-      };
+      const activeList = activeTab === 'missing' ? breakdown.missing : (activeTab === 'extra' ? breakdown.extra : breakdown.match);
 
       return (
           <div className="bg-slate-50 min-h-screen flex flex-col">
+              {/* Header Results */}
               <div className="bg-white px-4 py-3 border-b border-slate-200 flex items-center justify-between sticky top-0 z-20 shadow-sm">
                   <div className="flex items-center gap-2">
                       <button onClick={() => setStep('select')} className="p-2 hover:bg-slate-100 rounded-full"><ChevronLeft className="w-5 h-5"/></button>
@@ -393,8 +322,7 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
               </div>
 
               <div className="p-4 max-w-2xl mx-auto w-full flex-1 overflow-y-auto pb-20">
-                  
-                  {/* --- VERDICT PANEL --- */}
+                  {/* Score Card */}
                   <div className={`rounded-3xl p-6 shadow-sm border mb-6 relative overflow-hidden ${verdictBg}`}>
                         <div className="flex justify-between items-start relative z-10">
                             <div>
@@ -406,10 +334,9 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
                                 </div>
                                 <h2 className={`text-lg font-bold ${verdictTextColor} leading-tight`}>{verdictText}</h2>
                                 <p className={`text-xs opacity-80 mt-1 ${verdictTextColor}`}>
-                                    Comparando <strong>{currentSession?.erpOrder}</strong> (Físico) con <strong>{selectedMatch.expectedOrder.internalId}</strong> (Excel)
+                                    Comparando <strong>{currentSession?.erpOrder}</strong> con <strong>{selectedMatch.expectedOrder.internalId}</strong>
                                 </p>
                             </div>
-                            
                             <div className="text-right">
                                 <button 
                                     onClick={handleAssignOrder}
@@ -442,8 +369,68 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
                   </div>
 
                   {/* List Content */}
-                  {renderContent()}
-
+                  {activeTab === 'links' ? (
+                      breakdown.links.length === 0 ? (
+                        <div className="text-center py-12 text-slate-400 text-sm">No hay sugerencias de alias.</div>
+                      ) : (
+                        <div className="space-y-4">
+                            <div className="bg-indigo-50 border border-indigo-200 p-4 rounded-xl text-sm text-indigo-800 flex items-start gap-3">
+                                <Sparkles className="w-5 h-5 shrink-0" />
+                                <div><span className="font-bold">Detección Inteligente:</span> Productos con códigos distintos pero cantidades idénticas.</div>
+                            </div>
+                            {breakdown.links.map((link, idx) => {
+                                const isLinked = linkedAliases.has(link.physicalBarcode);
+                                return (
+                                    <div key={idx} className={`bg-white rounded-xl border shadow-sm overflow-hidden ${isLinked ? 'border-emerald-200' : 'border-indigo-100'}`}>
+                                        <div className="flex items-stretch">
+                                            <div className="flex-1 p-3 bg-slate-50">
+                                                <div className="text-[10px] font-bold text-slate-400 uppercase">Lo que contaste</div>
+                                                <div className="font-bold text-slate-900 text-sm">{link.physicalName}</div>
+                                                <div className="font-mono text-xs text-slate-500">{link.physicalBarcode}</div>
+                                            </div>
+                                            <div className="w-20 bg-indigo-50 flex flex-col items-center justify-center border-l border-r border-indigo-100">
+                                                <div className="text-xl font-black text-indigo-600">{link.quantity}</div>
+                                                <div className="text-[9px] text-indigo-400 uppercase font-bold">Unidades</div>
+                                                <ArrowLeftRight className="w-4 h-4 text-indigo-400 mt-1" />
+                                            </div>
+                                            <div className="flex-1 p-3 bg-white">
+                                                <div className="text-[10px] font-bold text-slate-400 uppercase">Lo que dice el Excel</div>
+                                                <div className="font-bold text-slate-900 text-sm">{link.expectedName}</div>
+                                                <div className="font-mono text-xs text-slate-500">{link.expectedBarcode}</div>
+                                            </div>
+                                        </div>
+                                        <div className="p-2 bg-slate-50 border-t border-slate-100 flex justify-end">
+                                            <button onClick={() => handleAcceptAlias(link)} disabled={isLinked} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${isLinked ? 'bg-emerald-100 text-emerald-700' : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md'}`}>
+                                                {isLinked ? 'Vinculado' : 'Vincular SKU'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                      )
+                  ) : (
+                      activeList.length === 0 ? (
+                        <div className="text-center py-12 text-slate-400 text-sm">Lista vacía.</div>
+                      ) : (
+                        <div className="space-y-2">
+                            {activeList.map((item, idx) => (
+                                <div key={idx} className="bg-white p-3 rounded-xl border border-slate-100 flex justify-between items-center">
+                                    <div className="min-w-0 flex-1 pr-4">
+                                        <div className="font-bold text-slate-900 text-sm truncate">{item.name}</div>
+                                        <div className="font-mono text-xs text-slate-400">{item.barcode}</div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className={`font-black text-lg ${item.difference === 0 ? 'text-emerald-500' : (item.difference < 0 ? 'text-red-500' : 'text-amber-500')}`}>
+                                            {item.difference > 0 ? `+${item.difference}` : item.difference}
+                                        </div>
+                                        <div className="text-[9px] text-slate-400 font-bold uppercase">Esp: {item.expectedQty} | Fís: {item.physicalQty}</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                      )
+                  )}
               </div>
           </div>
       );

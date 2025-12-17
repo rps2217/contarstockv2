@@ -1,11 +1,11 @@
 
-import React, { useState } from 'react';
-import { Settings as SettingsIcon, Volume2, VolumeX, Vibrate, Zap, Moon, Sun, Monitor, AlertTriangle, ArrowLeft, Cloud, Key, Database, Lock, Check, Eye, Shield, FileText, Package, AlertOctagon, Activity, CheckCircle, XCircle, Share2, Download, QrCode, Copy, Save, Upload, RefreshCw, Loader2, Speech, Hash, Type, Gauge, BarChart3, Smartphone, LayoutTemplate, Camera } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Settings as SettingsIcon, Volume2, VolumeX, Vibrate, Zap, Moon, Sun, Monitor, AlertTriangle, ArrowLeft, Cloud, Key, Database, Lock, Check, Eye, Shield, FileText, Package, AlertOctagon, Activity, CheckCircle, XCircle, Share2, Download, QrCode, Copy, Save, Upload, RefreshCw, Loader2, Speech, Hash, Type, Gauge, BarChart3, Smartphone, LayoutTemplate, Camera, Stethoscope, Trash2, HardDrive } from 'lucide-react';
 import * as sessionService from '../services/sessionService'; 
 import * as settingsService from '../services/settings';
+import * as maintenanceService from '../services/maintenance';
 import { createFullBackup, restoreFullBackup } from '../services/backupService';
 import { AppSettings, ViewState } from '../types';
-import { runSystemDiagnostics } from '../services/businessLogic.test';
 import { SoundFX } from '../services/audio';
 import { CameraScanner } from './CameraScanner';
 
@@ -28,13 +28,31 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
   // Camera State
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   
-  // Diagnostics State
-  const [diagResults, setDiagResults] = useState<{ passed: number, failed: number, logs: string[] } | null>(null);
-  const [isRunningDiag, setIsRunningDiag] = useState(false);
+  // Health & Maintenance State
+  const [healthReport, setHealthReport] = useState<maintenanceService.HealthReport | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isRepairing, setIsRepairing] = useState(false);
+  const [repairLogs, setRepairLogs] = useState<string[]>([]);
 
   // Backup State
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
+
+  useEffect(() => {
+      runHealthCheck();
+  }, []);
+
+  const runHealthCheck = async () => {
+      setIsAnalyzing(true);
+      try {
+          const report = await maintenanceService.checkSystemHealth();
+          setHealthReport(report);
+      } catch (e) {
+          console.error(e);
+      } finally {
+          setIsAnalyzing(false);
+      }
+  };
 
   const updateSetting = (key: keyof AppSettings, value: any) => {
     const newSettings = { ...settings, [key]: value };
@@ -83,16 +101,19 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
       setTimeout(() => setShowSaveFeedback(false), 3000);
   };
 
-  const handleRunDiagnostics = async () => {
-      setIsRunningDiag(true);
-      setDiagResults(null);
+  const handleRepairSystem = async () => {
+      if (!confirm("¿Ejecutar optimización de base de datos? Esto eliminará registros huérfanos y limpiará la cola de sincronización.")) return;
+      
+      setIsRepairing(true);
+      setRepairLogs([]);
       try {
-        const results = await runSystemDiagnostics();
-        setDiagResults(results);
+        const logs = await maintenanceService.repairSystem();
+        setRepairLogs(logs);
+        await runHealthCheck(); // Refresh status
       } catch (e) {
         console.error(e);
       } finally {
-        setIsRunningDiag(false);
+        setIsRepairing(false);
       }
   };
 
@@ -176,6 +197,15 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
       alert("Configuración copiada al portapapeles.");
   };
 
+  // Helper for byte formatting
+  const formatBytes = (bytes: number) => {
+      if (bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
   return (
     <div className="max-w-3xl mx-auto pb-24 px-4 pt-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
       
@@ -223,7 +253,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
             </div>
         </section>
 
-        {/* MOBILE NAVIGATION CONFIG (NEW) */}
+        {/* MOBILE NAVIGATION CONFIG */}
         <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
              <h2 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
                 <Smartphone className="w-5 h-5 text-purple-500" /> Navegación Móvil
@@ -352,6 +382,75 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
             </div>
         </section>
 
+        {/* SYSTEM HEALTH & MAINTENANCE (NEW) */}
+        <section className={`rounded-2xl border p-6 transition-all ${healthReport?.status === 'warning' || healthReport?.status === 'critical' ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-200 shadow-sm'}`}>
+            <div className="flex justify-between items-start mb-4">
+                <h2 className={`text-lg font-bold flex items-center gap-2 ${healthReport?.status === 'healthy' ? 'text-slate-900' : 'text-amber-900'}`}>
+                    <Stethoscope className="w-5 h-5 text-emerald-600" /> Centro de Salud
+                </h2>
+                <button onClick={runHealthCheck} className="p-2 bg-white/50 rounded-full hover:bg-white transition-colors" disabled={isAnalyzing}>
+                    {isAnalyzing ? <Loader2 className="w-4 h-4 animate-spin text-slate-500"/> : <RefreshCw className="w-4 h-4 text-slate-500"/>}
+                </button>
+            </div>
+
+            {healthReport && (
+                <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-white/60 p-3 rounded-xl border border-black/5">
+                            <div className="text-xs text-slate-500 font-bold uppercase mb-1">Registros Totales</div>
+                            <div className="text-xl font-black text-slate-800">{healthReport.totalRecords}</div>
+                        </div>
+                        <div className="bg-white/60 p-3 rounded-xl border border-black/5">
+                            <div className="text-xs text-slate-500 font-bold uppercase mb-1">Uso de Disco</div>
+                            <div className="text-xl font-black text-slate-800 flex items-center gap-2">
+                                <HardDrive className="w-4 h-4 text-slate-400" /> {formatBytes(healthReport.storageUsage)}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Alert Box if Issues */}
+                    {(healthReport.orphanScans > 0 || healthReport.stuckSyncJobs > 0 || healthReport.corruptProducts > 0) ? (
+                        <div className="bg-white p-4 rounded-xl border border-amber-100 shadow-sm">
+                            <h3 className="text-sm font-bold text-amber-800 mb-2 flex items-center gap-2"><AlertTriangle className="w-4 h-4"/> Problemas Detectados</h3>
+                            <ul className="text-xs text-amber-700 space-y-1 list-disc pl-4">
+                                {healthReport.orphanScans > 0 && <li><strong>{healthReport.orphanScans}</strong> registros de escaneo huérfanos (basura).</li>}
+                                {healthReport.stuckSyncJobs > 0 && <li><strong>{healthReport.stuckSyncJobs}</strong> trabajos de subida atascados.</li>}
+                                {healthReport.corruptProducts > 0 && <li><strong>{healthReport.corruptProducts}</strong> productos corruptos.</li>}
+                            </ul>
+                            
+                            <button 
+                                onClick={handleRepairSystem}
+                                disabled={isRepairing}
+                                className="w-full mt-3 bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 rounded-lg text-xs flex items-center justify-center gap-2 transition-colors shadow-sm"
+                            >
+                                {isRepairing ? <Loader2 className="w-3 h-3 animate-spin"/> : <Trash2 className="w-3 h-3" />}
+                                Ejecutar Reparación Automática
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="bg-emerald-50 text-emerald-800 text-xs font-bold p-3 rounded-xl border border-emerald-100 flex items-center gap-2">
+                            <CheckCircle className="w-4 h-4" /> Base de datos saludable y optimizada.
+                        </div>
+                    )}
+
+                    {repairLogs.length > 0 && (
+                        <div className="bg-slate-900 text-slate-300 p-3 rounded-xl text-[10px] font-mono max-h-32 overflow-y-auto">
+                            {repairLogs.map((log, i) => <div key={i}>{log}</div>)}
+                        </div>
+                    )}
+                </div>
+            )}
+            
+            <div className="mt-4 pt-4 border-t border-black/5 grid grid-cols-2 gap-3">
+                 <button onClick={handleHardReset} className="text-xs font-bold text-slate-500 hover:text-blue-600 flex items-center gap-1 justify-center py-2 bg-white rounded-lg border border-slate-200">
+                    <RefreshCw className="w-3 h-3" /> Forzar Recarga
+                 </button>
+                 <button onClick={() => window.location.reload()} className="text-xs font-bold text-slate-500 hover:text-blue-600 flex items-center gap-1 justify-center py-2 bg-white rounded-lg border border-slate-200">
+                    <Activity className="w-3 h-3" /> Reinicio Suave
+                 </button>
+            </div>
+        </section>
+
         {/* DATA SECURITY */}
         <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
             <h2 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
@@ -429,42 +528,6 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
                     {showSaveFeedback ? <Check className="w-4 h-4" /> : <Cloud className="w-4 h-4" />} {showSaveFeedback ? 'Guardado' : 'Guardar Configuración'}
                 </button>
             </form>
-        </section>
-
-        {/* DIAGNOSTICS & MAINTENANCE */}
-        <section className="bg-slate-50 rounded-2xl border border-slate-200 p-6">
-            <h2 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
-                <Activity className="w-5 h-5 text-emerald-600" /> Diagnóstico y Mantenimiento
-            </h2>
-            <p className="text-sm text-slate-500 mb-4">Herramientas para verificar integridad y actualizar la aplicación.</p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <button 
-                    onClick={handleRunDiagnostics} 
-                    disabled={isRunningDiag}
-                    className="bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 font-bold py-3 px-4 rounded-xl text-sm shadow-sm transition-colors flex items-center justify-center gap-2"
-                >
-                    {isRunningDiag ? <Loader2 className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />} 
-                    Ejecutar Pruebas
-                </button>
-                <button onClick={handleHardReset} className="bg-white border border-red-200 text-red-600 hover:bg-red-50 font-bold py-3 px-4 rounded-xl text-sm shadow-sm transition-colors flex items-center justify-center gap-2">
-                    <RefreshCw className="w-4 h-4" /> Forzar Actualización
-                </button>
-            </div>
-
-            {diagResults && (
-                <div className="mt-4 bg-white p-4 rounded-xl border border-slate-200 animate-in fade-in">
-                    <div className="flex gap-4 mb-2">
-                        <span className="text-green-600 font-bold flex items-center gap-1"><CheckCircle className="w-4 h-4"/> Pasaron: {diagResults.passed}</span>
-                        <span className="text-red-600 font-bold flex items-center gap-1"><XCircle className="w-4 h-4"/> Fallaron: {diagResults.failed}</span>
-                    </div>
-                    <ul className="text-xs font-mono bg-slate-900 text-slate-300 p-3 rounded-lg space-y-1">
-                        {diagResults.logs.map((log, i) => (
-                            <li key={i}>{log}</li>
-                        ))}
-                    </ul>
-                </div>
-            )}
         </section>
 
       </div>

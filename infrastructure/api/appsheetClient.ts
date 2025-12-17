@@ -54,7 +54,6 @@ export const sendToAppSheet = async (
       if (!response.ok) {
         const errorBody = await response.text();
         console.error(`[Infra] Error HTTP ${response.status}:`, errorBody);
-        // AppSheet usually returns 400 or 404 for duplicates/keys not found
         throw new Error(`AppSheet API Error (${response.status}): ${errorBody}`);
       }
 
@@ -70,12 +69,12 @@ export const sendToAppSheet = async (
         return { success: true }; // Assume success if 200 OK but weird body (rare)
       }
 
-      // --- CRITICAL VALIDATION (THE FIX) ---
+      // --- CRITICAL VALIDATION ---
       // If we tried to ADD or EDIT, AppSheet MUST return the rows affected.
-      // If it returns an empty array, the operation failed silently (e.g. key mismatch, constraint violation, or duplicate key on Add without proper error code).
+      // If it returns an empty array, the operation failed silently (e.g. key mismatch, constraint violation).
       if ((payload.Action === 'Add' || payload.Action === 'Edit') && Array.isArray(json.Rows) && json.Rows.length === 0) {
           console.warn("[Infra] AppSheet returned 200 OK but ZERO rows were affected. Treating as Silent Failure.");
-          throw new Error(`Escritura fallida (Silent Failure): AppSheet rechazó la fila pero dijo OK. Verifique Claves/Duplicados.`);
+          throw new Error(`Escritura rechazada por AppSheet (Silent Failure). Verifique duplicados o claves primarias.`);
       }
 
       return json;
