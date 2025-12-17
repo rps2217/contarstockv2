@@ -12,29 +12,41 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose })
     const scannerRef = useRef<Html5Qrcode | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [isScanning, setIsScanning] = useState(true);
-    const [lastScanned, setLastScanned] = useState<string | null>(null);
     
-    // QA FIX: Use a stable ID component-scoped to prevent collisions if multiple instances existed
+    // Stable ID for the scanner container
     const uniqueId = useRef(`scanner-${Math.random().toString(36).substr(2, 9)}`).current;
+    
+    // Use a ref for onScan to avoid re-triggering the effect when it changes
+    const onScanRef = useRef(onScan);
+    onScanRef.current = onScan;
+
+    // Use a ref to track the last scanned code to prevent rapid duplicates locally
+    const lastScannedCode = useRef<string | null>(null);
 
     useEffect(() => {
         let isMounted = true;
 
-        // Ensure we don't create multiple instances if re-renders happen quickly
-        if (!scannerRef.current) {
-             scannerRef.current = new Html5Qrcode(uniqueId);
-        }
-        
         const startScanner = async () => {
-            if (!scannerRef.current) return;
+            // Wait for next tick to ensure DOM is fully ready
+            await new Promise(resolve => setTimeout(resolve, 50));
+            
+            if (!isMounted) return;
+
+            const element = document.getElementById(uniqueId);
+            if (!element) {
+                console.error("Scanner element not found in DOM");
+                setError("Error de inicialización: Elemento de cámara no encontrado.");
+                return;
+            }
 
             try {
-                // Configuración ajustada para pantalla completa
+                if (!scannerRef.current) {
+                    scannerRef.current = new Html5Qrcode(uniqueId);
+                }
+
                 const config = {
                     fps: 10,
                     qrbox: { width: 250, height: 250 },
-                    // Eliminamos aspectRatio fijo para permitir que la cámara use su nativo
-                    // y nosotros lo forzamos con CSS a cubrir el contenedor
                 };
 
                 await scannerRef.current.start(
@@ -42,51 +54,53 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose })
                     config,
                     (decodedText) => {
                         if (!isMounted) return;
-                        if (decodedText !== lastScanned) {
-                            setLastScanned(decodedText);
+                        // Local debounce to prevent multiple triggers for the same code in a short burst
+                        if (decodedText !== lastScannedCode.current) {
+                            lastScannedCode.current = decodedText;
                             if (navigator.vibrate) navigator.vibrate(50);
-                            onScan(decodedText);
-                            // Prevent rapid duplicates
+                            
+                            // Execute the callback via ref
+                            onScanRef.current(decodedText);
+                            
+                            // Reset local debounce after 2 seconds
                             setTimeout(() => {
-                                if (isMounted) setLastScanned(null);
+                                lastScannedCode.current = null;
                             }, 2000);
                         }
                     },
-                    (errorMessage) => {
-                        // Ignore frame parse errors
+                    () => {
+                        // Ignore frame parse errors (normal behavior)
                     }
                 );
             } catch (err: any) {
                 console.error("Error starting camera:", err);
-                // Only set error if we are still mounted/scanning
                 if (isMounted) {
                     setError("No se pudo acceder a la cámara. Verifique permisos o use HTTPS.");
                 }
             }
         };
 
-        if (isScanning) {
-            startScanner();
-        }
+        startScanner();
 
         return () => {
             isMounted = false;
-            // QA FIX: Robust async cleanup
-            if (scannerRef.current && scannerRef.current.isScanning) {
-                scannerRef.current.stop()
-                    .then(() => {
-                        return scannerRef.current?.clear();
-                    })
-                    .catch((err) => {
-                        console.warn("Scanner stop/clear warning:", err);
-                    })
-                    .finally(() => {
-                        // Explicitly nullify to allow garbage collection
+            if (scannerRef.current) {
+                const stopAndClear = async () => {
+                    try {
+                        if (scannerRef.current?.isScanning) {
+                            await scannerRef.current.stop();
+                        }
+                        await scannerRef.current?.clear();
+                    } catch (e) {
+                        console.warn("Cleanup warning:", e);
+                    } finally {
                         scannerRef.current = null;
-                    });
+                    }
+                };
+                stopAndClear();
             }
         };
-    }, [isScanning, uniqueId, onScan, lastScanned]); // Added dependencies for stability
+    }, [uniqueId]); // Only depend on the ID which is stable
 
     return (
         <div className="fixed inset-0 z-[80] bg-black flex flex-col animate-in fade-in duration-300">
@@ -94,7 +108,7 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose })
             <div className="flex justify-between items-center p-4 bg-black/50 absolute top-0 w-full z-10 backdrop-blur-sm">
                 <div className="flex items-center gap-2 text-white">
                     <Camera className="w-5 h-5 text-blue-400" />
-                    <span className="font-bold text-sm">Escáner de Emergencia</span>
+                    <span className="font-bold text-sm">Escáner de Cámara</span>
                 </div>
                 <button 
                     onClick={onClose} 
@@ -148,11 +162,9 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose })
                     50% { opacity: 1; }
                     100% { transform: translateY(100px); opacity: 0; }
                 }
-                /* Hide HTML5-QRCode default elements we don't want */
                 #reader__scan_region img { display: none; }
                 #reader__dashboard_section_csr button { display: none; }
                 
-                /* FORCE VIDEO TO FILL CONTAINER */
                 #${uniqueId} video {
                     width: 100% !important;
                     height: 100% !important;
