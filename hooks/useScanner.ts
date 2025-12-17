@@ -29,6 +29,9 @@ export const useScanner = (
     const [pendingScanCode, setPendingScanCode] = useState<string | null>(null);
     const [showExpirationModal, setShowExpirationModal] = useState(false);
 
+    // FOCUS SENTINEL STATE
+    const [isWindowFocused, setIsWindowFocused] = useState(true);
+
     // --- REFS ---
     const stateRef = useRef({
         showConfirmModal,
@@ -56,6 +59,23 @@ export const useScanner = (
             isCameraOpen
         };
     }, [showConfirmModal, showExpirationModal, manualMode, isMultiplierOpen, isCameraOpen]);
+
+    // --- FOCUS SENTINEL LISTENER ---
+    useEffect(() => {
+        const handleFocus = () => setIsWindowFocused(true);
+        const handleBlur = () => setIsWindowFocused(false);
+
+        window.addEventListener('focus', handleFocus);
+        window.addEventListener('blur', handleBlur);
+        
+        // Initial check
+        setIsWindowFocused(document.hasFocus());
+
+        return () => {
+            window.removeEventListener('focus', handleFocus);
+            window.removeEventListener('blur', handleBlur);
+        };
+    }, []);
 
     // --- DATA QUERIES ---
     const recentScans = useLiveQuery(
@@ -163,9 +183,6 @@ export const useScanner = (
         const cleanCode = sanitizeBarcode(code);
         if (!cleanCode) { triggerFeedback('error'); return; }
         
-        // --- FAIL-SAFE: DEBOUNCE HARDWARE ---
-        // Prevents mechanical bounce from older scanners sending duplicate "Enter" events
-        // 150ms is enough to block bounce but allows fast human scanning (approx 6 items/sec)
         const now = Date.now();
         if (cleanCode === lastProcessedScan.current.code && (now - lastProcessedScan.current.time < 150)) {
             console.warn("Duplicate scan debounce triggered");
@@ -176,7 +193,6 @@ export const useScanner = (
         const settings = getSettings();
 
         try {
-            // 1. Determine Context (Existing batch vs New)
             const existingScan = await db.scans
                 .where('[sessionId+barcode]')
                 .equals([session.id, cleanCode])
@@ -185,21 +201,16 @@ export const useScanner = (
                 .then(results => results[0]);
 
             if (existingScan) {
-                // Known item in this session -> Increment
                 await completeScan(cleanCode, existingScan.mm, existingScan.yyyy);
                 return;
             } 
             
-            // 2. New Item for this session. Check if it exists in DB.
             const productExists = await db.products.get(cleanCode);
             
             if (productExists) {
-                // Known product -> Add new scan
                 await completeScan(cleanCode);
             } else {
-                // 3. UNKNOWN PRODUCT
                 if (settings.autoRegisterUnknown) {
-                    // FAST MODE: Auto-register and continue
                     const pendingName = `PENDIENTE-${cleanCode}`;
                     await productService.saveProduct({
                         barcode: cleanCode,
@@ -210,10 +221,9 @@ export const useScanner = (
                     });
                     await completeScan(cleanCode);
                 } else {
-                    // SAFE MODE: Ask for details (Expiry, etc)
                     setPendingScanCode(cleanCode);
                     setShowExpirationModal(true);
-                    SoundFX.play('success'); // Play success that we read the code, even if modal opens
+                    SoundFX.play('success');
                 }
             }
         } catch (err) {
@@ -225,6 +235,9 @@ export const useScanner = (
     // --- GLOBAL LISTENER ---
     useEffect(() => {
         const handleGlobalKeyDown = (e: KeyboardEvent) => {
+            // STOP if window lost focus (Focus Sentinel)
+            if (!document.hasFocus()) return;
+
             const target = e.target as HTMLElement;
             if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return; 
             
@@ -338,7 +351,8 @@ export const useScanner = (
             multiplier, setMultiplier,
             isCameraOpen, setIsCameraOpen, 
             pendingProductName,
-            lastScanId 
+            lastScanId,
+            isWindowFocused // Export state for UI
         },
         data: { sessionStats, activeProductStats, lastScan, recentScans },
         actions: {

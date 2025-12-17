@@ -98,10 +98,11 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
   return (
     <div className="fixed inset-0 z-50 flex flex-col text-white overflow-hidden font-sans bg-slate-950">
       
-      {/* 1. VISUAL FEEDBACK LAYER (Background) */}
+      {/* 1. VISUAL FEEDBACK LAYER (Background & Focus Guard) */}
       <ScannerFeedbackLayer 
         feedback={state.feedback} 
-        isIncident={!!data.lastScan?.isIncident} 
+        isIncident={!!data.lastScan?.isIncident}
+        isWindowFocused={state.isWindowFocused} 
       />
 
       {/* 2. HEADER */}
