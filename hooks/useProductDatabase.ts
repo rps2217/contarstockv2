@@ -27,20 +27,23 @@ export const useProductDatabase = () => {
         checkStorage();
     }, []);
 
-    // --- QUERIES WITH FUZZY SEARCH ---
+    // --- QUERIES WITH WEB WORKER SEARCH ---
     const products = useLiveQuery(async () => {
+        // 1. Fetch raw data from IDB (Fast)
+        // If no search, limit to 200 to avoid loading 50k items into memory unnecessarily
         if (!searchQuery) {
-            // No search: just return first 200 items to avoid UI lag on massive DBs
             return await db.products.limit(200).toArray();
         }
 
-        // IMPROVED: Load all necessary fields for fuzzy search. 
-        // IndexedDB is fast enough to load 50k items metadata (barcode, name, category) quickly.
+        // 2. If searching, we need the full dataset to filter
+        // Optimization: In a real massive DB, we would use an FTS index or separate table,
+        // but for <100k items, loading to memory + Worker is extremely efficient.
         const allProducts = await db.products.toArray();
         
-        // Use the new Fuzzy Algorithm
-        return fuzzySearchProducts(allProducts, searchQuery, 50);
-    }, [searchQuery], []);
+        // 3. Offload processing to Worker (Async)
+        return await fuzzySearchProducts(allProducts, searchQuery, 50);
+        
+    }, [searchQuery], []); // dependency array ensures re-run on query change
 
     const pendingChangesCount = useLiveQuery(async () => {
         return await db.products.where('syncStatus').anyOf('add', 'edit').count();

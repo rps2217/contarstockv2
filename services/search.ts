@@ -1,68 +1,49 @@
-
 import { Product } from '../types';
 
-/**
- * Calculates a relevance score for a product against a search query.
- * Higher score = better match.
- */
-const scoreProduct = (product: Product, queryTokens: string[]): number => {
-    let score = 0;
-    const nameLower = product.name.toLowerCase();
-    const barcodeLower = product.barcode.toLowerCase();
-    const categoryLower = (product.category || '').toLowerCase();
+// Singleton worker instance to avoid overhead
+let searchWorker: Worker | null = null;
 
-    // 1. Critical Match: Barcode Exact
-    if (barcodeLower === queryTokens[0]) return 1000;
-    // 1b. Barcode Partial (High priority)
-    if (barcodeLower.includes(queryTokens[0])) score += 500;
+// Map to handle multiple simultaneous requests if necessary (though usually sequential in UI)
+let currentResolve: ((value: Product[]) => void) | null = null;
 
-    // 2. Token Matching (Name)
-    let tokensMatched = 0;
-    for (const token of queryTokens) {
-        if (nameLower.includes(token)) {
-            tokensMatched++;
-            score += 10;
-            // Bonus: Starts with token
-            if (nameLower.startsWith(token)) score += 5;
-            // Bonus: Word boundary (e.g. "Coca" matches "Coca Cola" better than "Acocados")
-            if (nameLower.includes(` ${token}`) || nameLower.startsWith(token)) score += 5;
-        } else if (categoryLower.includes(token)) {
-            tokensMatched++;
-            score += 5;
-        }
+const getWorker = () => {
+    if (!searchWorker) {
+        searchWorker = new Worker(new URL('../workers/search.worker.ts', import.meta.url), { type: 'module' });
+        
+        searchWorker.onmessage = (e) => {
+            if (currentResolve) {
+                currentResolve(e.data);
+                currentResolve = null;
+            }
+        };
+        
+        searchWorker.onerror = (e) => {
+            console.error("Search Worker Error:", e);
+            if (currentResolve) {
+                currentResolve([]); // Fallback to empty on error
+                currentResolve = null;
+            }
+        };
     }
-
-    // All tokens matched bonus
-    if (tokensMatched === queryTokens.length) score += 50;
-
-    // Penalty for very long names vs short query (relevance density)
-    score -= (nameLower.length * 0.01);
-
-    return score;
+    return searchWorker;
 };
 
 /**
- * Perform a fuzzy search on a list of products.
- * @param products The full list (or cached list) of products.
- * @param query The search string.
- * @param limit Max results.
+ * Perform a fuzzy search on a list of products using a background Web Worker.
+ * This prevents UI freeze on large datasets.
  */
-export const fuzzySearchProducts = (products: Product[], query: string, limit: number = 50): Product[] => {
-    const cleanQuery = query.trim().toLowerCase();
-    if (!cleanQuery) return products.slice(0, limit);
+export const fuzzySearchProducts = (products: Product[], query: string, limit: number = 50): Promise<Product[]> => {
+    return new Promise((resolve) => {
+        const worker = getWorker();
+        
+        // If a request is already pending, we could cancel it or just overwrite the resolver.
+        // Overwriting is essentially "debouncing" logic on the receiving end.
+        currentResolve = resolve;
 
-    const tokens = cleanQuery.split(/\s+/).filter(t => t.length > 0);
-    
-    // Filter first (broad match), then sort by score
-    // We only keep items that match AT LEAST ONE token to avoid garbage results
-    const candidates = products.filter(p => {
-        const str = (p.barcode + ' ' + p.name + ' ' + (p.category || '')).toLowerCase();
-        return tokens.some(token => str.includes(token));
+        worker.postMessage({
+            products, // Note: Structured cloning of large arrays has a cost, but less than freezing main thread logic.
+            query,
+            limit
+        });
     });
-
-    return candidates
-        .map(p => ({ product: p, score: scoreProduct(p, tokens) }))
-        .sort((a, b) => b.score - a.score)
-        .map(wrapper => wrapper.product)
-        .slice(0, limit);
 };
