@@ -202,7 +202,10 @@ export const Reception: React.FC = () => {
                                 <input 
                                     ref={inputRef}
                                     value={inputValue}
-                                    onChange={(e) => setInputValue(e.target.value)}
+                                    onChange={(e) => setInputValue(e.target.value.replace(/[^0-9]/g, ''))}
+                                    type="text"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
                                     placeholder="Escriba código..."
                                     className="w-full bg-slate-800 border border-slate-700 rounded-xl py-4 pl-12 pr-12 text-white placeholder:text-slate-600 outline-none focus:border-blue-500 transition-all font-mono"
                                 />
