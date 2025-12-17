@@ -1,5 +1,5 @@
-
 import { db } from '../db';
+import { logger } from './logger';
 
 export interface HealthReport {
     status: 'healthy' | 'warning' | 'critical';
@@ -80,32 +80,42 @@ export const repairSystem = async (): Promise<string[]> => {
         
         if (orphansToDelete.length > 0) {
             await db.scans.bulkDelete(orphansToDelete);
-            logs.push(`✅ Eliminados ${orphansToDelete.length} registros huérfanos.`);
+            const msg = `✅ Eliminados ${orphansToDelete.length} registros huérfanos.`;
+            logs.push(msg);
+            logger.warn('Maintenance', msg);
         }
 
         // 2. Clean Stuck Jobs
         const stuckJobs = await db.syncQueue.where('retryCount').above(10).primaryKeys();
         if (stuckJobs.length > 0) {
             await db.syncQueue.bulkDelete(stuckJobs);
-            logs.push(`✅ Limpiados ${stuckJobs.length} trabajos de sincronización fallidos.`);
+            const msg = `✅ Limpiados ${stuckJobs.length} trabajos de sincronización fallidos.`;
+            logs.push(msg);
+            logger.warn('Maintenance', msg);
         }
 
         // 3. Clean Corrupt Products
         const corruptKeys = await db.products.filter(p => !p.barcode || !p.name).primaryKeys();
         if (corruptKeys.length > 0) {
             await db.products.bulkDelete(corruptKeys);
-            logs.push(`✅ Eliminados ${corruptKeys.length} productos corruptos.`);
+            const msg = `✅ Eliminados ${corruptKeys.length} productos corruptos.`;
+            logs.push(msg);
+            logger.warn('Maintenance', msg);
         }
 
         if (logs.length === 0) {
             logs.push("✨ El sistema ya estaba optimizado. No se requirieron acciones.");
+        } else {
+            logger.success('Maintenance', 'Reparación del sistema ejecutada.', { actions: logs });
         }
 
         return logs;
 
     } catch (e: any) {
         console.error("Maintenance failed", e);
-        logs.push(`❌ Error crítico durante la reparación: ${e.message}`);
+        const err = `❌ Error crítico durante la reparación: ${e.message}`;
+        logs.push(err);
+        logger.error('Maintenance', 'Reparación fallida', e);
         return logs;
     }
 };

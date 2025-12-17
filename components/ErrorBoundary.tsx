@@ -12,14 +12,16 @@ interface State {
 }
 
 export class ErrorBoundary extends Component<Props, State> {
-  public state: State = {
-    hasError: false,
-    error: null,
-    errorInfo: null
-  };
+  constructor(props: Props) {
+    super(props);
+    this.state = {
+      hasError: false,
+      error: null,
+      errorInfo: null
+    };
+  }
 
   static getDerivedStateFromError(error: Error): Partial<State> {
-    // Update state so the next render will show the fallback UI.
     return { hasError: true, error };
   }
 
@@ -29,15 +31,12 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   handleReload = () => {
-    // Force reload from server to clear any transient UI states
     window.location.reload();
   };
 
   handleClearCacheAndReload = () => {
     if (window.confirm("¿Estás seguro? Esto forzará una recarga completa de la aplicación y limpieza de caché.")) {
-        // Clear session storage as well
         sessionStorage.clear();
-        // Force a fresh request by appending a timestamp, bypassing browser cache
         window.location.href = '/?t=' + Date.now();
     }
   };

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Settings as SettingsIcon, Volume2, VolumeX, Vibrate, Zap, Moon, Sun, Monitor, AlertTriangle, ArrowLeft, Cloud, Key, Database, Lock, Check, Eye, Shield, FileText, Package, AlertOctagon, Activity, CheckCircle, XCircle, Share2, Download, QrCode, Copy, Save, Upload, RefreshCw, Loader2, Speech, Hash, Type, Gauge, BarChart3, Smartphone, LayoutTemplate, Camera, Stethoscope, Trash2, HardDrive, Terminal } from 'lucide-react';
 import * as sessionService from '../services/sessionService'; 
@@ -233,7 +232,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
         <section className={`rounded-2xl border p-6 transition-all ${healthReport?.status === 'warning' || healthReport?.status === 'critical' ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-200 shadow-sm'}`}>
             <div className="flex justify-between items-start mb-4">
                 <h2 className={`text-lg font-bold flex items-center gap-2 ${healthReport?.status === 'healthy' ? 'text-slate-900' : 'text-amber-900'}`}>
-                    <Stethoscope className="w-5 h-5 text-emerald-600" /> Centro de Salud
+                    <Stethoscope className="w-5 h-5 text-emerald-600" /> Diagnóstico del Sistema
                 </h2>
                 <div className="flex gap-2">
                     <button onClick={loadSystemLogs} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors" title="Ver Logs">
@@ -471,6 +470,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
                     </button>
                 </div>
 
+                {/* Confirm Delete Toggle */}
                 <div className="flex items-center justify-between p-2">
                     <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-lg ${settings.confirmDelete ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
