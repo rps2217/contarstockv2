@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { Routes, Route, useNavigate, useLocation, Navigate, Outlet, HashRouter } from 'react-router-dom';
 import { CountingSession } from './types';
@@ -5,7 +6,7 @@ import { Dashboard } from './components/Dashboard';
 import { Login } from './components/Login';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { InstallPrompt } from './components/InstallPrompt';
-import { NetworkStatus } from './components/NetworkStatus'; 
+import { SystemStatus } from './components/SystemStatus'; 
 import { Sidebar } from './components/Sidebar'; 
 import * as sessionService from './services/sessionService'; 
 import { useAppStore } from './store/useAppStore';
@@ -58,7 +59,7 @@ const MainLayout = () => {
 
     return (
         <div className={`min-h-screen font-sans ${themeClass} transition-colors duration-300 flex`}>
-            <NetworkStatus />
+            <SystemStatus />
             <Sidebar view={currentView} settings={settings} />
             
             <main className="flex-1 md:ml-64 w-full animate-in fade-in zoom-in-95 duration-300 min-h-screen relative pb-16 md:pb-0">

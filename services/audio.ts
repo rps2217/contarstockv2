@@ -62,12 +62,13 @@ class AudioService {
       this.synth.speak(utterance);
   }
 
-  public play(type: 'success' | 'error' | 'delete') {
+  public play(type: 'success' | 'error' | 'delete' | 'increment') {
     const settings = getSettings();
     
     // Haptics
     if (settings.hapticsEnabled && navigator.vibrate) {
         if (type === 'error') navigator.vibrate([50, 50, 50]);
+        else if (type === 'increment') navigator.vibrate(15); // Short tick
         else navigator.vibrate(50);
     }
 
@@ -86,13 +87,22 @@ class AudioService {
       gain.connect(ctx.destination);
 
       switch (type) {
-        case 'success':
-          osc.frequency.setValueAtTime(1200, now);
+        case 'success': // New Product (Higher pitch, clear)
+          osc.frequency.setValueAtTime(1000, now);
+          osc.frequency.exponentialRampToValueAtTime(1500, now + 0.1);
           osc.type = 'sine';
           gain.gain.setValueAtTime(0.1, now);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
           osc.start(now);
-          osc.stop(now + 0.1);
+          osc.stop(now + 0.15);
+          break;
+        case 'increment': // Same Product (Short, lower tick)
+          osc.frequency.setValueAtTime(800, now);
+          osc.type = 'sine'; // Softer than square
+          gain.gain.setValueAtTime(0.05, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+          osc.start(now);
+          osc.stop(now + 0.08);
           break;
         case 'delete':
           osc.frequency.setValueAtTime(600, now);

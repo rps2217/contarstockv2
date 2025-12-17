@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   speedometerEnabled: false, // Default DISABLED as requested
   controlTowerEnabled: false, // Default DISABLED as requested (Widgets hidden)
   confirmDelete: true,
+  autoRegisterUnknown: false, // Default DISABLED (Safety first)
   appSheetConfig: {
       appId: '',
       accessKey: '',

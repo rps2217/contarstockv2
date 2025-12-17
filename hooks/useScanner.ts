@@ -22,18 +22,14 @@ export const useScanner = (
     const [manualMode, setManualMode] = useState(false);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     
-    // NEW: Camera Mode
     const [isCameraOpen, setIsCameraOpen] = useState(false);
-
-    // NEW: Multiplier Mode
     const [multiplier, setMultiplier] = useState(1);
     const [isMultiplierOpen, setIsMultiplierOpen] = useState(false);
 
-    // Expiration State
     const [pendingScanCode, setPendingScanCode] = useState<string | null>(null);
     const [showExpirationModal, setShowExpirationModal] = useState(false);
 
-    // --- REFS FOR EVENT LISTENER STABILITY ---
+    // --- REFS ---
     const stateRef = useRef({
         showConfirmModal,
         showExpirationModal,
@@ -42,8 +38,13 @@ export const useScanner = (
         isCameraOpen
     });
 
-    // --- STREAK COUNTER LOGIC ---
     const streakRef = useRef({ barcode: '', count: 0 });
+    const scannerBuffer = useRef<string>('');
+    const lastKeyTime = useRef<number>(0);
+    // FAIL-SAFE: Ref to prevent double-scans from hardware bounce
+    const lastProcessedScan = useRef<{ code: string, time: number }>({ code: '', time: 0 });
+    
+    const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Update ref whenever state changes
     useEffect(() => {
@@ -55,11 +56,6 @@ export const useScanner = (
             isCameraOpen
         };
     }, [showConfirmModal, showExpirationModal, manualMode, isMultiplierOpen, isCameraOpen]);
-
-    // Refs for buffer
-    const scannerBuffer = useRef<string>('');
-    const lastKeyTime = useRef<number>(0);
-    const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // --- DATA QUERIES ---
     const recentScans = useLiveQuery(
@@ -108,49 +104,47 @@ export const useScanner = (
 
     const triggerFeedback = useCallback((type: 'success' | 'error' | 'undo') => {
         setFeedback(type);
-        SoundFX.play(type === 'undo' ? 'delete' : type);
+        if (type === 'undo') SoundFX.play('delete');
+        if (type === 'error') SoundFX.play('error');
+
         if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
         feedbackTimer.current = setTimeout(() => setFeedback('idle'), type === 'undo' ? 1000 : 500);
     }, []);
 
     const completeScan = async (code: string, mm?: number, yyyy?: number) => {
         try {
-            // Apply multiplier
             const qtyToAdd = multiplier > 0 ? multiplier : 1;
             
-            // DB Save
+            if (code === streakRef.current.barcode) {
+                SoundFX.play('increment');
+            } else {
+                SoundFX.play('success');
+            }
+
             const newScan = await sessionService.addScan(session.id, code, qtyToAdd, mm, yyyy);
             setLastScanId(newScan.id);
-            triggerFeedback('success');
+            setFeedback('success');
+            if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
+            feedbackTimer.current = setTimeout(() => setFeedback('idle'), 500);
 
-            // --- TTS LOGIC (Improved Streak Counter) ---
+            // --- TTS LOGIC ---
             const settings = getSettings();
             if (settings.ttsEnabled) {
-                // Determine Mode
                 if (settings.ttsMode === 'count') {
-                    // STREAK MODE
                     if (code === streakRef.current.barcode) {
                         streakRef.current.count += qtyToAdd;
                     } else {
-                        // New product, reset streak
                         streakRef.current.barcode = code;
-                        streakRef.current.count = qtyToAdd; // Start at 1 (or multiplier value)
+                        streakRef.current.count = qtyToAdd;
                     }
                     SoundFX.speak(streakRef.current.count.toString());
                 } else {
-                    // PRODUCT NAME MODE
-                    // We need the name asynchronously, so we do a quick fetch
-                    // Optimistic lookup from existing map if possible
                     let nameToSpeak = "Producto";
                     const cachedProduct = await db.products.get(code);
-                    
                     if (cachedProduct) nameToSpeak = cachedProduct.name;
-                    else nameToSpeak = "Producto Desconocido";
-
                     SoundFX.speak(nameToSpeak);
                 }
             } else {
-                // If TTS Disabled, reset streak silently
                 if (code !== streakRef.current.barcode) {
                     streakRef.current.barcode = code;
                     streakRef.current.count = 0; 
@@ -158,7 +152,6 @@ export const useScanner = (
                 streakRef.current.count += qtyToAdd;
             }
             
-            // Reset multiplier after successful scan for safety
             if (multiplier !== 1) setMultiplier(1);
 
         } catch (err) {
@@ -169,27 +162,59 @@ export const useScanner = (
     const processScan = async (code: string) => {
         const cleanCode = sanitizeBarcode(code);
         if (!cleanCode) { triggerFeedback('error'); return; }
-    
+        
+        // --- FAIL-SAFE: DEBOUNCE HARDWARE ---
+        // Prevents mechanical bounce from older scanners sending duplicate "Enter" events
+        // 150ms is enough to block bounce but allows fast human scanning (approx 6 items/sec)
+        const now = Date.now();
+        if (cleanCode === lastProcessedScan.current.code && (now - lastProcessedScan.current.time < 150)) {
+            console.warn("Duplicate scan debounce triggered");
+            return;
+        }
+        lastProcessedScan.current = { code: cleanCode, time: now };
+
+        const settings = getSettings();
+
         try {
-            // QA FIX: Integrity check for multiple batches.
-            // We want to find the MOST RECENTLY MODIFIED scan for this product in this session.
-            // This ensures that if the user has 2 lots (Jan and Mar), and they scan again,
-            // we increment the one they were just working on, not the oldest one.
+            // 1. Determine Context (Existing batch vs New)
             const existingScan = await db.scans
                 .where('[sessionId+barcode]')
                 .equals([session.id, cleanCode])
-                .reverse() // Crucial: Look at the newest first (LIFO)
+                .reverse()
                 .sortBy('timestamp')
                 .then(results => results[0]);
 
             if (existingScan) {
-                // We found a match, increment that specific batch/date
+                // Known item in this session -> Increment
                 await completeScan(cleanCode, existingScan.mm, existingScan.yyyy);
+                return;
+            } 
+            
+            // 2. New Item for this session. Check if it exists in DB.
+            const productExists = await db.products.get(cleanCode);
+            
+            if (productExists) {
+                // Known product -> Add new scan
+                await completeScan(cleanCode);
             } else {
-                // New item for this session
-                setPendingScanCode(cleanCode);
-                setShowExpirationModal(true);
-                SoundFX.play('success');
+                // 3. UNKNOWN PRODUCT
+                if (settings.autoRegisterUnknown) {
+                    // FAST MODE: Auto-register and continue
+                    const pendingName = `PENDIENTE-${cleanCode}`;
+                    await productService.saveProduct({
+                        barcode: cleanCode,
+                        name: pendingName,
+                        category: 'PENDIENTE',
+                        supplier: '',
+                        supplierRut: ''
+                    });
+                    await completeScan(cleanCode);
+                } else {
+                    // SAFE MODE: Ask for details (Expiry, etc)
+                    setPendingScanCode(cleanCode);
+                    setShowExpirationModal(true);
+                    SoundFX.play('success'); // Play success that we read the code, even if modal opens
+                }
             }
         } catch (err) {
             console.error(err);
@@ -198,30 +223,21 @@ export const useScanner = (
     };
 
     // --- GLOBAL LISTENER ---
-    
     useEffect(() => {
         const handleGlobalKeyDown = (e: KeyboardEvent) => {
             const target = e.target as HTMLElement;
-            // Ignore typing in input fields
             if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return; 
             
-            // CHECK REFS INSTEAD OF DIRECT STATE DEPENDENCIES
             const s = stateRef.current;
             if (s.showConfirmModal || s.showExpirationModal || s.isMultiplierOpen || s.manualMode || s.isCameraOpen) return;
 
             const now = Date.now();
-            const timeDiff = now - lastKeyTime.current;
+            if (now - lastKeyTime.current > 50) scannerBuffer.current = ''; 
             lastKeyTime.current = now;
-
-            if (timeDiff > 50) {
-                scannerBuffer.current = ''; 
-            }
 
             if (e.key === 'Enter') {
                 const code = scannerBuffer.current;
-                if (code.length > 1) { 
-                    processScan(code);
-                }
+                if (code.length > 1) processScan(code);
                 scannerBuffer.current = '';
                 e.preventDefault(); 
             } else if (e.key.length === 1) {
@@ -232,7 +248,6 @@ export const useScanner = (
         window.addEventListener('keydown', handleGlobalKeyDown);
         return () => window.removeEventListener('keydown', handleGlobalKeyDown);
     }, []); 
-
 
     // --- HANDLERS ---
 
@@ -259,18 +274,12 @@ export const useScanner = (
         }
     }, []);
 
-    // NEW: Undo Logic
     const handleUndoLastScan = useCallback(async () => {
         if (!lastScanId) return;
         try {
             await sessionService.deleteScan(lastScanId);
             setLastScanId(null);
-            
-            // Adjust streak if undoing the immediate last one
-            if (streakRef.current.count > 0) {
-                streakRef.current.count--;
-            }
-
+            if (streakRef.current.count > 0) streakRef.current.count--;
             triggerFeedback('undo');
         } catch (e) {
             console.error("Undo failed", e);
@@ -316,9 +325,7 @@ export const useScanner = (
 
     const getProductName = (code: string) => productsMap?.[code]?.name || 'Producto Desconocido';
 
-    const handleExternalScan = (code: string) => {
-        processScan(code);
-    };
+    const handleExternalScan = (code: string) => processScan(code);
 
     return {
         state: {

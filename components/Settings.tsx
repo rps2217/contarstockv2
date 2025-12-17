@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Settings as SettingsIcon, Volume2, VolumeX, Vibrate, Zap, Moon, Sun, Monitor, AlertTriangle, ArrowLeft, Cloud, Key, Database, Lock, Check, Eye, Shield, FileText, Package, AlertOctagon, Activity, CheckCircle, XCircle, Share2, Download, QrCode, Copy, Save, Upload, RefreshCw, Loader2, Speech, Hash, Type, Gauge, BarChart3, Smartphone, LayoutTemplate, Camera, Stethoscope, Trash2, HardDrive, Terminal } from 'lucide-react';
 import * as sessionService from '../services/sessionService'; 
@@ -222,6 +223,121 @@ export const Settings: React.FC = () => {
 
       <div className="space-y-6">
         
+        {/* PREFERENCES */}
+        <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <Zap className="w-5 h-5 text-yellow-500" /> Preferencias Operativas
+            </h2>
+            <div className="space-y-4">
+                
+                {/* AUTO REGISTER UNKNOWN */}
+                <div className="flex items-center justify-between p-2">
+                    <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${settings.autoRegisterUnknown ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-400'}`}>
+                            <Zap className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <div className="font-bold text-slate-900">Registro Rápido (Desconocidos)</div>
+                            <div className="text-xs text-slate-400">Guardar items nuevos sin preguntar</div>
+                        </div>
+                    </div>
+                    <button onClick={() => updateSetting('autoRegisterUnknown', !settings.autoRegisterUnknown)} className={`w-12 h-6 rounded-full transition-colors relative ${settings.autoRegisterUnknown ? 'bg-orange-500' : 'bg-slate-300'}`}>
+                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.autoRegisterUnknown ? 'left-7' : 'left-1'}`} />
+                    </button>
+                </div>
+
+                <div className="flex items-center justify-between p-2">
+                    <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${settings.soundEnabled ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-400'}`}>
+                            {settings.soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+                        </div>
+                        <div className="font-bold text-slate-900">Sonido</div>
+                    </div>
+                    <button onClick={() => updateSetting('soundEnabled', !settings.soundEnabled)} className={`w-12 h-6 rounded-full transition-colors relative ${settings.soundEnabled ? 'bg-green-500' : 'bg-slate-300'}`}>
+                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.soundEnabled ? 'left-7' : 'left-1'}`} />
+                    </button>
+                </div>
+                
+                <div className="border border-slate-100 rounded-xl p-3">
+                    <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-lg ${settings.ttsEnabled ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-400'}`}>
+                                <Speech className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <div className="font-bold text-slate-900">Asistente de Voz</div>
+                                <div className="text-xs text-slate-400">Confirmación auditiva</div>
+                            </div>
+                        </div>
+                        <button onClick={() => updateSetting('ttsEnabled', !settings.ttsEnabled)} className={`w-12 h-6 rounded-full transition-colors relative ${settings.ttsEnabled ? 'bg-purple-500' : 'bg-slate-300'}`}>
+                            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.ttsEnabled ? 'left-7' : 'left-1'}`} />
+                        </button>
+                    </div>
+
+                    {settings.ttsEnabled && (
+                        <div className="grid grid-cols-2 gap-2 mt-2 pl-12 animate-in fade-in slide-in-from-top-2">
+                            <button 
+                                onClick={() => updateSetting('ttsMode', 'count')}
+                                className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all ${settings.ttsMode === 'count' ? 'bg-purple-50 border-purple-300 text-purple-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'}`}
+                            >
+                                <Hash className="w-5 h-5" />
+                                <span className="text-xs font-bold">Contador (1, 2...)</span>
+                            </button>
+                            <button 
+                                onClick={() => updateSetting('ttsMode', 'product')}
+                                className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all ${settings.ttsMode === 'product' ? 'bg-purple-50 border-purple-300 text-purple-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'}`}
+                            >
+                                <Type className="w-5 h-5" />
+                                <span className="text-xs font-bold">Leer Nombre</span>
+                            </button>
+                        </div>
+                    )}
+                </div>
+
+                <div className="flex items-center justify-between p-2">
+                    <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${settings.controlTowerEnabled ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-400'}`}>
+                            <BarChart3 className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <div className="font-bold text-slate-900">Torre de Control</div>
+                            <div className="text-xs text-slate-400">Mostrar métricas en inicio</div>
+                        </div>
+                    </div>
+                    <button onClick={() => updateSetting('controlTowerEnabled', !settings.controlTowerEnabled)} className={`w-12 h-6 rounded-full transition-colors relative ${settings.controlTowerEnabled ? 'bg-indigo-500' : 'bg-slate-300'}`}>
+                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.controlTowerEnabled ? 'left-7' : 'left-1'}`} />
+                    </button>
+                </div>
+
+                <div className="flex items-center justify-between p-2">
+                    <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${settings.speedometerEnabled ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400'}`}>
+                            <Gauge className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <div className="font-bold text-slate-900">Velocímetro</div>
+                            <div className="text-xs text-slate-400">Mostrar items por minuto</div>
+                        </div>
+                    </div>
+                    <button onClick={() => updateSetting('speedometerEnabled', !settings.speedometerEnabled)} className={`w-12 h-6 rounded-full transition-colors relative ${settings.speedometerEnabled ? 'bg-blue-500' : 'bg-slate-300'}`}>
+                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.speedometerEnabled ? 'left-7' : 'left-1'}`} />
+                    </button>
+                </div>
+
+                <div className="flex items-center justify-between p-2">
+                    <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${settings.confirmDelete ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
+                            <AlertTriangle className="w-5 h-5" />
+                        </div>
+                        <div className="font-bold text-slate-900">Confirmar Eliminación</div>
+                    </div>
+                    <button onClick={() => updateSetting('confirmDelete', !settings.confirmDelete)} className={`w-12 h-6 rounded-full transition-colors relative ${settings.confirmDelete ? 'bg-blue-500' : 'bg-slate-300'}`}>
+                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.confirmDelete ? 'left-7' : 'left-1'}`} />
+                    </button>
+                </div>
+            </div>
+        </section>
+
         {/* SYSTEM HEALTH */}
         <section className={`rounded-2xl border p-6 transition-all ${healthReport?.status === 'warning' || healthReport?.status === 'critical' ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-200 shadow-sm'}`}>
             <div className="flex justify-between items-start mb-4">
@@ -371,104 +487,6 @@ export const Settings: React.FC = () => {
                         </button>
                     );
                 })}
-            </div>
-        </section>
-
-        {/* PREFERENCES */}
-        <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <Zap className="w-5 h-5 text-yellow-500" /> Preferencias Operativas
-            </h2>
-            <div className="space-y-4">
-                <div className="flex items-center justify-between p-2">
-                    <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${settings.soundEnabled ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-400'}`}>
-                            {settings.soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
-                        </div>
-                        <div className="font-bold text-slate-900">Sonido</div>
-                    </div>
-                    <button onClick={() => updateSetting('soundEnabled', !settings.soundEnabled)} className={`w-12 h-6 rounded-full transition-colors relative ${settings.soundEnabled ? 'bg-green-500' : 'bg-slate-300'}`}>
-                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.soundEnabled ? 'left-7' : 'left-1'}`} />
-                    </button>
-                </div>
-                
-                <div className="border border-slate-100 rounded-xl p-3">
-                    <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-lg ${settings.ttsEnabled ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-400'}`}>
-                                <Speech className="w-5 h-5" />
-                            </div>
-                            <div>
-                                <div className="font-bold text-slate-900">Asistente de Voz</div>
-                                <div className="text-xs text-slate-400">Confirmación auditiva</div>
-                            </div>
-                        </div>
-                        <button onClick={() => updateSetting('ttsEnabled', !settings.ttsEnabled)} className={`w-12 h-6 rounded-full transition-colors relative ${settings.ttsEnabled ? 'bg-purple-500' : 'bg-slate-300'}`}>
-                            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.ttsEnabled ? 'left-7' : 'left-1'}`} />
-                        </button>
-                    </div>
-
-                    {settings.ttsEnabled && (
-                        <div className="grid grid-cols-2 gap-2 mt-2 pl-12 animate-in fade-in slide-in-from-top-2">
-                            <button 
-                                onClick={() => updateSetting('ttsMode', 'count')}
-                                className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all ${settings.ttsMode === 'count' ? 'bg-purple-50 border-purple-300 text-purple-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'}`}
-                            >
-                                <Hash className="w-5 h-5" />
-                                <span className="text-xs font-bold">Contador (1, 2...)</span>
-                            </button>
-                            <button 
-                                onClick={() => updateSetting('ttsMode', 'product')}
-                                className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all ${settings.ttsMode === 'product' ? 'bg-purple-50 border-purple-300 text-purple-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'}`}
-                            >
-                                <Type className="w-5 h-5" />
-                                <span className="text-xs font-bold">Leer Nombre</span>
-                            </button>
-                        </div>
-                    )}
-                </div>
-
-                <div className="flex items-center justify-between p-2">
-                    <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${settings.controlTowerEnabled ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-400'}`}>
-                            <BarChart3 className="w-5 h-5" />
-                        </div>
-                        <div>
-                            <div className="font-bold text-slate-900">Torre de Control</div>
-                            <div className="text-xs text-slate-400">Mostrar métricas en inicio</div>
-                        </div>
-                    </div>
-                    <button onClick={() => updateSetting('controlTowerEnabled', !settings.controlTowerEnabled)} className={`w-12 h-6 rounded-full transition-colors relative ${settings.controlTowerEnabled ? 'bg-indigo-500' : 'bg-slate-300'}`}>
-                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.controlTowerEnabled ? 'left-7' : 'left-1'}`} />
-                    </button>
-                </div>
-
-                <div className="flex items-center justify-between p-2">
-                    <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${settings.speedometerEnabled ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400'}`}>
-                            <Gauge className="w-5 h-5" />
-                        </div>
-                        <div>
-                            <div className="font-bold text-slate-900">Velocímetro</div>
-                            <div className="text-xs text-slate-400">Mostrar items por minuto</div>
-                        </div>
-                    </div>
-                    <button onClick={() => updateSetting('speedometerEnabled', !settings.speedometerEnabled)} className={`w-12 h-6 rounded-full transition-colors relative ${settings.speedometerEnabled ? 'bg-blue-500' : 'bg-slate-300'}`}>
-                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.speedometerEnabled ? 'left-7' : 'left-1'}`} />
-                    </button>
-                </div>
-
-                <div className="flex items-center justify-between p-2">
-                    <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${settings.confirmDelete ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
-                            <AlertTriangle className="w-5 h-5" />
-                        </div>
-                        <div className="font-bold text-slate-900">Confirmar Eliminación</div>
-                    </div>
-                    <button onClick={() => updateSetting('confirmDelete', !settings.confirmDelete)} className={`w-12 h-6 rounded-full transition-colors relative ${settings.confirmDelete ? 'bg-blue-500' : 'bg-slate-300'}`}>
-                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.confirmDelete ? 'left-7' : 'left-1'}`} />
-                    </button>
-                </div>
             </div>
         </section>
 

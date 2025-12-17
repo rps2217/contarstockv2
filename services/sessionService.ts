@@ -1,15 +1,48 @@
+
 import { db } from '../db';
 import { ScanRecord, CountingSession } from '../types';
 import { generateUUID, sanitizeBarcode } from './utils';
 import { logger } from './logger';
 
 // ==========================================
-// WRITE BUFFER OPTIMIZATION (ACID + RETRY)
+// WRITE BUFFER OPTIMIZATION (ACID + MIRRORING)
 // ==========================================
 
 let scanBuffer: ScanRecord[] = [];
 let flushTimer: any = null;
 let isFlushing = false;
+const MIRROR_KEY = 'logicount_emergency_buffer';
+
+// --- BLACK BOX RECOVERY ---
+// Checks for crashed/unsaved data on startup
+(async () => {
+    try {
+        const mirrored = localStorage.getItem(MIRROR_KEY);
+        if (mirrored) {
+            const parsed = JSON.parse(mirrored);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                console.warn(`[Recovery] Found ${parsed.length} unsaved records in Black Box mirror. Recovering...`);
+                scanBuffer = [...scanBuffer, ...parsed]; // Merge with any current
+                localStorage.removeItem(MIRROR_KEY); // Clear immediately to prevent double-add loop if flush fails repeatedly
+                flushBuffer();
+            }
+        }
+    } catch (e) {
+        console.error("[Recovery] Failed to check emergency mirror", e);
+    }
+})();
+
+const saveMirror = () => {
+    try {
+        if (scanBuffer.length > 0) {
+            localStorage.setItem(MIRROR_KEY, JSON.stringify(scanBuffer));
+        } else {
+            localStorage.removeItem(MIRROR_KEY);
+        }
+    } catch (e) {
+        console.warn("Mirror save failed (Quota?)", e);
+    }
+};
 
 const flushBuffer = async () => {
     // Prevent re-entry or empty flush
@@ -22,8 +55,6 @@ const flushBuffer = async () => {
     
     try {
         // --- CRITICAL: ACID TRANSACTION ---
-        // We perform the bulk add AND the stats update in a single transaction.
-        // If any part fails, the DB rolls back completely, preventing "Ghost Scans".
         await (db as any).transaction('rw', db.scans, db.sessions, async () => {
             // 1. Write the raw scans
             await db.scans.bulkAdd(batch);
@@ -33,8 +64,6 @@ const flushBuffer = async () => {
             
             // 3. Recalculate stats for affected sessions explicitly within the transaction
             for (const sessionId of affectedSessions) {
-                // Optimization: Instead of reading full objects, we iterate keys/indices if possible
-                // or just rely on Dexie's speed for the read-aggregated-write loop inside the transaction.
                 let totalUnits = 0;
                 const uniqueSkus = new Set<string>();
 
@@ -50,16 +79,15 @@ const flushBuffer = async () => {
             }
         });
 
-        // SUCCESS: Only remove the successfully written items from the main buffer
-        // (We filter them out in case new items were added to scanBuffer during the await)
+        // SUCCESS: Remove written items from buffer
         const writtenIds = new Set(batch.map(s => s.id));
         scanBuffer = scanBuffer.filter(s => !writtenIds.has(s.id));
         
-        // logger.info('Buffer', `Flushed ${batch.length} records safely.`);
+        // Update Mirror
+        saveMirror();
 
     } catch (e: any) {
-        // FAILURE: We DO NOT clear the buffer. The items stay in `scanBuffer`.
-        // They will be retried on the next flush cycle or pagehide.
+        // FAILURE: Retry logic handled by data staying in scanBuffer
         logger.error("Buffer", "Transaction Failed - Retrying next cycle", e);
         console.error("Flush failed, data kept in buffer for retry.");
     } finally {
@@ -75,32 +103,34 @@ const flushBuffer = async () => {
     }
 };
 
+// --- WATCHDOG ---
+// Safety mechanism if isFlushing gets stuck to true (rare race condition)
+setInterval(() => {
+    if (isFlushing && scanBuffer.length > 0) {
+        // If flushing takes > 10s, something is wrong. Release lock.
+        console.warn("[Watchdog] Resetting stuck flush lock.");
+        isFlushing = false;
+        flushBuffer();
+    }
+}, 10000);
+
 // --- SAFETY MECHANISM: FLUSH ON EXIT ---
 if (typeof window !== 'undefined') {
-    // 1. Tab Hidden / Backgrounded
     window.addEventListener('visibilitychange', () => {
-        if (document.hidden) {
-            flushBuffer();
-        }
+        if (document.hidden) flushBuffer();
     });
-    
-    // 2. Tab Closed / Refreshed
     window.addEventListener('pagehide', () => {
-        // Attempt a synchronous flush if possible, or trigger the async one
-        // Note: Async on pagehide is unreliable, but better than nothing.
-        // Modern browsers support 'fetch' with keepalive, but IDB is tricky.
         flushBuffer();
     });
 }
 
 const addToBuffer = (record: ScanRecord) => {
     scanBuffer.push(record);
+    saveMirror(); // Sync to LocalStorage immediately
     
-    // Immediate flush if buffer gets too big to reduce transaction size
     if (scanBuffer.length >= 50) {
         flushBuffer();
     } else if (!flushTimer) {
-        // Debounce flush
         flushTimer = setTimeout(flushBuffer, 200);
     }
 };
@@ -165,15 +195,11 @@ export const activateDraftSession = async (draftSessionId: string, erpOrder: str
 };
 
 export const closeSession = async (sessionId: string) => { 
-    // Flush pending writes before closing to ensure stats are final
     await flushBuffer();
-    
-    // Final transactional update to ensure status and stats are consistent
     await (db as any).transaction('rw', db.sessions, db.scans, async () => {
         await updateSessionStatsInternal(sessionId);
         await db.sessions.update(sessionId, { status: 'completed' }); 
     });
-    
     logger.info('Session', `Closed: ${sessionId}`);
 };
 
@@ -195,7 +221,6 @@ export const cleanSyncedSessions = async (): Promise<number> => {
     const syncedSessions = await db.sessions.filter(s => !!s.lastSyncTimestamp && s.lastSyncTimestamp > 0).toArray();
     if (syncedSessions.length === 0) return 0;
     
-    // Transactional delete for safety
     let deletedCount = 0;
     await (db as any).transaction('rw', db.sessions, db.scans, db.syncQueue, async () => {
         for (const session of syncedSessions) {
@@ -204,7 +229,6 @@ export const cleanSyncedSessions = async (): Promise<number> => {
             deletedCount++;
         }
     });
-    
     logger.info('Maintenance', `Cleaned ${deletedCount} synced sessions.`);
     return deletedCount;
 };
@@ -229,7 +253,6 @@ export const markDraftsAsSynced = async (sessionIds: string[]) => {
 // ITEM / SCAN MANAGEMENT
 // ==========================================
 
-// Internal helper for use inside transactions
 const updateSessionStatsInternal = async (sessionId: string) => {
   let totalUnits = 0;
   const uniqueSkus = new Set<string>();
@@ -242,7 +265,6 @@ const updateSessionStatsInternal = async (sessionId: string) => {
   await db.sessions.update(sessionId, { totalUnits, totalSKUs: uniqueSkus.size });
 };
 
-// Public exposed version (wraps in transaction for consistency if called alone)
 export const updateSessionStats = async (sessionId: string) => {
     await (db as any).transaction('rw', db.scans, db.sessions, async () => {
         await updateSessionStatsInternal(sessionId);
@@ -279,8 +301,6 @@ export const addScan = async (
         isIncident
     };
 
-    // OPTIMIZATION: Use Write Buffer.
-    // The buffer logic now handles the Transactional Integrity during flush.
     addToBuffer(record);
     
     return record;
@@ -292,7 +312,6 @@ export const markScansAsSynced = async (scanIds: string[]) => {
 };
 
 export const updateScanIncident = async (scanId: string, isIncident: boolean) => {
-    // Incident changes don't affect totals, so single update is safe
     await db.scans.update(scanId, { isIncident: isIncident, synced: 0 });
 };
 
@@ -318,7 +337,6 @@ export const deleteScan = async (scanId: string) => {
 
 export const deleteSessionItem = async (sessionId: string, barcode: string) => {
   const cleanCode = sanitizeBarcode(barcode); 
-  
   await (db as any).transaction('rw', db.scans, db.sessions, async () => {
       const scans = await db.scans.where('[sessionId+barcode]').equals([sessionId, cleanCode]).toArray();
       if (scans.length > 0) { 
@@ -331,24 +349,15 @@ export const deleteSessionItem = async (sessionId: string, barcode: string) => {
 
 export const adjustSessionItemQuantity = async (sessionId: string, barcode: string, delta: number) => {
   const cleanCode = sanitizeBarcode(barcode);
-  
-  // NOTE: Delta adjustment logic is complex, so we keep it outside the buffer for now to ensure precise control
-  // But we wrap the result in a transaction.
-  
   if (delta > 0) { 
       const lastScan = await db.scans.where('[sessionId+barcode]').equals([sessionId, cleanCode]).last(); 
-      // Reuse addScan logic (buffered) for additions as it's efficient
       await addScan(sessionId, cleanCode, delta, lastScan?.mm, lastScan?.yyyy, 0);
   } else {
-    // Removals are strict logic, run immediately in transaction
     let remainingToRemove = Math.abs(delta); 
-    
     await (db as any).transaction('rw', db.scans, db.sessions, async () => { 
         const scans = await db.scans.where('[sessionId+barcode]').equals([sessionId, cleanCode]).reverse().sortBy('timestamp'); 
-        
         const toDelete: string[] = []; 
         let updateTarget: { id: string, qty: number } | null = null;
-        
         for (const scan of scans) { 
             if (remainingToRemove <= 0) break; 
             if (scan.quantity > remainingToRemove) { 
@@ -359,10 +368,8 @@ export const adjustSessionItemQuantity = async (sessionId: string, barcode: stri
                 remainingToRemove -= scan.quantity; 
             } 
         } 
-        
         if (toDelete.length > 0) await db.scans.bulkDelete(toDelete); 
         if (updateTarget) await db.scans.update(updateTarget.id, { quantity: updateTarget.qty, synced: 0 }); 
-        
         await updateSessionStatsInternal(sessionId); 
     });
   }

@@ -68,6 +68,7 @@ export interface AppSettings {
   speedometerEnabled: boolean; // NEW: Show scans per minute
   controlTowerEnabled: boolean; // NEW: Show Dashboard Widgets
   confirmDelete: boolean;
+  autoRegisterUnknown: boolean; // NEW: Auto-register unknown products
   appSheetConfig?: AppSheetConfig;
   mobileNavConfig?: ViewState[]; // NEW: Customizable Mobile Navigation
 }
