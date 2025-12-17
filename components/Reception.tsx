@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { ChevronLeft, Barcode, CheckCircle2, WifiOff, CloudUpload, CloudDownload, Box, Zap, Layers, Hash, Loader2, Camera, Ban, List, Trash2, X, Eye, Keyboard, AlertTriangle, ArrowRight } from 'lucide-react';
+import { ChevronLeft, Barcode, CheckCircle2, WifiOff, Upload, Download, Box, Zap, Layers, Hash, Loader2, Camera, Ban, List, Trash2, X, Eye, Keyboard, AlertTriangle, ArrowRight } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import * as sessionService from '../services/sessionService'; 
@@ -168,7 +167,7 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack, onNavigate }) => {
                     disabled={isRestoring}
                     className="p-2 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white rounded-lg transition-colors flex items-center gap-2 text-xs font-bold border border-indigo-500/30 disabled:opacity-50"
                 >
-                    {isRestoring ? <Loader2 className="w-4 h-4 animate-spin" /> : <CloudDownload className="w-4 h-4" />}
+                    {isRestoring ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                     <span className="hidden md:inline">Descargar Bitácora</span>
                 </button>
             </div>
@@ -272,7 +271,7 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack, onNavigate }) => {
                         onClick={handleSyncRedirect}
                         className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-900/50 flex items-center justify-center gap-3 transition-all active:scale-95"
                     >
-                        <CloudUpload className="w-6 h-6" />
+                        <Upload className="w-6 h-6" />
                         Ir al Gestor de Nube ({unsyncedDrafts.length} Pendientes)
                     </button>
                 </div>

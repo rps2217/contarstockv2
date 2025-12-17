@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { FileSpreadsheet, X, Loader2, CheckCircle2, AlertTriangle, CloudDownload } from 'lucide-react';
+import { FileSpreadsheet, X, Loader2, CheckCircle2, AlertTriangle, Download } from 'lucide-react';
 import * as productService from '../../services/productService';
 
 interface ImportToolsProps {
@@ -137,7 +136,7 @@ export const ImportTools: React.FC<ImportToolsProps> = ({ isOpen, onClose, onImp
                     placeholder="https://docs.google.com/spreadsheets/d/..."
                   />
                   <button type="submit" className="bg-green-600 text-white p-3 rounded-xl hover:bg-green-700 transition-colors shadow-sm">
-                    <CloudDownload className="w-5 h-5" />
+                    <Download className="w-5 h-5" />
                   </button>
                 </div>
               </form>

@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import { Product } from '../types';
-import { Plus, Package, FileSpreadsheet, CheckCircle2, ChevronLeft, AlertTriangle, CloudDownload, CloudUpload, Loader2, HardDrive } from 'lucide-react';
+import { Plus, Package, FileSpreadsheet, CheckCircle2, ChevronLeft, AlertTriangle, Download, Upload, Loader2, HardDrive } from 'lucide-react';
 import { SearchBar } from './SearchBar';
 import { ProductList } from './database/ProductList';
 import { ProductForm } from './database/ProductForm';
@@ -77,7 +76,7 @@ export const Database: React.FC<DatabaseProps> = ({ onBack }) => {
                         className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-indigo-600 disabled:opacity-50 transition-colors"
                         title="Descargar Productos de AppSheet"
                     >
-                        {state.isDownloading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CloudDownload className="w-5 h-5" />}
+                        {state.isDownloading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
                     </button>
                     <div className="w-px bg-slate-200 my-1"></div>
                     <button 
@@ -86,7 +85,7 @@ export const Database: React.FC<DatabaseProps> = ({ onBack }) => {
                         className={`p-2 rounded-lg hover:bg-slate-100 disabled:opacity-50 transition-colors relative ${state.pendingChangesCount > 0 ? 'text-indigo-600' : 'text-slate-600'}`}
                         title="Subir Productos a AppSheet"
                     >
-                        {state.isSyncing ? <Loader2 className="w-5 h-5 animate-spin" /> : <CloudUpload className="w-5 h-5" />}
+                        {state.isSyncing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
                         {state.pendingChangesCount > 0 && !state.isSyncing && (
                             <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
                         )}
@@ -135,10 +134,10 @@ export const Database: React.FC<DatabaseProps> = ({ onBack }) => {
       {/* FLOATING ACTION BUTTON (Mobile) */}
       <div className="md:hidden fixed bottom-24 right-5 flex flex-col gap-3 z-30">
         <button onClick={actions.handleDownloadFromCloud} disabled={state.isDownloading} className="w-12 h-12 bg-white text-indigo-600 border border-slate-200 rounded-full shadow-lg flex items-center justify-center active:scale-90 transition-transform disabled:opacity-50">
-            {state.isDownloading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CloudDownload className="w-5 h-5" />}
+            {state.isDownloading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
         </button>
         <button onClick={actions.handleSyncToCloud} disabled={state.isSyncing} className="w-12 h-12 bg-white text-indigo-600 border border-slate-200 rounded-full shadow-lg flex items-center justify-center active:scale-90 transition-transform disabled:opacity-50 relative">
-            {state.isSyncing ? <Loader2 className="w-5 h-5 animate-spin" /> : <CloudUpload className="w-5 h-5" />}
+            {state.isSyncing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
             {state.pendingChangesCount > 0 && !state.isSyncing && <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>}
         </button>
         <button onClick={() => setIsImportOpen(true)} className="w-12 h-12 bg-white text-green-600 border border-slate-200 rounded-full shadow-lg flex items-center justify-center active:scale-90 transition-transform">
