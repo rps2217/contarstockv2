@@ -7,6 +7,7 @@ import { markProductsAsSynced } from "./productService";
 import { db } from "../db";
 import { sendToAppSheet, AppSheetPayload } from "../infrastructure/api/appsheetClient";
 import { SHEET_COLUMNS, SYNC_ENGINE_VERSION } from "./constants";
+import { logger } from "./logger";
 
 export { SYNC_ENGINE_VERSION, SHEET_COLUMNS };
 
@@ -114,25 +115,33 @@ const aggregateScansForSync = async (session: CountingSession, scans: ScanRecord
 export const syncToAppSheet = async (session: CountingSession, _ignoredItems?: ConsolidatedItem[]): Promise<void> => {
   const settings = getSettings(); const config = settings.appSheetConfig;
   if (!config?.appId || !config?.accessKey || !config?.countsTableName) throw new Error("Error Config: Falta AppID o Tabla Consolidados.");
+  
   const unsyncedScans = await getUnsyncedScans(session.erpOrder);
-  if (unsyncedScans.length === 0) { console.log("[Sync] Nada nuevo."); return; }
+  if (unsyncedScans.length === 0) { 
+      logger.info('Sync', `Nothing to sync for ${session.erpOrder}`);
+      return; 
+  }
+
   try {
     const aggregatedRows = await aggregateScansForSync(session, unsyncedScans);
     const safeErp = session.erpOrder.replace(/'/g, "");
     const selector = `[${SHEET_COLUMNS.ERP_ORDER}] = '${safeErp}'`;
     
     // For regular inventory, we still try Find first as mass-Add is risky for large batches.
-    // If it fails, we fall back to Add.
-    
     let existingMap = new Map<string, {id: string, qty: number}>();
     try {
         const existingData = await sendToAppSheet(config, config.countsTableName, { Action: "Find", Properties: { Locale: "es-CL", Timezone: "UTC", Selector: selector }, Rows: [] });
-        if (Array.isArray(existingData)) { existingData.forEach((r: any) => { if (r[SHEET_COLUMNS.UNIQUE_KEY]) existingMap.set(r[SHEET_COLUMNS.UNIQUE_KEY], { id: r[SHEET_COLUMNS.ID], qty: Number(r[SHEET_COLUMNS.QUANTITY]) || 0 }); }); }
-    } catch (e) {
-        console.warn("[Sync Inventory] Find failed, proceeding with blind Add/Edit", e);
+        if (Array.isArray(existingData)) { 
+            existingData.forEach((r: any) => { 
+                if (r[SHEET_COLUMNS.UNIQUE_KEY]) existingMap.set(r[SHEET_COLUMNS.UNIQUE_KEY], { id: r[SHEET_COLUMNS.ID], qty: Number(r[SHEET_COLUMNS.QUANTITY]) || 0 }); 
+            }); 
+        }
+    } catch (e: any) {
+        logger.warn("Sync", `Find failed for ${session.erpOrder}, defaulting to Add/Edit`, e.message);
     }
     
-    const batchAdd: any[] = []; const batchEdit: any[] = [];
+    const batchAdd: any[] = []; 
+    const batchEdit: any[] = [];
     
     aggregatedRows.forEach(row => {
         const key = row[SHEET_COLUMNS.UNIQUE_KEY]; const existing = existingMap.get(key);
@@ -145,25 +154,69 @@ export const syncToAppSheet = async (session: CountingSession, _ignoredItems?: C
         }
     });
     
-    if (batchAdd.length > 0) await sendToAppSheet(config, config.countsTableName, { Action: "Add", Properties: { Locale: "es-CL", Timezone: "UTC" }, Rows: batchAdd });
-    if (batchEdit.length > 0) await sendToAppSheet(config, config.countsTableName, { Action: "Edit", Properties: { Locale: "es-CL", Timezone: "UTC" }, Rows: batchEdit });
+    // --- CHUNKING IMPLEMENTATION (Reliability Feature) ---
+    // AppSheet API often times out with > 1000 rows. We split into chunks of 400.
+    
+    const BATCH_SIZE = 400;
+
+    // Process Adds
+    for (let i = 0; i < batchAdd.length; i += BATCH_SIZE) {
+        const chunk = batchAdd.slice(i, i + BATCH_SIZE);
+        await sendToAppSheet(config, config.countsTableName, { 
+            Action: "Add", 
+            Properties: { Locale: "es-CL", Timezone: "UTC" }, 
+            Rows: chunk 
+        });
+        logger.info('Sync', `Chunked Add: ${chunk.length} rows`);
+    }
+
+    // Process Edits
+    for (let i = 0; i < batchEdit.length; i += BATCH_SIZE) {
+        const chunk = batchEdit.slice(i, i + BATCH_SIZE);
+        await sendToAppSheet(config, config.countsTableName, { 
+            Action: "Edit", 
+            Properties: { Locale: "es-CL", Timezone: "UTC" }, 
+            Rows: chunk 
+        });
+        logger.info('Sync', `Chunked Edit: ${chunk.length} rows`);
+    }
     
     await markScansAsSynced(unsyncedScans.map(s => s.id));
-    console.log(`[Sync] Exitosa.`);
-  } catch (error: any) { console.error("[Sync] Error:", error); throw error; }
+    logger.success('Sync', `Sync complete for ${session.erpOrder}. Items: ${aggregatedRows.length}`);
+
+  } catch (error: any) { 
+      logger.error('Sync', `Failed for ${session.erpOrder}`, error);
+      throw error; 
+  }
 };
 
 export const syncProductsToAppSheet = async (products: Product[]): Promise<void> => {
     const settings = getSettings(); const config = settings.appSheetConfig;
     if (!config?.appId || !config?.accessKey || !config?.productsTableName) throw new Error("Config incompleta.");
+    
     const adds: any[] = []; const edits: any[] = []; const addIds: string[] = []; const editIds: string[] = [];
     products.forEach(p => {
         if (!p.barcode) return;
         const row = { "COD PRODUCTO": p.barcode, "COD_PRODUCTO": p.barcode, "CODIGO": p.barcode, "SKU": p.barcode, "ID": p.barcode, "DESCRIPCION": p.name, "PROVEEDOR": p.supplier || "RUT PENDIENTES", "RUT PROVEEDOR": p.supplierRut || "123456789", "MUNDO": p.category || "GENERAL" };
         if (p.syncStatus === 'edit') { edits.push(row); editIds.push(p.barcode); } else { adds.push(row); addIds.push(p.barcode); }
     });
-    if (adds.length > 0) { await sendToAppSheet(config, config.productsTableName, { Action: "Add", Properties: { Locale: "es-CL", Timezone: "UTC" }, Rows: adds }); await markProductsAsSynced(addIds); }
-    if (edits.length > 0) { await sendToAppSheet(config, config.productsTableName, { Action: "Edit", Properties: { Locale: "es-CL", Timezone: "UTC" }, Rows: edits }); await markProductsAsSynced(editIds); }
+
+    // Chunking logic for Products too
+    const BATCH = 400;
+    
+    if (adds.length > 0) {
+        for (let i = 0; i < adds.length; i += BATCH) {
+            await sendToAppSheet(config, config.productsTableName, { Action: "Add", Properties: { Locale: "es-CL", Timezone: "UTC" }, Rows: adds.slice(i, i + BATCH) });
+        }
+        await markProductsAsSynced(addIds); 
+    }
+    
+    if (edits.length > 0) { 
+        for (let i = 0; i < edits.length; i += BATCH) {
+            await sendToAppSheet(config, config.productsTableName, { Action: "Edit", Properties: { Locale: "es-CL", Timezone: "UTC" }, Rows: edits.slice(i, i + BATCH) }); 
+        }
+        await markProductsAsSynced(editIds); 
+    }
 };
 
 // FIXED: SERIALIZED ROW-BY-ROW SYNC FOR ROBUSTNESS
@@ -175,7 +228,7 @@ export const syncReceptionToAppSheet = async (sessions: CountingSession[]): Prom
     if (!config?.appId || !config?.accessKey) throw new Error("Configuración incompleta: Faltan credenciales.");
     if (!config?.receptionTableName) throw new Error("Falta configurar la 'Tabla de Recepción' en Ajustes.");
     
-    console.log(`[Sync Reception] Starting sequential sync for ${sessions.length} items...`);
+    logger.info('Sync Reception', `Starting sequential sync for ${sessions.length} items...`);
 
     let successCount = 0;
     let failCount = 0;
@@ -209,20 +262,16 @@ export const syncReceptionToAppSheet = async (sessions: CountingSession[]): Prom
                     Properties: { Locale: "es-CL", Timezone: "UTC" }, 
                     Rows: [row] 
                 });
-                console.log(`[Sync Reception] ADD Success: ${session.logisticsLabel}`);
             } catch (addError: any) {
                 const msg = addError.message || "";
                 
                 // If the error suggests it already exists or it was a silent failure (rejected add)
                 if (msg.includes("exists") || msg.includes("Duplicate") || msg.includes("400") || msg.includes("Silent Failure")) {
-                    console.log(`[Sync Reception] Duplicate/Fail detected for ${session.logisticsLabel}, attempting Update...`);
-                    
                     await sendToAppSheet(config, config.receptionTableName, { 
                         Action: "Edit", 
                         Properties: { Locale: "es-CL", Timezone: "UTC" }, 
                         Rows: [row] 
                     });
-                    console.log(`[Sync Reception] EDIT Success: ${session.logisticsLabel}`);
                 } else {
                     // Fatal error (Auth, Schema, etc)
                     throw addError;
@@ -241,7 +290,7 @@ export const syncReceptionToAppSheet = async (sessions: CountingSession[]): Prom
         }
     }
     
-    console.log(`[Sync Reception] Batch complete. Success: ${successCount}, Failed: ${failCount}`);
+    logger.info('Sync Reception', `Batch complete. Success: ${successCount}, Failed: ${failCount}`);
     return { success: successCount, failed: failCount, errors };
 };
 
@@ -331,14 +380,7 @@ export const processSyncQueue = async () => {
         // Max Retry: 5 (Wait ~32s)
         if (job.retryCount > 0) {
             const waitTime = Math.min(30000, Math.pow(2, job.retryCount) * 1000);
-            const timeSinceCreation = Date.now() - job.createdAt;
-            
-            // If the job is "fresh" relative to its retry count, skip it to let it backoff
-            // (Simplification since we don't store 'lastAttempt' in types yet)
-            // Logic: if current time is less than (createdAt + waitTime * retryCount), approximate wait.
-            // A better robust way without schema change is just probability or fixed checks.
-            // For now, let's just use the retryCount as a throttle.
-            // If retryCount is high, we only try if Math.random matches low probability (poor man's backoff)
+            // Simple probability gate instead of strict time check to allow processing occasionally
             if (job.retryCount > 3 && Math.random() > 0.3) continue; 
         }
 

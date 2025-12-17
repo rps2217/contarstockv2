@@ -2,6 +2,7 @@
 import { db } from '../db';
 import { ScanRecord, CountingSession } from '../types';
 import { generateUUID, sanitizeBarcode } from './utils';
+import { logger } from './logger';
 
 // ==========================================
 // WRITE BUFFER OPTIMIZATION
@@ -18,8 +19,10 @@ const flushBuffer = async () => {
     
     const batch = [...scanBuffer];
     scanBuffer = []; // Clear immediate
-    clearTimeout(flushTimer);
-    flushTimer = null;
+    if (flushTimer) {
+        clearTimeout(flushTimer);
+        flushTimer = null;
+    }
 
     try {
         await db.scans.bulkAdd(batch);
@@ -29,11 +32,27 @@ const flushBuffer = async () => {
         for (const sessionId of affectedSessions) {
             await updateSessionStats(sessionId);
         }
-    } catch (e) {
-        console.error("Buffer Flush Failed! Potential Data Loss", e);
-        // Retry logic could go here
+        // logger.info('Buffer', `Flushed ${batch.length} records safely.`); // Too verbose for prod
+    } catch (e: any) {
+        logger.error("Buffer", "Flush Failed! Potential Data Loss", e);
     }
 };
+
+// --- SAFETY MECHANISM: FLUSH ON EXIT ---
+// Critical for mobile devices where the browser might be killed in background
+if (typeof window !== 'undefined') {
+    // 1. Tab Hidden / Backgrounded
+    window.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            flushBuffer();
+        }
+    });
+    
+    // 2. Tab Closed / Refreshed
+    window.addEventListener('pagehide', () => {
+        flushBuffer();
+    });
+}
 
 const addToBuffer = (record: ScanRecord) => {
     scanBuffer.push(record);
@@ -68,6 +87,7 @@ export const createSession = async (erpOrder: string, logisticsLabel: string): P
   };
   
   await db.sessions.add(newSession); 
+  logger.info('Session', `Created: ${erpOrder} / ${logisticsLabel}`);
   return newSession;
 };
 
@@ -101,6 +121,7 @@ export const activateDraftSession = async (draftSessionId: string, erpOrder: str
         status: 'active',
         erpOrder: erpOrder.trim(),
     });
+    logger.info('Session', `Draft Activated: ${erpOrder}`);
     return (await db.sessions.get(draftSessionId)) as CountingSession;
 };
 
@@ -109,6 +130,7 @@ export const closeSession = async (sessionId: string) => {
     await flushBuffer();
     await db.sessions.update(sessionId, { status: 'completed' }); 
     await updateSessionStats(sessionId); 
+    logger.info('Session', `Closed: ${sessionId}`);
 };
 
 export const deleteSession = async (sessionId: string) => { 
@@ -133,6 +155,7 @@ export const cleanSyncedSessions = async (): Promise<number> => {
         await deleteSession(session.id);
         deletedCount++;
     }
+    logger.info('Maintenance', `Cleaned ${deletedCount} synced sessions.`);
     return deletedCount;
 };
 

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Volume2, VolumeX, Vibrate, Zap, Moon, Sun, Monitor, AlertTriangle, ArrowLeft, Cloud, Key, Database, Lock, Check, Eye, Shield, FileText, Package, AlertOctagon, Activity, CheckCircle, XCircle, Share2, Download, QrCode, Copy, Save, Upload, RefreshCw, Loader2, Speech, Hash, Type, Gauge, BarChart3, Smartphone, LayoutTemplate, Camera, Stethoscope, Trash2, HardDrive } from 'lucide-react';
+import { Settings as SettingsIcon, Volume2, VolumeX, Vibrate, Zap, Moon, Sun, Monitor, AlertTriangle, ArrowLeft, Cloud, Key, Database, Lock, Check, Eye, Shield, FileText, Package, AlertOctagon, Activity, CheckCircle, XCircle, Share2, Download, QrCode, Copy, Save, Upload, RefreshCw, Loader2, Speech, Hash, Type, Gauge, BarChart3, Smartphone, LayoutTemplate, Camera, Stethoscope, Trash2, HardDrive, Terminal } from 'lucide-react';
 import * as sessionService from '../services/sessionService'; 
 import * as settingsService from '../services/settings';
 import * as maintenanceService from '../services/maintenance';
@@ -8,6 +8,7 @@ import { createFullBackup, restoreFullBackup } from '../services/backupService';
 import { AppSettings, ViewState } from '../types';
 import { SoundFX } from '../services/audio';
 import { CameraScanner } from './CameraScanner';
+import { logger } from '../services/logger';
 
 interface SettingsProps {
   onBack: () => void;
@@ -15,7 +16,6 @@ interface SettingsProps {
 }
 
 export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged }) => {
-  // FIXED: Use settingsService instead of storage for getSettings to avoid circular dependency chain
   const [settings, setSettings] = useState<AppSettings>(settingsService.getSettings());
   const [appSheetConfig, setAppSheetConfig] = useState(settings.appSheetConfig || { appId: '', accessKey: '', countsTableName: '', productsTableName: '', receptionTableName: '' });
   const [showSaveFeedback, setShowSaveFeedback] = useState(false);
@@ -33,6 +33,8 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isRepairing, setIsRepairing] = useState(false);
   const [repairLogs, setRepairLogs] = useState<string[]>([]);
+  const [showSystemLogs, setShowSystemLogs] = useState(false);
+  const [systemLogs, setSystemLogs] = useState<any[]>([]);
 
   // Backup State
   const [isBackingUp, setIsBackingUp] = useState(false);
@@ -52,6 +54,12 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
       } finally {
           setIsAnalyzing(false);
       }
+  };
+
+  const loadSystemLogs = async () => {
+      const logs = await logger.getRecent(50);
+      setSystemLogs(logs);
+      setShowSystemLogs(true);
   };
 
   const updateSetting = (key: keyof AppSettings, value: any) => {
@@ -80,11 +88,9 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
       let current = settings.mobileNavConfig || ['dashboard', 'database', 'reports'];
       
       if (current.includes(id)) {
-          // Prevent removing if only 1 item left (sanity check)
           if (current.length <= 1) return;
           current = current.filter(i => i !== id);
       } else {
-          // Limit to 5 items to fit on screen
           if (current.length >= 5) {
               alert("Máximo 5 elementos permitidos en la barra móvil.");
               return;
@@ -151,18 +157,14 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
       }
   };
 
-  // --- HARD RESET HANDLER ---
   const handleHardReset = () => {
     if (confirm("¿Forzar actualización?\n\nEsto recargará la aplicación ignorando el caché del navegador para asegurar que tengas la última versión.")) {
-        // Cache busting reload technique
         window.location.href = '/?t=' + Date.now();
     }
   };
 
-  // --- SHARE LOGIC ---
   const generateConfigString = () => {
       const json = JSON.stringify(appSheetConfig);
-      // Encode to Base64 to make it scanner friendly and URL safe
       return `LGC://${btoa(json)}`;
   };
 
@@ -176,7 +178,6 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
           const json = atob(base64);
           const parsed = JSON.parse(json);
 
-          // Basic Validation
           if (!parsed.appId || !parsed.accessKey) {
               throw new Error("La configuración importada parece incompleta.");
           }
@@ -197,7 +198,6 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
       alert("Configuración copiada al portapapeles.");
   };
 
-  // Helper for byte formatting
   const formatBytes = (bytes: number) => {
       if (bytes === 0) return '0 B';
       const k = 1024;
@@ -229,6 +229,109 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
 
       <div className="space-y-6">
         
+        {/* SYSTEM HEALTH */}
+        <section className={`rounded-2xl border p-6 transition-all ${healthReport?.status === 'warning' || healthReport?.status === 'critical' ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-200 shadow-sm'}`}>
+            <div className="flex justify-between items-start mb-4">
+                <h2 className={`text-lg font-bold flex items-center gap-2 ${healthReport?.status === 'healthy' ? 'text-slate-900' : 'text-amber-900'}`}>
+                    <Stethoscope className="w-5 h-5 text-emerald-600" /> Centro de Salud
+                </h2>
+                <div className="flex gap-2">
+                    <button onClick={loadSystemLogs} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors" title="Ver Logs">
+                        <Terminal className="w-4 h-4 text-slate-500" />
+                    </button>
+                    <button onClick={runHealthCheck} className="p-2 bg-white/50 rounded-full hover:bg-white transition-colors" disabled={isAnalyzing}>
+                        {isAnalyzing ? <Loader2 className="w-4 h-4 animate-spin text-slate-500"/> : <RefreshCw className="w-4 h-4 text-slate-500"/>}
+                    </button>
+                </div>
+            </div>
+
+            {healthReport && (
+                <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-white/60 p-3 rounded-xl border border-black/5">
+                            <div className="text-xs text-slate-500 font-bold uppercase mb-1">Registros Totales</div>
+                            <div className="text-xl font-black text-slate-800">{healthReport.totalRecords}</div>
+                        </div>
+                        <div className="bg-white/60 p-3 rounded-xl border border-black/5">
+                            <div className="text-xs text-slate-500 font-bold uppercase mb-1">Uso de Disco</div>
+                            <div className="text-xl font-black text-slate-800 flex items-center gap-2">
+                                <HardDrive className="w-4 h-4 text-slate-400" /> {formatBytes(healthReport.storageUsage)}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Alert Box if Issues */}
+                    {(healthReport.orphanScans > 0 || healthReport.stuckSyncJobs > 0 || healthReport.corruptProducts > 0) ? (
+                        <div className="bg-white p-4 rounded-xl border border-amber-100 shadow-sm">
+                            <h3 className="text-sm font-bold text-amber-800 mb-2 flex items-center gap-2"><AlertTriangle className="w-4 h-4"/> Problemas Detectados</h3>
+                            <ul className="text-xs text-amber-700 space-y-1 list-disc pl-4">
+                                {healthReport.orphanScans > 0 && <li><strong>{healthReport.orphanScans}</strong> registros de escaneo huérfanos (basura).</li>}
+                                {healthReport.stuckSyncJobs > 0 && <li><strong>{healthReport.stuckSyncJobs}</strong> trabajos de subida atascados.</li>}
+                                {healthReport.corruptProducts > 0 && <li><strong>{healthReport.corruptProducts}</strong> productos corruptos.</li>}
+                            </ul>
+                            
+                            <button 
+                                onClick={handleRepairSystem}
+                                disabled={isRepairing}
+                                className="w-full mt-3 bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 rounded-lg text-xs flex items-center justify-center gap-2 transition-colors shadow-sm"
+                            >
+                                {isRepairing ? <Loader2 className="w-3 h-3 animate-spin"/> : <Trash2 className="w-3 h-3" />}
+                                Ejecutar Reparación Automática
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="bg-emerald-50 text-emerald-800 text-xs font-bold p-3 rounded-xl border border-emerald-100 flex items-center gap-2">
+                            <CheckCircle className="w-4 h-4" /> Base de datos saludable y optimizada.
+                        </div>
+                    )}
+
+                    {repairLogs.length > 0 && (
+                        <div className="bg-slate-900 text-slate-300 p-3 rounded-xl text-[10px] font-mono max-h-32 overflow-y-auto">
+                            {repairLogs.map((log, i) => <div key={i}>{log}</div>)}
+                        </div>
+                    )}
+                </div>
+            )}
+            
+            <div className="mt-4 pt-4 border-t border-black/5 grid grid-cols-2 gap-3">
+                 <button onClick={handleHardReset} className="text-xs font-bold text-slate-500 hover:text-blue-600 flex items-center gap-1 justify-center py-2 bg-white rounded-lg border border-slate-200">
+                    <RefreshCw className="w-3 h-3" /> Forzar Recarga
+                 </button>
+                 <button onClick={() => window.location.reload()} className="text-xs font-bold text-slate-500 hover:text-blue-600 flex items-center gap-1 justify-center py-2 bg-white rounded-lg border border-slate-200">
+                    <Activity className="w-3 h-3" /> Reinicio Suave
+                 </button>
+            </div>
+        </section>
+
+        {/* LOG VIEWER MODAL */}
+        {showSystemLogs && (
+            <div className="fixed inset-0 z-[80] bg-slate-900/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+                <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl flex flex-col h-[80vh]">
+                    <div className="p-4 border-b flex justify-between items-center bg-slate-50 rounded-t-3xl">
+                        <h3 className="font-bold flex items-center gap-2 text-slate-800"><Terminal className="w-5 h-5" /> Logs del Sistema (Últimos 50)</h3>
+                        <button onClick={() => setShowSystemLogs(false)} className="p-2 hover:bg-slate-200 rounded-full text-slate-500"><XCircle className="w-6 h-6"/></button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-4 bg-slate-900 font-mono text-xs">
+                        {systemLogs.length === 0 ? (
+                            <div className="text-slate-500 italic">No hay logs registrados.</div>
+                        ) : (
+                            systemLogs.map((log, i) => (
+                                <div key={i} className="mb-2 border-b border-slate-800 pb-2">
+                                    <div className="flex gap-2 mb-1">
+                                        <span className="text-slate-500">{new Date(log.timestamp).toLocaleTimeString()}</span>
+                                        <span className={`font-bold ${log.level === 'error' ? 'text-red-400' : log.level === 'warn' ? 'text-amber-400' : 'text-blue-400'}`}>[{log.level.toUpperCase()}]</span>
+                                        <span className="text-slate-300 font-bold">{log.module}</span>
+                                    </div>
+                                    <div className="text-slate-300 pl-14">{log.message}</div>
+                                    {log.details && <div className="text-slate-500 pl-14 mt-1 break-all">{log.details}</div>}
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+            </div>
+        )}
+
         {/* APPEARANCE */}
         <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
             <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
@@ -379,100 +482,6 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
                         <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.confirmDelete ? 'left-7' : 'left-1'}`} />
                     </button>
                 </div>
-            </div>
-        </section>
-
-        {/* SYSTEM HEALTH & MAINTENANCE (NEW) */}
-        <section className={`rounded-2xl border p-6 transition-all ${healthReport?.status === 'warning' || healthReport?.status === 'critical' ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-200 shadow-sm'}`}>
-            <div className="flex justify-between items-start mb-4">
-                <h2 className={`text-lg font-bold flex items-center gap-2 ${healthReport?.status === 'healthy' ? 'text-slate-900' : 'text-amber-900'}`}>
-                    <Stethoscope className="w-5 h-5 text-emerald-600" /> Centro de Salud
-                </h2>
-                <button onClick={runHealthCheck} className="p-2 bg-white/50 rounded-full hover:bg-white transition-colors" disabled={isAnalyzing}>
-                    {isAnalyzing ? <Loader2 className="w-4 h-4 animate-spin text-slate-500"/> : <RefreshCw className="w-4 h-4 text-slate-500"/>}
-                </button>
-            </div>
-
-            {healthReport && (
-                <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-white/60 p-3 rounded-xl border border-black/5">
-                            <div className="text-xs text-slate-500 font-bold uppercase mb-1">Registros Totales</div>
-                            <div className="text-xl font-black text-slate-800">{healthReport.totalRecords}</div>
-                        </div>
-                        <div className="bg-white/60 p-3 rounded-xl border border-black/5">
-                            <div className="text-xs text-slate-500 font-bold uppercase mb-1">Uso de Disco</div>
-                            <div className="text-xl font-black text-slate-800 flex items-center gap-2">
-                                <HardDrive className="w-4 h-4 text-slate-400" /> {formatBytes(healthReport.storageUsage)}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Alert Box if Issues */}
-                    {(healthReport.orphanScans > 0 || healthReport.stuckSyncJobs > 0 || healthReport.corruptProducts > 0) ? (
-                        <div className="bg-white p-4 rounded-xl border border-amber-100 shadow-sm">
-                            <h3 className="text-sm font-bold text-amber-800 mb-2 flex items-center gap-2"><AlertTriangle className="w-4 h-4"/> Problemas Detectados</h3>
-                            <ul className="text-xs text-amber-700 space-y-1 list-disc pl-4">
-                                {healthReport.orphanScans > 0 && <li><strong>{healthReport.orphanScans}</strong> registros de escaneo huérfanos (basura).</li>}
-                                {healthReport.stuckSyncJobs > 0 && <li><strong>{healthReport.stuckSyncJobs}</strong> trabajos de subida atascados.</li>}
-                                {healthReport.corruptProducts > 0 && <li><strong>{healthReport.corruptProducts}</strong> productos corruptos.</li>}
-                            </ul>
-                            
-                            <button 
-                                onClick={handleRepairSystem}
-                                disabled={isRepairing}
-                                className="w-full mt-3 bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 rounded-lg text-xs flex items-center justify-center gap-2 transition-colors shadow-sm"
-                            >
-                                {isRepairing ? <Loader2 className="w-3 h-3 animate-spin"/> : <Trash2 className="w-3 h-3" />}
-                                Ejecutar Reparación Automática
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="bg-emerald-50 text-emerald-800 text-xs font-bold p-3 rounded-xl border border-emerald-100 flex items-center gap-2">
-                            <CheckCircle className="w-4 h-4" /> Base de datos saludable y optimizada.
-                        </div>
-                    )}
-
-                    {repairLogs.length > 0 && (
-                        <div className="bg-slate-900 text-slate-300 p-3 rounded-xl text-[10px] font-mono max-h-32 overflow-y-auto">
-                            {repairLogs.map((log, i) => <div key={i}>{log}</div>)}
-                        </div>
-                    )}
-                </div>
-            )}
-            
-            <div className="mt-4 pt-4 border-t border-black/5 grid grid-cols-2 gap-3">
-                 <button onClick={handleHardReset} className="text-xs font-bold text-slate-500 hover:text-blue-600 flex items-center gap-1 justify-center py-2 bg-white rounded-lg border border-slate-200">
-                    <RefreshCw className="w-3 h-3" /> Forzar Recarga
-                 </button>
-                 <button onClick={() => window.location.reload()} className="text-xs font-bold text-slate-500 hover:text-blue-600 flex items-center gap-1 justify-center py-2 bg-white rounded-lg border border-slate-200">
-                    <Activity className="w-3 h-3" /> Reinicio Suave
-                 </button>
-            </div>
-        </section>
-
-        {/* DATA SECURITY */}
-        <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <h2 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
-                <Shield className="w-5 h-5 text-emerald-600" /> Seguridad de Datos
-            </h2>
-            <p className="text-sm text-slate-500 mb-4">Gestione copias de seguridad locales para evitar pérdida de datos.</p>
-            
-            <div className="flex flex-col gap-3">
-                <button 
-                    onClick={handleBackup}
-                    disabled={isBackingUp}
-                    className="w-full flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition-colors border border-slate-200"
-                >
-                    {isBackingUp ? <div className="w-4 h-4 border-2 border-slate-600 border-t-transparent rounded-full animate-spin"></div> : <Save className="w-4 h-4" />}
-                    Crear Copia de Seguridad
-                </button>
-                
-                <label className={`w-full flex items-center justify-center gap-2 bg-white hover:bg-emerald-50 text-emerald-700 font-bold py-3 rounded-xl transition-colors border-2 border-dashed border-emerald-200 cursor-pointer ${isRestoring ? 'opacity-50 pointer-events-none' : ''}`}>
-                    {isRestoring ? <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></div> : <Upload className="w-4 h-4" />}
-                    {isRestoring ? 'Restaurando...' : 'Restaurar desde Copia'}
-                    <input type="file" accept=".json" onChange={handleRestoreFile} className="hidden" disabled={isRestoring} />
-                </label>
             </div>
         </section>
 
