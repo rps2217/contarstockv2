@@ -1,10 +1,10 @@
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { ChevronLeft, Barcode, CheckCircle2, WifiOff, Upload, Download, Box, Zap, Layers, Hash, Loader2, Camera, Ban, List, Trash2, X, Eye, Keyboard, AlertTriangle, ArrowRight } from 'lucide-react';
+import { ChevronLeft, Barcode, CheckCircle2, WifiOff, Upload, Download, Box, Zap, Layers, Hash, Loader2, Camera, Ban, List, Trash2, X, Eye, Keyboard, AlertTriangle, ArrowRight, Cloud } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import * as sessionService from '../services/sessionService'; 
 import { sanitizeBarcode } from '../services/utils';
-import { restoreReceptionFromCloud } from '../services/syncManager';
 import { SoundFX } from '../services/audio';
 import { CameraScanner } from './CameraScanner';
 import { useNavigate } from 'react-router-dom';
@@ -14,7 +14,6 @@ export const Reception: React.FC = () => {
     const [inputValue, setInputValue] = useState('');
     const [lastScanned, setLastScanned] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const [isRestoring, setIsRestoring] = useState(false);
     const [isCameraOpen, setIsCameraOpen] = useState(false);
     const [showQueueModal, setShowQueueModal] = useState(false);
     const [showManualInput, setShowManualInput] = useState(false);
@@ -93,19 +92,6 @@ export const Reception: React.FC = () => {
         }
     };
 
-    const handleRestore = async () => {
-        if (!confirm('¿Descargar historial de recepción desde la nube? Esto traerá bultos escaneados en otros dispositivos.')) return;
-        setIsRestoring(true);
-        try {
-            const count = await restoreReceptionFromCloud();
-            alert(`Descarga completada. ${count} nuevos registros importados.`);
-        } catch (e: any) {
-            alert(`Error de descarga: ${e.message}`);
-        } finally {
-            setIsRestoring(false);
-        }
-    };
-
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             const target = e.target as HTMLElement;
@@ -143,12 +129,11 @@ export const Reception: React.FC = () => {
                 <div className="font-bold uppercase tracking-widest text-sm text-slate-400">Recepción Ciega</div>
                 
                 <button 
-                    onClick={handleRestore}
-                    disabled={isRestoring}
-                    className="p-2 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white rounded-lg transition-colors flex items-center gap-2 text-xs font-bold border border-indigo-500/30 disabled:opacity-50"
+                    onClick={() => navigate('/sync')}
+                    className="p-2 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white rounded-lg transition-colors flex items-center gap-2 text-xs font-bold border border-indigo-500/30"
                 >
-                    {isRestoring ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                    <span className="hidden md:inline">Descargar Bitácora</span>
+                    <Cloud className="w-4 h-4" />
+                    <span className="hidden md:inline">Sincronizar / Descargar</span>
                 </button>
             </div>
 
