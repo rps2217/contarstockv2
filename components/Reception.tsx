@@ -7,13 +7,10 @@ import { sanitizeBarcode } from '../services/utils';
 import { restoreReceptionFromCloud } from '../services/syncBridge';
 import { SoundFX } from '../services/audio';
 import { CameraScanner } from './CameraScanner';
+import { useNavigate } from 'react-router-dom';
 
-interface ReceptionProps {
-    onBack: () => void;
-    onNavigate?: (view: any) => void;
-}
-
-export const Reception: React.FC<ReceptionProps> = ({ onBack, onNavigate }) => {
+export const Reception: React.FC = () => {
+    const navigate = useNavigate();
     const [inputValue, setInputValue] = useState('');
     const [lastScanned, setLastScanned] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -22,7 +19,6 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack, onNavigate }) => {
     const [showQueueModal, setShowQueueModal] = useState(false);
     const [showManualInput, setShowManualInput] = useState(false);
 
-    // Queries
     const draftCount = useLiveQuery(() => db.sessions.where('status').equals('draft').count(), [], 0);
     const unsyncedDrafts = useLiveQuery(() => db.sessions.where('status').equals('draft').and(s => !s.lastSyncTimestamp).reverse().toArray(), [], []);
 
@@ -30,7 +26,6 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack, onNavigate }) => {
     const lastKeyTime = useRef(0);
     const inputRef = useRef<HTMLInputElement>(null);
 
-    // --- SECURITY CHECK ---
     const hasCameraSupport = useMemo(() => {
         if (typeof navigator === 'undefined') return false;
         const isSecure = typeof window !== 'undefined' ? window.isSecureContext : false;
@@ -38,13 +33,12 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack, onNavigate }) => {
         return isSecure && hasApi;
     }, []);
 
-    // --- SCANNER LOGIC ---
     const handleScan = async (code: string) => {
         const cleanCode = sanitizeBarcode(code);
         if (!cleanCode) return;
 
         try {
-            await sessionService.createDraftSession(cleanCode); // Updated usage
+            await sessionService.createDraftSession(cleanCode);
             setLastScanned(cleanCode);
             setError(null);
             SoundFX.play('success');
@@ -66,7 +60,7 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack, onNavigate }) => {
         e.preventDefault();
         handleScan(inputValue);
         setInputValue('');
-        setShowManualInput(false); // Hide keyboard after submit
+        setShowManualInput(false); 
     };
 
     const handleToggleManualInput = () => {
@@ -76,7 +70,6 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack, onNavigate }) => {
         }
     };
 
-    // --- QUEUE MANAGEMENT ---
     const handleDeleteDraft = async (id: string) => {
         try {
             await db.sessions.delete(id);
@@ -113,21 +106,10 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack, onNavigate }) => {
         }
     };
 
-    const handleSyncRedirect = () => {
-        if (onNavigate) {
-            onNavigate('sync');
-        } else {
-            // Fallback just in case
-            onBack();
-        }
-    };
-
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             const target = e.target as HTMLElement;
-            // Don't capture keys if camera is open to avoid conflicts
             if (isCameraOpen || showQueueModal) return;
-            // If typing in the manual input, let it be
             if (target.tagName === 'INPUT') return;
 
             const now = Date.now();
@@ -146,7 +128,6 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack, onNavigate }) => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [isCameraOpen, showQueueModal]);
 
-    // Optimize Queue Rendering: Only show last 100 items to prevent UI lag on massive queues
     const visibleDrafts = useMemo(() => {
         return unsyncedDrafts ? unsyncedDrafts.slice(0, 100) : [];
     }, [unsyncedDrafts]);
@@ -155,9 +136,8 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack, onNavigate }) => {
 
     return (
         <div className="flex flex-col h-screen bg-slate-900 text-white">
-            {/* Header */}
             <div className="p-4 flex items-center justify-between bg-slate-800/50">
-                <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                <button onClick={() => navigate('/dashboard')} className="p-2 hover:bg-white/10 rounded-full transition-colors">
                     <ChevronLeft className="w-6 h-6" />
                 </button>
                 <div className="font-bold uppercase tracking-widest text-sm text-slate-400">Recepción Ciega</div>
@@ -172,7 +152,6 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack, onNavigate }) => {
                 </button>
             </div>
 
-            {/* Main Content */}
             <div className="flex-1 overflow-y-auto p-4 md:p-6 no-scrollbar">
                 <div className="flex flex-col items-center justify-center min-h-full pb-12">
                 
@@ -191,11 +170,9 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack, onNavigate }) => {
                         </div>
                     )}
 
-                    {/* Counter Card */}
                     <div className="bg-white/5 rounded-3xl p-6 w-full max-w-sm border border-white/10 relative overflow-hidden group mb-8">
                         <div className="absolute top-0 right-0 p-16 bg-blue-500/20 rounded-full blur-3xl -mr-8 -mt-8"></div>
                         
-                        {/* Queue Management Button */}
                         <div className="absolute top-4 right-4 z-20">
                             <button 
                                 onClick={() => setShowQueueModal(true)}
@@ -214,9 +191,7 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack, onNavigate }) => {
                         </div>
                     </div>
 
-                    {/* Input Controls */}
                     <div className="w-full max-w-sm flex flex-col gap-3">
-                        {/* Toggle Manual Input */}
                         {!showManualInput ? (
                              <div className="grid grid-cols-2 gap-3">
                                 <button 
@@ -264,11 +239,10 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack, onNavigate }) => {
                 </div>
             </div>
 
-            {/* REDIRECT TO SYNC FOOTER */}
             {unsyncedDrafts && unsyncedDrafts.length > 0 && (
                 <div className="p-4 bg-slate-800 border-t border-slate-700 animate-in slide-in-from-bottom-full shrink-0">
                     <button 
-                        onClick={handleSyncRedirect}
+                        onClick={() => navigate('/sync')}
                         className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-900/50 flex items-center justify-center gap-3 transition-all active:scale-95"
                     >
                         <Upload className="w-6 h-6" />
@@ -277,7 +251,6 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack, onNavigate }) => {
                 </div>
             )}
 
-            {/* Camera Modal */}
             {isCameraOpen && (
                 <CameraScanner 
                     onScan={(code) => {
@@ -288,11 +261,9 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack, onNavigate }) => {
                 />
             )}
 
-            {/* QUEUE MANAGEMENT MODAL */}
             {showQueueModal && (
                 <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
                     <div className="bg-slate-900 w-full max-w-lg rounded-3xl shadow-2xl border border-slate-800 flex flex-col max-h-[85vh] animate-in slide-in-from-bottom-8">
-                        {/* Header */}
                         <div className="p-4 border-b border-slate-800 flex justify-between items-center">
                             <div>
                                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
@@ -305,7 +276,6 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack, onNavigate }) => {
                             </button>
                         </div>
 
-                        {/* List - PERFORMANCE: Render only visible drafts */}
                         <div className="flex-1 overflow-y-auto p-4 space-y-2 no-scrollbar">
                             {(!visibleDrafts || visibleDrafts.length === 0) ? (
                                 <div className="text-center py-12 text-slate-500">
@@ -343,7 +313,6 @@ export const Reception: React.FC<ReceptionProps> = ({ onBack, onNavigate }) => {
                             )}
                         </div>
 
-                        {/* Footer Actions */}
                         <div className="p-4 border-t border-slate-800 grid grid-cols-2 gap-3 bg-slate-900/50 rounded-b-3xl">
                              <button 
                                 onClick={handleDiscardQueue}

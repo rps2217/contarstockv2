@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Upload, ChevronLeft, Search, FileSpreadsheet, CheckCircle2, AlertTriangle, XCircle, ArrowRight, Fingerprint, RefreshCw, Filter, FileText, Link, Eye, EyeOff, PackageMinus, PackagePlus, PackageCheck, Repeat, ArrowLeftRight, Sparkles, Save, Check, ShieldCheck, Ban, ArrowDown } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -8,12 +7,10 @@ import * as productService from '../services/productService';
 import { MatchResult, AliasSuggestion, ExpectedOrder } from '../types';
 import { exportDiscrepancyPDF } from '../services/export';
 import { aggregateScans } from '../services/aggregator';
+import { useNavigate } from 'react-router-dom';
 
-interface ConciliatorProps {
-  onBack: () => void;
-}
-
-export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
+export const Conciliator: React.FC = () => {
+  const navigate = useNavigate();
   const [step, setStep] = useState<'upload' | 'select' | 'results'>('upload');
   const [isImporting, setIsImporting] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
@@ -22,20 +19,16 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
   const [analysisProgress, setAnalysisProgress] = useState('');
   const [selectedMatch, setSelectedMatch] = useState<MatchResult | null>(null);
   
-  // UI States
   const [activeTab, setActiveTab] = useState<'missing' | 'extra' | 'match' | 'links'>('links');
   const [linkedAliases, setLinkedAliases] = useState<Set<string>>(new Set());
 
-  // Worker Ref
   const workerRef = useRef<Worker | null>(null);
 
-  // Queries
   const sessions = useLiveQuery(() => db.sessions.orderBy('createdAt').reverse().toArray(), [], []);
   const expectedOrdersCount = useLiveQuery(() => db.expectedOrders.count(), [], 0);
 
   const currentSession = sessions?.find(s => s.id === selectedSessionId);
 
-  // Cleanup worker on unmount
   useEffect(() => {
       return () => {
           if (workerRef.current) {
@@ -44,7 +37,10 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
       };
   }, []);
 
-  // --- HANDLERS ---
+  const handleBackToMain = () => {
+      if (step === 'upload') navigate('/dashboard');
+      else setStep('upload');
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -69,7 +65,6 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
     setLinkedAliases(new Set()); 
 
     try {
-      // 1. Prepare Data
       const scans = await db.scans.where('sessionId').equals(sessionId).toArray();
       const physicalItems = await aggregateScans(scans);
       const expectedOrders = await db.expectedOrders.toArray();
@@ -80,15 +75,12 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
 
       setAnalysisProgress(`Analizando ${physicalItems.length} productos contra ${expectedOrders.length} guías...`);
 
-      // 2. Initialize Worker
       if (!workerRef.current) {
           workerRef.current = new Worker(new URL('../workers/detective.worker.ts', import.meta.url), { type: 'module' });
       }
 
-      // 3. Post Message
       workerRef.current.postMessage({ physicalItems, expectedOrders });
 
-      // 4. Handle Response
       workerRef.current.onmessage = (e) => {
           const { success, results, error } = e.data;
           
@@ -159,7 +151,7 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
               auditTimestamp: Date.now()
           });
           alert("✅ Validación Completada.");
-          onBack(); 
+          navigate('/dashboard'); 
       } catch (e) {
           alert("Error al actualizar base de datos.");
       }
@@ -170,7 +162,6 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
       exportDiscrepancyPDF(selectedMatch, currentSession.logisticsLabel);
   };
 
-  // --- DERIVED DATA ---
   const breakdown = useMemo(() => {
       if (!selectedMatch) return { missing: [], extra: [], match: [], links: [], stats: { total: 0, percent: 0 } };
       
@@ -189,12 +180,10 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
       return { missing, extra, match, links, stats: { total: totalLines, percent } };
   }, [selectedMatch]);
 
-  // --- RENDERERS ---
-
   if (step === 'upload') {
     return (
       <div className="max-w-2xl mx-auto p-4 pt-8 animate-in fade-in">
-        <button onClick={onBack} className="flex items-center gap-2 text-slate-500 mb-6 hover:text-slate-900"><ChevronLeft className="w-5 h-5"/> Volver</button>
+        <button onClick={handleBackToMain} className="flex items-center gap-2 text-slate-500 mb-6 hover:text-slate-900"><ChevronLeft className="w-5 h-5"/> Volver</button>
         
         <div className="text-center mb-10">
           <div className="bg-slate-900 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-slate-900/30">
@@ -282,9 +271,7 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
       );
   }
 
-  // --- VIEW: RESULTS ---
   if (step === 'results' && selectedMatch) {
-      // Determine Verdict (Same logic as before)
       const score = selectedMatch.matchScore;
       let verdictColor = 'bg-emerald-500';
       let verdictText = 'Coincidencia Certificada';
@@ -310,7 +297,6 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
 
       return (
           <div className="bg-slate-50 min-h-screen flex flex-col">
-              {/* Header Results */}
               <div className="bg-white px-4 py-3 border-b border-slate-200 flex items-center justify-between sticky top-0 z-20 shadow-sm">
                   <div className="flex items-center gap-2">
                       <button onClick={() => setStep('select')} className="p-2 hover:bg-slate-100 rounded-full"><ChevronLeft className="w-5 h-5"/></button>
@@ -322,7 +308,6 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
               </div>
 
               <div className="p-4 max-w-2xl mx-auto w-full flex-1 overflow-y-auto pb-20">
-                  {/* Score Card */}
                   <div className={`rounded-3xl p-6 shadow-sm border mb-6 relative overflow-hidden ${verdictBg}`}>
                         <div className="flex justify-between items-start relative z-10">
                             <div>
@@ -349,7 +334,6 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
                         </div>
                   </div>
 
-                  {/* Tabs */}
                   <div className="flex bg-white p-1 rounded-2xl border border-slate-200 mb-4 shadow-sm">
                       <button onClick={() => setActiveTab('links')} className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 ${activeTab === 'links' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-500 hover:bg-slate-50'}`}>
                           <Link className="w-3 h-3" /> Sugerencias
@@ -368,7 +352,6 @@ export const Conciliator: React.FC<ConciliatorProps> = ({ onBack }) => {
                       </button>
                   </div>
 
-                  {/* List Content */}
                   {activeTab === 'links' ? (
                       breakdown.links.length === 0 ? (
                         <div className="text-center py-12 text-slate-400 text-sm">No hay sugerencias de alias.</div>

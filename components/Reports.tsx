@@ -1,7 +1,6 @@
-
 import React, { useState, useCallback } from 'react';
 import { FileText, Calendar, ChevronLeft, CheckCircle2, Layers, Plus, MoreVertical, Trash2, Truck, WifiOff, Cloud, Eraser, ShieldCheck, AlertTriangle, ExternalLink } from 'lucide-react';
-import { CountingSession, ViewState } from '../types';
+import { CountingSession } from '../types';
 import * as sessionService from '../services/sessionService'; 
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
@@ -10,18 +9,13 @@ import { SearchBar } from './SearchBar';
 import { FixedSizeList } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { ReportDetail } from './reports/ReportDetail';
-
-interface ReportsProps {
-  onSessionStart: (session: CountingSession) => void;
-  onNavigate: (view: ViewState) => void;
-}
+import { useNavigate } from 'react-router-dom';
 
 // --- VIRTUALIZED ROW COMPONENT ---
 const SessionRow = ({ index, style, data }: { index: number; style: React.CSSProperties; data: { sessions: CountingSession[]; onSelect: (id: string) => void; activeMenuId: string | null; onMenuToggle: (e: any, id: string) => void; onDelete: (e: any, id: string) => void } }) => {
     const session = data.sessions[index];
     const { onSelect, activeMenuId, onMenuToggle, onDelete } = data;
 
-    // Determine Status Badge
     let AuditIcon = null;
     if (session.auditStatus === 'verified') {
         AuditIcon = <ShieldCheck className="w-3 h-3 text-emerald-600" />;
@@ -39,14 +33,11 @@ const SessionRow = ({ index, style, data }: { index: number; style: React.CSSPro
                             {new Date(session.createdAt).toLocaleDateString()}
                         </div>
                         <div className="flex items-center gap-1">
-                            {/* AUDIT STATUS BADGE */}
                             {session.auditStatus && (
                                 <div className={`p-1 rounded-full ${session.auditStatus === 'verified' ? 'bg-emerald-100' : 'bg-amber-100'}`} title="Auditado">
                                     {AuditIcon}
                                 </div>
                             )}
-
-                            {/* SYNC STATUS BADGE */}
                             {session.lastSyncTimestamp && (
                                 <div className="bg-green-100 text-green-700 p-1 rounded-full" title="Sincronizado con AppSheet">
                                     <Cloud className="w-3 h-3" />
@@ -94,7 +85,8 @@ const SessionRow = ({ index, style, data }: { index: number; style: React.CSSPro
     );
 };
 
-export const Reports: React.FC<ReportsProps> = ({ onSessionStart, onNavigate }) => {
+export const Reports: React.FC = () => {
+  const navigate = useNavigate();
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [isCleaning, setIsCleaning] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -160,6 +152,11 @@ export const Reports: React.FC<ReportsProps> = ({ onSessionStart, onNavigate }) 
       }
   };
 
+  const handleSessionStart = (session: CountingSession) => {
+      // Redirect to the scanner view for this session
+      navigate(`/counting/${session.id}`);
+  };
+
   // --- ROUTING: DETAIL VIEW ---
   if (selectedSessionId) {
       return <ReportDetail sessionId={selectedSessionId} onBack={() => setSelectedSessionId(null)} />;
@@ -170,7 +167,7 @@ export const Reports: React.FC<ReportsProps> = ({ onSessionStart, onNavigate }) 
         <div className="flex flex-col h-[calc(100vh-64px)] max-w-3xl mx-auto w-full px-4 pt-4">
             <div className="flex-none">
                 <div className="flex items-center gap-2 mb-4">
-                    <button onClick={() => onNavigate('dashboard')} className="p-2 hover:bg-slate-100 rounded-full text-slate-600 transition-colors">
+                    <button onClick={() => navigate('/dashboard')} className="p-2 hover:bg-slate-100 rounded-full text-slate-600 transition-colors">
                         <ChevronLeft className="w-6 h-6" />
                     </button>
                     <div className="text-blue-600"><CheckCircle2 className="w-6 h-6" /></div>
@@ -191,7 +188,7 @@ export const Reports: React.FC<ReportsProps> = ({ onSessionStart, onNavigate }) 
                         {isCleaning ? <div className="w-4 h-4 border-2 border-slate-600 border-t-transparent rounded-full animate-spin" /> : <Eraser className="w-4 h-4" />}
                         Limpiar Sincronizados
                     </button>
-                    <button onClick={() => onNavigate('consolidated')} className="bg-white border border-slate-200 text-purple-700 font-bold py-2.5 rounded-xl hover:bg-purple-50 hover:border-purple-200 transition-colors flex items-center justify-center gap-2 shadow-sm active:scale-95">
+                    <button onClick={() => navigate('/consolidated')} className="bg-white border border-slate-200 text-purple-700 font-bold py-2.5 rounded-xl hover:bg-purple-50 hover:border-purple-200 transition-colors flex items-center justify-center gap-2 shadow-sm active:scale-95">
                         <Layers className="w-4 h-4" /> Consolidados
                     </button>
                     <button onClick={() => setIsStartModalOpen(true)} className="bg-blue-600 text-white font-bold py-2.5 rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 shadow-md shadow-blue-200 active:scale-95">
@@ -202,7 +199,7 @@ export const Reports: React.FC<ReportsProps> = ({ onSessionStart, onNavigate }) 
                 {/* SYNC QUEUE ALERT */}
                 {pendingSyncCount > 0 && (
                     <button 
-                        onClick={() => onNavigate('sync')}
+                        onClick={() => navigate('/sync')}
                         className="w-full mb-4 bg-orange-50 border border-orange-200 p-4 rounded-xl flex items-center justify-between shadow-sm animate-in slide-in-from-top-2 group hover:bg-orange-100 transition-colors"
                     >
                         <div className="flex items-center gap-3">
@@ -250,7 +247,7 @@ export const Reports: React.FC<ReportsProps> = ({ onSessionStart, onNavigate }) 
                 )}
             </div>
             
-            <StartSessionModal isOpen={isStartModalOpen} onClose={() => setIsStartModalOpen(false)} onSessionStart={(s) => { setIsStartModalOpen(false); onSessionStart(s); }} />
+            <StartSessionModal isOpen={isStartModalOpen} onClose={() => setIsStartModalOpen(false)} onSessionStart={(s) => { setIsStartModalOpen(false); handleSessionStart(s); }} />
         </div>
     );
 };

@@ -6,25 +6,19 @@ import { ProductList } from './database/ProductList';
 import { ProductForm } from './database/ProductForm';
 import { ImportTools } from './database/ImportTools';
 import { useProductDatabase } from '../hooks/useProductDatabase';
+import { useNavigate } from 'react-router-dom';
 
-interface DatabaseProps {
-    onBack?: () => void;
-}
-
-export const Database: React.FC<DatabaseProps> = ({ onBack }) => {
-  // Use Custom Hook for Logic
+export const Database: React.FC = () => {
+  const navigate = useNavigate();
   const { state, actions } = useProductDatabase();
   
-  // Local UI State (Modals)
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
-  // Derived Values
   const usagePercent = state.storageUsage ? Math.min(100, (state.storageUsage.used / state.storageUsage.quota) * 100) : 0;
   const usedMb = state.storageUsage ? (state.storageUsage.used / 1024 / 1024).toFixed(1) : '0';
 
-  // Local Handlers
   const handleOpenCreate = () => {
       setEditingProduct(null);
       setIsFormOpen(true);
@@ -42,11 +36,9 @@ export const Database: React.FC<DatabaseProps> = ({ onBack }) => {
       <div className="shrink-0 z-30 bg-slate-50/95 backdrop-blur-sm py-4 px-4 border-b border-slate-200/50">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 max-w-6xl mx-auto">
             <div className="flex items-center gap-3">
-                {onBack && (
-                    <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full text-slate-600 transition-colors">
-                        <ChevronLeft className="w-6 h-6" />
-                    </button>
-                )}
+                <button onClick={() => navigate('/dashboard')} className="p-2 hover:bg-slate-100 rounded-full text-slate-600 transition-colors">
+                    <ChevronLeft className="w-6 h-6" />
+                </button>
                 <div>
                     <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
                         <Package className="w-6 h-6 text-blue-600" /> Base de Datos

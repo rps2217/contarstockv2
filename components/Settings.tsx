@@ -8,26 +8,23 @@ import { AppSettings, ViewState } from '../types';
 import { SoundFX } from '../services/audio';
 import { CameraScanner } from './CameraScanner';
 import { logger } from '../services/logger';
+import { useNavigate } from 'react-router-dom';
+import { useAppStore } from '../store/useAppStore';
 
-interface SettingsProps {
-  onBack: () => void;
-  onSettingsChanged: (newSettings: AppSettings) => void;
-}
-
-export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged }) => {
+export const Settings: React.FC = () => {
+  const navigate = useNavigate();
+  const { updateSetting: updateGlobalSetting } = useAppStore(); // Use global store to update instantly
+  
   const [settings, setSettings] = useState<AppSettings>(settingsService.getSettings());
   const [appSheetConfig, setAppSheetConfig] = useState(settings.appSheetConfig || { appId: '', accessKey: '', countsTableName: '', productsTableName: '', receptionTableName: '' });
   const [showSaveFeedback, setShowSaveFeedback] = useState(false);
   
-  // Share/Import State
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareMode, setShareMode] = useState<'export' | 'import'>('export');
   const [importString, setImportString] = useState('');
   
-  // Camera State
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   
-  // Health & Maintenance State
   const [healthReport, setHealthReport] = useState<maintenanceService.HealthReport | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isRepairing, setIsRepairing] = useState(false);
@@ -35,7 +32,6 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
   const [showSystemLogs, setShowSystemLogs] = useState(false);
   const [systemLogs, setSystemLogs] = useState<any[]>([]);
 
-  // Backup State
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
 
@@ -65,14 +61,13 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
     const newSettings = { ...settings, [key]: value };
     setSettings(newSettings);
     settingsService.saveSettings(newSettings);
-    onSettingsChanged(newSettings);
+    updateGlobalSetting(key, value); // Updates store -> Updates App -> Updates Theme
 
     if (key === 'ttsEnabled' && value === true) {
         SoundFX.speak("Voz activada");
     }
   };
 
-  // --- MOBILE NAV CONFIG ---
   const availableNavItems: {id: ViewState, label: string}[] = [
       { id: 'dashboard', label: 'Inicio' },
       { id: 'database', label: 'Datos' },
@@ -114,7 +109,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
       try {
         const logs = await maintenanceService.repairSystem();
         setRepairLogs(logs);
-        await runHealthCheck(); // Refresh status
+        await runHealthCheck(); 
       } catch (e) {
         console.error(e);
       } finally {
@@ -122,7 +117,6 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
       }
   };
 
-  // --- BACKUP HANDLERS ---
   const handleBackup = async () => {
       setIsBackingUp(true);
       try {
@@ -139,7 +133,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
       if (!file) return;
 
       if (!confirm("⚠️ ADVERTENCIA: Esta acción REEMPLAZARÁ todos los datos actuales con los del archivo de respaldo. ¿Está seguro?")) {
-          e.target.value = ''; // Reset input
+          e.target.value = ''; 
           return;
       }
 
@@ -152,7 +146,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
           alert(`Error al restaurar: ${err.message}`);
       } finally {
           setIsRestoring(false);
-          e.target.value = ''; // Reset
+          e.target.value = ''; 
       }
   };
 
@@ -209,7 +203,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
     <div className="max-w-3xl mx-auto pb-24 px-4 pt-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
       
       <div className="flex items-center gap-3 mb-8">
-        <button onClick={onBack} className="p-2 hover:bg-black/5 rounded-full transition-colors">
+        <button onClick={() => navigate(-1)} className="p-2 hover:bg-black/5 rounded-full transition-colors">
             <ArrowLeft className="w-6 h-6" />
         </button>
         <div className="flex-1">
@@ -259,7 +253,6 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
                         </div>
                     </div>
 
-                    {/* Alert Box if Issues */}
                     {(healthReport.orphanScans > 0 || healthReport.stuckSyncJobs > 0 || healthReport.corruptProducts > 0) ? (
                         <div className="bg-white p-4 rounded-xl border border-amber-100 shadow-sm">
                             <h3 className="text-sm font-bold text-amber-800 mb-2 flex items-center gap-2"><AlertTriangle className="w-4 h-4"/> Problemas Detectados</h3>
@@ -302,7 +295,6 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
             </div>
         </section>
 
-        {/* LOG VIEWER MODAL */}
         {showSystemLogs && (
             <div className="fixed inset-0 z-[80] bg-slate-900/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
                 <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl flex flex-col h-[80vh]">
@@ -400,7 +392,6 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
                     </button>
                 </div>
                 
-                {/* TTS Toggle */}
                 <div className="border border-slate-100 rounded-xl p-3">
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
@@ -417,7 +408,6 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
                         </button>
                     </div>
 
-                    {/* TTS MODE SELECTION (Visible only if enabled) */}
                     {settings.ttsEnabled && (
                         <div className="grid grid-cols-2 gap-2 mt-2 pl-12 animate-in fade-in slide-in-from-top-2">
                             <button 
@@ -438,7 +428,6 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
                     )}
                 </div>
 
-                {/* Control Tower Toggle */}
                 <div className="flex items-center justify-between p-2">
                     <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-lg ${settings.controlTowerEnabled ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-400'}`}>
@@ -454,7 +443,6 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
                     </button>
                 </div>
 
-                {/* Speedometer Toggle */}
                 <div className="flex items-center justify-between p-2">
                     <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-lg ${settings.speedometerEnabled ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400'}`}>
@@ -470,7 +458,6 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
                     </button>
                 </div>
 
-                {/* Confirm Delete Toggle */}
                 <div className="flex items-center justify-between p-2">
                     <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-lg ${settings.confirmDelete ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
@@ -517,7 +504,6 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
                     <input type="password" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono" value={appSheetConfig.accessKey} onChange={e => setAppSheetConfig({...appSheetConfig, accessKey: e.target.value})} placeholder="V2-..." />
                 </div>
                 
-                {/* Tables Grid */}
                 <div className="grid md:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
                     <div className="md:col-span-2">
                         <label className="text-xs font-bold text-slate-500 uppercase mb-1.5 block">Tabla de Conteos (Bitácora)</label>
@@ -541,7 +527,6 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
 
       </div>
 
-      {/* MODAL SHARE */}
       {showShareModal && (
           <div className="fixed inset-0 z-[70] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
               <div className="w-full max-w-md bg-white rounded-3xl p-6 relative shadow-2xl animate-in zoom-in-95">
@@ -605,7 +590,6 @@ export const Settings: React.FC<SettingsProps> = ({ onBack, onSettingsChanged })
           </div>
       )}
 
-      {/* Camera Overlay */}
       {isCameraOpen && (
           <CameraScanner 
               onScan={(code) => {

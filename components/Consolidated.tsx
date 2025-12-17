@@ -6,13 +6,10 @@ import { CountingSession } from '../types';
 import { exportToExcel, exportToPDF } from '../services/export';
 import { aggregateScans } from '../services/aggregator';
 import { SearchBar } from './SearchBar';
+import { useNavigate } from 'react-router-dom';
 
-interface ConsolidatedProps {
-    onBack: () => void;
-    onNavigate: (view: any) => void;
-}
-
-export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack, onNavigate }) => {
+export const Consolidated: React.FC = () => {
+    const navigate = useNavigate();
     const [selectedErp, setSelectedErp] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [detailSearchQuery, setDetailSearchQuery] = useState('');
@@ -35,18 +32,15 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack, onNavigate }
         let sessions: CountingSession[];
 
         if (searchQuery) {
-            // Index 'erpOrder' is used here for prefix search
             sessions = await db.sessions
                 .where('erpOrder').startsWithIgnoreCase(searchQuery)
-                .limit(200) // Safety limit
+                .limit(200)
                 .toArray();
         } else {
-            // Using compound index [erpOrder+createdAt] would be ideal, 
-            // but just limiting by recent is enough for the UI list.
             sessions = await db.sessions
                 .orderBy('createdAt')
                 .reverse()
-                .limit(200) // Only show most recent 200 sessions to keep UI snappy
+                .limit(200) 
                 .toArray();
         }
 
@@ -65,7 +59,6 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack, onNavigate }
                 groups[s.erpOrder].allSynced = false;
             }
 
-            // Audit stats
             if (s.auditStatus === 'verified') groups[s.erpOrder].verifiedCount++;
             else if (s.auditStatus === 'warning' || s.auditStatus === 'failed') groups[s.erpOrder].alertCount++;
         }
@@ -76,22 +69,19 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack, onNavigate }
 
     }, [searchQuery], []);
 
-    // 2. OPTIMIZED DETAIL QUERY using Central Aggregator
+    // 2. OPTIMIZED DETAIL QUERY
     const details = useLiveQuery(async () => {
         if (!selectedErp) return null;
 
-        // Use index lookup
         const sessions = await db.sessions.where('erpOrder').equals(selectedErp).toArray();
         const sessionIds = sessions.map(s => s.id);
         
-        // Use batch fetch via 'anyOf' which uses index
         const scans = await db.scans.where('sessionId').anyOf(sessionIds).toArray();
         const items = await aggregateScans(scans);
 
         const logisticsLabels = sessions.map(s => s.logisticsLabel).join(', ');
         const isFullySynced = sessions.every(s => !!s.lastSyncTimestamp);
 
-        // Audit details
         const verifiedCount = sessions.filter(s => s.auditStatus === 'verified').length;
         const totalCount = sessions.length;
 
@@ -116,7 +106,6 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack, onNavigate }
         );
     }, [details, detailSearchQuery]);
 
-    // ... (Export Handlers) ...
     const handleExportExcel = () => {
         if (!selectedErp || !details) return;
         const virtualSession: CountingSession = {
@@ -141,11 +130,6 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack, onNavigate }
         exportToPDF(virtualSession, details.items);
     };
 
-    const handleSyncRedirect = () => {
-        // Direct the user to the specialized Sync Manager
-        onNavigate('sync');
-    };
-
     if (selectedErp) {
         return (
             <div className="flex flex-col h-[calc(100vh-64px)] bg-slate-50">
@@ -167,7 +151,6 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack, onNavigate }
                                         {selectedErp}
                                         {details?.isFullySynced && <span className="text-sm font-bold bg-green-100 text-green-700 px-2 py-1 rounded-md border border-green-200 flex items-center gap-1"><Upload className="w-3 h-3" /> Sincronizado</span>}
                                     </div>
-                                    {/* Audit Coverage Badge */}
                                     {details && details.verifiedCount > 0 && (
                                         <div className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-100 px-3 py-1.5 rounded-lg mt-3 text-xs font-bold shadow-sm">
                                             <ShieldCheck className="w-4 h-4 text-emerald-600" />
@@ -177,7 +160,7 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack, onNavigate }
                                 </div>
                                 <div className="flex flex-wrap gap-2">
                                     <button 
-                                        onClick={handleSyncRedirect}
+                                        onClick={() => navigate('/sync')}
                                         className="bg-indigo-600 text-white hover:bg-indigo-700 px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-2 transition-colors shadow-md shadow-indigo-200"
                                     >
                                         <Upload className="w-4 h-4" /> Ir al Gestor Nube
@@ -226,7 +209,7 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack, onNavigate }
         <div className="max-w-3xl mx-auto pb-24 px-4 pt-6">
              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-3">
-                    <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full text-slate-600 transition-colors">
+                    <button onClick={() => navigate('/dashboard')} className="p-2 hover:bg-slate-100 rounded-full text-slate-600 transition-colors">
                         <ChevronLeft className="w-6 h-6" />
                     </button>
                     <div>
@@ -272,7 +255,6 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack, onNavigate }
                                         <div className="flex items-center gap-1"><Package className="w-4 h-4 text-slate-400" /> <span className="font-bold text-slate-900">{group.totalUnits}</span> Unidades</div>
                                     </div>
                                     
-                                    {/* Audit Status Indicator in List */}
                                     <div className="flex gap-2 mt-3">
                                         {group.verifiedCount > 0 && (
                                             <span className="flex items-center gap-1 text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-100">
