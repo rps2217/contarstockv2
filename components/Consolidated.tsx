@@ -1,6 +1,5 @@
-
 import React, { useState, useMemo } from 'react';
-import { Layers, ChevronLeft, Package, Box, FileSpreadsheet, FileText, ArrowRight, CloudUpload, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { Layers, ChevronLeft, Package, Box, FileSpreadsheet, FileText, ArrowRight, Upload, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { CountingSession } from '../types';
@@ -170,7 +169,7 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack, onNavigate }
                                     <div className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-1">Orden ERP Total</div>
                                     <div className="text-3xl font-black text-slate-900 flex items-center gap-2">
                                         {selectedErp}
-                                        {details?.isFullySynced && <span className="text-sm font-bold bg-green-100 text-green-700 px-2 py-1 rounded-md border border-green-200 flex items-center gap-1"><CloudUpload className="w-3 h-3" /> Sincronizado</span>}
+                                        {details?.isFullySynced && <span className="text-sm font-bold bg-green-100 text-green-700 px-2 py-1 rounded-md border border-green-200 flex items-center gap-1"><Upload className="w-3 h-3" /> Sincronizado</span>}
                                     </div>
                                     {/* Audit Coverage Badge */}
                                     {details && details.verifiedCount > 0 && (
@@ -185,7 +184,7 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack, onNavigate }
                                         onClick={handleSyncRedirect}
                                         className="bg-indigo-600 text-white hover:bg-indigo-700 px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-2 transition-colors shadow-md shadow-indigo-200"
                                     >
-                                        <CloudUpload className="w-4 h-4" /> Ir al Gestor Nube
+                                        <Upload className="w-4 h-4" /> Ir al Gestor Nube
                                     </button>
                                     <button onClick={handleExportExcel} className="bg-green-50 text-green-700 hover:bg-green-100 px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-2 transition-colors border border-green-200"><FileSpreadsheet className="w-4 h-4" /> Excel</button>
                                     <button onClick={handleExportPDF} className="bg-red-50 text-red-700 hover:bg-red-100 px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-2 transition-colors border border-red-200"><FileText className="w-4 h-4" /> PDF</button>
@@ -268,7 +267,7 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack, onNavigate }
                                          <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">
                                             Orden ERP
                                          </span>
-                                         {group.allSynced && <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider flex items-center gap-1"><CloudUpload className="w-3 h-3" /> Subida</span>}
+                                         {group.allSynced && <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider flex items-center gap-1"><Upload className="w-3 h-3" /> Subida</span>}
                                          <span className="text-slate-400 text-xs">{new Date(group.lastDate).toLocaleDateString()}</span>
                                     </div>
                                     <h3 className="text-xl font-black text-slate-900 mb-1">{group.erp}</h3>
