@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { Routes, Route, useNavigate, useLocation, Navigate, Outlet, HashRouter } from 'react-router-dom';
 import { CountingSession } from './types';
@@ -15,16 +14,17 @@ import { processSyncQueue } from './services/appsheet';
 import { initPersistence } from './services/backupService';
 import { Home, Database as DbIcon, History, Layers, Container, Fingerprint, Cloud, Loader2 } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { lazyWithRetry } from './services/lazyLoad';
 
-// Lazy Load
-const Scanner = React.lazy(() => import('./components/Scanner').then(module => ({ default: module.Scanner })));
-const DatabaseView = React.lazy(() => import('./components/Database').then(module => ({ default: module.Database })));
-const Reports = React.lazy(() => import('./components/Reports').then(module => ({ default: module.Reports })));
-const Consolidated = React.lazy(() => import('./components/Consolidated').then(module => ({ default: module.Consolidated })));
-const Conciliator = React.lazy(() => import('./components/Conciliator').then(module => ({ default: module.Conciliator })));
-const SettingsView = React.lazy(() => import('./components/Settings').then(module => ({ default: module.Settings })));
-const Reception = React.lazy(() => import('./components/Reception').then(module => ({ default: module.Reception })));
-const SyncManagerUI = React.lazy(() => import('./components/SyncManagerUI').then(module => ({ default: module.SyncManagerUI })));
+// Optimized Lazy Load with Retry Strategy
+const Scanner = lazyWithRetry(() => import('./components/Scanner').then(module => ({ default: module.Scanner })));
+const DatabaseView = lazyWithRetry(() => import('./components/Database').then(module => ({ default: module.Database })));
+const Reports = lazyWithRetry(() => import('./components/Reports').then(module => ({ default: module.Reports })));
+const Consolidated = lazyWithRetry(() => import('./components/Consolidated').then(module => ({ default: module.Consolidated })));
+const Conciliator = lazyWithRetry(() => import('./components/Conciliator').then(module => ({ default: module.Conciliator })));
+const SettingsView = lazyWithRetry(() => import('./components/Settings').then(module => ({ default: module.Settings })));
+const Reception = lazyWithRetry(() => import('./components/Reception').then(module => ({ default: module.Reception })));
+const SyncManagerUI = lazyWithRetry(() => import('./components/SyncManagerUI').then(module => ({ default: module.SyncManagerUI })));
 
 const LoadingFallback = () => (
   <div className="h-full w-full flex flex-col items-center justify-center text-slate-400 gap-3 animate-pulse">
@@ -37,7 +37,9 @@ const LoadingFallback = () => (
 
 const MainLayout = () => {
     const { settings } = useAppStore();
-    const pendingSyncCount = useLiveQuery(() => db.scans.where('synced').equals(0).count(), [], 0);
+    // PERFORMANCE FIX: Removed useLiveQuery(pendingSyncCount) from here.
+    // It was causing the entire Layout (and Outlet) to re-render on every single database write.
+    
     const location = useLocation();
     
     // Determine ViewState for Sidebar highlighting based on URL
@@ -57,7 +59,7 @@ const MainLayout = () => {
     return (
         <div className={`min-h-screen font-sans ${themeClass} transition-colors duration-300 flex`}>
             <NetworkStatus />
-            <Sidebar view={currentView} settings={settings} pendingCount={pendingSyncCount} />
+            <Sidebar view={currentView} settings={settings} />
             
             <main className="flex-1 md:ml-64 w-full animate-in fade-in zoom-in-95 duration-300 min-h-screen relative pb-16 md:pb-0">
                 <Suspense fallback={<LoadingFallback />}>
@@ -116,7 +118,7 @@ const AppContent: React.FC = () => {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/database" element={<DatabaseView />} />
             <Route path="/reports" element={<Reports />} />
-            <Route path="/reports/:sessionId" element={<Reports />} /> {/* Detail View handled inside Reports component for now or split */}
+            <Route path="/reports/:sessionId" element={<Reports />} />
             <Route path="/consolidated" element={<Consolidated />} />
             <Route path="/conciliator" element={<Conciliator />} />
             <Route path="/settings" element={<SettingsView />} />

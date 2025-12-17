@@ -1,17 +1,20 @@
-
 import React from 'react';
 import { Home, Database, History, Layers, Container, Fingerprint, Cloud, Box, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AppSettings } from '../types';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from '../db';
 
 interface SidebarProps {
   view: string;
   settings: AppSettings;
-  pendingCount?: number;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ view, pendingCount }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ view }) => {
   const navigate = useNavigate();
+  
+  // PERFORMANCE: Query is now local to Sidebar. Updates here won't re-render the whole App.
+  const pendingCount = useLiveQuery(() => db.scans.where('synced').equals(0).count(), [], 0);
   
   const NavItem = ({ path, label, icon: Icon, badge, activeKey }: { path: string, label: string, icon: any, badge?: number, activeKey: string }) => {
     const isActive = view === activeKey;
@@ -45,7 +48,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, pendingCount }) => {
         </div>
         <div>
           <h1 className="text-white font-bold text-lg leading-tight">LogiCount</h1>
-          <p className="text-slate-500 text-xs font-mono">PRO v2.1</p>
+          <p className="text-slate-500 text-xs font-mono">PRO v2.2</p>
         </div>
       </div>
 

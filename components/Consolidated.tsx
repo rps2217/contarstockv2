@@ -31,8 +31,6 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack, onNavigate }
     };
 
     // 1. OPTIMIZED LIST QUERY
-    // Instead of loading all and reducing (which kills performance on large DBs),
-    // We fetch a limited set or use query optimization.
     const erpGroups = useLiveQuery(async () => {
         let sessions: CountingSession[];
 
@@ -54,8 +52,6 @@ export const Consolidated: React.FC<ConsolidatedProps> = ({ onBack, onNavigate }
 
         const groups: Record<string, { count: number, lastDate: number, totalUnits: number, sessionIds: string[], allSynced: boolean, verifiedCount: number, alertCount: number }> = {};
 
-        // Grouping in memory is fast for 200 items. 
-        // For 10,000 items, we would need a proper GROUP BY in the DB layer (which IndexedDB doesn't natively support easily).
         for (const s of sessions) {
             if (!groups[s.erpOrder]) {
                 groups[s.erpOrder] = { count: 0, lastDate: 0, totalUnits: 0, sessionIds: [], allSynced: true, verifiedCount: 0, alertCount: 0 };
