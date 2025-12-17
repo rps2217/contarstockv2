@@ -1,13 +1,9 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Cloud, Upload, Download, RefreshCw, CheckCircle2, AlertTriangle, XCircle, ArrowUpCircle, ArrowDownCircle, Package, Layers, ChevronLeft, Terminal, Calendar, Clock, ChevronDown, ChevronUp, Play } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import * as syncManager from '../services/syncManager';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
-
-interface SyncManagerUIProps {
-    onBack: () => void;
-}
 
 // Extended type for UI state handling
 interface UIUploadGroup extends syncManager.UploadGroup {
@@ -15,7 +11,8 @@ interface UIUploadGroup extends syncManager.UploadGroup {
     uiMessage?: string;
 }
 
-export const SyncManagerUI: React.FC<SyncManagerUIProps> = ({ onBack }) => {
+export const SyncManagerUI: React.FC = () => {
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<'upload' | 'download'>('upload');
     
     // UI State for Uploads
@@ -165,7 +162,7 @@ export const SyncManagerUI: React.FC<SyncManagerUIProps> = ({ onBack }) => {
             
             {/* Header */}
             <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center gap-3 shadow-sm sticky top-0 z-20">
-                <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full text-slate-600 transition-colors">
+                <button onClick={() => navigate('/dashboard')} className="p-2 hover:bg-slate-100 rounded-full text-slate-600 transition-colors">
                     <ChevronLeft className="w-5 h-5" />
                 </button>
                 <div className="flex-1">
