@@ -5,6 +5,7 @@ import * as sessionService from './sessionService';
 import * as productService from './productService';
 import { generateCompositeKey, normalizeKey, sanitizeBarcode, generateUUID } from './utils';
 import { logger } from './logger';
+import { CloudInventoryRowSchema, CloudProductSchema, CloudReceptionRowSchema } from './schemas';
 
 export { SYNC_ENGINE_VERSION } from './constants';
 
@@ -19,23 +20,10 @@ export interface UploadGroup {
     type: 'inventory' | 'reception';
 }
 
-export interface CloudItem {
-    erpOrder: string;
-    label: string;
-    date: Date;
-    totalQty: number;
-    status: 'new' | 'exists_identical' | 'exists_different';
-    rawRow: any;
-}
-
 // ==========================================
 // 1. UPLOAD MANAGEMENT (Local -> Cloud)
 // ==========================================
 
-/**
- * Agrupa todos los escaneos pendientes por Orden ERP.
- * Agrupa los bultos recepcionados (Check-in) pendientes.
- */
 export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
     const groups: Record<string, UploadGroup> = {};
 
@@ -97,9 +85,6 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
     return Object.values(groups);
 };
 
-/**
- * Ejecuta la subida consolidada.
- */
 export const performBatchUpload = async (group: UploadGroup): Promise<void> => {
     
     // CASE A: RECEPTION LOGS
@@ -117,7 +102,6 @@ export const performBatchUpload = async (group: UploadGroup): Promise<void> => {
     }
 
     // CASE B: INVENTORY COUNTS
-    // 1. Create a Virtual Session for the payload
     const virtualSession: CountingSession = {
         id: 'BATCH_UPLOAD_' + Date.now(),
         erpOrder: group.erpOrder,
@@ -126,10 +110,7 @@ export const performBatchUpload = async (group: UploadGroup): Promise<void> => {
         status: 'completed'
     };
 
-    // 2. Send to AppSheet
     await syncToAppSheet(virtualSession);
-
-    // 3. Mark all involved sessions as synced locally
     await db.sessions.where('id').anyOf(group.sessionIds).modify({ lastSyncTimestamp: Date.now() });
 };
 
@@ -141,7 +122,6 @@ export const processSyncQueue = async () => {
     const jobs = await db.syncQueue.where('status').equals('pending').toArray();
     
     for (const job of jobs) { 
-        // Exponential Backoff Logic
         if (job.retryCount > 0) {
             const waitTime = Math.min(30000, Math.pow(2, job.retryCount) * 1000);
             if (job.retryCount > 3 && Math.random() > 0.3) continue; 
@@ -169,42 +149,65 @@ export const processSyncQueue = async () => {
 // ==========================================
 
 /**
- * Imports Products from AppSheet to Local DB
+ * Imports Products from AppSheet with Zod Validation
  */
 export const importProductsFromAppSheet = async (): Promise<number> => {
-    const rows = await fetchProductsFromCloud();
-    const products: Product[] = rows.map(r => ({
-        barcode: sanitizeBarcode(r["COD PRODUCTO"]),
-        name: r.DESCRIPCION,
-        category: r.MUNDO,
-        supplier: r.PROVEEDOR,
-        supplierRut: r['RUT PROVEEDOR'],
-        syncStatus: 'synced' 
-    }));
+    const rawRows = await fetchProductsFromCloud();
+    const validProducts: Product[] = [];
+    let invalidCount = 0;
 
-    if (products.length > 0) {
-        await productService.saveProductBatch(products);
+    for (const row of rawRows) {
+        // Zod Parse & Transform
+        const result = CloudProductSchema.safeParse(row);
+        
+        if (result.success) {
+            const p = result.data;
+            if (p.barcode && p.name) {
+                validProducts.push({
+                    barcode: sanitizeBarcode(p.barcode),
+                    name: p.name,
+                    category: p.category,
+                    supplier: p.supplier,
+                    supplierRut: p.supplierRut,
+                    syncStatus: 'synced'
+                });
+            }
+        } else {
+            invalidCount++;
+        }
     }
-    return products.length;
+
+    if (invalidCount > 0) {
+        console.warn(`[Sync] Skipped ${invalidCount} invalid products from Cloud.`);
+    }
+
+    if (validProducts.length > 0) {
+        await productService.saveProductBatch(validProducts);
+    }
+    return validProducts.length;
 };
 
 /**
- * Restores Reception Logs (Bitácora)
+ * Restores Reception Logs with Validation
  */
 export const restoreReceptionFromCloud = async (options?: { dateRange?: { start: string, end: string } }): Promise<number> => {
-    const rows = await fetchReceptionData(options);
+    const rawRows = await fetchReceptionData(options);
     let restoredCount = 0;
 
     const existingDrafts = await db.sessions.where('status').equals('draft').toArray();
     const existingMap = new Set(existingDrafts.map(d => d.logisticsLabel));
 
-    for (const row of rows) {
-        const cloudId = row["ID_RECEPCION"];
-        const label = row["ETIQUETA"];
-        const status = row["ESTADO"]; 
-        const dateStr = row["FECHA_HORA"];
-        const auditStatusRaw = row["ESTADO_AUDITORIA"];
+    for (const row of rawRows) {
+        // Validate Row
+        const result = CloudReceptionRowSchema.safeParse(row);
+        if (!result.success) continue;
 
+        const data = result.data;
+        const cloudId = data.ID_RECEPCION;
+        const label = data.ETIQUETA;
+        const status = data.ESTADO;
+        const dateStr = data.FECHA_HORA;
+        
         if (!label) continue;
 
         const existsById = cloudId ? await db.sessions.get(cloudId) : null;
@@ -221,9 +224,9 @@ export const restoreReceptionFromCloud = async (options?: { dateRange?: { start:
         const localStatus = status === 'PENDIENTE' ? 'draft' : 'completed';
         
         let localAudit: 'verified' | 'warning' | 'failed' | 'pending' = 'pending';
-        if (auditStatusRaw === 'VERIFICADO_OK') localAudit = 'verified';
-        else if (auditStatusRaw === 'CON_DIFERENCIAS') localAudit = 'warning';
-        else if (auditStatusRaw === 'RECHAZADO') localAudit = 'failed';
+        if (data.ESTADO_AUDITORIA === 'VERIFICADO_OK') localAudit = 'verified';
+        else if (data.ESTADO_AUDITORIA === 'CON_DIFERENCIAS') localAudit = 'warning';
+        else if (data.ESTADO_AUDITORIA === 'RECHAZADO') localAudit = 'failed';
 
         await db.sessions.add({
             id: cloudId || generateUUID(),
@@ -242,11 +245,11 @@ export const restoreReceptionFromCloud = async (options?: { dateRange?: { start:
 };
 
 /**
- * Restores Inventory Counts (Smart Delta Sync)
+ * Restores Inventory Counts with Zod Validation
  */
 export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange?: { start: string, end: string }, skipExisting?: boolean }): Promise<{ sessions: number, items: number }> => {
-  const rows = await fetchCloudData(options);
-  if (rows.length === 0) return { sessions: 0, items: 0 };
+  const rawRows = await fetchCloudData(options);
+  if (rawRows.length === 0) return { sessions: 0, items: 0 };
 
   const allLocalSessions = await db.sessions.toArray();
   const localSessionMap = new Map<string, CountingSession>();
@@ -255,9 +258,17 @@ export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange
       localSessionMap.set(generateCompositeKey(s.erpOrder, s.logisticsLabel), s);
   });
 
-  let rowsToProcess = rows;
+  // Validated Rows Buffer
+  const validRows = [];
+  for (const r of rawRows) {
+      const parsed = CloudInventoryRowSchema.safeParse(r);
+      if (parsed.success) validRows.push(parsed.data);
+  }
+
+  // Filter existing if needed
+  let rowsToProcess = validRows;
   if (options?.skipExisting) {
-      rowsToProcess = rows.filter(row => {
+      rowsToProcess = validRows.filter(row => {
           const key = generateCompositeKey(row[SHEET_COLUMNS.ERP_ORDER], row[SHEET_COLUMNS.LABEL]);
           return !localSessionMap.has(key);
       });
@@ -268,8 +279,8 @@ export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange
   let sessionsProcessed = 0;
   let itemsRestored = 0;
 
-  // Group Rows by Session
-  const sessionsMap = new Map<string, any[]>();
+  // Group by Session (ERP + Label)
+  const sessionsMap = new Map<string, typeof validRows>();
   rowsToProcess.forEach(row => {
     let erp = row[SHEET_COLUMNS.ERP_ORDER];
     let label = row[SHEET_COLUMNS.LABEL];
@@ -284,8 +295,8 @@ export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange
   // Process Groups
   for (const [key, sessionRows] of sessionsMap.entries()) {
     const firstRow = sessionRows[0];
-    const erp = String(firstRow[SHEET_COLUMNS.ERP_ORDER]).trim();
-    const label = String(firstRow[SHEET_COLUMNS.LABEL] || "GENERAL").trim();
+    const erp = firstRow[SHEET_COLUMNS.ERP_ORDER].trim();
+    const label = (firstRow[SHEET_COLUMNS.LABEL] || "GENERAL").trim();
 
     let sessionId: string;
     let isNewSession = false;
@@ -323,13 +334,12 @@ export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange
     for (const row of sessionRows) {
         const barcodeRaw = row[SHEET_COLUMNS.BARCODE];
         const barcode = sanitizeBarcode(barcodeRaw);
-        const rawQty = row[SHEET_COLUMNS.QUANTITY];
-        const qty = typeof rawQty === 'number' ? rawQty : Number(String(rawQty).replace(/,/g, ''));
+        const qty = row[SHEET_COLUMNS.QUANTITY];
         
-        if (!barcode || !qty || isNaN(qty) || qty <= 0) continue;
+        if (!barcode || qty <= 0) continue;
 
-        const mm = row[SHEET_COLUMNS.MONTH] ? Number(row[SHEET_COLUMNS.MONTH]) : undefined;
-        const yyyy = row[SHEET_COLUMNS.YEAR] ? Number(row[SHEET_COLUMNS.YEAR]) : undefined;
+        const mm = row[SHEET_COLUMNS.MONTH];
+        const yyyy = row[SHEET_COLUMNS.YEAR];
         const name = row[SHEET_COLUMNS.PRODUCT_NAME] || 'Producto Importado';
         const isIncident = row[SHEET_COLUMNS.INCIDENT] === "FRC";
         const dateKey = getCompositeKey(barcode, mm, yyyy);
