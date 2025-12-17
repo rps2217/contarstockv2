@@ -10,7 +10,7 @@ import { Sidebar } from './components/Sidebar';
 import * as sessionService from './services/sessionService'; 
 import { useAppStore } from './store/useAppStore';
 import { db } from './db';
-import { processSyncQueue } from './services/appsheet';
+import { processSyncQueue } from './services/syncManager';
 import { initPersistence } from './services/backupService';
 import { Home, Database as DbIcon, History, Layers, Container, Fingerprint, Cloud, Loader2 } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';

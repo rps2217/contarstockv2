@@ -1,4 +1,3 @@
-
 import { ConsolidatedItem, CountingSession, Product, ScanRecord } from "../types";
 import { getSettings } from "./settings"; 
 import { generateUUID } from "./utils";
@@ -17,15 +16,12 @@ export { SYNC_ENGINE_VERSION, SHEET_COLUMNS };
 const formatDateTimeForAppSheet = (timestamp: number): string => {
     const d = new Date(timestamp);
     const pad = (n: number) => n.toString().padStart(2, '0');
-    // Using UTC methods because we send Timezone: "UTC" in the payload properties
-    // DD/MM/YYYY HH:mm:ss
     return `${pad(d.getUTCDate())}/${pad(d.getUTCMonth() + 1)}/${d.getUTCFullYear()} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
 };
 
 export const parseFlexibleDate = (dateVal: any): number => {
     if (!dateVal) return Date.now();
     if (typeof dateVal === 'number') {
-        // Excel serial date check (years > 1982)
         if (dateVal > 30000 && dateVal < 60000) {
             return new Date((dateVal - (25567 + 2)) * 86400 * 1000).getTime();
         }
@@ -33,22 +29,17 @@ export const parseFlexibleDate = (dateVal: any): number => {
     }
     
     const s = String(dateVal).trim();
-    
-    // ISO Format YYYY-MM-DD
     if (s.match(/^\d{4}-\d{2}-\d{2}/)) { 
         const ts = new Date(s.replace(/-/g, '/')).getTime(); 
         if (!isNaN(ts)) return ts; 
     }
     
-    // Latam Format DD/MM/YYYY or DD-MM-YYYY
     const parts = s.split(/[\/\-]/);
     if (parts.length === 3) {
         if (parts[0].length === 4) {
-             // YYYY/MM/DD
              const y = parseInt(parts[0], 10); const m = parseInt(parts[1], 10) - 1; const d = parseInt(parts[2], 10);
              const ts = new Date(y, m, d).getTime(); if (!isNaN(ts)) return ts;
         } else {
-             // DD/MM/YYYY
              const d = parseInt(parts[0], 10); const m = parseInt(parts[1], 10) - 1; const y = parseInt(parts[2], 10);
              const ts = new Date(y, m, d).getTime(); if (!isNaN(ts)) return ts;
         }
@@ -95,7 +86,7 @@ const aggregateScansForSync = async (session: CountingSession, scans: ScanRecord
             grouped[uniqueKey] = {
                 [SHEET_COLUMNS.ID]: generateUUID(), 
                 [SHEET_COLUMNS.UNIQUE_KEY]: uniqueKey, 
-                [SHEET_COLUMNS.DATE]: new Date(session.createdAt).toISOString().split('T')[0], // For counts table, ISO is usually fine as column is often Text
+                [SHEET_COLUMNS.DATE]: new Date(session.createdAt).toISOString().split('T')[0], 
                 [SHEET_COLUMNS.ERP_ORDER]: session.erpOrder, 
                 [SHEET_COLUMNS.BARCODE]: scan.barcode, 
                 [SHEET_COLUMNS.PRODUCT_NAME]: productNames[scan.barcode] || "Desconocido",
@@ -110,7 +101,7 @@ const aggregateScansForSync = async (session: CountingSession, scans: ScanRecord
     return Object.values(grouped);
 };
 
-// --- MAIN ACTIONS (UPLOAD) ---
+// --- CORE SYNC FUNCTIONS (API CALLERS) ---
 
 export const syncToAppSheet = async (session: CountingSession, _ignoredItems?: ConsolidatedItem[]): Promise<void> => {
   const settings = getSettings(); const config = settings.appSheetConfig;
@@ -127,7 +118,6 @@ export const syncToAppSheet = async (session: CountingSession, _ignoredItems?: C
     const safeErp = session.erpOrder.replace(/'/g, "");
     const selector = `[${SHEET_COLUMNS.ERP_ORDER}] = '${safeErp}'`;
     
-    // For regular inventory, we still try Find first as mass-Add is risky for large batches.
     let existingMap = new Map<string, {id: string, qty: number}>();
     try {
         const existingData = await sendToAppSheet(config, config.countsTableName, { Action: "Find", Properties: { Locale: "es-CL", Timezone: "UTC", Selector: selector }, Rows: [] });
@@ -154,12 +144,8 @@ export const syncToAppSheet = async (session: CountingSession, _ignoredItems?: C
         }
     });
     
-    // --- CHUNKING IMPLEMENTATION (Reliability Feature) ---
-    // AppSheet API often times out with > 1000 rows. We split into chunks of 400.
-    
     const BATCH_SIZE = 400;
 
-    // Process Adds
     for (let i = 0; i < batchAdd.length; i += BATCH_SIZE) {
         const chunk = batchAdd.slice(i, i + BATCH_SIZE);
         await sendToAppSheet(config, config.countsTableName, { 
@@ -167,10 +153,8 @@ export const syncToAppSheet = async (session: CountingSession, _ignoredItems?: C
             Properties: { Locale: "es-CL", Timezone: "UTC" }, 
             Rows: chunk 
         });
-        logger.info('Sync', `Chunked Add: ${chunk.length} rows`);
     }
 
-    // Process Edits
     for (let i = 0; i < batchEdit.length; i += BATCH_SIZE) {
         const chunk = batchEdit.slice(i, i + BATCH_SIZE);
         await sendToAppSheet(config, config.countsTableName, { 
@@ -178,7 +162,6 @@ export const syncToAppSheet = async (session: CountingSession, _ignoredItems?: C
             Properties: { Locale: "es-CL", Timezone: "UTC" }, 
             Rows: chunk 
         });
-        logger.info('Sync', `Chunked Edit: ${chunk.length} rows`);
     }
     
     await markScansAsSynced(unsyncedScans.map(s => s.id));
@@ -201,7 +184,6 @@ export const syncProductsToAppSheet = async (products: Product[]): Promise<void>
         if (p.syncStatus === 'edit') { edits.push(row); editIds.push(p.barcode); } else { adds.push(row); addIds.push(p.barcode); }
     });
 
-    // Chunking logic for Products too
     const BATCH = 400;
     
     if (adds.length > 0) {
@@ -219,8 +201,6 @@ export const syncProductsToAppSheet = async (products: Product[]): Promise<void>
     }
 };
 
-// FIXED: SERIALIZED ROW-BY-ROW SYNC FOR ROBUSTNESS
-// Now returns granular status to SyncManager
 export const syncReceptionToAppSheet = async (sessions: CountingSession[]): Promise<{ success: number; failed: number; errors: string[] }> => {
     const settings = getSettings(); 
     const config = settings.appSheetConfig;
@@ -234,10 +214,7 @@ export const syncReceptionToAppSheet = async (sessions: CountingSession[]): Prom
     let failCount = 0;
     const errors: string[] = [];
 
-    // Process sequentially to ensure atomic success/failure per row and robust duplicate handling
     for (const session of sessions) {
-        
-        // 1. Prepare Row with strict casting
         let auditState = "PENDIENTE";
         if (session.auditStatus === 'verified') auditState = "VERIFICADO_OK";
         else if (session.auditStatus === 'warning') auditState = "CON_DIFERENCIAS";
@@ -253,9 +230,6 @@ export const syncReceptionToAppSheet = async (sessions: CountingSession[]): Prom
         };
 
         try {
-            // STRATEGY: OPTIMISTIC ADD -> FALLBACK EDIT
-            // This now relies on `sendToAppSheet` throwing error if Add returns 0 rows.
-            
             try {
                 await sendToAppSheet(config, config.receptionTableName, { 
                     Action: "Add", 
@@ -264,8 +238,6 @@ export const syncReceptionToAppSheet = async (sessions: CountingSession[]): Prom
                 });
             } catch (addError: any) {
                 const msg = addError.message || "";
-                
-                // If the error suggests it already exists or it was a silent failure (rejected add)
                 if (msg.includes("exists") || msg.includes("Duplicate") || msg.includes("400") || msg.includes("Silent Failure")) {
                     await sendToAppSheet(config, config.receptionTableName, { 
                         Action: "Edit", 
@@ -273,12 +245,10 @@ export const syncReceptionToAppSheet = async (sessions: CountingSession[]): Prom
                         Rows: [row] 
                     });
                 } else {
-                    // Fatal error (Auth, Schema, etc)
                     throw addError;
                 }
             }
 
-            // 3. Mark Local as Synced only after SUCCESS
             await markDraftsAsSynced([session.id]);
             successCount++;
 
@@ -286,7 +256,6 @@ export const syncReceptionToAppSheet = async (sessions: CountingSession[]): Prom
             console.error(`[Sync Reception] Failed to sync ${session.logisticsLabel}`, finalError);
             failCount++;
             errors.push(`${session.logisticsLabel}: ${finalError.message}`);
-            // Do NOT throw here, so other items can proceed
         }
     }
     
@@ -299,7 +268,6 @@ export const fetchReceptionData = async (options?: { dateRange?: { start: string
     const config = settings.appSheetConfig;
     if (!config?.receptionTableName) throw new Error("Falta configurar la Tabla de Recepción en Ajustes.");
     
-    // Optimistic fetch: Filter client-side if selector is hard, but ideally rely on dates.
     const result = await sendToAppSheet(config, config.receptionTableName, {
         Action: "Find",
         Properties: { Locale: "es-CL", Timezone: "UTC" },
@@ -309,7 +277,6 @@ export const fetchReceptionData = async (options?: { dateRange?: { start: string
     if (!Array.isArray(result)) return [];
 
     if (options?.dateRange) {
-        console.log(`[AppSheet] Filtering ${result.length} reception logs by date locally...`);
         const startTs = parseFlexibleDate(options.dateRange.start);
         const endTs = parseFlexibleDate(options.dateRange.end) + (24 * 60 * 60 * 1000) - 1;
 
@@ -340,15 +307,12 @@ export const fetchCloudData = async (options?: { erpFilter?: string; dateRange?:
       selector = `[${SHEET_COLUMNS.ERP_ORDER}] = '${options.erpFilter.replace(/'/g, "")}'`; 
   }
   
-  console.log("[AppSheet] Fetching with selector:", selector || "ALL (Client-side filtering enabled)");
-
   const payload: AppSheetPayload = { Action: "Find", Properties: { Locale: "es-CL", Timezone: "UTC", Selector: selector || undefined }, Rows: [] };
   const result = await sendToAppSheet(config, config.countsTableName, payload);
   
   if (!Array.isArray(result)) return [];
 
   if (options?.dateRange) {
-      console.log(`[AppSheet] Filtering ${result.length} rows by date locally...`);
       const startTs = parseFlexibleDate(options.dateRange.start);
       const endTs = parseFlexibleDate(options.dateRange.end) + (24 * 60 * 60 * 1000) - 1; 
 
@@ -365,39 +329,4 @@ export const fetchCloudData = async (options?: { erpFilter?: string; dateRange?:
 
 export const queueSync = async (session: CountingSession, items: ConsolidatedItem[]) => { 
     await db.syncQueue.add({ session, items, createdAt: Date.now(), status: 'pending', retryCount: 0 }); 
-};
-
-// IMPROVED: Exponential Backoff for Background Sync
-export const processSyncQueue = async () => {
-    const jobs = await db.syncQueue.where('status').equals('pending').toArray();
-    
-    for (const job of jobs) { 
-        // Exponential Backoff Logic:
-        // Retry 0: Wait 0ms
-        // Retry 1: Wait 2s (2000ms)
-        // Retry 2: Wait 4s (4000ms)
-        // Retry 3: Wait 8s (8000ms)
-        // Max Retry: 5 (Wait ~32s)
-        if (job.retryCount > 0) {
-            const waitTime = Math.min(30000, Math.pow(2, job.retryCount) * 1000);
-            // Simple probability gate instead of strict time check to allow processing occasionally
-            if (job.retryCount > 3 && Math.random() > 0.3) continue; 
-        }
-
-        try { 
-            await syncToAppSheet(job.session); 
-            if (job.id) await db.syncQueue.delete(job.id); 
-        } catch (e: any) { 
-            console.error(`[Queue] Job ${job.id} failed. Retry count: ${job.retryCount + 1}`);
-            if (job.id) {
-                // Increment retry count. If > 10, mark as failed to stop loop.
-                const nextStatus = job.retryCount >= 10 ? 'failed' : 'pending';
-                await db.syncQueue.update(job.id, { 
-                    retryCount: job.retryCount + 1, 
-                    status: nextStatus,
-                    lastError: e.message 
-                }); 
-            }
-        } 
-    }
 };

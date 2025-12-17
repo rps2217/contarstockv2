@@ -4,7 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import * as sessionService from '../services/sessionService'; 
 import { sanitizeBarcode } from '../services/utils';
-import { restoreReceptionFromCloud } from '../services/syncBridge';
+import { restoreReceptionFromCloud } from '../services/syncManager';
 import { SoundFX } from '../services/audio';
 import { CameraScanner } from './CameraScanner';
 import { useNavigate } from 'react-router-dom';

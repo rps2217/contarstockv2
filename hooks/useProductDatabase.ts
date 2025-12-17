@@ -1,10 +1,10 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { Product } from '../types';
 import * as productService from '../services/productService';
-import { importProductsFromAppSheet, syncProductsToAppSheet } from '../services/syncBridge';
+import { importProductsFromAppSheet } from '../services/syncManager';
+import { syncProductsToAppSheet } from '../services/appsheet';
 import { fuzzySearchProducts } from '../services/search';
 
 export const useProductDatabase = () => {
