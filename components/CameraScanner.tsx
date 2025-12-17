@@ -16,6 +16,8 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose })
     const [lastScanned, setLastScanned] = useState<string | null>(null);
     const [feedbackStatus, setFeedbackStatus] = useState<'success' | 'error' | null>(null);
     
+    // Use ref to track last scanned code internally to avoid re-triggering the main effect
+    const lastProcessedCode = useRef<string | null>(null);
     const uniqueId = useRef(`scanner-${Math.random().toString(36).substr(2, 9)}`).current;
 
     useEffect(() => {
@@ -30,7 +32,7 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose })
 
             try {
                 const config = {
-                    fps: 15, // Aumentado para mayor fluidez
+                    fps: 15,
                     qrbox: { width: 260, height: 260 },
                 };
 
@@ -38,8 +40,14 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose })
                     { facingMode: "environment" }, 
                     config,
                     (decodedText) => {
-                        if (!isMounted || lastScanned === decodedText) return;
-
+                        // Prevent multiple triggers for the same code while processing
+                        if (!isMounted || lastProcessedCode.current === decodedText) return;
+                        
+                        lastProcessedCode.current = decodedText;
+                        
+                        // Clear any previous errors if we successfully got a code
+                        setError(null);
+                        
                         // --- FEEDBACK SEQUENCE ---
                         setLastScanned(decodedText);
                         setFeedbackStatus('success');
@@ -49,20 +57,21 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose })
                             navigator.vibrate(60);
                         }
 
-                        // Delay closure slightly so user sees the confirmation
+                        // Delay closure slightly so user sees the confirmation flash
                         setTimeout(() => {
                             if (isMounted) {
                                 onScan(decodedText);
                             }
-                        }, 400);
+                        }, 450);
                     },
                     () => {
-                        // Ignore frame parse errors
+                        // Ignore frame parse errors (normal operation)
                     }
                 );
             } catch (err: any) {
                 console.error("Error starting camera:", err);
-                if (isMounted) {
+                // Only set error if we haven't already succeeded (prevents race condition errors on shutdown)
+                if (isMounted && !lastProcessedCode.current) {
                     setError("No se pudo acceder a la cámara. Verifique permisos o use HTTPS.");
                 }
             }
@@ -81,12 +90,13 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose })
                     .finally(() => { scannerRef.current = null; });
             }
         };
-    }, [isScanning, uniqueId, onScan, lastScanned]);
+        // Removed lastScanned from dependencies to prevent infinite loop/restarts
+    }, [isScanning, uniqueId, onScan]);
 
     return (
         <div className="fixed inset-0 z-[80] bg-black flex flex-col animate-in fade-in duration-300">
             {/* Header */}
-            <div className="flex justify-between items-center p-4 bg-black/60 absolute top-0 w-full z-30 backdrop-blur-md">
+            <div className="flex justify-between items-center p-4 bg-black/60 absolute top-0 w-full z-50 backdrop-blur-md">
                 <div className="flex items-center gap-2 text-white">
                     <div className="bg-blue-500 p-1.5 rounded-lg">
                         <Camera className="w-5 h-5 text-white" />
@@ -104,51 +114,63 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose })
             {/* Viewport Area */}
             <div className="flex-1 relative bg-black flex flex-col justify-center overflow-hidden">
                 
-                {/* 1. FLASH FEEDBACK LAYER */}
+                {/* 1. FLASH FEEDBACK LAYER (Highest priority) */}
                 {feedbackStatus === 'success' && (
-                    <div className="absolute inset-0 z-40 bg-emerald-500/40 animate-in fade-in zoom-in duration-200 pointer-events-none flex flex-col items-center justify-center">
-                        <div className="bg-white rounded-full p-4 shadow-2xl animate-bounce">
-                            <CheckCircle2 className="w-16 h-16 text-emerald-600" />
+                    <div className="absolute inset-0 z-[60] bg-emerald-600 animate-in fade-in zoom-in duration-150 flex flex-col items-center justify-center">
+                        <div className="bg-white rounded-full p-6 shadow-2xl animate-bounce">
+                            <CheckCircle2 className="w-20 h-20 text-emerald-600" />
                         </div>
-                        <div className="mt-4 bg-black/60 backdrop-blur px-6 py-2 rounded-2xl border border-white/20">
-                            <span className="text-white font-mono font-bold text-xl">{lastScanned}</span>
+                        <div className="mt-6 bg-black/40 backdrop-blur-xl px-8 py-3 rounded-2xl border border-white/20 shadow-2xl">
+                            <span className="text-white font-mono font-black text-2xl tracking-wider">{lastScanned}</span>
                         </div>
+                        <p className="text-white/80 mt-4 font-bold uppercase tracking-widest text-xs">Captura Exitosa</p>
                     </div>
                 )}
 
-                {error ? (
-                    <div className="text-center p-8 z-50">
-                        <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-                        <h3 className="text-white font-bold text-xl mb-2">Error de Cámara</h3>
-                        <p className="text-slate-400 text-sm mb-6">{error}</p>
-                        <button onClick={onClose} className="bg-slate-800 text-white px-6 py-3 rounded-xl font-bold">Cerrar</button>
+                {/* 2. ERROR UI (Only if not in success mode) */}
+                {error && feedbackStatus !== 'success' ? (
+                    <div className="text-center p-8 z-50 animate-in slide-in-from-bottom-4">
+                        <div className="bg-red-500/20 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-500/30">
+                            <AlertTriangle className="w-12 h-12 text-red-500" />
+                        </div>
+                        <h3 className="text-white font-bold text-2xl mb-2">Error de Cámara</h3>
+                        <p className="text-slate-400 text-sm mb-8 max-w-xs mx-auto leading-relaxed">{error}</p>
+                        <button 
+                            onClick={onClose} 
+                            className="bg-white text-black px-8 py-4 rounded-2xl font-black shadow-xl active:scale-95 transition-all"
+                        >
+                            Cerrar y Volver
+                        </button>
                     </div>
                 ) : (
-                    <>
-                        <div id={uniqueId} className="w-full h-full"></div>
-                        
-                        {/* Overlay Guidelines */}
-                        <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-20">
-                            <div className="w-64 h-64 border-2 border-white/30 rounded-[2.5rem] relative">
-                                {/* Corners */}
-                                <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-blue-500 rounded-tl-3xl"></div>
-                                <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-blue-500 rounded-tr-3xl"></div>
-                                <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-blue-500 rounded-bl-3xl"></div>
-                                <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-blue-500 rounded-br-3xl"></div>
-                                
-                                {/* Scanning Laser Animation */}
-                                <div className="absolute top-1/2 left-4 right-4 h-0.5 bg-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.8)] animate-[scan_1.5s_infinite]"></div>
+                    /* 3. ACTIVE SCANNER VIEW */
+                    feedbackStatus !== 'success' && (
+                        <>
+                            <div id={uniqueId} className="w-full h-full"></div>
+                            
+                            {/* Overlay Guidelines */}
+                            <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-20">
+                                <div className="w-64 h-64 border-2 border-white/30 rounded-[2.5rem] relative">
+                                    {/* Corners */}
+                                    <div className="absolute -top-1 -left-1 w-10 h-10 border-t-4 border-l-4 border-blue-500 rounded-tl-3xl"></div>
+                                    <div className="absolute -top-1 -right-1 w-10 h-10 border-t-4 border-r-4 border-blue-500 rounded-tr-3xl"></div>
+                                    <div className="absolute -bottom-1 -left-1 w-10 h-10 border-b-4 border-l-4 border-blue-500 rounded-bl-3xl"></div>
+                                    <div className="absolute -bottom-1 -right-1 w-10 h-10 border-b-4 border-r-4 border-blue-500 rounded-br-3xl"></div>
+                                    
+                                    {/* Scanning Laser Animation */}
+                                    <div className="absolute top-1/2 left-4 right-4 h-0.5 bg-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.8)] animate-[scan_1.5s_infinite]"></div>
+                                </div>
                             </div>
-                        </div>
 
-                        {/* Instructions */}
-                        <div className="absolute bottom-24 left-0 right-0 text-center pointer-events-none px-6 z-30">
-                            <div className="bg-black/40 backdrop-blur-md rounded-full px-6 py-3 inline-flex items-center gap-3 border border-white/10 shadow-2xl">
-                                <Zap className="w-5 h-5 text-yellow-400 animate-pulse" />
-                                <span className="text-white text-xs font-bold uppercase tracking-widest">Encuadre el Código</span>
+                            {/* Instructions */}
+                            <div className="absolute bottom-24 left-0 right-0 text-center pointer-events-none px-6 z-30">
+                                <div className="bg-black/60 backdrop-blur-md rounded-full px-6 py-3 inline-flex items-center gap-3 border border-white/10 shadow-2xl">
+                                    <Zap className="w-5 h-5 text-yellow-400 animate-pulse" />
+                                    <span className="text-white text-xs font-bold uppercase tracking-widest">Encuadre el Código</span>
+                                </div>
                             </div>
-                        </div>
-                    </>
+                        </>
+                    )
                 )}
             </div>
 

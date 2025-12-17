@@ -14,17 +14,18 @@ interface State {
 }
 
 // Error Boundaries must be class components in React
-// Fixed: Extending Component directly to ensure TypeScript correctly identifies inherited properties like state and props
-export class ErrorBoundary extends Component<Props, State> {
-  // Fixed: Declaring state property as a class field to resolve "Property 'state' does not exist" errors
-  state: State = {
-    hasError: false,
-    error: null,
-    errorInfo: null
-  };
-
+/**
+ * Fix: Explicitly extending React.Component and initializing state in constructor 
+ * to ensure TypeScript correctly recognizes inherited properties like setState, state, and props.
+ */
+export class ErrorBoundary extends React.Component<Props, State> {
   constructor(props: Props) {
     super(props);
+    this.state = {
+      hasError: false,
+      error: null,
+      errorInfo: null
+    };
   }
 
   static getDerivedStateFromError(error: Error): Partial<State> {
@@ -40,7 +41,7 @@ export class ErrorBoundary extends Component<Props, State> {
         { stack: error.stack, componentStack: errorInfo.componentStack }
     ).catch(e => console.error("Failed to write crash log", e));
     
-    // Fixed: Using this.setState inherited from Component class
+    // Fix: Accessing setState which is inherited from React.Component
     this.setState({ errorInfo });
   }
 
@@ -56,7 +57,7 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   render(): ReactNode {
-    // Fixed: Accessing this.state from inherited Component class
+    // Fix: Accessing this.state inherited from React.Component
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-sans">
@@ -79,7 +80,6 @@ export class ErrorBoundary extends Component<Props, State> {
                     <span className="text-[10px] font-bold text-slate-400 uppercase">Crash Report Saved</span>
                 </div>
                 <code className="text-xs text-red-400 font-mono break-all">
-                  {/* Fixed: Accessing this.state.error safely */}
                   {this.state.error?.toString()}
                 </code>
               </div>
@@ -104,7 +104,7 @@ export class ErrorBoundary extends Component<Props, State> {
       );
     }
 
-    // Fixed: Accessing this.props.children from inherited Component class
+    // Fix: Accessing this.props.children inherited from React.Component
     return this.props.children;
   }
 }
