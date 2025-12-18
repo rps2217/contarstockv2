@@ -13,11 +13,11 @@ interface State {
   errorInfo: ErrorInfo | null;
 }
 
-// Error Boundaries must be class components in React
 /**
- * Fix: Explicitly extending React.Component and initializing state in constructor 
- * to ensure TypeScript correctly recognizes inherited properties like setState, state, and props.
+ * Error Boundary component to catch runtime crashes and provide recovery options.
+ * Must be a class component as per React specifications.
  */
+// Fix: Use React.Component to ensure inheritance and access to state/props
 export class ErrorBoundary extends React.Component<Props, State> {
   constructor(props: Props) {
     super(props);
@@ -28,20 +28,25 @@ export class ErrorBoundary extends React.Component<Props, State> {
     };
   }
 
-  static getDerivedStateFromError(error: Error): Partial<State> {
-    return { hasError: true, error };
+  static getDerivedStateFromError(error: Error): State {
+    // Update state so the next render will show the fallback UI.
+    return { 
+      hasError: true, 
+      error, 
+      errorInfo: null 
+    };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
-    // FORENSIC LOGGING: Save the crash to IndexedDB immediately
+    
+    // Attempt to log the crash details to the local database for debugging
     logger.error(
         'SYSTEM_CRASH', 
         error.message || 'Unknown Critical Error', 
         { stack: error.stack, componentStack: errorInfo.componentStack }
     ).catch(e => console.error("Failed to write crash log", e));
     
-    // Fix: Accessing setState which is inherited from React.Component
     this.setState({ errorInfo });
   }
 
@@ -57,8 +62,8 @@ export class ErrorBoundary extends React.Component<Props, State> {
   };
 
   render(): ReactNode {
-    // Fix: Accessing this.state inherited from React.Component
     if (this.state.hasError) {
+      // Fallback UI when a crash occurs
       return (
         <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-sans">
           <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-200">
@@ -104,7 +109,6 @@ export class ErrorBoundary extends React.Component<Props, State> {
       );
     }
 
-    // Fix: Accessing this.props.children inherited from React.Component
     return this.props.children;
   }
 }

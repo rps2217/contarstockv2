@@ -9,20 +9,20 @@ const DEFAULT_SETTINGS: AppSettings = {
   theme: 'light',
   soundEnabled: true,
   hapticsEnabled: true,
-  ttsEnabled: false, // Default DISABLED as requested
-  ttsMode: 'count',  // Default mode is the new efficient Counting mode
-  speedometerEnabled: false, // Default DISABLED as requested
-  controlTowerEnabled: false, // Default DISABLED as requested (Widgets hidden)
+  ttsEnabled: false, 
+  ttsMode: 'count',  
+  speedometerEnabled: false, 
+  controlTowerEnabled: false, 
   confirmDelete: true,
-  autoRegisterUnknown: false, // Default DISABLED (Safety first)
+  autoRegisterUnknown: false, 
   appSheetConfig: {
       appId: '',
       accessKey: '',
       countsTableName: '',
       productsTableName: '',
-      receptionTableName: '' // Default empty
+      receptionTableName: 'RECEPCION_BULTOS' // Ajustado según requerimiento
   },
-  mobileNavConfig: ['dashboard', 'database', 'reports'] // Default Mobile Items
+  mobileNavConfig: ['dashboard', 'database', 'reports'] 
 };
 
 export const getSettings = (): AppSettings => {
@@ -30,9 +30,7 @@ export const getSettings = (): AppSettings => {
     const data = localStorage.getItem(KEYS.SETTINGS);
     const parsed = data ? JSON.parse(data) : {};
     
-    // Merge deeply if needed, but for now simple spread
     const config = parsed.appSheetConfig || {};
-    // Migration fix: old 'tableName' to 'countsTableName'
     if (config.tableName && !config.countsTableName) {
         config.countsTableName = config.tableName;
     }
@@ -44,7 +42,6 @@ export const getSettings = (): AppSettings => {
             ...DEFAULT_SETTINGS.appSheetConfig,
             ...config
         },
-        // Ensure mobileNavConfig exists if loading from old settings
         mobileNavConfig: parsed.mobileNavConfig || DEFAULT_SETTINGS.mobileNavConfig
     };
   } catch (e) {

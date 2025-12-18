@@ -1,4 +1,3 @@
-
 // infrastructure/api/appsheetClient.ts
 
 export interface AppSheetConfig {
@@ -18,22 +17,19 @@ export interface AppSheetPayload {
 
 /**
  * Pure HTTP Client for AppSheet API.
- * Zero dependencies on application logic or database.
- * Includes timeout handling for robustness in warehouse environments.
+ * Tightened validation to prevent false success reports.
  */
 export const sendToAppSheet = async (
   config: AppSheetConfig, 
   tableName: string, 
   payload: AppSheetPayload,
-  timeoutMs: number = 45000 // Default 45s timeout
+  timeoutMs: number = 45000 
 ): Promise<any> => {
   if (!config.appId || !config.accessKey) {
       throw new Error("Configuración de AppSheet incompleta (Falta AppID o AccessKey).");
   }
 
   const endpoint = `https://api.appsheet.com/api/v2/apps/${config.appId}/tables/${tableName}/Action`;
-
-  console.log(`[Infra] ${payload.Action} -> ${tableName}`, payload.Rows.length > 0 ? `(${payload.Rows.length} rows)` : '(Query)');
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -53,39 +49,35 @@ export const sendToAppSheet = async (
 
       if (!response.ok) {
         const errorBody = await response.text();
-        console.error(`[Infra] Error HTTP ${response.status}:`, errorBody);
-        throw new Error(`AppSheet API Error (${response.status}): ${errorBody}`);
+        throw new Error(`Error HTTP ${response.status}: ${errorBody}`);
       }
 
       const text = await response.text();
-      // AppSheet sometimes returns empty string on success for some actions, but for Add/Find/Edit it usually returns JSON.
       if (!text) return { success: true };
 
       let json;
       try {
         json = JSON.parse(text);
       } catch (e) {
-        console.warn("[Infra] Response was not JSON:", text);
-        return { success: true }; // Assume success if 200 OK but weird body (rare)
+        return { success: true }; 
       }
 
       // --- CRITICAL VALIDATION ---
-      // If we tried to ADD or EDIT, AppSheet MUST return the rows affected.
-      // If it returns an empty array, the operation failed silently (e.g. key mismatch, constraint violation).
-      if ((payload.Action === 'Add' || payload.Action === 'Edit') && Array.isArray(json.Rows) && json.Rows.length === 0) {
-          console.warn("[Infra] AppSheet returned 200 OK but ZERO rows were affected. Treating as Silent Failure.");
-          throw new Error(`Escritura rechazada por AppSheet (Silent Failure). Verifique duplicados o claves primarias.`);
+      // AppSheet often returns 200 OK but an empty Rows array if column names are wrong or constraints fail.
+      if ((payload.Action === 'Add' || payload.Action === 'Edit')) {
+          if (!json.Rows || !Array.isArray(json.Rows) || json.Rows.length === 0) {
+              console.error("[AppSheet] Silent Failure detected. Payload:", payload, "Response:", json);
+              throw new Error("El servidor recibió los datos pero no pudo escribir la fila. Verifique que los nombres de las columnas en Excel coincidan exactamente con la App.");
+          }
       }
 
       return json;
 
   } catch (error: any) {
       clearTimeout(timeoutId);
-      console.error("[Infra] Network/Fetch Error:", error);
-      
       if (error.name === 'AbortError') {
-          throw new Error("Tiempo de espera agotado (Timeout). Verifique su conexión a internet.");
+          throw new Error("Tiempo de espera agotado. Verifique su conexión.");
       }
-      throw new Error(error.message || "Error de conexión con AppSheet.");
+      throw error;
   }
 };
