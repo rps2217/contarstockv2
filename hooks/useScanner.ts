@@ -193,6 +193,7 @@ export const useScanner = (
         const settings = getSettings();
 
         try {
+            // Verificamos si el producto ya existe en la sesión actual
             const existingScan = await db.scans
                 .where('[sessionId+barcode]')
                 .equals([session.id, cleanCode])
@@ -201,31 +202,32 @@ export const useScanner = (
                 .then(results => results[0]);
 
             if (existingScan) {
+                // Si ya existe en la sesión, usamos su fecha registrada para no pedirla de nuevo
                 await completeScan(cleanCode, existingScan.mm, existingScan.yyyy);
                 return;
             } 
             
+            // SI LLEGAMOS AQUÍ, ES LA PRIMERA VEZ QUE VEMOS EL PRODUCTO EN ESTA SESIÓN
+            // Primero verificamos el maestro para registro automático
             const productExists = await db.products.get(cleanCode);
             
-            if (productExists) {
-                await completeScan(cleanCode);
-            } else {
-                if (settings.autoRegisterUnknown) {
-                    const pendingName = `PENDIENTE-${cleanCode}`;
-                    await productService.saveProduct({
-                        barcode: cleanCode,
-                        name: pendingName,
-                        category: 'PENDIENTE',
-                        supplier: '',
-                        supplierRut: ''
-                    });
-                    await completeScan(cleanCode);
-                } else {
-                    setPendingScanCode(cleanCode);
-                    setShowExpirationModal(true);
-                    SoundFX.play('success');
-                }
+            if (!productExists && settings.autoRegisterUnknown) {
+                // Registrar automáticamente si no existe en maestro
+                const pendingName = `PENDIENTE-${cleanCode}`;
+                await productService.saveProduct({
+                    barcode: cleanCode,
+                    name: pendingName,
+                    category: 'PENDIENTE',
+                    supplier: '',
+                    supplierRut: ''
+                });
             }
+
+            // Disparamos obligatoriamente el modal de vencimiento para el primer registro en sesión
+            setPendingScanCode(cleanCode);
+            setShowExpirationModal(true);
+            SoundFX.play('success');
+
         } catch (err) {
             console.error(err);
             triggerFeedback('error');
