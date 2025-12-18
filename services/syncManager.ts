@@ -27,7 +27,6 @@ export interface UploadGroup {
 export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
     const groups: Record<string, UploadGroup> = {};
 
-    // A. INVENTORY: Get all unsynced scans
     const unsyncedScans = await db.scans.where('synced').equals(0).toArray();
     
     if (unsyncedScans.length > 0) {
@@ -40,7 +39,6 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
         for (const scan of unsyncedScans) {
             const session = sessionMap.get(scan.sessionId);
             if (!session) continue;
-
             const erp = session.erpOrder;
             
             if (!groups[erp]) {
@@ -53,7 +51,6 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
                     type: 'inventory'
                 };
             }
-
             groups[erp].totalUnits += scan.quantity;
             if (!groups[erp].sessionIds.includes(session.id)) {
                 groups[erp].sessionIds.push(session.id);
@@ -63,7 +60,6 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
         }
     }
 
-    // B. RECEPTION: Get pending drafts
     const pendingDrafts = await db.sessions
         .where('status').equals('draft')
         .and(s => !s.lastSyncTimestamp)
@@ -71,7 +67,6 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
 
     if (pendingDrafts.length > 0) {
         const receptionKey = "BITÁCORA RECEPCIÓN";
-        
         groups[receptionKey] = {
             erpOrder: receptionKey,
             sessionCount: pendingDrafts.length,
@@ -86,22 +81,17 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
 };
 
 export const performBatchUpload = async (group: UploadGroup): Promise<void> => {
-    
-    // CASE A: RECEPTION LOGS
     if (group.type === 'reception') {
         const drafts = await db.sessions.where('id').anyOf(group.sessionIds).toArray();
         if (drafts.length === 0) return;
-
         const result = await syncReceptionToAppSheet(drafts);
-        
         if (result.failed > 0) {
             const errStr = result.errors.slice(0, 3).join('; ');
-            throw new Error(`Hubo fallos parciales (${result.failed} errores / ${result.success} éxitos). Info: ${errStr}`);
+            throw new Error(`Fallo parcial: ${result.failed} errores. Info: ${errStr}`);
         }
         return;
     }
 
-    // CASE B: INVENTORY COUNTS
     const virtualSession: CountingSession = {
         id: 'BATCH_UPLOAD_' + Date.now(),
         erpOrder: group.erpOrder,
@@ -115,113 +105,65 @@ export const performBatchUpload = async (group: UploadGroup): Promise<void> => {
 };
 
 // ==========================================
-// 2. QUEUE PROCESSING (Background Sync)
+// 2. DOWNLOAD & RESTORE (Cloud -> Local)
 // ==========================================
 
-export const processSyncQueue = async () => {
-    const jobs = await db.syncQueue.where('status').equals('pending').toArray();
-    
-    for (const job of jobs) { 
-        if (job.retryCount > 0) {
-            const waitTime = Math.min(30000, Math.pow(2, job.retryCount) * 1000);
-            if (job.retryCount > 3 && Math.random() > 0.3) continue; 
-        }
-
-        try { 
-            await syncToAppSheet(job.session); 
-            if (job.id) await db.syncQueue.delete(job.id); 
-        } catch (e: any) { 
-            console.error(`[Queue] Job ${job.id} failed. Retry count: ${job.retryCount + 1}`);
-            if (job.id) {
-                const nextStatus = job.retryCount >= 10 ? 'failed' : 'pending';
-                await db.syncQueue.update(job.id, { 
-                    retryCount: job.retryCount + 1, 
-                    status: nextStatus,
-                    lastError: e.message 
-                }); 
-            }
-        } 
-    }
-};
-
-// ==========================================
-// 3. DOWNLOAD & RESTORE (Cloud -> Local)
-// ==========================================
-
-/**
- * Imports Products from AppSheet with Zod Validation
- */
 export const importProductsFromAppSheet = async (): Promise<number> => {
     const rawRows = await fetchProductsFromCloud();
     const validProducts: Product[] = [];
-    let invalidCount = 0;
-
     for (const row of rawRows) {
-        // Zod Parse & Transform
         const result = CloudProductSchema.safeParse(row);
-        
         if (result.success) {
             const p = result.data;
-            if (p.barcode && p.name) {
-                validProducts.push({
-                    barcode: sanitizeBarcode(p.barcode),
-                    name: p.name,
-                    category: p.category,
-                    supplier: p.supplier,
-                    supplierRut: p.supplierRut,
-                    syncStatus: 'synced'
-                });
-            }
-        } else {
-            invalidCount++;
+            validProducts.push({
+                barcode: sanitizeBarcode(p.barcode),
+                name: p.name,
+                category: p.category,
+                supplier: p.supplier,
+                supplierRut: p.supplierRut,
+                syncStatus: 'synced'
+            });
         }
     }
-
-    if (invalidCount > 0) {
-        console.warn(`[Sync] Skipped ${invalidCount} invalid products from Cloud.`);
-    }
-
-    if (validProducts.length > 0) {
-        await productService.saveProductBatch(validProducts);
-    }
+    if (validProducts.length > 0) await productService.saveProductBatch(validProducts);
     return validProducts.length;
 };
 
 /**
- * Restores Reception Logs with Validation
+ * Recupera logs de recepción desde AppSheet y los mapea a la cola local.
  */
 export const restoreReceptionFromCloud = async (options?: { dateRange?: { start: string, end: string } }): Promise<number> => {
     const rawRows = await fetchReceptionData(options);
     let restoredCount = 0;
 
-    const existingDrafts = await db.sessions.where('status').equals('draft').toArray();
-    const existingMap = new Set(existingDrafts.map(d => d.logisticsLabel));
-
     for (const row of rawRows) {
-        // Validate Row
         const result = CloudReceptionRowSchema.safeParse(row);
         if (!result.success) continue;
 
         const data = result.data;
         const cloudId = data.ID_RECEPCION;
-        const label = data.ETIQUETA;
-        const status = data.ESTADO;
-        const dateStr = data.FECHA_HORA;
+        const label = sanitizeBarcode(data.ETIQUETA);
+        const cloudStatus = data.ESTADO; // PENDIENTE o PROCESADO
         
         if (!label) continue;
 
-        const existsById = cloudId ? await db.sessions.get(cloudId) : null;
+        // 1. Verificar si ya existe por ID exacto
+        const localSession = await db.sessions.get(cloudId);
         
-        if (existsById) {
-            if (status === 'PROCESADO' && existsById.status === 'draft') {
-                await db.sessions.update(existsById.id, { status: 'completed' });
+        if (localSession) {
+            // Si en la nube ya está PROCESADO pero aquí sigue en DRAFT, actualizamos estado
+            if (cloudStatus === 'PROCESADO' && localSession.status === 'draft') {
+                await db.sessions.update(cloudId, { status: 'completed' });
             }
-            continue;
+            continue; 
         }
 
-        if (existingMap.has(label)) continue; 
-        
-        const localStatus = status === 'PENDIENTE' ? 'draft' : 'completed';
+        // 2. Verificar por etiqueta si no hay ID (Búsqueda por bultos manuales)
+        const duplicateLabel = await db.sessions.where('logisticsLabel').equals(label).first();
+        if (duplicateLabel) continue;
+
+        // 3. Crear registro local
+        const localStatus = cloudStatus === 'PENDIENTE' ? 'draft' : 'completed';
         
         let localAudit: 'verified' | 'warning' | 'failed' | 'pending' = 'pending';
         if (data.ESTADO_AUDITORIA === 'VERIFICADO_OK') localAudit = 'verified';
@@ -230,13 +172,13 @@ export const restoreReceptionFromCloud = async (options?: { dateRange?: { start:
 
         await db.sessions.add({
             id: cloudId || generateUUID(),
-            erpOrder: 'PENDIENTE',
+            erpOrder: 'PENDIENTE', // Por defecto hasta que se inicie el conteo
             logisticsLabel: label,
-            createdAt: dateStr ? parseFlexibleDate(dateStr) : Date.now(),
+            createdAt: data.FECHA_HORA ? parseFlexibleDate(data.FECHA_HORA) : Date.now(),
             status: localStatus,
             totalUnits: 0,
             totalSKUs: 0,
-            lastSyncTimestamp: Date.now(),
+            lastSyncTimestamp: Date.now(), // Marcamos como sincronizado para no volver a subirlo
             auditStatus: localAudit
         });
         restoredCount++;
@@ -244,81 +186,48 @@ export const restoreReceptionFromCloud = async (options?: { dateRange?: { start:
     return restoredCount;
 };
 
-/**
- * Restores Inventory Counts with Zod Validation
- */
 export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange?: { start: string, end: string }, skipExisting?: boolean }): Promise<{ sessions: number, items: number }> => {
   const rawRows = await fetchCloudData(options);
   if (rawRows.length === 0) return { sessions: 0, items: 0 };
 
   const allLocalSessions = await db.sessions.toArray();
   const localSessionMap = new Map<string, CountingSession>();
-  
-  allLocalSessions.forEach(s => {
-      localSessionMap.set(generateCompositeKey(s.erpOrder, s.logisticsLabel), s);
-  });
+  allLocalSessions.forEach(s => localSessionMap.set(generateCompositeKey(s.erpOrder, s.logisticsLabel), s));
 
-  // Validated Rows Buffer
   const validRows = [];
   for (const r of rawRows) {
       const parsed = CloudInventoryRowSchema.safeParse(r);
       if (parsed.success) validRows.push(parsed.data);
   }
 
-  // Filter existing if needed
-  let rowsToProcess = validRows;
-  if (options?.skipExisting) {
-      rowsToProcess = validRows.filter(row => {
-          const key = generateCompositeKey(row[SHEET_COLUMNS.ERP_ORDER], row[SHEET_COLUMNS.LABEL]);
-          return !localSessionMap.has(key);
-      });
-  }
+  let rowsToProcess = options?.skipExisting 
+    ? validRows.filter(row => !localSessionMap.has(generateCompositeKey(row[SHEET_COLUMNS.ERP_ORDER], row[SHEET_COLUMNS.LABEL])))
+    : validRows;
 
   if (rowsToProcess.length === 0) return { sessions: 0, items: 0 };
 
-  let sessionsProcessed = 0;
-  let itemsRestored = 0;
-
-  // Group by Session (ERP + Label)
   const sessionsMap = new Map<string, typeof validRows>();
   rowsToProcess.forEach(row => {
-    let erp = row[SHEET_COLUMNS.ERP_ORDER];
-    let label = row[SHEET_COLUMNS.LABEL];
-    const key = generateCompositeKey(erp, label);
-
-    if (normalizeKey(erp).length > 0) {
+    const key = generateCompositeKey(row[SHEET_COLUMNS.ERP_ORDER], row[SHEET_COLUMNS.LABEL]);
+    if (normalizeKey(row[SHEET_COLUMNS.ERP_ORDER]).length > 0) {
         if (!sessionsMap.has(key)) sessionsMap.set(key, []);
         sessionsMap.get(key)?.push(row);
     }
   });
 
-  // Process Groups
+  let sessionsProcessed = 0;
+  let itemsRestored = 0;
+
   for (const [key, sessionRows] of sessionsMap.entries()) {
     const firstRow = sessionRows[0];
     const erp = firstRow[SHEET_COLUMNS.ERP_ORDER].trim();
     const label = (firstRow[SHEET_COLUMNS.LABEL] || "GENERAL").trim();
-
     let sessionId: string;
     let isNewSession = false;
-    let sessionTotalUnits = 0;
-    let sessionTotalSKUs = 0;
-
     let existingSession = localSessionMap.get(key);
-
-    if (!existingSession) {
-        const normErp = normalizeKey(erp);
-        const normLabel = normalizeKey(label);
-        
-        existingSession = allLocalSessions.find(s => 
-            normalizeKey(s.erpOrder) === normErp && 
-            normalizeKey(s.logisticsLabel) === normLabel
-        );
-    }
 
     if (existingSession) {
         sessionId = existingSession.id;
-        sessionTotalUnits = existingSession.totalUnits || 0;
-        sessionTotalSKUs = existingSession.totalSKUs || 0;
         await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
     } else {
         sessionId = generateUUID();
@@ -326,154 +235,88 @@ export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange
         sessionsProcessed++;
     }
 
-    // Calculate Aggregates
-    interface AggregatedItem { qty: number; name: string; mm?: number; yyyy?: number; isIncident?: boolean; }
-    const cloudAggregated = new Map<string, AggregatedItem>();
-    const getCompositeKey = (barcode: string, mm: any, yyyy: any) => `${sanitizeBarcode(barcode)}_${mm ? Number(mm) : 0}_${yyyy ? Number(yyyy) : 0}`;
-
+    // Agregación de nube
+    const cloudAggregated = new Map<string, any>();
     for (const row of sessionRows) {
-        const barcodeRaw = row[SHEET_COLUMNS.BARCODE];
-        const barcode = sanitizeBarcode(barcodeRaw);
-        const qty = row[SHEET_COLUMNS.QUANTITY];
-        
-        if (!barcode || qty <= 0) continue;
-
-        const mm = row[SHEET_COLUMNS.MONTH];
-        const yyyy = row[SHEET_COLUMNS.YEAR];
-        const name = row[SHEET_COLUMNS.PRODUCT_NAME] || 'Producto Importado';
-        const isIncident = row[SHEET_COLUMNS.INCIDENT] === "FRC";
-        const dateKey = getCompositeKey(barcode, mm, yyyy);
-        
+        const barcode = sanitizeBarcode(row[SHEET_COLUMNS.BARCODE]);
+        if (!barcode) continue;
+        const dateKey = `${barcode}_${Number(row[SHEET_COLUMNS.MONTH]) || 0}_${Number(row[SHEET_COLUMNS.YEAR]) || 0}`;
         if (cloudAggregated.has(dateKey)) {
-            const current = cloudAggregated.get(dateKey)!;
-            current.qty += qty;
-            if (isIncident) current.isIncident = true;
+            cloudAggregated.get(dateKey).qty += row[SHEET_COLUMNS.QUANTITY];
         } else {
-            cloudAggregated.set(dateKey, { qty, name, mm, yyyy, isIncident });
+            cloudAggregated.set(dateKey, { qty: row[SHEET_COLUMNS.QUANTITY], name: row[SHEET_COLUMNS.PRODUCT_NAME], mm: row[SHEET_COLUMNS.MONTH], yyyy: row[SHEET_COLUMNS.YEAR] });
         }
     }
 
-    // Compare with Local
-    const localQtyMap = new Map<string, number>();
-    if (!isNewSession) {
-        const localScans = await db.scans.where('sessionId').equals(sessionId).toArray();
-        localScans.forEach(s => {
-            const dateKey = getCompositeKey(s.barcode, s.mm, s.yyyy);
-            localQtyMap.set(dateKey, (localQtyMap.get(dateKey) || 0) + s.quantity);
-        });
-    }
-
-    // Generate Diff
     const scansToAdd: ScanRecord[] = [];
-    const productsToAdd: Map<string, Product> = new Map();
-    const uniqueSKUsSet = new Set<string>();
-
-    for (const [dateKey, cloudData] of cloudAggregated.entries()) {
-        const localQty = localQtyMap.get(dateKey) || 0;
+    for (const [dateKey, data] of cloudAggregated.entries()) {
         const [barcode] = dateKey.split('_');
-        
-        uniqueSKUsSet.add(barcode);
-
-        if (cloudData.qty > localQty) {
-            const quantityToAdd = cloudData.qty - localQty;
-
-            if (!productsToAdd.has(barcode)) {
-                productsToAdd.set(barcode, {
-                    barcode: barcode,
-                    name: cloudData.name,
-                    category: 'IMPORTADO',
-                    syncStatus: 'synced'
-                });
-            }
-
-            scansToAdd.push({
-                id: generateUUID(),
-                sessionId: sessionId,
-                barcode: barcode,
-                quantity: quantityToAdd,
-                timestamp: Date.now(),
-                mm: cloudData.mm,
-                yyyy: cloudData.yyyy,
-                synced: 1, 
-                isIncident: cloudData.isIncident
-            });
-            
-            sessionTotalUnits += quantityToAdd;
-            itemsRestored += quantityToAdd;
-        }
+        scansToAdd.push({
+            id: generateUUID(),
+            sessionId,
+            barcode,
+            quantity: data.qty,
+            timestamp: Date.now(),
+            mm: data.mm,
+            yyyy: data.yyyy,
+            synced: 1
+        });
+        itemsRestored += data.qty;
     }
 
     if (isNewSession) {
-        sessionTotalSKUs = uniqueSKUsSet.size;
-    }
-
-    // Commit
-    if (isNewSession) {
-         await db.sessions.add({
+        await db.sessions.add({
             id: sessionId,
             erpOrder: erp,
             logisticsLabel: label,
             createdAt: parseFlexibleDate(firstRow[SHEET_COLUMNS.DATE]),
             status: 'completed',
-            totalUnits: sessionTotalUnits,
-            totalSKUs: sessionTotalSKUs,
+            totalUnits: sessionRows.reduce((a, b) => a + b[SHEET_COLUMNS.QUANTITY], 0),
+            totalSKUs: cloudAggregated.size,
             lastSyncTimestamp: Date.now()
         });
-    } else if (scansToAdd.length > 0) {
-        await db.sessions.update(sessionId, { totalUnits: sessionTotalUnits });
     }
-
-    if (scansToAdd.length > 0) {
-        await db.scans.bulkAdd(scansToAdd);
-        if (productsToAdd.size > 0) {
-            await productService.saveProductBatch(Array.from(productsToAdd.values()));
-        }
-    }
+    if (scansToAdd.length > 0) await db.scans.bulkAdd(scansToAdd);
   }
-
   return { sessions: sessionsProcessed, items: itemsRestored };
 };
-
-// ==========================================
-// 4. CENTRAL EXECUTOR (Called by UI)
-// ==========================================
 
 export const executeDownload = async (
     type: 'inventory' | 'reception' | 'products',
     dateRange?: { start: string, end: string },
     log?: (msg: string) => void
 ) => {
-    const logger = log || console.log;
-
+    const loggerFunc = log || console.log;
     try {
         if (type === 'inventory') {
-            logger(`[Inventario] Solicitando datos (${dateRange?.start} - ${dateRange?.end})...`);
-            const res = await restoreFromCloud({ 
-                dateRange: dateRange, 
-                skipExisting: true 
-            });
-            logger(`[Inventario] Procesamiento finalizado.`);
-            return { success: true, message: `Se importaron ${res.sessions} bultos y ${res.items} items.` };
+            loggerFunc(`[Inventario] Descargando bloque...`);
+            const res = await restoreFromCloud({ dateRange, skipExisting: true });
+            return { success: true, message: `Importados ${res.sessions} bultos.` };
         } 
-        
         else if (type === 'reception') {
-            logger(`[Bitácora] Solicitando logs (${dateRange?.start} - ${dateRange?.end})...`);
+            loggerFunc(`[Recepción] Solicitando bitácora de nube...`);
             const count = await restoreReceptionFromCloud({ dateRange });
-            logger(`[Bitácora] Finalizado.`);
-            return { success: true, message: `${count} registros de recepción importados.` };
+            return { success: true, message: `${count} bultos agregados a la cola.` };
         } 
-        
         else if (type === 'products') {
-            logger(`[Maestro] Solicitando catálogo completo...`);
             const count = await importProductsFromAppSheet();
-            logger(`[Maestro] Guardando en base de datos local...`);
-            return { success: true, message: `${count} productos actualizados/creados.` };
+            return { success: true, message: `${count} productos actualizados.` };
         }
-
-        return { success: false, message: "Tipo de descarga desconocido." };
-
+        return { success: false, message: "Tipo desconocido." };
     } catch (error: any) {
-        logger(`[ERROR] ${error.message}`);
+        loggerFunc(`[ERROR] ${error.message}`);
         throw error;
+    }
+};
+
+export const processSyncQueue = async () => {
+    const jobs = await db.syncQueue.where('status').equals('pending').toArray();
+    for (const job of jobs) { 
+        try { 
+            await syncToAppSheet(job.session); 
+            if (job.id) await db.syncQueue.delete(job.id); 
+        } catch (e: any) { 
+            if (job.id) await db.syncQueue.update(job.id, { retryCount: job.retryCount + 1, status: job.retryCount >= 5 ? 'failed' : 'pending' }); 
+        } 
     }
 };

@@ -26,7 +26,6 @@ const cleanNumber = z.union([z.string(), z.number(), z.null(), z.undefined()])
     });
 
 // --- 1. PRODUCT SCHEMA (Master Data) ---
-// Maps strictly to what we expect from the AppSheet Products Table
 export const CloudProductSchema = z.object({
     "COD PRODUCTO": cleanString,
     "DESCRIPCION": cleanString.default("Sin Descripción"),
@@ -34,7 +33,6 @@ export const CloudProductSchema = z.object({
     "PROVEEDOR": cleanString.default(""),
     "RUT PROVEEDOR": cleanString.default(""),
 }).transform((data) => ({
-    // Transform to internal Application Domain Model
     barcode: data["COD PRODUCTO"],
     name: data["DESCRIPCION"],
     category: data["MUNDO"],
@@ -43,13 +41,12 @@ export const CloudProductSchema = z.object({
 }));
 
 // --- 2. INVENTORY ROW SCHEMA (Transactional Data) ---
-// Maps to the 'Consolidated' table in AppSheet
 export const CloudInventoryRowSchema = z.object({
     [SHEET_COLUMNS.ERP_ORDER]: cleanString,
     [SHEET_COLUMNS.LABEL]: cleanString,
     [SHEET_COLUMNS.BARCODE]: cleanString,
     [SHEET_COLUMNS.QUANTITY]: cleanNumber,
-    [SHEET_COLUMNS.DATE]: cleanString, // We parse date later
+    [SHEET_COLUMNS.DATE]: cleanString,
     [SHEET_COLUMNS.MONTH]: cleanNumber.optional(),
     [SHEET_COLUMNS.YEAR]: cleanNumber.optional(),
     [SHEET_COLUMNS.PRODUCT_NAME]: cleanString.optional(),
@@ -57,13 +54,13 @@ export const CloudInventoryRowSchema = z.object({
 });
 
 // --- 3. RECEPTION ROW SCHEMA (Logistics Data) ---
-// Maps to the 'Reception' table
+// Ajustado según requerimiento: ID_RECEPCION, FECHA_HORA, ETIQUETA, ESTADO
 export const CloudReceptionRowSchema = z.object({
     "ID_RECEPCION": cleanString,
+    "FECHA_HORA": cleanString,
     "ETIQUETA": cleanString,
     "ESTADO": cleanString,
-    "FECHA_HORA": cleanString,
-    "ESTADO_AUDITORIA": cleanString.optional(),
+    "ESTADO_AUDITORIA": cleanString.optional(), // Opcional para modo detective
 });
 
 export type CloudProduct = z.infer<typeof CloudProductSchema>;
