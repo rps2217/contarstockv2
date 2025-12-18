@@ -17,8 +17,8 @@ interface State {
  * Error Boundary component to catch runtime crashes and provide recovery options.
  * Must be a class component as per React specifications.
  */
-// Fix: Use Component from 'react' directly and initialize state as a class property to ensure proper type inheritance
-export class ErrorBoundary extends Component<Props, State> {
+// Fix: Explicitly extend React.Component to ensure the compiler correctly identifies inherited members like setState and props
+export class ErrorBoundary extends React.Component<Props, State> {
   public state: State = {
     hasError: false,
     error: null,
