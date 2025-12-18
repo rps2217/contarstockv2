@@ -1,4 +1,3 @@
-
 import { db } from '../db';
 import { ScanRecord, CountingSession } from '../types';
 import { generateUUID, sanitizeBarcode } from './utils';
@@ -14,7 +13,6 @@ let isFlushing = false;
 const MIRROR_KEY = 'logicount_emergency_buffer';
 
 // --- BLACK BOX RECOVERY ---
-// Checks for crashed/unsaved data on startup
 (async () => {
     try {
         const mirrored = localStorage.getItem(MIRROR_KEY);
@@ -22,8 +20,8 @@ const MIRROR_KEY = 'logicount_emergency_buffer';
             const parsed = JSON.parse(mirrored);
             if (Array.isArray(parsed) && parsed.length > 0) {
                 console.warn(`[Recovery] Found ${parsed.length} unsaved records in Black Box mirror. Recovering...`);
-                scanBuffer = [...scanBuffer, ...parsed]; // Merge with any current
-                localStorage.removeItem(MIRROR_KEY); // Clear immediately to prevent double-add loop if flush fails repeatedly
+                scanBuffer = [...scanBuffer, ...parsed];
+                localStorage.removeItem(MIRROR_KEY);
                 flushBuffer();
             }
         }
@@ -45,33 +43,21 @@ const saveMirror = () => {
 };
 
 const flushBuffer = async () => {
-    // Prevent re-entry or empty flush
     if (scanBuffer.length === 0 || isFlushing) return;
-    
     isFlushing = true;
-    
-    // Create a local copy of the batch to attempt writing
     const batch = [...scanBuffer];
     
     try {
-        // --- CRITICAL: ACID TRANSACTION ---
         await (db as any).transaction('rw', db.scans, db.sessions, async () => {
-            // 1. Write the raw scans
             await db.scans.bulkAdd(batch);
-            
-            // 2. Identify affected sessions
             const affectedSessions = new Set(batch.map(s => s.sessionId));
-            
-            // 3. Recalculate stats for affected sessions explicitly within the transaction
             for (const sessionId of affectedSessions) {
                 let totalUnits = 0;
                 const uniqueSkus = new Set<string>();
-
                 await db.scans.where('sessionId').equals(sessionId).each(scan => {
                     totalUnits += scan.quantity;
                     uniqueSkus.add(scan.barcode);
                 });
-
                 await db.sessions.update(sessionId, { 
                     totalUnits, 
                     totalSKUs: uniqueSkus.size 
@@ -79,24 +65,17 @@ const flushBuffer = async () => {
             }
         });
 
-        // SUCCESS: Remove written items from buffer
         const writtenIds = new Set(batch.map(s => s.id));
         scanBuffer = scanBuffer.filter(s => !writtenIds.has(s.id));
-        
-        // Update Mirror
         saveMirror();
 
     } catch (e: any) {
-        // FAILURE: Retry logic handled by data staying in scanBuffer
         logger.error("Buffer", "Transaction Failed - Retrying next cycle", e);
-        console.error("Flush failed, data kept in buffer for retry.");
     } finally {
         isFlushing = false;
-        
-        // If there are still items (due to failure or new adds), schedule next flush quickly
         if (scanBuffer.length > 0) {
             if (flushTimer) clearTimeout(flushTimer);
-            flushTimer = setTimeout(flushBuffer, 500); // Retry/Next in 500ms
+            flushTimer = setTimeout(flushBuffer, 500);
         } else {
             flushTimer = null;
         }
@@ -104,11 +83,8 @@ const flushBuffer = async () => {
 };
 
 // --- WATCHDOG ---
-// Safety mechanism if isFlushing gets stuck to true (rare race condition)
 setInterval(() => {
     if (isFlushing && scanBuffer.length > 0) {
-        // If flushing takes > 10s, something is wrong. Release lock.
-        console.warn("[Watchdog] Resetting stuck flush lock.");
         isFlushing = false;
         flushBuffer();
     }
@@ -126,8 +102,7 @@ if (typeof window !== 'undefined') {
 
 const addToBuffer = (record: ScanRecord) => {
     scanBuffer.push(record);
-    saveMirror(); // Sync to LocalStorage immediately
-    
+    saveMirror();
     if (scanBuffer.length >= 50) {
         flushBuffer();
     } else if (!flushTimer) {
@@ -302,7 +277,6 @@ export const addScan = async (
     };
 
     addToBuffer(record);
-    
     return record;
 };
 

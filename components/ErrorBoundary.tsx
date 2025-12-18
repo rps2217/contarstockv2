@@ -1,5 +1,5 @@
 
-import React, { ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home, Terminal } from 'lucide-react';
 import { logger } from '../services/logger';
 
@@ -17,16 +17,16 @@ interface State {
  * Error Boundary component to catch runtime crashes and provide recovery options.
  * Must be a class component as per React specifications.
  */
-// Use React.Component to ensure inheritance and access to state/props
-export class ErrorBoundary extends React.Component<Props, State> {
+// Fix: Use Component from 'react' directly and initialize state as a class property to ensure proper type inheritance
+export class ErrorBoundary extends Component<Props, State> {
+  public state: State = {
+    hasError: false,
+    error: null,
+    errorInfo: null
+  };
+
   constructor(props: Props) {
     super(props);
-    // Initialize the component state
-    this.state = {
-      hasError: false,
-      error: null,
-      errorInfo: null
-    };
   }
 
   static getDerivedStateFromError(error: Error): State {

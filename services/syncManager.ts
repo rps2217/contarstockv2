@@ -20,6 +20,9 @@ export interface UploadGroup {
     type: 'inventory' | 'reception';
 }
 
+// Global lock to prevent concurrent sync runs
+let isSyncingInProgress = false;
+
 // ==========================================
 // 1. UPLOAD MANAGEMENT (Local -> Cloud)
 // ==========================================
@@ -27,6 +30,7 @@ export interface UploadGroup {
 export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
     const groups: Record<string, UploadGroup> = {};
 
+    // 1. Detect standard inventory scans (synced = 0)
     const unsyncedScans = await db.scans.where('synced').equals(0).toArray();
     
     if (unsyncedScans.length > 0) {
@@ -60,6 +64,7 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
         }
     }
 
+    // 2. Detect pending Reception Drafts (status = draft & never synced)
     const pendingDrafts = await db.sessions
         .where('status').equals('draft')
         .and(s => !s.lastSyncTimestamp)
@@ -80,6 +85,9 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
     return Object.values(groups);
 };
 
+/**
+ * Core logic to upload a group. Used by UI and Auto-sync.
+ */
 export const performBatchUpload = async (group: UploadGroup): Promise<void> => {
     if (group.type === 'reception') {
         const drafts = await db.sessions.where('id').anyOf(group.sessionIds).toArray();
@@ -92,20 +100,69 @@ export const performBatchUpload = async (group: UploadGroup): Promise<void> => {
         return;
     }
 
-    const virtualSession: CountingSession = {
-        id: 'BATCH_UPLOAD_' + Date.now(),
-        erpOrder: group.erpOrder,
-        logisticsLabel: group.logisticsLabels.join(', '),
-        createdAt: Date.now(),
-        status: 'completed'
-    };
-
-    await syncToAppSheet(virtualSession);
-    await db.sessions.where('id').anyOf(group.sessionIds).modify({ lastSyncTimestamp: Date.now() });
+    // Process Inventory Groups
+    // We process each session in the group to ensure proper record mapping
+    for (const sessionId of group.sessionIds) {
+        const session = await db.sessions.get(sessionId);
+        if (!session) continue;
+        
+        // syncToAppSheet already handles scan aggregation and marking scans as synced
+        await syncToAppSheet(session);
+        
+        // IMPORTANT: Mark the session itself as synced at the header level
+        await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
+    }
 };
 
 // ==========================================
-// 2. DOWNLOAD & RESTORE (Cloud -> Local)
+// 2. AUTO-SYNC ENGINE (Background Process)
+// ==========================================
+
+export const processSyncQueue = async () => {
+    if (isSyncingInProgress || !navigator.onLine) return;
+
+    try {
+        isSyncingInProgress = true;
+        
+        // 1. Process legacy explicit jobs in syncQueue if any exist
+        const jobs = await db.syncQueue.where('status').equals('pending').toArray();
+        for (const job of jobs) { 
+            try { 
+                await syncToAppSheet(job.session); 
+                if (job.id) await db.syncQueue.delete(job.id); 
+            } catch (e: any) { 
+                if (job.id) await db.syncQueue.update(job.id, { 
+                    retryCount: job.retryCount + 1, 
+                    status: job.retryCount >= 5 ? 'failed' : 'pending' 
+                }); 
+            } 
+        }
+
+        // 2. CRITICAL FIX: Automatically process pending UploadGroups (Scans with synced=0)
+        const pendingGroups = await getPendingUploadGroups();
+        if (pendingGroups.length > 0) {
+            logger.info('AutoSync', `Detectados ${pendingGroups.length} bloques pendientes. Iniciando subida automática...`);
+            
+            for (const group of pendingGroups) {
+                try {
+                    await performBatchUpload(group);
+                    logger.success('AutoSync', `Bloque [${group.erpOrder}] sincronizado automáticamente.`);
+                } catch (e: any) {
+                    logger.error('AutoSync', `Error subiendo bloque ${group.erpOrder}`, e.message);
+                    // We continue with next groups even if one fails
+                }
+            }
+        }
+
+    } catch (error) {
+        console.error("[AutoSync] Error general:", error);
+    } finally {
+        isSyncingInProgress = false;
+    }
+};
+
+// ==========================================
+// 3. DOWNLOAD & RESTORE (Cloud -> Local)
 // ==========================================
 
 export const importProductsFromAppSheet = async (): Promise<number> => {
@@ -306,17 +363,5 @@ export const executeDownload = async (
     } catch (error: any) {
         loggerFunc(`[ERROR] ${error.message}`);
         throw error;
-    }
-};
-
-export const processSyncQueue = async () => {
-    const jobs = await db.syncQueue.where('status').equals('pending').toArray();
-    for (const job of jobs) { 
-        try { 
-            await syncToAppSheet(job.session); 
-            if (job.id) await db.syncQueue.delete(job.id); 
-        } catch (e: any) { 
-            if (job.id) await db.syncQueue.update(job.id, { retryCount: job.retryCount + 1, status: job.retryCount >= 5 ? 'failed' : 'pending' }); 
-        } 
     }
 };
