@@ -39,38 +39,64 @@ export const parseFlexibleDate = (dateVal: any): number => {
     return isNaN(ts) ? Date.now() : ts;
 };
 
-// --- CORE SYNC FUNCTIONS ---
+// ==========================================
+// CORE SYNC LOGIC (ANTI-DUPLICATE)
+// ==========================================
 
 export const syncToAppSheet = async (session: CountingSession): Promise<void> => {
   const settings = getSettings(); 
   const config = settings.appSheetConfig;
   if (!config?.appId || !config?.accessKey || !config?.countsTableName) throw new Error("Config incompleta.");
   
-  const scans = await db.scans.where('sessionId').equals(session.id).toArray();
-  if (scans.length === 0) return;
+  // 1. CRITICAL: Only fetch scans that HAVE NOT been synced yet (synced = 0)
+  const unsyncedScans = await db.scans
+    .where('sessionId').equals(session.id)
+    .filter(s => s.synced === 0)
+    .toArray();
 
-  const consolidated = await aggregateScans(scans);
+  if (unsyncedScans.length === 0) {
+      logger.info('Sync', `Sesión ${session.logisticsLabel} ya está al día. Nada que subir.`);
+      return;
+  }
 
-  const rows = consolidated.map(item => ({
-    [SHEET_COLUMNS.ID]: generateUUID(),
-    [SHEET_COLUMNS.DATE]: formatDateTimeForAppSheet(session.createdAt),
-    [SHEET_COLUMNS.ERP_ORDER]: session.erpOrder,
-    [SHEET_COLUMNS.BARCODE]: item.barcode,
-    [SHEET_COLUMNS.PRODUCT_NAME]: item.productName,
-    [SHEET_COLUMNS.QUANTITY]: item.totalQuantity,
-    [SHEET_COLUMNS.LABEL]: session.logisticsLabel,
-    [SHEET_COLUMNS.MONTH]: item.mm || 0,
-    [SHEET_COLUMNS.YEAR]: item.yyyy || 0,
-    [SHEET_COLUMNS.INCIDENT]: item.isIncident ? "FRC" : ""
-  }));
+  // 2. Aggregate only the new scans
+  const consolidated = await aggregateScans(unsyncedScans);
 
+  // 3. Prepare rows with Idempotency Key (CLAVE_UNICA)
+  // AppSheet can use this column to prevent duplicate rows if configured as key
+  const rows = consolidated.map(item => {
+    const mm = item.mm || 0;
+    const yyyy = item.yyyy || 0;
+    // Composite ID to prevent cloud duplication: ERP_LABEL_SKU_MM_YYYY
+    const idempotencyKey = `${session.erpOrder}_${session.logisticsLabel}_${item.barcode}_${mm}_${yyyy}`;
+
+    return {
+      [SHEET_COLUMNS.ID]: generateUUID(),
+      [SHEET_COLUMNS.UNIQUE_KEY]: idempotencyKey, // Map to a 'Key' column in AppSheet
+      [SHEET_COLUMNS.DATE]: formatDateTimeForAppSheet(Date.now()), // Use current sync time
+      [SHEET_COLUMNS.ERP_ORDER]: session.erpOrder,
+      [SHEET_COLUMNS.BARCODE]: item.barcode,
+      [SHEET_COLUMNS.PRODUCT_NAME]: item.productName,
+      [SHEET_COLUMNS.QUANTITY]: item.totalQuantity,
+      [SHEET_COLUMNS.LABEL]: session.logisticsLabel,
+      [SHEET_COLUMNS.MONTH]: mm,
+      [SHEET_COLUMNS.YEAR]: yyyy,
+      [SHEET_COLUMNS.INCIDENT]: item.isIncident ? "FRC" : ""
+    };
+  });
+
+  // 4. Execute Cloud Write
   await sendToAppSheet(config, config.countsTableName, {
     Action: "Add",
     Properties: { Locale: "es-CL", Timezone: "UTC" },
     Rows: rows
   });
 
-  await markScansAsSynced(scans.map(s => s.id));
+  // 5. Mark only THESE scans as synced in local DB
+  const syncedIds = unsyncedScans.map(s => s.id);
+  await markScansAsSynced(syncedIds);
+  
+  logger.success('Sync', `Subidos ${rows.length} registros nuevos para ${session.erpOrder}`);
 };
 
 export const syncReceptionToAppSheet = async (sessions: CountingSession[]): Promise<{ success: number; failed: number; errors: string[] }> => {
@@ -86,6 +112,7 @@ export const syncReceptionToAppSheet = async (sessions: CountingSession[]): Prom
     const errors: string[] = [];
 
     for (const session of sessions) {
+        // Idempotent Header Sync: Uses session.id as ID_RECEPCION
         const row = {
             "ID_RECEPCION": String(session.id),
             "FECHA_HORA": formatDateTimeForAppSheet(session.createdAt),
@@ -102,6 +129,7 @@ export const syncReceptionToAppSheet = async (sessions: CountingSession[]): Prom
             await markDraftsAsSynced([session.id]);
             successCount++;
         } catch (addError: any) {
+            // If Add fails (usually because ID already exists), try Edit to update status
             try {
                 await sendToAppSheet(config, config.receptionTableName, { 
                     Action: "Edit", 

@@ -17,8 +17,8 @@ interface State {
  * Error Boundary component to catch runtime crashes and provide recovery options.
  * Must be a class component as per React specifications.
  */
-// Fix: Explicitly extend React.Component to ensure the compiler correctly identifies inherited members like setState and props
-export class ErrorBoundary extends React.Component<Props, State> {
+// Fix: Explicitly extend Component from React to ensure inherited members like setState and props are available
+export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
     error: null,
@@ -48,7 +48,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
         { stack: error.stack, componentStack: errorInfo.componentStack }
     ).catch(e => console.error("Failed to write crash log", e));
     
-    // Accessing setState from the React.Component base class
+    // Correctly using setState which is inherited from Component
     this.setState({ errorInfo });
   }
 
@@ -112,7 +112,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
       );
     }
 
-    // Accessing inherited props to render children when no error exists
+    // Accessing inherited props to render children
     return this.props.children;
   }
 }

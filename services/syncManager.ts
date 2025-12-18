@@ -32,6 +32,7 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
     const groups: Record<string, UploadGroup> = {};
 
     // 1. Detect standard inventory scans (synced = 0)
+    // Filter ensures we only process what is NOT in the cloud
     const unsyncedScans = await db.scans.where('synced').equals(0).toArray();
     
     if (unsyncedScans.length > 0) {
@@ -108,9 +109,10 @@ export const performBatchUpload = async (group: UploadGroup): Promise<void> => {
         if (!session) continue;
         
         try {
-            // syncToAppSheet handles scan aggregation and marking scans as synced (synced=1)
+            // syncToAppSheet now only takes unsynced items (synced=0)
             await syncToAppSheet(session);
-            // Mark session as synced at header level
+            
+            // Mark session with timestamp to indicate activity
             await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
         } catch (e: any) {
             logger.error('Sync', `Error subiendo bulto ${session.logisticsLabel}`, e.message);
@@ -133,7 +135,6 @@ export const processSyncQueue = async () => {
     try {
         isSyncingInProgress = true;
         
-        // Process new pending UploadGroups (Scans with synced=0)
         const pendingGroups = await getPendingUploadGroups();
         if (pendingGroups.length > 0) {
             for (const group of pendingGroups) {
@@ -141,7 +142,6 @@ export const processSyncQueue = async () => {
                     await performBatchUpload(group);
                     logger.success('AutoSync', `Bloque [${group.erpOrder}] sincronizado.`);
                 } catch (e: any) {
-                    // Fail silently in background but log it
                     logger.warn('AutoSync', `Fallo automático en ${group.erpOrder}: ${e.message}`);
                 }
             }
@@ -207,7 +207,6 @@ export const restoreReceptionFromCloud = async (options?: { dateRange?: { start:
         const existing = await db.sessions.get(cloudId);
         
         if (existing) {
-            // Actualizar estado si cambió en la nube
             const newLocalStatus = cloudStatus === 'PROCESADO' ? 'completed' : existing.status;
             await db.sessions.update(cloudId, { 
                 status: newLocalStatus,
@@ -245,7 +244,6 @@ export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange
 
   if (validRows.length === 0) return { sessions: 0, items: 0 };
 
-  // Agrupar por ERP + Label
   const sessionsMap = new Map<string, typeof validRows>();
   validRows.forEach(row => {
     const key = generateCompositeKey(row[SHEET_COLUMNS.ERP_ORDER], row[SHEET_COLUMNS.LABEL]);
@@ -261,18 +259,13 @@ export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange
     const erp = firstRow[SHEET_COLUMNS.ERP_ORDER].trim();
     const label = (firstRow[SHEET_COLUMNS.LABEL] || "GENERAL").trim();
     
-    // Buscar si ya existe bulto local
     let localSession = await db.sessions.where('erpOrder').equals(erp).and(s => normalizeKey(s.logisticsLabel) === normalizeKey(label)).first();
     
     if (options?.skipExisting && localSession) continue;
 
     const sessionId = localSession ? localSession.id : generateUUID();
-
-    // AUDITORÍA: Si estamos sobrescribiendo, limpiar escaneos locales previos de este bulto
-    // para evitar duplicidad si el usuario descarga la misma orden dos veces.
     await db.scans.where('sessionId').equals(sessionId).delete();
 
-    // Agregación de nube por código + fecha
     const cloudAggregated = new Map<string, any>();
     for (const row of sessionRows) {
         const barcode = sanitizeBarcode(row[SHEET_COLUMNS.BARCODE]);
@@ -302,7 +295,7 @@ export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange
             timestamp: Date.now(),
             mm: data.mm,
             yyyy: data.yyyy,
-            synced: 1, // Marcados como sincronizados ya que vienen de la nube
+            synced: 1, 
             isIncident: data.incident
         });
         itemsRestored += data.qty;
