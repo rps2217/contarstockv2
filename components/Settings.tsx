@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Volume2, VolumeX, Vibrate, Zap, Moon, Sun, Monitor, AlertTriangle, ArrowLeft, Cloud, Key, Database, Lock, Check, Eye, Shield, FileText, Package, AlertOctagon, Activity, CheckCircle, XCircle, Share2, Download, QrCode, Copy, Save, Upload, RefreshCw, Loader2, Speech, Hash, Type, Gauge, BarChart3, Smartphone, LayoutTemplate, Camera, Stethoscope, Trash2, HardDrive, Terminal, Wind, Home, History, Layers, Container, Fingerprint } from 'lucide-react';
+import { Settings as SettingsIcon, Volume2, VolumeX, Vibrate, Zap, Moon, Sun, Monitor, AlertTriangle, ArrowLeft, Cloud, Key, Database, Lock, Check, Eye, Shield, FileText, Package, AlertOctagon, Activity, CheckCircle, XCircle, Share2, Download, QrCode, Copy, Save, Upload, RefreshCw, Loader2, Speech, Hash, Type, Gauge, BarChart3, Smartphone, LayoutTemplate, Camera, Stethoscope, Trash2, HardDrive, Terminal, Wind, Home, History, Layers, Container, Fingerprint, RotateCcw, LifeBuoy } from 'lucide-react';
 import * as sessionService from '../services/sessionService'; 
 import * as settingsService from '../services/settings';
 import * as maintenanceService from '../services/maintenance';
@@ -147,8 +147,15 @@ export const Settings: React.FC = () => {
       }
   };
 
+  const handleSoftReset = () => {
+    if (confirm("¿Reiniciar interfaz?\n\nEsto recargará la aplicación para liberar memoria. No perderás tus datos.")) {
+        window.location.reload();
+    }
+  };
+
   const handleHardReset = () => {
-    if (confirm("¿Forzar actualización?\n\nEsto recargará la aplicación ignorando el caché del navegador para asegurar que tengas la última versión.")) {
+    if (confirm("¿⚠️ LIMPIEZA PROFUNDA?\n\nEsto borrará el caché temporal y forzará la descarga de la última versión. Úsalo si la app se comporta de forma extraña.")) {
+        sessionStorage.clear();
         window.location.href = '/?t=' + Date.now();
     }
   };
@@ -274,7 +281,7 @@ export const Settings: React.FC = () => {
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
                             <div className={`p-2 rounded-lg ${settings.ttsEnabled ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-400'}`}>
-                                <Speech className="w-5 h-5" />
+                                <LifeBuoy className="w-5 h-5 text-purple-600" />
                             </div>
                             <div>
                                 <div className="font-bold text-slate-900">Asistente de Voz</div>
@@ -447,6 +454,42 @@ export const Settings: React.FC = () => {
                     )}
                 </div>
             )}
+        </section>
+
+        {/* SUPPORT AND RECOVERY */}
+        <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 animate-in slide-in-from-bottom-2">
+            <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <LifeBuoy className="w-5 h-5 text-blue-600" /> Soporte y Recuperación
+            </h2>
+            <p className="text-xs text-slate-500 mb-6">Opciones para refrescar la aplicación en caso de comportamientos inesperados.</p>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <button 
+                    onClick={handleSoftReset}
+                    className="flex items-center gap-4 p-4 rounded-xl border-2 border-slate-100 hover:border-blue-200 hover:bg-blue-50 transition-all text-left group"
+                >
+                    <div className="p-3 bg-white rounded-lg shadow-sm group-hover:scale-110 transition-transform">
+                        <RefreshCw className="w-6 h-6 text-blue-500" />
+                    </div>
+                    <div>
+                        <div className="font-bold text-slate-900 text-sm">Reinicio Suave</div>
+                        <div className="text-[10px] text-slate-400">Refrescar interfaz y memoria</div>
+                    </div>
+                </button>
+
+                <button 
+                    onClick={handleHardReset}
+                    className="flex items-center gap-4 p-4 rounded-xl border-2 border-slate-100 hover:border-red-200 hover:bg-red-50 transition-all text-left group"
+                >
+                    <div className="p-3 bg-white rounded-lg shadow-sm group-hover:scale-110 transition-transform">
+                        <RotateCcw className="w-6 h-6 text-red-500" />
+                    </div>
+                    <div>
+                        <div className="font-bold text-slate-900 text-sm">Reinicio Profundo</div>
+                        <div className="text-[10px] text-slate-400">Limpiar caché y forzar versión</div>
+                    </div>
+                </button>
+            </div>
         </section>
 
         {/* CLOUD CONFIGURATION */}
