@@ -9,16 +9,26 @@ export interface Product {
   syncStatus?: 'synced' | 'add' | 'edit'; // Delta Sync Status
 }
 
+export interface ExpectedItem {
+  barcode: string;
+  name: string;
+  expectedQty: number;
+}
+
 export interface CountingSession {
   id: string;
   erpOrder: string;
   logisticsLabel: string;
   createdAt: number;
-  status: 'active' | 'completed' | 'draft'; // Added 'draft' for Reception Mode
+  status: 'active' | 'completed' | 'draft';
   totalUnits?: number;
   totalSKUs?: number;
-  lastSyncTimestamp?: number; // New: Tracks when this session was uploaded
+  lastSyncTimestamp?: number;
   
+  // Guided Mode / Reception Verified
+  isVerifiedMode?: boolean;
+  expectedItems?: ExpectedItem[];
+
   // Audit / Detective Fields
   auditStatus?: 'verified' | 'warning' | 'failed' | 'pending';
   auditScore?: number; // 0-100

@@ -31,36 +31,29 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
   const settings = useMemo(() => settingsService.getSettings(), []);
   const manualInputRef = useRef<HTMLInputElement>(null);
 
-  // --- PERFORMANCE TRACKING (SPEEDOMETER) ---
   const [scansPerMinute, setScansPerMinute] = useState(0);
   const scanTimestampsRef = useRef<number[]>([]);
 
-  // Optimized: Only update SPM if it actually changes to prevent header re-renders
   useEffect(() => {
     if (settings.speedometerEnabled && data.lastScan) {
         const now = Date.now();
         scanTimestampsRef.current.push(now);
-        // Clean old
         const cutoff = now - 60000;
         const filtered = scanTimestampsRef.current.filter(t => t > cutoff);
         scanTimestampsRef.current = filtered;
-        
         if (filtered.length !== scansPerMinute) {
             setScansPerMinute(filtered.length);
         }
     }
   }, [data.lastScan, settings.speedometerEnabled]);
 
-  // Interval cleanup for SPM
   useEffect(() => {
       if (!settings.speedometerEnabled) return;
       const interval = setInterval(() => {
           const now = Date.now();
           const cutoff = now - 60000;
-          const prevLen = scanTimestampsRef.current.length;
           const filtered = scanTimestampsRef.current.filter(t => t > cutoff);
           scanTimestampsRef.current = filtered;
-          
           if (filtered.length !== scansPerMinute) {
               setScansPerMinute(filtered.length);
           }
@@ -68,7 +61,6 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
       return () => clearInterval(interval);
   }, [settings.speedometerEnabled, scansPerMinute]);
 
-  // SECURITY CHECK
   const hasCameraSupport = useMemo(() => {
     if (typeof navigator === 'undefined') return false;
     const isSecure = typeof window !== 'undefined' ? window.isSecureContext : false;
@@ -78,7 +70,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
 
   const handleCameraClick = useCallback(() => {
       if (!hasCameraSupport) {
-          alert("⚠️ CÁMARA BLOQUEADA POR EL NAVEGADOR\n\nCausa: Estás accediendo por una conexión no segura (HTTP).\n\nSolución:\n1. Usa 'localhost' si estás en el PC.\n2. Configura HTTPS para acceso móvil.\n3. O habilita las flags de 'Insecure origins' en chrome://flags.");
+          alert("⚠️ CÁMARA BLOQUEADA\n\nRequiere conexión segura (HTTPS).");
           return;
       }
       state.setIsCameraOpen(true);
@@ -98,7 +90,6 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
   return (
     <div className="fixed inset-0 z-50 flex flex-col text-white overflow-hidden font-sans bg-slate-950">
       
-      {/* 1. VISUAL FEEDBACK LAYER (Background & Focus Guard) */}
       <ScannerFeedbackLayer 
         feedback={state.feedback} 
         isIncident={!!data.lastScan?.isIncident}
@@ -106,7 +97,6 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
         isIdle={state.isIdle}
       />
 
-      {/* 2. HEADER */}
       <ScannerHeader 
         erpOrder={session.erpOrder}
         scansPerMinute={scansPerMinute}
@@ -114,27 +104,24 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
         onPause={() => state.setShowConfirmModal(true)}
       />
 
-      {/* 3. MAIN CONTENT GRID (Responsive: 1 Col Mobile, 2 Cols Desktop) */}
       <div className="flex-1 min-h-0 relative z-10 grid grid-cols-1 lg:grid-cols-12">
         
-        {/* LEFT PANEL: HERO & CONTROLS (70% on Desktop) */}
         <div className="lg:col-span-8 flex flex-col justify-center items-center relative p-6">
             
-            {/* Center Display */}
             <div className="flex-1 flex flex-col items-center justify-center text-center w-full max-w-3xl">
                 <ScannerHero 
                     lastScan={data.lastScan}
                     activeProductStats={{
                         ...data.activeProductStats,
-                        totalQty: state.optimisticActiveQty // USAR VALOR OPTIMISTA PARA CERO LATENCIA
+                        totalQty: state.optimisticActiveQty 
                     }}
                     feedback={state.feedback}
                     onRegisterPending={actions.handleRegisterPending}
                     onToggleIncident={actions.handleToggleIncident}
+                    expectedItem={data.expectedForActive}
                 />
             </div>
 
-            {/* Floating Undo */}
             {state.lastScanId && !state.isMultiplierOpen && !state.manualMode && !state.isCameraOpen && (
                 <div className="absolute bottom-24 lg:bottom-32 flex justify-center z-30 pointer-events-none animate-in slide-in-from-bottom-4 fade-in w-full">
                     <button 
@@ -147,12 +134,12 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
                 </div>
             )}
 
-            {/* Footer Controls */}
             <div className="w-full max-w-md">
                 <ScannerControls 
+                    session={session}
                     sessionStats={{
-                        totalQty: state.optimisticTotalQty, // USAR VALOR OPTIMISTA
-                        uniqueSkus: state.optimisticUniqueSkus // USAR VALOR OPTIMISTA
+                        totalQty: state.optimisticTotalQty, 
+                        uniqueSkus: state.optimisticUniqueSkus 
                     }}
                     multiplier={state.multiplier}
                     scansPerMinute={scansPerMinute}
@@ -165,7 +152,6 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
             </div>
         </div>
 
-        {/* RIGHT PANEL: LIVE HISTORY (30% on Desktop, Hidden on Mobile) */}
         <div className="hidden lg:flex lg:col-span-4 bg-slate-900/50 border-l border-slate-800 flex-col backdrop-blur-sm">
             <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/30">
                 <h3 className="font-bold text-slate-400 text-sm uppercase tracking-wider flex items-center gap-2">
@@ -202,8 +188,6 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
 
       </div>
 
-      {/* --- MODALS & OVERLAYS --- */}
-      
       {state.isCameraOpen && (
         <CameraScanner 
             onScan={(code) => actions.handleExternalScan(code)} 
