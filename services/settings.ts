@@ -15,12 +15,13 @@ const DEFAULT_SETTINGS: AppSettings = {
   controlTowerEnabled: false, 
   confirmDelete: true,
   autoRegisterUnknown: false, 
+  lowPerformanceMode: false, // Default: Full experience
   appSheetConfig: {
       appId: '',
       accessKey: '',
       countsTableName: '',
       productsTableName: '',
-      receptionTableName: 'RECEPCION_BULTOS' // Ajustado según requerimiento
+      receptionTableName: 'RECEPCION_BULTOS'
   },
   mobileNavConfig: ['dashboard', 'database', 'reports'] 
 };

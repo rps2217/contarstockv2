@@ -2,6 +2,7 @@
 import React, { memo } from 'react';
 import { RotateCcw, AlertTriangle, Zap } from 'lucide-react';
 import { ScanRecord } from '../../types';
+import { useAppStore } from '../../store/useAppStore';
 
 interface ScannerHeroProps {
     lastScan: ScanRecord | undefined;
@@ -18,10 +19,12 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
     onRegisterPending, 
     onToggleIncident 
 }) => {
+    const { settings } = useAppStore();
+    const lowPerf = settings.lowPerformanceMode;
     
     if (feedback === 'undo') {
         return (
-            <div className="flex flex-col items-center animate-in zoom-in duration-200">
+            <div className="flex flex-col items-center animate-in zoom-in duration-200" style={{ willChange: 'transform, opacity' }}>
                 <RotateCcw className="w-32 h-32 text-white mb-4" />
                 <h2 className="text-4xl font-black uppercase tracking-widest">Deshecho</h2>
                 <p className="text-white/70 mt-2">El último registro ha sido eliminado.</p>
@@ -34,12 +37,12 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
         const isLastScanIncident = !!lastScan.isIncident;
 
         return (
-            <div className="animate-in zoom-in-95 duration-150 w-full max-w-2xl flex flex-col items-center">
+            <div className="animate-in zoom-in-95 duration-100 w-full max-w-2xl flex flex-col items-center" style={{ willChange: 'transform, opacity' }}>
                 {isUnknown ? (
                     /* UNKNOWN PRODUCT STATE */
                     <div className="bg-amber-500/90 text-black p-8 rounded-3xl shadow-2xl border-4 border-amber-300 w-full">
                         <div className="flex flex-col items-center gap-4 mb-6">
-                            <AlertTriangle className="w-20 h-20 animate-pulse" />
+                            <AlertTriangle className={`w-20 h-20 ${lowPerf ? '' : 'animate-pulse'}`} />
                             <h2 className="text-3xl font-black uppercase tracking-tight">Producto Desconocido</h2>
                         </div>
                         <div className="font-mono text-3xl font-bold mb-8 bg-black/10 py-2 rounded-xl">{lastScan.barcode}</div>
@@ -54,7 +57,7 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
                     /* SUCCESS SCAN STATE */
                     <>
                         {/* Product Name */}
-                        <h1 className="text-3xl md:text-5xl font-black leading-tight mb-4 text-white drop-shadow-md break-words line-clamp-3">
+                        <h1 className={`text-3xl md:text-5xl font-black leading-tight mb-4 text-white break-words line-clamp-3 ${lowPerf ? '' : 'drop-shadow-md'}`}>
                             {activeProductStats.name}
                         </h1>
                         
@@ -82,7 +85,7 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
                         {/* QUANTITY DISPLAY (HERO) */}
                         <div className="flex flex-col items-center">
                             <div className="text-[10px] md:text-xs font-bold uppercase tracking-[0.3em] text-white/50 mb-1">Total Acumulado</div>
-                            <div className="text-[7rem] md:text-[9rem] leading-none font-black tracking-tighter text-white drop-shadow-2xl font-mono">
+                            <div className={`text-[7rem] md:text-[9rem] leading-none font-black tracking-tighter text-white font-mono ${lowPerf ? '' : 'drop-shadow-2xl'}`}>
                                 {activeProductStats.totalQty}
                             </div>
                         </div>
@@ -94,7 +97,7 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
 
     /* IDLE / READY STATE */
     return (
-        <div className="flex flex-col items-center opacity-20">
+        <div className="flex flex-col items-center opacity-20" style={{ willChange: 'opacity' }}>
             <Zap className="w-32 h-32 mb-6" />
             <h2 className="text-4xl font-black tracking-widest uppercase">Listo</h2>
             <p className="mt-2 text-sm font-mono">Esperando Escáner...</p>

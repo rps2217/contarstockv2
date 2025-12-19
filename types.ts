@@ -63,14 +63,15 @@ export interface AppSettings {
   theme: Theme;
   soundEnabled: boolean;
   hapticsEnabled: boolean;
-  ttsEnabled: boolean; // NEW: Text to Speech enabled
-  ttsMode: 'product' | 'count'; // NEW: Voice Mode (Read Name vs Count Streak)
-  speedometerEnabled: boolean; // NEW: Show scans per minute
-  controlTowerEnabled: boolean; // NEW: Show Dashboard Widgets
+  ttsEnabled: boolean; 
+  ttsMode: 'product' | 'count'; 
+  speedometerEnabled: boolean; 
+  controlTowerEnabled: boolean; 
   confirmDelete: boolean;
-  autoRegisterUnknown: boolean; // NEW: Auto-register unknown products
+  autoRegisterUnknown: boolean; 
+  lowPerformanceMode: boolean; // NEW: High efficiency mode for low-end devices
   appSheetConfig?: AppSheetConfig;
-  mobileNavConfig?: ViewState[]; // NEW: Customizable Mobile Navigation
+  mobileNavConfig?: ViewState[]; 
 }
 
 export interface SyncJob {
@@ -83,11 +84,9 @@ export interface SyncJob {
   lastError?: string;
 }
 
-// --- CONCILIATOR / DETECTIVE TYPES ---
-
 export interface ExpectedOrder {
   id: string;
-  internalId: string; // The "Mystery Number" from the Excel
+  internalId: string; 
   items: { barcode: string; name: string; expectedQty: number }[];
   totalExpectedUnits: number;
   totalExpectedSKUs: number;
@@ -104,19 +103,17 @@ export interface AliasSuggestion {
 
 export interface MatchResult {
   expectedOrder: ExpectedOrder;
-  matchScore: number; // 0-100%
+  matchScore: number; 
   status: 'exact' | 'partial' | 'mismatch';
   details: {
     barcode: string;
     name: string;
     physicalQty: number;
     expectedQty: number;
-    difference: number; // physical - expected
+    difference: number; 
   }[];
-  potentialAliases: AliasSuggestion[]; // New: Suggestions based on quantity matching
+  potentialAliases: AliasSuggestion[]; 
 }
-
-// --- FILE SYSTEM TYPES ---
 
 export interface FileNode {
   name: string;
