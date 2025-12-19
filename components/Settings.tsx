@@ -5,7 +5,7 @@ import {
   Monitor, AlertTriangle, ArrowLeft, Cloud, Key, Database, Lock, Check, 
   Eye, Shield, FileText, Package, AlertOctagon, Activity, CheckCircle, 
   XCircle, Share2, Download, QrCode, Copy, Save, Upload, RefreshCw, 
-  Loader2, Speech, Hash, Type, Gauge, BarChart3, Smartphone, 
+  Loader2, Hash, Type, Gauge, BarChart3, Smartphone, 
   LayoutTemplate, Camera, Stethoscope, Trash2, HardDrive, Terminal, 
   Wind, Home, History, Layers, Container, Fingerprint, RotateCcw, LifeBuoy 
 } from 'lucide-react';
@@ -273,7 +273,7 @@ export const Settings: React.FC = () => {
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
                             <div className={`p-2 rounded-lg ${settings.ttsEnabled ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-400'}`}>
-                                <Speech className="w-5 h-5" />
+                                <Volume2 className="w-5 h-5" />
                             </div>
                             <div>
                                 <div className="font-bold text-slate-900">Asistente de Voz</div>
@@ -593,6 +593,15 @@ export const Settings: React.FC = () => {
                 </button>
             </div>
         </section>
+
+        <div className="pt-6">
+            <button 
+                onClick={handleHardReset}
+                className="w-full py-4 text-slate-400 hover:text-blue-500 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-colors border-t border-slate-100"
+            >
+                <RefreshCw className="w-3 h-3" /> Forzar Actualización del Sistema
+            </button>
+        </div>
       </div>
 
       {showSystemLogs && (
