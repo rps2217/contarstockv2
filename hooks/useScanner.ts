@@ -34,6 +34,13 @@ export const useScanner = (
     const [isIdle, setIsIdle] = useState(false);
     const idleTimerRef = useRef<any>(null);
 
+    // --- OPTIMISTIC UI STATE (PERFORMANCE FIX) ---
+    // Estos estados se actualizan instantáneamente antes de que el disco responda
+    const [optimisticActiveQty, setOptimisticActiveQty] = useState(0);
+    const [optimisticTotalQty, setOptimisticTotalQty] = useState(0);
+    const [optimisticUniqueSkus, setOptimisticUniqueSkus] = useState(0);
+    const lastOptimisticBarcode = useRef<string>('');
+
     // --- REFS ---
     const stateRef = useRef({
         showConfirmModal,
@@ -65,7 +72,6 @@ export const useScanner = (
     const resetIdleTimer = useCallback(() => {
         setIsIdle(false);
         if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-        // 5 Minutos de inactividad para difuminar datos sensibles
         idleTimerRef.current = setTimeout(() => setIsIdle(true), 300000);
     }, []);
 
@@ -114,10 +120,25 @@ export const useScanner = (
         return { totalQty, name: product?.name || 'Producto Desconocido', isUnknown: !product };
     }, [lastScan], { totalQty: 0, name: '', isUnknown: false });
 
+    // --- RECONCILIATION EFFECT ---
+    // Cuando la base de datos se actualiza definitivamente, ajustamos los contadores optimistas
+    useEffect(() => {
+        if (activeProductStats) {
+            setOptimisticActiveQty(activeProductStats.totalQty);
+        }
+    }, [activeProductStats.totalQty, lastScan?.barcode]);
+
     const sessionStats = useLiveQuery(async () => {
         const currentSession = await db.sessions.get(session.id);
         return { totalQty: currentSession?.totalUnits || 0, uniqueSkus: currentSession?.totalSKUs || 0 };
     }, [session.id], { totalQty: 0, uniqueSkus: 0 });
+
+    useEffect(() => {
+        if (sessionStats) {
+            setOptimisticTotalQty(sessionStats.totalQty);
+            setOptimisticUniqueSkus(sessionStats.uniqueSkus);
+        }
+    }, [sessionStats.totalQty, sessionStats.uniqueSkus]);
 
     const visibleBarcodes = useMemo(() => recentScans ? Array.from(new Set(recentScans.map(s => s.barcode))) : [], [recentScans]);
     
@@ -149,15 +170,28 @@ export const useScanner = (
         try {
             const qtyToAdd = multiplier > 0 ? multiplier : 1;
             
+            // --- OPTIMISTIC UPDATE (INSTANT UI) ---
+            if (code === lastOptimisticBarcode.current) {
+                setOptimisticActiveQty(prev => prev + qtyToAdd);
+            } else {
+                // Si es un producto nuevo, reseteamos a qtyToAdd
+                // La consulta de la DB (activeProductStats) lo ajustará al valor real en ms
+                setOptimisticActiveQty(qtyToAdd);
+                lastOptimisticBarcode.current = code;
+            }
+            setOptimisticTotalQty(prev => prev + qtyToAdd);
+            
             if (code === streakRef.current.barcode) {
                 SoundFX.play('increment');
             } else {
                 SoundFX.play('success');
             }
 
+            // Guardado en segundo plano (Buffer)
             const newScan = await sessionService.addScan(session.id, code, qtyToAdd, mm, yyyy);
             setLastScanId(newScan.id);
             setFeedback('success');
+            
             if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
             feedbackTimer.current = setTimeout(() => setFeedback('idle'), 500);
 
@@ -337,7 +371,11 @@ export const useScanner = (
             pendingProductName,
             lastScanId,
             isWindowFocused,
-            isIdle // Pass idle state to UI
+            isIdle,
+            // Valores optimistas para UI de alto rendimiento
+            optimisticActiveQty,
+            optimisticTotalQty,
+            optimisticUniqueSkus
         },
         data: { sessionStats, activeProductStats, lastScan, recentScans },
         actions: {

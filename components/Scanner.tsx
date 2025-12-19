@@ -102,7 +102,8 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
       <ScannerFeedbackLayer 
         feedback={state.feedback} 
         isIncident={!!data.lastScan?.isIncident}
-        isWindowFocused={state.isWindowFocused} 
+        isWindowFocused={state.isWindowFocused}
+        isIdle={state.isIdle}
       />
 
       {/* 2. HEADER */}
@@ -123,7 +124,10 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
             <div className="flex-1 flex flex-col items-center justify-center text-center w-full max-w-3xl">
                 <ScannerHero 
                     lastScan={data.lastScan}
-                    activeProductStats={data.activeProductStats}
+                    activeProductStats={{
+                        ...data.activeProductStats,
+                        totalQty: state.optimisticActiveQty // USAR VALOR OPTIMISTA PARA CERO LATENCIA
+                    }}
                     feedback={state.feedback}
                     onRegisterPending={actions.handleRegisterPending}
                     onToggleIncident={actions.handleToggleIncident}
@@ -146,7 +150,10 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
             {/* Footer Controls */}
             <div className="w-full max-w-md">
                 <ScannerControls 
-                    sessionStats={data.sessionStats}
+                    sessionStats={{
+                        totalQty: state.optimisticTotalQty, // USAR VALOR OPTIMISTA
+                        uniqueSkus: state.optimisticUniqueSkus // USAR VALOR OPTIMISTA
+                    }}
                     multiplier={state.multiplier}
                     scansPerMinute={scansPerMinute}
                     showSpeedometer={settings.speedometerEnabled}
