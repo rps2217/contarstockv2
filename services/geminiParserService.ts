@@ -1,12 +1,6 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { ExpectedItem } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
-
-/**
- * Convierte un File a base64
- */
 const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -22,9 +16,11 @@ const fileToBase64 = (file: File): Promise<string> => {
 export const parseOrderDocument = async (files: File[]): Promise<ExpectedItem[]> => {
     if (files.length === 0) return [];
 
+    // Instantiate inside the call to ensure fresh API key context if needed
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+
     try {
         const parts: any[] = [];
-        
         for (const file of files) {
             const base64 = await fileToBase64(file);
             parts.push({
@@ -36,16 +32,7 @@ export const parseOrderDocument = async (files: File[]): Promise<ExpectedItem[]>
         }
 
         parts.push({
-            text: `Analiza estos documentos de orden de compra/recepción. 
-            Extrae la tabla de productos y devuelve ÚNICAMENTE un JSON array de objetos con las propiedades:
-            - barcode: (string) código de barras o SKU.
-            - name: (string) descripción del producto.
-            - expectedQty: (number) cantidad solicitada/pendiente.
-            
-            Reglas:
-            - Si el código tiene letras, mantenlas.
-            - Limpia espacios innecesarios.
-            - No devuelvas explicaciones, solo el JSON puro.`
+            text: `Analiza estos documentos de orden de compra. Extrae la tabla de productos y devuelve un JSON array de objetos: barcode (string), name (string), expectedQty (number). ÚNICAMENTE devuelve el JSON.`
         });
 
         const response = await ai.models.generateContent({
@@ -69,11 +56,10 @@ export const parseOrderDocument = async (files: File[]): Promise<ExpectedItem[]>
         });
 
         const text = response.text;
-        if (!text) throw new Error("Gemini no devolvió resultados.");
-        
+        if (!text) throw new Error("Sin respuesta del modelo.");
         return JSON.parse(text) as ExpectedItem[];
     } catch (error: any) {
-        console.error("Gemini Parsing Error:", error);
-        throw new Error("No se pudo procesar el documento: " + error.message);
+        console.error("Gemini Error:", error);
+        throw new Error("Error al procesar: " + error.message);
     }
 };

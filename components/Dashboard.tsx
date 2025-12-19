@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Database, ScanLine, Settings, Box, Layers, Fingerprint, Container, Cloud } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
@@ -7,10 +7,13 @@ import { useAppStore } from '../store/useAppStore';
 import { useNavigate } from 'react-router-dom';
 import { StatsSection } from './dashboard/StatsSection';
 import { ActionCard } from './dashboard/ActionCard';
+import { TrendsChart } from './dashboard/TrendsChart';
+import { getHourlyProductivity, ProductivityPoint } from '../services/statsService';
 
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const { settings } = useAppStore();
+  const [trendData, setTrendData] = useState<ProductivityPoint[]>([]);
 
   const dailyStats = useLiveQuery(async () => {
       const date = new Date();
@@ -22,6 +25,16 @@ export const Dashboard: React.FC = () => {
       const pendingSync = await db.scans.where('synced').equals(0).count();
       return { bultos, units, pendingSync };
   }, [], { bultos: 0, units: 0, pendingSync: 0 });
+
+  useEffect(() => {
+      const loadTrends = async () => {
+          const data = await getHourlyProductivity(1);
+          setTrendData(data);
+      };
+      loadTrends();
+      const interval = setInterval(loadTrends, 300000); // Actualizar cada 5 min
+      return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="w-full max-w-7xl mx-auto pb-32 px-4 md:px-8 animate-in fade-in duration-500">
@@ -40,7 +53,16 @@ export const Dashboard: React.FC = () => {
         </button>
       </div>
 
-      {settings.controlTowerEnabled && <StatsSection stats={dailyStats} />}
+      {settings.controlTowerEnabled && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+              <div className="lg:col-span-2">
+                  <StatsSection stats={dailyStats} />
+              </div>
+              <div className="lg:col-span-1">
+                  <TrendsChart data={trendData} />
+              </div>
+          </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6 mb-8">
         <div className="md:col-span-2 md:row-span-2">
