@@ -1,6 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Volume2, VolumeX, Vibrate, Zap, Moon, Sun, Monitor, AlertTriangle, ArrowLeft, Cloud, Key, Database, Lock, Check, Eye, Shield, FileText, Package, AlertOctagon, Activity, CheckCircle, XCircle, Share2, Download, QrCode, Copy, Save, Upload, RefreshCw, Loader2, Speech, Hash, Type, Gauge, BarChart3, Smartphone, LayoutTemplate, Camera, Stethoscope, Trash2, HardDrive, Terminal, Wind, Home, History, Layers, Container, Fingerprint, RotateCcw, LifeBuoy } from 'lucide-react';
+import { 
+  Settings as SettingsIcon, Volume2, VolumeX, Vibrate, Zap, Moon, Sun, 
+  Monitor, AlertTriangle, ArrowLeft, Cloud, Key, Database, Lock, Check, 
+  Eye, Shield, FileText, Package, AlertOctagon, Activity, CheckCircle, 
+  XCircle, Share2, Download, QrCode, Copy, Save, Upload, RefreshCw, 
+  Loader2, Speech, Hash, Type, Gauge, BarChart3, Smartphone, 
+  LayoutTemplate, Camera, Stethoscope, Trash2, HardDrive, Terminal, 
+  Wind, Home, History, Layers, Container, Fingerprint, RotateCcw, LifeBuoy 
+} from 'lucide-react';
 import * as sessionService from '../services/sessionService'; 
 import * as settingsService from '../services/settings';
 import * as maintenanceService from '../services/maintenance';
@@ -249,22 +257,6 @@ export const Settings: React.FC = () => {
                     </button>
                 </div>
 
-                {/* AUTO REGISTER UNKNOWN */}
-                <div className="flex items-center justify-between p-2">
-                    <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${settings.autoRegisterUnknown ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-400'}`}>
-                            <Zap className="w-5 h-5" />
-                        </div>
-                        <div>
-                            <div className="font-bold text-slate-900">Registro Rápido (Desconocidos)</div>
-                            <div className="text-xs text-slate-400">Guardar items nuevos sin preguntar</div>
-                        </div>
-                    </div>
-                    <button onClick={() => updateSetting('autoRegisterUnknown', !settings.autoRegisterUnknown)} className={`w-12 h-6 rounded-full transition-colors relative ${settings.autoRegisterUnknown ? 'bg-orange-500' : 'bg-slate-300'}`}>
-                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.autoRegisterUnknown ? 'left-7' : 'left-1'}`} />
-                    </button>
-                </div>
-
                 <div className="flex items-center justify-between p-2">
                     <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-lg ${settings.soundEnabled ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-400'}`}>
@@ -281,7 +273,7 @@ export const Settings: React.FC = () => {
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
                             <div className={`p-2 rounded-lg ${settings.ttsEnabled ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-400'}`}>
-                                <LifeBuoy className="w-5 h-5 text-purple-600" />
+                                <Speech className="w-5 h-5" />
                             </div>
                             <div>
                                 <div className="font-bold text-slate-900">Asistente de Voz</div>
@@ -320,7 +312,7 @@ export const Settings: React.FC = () => {
                         </div>
                         <div>
                             <div className="font-bold text-slate-900">Torre de Control</div>
-                            <div className="text-xs text-slate-400">Mostrar métricas en inicio</div>
+                            <div className="text-xs text-slate-400">Métricas en inicio</div>
                         </div>
                     </div>
                     <button onClick={() => updateSetting('controlTowerEnabled', !settings.controlTowerEnabled)} className={`w-12 h-6 rounded-full transition-colors relative ${settings.controlTowerEnabled ? 'bg-indigo-500' : 'bg-slate-300'}`}>
@@ -335,7 +327,7 @@ export const Settings: React.FC = () => {
                         </div>
                         <div>
                             <div className="font-bold text-slate-900">Velocímetro</div>
-                            <div className="text-xs text-slate-400">Mostrar items por minuto</div>
+                            <div className="text-xs text-slate-400">Items por minuto</div>
                         </div>
                     </div>
                     <button onClick={() => updateSetting('speedometerEnabled', !settings.speedometerEnabled)} className={`w-12 h-6 rounded-full transition-colors relative ${settings.speedometerEnabled ? 'bg-blue-500' : 'bg-slate-300'}`}>
@@ -398,6 +390,42 @@ export const Settings: React.FC = () => {
             </div>
         </section>
 
+        {/* SUPPORT AND RECOVERY */}
+        <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 animate-in slide-in-from-bottom-2">
+            <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <LifeBuoy className="w-5 h-5 text-blue-600" /> Soporte y Recuperación
+            </h2>
+            <p className="text-xs text-slate-500 mb-6">Opciones para refrescar la aplicación en caso de comportamientos inesperados.</p>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <button 
+                    onClick={handleSoftReset}
+                    className="flex items-center gap-4 p-4 rounded-xl border-2 border-slate-100 hover:border-blue-200 hover:bg-blue-50 transition-all text-left group"
+                >
+                    <div className="p-3 bg-white rounded-lg shadow-sm group-hover:scale-110 transition-transform">
+                        <RefreshCw className="w-6 h-6 text-blue-500" />
+                    </div>
+                    <div>
+                        <div className="font-bold text-slate-900 text-sm">Reinicio Suave</div>
+                        <div className="text-[10px] text-slate-400">Refrescar interfaz y memoria</div>
+                    </div>
+                </button>
+
+                <button 
+                    onClick={handleHardReset}
+                    className="flex items-center gap-4 p-4 rounded-xl border-2 border-slate-100 hover:border-red-200 hover:bg-red-50 transition-all text-left group"
+                >
+                    <div className="p-3 bg-white rounded-lg shadow-sm group-hover:scale-110 transition-transform">
+                        <RotateCcw className="w-6 h-6 text-red-500" />
+                    </div>
+                    <div>
+                        <div className="font-bold text-slate-900 text-sm">Reinicio Profundo</div>
+                        <div className="text-[10px] text-slate-400">Limpiar caché y forzar versión</div>
+                    </div>
+                </button>
+            </div>
+        </section>
+
         {/* SYSTEM DIAGNOSTICS */}
         <section className={`rounded-2xl border p-6 transition-all ${healthReport?.status === 'warning' || healthReport?.status === 'critical' ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-200 shadow-sm'}`}>
             <div className="flex justify-between items-start mb-4">
@@ -454,42 +482,6 @@ export const Settings: React.FC = () => {
                     )}
                 </div>
             )}
-        </section>
-
-        {/* SUPPORT AND RECOVERY */}
-        <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 animate-in slide-in-from-bottom-2">
-            <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <LifeBuoy className="w-5 h-5 text-blue-600" /> Soporte y Recuperación
-            </h2>
-            <p className="text-xs text-slate-500 mb-6">Opciones para refrescar la aplicación en caso de comportamientos inesperados.</p>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <button 
-                    onClick={handleSoftReset}
-                    className="flex items-center gap-4 p-4 rounded-xl border-2 border-slate-100 hover:border-blue-200 hover:bg-blue-50 transition-all text-left group"
-                >
-                    <div className="p-3 bg-white rounded-lg shadow-sm group-hover:scale-110 transition-transform">
-                        <RefreshCw className="w-6 h-6 text-blue-500" />
-                    </div>
-                    <div>
-                        <div className="font-bold text-slate-900 text-sm">Reinicio Suave</div>
-                        <div className="text-[10px] text-slate-400">Refrescar interfaz y memoria</div>
-                    </div>
-                </button>
-
-                <button 
-                    onClick={handleHardReset}
-                    className="flex items-center gap-4 p-4 rounded-xl border-2 border-slate-100 hover:border-red-200 hover:bg-red-50 transition-all text-left group"
-                >
-                    <div className="p-3 bg-white rounded-lg shadow-sm group-hover:scale-110 transition-transform">
-                        <RotateCcw className="w-6 h-6 text-red-500" />
-                    </div>
-                    <div>
-                        <div className="font-bold text-slate-900 text-sm">Reinicio Profundo</div>
-                        <div className="text-[10px] text-slate-400">Limpiar caché y forzar versión</div>
-                    </div>
-                </button>
-            </div>
         </section>
 
         {/* CLOUD CONFIGURATION */}
@@ -601,15 +593,6 @@ export const Settings: React.FC = () => {
                 </button>
             </div>
         </section>
-
-        <div className="pt-6">
-            <button 
-                onClick={handleHardReset}
-                className="w-full py-4 text-slate-400 hover:text-blue-500 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-colors border-t border-slate-100"
-            >
-                <RefreshCw className="w-3 h-3" /> Forzar Actualización del Sistema
-            </button>
-        </div>
       </div>
 
       {showSystemLogs && (
