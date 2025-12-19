@@ -7,7 +7,7 @@ import {
   XCircle, Share2, Download, QrCode, Copy, Save, Upload, RefreshCw, 
   Loader2, Hash, Type, Gauge, BarChart3, Smartphone, 
   LayoutTemplate, Camera, Stethoscope, Trash2, HardDrive, Terminal, 
-  Wind, Home, History, Layers, Container, Fingerprint, RotateCcw, LifeBuoy 
+  Wind, Home, History, Layers, Container, Fingerprint, RotateCcw, LifeBuoy, Mic
 } from 'lucide-react';
 import * as sessionService from '../services/sessionService'; 
 import * as settingsService from '../services/settings';
@@ -241,22 +241,23 @@ export const Settings: React.FC = () => {
             </h2>
             <div className="space-y-4">
                 
-                {/* LOW PERFORMANCE MODE */}
+                {/* AUTO REGISTER UNKNOWN */}
                 <div className="flex items-center justify-between p-2">
                     <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${settings.lowPerformanceMode ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400'}`}>
-                            <Wind className="w-5 h-5" />
+                        <div className={`p-2 rounded-lg ${settings.autoRegisterUnknown ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-400'}`}>
+                            <Zap className="w-5 h-5" />
                         </div>
                         <div>
-                            <div className="font-bold text-slate-900">Modo Alto Rendimiento</div>
-                            <div className="text-xs text-slate-400">Reduce animaciones y efectos para mayor fluidez</div>
+                            <div className="font-bold text-slate-900">Registro Rápido (Desconocidos)</div>
+                            <div className="text-xs text-slate-400">Guardar items nuevos sin preguntar</div>
                         </div>
                     </div>
-                    <button onClick={() => updateSetting('lowPerformanceMode', !settings.lowPerformanceMode)} className={`w-12 h-6 rounded-full transition-colors relative ${settings.lowPerformanceMode ? 'bg-blue-500' : 'bg-slate-300'}`}>
-                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.lowPerformanceMode ? 'left-7' : 'left-1'}`} />
+                    <button onClick={() => updateSetting('autoRegisterUnknown', !settings.autoRegisterUnknown)} className={`w-12 h-6 rounded-full transition-colors relative ${settings.autoRegisterUnknown ? 'bg-orange-500' : 'bg-slate-300'}`}>
+                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.autoRegisterUnknown ? 'left-7' : 'left-1'}`} />
                     </button>
                 </div>
 
+                {/* SOUND */}
                 <div className="flex items-center justify-between p-2">
                     <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-lg ${settings.soundEnabled ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-400'}`}>
@@ -269,11 +270,12 @@ export const Settings: React.FC = () => {
                     </button>
                 </div>
                 
+                {/* TTS ASISTANT */}
                 <div className="border border-slate-100 rounded-xl p-3">
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
                             <div className={`p-2 rounded-lg ${settings.ttsEnabled ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-400'}`}>
-                                <Volume2 className="w-5 h-5" />
+                                <Mic className="w-5 h-5" />
                             </div>
                             <div>
                                 <div className="font-bold text-slate-900">Asistente de Voz</div>
@@ -305,6 +307,7 @@ export const Settings: React.FC = () => {
                     )}
                 </div>
 
+                {/* CONTROL TOWER */}
                 <div className="flex items-center justify-between p-2">
                     <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-lg ${settings.controlTowerEnabled ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-400'}`}>
@@ -320,6 +323,7 @@ export const Settings: React.FC = () => {
                     </button>
                 </div>
 
+                {/* SPEEDOMETER */}
                 <div className="flex items-center justify-between p-2">
                     <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-lg ${settings.speedometerEnabled ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400'}`}>
@@ -335,6 +339,7 @@ export const Settings: React.FC = () => {
                     </button>
                 </div>
 
+                {/* CONFIRM DELETE */}
                 <div className="flex items-center justify-between p-2">
                     <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-lg ${settings.confirmDelete ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
@@ -346,6 +351,58 @@ export const Settings: React.FC = () => {
                         <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.confirmDelete ? 'left-7' : 'left-1'}`} />
                     </button>
                 </div>
+
+                {/* LOW PERFORMANCE MODE */}
+                <div className="flex items-center justify-between p-2">
+                    <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${settings.lowPerformanceMode ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400'}`}>
+                            <Wind className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <div className="font-bold text-slate-900">Modo Alto Rendimiento</div>
+                            <div className="text-xs text-slate-400">Reduce animaciones y efectos</div>
+                        </div>
+                    </div>
+                    <button onClick={() => updateSetting('lowPerformanceMode', !settings.lowPerformanceMode)} className={`w-12 h-6 rounded-full transition-colors relative ${settings.lowPerformanceMode ? 'bg-blue-500' : 'bg-slate-300'}`}>
+                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.lowPerformanceMode ? 'left-7' : 'left-1'}`} />
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        {/* SUPPORT AND RECOVERY */}
+        <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 animate-in slide-in-from-bottom-2">
+            <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <LifeBuoy className="w-5 h-5 text-blue-600" /> Soporte y Recuperación
+            </h2>
+            <p className="text-xs text-slate-500 mb-6">Opciones para refrescar la aplicación en caso de comportamientos inesperados.</p>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <button 
+                    onClick={handleSoftReset}
+                    className="flex items-center gap-4 p-4 rounded-xl border-2 border-slate-100 hover:border-blue-200 hover:bg-blue-50 transition-all text-left group"
+                >
+                    <div className="p-3 bg-white rounded-lg shadow-sm group-hover:scale-110 transition-transform">
+                        <RefreshCw className="w-6 h-6 text-blue-500" />
+                    </div>
+                    <div>
+                        <div className="font-bold text-slate-900 text-sm">Reinicio Suave</div>
+                        <div className="text-[10px] text-slate-400">Refrescar interfaz y memoria</div>
+                    </div>
+                </button>
+
+                <button 
+                    onClick={handleHardReset}
+                    className="flex items-center gap-4 p-4 rounded-xl border-2 border-slate-100 hover:border-red-200 hover:bg-red-50 transition-all text-left group"
+                >
+                    <div className="p-3 bg-white rounded-lg shadow-sm group-hover:scale-110 transition-transform">
+                        <RotateCcw className="w-6 h-6 text-red-500" />
+                    </div>
+                    <div>
+                        <div className="font-bold text-slate-900 text-sm">Reinicio Profundo</div>
+                        <div className="text-[10px] text-slate-400">Limpiar caché y forzar versión</div>
+                    </div>
+                </button>
             </div>
         </section>
 
@@ -387,42 +444,6 @@ export const Settings: React.FC = () => {
                         <div key={i} className={`w-3 h-3 rounded-full ${i < (settings.mobileNavConfig?.length || 0) ? 'bg-indigo-500' : 'bg-slate-200'}`} />
                     ))}
                 </div>
-            </div>
-        </section>
-
-        {/* SUPPORT AND RECOVERY */}
-        <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 animate-in slide-in-from-bottom-2">
-            <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <LifeBuoy className="w-5 h-5 text-blue-600" /> Soporte y Recuperación
-            </h2>
-            <p className="text-xs text-slate-500 mb-6">Opciones para refrescar la aplicación en caso de comportamientos inesperados.</p>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <button 
-                    onClick={handleSoftReset}
-                    className="flex items-center gap-4 p-4 rounded-xl border-2 border-slate-100 hover:border-blue-200 hover:bg-blue-50 transition-all text-left group"
-                >
-                    <div className="p-3 bg-white rounded-lg shadow-sm group-hover:scale-110 transition-transform">
-                        <RefreshCw className="w-6 h-6 text-blue-500" />
-                    </div>
-                    <div>
-                        <div className="font-bold text-slate-900 text-sm">Reinicio Suave</div>
-                        <div className="text-[10px] text-slate-400">Refrescar interfaz y memoria</div>
-                    </div>
-                </button>
-
-                <button 
-                    onClick={handleHardReset}
-                    className="flex items-center gap-4 p-4 rounded-xl border-2 border-slate-100 hover:border-red-200 hover:bg-red-50 transition-all text-left group"
-                >
-                    <div className="p-3 bg-white rounded-lg shadow-sm group-hover:scale-110 transition-transform">
-                        <RotateCcw className="w-6 h-6 text-red-500" />
-                    </div>
-                    <div>
-                        <div className="font-bold text-slate-900 text-sm">Reinicio Profundo</div>
-                        <div className="text-[10px] text-slate-400">Limpiar caché y forzar versión</div>
-                    </div>
-                </button>
             </div>
         </section>
 
