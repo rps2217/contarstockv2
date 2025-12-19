@@ -1,3 +1,4 @@
+
 import { db } from '../db';
 import { logger } from './logger';
 
@@ -6,20 +7,16 @@ export interface HealthReport {
     orphanScans: number;
     stuckSyncJobs: number;
     corruptProducts: number;
-    storageUsage: number; // in bytes
+    storageUsage: number; 
     totalRecords: number;
 }
 
 /**
- * Analiza la integridad referencial de la base de datos local.
- * Detecta registros sin padre, colas atascadas y datos corruptos.
+ * Analiza la integridad referencial y el estado físico de la base de datos.
  */
 export const checkSystemHealth = async (): Promise<HealthReport> => {
-    // 1. Get all valid Session IDs
     const sessionIds = new Set(await db.sessions.toCollection().primaryKeys());
     
-    // 2. Count orphans (Scans pointing to non-existent sessions)
-    // We iterate keys for speed instead of loading objects
     let orphanScans = 0;
     await db.scans.each(scan => {
         if (!sessionIds.has(scan.sessionId)) {
@@ -27,30 +24,25 @@ export const checkSystemHealth = async (): Promise<HealthReport> => {
         }
     });
 
-    // 3. Check Sync Queue for dead jobs
     const stuckSyncJobs = await db.syncQueue
         .where('retryCount').above(10)
         .count();
 
-    // 4. Check for Corrupt Products (Empty barcode or name)
     const corruptProducts = await db.products
         .filter(p => !p.barcode || !p.name)
         .count();
 
-    // 5. Storage Estimate
     let storageUsage = 0;
     if (navigator.storage && navigator.storage.estimate) {
         const estimate = await navigator.storage.estimate();
         storageUsage = estimate.usage || 0;
     }
 
-    // 6. Total Volume
     const totalRecords = (await db.scans.count()) + (await db.sessions.count());
 
-    // Determine Status
     let status: 'healthy' | 'warning' | 'critical' = 'healthy';
     if (orphanScans > 0 || stuckSyncJobs > 0) status = 'warning';
-    if (corruptProducts > 0) status = 'critical';
+    if (corruptProducts > 0 || storageUsage > 100 * 1024 * 1024) status = 'critical';
 
     return {
         status,
@@ -63,13 +55,13 @@ export const checkSystemHealth = async (): Promise<HealthReport> => {
 };
 
 /**
- * Ejecuta acciones correctivas sobre la base de datos.
+ * Ejecuta DEEP VACUUM: Purgado de huérfanos y compactación lógica.
  */
 export const repairSystem = async (): Promise<string[]> => {
     const logs: string[] = [];
     
     try {
-        // 1. Clean Orphans
+        // 1. Eliminar Huérfanos
         const sessionIds = new Set(await db.sessions.toCollection().primaryKeys());
         const orphansToDelete: string[] = [];
         await db.scans.each(scan => {
@@ -80,42 +72,33 @@ export const repairSystem = async (): Promise<string[]> => {
         
         if (orphansToDelete.length > 0) {
             await db.scans.bulkDelete(orphansToDelete);
-            const msg = `✅ Eliminados ${orphansToDelete.length} registros huérfanos.`;
-            logs.push(msg);
-            logger.warn('Maintenance', msg);
+            logs.push(`✅ Eliminados ${orphansToDelete.length} escaneos huérfanos.`);
         }
 
-        // 2. Clean Stuck Jobs
-        const stuckJobs = await db.syncQueue.where('retryCount').above(10).primaryKeys();
-        if (stuckJobs.length > 0) {
-            await db.syncQueue.bulkDelete(stuckJobs);
-            const msg = `✅ Limpiados ${stuckJobs.length} trabajos de sincronización fallidos.`;
-            logs.push(msg);
-            logger.warn('Maintenance', msg);
+        // 2. Limpieza de Logs Antiguos (Mantener solo últimos 500)
+        const totalLogs = await db.logs.count();
+        if (totalLogs > 500) {
+            const keysToDelete = await db.logs.orderBy('timestamp').limit(totalLogs - 500).primaryKeys();
+            await db.logs.bulkDelete(keysToDelete);
+            logs.push(`✅ Vacuum: Purgados ${keysToDelete.length} logs antiguos.`);
         }
 
-        // 3. Clean Corrupt Products
-        const corruptKeys = await db.products.filter(p => !p.barcode || !p.name).primaryKeys();
-        if (corruptKeys.length > 0) {
-            await db.products.bulkDelete(corruptKeys);
-            const msg = `✅ Eliminados ${corruptKeys.length} productos corruptos.`;
-            logs.push(msg);
-            logger.warn('Maintenance', msg);
+        // 3. Reset de Sincronizaciones Fallidas (Reintento forzado)
+        const stuckJobsCount = await db.syncQueue.where('retryCount').above(5).modify({ retryCount: 0 });
+        if (stuckJobsCount) {
+            logs.push(`✅ Re-encolados ${stuckJobsCount} trabajos de sincronización.`);
         }
 
         if (logs.length === 0) {
-            logs.push("✨ El sistema ya estaba optimizado. No se requirieron acciones.");
+            logs.push("✨ Sistema optimizado. No se requiere acción.");
         } else {
-            logger.success('Maintenance', 'Reparación del sistema ejecutada.', { actions: logs });
+            logger.success('Maintenance', 'Deep Vacuum completado.', { actions: logs });
         }
 
         return logs;
 
     } catch (e: any) {
-        console.error("Maintenance failed", e);
-        const err = `❌ Error crítico durante la reparación: ${e.message}`;
-        logs.push(err);
-        logger.error('Maintenance', 'Reparación fallida', e);
-        return logs;
+        logger.error('Maintenance', 'Fallo en reparación profunda', e);
+        return [`❌ Error: ${e.message}`];
     }
 };

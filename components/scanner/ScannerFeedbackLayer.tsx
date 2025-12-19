@@ -1,29 +1,42 @@
 
 import React, { memo } from 'react';
-import { Lock } from 'lucide-react';
+import { Lock, EyeOff } from 'lucide-react';
 
 interface ScannerFeedbackLayerProps {
     feedback: 'idle' | 'success' | 'error' | 'undo';
     isIncident?: boolean;
     isWindowFocused?: boolean;
+    isIdle?: boolean; // New prop
 }
 
-export const ScannerFeedbackLayer: React.FC<ScannerFeedbackLayerProps> = memo(({ feedback, isIncident, isWindowFocused = true }) => {
+export const ScannerFeedbackLayer: React.FC<ScannerFeedbackLayerProps> = memo(({ feedback, isIncident, isWindowFocused = true, isIdle = false }) => {
     
     // --- FOCUS GUARD OVERLAY ---
     if (!isWindowFocused) {
         return (
-            <div className="absolute inset-0 z-50 bg-slate-900/90 backdrop-blur-sm flex flex-col items-center justify-center text-center p-8 animate-in fade-in duration-200">
+            <div className="absolute inset-0 z-50 bg-slate-900/90 backdrop-blur-md flex flex-col items-center justify-center text-center p-8 animate-in fade-in duration-200">
                 <div className="bg-slate-800 p-6 rounded-full mb-6 border border-slate-700 shadow-2xl animate-pulse">
                     <Lock className="w-16 h-16 text-slate-400" />
                 </div>
                 <h2 className="text-3xl font-black text-white uppercase tracking-widest mb-2">Pausa Automática</h2>
                 <p className="text-slate-400 font-medium text-lg max-w-xs">
-                    La aplicación perdió el foco. Toque la pantalla para continuar escaneando.
+                    La aplicación perdió el foco. Toque la pantalla para continuar.
                 </p>
-                <div className="mt-8 text-xs text-slate-600 font-mono uppercase border border-slate-800 rounded px-2 py-1">
-                    Protection Mode Active
+            </div>
+        );
+    }
+
+    // --- IDLE PRIVACY BLUR ---
+    if (isIdle) {
+        return (
+            <div className="absolute inset-0 z-50 bg-slate-950/95 backdrop-blur-3xl flex flex-col items-center justify-center text-center p-8 animate-in fade-in zoom-in-105 duration-500">
+                <div className="w-24 h-24 bg-blue-600/20 rounded-full flex items-center justify-center mb-6 border border-blue-500/30">
+                    <EyeOff className="w-12 h-12 text-blue-400" />
                 </div>
+                <h2 className="text-2xl font-black text-white uppercase tracking-tighter mb-2">Modo Privacidad</h2>
+                <p className="text-slate-500 text-sm max-w-[240px]">
+                    Datos ocultos por inactividad. Presione cualquier tecla para restaurar.
+                </p>
             </div>
         );
     }
@@ -37,7 +50,6 @@ export const ScannerFeedbackLayer: React.FC<ScannerFeedbackLayerProps> = memo(({
         if (feedback === 'error') return 'bg-red-600 opacity-100';
         if (feedback === 'undo') return 'bg-purple-600 opacity-100';
         
-        // Idle states (Backgrounds)
         if (isIncident) return 'bg-amber-900 opacity-100'; 
         return 'bg-slate-950 opacity-100'; 
     };

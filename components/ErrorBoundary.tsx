@@ -1,5 +1,5 @@
 
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home, Terminal } from 'lucide-react';
 import { logger } from '../services/logger';
 
@@ -17,8 +17,8 @@ interface State {
  * Error Boundary component to catch runtime crashes and provide recovery options.
  * Must be a class component as per React specifications.
  */
-// Fix: Use Component directly to resolve TypeScript inheritance visibility issues
-export class ErrorBoundary extends Component<Props, State> {
+// Use React.Component explicitly to ensure inherited members like setState and props are correctly resolved by TypeScript
+export class ErrorBoundary extends React.Component<Props, State> {
   public state: State = {
     hasError: false,
     error: null,
@@ -48,7 +48,7 @@ export class ErrorBoundary extends Component<Props, State> {
         { stack: error.stack, componentStack: errorInfo.componentStack }
     ).catch(e => console.error("Failed to write crash log", e));
     
-    // Correctly using setState which is inherited from Component
+    // Using setState inherited from the React.Component base class
     this.setState({ errorInfo });
   }
 
@@ -112,7 +112,7 @@ export class ErrorBoundary extends Component<Props, State> {
       );
     }
 
-    // Accessing inherited props to render children
+    // Accessing inherited children property from the props object of the React.Component base class
     return this.props.children;
   }
 }
