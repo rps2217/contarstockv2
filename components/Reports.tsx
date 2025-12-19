@@ -1,5 +1,6 @@
+
 import React, { useState, useCallback } from 'react';
-import { FileText, Calendar, ChevronLeft, CheckCircle2, Layers, Plus, MoreVertical, Trash2, Truck, WifiOff, Cloud, Eraser, ShieldCheck, AlertTriangle, ExternalLink } from 'lucide-react';
+import { FileText, WifiOff, ExternalLink } from 'lucide-react';
 import { CountingSession } from '../types';
 import * as sessionService from '../services/sessionService'; 
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -9,81 +10,9 @@ import { SearchBar } from './SearchBar';
 import { FixedSizeList } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { ReportDetail } from './reports/ReportDetail';
+import { ReportsHeader } from './reports/ReportsHeader';
 import { useNavigate } from 'react-router-dom';
-
-// --- VIRTUALIZED ROW COMPONENT ---
-const SessionRow = ({ index, style, data }: { index: number; style: React.CSSProperties; data: { sessions: CountingSession[]; onSelect: (id: string) => void; activeMenuId: string | null; onMenuToggle: (e: any, id: string) => void; onDelete: (e: any, id: string) => void } }) => {
-    const session = data.sessions[index];
-    const { onSelect, activeMenuId, onMenuToggle, onDelete } = data;
-
-    let AuditIcon = null;
-    if (session.auditStatus === 'verified') {
-        AuditIcon = <ShieldCheck className="w-3 h-3 text-emerald-600" />;
-    } else if (session.auditStatus === 'warning') {
-        AuditIcon = <AlertTriangle className="w-3 h-3 text-amber-500" />;
-    }
-
-    return (
-        <div style={style} className="px-1 py-2">
-            <div className={`bg-white rounded-2xl shadow-sm border transition-shadow relative z-0 h-full flex flex-col ${session.lastSyncTimestamp ? 'border-green-200' : 'border-slate-200 hover:shadow-md'}`}>
-                <div className="p-4 flex-1">
-                    <div className="flex justify-between items-start mb-2">
-                        <div className="flex items-center gap-2 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
-                            <Calendar className="w-3 h-3" />
-                            {new Date(session.createdAt).toLocaleDateString()}
-                        </div>
-                        <div className="flex items-center gap-1">
-                            {session.auditStatus && (
-                                <div className={`p-1 rounded-full ${session.auditStatus === 'verified' ? 'bg-emerald-100' : 'bg-amber-100'}`} title="Auditado">
-                                    {AuditIcon}
-                                </div>
-                            )}
-                            {session.lastSyncTimestamp && (
-                                <div className="bg-green-100 text-green-700 p-1 rounded-full" title="Sincronizado con AppSheet">
-                                    <Cloud className="w-3 h-3" />
-                                </div>
-                            )}
-                            <div className="relative">
-                                <button 
-                                    type="button"
-                                    onClick={(e) => onMenuToggle(e, session.id)}
-                                    className="p-1.5 -mr-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100"
-                                >
-                                    <MoreVertical className="w-4 h-4" />
-                                </button>
-                                {activeMenuId === session.id && (
-                                    <>
-                                        <div className="fixed inset-0 z-40 bg-transparent" onClick={(e) => onMenuToggle(e, '')}></div>
-                                        <div className="absolute right-0 top-full mt-1 w-32 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden">
-                                            <button type="button" onClick={(e) => onDelete(e, session.id)} className="w-full text-left px-4 py-3 text-xs text-red-600 hover:bg-red-50 font-bold flex items-center gap-2">
-                                                <Trash2 className="w-3 h-3" /> Eliminar
-                                            </button>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                    <h3 className="text-base font-bold text-slate-900 mb-2 tracking-tight line-clamp-1 flex items-center gap-2">
-                        {session.erpOrder}
-                    </h3>
-                    <div className="flex items-center gap-2 mb-1">
-                        <Truck className="w-3 h-3 text-slate-400" />
-                        <span className="text-xs text-slate-600 truncate max-w-[200px]">
-                            {session.logisticsLabel}
-                        </span>
-                    </div>
-                </div>
-                <div className="bg-slate-50 px-4 py-2 border-t border-slate-100 flex items-center justify-between rounded-b-2xl">
-                    <div className="text-xs text-slate-700">Total: <span className="font-bold">{session.totalUnits || 0}</span></div>
-                    <button onClick={() => onSelect(session.id)} className="bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-sm">
-                        Ver
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-};
+import { SessionRow } from './reports/SessionRow'; // Extraído a un archivo nuevo para estabilidad
 
 export const Reports: React.FC = () => {
   const navigate = useNavigate();
@@ -95,151 +24,68 @@ export const Reports: React.FC = () => {
   
   const pendingSyncCount = useLiveQuery(() => db.scans.where('synced').equals(0).count(), [], 0);
 
-  const handleSearch = useCallback((query: string) => {
-      setSearchQuery(query);
-  }, []);
-
   const sessions = useLiveQuery(async () => {
     if (searchQuery) {
         const cleanQuery = searchQuery.trim();
-        return await db.sessions
-            .where('erpOrder').startsWithIgnoreCase(cleanQuery)
-            .or('logisticsLabel').startsWithIgnoreCase(cleanQuery)
-            .reverse()
-            .toArray();
+        return await db.sessions.where('erpOrder').startsWithIgnoreCase(cleanQuery).or('logisticsLabel').startsWithIgnoreCase(cleanQuery).reverse().toArray();
     } else {
-        return await db.sessions
-            .orderBy('createdAt')
-            .reverse()
-            .toArray();
+        return await db.sessions.orderBy('createdAt').reverse().toArray();
     }
   }, [searchQuery], []);
 
-  const handleSelectSession = (id: string) => {
-    setSelectedSessionId(id);
-  };
-
-  const handleMenuToggle = (e: React.MouseEvent, id: string) => {
-      e.stopPropagation(); 
-      setActiveMenuId(activeMenuId === id ? null : id);
-  };
+  const handleMenuToggle = (e: React.MouseEvent, id: string) => { e.stopPropagation(); setActiveMenuId(activeMenuId === id ? null : id); };
 
   const handleDeleteSession = async (e: React.MouseEvent, sessionId: string) => {
       e.stopPropagation();
-      e.preventDefault();
-      
-      if (window.confirm('¿Estás seguro de que deseas eliminar este historial de conteo permanentemente? Esta acción no se puede deshacer.')) {
+      if (window.confirm('¿Eliminar permanentemente?')) {
           await sessionService.deleteSession(sessionId); 
           setActiveMenuId(null);
       }
   };
 
   const handleCleanSynced = async () => {
-      if (!confirm("¿Desea eliminar del dispositivo los conteos que YA están respaldados en la nube?\n\nEsta acción liberará espacio pero mantendrá los datos pendientes de subida.")) return;
-      
+      if (!confirm("¿Eliminar del dispositivo bultos YA respaldados?")) return;
       setIsCleaning(true);
       try {
           const count = await sessionService.cleanSyncedSessions(); 
-          if (count > 0) {
-              alert(`Limpieza completada.\nSe eliminaron ${count} sesiones locales respaldadas.`);
-          } else {
-              alert("No hay sesiones sincronizadas para limpiar.");
-          }
-      } catch (err: any) {
-          alert(`Error durante la limpieza: ${err.message}`);
-      } finally {
-          setIsCleaning(false);
-      }
+          alert(count > 0 ? `Limpieza exitosa: ${count} bultos.` : "Nada para limpiar.");
+      } finally { setIsCleaning(false); }
   };
 
-  const handleSessionStart = (session: CountingSession) => {
-      // Redirect to the scanner view for this session
-      navigate(`/counting/${session.id}`);
-  };
+  if (selectedSessionId) return <ReportDetail sessionId={selectedSessionId} onBack={() => setSelectedSessionId(null)} />;
 
-  // --- ROUTING: DETAIL VIEW ---
-  if (selectedSessionId) {
-      return <ReportDetail sessionId={selectedSessionId} onBack={() => setSelectedSessionId(null)} />;
-  }
-
-  // --- ROUTING: LIST VIEW ---
   return (
         <div className="flex flex-col h-[calc(100vh-64px)] max-w-3xl mx-auto w-full px-4 pt-4">
-            <div className="flex-none">
-                <div className="flex items-center gap-2 mb-4">
-                    <button onClick={() => navigate('/dashboard')} className="p-2 hover:bg-slate-100 rounded-full text-slate-600 transition-colors">
-                        <ChevronLeft className="w-6 h-6" />
-                    </button>
-                    <div className="text-blue-600"><CheckCircle2 className="w-6 h-6" /></div>
-                    <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Historial</h1>
-                </div>
-                
-                <div className="mb-4">
-                    <SearchBar onSearch={handleSearch} placeholder="Buscar por Orden ERP o Etiqueta..." />
-                </div>
-
-                {/* ACTION BUTTONS */}
-                <div className="grid grid-cols-2 gap-2 mb-4">
-                    <button 
-                        onClick={handleCleanSynced} 
-                        disabled={isCleaning} 
-                        className="col-span-2 bg-slate-50 border border-slate-200 text-slate-600 font-bold py-2.5 rounded-xl hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 active:scale-95"
-                    >
-                        {isCleaning ? <div className="w-4 h-4 border-2 border-slate-600 border-t-transparent rounded-full animate-spin" /> : <Eraser className="w-4 h-4" />}
-                        Limpiar Sincronizados
-                    </button>
-                    <button onClick={() => navigate('/consolidated')} className="bg-white border border-slate-200 text-purple-700 font-bold py-2.5 rounded-xl hover:bg-purple-50 hover:border-purple-200 transition-colors flex items-center justify-center gap-2 shadow-sm active:scale-95">
-                        <Layers className="w-4 h-4" /> Consolidados
-                    </button>
-                    <button onClick={() => setIsStartModalOpen(true)} className="bg-blue-600 text-white font-bold py-2.5 rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 shadow-md shadow-blue-200 active:scale-95">
-                        <Plus className="w-5 h-5" /> Iniciar Conteo
-                    </button>
-                </div>
-
-                {/* SYNC QUEUE ALERT */}
-                {pendingSyncCount > 0 && (
-                    <button 
-                        onClick={() => navigate('/sync')}
-                        className="w-full mb-4 bg-orange-50 border border-orange-200 p-4 rounded-xl flex items-center justify-between shadow-sm animate-in slide-in-from-top-2 group hover:bg-orange-100 transition-colors"
-                    >
-                        <div className="flex items-center gap-3">
-                            <WifiOff className="w-5 h-5 text-orange-500" />
-                            <div className="text-left">
-                                <div className="text-sm font-bold text-orange-800">Sincronización Pendiente</div>
-                                <div className="text-xs text-orange-600">{pendingSyncCount} registros esperando subida</div>
-                            </div>
-                        </div>
-                        <div className="bg-white text-orange-700 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 group-hover:bg-orange-200">
-                            Ir a Nube <ExternalLink className="w-3 h-3" />
-                        </div>
-                    </button>
-                )}
-            </div>
+            <ReportsHeader 
+                isCleaning={isCleaning} 
+                onClean={handleCleanSynced} 
+                onOpenConsolidated={() => navigate('/consolidated')} 
+                onStartNew={() => setIsStartModalOpen(true)} 
+            />
             
-            {/* VIRTUALIZED LIST CONTAINER */}
+            <div className="mb-4">
+                <SearchBar onSearch={setSearchQuery} placeholder="Buscar por ERP o Etiqueta..." />
+            </div>
+
+            {pendingSyncCount > 0 && (
+                <button onClick={() => navigate('/sync')} className="w-full mb-4 bg-orange-50 border border-orange-200 p-4 rounded-xl flex items-center justify-between shadow-sm group hover:bg-orange-100 transition-colors">
+                    <div className="flex items-center gap-3">
+                        <WifiOff className="w-5 h-5 text-orange-500" />
+                        <div className="text-left"><div className="text-sm font-bold text-orange-800">Sync Pendiente</div><div className="text-xs text-orange-600">{pendingSyncCount} registros</div></div>
+                    </div>
+                    <div className="bg-white text-orange-700 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1">Subir <ExternalLink className="w-3 h-3" /></div>
+                </button>
+            )}
+
             <div className="flex-1 min-h-0 pb-20">
-                {!sessions || sessions.length === 0 ? (
-                    <div className="text-center py-12 bg-white rounded-3xl border border-slate-100 shadow-sm h-full flex flex-col justify-center items-center">
-                        <FileText className="w-12 h-12 mx-auto text-slate-300 mb-3" />
-                        <p className="text-slate-400 font-medium">No hay historial disponible.</p>
+                {(!sessions || sessions.length === 0) ? (
+                    <div className="text-center py-12 bg-white rounded-3xl border border-slate-100 h-full flex flex-col justify-center items-center">
+                        <FileText className="w-12 h-12 mx-auto text-slate-300 mb-3" /><p className="text-slate-400 font-medium">Vacío</p>
                     </div>
                 ) : (
                     <AutoSizer>
                         {({ height, width }) => (
-                            <FixedSizeList
-                                height={height}
-                                width={width}
-                                itemCount={sessions.length}
-                                itemSize={160} // Fixed height for session card
-                                className="no-scrollbar"
-                                itemData={{
-                                    sessions,
-                                    onSelect: handleSelectSession,
-                                    activeMenuId,
-                                    onMenuToggle: handleMenuToggle,
-                                    onDelete: handleDeleteSession
-                                }}
-                            >
+                            <FixedSizeList height={height} width={width} itemCount={sessions.length} itemSize={160} className="no-scrollbar" itemData={{ sessions, onSelect: setSelectedSessionId, activeMenuId, onMenuToggle: handleMenuToggle, onDelete: handleDeleteSession }}>
                                 {SessionRow}
                             </FixedSizeList>
                         )}
@@ -247,7 +93,7 @@ export const Reports: React.FC = () => {
                 )}
             </div>
             
-            <StartSessionModal isOpen={isStartModalOpen} onClose={() => setIsStartModalOpen(false)} onSessionStart={(s) => { setIsStartModalOpen(false); handleSessionStart(s); }} />
+            <StartSessionModal isOpen={isStartModalOpen} onClose={() => setIsStartModalOpen(false)} onSessionStart={(s) => navigate(`/counting/${s.id}`)} />
         </div>
     );
 };
