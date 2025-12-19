@@ -18,7 +18,7 @@ export const Conciliator: React.FC = () => {
     const navigate = useNavigate();
     const [step, setStep] = useState<'upload' | 'select' | 'results'>('upload');
     const [isImporting, setIsImporting] = useState(false);
-    const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+    const [selectedSessionIds, setSelectedSessionIds] = useState<string[]>([]);
     const [matches, setMatches] = useState<MatchResult[]>([]);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [analysisProgress, setAnalysisProgress] = useState('');
@@ -45,15 +45,17 @@ export const Conciliator: React.FC = () => {
         finally { setIsImporting(false); }
     };
 
-    const handleRunAnalysis = async (sessionId: string) => {
-        setSelectedSessionId(sessionId);
+    const handleRunAnalysis = async (sessionIds: string[]) => {
+        setSelectedSessionIds(sessionIds);
         setIsAnalyzing(true);
-        setAnalysisProgress('Preparando datos físicos...');
+        setAnalysisProgress(`Sumando contenido de ${sessionIds.length} bultos...`);
         setLinkedAliases(new Set()); 
 
         try {
-            const scans = await db.scans.where('sessionId').equals(sessionId).toArray();
+            // AGREGACIÓN MULTI-BULTO: Traer todos los escaneos de todos los IDs
+            const scans = await db.scans.where('sessionId').anyOf(sessionIds).toArray();
             const physicalItems = await aggregateScans(scans);
+            
             const expectedOrders = await db.expectedOrders.toArray();
             if (expectedOrders.length === 0) throw new Error("No hay matriz cargada.");
 
@@ -85,30 +87,51 @@ export const Conciliator: React.FC = () => {
     };
 
     const handleAssignOrder = async () => {
-        if (!selectedMatch || !selectedSessionId) return;
+        if (!selectedMatch || selectedSessionIds.length === 0) return;
+        
         const newErp = selectedMatch.expectedOrder.internalId;
         const score = selectedMatch.matchScore;
         let auditStatus: 'verified' | 'warning' | 'failed' = score > 98 ? 'verified' : (score > 60 ? 'warning' : 'failed');
         
-        if (!confirm(`¿Vincular este conteo a la Guía "${newErp}"?`)) return;
+        const confirmMsg = selectedSessionIds.length > 1 
+            ? `¿Vincular estos ${selectedSessionIds.length} bultos a la Guía "${newErp}"?`
+            : `¿Vincular este conteo a la Guía "${newErp}"?`;
+
+        if (!confirm(confirmMsg)) return;
 
         try {
-            await db.sessions.update(selectedSessionId, { 
-                erpOrder: newErp,
-                auditStatus: auditStatus,
-                auditScore: parseFloat(score.toFixed(1)),
-                auditTimestamp: Date.now()
-            });
-            alert("✅ Vinculación Exitosa.");
+            // Actualizar todas las sesiones involucradas
+            await Promise.all(selectedSessionIds.map(id => 
+                db.sessions.update(id, { 
+                    erpOrder: newErp,
+                    auditStatus: auditStatus,
+                    auditScore: parseFloat(score.toFixed(1)),
+                    auditTimestamp: Date.now()
+                })
+            ));
+            alert(`✅ Éxito: ${selectedSessionIds.length} bultos auditados.`);
             navigate('/dashboard'); 
         } catch (e) { alert("Error al guardar."); }
     };
 
     if (step === 'upload') return <UploadStep onBack={() => navigate('/dashboard')} onFileUpload={handleFileUpload} onSkip={() => setStep('select')} isImporting={isImporting} expectedOrdersCount={expectedOrdersCount} />;
     
-    if (step === 'select') return <SessionPickerStep sessions={sessions || []} onBack={() => setStep('upload')} onSelect={handleRunAnalysis} isAnalyzing={isAnalyzing} progress={analysisProgress} />;
+    if (step === 'select') return <SessionPickerStep sessions={sessions || []} onBack={() => setStep('upload')} onSelectMultiple={handleRunAnalysis} isAnalyzing={isAnalyzing} progress={analysisProgress} />;
     
-    if (step === 'results' && selectedMatch) return <AnalysisResults match={selectedMatch} sessionLabel={sessions?.find(s => s.id === selectedSessionId)?.logisticsLabel || ''} onBack={() => setStep('select')} onExportPDF={() => exportDiscrepancyPDF(selectedMatch, '')} onAssign={handleAssignOrder} onLinkAlias={handleAcceptAlias} linkedAliases={linkedAliases} />;
+    if (step === 'results' && selectedMatch) {
+        const labels = sessions?.filter(s => selectedSessionIds.includes(s.id)).map(s => s.logisticsLabel).join(', ') || '';
+        const displayLabel = selectedSessionIds.length > 1 ? `${selectedSessionIds.length} Bultos (${labels})` : labels;
+
+        return <AnalysisResults 
+            match={selectedMatch} 
+            sessionLabel={displayLabel} 
+            onBack={() => setStep('select')} 
+            onExportPDF={() => exportDiscrepancyPDF(selectedMatch, displayLabel)} 
+            onAssign={handleAssignOrder} 
+            onLinkAlias={handleAcceptAlias} 
+            linkedAliases={linkedAliases} 
+        />;
+    }
 
     return null;
 };
