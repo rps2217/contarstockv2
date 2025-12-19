@@ -1,12 +1,12 @@
 
 export interface Product {
-  barcode: string;      // Mapped from: CODIGO
-  name: string;         // Mapped from: DESCRIPCION
-  category: string;     // Mapped from: MUNDO
-  supplier?: string;    // Mapped from: PROVEEDOR
-  supplierRut?: string; // Mapped from: RUT PROVEEDOR
+  barcode: string;
+  name: string;
+  category: string;
+  supplier?: string;
+  supplierRut?: string;
   price?: number;
-  syncStatus?: 'synced' | 'add' | 'edit'; // Delta Sync Status
+  syncStatus?: 'synced' | 'add' | 'edit';
 }
 
 export interface ExpectedItem {
@@ -24,14 +24,10 @@ export interface CountingSession {
   totalUnits?: number;
   totalSKUs?: number;
   lastSyncTimestamp?: number;
-  
-  // Guided Mode / Reception Verified
   isVerifiedMode?: boolean;
   expectedItems?: ExpectedItem[];
-
-  // Audit / Detective Fields
   auditStatus?: 'verified' | 'warning' | 'failed' | 'pending';
-  auditScore?: number; // 0-100
+  auditScore?: number;
   auditTimestamp?: number;
 }
 
@@ -41,10 +37,10 @@ export interface ScanRecord {
   barcode: string;
   timestamp: number;
   quantity: number;
-  mm?: number;   // Expiration Month
-  yyyy?: number; // Expiration Year
-  synced?: number; // 0 = Pending, 1 = Synced (New for Delta Sync)
-  isIncident?: boolean; // New: Marks if item has FRC (Fecha/Rotura/Caducidad)
+  mm?: number;
+  yyyy?: number;
+  synced?: number;
+  isIncident?: boolean;
 }
 
 export interface ConsolidatedItem {
@@ -54,7 +50,7 @@ export interface ConsolidatedItem {
   scans: number;
   mm?: number;
   yyyy?: number;
-  isIncident?: boolean; // Aggregate flag
+  isIncident?: boolean;
 }
 
 export type ViewState = 'dashboard' | 'counting' | 'database' | 'reports' | 'settings' | 'consolidated' | 'conciliator' | 'reception' | 'sync';
@@ -64,9 +60,9 @@ export type Theme = 'light' | 'dark' | 'contrast' | 'warm' | 'navy';
 export interface AppSheetConfig {
   appId: string;
   accessKey: string;
-  countsTableName: string;   // Table for Transactional Data (Counts)
-  productsTableName: string; // Table for Master Data (Products)
-  receptionTableName?: string; // New: Table for Reception Logs
+  countsTableName: string;
+  productsTableName: string;
+  receptionTableName?: string;
 }
 
 export interface AppSettings {
@@ -79,7 +75,7 @@ export interface AppSettings {
   controlTowerEnabled: boolean; 
   confirmDelete: boolean;
   autoRegisterUnknown: boolean; 
-  lowPerformanceMode: boolean; // NEW: High efficiency mode for low-end devices
+  lowPerformanceMode: boolean;
   appSheetConfig?: AppSheetConfig;
   mobileNavConfig?: ViewState[]; 
 }

@@ -1,31 +1,29 @@
 
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
-import { Routes, Route, useNavigate, useLocation, Navigate, Outlet, HashRouter } from 'react-router-dom';
-import { CountingSession } from './types';
+import { Routes, Route, useNavigate, useLocation, Navigate, Outlet, HashRouter, useParams } from 'react-router-dom';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { Home, Database as DbIcon, History, Layers, Container, Fingerprint, Cloud, Loader2 } from 'lucide-react';
+import { useAppStore } from './store/useAppStore';
+import { db } from './db';
+import { processSyncQueue } from './services/syncManager';
+import { initPersistence } from './services/backupService';
+import { lazyWithRetry } from './services/lazyLoad';
+import * as sessionService from './services/sessionService';
 import { Dashboard } from './components/Dashboard';
 import { Login } from './components/Login';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { InstallPrompt } from './components/InstallPrompt';
 import { SystemStatus } from './components/SystemStatus'; 
 import { Sidebar } from './components/Sidebar'; 
-import * as sessionService from './services/sessionService'; 
-import { useAppStore } from './store/useAppStore';
-import { db } from './db';
-import { processSyncQueue } from './services/syncManager';
-import { initPersistence } from './services/backupService';
-import { Home, Database as DbIcon, History, Layers, Container, Fingerprint, Cloud, Loader2 } from 'lucide-react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { lazyWithRetry } from './services/lazyLoad';
 
-// Optimized Lazy Load with Retry Strategy
-const Scanner = lazyWithRetry(() => import('./components/Scanner').then(module => ({ default: module.Scanner })));
-const DatabaseView = lazyWithRetry(() => import('./components/Database').then(module => ({ default: module.Database })));
-const Reports = lazyWithRetry(() => import('./components/Reports').then(module => ({ default: module.Reports })));
-const Consolidated = lazyWithRetry(() => import('./components/Consolidated').then(module => ({ default: module.Consolidated })));
-const Conciliator = lazyWithRetry(() => import('./components/Conciliator').then(module => ({ default: module.Conciliator })));
-const SettingsView = lazyWithRetry(() => import('./components/Settings').then(module => ({ default: module.Settings })));
-const Reception = lazyWithRetry(() => import('./components/Reception').then(module => ({ default: module.Reception })));
-const SyncManagerUI = lazyWithRetry(() => import('./components/SyncManagerUI').then(module => ({ default: module.SyncManagerUI })));
+const Scanner = lazyWithRetry(() => import('./components/Scanner').then(m => ({ default: m.Scanner })));
+const DatabaseView = lazyWithRetry(() => import('./components/Database').then(m => ({ default: m.Database })));
+const Reports = lazyWithRetry(() => import('./components/Reports').then(m => ({ default: m.Reports })));
+const Consolidated = lazyWithRetry(() => import('./components/Consolidated').then(m => ({ default: m.Consolidated })));
+const Conciliator = lazyWithRetry(() => import('./components/Conciliator').then(m => ({ default: m.Conciliator })));
+const SettingsView = lazyWithRetry(() => import('./components/Settings').then(m => ({ default: m.Settings })));
+const Reception = lazyWithRetry(() => import('./components/Reception').then(m => ({ default: m.Reception })));
+const SyncManagerUI = lazyWithRetry(() => import('./components/SyncManagerUI').then(m => ({ default: m.SyncManagerUI })));
 
 const LoadingFallback = () => (
   <div className="h-full w-full flex flex-col items-center justify-center text-slate-400 gap-3 animate-pulse">
@@ -34,19 +32,11 @@ const LoadingFallback = () => (
   </div>
 );
 
-// --- LAYOUTS ---
-
 const MainLayout = () => {
     const { settings } = useAppStore();
-    // PERFORMANCE FIX: Removed useLiveQuery(pendingSyncCount) from here.
-    // It was causing the entire Layout (and Outlet) to re-render on every single database write.
-    
     const location = useLocation();
-    
-    // Determine ViewState for Sidebar highlighting based on URL
     const currentView = location.pathname.split('/')[1] || 'dashboard';
 
-    // Theme Class
     const themeClass = useMemo(() => {
         switch (settings.theme) {
             case 'dark': return 'bg-slate-950 text-slate-200';
@@ -61,20 +51,16 @@ const MainLayout = () => {
         <div className={`min-h-screen font-sans ${themeClass} transition-colors duration-300 flex`}>
             <SystemStatus />
             <Sidebar view={currentView} settings={settings} />
-            
             <main className="flex-1 md:ml-64 w-full animate-in fade-in zoom-in-95 duration-300 min-h-screen relative pb-16 md:pb-0">
                 <Suspense fallback={<LoadingFallback />}>
                     <Outlet />
                 </Suspense>
             </main>
-
             <InstallPrompt />
             <MobileNav currentView={currentView} settings={settings} />
         </div>
     );
 };
-
-// --- APP CONTENT ---
 
 const AppContent: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -97,10 +83,8 @@ const AppContent: React.FC = () => {
         setIsAuthenticated(true);
     }
 
-    const syncInterval = setInterval(async () => {
-        if (navigator.onLine) {
-            try { await processSyncQueue(); } catch (e) {}
-        }
+    const syncInterval = setInterval(() => {
+        if (navigator.onLine) processSyncQueue().catch(() => {});
     }, 60000); 
     return () => clearInterval(syncInterval);
   }, []);
@@ -125,25 +109,11 @@ const AppContent: React.FC = () => {
             <Route path="/settings" element={<SettingsView />} />
             <Route path="/sync" element={<SyncManagerUI />} />
         </Route>
-        
-        {/* Fullscreen Routes */}
-        <Route path="/counting/:sessionId" element={
-            <Suspense fallback={<LoadingFallback />}>
-                <ScannerWrapper />
-            </Suspense>
-        } />
-        <Route path="/reception" element={
-            <Suspense fallback={<LoadingFallback />}>
-                <Reception />
-            </Suspense>
-        } />
+        <Route path="/counting/:sessionId" element={<Suspense fallback={<LoadingFallback />}><ScannerWrapper /></Suspense>} />
+        <Route path="/reception" element={<Suspense fallback={<LoadingFallback />}><Reception /></Suspense>} />
     </Routes>
   );
 };
-
-// --- WRAPPERS ---
-
-import { useParams } from 'react-router-dom';
 
 const ScannerWrapper = () => {
     const { sessionId } = useParams();
@@ -169,17 +139,13 @@ const ScannerWrapper = () => {
     );
 };
 
-const App: React.FC = () => {
-    return (
-        <ErrorBoundary>
-            <HashRouter>
-                <AppContent />
-            </HashRouter>
-        </ErrorBoundary>
-    );
-};
-
-// --- MOBILE NAV ---
+const App: React.FC = () => (
+    <ErrorBoundary>
+        <HashRouter>
+            <AppContent />
+        </HashRouter>
+    </ErrorBoundary>
+);
 
 const NAV_CONFIG: Record<string, { label: string, icon: React.ReactNode, path: string }> = {
     'dashboard': { label: 'Inicio', icon: <Home className="w-5 h-5" />, path: '/dashboard' },
