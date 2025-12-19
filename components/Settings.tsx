@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Volume2, VolumeX, Vibrate, Zap, Moon, Sun, Monitor, AlertTriangle, ArrowLeft, Cloud, Key, Database, Lock, Check, Eye, Shield, FileText, Package, AlertOctagon, Activity, CheckCircle, XCircle, Share2, Download, QrCode, Copy, Save, Upload, RefreshCw, Loader2, Speech, Hash, Type, Gauge, BarChart3, Smartphone, LayoutTemplate, Camera, Stethoscope, Trash2, HardDrive, Terminal, Wind } from 'lucide-react';
+import { Settings as SettingsIcon, Volume2, VolumeX, Vibrate, Zap, Moon, Sun, Monitor, AlertTriangle, ArrowLeft, Cloud, Key, Database, Lock, Check, Eye, Shield, FileText, Package, AlertOctagon, Activity, CheckCircle, XCircle, Share2, Download, QrCode, Copy, Save, Upload, RefreshCw, Loader2, Speech, Hash, Type, Gauge, BarChart3, Smartphone, LayoutTemplate, Camera, Stethoscope, Trash2, HardDrive, Terminal, Wind, Home, History, Layers, Container, Fingerprint } from 'lucide-react';
 import * as sessionService from '../services/sessionService'; 
 import * as settingsService from '../services/settings';
 import * as maintenanceService from '../services/maintenance';
@@ -65,14 +65,14 @@ export const Settings: React.FC = () => {
     }
   };
 
-  const availableNavItems: {id: ViewState, label: string}[] = [
-      { id: 'dashboard', label: 'Inicio' },
-      { id: 'database', label: 'Datos' },
-      { id: 'reports', label: 'Historial' },
-      { id: 'consolidated', label: 'Consolidados' },
-      { id: 'reception', label: 'Recepción' },
-      { id: 'conciliator', label: 'Detective' },
-      { id: 'sync', label: 'Nube' },
+  const availableNavItems: {id: ViewState, label: string, icon: any}[] = [
+      { id: 'dashboard', label: 'Inicio', icon: Home },
+      { id: 'database', label: 'Datos', icon: Database },
+      { id: 'reports', label: 'Historial', icon: History },
+      { id: 'consolidated', label: 'Consol.', icon: Layers },
+      { id: 'reception', label: 'Recep.', icon: Container },
+      { id: 'conciliator', label: 'Detect.', icon: Fingerprint },
+      { id: 'sync', label: 'Nube', icon: Cloud },
   ];
 
   const toggleNavOption = (id: ViewState) => {
@@ -350,7 +350,48 @@ export const Settings: React.FC = () => {
             </div>
         </section>
 
-        {/* REST OF SECTIONS REMAIN THE SAME */}
+        {/* MOBILE NAVIGATION CUSTOMIZATION */}
+        <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 animate-in slide-in-from-bottom-2">
+            <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <LayoutTemplate className="w-5 h-5 text-indigo-600" /> Navegación Móvil
+            </h2>
+            <p className="text-xs text-slate-500 mb-6">Selecciona hasta 5 accesos rápidos para el muelle inferior.</p>
+            
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {availableNavItems.map(item => {
+                    const isActive = (settings.mobileNavConfig || []).includes(item.id);
+                    const Icon = item.icon;
+                    return (
+                        <button 
+                            key={item.id}
+                            onClick={() => toggleNavOption(item.id)}
+                            className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all group ${
+                                isActive 
+                                ? 'bg-indigo-50 border-indigo-500 text-indigo-700 shadow-md ring-4 ring-indigo-500/10' 
+                                : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200 hover:text-slate-600'
+                            }`}
+                        >
+                            <div className={`p-2 rounded-xl mb-2 transition-transform group-active:scale-90 ${isActive ? 'bg-indigo-500 text-white' : 'bg-slate-50'}`}>
+                                <Icon className="w-6 h-6" />
+                            </div>
+                            <span className="text-[10px] font-black uppercase tracking-tighter">{item.label}</span>
+                            {isActive && <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-indigo-500" />}
+                        </button>
+                    );
+                })}
+            </div>
+            
+            <div className="mt-6 p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200 flex items-center justify-between">
+                <div className="text-xs font-bold text-slate-400 uppercase">Items seleccionados:</div>
+                <div className="flex gap-1">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                        <div key={i} className={`w-3 h-3 rounded-full ${i < (settings.mobileNavConfig?.length || 0) ? 'bg-indigo-500' : 'bg-slate-200'}`} />
+                    ))}
+                </div>
+            </div>
+        </section>
+
+        {/* SYSTEM DIAGNOSTICS */}
         <section className={`rounded-2xl border p-6 transition-all ${healthReport?.status === 'warning' || healthReport?.status === 'critical' ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-200 shadow-sm'}`}>
             <div className="flex justify-between items-start mb-4">
                 <h2 className={`text-lg font-bold flex items-center gap-2 ${healthReport?.status === 'healthy' ? 'text-slate-900' : 'text-amber-900'}`}>
@@ -408,7 +449,93 @@ export const Settings: React.FC = () => {
             )}
         </section>
 
-        {/* Rest of the settings file... */}
+        {/* CLOUD CONFIGURATION */}
+        <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <Cloud className="w-5 h-5 text-indigo-600" /> AppSheet Cloud Sync
+            </h2>
+            <form onSubmit={handleAppSheetSave} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 block mb-1">App ID</label>
+                        <input 
+                            value={appSheetConfig.appId} 
+                            onChange={(e) => setAppSheetConfig({...appSheetConfig, appId: e.target.value})}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-mono outline-none focus:border-indigo-500 transition-all" 
+                            placeholder="xxxx-xxxx-xxxx"
+                        />
+                    </div>
+                    <div>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 block mb-1">Access Key</label>
+                        <input 
+                            type="password"
+                            value={appSheetConfig.accessKey} 
+                            onChange={(e) => setAppSheetConfig({...appSheetConfig, accessKey: e.target.value})}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-mono outline-none focus:border-indigo-500 transition-all" 
+                            placeholder="••••••••••••"
+                        />
+                    </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 block mb-1">Tabla Conteos</label>
+                        <input 
+                            value={appSheetConfig.countsTableName} 
+                            onChange={(e) => setAppSheetConfig({...appSheetConfig, countsTableName: e.target.value})}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs outline-none focus:border-indigo-500 transition-all" 
+                            placeholder="Nombre exacto..."
+                        />
+                    </div>
+                    <div>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 block mb-1">Tabla Recepción</label>
+                        <input 
+                            value={appSheetConfig.receptionTableName} 
+                            onChange={(e) => setAppSheetConfig({...appSheetConfig, receptionTableName: e.target.value})}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs outline-none focus:border-indigo-500 transition-all" 
+                            placeholder="Nombre exacto..."
+                        />
+                    </div>
+                    <div>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase ml-1 block mb-1">Tabla Productos</label>
+                        <input 
+                            value={appSheetConfig.productsTableName} 
+                            onChange={(e) => setAppSheetConfig({...appSheetConfig, productsTableName: e.target.value})}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs outline-none focus:border-indigo-500 transition-all" 
+                            placeholder="Nombre exacto..."
+                        />
+                    </div>
+                </div>
+                <button type="submit" className="w-full bg-slate-900 text-white font-bold py-3 rounded-xl hover:bg-slate-800 transition-all active:scale-95 flex items-center justify-center gap-2">
+                    <Save className="w-4 h-4" /> {showSaveFeedback ? 'Guardado ✓' : 'Guardar Configuración Cloud'}
+                </button>
+            </form>
+        </section>
+
+        {/* BACKUP & RESTORE */}
+        <section className="bg-slate-50 rounded-2xl border border-slate-200 p-6">
+            <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <Database className="w-5 h-5 text-blue-600" /> Respaldo de Seguridad
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <button 
+                    onClick={handleBackup}
+                    disabled={isBackingUp}
+                    className="bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 p-4 rounded-xl font-bold flex flex-col items-center justify-center gap-2 transition-all shadow-sm active:scale-95"
+                >
+                    <Download className="w-6 h-6" />
+                    <span>Crear Copia (JSON)</span>
+                    <span className="text-[9px] uppercase tracking-wider font-black opacity-60">Full Local Dump</span>
+                </button>
+                <label className="bg-white hover:bg-amber-50 text-amber-600 border border-amber-200 p-4 rounded-xl font-bold flex flex-col items-center justify-center gap-2 transition-all shadow-sm active:scale-95 cursor-pointer relative">
+                    <input type="file" accept=".json" onChange={handleRestoreFile} className="hidden" />
+                    {isRestoring ? <Loader2 className="w-6 h-6 animate-spin"/> : <Upload className="w-6 h-6" />}
+                    <span>Restaurar Copia</span>
+                    <span className="text-[9px] uppercase tracking-wider font-black opacity-60 text-red-400">Peligro: Sobrescribe</span>
+                </label>
+            </div>
+        </section>
+
+        {/* APPEARANCE */}
         <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
             <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
                 <Sun className="w-5 h-5 text-blue-500" /> Apariencia
@@ -431,6 +558,15 @@ export const Settings: React.FC = () => {
                 </button>
             </div>
         </section>
+
+        <div className="pt-6">
+            <button 
+                onClick={handleHardReset}
+                className="w-full py-4 text-slate-400 hover:text-blue-500 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-colors border-t border-slate-100"
+            >
+                <RefreshCw className="w-3 h-3" /> Forzar Actualización del Sistema
+            </button>
+        </div>
       </div>
 
       {showSystemLogs && (
