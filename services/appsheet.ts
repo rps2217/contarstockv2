@@ -2,7 +2,8 @@
 import { ConsolidatedItem, CountingSession, Product, ScanRecord } from "../types";
 import { getSettings } from "./settings"; 
 import { generateUUID } from "./utils";
-import { getUnsyncedScans, markScansAsSynced, markDraftsAsSynced } from "./sessionService"; 
+// Fix: Removed non-existent export getUnsyncedScans from sessionService import
+import { markScansAsSynced, markDraftsAsSynced } from "./sessionService"; 
 import { markProductsAsSynced } from "./productService";
 import { db } from "../db";
 import { sendToAppSheet, AppSheetPayload } from "../infrastructure/api/appsheetClient";

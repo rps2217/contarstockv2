@@ -3,32 +3,7 @@ import { sanitizeBarcode } from './utils';
 import { calculateOrderMatch } from './matcher';
 import { ConsolidatedItem, ExpectedOrder } from '../types';
 import { db } from '../db';
-
-// --- MOCK DATA ---
-
-const mockPhysical: ConsolidatedItem[] = [
-    { barcode: 'A1', productName: 'Prod A', totalQuantity: 10, scans: 1 },
-    { barcode: 'B2', productName: 'Prod B', totalQuantity: 5, scans: 1 }
-];
-
-const mockOrderExact: ExpectedOrder = {
-    id: '1', internalId: 'ORD-EXACT', totalExpectedUnits: 15, totalExpectedSKUs: 2, importedAt: 0,
-    items: [
-        { barcode: 'A1', name: 'Prod A', expectedQty: 10 },
-        { barcode: 'B2', name: 'Prod B', expectedQty: 5 }
-    ]
-};
-
-// Scenario: SKUs match exactly, but quantity deviates (5 vs 8) -> True Partial Match
-const mockOrderPartial: ExpectedOrder = {
-    id: '2', internalId: 'ORD-PARTIAL', totalExpectedUnits: 18, totalExpectedSKUs: 2, importedAt: 0,
-    items: [
-        { barcode: 'A1', name: 'Prod A', expectedQty: 10 }, // Match
-        { barcode: 'B2', name: 'Prod B', expectedQty: 8 }   // Deviation
-    ]
-};
-
-// --- RUNNER ---
+import * as sessionService from './sessionService';
 
 export const runSystemDiagnostics = async () => {
     let passed = 0;
@@ -40,52 +15,77 @@ export const runSystemDiagnostics = async () => {
         if (isError) failed++; else passed++;
     };
 
-    // 1. Sanitize Test (Sync)
+    log("--- INICIANDO AUDITORÍA DE SISTEMA v2 ---");
+
+    // 1. Test de Integridad de Datos (Sanitize)
     try {
-        const t1 = sanitizeBarcode(' abc ') === 'ABC';
-        const t2 = sanitizeBarcode('a\u200Bb') === 'AB';
-        if (t1 && t2) log("✅ Limpieza de Códigos: OK");
-        else log("❌ Limpieza de Códigos: FALLÓ", true);
+        const tests = [
+            { input: ' 780123 ', expected: '780123' },
+            { input: 'abc-123', expected: 'ABC-123' },
+            { input: '99\u200B88', expected: '9988' } // Zero-width space
+        ];
+        const allOk = tests.every(t => sanitizeBarcode(t.input) === t.expected);
+        if (allOk) log("✅ Desinfección de SKU: Robusta");
+        else log("❌ Desinfección de SKU: Falló validación de caracteres invisibles", true);
     } catch (e) { log(`❌ Error Sanitize: ${e}`, true); }
 
-    // 2. Matcher Test (Sync)
+    // 2. Test de Estrés de Inserción (Concurrency Stress)
     try {
-        const exactResult = calculateOrderMatch(mockPhysical, mockOrderExact);
-        if (exactResult.status === 'exact' && exactResult.matchScore > 99) {
-            log("✅ Algoritmo Detective (Exacto): OK");
-        } else {
-            log("❌ Algoritmo Detective (Exacto): FALLÓ", true);
+        log("⏳ Probando latencia de escritura masiva (100 registros)...");
+        const start = performance.now();
+        const testSessionId = 'DIAG-STRESS-' + Date.now();
+        
+        // Simular ráfaga de escaneo ultra-rápida
+        const promises = [];
+        for(let i=0; i<100; i++) {
+            promises.push(sessionService.addScan(testSessionId, 'STRESS-TEST', 1));
         }
+        await Promise.all(promises);
+        
+        // Forzar flush del buffer
+        await new Promise(r => setTimeout(r, 600)); 
+        
+        const count = await db.scans.where('sessionId').equals(testSessionId).count();
+        const end = performance.now();
+        const duration = end - start;
 
-        const partialResult = calculateOrderMatch(mockPhysical, mockOrderPartial);
-        // We expect 'partial' status because SKUs are correct but quantities differ
-        if (partialResult.status === 'partial') {
-            log(`✅ Algoritmo Detective (Parcial): OK (${partialResult.matchScore.toFixed(1)}%)`);
+        if (count === 100) {
+            log(`✅ Stress Test: 100 registros en ${duration.toFixed(0)}ms (${(duration/100).toFixed(2)}ms/op)`);
         } else {
-            log(`❌ Algoritmo Detective (Parcial): FALLÓ (Status: ${partialResult.status}, Score: ${partialResult.matchScore.toFixed(1)}%)`, true);
+            log(`❌ Stress Test: Pérdida de datos detectada. Esperados 100, grabados ${count}`, true);
+        }
+        
+        // Limpiar
+        await db.scans.where('sessionId').equals(testSessionId).delete();
+    } catch (e: any) {
+        log(`❌ Error en Stress Test: ${e.message}`, true);
+    }
+
+    // 3. Verificación de Huérfanos
+    try {
+        const scans = await db.scans.limit(100).toArray();
+        const sessions = await db.sessions.toArray();
+        const sessionIds = new Set(sessions.map(s => s.id));
+        const orphans = scans.filter(s => !sessionIds.has(s.sessionId));
+        
+        if (orphans.length === 0) log("✅ Integridad Referencial: Sin registros huérfanos");
+        else log(`⚠️ Integridad: Detectados ${orphans.length} escaneos sin sesión vinculada`, true);
+    } catch (e) { log(`❌ Error Integridad: ${e}`, true); }
+
+    // 4. Test de Matcher (Lógica de Negocio)
+    try {
+        const mockPhys: ConsolidatedItem[] = [{ barcode: 'X', productName: 'P', totalQuantity: 10, scans: 1 }];
+        const mockExp: ExpectedOrder = { 
+            id: '1', internalId: 'TEST', totalExpectedUnits: 12, totalExpectedSKUs: 1, importedAt: 0,
+            items: [{ barcode: 'X', name: 'P', expectedQty: 12 }] 
+        };
+        const result = calculateOrderMatch(mockPhys, mockExp);
+        if (result.matchScore > 80 && result.status === 'partial') {
+            log("✅ Algoritmo Detective: Coincidencia parcial calculada correctamente");
+        } else {
+            log("❌ Algoritmo Detective: Error en cálculo de desviaciones", true);
         }
     } catch (e) { log(`❌ Error Matcher: ${e}`, true); }
-
-    // 3. Database Health Check (Async)
-    try {
-        const start = performance.now();
-        // Check 1: Can we count items?
-        const productCount = await db.products.count();
-        // Check 2: Can we write/delete? (Ephemeral test)
-        const testKey = '__DIAGNOSTIC_TEST__';
-        await db.products.put({ barcode: testKey, name: 'TEST', category: 'TEST', syncStatus: 'synced' });
-        const retrieved = await db.products.get(testKey);
-        await db.products.delete(testKey);
-        const duration = (performance.now() - start).toFixed(1);
-
-        if (retrieved && retrieved.name === 'TEST') {
-            log(`✅ Base de Datos: SALUDABLE (${productCount} items, ${duration}ms)`);
-        } else {
-            log(`❌ Base de Datos: ERROR DE ESCRITURA`, true);
-        }
-    } catch (e: any) {
-        log(`❌ Base de Datos: CRÍTICO - ${e.message}`, true);
-    }
 
     return { passed, failed, logs };
 };

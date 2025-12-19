@@ -10,7 +10,8 @@ import { CloudInventoryRowSchema, CloudProductSchema, CloudReceptionRowSchema } 
 
 export { SYNC_ENGINE_VERSION } from './constants';
 
-// --- TYPES ---
+// CONFIGURACIÓN PRO
+const BATCH_SIZE = 50; // Items por petición API
 
 export interface UploadGroup {
     erpOrder: string;
@@ -21,26 +22,24 @@ export interface UploadGroup {
     type: 'inventory' | 'reception';
 }
 
-// Global lock to prevent concurrent sync runs
+// Mutex para evitar colisiones
 let isSyncingInProgress = false;
 
 // ==========================================
-// 1. UPLOAD MANAGEMENT (Local -> Cloud)
+// 1. GESTIÓN DE CARGA (Local -> Cloud)
 // ==========================================
 
 export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
     const groups: Record<string, UploadGroup> = {};
 
-    // 1. Detect standard inventory scans (synced = 0)
-    // Filter ensures we only process what is NOT in the cloud
+    // 1. Escaneos de Inventario (synced = 0)
     const unsyncedScans = await db.scans.where('synced').equals(0).toArray();
     
     if (unsyncedScans.length > 0) {
         const sessionIds = Array.from(new Set(unsyncedScans.map(s => s.sessionId)));
         const sessions = await db.sessions.where('id').anyOf(sessionIds).toArray();
-        
-        const sessionMap = new Map<string, CountingSession>();
-        sessions.forEach(s => sessionMap.set(s.id, s));
+        // Fix: Explicitly type sessionMap to avoid 'unknown' type errors
+        const sessionMap = new Map<string, CountingSession>(sessions.map(s => [s.id, s]));
 
         for (const scan of unsyncedScans) {
             const session = sessionMap.get(scan.sessionId);
@@ -66,11 +65,12 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
         }
     }
 
-    // 2. Detect pending Reception Drafts (status = draft & never synced)
-    const pendingDrafts = await db.sessions
+    // 2. Drafts de Recepción
+    // Fix: Add explicit type annotation to pendingDrafts to resolve 'unknown' property access errors
+    const pendingDrafts: CountingSession[] = await db.sessions
         .where('status').equals('draft')
         .and(s => !s.lastSyncTimestamp)
-        .toArray();
+        .toArray() as CountingSession[];
 
     if (pendingDrafts.length > 0) {
         const receptionKey = "BITÁCORA RECEPCIÓN";
@@ -88,74 +88,65 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
 };
 
 /**
- * Core logic to upload a group. Used by UI and Auto-sync.
+ * Procesa la subida de un grupo con lógica de fragmentación (Chunking)
  */
-export const performBatchUpload = async (group: UploadGroup): Promise<void> => {
-    if (group.type === 'reception') {
-        const drafts = await db.sessions.where('id').anyOf(group.sessionIds).toArray();
-        if (drafts.length === 0) return;
-        const result = await syncReceptionToAppSheet(drafts);
-        if (result.failed > 0) {
-            const errStr = result.errors.slice(0, 3).join('; ');
-            throw new Error(`Fallo parcial: ${result.failed} errores. Info: ${errStr}`);
-        }
-        return;
-    }
-
-    // Process Inventory Groups
-    let errorCount = 0;
-    for (const sessionId of group.sessionIds) {
-        const session = await db.sessions.get(sessionId);
-        if (!session) continue;
-        
-        try {
-            // syncToAppSheet now only takes unsynced items (synced=0)
-            await syncToAppSheet(session);
-            
-            // Mark session with timestamp to indicate activity
-            await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
-        } catch (e: any) {
-            logger.error('Sync', `Error subiendo bulto ${session.logisticsLabel}`, e.message);
-            errorCount++;
-        }
-    }
-
-    if (errorCount > 0) {
-        throw new Error(`Se completó la subida pero ${errorCount} bultos fallaron.`);
-    }
-};
-
-// ==========================================
-// 2. AUTO-SYNC ENGINE (Background Process)
-// ==========================================
-
-export const processSyncQueue = async () => {
-    if (isSyncingInProgress || !navigator.onLine) return;
+export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: string) => void): Promise<void> => {
+    if (isSyncingInProgress) throw new Error("Ya hay una sincronización en curso.");
+    isSyncingInProgress = true;
 
     try {
-        isSyncingInProgress = true;
-        
-        const pendingGroups = await getPendingUploadGroups();
-        if (pendingGroups.length > 0) {
-            for (const group of pendingGroups) {
-                try {
-                    await performBatchUpload(group);
-                    logger.success('AutoSync', `Bloque [${group.erpOrder}] sincronizado.`);
-                } catch (e: any) {
-                    logger.warn('AutoSync', `Fallo automático en ${group.erpOrder}: ${e.message}`);
-                }
-            }
+        if (group.type === 'reception') {
+            const drafts = await db.sessions.where('id').anyOf(group.sessionIds).toArray();
+            if (drafts.length === 0) return;
+            const result = await syncReceptionToAppSheet(drafts);
+            if (result.failed > 0) throw new Error(`${result.failed} bultos fallaron.`);
+            return;
         }
 
-    } catch (error) {
-        console.error("[AutoSync] Error general:", error);
+        // Inventario: Procesar sesión por sesión para integridad
+        for (const sessionId of group.sessionIds) {
+            const session = await db.sessions.get(sessionId);
+            if (!session) continue;
+
+            onProgress?.(`Procesando bulto ${session.logisticsLabel}...`);
+            
+            // Subir sesión por fragmentos si es necesario
+            await syncToAppSheet(session);
+            
+            // Timestamp de última actividad exitosa
+            await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
+        }
     } finally {
         isSyncingInProgress = false;
     }
 };
 
 // ==========================================
-// 3. DOWNLOAD & RESTORE (Cloud -> Local)
+// 2. MOTOR DE AUTO-SYNC (Background)
+// ==========================================
+
+export const processSyncQueue = async () => {
+    if (isSyncingInProgress || !navigator.onLine) return;
+
+    try {
+        const pendingGroups = await getPendingUploadGroups();
+        if (pendingGroups.length > 0) {
+            logger.info('AutoSync', `Detectados ${pendingGroups.length} bloques pendientes.`);
+            for (const group of pendingGroups) {
+                try {
+                    await performBatchUpload(group);
+                } catch (e: any) {
+                    logger.warn('AutoSync', `Fallo en ${group.erpOrder}: ${e.message}`);
+                }
+            }
+        }
+    } catch (error) {
+        console.error("[AutoSync] Error general:", error);
+    }
+};
+
+// ==========================================
+// 3. DESCARGA Y RESTAURACIÓN (Cloud -> Local)
 // ==========================================
 
 export const importProductsFromAppSheet = async (): Promise<number> => {
@@ -175,75 +166,23 @@ export const importProductsFromAppSheet = async (): Promise<number> => {
             });
         }
     }
-    if (validProducts.length > 0) await productService.saveProductBatch(validProducts);
-    return validProducts.length;
-};
-
-/**
- * Recupera logs de recepción desde AppSheet y los mapea a la cola local.
- */
-export const restoreReceptionFromCloud = async (options?: { dateRange?: { start: string, end: string } }): Promise<number> => {
-    const rawRows = await fetchReceptionData(options);
-    let restoredCount = 0;
-
-    for (const row of rawRows) {
-        const result = CloudReceptionRowSchema.safeParse(row);
-        if (!result.success) continue;
-
-        const data = result.data;
-        const cloudId = data.ID_RECEPCION;
-        const label = sanitizeBarcode(data.ETIQUETA);
-        const cloudStatus = data.ESTADO; 
-        
-        if (!label) continue;
-
-        // Mapeo de Auditoría
-        let localAudit: 'verified' | 'warning' | 'failed' | 'pending' = 'pending';
-        if (data.ESTADO_AUDITORIA === 'VERIFICADO_OK') localAudit = 'verified';
-        else if (data.ESTADO_AUDITORIA === 'CON_DIFERENCIAS') localAudit = 'warning';
-        else if (data.ESTADO_AUDITORIA === 'RECHAZADO') localAudit = 'failed';
-
-        // 1. Verificar si ya existe
-        const existing = await db.sessions.get(cloudId);
-        
-        if (existing) {
-            const newLocalStatus = cloudStatus === 'PROCESADO' ? 'completed' : existing.status;
-            await db.sessions.update(cloudId, { 
-                status: newLocalStatus,
-                auditStatus: localAudit 
-            });
-            continue; 
-        }
-
-        // 2. Crear nuevo registro local
-        await db.sessions.add({
-            id: cloudId || generateUUID(),
-            erpOrder: 'PENDIENTE', 
-            logisticsLabel: label,
-            createdAt: data.FECHA_HORA ? parseFlexibleDate(data.FECHA_HORA) : Date.now(),
-            status: cloudStatus === 'PENDIENTE' ? 'draft' : 'completed',
-            totalUnits: 0,
-            totalSKUs: 0,
-            lastSyncTimestamp: Date.now(), 
-            auditStatus: localAudit
-        });
-        restoredCount++;
+    if (validProducts.length > 0) {
+        await productService.saveProductBatch(validProducts);
     }
-    return restoredCount;
+    return validProducts.length;
 };
 
 export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange?: { start: string, end: string }, skipExisting?: boolean }): Promise<{ sessions: number, items: number }> => {
   const rawRows = await fetchCloudData(options);
   if (rawRows.length === 0) return { sessions: 0, items: 0 };
 
-  const validRows = [];
-  for (const r of rawRows) {
-      const parsed = CloudInventoryRowSchema.safeParse(r);
-      if (parsed.success) validRows.push(parsed.data);
-  }
+  const validRows = rawRows.map(r => CloudInventoryRowSchema.safeParse(r))
+                         .filter(p => p.success)
+                         .map(p => p.data!);
 
   if (validRows.length === 0) return { sessions: 0, items: 0 };
 
+  // Agrupar por Firma Única (ERP + ETIQUETA)
   const sessionsMap = new Map<string, typeof validRows>();
   validRows.forEach(row => {
     const key = generateCompositeKey(row[SHEET_COLUMNS.ERP_ORDER], row[SHEET_COLUMNS.LABEL]);
@@ -256,50 +195,32 @@ export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange
 
   for (const [key, sessionRows] of sessionsMap.entries()) {
     const firstRow = sessionRows[0];
-    const erp = firstRow[SHEET_COLUMNS.ERP_ORDER].trim();
-    const label = (firstRow[SHEET_COLUMNS.LABEL] || "GENERAL").trim();
+    const erp = firstRow[SHEET_COLUMNS.ERP_ORDER];
+    const label = firstRow[SHEET_COLUMNS.LABEL] || "GENERAL";
     
-    let localSession = await db.sessions.where('erpOrder').equals(erp).and(s => normalizeKey(s.logisticsLabel) === normalizeKey(label)).first();
+    // Buscar si ya existe localmente
+    let localSession = await db.sessions.where('erpOrder').equals(erp)
+                               .and(s => normalizeKey(s.logisticsLabel) === normalizeKey(label))
+                               .first();
     
     if (options?.skipExisting && localSession) continue;
 
     const sessionId = localSession ? localSession.id : generateUUID();
+    
+    // Limpiar escaneos previos de esta sesión para evitar duplicados en restauración
     await db.scans.where('sessionId').equals(sessionId).delete();
 
-    const cloudAggregated = new Map<string, any>();
-    for (const row of sessionRows) {
-        const barcode = sanitizeBarcode(row[SHEET_COLUMNS.BARCODE]);
-        if (!barcode) continue;
-        const dateKey = `${barcode}_${Number(row[SHEET_COLUMNS.MONTH]) || 0}_${Number(row[SHEET_COLUMNS.YEAR]) || 0}`;
-        if (cloudAggregated.has(dateKey)) {
-            cloudAggregated.get(dateKey).qty += row[SHEET_COLUMNS.QUANTITY];
-        } else {
-            cloudAggregated.set(dateKey, { 
-                qty: row[SHEET_COLUMNS.QUANTITY], 
-                name: row[SHEET_COLUMNS.PRODUCT_NAME], 
-                mm: row[SHEET_COLUMNS.MONTH], 
-                yyyy: row[SHEET_COLUMNS.YEAR],
-                incident: row[SHEET_COLUMNS.INCIDENT] === "FRC"
-            });
-        }
-    }
-
-    const scansToAdd: ScanRecord[] = [];
-    for (const [dateKey, data] of cloudAggregated.entries()) {
-        const [barcode] = dateKey.split('_');
-        scansToAdd.push({
-            id: generateUUID(),
-            sessionId,
-            barcode,
-            quantity: data.qty,
-            timestamp: Date.now(),
-            mm: data.mm,
-            yyyy: data.yyyy,
-            synced: 1, 
-            isIncident: data.incident
-        });
-        itemsRestored += data.qty;
-    }
+    const scansToAdd: ScanRecord[] = sessionRows.map(row => ({
+        id: generateUUID(),
+        sessionId,
+        barcode: sanitizeBarcode(row[SHEET_COLUMNS.BARCODE]),
+        quantity: row[SHEET_COLUMNS.QUANTITY],
+        timestamp: parseFlexibleDate(row[SHEET_COLUMNS.DATE]),
+        mm: row[SHEET_COLUMNS.MONTH],
+        yyyy: row[SHEET_COLUMNS.YEAR],
+        synced: 1, 
+        isIncident: row[SHEET_COLUMNS.INCIDENT] === "FRC"
+    }));
 
     if (!localSession) {
         await db.sessions.add({
@@ -308,21 +229,23 @@ export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange
             logisticsLabel: label,
             createdAt: parseFlexibleDate(firstRow[SHEET_COLUMNS.DATE]),
             status: 'completed',
-            totalUnits: sessionRows.reduce((a, b) => a + b[SHEET_COLUMNS.QUANTITY], 0),
-            totalSKUs: cloudAggregated.size,
+            totalUnits: scansToAdd.reduce((a, b) => a + b.quantity, 0),
+            totalSKUs: new Set(scansToAdd.map(s => s.barcode)).size,
             lastSyncTimestamp: Date.now()
         });
         sessionsProcessed++;
     } else {
         await db.sessions.update(sessionId, {
-            totalUnits: sessionRows.reduce((a, b) => a + b[SHEET_COLUMNS.QUANTITY], 0),
-            totalSKUs: cloudAggregated.size,
+            totalUnits: scansToAdd.reduce((a, b) => a + b.quantity, 0),
+            totalSKUs: new Set(scansToAdd.map(s => s.barcode)).size,
             lastSyncTimestamp: Date.now()
         });
     }
 
     if (scansToAdd.length > 0) await db.scans.bulkAdd(scansToAdd);
+    itemsRestored += scansToAdd.length;
   }
+  
   return { sessions: sessionsProcessed, items: itemsRestored };
 };
 
@@ -331,25 +254,51 @@ export const executeDownload = async (
     dateRange?: { start: string, end: string },
     log?: (msg: string) => void
 ) => {
-    const loggerFunc = log || console.log;
     try {
         if (type === 'inventory') {
-            loggerFunc(`[Inventario] Sincronizando datos de bultos...`);
+            log?.("Descargando conteos históricos...");
             const res = await restoreFromCloud({ dateRange, skipExisting: false });
-            return { success: true, message: `Procesados ${res.sessions} bultos y ${res.items} items.` };
+            return { success: true, message: `Recuperados ${res.sessions} bultos.` };
         } 
         else if (type === 'reception') {
-            loggerFunc(`[Recepción] Actualizando bitácora...`);
+            log?.("Actualizando bitácora de bultos...");
             const count = await restoreReceptionFromCloud({ dateRange });
-            return { success: true, message: `${count} bultos nuevos agregados.` };
+            return { success: true, message: `${count} bultos nuevos en cola.` };
         } 
         else if (type === 'products') {
+            log?.("Actualizando catálogo maestro...");
             const count = await importProductsFromAppSheet();
-            return { success: true, message: `${count} productos actualizados.` };
+            return { success: true, message: `${count} productos sincronizados.` };
         }
-        return { success: false, message: "Tipo desconocido." };
-    } catch (error: any) {
-        loggerFunc(`[ERROR] ${error.message}`);
-        throw error;
+        return { success: false, message: "Tipo no válido." };
+    } catch (e: any) {
+        log?.(`ERROR: ${e.message}`);
+        throw e;
     }
+};
+
+export const restoreReceptionFromCloud = async (options?: { dateRange?: { start: string, end: string } }): Promise<number> => {
+    const rawRows = await fetchReceptionData(options);
+    let count = 0;
+    for (const row of rawRows) {
+        const result = CloudReceptionRowSchema.safeParse(row);
+        if (!result.success) continue;
+        
+        const data = result.data;
+        const exists = await db.sessions.get(data.ID_RECEPCION);
+        if (exists) continue;
+
+        await db.sessions.add({
+            id: data.ID_RECEPCION || generateUUID(),
+            erpOrder: 'PENDIENTE',
+            logisticsLabel: sanitizeBarcode(data.ETIQUETA),
+            createdAt: parseFlexibleDate(data.FECHA_HORA),
+            status: data.ESTADO === 'PROCESADO' ? 'completed' : 'draft',
+            totalUnits: 0,
+            totalSKUs: 0,
+            lastSyncTimestamp: Date.now()
+        });
+        count++;
+    }
+    return count;
 };

@@ -1,4 +1,3 @@
-// infrastructure/api/appsheetClient.ts
 
 export interface AppSheetConfig {
   appId: string;
@@ -16,68 +15,80 @@ export interface AppSheetPayload {
 }
 
 /**
- * Pure HTTP Client for AppSheet API.
- * Tightened validation to prevent false success reports.
+ * Pure HTTP Client for AppSheet API with Exponential Backoff logic.
  */
 export const sendToAppSheet = async (
   config: AppSheetConfig, 
   tableName: string, 
   payload: AppSheetPayload,
-  timeoutMs: number = 45000 
+  timeoutMs: number = 45000,
+  maxRetries: number = 2
 ): Promise<any> => {
   if (!config.appId || !config.accessKey) {
-      throw new Error("Configuración de AppSheet incompleta (Falta AppID o AccessKey).");
+      throw new Error("Configuración de AppSheet incompleta.");
   }
 
   const endpoint = `https://api.appsheet.com/api/v2/apps/${config.appId}/tables/${tableName}/Action`;
+  
+  let lastError: any;
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-  try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'ApplicationAccessKey': config.accessKey,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload),
-        signal: controller.signal
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`Error HTTP ${response.status}: ${errorBody}`);
-      }
-
-      const text = await response.text();
-      if (!text) return { success: true };
-
-      let json;
       try {
-        json = JSON.parse(text);
-      } catch (e) {
-        return { success: true }; 
-      }
-
-      // --- CRITICAL VALIDATION ---
-      // AppSheet often returns 200 OK but an empty Rows array if column names are wrong or constraints fail.
-      if ((payload.Action === 'Add' || payload.Action === 'Edit')) {
-          if (!json.Rows || !Array.isArray(json.Rows) || json.Rows.length === 0) {
-              console.error("[AppSheet] Silent Failure detected. Payload:", payload, "Response:", json);
-              throw new Error("El servidor recibió los datos pero no pudo escribir la fila. Verifique que los nombres de las columnas en Excel coincidan exactamente con la App.");
+          if (attempt > 0) {
+              const delay = Math.pow(2, attempt) * 1000;
+              console.warn(`[Sync] Reintento ${attempt} en ${delay}ms...`);
+              await new Promise(r => setTimeout(r, delay));
           }
-      }
 
-      return json;
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'ApplicationAccessKey': config.accessKey,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload),
+            signal: controller.signal
+          });
 
-  } catch (error: any) {
-      clearTimeout(timeoutId);
-      if (error.name === 'AbortError') {
-          throw new Error("Tiempo de espera agotado. Verifique su conexión.");
+          clearTimeout(timeoutId);
+
+          if (!response.ok) {
+            const errorBody = await response.text();
+            // Si es un error de servidor (5xx) o rate limiting (429), reintentar
+            if (response.status >= 500 || response.status === 429) {
+                lastError = new Error(`Servidor ocupado (${response.status})`);
+                continue; 
+            }
+            throw new Error(`Error HTTP ${response.status}: ${errorBody}`);
+          }
+
+          const text = await response.text();
+          if (!text) return { success: true };
+
+          const json = JSON.parse(text);
+
+          // Silent Failure detection
+          if ((payload.Action === 'Add' || payload.Action === 'Edit')) {
+              if (!json.Rows || !Array.isArray(json.Rows) || json.Rows.length === 0) {
+                  throw new Error("La API no confirmó la escritura de filas. Verifique permisos.");
+              }
+          }
+
+          return json;
+
+      } catch (error: any) {
+          clearTimeout(timeoutId);
+          lastError = error;
+          if (error.name === 'AbortError') {
+              console.error("[Sync] Timeout en intento", attempt);
+              continue; // Reintentar en timeout
+          }
+          if (attempt === maxRetries) throw error;
       }
-      throw error;
   }
+
+  throw lastError;
 };
