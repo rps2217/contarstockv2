@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Database, ScanLine, Box, Layers, Fingerprint, Container, Cloud, ChevronRight } from 'lucide-react';
+import { Database, ScanLine, Box, Layers, Fingerprint, Container, Cloud, ChevronRight, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export const Dashboard: React.FC = () => {
@@ -17,14 +17,23 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="w-full max-w-2xl mx-auto pb-20 animate-in fade-in duration-700 pt-4">
-      <div className="mb-10 px-2">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="bg-[#1a1f2c] p-2 rounded-xl shadow-lg">
-                <Box className="w-6 h-6 text-white" />
+      <div className="mb-10 px-2 flex justify-between items-start">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+                <div className="bg-[#1a1f2c] p-2 rounded-xl shadow-lg">
+                    <Box className="w-6 h-6 text-white" />
+                </div>
+                <h1 className="text-3xl font-black tracking-tight text-slate-900">Centro de Control</h1>
             </div>
-            <h1 className="text-3xl font-black tracking-tight text-slate-900">Centro de Control</h1>
+            <p className="text-slate-400 font-medium text-sm">Resumen operativo del día.</p>
           </div>
-          <p className="text-slate-400 font-medium text-sm">Resumen operativo del día.</p>
+          
+          <button 
+            onClick={() => navigate('/settings')}
+            className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all shadow-sm active:scale-90"
+          >
+            <Settings className="w-6 h-6" />
+          </button>
       </div>
 
       <div className="space-y-4 px-2">

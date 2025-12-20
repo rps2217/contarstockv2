@@ -1,6 +1,6 @@
 
-// Use named import for Dexie to ensure proper class inheritance and method recognition in TypeScript environments.
-import { Dexie } from 'dexie';
+// Use default import for Dexie to ensure proper class inheritance and method recognition in TypeScript environments.
+import Dexie from 'dexie';
 import type { Table } from 'dexie';
 import { Product, CountingSession, ScanRecord, SyncJob, ExpectedOrder } from './types';
 
@@ -37,4 +37,5 @@ export class LogiCountDB extends Dexie {
   }
 }
 
-export const db = new LogiCountDB();
+// Explicitly typing the db instance as LogiCountDB to ensure inherited methods like open() and transaction() are correctly typed.
+export const db: LogiCountDB = new LogiCountDB();
