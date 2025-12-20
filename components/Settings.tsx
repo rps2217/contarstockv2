@@ -1,145 +1,109 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { 
-  Settings as SettingsIcon, ArrowLeft, Cloud, Key, Save, Share2, 
-  Sun, Moon, Monitor, XCircle, QrCode, Copy, Camera
+  Settings as SettingsIcon, ArrowLeft, Share2, 
+  Zap, Volume2, Mic, BarChart3, Gauge, AlertTriangle, Hash, Type
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../store/useAppStore';
-import { AppSettings } from '../types';
-
-// Atómicos
-import { OperationalSection } from './settings/OperationalSection';
-import { NavigationSection } from './settings/NavigationSection';
-import { SupportSection } from './settings/SupportSection';
-import { CameraScanner } from './CameraScanner';
 
 export const Settings: React.FC = () => {
   const navigate = useNavigate();
   const { settings, updateSetting } = useAppStore(); 
-  
-  const [appSheetConfig, setAppSheetConfig] = useState(settings.appSheetConfig || { appId: '', accessKey: '', countsTableName: '', productsTableName: '', receptionTableName: '' });
-  const [showSaveFeedback, setShowSaveFeedback] = useState(false);
-  
-  const [showShareModal, setShowShareModal] = useState(false);
-  const [shareMode, setShareMode] = useState<'export' | 'import'>('export');
-  const [importString, setImportString] = useState('');
-  const [isCameraOpen, setIsCameraOpen] = useState(false);
 
-  const handleAppSheetSave = (e: React.FormEvent) => {
-      e.preventDefault();
-      updateSetting('appSheetConfig', appSheetConfig);
-      setShowSaveFeedback(true);
-      setTimeout(() => setShowSaveFeedback(false), 3000);
-  };
+  const Toggle = ({ active, onClick, color = "bg-blue-500" }: any) => (
+    <button onClick={onClick} className={`w-12 h-6 rounded-full transition-colors relative ${active ? color : 'bg-slate-200'}`}>
+      <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${active ? 'left-7' : 'left-1'}`} />
+    </button>
+  );
 
-  const handleImportConfig = () => {
-      try {
-          const raw = importString.trim();
-          if (!raw.startsWith('LGC://')) throw new Error("Formato inválido.");
-          const json = atob(raw.replace('LGC://', ''));
-          const parsed = JSON.parse(json);
-          setAppSheetConfig(parsed);
-          updateSetting('appSheetConfig', parsed);
-          alert("Configuración importada!");
-          setShowShareModal(false);
-      } catch (e: any) { alert(`Error: ${e.message}`); }
-  };
+  const Item = ({ icon: Icon, title, sub, children, iconBg = "bg-slate-50", iconColor = "text-slate-400" }: any) => (
+    <div className="p-4 flex items-center justify-between">
+      <div className="flex items-center gap-4">
+        <div className={`p-3 rounded-2xl ${iconBg} ${iconColor}`}>
+            <Icon className="w-5 h-5" />
+        </div>
+        <div>
+          <div className="font-bold text-slate-900 text-base">{title}</div>
+          {sub && <div className="text-[11px] text-slate-400 font-medium leading-tight">{sub}</div>}
+        </div>
+      </div>
+      {children}
+    </div>
+  );
 
   return (
-    <div className="max-w-3xl mx-auto pb-24 px-4 pt-6 animate-in fade-in duration-300">
-      
-      <div className="flex items-center gap-3 mb-8">
-        <button onClick={() => navigate(-1)} className="p-2 hover:bg-black/5 rounded-full transition-colors">
-            <ArrowLeft className="w-6 h-6" />
-        </button>
-        <div className="flex-1">
-            <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2 text-slate-800">
-                <SettingsIcon className="w-6 h-6 text-slate-400" /> Ajustes Globales
-            </h1>
+    <div className="max-w-2xl mx-auto pb-24 px-2 pt-6 animate-in fade-in duration-300">
+      <div className="flex items-center justify-between mb-8 px-2">
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate(-1)} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><ArrowLeft className="w-6 h-6" /></button>
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2 text-slate-800">
+              <SettingsIcon className="w-6 h-6 text-slate-400" /> Ajustes Globales
+          </h1>
         </div>
-        <button onClick={() => { setShareMode('export'); setShowShareModal(true); }} className="p-2 bg-blue-50 text-blue-600 rounded-full">
-            <Share2 className="w-5 h-5" />
-        </button>
+        <button className="p-2 bg-blue-50 text-blue-600 rounded-full"><Share2 className="w-5 h-5" /></button>
       </div>
 
-      <div className="space-y-6">
-        
-        {/* MODULO 1: OPERACIONAL (Capa aislada) */}
-        <OperationalSection settings={settings} updateSetting={updateSetting} />
+      <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden py-4">
+        <div className="px-6 py-4 flex items-center gap-2 mb-2">
+           <Zap className="w-5 h-5 text-yellow-500" />
+           <h2 className="text-lg font-bold text-slate-900">Preferencias Operativas</h2>
+        </div>
 
-        {/* MODULO 2: NAVEGACION (Capa aislada) */}
-        <NavigationSection settings={settings} updateSetting={updateSetting} />
+        <div className="divide-y divide-slate-50">
+          <Item title="Registro Rápido" sub="(Desconocidos)" sub2="Guardar items nuevos sin preguntar" icon={Zap}>
+             <Toggle active={settings.autoRegisterUnknown} onClick={() => updateSetting('autoRegisterUnknown', !settings.autoRegisterUnknown)} />
+          </Item>
+          
+          <Item title="Sonido" icon={Volume2} iconColor="text-green-600" iconBg="bg-green-50">
+             <Toggle active={settings.soundEnabled} onClick={() => updateSetting('soundEnabled', !settings.soundEnabled)} color="bg-emerald-500" />
+          </Item>
 
-        {/* MODULO 3: CLOUD SYNC (Integrado en el padre por ahora, fácil de extraer luego) */}
-        <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <Cloud className="w-5 h-5 text-indigo-600" /> AppSheet Cloud Sync
-            </h2>
-            <form onSubmit={handleAppSheetSave} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="px-4 py-2">
+              <div className="flex items-center justify-between p-2">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-2xl bg-purple-50 text-purple-600"><Mic className="w-5 h-5" /></div>
                     <div>
-                        <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block ml-1">App ID</label>
-                        <input value={appSheetConfig.appId} onChange={(e) => setAppSheetConfig({...appSheetConfig, appId: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-mono outline-none" placeholder="xxxx-xxxx" />
+                      <div className="font-bold text-slate-900 text-base">Asistente de Voz</div>
+                      <div className="text-[11px] text-slate-400 font-medium">Confirmación auditiva</div>
                     </div>
-                    <div>
-                        <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block ml-1">Access Key</label>
-                        <input type="password" value={appSheetConfig.accessKey} onChange={(e) => setAppSheetConfig({...appSheetConfig, accessKey: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-mono outline-none" placeholder="••••••••" />
-                    </div>
-                </div>
-                <button type="submit" className="w-full bg-slate-900 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2">
-                    <Save className="w-4 h-4" /> {showSaveFeedback ? 'Guardado ✓' : 'Guardar Cloud'}
-                </button>
-            </form>
-        </section>
-
-        {/* MODULO 4: SOPORTE Y BACKUP (Capa aislada) */}
-        <SupportSection />
-
-        {/* MODULO 5: APARIENCIA */}
-        <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <Sun className="w-5 h-5 text-blue-500" /> Apariencia
-            </h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {['light', 'dark', 'warm', 'navy', 'contrast'].map(t => (
-                    <button key={t} onClick={() => updateSetting('theme', t)} className={`p-3 rounded-xl border-2 text-xs font-bold capitalize ${settings.theme === t ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-100'}`}>
-                        {t}
-                    </button>
-                ))}
-            </div>
-        </section>
-      </div>
-
-      {/* MODALES DE COMPARTIR */}
-      {showShareModal && (
-          <div className="fixed inset-0 z-[70] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-              <div className="w-full max-w-md bg-white rounded-3xl p-6 relative">
-                  <button onClick={() => setShowShareModal(false)} className="absolute top-4 right-4 text-slate-400"><XCircle /></button>
-                  {shareMode === 'export' ? (
-                      <div className="text-center">
-                          <QrCode className="w-12 h-12 mx-auto mb-4 text-blue-600" />
-                          <h3 className="font-bold mb-4">Exportar Configuración</h3>
-                          <div className="bg-slate-50 p-4 rounded-xl border mb-4">
-                              <img src={`https://quickchart.io/qr?text=${encodeURIComponent('LGC://' + btoa(JSON.stringify(appSheetConfig)))}&size=200`} className="mx-auto" />
-                          </div>
-                          <button onClick={() => { navigator.clipboard.writeText('LGC://' + btoa(JSON.stringify(appSheetConfig))); alert("Copiado"); }} className="flex items-center gap-2 mx-auto text-blue-600 font-bold"><Copy className="w-4 h-4" /> Copiar texto</button>
-                      </div>
-                  ) : (
-                      <div className="text-center">
-                          <h3 className="font-bold mb-4">Importar Configuración</h3>
-                          <div className="flex gap-2 mb-4">
-                              <input value={importString} onChange={(e) => setImportString(e.target.value)} className="flex-1 border p-3 rounded-xl text-xs font-mono" placeholder="LGC://..." />
-                              <button onClick={() => setIsCameraOpen(true)} className="p-3 bg-slate-100 rounded-xl"><Camera /></button>
-                          </div>
-                          <button onClick={handleImportConfig} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold">Cargar</button>
-                      </div>
-                  )}
+                  </div>
+                  <Toggle active={settings.ttsEnabled} onClick={() => updateSetting('ttsEnabled', !settings.ttsEnabled)} color="bg-purple-500" />
               </div>
-          </div>
-      )}
 
-      {isCameraOpen && <CameraScanner onScan={(c) => { setImportString(c); setIsCameraOpen(false); }} onClose={() => setIsCameraOpen(false)} />}
+              {settings.ttsEnabled && (
+                  <div className="grid grid-cols-2 gap-3 mt-4 px-2 mb-4">
+                      <button 
+                          onClick={() => updateSetting('ttsMode', 'count')}
+                          className={`p-5 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all ${settings.ttsMode === 'count' ? 'bg-purple-50 border-purple-100 text-purple-700' : 'bg-white border-slate-100 text-slate-400'}`}
+                      >
+                          <Hash className="w-6 h-6" />
+                          <span className="text-[11px] font-black uppercase">Contador (1, 2...)</span>
+                      </button>
+                      <button 
+                          onClick={() => updateSetting('ttsMode', 'product')}
+                          className={`p-5 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all ${settings.ttsMode === 'product' ? 'bg-purple-50 border-purple-100 text-purple-700' : 'bg-white border-slate-100 text-slate-400'}`}
+                      >
+                          <Type className="w-6 h-6" />
+                          <span className="text-[11px] font-black uppercase">Leer Nombre</span>
+                      </button>
+                  </div>
+              )}
+          </div>
+
+          <Item title="Torre de Control" sub="Mostrar métricas en inicio" icon={BarChart3}>
+             <Toggle active={settings.controlTowerEnabled} onClick={() => updateSetting('controlTowerEnabled', !settings.controlTowerEnabled)} />
+          </Item>
+
+          <Item title="Velocímetro" sub="Mostrar items por minuto" icon={Gauge}>
+             <Toggle active={settings.speedometerEnabled} onClick={() => updateSetting('speedometerEnabled', !settings.speedometerEnabled)} />
+          </Item>
+
+          <Item title="Confirmar Eliminación" icon={AlertTriangle} iconColor="text-blue-600" iconBg="bg-blue-50">
+             <Toggle active={settings.confirmDelete} onClick={() => updateSetting('confirmDelete', !settings.confirmDelete)} />
+          </Item>
+        </div>
+      </div>
     </div>
   );
 };

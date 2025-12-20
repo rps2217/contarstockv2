@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect, Suspense } from 'react';
 import { Routes, Route, useNavigate, useLocation, Navigate, Outlet, HashRouter, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Home, Database as DbIcon, History, Layers, Container, Fingerprint, Cloud, Loader2 } from 'lucide-react';
+import { Home, Layers, Cloud, Loader2 } from 'lucide-react';
 import { useAppStore } from './store/useAppStore';
 import { db } from './db';
 import { processSyncQueue } from './services/syncManager';
@@ -37,7 +38,7 @@ const MainLayout = () => {
     const currentView = location.pathname.split('/')[1] || 'dashboard';
 
     return (
-        <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col md:flex-row transition-all duration-300">
+        <div className="min-h-screen bg-[#FDFCF9] text-slate-900 flex flex-col md:flex-row transition-all duration-300">
             <SystemStatus />
             <Sidebar view={currentView} settings={settings} />
             <main className="flex-1 md:ml-64 w-full relative pb-24 md:pb-0">
@@ -48,7 +49,7 @@ const MainLayout = () => {
                 </Suspense>
             </main>
             <InstallPrompt />
-            <MobileNav currentView={currentView} settings={settings} />
+            <MobileNav currentView={currentView} />
         </div>
     );
 };
@@ -138,35 +139,31 @@ const App: React.FC = () => (
     </ErrorBoundary>
 );
 
-const NAV_CONFIG: Record<string, { label: string, icon: React.ReactNode, path: string }> = {
-    'dashboard': { label: 'Inicio', icon: <Home className="w-6 h-6" />, path: '/dashboard' },
-    'database': { label: 'Datos', icon: <DbIcon className="w-6 h-6" />, path: '/database' },
-    'reports': { label: 'Historial', icon: <History className="w-6 h-6" />, path: '/reports' },
-    'consolidated': { label: 'Consol.', icon: <Layers className="w-6 h-6" />, path: '/consolidated' },
-    'reception': { label: 'Recep.', icon: <Container className="w-6 h-6" />, path: '/reception' },
-    'conciliator': { label: 'Detect.', icon: <Fingerprint className="w-6 h-6" />, path: '/conciliator' },
-    'sync': { label: 'Nube', icon: <Cloud className="w-6 h-6" />, path: '/sync' },
-};
+const NAV_ITEMS = [
+    { key: 'dashboard', label: 'Inicio', icon: Home, path: '/dashboard' },
+    { key: 'consolidated', label: 'Consol.', icon: Layers, path: '/consolidated' },
+    { key: 'sync', label: 'Nube', icon: Cloud, path: '/sync' },
+];
 
-const MobileNav = ({ currentView, settings }: any) => {
+const MobileNav = ({ currentView }: { currentView: string }) => {
   const navigate = useNavigate();
-  const navItems = settings.mobileNavConfig || ['dashboard', 'database', 'reports', 'sync'];
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 pb-safe-area shadow-xl">
-        <div className="flex justify-around items-center h-16 px-2">
-            {navItems.map((key: string) => {
-                const conf = NAV_CONFIG[key];
-                if (!conf) return null;
-                const isActive = currentView === key;
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-100 pb-safe-area shadow-[0_-4px_10px_rgba(0,0,0,0.03)]">
+        <div className="flex justify-around items-center h-16 px-4">
+            {NAV_ITEMS.map((item) => {
+                const isActive = currentView === item.key;
+                const Icon = item.icon;
                 return (
                     <button 
-                        key={key}
-                        onClick={() => navigate(conf.path)}
-                        className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-all ${isActive ? 'text-blue-600' : 'text-slate-400'}`}
+                        key={item.key}
+                        onClick={() => navigate(item.path)}
+                        className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-all ${isActive ? 'text-blue-600' : 'text-slate-300'}`}
                     >
-                        <div className={`transition-transform duration-300 ${isActive ? 'scale-110' : ''}`}>{conf.icon}</div>
-                        <span className={`text-[10px] font-bold uppercase tracking-tight ${isActive ? 'opacity-100' : 'opacity-60'}`}>{conf.label}</span>
+                        <div className={`transition-transform duration-300 ${isActive ? 'scale-110' : ''}`}>
+                            <Icon className="w-6 h-6" />
+                        </div>
+                        <span className="text-[10px] font-bold tracking-tight">{item.label}</span>
                     </button>
                 );
             })}

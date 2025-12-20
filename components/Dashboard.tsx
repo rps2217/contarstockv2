@@ -1,83 +1,55 @@
-import React, { useState, useEffect } from 'react';
-import { Database, ScanLine, Settings, Box, Layers, Fingerprint, Container, Cloud } from 'lucide-react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../db';
-import { useAppStore } from '../store/useAppStore';
+
+import React from 'react';
+import { Database, ScanLine, Box, Layers, Fingerprint, Container, Cloud, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { StatsSection } from './dashboard/StatsSection';
-import { ActionCard } from './dashboard/ActionCard';
-import { TrendsChart } from './dashboard/TrendsChart';
-import { getHourlyProductivity, ProductivityPoint } from '../services/statsService';
 
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { settings } = useAppStore();
-  const [trendData, setTrendData] = useState<ProductivityPoint[]>([]);
 
-  const dailyStats = useLiveQuery(async () => {
-      const date = new Date();
-      date.setHours(0, 0, 0, 0);
-      const todayStart = date.getTime();
-      const todaySessions = await db.sessions.where('createdAt').aboveOrEqual(todayStart).toArray();
-      const bultos = todaySessions.length;
-      const units = todaySessions.reduce((acc, s) => acc + (s.totalUnits || 0), 0);
-      const pendingSync = await db.scans.where('synced').equals(0).count();
-      return { bultos, units, pendingSync };
-  }, [], { bultos: 0, units: 0, pendingSync: 0 });
-
-  useEffect(() => {
-      const loadTrends = async () => {
-          const data = await getHourlyProductivity(1);
-          setTrendData(data);
-      };
-      loadTrends();
-      const interval = setInterval(loadTrends, 300000); 
-      return () => clearInterval(interval);
-  }, []);
+  const menuItems = [
+    { title: "Sesión de Conteo", sub: "Iniciar inventario físico", icon: ScanLine, path: "/reports" },
+    { title: "Recepción Ciega", sub: "Check-in rápido", icon: Container, path: "/reception" },
+    { title: "Gestor Nube", sub: "Sincronización", icon: Cloud, path: "/sync" },
+    { title: "Consolidados", sub: "Reportes por ERP", icon: Layers, path: "/consolidated" },
+    { title: "Detective", sub: "Conciliación Excel", icon: Fingerprint, path: "/conciliator" },
+    { title: "Base de Datos", sub: "Maestro de Productos", icon: Database, path: "/database" },
+  ];
 
   return (
-    <div className="w-full max-w-7xl mx-auto pb-20 animate-in fade-in duration-700">
-      <div className="mb-10 flex items-center justify-between">
-        <div>
-            <h1 className="text-3xl md:text-5xl font-black tracking-tight text-slate-900 flex items-center gap-4">
-              <div className="bg-blue-600 p-2 rounded-2xl shadow-lg shadow-blue-200">
-                <Box className="w-8 h-8 md:w-10 md:h-10 text-white" />
-              </div>
-              Panel de Control
-            </h1>
-            <p className="text-slate-500 mt-2 font-semibold text-lg">Sistema de Gestión Logística LogiCount Pro</p>
-        </div>
-        <button onClick={() => navigate('/settings')} className="p-4 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-blue-600 hover:border-blue-300 transition-all shadow-sm active:scale-95">
-            <Settings className="w-6 h-6" />
-        </button>
-      </div>
-
-      {settings.controlTowerEnabled && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-              <div className="lg:col-span-2">
-                  <StatsSection stats={dailyStats} />
-              </div>
-              <div className="lg:col-span-1">
-                  <TrendsChart data={trendData} />
-              </div>
+    <div className="w-full max-w-2xl mx-auto pb-20 animate-in fade-in duration-700 pt-4">
+      <div className="mb-10 px-2">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="bg-[#1a1f2c] p-2 rounded-xl shadow-lg">
+                <Box className="w-6 h-6 text-white" />
+            </div>
+            <h1 className="text-3xl font-black tracking-tight text-slate-900">Centro de Control</h1>
           </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
-        <div className="md:col-span-2">
-             <ActionCard title="Nueva Sesión" sub="Iniciar proceso de conteo de mercadería" icon={ScanLine} colorClass="bg-blue-600 text-white shadow-blue-200" to="/reports" />
-        </div>
-        <ActionCard title="Recepción" sub="Ingreso masivo de bultos" icon={Container} colorClass="bg-white text-slate-900 border-slate-200" to="/reception" />
-        <ActionCard title="Sincronizar" sub="Subir datos locales a la nube" icon={Cloud} colorClass="bg-white text-slate-900 border-slate-200" to="/sync" />
-        <ActionCard title="Consolidados" sub="Ver reportes agrupados por ERP" icon={Layers} colorClass="bg-white text-slate-900 border-slate-200" to="/consolidated" />
-        <ActionCard title="Detective" sub="Conciliación avanzada de pedidos" icon={Fingerprint} colorClass="bg-white text-slate-900 border-slate-200" to="/conciliator" />
-        <ActionCard title="Catálogo" sub="Administrar base de productos" icon={Database} colorClass="bg-white text-slate-900 border-slate-200" to="/database" />
+          <p className="text-slate-400 font-medium text-sm">Resumen operativo del día.</p>
       </div>
 
-      <div className="flex flex-col items-center justify-center py-12 opacity-20 border-t border-slate-200 mt-10">
-        <div className="text-xs text-slate-500 font-black tracking-[0.4em] uppercase text-center">
-          LOGICOUNT SYSTEMS • ENTERPRISE EDITION v2.5
-        </div>
+      <div className="space-y-4 px-2">
+        {menuItems.map((item, idx) => (
+          <button 
+            key={idx}
+            onClick={() => navigate(item.path)}
+            className="w-full bg-white border border-slate-100 p-5 rounded-[1.5rem] flex items-center justify-between shadow-sm active:scale-[0.98] transition-all hover:bg-slate-50 group"
+          >
+            <div className="flex items-center gap-5">
+              <div className="p-3 bg-slate-50 rounded-2xl group-hover:bg-white transition-colors">
+                  <item.icon className="w-6 h-6 text-slate-500" />
+              </div>
+              <div className="text-left">
+                <h2 className="text-lg font-bold text-slate-800 leading-tight">{item.title}</h2>
+                <p className="text-xs text-slate-400 font-medium">{item.sub}</p>
+              </div>
+            </div>
+            <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-blue-500 transition-colors" />
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-16 text-center">
+        <p className="text-[10px] text-slate-300 font-bold uppercase tracking-[0.2em]">LogiCount Pro Modular Architecture</p>
       </div>
     </div>
   );

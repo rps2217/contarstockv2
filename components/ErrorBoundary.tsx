@@ -1,5 +1,5 @@
 
-import React, { ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home, Terminal } from 'lucide-react';
 import { logger } from '../services/logger';
 
@@ -13,8 +13,8 @@ interface State {
   errorInfo: ErrorInfo | null;
 }
 
-// Fixed: Extending React.Component explicitly to ensure 'state', 'setState', and 'props' are correctly recognized as base members by the compiler.
-export class ErrorBoundary extends React.Component<Props, State> {
+// Fixed: Extending Component directly to ensure 'state', 'setState', and 'props' are correctly recognized as base members by the compiler.
+export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
     this.state = {
@@ -41,7 +41,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
         { stack: error.stack, componentStack: errorInfo.componentStack }
     ).catch(e => console.error("Failed to write crash log", e));
     
-    // Fixed: setState is correctly inherited from React.Component
+    // setState is correctly inherited from Component
     this.setState({ errorInfo });
   }
 
@@ -57,7 +57,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
   };
 
   render(): ReactNode {
-    // Fixed: state is correctly inherited from React.Component
+    // state is correctly inherited from Component
     if (this.state.hasError) {
       // Safe error message conversion
       const errorMessage = this.state.error 
@@ -109,7 +109,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
       );
     }
 
-    // Fixed: props is correctly inherited from React.Component
+    // props is correctly inherited from Component
     return this.props.children;
   }
 }
