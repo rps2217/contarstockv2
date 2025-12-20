@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { Database, ScanLine, Settings, Box, Layers, Fingerprint, Container, Cloud } from 'lucide-react';
+import { Database, ScanLine, Settings, Box, Layers, Fingerprint, Container, Cloud, Zap } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { useAppStore } from '../store/useAppStore';
@@ -32,29 +31,32 @@ export const Dashboard: React.FC = () => {
           setTrendData(data);
       };
       loadTrends();
-      const interval = setInterval(loadTrends, 300000); // Actualizar cada 5 min
+      const interval = setInterval(loadTrends, 300000); 
       return () => clearInterval(interval);
   }, []);
 
   return (
-    <div className="w-full max-w-7xl mx-auto pb-32 px-4 md:px-8 animate-in fade-in duration-500">
-      <div className="pt-6 md:pt-8 mb-6 md:mb-8 flex items-center justify-between">
+    <div className="w-full max-w-7xl mx-auto pb-32 px-4 md:px-8 animate-in fade-in duration-700">
+      <div className="pt-6 md:pt-12 mb-8 md:mb-12 flex items-center justify-between">
         <div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-2 md:gap-3">
-            <div className="bg-slate-900 text-white p-1.5 md:p-2 rounded-lg md:rounded-xl">
-                <Box className="w-5 h-5 md:w-6 md:h-6" />
+            <div className="flex items-center gap-2 text-blue-500 font-bold text-[10px] uppercase tracking-[0.3em] mb-2">
+                <Zap className="w-3 h-3 fill-current" /> Warehouse Console v2.5
             </div>
-            Centro de Control
+            <h1 className="text-3xl md:text-4xl font-black tracking-tighter text-white flex items-center gap-3">
+              <div className="bg-blue-600 text-white p-2 rounded-xl shadow-[0_0_20px_rgba(37,99,235,0.4)]">
+                  <Box className="w-6 h-6 md:w-8 md:h-8" />
+              </div>
+              LogiCount Pro
             </h1>
-            <p className="text-sm md:text-lg text-slate-500 mt-1">Resumen operativo del día.</p>
+            <p className="text-slate-400 mt-2 font-medium">Terminal operativo de flujo logístico.</p>
         </div>
-        <button onClick={() => navigate('/settings')} className="md:hidden p-2 bg-slate-100 rounded-full text-slate-600 hover:bg-slate-200">
-            <Settings className="w-5 h-5" />
+        <button onClick={() => navigate('/settings')} className="md:hidden p-3 bg-slate-900 border border-slate-800 rounded-2xl text-slate-400 hover:text-white transition-all active:scale-95">
+            <Settings className="w-6 h-6" />
         </button>
       </div>
 
       {settings.controlTowerEnabled && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
               <div className="lg:col-span-2">
                   <StatsSection stats={dailyStats} />
               </div>
@@ -64,18 +66,22 @@ export const Dashboard: React.FC = () => {
           </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 mb-12">
         <div className="md:col-span-2 md:row-span-2">
-             <ActionCard title="Sesión de Conteo" sub="Iniciar inventario físico" icon={ScanLine} colorClass="md:from-blue-600 md:to-blue-700" to="/reports" span={2} />
+             <ActionCard title="Sesión de Conteo" sub="Iniciar inventario físico" icon={ScanLine} colorClass="bg-blue-600/10 border-blue-500/20 md:from-blue-600 md:to-blue-700 md:border-0" to="/reports" span={2} />
         </div>
-        <ActionCard title="Recepción Ciega" sub="Check-in rápido" icon={Container} colorClass="md:from-slate-800 md:to-slate-900" to="/reception" />
-        <ActionCard title="Gestor Nube" sub="Sincronización" icon={Cloud} colorClass="md:from-indigo-500 md:to-violet-600" to="/sync" />
-        <ActionCard title="Consolidados" sub="Reportes por ERP" icon={Layers} colorClass="md:from-purple-600 md:to-fuchsia-700" to="/consolidated" />
-        <ActionCard title="Detective" sub="Conciliación Excel" icon={Fingerprint} colorClass="md:from-emerald-600 md:to-teal-700" to="/conciliator" />
-        <ActionCard title="Base de Datos" sub="Maestro de Productos" icon={Database} colorClass="md:from-cyan-500 md:to-blue-600" to="/database" />
+        <ActionCard title="Recepción Ciega" sub="Check-in rápido" icon={Container} colorClass="bg-slate-900/40 border-slate-800 md:from-slate-800 md:to-slate-900 md:border-0" to="/reception" />
+        <ActionCard title="Gestor Nube" sub="Sincronización" icon={Cloud} colorClass="bg-indigo-900/40 border-indigo-800 md:from-indigo-600 md:to-violet-700 md:border-0" to="/sync" />
+        <ActionCard title="Consolidados" sub="Reportes por ERP" icon={Layers} colorClass="bg-purple-900/40 border-purple-800 md:from-purple-600 md:to-fuchsia-700 md:border-0" to="/consolidated" />
+        <ActionCard title="Detective" sub="Conciliación Excel" icon={Fingerprint} colorClass="bg-emerald-900/40 border-emerald-800 md:from-emerald-600 md:to-teal-700 md:border-0" to="/conciliator" />
+        <ActionCard title="Base de Datos" sub="Maestro de Productos" icon={Database} colorClass="bg-slate-900/40 border-slate-800 md:from-cyan-600 md:to-blue-600 md:border-0" to="/database" />
       </div>
 
-      <div className="text-center text-[10px] md:text-xs text-slate-400 mt-8 font-mono">LogiCount Pro Modular Architecture</div>
+      <div className="text-center py-8">
+        <div className="text-[10px] md:text-xs text-slate-600 font-mono tracking-widest uppercase">
+          Cyber-Warehouse Edition &bull; Local-First Engine &bull; Gemini-Powered
+        </div>
+      </div>
     </div>
   );
 };

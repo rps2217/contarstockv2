@@ -1,4 +1,6 @@
-import { Dexie, type Table } from 'dexie';
+
+import Dexie from 'dexie';
+import type { Table } from 'dexie';
 import { Product, CountingSession, ScanRecord, SyncJob, ExpectedOrder } from './types';
 
 export interface SystemLog {
@@ -20,8 +22,8 @@ export class LogiCountDB extends Dexie {
 
   constructor() {
     super('LogiCountDB');
-    // Fix: Using the version() method inherited from Dexie. 
-    // Named import for Dexie often fixes issues where inherited members are not correctly identified by the compiler.
+    // Define the database schema and versioning.
+    // The version() method is inherited from the Dexie base class.
     this.version(15).stores({
       products: '&barcode, name, syncStatus', 
       sessions: 'id, status, createdAt, erpOrder, logisticsLabel, auditStatus, [erpOrder+createdAt], [status+lastSyncTimestamp]', 

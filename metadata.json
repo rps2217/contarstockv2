@@ -1,6 +1,6 @@
 {
-  "name": "LogiCount Pro v2",
-  "description": "Sistema de gestión de inventario local-first optimizado para lectores de códigos de barras físicos. Cuenta con consolidación por orden ERP, seguimiento de sesiones y análisis de reportes con IA.",
+  "name": "LogiCount Pro v2.5",
+  "description": "LogiCount Pro: Cyber-Warehouse Edition. Local-first warehouse management with high-performance UI and Gemini-powered analytics.",
   "requestFramePermissions": [
     "camera"
   ]
