@@ -1,5 +1,5 @@
 
-import React, { ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home, Terminal } from 'lucide-react';
 import { logger } from '../services/logger';
 
@@ -13,11 +13,11 @@ interface State {
   errorInfo: ErrorInfo | null;
 }
 
-// Fixed: Explicitly extending React.Component to ensure inherited properties like state, setState, and props are correctly recognized by the TypeScript compiler.
-export class ErrorBoundary extends React.Component<Props, State> {
+// Fixed: Explicitly extending Component from React via named import to ensure properties like state, setState, and props are correctly recognized by the compiler.
+export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    // Fixed: Initializing state on the class instance, which is inherited from React.Component.
+    // Fixed: Initializing state on the class instance, now correctly recognized through explicit inheritance.
     this.state = {
       hasError: false,
       error: null,
@@ -33,7 +33,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
     };
   }
 
-  // Fixed: componentDidCatch implementation utilizing setState from the React.Component base class.
+  // Fixed: componentDidCatch implementation utilizing setState from the base Component class.
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
     
@@ -43,7 +43,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
         { stack: error.stack, componentStack: errorInfo.componentStack }
     ).catch(e => console.error("Failed to write crash log", e));
     
-    // Fixed: setState is a method provided by the React.Component base class.
+    // Fixed: setState is now correctly recognized as a method of the base class.
     this.setState({ errorInfo });
   }
 
@@ -58,7 +58,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
     }
   };
 
-  // Fixed: render() method accessing inherited state.
+  // Fixed: render() method now correctly accesses inherited state.
   render(): ReactNode {
     // Fixed: Accessing inherited state property.
     if (this.state.hasError) {
@@ -107,7 +107,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
       );
     }
 
-    // Fixed: Accessing inherited props property.
+    // Fixed: Accessing inherited props property correctly.
     return this.props.children;
   }
 }

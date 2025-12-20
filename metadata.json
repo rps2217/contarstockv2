@@ -1,6 +1,6 @@
 {
   "name": "LogiCount Pro v2.5",
-  "description": "LogiCount Pro: Cyber-Warehouse Edition. Local-first warehouse management with high-performance UI and Gemini-powered analytics.",
+  "description": "Sistema profesional de gestión de inventario local-first con analítica avanzada.",
   "requestFramePermissions": [
     "camera"
   ]

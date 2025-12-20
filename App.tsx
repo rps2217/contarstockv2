@@ -27,7 +27,7 @@ const SyncManagerUI = lazyWithRetry(() => import('./components/SyncManagerUI').t
 const LoadingFallback = () => (
   <div className="h-full w-full flex flex-col items-center justify-center text-slate-500 gap-4 animate-pulse">
     <Loader2 className="w-14 h-14 animate-spin text-blue-500" />
-    <span className="text-sm font-black uppercase tracking-[0.3em]">Cargando Sistema...</span>
+    <span className="text-sm font-bold uppercase tracking-wider">Cargando Sistema...</span>
   </div>
 );
 
@@ -37,10 +37,10 @@ const MainLayout = () => {
     const currentView = location.pathname.split('/')[1] || 'dashboard';
 
     return (
-        <div className="min-h-screen font-sans bg-[#0a0f1d] text-slate-200 transition-colors duration-300 flex">
+        <div className="min-h-screen font-sans bg-slate-50 text-slate-900 transition-colors duration-300 flex">
             <SystemStatus />
             <Sidebar view={currentView} settings={settings} />
-            <main className="flex-1 md:ml-64 w-full animate-in fade-in duration-700 min-h-screen relative pb-24 md:pb-0">
+            <main className="flex-1 md:ml-64 w-full animate-in fade-in duration-500 min-h-screen relative pb-24 md:pb-0">
                 <Suspense fallback={<LoadingFallback />}>
                     <div className="p-4 md:p-8 max-w-7xl mx-auto">
                       <Outlet />
@@ -80,8 +80,8 @@ const AppContent: React.FC = () => {
     return () => clearInterval(syncInterval);
   }, []);
 
-  if (dbError) return <div className="p-12 text-rose-400 text-center font-black text-xl bg-slate-950 min-h-screen flex items-center justify-center">Error: {dbError}</div>;
-  if (!dbReady) return <div className="h-screen flex items-center justify-center bg-slate-950"><Loader2 className="animate-spin w-12 h-12 text-blue-500"/></div>;
+  if (dbError) return <div className="p-12 text-rose-600 text-center font-bold text-xl bg-white min-h-screen flex items-center justify-center">Error de base de datos: {dbError}</div>;
+  if (!dbReady) return <div className="h-screen flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin w-12 h-12 text-blue-500"/></div>;
 
   if (!isAuthenticated) {
       return <Login onLoginSuccess={() => setIsAuthenticated(true)} />;
@@ -114,7 +114,7 @@ const ScannerWrapper = () => {
     if (!session) return <LoadingFallback />;
 
     return (
-        <div className="h-screen bg-slate-950 overflow-hidden">
+        <div className="h-screen bg-slate-100 overflow-hidden">
             <Scanner 
                 session={session} 
                 onCloseSession={async () => {
@@ -153,8 +153,8 @@ const MobileNav = ({ currentView, settings }: any) => {
   const navItems = settings.mobileNavConfig || ['dashboard', 'database', 'reports', 'sync'];
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-xl border-t border-white/10 pb-safe-area shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
-        <div className="flex justify-around items-center h-20 px-2">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 pb-safe-area shadow-lg">
+        <div className="flex justify-around items-center h-16 px-2">
             {navItems.map((key: string) => {
                 const conf = NAV_CONFIG[key];
                 if (!conf) return null;
@@ -163,10 +163,10 @@ const MobileNav = ({ currentView, settings }: any) => {
                     <button 
                         key={key}
                         onClick={() => navigate(conf.path)}
-                        className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-all duration-300 ${isActive ? 'text-white scale-110' : 'text-slate-500'}`}
+                        className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-all ${isActive ? 'text-blue-600' : 'text-slate-400'}`}
                     >
-                        <div className={`${isActive ? 'bg-blue-600 p-2 rounded-xl shadow-lg shadow-blue-900/50' : ''} transition-all`}>{conf.icon}</div>
-                        <span className={`text-[10px] font-black uppercase tracking-tighter leading-none ${isActive ? 'opacity-100' : 'opacity-60'}`}>{conf.label}</span>
+                        <div className="transition-all">{conf.icon}</div>
+                        <span className={`text-[10px] font-bold uppercase ${isActive ? 'opacity-100' : 'opacity-60'}`}>{conf.label}</span>
                     </button>
                 );
             })}

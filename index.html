@@ -3,17 +3,13 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta name="theme-color" content="#0a0f1d" />
-    <meta name="description" content="LogiCount Pro - Zen Edition" />
+    <meta name="theme-color" content="#3b82f6" />
+    <meta name="description" content="LogiCount Pro - Sistema de Gestión de Inventario" />
     <title>LogiCount Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
       
-      :root {
-        --bg-zen: #0a0f1d;
-      }
-
       .no-scrollbar::-webkit-scrollbar { display: none; }
       .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       
@@ -21,71 +17,51 @@
         overscroll-behavior-y: contain; 
         touch-action: manipulation; 
         -webkit-text-size-adjust: 100%;
-        background-color: var(--bg-zen);
-        color: #94a3b8;
-        font-family: 'Plus Jakarta Sans', sans-serif;
-        font-size: 18px;
-        line-height: 1.6;
-      }
-
-      .zen-bg {
-        background: radial-gradient(circle at 50% -20%, #1e293b 0%, #0a0f1d 80%);
-        min-height: 100vh;
+        background-color: #f8fafc;
+        color: #1e293b;
+        font-family: 'Inter', sans-serif;
       }
 
       .glass-card {
-        background: rgba(30, 41, 59, 0.4);
-        backdrop-filter: blur(16px);
-        border: 1px solid rgba(255, 255, 255, 0.03);
-        box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
-      }
-
-      .sku-font {
-        font-family: 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', monospace;
-        letter-spacing: 0.05em;
-        font-weight: 800;
+        background: white;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
       }
 
       ::-webkit-scrollbar { width: 8px; }
-      ::-webkit-scrollbar-track { background: #0a0f1d; }
-      ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+      ::-webkit-scrollbar-track { background: #f1f5f9; }
+      ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
-    <script type="importmap">
+<script type="importmap">
 {
   "imports": {
-    "react": "https://esm.sh/react@18.3.1",
-    "react/": "https://esm.sh/react@18.3.1/",
-    "react-dom": "https://esm.sh/react-dom@18.3.1",
-    "react-dom/": "https://esm.sh/react-dom@18.3.1/",
-    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
-    "react-router-dom": "https://esm.sh/react-router-dom@6.22.3?external=react,react-dom",
-    "@remix-run/router": "https://esm.sh/@remix-run/router@1.15.3",
-    "zustand": "https://esm.sh/zustand@4.5.2?external=react",
-    "react-markdown": "https://esm.sh/react-markdown@9.0.1?external=react",
-    "@google/genai": "https://esm.sh/@google/genai@1.30.0",
-    "lucide-react": "https://esm.sh/lucide-react@0.344.0?external=react",
-    "recharts": "https://esm.sh/recharts@2.12.2?external=react,react-dom",
-    "dexie": "https://esm.sh/dexie@3.2.4",
-    "dexie-react-hooks": "https://esm.sh/dexie-react-hooks@1.1.7?external=react,dexie",
-    "uuid": "https://esm.sh/uuid@9.0.1",
-    "papaparse": "https://esm.sh/papaparse@5.4.1",
-    "jspdf": "https://esm.sh/jspdf@2.5.1",
-    "jspdf-autotable": "https://esm.sh/jspdf-autotable@3.8.2",
-    "xlsx": "https://esm.sh/xlsx@0.18.5",
-    "jszip": "https://esm.sh/jszip@3.10.1",
-    "react-window": "https://esm.sh/react-window@1.8.10?external=react,react-dom",
-    "react-virtualized-auto-sizer": "https://esm.sh/react-virtualized-auto-sizer@1.0.24?external=react,react-dom",
-    "html5-qrcode": "https://esm.sh/html5-qrcode@2.3.8",
-    "date-fns": "https://esm.sh/date-fns@3.3.1",
-    "zod": "https://esm.sh/zod@3.22.4",
+    "jspdf": "https://esm.sh/jspdf@^3.0.4",
+    "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "recharts": "https://esm.sh/recharts@^3.6.0",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react-router-dom": "https://esm.sh/react-router-dom@^7.11.0",
+    "html5-qrcode": "https://esm.sh/html5-qrcode@^2.3.8",
+    "zustand": "https://esm.sh/zustand@^5.0.9",
+    "xlsx": "https://esm.sh/xlsx@^0.18.5",
+    "date-fns": "https://esm.sh/date-fns@^4.1.0",
+    "dexie": "https://esm.sh/dexie@^4.2.1",
+    "react-window": "https://esm.sh/react-window@^2.2.3",
+    "jspdf-autotable": "https://esm.sh/jspdf-autotable@^5.0.2",
+    "papaparse": "https://esm.sh/papaparse@^5.5.3",
+    "zod": "https://esm.sh/zod@^4.2.1",
+    "react-virtualized-auto-sizer": "https://esm.sh/react-virtualized-auto-sizer@^1.0.26",
     "vite": "https://esm.sh/vite@^7.3.0",
     "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
+    "dexie-react-hooks": "https://esm.sh/dexie-react-hooks@^4.2.0",
     "vite-plugin-pwa": "https://esm.sh/vite-plugin-pwa@^1.2.0"
   }
 }
 </script>
 </head>
-<body class="zen-bg">
+<body class="bg-slate-50">
     <div id="root"></div>
     <script type="module" src="index.tsx"></script>
 </body>

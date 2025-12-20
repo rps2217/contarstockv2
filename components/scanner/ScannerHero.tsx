@@ -1,7 +1,6 @@
 import React, { memo } from 'react';
-import { RotateCcw, AlertCircle, Leaf, CheckCircle, Package } from 'lucide-react';
+import { RotateCcw, AlertCircle, Package, CheckCircle } from 'lucide-react';
 import { ScanRecord, ExpectedItem } from '../../types';
-import { useAppStore } from '../../store/useAppStore';
 
 interface ScannerHeroProps {
     lastScan: ScanRecord | undefined;
@@ -17,17 +16,15 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
     activeProductStats, 
     feedback, 
     onRegisterPending, 
-    onToggleIncident,
     expectedItem
 }) => {
     if (feedback === 'undo') {
         return (
-            <div className="flex flex-col items-center animate-in zoom-in duration-500">
-                <div className="p-12 bg-slate-800 rounded-[3rem] border-2 border-white/10 mb-8 shadow-2xl">
-                    <RotateCcw className="w-20 h-20 text-slate-300" />
+            <div className="flex flex-col items-center animate-in zoom-in duration-300">
+                <div className="p-8 bg-slate-100 rounded-full mb-6">
+                    <RotateCcw className="w-16 h-16 text-slate-400" />
                 </div>
-                <h2 className="text-3xl font-black uppercase tracking-[0.2em] text-slate-300">Reversión</h2>
-                <p className="text-slate-400 mt-4 text-xl font-bold italic">Registro eliminado</p>
+                <h2 className="text-2xl font-bold text-slate-400">Acción Revertida</h2>
             </div>
         );
     }
@@ -42,61 +39,57 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
         const progress = targetQty > 0 ? Math.min(100, (currentQty / targetQty) * 100) : 0;
 
         return (
-            <div className={`animate-in fade-in duration-500 w-full flex flex-col items-center px-4`}>
+            <div className="animate-in fade-in duration-300 w-full flex flex-col items-center px-4">
                 {isUnknown ? (
-                    <div className="bg-slate-900 border-2 border-amber-500/40 p-10 md:p-16 rounded-[3rem] shadow-2xl w-full max-w-2xl text-center">
-                        <AlertCircle className="w-24 h-24 text-amber-500 mx-auto mb-8" />
-                        <h2 className="text-4xl font-black text-amber-200 mb-4">SKU Externo</h2>
-                        <div className="sku-font text-3xl mb-10 bg-black/40 py-6 px-4 rounded-2xl text-amber-400 border border-amber-500/20">{lastScan.barcode}</div>
-                        <button onClick={onRegisterPending} className="w-full bg-amber-600 hover:bg-amber-500 text-black font-black text-2xl py-6 rounded-2xl shadow-xl transition-all active:scale-95">Vincular Ahora</button>
+                    <div className="bg-white border border-orange-200 p-8 md:p-12 rounded-3xl shadow-xl w-full max-w-xl text-center">
+                        <AlertCircle className="w-16 h-16 text-orange-500 mx-auto mb-6" />
+                        <h2 className="text-3xl font-black text-slate-900 mb-2">Producto Nuevo</h2>
+                        <p className="text-slate-500 mb-8 font-mono text-xl">{lastScan.barcode}</p>
+                        <button onClick={onRegisterPending} className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-2xl shadow-lg transition-all active:scale-95">Registrar en Catálogo</button>
                     </div>
                 ) : (
                     <div className="w-full flex flex-col items-center">
                         {expectedItem && (
-                            <div className="mb-8 flex gap-4">
+                            <div className="mb-6">
                                 {isOverCount ? (
-                                    <div className="bg-rose-600 text-white px-8 py-3 rounded-full font-black text-sm uppercase tracking-widest flex items-center gap-3 shadow-lg shadow-rose-900/40">
-                                        <AlertCircle className="w-6 h-6" /> EXCESO DETECTADO
+                                    <div className="bg-red-100 text-red-700 px-6 py-2 rounded-full font-bold text-sm flex items-center gap-2 border border-red-200">
+                                        <AlertCircle className="w-4 h-4" /> EXCESO
                                     </div>
                                 ) : isTargetReached ? (
-                                    <div className="bg-emerald-600 text-white px-8 py-3 rounded-full font-black text-sm uppercase tracking-widest flex items-center gap-3 shadow-lg shadow-emerald-900/40">
-                                        <CheckCircle className="w-6 h-6" /> META CUMPLIDA
+                                    <div className="bg-green-100 text-green-700 px-6 py-2 rounded-full font-bold text-sm flex items-center gap-2 border border-green-200">
+                                        <CheckCircle className="w-4 h-4" /> COMPLETADO
                                     </div>
                                 ) : (
-                                    <div className="bg-slate-800 text-slate-100 border-2 border-white/10 px-8 py-3 rounded-full font-black text-sm uppercase tracking-widest">
-                                        Guía: {targetQty} unidades
+                                    <div className="bg-slate-100 text-slate-600 px-6 py-2 rounded-full font-bold text-sm border border-slate-200">
+                                        Objetivo: {targetQty} unidades
                                     </div>
                                 )}
                             </div>
                         )}
 
-                        <h1 className="text-4xl md:text-7xl font-extrabold leading-[1.1] mb-10 text-white text-center tracking-tight max-w-4xl drop-shadow-lg">
+                        <h1 className="text-3xl md:text-5xl font-black text-slate-900 text-center mb-4 leading-tight max-w-4xl">
                             {activeProductStats.name}
                         </h1>
                         
-                        <div className="sku-font text-2xl md:text-4xl text-blue-400 bg-blue-900/20 px-8 py-4 rounded-2xl border border-blue-500/30 mb-12 shadow-inner">
+                        <div className="text-xl md:text-2xl text-blue-600 font-bold bg-blue-50 px-6 py-2 rounded-xl border border-blue-100 mb-10">
                             {lastScan.barcode}
                         </div>
 
                         {expectedItem && (
-                            <div className="w-full max-w-xl h-4 bg-slate-900 border-2 border-white/5 rounded-full overflow-hidden mb-16 shadow-inner">
+                            <div className="w-full max-w-md h-3 bg-slate-200 rounded-full overflow-hidden mb-12">
                                 <div 
-                                    className={`h-full transition-all duration-1000 ${isOverCount ? 'bg-rose-500' : (isTargetReached ? 'bg-emerald-500' : 'bg-blue-500')}`}
+                                    className={`h-full transition-all duration-700 ${isOverCount ? 'bg-red-500' : (isTargetReached ? 'bg-green-500' : 'bg-blue-500')}`}
                                     style={{ width: `${progress}%` }}
                                 />
                             </div>
                         )}
 
                         <div className="flex flex-col items-center">
-                            <div className="text-xl font-black uppercase tracking-[0.4em] text-slate-500 mb-4 flex items-center gap-3">
-                                <Package className="w-8 h-8" /> Cantidad Actual
-                            </div>
-                            <div className="text-[12rem] md:text-[18rem] leading-[0.8] font-black text-white font-sans flex items-baseline select-none tabular-nums drop-shadow-[0_20px_50px_rgba(0,0,0,0.8)]">
+                            <div className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Cantidad Registrada</div>
+                            <div className="text-[10rem] md:text-[14rem] leading-none font-black text-slate-900 flex items-baseline select-none tabular-nums">
                                 {currentQty}
                                 {expectedItem && (
-                                    <span className="text-5xl md:text-8xl text-slate-700 ml-8 font-extrabold">
-                                        /{targetQty}
-                                    </span>
+                                    <span className="text-4xl md:text-6xl text-slate-300 ml-4">/{targetQty}</span>
                                 )}
                             </div>
                         </div>
@@ -107,10 +100,9 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
     }
 
     return (
-        <div className="flex flex-col items-center opacity-30 animate-in fade-in duration-1000 py-20">
-            <Leaf className="w-32 h-32 mb-10 text-slate-400" />
-            <h2 className="text-4xl font-black tracking-[0.3em] uppercase text-slate-500 text-center">Modo Espera</h2>
-            <p className="mt-8 text-xl font-bold uppercase tracking-widest text-slate-600">Escanee para reanudar</p>
+        <div className="flex flex-col items-center opacity-20 py-20">
+            <Package className="w-24 h-24 mb-6 text-slate-400" />
+            <h2 className="text-2xl font-bold uppercase tracking-widest text-slate-400">Escáner Listo</h2>
         </div>
     );
 });
