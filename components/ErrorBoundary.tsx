@@ -13,13 +13,16 @@ interface State {
   errorInfo: ErrorInfo | null;
 }
 
-// Fixed: Using the named Component import resolves inheritance typing issues in certain TS environments.
+// Fixed: Explicitly extending Component ensures inherited properties like state, setState, and props are correctly recognized.
 export class ErrorBoundary extends Component<Props, State> {
-  public state: State = {
-    hasError: false,
-    error: null,
-    errorInfo: null
-  };
+  constructor(props: Props) {
+    super(props);
+    this.state = {
+      hasError: false,
+      error: null,
+      errorInfo: null
+    };
+  }
 
   static getDerivedStateFromError(error: Error): State {
     return { 
@@ -29,6 +32,7 @@ export class ErrorBoundary extends Component<Props, State> {
     };
   }
 
+  // Fixed: Removed 'override' to prevent issues with environments not strictly enforcing it.
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
     
@@ -38,7 +42,6 @@ export class ErrorBoundary extends Component<Props, State> {
         { stack: error.stack, componentStack: errorInfo.componentStack }
     ).catch(e => console.error("Failed to write crash log", e));
     
-    // Fixed: setState is now correctly recognized as a member of the base Component class.
     this.setState({ errorInfo });
   }
 
@@ -53,6 +56,7 @@ export class ErrorBoundary extends Component<Props, State> {
     }
   };
 
+  // Fixed: Removed 'override' modifier.
   render(): ReactNode {
     if (this.state.hasError) {
       return (
@@ -100,7 +104,6 @@ export class ErrorBoundary extends Component<Props, State> {
       );
     }
 
-    // Fixed: props.children is now correctly typed as part of the Component class.
     return this.props.children;
   }
 }

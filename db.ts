@@ -24,8 +24,7 @@ export class LogiCountDB extends Dexie {
   constructor() {
     super('LogiCountDB');
     // Define the database schema and versioning.
-    // The version() and stores() methods are inherited from the Dexie base class.
-    // Fixed: Using named import for Dexie ensures inherited methods are recognized.
+    // Fixed: Using named import for Dexie ensures inherited methods like version() are recognized by TypeScript.
     this.version(15).stores({
       products: '&barcode, name, syncStatus', 
       sessions: 'id, status, createdAt, erpOrder, logisticsLabel, auditStatus, [erpOrder+createdAt], [status+lastSyncTimestamp]', 
