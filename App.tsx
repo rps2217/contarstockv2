@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { Routes, Route, useNavigate, useLocation, Navigate, Outlet, HashRouter, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -26,9 +25,9 @@ const Reception = lazyWithRetry(() => import('./components/Reception').then(m =>
 const SyncManagerUI = lazyWithRetry(() => import('./components/SyncManagerUI').then(m => ({ default: m.SyncManagerUI })));
 
 const LoadingFallback = () => (
-  <div className="h-full w-full flex flex-col items-center justify-center text-slate-400 gap-3 animate-pulse">
-    <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
-    <span className="text-xs font-bold uppercase tracking-wider">Cargando...</span>
+  <div className="h-full w-full flex flex-col items-center justify-center text-slate-500 gap-4 animate-pulse">
+    <Loader2 className="w-14 h-14 animate-spin text-blue-500" />
+    <span className="text-sm font-black uppercase tracking-[0.3em]">Cargando Sistema...</span>
   </div>
 );
 
@@ -37,23 +36,15 @@ const MainLayout = () => {
     const location = useLocation();
     const currentView = location.pathname.split('/')[1] || 'dashboard';
 
-    const themeClass = useMemo(() => {
-        switch (settings.theme) {
-            case 'dark': return 'bg-slate-950 text-slate-200';
-            case 'contrast': return 'bg-black text-yellow-400 font-mono';
-            case 'warm': return 'bg-[#fcf8f2] text-[#57534e]';
-            case 'navy': return 'bg-[#0B1121] text-slate-300';
-            default: return 'bg-[#eff3f8] text-slate-600';
-        }
-    }, [settings.theme]);
-
     return (
-        <div className={`min-h-screen font-sans ${themeClass} transition-colors duration-300 flex`}>
+        <div className="min-h-screen font-sans bg-[#0a0f1d] text-slate-200 transition-colors duration-300 flex">
             <SystemStatus />
             <Sidebar view={currentView} settings={settings} />
-            <main className="flex-1 md:ml-64 w-full animate-in fade-in zoom-in-95 duration-300 min-h-screen relative pb-16 md:pb-0">
+            <main className="flex-1 md:ml-64 w-full animate-in fade-in duration-700 min-h-screen relative pb-24 md:pb-0">
                 <Suspense fallback={<LoadingFallback />}>
-                    <Outlet />
+                    <div className="p-4 md:p-8 max-w-7xl mx-auto">
+                      <Outlet />
+                    </div>
                 </Suspense>
             </main>
             <InstallPrompt />
@@ -70,11 +61,11 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     const initDb = async () => {
         try {
-            await (db as any).open();
+            await db.open();
             setDbReady(true);
             await initPersistence();
         } catch (e: any) {
-            setDbError(`Error crítico: ${e.message}`);
+            setDbError(String(e.message || e));
         }
     };
     initDb();
@@ -89,8 +80,8 @@ const AppContent: React.FC = () => {
     return () => clearInterval(syncInterval);
   }, []);
 
-  if (dbError) return <div className="p-8 text-red-600 text-center font-bold">{dbError}</div>;
-  if (!dbReady) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin w-8 h-8 text-blue-600"/></div>;
+  if (dbError) return <div className="p-12 text-rose-400 text-center font-black text-xl bg-slate-950 min-h-screen flex items-center justify-center">Error: {dbError}</div>;
+  if (!dbReady) return <div className="h-screen flex items-center justify-center bg-slate-950"><Loader2 className="animate-spin w-12 h-12 text-blue-500"/></div>;
 
   if (!isAuthenticated) {
       return <Login onLoginSuccess={() => setIsAuthenticated(true)} />;
@@ -148,22 +139,22 @@ const App: React.FC = () => (
 );
 
 const NAV_CONFIG: Record<string, { label: string, icon: React.ReactNode, path: string }> = {
-    'dashboard': { label: 'Inicio', icon: <Home className="w-5 h-5" />, path: '/dashboard' },
-    'database': { label: 'Datos', icon: <DbIcon className="w-5 h-5" />, path: '/database' },
-    'reports': { label: 'Historial', icon: <History className="w-5 h-5" />, path: '/reports' },
-    'consolidated': { label: 'Consol.', icon: <Layers className="w-5 h-5" />, path: '/consolidated' },
-    'reception': { label: 'Recep.', icon: <Container className="w-5 h-5" />, path: '/reception' },
-    'conciliator': { label: 'Detect.', icon: <Fingerprint className="w-5 h-5" />, path: '/conciliator' },
-    'sync': { label: 'Nube', icon: <Cloud className="w-5 h-5" />, path: '/sync' },
+    'dashboard': { label: 'Inicio', icon: <Home className="w-7 h-7" />, path: '/dashboard' },
+    'database': { label: 'Datos', icon: <DbIcon className="w-7 h-7" />, path: '/database' },
+    'reports': { label: 'Historial', icon: <History className="w-7 h-7" />, path: '/reports' },
+    'consolidated': { label: 'Consol.', icon: <Layers className="w-7 h-7" />, path: '/consolidated' },
+    'reception': { label: 'Recep.', icon: <Container className="w-7 h-7" />, path: '/reception' },
+    'conciliator': { label: 'Detect.', icon: <Fingerprint className="w-7 h-7" />, path: '/conciliator' },
+    'sync': { label: 'Nube', icon: <Cloud className="w-7 h-7" />, path: '/sync' },
 };
 
 const MobileNav = ({ currentView, settings }: any) => {
   const navigate = useNavigate();
-  const navItems = settings.mobileNavConfig || ['dashboard', 'database', 'reports'];
+  const navItems = settings.mobileNavConfig || ['dashboard', 'database', 'reports', 'sync'];
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/90 backdrop-blur border-t border-slate-200 pb-safe-area">
-        <div className="flex justify-around items-center h-16 px-1">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-xl border-t border-white/10 pb-safe-area shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+        <div className="flex justify-around items-center h-20 px-2">
             {navItems.map((key: string) => {
                 const conf = NAV_CONFIG[key];
                 if (!conf) return null;
@@ -172,10 +163,10 @@ const MobileNav = ({ currentView, settings }: any) => {
                     <button 
                         key={key}
                         onClick={() => navigate(conf.path)}
-                        className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${isActive ? 'text-blue-600' : 'text-slate-400'}`}
+                        className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-all duration-300 ${isActive ? 'text-white scale-110' : 'text-slate-500'}`}
                     >
-                        <div className={`${isActive ? '-translate-y-1' : ''} transition-transform duration-200`}>{conf.icon}</div>
-                        <span className="text-[10px] font-bold leading-none">{conf.label}</span>
+                        <div className={`${isActive ? 'bg-blue-600 p-2 rounded-xl shadow-lg shadow-blue-900/50' : ''} transition-all`}>{conf.icon}</div>
+                        <span className={`text-[10px] font-black uppercase tracking-tighter leading-none ${isActive ? 'opacity-100' : 'opacity-60'}`}>{conf.label}</span>
                     </button>
                 );
             })}

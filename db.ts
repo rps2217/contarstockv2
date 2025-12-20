@@ -1,5 +1,6 @@
 
-import Dexie from 'dexie';
+// Use named import for Dexie to ensure proper class inheritance in TypeScript environments.
+import { Dexie } from 'dexie';
 import type { Table } from 'dexie';
 import { Product, CountingSession, ScanRecord, SyncJob, ExpectedOrder } from './types';
 
@@ -23,7 +24,8 @@ export class LogiCountDB extends Dexie {
   constructor() {
     super('LogiCountDB');
     // Define the database schema and versioning.
-    // The version() method is inherited from the Dexie base class.
+    // The version() and stores() methods are inherited from the Dexie base class.
+    // Fixed: Using named import for Dexie ensures inherited methods are recognized.
     this.version(15).stores({
       products: '&barcode, name, syncStatus', 
       sessions: 'id, status, createdAt, erpOrder, logisticsLabel, auditStatus, [erpOrder+createdAt], [status+lastSyncTimestamp]', 

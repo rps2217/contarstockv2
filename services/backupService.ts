@@ -1,4 +1,5 @@
 
+
 import { db } from '../db';
 import { AppSettings } from '../types';
 import { getSettings } from './settings';
@@ -81,7 +82,8 @@ export const restoreFullBackup = async (file: File): Promise<number> => {
         }
 
         // Execute Restore in a Transaction
-        await (db as any).transaction('rw', db.products, db.sessions, db.scans, db.syncQueue, db.expectedOrders, async () => {
+        // Fix: db correctly inherits transaction() from Dexie, so 'as any' is removed.
+        await db.transaction('rw', db.products, db.sessions, db.scans, db.syncQueue, db.expectedOrders, async () => {
           // 1. Clear existing
           await db.products.clear();
           await db.sessions.clear();

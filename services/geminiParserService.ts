@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { ExpectedItem } from "../types";
 
@@ -16,8 +17,8 @@ const fileToBase64 = (file: File): Promise<string> => {
 export const parseOrderDocument = async (files: File[]): Promise<ExpectedItem[]> => {
     if (files.length === 0) return [];
 
-    // Instantiate inside the call to ensure fresh API key context if needed
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+    // Instantiate with the API key directly from process.env.API_KEY
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
     try {
         const parts: any[] = [];

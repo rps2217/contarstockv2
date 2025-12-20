@@ -3,46 +3,52 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta name="theme-color" content="#020617" />
-    <meta name="description" content="LogiCount Pro - Cyber Warehouse Edition" />
+    <meta name="theme-color" content="#0a0f1d" />
+    <meta name="description" content="LogiCount Pro - Accesibilidad Visual" />
     <title>LogiCount Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
       
-      .no-scrollbar::-webkit-scrollbar { display: none; }
-      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      
+      :root {
+        --bg-zen: #0a0f1d;
+        --text-comfort: #e2e8f0; /* Blanco crema, no deslumbra */
+      }
+
       body { 
         overscroll-behavior-y: contain; 
         touch-action: manipulation; 
         -webkit-text-size-adjust: 100%;
-        background-color: #020617;
-        color: #f8fafc;
+        background-color: var(--bg-zen);
+        color: var(--text-comfort);
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 18px; /* Aumento de base para fatiga visual */
+        line-height: 1.6;
       }
 
-      .cyber-grid {
-        background-image: 
-          linear-gradient(rgba(59, 130, 246, 0.05) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(59, 130, 246, 0.05) 1px, transparent 1px);
-        background-size: 40px 40px;
+      .zen-bg {
+        background: radial-gradient(circle at 50% -20%, #161e2e 0%, #0a0f1d 80%);
+        min-height: 100vh;
       }
 
-      .neon-glow {
-        box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+      /* Estilo para items que requieren lectura rápida (SKUs) */
+      .sku-font {
+        font-family: 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', monospace;
+        letter-spacing: 0.05em;
+        font-weight: 800;
       }
 
-      .text-neon {
-        text-shadow: 0 0 10px rgba(59, 130, 246, 0.8);
-      }
+      /* Scrollbars suaves para no distraer */
+      ::-webkit-scrollbar { width: 8px; }
+      ::-webkit-scrollbar-track { background: #0a0f1d; }
+      ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
 
       .glass-card {
-        background: rgba(15, 23, 42, 0.6);
+        background: rgba(30, 41, 59, 0.6);
         backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.05);
+        border: 2px solid rgba(255, 255, 255, 0.05); /* Bordes más gruesos para definición */
+        box-shadow: 0 15px 35px -5px rgba(0,0,0,0.6);
       }
-
-      .transform-gpu { transform: translateZ(0); }
     </style>
     <script type="importmap">
 {
@@ -54,7 +60,7 @@
     "@remix-run/router": "https://esm.sh/@remix-run/router@1.15.3",
     "zustand": "https://esm.sh/zustand@4.5.2?external=react",
     "react-markdown": "https://esm.sh/react-markdown@9.0.1?external=react",
-    "@google/genai": "https://esm.sh/@google/genai@0.1.1",
+    "@google/genai": "https://esm.sh/@google/genai@1.30.0",
     "lucide-react": "https://esm.sh/lucide-react@0.344.0?external=react",
     "recharts": "https://esm.sh/recharts@2.12.2?external=react,react-dom",
     "dexie": "https://esm.sh/dexie@3.2.4",
@@ -79,7 +85,7 @@
 }
 </script>
 </head>
-<body class="bg-slate-950 cyber-grid">
+<body class="zen-bg">
     <div id="root"></div>
     <script type="module" src="index.tsx"></script>
 </body>

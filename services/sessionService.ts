@@ -1,4 +1,5 @@
 
+
 import { db } from '../db';
 import { ScanRecord, CountingSession } from '../types';
 import { generateUUID, sanitizeBarcode } from './utils';
@@ -38,7 +39,8 @@ const flushBuffer = async () => {
     isFlushing = true;
     const batch = [...scanBuffer];
     try {
-        await (db as any).transaction('rw', db.scans, db.sessions, async () => {
+        // Fix: db correctly inherits transaction() from Dexie, so 'as any' is removed.
+        await db.transaction('rw', db.scans, db.sessions, async () => {
             await db.scans.bulkAdd(batch);
             const affectedSessions = new Set(batch.map(s => s.sessionId));
             for (const sessionId of affectedSessions) {
@@ -93,7 +95,8 @@ export const addScan = async (sessionId: string, barcode: string, quantity: numb
 export const deleteSession = async (sessionId: string) => { 
     scanBuffer = scanBuffer.filter(s => s.sessionId !== sessionId);
     saveMirror();
-    return (db as any).transaction('rw', db.sessions, db.scans, async () => { 
+    // Fix: db correctly inherits transaction() from Dexie, so 'as any' is removed.
+    return db.transaction('rw', db.sessions, db.scans, async () => { 
         await db.scans.where('sessionId').equals(sessionId).delete(); 
         await db.sessions.delete(sessionId); 
     });
@@ -102,7 +105,8 @@ export const deleteSession = async (sessionId: string) => {
 export const updateScanQuantity = async (scanId: string, newQuantity: number) => {
     const scan = await db.scans.get(scanId); 
     if (scan) {
-        await (db as any).transaction('rw', db.scans, db.sessions, async () => {
+        // Fix: db correctly inherits transaction() from Dexie, so 'as any' is removed.
+        await db.transaction('rw', db.scans, db.sessions, async () => {
             await db.scans.update(scanId, { quantity: newQuantity, synced: 0 }); 
             const scans = await db.scans.where('sessionId').equals(scan.sessionId).toArray();
             await db.sessions.update(scan.sessionId, { totalUnits: scans.reduce((acc, s) => acc + s.quantity, 0) });
@@ -113,7 +117,8 @@ export const updateScanQuantity = async (scanId: string, newQuantity: number) =>
 export const deleteScan = async (scanId: string) => { 
     const scan = await db.scans.get(scanId); 
     if (scan) { 
-        await (db as any).transaction('rw', db.scans, db.sessions, async () => {
+        // Fix: db correctly inherits transaction() from Dexie, so 'as any' is removed.
+        await db.transaction('rw', db.scans, db.sessions, async () => {
             await db.scans.delete(scanId); 
             const scans = await db.scans.where('sessionId').equals(scan.sessionId).toArray();
             await db.sessions.update(scan.sessionId, { 
