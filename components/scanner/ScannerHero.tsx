@@ -20,11 +20,11 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
 }) => {
     if (feedback === 'undo') {
         return (
-            <div className="flex flex-col items-center animate-in zoom-in duration-300">
-                <div className="p-8 bg-slate-100 rounded-full mb-6">
-                    <RotateCcw className="w-16 h-16 text-slate-400" />
+            <div className="flex flex-col items-center animate-in zoom-in duration-500">
+                <div className="p-12 bg-slate-100 rounded-full mb-8 shadow-inner">
+                    <RotateCcw className="w-20 h-20 text-slate-400" />
                 </div>
-                <h2 className="text-2xl font-bold text-slate-400">Acción Revertida</h2>
+                <h2 className="text-3xl font-black text-slate-400 uppercase tracking-widest">Acción Deshecha</h2>
             </div>
         );
     }
@@ -39,57 +39,57 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
         const progress = targetQty > 0 ? Math.min(100, (currentQty / targetQty) * 100) : 0;
 
         return (
-            <div className="animate-in fade-in duration-300 w-full flex flex-col items-center px-4">
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full flex flex-col items-center px-4">
                 {isUnknown ? (
-                    <div className="bg-white border border-orange-200 p-8 md:p-12 rounded-3xl shadow-xl w-full max-w-xl text-center">
-                        <AlertCircle className="w-16 h-16 text-orange-500 mx-auto mb-6" />
-                        <h2 className="text-3xl font-black text-slate-900 mb-2">Producto Nuevo</h2>
-                        <p className="text-slate-500 mb-8 font-mono text-xl">{lastScan.barcode}</p>
-                        <button onClick={onRegisterPending} className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-2xl shadow-lg transition-all active:scale-95">Registrar en Catálogo</button>
+                    <div className="bg-white border-2 border-orange-200 p-10 md:p-14 rounded-[3rem] shadow-2xl w-full max-w-2xl text-center">
+                        <div className="w-20 h-20 bg-orange-50 text-orange-500 rounded-3xl flex items-center justify-center mx-auto mb-8"><AlertCircle className="w-10 h-10" /></div>
+                        <h2 className="text-4xl font-black text-slate-900 mb-3 tracking-tight">Producto Nuevo</h2>
+                        <p className="text-slate-400 mb-10 font-bold text-2xl bg-slate-50 py-3 rounded-2xl border border-slate-100">{lastScan.barcode}</p>
+                        <button onClick={onRegisterPending} className="w-full bg-orange-500 hover:bg-orange-600 text-white font-black py-5 rounded-2xl shadow-xl shadow-orange-100 transition-all active:scale-95 uppercase tracking-widest text-sm">Registrar en Catálogo</button>
                     </div>
                 ) : (
                     <div className="w-full flex flex-col items-center">
                         {expectedItem && (
-                            <div className="mb-6">
+                            <div className="mb-8">
                                 {isOverCount ? (
-                                    <div className="bg-red-100 text-red-700 px-6 py-2 rounded-full font-bold text-sm flex items-center gap-2 border border-red-200">
-                                        <AlertCircle className="w-4 h-4" /> EXCESO
+                                    <div className="bg-red-600 text-white px-8 py-3 rounded-full font-black text-sm flex items-center gap-3 shadow-lg shadow-red-200 animate-pulse">
+                                        <AlertCircle className="w-5 h-5" /> EXCESO DETECTADO
                                     </div>
                                 ) : isTargetReached ? (
-                                    <div className="bg-green-100 text-green-700 px-6 py-2 rounded-full font-bold text-sm flex items-center gap-2 border border-green-200">
-                                        <CheckCircle className="w-4 h-4" /> COMPLETADO
+                                    <div className="bg-emerald-500 text-white px-8 py-3 rounded-full font-black text-sm flex items-center gap-3 shadow-lg shadow-emerald-200">
+                                        <CheckCircle className="w-5 h-5" /> OBJETIVO CUMPLIDO
                                     </div>
                                 ) : (
-                                    <div className="bg-slate-100 text-slate-600 px-6 py-2 rounded-full font-bold text-sm border border-slate-200">
-                                        Objetivo: {targetQty} unidades
+                                    <div className="bg-blue-50 text-blue-700 px-8 py-3 rounded-full font-black text-sm border-2 border-blue-100 shadow-sm">
+                                        REQUERIDO: {targetQty} UNIDADES
                                     </div>
                                 )}
                             </div>
                         )}
 
-                        <h1 className="text-3xl md:text-5xl font-black text-slate-900 text-center mb-4 leading-tight max-w-4xl">
+                        <h1 className="text-4xl md:text-6xl font-black text-slate-900 text-center mb-6 leading-[1.1] max-w-5xl tracking-tight">
                             {activeProductStats.name}
                         </h1>
                         
-                        <div className="text-xl md:text-2xl text-blue-600 font-bold bg-blue-50 px-6 py-2 rounded-xl border border-blue-100 mb-10">
+                        <div className="text-xl md:text-2xl text-blue-600 font-black bg-blue-50/50 px-10 py-3 rounded-2xl border border-blue-100 mb-12 tracking-wider">
                             {lastScan.barcode}
                         </div>
 
                         {expectedItem && (
-                            <div className="w-full max-w-md h-3 bg-slate-200 rounded-full overflow-hidden mb-12">
+                            <div className="w-full max-w-lg h-4 bg-slate-200 rounded-full overflow-hidden mb-16 shadow-inner border border-white">
                                 <div 
-                                    className={`h-full transition-all duration-700 ${isOverCount ? 'bg-red-500' : (isTargetReached ? 'bg-green-500' : 'bg-blue-500')}`}
+                                    className={`h-full transition-all duration-1000 ease-out ${isOverCount ? 'bg-red-500' : (isTargetReached ? 'bg-emerald-500' : 'bg-blue-600')}`}
                                     style={{ width: `${progress}%` }}
                                 />
                             </div>
                         )}
 
                         <div className="flex flex-col items-center">
-                            <div className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Cantidad Registrada</div>
-                            <div className="text-[10rem] md:text-[14rem] leading-none font-black text-slate-900 flex items-baseline select-none tabular-nums">
+                            <div className="text-xs font-black uppercase tracking-[0.4em] text-slate-400 mb-4">Total Registrado</div>
+                            <div className="text-[11rem] md:text-[16rem] leading-none font-black text-slate-900 flex items-baseline select-none tabular-nums tracking-tighter drop-shadow-sm">
                                 {currentQty}
                                 {expectedItem && (
-                                    <span className="text-4xl md:text-6xl text-slate-300 ml-4">/{targetQty}</span>
+                                    <span className="text-5xl md:text-7xl text-slate-300 ml-4 font-black">/{targetQty}</span>
                                 )}
                             </div>
                         </div>
@@ -100,9 +100,9 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
     }
 
     return (
-        <div className="flex flex-col items-center opacity-20 py-20">
-            <Package className="w-24 h-24 mb-6 text-slate-400" />
-            <h2 className="text-2xl font-bold uppercase tracking-widest text-slate-400">Escáner Listo</h2>
+        <div className="flex flex-col items-center opacity-10 py-32">
+            <Package className="w-32 h-32 mb-8 text-slate-900" />
+            <h2 className="text-3xl font-black uppercase tracking-[0.5em] text-slate-900">Escáner Listo</h2>
         </div>
     );
 });

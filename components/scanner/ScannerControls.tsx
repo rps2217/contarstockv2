@@ -1,4 +1,3 @@
-
 import React, { memo, useMemo } from 'react';
 import { Gauge, Camera, Ban, Keyboard, PieChart } from 'lucide-react';
 import { CountingSession } from '../../types';
@@ -34,21 +33,20 @@ export const ScannerControls: React.FC<ScannerControlsProps> = memo(({
     }, [session.isVerifiedMode, session.expectedItems, sessionStats.totalQty]);
 
     return (
-        <div className="shrink-0 pb-safe-area px-4 pb-4 relative z-40">
-            <div className="max-w-md mx-auto bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-2 flex flex-col gap-2 shadow-lg">
+        <div className="shrink-0 pb-safe-area px-4 pb-8 relative z-40">
+            <div className="max-w-xl mx-auto bg-white border border-slate-200 rounded-[2rem] p-3 flex flex-col gap-3 shadow-2xl shadow-slate-200/50">
                 
-                {/* Global Progress Bar for Verified Mode */}
                 {globalProgress !== null && (
-                    <div className="px-3 pt-2">
-                        <div className="flex justify-between items-center mb-1">
-                            <div className="text-[9px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-1">
-                                <PieChart className="w-3 h-3" /> Progreso Guía
+                    <div className="px-5 pt-3">
+                        <div className="flex justify-between items-center mb-2">
+                            <div className="text-[10px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-2">
+                                <PieChart className="w-3.5 h-3.5" /> Eficiencia de Bulto
                             </div>
-                            <div className="text-[9px] font-black text-white">{globalProgress.toFixed(1)}%</div>
+                            <div className="text-[10px] font-black text-slate-900 bg-indigo-50 px-2 py-0.5 rounded-lg">{globalProgress.toFixed(1)}%</div>
                         </div>
-                        <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                        <div className="h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-50">
                             <div 
-                                className="h-full bg-indigo-500 transition-all duration-1000"
+                                className="h-full bg-indigo-600 transition-all duration-1000 ease-out"
                                 style={{ width: `${globalProgress}%` }}
                             />
                         </div>
@@ -56,55 +54,53 @@ export const ScannerControls: React.FC<ScannerControlsProps> = memo(({
                 )}
 
                 <div className="flex justify-between items-center">
-                    {/* Stats */}
-                    <div className="flex gap-4 px-3 items-center">
+                    <div className="flex gap-6 px-5 items-center">
                         {showSpeedometer && (
-                            <div className="md:hidden flex flex-col items-center justify-center mr-2 w-10">
-                                <Gauge className={`w-5 h-5 ${scansPerMinute > 20 ? 'text-green-400' : 'text-slate-500'}`} />
-                                <span className={`text-[9px] font-bold ${scansPerMinute > 20 ? 'text-green-400' : 'text-slate-500'}`}>{scansPerMinute}</span>
+                            <div className="md:hidden flex flex-col items-center justify-center mr-2 w-12 border-r border-slate-100">
+                                <Gauge className={`w-6 h-6 mb-1 ${scansPerMinute > 25 ? 'text-emerald-500' : 'text-slate-300'}`} />
+                                <span className={`text-[10px] font-black ${scansPerMinute > 25 ? 'text-emerald-600' : 'text-slate-400'}`}>{scansPerMinute} ipm</span>
                             </div>
                         )}
 
                         <div className="flex flex-col">
-                            <span className="text-[9px] uppercase font-bold text-white/40">Unidades</span>
-                            <span className="text-xl font-bold tabular-nums">{sessionStats.totalQty}</span>
+                            <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Unidades</span>
+                            <span className="text-2xl font-black tabular-nums text-slate-900">{sessionStats.totalQty}</span>
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-[9px] uppercase font-bold text-white/40">SKUs</span>
-                            <span className="text-xl font-bold tabular-nums text-blue-400">
+                            <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">SKUs</span>
+                            <span className="text-2xl font-black tabular-nums text-blue-600 flex items-baseline">
                                 {sessionStats.uniqueSkus}
                                 {session.isVerifiedMode && session.expectedItems && (
-                                    <span className="text-xs text-white/20 ml-1">/ {session.expectedItems.length}</span>
+                                    <span className="text-sm text-slate-300 ml-1 font-bold">/ {session.expectedItems.length}</span>
                                 )}
                             </span>
                         </div>
                     </div>
 
-                    {/* Controls */}
-                    <div className="flex gap-2">
+                    <div className="flex gap-3">
                         <button 
                             onClick={onCameraClick}
-                            className={`h-12 w-12 rounded-xl border flex items-center justify-center shadow-lg active:scale-95 transition-all ${
+                            className={`h-14 w-14 rounded-2xl border-2 flex items-center justify-center shadow-lg active:scale-90 transition-all ${
                                 hasCameraSupport 
-                                ? 'bg-slate-800 text-blue-400 border-slate-700 hover:bg-slate-700' 
-                                : 'bg-red-900/50 text-red-400 border-red-800 hover:bg-red-900'
+                                ? 'bg-slate-50 text-blue-600 border-blue-100 hover:bg-blue-50' 
+                                : 'bg-red-50 text-red-400 border-red-100 opacity-50'
                             }`}
                         >
-                            {hasCameraSupport ? <Camera className="w-6 h-6" /> : <Ban className="w-6 h-6" />}
+                            {hasCameraSupport ? <Camera className="w-7 h-7" /> : <Ban className="w-7 h-7" />}
                         </button>
 
                         <button 
                             onClick={onMultiplierClick}
-                            className={`h-12 px-4 rounded-xl font-bold text-lg flex items-center justify-center transition-all ${multiplier > 1 ? 'bg-yellow-500 text-black' : 'bg-white/10 text-white hover:bg-white/20'}`}
+                            className={`h-14 px-6 rounded-2xl font-black text-2xl flex items-center justify-center transition-all shadow-lg active:scale-90 ${multiplier > 1 ? 'bg-amber-400 text-amber-950 shadow-amber-100' : 'bg-slate-100 text-slate-600 border-2 border-slate-200 hover:bg-slate-200'}`}
                         >
-                            <span className="text-xs mr-1 opacity-60">x</span>{multiplier}
+                            <span className="text-xs mr-1 opacity-50 font-bold">x</span>{multiplier}
                         </button>
                         
                         <button 
                             onClick={onManualClick}
-                            className="h-12 w-12 rounded-xl bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center shadow-lg active:scale-95 transition-all"
+                            className="h-14 w-14 rounded-2xl bg-slate-900 hover:bg-black text-white flex items-center justify-center shadow-xl active:scale-90 transition-all"
                         >
-                            <Keyboard className="w-6 h-6" />
+                            <Keyboard className="w-7 h-7" />
                         </button>
                     </div>
                 </div>

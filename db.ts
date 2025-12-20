@@ -1,6 +1,6 @@
 
-// Use named import for Dexie to ensure proper class inheritance and method recognition in TypeScript environments.
-import { Dexie } from 'dexie';
+// Use default import for Dexie to ensure proper class inheritance and method recognition in TypeScript environments.
+import Dexie from 'dexie';
 import type { Table } from 'dexie';
 import { Product, CountingSession, ScanRecord, SyncJob, ExpectedOrder } from './types';
 
@@ -13,7 +13,7 @@ export interface SystemLog {
   timestamp: number;
 }
 
-// Fixed: Inheriting from Dexie using named import to ensure methods like version(), open(), and transaction() are correctly recognized by the TypeScript compiler across the entire application.
+// Inheriting from Dexie class.
 export class LogiCountDB extends Dexie {
   products!: Table<Product>;
   sessions!: Table<CountingSession>;

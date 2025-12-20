@@ -1,5 +1,5 @@
 
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home, Terminal } from 'lucide-react';
 import { logger } from '../services/logger';
 
@@ -13,11 +13,10 @@ interface State {
   errorInfo: ErrorInfo | null;
 }
 
-// Fixed: Explicitly extending Component from React via named import to ensure properties like state, setState, and props are correctly recognized by the compiler.
-export class ErrorBoundary extends Component<Props, State> {
+// Fixed: Extending React.Component explicitly to ensure 'state', 'setState', and 'props' are correctly recognized as base members by the compiler.
+export class ErrorBoundary extends React.Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    // Fixed: Initializing state on the class instance, now correctly recognized through explicit inheritance.
     this.state = {
       hasError: false,
       error: null,
@@ -33,7 +32,6 @@ export class ErrorBoundary extends Component<Props, State> {
     };
   }
 
-  // Fixed: componentDidCatch implementation utilizing setState from the base Component class.
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
     
@@ -43,7 +41,7 @@ export class ErrorBoundary extends Component<Props, State> {
         { stack: error.stack, componentStack: errorInfo.componentStack }
     ).catch(e => console.error("Failed to write crash log", e));
     
-    // Fixed: setState is now correctly recognized as a method of the base class.
+    // Fixed: setState is correctly inherited from React.Component
     this.setState({ errorInfo });
   }
 
@@ -58,10 +56,14 @@ export class ErrorBoundary extends Component<Props, State> {
     }
   };
 
-  // Fixed: render() method now correctly accesses inherited state.
   render(): ReactNode {
-    // Fixed: Accessing inherited state property.
+    // Fixed: state is correctly inherited from React.Component
     if (this.state.hasError) {
+      // Safe error message conversion
+      const errorMessage = this.state.error 
+        ? (typeof this.state.error.message === 'string' ? this.state.error.message : JSON.stringify(this.state.error.message))
+        : 'Error desconocido';
+
       return (
         <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 font-sans text-slate-300">
           <div className="max-w-md w-full bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-white/5">
@@ -83,7 +85,7 @@ export class ErrorBoundary extends Component<Props, State> {
                     <span className="text-[10px] font-bold text-slate-500 uppercase">Crash Diagnostics</span>
                 </div>
                 <code className="text-xs text-rose-400 font-mono break-all">
-                  {this.state.error?.message || 'Error desconocido'}
+                  {errorMessage}
                 </code>
               </div>
 
@@ -107,7 +109,7 @@ export class ErrorBoundary extends Component<Props, State> {
       );
     }
 
-    // Fixed: Accessing inherited props property correctly.
+    // Fixed: props is correctly inherited from React.Component
     return this.props.children;
   }
 }

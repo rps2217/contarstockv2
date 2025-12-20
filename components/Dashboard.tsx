@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Database, ScanLine, Settings, Box, Layers, Fingerprint, Container, Cloud, Sparkles, Leaf } from 'lucide-react';
+import { Database, ScanLine, Settings, Box, Layers, Fingerprint, Container, Cloud } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { useAppStore } from '../store/useAppStore';
@@ -36,25 +36,24 @@ export const Dashboard: React.FC = () => {
   }, []);
 
   return (
-    <div className="w-full max-w-7xl mx-auto pb-20 animate-in fade-in duration-500">
+    <div className="w-full max-w-7xl mx-auto pb-20 animate-in fade-in duration-700">
       <div className="mb-10 flex items-center justify-between">
         <div>
-            <div className="flex items-center gap-2 text-slate-400 font-bold text-[10px] uppercase tracking-widest mb-2">
-                LogiCount Pro Edition
-            </div>
-            <h1 className="text-3xl md:text-4xl font-black tracking-tight text-slate-900 flex items-center gap-3">
-              <Box className="w-8 h-8 text-blue-600" />
+            <h1 className="text-3xl md:text-5xl font-black tracking-tight text-slate-900 flex items-center gap-4">
+              <div className="bg-blue-600 p-2 rounded-2xl shadow-lg shadow-blue-200">
+                <Box className="w-8 h-8 md:w-10 md:h-10 text-white" />
+              </div>
               Panel de Control
             </h1>
-            <p className="text-slate-500 mt-1 font-medium text-base">Gestión integral de inventario y flujo logístico.</p>
+            <p className="text-slate-500 mt-2 font-semibold text-lg">Sistema de Gestión Logística LogiCount Pro</p>
         </div>
-        <button onClick={() => navigate('/settings')} className="p-3 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-slate-50 transition-all shadow-sm">
+        <button onClick={() => navigate('/settings')} className="p-4 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-blue-600 hover:border-blue-300 transition-all shadow-sm active:scale-95">
             <Settings className="w-6 h-6" />
         </button>
       </div>
 
       {settings.controlTowerEnabled && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
               <div className="lg:col-span-2">
                   <StatsSection stats={dailyStats} />
               </div>
@@ -64,20 +63,20 @@ export const Dashboard: React.FC = () => {
           </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-16">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
         <div className="md:col-span-2">
-             <ActionCard title="Nueva Sesión" sub="Comenzar conteo de mercadería" icon={ScanLine} colorClass="bg-blue-600 text-white" to="/reports" />
+             <ActionCard title="Nueva Sesión" sub="Iniciar proceso de conteo de mercadería" icon={ScanLine} colorClass="bg-blue-600 text-white shadow-blue-200" to="/reports" />
         </div>
-        <ActionCard title="Recepción" sub="Ingreso de bultos rápido" icon={Container} colorClass="bg-white border-slate-200" to="/reception" />
-        <ActionCard title="Sincronizar" sub="Subir datos a la nube" icon={Cloud} colorClass="bg-white border-slate-200" to="/sync" />
-        <ActionCard title="Consolidados" sub="Ver reportes por ERP" icon={Layers} colorClass="bg-white border-slate-200" to="/consolidated" />
-        <ActionCard title="Detective" sub="Conciliación de pedidos" icon={Fingerprint} colorClass="bg-white border-slate-200" to="/conciliator" />
-        <ActionCard title="Catálogo" sub="Gestión de productos" icon={Database} colorClass="bg-white border-slate-200" to="/database" />
+        <ActionCard title="Recepción" sub="Ingreso masivo de bultos" icon={Container} colorClass="bg-white text-slate-900 border-slate-200" to="/reception" />
+        <ActionCard title="Sincronizar" sub="Subir datos locales a la nube" icon={Cloud} colorClass="bg-white text-slate-900 border-slate-200" to="/sync" />
+        <ActionCard title="Consolidados" sub="Ver reportes agrupados por ERP" icon={Layers} colorClass="bg-white text-slate-900 border-slate-200" to="/consolidated" />
+        <ActionCard title="Detective" sub="Conciliación avanzada de pedidos" icon={Fingerprint} colorClass="bg-white text-slate-900 border-slate-200" to="/conciliator" />
+        <ActionCard title="Catálogo" sub="Administrar base de productos" icon={Database} colorClass="bg-white text-slate-900 border-slate-200" to="/database" />
       </div>
 
-      <div className="flex flex-col items-center justify-center py-8 opacity-40">
-        <div className="text-[10px] text-slate-500 font-bold tracking-widest uppercase text-center">
-          LOGICOUNT SYSTEMS • DIGITAL WAREHOUSE MANAGER
+      <div className="flex flex-col items-center justify-center py-12 opacity-20 border-t border-slate-200 mt-10">
+        <div className="text-xs text-slate-500 font-black tracking-[0.4em] uppercase text-center">
+          LOGICOUNT SYSTEMS • ENTERPRISE EDITION v2.5
         </div>
       </div>
     </div>

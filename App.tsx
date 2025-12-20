@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { Routes, Route, useNavigate, useLocation, Navigate, Outlet, HashRouter, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Home, Database as DbIcon, History, Layers, Container, Fingerprint, Cloud, Loader2 } from 'lucide-react';
@@ -25,9 +25,9 @@ const Reception = lazyWithRetry(() => import('./components/Reception').then(m =>
 const SyncManagerUI = lazyWithRetry(() => import('./components/SyncManagerUI').then(m => ({ default: m.SyncManagerUI })));
 
 const LoadingFallback = () => (
-  <div className="h-full w-full flex flex-col items-center justify-center text-slate-500 gap-4 animate-pulse">
-    <Loader2 className="w-14 h-14 animate-spin text-blue-500" />
-    <span className="text-sm font-bold uppercase tracking-wider">Cargando Sistema...</span>
+  <div className="h-full w-full flex flex-col items-center justify-center text-slate-400 gap-4">
+    <Loader2 className="w-12 h-12 animate-spin text-blue-500" />
+    <span className="text-xs font-bold uppercase tracking-widest">Cargando Sistema...</span>
   </div>
 );
 
@@ -37,12 +37,12 @@ const MainLayout = () => {
     const currentView = location.pathname.split('/')[1] || 'dashboard';
 
     return (
-        <div className="min-h-screen font-sans bg-slate-50 text-slate-900 transition-colors duration-300 flex">
+        <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col md:flex-row transition-all duration-300">
             <SystemStatus />
             <Sidebar view={currentView} settings={settings} />
-            <main className="flex-1 md:ml-64 w-full animate-in fade-in duration-500 min-h-screen relative pb-24 md:pb-0">
+            <main className="flex-1 md:ml-64 w-full relative pb-24 md:pb-0">
                 <Suspense fallback={<LoadingFallback />}>
-                    <div className="p-4 md:p-8 max-w-7xl mx-auto">
+                    <div className="p-4 md:p-8 max-w-7xl mx-auto animate-in fade-in duration-500">
                       <Outlet />
                     </div>
                 </Suspense>
@@ -114,7 +114,7 @@ const ScannerWrapper = () => {
     if (!session) return <LoadingFallback />;
 
     return (
-        <div className="h-screen bg-slate-100 overflow-hidden">
+        <div className="h-screen bg-white overflow-hidden">
             <Scanner 
                 session={session} 
                 onCloseSession={async () => {
@@ -139,13 +139,13 @@ const App: React.FC = () => (
 );
 
 const NAV_CONFIG: Record<string, { label: string, icon: React.ReactNode, path: string }> = {
-    'dashboard': { label: 'Inicio', icon: <Home className="w-7 h-7" />, path: '/dashboard' },
-    'database': { label: 'Datos', icon: <DbIcon className="w-7 h-7" />, path: '/database' },
-    'reports': { label: 'Historial', icon: <History className="w-7 h-7" />, path: '/reports' },
-    'consolidated': { label: 'Consol.', icon: <Layers className="w-7 h-7" />, path: '/consolidated' },
-    'reception': { label: 'Recep.', icon: <Container className="w-7 h-7" />, path: '/reception' },
-    'conciliator': { label: 'Detect.', icon: <Fingerprint className="w-7 h-7" />, path: '/conciliator' },
-    'sync': { label: 'Nube', icon: <Cloud className="w-7 h-7" />, path: '/sync' },
+    'dashboard': { label: 'Inicio', icon: <Home className="w-6 h-6" />, path: '/dashboard' },
+    'database': { label: 'Datos', icon: <DbIcon className="w-6 h-6" />, path: '/database' },
+    'reports': { label: 'Historial', icon: <History className="w-6 h-6" />, path: '/reports' },
+    'consolidated': { label: 'Consol.', icon: <Layers className="w-6 h-6" />, path: '/consolidated' },
+    'reception': { label: 'Recep.', icon: <Container className="w-6 h-6" />, path: '/reception' },
+    'conciliator': { label: 'Detect.', icon: <Fingerprint className="w-6 h-6" />, path: '/conciliator' },
+    'sync': { label: 'Nube', icon: <Cloud className="w-6 h-6" />, path: '/sync' },
 };
 
 const MobileNav = ({ currentView, settings }: any) => {
@@ -153,7 +153,7 @@ const MobileNav = ({ currentView, settings }: any) => {
   const navItems = settings.mobileNavConfig || ['dashboard', 'database', 'reports', 'sync'];
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 pb-safe-area shadow-lg">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 pb-safe-area shadow-xl">
         <div className="flex justify-around items-center h-16 px-2">
             {navItems.map((key: string) => {
                 const conf = NAV_CONFIG[key];
@@ -165,8 +165,8 @@ const MobileNav = ({ currentView, settings }: any) => {
                         onClick={() => navigate(conf.path)}
                         className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-all ${isActive ? 'text-blue-600' : 'text-slate-400'}`}
                     >
-                        <div className="transition-all">{conf.icon}</div>
-                        <span className={`text-[10px] font-bold uppercase ${isActive ? 'opacity-100' : 'opacity-60'}`}>{conf.label}</span>
+                        <div className={`transition-transform duration-300 ${isActive ? 'scale-110' : ''}`}>{conf.icon}</div>
+                        <span className={`text-[10px] font-bold uppercase tracking-tight ${isActive ? 'opacity-100' : 'opacity-60'}`}>{conf.label}</span>
                     </button>
                 );
             })}

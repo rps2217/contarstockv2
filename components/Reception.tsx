@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -7,7 +6,7 @@ import * as sessionService from '../services/sessionService';
 import { sanitizeBarcode } from '../services/utils';
 import { SoundFX } from '../services/audio';
 import { CameraScanner } from './CameraScanner';
-import { ChevronLeft, Cloud, Barcode, X, Upload } from 'lucide-react';
+import { ChevronLeft, Cloud, Barcode, X, Upload, Container } from 'lucide-react';
 
 // Atómicos
 import { ReceptionHero } from './reception/ReceptionHero';
@@ -65,16 +64,22 @@ export const Reception: React.FC = () => {
     }, [isCameraOpen, showQueueModal]);
 
     return (
-        <div className="flex flex-col h-screen bg-slate-900 text-white overflow-hidden">
-            <div className="p-4 flex items-center justify-between bg-slate-800/30 backdrop-blur-md border-b border-white/5 shrink-0 z-20">
-                <button onClick={() => navigate('/dashboard')} className="p-2 hover:bg-white/10 rounded-full transition-colors"><ChevronLeft className="w-6 h-6" /></button>
-                <div className="font-black uppercase tracking-[0.2em] text-[10px] text-slate-400">Recepción Ciega v2</div>
-                <button onClick={() => navigate('/sync')} className="p-2.5 bg-indigo-600/10 hover:bg-indigo-600 text-indigo-400 hover:text-white rounded-xl transition-all flex items-center gap-2 text-[10px] font-black uppercase border border-indigo-500/20 shadow-lg">
+        <div className="flex flex-col h-screen bg-slate-50 text-slate-900 overflow-hidden">
+            <div className="p-4 flex items-center justify-between bg-white border-b border-slate-200 shrink-0 z-20 shadow-sm">
+                <div className="flex items-center gap-3">
+                    <button onClick={() => navigate('/dashboard')} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500"><ChevronLeft className="w-6 h-6" /></button>
+                    <div>
+                        <h1 className="text-lg font-black text-slate-900 flex items-center gap-2 uppercase tracking-tight">
+                            <Container className="w-5 h-5 text-blue-600" /> Recepción de Bultos
+                        </h1>
+                    </div>
+                </div>
+                <button onClick={() => navigate('/sync')} className="p-2.5 bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white rounded-xl transition-all flex items-center gap-2 text-xs font-black uppercase border border-blue-100 shadow-sm active:scale-95">
                     <Cloud className="w-4 h-4" /> <span className="hidden md:inline">Gestor Nube</span>
                 </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 md:p-6 no-scrollbar relative">
+            <div className="flex-1 overflow-y-auto p-4 md:p-10 relative bg-slate-50">
                 <ReceptionHero 
                     lastScanned={lastScanned} 
                     draftCount={draftCount} 
@@ -86,27 +91,29 @@ export const Reception: React.FC = () => {
                 />
 
                 {showManualInput && (
-                    <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6">
-                        <form onSubmit={handleManualSubmit} className="w-full max-w-sm bg-slate-900 p-6 rounded-[2rem] border border-white/10 shadow-2xl relative animate-in zoom-in-95">
-                            <button type="button" onClick={() => setShowManualInput(false)} className="absolute top-4 right-4 text-slate-500"><X /></button>
-                            <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-6 flex items-center gap-2"><Barcode className="w-4 h-4" /> Ingreso Manual</h3>
-                            <input ref={inputRef} value={inputValue} onChange={(e) => setInputValue(e.target.value.replace(/[^0-9]/g, ''))} type="text" inputMode="numeric" pattern="[0-9]*" placeholder="Escriba código..." className="w-full bg-black border border-white/10 rounded-2xl py-5 px-6 text-white text-2xl font-mono text-center outline-none focus:border-blue-500 transition-all mb-4" />
-                            <button type="submit" className="w-full bg-blue-600 py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg shadow-blue-900/50">Registrar</button>
+                    <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-6">
+                        <form onSubmit={handleManualSubmit} className="w-full max-w-md bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-2xl relative animate-in zoom-in-95">
+                            <button type="button" onClick={() => setShowManualInput(false)} className="absolute top-6 right-6 text-slate-300 hover:text-slate-600 transition-colors"><X className="w-7 h-7"/></button>
+                            <h3 className="text-xl font-black uppercase tracking-widest text-slate-900 mb-8 flex items-center gap-3"><Barcode className="w-6 h-6 text-blue-600" /> Ingreso de Etiqueta</h3>
+                            <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200 mb-8 shadow-inner">
+                                <input ref={inputRef} value={inputValue} onChange={(e) => setInputValue(e.target.value.replace(/[^0-9]/g, ''))} type="text" inputMode="numeric" pattern="[0-9]*" placeholder="00000000" className="w-full bg-transparent text-slate-900 text-4xl font-black text-center outline-none transition-all placeholder:text-slate-200" />
+                            </div>
+                            <button type="submit" className="w-full bg-blue-600 py-5 rounded-2xl font-black uppercase tracking-widest text-sm text-white shadow-xl shadow-blue-100 active:scale-95 transition-all">Registrar Bulto</button>
                         </form>
                     </div>
                 )}
             </div>
 
             {unsyncedDrafts.length > 0 && (
-                <div className="p-4 bg-slate-800 border-t border-white/5 animate-in slide-in-from-bottom-full shrink-0">
-                    <button onClick={() => navigate('/sync')} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-widest text-xs py-5 rounded-2xl shadow-2xl shadow-blue-900/50 flex items-center justify-center gap-3 transition-all active:scale-95">
-                        <Upload className="w-5 h-5" /> Sincronizar ({unsyncedDrafts.length})
+                <div className="p-6 bg-white border-t border-slate-200 shadow-2xl z-20 shrink-0">
+                    <button onClick={() => navigate('/sync')} className="w-full max-w-xl mx-auto bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-widest text-sm py-5 rounded-2xl shadow-xl shadow-blue-100 flex items-center justify-center gap-4 transition-all active:scale-95">
+                        <Upload className="w-6 h-6" /> Sincronizar Cola ({unsyncedDrafts.length})
                     </button>
                 </div>
             )}
 
             {isCameraOpen && <CameraScanner onScan={(code) => { setIsCameraOpen(false); handleScan(code); }} onClose={() => setIsCameraOpen(false)} />}
-            <QueueManager isOpen={showQueueModal} onClose={() => setShowQueueModal(false)} drafts={unsyncedDrafts} onDelete={async (id) => { await db.sessions.delete(id); SoundFX.play('delete'); }} onDiscardAll={async () => { if (confirm("¿Vaciar cola?")) { await db.sessions.where('status').equals('draft').delete(); SoundFX.play('delete'); setShowQueueModal(false); } }} />
+            <QueueManager isOpen={showQueueModal} onClose={() => setShowQueueModal(false)} drafts={unsyncedDrafts} onDelete={async (id) => { await db.sessions.delete(id); SoundFX.play('delete'); }} onDiscardAll={async () => { if (confirm("¿Vaciar cola de recepción?")) { await db.sessions.where('status').equals('draft').delete(); SoundFX.play('delete'); setShowQueueModal(false); } }} />
         </div>
     );
 };
