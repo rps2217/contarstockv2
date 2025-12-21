@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
-// Added Loader2 to the imports to fix "Cannot find name 'Loader2'" error
-import { Box, Lock, User, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
+import { Box, Lock, User, ArrowRight, AlertCircle, Loader2, ScanFace } from 'lucide-react';
 
 interface LoginProps {
   onLoginSuccess: () => void;
@@ -12,6 +11,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [activeField, setActiveField] = useState<'user' | 'pass' | null>(null);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,67 +26,91 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         onLoginSuccess();
         localStorage.setItem('logicount_auth', 'true');
       } else {
-        setError('Acceso denegado. Verifique credenciales.');
+        setError('Credenciales incorrectas');
         setIsLoading(false);
       }
     }, 800);
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
-      <div className="mb-12 text-center animate-in fade-in slide-in-from-top-6 duration-700">
-        <div className="bg-blue-600 w-20 h-20 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-blue-200">
-            <Box className="w-10 h-10 text-white" />
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 font-sans">
+      <div className="w-full max-w-sm flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+        
+        {/* Header Branding */}
+        <div className="text-center">
+            <div className="inline-flex bg-blue-600 p-5 rounded-[2rem] shadow-2xl shadow-blue-200 mb-6">
+                <Box className="w-10 h-10 text-white" />
+            </div>
+            <h1 className="text-4xl font-black text-slate-900 tracking-tighter mb-1">
+                LogiCount <span className="text-blue-600">Pro</span>
+            </h1>
+            <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.3em]">Enterprise Edition</p>
         </div>
-        <h1 className="text-4xl font-black text-slate-900 tracking-tighter">LogiCount <span className="text-blue-600">Pro</span></h1>
-        <p className="text-slate-400 mt-3 font-bold text-sm uppercase tracking-widest">Portal de Acceso Corporativo</p>
-      </div>
 
-      <div className="w-full max-w-md bg-white border border-slate-200 rounded-[2.5rem] shadow-2xl p-10 animate-in zoom-in-95 duration-500">
-        <form onSubmit={handleLogin} className="space-y-6">
-            <div>
-                <label htmlFor="username" className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block ml-1">Identificador de Usuario</label>
-                <div className="relative">
-                    <User className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
-                    <input 
-                        id="username" name="username" type="text" autoComplete="username" value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 text-slate-900 pl-14 pr-6 py-5 rounded-2xl focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all placeholder:text-slate-200 font-bold outline-none shadow-inner"
-                        placeholder="admin" autoFocus
-                    />
+        {/* Login Form Card */}
+        <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl shadow-slate-200/50 border border-slate-100">
+            <form onSubmit={handleLogin} className="space-y-5">
+                
+                {/* User Field */}
+                <div className="space-y-2">
+                    <label className={`text-[10px] font-black uppercase tracking-widest ml-4 transition-colors ${activeField === 'user' ? 'text-blue-600' : 'text-slate-400'}`}>Usuario</label>
+                    <div className={`relative group transition-all duration-300 ${activeField === 'user' ? 'scale-[1.02]' : ''}`}>
+                        <div className={`absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-colors ${activeField === 'user' ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400'}`}>
+                            <User className="w-5 h-5" />
+                        </div>
+                        <input 
+                            type="text" 
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            onFocus={() => setActiveField('user')}
+                            onBlur={() => setActiveField(null)}
+                            className={`w-full h-16 pl-16 pr-6 bg-slate-50 border-2 rounded-2xl font-bold text-lg outline-none transition-all placeholder:text-slate-300 text-slate-900 ${activeField === 'user' ? 'border-blue-500 bg-white ring-4 ring-blue-50' : 'border-transparent'}`}
+                            placeholder="ID Operador"
+                            autoComplete="username"
+                        />
+                    </div>
                 </div>
-            </div>
 
-            <div>
-                <label htmlFor="password" className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block ml-1">Clave de Seguridad</label>
-                <div className="relative">
-                    <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
-                    <input 
-                        id="password" name="password" type="password" autoComplete="current-password" value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 text-slate-900 pl-14 pr-6 py-5 rounded-2xl focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all placeholder:text-slate-200 font-bold outline-none shadow-inner"
-                        placeholder="••••••••"
-                    />
+                {/* Password Field */}
+                <div className="space-y-2">
+                    <label className={`text-[10px] font-black uppercase tracking-widest ml-4 transition-colors ${activeField === 'pass' ? 'text-blue-600' : 'text-slate-400'}`}>Contraseña</label>
+                    <div className={`relative group transition-all duration-300 ${activeField === 'pass' ? 'scale-[1.02]' : ''}`}>
+                        <div className={`absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-colors ${activeField === 'pass' ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400'}`}>
+                            <Lock className="w-5 h-5" />
+                        </div>
+                        <input 
+                            type="password" 
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            onFocus={() => setActiveField('pass')}
+                            onBlur={() => setActiveField(null)}
+                            className={`w-full h-16 pl-16 pr-6 bg-slate-50 border-2 rounded-2xl font-bold text-lg outline-none transition-all placeholder:text-slate-300 text-slate-900 ${activeField === 'pass' ? 'border-blue-500 bg-white ring-4 ring-blue-50' : 'border-transparent'}`}
+                            placeholder="••••••••"
+                            autoComplete="current-password"
+                        />
+                    </div>
                 </div>
-            </div>
 
-            {error && (
-                <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 flex items-center gap-3 text-rose-600 text-xs font-black animate-in shake">
-                    <AlertCircle className="w-5 h-5 shrink-0" /> {error}
-                </div>
-            )}
+                {error && (
+                    <div className="bg-rose-50 p-4 rounded-2xl flex items-center gap-3 animate-in shake">
+                        <AlertCircle className="w-5 h-5 text-rose-500 shrink-0" />
+                        <span className="text-xs font-bold text-rose-600">{error}</span>
+                    </div>
+                )}
 
-            <button 
-                type="submit" disabled={isLoading}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-5 rounded-2xl shadow-xl shadow-blue-100 flex items-center justify-center gap-3 transition-all active:scale-[0.97] disabled:opacity-50 uppercase tracking-widest text-xs mt-4"
-            >
-                {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <>Entrar al Sistema <ArrowRight className="w-5 h-5" /></>}
-            </button>
-        </form>
-      </div>
+                <button 
+                    type="submit" 
+                    disabled={isLoading}
+                    className="w-full h-16 bg-slate-900 hover:bg-black text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-70 mt-4"
+                >
+                    {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Ingresar <ArrowRight className="w-5 h-5" /></>}
+                </button>
+            </form>
+        </div>
 
-      <div className="mt-12 text-center text-slate-400 text-[10px] font-black uppercase tracking-[0.3em]">
-        <p>&copy; {new Date().getFullYear()} LogiCount Systems Group</p>
+        <div className="text-center opacity-40 hover:opacity-100 transition-opacity">
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">v2.5.0 Stable Build</p>
+        </div>
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Product } from '../../types';
-import { X, Pencil, Plus, Save } from 'lucide-react';
+import { X, Pencil, Plus, Save, Box, ScanLine } from 'lucide-react';
 import * as productService from '../../services/productService';
 import { sanitizeBarcode } from '../../services/utils';
 
@@ -47,76 +47,90 @@ export const ProductForm: React.FC<ProductFormProps> = ({ isOpen, onClose, initi
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl p-6 relative animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto no-scrollbar">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-2"
-        >
-          <X className="w-6 h-6" />
-        </button>
-        <div className="mb-6">
-          <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-            {initialData ? <Pencil className="w-5 h-5 text-blue-600" /> : <Plus className="w-5 h-5 text-blue-600" />}
-            {initialData ? 'Editar Producto' : 'Nuevo Producto'}
-          </h2>
-          <p className="text-sm text-slate-500">Complete la información del SKU.</p>
-        </div>
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
+        <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
         
-        <form onSubmit={handleSave} className="space-y-4">
-          <div>
-            <label className="text-xs font-bold text-slate-500 uppercase ml-1 block mb-1">Código de Barras</label>
-            <input
-              required
-              disabled={!!initialData}
-              value={formData.barcode}
-              onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 font-mono font-bold text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all disabled:opacity-60 disabled:bg-slate-100"
-              placeholder="Ej. 780123456789"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-bold text-slate-500 uppercase ml-1 block mb-1">Descripción</label>
-            <input
-              required
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 font-bold text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
-              placeholder="Nombre del producto"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-bold text-slate-500 uppercase ml-1 block mb-1">Mundo / Categoría</label>
-              <input
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
-                placeholder="Ej. LACTEOS"
-              />
+        <div className="relative w-full max-h-[90dvh] bg-white rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl animate-in slide-in-from-bottom-4 duration-300 md:max-w-md overflow-hidden flex flex-col">
+            
+            {/* Header */}
+            <div className="px-8 pt-8 pb-4 flex justify-between items-start shrink-0">
+                <div>
+                    <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-4">
+                        {initialData ? <Pencil className="w-6 h-6" /> : <Plus className="w-6 h-6" />}
+                    </div>
+                    <h2 className="text-2xl font-black text-slate-900 leading-none">{initialData ? 'Editar SKU' : 'Nuevo SKU'}</h2>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mt-2">Ficha Maestra de Producto</p>
+                </div>
+                <button onClick={onClose} className="p-2 bg-slate-50 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-900 transition-colors">
+                    <X className="w-6 h-6" />
+                </button>
             </div>
-            <div>
-              <label className="text-xs font-bold text-slate-500 uppercase ml-1 block mb-1">Proveedor</label>
-              <input
-                value={formData.supplier}
-                onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
-                placeholder="Nombre Prov."
-              />
-            </div>
-          </div>
 
-          {error && (
-             <div className="text-red-500 text-xs font-bold bg-red-50 p-3 rounded-lg border border-red-100">
-                 {error}
-             </div>
-          )}
+            <form onSubmit={handleSave} className="flex-1 overflow-y-auto px-8 pb-8 space-y-5 no-scrollbar">
+                
+                <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Código de Barras</label>
+                    <div className="relative">
+                        <ScanLine className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                        <input
+                            required
+                            disabled={!!initialData}
+                            value={formData.barcode}
+                            onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                            className="w-full h-14 pl-12 pr-4 bg-slate-50 border-2 border-transparent rounded-2xl font-mono font-bold text-slate-900 outline-none focus:bg-white focus:border-blue-500 transition-all placeholder:text-slate-300 disabled:opacity-60 disabled:bg-slate-100"
+                            placeholder="EAN / SKU"
+                        />
+                    </div>
+                </div>
 
-          <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center justify-center gap-2 mt-4">
-            <Save className="w-5 h-5" /> Guardar Producto
-          </button>
-        </form>
-      </div>
+                <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Descripción</label>
+                    <div className="relative">
+                        <Box className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                        <input
+                            required
+                            value={formData.name}
+                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            className="w-full h-14 pl-12 pr-4 bg-slate-50 border-2 border-transparent rounded-2xl font-bold text-slate-900 outline-none focus:bg-white focus:border-blue-500 transition-all placeholder:text-slate-300"
+                            placeholder="Nombre del producto"
+                        />
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Mundo</label>
+                        <input
+                            value={formData.category}
+                            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                            className="w-full h-14 px-4 bg-slate-50 border-2 border-transparent rounded-2xl font-bold text-sm text-slate-900 outline-none focus:bg-white focus:border-blue-500 transition-all placeholder:text-slate-300"
+                            placeholder="Categoría"
+                        />
+                    </div>
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Proveedor</label>
+                        <input
+                            value={formData.supplier}
+                            onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
+                            className="w-full h-14 px-4 bg-slate-50 border-2 border-transparent rounded-2xl font-bold text-sm text-slate-900 outline-none focus:bg-white focus:border-blue-500 transition-all placeholder:text-slate-300"
+                            placeholder="Nombre"
+                        />
+                    </div>
+                </div>
+
+                {error && (
+                    <div className="bg-rose-50 text-rose-600 text-xs font-bold p-4 rounded-2xl animate-in shake border border-rose-100 text-center">
+                        {error}
+                    </div>
+                )}
+
+                <div className="pt-2">
+                    <button type="submit" className="w-full h-16 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl shadow-xl shadow-blue-200 transition-all active:scale-95 flex items-center justify-center gap-3 uppercase tracking-widest text-xs">
+                        <Save className="w-5 h-5" /> Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
   );
 };

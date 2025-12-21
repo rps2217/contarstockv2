@@ -32,7 +32,6 @@ export const Reception: React.FC = () => {
             await sessionService.createDraftSession(cleanCode);
             setLastScanned(cleanCode);
             SoundFX.play('success');
-            // Auto-clear success message after 3s
             setTimeout(() => setLastScanned(prev => prev === cleanCode ? null : prev), 3000);
         } catch (err: any) { SoundFX.play('error'); }
     };
@@ -112,30 +111,32 @@ export const Reception: React.FC = () => {
             </div>
 
             {showManualInput && (
-                <div className="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-md flex items-end md:items-center justify-center md:p-6">
-                    <form onSubmit={handleManualSubmit} className="w-full max-w-md bg-white p-8 rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl relative animate-in slide-in-from-bottom-10">
+                <div className="fixed inset-0 z-[60] bg-slate-900/80 backdrop-blur-md flex items-end md:items-center justify-center p-4 md:p-6 animate-in fade-in duration-200">
+                    <div className="w-full max-w-md bg-white p-8 rounded-[2.5rem] shadow-2xl relative animate-in slide-in-from-bottom-10">
                         <div className="flex justify-between items-center mb-8">
                             <h3 className="text-xl font-black uppercase tracking-widest text-slate-900 flex items-center gap-3">
-                                <Barcode className="w-6 h-6 text-blue-600" /> Etiqueta
+                                <Barcode className="w-6 h-6 text-blue-600" /> Ingreso Etiqueta
                             </h3>
                             <button type="button" onClick={() => setShowManualInput(false)} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200"><X className="w-5 h-5 text-slate-500"/></button>
                         </div>
                         
-                        <input 
-                            autoFocus 
-                            ref={inputRef} 
-                            value={inputValue} 
-                            onChange={(e) => setInputValue(e.target.value.replace(/[^0-9]/g, ''))} 
-                            type="text" 
-                            inputMode="numeric" 
-                            placeholder="ESCANEAR..." 
-                            className="w-full bg-slate-50 border-2 border-slate-200 rounded-2xl p-6 text-3xl font-black text-center outline-none focus:border-blue-500 transition-all placeholder:text-slate-300 mb-6 text-slate-900" 
-                        />
-                        
-                        <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 py-5 rounded-2xl font-black uppercase tracking-widest text-xs text-white shadow-lg shadow-blue-200 active:scale-95 transition-all">
-                            Registrar Bulto
-                        </button>
-                    </form>
+                        <form onSubmit={handleManualSubmit} className="space-y-6">
+                            <input 
+                                autoFocus 
+                                ref={inputRef} 
+                                value={inputValue} 
+                                onChange={(e) => setInputValue(e.target.value.replace(/[^0-9]/g, ''))} 
+                                type="text" 
+                                inputMode="numeric" 
+                                placeholder="00000000" 
+                                className="w-full h-20 bg-slate-50 border-2 border-slate-200 rounded-3xl p-6 text-3xl font-black text-center outline-none focus:bg-white focus:border-blue-500 transition-all placeholder:text-slate-300 text-slate-900 tracking-widest" 
+                            />
+                            
+                            <button type="submit" className="w-full h-16 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg shadow-blue-200 active:scale-95 transition-all">
+                                Registrar Bulto
+                            </button>
+                        </form>
+                    </div>
                 </div>
             )}
 

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { X, Camera, Mail, ShieldCheck, Loader2, FileUp } from 'lucide-react';
+import { X, Camera, Mail, ShieldCheck, Loader2, FileUp, ScanBarcode, Search } from 'lucide-react';
 import { CountingSession, ExpectedItem } from '../types';
 import * as sessionService from '../services/sessionService'; 
 import { sanitizeBarcode } from '../services/utils';
@@ -117,121 +117,146 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center">
-        <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
+        <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md transition-opacity" onClick={onClose} />
 
-        {/* Modal Container: Adjusted height constraints and padding */}
-        <div className="relative w-full max-h-[90dvh] flex flex-col bg-white rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl animate-in slide-in-from-bottom-4 duration-300 md:max-w-md md:h-auto overflow-hidden">
+        <div className="relative w-full max-h-[95dvh] flex flex-col bg-white rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl animate-in slide-in-from-bottom-4 duration-300 md:max-w-md overflow-hidden">
             
-            <div className="flex justify-between items-center px-6 py-5 bg-white border-b border-slate-100 shrink-0 z-10">
-                <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase">Iniciar Conteo</h2>
-                <button onClick={onClose} className="text-slate-400 hover:text-slate-700 p-2 rounded-full hover:bg-slate-50 transition-colors">
-                    <X className="w-6 h-6" />
+            {/* Header Limpio */}
+            <div className="flex justify-between items-center px-6 pt-6 pb-2 bg-white shrink-0 z-10">
+                <div>
+                    <h2 className="text-xl font-black text-slate-900 tracking-tight">INICIAR CONTEO</h2>
+                    <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-0.5">Nueva Sesión Operativa</p>
+                </div>
+                <button onClick={onClose} className="bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900 p-3 rounded-full transition-colors active:scale-90">
+                    <X className="w-5 h-5" />
                 </button>
             </div>
             
-            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6 min-h-0 bg-white no-scrollbar">
+            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-4 space-y-5 min-h-0 bg-white no-scrollbar">
                 
-                {/* LABEL FIELD */}
-                <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Etiqueta Logística</label>
-                    <div className="flex gap-2">
-                        <input 
-                            type="text" inputMode="numeric"
-                            className={`flex-1 p-4 font-black text-xl rounded-2xl border-2 transition-all outline-none text-center tracking-wider ${activeKeypadField === 'label' ? 'border-blue-600 bg-white text-blue-600' : 'border-slate-200 bg-slate-50 text-slate-900'}`}
-                            placeholder="BULTO" value={labelId} onFocus={() => setActiveKeypadField('label')}
-                            onChange={(e) => handleNumericInputChange(setLabelId, e.target.value)}
-                        />
-                        <button type="button" onClick={() => setIsCameraOpen(true)} className="w-16 bg-slate-50 border-2 border-slate-200 rounded-2xl flex items-center justify-center text-slate-400 hover:text-blue-600 hover:border-blue-200 transition-all">
-                            <Camera className="w-6 h-6" />
+                {/* CAMPO: ETIQUETA LOGÍSTICA */}
+                <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                        <ScanBarcode className="w-3 h-3" /> Etiqueta Logística
+                    </label>
+                    <div className="flex gap-3">
+                        <div 
+                            className={`flex-1 relative rounded-2xl transition-all duration-300 ${activeKeypadField === 'label' ? 'ring-4 ring-blue-100 bg-white' : 'bg-slate-50'}`}
+                            onClick={() => setActiveKeypadField('label')}
+                        >
+                            <input 
+                                type="text" inputMode="none" readOnly
+                                className="w-full h-16 bg-transparent border-0 text-center font-black text-2xl text-slate-900 placeholder:text-slate-300 focus:ring-0 rounded-2xl tracking-wider"
+                                placeholder="BULTO" value={labelId}
+                            />
+                            {/* Indicador de Foco */}
+                            {activeKeypadField === 'label' && <div className="absolute inset-x-0 bottom-0 h-1 bg-blue-500 rounded-b-2xl animate-in slide-in-from-left duration-300"></div>}
+                        </div>
+                        
+                        {/* Botón Cámara Principal - Grande y Visible */}
+                        <button 
+                            type="button" 
+                            onClick={() => setIsCameraOpen(true)} 
+                            className="h-16 w-16 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl shadow-lg shadow-blue-200 flex items-center justify-center active:scale-90 transition-all shrink-0"
+                        >
+                            <Camera className="w-7 h-7" />
                         </button>
                     </div>
                 </div>
 
-                {/* ERP FIELD */}
-                <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">N° Documento ERP</label>
-                    <div className="flex gap-2">
-                        <input 
-                            ref={erpInputRef} type="text" inputMode="numeric"
-                            className={`flex-1 p-4 font-black text-xl rounded-2xl border-2 transition-all outline-none text-center tracking-wider ${activeKeypadField === 'erp' ? 'border-blue-600 bg-white text-blue-600' : 'border-slate-200 bg-slate-50 text-slate-900'}`}
-                            placeholder="ORDEN" value={erpOrder} onFocus={() => setActiveKeypadField('erp')}
-                            onChange={(e) => handleNumericInputChange(setErpOrder, e.target.value)}
-                        />
-                        <button type="button" onClick={handleGmailSearch} className="w-16 bg-red-50 border-2 border-red-100 rounded-2xl flex items-center justify-center text-red-400 hover:text-red-600 hover:border-red-200 transition-all" title="Buscar en Gmail">
-                            <Mail className="w-6 h-6" />
+                {/* CAMPO: DOCUMENTO ERP */}
+                <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                        <FileUp className="w-3 h-3" /> Documento ERP
+                    </label>
+                    <div className="flex gap-3">
+                        <div 
+                            className={`flex-1 relative rounded-2xl transition-all duration-300 ${activeKeypadField === 'erp' ? 'ring-4 ring-blue-100 bg-white' : 'bg-slate-50'}`}
+                            onClick={() => setActiveKeypadField('erp')}
+                        >
+                            <input 
+                                type="text" inputMode="none" readOnly
+                                className="w-full h-16 bg-transparent border-0 text-center font-black text-2xl text-slate-900 placeholder:text-slate-300 focus:ring-0 rounded-2xl tracking-wider"
+                                placeholder="ORDEN" value={erpOrder}
+                            />
+                            {activeKeypadField === 'erp' && <div className="absolute inset-x-0 bottom-0 h-1 bg-blue-500 rounded-b-2xl animate-in slide-in-from-left duration-300"></div>}
+                        </div>
+
+                        {/* Botón Gmail/Buscar - Estilo Secundario pero Visible */}
+                        <button 
+                            type="button" 
+                            onClick={handleGmailSearch} 
+                            className="h-16 w-16 bg-white border-2 border-slate-100 text-slate-400 hover:text-red-500 hover:border-red-100 hover:bg-red-50 rounded-2xl flex items-center justify-center active:scale-90 transition-all shrink-0 shadow-sm"
+                            title="Buscar en Gmail"
+                        >
+                            <Mail className="w-7 h-7" />
                         </button>
                     </div>
                 </div>
 
-                {/* VERIFIED MODE TOGGLE */}
-                <div className="bg-slate-50 rounded-3xl p-5 border border-slate-100 space-y-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className={`p-3 rounded-xl transition-colors ${isVerifiedMode ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-200 text-slate-400'}`}>
-                                <ShieldCheck className="w-5 h-5" />
+                {/* MODO VERIFICADO */}
+                <div className={`rounded-3xl p-1 border transition-all duration-300 ${isVerifiedMode ? 'bg-indigo-50 border-indigo-100' : 'bg-white border-white'}`}>
+                    <button 
+                        type="button"
+                        onClick={() => setIsVerifiedMode(!isVerifiedMode)}
+                        className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all active:scale-[0.98] ${isVerifiedMode ? 'bg-white border-indigo-100 shadow-sm' : 'bg-slate-50 border-slate-100 hover:bg-slate-100'}`}
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className={`p-2.5 rounded-xl transition-colors ${isVerifiedMode ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-400'}`}>
+                                <ShieldCheck className="w-6 h-6" />
                             </div>
-                            <div>
-                                <div className="text-sm font-bold text-slate-900 leading-tight">Modo Verificado</div>
-                                <div className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Requiere Guía PDF/IMG</div>
+                            <div className="text-left">
+                                <div className={`text-sm font-black ${isVerifiedMode ? 'text-indigo-900' : 'text-slate-500'}`}>Modo Verificado</div>
+                                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Requiere Guía PDF/IMG</div>
                             </div>
                         </div>
-                        <button 
-                            type="button"
-                            onClick={() => setIsVerifiedMode(!isVerifiedMode)}
-                            className={`w-14 h-8 rounded-full transition-colors relative shadow-inner ${isVerifiedMode ? 'bg-indigo-600' : 'bg-slate-300'}`}
-                        >
-                            <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-transform shadow-sm ${isVerifiedMode ? 'left-7' : 'left-1'}`} />
-                        </button>
-                    </div>
+                        <div className={`w-12 h-7 rounded-full relative transition-colors ${isVerifiedMode ? 'bg-indigo-600' : 'bg-slate-200'}`}>
+                            <div className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-300 ${isVerifiedMode ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </div>
+                    </button>
 
                     {isVerifiedMode && (
-                        <div className="space-y-3 animate-in slide-in-from-top-2 duration-300">
+                        <div className="px-2 pb-2 pt-1 animate-in slide-in-from-top-2">
                             {expectedItems.length === 0 ? (
-                                <label className="flex flex-col items-center justify-center p-6 border-3 border-dashed border-indigo-200 rounded-2xl hover:bg-indigo-50/50 transition-colors cursor-pointer group bg-white">
-                                    <FileUp className="w-8 h-8 text-indigo-300 group-hover:text-indigo-600 group-hover:scale-110 transition-all mb-2" />
-                                    <span className="text-xs font-bold text-indigo-600 uppercase tracking-wide">Cargar Documento</span>
+                                <label className="flex items-center justify-center gap-3 p-4 bg-indigo-100/50 border border-dashed border-indigo-300 text-indigo-700 rounded-xl cursor-pointer hover:bg-indigo-100 transition-colors active:scale-95">
+                                    <FileUp className="w-5 h-5" />
+                                    <span className="text-xs font-black uppercase">Cargar Documento</span>
                                     <input type="file" className="hidden" accept=".pdf,image/*" multiple onChange={handleFileChange} />
                                 </label>
                             ) : (
-                                <div className="bg-white rounded-2xl border border-indigo-100 p-4">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">{expectedItems.length} SKUs Leídos</span>
-                                        <button type="button" onClick={() => { setExpectedItems([]); }} className="text-[10px] font-bold text-red-500 hover:underline uppercase">Borrar</button>
+                                <div className="bg-white rounded-xl border border-indigo-100 p-3 flex justify-between items-center shadow-sm">
+                                    <div className="flex items-center gap-2 text-indigo-700">
+                                        <CheckCircle className="w-4 h-4" />
+                                        <span className="text-xs font-black uppercase">{expectedItems.length} SKUs Listos</span>
                                     </div>
-                                    <div className="h-1 w-full bg-indigo-50 rounded-full overflow-hidden">
-                                        <div className="h-full bg-indigo-500 w-full animate-pulse"></div>
-                                    </div>
+                                    <button type="button" onClick={() => setExpectedItems([])} className="text-[10px] font-bold text-red-500 bg-red-50 px-2 py-1 rounded hover:bg-red-100">BORRAR</button>
                                 </div>
                             )}
-                            {isParsing && (
-                                <div className="flex items-center justify-center gap-2 py-2">
-                                    <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
-                                    <span className="text-[10px] font-bold text-indigo-600 uppercase">Analizando con Gemini...</span>
-                                </div>
-                            )}
+                            {isParsing && <div className="text-center text-[10px] font-bold text-indigo-500 py-2 animate-pulse">Analizando documento...</div>}
                         </div>
                     )}
                 </div>
 
+                {/* TECLADO INTEGRADO */}
                 {showKeypad && (
-                    <div className="pt-2">
+                    <div className="pt-2 pb-2">
                         <NumericKeypad isOpen={showKeypad} embedded={true} onInput={handleKeypadInput} onDelete={handleKeypadDelete} />
                     </div>
                 )}
 
                 {error && (
-                    <div className="bg-red-50 text-red-600 text-xs font-bold px-4 py-4 rounded-2xl animate-in shake border border-red-100 flex items-center gap-3">
-                        <div className="w-2 h-2 bg-red-500 rounded-full"></div> {error}
+                    <div className="bg-rose-50 text-rose-600 text-xs font-bold p-4 rounded-2xl animate-in shake border border-rose-100 flex items-center gap-3 shadow-sm">
+                        <div className="w-2 h-2 bg-rose-500 rounded-full shrink-0"></div> {error}
                     </div>
                 )}
             </form>
 
-            {/* Footer with extra padding for mobile devices */}
-            <div className="p-4 bg-white border-t border-slate-100 shrink-0 pb-8 md:pb-6">
+            {/* Footer Action */}
+            <div className="p-4 bg-white border-t border-slate-100 shrink-0 pb-8 md:pb-6 z-20 shadow-[0_-10px_20px_rgba(0,0,0,0.02)]">
                 <button 
                     onClick={handleSubmit}
                     disabled={isParsing}
-                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white font-black text-sm py-5 rounded-2xl shadow-xl shadow-blue-200 flex items-center justify-center gap-2 transition-all active:scale-95 uppercase tracking-widest"
+                    className="w-full bg-slate-900 hover:bg-slate-800 disabled:bg-slate-300 text-white font-black text-base py-5 rounded-2xl shadow-xl flex items-center justify-center gap-3 transition-all active:scale-[0.98] uppercase tracking-widest"
                 >
                     {isVerifiedMode ? 'Comenzar Recepción' : 'Iniciar Conteo'}
                 </button>
@@ -242,3 +267,10 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
     </div>
   );
 };
+
+// Simple icon component helper if not imported
+const CheckCircle = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
+    </svg>
+);

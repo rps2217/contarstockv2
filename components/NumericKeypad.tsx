@@ -22,40 +22,38 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
 }) => {
   
   const handlePress = (val: string) => {
-    // Vibrate to give tactile feedback, helping user know they hit the target
     if (navigator.vibrate) navigator.vibrate(10);
     onInput(val);
   };
 
   const handleDeletePress = (e: React.MouseEvent | React.TouchEvent) => {
-    // Prevent default to stop potential double-fire on some touch devices
     if (e.type === 'touchstart') e.preventDefault();
     if (navigator.vibrate) navigator.vibrate(20);
     onDelete();
   };
 
-  // --- EMBEDDED MODE (Inside Modal) ---
+  // --- MODO INTEGRADO (Dentro del Modal) ---
   if (embedded) {
       if (!isOpen) return null;
       return (
-        <div className="w-full bg-slate-100 rounded-2xl p-2 border border-slate-200 animate-in fade-in slide-in-from-top-2 duration-200 touch-manipulation">
-            <div className="grid grid-cols-3 gap-2 select-none">
+        <div className="w-full bg-slate-50 rounded-3xl p-1.5 touch-manipulation select-none">
+            <div className="grid grid-cols-3 gap-1.5">
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
                     <button
                         key={num}
                         type="button"
                         onClick={() => handlePress(num.toString())}
-                        className="h-12 md:h-14 lg:h-16 bg-white hover:bg-blue-50 active:bg-blue-100 text-slate-900 text-xl font-black rounded-xl shadow-sm border border-slate-200 border-b-[3px] border-b-slate-300 active:border-b-0 active:translate-y-[3px] transition-all flex items-center justify-center active:scale-95"
+                        className="h-14 bg-white text-slate-800 text-2xl font-bold rounded-xl shadow-[0_2px_0_#e2e8f0] active:shadow-none active:translate-y-[2px] transition-all flex items-center justify-center border border-slate-100"
                     >
                         {num}
                     </button>
                 ))}
 
-                {/* Bottom Row */}
+                {/* Fila Inferior */}
                 <button
                     type="button"
                     onClick={() => handlePress("-")}
-                    className="h-12 md:h-14 lg:h-16 bg-slate-200 hover:bg-slate-300 active:bg-blue-100 text-slate-800 text-xl font-black rounded-xl shadow-sm border border-slate-300 border-b-[3px] border-b-slate-400 active:border-b-0 active:translate-y-[3px] transition-all flex items-center justify-center active:scale-95"
+                    className="h-14 bg-slate-100 text-slate-500 text-2xl font-bold rounded-xl shadow-[0_2px_0_#cbd5e1] active:shadow-none active:translate-y-[2px] transition-all flex items-center justify-center border border-slate-200"
                 >
                     -
                 </button>
@@ -63,7 +61,7 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
                 <button
                     type="button"
                     onClick={() => handlePress("0")}
-                    className="h-12 md:h-14 lg:h-16 bg-white hover:bg-blue-50 active:bg-blue-100 text-slate-900 text-xl font-black rounded-xl shadow-sm border border-slate-200 border-b-[3px] border-b-slate-300 active:border-b-0 active:translate-y-[3px] transition-all flex items-center justify-center active:scale-95"
+                    className="h-14 bg-white text-slate-800 text-2xl font-bold rounded-xl shadow-[0_2px_0_#e2e8f0] active:shadow-none active:translate-y-[2px] transition-all flex items-center justify-center border border-slate-100"
                 >
                     0
                 </button>
@@ -71,16 +69,16 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
                 <button
                     type="button"
                     onClick={() => onDelete()}
-                    className="h-12 md:h-14 lg:h-16 bg-red-100 hover:bg-red-200 active:bg-red-300 text-red-600 rounded-xl shadow-sm border border-red-200 border-b-[3px] border-b-red-300 active:border-b-0 active:translate-y-[3px] transition-all flex items-center justify-center active:scale-95"
+                    className="h-14 bg-rose-50 text-rose-500 rounded-xl shadow-[0_2px_0_#fecdd3] active:shadow-none active:translate-y-[2px] transition-all flex items-center justify-center border border-rose-100"
                 >
-                    <Delete className="w-6 h-6" />
+                    <Delete className="w-7 h-7" />
                 </button>
             </div>
         </div>
       );
   }
 
-  // --- OVERLAY MODE (Bottom Sheet) ---
+  // --- MODO OVERLAY (Sheet Inferior) ---
   if (!isOpen) return null;
 
   return (

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { FileSpreadsheet, X, Loader2, CheckCircle2, AlertTriangle, Download } from 'lucide-react';
 import * as productService from '../../services/productService';
@@ -85,68 +86,66 @@ export const ImportTools: React.FC<ImportToolsProps> = ({ isOpen, onClose, onImp
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl p-6 relative animate-in zoom-in-95 duration-200">
-        <button onClick={handleClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-2">
-          <X className="w-6 h-6" />
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 relative animate-in zoom-in-95 duration-200">
+        <button onClick={handleClose} className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 p-2 bg-slate-50 rounded-full">
+          <X className="w-5 h-5" />
         </button>
 
-        <div className="text-center mb-6">
-          <div className="w-16 h-16 bg-green-100 text-green-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <FileSpreadsheet className="w-8 h-8" />
+        <div className="text-center mb-8">
+          <div className="w-20 h-20 bg-green-100 text-green-600 rounded-[2rem] flex items-center justify-center mx-auto mb-4">
+            <FileSpreadsheet className="w-10 h-10" />
           </div>
-          <h2 className="text-xl font-bold text-slate-900">Importar Productos</h2>
-          <p className="text-sm text-slate-500 mt-1">Cargue un CSV o use una hoja de Google Sheets pública.</p>
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Importar Productos</h2>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mt-2">Carga masiva de SKUs</p>
         </div>
 
         {importStatus === 'loading' ? (
-          <div className="py-8 text-center">
-            <Loader2 className="w-10 h-10 text-blue-600 animate-spin mx-auto mb-3" />
-            <p className="text-slate-600 font-bold">Procesando archivo...</p>
-            <p className="text-xs text-slate-400">Esto puede tomar unos segundos.</p>
+          <div className="py-12 text-center">
+            <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
+            <p className="text-slate-900 font-bold uppercase tracking-widest text-xs">Procesando archivo...</p>
           </div>
         ) : importStatus === 'success' ? (
-          <div className="py-6 text-center">
-            <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto mb-3" />
-            <h3 className="text-lg font-bold text-slate-900">¡Importación Exitosa!</h3>
-            <p className="text-slate-600 mb-6">Se cargaron {importCount} productos.</p>
-            <button onClick={handleClose} className="bg-slate-900 text-white px-6 py-2 rounded-xl font-bold">Cerrar</button>
+          <div className="py-8 text-center">
+            <CheckCircle2 className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
+            <h3 className="text-xl font-black text-slate-900 mb-2">¡Importación Exitosa!</h3>
+            <p className="text-slate-500 mb-8 text-sm font-medium">Se cargaron {importCount} productos.</p>
+            <button onClick={handleClose} className="bg-slate-900 text-white w-full py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl active:scale-95 transition-all">Finalizar</button>
           </div>
         ) : (
-          <>
-            <div className="space-y-4">
-              <div>
-                <label className="text-xs font-bold text-slate-500 uppercase ml-1 block mb-1">Opción A: Subir Archivo CSV</label>
-                <input type="file" accept=".csv" onChange={handleFileUpload} className="block w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer border border-slate-200 rounded-xl" />
-              </div>
+          <div className="space-y-6">
+            <div>
+              <label className="text-[10px] font-black text-slate-400 uppercase ml-1 block mb-2">Opción A: Archivo CSV</label>
+              <input type="file" accept=".csv" onChange={handleFileUpload} className="block w-full text-sm text-slate-500 file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-xs file:font-black file:uppercase file:tracking-wide file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer border-2 border-slate-100 rounded-2xl h-16 flex items-center bg-slate-50" />
+            </div>
 
-              <div className="relative flex py-2 items-center">
-                <div className="flex-grow border-t border-slate-200"></div>
-                <span className="flex-shrink-0 mx-4 text-slate-300 text-xs font-bold uppercase">O también</span>
-                <div className="flex-grow border-t border-slate-200"></div>
-              </div>
+            <div className="relative flex py-2 items-center">
+                <div className="flex-grow border-t border-slate-100"></div>
+                <span className="flex-shrink-0 mx-4 text-slate-300 text-[10px] font-black uppercase tracking-widest">O también</span>
+                <div className="flex-grow border-t border-slate-100"></div>
+            </div>
 
-              <form onSubmit={handleImport}>
-                <label className="text-xs font-bold text-slate-500 uppercase ml-1 block mb-1">Opción B: URL Google Sheet (Pública)</label>
+            <form onSubmit={handleImport}>
+                <label className="text-[10px] font-black text-slate-400 uppercase ml-1 block mb-2">Opción B: Google Sheet (Pública)</label>
                 <div className="flex gap-2">
                   <input
                     value={sheetUrl}
                     onChange={(e) => setSheetUrl(e.target.value)}
-                    className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all"
-                    placeholder="https://docs.google.com/spreadsheets/d/..."
+                    className="flex-1 h-14 pl-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-bold outline-none focus:bg-white focus:border-green-500 transition-all placeholder:text-slate-300"
+                    placeholder="https://docs.google.com/..."
                   />
-                  <button type="submit" className="bg-green-600 text-white p-3 rounded-xl hover:bg-green-700 transition-colors shadow-sm">
-                    <Download className="w-5 h-5" />
+                  <button type="submit" className="h-14 w-14 flex items-center justify-center bg-green-600 text-white rounded-2xl hover:bg-green-700 transition-colors shadow-lg active:scale-90">
+                    <Download className="w-6 h-6" />
                   </button>
                 </div>
-              </form>
-            </div>
+            </form>
+
             {importError && (
-              <div className="mt-4 bg-red-50 text-red-600 text-xs font-bold p-3 rounded-xl flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 shrink-0" /> {importError}
+              <div className="bg-red-50 text-red-600 text-xs font-bold p-4 rounded-2xl flex items-center gap-3 animate-in shake">
+                <AlertTriangle className="w-5 h-5 shrink-0" /> {importError}
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
     </div>

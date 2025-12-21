@@ -1,6 +1,5 @@
 
 import React, { useMemo, useRef, useEffect, useState } from 'react';
-/* Added History as HistoryIcon to resolve missing name error */
 import { X, ChevronLeft, Keyboard as KeyboardIcon, Hash, History as HistoryIcon } from 'lucide-react';
 import { CountingSession } from '../types';
 import { ExpirationModal } from './ExpirationModal';
@@ -40,7 +39,6 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
     }
   }, [data.lastScan, settings.speedometerEnabled]);
 
-  // Resolución de ítem esperado para modo verificado
   const expectedForActive = useMemo(() => {
       if (!session.isVerifiedMode || !data.lastScan || !session.expectedItems) return null;
       return session.expectedItems.find(item => item.barcode === data.lastScan!.barcode) || null;
@@ -122,30 +120,29 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
 
       {/* --- MODALES DE INTERACCIÓN --- */}
 
-      {/* Entrada Manual de SKU */}
+      {/* Entrada Manual de SKU (REDISEÑADA) */}
       {state.manualMode && (
           <div className="fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-md flex items-end md:items-center justify-center p-4 animate-in fade-in duration-300">
               <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 animate-in slide-in-from-bottom-10">
                   <div className="flex justify-between items-center mb-8">
-                      <h3 className="text-xl font-black uppercase tracking-tight flex items-center gap-3">
+                      <h3 className="text-xl font-black uppercase tracking-tight flex items-center gap-3 text-slate-900">
                           <KeyboardIcon className="w-6 h-6 text-blue-600" /> Ingreso Manual
                       </h3>
-                      <button onClick={() => state.setManualMode(false)} className="p-2 bg-slate-100 rounded-full"><X className="w-5 h-5"/></button>
+                      <button onClick={() => state.setManualMode(false)} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 text-slate-500"><X className="w-6 h-6"/></button>
                   </div>
-                  <form onSubmit={actions.handleManualSubmit}>
+                  <form onSubmit={actions.handleManualSubmit} className="space-y-6">
                       <input 
                           autoFocus
                           type="text"
                           inputMode="numeric"
                           value={state.manualInput}
                           onChange={(e) => state.setManualInput(e.target.value)}
-                          placeholder="DIGITE CÓDIGO SKU"
-                          className="w-full bg-slate-50 border-2 border-slate-200 rounded-2xl p-6 text-3xl font-black text-center outline-none focus:border-blue-500 transition-all placeholder:text-slate-200 mb-6"
+                          placeholder="DIGITE SKU"
+                          className="w-full h-20 bg-slate-50 border-2 border-slate-200 rounded-3xl text-3xl font-black text-center outline-none focus:bg-white focus:border-blue-500 transition-all placeholder:text-slate-200 text-slate-900 tracking-wider"
                       />
-                      <div className="grid grid-cols-2 gap-4">
-                        <button type="button" onClick={() => state.setManualMode(false)} className="bg-slate-100 text-slate-600 font-black py-4 rounded-xl uppercase tracking-widest text-xs">Cancelar</button>
-                        <button type="submit" className="bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg shadow-blue-200 uppercase tracking-widest text-xs">Registrar</button>
-                      </div>
+                      <button type="submit" className="w-full h-16 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl shadow-xl shadow-blue-200 uppercase tracking-widest text-sm active:scale-95 transition-all">
+                          Registrar Item
+                      </button>
                   </form>
               </div>
           </div>
@@ -168,7 +165,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
                           <button 
                             key={val}
                             onClick={() => { state.setMultiplier(val); state.setIsMultiplierOpen(false); }}
-                            className={`py-5 rounded-2xl font-black text-xl border-2 transition-all active:scale-90 ${state.multiplier === val ? 'bg-amber-400 border-amber-500 text-amber-950 shadow-lg' : 'bg-slate-50 border-slate-100 text-slate-400 hover:border-amber-200'}`}
+                            className={`h-16 rounded-2xl font-black text-xl border-2 transition-all active:scale-90 ${state.multiplier === val ? 'bg-amber-400 border-amber-500 text-amber-950 shadow-lg' : 'bg-slate-50 border-slate-100 text-slate-400 hover:border-amber-200'}`}
                           >
                               {val}
                           </button>
@@ -177,7 +174,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
 
                   <button 
                     onClick={() => state.setIsMultiplierOpen(false)}
-                    className="w-full bg-slate-900 text-white font-black py-4 rounded-xl uppercase tracking-widest text-xs shadow-xl"
+                    className="w-full bg-slate-900 text-white font-black h-14 rounded-xl uppercase tracking-widest text-xs shadow-xl active:scale-95 transition-all"
                   >
                     Confirmar x{state.multiplier}
                   </button>
@@ -193,7 +190,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
                   <h3 className="text-2xl font-black mb-2 uppercase tracking-tighter">Pausa en Conteo</h3>
                   <p className="text-slate-400 text-sm mb-8 font-medium">¿Deseas finalizar la sesión actual o continuar escaneando?</p>
                   <div className="flex flex-col gap-3">
-                      <button onClick={onCloseSession} className="bg-blue-600 hover:bg-blue-700 text-white py-5 rounded-2xl font-black shadow-lg shadow-blue-100 transition-all active:scale-95 uppercase text-xs tracking-widest">Finalizar y Salir</button>
+                      <button onClick={onCloseSession} className="bg-blue-600 hover:bg-blue-700 text-white h-16 rounded-2xl font-black shadow-lg shadow-blue-100 transition-all active:scale-95 uppercase text-xs tracking-widest">Finalizar y Salir</button>
                       <button onClick={() => state.setShowConfirmModal(false)} className="text-slate-400 font-bold hover:text-slate-900 py-3 transition-colors uppercase text-[10px] tracking-[0.2em]">Volver al Escáner</button>
                   </div>
               </div>
