@@ -1,4 +1,3 @@
-
 import React, { memo } from 'react';
 import { Lock, Coffee } from 'lucide-react';
 
@@ -10,6 +9,7 @@ interface ScannerFeedbackLayerProps {
 }
 
 export const ScannerFeedbackLayer: React.FC<ScannerFeedbackLayerProps> = memo(({ feedback, isIncident, isWindowFocused = true, isIdle = false }) => {
+    // --- FOCUS GUARD OVERLAY ---
     if (!isWindowFocused) {
         return (
             <div className="absolute inset-0 z-50 bg-slate-900/60 flex flex-col items-center justify-center text-center p-8 animate-in fade-in duration-300 backdrop-blur-sm">
@@ -22,16 +22,18 @@ export const ScannerFeedbackLayer: React.FC<ScannerFeedbackLayerProps> = memo(({
         );
     }
 
+    // --- IDLE PRIVACY OVERLAY ---
     if (isIdle) {
         return (
             <div className="absolute inset-0 z-50 bg-slate-50/95 flex flex-col items-center justify-center text-center p-8 animate-in fade-in duration-500 backdrop-blur-md">
-                < Coffee className="w-12 h-12 text-slate-300 mb-6" />
+                <Coffee className="w-12 h-12 text-slate-300 mb-6" />
                 <h2 className="text-xl font-bold text-slate-500 uppercase tracking-widest">Modo Ahorro</h2>
                 <p className="text-slate-400 text-sm mt-2">Presione cualquier tecla para reactivar</p>
             </div>
         );
     }
 
+    // --- STANDARD FEEDBACK ---
     const getFeedbackLayerClass = () => {
         if (feedback === 'success') {
             if (isIncident) return 'bg-orange-500/10 opacity-100';
@@ -39,6 +41,7 @@ export const ScannerFeedbackLayer: React.FC<ScannerFeedbackLayerProps> = memo(({
         }
         if (feedback === 'error') return 'bg-red-500/20 opacity-100';
         if (feedback === 'undo') return 'bg-slate-200 opacity-100';
+        
         return 'bg-transparent opacity-100'; 
     };
 

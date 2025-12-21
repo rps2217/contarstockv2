@@ -1,4 +1,3 @@
-
 import React, { memo } from 'react';
 import { RotateCcw, AlertCircle, Package, CheckCircle } from 'lucide-react';
 import { ScanRecord, ExpectedItem } from '../../types';
@@ -34,6 +33,7 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
         const isUnknown = activeProductStats.isUnknown;
         const currentQty = activeProductStats.totalQty;
         const targetQty = expectedItem?.expectedQty || 0;
+        
         const isOverCount = expectedItem && currentQty > targetQty;
         const isTargetReached = expectedItem && currentQty === targetQty;
         const progress = targetQty > 0 ? Math.min(100, (currentQty / targetQty) * 100) : 0;
@@ -66,22 +66,31 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
                                 )}
                             </div>
                         )}
+
                         <h1 className="text-4xl md:text-6xl font-black text-slate-900 text-center mb-6 leading-[1.1] max-w-5xl tracking-tight">
                             {activeProductStats.name}
                         </h1>
+                        
                         <div className="text-xl md:text-2xl text-blue-600 font-black bg-blue-50/50 px-10 py-3 rounded-2xl border border-blue-100 mb-12 tracking-wider">
                             {lastScan.barcode}
                         </div>
+
                         {expectedItem && (
                             <div className="w-full max-w-lg h-4 bg-slate-200 rounded-full overflow-hidden mb-16 shadow-inner border border-white">
-                                <div className={`h-full transition-all duration-1000 ease-out ${isOverCount ? 'bg-red-500' : (isTargetReached ? 'bg-emerald-500' : 'bg-blue-600')}`} style={{ width: `${progress}%` }} />
+                                <div 
+                                    className={`h-full transition-all duration-1000 ease-out ${isOverCount ? 'bg-red-500' : (isTargetReached ? 'bg-emerald-500' : 'bg-blue-600')}`}
+                                    style={{ width: `${progress}%` }}
+                                />
                             </div>
                         )}
+
                         <div className="flex flex-col items-center">
                             <div className="text-xs font-black uppercase tracking-[0.4em] text-slate-400 mb-4">Total Registrado</div>
                             <div className="text-[11rem] md:text-[16rem] leading-none font-black text-slate-900 flex items-baseline select-none tabular-nums tracking-tighter drop-shadow-sm">
                                 {currentQty}
-                                {expectedItem && <span className="text-5xl md:text-7xl text-slate-300 ml-4 font-black">/{targetQty}</span>}
+                                {expectedItem && (
+                                    <span className="text-5xl md:text-7xl text-slate-300 ml-4 font-black">/{targetQty}</span>
+                                )}
                             </div>
                         </div>
                     </div>

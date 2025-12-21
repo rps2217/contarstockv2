@@ -64,18 +64,23 @@ export const Reception: React.FC = () => {
                 <h1 className="text-sm font-black uppercase tracking-[0.2em] text-white/80">Recepción Ciega V2</h1>
                 <button onClick={() => setShowQueueModal(true)} className="p-2 hover:bg-white/5 rounded-full text-white/60"><List className="w-6 h-6" /></button>
             </div>
+
             <div className="flex-1 flex flex-col items-center justify-center p-6 animate-in fade-in duration-500">
                 <div className="mb-12 text-center">
                     <Zap className="w-20 h-20 text-blue-500/40 mx-auto mb-6" />
                     <h2 className="text-3xl font-black tracking-tight mb-2">MODO RÁFAGA</h2>
+                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-[0.2em]">Eskanee bultos rápidamente</p>
                 </div>
+
                 <div className="w-full max-w-sm bg-white/5 border border-white/10 rounded-[3rem] p-10 text-center mb-16 shadow-2xl relative">
-                    <div className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] mb-4">Ingresos en Cola</div>
+                    <button className="absolute top-6 right-6 text-white/20"><List className="w-5 h-5"/></button>
+                    <div className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] mb-4">Total Ingresos</div>
                     <div className="flex items-center justify-center gap-6">
                         <Container className="w-12 h-12 text-white/10" />
                         <span className="text-9xl font-black tracking-tighter">{draftCount}</span>
                     </div>
                 </div>
+
                 <div className="grid grid-cols-2 gap-4 w-full max-w-sm">
                     <button onClick={() => setShowManualInput(true)} className="bg-white/5 border border-white/10 p-8 rounded-[2rem] flex flex-col items-center gap-3 active:scale-95 transition-all">
                         <Keyboard className="w-6 h-6 text-white/60" />
@@ -87,15 +92,18 @@ export const Reception: React.FC = () => {
                     </button>
                 </div>
             </div>
+
             {showManualInput && (
                 <div className="fixed inset-0 z-[60] bg-[#111827]/90 backdrop-blur-md flex items-center justify-center p-6">
                     <form onSubmit={handleManualSubmit} className="w-full max-w-md bg-[#1F2937] p-8 rounded-[2.5rem] border border-white/10 shadow-2xl relative">
+                        <button type="button" onClick={() => setShowManualInput(false)} className="absolute top-6 right-6 text-white/20"><X className="w-7 h-7"/></button>
                         <h3 className="text-xl font-black uppercase tracking-widest text-white mb-8 flex items-center gap-3"><Barcode className="w-6 h-6 text-blue-500" /> Etiqueta</h3>
                         <input autoFocus ref={inputRef} value={inputValue} onChange={(e) => setInputValue(e.target.value.replace(/[^0-9]/g, ''))} type="text" inputMode="numeric" placeholder="00000000" className="w-full bg-black/20 border border-white/5 rounded-3xl p-6 text-white text-4xl font-black text-center outline-none transition-all placeholder:text-white/10 mb-8" />
-                        <button type="submit" className="w-full bg-blue-600 py-5 rounded-2xl font-black uppercase tracking-widest text-sm text-white">Registrar</button>
+                        <button type="submit" className="w-full bg-blue-600 py-5 rounded-2xl font-black uppercase tracking-widest text-sm text-white shadow-xl shadow-blue-500/20 active:scale-95">Registrar Bulto</button>
                     </form>
                 </div>
             )}
+
             {isCameraOpen && <CameraScanner onScan={(code) => { setIsCameraOpen(false); handleScan(code); }} onClose={() => setIsCameraOpen(false)} />}
             <QueueManager isOpen={showQueueModal} onClose={() => setShowQueueModal(false)} drafts={unsyncedDrafts} onDelete={async (id) => { await db.sessions.delete(id); SoundFX.play('delete'); }} onDiscardAll={async () => { if (confirm("¿Vaciar cola?")) { await db.sessions.where('status').equals('draft').delete(); setShowQueueModal(false); } }} />
         </div>
