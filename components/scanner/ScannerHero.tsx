@@ -25,7 +25,7 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
                 <div className="p-10 bg-slate-100 rounded-full mb-6">
                     <RotateCcw className="w-16 h-16 text-slate-400" />
                 </div>
-                <h2 className="text-2xl font-black text-slate-400 uppercase tracking-widest">Deshecho</h2>
+                <h2 className="text-2xl font-black text-slate-400 uppercase tracking-[0.3em]">Deshecho</h2>
             </div>
         );
     }
@@ -39,28 +39,28 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
         const progress = targetQty > 0 ? Math.min(100, (currentQty / targetQty) * 100) : 0;
 
         return (
-            <div className="w-full h-full flex flex-col items-center justify-center px-4 py-2 animate-in fade-in duration-500 overflow-hidden">
+            <div className="w-full flex flex-col items-center justify-center px-4 animate-in fade-in duration-500 overflow-hidden">
                 {isUnknown ? (
-                    <div className="bg-white border border-orange-200 p-8 rounded-[2.5rem] shadow-xl w-full max-w-md text-center">
+                    <div className="bg-white border-2 border-orange-200 p-8 rounded-[2.5rem] shadow-xl w-full max-w-sm text-center">
                         <div className="w-16 h-16 bg-orange-50 text-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-6"><AlertCircle className="w-8 h-8" /></div>
-                        <h2 className="text-2xl font-black text-slate-900 mb-2 uppercase tracking-tighter">SKU Desconocido</h2>
+                        <h2 className="text-xl font-black text-slate-900 mb-2 uppercase tracking-tight">SKU Desconocido</h2>
                         <div className="bg-slate-50 py-3 px-4 rounded-xl border border-slate-100 font-mono font-bold text-slate-600 mb-8 break-all">{lastScan.barcode}</div>
-                        <button onClick={onRegisterPending} className="w-full bg-orange-500 text-white font-black py-4 rounded-xl shadow-lg active:scale-95 transition-all text-xs uppercase tracking-widest">Dar de Alta</button>
+                        <button onClick={onRegisterPending} className="w-full bg-orange-500 text-white font-black py-4 rounded-xl shadow-lg active:scale-95 transition-all text-[10px] uppercase tracking-widest">Dar de Alta</button>
                     </div>
                 ) : (
-                    <div className="w-full flex flex-col items-center max-h-full">
+                    <div className="w-full flex flex-col items-center max-w-xl">
                         {expectedItem && (
                             <div className="mb-4">
                                 {isOverCount ? (
-                                    <div className="bg-rose-600 text-white px-4 py-1.5 rounded-full font-black text-[10px] flex items-center gap-2 shadow-lg animate-pulse uppercase">
+                                    <div className="bg-rose-600 text-white px-4 py-1.5 rounded-full font-black text-[10px] flex items-center gap-2 shadow-lg animate-pulse uppercase tracking-widest">
                                         <AlertCircle className="w-3 h-3" /> Exceso Detectado
                                     </div>
                                 ) : isTargetReached ? (
-                                    <div className="bg-emerald-500 text-white px-4 py-1.5 rounded-full font-black text-[10px] flex items-center gap-2 shadow-lg uppercase">
+                                    <div className="bg-emerald-500 text-white px-4 py-1.5 rounded-full font-black text-[10px] flex items-center gap-2 shadow-lg uppercase tracking-widest">
                                         <CheckCircle className="w-3 h-3" /> Meta Alcanzada
                                     </div>
                                 ) : (
-                                    <div className="bg-blue-600 text-white px-4 py-1.5 rounded-full font-black text-[10px] flex items-center gap-2 shadow-lg uppercase">
+                                    <div className="bg-blue-600 text-white px-4 py-1.5 rounded-full font-black text-[10px] flex items-center gap-2 shadow-lg uppercase tracking-widest">
                                         <Info className="w-3 h-3" /> Requerido: {targetQty}
                                     </div>
                                 )}
@@ -68,15 +68,15 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
                         )}
 
                         <div className="text-center w-full mb-2">
-                             <h1 className="text-2xl md:text-4xl font-black text-slate-900 leading-tight uppercase tracking-tight line-clamp-2 px-4">{activeProductStats.name}</h1>
-                             <div className="text-[10px] font-mono font-black text-blue-600 mt-2 bg-blue-50 px-3 py-1 rounded-lg inline-block">{lastScan.barcode}</div>
+                             <h1 className="text-xl md:text-3xl font-black text-slate-900 leading-tight uppercase tracking-tight line-clamp-2 px-6">{activeProductStats.name}</h1>
+                             <div className="text-[10px] font-mono font-black text-blue-600 mt-2 bg-blue-50 px-3 py-1 rounded-lg inline-block border border-blue-100 uppercase tracking-widest">{lastScan.barcode}</div>
                         </div>
 
-                        <div className="relative flex flex-col items-center my-4">
-                            <div className="text-[10rem] md:text-[14rem] leading-none font-black text-slate-900 tabular-nums tracking-tighter select-none drop-shadow-md">
+                        <div className="relative flex flex-col items-center my-4 md:my-8">
+                            <div className="text-[9rem] md:text-[14rem] leading-none font-black text-slate-900 tabular-nums tracking-tighter select-none drop-shadow-md">
                                 {currentQty}
                             </div>
-                            <div className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-300 -mt-2">Contabilizados</div>
+                            <div className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-300 -mt-2">Contabilizados</div>
                         </div>
 
                         {expectedItem && (
@@ -94,9 +94,10 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
     }
 
     return (
-        <div className="flex flex-col items-center justify-center opacity-10 py-20 grayscale">
-            <Package className="w-24 h-24 mb-4 text-slate-900" />
-            <h2 className="text-xl font-black uppercase tracking-[0.5em] text-slate-900">Standby</h2>
+        <div className="flex-1 flex flex-col items-center justify-center py-20 grayscale animate-in fade-in duration-1000">
+            <Package className="w-32 h-32 mb-6 text-slate-900 opacity-5" />
+            <h2 className="text-3xl font-black uppercase tracking-[0.4em] text-slate-200">Standby</h2>
+            <p className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.2em] mt-4">Listo para procesar etiqueta</p>
         </div>
     );
 });

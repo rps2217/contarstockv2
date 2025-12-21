@@ -39,6 +39,7 @@ export const Conciliator: React.FC = () => {
         setIsImporting(true);
         try {
             const count = await matcher.importExpectedOrders(file);
+            // Reemplazar alert por feedback visual si es posible, por ahora mantenemos simple
             alert(`Matriz lista: ${count} pedidos cargados.`);
             setStep('select');
         } catch (err: any) { alert(`Error: ${err.message}`); }
@@ -52,7 +53,6 @@ export const Conciliator: React.FC = () => {
         setLinkedAliases(new Set()); 
 
         try {
-            // AGREGACIÓN MULTI-BULTO: Traer todos los escaneos de todos los IDs
             const scans = await db.scans.where('sessionId').anyOf(sessionIds).toArray();
             const physicalItems = await aggregateScans(scans);
             
@@ -100,7 +100,6 @@ export const Conciliator: React.FC = () => {
         if (!confirm(confirmMsg)) return;
 
         try {
-            // Actualizar todas las sesiones involucradas
             await Promise.all(selectedSessionIds.map(id => 
                 db.sessions.update(id, { 
                     erpOrder: newErp,
@@ -114,24 +113,22 @@ export const Conciliator: React.FC = () => {
         } catch (e) { alert("Error al guardar."); }
     };
 
-    if (step === 'upload') return <UploadStep onBack={() => navigate('/dashboard')} onFileUpload={handleFileUpload} onSkip={() => setStep('select')} isImporting={isImporting} expectedOrdersCount={expectedOrdersCount} />;
-    
-    if (step === 'select') return <SessionPickerStep sessions={sessions || []} onBack={() => setStep('upload')} onSelectMultiple={handleRunAnalysis} isAnalyzing={isAnalyzing} progress={analysisProgress} />;
-    
-    if (step === 'results' && selectedMatch) {
-        const labels = sessions?.filter(s => selectedSessionIds.includes(s.id)).map(s => s.logisticsLabel).join(', ') || '';
-        const displayLabel = selectedSessionIds.length > 1 ? `${selectedSessionIds.length} Bultos (${labels})` : labels;
-
-        return <AnalysisResults 
-            match={selectedMatch} 
-            sessionLabel={displayLabel} 
-            onBack={() => setStep('select')} 
-            onExportPDF={() => exportDiscrepancyPDF(selectedMatch, displayLabel)} 
-            onAssign={handleAssignOrder} 
-            onLinkAlias={handleAcceptAlias} 
-            linkedAliases={linkedAliases} 
-        />;
-    }
-
-    return null;
+    // Wrapper div para consistencia de espaciado y fondo
+    return (
+        <div className="min-h-[calc(100vh-80px)] w-full">
+            {step === 'upload' && <UploadStep onBack={() => navigate('/dashboard')} onFileUpload={handleFileUpload} onSkip={() => setStep('select')} isImporting={isImporting} expectedOrdersCount={expectedOrdersCount} />}
+            {step === 'select' && <SessionPickerStep sessions={sessions || []} onBack={() => setStep('upload')} onSelectMultiple={handleRunAnalysis} isAnalyzing={isAnalyzing} progress={analysisProgress} />}
+            {step === 'results' && selectedMatch && (
+                <AnalysisResults 
+                    match={selectedMatch} 
+                    sessionLabel={selectedSessionIds.length > 1 ? `${selectedSessionIds.length} Bultos` : (sessions?.find(s => s.id === selectedSessionIds[0])?.logisticsLabel || '')} 
+                    onBack={() => setStep('select')} 
+                    onExportPDF={() => exportDiscrepancyPDF(selectedMatch, "Análisis Detective")} 
+                    onAssign={handleAssignOrder} 
+                    onLinkAlias={handleAcceptAlias} 
+                    linkedAliases={linkedAliases} 
+                />
+            )}
+        </div>
+    );
 };

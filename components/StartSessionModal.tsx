@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { X, Sparkles, Keyboard, History as HistoryIcon, ArrowLeft, PackageCheck, Camera, Mail, FileUp, ShieldCheck, Loader2, Trash2 } from 'lucide-react';
+import { X, Camera, Mail, ShieldCheck, Loader2, FileUp } from 'lucide-react';
 import { CountingSession, ExpectedItem } from '../types';
 import * as sessionService from '../services/sessionService'; 
 import { sanitizeBarcode } from '../services/utils';
@@ -23,7 +23,6 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
 
   // Modo Verificado
   const [isVerifiedMode, setIsVerifiedMode] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [expectedItems, setExpectedItems] = useState<ExpectedItem[]>([]);
   const [isParsing, setIsParsing] = useState(false);
 
@@ -32,26 +31,6 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
   const [activeKeypadField, setActiveKeypadField] = useState<'label' | 'erp'>('label');
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [draftSessionId, setDraftSessionId] = useState<string | null>(null);
-
-  const recentSessionsForAi = useLiveQuery(() => db.sessions.orderBy('createdAt').reverse().limit(50).toArray(), [], []);
-
-  const { recentErps, correlationMap } = useMemo(() => {
-    if (!recentSessionsForAi) return { recentErps: [], correlationMap: new Map() };
-    const unique = new Set<string>();
-    const recents: string[] = [];
-    const correlations = new Map<string, string>();
-    for (const s of recentSessionsForAi) {
-        if (!unique.has(s.erpOrder) && recents.length < 4 && s.erpOrder !== 'PENDIENTE') {
-            unique.add(s.erpOrder);
-            recents.push(s.erpOrder);
-        }
-        if (s.logisticsLabel.length >= 3 && s.erpOrder !== 'PENDIENTE') {
-            const prefix = s.logisticsLabel.substring(0, 3).toUpperCase();
-            if (!correlations.has(prefix)) correlations.set(prefix, s.erpOrder);
-        }
-    }
-    return { recentErps: recents, correlationMap: correlations };
-  }, [recentSessionsForAi]);
 
   useEffect(() => {
       const checkDraft = async () => {
@@ -71,17 +50,14 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-      // Fix: Argument of type 'unknown[]' is not assignable to parameter of type 'File[]'.
       const files = Array.from(e.target.files || []) as File[];
       if (files.length === 0) return;
-      setUploadedFiles(prev => [...prev, ...files]);
       setIsParsing(true);
       setError('');
       try {
           const items = await parseOrderDocument(files);
           setExpectedItems(prev => {
               const combined = [...prev, ...items];
-              // De-duplicate by barcode
               const unique = Array.from(new Map(combined.map(item => [item.barcode, item])).values());
               return unique;
           });
@@ -111,7 +87,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
   const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       if (!erpOrder.trim() || !labelId.trim()) { setError('Por favor complete ambos campos obligatorios.'); return; }
-      if (isVerifiedMode && expectedItems.length === 0) { setError('En Modo Verificado debe cargar al menos un documento con productos.'); return; }
+      if (isVerifiedMode && expectedItems.length === 0) { setError('En Modo Verificado debe cargar al menos un documento.'); return; }
 
       try {
           let session: CountingSession;
@@ -130,7 +106,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
           }
           
           onSessionStart(session);
-          setErpOrder(''); setLabelId(''); setDraftSessionId(null); setExpectedItems([]); setUploadedFiles([]); setIsVerifiedMode(false);
+          setErpOrder(''); setLabelId(''); setDraftSessionId(null); setExpectedItems([]); setIsVerifiedMode(false);
           onClose();
       } catch (err: any) {
           setError(`Error: ${err.message}`);
@@ -141,104 +117,95 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center">
-        <div className="absolute inset-0 bg-slate-50 md:bg-black/60 md:backdrop-blur-sm transition-opacity" onClick={onClose} />
+        <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
 
-        <div className="relative w-full h-[100dvh] md:h-auto md:max-h-[90vh] md:w-full md:max-w-md bg-white md:rounded-3xl shadow-none md:shadow-2xl flex flex-col animate-in slide-in-from-bottom-4 duration-300 overflow-hidden">
+        <div className="relative w-full h-[95vh] md:h-auto md:max-h-[90vh] md:w-full md:max-w-md bg-white rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl flex flex-col animate-in slide-in-from-bottom-4 duration-300 overflow-hidden">
             
-            <div className="flex justify-between items-center px-4 py-3 bg-white border-b border-slate-100 shrink-0 z-10">
-                <h2 className="text-lg font-bold text-slate-900 tracking-tight">Nuevo Conteo</h2>
+            <div className="flex justify-between items-center px-6 py-5 bg-white border-b border-slate-100 shrink-0 z-10">
+                <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase">Iniciar Conteo</h2>
                 <button onClick={onClose} className="text-slate-400 hover:text-slate-700 p-2 rounded-full hover:bg-slate-50 transition-colors">
                     <X className="w-6 h-6" />
                 </button>
             </div>
             
-            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-5 min-h-0 bg-white no-scrollbar">
+            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6 min-h-0 bg-white no-scrollbar">
                 
                 {/* LABEL FIELD */}
-                <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">N° de Bulto / Etiqueta <span className="text-red-500">*</span></label>
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Etiqueta Logística</label>
                     <div className="flex gap-2">
                         <input 
                             type="text" inputMode="numeric"
-                            className={`flex-1 p-3.5 font-bold text-xl rounded-xl border-2 transition-all ${activeKeypadField === 'label' ? 'border-blue-600 bg-white' : 'border-slate-200 bg-slate-50'}`}
-                            placeholder="Etiqueta" value={labelId} onFocus={() => setActiveKeypadField('label')}
+                            className={`flex-1 p-4 font-black text-xl rounded-2xl border-2 transition-all outline-none text-center tracking-wider ${activeKeypadField === 'label' ? 'border-blue-600 bg-white text-blue-600' : 'border-slate-200 bg-slate-50 text-slate-900'}`}
+                            placeholder="BULTO" value={labelId} onFocus={() => setActiveKeypadField('label')}
                             onChange={(e) => handleNumericInputChange(setLabelId, e.target.value)}
                         />
-                        <button type="button" onClick={() => setIsCameraOpen(true)} className="w-14 bg-slate-100 border-2 border-slate-200 rounded-xl flex items-center justify-center text-slate-500 hover:text-blue-600">
+                        <button type="button" onClick={() => setIsCameraOpen(true)} className="w-16 bg-slate-50 border-2 border-slate-200 rounded-2xl flex items-center justify-center text-slate-400 hover:text-blue-600 hover:border-blue-200 transition-all">
                             <Camera className="w-6 h-6" />
                         </button>
                     </div>
                 </div>
 
                 {/* ERP FIELD */}
-                <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Orden ERP <span className="text-red-500">*</span></label>
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">N° Documento ERP</label>
                     <div className="flex gap-2">
                         <input 
                             ref={erpInputRef} type="text" inputMode="numeric"
-                            className={`flex-1 p-3.5 font-bold text-xl rounded-xl border-2 transition-all ${activeKeypadField === 'erp' ? 'border-blue-600 bg-white' : 'border-slate-200 bg-slate-50'}`}
-                            placeholder="N° ERP" value={erpOrder} onFocus={() => setActiveKeypadField('erp')}
+                            className={`flex-1 p-4 font-black text-xl rounded-2xl border-2 transition-all outline-none text-center tracking-wider ${activeKeypadField === 'erp' ? 'border-blue-600 bg-white text-blue-600' : 'border-slate-200 bg-slate-50 text-slate-900'}`}
+                            placeholder="ORDEN" value={erpOrder} onFocus={() => setActiveKeypadField('erp')}
                             onChange={(e) => handleNumericInputChange(setErpOrder, e.target.value)}
                         />
-                        <button type="button" onClick={handleGmailSearch} className="w-14 bg-red-50 border-2 border-red-200 rounded-xl flex items-center justify-center text-red-600 hover:bg-red-100" title="Buscar en Gmail">
+                        <button type="button" onClick={handleGmailSearch} className="w-16 bg-red-50 border-2 border-red-100 rounded-2xl flex items-center justify-center text-red-400 hover:text-red-600 hover:border-red-200 transition-all" title="Buscar en Gmail">
                             <Mail className="w-6 h-6" />
                         </button>
                     </div>
                 </div>
 
                 {/* VERIFIED MODE TOGGLE */}
-                <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 space-y-4">
+                <div className="bg-slate-50 rounded-3xl p-5 border border-slate-100 space-y-4">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-lg ${isVerifiedMode ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
+                            <div className={`p-3 rounded-xl transition-colors ${isVerifiedMode ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-200 text-slate-400'}`}>
                                 <ShieldCheck className="w-5 h-5" />
                             </div>
                             <div>
-                                <div className="text-sm font-bold text-slate-900 leading-tight">Modo Recepción Verificada</div>
-                                <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Escaneo contra guía</div>
+                                <div className="text-sm font-bold text-slate-900 leading-tight">Modo Verificado</div>
+                                <div className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Requiere Guía PDF/IMG</div>
                             </div>
                         </div>
                         <button 
                             type="button"
                             onClick={() => setIsVerifiedMode(!isVerifiedMode)}
-                            className={`w-12 h-6 rounded-full transition-colors relative ${isVerifiedMode ? 'bg-indigo-600' : 'bg-slate-300'}`}
+                            className={`w-14 h-8 rounded-full transition-colors relative shadow-inner ${isVerifiedMode ? 'bg-indigo-600' : 'bg-slate-300'}`}
                         >
-                            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${isVerifiedMode ? 'left-7' : 'left-1'}`} />
+                            <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-transform shadow-sm ${isVerifiedMode ? 'left-7' : 'left-1'}`} />
                         </button>
                     </div>
 
                     {isVerifiedMode && (
                         <div className="space-y-3 animate-in slide-in-from-top-2 duration-300">
                             {expectedItems.length === 0 ? (
-                                <label className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-indigo-200 rounded-xl hover:bg-indigo-50/50 transition-colors cursor-pointer group">
-                                    <FileUp className="w-8 h-8 text-indigo-400 group-hover:scale-110 transition-transform mb-2" />
-                                    <span className="text-xs font-bold text-indigo-600">Subir PDF / Guía ERP</span>
-                                    <span className="text-[9px] text-slate-400 mt-1 uppercase">Gemini extraerá los productos</span>
+                                <label className="flex flex-col items-center justify-center p-6 border-3 border-dashed border-indigo-200 rounded-2xl hover:bg-indigo-50/50 transition-colors cursor-pointer group bg-white">
+                                    <FileUp className="w-8 h-8 text-indigo-300 group-hover:text-indigo-600 group-hover:scale-110 transition-all mb-2" />
+                                    <span className="text-xs font-bold text-indigo-600 uppercase tracking-wide">Cargar Documento</span>
                                     <input type="file" className="hidden" accept=".pdf,image/*" multiple onChange={handleFileChange} />
                                 </label>
                             ) : (
-                                <div className="space-y-2">
-                                    <div className="flex justify-between items-center px-1">
-                                        <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">{expectedItems.length} SKUs Identificados</span>
-                                        <button type="button" onClick={() => { setExpectedItems([]); setUploadedFiles([]); }} className="text-[10px] font-bold text-red-500 hover:underline">Limpiar</button>
+                                <div className="bg-white rounded-2xl border border-indigo-100 p-4">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">{expectedItems.length} SKUs Leídos</span>
+                                        <button type="button" onClick={() => { setExpectedItems([]); }} className="text-[10px] font-bold text-red-500 hover:underline uppercase">Borrar</button>
                                     </div>
-                                    <div className="max-h-40 overflow-y-auto border border-indigo-100 rounded-xl bg-white divide-y divide-slate-50">
-                                        {expectedItems.map((item, idx) => (
-                                            <div key={idx} className="p-3 flex justify-between items-center">
-                                                <div className="min-w-0 flex-1 pr-2">
-                                                    <div className="text-[11px] font-bold text-slate-900 truncate">{item.name}</div>
-                                                    <div className="text-[9px] font-mono text-slate-400">{item.barcode}</div>
-                                                </div>
-                                                <div className="bg-indigo-50 px-2 py-1 rounded font-black text-xs text-indigo-700">{item.expectedQty}</div>
-                                            </div>
-                                        ))}
+                                    <div className="h-1 w-full bg-indigo-50 rounded-full overflow-hidden">
+                                        <div className="h-full bg-indigo-500 w-full animate-pulse"></div>
                                     </div>
                                 </div>
                             )}
                             {isParsing && (
                                 <div className="flex items-center justify-center gap-2 py-2">
                                     <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
-                                    <span className="text-[10px] font-bold text-indigo-600 uppercase">Analizando Documento...</span>
+                                    <span className="text-[10px] font-bold text-indigo-600 uppercase">Analizando con Gemini...</span>
                                 </div>
                             )}
                         </div>
@@ -252,20 +219,19 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
                 )}
 
                 {error && (
-                    <div className="bg-red-50 text-red-600 text-xs font-bold px-4 py-3 rounded-xl animate-in shake border border-red-100 flex items-center gap-2">
-                        <X className="w-4 h-4" /> {error}
+                    <div className="bg-red-50 text-red-600 text-xs font-bold px-4 py-4 rounded-2xl animate-in shake border border-red-100 flex items-center gap-3">
+                        <div className="w-2 h-2 bg-red-500 rounded-full"></div> {error}
                     </div>
                 )}
             </form>
 
-            <div className="p-4 bg-slate-50 border-t border-slate-100 shrink-0 safe-area-pb">
+            <div className="p-4 bg-white border-t border-slate-100 shrink-0 safe-area-pb">
                 <button 
                     onClick={handleSubmit}
                     disabled={isParsing}
-                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white font-black text-lg py-4 rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95"
+                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white font-black text-sm py-5 rounded-2xl shadow-xl shadow-blue-200 flex items-center justify-center gap-2 transition-all active:scale-95 uppercase tracking-widest"
                 >
-                    {isVerifiedMode ? <ShieldCheck className="w-5 h-5" /> : null}
-                    {isVerifiedMode ? 'Empezar Recepción Guiada' : 'Comenzar Conteo Ciego'}
+                    {isVerifiedMode ? 'Comenzar Recepción' : 'Iniciar Conteo'}
                 </button>
             </div>
         </div>

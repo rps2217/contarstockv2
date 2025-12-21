@@ -1,6 +1,6 @@
 
 import React, { memo, useMemo } from 'react';
-import { Gauge, Camera, Ban, Keyboard, Zap } from 'lucide-react';
+import { Gauge, Camera, Ban, Keyboard, Zap, Hash } from 'lucide-react';
 import { CountingSession } from '../../types';
 
 interface ScannerControlsProps {
@@ -28,6 +28,7 @@ export const ScannerControls: React.FC<ScannerControlsProps> = memo(({
 }) => {
     return (
         <div className="w-full bg-white/90 backdrop-blur-xl border border-slate-200 rounded-[2.5rem] p-4 shadow-2xl shadow-slate-200/50 flex flex-col gap-4">
+            {/* Header de Metadatos Rápidos */}
             <div className="flex items-center justify-between px-4 pt-2 border-b border-slate-100 pb-4">
                 <div className="flex flex-col">
                     <span className="text-[9px] uppercase font-black text-slate-400 tracking-[0.2em]">Acumulado</span>
@@ -39,17 +40,18 @@ export const ScannerControls: React.FC<ScannerControlsProps> = memo(({
                         <span className="text-[9px] uppercase font-black text-slate-400 tracking-[0.2em]">Rendimiento</span>
                         <div className="flex items-center gap-1.5 mt-0.5">
                             <Zap className={`w-3 h-3 ${scansPerMinute > 25 ? 'text-blue-500 fill-blue-500' : 'text-slate-300'}`} />
-                            <span className="text-sm font-black text-slate-700">{scansPerMinute} <span className="text-[10px] text-slate-400 font-bold uppercase">ipm</span></span>
+                            <span className="text-sm font-black text-slate-700">{scansPerMinute} <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">IPM</span></span>
                         </div>
                     </div>
                 )}
 
                 <div className="flex flex-col text-right">
-                    <span className="text-[9px] uppercase font-black text-slate-400 tracking-[0.2em]">Variedad SKUs</span>
+                    <span className="text-[9px] uppercase font-black text-slate-400 tracking-[0.2em]">Diversidad SKUs</span>
                     <span className="text-2xl font-black tabular-nums text-blue-600">{sessionStats.uniqueSkus}</span>
                 </div>
             </div>
 
+            {/* Fila de Botones de Acción */}
             <div className="grid grid-cols-3 gap-3">
                 <button 
                     onClick={onCameraClick}
@@ -60,7 +62,7 @@ export const ScannerControls: React.FC<ScannerControlsProps> = memo(({
                     }`}
                 >
                     <Camera className="w-6 h-6" />
-                    <span className="text-[8px] font-black uppercase tracking-widest">Cámara</span>
+                    <span className="text-[8px] font-black uppercase tracking-[0.2em]">Cámara</span>
                 </button>
 
                 <button 
@@ -68,19 +70,19 @@ export const ScannerControls: React.FC<ScannerControlsProps> = memo(({
                     className={`h-16 rounded-2xl flex flex-col items-center justify-center transition-all active:scale-90 border-2 ${
                         multiplier > 1 
                         ? 'bg-blue-600 text-white border-blue-700 shadow-lg shadow-blue-200' 
-                        : 'bg-slate-50 text-slate-700 border-slate-200'
+                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-blue-200'
                     }`}
                 >
-                    <span className="text-2xl font-black leading-none">x{multiplier}</span>
-                    <span className="text-[8px] font-black uppercase tracking-widest mt-1">Multiplicar</span>
+                    <span className={`text-2xl font-black leading-none ${multiplier > 1 ? 'text-white' : 'text-slate-900'}`}>x{multiplier}</span>
+                    <span className={`text-[8px] font-black uppercase tracking-[0.2em] mt-1 ${multiplier > 1 ? 'text-blue-100' : 'text-slate-400'}`}>Multiplicar</span>
                 </button>
                 
                 <button 
                     onClick={onManualClick}
-                    className="h-16 rounded-2xl bg-slate-900 text-white flex flex-col items-center justify-center gap-1 active:scale-90 transition-all border-2 border-slate-950 shadow-xl"
+                    className="h-16 rounded-2xl bg-slate-900 text-white flex flex-col items-center justify-center gap-1 active:scale-90 transition-all border-2 border-slate-950 shadow-xl hover:bg-black"
                 >
                     <Keyboard className="w-6 h-6" />
-                    <span className="text-[8px] font-black uppercase tracking-widest">Manual</span>
+                    <span className="text-[8px] font-black uppercase tracking-[0.2em]">Manual</span>
                 </button>
             </div>
         </div>

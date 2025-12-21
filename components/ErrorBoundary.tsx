@@ -13,17 +13,12 @@ interface State {
   errorInfo: ErrorInfo | null;
 }
 
-// Se extiende Component de forma explícita para garantizar que TypeScript reconozca las propiedades heredadas (props, state, setState).
 export class ErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
-    super(props);
-    // Inicialización del estado heredado de Component
-    this.state = {
-      hasError: false,
-      error: null,
-      errorInfo: null
-    };
-  }
+  public state: State = {
+    hasError: false,
+    error: null,
+    errorInfo: null
+  };
 
   static getDerivedStateFromError(error: Error): State {
     return { 
@@ -42,7 +37,6 @@ export class ErrorBoundary extends Component<Props, State> {
         { stack: error.stack, componentStack: errorInfo.componentStack }
     ).catch(e => console.error("Failed to write crash log", e));
     
-    // setState es un método de la clase base Component
     this.setState({ errorInfo });
   }
 
@@ -58,9 +52,7 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   render(): ReactNode {
-    // state es una propiedad de la clase base Component
     if (this.state.hasError) {
-      // Conversión segura de mensajes de error para visualización
       const errorMessage = this.state.error 
         ? (typeof this.state.error.message === 'string' ? this.state.error.message : JSON.stringify(this.state.error.message))
         : 'Error desconocido';
@@ -110,7 +102,6 @@ export class ErrorBoundary extends Component<Props, State> {
       );
     }
 
-    // props es una propiedad de la clase base Component
     return this.props.children;
   }
 }
