@@ -24,8 +24,7 @@ interface ScannerProps {
 export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDiscardSession }) => {
   const { state, data, actions } = useScanner(session, onCloseSession, onDiscardSession);
   const settings = useMemo(() => settingsService.getSettings(), []);
-  const manualInputRef = useRef<HTMLInputElement>(null);
-
+  
   const [scansPerMinute, setScansPerMinute] = useState(0);
   const scanTimestampsRef = useRef<number[]>([]);
 
@@ -39,6 +38,12 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
         setScansPerMinute(filtered.length);
     }
   }, [data.lastScan, settings.speedometerEnabled]);
+
+  // Resolución de ítem esperado para modo verificado
+  const expectedForActive = useMemo(() => {
+      if (!session.isVerifiedMode || !data.lastScan || !session.expectedItems) return null;
+      return session.expectedItems.find(item => item.barcode === data.lastScan!.barcode) || null;
+  }, [session.isVerifiedMode, data.lastScan, session.expectedItems]);
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col text-slate-900 overflow-hidden bg-slate-50">
@@ -67,6 +72,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
                 feedback={state.feedback}
                 onRegisterPending={actions.handleRegisterPending}
                 onToggleIncident={actions.handleToggleIncident}
+                expectedItem={expectedForActive}
             />
 
             <div className="w-full max-w-lg mt-auto">
@@ -90,7 +96,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
         <div className="hidden lg:flex lg:col-span-4 bg-white border-l border-slate-200 flex-col">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between">
                 <h3 className="font-black text-slate-800 text-sm uppercase flex items-center gap-3">
-                    <HistoryIcon className="w-5 h-5 text-blue-600" /> Historial
+                    <HistoryIcon className="w-5 h-5 text-blue-600" /> Historial de Bulto
                 </h3>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
@@ -110,13 +116,15 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
       </div>
 
       {state.isCameraOpen && <CameraScanner onScan={(code) => actions.handleExternalScan(code)} onClose={() => state.setIsCameraOpen(false)} />}
+      
       {state.showConfirmModal && (
-          <div className="absolute inset-0 bg-slate-900/60 z-[70] flex items-center justify-center p-6 backdrop-blur-md">
-              <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl text-center max-w-sm">
-                  <h3 className="text-2xl font-black mb-4">¿Finalizar Conteo?</h3>
+          <div className="absolute inset-0 bg-slate-900/70 z-[70] flex items-center justify-center p-6 backdrop-blur-md animate-in fade-in duration-300">
+              <div className="bg-white p-10 rounded-[3rem] shadow-2xl text-center max-w-sm border border-slate-100 animate-in zoom-in-95">
+                  <h3 className="text-2xl font-black mb-2">Pausa en Conteo</h3>
+                  <p className="text-slate-400 text-sm mb-8 font-medium">¿Deseas finalizar y guardar los datos capturados hasta ahora?</p>
                   <div className="flex flex-col gap-3">
-                      <button onClick={onCloseSession} className="bg-blue-600 text-white py-4 rounded-2xl font-black">Guardar y Salir</button>
-                      <button onClick={() => state.setShowConfirmModal(false)} className="text-slate-400 font-bold">Continuar</button>
+                      <button onClick={onCloseSession} className="bg-blue-600 hover:bg-blue-700 text-white py-5 rounded-2xl font-black shadow-lg shadow-blue-100 transition-all active:scale-95">Finalizar y Salir</button>
+                      <button onClick={() => state.setShowConfirmModal(false)} className="text-slate-400 font-bold hover:text-slate-900 py-3 transition-colors">Volver a Escanear</button>
                   </div>
               </div>
           </div>

@@ -1,5 +1,5 @@
 
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home, Terminal } from 'lucide-react';
 import { logger } from '../services/logger';
 
@@ -13,11 +13,11 @@ interface State {
   errorInfo: ErrorInfo | null;
 }
 
-// Fixed: Explicitly extending Component from React to ensure 'state', 'setState', and 'props' are correctly recognized as base members.
-export class ErrorBoundary extends Component<Props, State> {
+// Se extiende React.Component de forma explícita para garantizar que TypeScript reconozca las propiedades heredadas (props, state, setState).
+export class ErrorBoundary extends React.Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    // state is correctly inherited from Component
+    // Inicialización del estado heredado de React.Component
     this.state = {
       hasError: false,
       error: null,
@@ -42,7 +42,7 @@ export class ErrorBoundary extends Component<Props, State> {
         { stack: error.stack, componentStack: errorInfo.componentStack }
     ).catch(e => console.error("Failed to write crash log", e));
     
-    // setState is correctly inherited from Component
+    // setState es un método de la clase base React.Component
     this.setState({ errorInfo });
   }
 
@@ -58,9 +58,9 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   render(): ReactNode {
-    // state is correctly inherited from Component
+    // state es una propiedad de la clase base React.Component
     if (this.state.hasError) {
-      // Safe error message conversion
+      // Conversión segura de mensajes de error para visualización
       const errorMessage = this.state.error 
         ? (typeof this.state.error.message === 'string' ? this.state.error.message : JSON.stringify(this.state.error.message))
         : 'Error desconocido';
@@ -110,7 +110,7 @@ export class ErrorBoundary extends Component<Props, State> {
       );
     }
 
-    // props is correctly inherited from Component
+    // props es una propiedad de la clase base React.Component
     return this.props.children;
   }
 }

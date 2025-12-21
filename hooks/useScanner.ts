@@ -30,7 +30,10 @@ export const useScanner = (
     const [isIdle, setIsIdle] = useState(false);
     const idleTimerRef = useRef<any>(null);
 
-    // Valores optimistas para UI ultra-rápida
+    // Caché de fechas por sesión para evitar redundancia tras el primer ingreso
+    const sessionDatesCache = useRef<Map<string, {mm?: number, yyyy?: number}>>(new Map());
+
+    // Estados optimistas para UI instantánea
     const [optimisticActiveQty, setOptimisticActiveQty] = useState(0);
     const [optimisticTotalQty, setOptimisticTotalQty] = useState(0);
     const [optimisticUniqueSkus, setOptimisticUniqueSkus] = useState(0);
@@ -95,10 +98,18 @@ export const useScanner = (
     const completeScan = useCallback(async (code: string, mm?: number, yyyy?: number) => {
         try {
             const qtyToAdd = multiplier > 0 ? multiplier : 1;
+            
+            // Actualización optimista
             setOptimisticActiveQty(prev => prev + qtyToAdd);
             setOptimisticTotalQty(prev => prev + qtyToAdd);
             
             const newScan = await sessionService.addScan(session.id, code, qtyToAdd, mm, yyyy);
+            
+            // Guardar en caché local para subsiguientes escaneos del mismo SKU
+            if (mm || yyyy) {
+                sessionDatesCache.current.set(code, { mm, yyyy });
+            }
+
             setLastScanId(newScan.id);
             setFeedback('success');
             SoundFX.play('success');
@@ -111,7 +122,10 @@ export const useScanner = (
             if (multiplier !== 1) setMultiplier(1);
             resetIdleTimer();
             setTimeout(() => setFeedback('idle'), 500);
-        } catch (err) { setFeedback('error'); SoundFX.play('error'); }
+        } catch (err) { 
+            setFeedback('error'); 
+            SoundFX.play('error'); 
+        }
     }, [session.id, multiplier, resetIdleTimer]);
 
     const processScan = useCallback(async (code: string) => {
@@ -123,17 +137,34 @@ export const useScanner = (
         lastProcessedScan.current = { code: cleanCode, time: now };
         
         try {
-            const existingScan = await db.scans.where('[sessionId+barcode]').equals([session.id, cleanCode]).first();
-            if (existingScan) { 
-                await completeScan(cleanCode, existingScan.mm, existingScan.yyyy); 
+            // REGLA DE AUDITORÍA: ¿Ya tiene fecha en esta sesión?
+            let existingDate = sessionDatesCache.current.get(cleanCode);
+            
+            if (!existingDate) {
+                // Si no está en caché de memoria, buscar el registro más reciente en la DB para este SKU y sesión
+                const lastEntry = await db.scans.where('[sessionId+barcode]').equals([session.id, cleanCode]).last();
+                if (lastEntry) {
+                    existingDate = { mm: lastEntry.mm, yyyy: lastEntry.yyyy };
+                    sessionDatesCache.current.set(cleanCode, existingDate);
+                }
+            }
+
+            if (existingDate) { 
+                // Ya tenemos info de este producto en esta sesión, procedemos sin modal
+                await completeScan(cleanCode, existingDate.mm, existingDate.yyyy); 
                 return; 
             } 
             
+            // PRIMER ESCANEO DEL SKU EN ESTA SESIÓN: Pedir fecha
             const masterProduct = await db.products.get(cleanCode);
-            setPendingProductName(masterProduct?.name || 'Nuevo Producto');
+            setPendingProductName(masterProduct?.name || `NUEVO: ${cleanCode}`);
             setPendingScanCode(cleanCode);
             setShowExpirationModal(true);
-        } catch (err) { setFeedback('error'); }
+            SoundFX.play('success');
+        } catch (err) { 
+            console.error("Scan Error:", err);
+            setFeedback('error'); 
+        }
     }, [session.id, completeScan]);
 
     useEffect(() => {
@@ -186,7 +217,7 @@ export const useScanner = (
                 if (newVal > 0) await sessionService.updateScanQuantity(id, newVal);
             }, 
             handleRegisterPending: () => {}, 
-            handleDiscard: () => { if (confirm("¿Descartar?")) onDiscardSession?.(); }, 
+            handleDiscard: () => { if (confirm("¿Estás seguro de descartar este conteo?")) onDiscardSession?.(); }, 
             handleExpirationComplete: (mm?: number, yyyy?: number) => {
                 if (pendingScanCode) completeScan(pendingScanCode, mm, yyyy);
                 setShowExpirationModal(false);
@@ -196,7 +227,7 @@ export const useScanner = (
                 e.stopPropagation();
                 await sessionService.updateScanIncident(id, !status);
             }, 
-            getProductName: (code: string) => 'Producto', 
+            getProductName: (code: string) => 'Cargando...', 
             handleExternalScan: (code: string) => processScan(code) 
         }
     };

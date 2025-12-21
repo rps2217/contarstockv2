@@ -9,6 +9,7 @@ let flushTimer: any = null;
 let isFlushing = false;
 const MIRROR_KEY = 'logicount_emergency_buffer';
 
+// Recuperación de desastres (Buffer Mirroring)
 (async () => {
     try {
         const mirrored = localStorage.getItem(MIRROR_KEY);
@@ -38,23 +39,25 @@ const flushBuffer = async () => {
     isFlushing = true;
     const batch = [...scanBuffer];
     try {
-        // Using as any for transaction to ensure the method is recognized by the compiler
+        // Transacción atómica para garantizar consistencia de contadores
         await (db as any).transaction('rw', db.scans, db.sessions, async () => {
             await db.scans.bulkAdd(batch);
+            
             const affectedSessions = new Set(batch.map(s => s.sessionId));
             for (const sessionId of affectedSessions) {
-                const allScans = await db.scans.where('sessionId').equals(sessionId).toArray();
-                await db.sessions.update(sessionId, { 
-                    totalUnits: allScans.reduce((acc, s) => acc + s.quantity, 0), 
-                    totalSKUs: new Set(allScans.map(s => s.barcode)).size 
-                });
+                const scans = await db.scans.where('sessionId').equals(sessionId).toArray();
+                const totalUnits = scans.reduce((acc, s) => acc + s.quantity, 0);
+                const totalSKUs = new Set(scans.map(s => s.barcode)).size;
+                
+                await db.sessions.update(sessionId, { totalUnits, totalSKUs });
             }
         });
+
         const writtenIds = new Set(batch.map(s => s.id));
         scanBuffer = scanBuffer.filter(s => !writtenIds.has(s.id));
         saveMirror();
     } catch (e: any) {
-        logger.error("Buffer", "Transaction Failed", e);
+        logger.error("Database", "Error en persistencia de buffer", e);
     } finally {
         isFlushing = false;
         if (scanBuffer.length > 0) {
@@ -72,29 +75,44 @@ export const createSession = async (erpOrder: string, logisticsLabel: string): P
       await Promise.all(activeSessions.map(s => db.sessions.update(s.id, { status: 'completed' }))); 
   }
   const newSession: CountingSession = { 
-      id: generateUUID(), erpOrder: erpOrder.trim(), logisticsLabel: logisticsLabel.trim(), 
-      createdAt: Date.now(), status: 'active', totalUnits: 0, totalSKUs: 0 
+      id: generateUUID(), 
+      erpOrder: erpOrder.trim(), 
+      logisticsLabel: logisticsLabel.trim(), 
+      createdAt: Date.now(), 
+      status: 'active', 
+      totalUnits: 0, 
+      totalSKUs: 0 
   };
   await db.sessions.add(newSession); 
   return newSession;
 };
 
 export const addScan = async (sessionId: string, barcode: string, quantity: number, mm?: number, yyyy?: number): Promise<ScanRecord> => {
+    if (quantity <= 0) throw new Error("La cantidad debe ser mayor a cero.");
+    
     const record: ScanRecord = {
-        id: generateUUID(), sessionId, barcode: sanitizeBarcode(barcode),
-        quantity, timestamp: Date.now(), mm, yyyy, synced: 0
+        id: generateUUID(), 
+        sessionId, 
+        barcode: sanitizeBarcode(barcode),
+        quantity, 
+        timestamp: Date.now(), 
+        mm, 
+        yyyy, 
+        synced: 0
     };
+    
     scanBuffer.push(record);
     saveMirror();
-    if (scanBuffer.length >= 20) flushBuffer();
+    
+    if (scanBuffer.length >= 10) flushBuffer();
     else if (!flushTimer) flushTimer = setTimeout(flushBuffer, 800);
+    
     return record;
 };
 
 export const deleteSession = async (sessionId: string) => { 
     scanBuffer = scanBuffer.filter(s => s.sessionId !== sessionId);
     saveMirror();
-    // Using as any for transaction call to bypass inheritance recognition issues
     return (db as any).transaction('rw', db.sessions, db.scans, async () => { 
         await db.scans.where('sessionId').equals(sessionId).delete(); 
         await db.sessions.delete(sessionId); 
@@ -102,9 +120,9 @@ export const deleteSession = async (sessionId: string) => {
 };
 
 export const updateScanQuantity = async (scanId: string, newQuantity: number) => {
+    if (newQuantity < 0) return;
     const scan = await db.scans.get(scanId); 
     if (scan) {
-        // Using as any for transaction call to bypass inheritance recognition issues
         await (db as any).transaction('rw', db.scans, db.sessions, async () => {
             await db.scans.update(scanId, { quantity: newQuantity, synced: 0 }); 
             const scans = await db.scans.where('sessionId').equals(scan.sessionId).toArray();
@@ -116,7 +134,6 @@ export const updateScanQuantity = async (scanId: string, newQuantity: number) =>
 export const deleteScan = async (scanId: string) => { 
     const scan = await db.scans.get(scanId); 
     if (scan) { 
-        // Using as any for transaction call to bypass inheritance recognition issues
         await (db as any).transaction('rw', db.scans, db.sessions, async () => {
             await db.scans.delete(scanId); 
             const scans = await db.scans.where('sessionId').equals(scan.sessionId).toArray();

@@ -10,18 +10,26 @@ export const analyzeConsolidation = async (
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
-    const inventorySummary = items.slice(0, 100).map(i => 
-        `- ${i.productName} (SKU: ${i.barcode}): ${i.totalQuantity} u.`
+    // Serialización optimizada para contexto de IA
+    const inventorySummary = items.slice(0, 150).map(i => 
+        `- SKU: ${i.barcode} | ${i.productName} | Cant: ${i.totalQuantity} | Vence: ${i.mm || 'N/A'}/${i.yyyy || 'N/A'} ${i.isIncident ? '(FRC)' : ''}`
     ).join('\n');
 
     const prompt = `
-      Analiza esta consolidación logística:
-      Orden ERP: "${erpOrder}"
-      Bulto: ${logisticsLabel}
-      Items:
+      ROL: Auditor Logístico Senior.
+      TAREA: Analizar consolidación de inventario físico.
+      DATOS:
+      - Orden ERP de Referencia: "${erpOrder}"
+      - ID de Bulto/Etiqueta: "${logisticsLabel}"
+      - Items Detectados:
       ${inventorySummary}
 
-      Genera un reporte ejecutivo en Markdown sobre la calidad del conteo y posibles errores de picking.
+      REQUERIMIENTO:
+      Genera un informe técnico en Markdown que incluya:
+      1. Resumen de integridad de carga.
+      2. Alertas de caducidad si las hay.
+      3. Identificación de potenciales discrepancias de picking.
+      4. Recomendación inmediata.
     `;
 
     const response = await ai.models.generateContent({
@@ -29,9 +37,9 @@ export const analyzeConsolidation = async (
       contents: prompt,
     });
 
-    return response.text || "No se pudo generar el análisis.";
+    return response.text || "Análisis no disponible en este momento.";
   } catch (error: any) {
-    console.error("Gemini Error:", error);
-    return "Error al conectar con la IA.";
+    console.error("Gemini Analysis Error:", error);
+    return "Fallo en la conexión con el motor de inteligencia artificial.";
   }
 };
