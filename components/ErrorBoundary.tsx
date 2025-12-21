@@ -13,7 +13,7 @@ interface State {
   errorInfo: ErrorInfo | null;
 }
 
-// Fixed: Extending React.Component directly to ensure 'state', 'setState', and 'props' are correctly recognized as base members by the compiler.
+// Fixed: Using React.Component explicitly to ensure 'state', 'setState', and 'props' are correctly recognized as base members in some TS environments.
 export class ErrorBoundary extends React.Component<Props, State> {
   constructor(props: Props) {
     super(props);
@@ -42,7 +42,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
         { stack: error.stack, componentStack: errorInfo.componentStack }
     ).catch(e => console.error("Failed to write crash log", e));
     
-    // setState is correctly inherited from React.Component
+    // setState is correctly inherited from Component
     this.setState({ errorInfo });
   }
 
@@ -58,7 +58,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
   };
 
   render(): ReactNode {
-    // state is correctly inherited from React.Component
+    // state is correctly inherited from Component
     if (this.state.hasError) {
       // Safe error message conversion
       const errorMessage = this.state.error 
@@ -110,7 +110,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
       );
     }
 
-    // props is correctly inherited from React.Component
+    // props is correctly inherited from Component
     return this.props.children;
   }
 }

@@ -24,6 +24,7 @@ export const useScanner = (
     const [multiplier, setMultiplier] = useState(1);
     const [isMultiplierOpen, setIsMultiplierOpen] = useState(false);
     const [pendingScanCode, setPendingScanCode] = useState<string | null>(null);
+    const [pendingProductName, setPendingProductName] = useState('Nuevo Producto');
     const [showExpirationModal, setShowExpirationModal] = useState(false);
     const [isWindowFocused, setIsWindowFocused] = useState(true);
     const [isIdle, setIsIdle] = useState(false);
@@ -34,6 +35,7 @@ export const useScanner = (
     const [optimisticUniqueSkus, setOptimisticUniqueSkus] = useState(0);
     const lastOptimisticBarcode = useRef<string>('');
 
+    // Refs para evitar cierres obsoletos en listeners de eventos de hardware
     const stateRef = useRef({ showConfirmModal, showExpirationModal, manualMode, isMultiplierOpen, isCameraOpen });
     const streakRef = useRef({ barcode: '', count: 0 });
     const scannerBuffer = useRef<string>('');
@@ -72,7 +74,6 @@ export const useScanner = (
 
     const lastScan = useMemo(() => recentScans?.find(s => s.id === lastScanId) || recentScans?.[0], [recentScans, lastScanId]);
 
-    // Guía del bulto actual (Modo Verificado)
     const expectedForActive = useMemo(() => {
         if (!session.isVerifiedMode || !lastScan || !session.expectedItems) return null;
         return session.expectedItems.find(item => item.barcode === lastScan.barcode) || null;
@@ -114,24 +115,17 @@ export const useScanner = (
         feedbackTimer.current = setTimeout(() => setFeedback('idle'), type === 'undo' ? 1000 : 500);
     }, []);
 
-    const completeScan = async (code: string, mm?: number, yyyy?: number) => {
+    const completeScan = useCallback(async (code: string, mm?: number, yyyy?: number) => {
         try {
             const qtyToAdd = multiplier > 0 ? multiplier : 1;
-            const newOptimisticQty = (code === lastOptimisticBarcode.current ? optimisticActiveQty : activeProductStats.totalQty) + qtyToAdd;
-
-            // Verificar Exceso en Modo Guiado
-            if (session.isVerifiedMode && session.expectedItems) {
-                const expected = session.expectedItems.find(i => i.barcode === code);
-                if (expected && newOptimisticQty > expected.expectedQty) {
-                    SoundFX.play('error');
-                    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-                } else if (expected && newOptimisticQty === expected.expectedQty) {
-                    SoundFX.play('success'); // Podríamos poner un sonido de meta alcanzada
-                }
-            }
-
+            
+            // Lógica optimista para feedback instantáneo
             if (code === lastOptimisticBarcode.current) setOptimisticActiveQty(prev => prev + qtyToAdd);
-            else { setOptimisticActiveQty(activeProductStats.totalQty + qtyToAdd); lastOptimisticBarcode.current = code; }
+            else { 
+                const currentProdQty = activeProductStats.totalQty;
+                setOptimisticActiveQty(currentProdQty + qtyToAdd); 
+                lastOptimisticBarcode.current = code; 
+            }
             setOptimisticTotalQty(prev => prev + qtyToAdd);
             
             if (code === streakRef.current.barcode) SoundFX.play('increment');
@@ -150,60 +144,94 @@ export const useScanner = (
                     else { streakRef.current.barcode = code; streakRef.current.count = qtyToAdd; }
                     SoundFX.speak(streakRef.current.count.toString());
                 } else {
-                    let nameToSpeak = "Producto";
                     const cachedProduct = await db.products.get(code);
-                    if (cachedProduct) nameToSpeak = cachedProduct.name;
-                    SoundFX.speak(nameToSpeak);
+                    SoundFX.speak(cachedProduct?.name || "Producto");
                 }
             }
             if (multiplier !== 1) setMultiplier(1);
             resetIdleTimer();
         } catch (err) { triggerFeedback('error'); }
-    };
+    }, [session.id, multiplier, activeProductStats.totalQty, triggerFeedback, resetIdleTimer]);
 
-    const processScan = async (code: string) => {
+    const processScan = useCallback(async (code: string) => {
         const cleanCode = sanitizeBarcode(code);
         if (!cleanCode) { triggerFeedback('error'); return; }
+        
         const now = Date.now();
-        if (cleanCode === lastProcessedScan.current.code && (now - lastProcessedScan.current.time < 150)) return;
+        if (cleanCode === lastProcessedScan.current.code && (now - lastProcessedScan.current.time < 200)) return;
         lastProcessedScan.current = { code: cleanCode, time: now };
+        
         const settings = getSettings();
         try {
-            const existingScan = await db.scans.where('[sessionId+barcode]').equals([session.id, cleanCode]).reverse().sortBy('timestamp').then(results => results[0]);
-            if (existingScan) { await completeScan(cleanCode, existingScan.mm, existingScan.yyyy); return; } 
-            const productExists = await db.products.get(cleanCode);
-            if (!productExists && settings.autoRegisterUnknown) {
-                await productService.saveProduct({ barcode: cleanCode, name: `PENDIENTE-${cleanCode}`, category: 'PENDIENTE', supplier: '', supplierRut: '' });
+            // Verificar si el producto ya fue escaneado EN ESTA SESIÓN
+            const existingScan = await db.scans
+                .where('[sessionId+barcode]')
+                .equals([session.id, cleanCode])
+                .reverse()
+                .sortBy('timestamp')
+                .then(results => results[0]);
+
+            if (existingScan) { 
+                // Ya existe en la sesión actual, no pedimos fecha, usamos la previa
+                await completeScan(cleanCode, existingScan.mm, existingScan.yyyy); 
+                return; 
+            } 
+            
+            // Si es la primera vez en la sesión, resolvemos nombre y pedimos fecha
+            const masterProduct = await db.products.get(cleanCode);
+            if (!masterProduct && settings.autoRegisterUnknown) {
+                await productService.saveProduct({ 
+                    barcode: cleanCode, 
+                    name: `PENDIENTE-${cleanCode}`, 
+                    category: 'PENDIENTE', 
+                    supplier: '', 
+                    supplierRut: '' 
+                });
+                setPendingProductName(`Nuevo: ${cleanCode}`);
+            } else {
+                setPendingProductName(masterProduct?.name || 'Nuevo Producto');
             }
+
             setPendingScanCode(cleanCode);
             setShowExpirationModal(true);
             SoundFX.play('success');
-        } catch (err) { triggerFeedback('error'); }
-    };
+        } catch (err) { 
+            console.error("Scan Process Error:", err);
+            triggerFeedback('error'); 
+        }
+    }, [session.id, completeScan, triggerFeedback]);
 
     useEffect(() => {
         const handleGlobalKeyDown = (e: KeyboardEvent) => {
             if (!document.hasFocus()) return;
             const target = e.target as HTMLElement;
             if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return; 
+            
             const s = stateRef.current;
             if (s.showConfirmModal || s.showExpirationModal || s.isMultiplierOpen || s.manualMode || s.isCameraOpen) return;
+            
             const now = Date.now();
             if (now - lastKeyTime.current > 50) scannerBuffer.current = ''; 
             lastKeyTime.current = now;
+            
             if (e.key === 'Enter') {
                 const code = scannerBuffer.current;
                 if (code.length > 1) processScan(code);
                 scannerBuffer.current = '';
                 e.preventDefault(); 
-            } else if (e.key.length === 1) { scannerBuffer.current += e.key; }
+            } else if (e.key.length === 1) { 
+                scannerBuffer.current += e.key; 
+            }
         };
         window.addEventListener('keydown', handleGlobalKeyDown);
         return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-    }, []); 
+    }, [processScan]); 
 
     const handleExpirationComplete = async (mm?: number, yyyy?: number) => {
-        if (pendingScanCode) await completeScan(pendingScanCode, mm, yyyy);
+        const codeToCommit = pendingScanCode;
+        if (codeToCommit) {
+            await completeScan(codeToCommit, mm, yyyy);
+        }
         setPendingScanCode(null);
         setShowExpirationModal(false);
     };
@@ -212,7 +240,8 @@ export const useScanner = (
         e.preventDefault();
         const cleanCode = sanitizeBarcode(manualInput);
         if (cleanCode) processScan(cleanCode); else triggerFeedback('error');
-        setManualInput(''); setManualMode(false);
+        setManualInput(''); 
+        setManualMode(false);
     };
 
     const handleDeleteScan = useCallback(async (e: React.MouseEvent, scanId: string) => {
@@ -246,7 +275,7 @@ export const useScanner = (
     return {
         state: {
             feedback, manualMode, setManualMode, manualInput, setManualInput, showConfirmModal, setShowConfirmModal, showExpirationModal, isMultiplierOpen, setIsMultiplierOpen, multiplier, setMultiplier, isCameraOpen, setIsCameraOpen, lastScanId, isWindowFocused, isIdle, optimisticActiveQty, optimisticTotalQty, optimisticUniqueSkus,
-            pendingProductName: productsMap?.[pendingScanCode || '']?.name || 'Nuevo Producto'
+            pendingProductName
         },
         data: { sessionStats, activeProductStats, lastScan, recentScans, expectedForActive },
         actions: { handleManualSubmit, handleDeleteScan, handleUndoLastScan, handleQuantityChange, handleRegisterPending: async () => {}, handleDiscard, handleExpirationComplete, handleToggleIncident, getProductName, handleExternalScan: (code: string) => processScan(code) }

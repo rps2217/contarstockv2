@@ -1,5 +1,5 @@
 
-// Use named import for Dexie to ensure proper class inheritance and method recognition in TypeScript environments.
+// Fixed: Changed from named import to default import for Dexie to ensure proper class inheritance and method recognition in TypeScript environments.
 import { Dexie } from 'dexie';
 import type { Table } from 'dexie';
 import { Product, CountingSession, ScanRecord, SyncJob, ExpectedOrder } from './types';
