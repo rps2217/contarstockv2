@@ -16,18 +16,19 @@ export const Dashboard: React.FC = () => {
   ];
 
   return (
-    <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="mb-10 flex justify-between items-end border-b border-slate-200 pb-6">
+    <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
+      <div className="mb-8 flex justify-between items-end border-b border-slate-200 pb-6 pt-2">
           <div>
-            <h1 className="text-3xl font-black tracking-tight text-slate-900 mb-1 uppercase">Control Tower</h1>
+            <h1 className="text-3xl md:text-4xl font-black tracking-tight text-slate-900 mb-1 uppercase">Control Tower</h1>
             <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.2em]">LogiCount Pro Enterprise Edition</p>
           </div>
           
           <button 
             onClick={() => navigate('/settings')}
             className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm active:scale-90"
+            aria-label="Configuración"
           >
-            <Settings className="w-5 h-5" />
+            <Settings className="w-6 h-6" />
           </button>
       </div>
 
@@ -36,25 +37,27 @@ export const Dashboard: React.FC = () => {
           <button 
             key={idx}
             onClick={() => navigate(item.path)}
-            className="w-full bg-white border border-slate-200 p-6 rounded-[2rem] flex items-center justify-between shadow-sm active:scale-[0.98] transition-all hover:border-blue-400 group relative overflow-hidden"
+            className="w-full bg-white border border-slate-200 p-5 md:p-6 rounded-[2rem] flex items-center justify-between shadow-sm active:scale-[0.98] transition-all hover:border-blue-400 group relative overflow-hidden"
           >
             <div className="flex items-center gap-5 relative z-10">
-              <div className={`p-4 rounded-2xl ${item.bg} ${item.color} group-hover:scale-110 transition-transform duration-500`}>
-                  <item.icon className="w-6 h-6" />
+              <div className={`p-4 rounded-2xl ${item.bg} ${item.color} group-hover:scale-110 transition-transform duration-500 shadow-sm`}>
+                  <item.icon className="w-7 h-7" />
               </div>
               <div className="text-left">
                 <h2 className="text-lg font-black text-slate-800 leading-tight uppercase tracking-tight">{item.title}</h2>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">{item.sub}</p>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1.5">{item.sub}</p>
               </div>
             </div>
-            <ArrowUpRight className="w-5 h-5 text-slate-300 group-hover:text-blue-500 transition-all translate-x-2 opacity-0 group-hover:translate-x-0 group-hover:opacity-100" />
+            <div className="bg-slate-50 p-2 rounded-full group-hover:bg-blue-50 transition-colors">
+                <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-blue-500 transition-colors" />
+            </div>
           </button>
         ))}
       </div>
 
-      <div className="mt-16 flex flex-col items-center">
-        <div className="h-px w-20 bg-slate-200 mb-6"></div>
-        <p className="text-[9px] text-slate-300 font-black uppercase tracking-[0.5em]">Stable Build 2.5.0</p>
+      <div className="mt-12 flex flex-col items-center">
+        <div className="h-1 w-16 bg-slate-100 rounded-full mb-4"></div>
+        <p className="text-[9px] text-slate-300 font-black uppercase tracking-[0.3em]">Stable Build 2.5.0</p>
       </div>
     </div>
   );
