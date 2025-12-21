@@ -1,6 +1,9 @@
 
 import React from 'react';
-import { Zap, Volume2, VolumeX, Mic, Hash, Type, BarChart3, Gauge, AlertTriangle, Wind } from 'lucide-react';
+import { 
+    Zap, Volume2, Mic, BarChart3, Gauge, AlertTriangle, Hash, Type, 
+    Smartphone, Cpu
+} from 'lucide-react';
 import { AppSettings } from '../../types';
 
 interface Props {
@@ -9,133 +12,125 @@ interface Props {
 }
 
 export const OperationalSection: React.FC<Props> = ({ settings, updateSetting }) => {
+    
+    const Toggle = ({ active, onClick, color = "bg-blue-500" }: any) => (
+        <button onClick={onClick} className={`w-12 h-6 rounded-full transition-colors relative shrink-0 ${active ? color : 'bg-slate-200'}`}>
+            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${active ? 'left-7' : 'left-1'}`} />
+        </button>
+    );
+
+    const Item = ({ icon: Icon, title, sub, children, iconBg = "bg-slate-50", iconColor = "text-slate-400" }: any) => (
+        <div className="p-4 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+                <div className={`p-3 rounded-2xl ${iconBg} ${iconColor} shrink-0`}>
+                    <Icon className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                    <div className="font-bold text-slate-900 text-base leading-tight">{title}</div>
+                    {sub && <div className="text-[11px] text-slate-400 font-medium leading-tight mt-0.5">{sub}</div>}
+                </div>
+            </div>
+            {children}
+        </div>
+    );
+
     return (
-        <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <Zap className="w-5 h-5 text-yellow-500" /> Preferencias Operativas
-            </h2>
-            <div className="space-y-4">
+        <section className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden py-2">
+            <div className="px-6 py-4 flex items-center gap-2 mb-2">
+                <Zap className="w-5 h-5 text-yellow-500" />
+                <h2 className="text-lg font-bold text-slate-900">Preferencias Operativas</h2>
+            </div>
+
+            <div className="divide-y divide-slate-50">
+                <Item 
+                    title="Registro Rápido" 
+                    sub="(Desconocidos) - Guardar items nuevos sin preguntar" 
+                    icon={Zap}
+                >
+                    <Toggle active={settings.autoRegisterUnknown} onClick={() => updateSetting('autoRegisterUnknown', !settings.autoRegisterUnknown)} />
+                </Item>
                 
-                {/* REGISTRO RÁPIDO - CRÍTICO */}
-                <div className="flex items-center justify-between p-2">
-                    <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${settings.autoRegisterUnknown ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-400'}`}>
-                            <Zap className="w-5 h-5" />
-                        </div>
-                        <div>
-                            <div className="font-bold text-slate-900 text-sm">Registro Rápido (Desconocidos)</div>
-                            <div className="text-[10px] text-slate-400">Guardar items nuevos sin preguntar</div>
-                        </div>
-                    </div>
-                    <button onClick={() => updateSetting('autoRegisterUnknown', !settings.autoRegisterUnknown)} className={`w-12 h-6 rounded-full transition-colors relative ${settings.autoRegisterUnknown ? 'bg-orange-500' : 'bg-slate-300'}`}>
-                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.autoRegisterUnknown ? 'left-7' : 'left-1'}`} />
-                    </button>
-                </div>
+                <Item 
+                    title="Sonido" 
+                    icon={Volume2} 
+                    iconColor="text-green-600" 
+                    iconBg="bg-green-50"
+                >
+                    <Toggle active={settings.soundEnabled} onClick={() => updateSetting('soundEnabled', !settings.soundEnabled)} color="bg-emerald-500" />
+                </Item>
 
-                <div className="flex items-center justify-between p-2">
-                    <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${settings.soundEnabled ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-400'}`}>
-                            {settings.soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
-                        </div>
-                        <div className="font-bold text-slate-900 text-sm">Sonido</div>
-                    </div>
-                    <button onClick={() => updateSetting('soundEnabled', !settings.soundEnabled)} className={`w-12 h-6 rounded-full transition-colors relative ${settings.soundEnabled ? 'bg-green-500' : 'bg-slate-300'}`}>
-                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.soundEnabled ? 'left-7' : 'left-1'}`} />
-                    </button>
-                </div>
-                
-                <div className="border border-slate-100 rounded-xl p-3 bg-slate-50/30">
-                    <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-lg ${settings.ttsEnabled ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-400'}`}>
-                                <Mic className="w-5 h-5" />
+                <Item 
+                    title="Vibración (Hápticos)" 
+                    sub="Feedback táctil al escanear"
+                    icon={Smartphone} 
+                    iconColor="text-blue-600" 
+                    iconBg="bg-blue-50"
+                >
+                    <Toggle active={settings.hapticsEnabled} onClick={() => updateSetting('hapticsEnabled', !settings.hapticsEnabled)} color="bg-blue-500" />
+                </Item>
+
+                <div className="px-1 py-1">
+                    <div className="mx-2 mb-2 rounded-3xl border border-slate-100 bg-slate-50/30 overflow-hidden">
+                        <div className="flex items-center justify-between p-4">
+                            <div className="flex items-center gap-4">
+                                <div className="p-3 rounded-2xl bg-purple-50 text-purple-600 shrink-0">
+                                    <Mic className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <div className="font-bold text-slate-900 text-base">Asistente de Voz</div>
+                                    <div className="text-[11px] text-slate-400 font-medium">Confirmación auditiva</div>
+                                </div>
                             </div>
-                            <div>
-                                <div className="font-bold text-slate-900 text-sm">Asistente de Voz</div>
-                                <div className="text-[10px] text-slate-400">Confirmación auditiva</div>
+                            <Toggle active={settings.ttsEnabled} onClick={() => updateSetting('ttsEnabled', !settings.ttsEnabled)} color="bg-purple-500" />
+                        </div>
+
+                        {settings.ttsEnabled && (
+                            <div className="grid grid-cols-2 gap-3 px-4 pb-4 animate-in slide-in-from-top-2 duration-300">
+                                <button 
+                                    onClick={() => updateSetting('ttsMode', 'count')}
+                                    className={`p-5 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all ${settings.ttsMode === 'count' ? 'bg-purple-50 border-purple-100 text-purple-700' : 'bg-white border-slate-100 text-slate-400'}`}
+                                >
+                                    <Hash className="w-6 h-6" />
+                                    <span className="text-[11px] font-black uppercase tracking-tight">Contador (1, 2...)</span>
+                                </button>
+                                <button 
+                                    onClick={() => updateSetting('ttsMode', 'product')}
+                                    className={`p-5 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all ${settings.ttsMode === 'product' ? 'bg-purple-50 border-purple-100 text-purple-700' : 'bg-white border-slate-100 text-slate-400'}`}
+                                >
+                                    <Type className="w-6 h-6" />
+                                    <span className="text-[11px] font-black uppercase tracking-tight">Leer Nombre</span>
+                                </button>
                             </div>
-                        </div>
-                        <button onClick={() => updateSetting('ttsEnabled', !settings.ttsEnabled)} className={`w-12 h-6 rounded-full transition-colors relative ${settings.ttsEnabled ? 'bg-purple-500' : 'bg-slate-300'}`}>
-                            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.ttsEnabled ? 'left-7' : 'left-1'}`} />
-                        </button>
+                        )}
                     </div>
-
-                    {settings.ttsEnabled && (
-                        <div className="grid grid-cols-2 gap-2 mt-2 pl-12 animate-in fade-in slide-in-from-top-2">
-                            <button 
-                                onClick={() => updateSetting('ttsMode', 'count')}
-                                className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all ${settings.ttsMode === 'count' ? 'bg-purple-50 border-purple-300 text-purple-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
-                            >
-                                <Hash className="w-5 h-5" />
-                                <span className="text-[10px] font-bold">Contador (1, 2...)</span>
-                            </button>
-                            <button 
-                                onClick={() => updateSetting('ttsMode', 'product')}
-                                className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all ${settings.ttsMode === 'product' ? 'bg-purple-50 border-purple-300 text-purple-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
-                            >
-                                <Type className="w-5 h-5" />
-                                <span className="text-[10px] font-bold">Leer Nombre</span>
-                            </button>
-                        </div>
-                    )}
                 </div>
 
-                <div className="flex items-center justify-between p-2">
-                    <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${settings.controlTowerEnabled ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-400'}`}>
-                            <BarChart3 className="w-5 h-5" />
-                        </div>
-                        <div>
-                            <div className="font-bold text-slate-900 text-sm">Torre de Control</div>
-                            <div className="text-[10px] text-slate-400">Métricas en inicio</div>
-                        </div>
-                    </div>
-                    <button onClick={() => updateSetting('controlTowerEnabled', !settings.controlTowerEnabled)} className={`w-12 h-6 rounded-full transition-colors relative ${settings.controlTowerEnabled ? 'bg-indigo-500' : 'bg-slate-300'}`}>
-                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.controlTowerEnabled ? 'left-7' : 'left-1'}`} />
-                    </button>
-                </div>
+                <Item title="Torre de Control" sub="Mostrar métricas en inicio" icon={BarChart3}>
+                    <Toggle active={settings.controlTowerEnabled} onClick={() => updateSetting('controlTowerEnabled', !settings.controlTowerEnabled)} />
+                </Item>
 
-                <div className="flex items-center justify-between p-2">
-                    <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${settings.speedometerEnabled ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400'}`}>
-                            <Gauge className="w-5 h-5" />
-                        </div>
-                        <div>
-                            <div className="font-bold text-slate-900 text-sm">Velocímetro</div>
-                            <div className="text-[10px] text-slate-400">Items por minuto</div>
-                        </div>
-                    </div>
-                    <button onClick={() => updateSetting('speedometerEnabled', !settings.speedometerEnabled)} className={`w-12 h-6 rounded-full transition-colors relative ${settings.speedometerEnabled ? 'bg-blue-500' : 'bg-slate-300'}`}>
-                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.speedometerEnabled ? 'left-7' : 'left-1'}`} />
-                    </button>
-                </div>
+                <Item title="Velocímetro" sub="Mostrar items por minuto" icon={Gauge}>
+                    <Toggle active={settings.speedometerEnabled} onClick={() => updateSetting('speedometerEnabled', !settings.speedometerEnabled)} />
+                </Item>
 
-                <div className="flex items-center justify-between p-2">
-                    <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${settings.confirmDelete ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
-                            <AlertTriangle className="w-5 h-5" />
-                        </div>
-                        <div className="font-bold text-slate-900 text-sm">Confirmar Eliminación</div>
-                    </div>
-                    <button onClick={() => updateSetting('confirmDelete', !settings.confirmDelete)} className={`w-12 h-6 rounded-full transition-colors relative ${settings.confirmDelete ? 'bg-blue-500' : 'bg-slate-300'}`}>
-                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.confirmDelete ? 'left-7' : 'left-1'}`} />
-                    </button>
-                </div>
+                <Item 
+                    title="Confirmar Eliminación" 
+                    icon={AlertTriangle} 
+                    iconColor="text-blue-600" 
+                    iconBg="bg-blue-50"
+                >
+                    <Toggle active={settings.confirmDelete} onClick={() => updateSetting('confirmDelete', !settings.confirmDelete)} />
+                </Item>
 
-                <div className="flex items-center justify-between p-2">
-                    <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${settings.lowPerformanceMode ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400'}`}>
-                            <Wind className="w-5 h-5" />
-                        </div>
-                        <div>
-                            <div className="font-bold text-slate-900 text-sm">Modo Alto Rendimiento</div>
-                            <div className="text-[10px] text-slate-400">Reduce animaciones y efectos</div>
-                        </div>
-                    </div>
-                    <button onClick={() => updateSetting('lowPerformanceMode', !settings.lowPerformanceMode)} className={`w-12 h-6 rounded-full transition-colors relative ${settings.lowPerformanceMode ? 'bg-blue-500' : 'bg-slate-300'}`}>
-                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.lowPerformanceMode ? 'left-7' : 'left-1'}`} />
-                    </button>
-                </div>
+                <Item 
+                    title="Bajo Rendimiento" 
+                    sub="Reduce animaciones para dispositivos antiguos"
+                    icon={Cpu} 
+                    iconColor="text-slate-600" 
+                    iconBg="bg-slate-100"
+                >
+                    <Toggle active={settings.lowPerformanceMode} onClick={() => updateSetting('lowPerformanceMode', !settings.lowPerformanceMode)} color="bg-slate-700" />
+                </Item>
             </div>
         </section>
     );

@@ -62,7 +62,8 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     const initDb = async () => {
         try {
-            await db.open();
+            // Using as any for open() call to ensure method recognition regardless of inheritance complexity
+            await (db as any).open();
             setDbReady(true);
             await initPersistence();
         } catch (e: any) {
