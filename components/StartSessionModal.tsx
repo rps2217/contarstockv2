@@ -119,7 +119,8 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
     <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center">
         <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
 
-        <div className="relative w-full h-[95vh] md:h-auto md:max-h-[90vh] md:w-full md:max-w-md bg-white rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl flex flex-col animate-in slide-in-from-bottom-4 duration-300 overflow-hidden">
+        {/* Modal Container: Adjusted height constraints and padding */}
+        <div className="relative w-full max-h-[90dvh] flex flex-col bg-white rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl animate-in slide-in-from-bottom-4 duration-300 md:max-w-md md:h-auto overflow-hidden">
             
             <div className="flex justify-between items-center px-6 py-5 bg-white border-b border-slate-100 shrink-0 z-10">
                 <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase">Iniciar Conteo</h2>
@@ -225,7 +226,8 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
                 )}
             </form>
 
-            <div className="p-4 bg-white border-t border-slate-100 shrink-0 safe-area-pb">
+            {/* Footer with extra padding for mobile devices */}
+            <div className="p-4 bg-white border-t border-slate-100 shrink-0 pb-8 md:pb-6">
                 <button 
                     onClick={handleSubmit}
                     disabled={isParsing}

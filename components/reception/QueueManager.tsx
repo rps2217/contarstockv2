@@ -55,7 +55,7 @@ export const QueueManager: React.FC<Props> = ({ isOpen, onClose, drafts, onDelet
                     )}
                 </div>
 
-                <div className="p-6 border-t border-slate-200 grid grid-cols-2 gap-4 bg-white shrink-0 safe-area-pb">
+                <div className="p-6 border-t border-slate-200 grid grid-cols-2 gap-4 bg-white shrink-0 pb-8 md:pb-6">
                     <button onClick={onDiscardAll} disabled={drafts.length === 0} className="bg-red-50 text-red-600 hover:bg-red-100 border border-red-100 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all disabled:opacity-50">
                         Vaciar Cola
                     </button>

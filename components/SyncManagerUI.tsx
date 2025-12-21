@@ -149,7 +149,7 @@ export const SyncManagerUI: React.FC = () => {
             </div>
 
             {/* Bottom Action Bar */}
-            <div className="p-4 bg-white border-t border-slate-200 shrink-0 safe-area-pb">
+            <div className="p-4 bg-white border-t border-slate-200 shrink-0 pb-8 md:pb-6">
                 <button 
                     onClick={handleSyncAll}
                     disabled={isProcessing || uiGroups.length === 0}
