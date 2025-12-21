@@ -1,5 +1,5 @@
 
-import React, { ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home, Terminal } from 'lucide-react';
 import { logger } from '../services/logger';
 
@@ -13,11 +13,11 @@ interface State {
   errorInfo: ErrorInfo | null;
 }
 
-// Fixed: Using React.Component explicitly to ensure 'state', 'setState', and 'props' are correctly recognized as base members in some TS environments.
-export class ErrorBoundary extends React.Component<Props, State> {
+// Fixed: Explicitly extending Component from React to ensure 'state', 'setState', and 'props' are correctly recognized as base members.
+export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    // state is correctly inherited from React.Component
+    // state is correctly inherited from Component
     this.state = {
       hasError: false,
       error: null,
