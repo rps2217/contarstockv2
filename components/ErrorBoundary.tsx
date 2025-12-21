@@ -1,5 +1,5 @@
 
-import React, { ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home, Terminal } from 'lucide-react';
 import { logger } from '../services/logger';
 
@@ -13,11 +13,11 @@ interface State {
   errorInfo: ErrorInfo | null;
 }
 
-// Se extiende React.Component de forma explícita para garantizar que TypeScript reconozca las propiedades heredadas (props, state, setState).
-export class ErrorBoundary extends React.Component<Props, State> {
+// Se extiende Component de forma explícita para garantizar que TypeScript reconozca las propiedades heredadas (props, state, setState).
+export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    // Inicialización del estado heredado de React.Component
+    // Inicialización del estado heredado de Component
     this.state = {
       hasError: false,
       error: null,
@@ -42,7 +42,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
         { stack: error.stack, componentStack: errorInfo.componentStack }
     ).catch(e => console.error("Failed to write crash log", e));
     
-    // setState es un método de la clase base React.Component
+    // setState es un método de la clase base Component
     this.setState({ errorInfo });
   }
 
@@ -58,7 +58,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
   };
 
   render(): ReactNode {
-    // state es una propiedad de la clase base React.Component
+    // state es una propiedad de la clase base Component
     if (this.state.hasError) {
       // Conversión segura de mensajes de error para visualización
       const errorMessage = this.state.error 
@@ -110,7 +110,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
       );
     }
 
-    // props es una propiedad de la clase base React.Component
+    // props es una propiedad de la clase base Component
     return this.props.children;
   }
 }

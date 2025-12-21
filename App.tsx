@@ -2,7 +2,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { Routes, Route, useNavigate, useLocation, Navigate, Outlet, HashRouter, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Home, Layers, Cloud, Loader2 } from 'lucide-react';
+import { Home, Layers, Cloud, Loader2, Database, History, Search } from 'lucide-react';
 import { useAppStore } from './store/useAppStore';
 import { db } from './db';
 import { processSyncQueue } from './services/syncManager';
@@ -26,9 +26,9 @@ const Reception = lazyWithRetry(() => import('./components/Reception').then(m =>
 const SyncManagerUI = lazyWithRetry(() => import('./components/SyncManagerUI').then(m => ({ default: m.SyncManagerUI })));
 
 const LoadingFallback = () => (
-  <div className="h-full w-full flex flex-col items-center justify-center text-slate-400 gap-4">
-    <Loader2 className="w-12 h-12 animate-spin text-blue-500" />
-    <span className="text-xs font-bold uppercase tracking-widest">Cargando Sistema...</span>
+  <div className="fixed inset-0 flex flex-col items-center justify-center bg-slate-50 text-slate-400 gap-4">
+    <Loader2 className="w-10 h-10 animate-spin text-blue-600" />
+    <span className="text-[10px] font-black uppercase tracking-[0.2em]">Inicializando Módulo</span>
   </div>
 );
 
@@ -38,18 +38,20 @@ const MainLayout = () => {
     const currentView = location.pathname.split('/')[1] || 'dashboard';
 
     return (
-        <div className="min-h-screen bg-[#FDFCF9] text-slate-900 flex flex-col md:flex-row transition-all duration-300">
+        <div className="min-h-[100dvh] bg-slate-50 text-slate-900 flex flex-col md:flex-row overflow-hidden">
             <SystemStatus />
             <Sidebar view={currentView} settings={settings} />
-            <main className="flex-1 md:ml-64 w-full relative pb-24 md:pb-0">
-                <Suspense fallback={<LoadingFallback />}>
-                    <div className="p-4 md:p-8 max-w-7xl mx-auto animate-in fade-in duration-500">
-                      <Outlet />
+            <main className="flex-1 md:ml-64 w-full relative flex flex-col min-h-0 h-full overflow-hidden">
+                <div className="flex-1 overflow-y-auto no-scrollbar pb-24 md:pb-8">
+                    <div className="p-4 md:p-8 max-w-5xl mx-auto w-full">
+                        <Suspense fallback={<LoadingFallback />}>
+                            <Outlet />
+                        </Suspense>
                     </div>
-                </Suspense>
+                </div>
+                <MobileNav currentView={currentView} />
             </main>
             <InstallPrompt />
-            <MobileNav currentView={currentView} />
         </div>
     );
 };
@@ -57,24 +59,18 @@ const MainLayout = () => {
 const AppContent: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [dbReady, setDbReady] = useState(false);
-  const [dbError, setDbError] = useState<string | null>(null);
 
   useEffect(() => {
-    const initDb = async () => {
+    const init = async () => {
         try {
-            // Using as any for open() call to ensure method recognition regardless of inheritance complexity
             await (db as any).open();
             setDbReady(true);
             await initPersistence();
-        } catch (e: any) {
-            setDbError(String(e.message || e));
-        }
+        } catch (e) { console.error(e); }
     };
-    initDb();
+    init();
 
-    if (localStorage.getItem('logicount_auth') === 'true') {
-        setIsAuthenticated(true);
-    }
+    if (localStorage.getItem('logicount_auth') === 'true') setIsAuthenticated(true);
 
     const syncInterval = setInterval(() => {
         if (navigator.onLine) processSyncQueue().catch(() => {});
@@ -82,12 +78,8 @@ const AppContent: React.FC = () => {
     return () => clearInterval(syncInterval);
   }, []);
 
-  if (dbError) return <div className="p-12 text-rose-600 text-center font-bold text-xl bg-white min-h-screen flex items-center justify-center">Error de base de datos: {dbError}</div>;
-  if (!dbReady) return <div className="h-screen flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin w-12 h-12 text-blue-500"/></div>;
-
-  if (!isAuthenticated) {
-      return <Login onLoginSuccess={() => setIsAuthenticated(true)} />;
-  }
+  if (!dbReady) return <LoadingFallback />;
+  if (!isAuthenticated) return <Login onLoginSuccess={() => setIsAuthenticated(true)} />;
 
   return (
     <Routes>
@@ -116,7 +108,7 @@ const ScannerWrapper = () => {
     if (!session) return <LoadingFallback />;
 
     return (
-        <div className="h-screen bg-white overflow-hidden">
+        <div className="fixed inset-0 bg-white overflow-hidden">
             <Scanner 
                 session={session} 
                 onCloseSession={async () => {
@@ -132,26 +124,19 @@ const ScannerWrapper = () => {
     );
 };
 
-const App: React.FC = () => (
-    <ErrorBoundary>
-        <HashRouter>
-            <AppContent />
-        </HashRouter>
-    </ErrorBoundary>
-);
-
 const NAV_ITEMS = [
     { key: 'dashboard', label: 'Inicio', icon: Home, path: '/dashboard' },
-    { key: 'consolidated', label: 'Consol.', icon: Layers, path: '/consolidated' },
-    { key: 'sync', label: 'Nube', icon: Cloud, path: '/sync' },
+    { key: 'reports', label: 'Historial', icon: History, path: '/reports' },
+    { key: 'database', label: 'Catálogo', icon: Database, path: '/database' },
+    { key: 'sync', label: 'Sync', icon: Cloud, path: '/sync' },
 ];
 
 const MobileNav = ({ currentView }: { currentView: string }) => {
   const navigate = useNavigate();
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-100 pb-safe-area shadow-[0_-4px_10px_rgba(0,0,0,0.03)]">
-        <div className="flex justify-around items-center h-16 px-4">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-slate-200 ios-safe-pb shadow-[0_-8px_30px_rgb(0,0,0,0.04)]">
+        <div className="flex justify-around items-center h-16 px-2">
             {NAV_ITEMS.map((item) => {
                 const isActive = currentView === item.key;
                 const Icon = item.icon;
@@ -159,12 +144,12 @@ const MobileNav = ({ currentView }: { currentView: string }) => {
                     <button 
                         key={item.key}
                         onClick={() => navigate(item.path)}
-                        className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-all ${isActive ? 'text-blue-600' : 'text-slate-300'}`}
+                        className={`flex flex-col items-center justify-center flex-1 h-full gap-1 transition-all ${isActive ? 'text-blue-600' : 'text-slate-400'}`}
                     >
-                        <div className={`transition-transform duration-300 ${isActive ? 'scale-110' : ''}`}>
-                            <Icon className="w-6 h-6" />
+                        <div className={`p-1 rounded-xl transition-all duration-300 ${isActive ? 'bg-blue-50 scale-110' : ''}`}>
+                            <Icon className="w-5 h-5" />
                         </div>
-                        <span className="text-[10px] font-bold tracking-tight">{item.label}</span>
+                        <span className="text-[9px] font-black uppercase tracking-wider">{item.label}</span>
                     </button>
                 );
             })}
@@ -172,5 +157,13 @@ const MobileNav = ({ currentView }: { currentView: string }) => {
     </nav>
   );
 };
+
+const App: React.FC = () => (
+    <ErrorBoundary>
+        <HashRouter>
+            <AppContent />
+        </HashRouter>
+    </ErrorBoundary>
+);
 
 export default App;

@@ -1,6 +1,6 @@
 {
-  "name": "LogiCount Pro v2.5",
-  "description": "Sistema profesional de gestión de inventario local-first con analítica avanzada.",
+  "name": "LogiCount Pro Enterprise v2.5",
+  "description": "Sistema profesional auditado para gestión de inventario en tiempo real con arquitectura mobile-first y local-first.",
   "requestFramePermissions": [
     "camera"
   ]

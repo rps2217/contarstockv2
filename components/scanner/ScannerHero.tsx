@@ -1,6 +1,6 @@
 
 import React, { memo } from 'react';
-import { RotateCcw, AlertCircle, Package, CheckCircle } from 'lucide-react';
+import { RotateCcw, AlertCircle, Package, CheckCircle, Info } from 'lucide-react';
 import { ScanRecord, ExpectedItem } from '../../types';
 
 interface ScannerHeroProps {
@@ -21,11 +21,11 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
 }) => {
     if (feedback === 'undo') {
         return (
-            <div className="flex flex-col items-center animate-in zoom-in duration-500">
-                <div className="p-12 bg-slate-100 rounded-full mb-8 shadow-inner">
-                    <RotateCcw className="w-20 h-20 text-slate-400" />
+            <div className="flex flex-col items-center justify-center h-full animate-in zoom-in duration-500">
+                <div className="p-10 bg-slate-100 rounded-full mb-6">
+                    <RotateCcw className="w-16 h-16 text-slate-400" />
                 </div>
-                <h2 className="text-3xl font-black text-slate-400 uppercase tracking-widest">Acción Deshecha</h2>
+                <h2 className="text-2xl font-black text-slate-400 uppercase tracking-widest">Deshecho</h2>
             </div>
         );
     }
@@ -39,51 +39,54 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
         const progress = targetQty > 0 ? Math.min(100, (currentQty / targetQty) * 100) : 0;
 
         return (
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full flex flex-col items-center px-4">
+            <div className="w-full h-full flex flex-col items-center justify-center px-4 py-2 animate-in fade-in duration-500 overflow-hidden">
                 {isUnknown ? (
-                    <div className="bg-white border-2 border-orange-200 p-10 md:p-14 rounded-[3rem] shadow-2xl w-full max-w-2xl text-center">
-                        <div className="w-20 h-20 bg-orange-50 text-orange-500 rounded-3xl flex items-center justify-center mx-auto mb-8"><AlertCircle className="w-10 h-10" /></div>
-                        <h2 className="text-4xl font-black text-slate-900 mb-3 tracking-tight">Producto Nuevo</h2>
-                        <p className="text-slate-400 mb-10 font-bold text-2xl bg-slate-50 py-3 rounded-2xl border border-slate-100">{lastScan.barcode}</p>
-                        <button onClick={onRegisterPending} className="w-full bg-orange-500 hover:bg-orange-600 text-white font-black py-5 rounded-2xl shadow-xl shadow-orange-100 transition-all active:scale-95 uppercase tracking-widest text-sm">Registrar en Catálogo</button>
+                    <div className="bg-white border border-orange-200 p-8 rounded-[2.5rem] shadow-xl w-full max-w-md text-center">
+                        <div className="w-16 h-16 bg-orange-50 text-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-6"><AlertCircle className="w-8 h-8" /></div>
+                        <h2 className="text-2xl font-black text-slate-900 mb-2 uppercase tracking-tighter">SKU Desconocido</h2>
+                        <div className="bg-slate-50 py-3 px-4 rounded-xl border border-slate-100 font-mono font-bold text-slate-600 mb-8 break-all">{lastScan.barcode}</div>
+                        <button onClick={onRegisterPending} className="w-full bg-orange-500 text-white font-black py-4 rounded-xl shadow-lg active:scale-95 transition-all text-xs uppercase tracking-widest">Dar de Alta</button>
                     </div>
                 ) : (
-                    <div className="w-full flex flex-col items-center">
+                    <div className="w-full flex flex-col items-center max-h-full">
                         {expectedItem && (
-                            <div className="mb-8">
+                            <div className="mb-4">
                                 {isOverCount ? (
-                                    <div className="bg-red-600 text-white px-8 py-3 rounded-full font-black text-sm flex items-center gap-3 shadow-lg shadow-red-200 animate-pulse">
-                                        <AlertCircle className="w-5 h-5" /> EXCESO DETECTADO
+                                    <div className="bg-rose-600 text-white px-4 py-1.5 rounded-full font-black text-[10px] flex items-center gap-2 shadow-lg animate-pulse uppercase">
+                                        <AlertCircle className="w-3 h-3" /> Exceso Detectado
                                     </div>
                                 ) : isTargetReached ? (
-                                    <div className="bg-emerald-500 text-white px-8 py-3 rounded-full font-black text-sm flex items-center gap-3 shadow-lg shadow-emerald-200">
-                                        <CheckCircle className="w-5 h-5" /> OBJETIVO CUMPLIDO
+                                    <div className="bg-emerald-500 text-white px-4 py-1.5 rounded-full font-black text-[10px] flex items-center gap-2 shadow-lg uppercase">
+                                        <CheckCircle className="w-3 h-3" /> Meta Alcanzada
                                     </div>
                                 ) : (
-                                    <div className="bg-blue-50 text-blue-700 px-8 py-3 rounded-full font-black text-sm border-2 border-blue-100 shadow-sm">
-                                        REQUERIDO: {targetQty} UNIDADES
+                                    <div className="bg-blue-600 text-white px-4 py-1.5 rounded-full font-black text-[10px] flex items-center gap-2 shadow-lg uppercase">
+                                        <Info className="w-3 h-3" /> Requerido: {targetQty}
                                     </div>
                                 )}
                             </div>
                         )}
-                        <h1 className="text-4xl md:text-6xl font-black text-slate-900 text-center mb-6 leading-[1.1] max-w-5xl tracking-tight">
-                            {activeProductStats.name}
-                        </h1>
-                        <div className="text-xl md:text-2xl text-blue-600 font-black bg-blue-50/50 px-10 py-3 rounded-2xl border border-blue-100 mb-12 tracking-wider">
-                            {lastScan.barcode}
+
+                        <div className="text-center w-full mb-2">
+                             <h1 className="text-2xl md:text-4xl font-black text-slate-900 leading-tight uppercase tracking-tight line-clamp-2 px-4">{activeProductStats.name}</h1>
+                             <div className="text-[10px] font-mono font-black text-blue-600 mt-2 bg-blue-50 px-3 py-1 rounded-lg inline-block">{lastScan.barcode}</div>
                         </div>
+
+                        <div className="relative flex flex-col items-center my-4">
+                            <div className="text-[10rem] md:text-[14rem] leading-none font-black text-slate-900 tabular-nums tracking-tighter select-none drop-shadow-md">
+                                {currentQty}
+                            </div>
+                            <div className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-300 -mt-2">Contabilizados</div>
+                        </div>
+
                         {expectedItem && (
-                            <div className="w-full max-w-lg h-4 bg-slate-200 rounded-full overflow-hidden mb-16 shadow-inner border border-white">
-                                <div className={`h-full transition-all duration-1000 ease-out ${isOverCount ? 'bg-red-500' : (isTargetReached ? 'bg-emerald-500' : 'bg-blue-600')}`} style={{ width: `${progress}%` }} />
+                            <div className="w-full max-w-xs h-2.5 bg-slate-200 rounded-full overflow-hidden mt-4 border border-white shadow-inner">
+                                <div 
+                                    className={`h-full transition-all duration-700 ease-out ${isOverCount ? 'bg-rose-500' : (isTargetReached ? 'bg-emerald-500' : 'bg-blue-600')}`}
+                                    style={{ width: `${progress}%` }}
+                                />
                             </div>
                         )}
-                        <div className="flex flex-col items-center">
-                            <div className="text-xs font-black uppercase tracking-[0.4em] text-slate-400 mb-4">Total Registrado</div>
-                            <div className="text-[11rem] md:text-[16rem] leading-none font-black text-slate-900 flex items-baseline select-none tabular-nums tracking-tighter drop-shadow-sm">
-                                {currentQty}
-                                {expectedItem && <span className="text-5xl md:text-7xl text-slate-300 ml-4 font-black">/{targetQty}</span>}
-                            </div>
-                        </div>
                     </div>
                 )}
             </div>
@@ -91,9 +94,9 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
     }
 
     return (
-        <div className="flex flex-col items-center opacity-10 py-32">
-            <Package className="w-32 h-32 mb-8 text-slate-900" />
-            <h2 className="text-3xl font-black uppercase tracking-[0.5em] text-slate-900">Escáner Listo</h2>
+        <div className="flex flex-col items-center justify-center opacity-10 py-20 grayscale">
+            <Package className="w-24 h-24 mb-4 text-slate-900" />
+            <h2 className="text-xl font-black uppercase tracking-[0.5em] text-slate-900">Standby</h2>
         </div>
     );
 });
