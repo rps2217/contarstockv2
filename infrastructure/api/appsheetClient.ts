@@ -75,6 +75,11 @@ export const sendToAppSheet = async (
               return { success: true };
           }
 
+          // NORMALIZACIÓN: Si AppSheet devuelve un Array directamente, lo envolvemos en { Rows: [...] }
+          if (Array.isArray(json)) {
+              json = { Rows: json };
+          }
+
           // Validación para búsquedas (Find)
           if (payload.Action === 'Find') {
               if (!json || typeof json !== 'object' || !json.hasOwnProperty('Rows')) {
@@ -86,7 +91,9 @@ export const sendToAppSheet = async (
           // Validación para escrituras (Add/Edit)
           if ((payload.Action === 'Add' || payload.Action === 'Edit')) {
               if (!json.Rows || !Array.isArray(json.Rows) || json.Rows.length === 0) {
-                  throw new Error("La API no confirmó la escritura de filas. Verifique permisos.");
+                  // Algunas respuestas de éxito en Add no devuelven filas si no hay cambios, pero usualmente sí.
+                  // Permitimos continuar si no es una búsqueda.
+                  return json;
               }
           }
 

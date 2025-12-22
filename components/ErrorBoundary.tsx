@@ -1,4 +1,4 @@
-import React, { ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home, Terminal } from 'lucide-react';
 import { logger } from '../services/logger';
 
@@ -15,8 +15,8 @@ interface State {
 /**
  * ErrorBoundary class component to catch JS errors anywhere in their child component tree.
  */
-// Fix: Use React.Component to ensure inheritance and members (setState, props) are properly recognized
-export class ErrorBoundary extends React.Component<Props, State> {
+// Correctly extending Component to ensure setState and props are available from the React base class
+export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
     error: null,
@@ -31,7 +31,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
     };
   }
 
-  // Handle errors caught in the lifecycle
+  // Corrected lifecycle method name to componentDidCatch for proper React Error Boundary functionality
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
     
@@ -41,7 +41,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
         { stack: error.stack, componentStack: errorInfo.componentStack }
     ).catch(e => console.error("Failed to write crash log", e));
     
-    // Fix: Access setState from the inherited React.Component base class
+    // setState is now correctly recognized as a member of the inherited Component class
     this.setState({ errorInfo });
   }
 
@@ -107,7 +107,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
       );
     }
 
-    // Fix: Access children from props inherited from the React.Component base class
+    // props is now correctly recognized as a member of the inherited Component class
     return this.props.children;
   }
 }

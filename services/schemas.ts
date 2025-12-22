@@ -25,7 +25,7 @@ export const CloudProductSchema = z.record(z.any()).transform((raw) => {
 
     // Mapeo flexible
     const barcode = normalized["COD PRODUCTO"] || normalized["CODIGO"] || normalized["SKU"] || normalized["BARCODE"] || normalized["EAN"] || "";
-    const name = normalized["DESCRIPCION"] || normalized["PRODUCTO"] || normalized["NOMBRE"] || normalized["DESCRIP"] || "Sin descripción";
+    const name = normalized["DESCRIPCION"] || normalized["PRODUCTO"] || normalized["NOMBRE"] || normalized["DESCRIP"] || normalized["ITEM"] || "Sin descripción";
     const category = normalized["MUNDO"] || normalized["CATEGORIA"] || normalized["CATEGORY"] || "GENERAL";
     const supplier = normalized["PROVEEDOR"] || normalized["SUPPLIER"] || "";
     const supplierRut = normalized["RUT PROVEEDOR"] || normalized["RUT"] || "";
@@ -39,10 +39,10 @@ export const CloudProductSchema = z.record(z.any()).transform((raw) => {
     };
 }).pipe(z.object({
     barcode: z.string().min(1, "El código es obligatorio"),
-    name: z.string(),
-    category: z.string(),
-    supplier: z.string(),
-    supplierRut: z.string()
+    name: z.string().default("Sin descripción"),
+    category: z.string().default("GENERAL"),
+    supplier: z.string().default(""),
+    supplierRut: z.string().default("")
 }));
 
 // Mantener esquemas de inventario para compatibilidad
