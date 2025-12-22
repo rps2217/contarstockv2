@@ -22,8 +22,8 @@ export class LogiCountDB extends Dexie {
 
   constructor() {
     super('LogiCountDB');
-    // Version bumped to 16 to include retryCount index for background sync logic
-    (this as any).version(16).stores({
+    // Version bumped to 17 to ensure retryCount index is properly created in production
+    (this as any).version(17).stores({
       products: '&barcode, name, syncStatus', 
       sessions: 'id, status, createdAt, erpOrder, logisticsLabel, auditStatus, [erpOrder+createdAt], [status+lastSyncTimestamp]', 
       scans: 'id, sessionId, barcode, timestamp, synced, isIncident, [sessionId+synced], [sessionId+barcode], [sessionId+timestamp]',
