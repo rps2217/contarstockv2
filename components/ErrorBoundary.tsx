@@ -1,5 +1,4 @@
-
-import React, { ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home, Terminal } from 'lucide-react';
 import { logger } from '../services/logger';
 
@@ -16,11 +15,11 @@ interface State {
 /**
  * ErrorBoundary class component to catch JS errors anywhere in their child component tree.
  */
-// Fix: Explicitly extend React.Component from react to resolve state, setState and props accessibility issues
-export class ErrorBoundary extends React.Component<Props, State> {
+// Use Component from react directly to fix state, setState and props accessibility issues
+export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    // Fix: Initialize state correctly on the class instance to resolve 'Property state does not exist'
+    // Initialize state on the class instance correctly
     this.state = {
       hasError: false,
       error: null,
@@ -36,7 +35,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
     };
   }
 
-  // Fix: Ensure lifecycle method name matches the React spec and handle errors gracefully
+  // Lifecycle method to handle errors gracefully and write logs
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
     
@@ -46,7 +45,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
         { stack: error.stack, componentStack: errorInfo.componentStack }
     ).catch(e => console.error("Failed to write crash log", e));
     
-    // Fix: Access setState through the inherited member to resolve 'Property setState does not exist'
+    // Access setState through the inherited member
     this.setState({ errorInfo });
   }
 
@@ -62,7 +61,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
   };
 
   render(): ReactNode {
-    // Fix: Access state through the inherited member to resolve 'Property state does not exist'
+    // Access state through the inherited member
     if (this.state.hasError) {
       const errorMessage = this.state.error 
         ? (typeof this.state.error.message === 'string' ? this.state.error.message : JSON.stringify(this.state.error.message))
@@ -101,7 +100,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
                   <RefreshCw className="w-5 h-5" /> Reiniciar Interfaz
                 </button>
                 <button 
-                   onClick={this.handleClearCacheAndReload}
+                   onClick={handleClearCacheAndReload}
                    className="w-full bg-slate-800 hover:bg-slate-700 text-slate-400 font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95"
                 >
                    <Home className="w-5 h-5" /> Limpieza Profunda
@@ -113,7 +112,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
       );
     }
 
-    // Fix: Access props through the inherited member to resolve 'Property props does not exist'
+    // Access props through the inherited member
     return this.props.children;
   }
 }

@@ -2,7 +2,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { Routes, Route, useNavigate, useLocation, Navigate, Outlet, HashRouter, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Home, Layers, Cloud, Loader2, Database, History } from 'lucide-react';
+import { Home, Layers, Cloud, Loader2, Database, History, Container, Fingerprint } from 'lucide-react';
 import { useAppStore } from './store/useAppStore';
 import { db } from './db';
 import { processSyncQueue } from './services/syncManager';
@@ -15,6 +15,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { InstallPrompt } from './components/InstallPrompt';
 import { SystemStatus } from './components/SystemStatus'; 
 import { Sidebar } from './components/Sidebar'; 
+import { ViewState } from './types';
 
 const Scanner = lazyWithRetry(() => import('./components/Scanner').then(m => ({ default: m.Scanner })));
 const DatabaseView = lazyWithRetry(() => import('./components/Database').then(m => ({ default: m.Database })));
@@ -31,6 +32,17 @@ const LoadingFallback = () => (
     <span className="text-[10px] font-black uppercase tracking-[0.2em]">Inicializando Módulo</span>
   </div>
 );
+
+// Diccionario maestro de navegación para vincular ViewState con metadatos de UI
+const NAV_REGISTRY: Record<string, { label: string, icon: any, path: string }> = {
+    dashboard: { label: 'Inicio', icon: Home, path: '/dashboard' },
+    database: { label: 'Datos', icon: Database, path: '/database' },
+    reports: { label: 'Historial', icon: History, path: '/reports' },
+    consolidated: { label: 'Consol.', icon: Layers, path: '/consolidated' },
+    reception: { label: 'Recep.', icon: Container, path: '/reception' },
+    conciliator: { label: 'Detect.', icon: Fingerprint, path: '/conciliator' },
+    sync: { label: 'Nube', icon: Cloud, path: '/sync' },
+};
 
 const MainLayout = () => {
     const { settings } = useAppStore();
@@ -95,7 +107,6 @@ const AppContent: React.FC = () => {
             <Route path="/sync" element={<SyncManagerUI />} />
         </Route>
         <Route path="/counting/:sessionId" element={<Suspense fallback={<LoadingFallback />}><ScannerWrapper /></Suspense>} />
-        <Route path="/reception" element={<Suspense fallback={<LoadingFallback />}><Reception /></Suspense>} />
     </Routes>
   );
 };
@@ -124,20 +135,24 @@ const ScannerWrapper = () => {
     );
 };
 
-const NAV_ITEMS = [
-    { key: 'dashboard', label: 'Inicio', icon: Home, path: '/dashboard' },
-    { key: 'reports', label: 'Historial', icon: History, path: '/reports' },
-    { key: 'database', label: 'Catálogo', icon: Database, path: '/database' },
-    { key: 'sync', label: 'Sync', icon: Cloud, path: '/sync' },
-];
-
 const MobileNav = ({ currentView }: { currentView: string }) => {
   const navigate = useNavigate();
+  const { settings } = useAppStore();
+  
+  // Obtenemos la configuración del store o usamos un fallback por defecto
+  const activeNavKeys = settings.mobileNavConfig && settings.mobileNavConfig.length > 0 
+    ? settings.mobileNavConfig 
+    : ['dashboard', 'reports', 'database', 'sync'];
+
+  // Construimos los items finales basados en el registro maestro
+  const navItems = activeNavKeys
+    .map(key => ({ key, ...NAV_REGISTRY[key] }))
+    .filter(item => !!item.label); // Limpieza de seguridad
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-slate-200 ios-safe-pb shadow-[0_-10px_40px_rgb(0,0,0,0.05)]">
         <div className="flex justify-around items-center h-16 px-2 pb-safe">
-            {NAV_ITEMS.map((item) => {
+            {navItems.map((item) => {
                 const isActive = currentView === item.key;
                 const Icon = item.icon;
                 return (
