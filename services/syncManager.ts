@@ -10,8 +10,8 @@ import { CloudInventoryRowSchema, CloudProductSchema, CloudReceptionRowSchema } 
 
 export { SYNC_ENGINE_VERSION } from './constants';
 
-// CONFIGURACIÓN PRO
-const BATCH_SIZE = 50; // Items por petición API
+const BATCH_SIZE = 50; 
+let isSyncingInProgress = false;
 
 export interface UploadGroup {
     erpOrder: string;
@@ -22,23 +22,13 @@ export interface UploadGroup {
     type: 'inventory' | 'reception';
 }
 
-// Mutex para evitar colisiones
-let isSyncingInProgress = false;
-
-// ==========================================
-// 1. GESTIÓN DE CARGA (Local -> Cloud)
-// ==========================================
-
 export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
     const groups: Record<string, UploadGroup> = {};
-
-    // 1. Escaneos de Inventario (synced = 0)
     const unsyncedScans = await db.scans.where('synced').equals(0).toArray();
     
     if (unsyncedScans.length > 0) {
         const sessionIds = Array.from(new Set(unsyncedScans.map(s => s.sessionId)));
         const sessions = await db.sessions.where('id').anyOf(sessionIds).toArray();
-        // Fix: Explicitly type sessionMap to avoid 'unknown' type errors
         const sessionMap = new Map<string, CountingSession>(sessions.map(s => [s.id, s]));
 
         for (const scan of unsyncedScans) {
@@ -65,8 +55,6 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
         }
     }
 
-    // 2. Drafts de Recepción
-    // Fix: Add explicit type annotation to pendingDrafts to resolve 'unknown' property access errors
     const pendingDrafts: CountingSession[] = await db.sessions
         .where('status').equals('draft')
         .and(s => !s.lastSyncTimestamp)
@@ -87,9 +75,6 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
     return Object.values(groups);
 };
 
-/**
- * Procesa la subida de un grupo con lógica de fragmentación (Chunking)
- */
 export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: string) => void): Promise<void> => {
     if (isSyncingInProgress) throw new Error("Ya hay una sincronización en curso.");
     isSyncingInProgress = true;
@@ -103,17 +88,11 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
             return;
         }
 
-        // Inventario: Procesar sesión por sesión para integridad
         for (const sessionId of group.sessionIds) {
             const session = await db.sessions.get(sessionId);
             if (!session) continue;
-
             onProgress?.(`Procesando bulto ${session.logisticsLabel}...`);
-            
-            // Subir sesión por fragmentos si es necesario
             await syncToAppSheet(session);
-            
-            // Timestamp de última actividad exitosa
             await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
         }
     } finally {
@@ -121,17 +100,11 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
     }
 };
 
-// ==========================================
-// 2. MOTOR DE AUTO-SYNC (Background)
-// ==========================================
-
 export const processSyncQueue = async () => {
     if (isSyncingInProgress || !navigator.onLine) return;
-
     try {
         const pendingGroups = await getPendingUploadGroups();
         if (pendingGroups.length > 0) {
-            logger.info('AutoSync', `Detectados ${pendingGroups.length} bloques pendientes.`);
             for (const group of pendingGroups) {
                 try {
                     await performBatchUpload(group);
@@ -145,13 +118,21 @@ export const processSyncQueue = async () => {
     }
 };
 
-// ==========================================
-// 3. DESCARGA Y RESTAURACIÓN (Cloud -> Local)
-// ==========================================
-
+/**
+ * IMPORTACIÓN DE PRODUCTOS (CORREGIDA)
+ */
 export const importProductsFromAppSheet = async (): Promise<number> => {
+    logger.info('Sync', 'Iniciando descarga de catálogo maestro...');
     const rawRows = await fetchProductsFromCloud();
+    
+    if (!rawRows || rawRows.length === 0) {
+        logger.warn('Sync', 'La nube devolvió 0 productos o tabla vacía.');
+        return 0;
+    }
+
     const validProducts: Product[] = [];
+    let rejectedCount = 0;
+
     for (const row of rawRows) {
         const result = CloudProductSchema.safeParse(row);
         if (result.success) {
@@ -164,11 +145,22 @@ export const importProductsFromAppSheet = async (): Promise<number> => {
                 supplierRut: p.supplierRut,
                 syncStatus: 'synced'
             });
+        } else {
+            rejectedCount++;
+            if (rejectedCount === 1) {
+                console.warn("[Sync] Ejemplo de fila rechazada:", row, result.error.format());
+            }
         }
     }
+
     if (validProducts.length > 0) {
         await productService.saveProductBatch(validProducts);
+        logger.success('Sync', `Importación completa: ${validProducts.length} procesados, ${rejectedCount} inválidos.`);
+    } else {
+        logger.error('Sync', 'No se pudo validar ningún producto. Verifique nombres de columnas.');
+        throw new Error("Formato de tabla incompatible con el esquema.");
     }
+    
     return validProducts.length;
 };
 
@@ -182,7 +174,6 @@ export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange
 
   if (validRows.length === 0) return { sessions: 0, items: 0 };
 
-  // Agrupar por Firma Única (ERP + ETIQUETA)
   const sessionsMap = new Map<string, typeof validRows>();
   validRows.forEach(row => {
     const key = generateCompositeKey(row[SHEET_COLUMNS.ERP_ORDER], row[SHEET_COLUMNS.LABEL]);
@@ -198,7 +189,6 @@ export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange
     const erp = firstRow[SHEET_COLUMNS.ERP_ORDER];
     const label = firstRow[SHEET_COLUMNS.LABEL] || "GENERAL";
     
-    // Buscar si ya existe localmente
     let localSession = await db.sessions.where('erpOrder').equals(erp)
                                .and(s => normalizeKey(s.logisticsLabel) === normalizeKey(label))
                                .first();
@@ -206,8 +196,6 @@ export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange
     if (options?.skipExisting && localSession) continue;
 
     const sessionId = localSession ? localSession.id : generateUUID();
-    
-    // Limpiar escaneos previos de esta sesión para evitar duplicados en restauración
     await db.scans.where('sessionId').equals(sessionId).delete();
 
     const scansToAdd: ScanRecord[] = sessionRows.map(row => ({

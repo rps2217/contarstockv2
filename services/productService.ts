@@ -5,74 +5,35 @@ import Papa from 'papaparse';
 import { sanitizeBarcode } from './utils';
 import { validateProduct } from './validator';
 
-// --- PRODUCT CRUD (PURE LOCAL) ---
-
 export const saveProduct = async (product: Product) => {
   const cleanBarcode = sanitizeBarcode(product.barcode);
-  
-  // Validation Guard
   const validation = validateProduct({ ...product, barcode: cleanBarcode });
-  if (!validation.valid) {
-      throw new Error(`Error de validación: ${validation.error}`);
-  }
+  if (!validation.valid) throw new Error(`Error: ${validation.error}`);
   
   const existing = await db.products.get(cleanBarcode);
   let syncStatus: 'add' | 'edit' | 'synced' = 'add';
+  if (existing) syncStatus = existing.syncStatus === 'add' ? 'add' : 'edit';
 
-  if (existing) {
-      syncStatus = existing.syncStatus === 'add' ? 'add' : 'edit';
-  }
-
-  const cleanProduct: Product = { 
-      ...product, 
-      barcode: cleanBarcode,
-      syncStatus: syncStatus
-  };
-  await db.products.put(cleanProduct);
+  await db.products.put({ ...product, barcode: cleanBarcode, syncStatus });
 };
 
 export const saveProductBatch = async (products: Product[]) => {
-    const validProducts: Product[] = [];
-    
-    // Filter and sanitize
-    for (const p of products) {
-        const cleanBarcode = sanitizeBarcode(p.barcode);
-        const candidate = { ...p, barcode: cleanBarcode };
-        
-        if (validateProduct(candidate).valid) {
-            validProducts.push(candidate);
-        }
-    }
-
-    if (validProducts.length > 0) {
-        await db.products.bulkPut(validProducts);
-    }
+    const valid = products.map(p => ({ ...p, barcode: sanitizeBarcode(p.barcode) }))
+                         .filter(p => validateProduct(p).valid);
+    if (valid.length > 0) await db.products.bulkPut(valid);
 };
 
-/**
- * Creates a new product record (alias) based on an existing one.
- * Useful when physically scanning a barcode that differs from the ERP/Database one,
- * but represents the same item.
- */
 export const createProductAlias = async (newBarcode: string, originalBarcode: string, fallbackName: string) => {
-    const cleanNew = sanitizeBarcode(newBarcode);
-    const cleanOriginal = sanitizeBarcode(originalBarcode);
-
-    // 1. Try to find the "Master" product in our DB to copy full details (Category, Supplier, etc)
-    const masterProduct = await db.products.get(cleanOriginal);
-
+    const masterProduct = await db.products.get(sanitizeBarcode(originalBarcode));
     const newProduct: Product = {
-        barcode: cleanNew,
-        name: masterProduct ? masterProduct.name : fallbackName, // Use DB name if avail, else Excel name
+        barcode: sanitizeBarcode(newBarcode),
+        name: masterProduct ? masterProduct.name : fallbackName,
         category: masterProduct?.category || 'ALIAS_DETECTADO',
         supplier: masterProduct?.supplier || '',
         supplierRut: masterProduct?.supplierRut || '',
-        price: masterProduct?.price,
-        syncStatus: 'add' // Mark as new so it uploads to Cloud later
+        syncStatus: 'add'
     };
-
     await saveProduct(newProduct);
-    return !!masterProduct; // Return true if we found a master record to clone
 };
 
 export const markProductsAsSynced = async (barcodes: string[]) => {
@@ -88,64 +49,44 @@ export const deleteAllProducts = async () => {
   await db.products.clear();
 };
 
-// --- BULK OPERATIONS (LOCAL CSV) ---
-
+/**
+ * IMPORTADOR MASIVO (Optimizado para el formato del usuario)
+ */
 export const bulkImportProducts = async (csvText: string): Promise<number> => {
     return new Promise((resolve, reject) => {
         Papa.parse(csvText, {
             header: true,
             skipEmptyLines: true,
-            worker: true, // PERFORMANCE: Run in background thread
+            dynamicTyping: true,
+            delimiter: "", // Auto-detect (ahora detectará tu ';')
             transformHeader: (h) => h.trim().toUpperCase(),
             complete: async (results) => {
                 try {
                     const products: Product[] = [];
-                    let errors = 0;
-                    
-                    // Processing logic inside the completion callback
-                    // Note: We cannot use async/await comfortably inside the forEach if we want speed,
-                    // so we process data first then bulk insert.
-                    
                     for (const row of results.data as any[]) {
-                        const rawBarcode = row['COD PRODUCTO'] || row['CODIGO'] || row['codigo'] || row['SKU'] || row['BARCODE'] || row['ID'];
-                        const name = row['DESCRIPCION'] || row['descripcion'] || row['NOMBRE'] || row['PRODUCTO'] || row['NAME'];
-                        const category = row['MUNDO'] || row['mundo'] || row['CATEGORIA'] || row['CATEGORY'] || '';
-                        const supplier = row['PROVEEDOR'] || row['proveedor'] || row['SUPPLIER'] || '';
-                        const supplierRut = row['RUT PROVEEDOR'] || row['rut proveedor'] || row['RUT'] || '';
+                        // Mapeo exacto según tu hoja
+                        const rawBarcode = row['COD PRODUCTO'] || row['CODIGO'] || row['SKU'];
+                        const name = row['DESCRIPCION'] || row['PRODUCTO'];
+                        const category = row['MUNDO'] || row['CATEGORIA'] || '';
+                        const supplier = row['PROVEEDOR'] || '';
+                        const rut = row['RUT PROVEEDOR'] || '';
 
                         if (rawBarcode && name) {
-                            const p: Product = {
+                            products.push({
                                 barcode: sanitizeBarcode(String(rawBarcode)),
                                 name: String(name).trim(),
                                 category: String(category).trim(),
                                 supplier: String(supplier).trim(),
-                                supplierRut: String(supplierRut).trim(),
+                                supplierRut: String(rut).trim(),
                                 syncStatus: 'synced'
-                            };
-                            
-                            // Simple validation logic duplicated here to avoid import issues inside workers if we moved this entirely
-                            if (p.barcode.length > 0 && p.name.length > 0) {
-                                products.push(p);
-                            } else {
-                                errors++;
-                            }
+                            });
                         }
                     }
-
-                    if (products.length > 0) {
-                        // Batch insert is efficient
-                        await db.products.bulkPut(products);
-                    }
-                    
-                    console.log(`Import: ${products.length} valid, ${errors} invalid skipped.`);
+                    if (products.length > 0) await db.products.bulkPut(products);
                     resolve(products.length);
-                } catch (err) {
-                    reject(err);
-                }
+                } catch (err) { reject(err); }
             },
-            error: (err: any) => {
-                reject(err);
-            }
+            error: (err: any) => reject(err)
         });
     });
 };

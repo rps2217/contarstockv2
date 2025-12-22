@@ -22,12 +22,12 @@ export class LogiCountDB extends Dexie {
 
   constructor() {
     super('LogiCountDB');
-    // Using type assertion to any to fix error: Property 'version' does not exist on type 'LogiCountDB'
-    (this as any).version(15).stores({
+    // Version bumped to 16 to include retryCount index for background sync logic
+    (this as any).version(16).stores({
       products: '&barcode, name, syncStatus', 
       sessions: 'id, status, createdAt, erpOrder, logisticsLabel, auditStatus, [erpOrder+createdAt], [status+lastSyncTimestamp]', 
       scans: 'id, sessionId, barcode, timestamp, synced, isIncident, [sessionId+synced], [sessionId+barcode], [sessionId+timestamp]',
-      syncQueue: '++id, status, createdAt',
+      syncQueue: '++id, status, createdAt, retryCount',
       expectedOrders: 'id, internalId',
       logs: '++id, level, module, timestamp'
     });

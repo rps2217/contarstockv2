@@ -57,7 +57,6 @@ export const sendToAppSheet = async (
 
           if (!response.ok) {
             const errorBody = await response.text();
-            // Si es un error de servidor (5xx) o rate limiting (429), reintentar
             if (response.status >= 500 || response.status === 429) {
                 lastError = new Error(`Servidor ocupado (${response.status})`);
                 continue; 
@@ -68,9 +67,16 @@ export const sendToAppSheet = async (
           const text = await response.text();
           if (!text) return { success: true };
 
-          const json = JSON.parse(text);
+          let json;
+          try {
+              json = JSON.parse(text);
+          } catch (e) {
+              // Si la respuesta no es JSON pero el status fue OK, asumimos éxito para algunas acciones
+              if (payload.Action === 'Find') throw new Error("La respuesta de búsqueda no es un JSON válido.");
+              return { success: true };
+          }
 
-          // Silent Failure detection
+          // CORRECCIÓN: Solo validar Rows en operaciones de ESCRITURA
           if ((payload.Action === 'Add' || payload.Action === 'Edit')) {
               if (!json.Rows || !Array.isArray(json.Rows) || json.Rows.length === 0) {
                   throw new Error("La API no confirmó la escritura de filas. Verifique permisos.");
@@ -84,7 +90,7 @@ export const sendToAppSheet = async (
           lastError = error;
           if (error.name === 'AbortError') {
               console.error("[Sync] Timeout en intento", attempt);
-              continue; // Reintentar en timeout
+              continue; 
           }
           if (attempt === maxRetries) throw error;
       }

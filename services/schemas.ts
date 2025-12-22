@@ -1,9 +1,9 @@
+
 import { z } from 'zod';
 import { SHEET_COLUMNS } from './constants';
 
 /**
  * Helper to coerce various input types into a clean String.
- * Handles numbers, nulls, undefined, and auto-trims.
  */
 const cleanString = z.union([z.string(), z.number(), z.null(), z.undefined()])
     .transform((val) => {
@@ -12,57 +12,52 @@ const cleanString = z.union([z.string(), z.number(), z.null(), z.undefined()])
     });
 
 /**
- * Helper to coerce inputs into a Number.
- * Handles strings with commas (European/LatAm format), empty strings, etc.
+ * NORMALIZADOR UNIVERSAL DE PRODUCTOS (Optimizado para encabezados específicos)
  */
-const cleanNumber = z.union([z.string(), z.number(), z.null(), z.undefined()])
-    .transform((val) => {
-        if (val === null || val === undefined || val === '') return 0;
-        if (typeof val === 'number') return val;
-        // Replace comma with dot if necessary and parse
-        const clean = val.replace(/,/g, '.').replace(/[^0-9.-]/g, '');
-        const num = parseFloat(clean);
-        return isNaN(num) ? 0 : num;
+export const CloudProductSchema = z.record(z.any()).transform((raw) => {
+    const normalized: Record<string, any> = {};
+    Object.keys(raw).forEach(k => {
+        normalized[k.trim().toUpperCase()] = raw[k];
     });
 
-// --- 1. PRODUCT SCHEMA (Master Data) ---
-export const CloudProductSchema = z.object({
-    "COD PRODUCTO": cleanString,
-    "DESCRIPCION": cleanString.default("Sin Descripción"),
-    "MUNDO": cleanString.default("GENERAL"),
-    "PROVEEDOR": cleanString.default(""),
-    "RUT PROVEEDOR": cleanString.default(""),
-}).transform((data) => ({
-    barcode: data["COD PRODUCTO"],
-    name: data["DESCRIPCION"],
-    category: data["MUNDO"],
-    supplier: data["PROVEEDOR"],
-    supplierRut: data["RUT PROVEEDOR"]
+    // Mapeo basado exactamente en las columnas del usuario
+    const barcode = normalized["COD PRODUCTO"] || normalized["CODIGO"] || normalized["SKU"] || normalized["BARCODE"] || "";
+    const name = normalized["DESCRIPCION"] || normalized["PRODUCTO"] || normalized["NOMBRE"] || "Producto sin nombre";
+    const category = normalized["MUNDO"] || normalized["CATEGORIA"] || "GENERAL";
+    const supplier = normalized["PROVEEDOR"] || normalized["SUPPLIER"] || "";
+    const supplierRut = normalized["RUT PROVEEDOR"] || normalized["RUT"] || "";
+
+    return {
+        barcode: String(barcode).trim(),
+        name: String(name).trim(),
+        category: String(category).trim(),
+        supplier: String(supplier).trim(),
+        supplierRut: String(supplierRut).trim()
+    };
+}).pipe(z.object({
+    barcode: z.string().min(1, "El código es obligatorio"),
+    name: z.string(),
+    category: z.string(),
+    supplier: z.string(),
+    supplierRut: z.string()
 }));
 
-// --- 2. INVENTORY ROW SCHEMA (Transactional Data) ---
+// Mantener esquemas de inventario para compatibilidad
 export const CloudInventoryRowSchema = z.object({
     [SHEET_COLUMNS.ERP_ORDER]: cleanString,
     [SHEET_COLUMNS.LABEL]: cleanString,
     [SHEET_COLUMNS.BARCODE]: cleanString,
-    [SHEET_COLUMNS.QUANTITY]: cleanNumber,
+    [SHEET_COLUMNS.QUANTITY]: z.coerce.number().default(0),
     [SHEET_COLUMNS.DATE]: cleanString,
-    [SHEET_COLUMNS.MONTH]: cleanNumber.optional(),
-    [SHEET_COLUMNS.YEAR]: cleanNumber.optional(),
+    [SHEET_COLUMNS.MONTH]: z.coerce.number().optional(),
+    [SHEET_COLUMNS.YEAR]: z.coerce.number().optional(),
     [SHEET_COLUMNS.PRODUCT_NAME]: cleanString.optional(),
     [SHEET_COLUMNS.INCIDENT]: cleanString.optional(),
 });
 
-// --- 3. RECEPTION ROW SCHEMA (Logistics Data) ---
-// Ajustado según requerimiento: ID_RECEPCION, FECHA_HORA, ETIQUETA, ESTADO
 export const CloudReceptionRowSchema = z.object({
     "ID_RECEPCION": cleanString,
     "FECHA_HORA": cleanString,
     "ETIQUETA": cleanString,
     "ESTADO": cleanString,
-    "ESTADO_AUDITORIA": cleanString.optional(), // Opcional para modo detective
 });
-
-export type CloudProduct = z.infer<typeof CloudProductSchema>;
-export type CloudInventoryRow = z.infer<typeof CloudInventoryRowSchema>;
-export type CloudReceptionRow = z.infer<typeof CloudReceptionRowSchema>;
