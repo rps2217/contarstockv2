@@ -15,7 +15,7 @@ interface State {
 /**
  * ErrorBoundary class component to catch JS errors anywhere in their child component tree.
  */
-export class ErrorBoundary extends React.Component<Props, State> {
+export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
     error: null,

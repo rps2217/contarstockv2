@@ -32,6 +32,10 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [draftSessionId, setDraftSessionId] = useState<string | null>(null);
 
+  // Referencias para manejo de buffer de escáner/teclado rápido
+  const keyBuffer = useRef('');
+  const lastKeyTime = useRef(0);
+
   useEffect(() => {
       const checkDraft = async () => {
           if (!labelId || labelId.length < 3) { setDraftSessionId(null); return; }
@@ -68,11 +72,6 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
       }
   };
 
-  const handleNumericInputChange = (setter: (val: string) => void, val: string) => {
-      setter(val.replace(/[^0-9-]/g, ''));
-      setError('');
-  };
-
   const handleKeypadInput = (char: string) => {
       if (activeKeypadField === 'erp') setErpOrder(prev => prev + char);
       else if (activeKeypadField === 'label') setLabelId(prev => prev + char);
@@ -84,10 +83,17 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
       else if (activeKeypadField === 'label') setLabelId(prev => prev.slice(0, -1));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!erpOrder.trim() || !labelId.trim()) { setError('Por favor complete ambos campos obligatorios.'); return; }
-      if (isVerifiedMode && expectedItems.length === 0) { setError('En Modo Verificado debe cargar al menos un documento.'); return; }
+  const handleSubmit = async (e?: React.FormEvent) => {
+      if (e) e.preventDefault();
+      
+      if (!erpOrder.trim() || !labelId.trim()) { 
+          setError('Por favor complete ambos campos obligatorios.'); 
+          return; 
+      }
+      if (isVerifiedMode && expectedItems.length === 0) { 
+          setError('En Modo Verificado debe cargar al menos un documento.'); 
+          return; 
+      }
 
       try {
           let session: CountingSession;
@@ -112,6 +118,70 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
           setError(`Error: ${err.message}`);
       }
   };
+
+  // --- GESTIÓN DE TECLADO FÍSICO / ESCÁNER ---
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+        if (!isOpen) return;
+
+        // Ignorar eventos si el foco está en un input nativo editable (aunque aquí son readOnly)
+        const target = e.target as HTMLElement;
+        if (target.tagName === 'INPUT' && !(target as HTMLInputElement).readOnly) return;
+
+        const now = Date.now();
+        const char = e.key;
+
+        // Detección de escáner (Ráfaga rápida)
+        if (now - lastKeyTime.current < 50) {
+            // Es parte de una ráfaga
+        } else {
+            // Inicio de nueva secuencia manual o lenta
+            if (char.length === 1) keyBuffer.current = ''; 
+        }
+        lastKeyTime.current = now;
+
+        // ENTER: Procesar buffer o enviar formulario
+        if (char === 'Enter') {
+            e.preventDefault();
+            // Si hay buffer de escáner (largo > 1), lo usamos
+            if (keyBuffer.current.length > 1) {
+                if (activeKeypadField === 'label') setLabelId(sanitizeBarcode(keyBuffer.current));
+                else setErpOrder(sanitizeBarcode(keyBuffer.current));
+                keyBuffer.current = '';
+                // Opcional: Cambiar foco automáticamente
+                if (activeKeypadField === 'label') setActiveKeypadField('erp');
+            } else {
+                // Enter manual: cambiar campo o enviar
+                if (activeKeypadField === 'label' && labelId) setActiveKeypadField('erp');
+                else if (erpOrder && labelId) handleSubmit();
+            }
+            return;
+        }
+
+        // BACKSPACE
+        if (char === 'Backspace') {
+            handleKeypadDelete();
+            return;
+        }
+
+        // TAB
+        if (char === 'Tab') {
+            e.preventDefault();
+            setActiveKeypadField(prev => prev === 'label' ? 'erp' : 'label');
+            return;
+        }
+
+        // CARACTERES ALFANUMÉRICOS
+        // Permitimos letras y números, ignoramos teclas de control (F1, Shift, etc)
+        if (char.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+            handleKeypadInput(char.toUpperCase());
+            keyBuffer.current += char;
+        }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [isOpen, activeKeypadField, labelId, erpOrder]); // Dependencias críticas para el closure
 
   if (!isOpen) return null;
 
@@ -237,9 +307,9 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
                     )}
                 </div>
 
-                {/* TECLADO INTEGRADO */}
+                {/* TECLADO INTEGRADO (Móvil) */}
                 {showKeypad && (
-                    <div className="pt-2 pb-2">
+                    <div className="pt-2 pb-2 md:hidden">
                         <NumericKeypad isOpen={showKeypad} embedded={true} onInput={handleKeypadInput} onDelete={handleKeypadDelete} />
                     </div>
                 )}
@@ -254,7 +324,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
             {/* Footer Action */}
             <div className="p-4 bg-white border-t border-slate-100 shrink-0 pb-8 md:pb-6 z-20 shadow-[0_-10px_20px_rgba(0,0,0,0.02)]">
                 <button 
-                    onClick={handleSubmit}
+                    onClick={(e) => handleSubmit(e)}
                     disabled={isParsing}
                     className="w-full bg-slate-900 hover:bg-slate-800 disabled:bg-slate-300 text-white font-black text-base py-5 rounded-2xl shadow-xl flex items-center justify-center gap-3 transition-all active:scale-[0.98] uppercase tracking-widest"
                 >
