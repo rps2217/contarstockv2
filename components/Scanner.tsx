@@ -1,11 +1,12 @@
 
 import React, { useMemo, useRef, useEffect, useState } from 'react';
-import { X, ChevronLeft, Keyboard as KeyboardIcon, Hash, History as HistoryIcon } from 'lucide-react';
+import { X, ChevronLeft, Keyboard as KeyboardIcon, Hash, History as HistoryIcon, Trash2 } from 'lucide-react';
 import { CountingSession } from '../types';
 import { ExpirationModal } from './ExpirationModal';
 import { useScanner } from '../hooks/useScanner';
 import { NumericKeypad } from './NumericKeypad';
 import { CameraScanner } from './CameraScanner';
+import { ProductForm } from './database/ProductForm';
 import * as settingsService from '../services/settings';
 
 // Sub-componentes modularizados
@@ -95,7 +96,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
             </div>
         </div>
 
-        {/* Lado Derecho: Historial (Solo Desktop o Pantallas Anchas) */}
+        {/* Lado Derecho: Historial */}
         <div className="hidden lg:flex lg:col-span-4 bg-white border-l border-slate-200 flex-col overflow-hidden">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                 <h3 className="font-black text-slate-800 text-xs uppercase tracking-widest flex items-center gap-3">
@@ -118,9 +119,21 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
         </div>
       </div>
 
-      {/* --- MODALES DE INTERACCIÓN --- */}
+      {/* --- MODALES --- */}
 
-      {/* Entrada Manual de SKU (REDISEÑADA) */}
+      {state.isProductFormOpen && (
+          <ProductForm 
+            isOpen={state.isProductFormOpen} 
+            onClose={() => state.setIsProductFormOpen(false)} 
+            initialData={state.pendingScanCode ? { barcode: state.pendingScanCode, name: '', category: '' } : null}
+            onSaveSuccess={() => {
+                state.setIsProductFormOpen(false);
+                // Una vez registrado, procedemos con el flujo normal de vencimiento
+                state.setShowExpirationModal(true);
+            }}
+          />
+      )}
+
       {state.manualMode && (
           <div className="fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-md flex items-end md:items-center justify-center p-4 animate-in fade-in duration-300">
               <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 animate-in slide-in-from-bottom-10">
@@ -148,7 +161,6 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
           </div>
       )}
 
-      {/* Selector de Multiplicador */}
       {state.isMultiplierOpen && (
           <div className="fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-md flex items-end md:items-center justify-center p-4 animate-in fade-in duration-200">
               <div className="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl p-8 animate-in slide-in-from-bottom-10">
@@ -157,7 +169,6 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
                           <Hash className="w-8 h-8" />
                       </div>
                       <h3 className="text-2xl font-black uppercase tracking-tighter">Multiplicador</h3>
-                      <p className="text-slate-400 text-xs font-bold uppercase mt-1">Afecta al siguiente escaneo</p>
                   </div>
                   
                   <div className="grid grid-cols-3 gap-3 mb-8">
@@ -172,12 +183,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
                       ))}
                   </div>
 
-                  <button 
-                    onClick={() => state.setIsMultiplierOpen(false)}
-                    className="w-full bg-slate-900 text-white font-black h-14 rounded-xl uppercase tracking-widest text-xs shadow-xl active:scale-95 transition-all"
-                  >
-                    Confirmar x{state.multiplier}
-                  </button>
+                  <button onClick={() => state.setIsMultiplierOpen(false)} className="w-full bg-slate-900 text-white font-black h-14 rounded-xl uppercase tracking-widest text-xs">Cerrar</button>
               </div>
           </div>
       )}
@@ -187,11 +193,30 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
       {state.showConfirmModal && (
           <div className="fixed inset-0 bg-slate-900/70 z-[110] flex items-center justify-center p-6 backdrop-blur-md animate-in fade-in duration-300">
               <div className="bg-white p-10 rounded-[3rem] shadow-2xl text-center max-w-sm border border-slate-100 animate-in zoom-in-95">
-                  <h3 className="text-2xl font-black mb-2 uppercase tracking-tighter">Pausa en Conteo</h3>
-                  <p className="text-slate-400 text-sm mb-8 font-medium">¿Deseas finalizar la sesión actual o continuar escaneando?</p>
+                  <h3 className="text-2xl font-black mb-2 uppercase tracking-tighter text-slate-900">Pausa en Conteo</h3>
+                  <p className="text-slate-500 text-xs font-medium mb-8 leading-relaxed">¿Deseas finalizar la sesión actual o descartar todo lo escaneado?</p>
+                  
                   <div className="flex flex-col gap-3">
-                      <button onClick={onCloseSession} className="bg-blue-600 hover:bg-blue-700 text-white h-16 rounded-2xl font-black shadow-lg shadow-blue-100 transition-all active:scale-95 uppercase text-xs tracking-widest">Finalizar y Salir</button>
-                      <button onClick={() => state.setShowConfirmModal(false)} className="text-slate-400 font-bold hover:text-slate-900 py-3 transition-colors uppercase text-[10px] tracking-[0.2em]">Volver al Escáner</button>
+                      <button 
+                        onClick={onCloseSession} 
+                        className="bg-blue-600 hover:bg-blue-700 text-white h-16 rounded-2xl font-black shadow-lg uppercase text-xs tracking-widest transition-all active:scale-95"
+                      >
+                        Finalizar y Salir
+                      </button>
+                      
+                      <button 
+                        onClick={actions.handleDiscard} 
+                        className="bg-rose-50 hover:bg-rose-100 text-rose-600 h-14 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all flex items-center justify-center gap-2"
+                      >
+                        <Trash2 className="w-4 h-4" /> Descartar Conteo
+                      </button>
+
+                      <button 
+                        onClick={() => state.setShowConfirmModal(false)} 
+                        className="text-slate-400 font-bold py-4 uppercase text-[10px] tracking-[0.2em] mt-2 hover:text-slate-600 transition-colors"
+                      >
+                        Volver al Escáner
+                      </button>
                   </div>
               </div>
           </div>

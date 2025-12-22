@@ -29,12 +29,11 @@ export const useScanner = (
     const [showExpirationModal, setShowExpirationModal] = useState(false);
     const [isWindowFocused, setIsWindowFocused] = useState(true);
     const [isIdle, setIsIdle] = useState(false);
+    const [isProductFormOpen, setIsProductFormOpen] = useState(false);
     const idleTimerRef = useRef<any>(null);
 
-    // Caché de fechas para evitar prompts repetitivos
     const sessionDatesCache = useRef<Map<string, {mm?: number, yyyy?: number}>>(new Map());
 
-    // Estados optimistas: La verdad visual inmediata
     const [optimisticActiveQty, setOptimisticActiveQty] = useState(0);
     const [optimisticTotalQty, setOptimisticTotalQty] = useState(0);
     const [optimisticUniqueSkus, setOptimisticUniqueSkus] = useState(0);
@@ -65,7 +64,6 @@ export const useScanner = (
         };
     }, [resetIdleTimer]);
 
-    // Queries reactivas (La verdad de la DB)
     const recentScans = useLiveQuery(
         () => db.scans.where('[sessionId+timestamp]').between([session.id, Dexie.minKey], [session.id, Dexie.maxKey]).reverse().limit(20).toArray(), 
         [session.id]
@@ -78,10 +76,9 @@ export const useScanner = (
         const scansOfProduct = await db.scans.where('[sessionId+barcode]').equals([session.id, lastScan.barcode]).toArray();
         const totalQty = scansOfProduct.reduce((acc, s) => acc + s.quantity, 0);
         const product = await db.products.get(lastScan.barcode);
-        return { totalQty, name: product?.name || 'Producto Desconocido', isUnknown: !product };
+        return { totalQty, name: product?.name || `PENDIENTE: ${lastScan.barcode}`, isUnknown: !product };
     }, [lastScan], { totalQty: 0, name: '', isUnknown: false });
 
-    // Sincronización de estado optimista con realidad de DB
     useEffect(() => {
         if (activeProductStats) setOptimisticActiveQty(activeProductStats.totalQty);
     }, [activeProductStats.totalQty, lastScan?.barcode]);
@@ -101,14 +98,10 @@ export const useScanner = (
     const completeScan = useCallback(async (code: string, mm?: number, yyyy?: number) => {
         try {
             const qtyToAdd = multiplier > 0 ? multiplier : 1;
-            
-            // 1. UPDATE UI INSTANTLY (Optimistic)
             setOptimisticActiveQty(prev => prev + qtyToAdd);
             setOptimisticTotalQty(prev => prev + qtyToAdd);
             
-            // 2. PERSIST TO DB
             const newScan = await sessionService.addScan(session.id, code, qtyToAdd, mm, yyyy);
-            
             if (mm || yyyy) sessionDatesCache.current.set(code, { mm, yyyy });
 
             setLastScanId(newScan.id);
@@ -127,7 +120,6 @@ export const useScanner = (
             logger.error('Scanner', 'Fallo al persistir escaneo', err);
             setFeedback('error'); 
             SoundFX.play('error'); 
-            // Revert optimistic if critical error
             setOptimisticTotalQty(sessionStats.totalQty);
         }
     }, [session.id, multiplier, resetIdleTimer, sessionStats.totalQty]);
@@ -137,9 +129,10 @@ export const useScanner = (
         if (!cleanCode) return;
         
         const now = Date.now();
-        // Debounce de hardware (evita lecturas duplicadas por rebote de gatillo)
         if (cleanCode === lastProcessedScan.current.code && (now - lastProcessedScan.current.time < 350)) return;
         lastProcessedScan.current = { code: cleanCode, time: now };
+        
+        const settings = getSettings();
         
         try {
             let existingDate = sessionDatesCache.current.get(cleanCode);
@@ -156,8 +149,30 @@ export const useScanner = (
                 return; 
             } 
             
-            const masterProduct = await db.products.get(cleanCode);
-            setPendingProductName(masterProduct?.name || `NUEVO: ${cleanCode}`);
+            let masterProduct = await db.products.get(cleanCode);
+            
+            // LÓGICA DE NO INTERRUPCIÓN:
+            if (!masterProduct && settings.autoRegisterUnknown) {
+                // Registrar automáticamente como pendiente para no detener el flujo
+                const placeholder: Product = {
+                    barcode: cleanCode,
+                    name: `PENDIENTE: ${cleanCode}`,
+                    category: 'AUTO-REGISTRO',
+                    syncStatus: 'add'
+                };
+                await productService.saveProduct(placeholder);
+                masterProduct = placeholder;
+            }
+
+            if (!masterProduct) {
+                // Si llegamos aquí es porque autoRegisterUnknown está desactivado
+                setPendingScanCode(cleanCode);
+                setLastScanId(null); 
+                await sessionService.addScan(session.id, cleanCode, 0); 
+                return;
+            }
+
+            setPendingProductName(masterProduct.name);
             setPendingScanCode(cleanCode);
             setShowExpirationModal(true);
             SoundFX.play('success');
@@ -189,7 +204,7 @@ export const useScanner = (
 
     return {
         state: {
-            feedback, manualMode, setManualMode, manualInput, setManualInput, showConfirmModal, setShowConfirmModal, showExpirationModal, isMultiplierOpen, setIsMultiplierOpen, multiplier, setMultiplier, isCameraOpen, setIsCameraOpen, lastScanId, isWindowFocused, isIdle, optimisticActiveQty, optimisticTotalQty, optimisticUniqueSkus, pendingProductName
+            feedback, manualMode, setManualMode, manualInput, setManualInput, showConfirmModal, setShowConfirmModal, showExpirationModal, setShowExpirationModal, isMultiplierOpen, setIsMultiplierOpen, multiplier, setMultiplier, isCameraOpen, setIsCameraOpen, lastScanId, isWindowFocused, isIdle, optimisticActiveQty, optimisticTotalQty, optimisticUniqueSkus, pendingProductName, isProductFormOpen, setIsProductFormOpen, pendingScanCode
         },
         data: { sessionStats, activeProductStats, lastScan, recentScans, expectedForActive: null },
         actions: { 
@@ -204,22 +219,12 @@ export const useScanner = (
                 await sessionService.deleteScan(id);
                 SoundFX.play('delete');
             }, 
-            handleUndoLastScan: async () => {
-                if (lastScanId) {
-                    await sessionService.deleteScan(lastScanId);
-                    setLastScanId(null);
-                    setFeedback('undo');
-                    setTimeout(() => setFeedback('idle'), 1000);
-                }
-            }, 
-            handleQuantityChange: async (id: string, current: number, delta: number) => {
-                const newVal = current + delta;
-                if (newVal > 0) await sessionService.updateScanQuantity(id, newVal);
-                else if (confirm("¿Eliminar registro?")) await sessionService.deleteScan(id);
-            }, 
+            handleQuantityChange: async (id: string, currentQty: number, delta: number) => {
+                const newQty = Math.max(0, currentQty + delta);
+                await sessionService.updateScanQuantity(id, newQty);
+            },
             handleRegisterPending: () => {
-                // Implementación de apertura de form de producto si autoRegister está OFF
-                setIsCameraOpen(false); 
+                setIsProductFormOpen(true);
             }, 
             handleDiscard: () => { if (confirm("¿Estás seguro de descartar este conteo?")) onDiscardSession?.(); }, 
             handleExpirationComplete: (mm?: number, yyyy?: number) => {
