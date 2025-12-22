@@ -15,19 +15,14 @@ interface State {
 /**
  * ErrorBoundary class component to catch JS errors anywhere in their child component tree.
  */
-// Use Component from react directly to fix state, setState and props accessibility issues
-export class ErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
-    super(props);
-    // Initialize state on the class instance correctly
-    this.state = {
-      hasError: false,
-      error: null,
-      errorInfo: null
-    };
-  }
+export class ErrorBoundary extends React.Component<Props, State> {
+  public state: State = {
+    hasError: false,
+    error: null,
+    errorInfo: null
+  };
 
-  static getDerivedStateFromError(error: Error): State {
+  public static getDerivedStateFromError(error: Error): State {
     return { 
       hasError: true, 
       error, 
@@ -36,7 +31,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   // Lifecycle method to handle errors gracefully and write logs
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
     
     logger.error(
@@ -60,7 +55,7 @@ export class ErrorBoundary extends Component<Props, State> {
     }
   };
 
-  render(): ReactNode {
+  public render(): ReactNode {
     // Access state through the inherited member
     if (this.state.hasError) {
       const errorMessage = this.state.error 
@@ -100,7 +95,7 @@ export class ErrorBoundary extends Component<Props, State> {
                   <RefreshCw className="w-5 h-5" /> Reiniciar Interfaz
                 </button>
                 <button 
-                   onClick={handleClearCacheAndReload}
+                   onClick={this.handleClearCacheAndReload}
                    className="w-full bg-slate-800 hover:bg-slate-700 text-slate-400 font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95"
                 >
                    <Home className="w-5 h-5" /> Limpieza Profunda

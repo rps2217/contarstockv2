@@ -1,9 +1,6 @@
 
-import React, { useState } from 'react';
-import { FileText, WifiOff, ExternalLink, Archive, Filter } from 'lucide-react';
-import * as sessionService from '../services/sessionService'; 
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../db';
+import React from 'react';
+import { FileText, WifiOff, ExternalLink, Archive } from 'lucide-react';
 import { StartSessionModal } from './StartSessionModal';
 import { SearchBar } from './SearchBar';
 import { FixedSizeList } from 'react-window';
@@ -12,68 +9,36 @@ import { ReportDetail } from './reports/ReportDetail';
 import { ReportsHeader } from './reports/ReportsHeader';
 import { useNavigate } from 'react-router-dom';
 import { SessionRow } from './reports/SessionRow';
+import { useReports } from '../hooks/useReports';
 
 export const Reports: React.FC = () => {
   const navigate = useNavigate();
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
-  const [isCleaning, setIsCleaning] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isStartModalOpen, setIsStartModalOpen] = useState(false);
-  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
-  
-  const pendingSyncCount = useLiveQuery(() => db.scans.where('synced').equals(0).count(), [], 0);
+  const { state, actions } = useReports();
 
-  const sessions = useLiveQuery(async () => {
-    if (searchQuery) {
-        return await db.sessions.where('erpOrder').startsWithIgnoreCase(searchQuery.trim()).or('logisticsLabel').startsWithIgnoreCase(searchQuery.trim()).reverse().toArray();
-    }
-    return await db.sessions.orderBy('createdAt').reverse().toArray();
-  }, [searchQuery], []);
-
-  const handleMenuToggle = (e: React.MouseEvent, id: string) => { 
-      e.stopPropagation(); 
-      setActiveMenuId(activeMenuId === id ? null : id); 
-  };
-
-  const handleDeleteSession = async (e: React.MouseEvent, sessionId: string) => {
-      e.stopPropagation();
-      if (window.confirm('¿Eliminar registro permanentemente?')) {
-          await sessionService.deleteSession(sessionId); 
-          setActiveMenuId(null);
-      }
-  };
-
-  const handleCleanSynced = async () => {
-      if (!confirm("Se purgarán los datos ya respaldados en la nube. ¿Continuar?")) return;
-      setIsCleaning(true);
-      try {
-          const count = await sessionService.cleanSyncedSessions(); 
-          if (count > 0) alert(`Purga exitosa: ${count} registros eliminados.`);
-      } finally { setIsCleaning(false); }
-  };
-
-  if (selectedSessionId) return <ReportDetail sessionId={selectedSessionId} onBack={() => setSelectedSessionId(null)} />;
+  if (state.selectedSessionId) {
+      return <ReportDetail sessionId={state.selectedSessionId} onBack={() => actions.setSelectedSessionId(null)} />;
+  }
 
   return (
         <div className="flex flex-col h-[calc(100dvh-120px)] w-full animate-in fade-in duration-500">
             <ReportsHeader 
-                isCleaning={isCleaning} 
-                onClean={handleCleanSynced} 
+                isCleaning={state.isCleaning} 
+                onClean={actions.handleCleanSynced} 
                 onOpenConsolidated={() => navigate('/consolidated')} 
-                onStartNew={() => setIsStartModalOpen(true)} 
+                onStartNew={() => actions.setIsStartModalOpen(true)} 
             />
             
             <div className="my-6">
-                <SearchBar onSearch={setSearchQuery} placeholder="Filtrar por ERP o Bulto..." />
+                <SearchBar onSearch={actions.setSearchQuery} placeholder="Filtrar por ERP o Bulto..." />
             </div>
 
-            {pendingSyncCount > 0 && (
+            {state.pendingSyncCount > 0 && (
                 <button onClick={() => navigate('/sync')} className="w-full mb-6 bg-blue-600 p-4 rounded-2xl flex items-center justify-between shadow-lg shadow-blue-200 animate-pulse group">
                     <div className="flex items-center gap-3">
                         <WifiOff className="w-5 h-5 text-white" />
                         <div className="text-left">
                             <div className="text-xs font-black text-white uppercase tracking-widest">Pendiente de Subida</div>
-                            <div className="text-[10px] text-blue-100 font-bold uppercase">{pendingSyncCount} registros sin sincronizar</div>
+                            <div className="text-[10px] text-blue-100 font-bold uppercase">{state.pendingSyncCount} registros sin sincronizar</div>
                         </div>
                     </div>
                     <ExternalLink className="w-5 h-5 text-white opacity-50 group-hover:opacity-100 transition-opacity" />
@@ -87,7 +52,7 @@ export const Reports: React.FC = () => {
                 </div>
                 
                 <div className="h-full pt-12">
-                    {(!sessions || sessions.length === 0) ? (
+                    {(!state.sessions || state.sessions.length === 0) ? (
                         <div className="h-full flex flex-col items-center justify-center text-slate-300">
                             <Archive className="w-12 h-12 mb-2 opacity-20" />
                             <p className="text-[10px] font-black uppercase tracking-widest">No hay registros</p>
@@ -98,10 +63,16 @@ export const Reports: React.FC = () => {
                                 <FixedSizeList 
                                     height={height} 
                                     width={width} 
-                                    itemCount={sessions.length} 
+                                    itemCount={state.sessions!.length} 
                                     itemSize={110} 
                                     className="no-scrollbar" 
-                                    itemData={{ sessions, onSelect: setSelectedSessionId, activeMenuId, onMenuToggle: handleMenuToggle, onDelete: handleDeleteSession }}
+                                    itemData={{ 
+                                        sessions: state.sessions, 
+                                        onSelect: actions.setSelectedSessionId, 
+                                        activeMenuId: state.activeMenuId, 
+                                        onMenuToggle: actions.handleMenuToggle, 
+                                        onDelete: actions.handleDeleteSession 
+                                    }}
                                 >
                                     {SessionRow}
                                 </FixedSizeList>
@@ -111,7 +82,11 @@ export const Reports: React.FC = () => {
                 </div>
             </div>
             
-            <StartSessionModal isOpen={isStartModalOpen} onClose={() => setIsStartModalOpen(false)} onSessionStart={(s) => navigate(`/counting/${s.id}`)} />
+            <StartSessionModal 
+                isOpen={state.isStartModalOpen} 
+                onClose={() => actions.setIsStartModalOpen(false)} 
+                onSessionStart={(s) => navigate(`/counting/${s.id}`)} 
+            />
         </div>
     );
 };

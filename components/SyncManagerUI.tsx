@@ -1,68 +1,19 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Cloud, ChevronLeft, Loader2, Wifi, WifiOff, Terminal, CheckCircle2, ArrowUpCircle, Server } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import * as syncManager from '../services/syncManager';
+import { useSyncManager } from '../hooks/useSyncManager';
 
 export const SyncManagerUI: React.FC = () => {
     const navigate = useNavigate();
-    const [uiGroups, setUiGroups] = useState<any[]>([]);
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [logs, setLogs] = useState<{time: string, msg: string, type: 'info'|'error'|'success'}[]>([]);
-    
+    const { state, actions } = useSyncManager();
     const terminalRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        refreshGroups();
-    }, []);
 
     useEffect(() => {
         if (terminalRef.current) {
             terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
         }
-    }, [logs]);
-
-    const refreshGroups = async () => {
-        const groups = await syncManager.getPendingUploadGroups();
-        setUiGroups(groups.map(g => ({ ...g, uiStatus: 'idle' })));
-    };
-
-    const addLog = (msg: any, type: 'info'|'error'|'success' = 'info') => {
-        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        const safeMsg = typeof msg === 'string' ? msg : JSON.stringify(msg);
-        setLogs(prev => [...prev, { time, msg: safeMsg, type }]);
-    };
-
-    const handleSyncAll = async () => {
-        if (!navigator.onLine) {
-            addLog("Error: No hay conexión a internet.", 'error');
-            return;
-        }
-
-        const pending = uiGroups.filter(g => g.uiStatus !== 'success');
-        if (!pending.length) {
-            addLog("Nada pendiente para sincronizar.", 'info');
-            return;
-        }
-
-        setIsProcessing(true);
-        addLog("--- INICIANDO SINCRONIZACIÓN ---", 'info');
-
-        for (let i = 0; i < uiGroups.length; i++) {
-            const group = uiGroups[i];
-            setUiGroups(prev => prev.map((g, idx) => idx === i ? { ...g, uiStatus: 'uploading' } : g));
-            try {
-                await syncManager.performBatchUpload(group, (m) => addLog(m));
-                setUiGroups(prev => prev.map((g, idx) => idx === i ? { ...g, uiStatus: 'success' } : g));
-                addLog(`✓ Lote ${group.erpOrder} completado.`, 'success');
-            } catch (e: any) {
-                setUiGroups(prev => prev.map((g, idx) => idx === i ? { ...g, uiStatus: 'error' } : g));
-                addLog(`Error en ${group.erpOrder}: ${e.message}`, 'error');
-            }
-        }
-        setIsProcessing(false);
-        addLog("--- PROCESO FINALIZADO ---", 'info');
-    };
+    }, [state.logs]);
 
     return (
         <div className="flex flex-col h-screen bg-slate-50 text-slate-900 overflow-hidden font-sans">
@@ -88,7 +39,7 @@ export const SyncManagerUI: React.FC = () => {
             {/* Main Content */}
             <div className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden">
                 <div className="flex-1 overflow-y-auto no-scrollbar pb-4">
-                    {uiGroups.length === 0 ? (
+                    {state.uiGroups.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center text-center opacity-60">
                             <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mb-6 border-4 border-white shadow-sm">
                                 <Cloud className="w-10 h-10 text-slate-300" />
@@ -99,9 +50,9 @@ export const SyncManagerUI: React.FC = () => {
                     ) : (
                         <div className="max-w-2xl mx-auto w-full space-y-4">
                             <div className="flex items-center justify-between mb-2 px-2">
-                                <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Cola de Subida ({uiGroups.length})</span>
+                                <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Cola de Subida ({state.uiGroups.length})</span>
                             </div>
-                            {uiGroups.map(g => (
+                            {state.uiGroups.map(g => (
                                 <div key={g.erpOrder} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex justify-between items-center transition-all">
                                     <div className="flex items-center gap-4">
                                         <div className={`p-3 rounded-xl ${g.uiStatus === 'success' ? 'bg-emerald-50 text-emerald-600' : (g.uiStatus === 'error' ? 'bg-rose-50 text-rose-600' : 'bg-blue-50 text-blue-600')}`}>
@@ -135,8 +86,8 @@ export const SyncManagerUI: React.FC = () => {
                         <span className="text-[10px] font-black uppercase tracking-widest">Log de Sistema</span>
                     </div>
                     <div ref={terminalRef} className="flex-1 overflow-y-auto space-y-1.5 font-mono text-[10px] md:text-xs">
-                        {logs.length === 0 && <div className="text-slate-600 italic">Esperando inicio de operaciones...</div>}
-                        {logs.map((log, i) => (
+                        {state.logs.length === 0 && <div className="text-slate-600 italic">Esperando inicio de operaciones...</div>}
+                        {state.logs.map((log, i) => (
                             <div key={i} className="flex gap-2">
                                 <span className="text-slate-500 shrink-0 select-none">{log.time}</span>
                                 <span className={`${log.type === 'error' ? 'text-rose-400 font-bold' : log.type === 'success' ? 'text-emerald-400' : 'text-slate-300'}`}>
@@ -151,11 +102,11 @@ export const SyncManagerUI: React.FC = () => {
             {/* Bottom Action Bar */}
             <div className="p-4 bg-white border-t border-slate-200 shrink-0 pb-8 md:pb-6">
                 <button 
-                    onClick={handleSyncAll}
-                    disabled={isProcessing || uiGroups.length === 0}
+                    onClick={actions.handleSyncAll}
+                    disabled={state.isProcessing || state.uiGroups.length === 0}
                     className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:text-slate-500 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-200 flex items-center justify-center gap-3 transition-all active:scale-[0.98] uppercase tracking-widest text-xs"
                 >
-                    {isProcessing ? (
+                    {state.isProcessing ? (
                         <>
                             <Loader2 className="animate-spin w-4 h-4"/>
                             Sincronizando...

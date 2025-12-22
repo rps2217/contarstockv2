@@ -59,67 +59,68 @@ export const Reception: React.FC = () => {
     }, [isCameraOpen, showQueueModal]);
 
     return (
-        <div className="flex flex-col h-screen bg-slate-50 text-slate-900 overflow-hidden font-sans">
-            <div className="p-4 flex items-center justify-between shrink-0 z-20">
-                <button onClick={() => navigate('/dashboard')} className="p-3 hover:bg-slate-200 rounded-2xl text-slate-500 transition-colors"><ChevronLeft className="w-6 h-6" /></button>
-                <h1 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Recepción Express</h1>
-                <button onClick={() => setShowQueueModal(true)} className="p-3 hover:bg-slate-200 rounded-2xl text-slate-500 transition-colors relative">
+        <div className="flex flex-col h-full w-full bg-slate-900 text-white rounded-[2rem] overflow-hidden border border-slate-800 shadow-2xl relative">
+            {/* Header */}
+            <div className="p-4 flex items-center justify-between border-b border-white/10 shrink-0 z-20 bg-slate-900/50 backdrop-blur-md">
+                <button onClick={() => navigate('/dashboard')} className="p-2 hover:bg-white/10 rounded-full text-white/70 transition-colors"><ChevronLeft className="w-6 h-6" /></button>
+                <div className="flex flex-col items-center">
+                    <h1 className="text-sm font-black uppercase tracking-[0.2em] text-white">Recepción Ciega</h1>
+                    <span className="text-[9px] font-bold text-blue-400 bg-blue-500/10 px-2 rounded mt-0.5">Modo Rápido</span>
+                </div>
+                <button onClick={() => setShowQueueModal(true)} className="p-2 hover:bg-white/10 rounded-full text-white/70 relative">
                     <List className="w-6 h-6" />
-                    {draftCount > 0 && <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-blue-600 rounded-full border-2 border-slate-50"></span>}
+                    {draftCount > 0 && <span className="absolute top-2 right-2 w-2 h-2 bg-blue-500 rounded-full"></span>}
                 </button>
             </div>
 
-            <div className="flex-1 flex flex-col items-center justify-center p-6 animate-in fade-in duration-500">
+            {/* Main Area */}
+            <div className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-y-auto no-scrollbar">
                 {lastScanned ? (
                     <div className="mb-12 text-center animate-in zoom-in duration-300">
-                        <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
-                            <CheckCircle2 className="w-10 h-10" />
+                        <div className="w-24 h-24 bg-emerald-500 text-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-emerald-500/30">
+                            <CheckCircle2 className="w-12 h-12" />
                         </div>
-                        <h2 className="text-4xl font-black text-slate-900 tracking-tighter mb-2">{lastScanned}</h2>
-                        <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest bg-emerald-50 px-3 py-1 rounded-full inline-block">Bulto Registrado</p>
+                        <h2 className="text-4xl font-black text-white tracking-tighter mb-2">{lastScanned}</h2>
+                        <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest bg-emerald-500/10 px-3 py-1 rounded-full inline-block">Bulto Registrado</p>
                     </div>
                 ) : (
-                    <div className="mb-12 text-center opacity-40">
-                        <Zap className="w-20 h-20 text-slate-300 mx-auto mb-6" />
-                        <h2 className="text-3xl font-black tracking-tight text-slate-300 mb-2">MODO RÁFAGA</h2>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Escanee etiqueta para ingresar</p>
+                    <div className="mb-12 text-center opacity-30">
+                        <Zap className="w-24 h-24 text-white mx-auto mb-6" />
+                        <h2 className="text-3xl font-black tracking-tight text-white mb-2">LISTO</h2>
+                        <p className="text-[10px] font-bold text-white uppercase tracking-[0.3em]">Esperando Etiqueta</p>
                     </div>
                 )}
 
-                <div className="w-full max-w-sm bg-white border border-slate-200 rounded-[3rem] p-10 text-center mb-10 shadow-xl shadow-slate-200/50 relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-full h-2 bg-blue-600"></div>
-                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4">Cola de Entrada</div>
+                <div className="w-full max-w-xs bg-white/5 border border-white/10 rounded-[2.5rem] p-8 text-center mb-8 backdrop-blur-sm">
+                    <div className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] mb-4">Total Sesión</div>
                     <div className="flex items-center justify-center gap-4">
-                        <span className="text-8xl font-black tracking-tighter text-slate-900 tabular-nums">{draftCount}</span>
+                        <Container className="w-8 h-8 text-white/20" />
+                        <span className="text-7xl font-black tracking-tighter text-white tabular-nums">{draftCount}</span>
                     </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 w-full max-w-sm">
-                    <button onClick={() => setShowManualInput(true)} className="bg-white border-2 border-slate-100 hover:border-blue-200 p-6 rounded-[2rem] flex flex-col items-center gap-3 active:scale-95 transition-all shadow-sm group">
-                        <div className="p-3 bg-slate-50 rounded-2xl group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
-                            <Keyboard className="w-6 h-6 text-slate-400 group-hover:text-blue-600" />
-                        </div>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">Teclado</span>
+                    <button onClick={() => setShowManualInput(true)} className="bg-white/5 hover:bg-white/10 border border-white/10 p-6 rounded-[2rem] flex flex-col items-center gap-3 active:scale-95 transition-all group">
+                        <Keyboard className="w-8 h-8 text-white/40 group-hover:text-white transition-colors" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-white/60">Teclado</span>
                     </button>
-                    <button onClick={() => setIsCameraOpen(true)} className="bg-white border-2 border-slate-100 hover:border-blue-200 p-6 rounded-[2rem] flex flex-col items-center gap-3 active:scale-95 transition-all shadow-sm group">
-                        <div className="p-3 bg-slate-50 rounded-2xl group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
-                            <Camera className="w-6 h-6 text-slate-400 group-hover:text-blue-600" />
-                        </div>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">Cámara</span>
+                    <button onClick={() => setIsCameraOpen(true)} className="bg-blue-600 hover:bg-blue-500 border border-blue-400 p-6 rounded-[2rem] flex flex-col items-center gap-3 active:scale-95 transition-all shadow-lg shadow-blue-900/50">
+                        <Camera className="w-8 h-8 text-white" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-white">Cámara</span>
                     </button>
                 </div>
             </div>
 
+            {/* Modals */}
             {showManualInput && (
-                <div className="fixed inset-0 z-[60] bg-slate-900/80 backdrop-blur-md flex items-end md:items-center justify-center p-4 md:p-6 animate-in fade-in duration-200">
-                    <div className="w-full max-w-md bg-white p-8 rounded-[2.5rem] shadow-2xl relative animate-in slide-in-from-bottom-10">
+                <div className="absolute inset-0 z-[60] bg-slate-900/90 backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in">
+                    <div className="w-full max-w-sm">
                         <div className="flex justify-between items-center mb-8">
-                            <h3 className="text-xl font-black uppercase tracking-widest text-slate-900 flex items-center gap-3">
-                                <Barcode className="w-6 h-6 text-blue-600" /> Ingreso Etiqueta
+                            <h3 className="text-xl font-black uppercase tracking-widest text-white flex items-center gap-3">
+                                <Barcode className="w-6 h-6 text-blue-500" /> Manual
                             </h3>
-                            <button type="button" onClick={() => setShowManualInput(false)} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200"><X className="w-5 h-5 text-slate-500"/></button>
+                            <button onClick={() => setShowManualInput(false)} className="p-2 bg-white/10 rounded-full hover:bg-white/20"><X className="w-5 h-5 text-white"/></button>
                         </div>
-                        
                         <form onSubmit={handleManualSubmit} className="space-y-6">
                             <input 
                                 autoFocus 
@@ -128,12 +129,11 @@ export const Reception: React.FC = () => {
                                 onChange={(e) => setInputValue(e.target.value.replace(/[^0-9]/g, ''))} 
                                 type="text" 
                                 inputMode="numeric" 
-                                placeholder="00000000" 
-                                className="w-full h-20 bg-slate-50 border-2 border-slate-200 rounded-3xl p-6 text-3xl font-black text-center outline-none focus:bg-white focus:border-blue-500 transition-all placeholder:text-slate-300 text-slate-900 tracking-widest" 
+                                placeholder="000000" 
+                                className="w-full h-24 bg-black/30 border-2 border-white/10 rounded-[2rem] text-4xl font-black text-center outline-none focus:border-blue-500 text-white tracking-widest placeholder:text-white/10 transition-colors" 
                             />
-                            
-                            <button type="submit" className="w-full h-16 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg shadow-blue-200 active:scale-95 transition-all">
-                                Registrar Bulto
+                            <button type="submit" className="w-full h-16 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg active:scale-95 transition-all">
+                                Confirmar
                             </button>
                         </form>
                     </div>
