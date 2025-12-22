@@ -1,3 +1,4 @@
+
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home, Terminal } from 'lucide-react';
 import { logger } from '../services/logger';
@@ -12,6 +13,8 @@ interface State {
   errorInfo: ErrorInfo | null;
 }
 
+// Fix: Using named import 'Component' and extending it directly ensures that 'setState' and 'props' 
+// are correctly inherited and recognized by the TypeScript compiler.
 export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
@@ -27,6 +30,8 @@ export class ErrorBoundary extends Component<Props, State> {
     };
   }
 
+  // Fix: 'this.setState' is now clearly inherited from the Component base class.
+  // The ErrorInfo type is also explicitly imported to ensure consistency.
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
     
@@ -101,6 +106,7 @@ export class ErrorBoundary extends Component<Props, State> {
       );
     }
 
+    // Fix: 'this.props' is now correctly recognized through explicit Component inheritance.
     return this.props.children;
   }
 }

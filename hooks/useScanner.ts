@@ -9,6 +9,7 @@ import { sanitizeBarcode } from '../services/utils';
 import { getSettings } from '../services/settings';
 import { SoundFX } from '../services/audio';
 import { CountingSession, Product } from '../types';
+import { logger } from '../services/logger';
 
 export const useScanner = (
     session: CountingSession, 
@@ -30,10 +31,10 @@ export const useScanner = (
     const [isIdle, setIsIdle] = useState(false);
     const idleTimerRef = useRef<any>(null);
 
-    // Caché de fechas por sesión para evitar redundancia tras el primer ingreso
+    // Caché de fechas para evitar prompts repetitivos
     const sessionDatesCache = useRef<Map<string, {mm?: number, yyyy?: number}>>(new Map());
 
-    // Estados optimistas para UI instantánea
+    // Estados optimistas: La verdad visual inmediata
     const [optimisticActiveQty, setOptimisticActiveQty] = useState(0);
     const [optimisticTotalQty, setOptimisticTotalQty] = useState(0);
     const [optimisticUniqueSkus, setOptimisticUniqueSkus] = useState(0);
@@ -64,6 +65,7 @@ export const useScanner = (
         };
     }, [resetIdleTimer]);
 
+    // Queries reactivas (La verdad de la DB)
     const recentScans = useLiveQuery(
         () => db.scans.where('[sessionId+timestamp]').between([session.id, Dexie.minKey], [session.id, Dexie.maxKey]).reverse().limit(20).toArray(), 
         [session.id]
@@ -79,6 +81,7 @@ export const useScanner = (
         return { totalQty, name: product?.name || 'Producto Desconocido', isUnknown: !product };
     }, [lastScan], { totalQty: 0, name: '', isUnknown: false });
 
+    // Sincronización de estado optimista con realidad de DB
     useEffect(() => {
         if (activeProductStats) setOptimisticActiveQty(activeProductStats.totalQty);
     }, [activeProductStats.totalQty, lastScan?.barcode]);
@@ -99,49 +102,48 @@ export const useScanner = (
         try {
             const qtyToAdd = multiplier > 0 ? multiplier : 1;
             
-            // Actualización optimista
+            // 1. UPDATE UI INSTANTLY (Optimistic)
             setOptimisticActiveQty(prev => prev + qtyToAdd);
             setOptimisticTotalQty(prev => prev + qtyToAdd);
             
+            // 2. PERSIST TO DB
             const newScan = await sessionService.addScan(session.id, code, qtyToAdd, mm, yyyy);
             
-            // Guardar en caché local para subsiguientes escaneos del mismo SKU
-            if (mm || yyyy) {
-                sessionDatesCache.current.set(code, { mm, yyyy });
-            }
+            if (mm || yyyy) sessionDatesCache.current.set(code, { mm, yyyy });
 
             setLastScanId(newScan.id);
             setFeedback('success');
-            SoundFX.play('success');
+            SoundFX.play(multiplier > 1 ? 'increment' : 'success');
 
             const settings = getSettings();
             if (settings.ttsEnabled) {
                 const cachedProduct = await db.products.get(code);
-                SoundFX.speak(cachedProduct?.name || "Producto");
+                SoundFX.speak(cachedProduct?.name || "Detectado");
             }
             if (multiplier !== 1) setMultiplier(1);
             resetIdleTimer();
             setTimeout(() => setFeedback('idle'), 500);
-        } catch (err) { 
+        } catch (err: any) { 
+            logger.error('Scanner', 'Fallo al persistir escaneo', err);
             setFeedback('error'); 
             SoundFX.play('error'); 
+            // Revert optimistic if critical error
+            setOptimisticTotalQty(sessionStats.totalQty);
         }
-    }, [session.id, multiplier, resetIdleTimer]);
+    }, [session.id, multiplier, resetIdleTimer, sessionStats.totalQty]);
 
     const processScan = useCallback(async (code: string) => {
         const cleanCode = sanitizeBarcode(code);
         if (!cleanCode) return;
         
         const now = Date.now();
-        if (cleanCode === lastProcessedScan.current.code && (now - lastProcessedScan.current.time < 250)) return;
+        // Debounce de hardware (evita lecturas duplicadas por rebote de gatillo)
+        if (cleanCode === lastProcessedScan.current.code && (now - lastProcessedScan.current.time < 350)) return;
         lastProcessedScan.current = { code: cleanCode, time: now };
         
         try {
-            // REGLA DE AUDITORÍA: ¿Ya tiene fecha en esta sesión?
             let existingDate = sessionDatesCache.current.get(cleanCode);
-            
             if (!existingDate) {
-                // Si no está en caché de memoria, buscar el registro más reciente en la DB para este SKU y sesión
                 const lastEntry = await db.scans.where('[sessionId+barcode]').equals([session.id, cleanCode]).last();
                 if (lastEntry) {
                     existingDate = { mm: lastEntry.mm, yyyy: lastEntry.yyyy };
@@ -150,19 +152,17 @@ export const useScanner = (
             }
 
             if (existingDate) { 
-                // Ya tenemos info de este producto en esta sesión, procedemos sin modal
                 await completeScan(cleanCode, existingDate.mm, existingDate.yyyy); 
                 return; 
             } 
             
-            // PRIMER ESCANEO DEL SKU EN ESTA SESIÓN: Pedir fecha
             const masterProduct = await db.products.get(cleanCode);
             setPendingProductName(masterProduct?.name || `NUEVO: ${cleanCode}`);
             setPendingScanCode(cleanCode);
             setShowExpirationModal(true);
             SoundFX.play('success');
         } catch (err) { 
-            console.error("Scan Error:", err);
+            logger.error('Scanner', 'Error en pipeline de procesamiento', err);
             setFeedback('error'); 
         }
     }, [session.id, completeScan]);
@@ -195,7 +195,7 @@ export const useScanner = (
         actions: { 
             handleManualSubmit: (e: any) => {
                 e.preventDefault();
-                processScan(manualInput);
+                if (manualInput.trim()) processScan(manualInput);
                 setManualMode(false);
                 setManualInput('');
             }, 
@@ -215,8 +215,12 @@ export const useScanner = (
             handleQuantityChange: async (id: string, current: number, delta: number) => {
                 const newVal = current + delta;
                 if (newVal > 0) await sessionService.updateScanQuantity(id, newVal);
+                else if (confirm("¿Eliminar registro?")) await sessionService.deleteScan(id);
             }, 
-            handleRegisterPending: () => {}, 
+            handleRegisterPending: () => {
+                // Implementación de apertura de form de producto si autoRegister está OFF
+                setIsCameraOpen(false); 
+            }, 
             handleDiscard: () => { if (confirm("¿Estás seguro de descartar este conteo?")) onDiscardSession?.(); }, 
             handleExpirationComplete: (mm?: number, yyyy?: number) => {
                 if (pendingScanCode) completeScan(pendingScanCode, mm, yyyy);
@@ -227,7 +231,6 @@ export const useScanner = (
                 e.stopPropagation();
                 await sessionService.updateScanIncident(id, !status);
             }, 
-            getProductName: (code: string) => 'Cargando...', 
             handleExternalScan: (code: string) => processScan(code) 
         }
     };

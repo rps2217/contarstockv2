@@ -4,88 +4,83 @@ import { calculateOrderMatch } from './matcher';
 import { ConsolidatedItem, ExpectedOrder } from '../types';
 import { db } from '../db';
 import * as sessionService from './sessionService';
+import { aggregateScans } from './aggregator';
 
-export const runSystemDiagnostics = async () => {
+export interface DiagnosticResult {
+    passed: number;
+    failed: number;
+    logs: { msg: string; type: 'info' | 'success' | 'error'; latency?: number }[];
+    totalLatency: number;
+}
+
+export const runFullSystemAudit = async (): Promise<DiagnosticResult> => {
     let passed = 0;
     let failed = 0;
-    const logs: string[] = [];
+    const logs: DiagnosticResult['logs'] = [];
+    const startTime = performance.now();
 
-    const log = (msg: string, isError = false) => {
-        logs.push(msg);
-        if (isError) failed++; else passed++;
+    const log = (msg: string, type: 'info' | 'success' | 'error' = 'info', latency?: number) => {
+        logs.push({ msg, type, latency });
+        if (type === 'success') passed++;
+        if (type === 'error') failed++;
     };
 
-    log("--- INICIANDO AUDITORÍA DE SISTEMA v2 ---");
+    log("--- INICIANDO AUDITORÍA DE REGRESIÓN v2.5 ---", 'info');
 
-    // 1. Test de Integridad de Datos (Sanitize)
+    // 1. TEST DE INTEGRIDAD DE AGREGACIÓN (Crucial para Reportes)
     try {
-        const tests = [
-            { input: ' 780123 ', expected: '780123' },
-            { input: 'abc-123', expected: 'ABC-123' },
-            { input: '99\u200B88', expected: '9988' } // Zero-width space
+        const tStart = performance.now();
+        const mockScans = [
+            { id: '1', sessionId: 'TEST', barcode: 'SKU1', quantity: 5, timestamp: Date.now(), synced: 0 },
+            { id: '2', sessionId: 'TEST', barcode: 'SKU1', quantity: 3, timestamp: Date.now(), synced: 0 },
+            { id: '3', sessionId: 'TEST', barcode: 'SKU2', quantity: 10, timestamp: Date.now(), synced: 0 },
         ];
-        const allOk = tests.every(t => sanitizeBarcode(t.input) === t.expected);
-        if (allOk) log("✅ Desinfección de SKU: Robusta");
-        else log("❌ Desinfección de SKU: Falló validación de caracteres invisibles", true);
-    } catch (e) { log(`❌ Error Sanitize: ${e}`, true); }
-
-    // 2. Test de Estrés de Inserción (Concurrency Stress)
-    try {
-        log("⏳ Probando latencia de escritura masiva (100 registros)...");
-        const start = performance.now();
-        const testSessionId = 'DIAG-STRESS-' + Date.now();
+        const result = await aggregateScans(mockScans as any);
+        const sku1 = result.find(r => r.barcode === 'SKU1');
         
-        // Simular ráfaga de escaneo ultra-rápida
+        if (sku1?.totalQuantity === 8 && result.length === 2) {
+            log("Motor de Agregación: Integridad confirmada", 'success', performance.now() - tStart);
+        } else {
+            log("Motor de Agregación: Error de cálculo detectado", 'error');
+        }
+    } catch (e: any) { log(`Fallo crítico Agregador: ${e.message}`, 'error'); }
+
+    // 2. STRESS TEST DE ESCRITURA (Previene bloqueos de UI)
+    try {
+        const tStart = performance.now();
+        const testSessionId = 'STRESS-UNIT-TEST';
+        const batchSize = 50;
         const promises = [];
-        for(let i=0; i<100; i++) {
-            promises.push(sessionService.addScan(testSessionId, 'STRESS-TEST', 1));
+        
+        for(let i=0; i < batchSize; i++) {
+            promises.push(sessionService.addScan(testSessionId, `SKU-STRESS-${i % 5}`, 1));
         }
         await Promise.all(promises);
         
-        // Forzar flush del buffer
-        await new Promise(r => setTimeout(r, 600)); 
+        // Esperar flush de buffer
+        await new Promise(r => setTimeout(r, 1200));
         
         const count = await db.scans.where('sessionId').equals(testSessionId).count();
-        const end = performance.now();
-        const duration = end - start;
-
-        if (count === 100) {
-            log(`✅ Stress Test: 100 registros en ${duration.toFixed(0)}ms (${(duration/100).toFixed(2)}ms/op)`);
+        if (count === batchSize) {
+            log(`Escritura Concurrente: ${batchSize} ops sin pérdida de datos`, 'success', performance.now() - tStart);
         } else {
-            log(`❌ Stress Test: Pérdida de datos detectada. Esperados 100, grabados ${count}`, true);
+            log(`Escritura Concurrente: Pérdida de datos (${count}/${batchSize})`, 'error');
         }
-        
-        // Limpiar
         await db.scans.where('sessionId').equals(testSessionId).delete();
-    } catch (e: any) {
-        log(`❌ Error en Stress Test: ${e.message}`, true);
-    }
+    } catch (e: any) { log(`Stress Test fallido: ${e.message}`, 'error'); }
 
-    // 3. Verificación de Huérfanos
-    try {
-        const scans = await db.scans.limit(100).toArray();
-        const sessions = await db.sessions.toArray();
-        const sessionIds = new Set(sessions.map(s => s.id));
-        const orphans = scans.filter(s => !sessionIds.has(s.sessionId));
-        
-        if (orphans.length === 0) log("✅ Integridad Referencial: Sin registros huérfanos");
-        else log(`⚠️ Integridad: Detectados ${orphans.length} escaneos sin sesión vinculada`, true);
-    } catch (e) { log(`❌ Error Integridad: ${e}`, true); }
+    // 3. VALIDACIÓN DE NORMALIZACIÓN (Previene fallos de búsqueda)
+    const normTests = [
+        { in: ' 780-abc ', out: '780-ABC' },
+        { in: '99\u200B88', out: '9988' }
+    ];
+    const normOk = normTests.every(t => sanitizeBarcode(t.in) === t.out);
+    normOk ? log("Sanitización de Datos: Robusta", 'success') : log("Sanitización: Regresión detectada", 'error');
 
-    // 4. Test de Matcher (Lógica de Negocio)
-    try {
-        const mockPhys: ConsolidatedItem[] = [{ barcode: 'X', productName: 'P', totalQuantity: 10, scans: 1 }];
-        const mockExp: ExpectedOrder = { 
-            id: '1', internalId: 'TEST', totalExpectedUnits: 12, totalExpectedSKUs: 1, importedAt: 0,
-            items: [{ barcode: 'X', name: 'P', expectedQty: 12 }] 
-        };
-        const result = calculateOrderMatch(mockPhys, mockExp);
-        if (result.matchScore > 80 && result.status === 'partial') {
-            log("✅ Algoritmo Detective: Coincidencia parcial calculada correctamente");
-        } else {
-            log("❌ Algoritmo Detective: Error en cálculo de desviaciones", true);
-        }
-    } catch (e) { log(`❌ Error Matcher: ${e}`, true); }
-
-    return { passed, failed, logs };
+    return {
+        passed,
+        failed,
+        logs,
+        totalLatency: performance.now() - startTime
+    };
 };

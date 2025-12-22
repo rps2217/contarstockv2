@@ -1,34 +1,34 @@
 
 import { db, SystemLog } from '../db';
 
-const MAX_LOGS = 1000; // Rotate logs to save space
+const MAX_LOGS = 2000; 
 
 const writeLog = async (level: SystemLog['level'], module: string, message: string, details?: any) => {
     try {
-        // Console mirror
-        const style = level === 'error' ? 'color: red' : level === 'success' ? 'color: green' : 'color: blue';
-        console.log(`%c[${module}] ${message}`, style, details || '');
+        const timestamp = Date.now();
+        // Consola formateada para desarrollo
+        const style = level === 'error' ? 'color: #ff4d4d; font-weight: bold' : level === 'success' ? 'color: #2ecc71' : 'color: #3498db';
+        console.log(`%c[${module}] [${level.toUpperCase()}] ${message}`, style, details || '');
 
         await db.logs.add({
             level,
             module,
             message,
-            details: details ? JSON.stringify(details) : undefined,
-            timestamp: Date.now()
+            details: details ? (typeof details === 'object' ? JSON.stringify(details) : String(details)) : undefined,
+            timestamp
         });
 
-        // Rotation Logic (Lazy cleanup)
-        // Only run cleanup occasionally (e.g. 10% chance) to avoid blocking main thread often
-        if (Math.random() < 0.1) {
+        // Cleanup selectivo (1 de cada 20 llamadas)
+        if (Math.random() < 0.05) {
             const count = await db.logs.count();
             if (count > MAX_LOGS) {
-                const limit = count - MAX_LOGS;
-                const keys = await db.logs.orderBy('timestamp').limit(limit).primaryKeys();
+                const keys = await db.logs.orderBy('timestamp').limit(count - MAX_LOGS).primaryKeys();
                 await db.logs.bulkDelete(keys);
             }
         }
     } catch (e) {
-        console.error("Logger failed", e);
+        // Fallback silencioso si falla IndexedDB
+        console.warn("Logger persistency failed", e);
     }
 };
 
@@ -38,11 +38,12 @@ export const logger = {
     error: (module: string, message: string, details?: any) => writeLog('error', module, message, details),
     success: (module: string, message: string, details?: any) => writeLog('success', module, message, details),
     
-    getRecent: async (limit = 100) => {
+    getRecent: async (limit = 200) => {
         return await db.logs.orderBy('timestamp').reverse().limit(limit).toArray();
     },
     
     clear: async () => {
         await db.logs.clear();
+        logger.info('System', 'Log de auditoría vaciado.');
     }
 };
