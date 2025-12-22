@@ -12,18 +12,21 @@ const cleanString = z.union([z.string(), z.number(), z.null(), z.undefined()])
     });
 
 /**
- * NORMALIZADOR UNIVERSAL DE PRODUCTOS (Optimizado para encabezados específicos)
+ * NORMALIZADOR UNIVERSAL DE PRODUCTOS
+ * Mapea variaciones de nombres de columnas a nuestro esquema interno.
  */
 export const CloudProductSchema = z.record(z.any()).transform((raw) => {
     const normalized: Record<string, any> = {};
+    // Normalizar todas las llaves a mayúsculas y quitar acentos básicos para comparación robusta
     Object.keys(raw).forEach(k => {
-        normalized[k.trim().toUpperCase()] = raw[k];
+        const key = k.trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        normalized[key] = raw[k];
     });
 
-    // Mapeo basado exactamente en las columnas del usuario
-    const barcode = normalized["COD PRODUCTO"] || normalized["CODIGO"] || normalized["SKU"] || normalized["BARCODE"] || "";
-    const name = normalized["DESCRIPCION"] || normalized["PRODUCTO"] || normalized["NOMBRE"] || "Producto sin nombre";
-    const category = normalized["MUNDO"] || normalized["CATEGORIA"] || "GENERAL";
+    // Mapeo flexible
+    const barcode = normalized["COD PRODUCTO"] || normalized["CODIGO"] || normalized["SKU"] || normalized["BARCODE"] || normalized["EAN"] || "";
+    const name = normalized["DESCRIPCION"] || normalized["PRODUCTO"] || normalized["NOMBRE"] || normalized["DESCRIP"] || "Sin descripción";
+    const category = normalized["MUNDO"] || normalized["CATEGORIA"] || normalized["CATEGORY"] || "GENERAL";
     const supplier = normalized["PROVEEDOR"] || normalized["SUPPLIER"] || "";
     const supplierRut = normalized["RUT PROVEEDOR"] || normalized["RUT"] || "";
 

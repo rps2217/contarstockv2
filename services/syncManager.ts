@@ -119,16 +119,19 @@ export const processSyncQueue = async () => {
 };
 
 /**
- * IMPORTACIÓN DE PRODUCTOS (CORREGIDA)
+ * IMPORTACIÓN DE PRODUCTOS CON REEMPLAZO TOTAL
  */
 export const importProductsFromAppSheet = async (): Promise<number> => {
     logger.info('Sync', 'Iniciando descarga de catálogo maestro...');
     const rawRows = await fetchProductsFromCloud();
     
     if (!rawRows || rawRows.length === 0) {
-        logger.warn('Sync', 'La nube devolvió 0 productos o tabla vacía.');
+        logger.warn('Sync', 'La nube devolvió 0 productos. Verifique que la tabla PRODUCTOS tenga datos y permisos de lectura.');
         return 0;
     }
+
+    // Log de diagnóstico para el desarrollador: ver qué columnas vienen realmente
+    console.log("[Sync] Columnas detectadas en la primera fila:", Object.keys(rawRows[0]));
 
     const validProducts: Product[] = [];
     let rejectedCount = 0;
@@ -147,18 +150,20 @@ export const importProductsFromAppSheet = async (): Promise<number> => {
             });
         } else {
             rejectedCount++;
-            if (rejectedCount === 1) {
-                console.warn("[Sync] Ejemplo de fila rechazada:", row, result.error.format());
-            }
         }
     }
 
     if (validProducts.length > 0) {
+        // REEMPLAZO TOTAL: Limpiar antes de insertar
+        await db.products.clear();
         await productService.saveProductBatch(validProducts);
-        logger.success('Sync', `Importación completa: ${validProducts.length} procesados, ${rejectedCount} inválidos.`);
+        logger.success('Sync', `Sincronización exitosa: ${validProducts.length} productos reemplazados.`);
+        if (rejectedCount > 0) {
+            logger.warn('Sync', `${rejectedCount} filas fueron omitidas por formato inválido.`);
+        }
     } else {
-        logger.error('Sync', 'No se pudo validar ningún producto. Verifique nombres de columnas.');
-        throw new Error("Formato de tabla incompatible con el esquema.");
+        logger.error('Sync', 'No se pudo validar ningún producto. Es probable que los nombres de las columnas en AppSheet no coincidan.');
+        throw new Error("Formato de tabla incompatible. Revise los nombres de las columnas.");
     }
     
     return validProducts.length;

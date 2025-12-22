@@ -71,12 +71,19 @@ export const sendToAppSheet = async (
           try {
               json = JSON.parse(text);
           } catch (e) {
-              // Si la respuesta no es JSON pero el status fue OK, asumimos éxito para algunas acciones
               if (payload.Action === 'Find') throw new Error("La respuesta de búsqueda no es un JSON válido.");
               return { success: true };
           }
 
-          // CORRECCIÓN: Solo validar Rows en operaciones de ESCRITURA
+          // Validación para búsquedas (Find)
+          if (payload.Action === 'Find') {
+              if (!json || typeof json !== 'object' || !json.hasOwnProperty('Rows')) {
+                  console.error("[Sync] Respuesta inesperada de AppSheet:", json);
+                  throw new Error("La respuesta de AppSheet no contiene la lista de filas (Rows). Verifique el nombre de la tabla.");
+              }
+          }
+
+          // Validación para escrituras (Add/Edit)
           if ((payload.Action === 'Add' || payload.Action === 'Edit')) {
               if (!json.Rows || !Array.isArray(json.Rows) || json.Rows.length === 0) {
                   throw new Error("La API no confirmó la escritura de filas. Verifique permisos.");
