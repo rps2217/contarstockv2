@@ -1,6 +1,6 @@
 
 import React, { memo } from 'react';
-import { Lock, Coffee } from 'lucide-react';
+import { Lock, Coffee, CheckCircle, AlertTriangle } from 'lucide-react';
 
 interface ScannerFeedbackLayerProps {
     feedback: 'idle' | 'success' | 'error' | 'undo';
@@ -10,42 +10,38 @@ interface ScannerFeedbackLayerProps {
 }
 
 export const ScannerFeedbackLayer: React.FC<ScannerFeedbackLayerProps> = memo(({ feedback, isIncident, isWindowFocused = true, isIdle = false }) => {
+    
     if (!isWindowFocused) {
         return (
-            <div className="absolute inset-0 z-50 bg-slate-900/60 flex flex-col items-center justify-center text-center p-8 animate-in fade-in duration-300 backdrop-blur-sm">
-                <div className="bg-white p-6 rounded-full mb-6 shadow-xl">
-                    <Lock className="w-12 h-12 text-blue-600" />
+            <div className="absolute inset-0 z-[100] bg-slate-950/90 flex flex-col items-center justify-center text-center p-8 backdrop-blur-xl animate-in fade-in duration-300">
+                <div className="bg-blue-500/10 p-8 rounded-full mb-6 border border-blue-500/20 shadow-[0_0_40px_rgba(59,130,246,0.1)]">
+                    <Lock className="w-12 h-12 text-blue-400" />
                 </div>
-                <h2 className="text-2xl font-bold text-white mb-2">Scanner Pausado</h2>
-                <p className="text-slate-200 text-sm">Haga clic para continuar operando</p>
+                <h2 className="text-3xl font-black text-white mb-2 uppercase tracking-tighter italic">Pausado</h2>
+                <p className="text-slate-500 text-sm font-bold uppercase tracking-widest">Toca para reanudar motor</p>
             </div>
         );
     }
 
     if (isIdle) {
         return (
-            <div className="absolute inset-0 z-50 bg-slate-50/95 flex flex-col items-center justify-center text-center p-8 animate-in fade-in duration-500 backdrop-blur-md">
-                < Coffee className="w-12 h-12 text-slate-300 mb-6" />
-                <h2 className="text-xl font-bold text-slate-500 uppercase tracking-widest">Modo Ahorro</h2>
-                <p className="text-slate-400 text-sm mt-2">Presione cualquier tecla para reactivar</p>
+            <div className="absolute inset-0 z-[100] bg-[#020617] flex flex-col items-center justify-center animate-in fade-in duration-1000">
+                <div className="text-slate-800 text-[12rem] font-black tracking-tighter select-none opacity-20">ZZZ</div>
             </div>
         );
     }
 
-    const getFeedbackLayerClass = () => {
-        if (feedback === 'success') {
-            if (isIncident) return 'bg-orange-500/10 opacity-100';
-            return 'bg-green-500/10 opacity-100';
-        }
-        if (feedback === 'error') return 'bg-red-500/20 opacity-100';
-        if (feedback === 'undo') return 'bg-slate-200 opacity-100';
-        return 'bg-transparent opacity-100'; 
-    };
-
     return (
-        <div 
-            className={`absolute inset-0 z-0 transition-colors duration-500 ease-out ${getFeedbackLayerClass()}`} 
-            style={{ willChange: 'background-color' }}
-        />
+        <>
+            {/* Capa de Pulso Visual (Success/Error) */}
+            {feedback === 'success' && <div className="scan-success-glow" />}
+            {feedback === 'error' && (
+                <div className="absolute inset-0 z-[5] bg-rose-500/10 animate-pulse pointer-events-none border-4 border-rose-500/50" />
+            )}
+            
+            {/* Decoración de Fondo (Grid Tecnológico) */}
+            <div className="absolute inset-0 z-0 opacity-[0.03] pointer-events-none" 
+                 style={{ backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
+        </>
     );
 });

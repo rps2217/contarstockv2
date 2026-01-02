@@ -7,6 +7,7 @@ import { useAppStore } from './store/useAppStore';
 import { db } from './db';
 import { processSyncQueue } from './services/syncManager';
 import { initPersistence } from './services/backupService';
+import { repairSystem } from './services/maintenance';
 import { lazyWithRetry } from './services/lazyLoad';
 import * as sessionService from './services/sessionService';
 import { Dashboard } from './components/Dashboard';
@@ -33,7 +34,6 @@ const LoadingFallback = () => (
   </div>
 );
 
-// Diccionario maestro de navegación
 const NAV_REGISTRY: Record<string, { label: string, icon: any, path: string }> = {
     dashboard: { label: 'Inicio', icon: Home, path: '/dashboard' },
     database: { label: 'Datos', icon: Database, path: '/database' },
@@ -49,13 +49,13 @@ const MainLayout = () => {
     const location = useLocation();
     const currentView = location.pathname.split('/')[1] || 'dashboard';
 
-    // Lógica de Temas
     const getThemeClasses = () => {
         switch (settings.theme) {
             case 'dark': return 'bg-slate-950 text-slate-100 selection:bg-blue-900';
             case 'navy': return 'bg-[#0f172a] text-slate-200 selection:bg-indigo-500';
             case 'warm': return 'bg-orange-50 text-orange-950 selection:bg-orange-200';
             case 'contrast': return 'bg-black text-yellow-400 selection:bg-white selection:text-black';
+            case 'oled': return 'bg-black text-slate-200 selection:bg-indigo-600';
             default: return 'bg-slate-50 text-slate-900 selection:bg-blue-100';
         }
     };
@@ -91,6 +91,8 @@ const AppContent: React.FC = () => {
             await (db as any).open();
             setDbReady(true);
             await initPersistence();
+            // Mantenimiento silencioso al arrancar
+            repairSystem().catch(() => {}); 
         } catch (e) { console.error(e); }
     };
     init();
@@ -161,8 +163,17 @@ const MobileNav = ({ currentView }: { currentView: string }) => {
     .map(key => ({ key, ...NAV_REGISTRY[key] }))
     .filter(item => !!item.label);
 
+  const getNavThemeClasses = () => {
+      switch (settings.theme) {
+          case 'dark': return 'bg-slate-900/90 border-slate-800';
+          case 'navy': return 'bg-slate-900/90 border-slate-800';
+          case 'oled': return 'bg-black border-white/10';
+          default: return 'bg-white/90 border-slate-200';
+      }
+  };
+
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-slate-200 ios-safe-pb shadow-[0_-10px_40px_rgb(0,0,0,0.05)]">
+    <nav className={`md:hidden fixed bottom-0 left-0 right-0 z-50 backdrop-blur-xl border-t ios-safe-pb shadow-[0_-10px_40px_rgb(0,0,0,0.05)] ${getNavThemeClasses()}`}>
         <div className="flex justify-around items-center h-16 px-2 pb-safe">
             {navItems.map((item) => {
                 const isActive = currentView === item.key;
@@ -171,9 +182,9 @@ const MobileNav = ({ currentView }: { currentView: string }) => {
                     <button 
                         key={item.key}
                         onClick={() => navigate(item.path)}
-                        className={`flex flex-col items-center justify-center flex-1 h-full gap-1 transition-all active:scale-95 ${isActive ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
+                        className={`flex flex-col items-center justify-center flex-1 h-full gap-1 transition-all active:scale-95 ${isActive ? 'text-blue-500' : 'text-slate-500 hover:text-slate-400'}`}
                     >
-                        <div className={`p-1.5 rounded-2xl transition-all duration-300 ${isActive ? 'bg-blue-50 shadow-sm translate-y-[-2px]' : ''}`}>
+                        <div className={`p-1.5 rounded-2xl transition-all duration-300 ${isActive ? (settings.theme === 'oled' ? 'bg-white/10 shadow-sm translate-y-[-2px]' : 'bg-blue-50 shadow-sm translate-y-[-2px]') : ''}`}>
                             <Icon className={`w-6 h-6 ${isActive ? 'stroke-[2.5px]' : 'stroke-2'}`} />
                         </div>
                         <span className={`text-[9px] font-black uppercase tracking-wider ${isActive ? 'opacity-100' : 'opacity-70'}`}>{item.label}</span>

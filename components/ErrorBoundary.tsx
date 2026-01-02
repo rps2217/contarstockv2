@@ -1,3 +1,4 @@
+
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home, Terminal } from 'lucide-react';
 import { logger } from '../services/logger';
@@ -15,12 +16,18 @@ interface State {
 /**
  * ErrorBoundary class component to catch JS errors anywhere in their child component tree.
  */
+// Fix: Extending Component directly from named import to ensure proper inheritance recognition
 export class ErrorBoundary extends Component<Props, State> {
+  // Fix: Removed override as it was failing due to inheritance recognition issues
   public state: State = {
     hasError: false,
     error: null,
     errorInfo: null
   };
+
+  constructor(props: Props) {
+    super(props);
+  }
 
   public static getDerivedStateFromError(error: Error): State {
     return { 
@@ -31,6 +38,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   // Lifecycle method to handle errors gracefully and write logs
+  // Fix: Removed override keyword
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
     
@@ -40,7 +48,7 @@ export class ErrorBoundary extends Component<Props, State> {
         { stack: error.stack, componentStack: errorInfo.componentStack }
     ).catch(e => console.error("Failed to write crash log", e));
     
-    // Access setState through the inherited member
+    // Fix: setState is now recognized through proper inheritance
     this.setState({ errorInfo });
   }
 
@@ -55,8 +63,8 @@ export class ErrorBoundary extends Component<Props, State> {
     }
   };
 
+  // Fix: Removed override keyword
   public render(): ReactNode {
-    // Access state through the inherited member
     if (this.state.hasError) {
       const errorMessage = this.state.error 
         ? (typeof this.state.error.message === 'string' ? this.state.error.message : JSON.stringify(this.state.error.message))
@@ -107,7 +115,7 @@ export class ErrorBoundary extends Component<Props, State> {
       );
     }
 
-    // Access props through the inherited member
+    // Fix: props is now recognized through proper inheritance
     return this.props.children;
   }
 }

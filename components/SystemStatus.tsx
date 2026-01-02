@@ -1,20 +1,18 @@
 
 import React, { useState, useEffect } from 'react';
-import { Wifi, WifiOff, Battery, BatteryCharging, BatteryWarning, HardDrive, AlertOctagon } from 'lucide-react';
+import { Wifi, WifiOff, Battery, BatteryWarning, HardDrive, Cloud, RefreshCw } from 'lucide-react';
+import { useSyncStore } from '../store/useSyncStore';
 
 export const SystemStatus: React.FC = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showBackOnline, setShowBackOnline] = useState(false);
-  
-  // Battery State
   const [batteryLevel, setBatteryLevel] = useState<number | null>(null);
   const [isCharging, setIsCharging] = useState(false);
-  
-  // Storage State
   const [storageCritical, setStorageCritical] = useState(false);
+  
+  const { isSyncing, pendingItems } = useSyncStore();
 
   useEffect(() => {
-    // --- NETWORK LISTENERS ---
     const handleOnline = () => {
       setIsOnline(true);
       setShowBackOnline(true);
@@ -25,7 +23,6 @@ export const SystemStatus: React.FC = () => {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // --- BATTERY LISTENERS ---
     let batteryRef: any = null;
     const updateBattery = () => {
         if (batteryRef) {
@@ -43,22 +40,16 @@ export const SystemStatus: React.FC = () => {
         });
     }
 
-    // --- STORAGE CHECK ---
     const checkStorage = async () => {
         if (navigator.storage && navigator.storage.estimate) {
             try {
                 const { usage, quota } = await navigator.storage.estimate();
-                if (usage && quota) {
-                    const percent = (usage / quota) * 100;
-                    if (percent > 85) setStorageCritical(true);
-                }
-            } catch (e) {
-                console.warn("Storage check failed", e);
-            }
+                if (usage && quota && (usage / quota) > 0.85) setStorageCritical(true);
+            } catch (e) {}
         }
     };
     checkStorage();
-    const storageInterval = setInterval(checkStorage, 30000); // Check every 30s
+    const storageInterval = setInterval(checkStorage, 60000);
 
     return () => {
       window.removeEventListener('online', handleOnline);
@@ -71,43 +62,50 @@ export const SystemStatus: React.FC = () => {
     };
   }, []);
 
-  // --- RENDERING LOGIC ---
-
   const alerts = [];
 
-  // 1. Critical Battery
-  if (batteryLevel !== null && batteryLevel < 15 && !isCharging) {
-      alerts.push(
-          <div key="batt" className="bg-red-600 text-white px-4 py-1 text-xs font-bold flex items-center justify-center gap-2 animate-pulse">
-              <BatteryWarning className="w-3 h-3" />
-              <span>BATERÍA CRÍTICA ({batteryLevel.toFixed(0)}%) - Guarde cambios</span>
-          </div>
-      );
+  // --- 1. CLOUD SYNC INDICATOR (SILENT) ---
+  if (isSyncing) {
+    alerts.push(
+        <div key="sync" className="bg-indigo-600 text-white px-4 py-1.5 text-[10px] font-black flex items-center justify-center gap-2 animate-in slide-in-from-top-full">
+            <RefreshCw className="w-3 h-3 animate-spin" />
+            <span className="uppercase tracking-[0.2em]">Sincronización en curso...</span>
+        </div>
+    );
   }
 
-  // 2. Critical Storage
-  if (storageCritical) {
-      alerts.push(
-          <div key="store" className="bg-amber-600 text-white px-4 py-1 text-xs font-bold flex items-center justify-center gap-2">
-              <HardDrive className="w-3 h-3" />
-              <span>ALMACENAMIENTO LLENO - Limpie historial</span>
-          </div>
-      );
-  }
-
-  // 3. Offline Mode
+  // --- 2. NETWORK ---
   if (!isOnline) {
       alerts.push(
-          <div key="net" className="bg-slate-800 text-slate-300 px-4 py-1 text-xs font-bold flex items-center justify-center gap-2 border-b border-slate-700">
+          <div key="net" className="bg-slate-900 text-rose-400 px-4 py-1.5 text-[10px] font-black flex items-center justify-center gap-2 border-b border-white/5">
               <WifiOff className="w-3 h-3" />
-              <span>MODO OFFLINE</span>
+              <span className="uppercase tracking-[0.2em]">Modo Offline - Datos Seguros</span>
           </div>
       );
   } else if (showBackOnline) {
       alerts.push(
-          <div key="net-back" className="bg-emerald-600 text-white px-4 py-1 text-xs font-bold flex items-center justify-center gap-2 animate-in slide-in-from-top-full fade-out duration-1000">
+          <div key="net-back" className="bg-emerald-500 text-white px-4 py-1.5 text-[10px] font-black flex items-center justify-center gap-2 animate-in slide-in-from-top-full fade-out duration-1000">
               <Wifi className="w-3 h-3" />
-              <span>EN LÍNEA</span>
+              <span className="uppercase tracking-[0.2em]">Conectado</span>
+          </div>
+      );
+  }
+
+  // --- 3. HARDWARE ALERTS ---
+  if (batteryLevel !== null && batteryLevel < 15 && !isCharging) {
+      alerts.push(
+          <div key="batt" className="bg-amber-500 text-amber-950 px-4 py-1 text-[9px] font-black flex items-center justify-center gap-2">
+              <BatteryWarning className="w-3 h-3" />
+              <span>BATERÍA BAJA ({batteryLevel.toFixed(0)}%)</span>
+          </div>
+      );
+  }
+
+  if (storageCritical) {
+      alerts.push(
+          <div key="store" className="bg-rose-600 text-white px-4 py-1 text-[9px] font-black flex items-center justify-center gap-2">
+              <HardDrive className="w-3 h-3" />
+              <span>MEMORIA CASI LLENA - SINCRONICE PRONTO</span>
           </div>
       );
   }
@@ -115,7 +113,7 @@ export const SystemStatus: React.FC = () => {
   if (alerts.length === 0) return null;
 
   return (
-      <div className="fixed top-0 left-0 right-0 z-[100] shadow-md flex flex-col">
+      <div className="fixed top-0 left-0 right-0 z-[100] shadow-2xl flex flex-col pointer-events-none">
           {alerts}
       </div>
   );

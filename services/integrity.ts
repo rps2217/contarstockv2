@@ -1,31 +1,28 @@
 
 /**
- * LogiCount Integrity Engine
- * Provee mecanismos de validación criptográfica para asegurar que los datos
- * locales no hayan sido manipulados o corrompidos por fallos de hardware.
+ * LogiCount Integrity Engine v2.0
+ * Protege contra corrupción silenciosa de datos en almacenamiento flash móvil.
  */
 
-export const calculateChecksum = (data: any): string => {
+export const generateRecordHash = (data: any): string => {
     const str = JSON.stringify(data);
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
         const char = str.charCodeAt(i);
         hash = ((hash << 5) - hash) + char;
-        hash = hash & hash; // Convert to 32bit integer
+        hash = hash & hash; // Convertir a entero de 32 bits
     }
-    return hash.toString(16);
+    return Math.abs(hash).toString(16);
 };
 
-export const verifyBatchIntegrity = (items: any[], expectedChecksum: string): boolean => {
-    return calculateChecksum(items) === expectedChecksum;
+export const verifyIntegrity = (record: any, storedHash: string): boolean => {
+    return generateRecordHash(record) === storedHash;
 };
 
 /**
- * Filtra caracteres maliciosos o secuencias de escape que podrían
- * inyectar código en exportaciones CSV/Excel.
+ * Sanitiza strings para prevenir inyecciones en exportaciones CSV/Excel
  */
-export const safetyHardenString = (val: string): string => {
+export const safetyHarden = (val: string): string => {
     if (!val) return "";
-    // Previene CSV Injection (Excel Formulas)
     return val.replace(/^[=+\-@\t\r]/g, "'$&");
 };

@@ -55,7 +55,10 @@ export interface ConsolidatedItem {
 
 export type ViewState = 'dashboard' | 'counting' | 'database' | 'reports' | 'settings' | 'consolidated' | 'conciliator' | 'reception' | 'sync';
 
-export type Theme = 'light' | 'dark' | 'contrast' | 'warm' | 'navy';
+export type Theme = 'light' | 'dark' | 'contrast' | 'warm' | 'navy' | 'oled';
+
+// Fase 1: Estados del Escáner
+export type ScannerStatus = 'idle' | 'manual' | 'camera' | 'expiring' | 'confirming' | 'error' | 'success' | 'product_form';
 
 export interface AppSheetConfig {
   appId: string;

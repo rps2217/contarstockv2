@@ -1,6 +1,6 @@
 
 import React, { useMemo, useRef, useEffect, useState } from 'react';
-import { X, ChevronLeft, Keyboard as KeyboardIcon, Hash, History as HistoryIcon, Trash2 } from 'lucide-react';
+import { X, ChevronLeft, Keyboard as KeyboardIcon, Hash, History as HistoryIcon, Trash2, Camera } from 'lucide-react';
 import { CountingSession } from '../types';
 import { ExpirationModal } from './ExpirationModal';
 import { useScanner } from '../hooks/useScanner';
@@ -9,7 +9,6 @@ import { CameraScanner } from './CameraScanner';
 import { ProductForm } from './database/ProductForm';
 import * as settingsService from '../services/settings';
 
-// Sub-componentes modularizados
 import { ScannerFeedbackLayer } from './scanner/ScannerFeedbackLayer';
 import { ScannerHeader } from './scanner/ScannerHeader';
 import { ScannerHero } from './scanner/ScannerHero';
@@ -34,9 +33,8 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
         const now = Date.now();
         scanTimestampsRef.current.push(now);
         const cutoff = now - 60000;
-        const filtered = scanTimestampsRef.current.filter(t => t > cutoff);
-        scanTimestampsRef.current = filtered;
-        setScansPerMinute(filtered.length);
+        scanTimestampsRef.current = scanTimestampsRef.current.filter(t => t > cutoff);
+        setScansPerMinute(scanTimestampsRef.current.length);
     }
   }, [data.lastScan, settings.speedometerEnabled]);
 
@@ -46,7 +44,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
   }, [session.isVerifiedMode, data.lastScan, session.expectedItems]);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col text-slate-900 overflow-hidden bg-slate-50 font-sans selection:bg-blue-100">
+    <div className="fixed inset-0 z-50 flex flex-col bg-[#020617] text-slate-100 overflow-hidden font-sans">
       <ScannerFeedbackLayer 
         feedback={state.feedback} 
         isIncident={!!data.lastScan?.isIncident}
@@ -58,21 +56,21 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
         erpOrder={session.erpOrder}
         scansPerMinute={scansPerMinute}
         showSpeedometer={settings.speedometerEnabled}
-        onPause={() => state.setShowConfirmModal(true)}
+        onPause={() => state.setStatus('confirming')}
       />
 
       <div className="flex-1 min-h-0 relative z-10 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
-        {/* Lado Izquierdo: Visualización y Controles Principales */}
         <div className="lg:col-span-8 flex flex-col relative p-4 h-full">
             <div className="flex-1 flex flex-col justify-center items-center min-h-0">
                 <ScannerHero 
                     lastScan={data.lastScan}
                     activeProductStats={{
+                        // Fix: data.data.activeProductStats -> data.activeProductStats
                         ...data.activeProductStats,
                         totalQty: state.optimisticActiveQty 
                     }}
                     feedback={state.feedback}
-                    onRegisterPending={actions.handleRegisterPending}
+                    onRegisterPending={() => state.setStatus('product_form')}
                     onToggleIncident={actions.handleToggleIncident}
                     expectedItem={expectedForActive}
                 />
@@ -89,18 +87,17 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
                     scansPerMinute={scansPerMinute}
                     showSpeedometer={settings.speedometerEnabled}
                     hasCameraSupport={true}
-                    onCameraClick={() => state.setIsCameraOpen(true)}
-                    onMultiplierClick={() => state.setIsMultiplierOpen(true)}
-                    onManualClick={() => state.setManualMode(true)}
+                    onCameraClick={() => state.setStatus('camera')}
+                    onMultiplierClick={() => state.setStatus('manual')} // Multiplicador usa modal manual o keypad
+                    onManualClick={() => state.setStatus('manual')}
                 />
             </div>
         </div>
 
-        {/* Lado Derecho: Historial */}
-        <div className="hidden lg:flex lg:col-span-4 bg-white border-l border-slate-200 flex-col overflow-hidden">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                <h3 className="font-black text-slate-800 text-xs uppercase tracking-widest flex items-center gap-3">
-                    <HistoryIcon className="w-4 h-4 text-blue-600" /> Registro Reciente
+        <div className="hidden lg:flex lg:col-span-4 bg-white/5 border-l border-white/10 flex-col overflow-hidden backdrop-blur-xl">
+            <div className="p-6 border-b border-white/10 flex items-center justify-between bg-white/5">
+                <h3 className="font-black text-blue-400 text-xs uppercase tracking-[0.2em] flex items-center gap-3">
+                    <HistoryIcon className="w-4 h-4" /> Live Feed
                 </h3>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar">
@@ -119,30 +116,38 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
         </div>
       </div>
 
-      {/* --- MODALES --- */}
+      {/* --- RENDERIZADO DE MODALES BASADO EN FSM --- */}
 
-      {state.isProductFormOpen && (
+      {state.status === 'product_form' && (
           <ProductForm 
-            isOpen={state.isProductFormOpen} 
-            onClose={() => state.setIsProductFormOpen(false)} 
+            isOpen={true} 
+            onClose={() => state.setStatus('idle')} 
             initialData={state.pendingScanCode ? { barcode: state.pendingScanCode, name: '', category: '' } : null}
-            onSaveSuccess={() => {
-                state.setIsProductFormOpen(false);
-                // Una vez registrado, procedemos con el flujo normal de vencimiento
-                state.setShowExpirationModal(true);
-            }}
+            onSaveSuccess={() => state.setStatus('expiring')}
           />
       )}
 
-      {state.manualMode && (
-          <div className="fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-md flex items-end md:items-center justify-center p-4 animate-in fade-in duration-300">
-              <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 animate-in slide-in-from-bottom-10">
+      {state.status === 'manual' && (
+          <div className="fixed inset-0 z-[100] bg-[#020617]/90 backdrop-blur-xl flex items-end md:items-center justify-center p-4 animate-in fade-in duration-300">
+              <div className="bg-white w-full max-w-md rounded-[3rem] shadow-2xl p-10 animate-in slide-in-from-bottom-10">
                   <div className="flex justify-between items-center mb-8">
                       <h3 className="text-xl font-black uppercase tracking-tight flex items-center gap-3 text-slate-900">
-                          <KeyboardIcon className="w-6 h-6 text-blue-600" /> Ingreso Manual
+                          <KeyboardIcon className="w-6 h-6 text-indigo-600" /> Entrada Manual
                       </h3>
-                      <button onClick={() => state.setManualMode(false)} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 text-slate-500"><X className="w-6 h-6"/></button>
+                      <button onClick={() => state.setStatus('idle')} className="p-2 bg-slate-100 rounded-full text-slate-500"><X className="w-6 h-6"/></button>
                   </div>
+                  
+                  {/* Selector de Multiplicador Integrado */}
+                  <div className="grid grid-cols-3 gap-2 mb-8">
+                      {[1, 2, 5, 10, 12, 24].map(v => (
+                          <button 
+                            key={v}
+                            onClick={() => state.setMultiplier(v)}
+                            className={`py-3 rounded-xl font-black border-2 transition-all ${state.multiplier === v ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg' : 'border-slate-100 text-slate-400'}`}
+                          >x{v}</button>
+                      ))}
+                  </div>
+
                   <form onSubmit={actions.handleManualSubmit} className="space-y-6">
                       <input 
                           autoFocus
@@ -150,79 +155,45 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
                           inputMode="numeric"
                           value={state.manualInput}
                           onChange={(e) => state.setManualInput(e.target.value)}
-                          placeholder="DIGITE SKU"
-                          className="w-full h-20 bg-slate-50 border-2 border-slate-200 rounded-3xl text-3xl font-black text-center outline-none focus:bg-white focus:border-blue-500 transition-all placeholder:text-slate-200 text-slate-900 tracking-wider"
+                          placeholder="DIGITAR SKU"
+                          className="w-full h-24 bg-slate-50 border-4 border-slate-100 rounded-[2rem] text-4xl font-black text-center outline-none focus:border-indigo-500 text-slate-900 tracking-tighter"
                       />
-                      <button type="submit" className="w-full h-16 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl shadow-xl shadow-blue-200 uppercase tracking-widest text-sm active:scale-95 transition-all">
-                          Registrar Item
-                      </button>
+                      <button type="submit" className="w-full h-16 bg-indigo-600 text-white font-black rounded-2xl shadow-xl shadow-indigo-200 uppercase tracking-widest text-xs active:scale-95 transition-all">Procesar Registro</button>
                   </form>
               </div>
           </div>
       )}
 
-      {state.isMultiplierOpen && (
-          <div className="fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-md flex items-end md:items-center justify-center p-4 animate-in fade-in duration-200">
-              <div className="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl p-8 animate-in slide-in-from-bottom-10">
-                  <div className="text-center mb-8">
-                      <div className="bg-amber-100 text-amber-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                          <Hash className="w-8 h-8" />
-                      </div>
-                      <h3 className="text-2xl font-black uppercase tracking-tighter">Multiplicador</h3>
-                  </div>
-                  
-                  <div className="grid grid-cols-3 gap-3 mb-8">
-                      {[1, 2, 5, 10, 12, 24].map(val => (
-                          <button 
-                            key={val}
-                            onClick={() => { state.setMultiplier(val); state.setIsMultiplierOpen(false); }}
-                            className={`h-16 rounded-2xl font-black text-xl border-2 transition-all active:scale-90 ${state.multiplier === val ? 'bg-amber-400 border-amber-500 text-amber-950 shadow-lg' : 'bg-slate-50 border-slate-100 text-slate-400 hover:border-amber-200'}`}
-                          >
-                              {val}
-                          </button>
-                      ))}
-                  </div>
-
-                  <button onClick={() => state.setIsMultiplierOpen(false)} className="w-full bg-slate-900 text-white font-black h-14 rounded-xl uppercase tracking-widest text-xs">Cerrar</button>
-              </div>
-          </div>
+      {state.status === 'camera' && (
+          <CameraScanner 
+            // Fix: actions.handleExternalScan is mapped to the processScan callback in hooks/useScanner.ts
+            onScan={(code) => { actions.handleExternalScan(code); state.setStatus('idle'); }} 
+            onClose={() => state.setStatus('idle')} 
+          />
       )}
-
-      {state.isCameraOpen && <CameraScanner onScan={(code) => actions.handleExternalScan(code)} onClose={() => state.setIsCameraOpen(false)} />}
       
-      {state.showConfirmModal && (
-          <div className="fixed inset-0 bg-slate-900/70 z-[110] flex items-center justify-center p-6 backdrop-blur-md animate-in fade-in duration-300">
-              <div className="bg-white p-10 rounded-[3rem] shadow-2xl text-center max-w-sm border border-slate-100 animate-in zoom-in-95">
-                  <h3 className="text-2xl font-black mb-2 uppercase tracking-tighter text-slate-900">Pausa en Conteo</h3>
-                  <p className="text-slate-500 text-xs font-medium mb-8 leading-relaxed">¿Deseas finalizar la sesión actual o descartar todo lo escaneado?</p>
+      {state.status === 'confirming' && (
+          <div className="fixed inset-0 bg-[#020617]/95 z-[110] flex items-center justify-center p-6 backdrop-blur-2xl animate-in fade-in">
+              <div className="bg-white p-12 rounded-[4rem] shadow-2xl text-center max-w-sm border border-white/10">
+                  <div className="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-inner"><X className="w-10 h-10" /></div>
+                  <h3 className="text-3xl font-black mb-2 uppercase tracking-tighter text-slate-900">¿Cerrar Sesión?</h3>
+                  <p className="text-slate-400 text-sm font-bold uppercase tracking-widest mb-10 leading-relaxed">Sus datos están seguros en la base local.</p>
                   
-                  <div className="flex flex-col gap-3">
-                      <button 
-                        onClick={onCloseSession} 
-                        className="bg-blue-600 hover:bg-blue-700 text-white h-16 rounded-2xl font-black shadow-lg uppercase text-xs tracking-widest transition-all active:scale-95"
-                      >
-                        Finalizar y Salir
-                      </button>
-                      
-                      <button 
-                        onClick={actions.handleDiscard} 
-                        className="bg-rose-50 hover:bg-rose-100 text-rose-600 h-14 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all flex items-center justify-center gap-2"
-                      >
-                        <Trash2 className="w-4 h-4" /> Descartar Conteo
-                      </button>
-
-                      <button 
-                        onClick={() => state.setShowConfirmModal(false)} 
-                        className="text-slate-400 font-bold py-4 uppercase text-[10px] tracking-[0.2em] mt-2 hover:text-slate-600 transition-colors"
-                      >
-                        Volver al Escáner
-                      </button>
+                  <div className="flex flex-col gap-4">
+                      <button onClick={onCloseSession} className="bg-indigo-600 text-white h-16 rounded-2xl font-black shadow-xl uppercase text-xs tracking-widest active:scale-95 transition-all">Guardar y Finalizar</button>
+                      <button onClick={actions.handleDiscard} className="bg-rose-50 text-rose-600 h-16 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2">Eliminar Todo</button>
+                      <button onClick={() => state.setStatus('idle')} className="text-slate-400 font-black py-4 uppercase text-[10px] tracking-[0.3em] hover:text-indigo-600">Volver</button>
                   </div>
               </div>
           </div>
       )}
 
-      {state.showExpirationModal && <ExpirationModal productName={state.pendingProductName} onComplete={actions.handleExpirationComplete} />}
+      {state.status === 'expiring' && (
+          <ExpirationModal 
+            productName={state.pendingProductName} 
+            onComplete={(mm, yyyy) => { actions.handleExpirationComplete(mm, yyyy); state.setStatus('idle'); }} 
+          />
+      )}
     </div>
   );
 };

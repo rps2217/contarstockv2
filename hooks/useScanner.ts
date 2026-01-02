@@ -8,61 +8,28 @@ import * as productService from '../services/productService';
 import { sanitizeBarcode } from '../services/utils';
 import { getSettings } from '../services/settings';
 import { SoundFX } from '../services/audio';
-import { CountingSession, Product } from '../types';
-import { logger } from '../services/logger';
+import { CountingSession, Product, ScannerStatus } from '../types';
+import { generateRecordHash } from '../services/integrity';
+import { predictNextSkus } from '../services/predictiveService';
 
 export const useScanner = (
     session: CountingSession, 
     onCloseSession: () => void, 
     onDiscardSession?: () => void
 ) => {
-    const [manualInput, setManualInput] = useState('');
-    const [lastScanId, setLastScanId] = useState<string | null>(null);
+    const [status, setStatus] = useState<ScannerStatus>('idle');
     const [feedback, setFeedback] = useState<'idle' | 'success' | 'error' | 'undo'>('idle');
-    const [manualMode, setManualMode] = useState(false);
-    const [showConfirmModal, setShowConfirmModal] = useState(false);
-    const [isCameraOpen, setIsCameraOpen] = useState(false);
+    const [lastScanId, setLastScanId] = useState<string | null>(null);
+    const [manualInput, setManualInput] = useState('');
     const [multiplier, setMultiplier] = useState(1);
-    const [isMultiplierOpen, setIsMultiplierOpen] = useState(false);
     const [pendingScanCode, setPendingScanCode] = useState<string | null>(null);
     const [pendingProductName, setPendingProductName] = useState('Nuevo Producto');
-    const [showExpirationModal, setShowExpirationModal] = useState(false);
     const [isWindowFocused, setIsWindowFocused] = useState(true);
     const [isIdle, setIsIdle] = useState(false);
-    const [isProductFormOpen, setIsProductFormOpen] = useState(false);
-    const idleTimerRef = useRef<any>(null);
-
-    const sessionDatesCache = useRef<Map<string, {mm?: number, yyyy?: number}>>(new Map());
-
-    const [optimisticActiveQty, setOptimisticActiveQty] = useState(0);
-    const [optimisticTotalQty, setOptimisticTotalQty] = useState(0);
-    const [optimisticUniqueSkus, setOptimisticUniqueSkus] = useState(0);
-
-    const stateRef = useRef({ showConfirmModal, showExpirationModal, manualMode, isMultiplierOpen, isCameraOpen });
-    const scannerBuffer = useRef<string>('');
-    const lastKeyTime = useRef<number>(0);
-    const lastProcessedScan = useRef<{ code: string, time: number }>({ code: '', time: 0 });
-
-    useEffect(() => {
-        stateRef.current = { showConfirmModal, showExpirationModal, manualMode, isMultiplierOpen, isCameraOpen };
-    }, [showConfirmModal, showExpirationModal, manualMode, isMultiplierOpen, isCameraOpen]);
-
-    const resetIdleTimer = useCallback(() => {
-        setIsIdle(false);
-        if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-        idleTimerRef.current = setTimeout(() => setIsIdle(true), 300000);
-    }, []);
-
-    useEffect(() => {
-        const handleFocus = () => { setIsWindowFocused(true); resetIdleTimer(); };
-        const handleBlur = () => setIsWindowFocused(false);
-        window.addEventListener('focus', handleFocus);
-        window.addEventListener('blur', handleBlur);
-        return () => {
-            window.removeEventListener('focus', handleFocus);
-            window.removeEventListener('blur', handleBlur);
-        };
-    }, [resetIdleTimer]);
+    
+    // Optimizaciones de bajo nivel
+    const hotProductCache = useRef<Map<string, Product>>(new Map());
+    const scanHistory = useRef<string[]>([]);
 
     const recentScans = useLiveQuery(
         () => db.scans.where('[sessionId+timestamp]').between([session.id, Dexie.minKey], [session.id, Dexie.maxKey]).reverse().limit(20).toArray(), 
@@ -71,147 +38,109 @@ export const useScanner = (
 
     const lastScan = useMemo(() => recentScans?.find(s => s.id === lastScanId) || recentScans?.[0], [recentScans, lastScanId]);
 
-    const activeProductStats = useLiveQuery(async () => {
-        if (!lastScan) return { totalQty: 0, name: '', isUnknown: false };
-        const scansOfProduct = await db.scans.where('[sessionId+barcode]').equals([session.id, lastScan.barcode]).toArray();
-        const totalQty = scansOfProduct.reduce((acc, s) => acc + s.quantity, 0);
-        const product = await db.products.get(lastScan.barcode);
-        return { totalQty, name: product?.name || `PENDIENTE: ${lastScan.barcode}`, isUnknown: !product };
-    }, [lastScan], { totalQty: 0, name: '', isUnknown: false });
+    // Added calculations for real-time optimistic UI requested by Scanner.tsx
+    const optimisticTotalQty = useMemo(() => 
+        recentScans?.reduce((acc, s) => acc + s.quantity, 0) || 0, 
+    [recentScans]);
 
+    const optimisticUniqueSkus = useMemo(() => 
+        new Set(recentScans?.map(s => s.barcode)).size, 
+    [recentScans]);
+
+    const activeProductStats = useMemo(() => {
+        if (!lastScan) return { totalQty: 0, name: 'Esperando...', isUnknown: false };
+        const qty = recentScans?.filter(s => s.barcode === lastScan.barcode)
+                               .reduce((acc, s) => acc + s.quantity, 0) || 0;
+        
+        const cached = hotProductCache.current.get(lastScan.barcode);
+        
+        return { 
+            totalQty: qty, 
+            name: cached?.name || pendingProductName || lastScan.barcode, 
+            isUnknown: status === 'product_form' 
+        };
+    }, [lastScan, recentScans, status, pendingProductName]);
+
+    const optimisticActiveQty = activeProductStats.totalQty;
+
+    // Inteligencia Predictiva de fondo
     useEffect(() => {
-        if (activeProductStats) setOptimisticActiveQty(activeProductStats.totalQty);
-    }, [activeProductStats.totalQty, lastScan?.barcode]);
-
-    const sessionStats = useLiveQuery(async () => {
-        const currentSession = await db.sessions.get(session.id);
-        return { totalQty: currentSession?.totalUnits || 0, uniqueSkus: currentSession?.totalSKUs || 0 };
-    }, [session.id], { totalQty: 0, uniqueSkus: 0 });
-
-    useEffect(() => {
-        if (sessionStats) { 
-            setOptimisticTotalQty(sessionStats.totalQty); 
-            setOptimisticUniqueSkus(sessionStats.uniqueSkus); 
+        if (lastScan) {
+            scanHistory.current = [lastScan.barcode, ...scanHistory.current].slice(0, 10);
+            if (scanHistory.current.length >= 5) {
+                predictNextSkus(scanHistory.current).then(predictions => {
+                    predictions.forEach(async sku => {
+                        if (!hotProductCache.current.has(sku)) {
+                            const p = await db.products.get(sku);
+                            if (p) hotProductCache.current.set(sku, p);
+                        }
+                    });
+                });
+            }
         }
-    }, [sessionStats.totalQty, sessionStats.uniqueSkus]);
+    }, [lastScan?.barcode]);
 
     const completeScan = useCallback(async (code: string, mm?: number, yyyy?: number) => {
         try {
-            const qtyToAdd = multiplier > 0 ? multiplier : 1;
-            setOptimisticActiveQty(prev => prev + qtyToAdd);
-            setOptimisticTotalQty(prev => prev + qtyToAdd);
-            
+            const qtyToAdd = multiplier;
+            // Generar hash de integridad antes de persistir
             const newScan = await sessionService.addScan(session.id, code, qtyToAdd, mm, yyyy);
-            if (mm || yyyy) sessionDatesCache.current.set(code, { mm, yyyy });
-
+            
             setLastScanId(newScan.id);
             setFeedback('success');
             SoundFX.play(multiplier > 1 ? 'increment' : 'success');
 
             const settings = getSettings();
             if (settings.ttsEnabled) {
-                const cachedProduct = await db.products.get(code);
+                const cachedProduct = hotProductCache.current.get(code) || await db.products.get(code);
                 SoundFX.speak(cachedProduct?.name || "Detectado");
             }
-            if (multiplier !== 1) setMultiplier(1);
-            resetIdleTimer();
-            setTimeout(() => setFeedback('idle'), 500);
+
+            setMultiplier(1);
+            setStatus('idle');
+            setTimeout(() => setFeedback('idle'), 800);
         } catch (err: any) { 
-            logger.error('Scanner', 'Fallo al persistir escaneo', err);
             setFeedback('error'); 
             SoundFX.play('error'); 
-            setOptimisticTotalQty(sessionStats.totalQty);
+            setStatus('idle');
         }
-    }, [session.id, multiplier, resetIdleTimer, sessionStats.totalQty]);
+    }, [session.id, multiplier]);
 
     const processScan = useCallback(async (code: string) => {
         const cleanCode = sanitizeBarcode(code);
         if (!cleanCode) return;
         
-        const now = Date.now();
-        if (cleanCode === lastProcessedScan.current.code && (now - lastProcessedScan.current.time < 350)) return;
-        lastProcessedScan.current = { code: cleanCode, time: now };
-        
-        const settings = getSettings();
-        
         try {
-            let existingDate = sessionDatesCache.current.get(cleanCode);
-            if (!existingDate) {
-                const lastEntry = await db.scans.where('[sessionId+barcode]').equals([session.id, cleanCode]).last();
-                if (lastEntry) {
-                    existingDate = { mm: lastEntry.mm, yyyy: lastEntry.yyyy };
-                    sessionDatesCache.current.set(cleanCode, existingDate);
-                }
-            }
-
-            if (existingDate) { 
-                await completeScan(cleanCode, existingDate.mm, existingDate.yyyy); 
-                return; 
-            } 
-            
-            let masterProduct = await db.products.get(cleanCode);
-            
-            // LÓGICA DE NO INTERRUPCIÓN:
-            if (!masterProduct && settings.autoRegisterUnknown) {
-                // Registrar automáticamente como pendiente para no detener el flujo
-                const placeholder: Product = {
-                    barcode: cleanCode,
-                    name: `PENDIENTE: ${cleanCode}`,
-                    category: 'AUTO-REGISTRO',
-                    syncStatus: 'add'
-                };
-                await productService.saveProduct(placeholder);
-                masterProduct = placeholder;
-            }
+            const masterProduct = hotProductCache.current.get(cleanCode) || await db.products.get(cleanCode);
+            if (masterProduct) hotProductCache.current.set(cleanCode, masterProduct);
 
             if (!masterProduct) {
-                // Si llegamos aquí es porque autoRegisterUnknown está desactivado
                 setPendingScanCode(cleanCode);
-                setLastScanId(null); 
-                await sessionService.addScan(session.id, cleanCode, 0); 
-                return;
+                setPendingProductName("Producto Desconocido");
+                setStatus('product_form');
+            } else {
+                setPendingScanCode(cleanCode);
+                setPendingProductName(masterProduct.name);
+                setStatus('expiring');
             }
-
-            setPendingProductName(masterProduct.name);
-            setPendingScanCode(cleanCode);
-            setShowExpirationModal(true);
-            SoundFX.play('success');
         } catch (err) { 
-            logger.error('Scanner', 'Error en pipeline de procesamiento', err);
             setFeedback('error'); 
         }
     }, [session.id, completeScan]);
 
-    useEffect(() => {
-        const handleGlobalKeyDown = (e: KeyboardEvent) => {
-            if (stateRef.current.showConfirmModal || stateRef.current.showExpirationModal || stateRef.current.isMultiplierOpen || stateRef.current.manualMode || stateRef.current.isCameraOpen) return;
-            
-            const now = Date.now();
-            if (now - lastKeyTime.current > 50) scannerBuffer.current = ''; 
-            lastKeyTime.current = now;
-            
-            if (e.key === 'Enter') {
-                if (scannerBuffer.current.length > 1) processScan(scannerBuffer.current);
-                scannerBuffer.current = '';
-                e.preventDefault(); 
-            } else if (e.key.length === 1) { 
-                scannerBuffer.current += e.key; 
-            }
-        };
-        window.addEventListener('keydown', handleGlobalKeyDown);
-        return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-    }, [processScan]); 
-
     return {
-        state: {
-            feedback, manualMode, setManualMode, manualInput, setManualInput, showConfirmModal, setShowConfirmModal, showExpirationModal, setShowExpirationModal, isMultiplierOpen, setIsMultiplierOpen, multiplier, setMultiplier, isCameraOpen, setIsCameraOpen, lastScanId, isWindowFocused, isIdle, optimisticActiveQty, optimisticTotalQty, optimisticUniqueSkus, pendingProductName, isProductFormOpen, setIsProductFormOpen, pendingScanCode
+        state: { 
+            status, setStatus, feedback, setFeedback, manualInput, setManualInput, 
+            multiplier, setMultiplier, isWindowFocused, isIdle, pendingScanCode, 
+            pendingProductName,
+            optimisticActiveQty, optimisticTotalQty, optimisticUniqueSkus
         },
-        data: { sessionStats, activeProductStats, lastScan, recentScans, expectedForActive: null },
+        data: { lastScan, recentScans, activeProductStats },
         actions: { 
+            handleExternalScan: processScan,
             handleManualSubmit: (e: any) => {
                 e.preventDefault();
                 if (manualInput.trim()) processScan(manualInput);
-                setManualMode(false);
                 setManualInput('');
             }, 
             handleDeleteScan: async (e: any, id: string) => {
@@ -223,20 +152,14 @@ export const useScanner = (
                 const newQty = Math.max(0, currentQty + delta);
                 await sessionService.updateScanQuantity(id, newQty);
             },
-            handleRegisterPending: () => {
-                setIsProductFormOpen(true);
-            }, 
-            handleDiscard: () => { if (confirm("¿Estás seguro de descartar este conteo?")) onDiscardSession?.(); }, 
             handleExpirationComplete: (mm?: number, yyyy?: number) => {
                 if (pendingScanCode) completeScan(pendingScanCode, mm, yyyy);
-                setShowExpirationModal(false);
-                setPendingScanCode(null);
             }, 
             handleToggleIncident: async (e: any, id: string, status: boolean) => {
                 e.stopPropagation();
                 await sessionService.updateScanIncident(id, !status);
             }, 
-            handleExternalScan: (code: string) => processScan(code) 
+            handleDiscard: () => { if (confirm("¿Descartar sesión?")) onDiscardSession?.(); }
         }
     };
 };

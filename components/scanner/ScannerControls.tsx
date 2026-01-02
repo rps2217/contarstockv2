@@ -1,6 +1,6 @@
 
-import React, { memo, useMemo } from 'react';
-import { Gauge, Camera, Ban, Keyboard, Zap, Hash } from 'lucide-react';
+import React, { memo } from 'react';
+import { Camera, Ban, Keyboard, Zap } from 'lucide-react';
 import { CountingSession } from '../../types';
 
 interface ScannerControlsProps {
@@ -27,62 +27,61 @@ export const ScannerControls: React.FC<ScannerControlsProps> = memo(({
     onManualClick 
 }) => {
     return (
-        <div className="w-full bg-white/90 backdrop-blur-xl border border-slate-200 rounded-[2.5rem] p-4 shadow-2xl shadow-slate-200/50 flex flex-col gap-4">
-            {/* Header de Metadatos Rápidos */}
-            <div className="flex items-center justify-between px-4 pt-2 border-b border-slate-100 pb-4">
+        <div className="w-full glass-card rounded-[3rem] p-4 shadow-2xl flex flex-col gap-4 mb-4 mx-auto max-w-lg">
+            {/* HUD de Información Rápida */}
+            <div className="flex items-center justify-between px-6 pt-2 border-b border-white/5 pb-4">
                 <div className="flex flex-col">
-                    <span className="text-[9px] uppercase font-black text-slate-400 tracking-[0.2em]">Acumulado</span>
-                    <span className="text-2xl font-black tabular-nums text-slate-900">{sessionStats.totalQty}</span>
+                    <span className="text-[9px] uppercase font-black text-slate-500 tracking-[0.2em]">Total</span>
+                    <span className="text-2xl font-black tabular-nums text-white">{sessionStats.totalQty}</span>
                 </div>
                 
                 {showSpeedometer && (
-                    <div className="flex flex-col items-center">
-                        <span className="text-[9px] uppercase font-black text-slate-400 tracking-[0.2em]">Rendimiento</span>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                            <Zap className={`w-3 h-3 ${scansPerMinute > 25 ? 'text-blue-500 fill-blue-500' : 'text-slate-300'}`} />
-                            <span className="text-sm font-black text-slate-700">{scansPerMinute} <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">IPM</span></span>
+                    <div className="flex flex-col items-center bg-blue-500/10 px-4 py-1 rounded-full border border-blue-500/20">
+                        <div className="flex items-center gap-1.5">
+                            <Zap className={`w-3 h-3 ${scansPerMinute > 25 ? 'text-blue-400 fill-blue-400' : 'text-slate-500'}`} />
+                            <span className="text-sm font-black text-blue-400">{scansPerMinute} <span className="text-[9px] opacity-60">IPM</span></span>
                         </div>
                     </div>
                 )}
 
                 <div className="flex flex-col text-right">
-                    <span className="text-[9px] uppercase font-black text-slate-400 tracking-[0.2em]">Diversidad SKUs</span>
-                    <span className="text-2xl font-black tabular-nums text-blue-600">{sessionStats.uniqueSkus}</span>
+                    <span className="text-[9px] uppercase font-black text-slate-500 tracking-[0.2em]">SKUs</span>
+                    <span className="text-2xl font-black tabular-nums text-indigo-400">{sessionStats.uniqueSkus}</span>
                 </div>
             </div>
 
-            {/* Fila de Botones de Acción */}
+            {/* Fila de Botones de Acción Ergonómica */}
             <div className="grid grid-cols-3 gap-3">
                 <button 
                     onClick={onCameraClick}
-                    className={`h-16 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all active:scale-90 border-2 ${
+                    className={`h-20 rounded-[2rem] flex flex-col items-center justify-center gap-2 transition-all btn-press border-2 ${
                         hasCameraSupport 
-                        ? 'bg-slate-50 text-slate-700 border-slate-200 hover:border-blue-500' 
-                        : 'bg-slate-100 text-slate-300 border-transparent opacity-50'
+                        ? 'bg-white/5 text-slate-200 border-white/5' 
+                        : 'bg-red-500/10 text-red-400 border-red-500/20 opacity-50'
                     }`}
                 >
-                    <Camera className="w-6 h-6" />
+                    <Camera className="w-7 h-7" />
                     <span className="text-[8px] font-black uppercase tracking-[0.2em]">Cámara</span>
                 </button>
 
                 <button 
                     onClick={onMultiplierClick}
-                    className={`h-16 rounded-2xl flex flex-col items-center justify-center transition-all active:scale-90 border-2 ${
+                    className={`h-20 rounded-[2rem] flex flex-col items-center justify-center transition-all btn-press border-2 ${
                         multiplier > 1 
-                        ? 'bg-blue-600 text-white border-blue-700 shadow-lg shadow-blue-200' 
-                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-blue-200'
+                        ? 'bg-blue-600 text-white border-blue-500 shadow-[0_0_20px_rgba(37,99,235,0.4)]' 
+                        : 'bg-white/5 text-slate-200 border-white/5'
                     }`}
                 >
-                    <span className={`text-2xl font-black leading-none ${multiplier > 1 ? 'text-white' : 'text-slate-900'}`}>x{multiplier}</span>
-                    <span className={`text-[8px] font-black uppercase tracking-[0.2em] mt-1 ${multiplier > 1 ? 'text-blue-100' : 'text-slate-400'}`}>Multiplicar</span>
+                    <span className="text-3xl font-black leading-none">x{multiplier}</span>
+                    <span className="text-[8px] font-black uppercase tracking-[0.2em] mt-1 opacity-60">Multi</span>
                 </button>
                 
                 <button 
                     onClick={onManualClick}
-                    className="h-16 rounded-2xl bg-slate-900 text-white flex flex-col items-center justify-center gap-1 active:scale-90 transition-all border-2 border-slate-950 shadow-xl hover:bg-black"
+                    className="h-20 rounded-[2rem] bg-slate-100 text-slate-900 flex flex-col items-center justify-center gap-2 btn-press shadow-xl"
                 >
-                    <Keyboard className="w-6 h-6" />
-                    <span className="text-[8px] font-black uppercase tracking-[0.2em]">Manual</span>
+                    <Keyboard className="w-7 h-7" />
+                    <span className="text-[8px] font-black uppercase tracking-[0.2em]">Teclado</span>
                 </button>
             </div>
         </div>
