@@ -1,6 +1,6 @@
 
 import React, { memo } from 'react';
-import { RotateCcw, AlertCircle, Package, CheckCircle, Info } from 'lucide-react';
+import { RotateCcw, AlertCircle, Package, CheckCircle, Info, Zap } from 'lucide-react';
 import { ScanRecord, ExpectedItem } from '../../types';
 
 interface ScannerHeroProps {
@@ -94,10 +94,22 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
     }
 
     return (
-        <div className="flex-1 flex flex-col items-center justify-center py-20 grayscale animate-in fade-in duration-1000">
-            <Package className="w-32 h-32 mb-6 text-slate-900 opacity-5" />
-            <h2 className="text-3xl font-black uppercase tracking-[0.4em] text-slate-200">Standby</h2>
-            <p className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.2em] mt-4">Listo para procesar etiqueta</p>
+        <div className="flex-1 flex flex-col items-center justify-center py-20 animate-in fade-in duration-1000">
+            <div className="relative mb-8">
+                <Package className="w-32 h-32 text-white opacity-5" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                    <Zap className="w-12 h-12 text-blue-500/20 animate-pulse" />
+                </div>
+            </div>
+            <h2 className="text-3xl font-black uppercase tracking-[0.4em] text-white/20 italic">STANDBY</h2>
+            <div className="mt-6 flex flex-col items-center gap-2">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">Escucha de hardware activa</p>
+                <div className="flex gap-1">
+                    <div className="w-1 h-1 bg-blue-500/40 rounded-full animate-bounce"></div>
+                    <div className="w-1 h-1 bg-blue-500/40 rounded-full animate-bounce [animation-delay:0.2s]"></div>
+                    <div className="w-1 h-1 bg-blue-500/40 rounded-full animate-bounce [animation-delay:0.4s]"></div>
+                </div>
+            </div>
         </div>
     );
 });

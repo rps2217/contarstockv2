@@ -9,7 +9,6 @@ import { sanitizeBarcode } from '../services/utils';
 import { getSettings } from '../services/settings';
 import { SoundFX } from '../services/audio';
 import { CountingSession, Product, ScannerStatus } from '../types';
-import { generateRecordHash } from '../services/integrity';
 import { predictNextSkus } from '../services/predictiveService';
 
 export const useScanner = (
@@ -27,7 +26,9 @@ export const useScanner = (
     const [isWindowFocused, setIsWindowFocused] = useState(true);
     const [isIdle, setIsIdle] = useState(false);
     
-    // Optimizaciones de bajo nivel
+    // Buffer para escáner físico (Hardware Keyboard Emulation)
+    const keyBuffer = useRef('');
+    const lastKeyTime = useRef(0);
     const hotProductCache = useRef<Map<string, Product>>(new Map());
     const scanHistory = useRef<string[]>([]);
 
@@ -38,7 +39,6 @@ export const useScanner = (
 
     const lastScan = useMemo(() => recentScans?.find(s => s.id === lastScanId) || recentScans?.[0], [recentScans, lastScanId]);
 
-    // Added calculations for real-time optimistic UI requested by Scanner.tsx
     const optimisticTotalQty = useMemo(() => 
         recentScans?.reduce((acc, s) => acc + s.quantity, 0) || 0, 
     [recentScans]);
@@ -63,27 +63,9 @@ export const useScanner = (
 
     const optimisticActiveQty = activeProductStats.totalQty;
 
-    // Inteligencia Predictiva de fondo
-    useEffect(() => {
-        if (lastScan) {
-            scanHistory.current = [lastScan.barcode, ...scanHistory.current].slice(0, 10);
-            if (scanHistory.current.length >= 5) {
-                predictNextSkus(scanHistory.current).then(predictions => {
-                    predictions.forEach(async sku => {
-                        if (!hotProductCache.current.has(sku)) {
-                            const p = await db.products.get(sku);
-                            if (p) hotProductCache.current.set(sku, p);
-                        }
-                    });
-                });
-            }
-        }
-    }, [lastScan?.barcode]);
-
     const completeScan = useCallback(async (code: string, mm?: number, yyyy?: number) => {
         try {
             const qtyToAdd = multiplier;
-            // Generar hash de integridad antes de persistir
             const newScan = await sessionService.addScan(session.id, code, qtyToAdd, mm, yyyy);
             
             setLastScanId(newScan.id);
@@ -93,7 +75,7 @@ export const useScanner = (
             const settings = getSettings();
             if (settings.ttsEnabled) {
                 const cachedProduct = hotProductCache.current.get(code) || await db.products.get(code);
-                SoundFX.speak(cachedProduct?.name || "Detectado");
+                SoundFX.speak(cachedProduct?.name || "Registrado");
             }
 
             setMultiplier(1);
@@ -108,7 +90,7 @@ export const useScanner = (
 
     const processScan = useCallback(async (code: string) => {
         const cleanCode = sanitizeBarcode(code);
-        if (!cleanCode) return;
+        if (!cleanCode || cleanCode.length < 2) return;
         
         try {
             const masterProduct = hotProductCache.current.get(cleanCode) || await db.products.get(cleanCode);
@@ -126,7 +108,61 @@ export const useScanner = (
         } catch (err) { 
             setFeedback('error'); 
         }
-    }, [session.id, completeScan]);
+    }, []);
+
+    // --- LISTENER GLOBAL PARA HARDWARE EXTERNO (SCANNER PISTOLA) ---
+    useEffect(() => {
+        const handleGlobalKeyDown = (e: KeyboardEvent) => {
+            // Ignorar si estamos en un formulario o modal que no sea IDLE
+            if (status !== 'idle' && status !== 'manual') return;
+            
+            // No capturar si el foco está en un input real (excepto el de manual)
+            const target = e.target as HTMLElement;
+            if (target.tagName === 'INPUT' && status !== 'manual') return;
+
+            const now = Date.now();
+            const char = e.key;
+
+            // Detección de ráfaga (Escáner físico es ultra rápido < 50ms)
+            if (now - lastKeyTime.current > 50) {
+                // Si el tiempo es largo, es una nueva lectura
+                if (char.length === 1) keyBuffer.current = char;
+            } else {
+                // Es parte de la ráfaga actual
+                if (char.length === 1) keyBuffer.current += char;
+            }
+            lastKeyTime.current = now;
+
+            // Procesar al recibir ENTER (Fin de ráfaga del escáner)
+            if (char === 'Enter') {
+                e.preventDefault();
+                if (keyBuffer.current.length >= 2) {
+                    processScan(keyBuffer.current);
+                    keyBuffer.current = '';
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleGlobalKeyDown);
+        return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+    }, [status, processScan]);
+
+    // Inteligencia Predictiva
+    useEffect(() => {
+        if (lastScan) {
+            scanHistory.current = [lastScan.barcode, ...scanHistory.current].slice(0, 10);
+            if (scanHistory.current.length >= 5) {
+                predictNextSkus(scanHistory.current).then(predictions => {
+                    predictions.forEach(async sku => {
+                        if (!hotProductCache.current.has(sku)) {
+                            const p = await db.products.get(sku);
+                            if (p) hotProductCache.current.set(sku, p);
+                        }
+                    });
+                });
+            }
+        }
+    }, [lastScan?.barcode]);
 
     return {
         state: { 
