@@ -1,4 +1,3 @@
-
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home, Terminal } from 'lucide-react';
 import { logger } from '../services/logger';
@@ -16,7 +15,7 @@ interface State {
 /**
  * ErrorBoundary class component to catch JS errors anywhere in their child component tree.
  */
-// Fix: Use Component explicitly from React to ensure that setState and props are correctly recognized by TypeScript as inherited members.
+// Fix: Use Component directly from react to ensure inherited members like setState and props are correctly resolved by TypeScript.
 export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
@@ -47,7 +46,7 @@ export class ErrorBoundary extends Component<Props, State> {
     ).catch(e => console.error("Failed to write crash log", e));
     
     // Captured error info in state to display in the UI
-    // Fix: Explicitly using this.setState from the base React.Component
+    // Fix: Explicitly using this.setState from the inherited Component context.
     this.setState({ errorInfo });
   }
 
@@ -113,7 +112,7 @@ export class ErrorBoundary extends Component<Props, State> {
       );
     }
 
-    // Fix: Accessing this.props from the React.Component context
+    // Fix: Explicitly accessing children via this.props from inherited Component context.
     return this.props.children;
   }
 }

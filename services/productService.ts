@@ -5,6 +5,11 @@ import Papa from 'papaparse';
 import { sanitizeBarcode } from './utils';
 import { validateProduct } from './validator';
 
+/**
+ * REGLA DE ESTABILIDAD:
+ * Los productos guardados mediante esta función deben ser sanitizados siempre.
+ * Si el producto ya existe y es 'synced', cambiar a 'edit' para asegurar que se suba el cambio.
+ */
 export const saveProduct = async (product: Product) => {
   const cleanBarcode = sanitizeBarcode(product.barcode);
   const validation = validateProduct({ ...product, barcode: cleanBarcode });
@@ -12,9 +17,18 @@ export const saveProduct = async (product: Product) => {
   
   const existing = await db.products.get(cleanBarcode);
   let syncStatus: 'add' | 'edit' | 'synced' = 'add';
-  if (existing) syncStatus = existing.syncStatus === 'add' ? 'add' : 'edit';
+  
+  if (existing) {
+      // No bajamos de nivel 'add', pero si era 'synced' ahora es 'edit'
+      syncStatus = existing.syncStatus === 'add' ? 'add' : 'edit';
+  }
 
-  await db.products.put({ ...product, barcode: cleanBarcode, syncStatus });
+  await db.products.put({ 
+      ...product, 
+      barcode: cleanBarcode, 
+      syncStatus,
+      name: product.name || 'PENDIENTE' // Fallback de seguridad
+  });
 };
 
 export const saveProductBatch = async (products: Product[]) => {
@@ -49,22 +63,18 @@ export const deleteAllProducts = async () => {
   await db.products.clear();
 };
 
-/**
- * IMPORTADOR MASIVO (Optimizado para el formato del usuario)
- */
 export const bulkImportProducts = async (csvText: string): Promise<number> => {
     return new Promise((resolve, reject) => {
         Papa.parse(csvText, {
             header: true,
             skipEmptyLines: true,
             dynamicTyping: true,
-            delimiter: "", // Auto-detect (ahora detectará tu ';')
+            delimiter: "", 
             transformHeader: (h) => h.trim().toUpperCase(),
             complete: async (results) => {
                 try {
                     const products: Product[] = [];
                     for (const row of results.data as any[]) {
-                        // Mapeo exacto según tu hoja
                         const rawBarcode = row['COD PRODUCTO'] || row['CODIGO'] || row['SKU'];
                         const name = row['DESCRIPCION'] || row['PRODUCTO'];
                         const category = row['MUNDO'] || row['CATEGORIA'] || '';
