@@ -26,14 +26,14 @@ export const useScanner = (
     const [isWindowFocused, setIsWindowFocused] = useState(true);
     const [isIdle, setIsIdle] = useState(false);
     
-    // Buffer para escáner físico (Hardware Keyboard Emulation)
     const keyBuffer = useRef('');
     const lastKeyTime = useRef(0);
     const hotProductCache = useRef<Map<string, Product>>(new Map());
     const scanHistory = useRef<string[]>([]);
 
+    // Consultar todos los escaneos de la sesión actual para validación de SKU único
     const recentScans = useLiveQuery(
-        () => db.scans.where('[sessionId+timestamp]').between([session.id, Dexie.minKey], [session.id, Dexie.maxKey]).reverse().limit(20).toArray(), 
+        () => db.scans.where('[sessionId+timestamp]').between([session.id, Dexie.minKey], [session.id, Dexie.maxKey]).reverse().toArray(), 
         [session.id]
     );
 
@@ -66,7 +66,19 @@ export const useScanner = (
     const completeScan = useCallback(async (code: string, mm?: number, yyyy?: number) => {
         try {
             const qtyToAdd = multiplier;
-            const newScan = await sessionService.addScan(session.id, code, qtyToAdd, mm, yyyy);
+            // Buscar si ya existe una fecha para este producto en la sesión para heredarla si no se provee
+            let finalMm = mm;
+            let finalYyyy = yyyy;
+
+            if (mm === undefined && yyyy === undefined) {
+                const prev = recentScans?.find(s => s.barcode === code && s.mm !== undefined);
+                if (prev) {
+                    finalMm = prev.mm;
+                    finalYyyy = prev.yyyy;
+                }
+            }
+
+            const newScan = await sessionService.addScan(session.id, code, qtyToAdd, finalMm, finalYyyy);
             
             setLastScanId(newScan.id);
             setFeedback('success');
@@ -86,7 +98,7 @@ export const useScanner = (
             SoundFX.play('error'); 
             setStatus('idle');
         }
-    }, [session.id, multiplier]);
+    }, [session.id, multiplier, recentScans]);
 
     const processScan = useCallback(async (code: string) => {
         const cleanCode = sanitizeBarcode(code);
@@ -96,11 +108,18 @@ export const useScanner = (
             const masterProduct = hotProductCache.current.get(cleanCode) || await db.products.get(cleanCode);
             if (masterProduct) hotProductCache.current.set(cleanCode, masterProduct);
 
+            // REQUERIMIENTO: Verificar si el SKU ya existe en esta sesión
+            const alreadyInSession = recentScans?.some(s => s.barcode === cleanCode);
+
             if (!masterProduct) {
                 setPendingScanCode(cleanCode);
                 setPendingProductName("Producto Desconocido");
                 setStatus('product_form');
+            } else if (alreadyInSession) {
+                // Ya existe en la sesión, registrar directamente (Expiry Only Once)
+                completeScan(cleanCode);
             } else {
+                // Es nuevo para esta sesión, pedir fecha
                 setPendingScanCode(cleanCode);
                 setPendingProductName(masterProduct.name);
                 setStatus('expiring');
@@ -108,36 +127,33 @@ export const useScanner = (
         } catch (err) { 
             setFeedback('error'); 
         }
-    }, []);
+    }, [recentScans, completeScan]);
 
-    // --- LISTENER GLOBAL PARA HARDWARE EXTERNO (SCANNER PISTOLA) ---
+    // LISTENER GLOBAL ROBUSTO PARA SCANNER FÍSICO
     useEffect(() => {
         const handleGlobalKeyDown = (e: KeyboardEvent) => {
-            // Ignorar si estamos en un formulario o modal que no sea IDLE
+            // No procesar si hay modales de sistema que no sean IDLE o MANUAL
             if (status !== 'idle' && status !== 'manual') return;
             
-            // No capturar si el foco está en un input real (excepto el de manual)
             const target = e.target as HTMLElement;
             if (target.tagName === 'INPUT' && status !== 'manual') return;
 
             const now = Date.now();
             const char = e.key;
 
-            // Detección de ráfaga (Escáner físico es ultra rápido < 50ms)
+            // Tiempo máximo entre caracteres de un escáner (50ms)
             if (now - lastKeyTime.current > 50) {
-                // Si el tiempo es largo, es una nueva lectura
-                if (char.length === 1) keyBuffer.current = char;
+                keyBuffer.current = char.length === 1 ? char : '';
             } else {
-                // Es parte de la ráfaga actual
                 if (char.length === 1) keyBuffer.current += char;
             }
             lastKeyTime.current = now;
 
-            // Procesar al recibir ENTER (Fin de ráfaga del escáner)
             if (char === 'Enter') {
                 e.preventDefault();
-                if (keyBuffer.current.length >= 2) {
-                    processScan(keyBuffer.current);
+                const codeToProcess = keyBuffer.current.trim();
+                if (codeToProcess.length >= 2) {
+                    processScan(codeToProcess);
                     keyBuffer.current = '';
                 }
             }
@@ -146,23 +162,6 @@ export const useScanner = (
         window.addEventListener('keydown', handleGlobalKeyDown);
         return () => window.removeEventListener('keydown', handleGlobalKeyDown);
     }, [status, processScan]);
-
-    // Inteligencia Predictiva
-    useEffect(() => {
-        if (lastScan) {
-            scanHistory.current = [lastScan.barcode, ...scanHistory.current].slice(0, 10);
-            if (scanHistory.current.length >= 5) {
-                predictNextSkus(scanHistory.current).then(predictions => {
-                    predictions.forEach(async sku => {
-                        if (!hotProductCache.current.has(sku)) {
-                            const p = await db.products.get(sku);
-                            if (p) hotProductCache.current.set(sku, p);
-                        }
-                    });
-                });
-            }
-        }
-    }, [lastScan?.barcode]);
 
     return {
         state: { 
