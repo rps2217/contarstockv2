@@ -1,22 +1,23 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+
+import React from 'react';
 import { AlertTriangle, RefreshCw, Home, Terminal } from 'lucide-react';
 import { logger } from '../services/logger';
 
 interface Props {
-  children?: ReactNode;
+  children?: React.ReactNode;
 }
 
 interface State {
   hasError: boolean;
   error: Error | null;
-  errorInfo: ErrorInfo | null;
+  errorInfo: React.ErrorInfo | null;
 }
 
 /**
  * ErrorBoundary class component to catch JS errors anywhere in their child component tree.
  */
-// Fix: Use Component directly from react to ensure inherited members like setState and props are correctly resolved by TypeScript.
-export class ErrorBoundary extends Component<Props, State> {
+// Fix: Use React.Component directly to ensure inherited members like setState and props are correctly resolved by TypeScript.
+export class ErrorBoundary extends React.Component<Props, State> {
   public state: State = {
     hasError: false,
     error: null,
@@ -36,7 +37,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   // Lifecycle method to handle errors gracefully and write logs
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  public componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
     
     logger.error(
@@ -46,7 +47,7 @@ export class ErrorBoundary extends Component<Props, State> {
     ).catch(e => console.error("Failed to write crash log", e));
     
     // Captured error info in state to display in the UI
-    // Fix: Explicitly using this.setState from the inherited Component context.
+    // Fix: Explicitly using this.setState from the inherited React.Component context.
     this.setState({ errorInfo });
   }
 
@@ -61,7 +62,7 @@ export class ErrorBoundary extends Component<Props, State> {
     }
   };
 
-  public render(): ReactNode {
+  public render(): React.ReactNode {
     if (this.state.hasError) {
       const errorMessage = this.state.error 
         ? (typeof this.state.error.message === 'string' ? this.state.error.message : JSON.stringify(this.state.error.message))
@@ -112,7 +113,7 @@ export class ErrorBoundary extends Component<Props, State> {
       );
     }
 
-    // Fix: Explicitly accessing children via this.props from inherited Component context.
+    // Fix: Explicitly accessing children via this.props from inherited React.Component context.
     return this.props.children;
   }
 }

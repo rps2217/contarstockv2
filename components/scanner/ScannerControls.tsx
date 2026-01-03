@@ -1,6 +1,6 @@
 
 import React, { memo } from 'react';
-import { Camera, Keyboard, Zap, List } from 'lucide-react';
+import { Camera, Keyboard, Zap, Hash } from 'lucide-react';
 import { CountingSession } from '../../types';
 
 interface ScannerControlsProps {
@@ -19,60 +19,53 @@ export const ScannerControls: React.FC<ScannerControlsProps> = memo(({
     session,
     sessionStats, 
     multiplier, 
-    scansPerMinute, 
-    showSpeedometer, 
-    hasCameraSupport,
     onCameraClick, 
     onMultiplierClick, 
     onManualClick 
 }) => {
     return (
-        <div className="w-full bg-white rounded-t-[3.5rem] p-6 shadow-[0_-20px_50px_rgba(0,0,0,0.1)] flex flex-col gap-6 mx-auto max-w-xl border-t-4 border-slate-100">
-            {/* HUD de Información - Alta Visibilidad */}
-            <div className="flex items-center justify-between px-4">
+        <div className="w-full bg-white border-t-8 border-black p-6 flex flex-col gap-6 max-w-lg mx-auto rounded-t-[3rem] shadow-[0_-10px_30px_rgba(0,0,0,0.2)]">
+            {/* STATS DE ALTO CONTRASTE */}
+            <div className="flex items-center justify-between px-2">
                 <div className="flex flex-col">
-                    <span className="text-xs uppercase font-black text-slate-500 tracking-widest">Total Unid.</span>
-                    <span className="text-4xl font-black tabular-nums text-slate-900">{sessionStats.totalQty}</span>
+                    <span className="text-xs uppercase font-black text-slate-500 tracking-[0.2em]">Total Unid.</span>
+                    <span className="text-5xl font-black tabular-nums text-black">{sessionStats.totalQty}</span>
                 </div>
                 
                 <div className="flex flex-col text-right">
-                    <span className="text-xs uppercase font-black text-slate-500 tracking-widest">Variedad SKUs</span>
-                    <span className="text-4xl font-black tabular-nums text-indigo-700">{sessionStats.uniqueSkus}</span>
+                    <span className="text-xs uppercase font-black text-slate-500 tracking-[0.2em]">Variedad SKUs</span>
+                    <span className="text-5xl font-black tabular-nums text-blue-700">{sessionStats.uniqueSkus}</span>
                 </div>
             </div>
 
-            {/* Fila de Botones - Objetivos táctiles grandes */}
-            <div className="grid grid-cols-3 gap-4">
+            {/* BOTONES GIGANTES */}
+            <div className="grid grid-cols-3 gap-4 h-32">
                 <button 
                     onClick={onCameraClick}
-                    className={`h-24 rounded-3xl flex flex-col items-center justify-center gap-2 transition-all active:scale-95 border-4 ${
-                        hasCameraSupport 
-                        ? 'bg-blue-50 text-blue-800 border-blue-200' 
-                        : 'bg-slate-100 text-slate-400 border-slate-200 opacity-50'
-                    }`}
+                    className="bg-blue-100 text-blue-900 border-4 border-blue-900 rounded-[2rem] flex flex-col items-center justify-center gap-2 active:translate-y-2 transition-all"
                 >
-                    <Camera className="w-8 h-8 stroke-[2.5px]" />
-                    <span className="text-[11px] font-black uppercase tracking-widest">Cámara</span>
+                    <Camera className="w-10 h-10 stroke-[2.5px]" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">CÁMARA</span>
                 </button>
 
                 <button 
                     onClick={onMultiplierClick}
-                    className={`h-24 rounded-3xl flex flex-col items-center justify-center transition-all active:scale-95 border-4 ${
+                    className={`rounded-[2.5rem] flex flex-col items-center justify-center transition-all border-4 shadow-xl active:scale-90 ${
                         multiplier > 1 
-                        ? 'bg-blue-700 text-white border-blue-800 shadow-lg' 
-                        : 'bg-slate-100 text-slate-700 border-slate-200'
+                        ? 'bg-black text-white border-black ring-8 ring-blue-100' 
+                        : 'bg-white text-black border-black'
                     }`}
                 >
-                    <span className="text-4xl font-black leading-none">x{multiplier}</span>
-                    <span className="text-[11px] font-black uppercase tracking-widest mt-1">Cantidad</span>
+                    <span className="text-5xl font-black leading-none">x{multiplier}</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest mt-1">CANT.</span>
                 </button>
                 
                 <button 
                     onClick={onManualClick}
-                    className="h-24 rounded-3xl bg-slate-900 text-white flex flex-col items-center justify-center gap-2 active:scale-95 shadow-xl border-4 border-slate-800"
+                    className="bg-black text-white border-4 border-black rounded-[2rem] flex flex-col items-center justify-center gap-2 active:translate-y-2 transition-all shadow-xl"
                 >
-                    <Keyboard className="w-8 h-8 stroke-[2.5px]" />
-                    <span className="text-[11px] font-black uppercase tracking-widest">Teclado</span>
+                    <Keyboard className="w-10 h-10 stroke-[2.5px]" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">TECLADO</span>
                 </button>
             </div>
         </div>
