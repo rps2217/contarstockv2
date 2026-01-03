@@ -9,7 +9,6 @@ import { sanitizeBarcode } from '../services/utils';
 import { getSettings } from '../services/settings';
 import { SoundFX } from '../services/audio';
 import { CountingSession, Product, ScannerStatus } from '../types';
-import { predictNextSkus } from '../services/predictiveService';
 
 export const useScanner = (
     session: CountingSession, 
@@ -29,9 +28,8 @@ export const useScanner = (
     const keyBuffer = useRef('');
     const lastKeyTime = useRef(0);
     const hotProductCache = useRef<Map<string, Product>>(new Map());
-    const scanHistory = useRef<string[]>([]);
 
-    // Consultar todos los escaneos de la sesión actual para validación de SKU único
+    // Consultar todos los escaneos de la sesión actual
     const recentScans = useLiveQuery(
         () => db.scans.where('[sessionId+timestamp]').between([session.id, Dexie.minKey], [session.id, Dexie.maxKey]).reverse().toArray(), 
         [session.id]
@@ -56,20 +54,20 @@ export const useScanner = (
         
         return { 
             totalQty: qty, 
-            name: cached?.name || pendingProductName || lastScan.barcode, 
-            isUnknown: status === 'product_form' 
+            name: cached?.name || lastScan.barcode, 
+            isUnknown: false // Ahora casi no habrá desconocidos por el auto-registro
         };
-    }, [lastScan, recentScans, status, pendingProductName]);
+    }, [lastScan, recentScans]);
 
     const optimisticActiveQty = activeProductStats.totalQty;
 
     const completeScan = useCallback(async (code: string, mm?: number, yyyy?: number) => {
         try {
             const qtyToAdd = multiplier;
-            // Buscar si ya existe una fecha para este producto en la sesión para heredarla si no se provee
             let finalMm = mm;
             let finalYyyy = yyyy;
 
+            // Si no se provee fecha, buscar si ya hay una para este SKU en esta sesión
             if (mm === undefined && yyyy === undefined) {
                 const prev = recentScans?.find(s => s.barcode === code && s.mm !== undefined);
                 if (prev) {
@@ -105,21 +103,31 @@ export const useScanner = (
         if (!cleanCode || cleanCode.length < 2) return;
         
         try {
-            const masterProduct = hotProductCache.current.get(cleanCode) || await db.products.get(cleanCode);
-            if (masterProduct) hotProductCache.current.set(cleanCode, masterProduct);
+            let masterProduct = hotProductCache.current.get(cleanCode) || await db.products.get(cleanCode);
+            
+            // REQUERIMIENTO: Auto-asignar PENDIENTE si es desconocido
+            if (!masterProduct) {
+                const newProd: Product = {
+                    barcode: cleanCode,
+                    name: 'PENDIENTE',
+                    category: 'AUTO_REGISTRO',
+                    syncStatus: 'add'
+                };
+                await productService.saveProduct(newProd);
+                masterProduct = newProd;
+                hotProductCache.current.set(cleanCode, newProd);
+            } else {
+                hotProductCache.current.set(cleanCode, masterProduct);
+            }
 
-            // REQUERIMIENTO: Verificar si el SKU ya existe en esta sesión
+            // REQUERIMIENTO: Verificar si el SKU ya existe en esta sesión para pedir fecha solo UNA VEZ
             const alreadyInSession = recentScans?.some(s => s.barcode === cleanCode);
 
-            if (!masterProduct) {
-                setPendingScanCode(cleanCode);
-                setPendingProductName("Producto Desconocido");
-                setStatus('product_form');
-            } else if (alreadyInSession) {
-                // Ya existe en la sesión, registrar directamente (Expiry Only Once)
+            if (alreadyInSession) {
+                // Ya tiene registro previo en esta sesión, incrementar directo (asume misma fecha)
                 completeScan(cleanCode);
             } else {
-                // Es nuevo para esta sesión, pedir fecha
+                // Es el primer escaneo de este producto en la sesión, pedir fecha de vencimiento
                 setPendingScanCode(cleanCode);
                 setPendingProductName(masterProduct.name);
                 setStatus('expiring');
@@ -129,19 +137,15 @@ export const useScanner = (
         }
     }, [recentScans, completeScan]);
 
-    // LISTENER GLOBAL ROBUSTO PARA SCANNER FÍSICO
     useEffect(() => {
         const handleGlobalKeyDown = (e: KeyboardEvent) => {
-            // No procesar si hay modales de sistema que no sean IDLE o MANUAL
             if (status !== 'idle' && status !== 'manual') return;
-            
             const target = e.target as HTMLElement;
             if (target.tagName === 'INPUT' && status !== 'manual') return;
 
             const now = Date.now();
             const char = e.key;
 
-            // Tiempo máximo entre caracteres de un escáner (50ms)
             if (now - lastKeyTime.current > 50) {
                 keyBuffer.current = char.length === 1 ? char : '';
             } else {
