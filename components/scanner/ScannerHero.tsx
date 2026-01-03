@@ -73,7 +73,7 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
                         </div>
 
                         <div className="relative flex flex-col items-center my-4 md:my-8">
-                            <div className="text-[9rem] md:text-[14rem] leading-none font-black text-slate-900 tabular-nums tracking-tighter select-none drop-shadow-md">
+                            <div className="text-[9rem] md:text-[14rem] leading-none font-black text-slate-900 tabular-nums tracking-tighter select-none drop-shadow-sm">
                                 {currentQty}
                             </div>
                             <div className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-300 -mt-2">Contabilizados</div>
@@ -96,14 +96,14 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
     return (
         <div className="flex-1 flex flex-col items-center justify-center py-20 animate-in fade-in duration-1000">
             <div className="relative mb-8">
-                <Package className="w-32 h-32 text-white opacity-5" />
+                <Package className="w-32 h-32 text-slate-900 opacity-5" />
                 <div className="absolute inset-0 flex items-center justify-center">
-                    <Zap className="w-12 h-12 text-blue-500/20 animate-pulse" />
+                    <Zap className="w-12 h-12 text-blue-500 animate-pulse" />
                 </div>
             </div>
-            <h2 className="text-3xl font-black uppercase tracking-[0.4em] text-white/20 italic">STANDBY</h2>
+            <h2 className="text-3xl font-black uppercase tracking-[0.4em] text-slate-200 italic">STANDBY</h2>
             <div className="mt-6 flex flex-col items-center gap-2">
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">Escucha de hardware activa</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Escucha de hardware activa</p>
                 <div className="flex gap-1">
                     <div className="w-1 h-1 bg-blue-500/40 rounded-full animate-bounce"></div>
                     <div className="w-1 h-1 bg-blue-500/40 rounded-full animate-bounce [animation-delay:0.2s]"></div>
