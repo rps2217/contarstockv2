@@ -21,55 +21,39 @@ export const Settings: React.FC = () => {
   const { settings, updateSetting } = useAppStore(); 
   const [activeTab, setActiveTab] = useState<TabId>('general');
 
-  const tabs: { id: TabId; label: string; icon: any; color: string }[] = [
-      { id: 'general', label: 'Operativa', icon: Zap, color: 'text-amber-500' },
-      { id: 'theme', label: 'Apariencia', icon: Palette, color: 'text-pink-500' },
-      { id: 'nav', label: 'Navegación', icon: LayoutTemplate, color: 'text-indigo-500' },
-      { id: 'cloud', label: 'Conexiones', icon: Cloud, color: 'text-blue-500' },
-      { id: 'system', label: 'Sistema', icon: ShieldCheck, color: 'text-emerald-500' },
+  const tabs: { id: TabId; label: string; icon: any; color: string; bg: string }[] = [
+      { id: 'general', label: 'Operativa', icon: Zap, color: 'text-amber-600', bg: 'bg-amber-50' },
+      { id: 'theme', label: 'Estilo', icon: Palette, color: 'text-pink-600', bg: 'bg-pink-50' },
+      { id: 'nav', label: 'Dock', icon: LayoutTemplate, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+      { id: 'cloud', label: 'Nube', icon: Cloud, color: 'text-blue-600', bg: 'bg-blue-50' },
+      { id: 'system', label: 'Soporte', icon: ShieldCheck, color: 'text-emerald-600', bg: 'bg-emerald-50' },
   ];
 
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: 'LogiCount Pro',
-        text: 'Sistema de Gestión de Inventario Profesional',
-        url: window.location.href
-      }).catch(() => {});
-    }
-  };
-
   return (
-    <div className="flex flex-col h-[calc(100vh-80px)] md:h-[calc(100vh-64px)] bg-slate-50 md:p-6 animate-in fade-in duration-300">
+    <div className="flex flex-col h-screen bg-slate-50 font-sans">
       
-      {/* HEADER MOVIL / DESKTOP */}
-      <div className="flex items-center justify-between mb-6 px-4 pt-4 md:pt-0 shrink-0">
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => navigate(-1)} 
-            className="p-2 hover:bg-white bg-slate-100 rounded-full transition-all text-slate-600 shadow-sm active:scale-90"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-xl font-black tracking-tight text-slate-900 flex items-center gap-2">
-                Ajustes
-            </h1>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest hidden md:block">Configuración Global</p>
-          </div>
+      {/* HEADER FIJO */}
+      <header className="bg-white border-b-4 border-slate-100 px-4 pt-4 pb-3 shrink-0 z-30">
+        <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+                <button 
+                    onClick={() => navigate(-1)} 
+                    className="p-3 bg-slate-100 border-2 border-slate-200 rounded-2xl text-black active:scale-90 transition-all"
+                >
+                    <ArrowLeft className="w-6 h-6 stroke-[3px]" />
+                </button>
+                <h1 className="text-2xl font-black tracking-tighter text-black uppercase italic">Configuración</h1>
+            </div>
+            <button 
+                onClick={() => navigator.share?.({ title: 'LogiCount Pro', url: window.location.href })}
+                className="p-3 bg-blue-50 border-2 border-blue-200 text-blue-700 rounded-2xl active:scale-90"
+            >
+                <Share2 className="w-6 h-6 stroke-[2.5px]" />
+            </button>
         </div>
-        <button 
-            onClick={handleShare}
-            className="p-2 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 transition-colors"
-        >
-            <Share2 className="w-5 h-5" />
-        </button>
-      </div>
 
-      <div className="flex-1 flex flex-col md:flex-row gap-6 min-h-0 overflow-hidden max-w-6xl mx-auto w-full">
-        
-        {/* SIDEBAR DE PESTAÑAS (Scroll Horizontal en Móvil, Vertical en Desktop) */}
-        <div className="md:w-64 shrink-0 overflow-x-auto md:overflow-y-auto no-scrollbar flex md:flex-col gap-2 px-4 pb-2 md:pb-0">
+        {/* TABS NAVEGACIÓN MÓVIL (Scroll Horizontal) */}
+        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 px-1">
             {tabs.map(tab => {
                 const isActive = activeTab === tab.id;
                 return (
@@ -77,30 +61,27 @@ export const Settings: React.FC = () => {
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
                         className={`
-                            flex items-center gap-3 p-3 md:p-4 rounded-2xl transition-all whitespace-nowrap md:whitespace-normal
+                            flex items-center gap-2 px-5 py-3 rounded-2xl transition-all whitespace-nowrap border-2
                             ${isActive 
-                                ? 'bg-white shadow-md border-slate-100 text-slate-900 ring-2 ring-blue-50' 
-                                : 'bg-transparent hover:bg-white/50 text-slate-500 hover:text-slate-700'
+                                ? `bg-black border-black text-white shadow-lg` 
+                                : `bg-white border-slate-200 text-slate-500`
                             }
                         `}
                     >
-                        <div className={`p-2 rounded-xl ${isActive ? 'bg-slate-50' : 'bg-transparent'}`}>
-                            <tab.icon className={`w-5 h-5 ${isActive ? tab.color : 'text-slate-400'}`} />
-                        </div>
-                        <div className="flex-1 text-left">
-                            <span className={`text-xs font-black uppercase tracking-wide ${isActive ? 'text-slate-900' : 'text-slate-500'}`}>
-                                {tab.label}
-                            </span>
-                        </div>
-                        {isActive && <ChevronRight className="w-4 h-4 text-slate-300 hidden md:block" />}
+                        <tab.icon className={`w-4 h-4 ${isActive ? 'text-white' : tab.color} stroke-[3px]`} />
+                        <span className="text-xs font-black uppercase tracking-widest">
+                            {tab.label}
+                        </span>
                     </button>
                 );
             })}
         </div>
+      </header>
 
-        {/* ÁREA DE CONTENIDO */}
-        <div className="flex-1 overflow-y-auto px-4 pb-24 md:pb-0 no-scrollbar">
-            <div className="bg-white rounded-[2.5rem] p-1 shadow-sm border border-slate-200 min-h-[400px]">
+      {/* ÁREA DE CONTENIDO SCROLLABLE */}
+      <div className="flex-1 overflow-y-auto px-4 pt-6 pb-32 no-scrollbar">
+        <div className="max-w-md mx-auto space-y-6">
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
                 {activeTab === 'general' && <OperationalSection settings={settings} updateSetting={updateSetting} />}
                 {activeTab === 'theme' && <ThemeSection settings={settings} updateSetting={updateSetting} />}
                 {activeTab === 'nav' && <NavigationSection settings={settings} updateSetting={updateSetting} />}
@@ -108,12 +89,11 @@ export const Settings: React.FC = () => {
                 {activeTab === 'system' && <SupportSection />}
             </div>
 
-            <div className="mt-8 text-center pb-8 opacity-50">
-                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-[0.3em]">LogiCount Pro Enterprise</p>
-                <p className="text-[9px] text-slate-300 mt-1">v2.5.2 Stable</p>
+            <div className="text-center py-8 opacity-40">
+                <p className="text-[10px] font-black text-black uppercase tracking-[0.3em]">LogiCount Enterprise v2.5.5</p>
+                <p className="text-[10px] text-slate-500 mt-1 font-bold">DEVICE ID: {navigator.userAgent.slice(-10)}</p>
             </div>
         </div>
-
       </div>
     </div>
   );
