@@ -16,7 +16,7 @@ export const SyncManagerUI: React.FC = () => {
     }, [state.logs]);
 
     return (
-        <div className="flex flex-col h-screen bg-slate-50 text-slate-900 overflow-hidden font-sans">
+        <div className="flex flex-col h-[calc(100dvh-6rem)] md:h-screen bg-slate-50 text-slate-900 overflow-hidden font-sans">
             {/* Header */}
             <div className="bg-white border-b border-slate-200 px-4 py-4 flex items-center justify-between shrink-0 z-20 shadow-sm">
                 <div className="flex items-center gap-3">
@@ -54,7 +54,7 @@ export const SyncManagerUI: React.FC = () => {
 
             {/* Main Content */}
             <div className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden">
-                <div className="flex-1 overflow-y-auto no-scrollbar pb-4">
+                <div className="flex-1 overflow-y-auto no-scrollbar pb-4 min-h-[100px]">
                     {state.uiGroups.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center text-center opacity-60">
                             <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mb-6 border-4 border-white shadow-sm">
@@ -74,22 +74,22 @@ export const SyncManagerUI: React.FC = () => {
                                         <div className={`p-3 rounded-xl ${g.uiStatus === 'success' ? 'bg-emerald-50 text-emerald-600' : (g.uiStatus === 'error' ? 'bg-rose-50 text-rose-600' : 'bg-blue-50 text-blue-600')}`}>
                                             {g.type === 'products' ? <Package className="w-5 h-5" /> : <Server className="w-5 h-5" />}
                                         </div>
-                                        <div>
-                                            <div className="font-black text-slate-900 text-sm uppercase tracking-tight">{g.erpOrder}</div>
+                                        <div className="min-w-0">
+                                            <div className="font-black text-slate-900 text-sm uppercase tracking-tight truncate">{g.erpOrder}</div>
                                             <div className="text-[10px] text-slate-500 font-bold uppercase mt-0.5 flex gap-2">
                                                 {g.type === 'products' ? (
-                                                    <span>{g.totalUnits} Cambios en Catálogo</span>
+                                                    <span>{g.totalUnits} Cambios</span>
                                                 ) : (
                                                     <>
                                                         <span>{g.sessionCount} Bultos</span>
                                                         <span className="text-slate-300">•</span>
-                                                        <span>{g.totalUnits} Unidades</span>
+                                                        <span>{g.totalUnits} Unid.</span>
                                                     </>
                                                 )}
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="pl-4">
+                                    <div className="pl-4 shrink-0">
                                         {g.uiStatus === 'uploading' && <Loader2 className="animate-spin text-blue-600 w-5 h-5" />}
                                         {g.uiStatus === 'success' && <CheckCircle2 className="text-emerald-500 w-6 h-6" />}
                                         {g.uiStatus === 'error' && <div className="text-rose-600 text-[10px] font-black uppercase bg-rose-50 px-2 py-1 rounded">Error</div>}
@@ -101,13 +101,13 @@ export const SyncManagerUI: React.FC = () => {
                     )}
                 </div>
 
-                {/* Console Log Area */}
-                <div className="mt-4 bg-slate-900 rounded-2xl border border-slate-800 p-4 h-48 md:h-64 flex flex-col shadow-2xl shrink-0">
+                {/* Console Log Area - Flexible height to avoid overflow */}
+                <div className="mt-4 bg-slate-900 rounded-2xl border border-slate-800 p-4 min-h-[120px] max-h-[30vh] md:max-h-[40vh] flex flex-col shadow-2xl shrink-0 overflow-hidden">
                     <div className="flex items-center gap-2 text-slate-400 mb-3 border-b border-slate-800 pb-2">
                         <Terminal className="w-3 h-3" />
                         <span className="text-[10px] font-black uppercase tracking-widest">Log de Sistema</span>
                     </div>
-                    <div ref={terminalRef} className="flex-1 overflow-y-auto space-y-1.5 font-mono text-[10px] md:text-xs">
+                    <div ref={terminalRef} className="flex-1 overflow-y-auto space-y-1.5 font-mono text-[10px] md:text-xs no-scrollbar">
                         {state.logs.length === 0 && <div className="text-slate-600 italic">Esperando inicio de operaciones...</div>}
                         {state.logs.map((log, i) => (
                             <div key={i} className="flex gap-2">
@@ -121,21 +121,21 @@ export const SyncManagerUI: React.FC = () => {
                 </div>
             </div>
 
-            {/* Bottom Action Bar */}
-            <div className="p-4 bg-white border-t border-slate-200 shrink-0 pb-8 md:pb-6">
+            {/* Bottom Action Bar - Ensure visibility above fixed nav */}
+            <div className="p-4 bg-white border-t border-slate-200 shrink-0 pb-6 md:pb-6 z-30">
                 <button 
                     onClick={actions.handleSyncAll}
                     disabled={state.isProcessing || state.uiGroups.length === 0}
-                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:text-slate-500 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-200 flex items-center justify-center gap-3 transition-all active:scale-[0.98] uppercase tracking-widest text-xs"
+                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:text-slate-500 text-white font-black py-5 rounded-2xl shadow-xl shadow-blue-200 flex items-center justify-center gap-3 transition-all active:scale-[0.98] uppercase tracking-widest text-sm"
                 >
                     {state.isProcessing ? (
                         <>
-                            <Loader2 className="animate-spin w-4 h-4"/>
-                            Sincronizando...
+                            <Loader2 className="animate-spin w-5 h-5"/>
+                            Procesando...
                         </>
                     ) : (
                         <>
-                            <ArrowUpCircle className="w-5 h-5" />
+                            <ArrowUpCircle className="w-6 h-6" />
                             Sincronizar Cola Ahora
                         </>
                     )}
