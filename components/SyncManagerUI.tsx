@@ -1,6 +1,6 @@
 
 import React, { useRef, useEffect } from 'react';
-import { Cloud, ChevronLeft, Loader2, Wifi, WifiOff, Terminal, CheckCircle2, ArrowUpCircle, Server, Package } from 'lucide-react';
+import { Cloud, ChevronLeft, Loader2, Wifi, WifiOff, Terminal, CheckCircle2, ArrowUpCircle, Server, Package, RefreshCw, ZapOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSyncManager } from '../hooks/useSyncManager';
 
@@ -33,6 +33,22 @@ export const SyncManagerUI: React.FC = () => {
                             )}
                         </div>
                     </div>
+                </div>
+                <div className="flex gap-2">
+                    <button 
+                        onClick={actions.refreshGroups}
+                        className="p-3 bg-slate-100 text-slate-500 rounded-xl hover:bg-slate-200 active:scale-95 transition-all"
+                        title="Refrescar Cola"
+                    >
+                        <RefreshCw className={`w-5 h-5 ${state.isProcessing ? 'animate-spin' : ''}`} />
+                    </button>
+                    <button 
+                        onClick={actions.handleForceReset}
+                        className="p-3 bg-orange-50 text-orange-600 rounded-xl hover:bg-orange-100 active:scale-95 transition-all"
+                        title="Liberar Motor"
+                    >
+                        <ZapOff className="w-5 h-5" />
+                    </button>
                 </div>
             </div>
 
@@ -120,7 +136,7 @@ export const SyncManagerUI: React.FC = () => {
                     ) : (
                         <>
                             <ArrowUpCircle className="w-5 h-5" />
-                            Subir Todo a la Nube
+                            Sincronizar Cola Ahora
                         </>
                     )}
                 </button>

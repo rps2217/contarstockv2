@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import * as syncManager from '../services/syncManager';
 
 export const useSyncManager = () => {
@@ -7,14 +7,14 @@ export const useSyncManager = () => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [logs, setLogs] = useState<{time: string, msg: string, type: 'info'|'error'|'success'}[]>([]);
     
-    useEffect(() => {
-        refreshGroups();
-    }, []);
-
-    const refreshGroups = async () => {
+    const refreshGroups = useCallback(async () => {
         const groups = await syncManager.getPendingUploadGroups();
         setUiGroups(groups.map(g => ({ ...g, uiStatus: 'idle' })));
-    };
+    }, []);
+
+    useEffect(() => {
+        refreshGroups();
+    }, [refreshGroups]);
 
     const addLog = (msg: any, type: 'info'|'error'|'success' = 'info') => {
         const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -22,39 +22,47 @@ export const useSyncManager = () => {
         setLogs(prev => [...prev, { time, msg: safeMsg, type }]);
     };
 
+    const handleForceReset = () => {
+        syncManager.resetSyncLock();
+        addLog("Motor reiniciado manualmente.", 'info');
+        refreshGroups();
+    };
+
     const handleSyncAll = async () => {
         if (!navigator.onLine) {
-            addLog("Error: No hay conexión a internet.", 'error');
+            addLog("Error: Sin conexión.", 'error');
             return;
         }
 
         const pending = uiGroups.filter(g => g.uiStatus !== 'success');
         if (!pending.length) {
-            addLog("Nada pendiente para sincronizar.", 'info');
+            addLog("Cola vacía.", 'info');
             return;
         }
 
         setIsProcessing(true);
-        addLog("--- INICIANDO SINCRONIZACIÓN ---", 'info');
+        addLog("Iniciando subida...", 'info');
 
         for (let i = 0; i < uiGroups.length; i++) {
             const group = uiGroups[i];
+            if (group.uiStatus === 'success') continue;
+
             setUiGroups(prev => prev.map((g, idx) => idx === i ? { ...g, uiStatus: 'uploading' } : g));
             try {
                 await syncManager.performBatchUpload(group, (m) => addLog(m));
                 setUiGroups(prev => prev.map((g, idx) => idx === i ? { ...g, uiStatus: 'success' } : g));
-                addLog(`✓ Lote ${group.erpOrder} completado.`, 'success');
+                addLog(`Éxito en ${group.erpOrder}`, 'success');
             } catch (e: any) {
                 setUiGroups(prev => prev.map((g, idx) => idx === i ? { ...g, uiStatus: 'error' } : g));
-                addLog(`Error en ${group.erpOrder}: ${e.message}`, 'error');
+                addLog(`Fallo en ${group.erpOrder}: ${e.message}`, 'error');
             }
         }
         setIsProcessing(false);
-        addLog("--- PROCESO FINALIZADO ---", 'info');
+        refreshGroups();
     };
 
     return {
         state: { uiGroups, isProcessing, logs },
-        actions: { handleSyncAll }
+        actions: { handleSyncAll, refreshGroups, handleForceReset }
     };
 };

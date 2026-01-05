@@ -14,6 +14,11 @@ export { SYNC_ENGINE_VERSION } from './constants';
 const BATCH_SIZE = 50; 
 let isSyncingInProgress = false;
 
+export const resetSyncLock = () => {
+    isSyncingInProgress = false;
+    useSyncStore.getState().setSyncing(false);
+};
+
 export interface UploadGroup {
     erpOrder: string;
     sessionCount: number;
@@ -26,7 +31,6 @@ export interface UploadGroup {
 export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
     const groups: Record<string, UploadGroup> = {};
     
-    // 1. Detectar Escaneos (Inventario)
     const unsyncedScans = await db.scans.where('synced').equals(0).toArray();
     if (unsyncedScans.length > 0) {
         const sessionIds = Array.from(new Set(unsyncedScans.map(s => s.sessionId)));
@@ -57,7 +61,6 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
         }
     }
 
-    // 2. Detectar Recepciones (Bultos Ciegos)
     const pendingDrafts: CountingSession[] = await db.sessions
         .where('status').equals('draft')
         .and(s => !s.lastSyncTimestamp)
@@ -75,7 +78,6 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
         };
     }
 
-    // 3. Detectar Cambios en Catálogo (Productos)
     const unsyncedProductsCount = await db.products.where('syncStatus').anyOf('add', 'edit').count();
     if (unsyncedProductsCount > 0) {
         const productKey = "ACTUALIZACIÓN DE CATÁLOGO";
@@ -105,7 +107,7 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
             if (result.failed > 0) throw new Error(`${result.failed} bultos fallaron.`);
         } 
         else if (group.type === 'products') {
-            onProgress?.(`Sincronizando ${group.totalUnits} definiciones de productos...`);
+            onProgress?.(`Actualizando catálogo (${group.totalUnits} items)...`);
             const unsyncedProds = await db.products.where('syncStatus').anyOf('add', 'edit').toArray();
             if (unsyncedProds.length > 0) {
                 await syncProductsToAppSheet(unsyncedProds);
@@ -115,7 +117,7 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
             for (const sessionId of group.sessionIds) {
                 const session = await db.sessions.get(sessionId);
                 if (!session) continue;
-                onProgress?.(`Procesando bulto ${session.logisticsLabel}...`);
+                onProgress?.(`Sincronizando ${session.logisticsLabel}...`);
                 await syncToAppSheet(session);
                 await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
             }
@@ -145,18 +147,15 @@ export const processSyncQueue = async () => {
             }
         }
     } catch (error) {
-        console.error("[AutoSync] Error general:", error);
+        console.error("[AutoSync] Error:", error);
     }
 };
 
 export const importProductsFromAppSheet = async (): Promise<number> => {
-    logger.info('Sync', 'Iniciando descarga de catálogo maestro...');
+    logger.info('Sync', 'Descargando catálogo...');
     const rawRows = await fetchProductsFromCloud();
     
-    if (!rawRows || rawRows.length === 0) {
-        logger.warn('Sync', 'La nube devolvió 0 productos.');
-        return 0;
-    }
+    if (!rawRows || rawRows.length === 0) return 0;
 
     const validProducts: Product[] = [];
     for (const row of rawRows) {
@@ -177,7 +176,7 @@ export const importProductsFromAppSheet = async (): Promise<number> => {
     if (validProducts.length > 0) {
         await db.products.clear();
         await productService.saveProductBatch(validProducts);
-        logger.success('Sync', `Sincronización exitosa: ${validProducts.length} productos.`);
+        logger.success('Sync', `Catálogo actualizado: ${validProducts.length} registros.`);
     }
     return validProducts.length;
 };

@@ -10,7 +10,6 @@ import { SHEET_COLUMNS } from "./constants";
 import { logger } from "./logger";
 import { aggregateScans } from "./aggregator";
 
-// Fixed: Exporting SHEET_COLUMNS so it can be correctly imported by other modules like syncManager
 export { SHEET_COLUMNS };
 
 const formatDateTime = (ts: number): string => {
@@ -50,9 +49,25 @@ export const syncToAppSheet = async (session: CountingSession): Promise<void> =>
       [SHEET_COLUMNS.INCIDENT]: item.isIncident ? "FRC" : ""
   }));
 
-  await sendToAppSheet(config, config.countsTableName, { Action: "Add", Properties: { Locale: "es-CL", Timezone: "UTC" }, Rows: rows });
+  try {
+      // Intento 1: Añadir nuevos
+      await sendToAppSheet(config, config.countsTableName, { 
+          Action: "Add", 
+          Properties: { Locale: "es-CL", Timezone: "UTC" }, 
+          Rows: rows 
+      });
+  } catch (error: any) {
+      // Intento 2: Si falla (posiblemente por duplicado), intentar actualizar
+      logger.warn('Sync', `Fallo en Add para ${session.erpOrder}, intentando Edit...`);
+      await sendToAppSheet(config, config.countsTableName, { 
+          Action: "Edit", 
+          Properties: { Locale: "es-CL", Timezone: "UTC" }, 
+          Rows: rows 
+      });
+  }
+
   await markScansAsSynced(unsynced.map(s => s.id));
-  logger.success('Sync', `Subidos ${rows.length} registros para ${session.erpOrder}`);
+  logger.success('Sync', `Sincronizados ${rows.length} registros para ${session.erpOrder}`);
 };
 
 export const syncReceptionToAppSheet = async (sessions: CountingSession[]) => {
@@ -77,7 +92,6 @@ export const syncReceptionToAppSheet = async (sessions: CountingSession[]) => {
     return { success, failed };
 };
 
-// Fixed: Added options parameter to satisfy call in syncManager.ts
 export const fetchCloudData = async (options?: any) => {
   const config = getSettings().appSheetConfig;
   if (!config?.appId || !config?.accessKey || !config?.countsTableName) throw new Error("Config incompleta.");
@@ -85,7 +99,6 @@ export const fetchCloudData = async (options?: any) => {
   return res?.Rows || [];
 };
 
-// Fixed: Added options parameter to satisfy call in syncManager.ts
 export const fetchReceptionData = async (options?: any) => {
   const config = getSettings().appSheetConfig;
   if (!config?.appId || !config?.accessKey || !config?.receptionTableName) throw new Error("Config incompleta.");
