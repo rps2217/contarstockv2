@@ -65,14 +65,19 @@ export const sendToAppSheet = async (
           }
 
           const text = await response.text();
-          if (!text) return { success: true };
+          
+          // MEJORA: AppSheet a veces devuelve status 200 pero cuerpo vacío en Adds/Edits exitosos.
+          if (!text || text.trim() === "") {
+              return { Rows: [] }; 
+          }
 
           let json;
           try {
               json = JSON.parse(text);
           } catch (e) {
+              // Si no es un JSON pero la respuesta fue 200 OK en una acción de escritura, asumimos éxito.
               if (payload.Action === 'Find') throw new Error("La respuesta de búsqueda no es un JSON válido.");
-              return { success: true };
+              return { Rows: [] };
           }
 
           // NORMALIZACIÓN: Si AppSheet devuelve un Array directamente, lo envolvemos en { Rows: [...] }
@@ -85,15 +90,6 @@ export const sendToAppSheet = async (
               if (!json || typeof json !== 'object' || !json.hasOwnProperty('Rows')) {
                   console.error("[Sync] Respuesta inesperada de AppSheet:", json);
                   throw new Error("La respuesta de AppSheet no contiene la lista de filas (Rows). Verifique el nombre de la tabla.");
-              }
-          }
-
-          // Validación para escrituras (Add/Edit)
-          if ((payload.Action === 'Add' || payload.Action === 'Edit')) {
-              if (!json.Rows || !Array.isArray(json.Rows) || json.Rows.length === 0) {
-                  // Algunas respuestas de éxito en Add no devuelven filas si no hay cambios, pero usualmente sí.
-                  // Permitimos continuar si no es una búsqueda.
-                  return json;
               }
           }
 

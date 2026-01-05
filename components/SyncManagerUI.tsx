@@ -1,6 +1,6 @@
 
 import React, { useRef, useEffect } from 'react';
-import { Cloud, ChevronLeft, Loader2, Wifi, WifiOff, Terminal, CheckCircle2, ArrowUpCircle, Server } from 'lucide-react';
+import { Cloud, ChevronLeft, Loader2, Wifi, WifiOff, Terminal, CheckCircle2, ArrowUpCircle, Server, Package } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSyncManager } from '../hooks/useSyncManager';
 
@@ -56,14 +56,20 @@ export const SyncManagerUI: React.FC = () => {
                                 <div key={g.erpOrder} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex justify-between items-center transition-all">
                                     <div className="flex items-center gap-4">
                                         <div className={`p-3 rounded-xl ${g.uiStatus === 'success' ? 'bg-emerald-50 text-emerald-600' : (g.uiStatus === 'error' ? 'bg-rose-50 text-rose-600' : 'bg-blue-50 text-blue-600')}`}>
-                                            <Server className="w-5 h-5" />
+                                            {g.type === 'products' ? <Package className="w-5 h-5" /> : <Server className="w-5 h-5" />}
                                         </div>
                                         <div>
                                             <div className="font-black text-slate-900 text-sm uppercase tracking-tight">{g.erpOrder}</div>
                                             <div className="text-[10px] text-slate-500 font-bold uppercase mt-0.5 flex gap-2">
-                                                <span>{g.sessionCount} Bultos</span>
-                                                <span className="text-slate-300">•</span>
-                                                <span>{g.totalUnits} Unidades</span>
+                                                {g.type === 'products' ? (
+                                                    <span>{g.totalUnits} Cambios en Catálogo</span>
+                                                ) : (
+                                                    <>
+                                                        <span>{g.sessionCount} Bultos</span>
+                                                        <span className="text-slate-300">•</span>
+                                                        <span>{g.totalUnits} Unidades</span>
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
                                     </div>

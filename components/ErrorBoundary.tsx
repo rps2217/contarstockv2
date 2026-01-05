@@ -15,8 +15,8 @@ interface State {
 /**
  * ErrorBoundary class component to catch JS errors anywhere in their child component tree.
  */
-// Fix: Using React.Component explicitly to solve potential type inference issues with named imports in some TypeScript configurations.
-export class ErrorBoundary extends React.Component<Props, State> {
+// Fix: Inherit from Component named import to ensure proper type resolution of setState and props.
+export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
     error: null,
@@ -36,7 +36,6 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   // Lifecycle method to handle errors gracefully and write logs
-  // Fix: setState is now correctly recognized as a member of React.Component.
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
     
@@ -46,8 +45,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
         { stack: error.stack, componentStack: errorInfo.componentStack }
     ).catch(e => console.error("Failed to write crash log", e));
     
-    // Captured error info in state to display in the UI
-    // Fix: Explicitly using this.setState from the inherited React.Component context.
+    // Fix: Access setState from the instance context.
     this.setState({ errorInfo });
   }
 
@@ -113,7 +111,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
       );
     }
 
-    // Fix: Explicitly accessing children via this.props from inherited React.Component context.
+    // Fix: Correctly access children through this.props.
     return this.props.children;
   }
 }

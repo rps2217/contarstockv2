@@ -1,6 +1,6 @@
 
 import { db } from '../db';
-import { fetchCloudData, fetchReceptionData, fetchProductsFromCloud, syncToAppSheet, syncReceptionToAppSheet, SHEET_COLUMNS, parseFlexibleDate } from './appsheet';
+import { fetchCloudData, fetchReceptionData, fetchProductsFromCloud, syncToAppSheet, syncReceptionToAppSheet, syncProductsToAppSheet, SHEET_COLUMNS, parseFlexibleDate } from './appsheet';
 import { CountingSession, ScanRecord, Product, ConsolidatedItem } from '../types';
 import * as sessionService from './sessionService';
 import * as productService from './productService';
@@ -20,13 +20,14 @@ export interface UploadGroup {
     totalUnits: number;
     sessionIds: string[];
     logisticsLabels: string[];
-    type: 'inventory' | 'reception';
+    type: 'inventory' | 'reception' | 'products';
 }
 
 export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
     const groups: Record<string, UploadGroup> = {};
-    const unsyncedScans = await db.scans.where('synced').equals(0).toArray();
     
+    // 1. Detectar Escaneos (Inventario)
+    const unsyncedScans = await db.scans.where('synced').equals(0).toArray();
     if (unsyncedScans.length > 0) {
         const sessionIds = Array.from(new Set(unsyncedScans.map(s => s.sessionId)));
         const sessions = await db.sessions.where('id').anyOf(sessionIds).toArray();
@@ -56,6 +57,7 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
         }
     }
 
+    // 2. Detectar Recepciones (Bultos Ciegos)
     const pendingDrafts: CountingSession[] = await db.sessions
         .where('status').equals('draft')
         .and(s => !s.lastSyncTimestamp)
@@ -73,6 +75,20 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
         };
     }
 
+    // 3. Detectar Cambios en Catálogo (Productos)
+    const unsyncedProductsCount = await db.products.where('syncStatus').anyOf('add', 'edit').count();
+    if (unsyncedProductsCount > 0) {
+        const productKey = "ACTUALIZACIÓN DE CATÁLOGO";
+        groups[productKey] = {
+            erpOrder: productKey,
+            sessionCount: 1,
+            totalUnits: unsyncedProductsCount,
+            sessionIds: ['SYSTEM_PRODUCTS'],
+            logisticsLabels: ['MASTER_DATA'],
+            type: 'products'
+        };
+    }
+
     return Object.values(groups);
 };
 
@@ -87,7 +103,15 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
             if (drafts.length === 0) return;
             const result = await syncReceptionToAppSheet(drafts);
             if (result.failed > 0) throw new Error(`${result.failed} bultos fallaron.`);
-        } else {
+        } 
+        else if (group.type === 'products') {
+            onProgress?.(`Sincronizando ${group.totalUnits} definiciones de productos...`);
+            const unsyncedProds = await db.products.where('syncStatus').anyOf('add', 'edit').toArray();
+            if (unsyncedProds.length > 0) {
+                await syncProductsToAppSheet(unsyncedProds);
+            }
+        }
+        else {
             for (const sessionId of group.sessionIds) {
                 const session = await db.sessions.get(sessionId);
                 if (!session) continue;
