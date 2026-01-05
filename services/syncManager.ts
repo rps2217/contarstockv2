@@ -1,6 +1,9 @@
 
 import { db } from '../db';
-import { fetchCloudData, fetchReceptionData, fetchProductsFromCloud, syncToAppSheet, syncReceptionToAppSheet, syncProductsToAppSheet, SHEET_COLUMNS, parseFlexibleDate } from './appsheet';
+// Fix: Removed fetchReceptionData as it's not exported from appsheet and SHEET_COLUMNS as it's not exported there.
+import { fetchCloudData, fetchProductsFromCloud, syncToAppSheet, syncReceptionToAppSheet, syncProductsToAppSheet, parseFlexibleDate } from './appsheet';
+// Fix: Import SHEET_COLUMNS from the correct location.
+import { SHEET_COLUMNS } from './constants';
 import { CountingSession, ScanRecord, Product, ConsolidatedItem } from '../types';
 import * as sessionService from './sessionService';
 import * as productService from './productService';

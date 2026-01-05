@@ -1,7 +1,7 @@
 
 import { CountingSession, Product } from "../types";
 import { getSettings } from "./settings"; 
-import { generateUUID } from "./utils";
+import { generateUUID, normalizeKey } from "./utils";
 import { markScansAsSynced, markDraftsAsSynced } from "./sessionService"; 
 import { markProductsAsSynced } from "./productService";
 import { db } from "../db";
@@ -9,8 +9,6 @@ import { sendToAppSheet } from "../infrastructure/api/appsheetClient";
 import { SHEET_COLUMNS } from "./constants";
 import { logger } from "./logger";
 import { aggregateScans } from "./aggregator";
-
-export { SHEET_COLUMNS };
 
 const formatDateTime = (ts: number): string => {
     const d = new Date(ts);
@@ -27,6 +25,28 @@ export const parseFlexibleDate = (v: any): number => {
     return isNaN(ts) ? Date.now() : ts;
 };
 
+/**
+ * Helper para intentar subir filas una por una si falla el lote
+ */
+const syncRowsIndividually = async (config: any, tableName: string, rows: any[], action: "Add" | "Edit"): Promise<{ successfulKeys: string[], failedCount: number }> => {
+    const successfulKeys: string[] = [];
+    let failedCount = 0;
+
+    for (const row of rows) {
+        try {
+            await sendToAppSheet(config, tableName, { 
+                Action: action, 
+                Properties: { Locale: "es-CL", Timezone: "UTC" }, 
+                Rows: [row] 
+            });
+            successfulKeys.push(row[SHEET_COLUMNS.UNIQUE_KEY] || row["COD PRODUCTO"]);
+        } catch (e) {
+            failedCount++;
+        }
+    }
+    return { successfulKeys, failedCount };
+};
+
 export const syncToAppSheet = async (session: CountingSession): Promise<void> => {
   const config = getSettings().appSheetConfig;
   if (!config?.appId || !config?.accessKey || !config?.countsTableName) throw new Error("Config incompleta.");
@@ -37,7 +57,7 @@ export const syncToAppSheet = async (session: CountingSession): Promise<void> =>
   const consolidated = await aggregateScans(unsynced);
   const rows = consolidated.map(item => ({
       [SHEET_COLUMNS.ID]: generateUUID(),
-      [SHEET_COLUMNS.UNIQUE_KEY]: `${session.erpOrder}_${session.logisticsLabel}_${item.barcode}_${item.mm || 0}_${item.yyyy || 0}`,
+      [SHEET_COLUMNS.UNIQUE_KEY]: `${normalizeKey(session.erpOrder)}_${normalizeKey(session.logisticsLabel)}_${item.barcode}_${item.mm || 0}_${item.yyyy || 0}`,
       [SHEET_COLUMNS.DATE]: formatDateTime(Date.now()),
       [SHEET_COLUMNS.ERP_ORDER]: session.erpOrder,
       [SHEET_COLUMNS.BARCODE]: item.barcode,
@@ -50,24 +70,62 @@ export const syncToAppSheet = async (session: CountingSession): Promise<void> =>
   }));
 
   try {
-      // Intento 1: Añadir nuevos
+      // Intento 1: Lote completo (Add)
       await sendToAppSheet(config, config.countsTableName, { 
           Action: "Add", 
           Properties: { Locale: "es-CL", Timezone: "UTC" }, 
           Rows: rows 
       });
-  } catch (error: any) {
-      // Intento 2: Si falla (posiblemente por duplicado), intentar actualizar
-      logger.warn('Sync', `Fallo en Add para ${session.erpOrder}, intentando Edit...`);
-      await sendToAppSheet(config, config.countsTableName, { 
-          Action: "Edit", 
-          Properties: { Locale: "es-CL", Timezone: "UTC" }, 
-          Rows: rows 
-      });
+      await markScansAsSynced(unsynced.map(s => s.id));
+  } catch (err: any) {
+      // Intento 2: Si el lote falla, procesar uno por uno para no bloquear
+      logger.warn('Sync', `Fallo lote en ${session.erpOrder}. Recuperando por fila...`);
+      
+      const { successfulKeys, failedCount } = await syncRowsIndividually(config, config.countsTableName, rows, "Edit");
+      
+      // Marcar como sincronizados solo los que tuvieron éxito (basado en la clave única)
+      const successfulSkus = new Set(successfulKeys.map(k => k.split('_')[2])); 
+      const idsToMark = unsynced.filter(s => successfulSkus.has(s.barcode)).map(s => s.id);
+      
+      if (idsToMark.length > 0) await markScansAsSynced(idsToMark);
+      if (failedCount > 0) throw new Error(`${failedCount} SKUs rechazados por la nube.`);
   }
+};
 
-  await markScansAsSynced(unsynced.map(s => s.id));
-  logger.success('Sync', `Sincronizados ${rows.length} registros para ${session.erpOrder}`);
+export const syncProductsToAppSheet = async (products: Product[]) => {
+  const config = getSettings().appSheetConfig;
+  if (!config?.appId || !config?.accessKey || !config?.productsTableName) throw new Error("Config incompleta.");
+  
+  const rows = products.map(p => ({ 
+      "COD PRODUCTO": p.barcode, 
+      "DESCRIPCION": p.name, 
+      "MUNDO": p.category, 
+      "PROVEEDOR": p.supplier, 
+      "RUT PROVEEDOR": p.supplierRut 
+  }));
+
+  try {
+      await sendToAppSheet(config, config.productsTableName, { Action: "Add", Properties: { Locale: "es-CL", Timezone: "UTC" }, Rows: rows });
+      await markProductsAsSynced(products.map(p => p.barcode));
+  } catch {
+      const { successfulKeys, failedCount } = await syncRowsIndividually(config, config.productsTableName, rows, "Edit");
+      if (successfulKeys.length > 0) await markProductsAsSynced(successfulKeys);
+      if (failedCount > 0) throw new Error(`${failedCount} productos no pudieron actualizarse.`);
+  }
+};
+
+export const fetchCloudData = async (options?: any) => {
+  const config = getSettings().appSheetConfig;
+  if (!config?.appId || !config?.accessKey || !config?.countsTableName) return [];
+  const res = await sendToAppSheet(config, config.countsTableName, { Action: "Find", Properties: { Locale: "es-CL", Timezone: "UTC" }, Rows: [] });
+  return res?.Rows || [];
+};
+
+export const fetchProductsFromCloud = async () => {
+  const config = getSettings().appSheetConfig;
+  if (!config?.appId || !config?.accessKey || !config?.productsTableName) return [];
+  const res = await sendToAppSheet(config, config.productsTableName, { Action: "Find", Properties: { Locale: "es-CL", Timezone: "UTC" }, Rows: [] });
+  return res?.Rows || [];
 };
 
 export const syncReceptionToAppSheet = async (sessions: CountingSession[]) => {
@@ -90,34 +148,4 @@ export const syncReceptionToAppSheet = async (sessions: CountingSession[]) => {
         }
     }
     return { success, failed };
-};
-
-export const fetchCloudData = async (options?: any) => {
-  const config = getSettings().appSheetConfig;
-  if (!config?.appId || !config?.accessKey || !config?.countsTableName) throw new Error("Config incompleta.");
-  const res = await sendToAppSheet(config, config.countsTableName, { Action: "Find", Properties: { Locale: "es-CL", Timezone: "UTC" }, Rows: [] });
-  return res?.Rows || [];
-};
-
-export const fetchReceptionData = async (options?: any) => {
-  const config = getSettings().appSheetConfig;
-  if (!config?.appId || !config?.accessKey || !config?.receptionTableName) throw new Error("Config incompleta.");
-  const res = await sendToAppSheet(config, config.receptionTableName, { Action: "Find", Properties: { Locale: "es-CL", Timezone: "UTC" }, Rows: [] });
-  return res?.Rows || [];
-};
-
-export const fetchProductsFromCloud = async () => {
-  const config = getSettings().appSheetConfig;
-  if (!config?.appId || !config?.accessKey || !config?.productsTableName) throw new Error("Config incompleta.");
-  const res = await sendToAppSheet(config, config.productsTableName, { Action: "Find", Properties: { Locale: "es-CL", Timezone: "UTC" }, Rows: [] });
-  return res?.Rows || [];
-};
-
-export const syncProductsToAppSheet = async (products: Product[]) => {
-  const config = getSettings().appSheetConfig;
-  if (!config?.appId || !config?.accessKey || !config?.productsTableName) throw new Error("Config incompleta.");
-  const rows = products.map(p => ({ "COD PRODUCTO": p.barcode, "DESCRIPCION": p.name, "MUNDO": p.category, "PROVEEDOR": p.supplier, "RUT PROVEEDOR": p.supplierRut }));
-  try { await sendToAppSheet(config, config.productsTableName, { Action: "Add", Properties: { Locale: "es-CL", Timezone: "UTC" }, Rows: rows }); }
-  catch { await sendToAppSheet(config, config.productsTableName, { Action: "Edit", Properties: { Locale: "es-CL", Timezone: "UTC" }, Rows: rows }); }
-  await markProductsAsSynced(products.map(p => p.barcode));
 };

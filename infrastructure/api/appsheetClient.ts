@@ -15,7 +15,7 @@ export interface AppSheetPayload {
 }
 
 /**
- * Pure HTTP Client for AppSheet API with Exponential Backoff logic.
+ * Cliente HTTP robusto para AppSheet con manejo de errores internos de negocio.
  */
 export const sendToAppSheet = async (
   config: AppSheetConfig, 
@@ -39,7 +39,6 @@ export const sendToAppSheet = async (
       try {
           if (attempt > 0) {
               const delay = Math.pow(2, attempt) * 1000;
-              console.warn(`[Sync] Reintento ${attempt} en ${delay}ms...`);
               await new Promise(r => setTimeout(r, delay));
           }
 
@@ -57,54 +56,27 @@ export const sendToAppSheet = async (
 
           if (!response.ok) {
             const errorBody = await response.text();
-            if (response.status >= 500 || response.status === 429) {
-                lastError = new Error(`Servidor ocupado (${response.status})`);
-                continue; 
-            }
-            throw new Error(`Error HTTP ${response.status}: ${errorBody}`);
+            throw new Error(`Error Cloud ${response.status}: ${errorBody}`);
           }
 
           const text = await response.text();
-          
-          // MEJORA: AppSheet a veces devuelve status 200 pero cuerpo vacío en Adds/Edits exitosos.
-          if (!text || text.trim() === "") {
-              return { Rows: [] }; 
+          if (!text || text.trim() === "") return { Rows: [] };
+
+          const json = JSON.parse(text);
+
+          // DETECCIÓN DE ERROR INTERNO: AppSheet devuelve error dentro del JSON a veces
+          if (json && json.REST_Operation_Failed) {
+              throw new Error(`AppSheet Error: ${json.REST_Operation_Failed}`);
           }
 
-          let json;
-          try {
-              json = JSON.parse(text);
-          } catch (e) {
-              // Si no es un JSON pero la respuesta fue 200 OK en una acción de escritura, asumimos éxito.
-              if (payload.Action === 'Find') throw new Error("La respuesta de búsqueda no es un JSON válido.");
-              return { Rows: [] };
-          }
-
-          // NORMALIZACIÓN: Si AppSheet devuelve un Array directamente, lo envolvemos en { Rows: [...] }
-          if (Array.isArray(json)) {
-              json = { Rows: json };
-          }
-
-          // Validación para búsquedas (Find)
-          if (payload.Action === 'Find') {
-              if (!json || typeof json !== 'object' || !json.hasOwnProperty('Rows')) {
-                  console.error("[Sync] Respuesta inesperada de AppSheet:", json);
-                  throw new Error("La respuesta de AppSheet no contiene la lista de filas (Rows). Verifique el nombre de la tabla.");
-              }
-          }
-
-          return json;
+          return Array.isArray(json) ? { Rows: json } : json;
 
       } catch (error: any) {
           clearTimeout(timeoutId);
           lastError = error;
-          if (error.name === 'AbortError') {
-              console.error("[Sync] Timeout en intento", attempt);
-              continue; 
-          }
+          if (error.name === 'AbortError') continue; 
           if (attempt === maxRetries) throw error;
       }
   }
-
   throw lastError;
 };

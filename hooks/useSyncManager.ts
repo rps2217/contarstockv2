@@ -7,6 +7,12 @@ export const useSyncManager = () => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [logs, setLogs] = useState<{time: string, msg: string, type: 'info'|'error'|'success'}[]>([]);
     
+    const addLog = useCallback((msg: any, type: 'info'|'error'|'success' = 'info') => {
+        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const safeMsg = typeof msg === 'string' ? msg : JSON.stringify(msg);
+        setLogs(prev => [...prev, { time, msg: safeMsg, type }]);
+    }, []);
+
     const refreshGroups = useCallback(async () => {
         const groups = await syncManager.getPendingUploadGroups();
         setUiGroups(groups.map(g => ({ ...g, uiStatus: 'idle' })));
@@ -16,12 +22,6 @@ export const useSyncManager = () => {
         refreshGroups();
     }, [refreshGroups]);
 
-    const addLog = (msg: any, type: 'info'|'error'|'success' = 'info') => {
-        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        const safeMsg = typeof msg === 'string' ? msg : JSON.stringify(msg);
-        setLogs(prev => [...prev, { time, msg: safeMsg, type }]);
-    };
-
     const handleForceReset = () => {
         syncManager.resetSyncLock();
         addLog("Motor reiniciado manualmente.", 'info');
@@ -30,33 +30,36 @@ export const useSyncManager = () => {
 
     const handleSyncAll = async () => {
         if (!navigator.onLine) {
-            addLog("Error: Sin conexión.", 'error');
+            addLog("Error: Sin conexión a Internet.", 'error');
             return;
         }
 
         const pending = uiGroups.filter(g => g.uiStatus !== 'success');
         if (!pending.length) {
-            addLog("Cola vacía.", 'info');
+            addLog("No hay datos pendientes para subir.", 'info');
             return;
         }
 
         setIsProcessing(true);
-        addLog("Iniciando subida...", 'info');
+        addLog(">>> INICIANDO SINCRONIZACIÓN CLOUD...", 'info');
 
         for (let i = 0; i < uiGroups.length; i++) {
             const group = uiGroups[i];
             if (group.uiStatus === 'success') continue;
 
             setUiGroups(prev => prev.map((g, idx) => idx === i ? { ...g, uiStatus: 'uploading' } : g));
+            
             try {
                 await syncManager.performBatchUpload(group, (m) => addLog(m));
                 setUiGroups(prev => prev.map((g, idx) => idx === i ? { ...g, uiStatus: 'success' } : g));
-                addLog(`Éxito en ${group.erpOrder}`, 'success');
+                addLog(`✓ Sincronizado: ${group.erpOrder}`, 'success');
             } catch (e: any) {
                 setUiGroups(prev => prev.map((g, idx) => idx === i ? { ...g, uiStatus: 'error' } : g));
-                addLog(`Fallo en ${group.erpOrder}: ${e.message}`, 'error');
+                addLog(`✗ Fallo en ${group.erpOrder}: ${e.message}`, 'error');
+                // Continuamos con el siguiente grupo si uno falla
             }
         }
+        
         setIsProcessing(false);
         refreshGroups();
     };
