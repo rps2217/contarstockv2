@@ -8,6 +8,7 @@ import { NetworkStatus } from './components/NetworkStatus';
 import { InstallPrompt } from './components/InstallPrompt';
 import { Sidebar } from './components/Sidebar';
 
+// Lazy load views for better performance
 const Dashboard = lazy(() => import('./components/Dashboard').then(m => ({ default: m.Dashboard })));
 const Reports = lazy(() => import('./components/Reports').then(m => ({ default: m.Reports })));
 const DatabaseView = lazy(() => import('./components/Database').then(m => ({ default: m.Database })));
@@ -16,6 +17,7 @@ const Consolidated = lazy(() => import('./components/Consolidated').then(m => ({
 const Conciliator = lazy(() => import('./components/Conciliator').then(m => ({ default: m.Conciliator })));
 const Reception = lazy(() => import('./components/Reception').then(m => ({ default: m.Reception })));
 const Settings = lazy(() => import('./components/Settings').then(m => ({ default: m.Settings })));
+const CountingView = lazy(() => import('./components/CountingView').then(m => ({ default: m.CountingView })));
 
 const NAV_REGISTRY: Record<string, { label: string, icon: any, path: string }> = {
   dashboard: { label: 'INICIO', icon: Home, path: '/dashboard' },
@@ -69,12 +71,15 @@ const AppContent = () => {
   const { settings } = useAppStore();
   const currentView = location.pathname.split('/')[1] || 'dashboard';
 
+  // Ocultar Sidebar y MobileNav si estamos en modo escaneo activo
+  const isScanningMode = location.pathname.startsWith('/counting/');
+
   return (
     <div className={`min-h-screen bg-slate-100 ${settings.theme === 'dark' || settings.theme === 'oled' ? 'dark bg-black' : ''}`}>
       <NetworkStatus />
       <div className="flex">
-        <Sidebar view={currentView} settings={settings} />
-        <main className="flex-1 md:pl-64 min-h-screen">
+        {!isScanningMode && <Sidebar view={currentView} settings={settings} />}
+        <main className={`flex-1 min-h-screen ${!isScanningMode ? 'md:pl-64' : ''}`}>
           <ErrorBoundary>
             <Suspense fallback={<div className="flex items-center justify-center h-screen"><div className="w-12 h-12 border-8 border-blue-700 border-t-transparent rounded-full animate-spin"></div></div>}>
               <Routes>
@@ -87,12 +92,13 @@ const AppContent = () => {
                 <Route path="/reception" element={<Reception />} />
                 <Route path="/conciliator" element={<Conciliator />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/counting/:id" element={<CountingView />} />
               </Routes>
             </Suspense>
           </ErrorBoundary>
         </main>
       </div>
-      <MobileNav currentView={currentView} />
+      {!isScanningMode && <MobileNav currentView={currentView} />}
       <InstallPrompt />
     </div>
   );
