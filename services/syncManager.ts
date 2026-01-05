@@ -1,8 +1,6 @@
 
 import { db } from '../db';
-// Fix: Removed fetchReceptionData as it's not exported from appsheet and SHEET_COLUMNS as it's not exported there.
 import { fetchCloudData, fetchProductsFromCloud, syncToAppSheet, syncReceptionToAppSheet, syncProductsToAppSheet, parseFlexibleDate } from './appsheet';
-// Fix: Import SHEET_COLUMNS from the correct location.
 import { SHEET_COLUMNS } from './constants';
 import { CountingSession, ScanRecord, Product, ConsolidatedItem } from '../types';
 import * as sessionService from './sessionService';
@@ -106,22 +104,21 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
         if (group.type === 'reception') {
             const drafts = await db.sessions.where('id').anyOf(group.sessionIds).toArray();
             if (drafts.length === 0) return;
-            const result = await syncReceptionToAppSheet(drafts);
+            const result = await syncReceptionToAppSheet(drafts, onProgress);
             if (result.failed > 0) throw new Error(`${result.failed} bultos fallaron.`);
         } 
         else if (group.type === 'products') {
-            onProgress?.(`Actualizando catálogo (${group.totalUnits} items)...`);
             const unsyncedProds = await db.products.where('syncStatus').anyOf('add', 'edit').toArray();
             if (unsyncedProds.length > 0) {
-                await syncProductsToAppSheet(unsyncedProds);
+                await syncProductsToAppSheet(unsyncedProds, onProgress);
             }
         }
         else {
             for (const sessionId of group.sessionIds) {
                 const session = await db.sessions.get(sessionId);
                 if (!session) continue;
-                onProgress?.(`Sincronizando ${session.logisticsLabel}...`);
-                await syncToAppSheet(session);
+                onProgress?.(`Iniciando subida de: ${session.logisticsLabel}`);
+                await syncToAppSheet(session, onProgress);
                 await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
             }
         }

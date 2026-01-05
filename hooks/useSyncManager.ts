@@ -16,7 +16,17 @@ export const useSyncManager = () => {
     const refreshGroups = useCallback(async () => {
         const groups = await syncManager.getPendingUploadGroups();
         setUiGroups(groups.map(g => ({ ...g, uiStatus: 'idle' })));
-    }, []);
+        
+        if (logs.length === 0) {
+            addLog(">>> Diagnóstico de Motor Cloud v6.3", 'info');
+            if (groups.length > 0) {
+                addLog(`Se detectaron ${groups.length} grupos pendientes de subida.`, 'info');
+                addLog("Presione 'Sincronizar Cola Ahora' para iniciar.", 'info');
+            } else {
+                addLog("No hay datos pendientes. Sistema al día.", 'success');
+            }
+        }
+    }, [logs.length, addLog]);
 
     useEffect(() => {
         refreshGroups();
@@ -24,13 +34,13 @@ export const useSyncManager = () => {
 
     const handleForceReset = () => {
         syncManager.resetSyncLock();
-        addLog("Motor reiniciado manualmente.", 'info');
+        addLog("Motor reiniciado manualmente por el usuario.", 'info');
         refreshGroups();
     };
 
     const handleSyncAll = async () => {
         if (!navigator.onLine) {
-            addLog("Error: Sin conexión a Internet.", 'error');
+            addLog("Error: Sin conexión a Internet detectada.", 'error');
             return;
         }
 
@@ -41,7 +51,7 @@ export const useSyncManager = () => {
         }
 
         setIsProcessing(true);
-        addLog(">>> INICIANDO SINCRONIZACIÓN CLOUD...", 'info');
+        addLog(">>> INICIANDO PROCESO DE CARGA...", 'info');
 
         for (let i = 0; i < uiGroups.length; i++) {
             const group = uiGroups[i];
@@ -50,17 +60,17 @@ export const useSyncManager = () => {
             setUiGroups(prev => prev.map((g, idx) => idx === i ? { ...g, uiStatus: 'uploading' } : g));
             
             try {
-                await syncManager.performBatchUpload(group, (m) => addLog(m));
+                await syncManager.performBatchUpload(group, (m) => addLog(m, 'info'));
                 setUiGroups(prev => prev.map((g, idx) => idx === i ? { ...g, uiStatus: 'success' } : g));
-                addLog(`✓ Sincronizado: ${group.erpOrder}`, 'success');
+                addLog(`✓ Completado: ${group.erpOrder}`, 'success');
             } catch (e: any) {
                 setUiGroups(prev => prev.map((g, idx) => idx === i ? { ...g, uiStatus: 'error' } : g));
-                addLog(`✗ Fallo en ${group.erpOrder}: ${e.message}`, 'error');
-                // Continuamos con el siguiente grupo si uno falla
+                addLog(`✗ Error en ${group.erpOrder}: ${e.message}`, 'error');
             }
         }
         
         setIsProcessing(false);
+        addLog(">>> Operación finalizada.", 'info');
         refreshGroups();
     };
 
