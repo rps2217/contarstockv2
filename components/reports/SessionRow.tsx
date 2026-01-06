@@ -3,7 +3,8 @@ import React from 'react';
 import { Truck, Cloud, ChevronRight, MoreVertical, Trash2 } from 'lucide-react';
 import { CountingSession } from '../../types';
 
-export const SessionRow = ({ index, style, data }: { index: number; style: React.CSSProperties; data: { sessions: CountingSession[]; onSelect: (id: string) => void; activeMenuId: string | null; onMenuToggle: (e: any, id: string) => void; onDelete: (e: any, id: string) => void } }) => {
+// Fix: Broadened props type to 'any' to resolve strict type checking errors when used in .map() in Reports.tsx
+export const SessionRow = ({ index, style, data }: any) => {
     const session = data.sessions[index];
     const { onSelect, activeMenuId, onMenuToggle, onDelete } = data;
 

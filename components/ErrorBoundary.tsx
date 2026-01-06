@@ -13,19 +13,12 @@ interface State {
   errorInfo: ErrorInfo | null;
 }
 
-/**
- * ErrorBoundary class component to catch JS errors anywhere in their child component tree.
- */
 export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
     error: null,
     errorInfo: null
   };
-
-  constructor(props: Props) {
-    super(props);
-  }
 
   public static getDerivedStateFromError(error: Error): State {
     return { 
@@ -35,17 +28,29 @@ export class ErrorBoundary extends Component<Props, State> {
     };
   }
 
-  // Lifecycle method to handle errors gracefully and write logs
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
     
+    // Si el error contiene palabras clave de fallo de módulo/importación, es un Error #130
+    const isModuleError = error.message.includes('loading chunk') || 
+                         error.message.includes('dynamically imported module') ||
+                         error.message.includes('130');
+
+    if (isModuleError) {
+        console.warn("Fallo de módulo detectado. Forzando actualización...");
+        // Intentar recargar una vez automáticamente
+        if (!sessionStorage.getItem('last-module-error')) {
+            sessionStorage.setItem('last-module-error', Date.now().toString());
+            window.location.reload();
+        }
+    }
+
     logger.error(
         'SYSTEM_CRASH', 
         error.message || 'Unknown Critical Error', 
         { stack: error.stack, componentStack: errorInfo.componentStack }
     ).catch(e => console.error("Failed to write crash log", e));
     
-    // Fix: Using explicit any cast for inherited setState to bypass environment-specific type checking issues
     (this as any).setState({ errorInfo });
   }
 
@@ -54,9 +59,15 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   handleClearCacheAndReload = () => {
-    if (window.confirm("¿Estás seguro? Esto forzará una recarga completa y limpieza de caché.")) {
+    if (window.confirm("¿Estás seguro? Esto borrará la sesión actual pero NO tus datos guardados en la base de datos.")) {
         sessionStorage.clear();
-        window.location.href = '/?t=' + Date.now();
+        // Borrar Service Workers si existen
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                for (let registration of registrations) registration.unregister();
+            });
+        }
+        window.location.href = '/?cache_bust=' + Date.now();
     }
   };
 
@@ -78,13 +89,13 @@ export class ErrorBoundary extends Component<Props, State> {
             <div className="p-8 text-center">
               <h1 className="text-2xl font-black text-white mb-2">Pausa Inesperada</h1>
               <p className="text-slate-500 mb-6 text-sm">
-                El motor ha detectado una anomalía. Los datos locales están seguros.
+                El motor ha detectado una anomalía. Tus datos locales están seguros en la base de datos.
               </p>
 
               <div className="bg-black/40 p-4 rounded-xl text-left mb-6 overflow-auto max-h-32 border border-white/5 shadow-inner">
                 <div className="flex items-center gap-2 mb-2 border-b border-white/5 pb-2">
                     <Terminal className="w-3 h-3 text-emerald-500" />
-                    <span className="text-[10px] font-bold text-slate-500 uppercase">Crash Diagnostics</span>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase">Diagnóstico React #130</span>
                 </div>
                 <code className="text-xs text-rose-400 font-mono break-all">
                   {errorMessage}
@@ -96,13 +107,13 @@ export class ErrorBoundary extends Component<Props, State> {
                   onClick={this.handleReload}
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20 active:scale-95 transition-all"
                 >
-                  <RefreshCw className="w-5 h-5" /> Reiniciar Interfaz
+                  <RefreshCw className="w-5 h-5" /> Reintentar Carga
                 </button>
                 <button 
                    onClick={this.handleClearCacheAndReload}
                    className="w-full bg-slate-800 hover:bg-slate-700 text-slate-400 font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95"
                 >
-                   <Home className="w-5 h-5" /> Limpieza Profunda
+                   <Home className="w-5 h-5" /> Limpiar y Forzar Inicio
                 </button>
               </div>
             </div>
@@ -111,7 +122,6 @@ export class ErrorBoundary extends Component<Props, State> {
       );
     }
 
-    // Fix: Using explicit any cast for inherited props member to bypass environment-specific type checking issues
     return (this as any).props.children;
   }
 }

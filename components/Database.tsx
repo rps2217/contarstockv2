@@ -21,7 +21,7 @@ export const Database: React.FC = () => {
   const handleOpenEdit = (product: Product) => { setEditingProduct(product); setIsFormOpen(true); };
 
   return (
-    <div className="flex flex-col h-screen bg-slate-50/50 pb-24 md:pb-0">
+    <div className="flex flex-col h-screen bg-slate-50/50 dark:bg-black pb-24 md:pb-0">
       <DatabaseHeader 
         usedMb={usedMb}
         usagePercent={usagePercent}
@@ -51,3 +51,5 @@ export const Database: React.FC = () => {
     </div>
   );
 };
+
+export default Database;

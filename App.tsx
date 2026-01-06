@@ -8,15 +8,16 @@ import { NetworkStatus } from './components/NetworkStatus';
 import { InstallPrompt } from './components/InstallPrompt';
 import { Sidebar } from './components/Sidebar';
 
-const Dashboard = lazy(() => import('./components/Dashboard').then(m => ({ default: m.Dashboard })));
-const Reports = lazy(() => import('./components/Reports').then(m => ({ default: m.Reports })));
-const DatabaseView = lazy(() => import('./components/Database').then(m => ({ default: m.Database })));
-const Sync = lazy(() => import('./components/SyncManagerUI').then(m => ({ default: m.SyncManagerUI })));
-const Consolidated = lazy(() => import('./components/Consolidated').then(m => ({ default: m.Consolidated })));
-const Conciliator = lazy(() => import('./components/Conciliator').then(m => ({ default: m.Conciliator })));
-const Reception = lazy(() => import('./components/Reception').then(m => ({ default: m.Reception })));
-const Settings = lazy(() => import('./components/Settings').then(m => ({ default: m.Settings })));
-const CountingView = lazy(() => import('./components/CountingView').then(m => ({ default: m.CountingView })));
+// Importaciones Lazy estandarizadas (requieren export default en el destino)
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const Reports = lazy(() => import('./components/Reports'));
+const DatabaseView = lazy(() => import('./components/Database'));
+const Sync = lazy(() => import('./components/SyncManagerUI'));
+const Consolidated = lazy(() => import('./components/Consolidated'));
+const Conciliator = lazy(() => import('./components/Conciliator'));
+const Reception = lazy(() => import('./components/Reception'));
+const Settings = lazy(() => import('./components/Settings'));
+const CountingView = lazy(() => import('./components/CountingView'));
 
 const NAV_REGISTRY: Record<string, { label: string, icon: any, path: string }> = {
   dashboard: { label: 'INICIO', icon: Home, path: '/dashboard' },
@@ -71,7 +72,6 @@ const AppContent = () => {
   const currentView = location.pathname.split('/')[1] || 'dashboard';
   const isScanningMode = location.pathname.startsWith('/counting/');
 
-  // Logica de Temas centralizada
   const theme = settings.theme || 'light';
   const isDarkTheme = ['dark', 'oled', 'navy', 'contrast'].includes(theme);
 
