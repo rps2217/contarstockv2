@@ -8,7 +8,6 @@ import { NetworkStatus } from './components/NetworkStatus';
 import { InstallPrompt } from './components/InstallPrompt';
 import { Sidebar } from './components/Sidebar';
 
-// Lazy load views for better performance
 const Dashboard = lazy(() => import('./components/Dashboard').then(m => ({ default: m.Dashboard })));
 const Reports = lazy(() => import('./components/Reports').then(m => ({ default: m.Reports })));
 const DatabaseView = lazy(() => import('./components/Database').then(m => ({ default: m.Database })));
@@ -43,7 +42,7 @@ const MobileNav = ({ currentView }: { currentView: string }) => {
     .filter(item => !!item.label);
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-black border-t-4 border-blue-600 shadow-[0_-10px_40px_rgba(0,0,0,0.4)] pb-safe">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-xl border-t border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.4)] pb-safe">
         <div className="flex justify-around items-center h-24 px-2">
             {navItems.map((item) => {
                 const isActive = currentView === item.key;
@@ -52,12 +51,12 @@ const MobileNav = ({ currentView }: { currentView: string }) => {
                     <button 
                         key={item.key}
                         onClick={() => navigate(item.path)}
-                        className={`flex flex-col items-center justify-center flex-1 h-full gap-2 transition-all ${isActive ? 'text-white scale-110' : 'text-slate-400'}`}
+                        className={`flex flex-col items-center justify-center flex-1 h-full gap-2 transition-all ${isActive ? 'text-white scale-105' : 'text-slate-500'}`}
                     >
-                        <div className={`p-3 rounded-2xl transition-all duration-300 ${isActive ? 'bg-blue-700 shadow-lg' : ''}`}>
-                            <Icon className={`w-8 h-8 ${isActive ? 'stroke-[3px]' : 'stroke-2'}`} />
+                        <div className={`p-3 rounded-2xl transition-all duration-300 ${isActive ? 'bg-blue-600 shadow-lg shadow-blue-900/40' : ''}`}>
+                            <Icon className={`w-7 h-7 ${isActive ? 'stroke-[3px]' : 'stroke-2'}`} />
                         </div>
-                        <span className={`text-[10px] font-black uppercase tracking-widest ${isActive ? 'opacity-100' : 'opacity-60'}`}>{item.label}</span>
+                        <span className={`text-[9px] font-black uppercase tracking-widest ${isActive ? 'opacity-100' : 'opacity-40'}`}>{item.label}</span>
                     </button>
                 );
             })}
@@ -70,18 +69,16 @@ const AppContent = () => {
   const location = useLocation();
   const { settings } = useAppStore();
   const currentView = location.pathname.split('/')[1] || 'dashboard';
-
-  // Ocultar Sidebar y MobileNav si estamos en modo escaneo activo
   const isScanningMode = location.pathname.startsWith('/counting/');
 
   return (
-    <div className={`min-h-screen bg-slate-100 ${settings.theme === 'dark' || settings.theme === 'oled' ? 'dark bg-black' : ''}`}>
+    <div className={`min-h-screen bg-slate-50 ${settings.theme === 'dark' || settings.theme === 'oled' ? 'dark bg-black' : ''}`}>
       <NetworkStatus />
       <div className="flex">
         {!isScanningMode && <Sidebar view={currentView} settings={settings} />}
-        <main className={`flex-1 min-h-screen ${!isScanningMode ? 'md:pl-64' : ''}`}>
+        <main className={`flex-1 min-h-[100dvh] transition-all duration-300 ${!isScanningMode ? 'md:pl-64 pb-24 md:pb-0' : ''}`}>
           <ErrorBoundary>
-            <Suspense fallback={<div className="flex items-center justify-center h-screen"><div className="w-12 h-12 border-8 border-blue-700 border-t-transparent rounded-full animate-spin"></div></div>}>
+            <Suspense fallback={<div className="flex items-center justify-center h-screen"><div className="w-12 h-12 border-8 border-blue-600 border-t-transparent rounded-full animate-spin"></div></div>}>
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/dashboard" element={<Dashboard />} />

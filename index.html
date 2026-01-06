@@ -16,18 +16,20 @@
       :root {
         --safe-area-inset-top: env(safe-area-inset-top);
         --safe-area-inset-bottom: env(safe-area-inset-bottom);
+        --nav-height: 6rem;
       }
 
       body { 
         overscroll-behavior-y: contain; 
         touch-action: manipulation; 
-        background-color: #f1f5f9;
-        color: #000000;
+        background-color: #f8fafc;
+        color: #0f172a;
         font-family: 'Inter', sans-serif;
         font-size: 16px;
+        min-height: 100dvh;
       }
 
-      /* Bordes reforzados para personas con lentes */
+      /* Bordes reforzados para personas con lentes - Estilo Industrial */
       .btn-accessible {
         border: 3px solid #000000 !important;
         box-shadow: 4px 4px 0px 0px rgba(0,0,0,1);
@@ -38,13 +40,19 @@
         box-shadow: 0px 0px 0px 0px rgba(0,0,0,1);
       }
 
-      .card-high-vis {
-        background: #ffffff;
-        border: 2px solid #cbd5e1;
+      /* Scrollbars invisibles pero funcionales */
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+      /* Animaciones de entrada suaves */
+      .page-transition {
+        animation: slideUp 0.3s ease-out;
       }
 
-      /* Eliminar scrollbars */
-      .no-scrollbar::-webkit-scrollbar { display: none; }
+      @keyframes slideUp {
+        from { transform: translateY(10px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
     </style>
 <script type="importmap">
 {
@@ -75,7 +83,7 @@
 }
 </script>
 </head>
-<body class="bg-slate-100">
+<body>
     <div id="root"></div>
     <script type="module" src="index.tsx"></script>
 </body>
