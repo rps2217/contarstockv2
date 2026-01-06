@@ -11,11 +11,10 @@ import { SoundFX } from '../services/audio';
 import { CountingSession, Product, ScannerStatus } from '../types';
 
 /**
- * REGLAS DE ORO DE ESTE HOOK (PARA MANTENER ESTABILIDAD):
- * 1. AUTO-REGISTRO: Todo SKU desconocido DEBE registrarse como 'PENDIENTE' automáticamente.
- * 2. FLUJO: processScan -> (si es nuevo) -> setStatus('expiring') -> completeScan.
- * 3. PERSISTENCIA: Si ya existe en la sesión, NO pedir fecha de nuevo.
- * 4. FEEDBACK: Éxito debe disparar sonido y resetear multiplicador a 1.
+ * REGLAS DE OPTIMIZACIÓN v2.6:
+ * 1. LIMIT: Solo cargar los últimos 20 escaneos para la UI (Evita lag en sesiones de 1000+ items).
+ * 2. DECOUPLE: Los totales de sesión se leen del objeto session, no se calculan por reducción de array.
+ * 3. FAST-PATH: El cache de productos evita hits innecesarios a IndexedDB.
  */
 
 export const useScanner = (
@@ -39,49 +38,68 @@ export const useScanner = (
     const lastKeyTime = useRef(0);
     const hotProductCache = useRef<Map<string, Product>>(new Map());
 
-    // --- CONSULTAS VIVAS (DEXIE) ---
+    // --- CONSULTAS VIVAS OPTIMIZADAS ---
+    
+    // 1. Solo los últimos 20 registros para la lista lateral/inferior (Mejora brutal de FPS)
     const recentScans = useLiveQuery(
-        () => db.scans.where('[sessionId+timestamp]').between([session.id, Dexie.minKey], [session.id, Dexie.maxKey]).reverse().toArray(), 
+        () => db.scans
+            .where('sessionId').equals(session.id)
+            .reverse()
+            .limit(20)
+            .toArray(), 
         [session.id]
     );
 
-    const lastScan = useMemo(() => recentScans?.find(s => s.id === lastScanId) || recentScans?.[0], [recentScans, lastScanId]);
+    // 2. Metadatos de la sesión para estadísticas globales (Leídos de la tabla sessions, no calculados de scans)
+    const sessionMetadata = useLiveQuery(
+        () => db.sessions.get(session.id),
+        [session.id]
+    );
 
-    const optimisticTotalQty = useMemo(() => 
-        recentScans?.reduce((acc, s) => acc + s.quantity, 0) || 0, 
-    [recentScans]);
+    const lastScan = useMemo(() => {
+        if (lastScanId) return recentScans?.find(s => s.id === lastScanId);
+        return recentScans?.[0];
+    }, [recentScans, lastScanId]);
 
-    const optimisticUniqueSkus = useMemo(() => 
-        new Set(recentScans?.map(s => s.barcode)).size, 
-    [recentScans]);
+    // Estadísticas rápidas usando metadatos pre-calculados en DB
+    const optimisticTotalQty = sessionMetadata?.totalUnits || 0;
+    const optimisticUniqueSkus = sessionMetadata?.totalSKUs || 0;
 
-    const activeProductStats = useMemo(() => {
+    // Cálculo específico para el producto activo (Este sí requiere una consulta pequeña)
+    const activeProductStats = useLiveQuery(async () => {
         if (!lastScan) return { totalQty: 0, name: 'Listo', isUnknown: false };
-        const qty = recentScans?.filter(s => s.barcode === lastScan.barcode)
-                               .reduce((acc, s) => acc + s.quantity, 0) || 0;
+        
+        // Sumar solo para este SKU específico en esta sesión
+        const scans = await db.scans
+            .where('[sessionId+barcode]')
+            .equals([session.id, lastScan.barcode])
+            .toArray();
+            
+        const qty = scans.reduce((acc, s) => acc + s.quantity, 0);
         const cached = hotProductCache.current.get(lastScan.barcode);
+        
         return { 
             totalQty: qty, 
             name: cached?.name || lastScan.barcode, 
             isUnknown: false 
         };
-    }, [lastScan, recentScans]);
+    }, [lastScan, session.id]);
 
-    // --- LÓGICA DE NEGOCIO PROTEGIDA ---
+    // --- LÓGICA DE NEGOCIO ---
 
-    /**
-     * CRÍTICO: Finaliza el registro del escaneo en la base de datos.
-     * Siempre resetea el multiplicador a 1 tras el éxito.
-     */
     const completeScan = useCallback(async (code: string, mm?: number, yyyy?: number) => {
         try {
             const qtyToAdd = multiplier;
             let finalMm = mm;
             let finalYyyy = yyyy;
 
-            // Recuperación de fecha inteligente: si no viene, buscamos si ya se ingresó antes para este SKU
+            // Recuperación de fecha inteligente
             if (mm === undefined && yyyy === undefined) {
-                const prev = recentScans?.find(s => s.barcode === code && s.mm !== undefined);
+                const prev = await db.scans
+                    .where('[sessionId+barcode]')
+                    .equals([session.id, code])
+                    .filter(s => s.mm !== undefined)
+                    .first();
                 if (prev) {
                     finalMm = prev.mm;
                     finalYyyy = prev.yyyy;
@@ -100,28 +118,27 @@ export const useScanner = (
                 SoundFX.speak(cachedProduct?.name || "Registrado");
             }
 
-            setMultiplier(1); // RESET CRÍTICO
+            setMultiplier(1);
             setStatus('idle');
-            setTimeout(() => setFeedback('idle'), 800);
+            setTimeout(() => setFeedback('idle'), 500); // Reducido tiempo de feedback
         } catch (err: any) { 
             setFeedback('error'); 
             SoundFX.play('error'); 
             setStatus('idle');
         }
-    }, [session.id, multiplier, recentScans]);
+    }, [session.id, multiplier]);
 
-    /**
-     * CRÍTICO: Punto de entrada para cualquier escaneo (Cámara, Teclado o Físico).
-     * Implementa el auto-registro 'PENDIENTE' para no bloquear el flujo.
-     */
     const processScan = useCallback(async (code: string) => {
         const cleanCode = sanitizeBarcode(code);
         if (!cleanCode || cleanCode.length < 2) return;
         
         try {
-            let masterProduct = hotProductCache.current.get(cleanCode) || await db.products.get(cleanCode);
+            let masterProduct = hotProductCache.current.get(cleanCode);
+            if (!masterProduct) {
+                masterProduct = await db.products.get(cleanCode);
+                if (masterProduct) hotProductCache.current.set(cleanCode, masterProduct);
+            }
             
-            // REGLA DE ORO: Si no existe, crear como PENDIENTE automáticamente
             if (!masterProduct) {
                 const newProd: Product = {
                     barcode: cleanCode,
@@ -132,24 +149,25 @@ export const useScanner = (
                 await productService.saveProduct(newProd);
                 masterProduct = newProd;
                 hotProductCache.current.set(cleanCode, newProd);
-            } else {
-                hotProductCache.current.set(cleanCode, masterProduct);
             }
 
-            // REGLA DE ORO: Solo pedir fecha si es la PRIMERA VEZ que se ve el SKU en esta sesión
-            const alreadyInSession = recentScans?.some(s => s.barcode === cleanCode);
+            // ¿Ya está en la sesión?
+            const alreadyInSession = await db.scans
+                .where('[sessionId+barcode]')
+                .equals([session.id, cleanCode])
+                .first();
 
             if (alreadyInSession) {
                 completeScan(cleanCode);
             } else {
                 setPendingScanCode(cleanCode);
                 setPendingProductName(masterProduct.name);
-                setStatus('expiring'); // Salta a pedir fecha
+                setStatus('expiring');
             }
         } catch (err) { 
             setFeedback('error'); 
         }
-    }, [recentScans, completeScan]);
+    }, [session.id, completeScan]);
 
     // --- GESTIÓN DE ENTRADA HARDWARE ---
     useEffect(() => {
@@ -161,7 +179,7 @@ export const useScanner = (
             const now = Date.now();
             const char = e.key;
 
-            if (now - lastKeyTime.current > 50) {
+            if (now - lastKeyTime.current > 40) { // Umbral de ráfaga más estricto
                 keyBuffer.current = char.length === 1 ? char : '';
             } else {
                 if (char.length === 1) keyBuffer.current += char;
@@ -187,11 +205,15 @@ export const useScanner = (
             status, setStatus, feedback, setFeedback, manualInput, setManualInput, 
             multiplier, setMultiplier, isWindowFocused, isIdle, pendingScanCode, 
             pendingProductName,
-            optimisticActiveQty: activeProductStats.totalQty, 
+            optimisticActiveQty: activeProductStats?.totalQty || 0, 
             optimisticTotalQty, 
             optimisticUniqueSkus
         },
-        data: { lastScan, recentScans, activeProductStats },
+        data: { 
+            lastScan, 
+            recentScans, 
+            activeProductStats: activeProductStats || { totalQty: 0, name: 'Cargando...', isUnknown: false }
+        },
         actions: { 
             handleExternalScan: processScan,
             handleManualSubmit: (e: any) => {

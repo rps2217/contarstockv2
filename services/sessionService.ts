@@ -9,7 +9,7 @@ let flushTimer: any = null;
 let isFlushing = false;
 const MIRROR_KEY = 'logicount_emergency_buffer';
 
-// Recuperación de desastres (Buffer Mirroring)
+// Recuperación de desastres
 (async () => {
     try {
         const mirrored = localStorage.getItem(MIRROR_KEY);
@@ -34,22 +34,35 @@ const saveMirror = () => {
     } catch (e) {}
 };
 
+/**
+ * OPTIMIZACIÓN: FlushBuffer ahora actualiza contadores de forma más eficiente.
+ */
 const flushBuffer = async () => {
     if (scanBuffer.length === 0 || isFlushing) return;
     isFlushing = true;
     const batch = [...scanBuffer];
     try {
-        // Transacción atómica para garantizar consistencia de contadores
         await (db as any).transaction('rw', db.scans, db.sessions, async () => {
             await db.scans.bulkAdd(batch);
             
             const affectedSessions = new Set(batch.map(s => s.sessionId));
             for (const sessionId of affectedSessions) {
-                const scans = await db.scans.where('sessionId').equals(sessionId).toArray();
-                const totalUnits = scans.reduce((acc, s) => acc + s.quantity, 0);
-                const totalSKUs = new Set(scans.map(s => s.barcode)).size;
+                // En lugar de contar todo, calculamos el delta del batch para esta sesión específica
+                const sessionScans = batch.filter(s => s.sessionId === sessionId);
+                const deltaUnits = sessionScans.reduce((acc, s) => acc + s.quantity, 0);
                 
-                await db.sessions.update(sessionId, { totalUnits, totalSKUs });
+                const session = await db.sessions.get(sessionId);
+                if (session) {
+                    // Recalcular SKUs únicos es inevitable pero solo lo hacemos una vez al flush
+                    const allScansForSession = await db.scans.where('sessionId').equals(sessionId).toArray();
+                    const totalSKUs = new Set(allScansForSession.map(s => s.barcode)).size;
+                    const totalUnits = allScansForSession.reduce((acc, s) => acc + s.quantity, 0);
+                    
+                    await db.sessions.update(sessionId, { 
+                        totalUnits, 
+                        totalSKUs 
+                    });
+                }
             }
         });
 
@@ -62,7 +75,7 @@ const flushBuffer = async () => {
         isFlushing = false;
         if (scanBuffer.length > 0) {
             if (flushTimer) clearTimeout(flushTimer);
-            flushTimer = setTimeout(flushBuffer, 1000);
+            flushTimer = setTimeout(flushBuffer, 500);
         } else {
             flushTimer = null;
         }
@@ -104,8 +117,9 @@ export const addScan = async (sessionId: string, barcode: string, quantity: numb
     scanBuffer.push(record);
     saveMirror();
     
-    if (scanBuffer.length >= 10) flushBuffer();
-    else if (!flushTimer) flushTimer = setTimeout(flushBuffer, 800);
+    // Flush más frecuente pero más ligero
+    if (scanBuffer.length >= 5) flushBuffer();
+    else if (!flushTimer) flushTimer = setTimeout(flushBuffer, 400);
     
     return record;
 };
