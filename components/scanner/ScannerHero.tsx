@@ -1,5 +1,6 @@
+
 import React, { memo } from 'react';
-import { RotateCcw, AlertCircle, CheckCircle, Info, Zap } from 'lucide-react';
+import { RotateCcw, AlertCircle, CheckCircle, Zap } from 'lucide-react';
 import { ScanRecord, ExpectedItem } from '../../types';
 
 interface ScannerHeroProps {
@@ -47,7 +48,6 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
                     </div>
                 ) : (
                     <div className="w-full flex flex-col items-center">
-                        {/* INDICADORES DE ESTADO */}
                         <div className="mb-2 md:mb-4">
                             {isOverCount ? (
                                 <div className="bg-red-700 text-white px-6 py-2 md:px-8 md:py-3 rounded-full font-black text-lg md:text-2xl border-4 border-red-950 flex items-center gap-3 animate-pulse uppercase">
@@ -69,7 +69,6 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
                              <div className="text-lg md:text-xl font-mono font-black text-blue-800 mt-1 md:mt-2 bg-blue-100 px-4 py-1.5 md:px-6 md:py-2 rounded-xl inline-block border-2 border-blue-300 uppercase tracking-widest">{lastScan.barcode}</div>
                         </div>
 
-                        {/* EL NÚMERO: MÁXIMA ESCALA POSIBLE */}
                         <div className="relative flex flex-col items-center mt-2 md:mt-4">
                             <div className="text-[10rem] md:text-[15rem] leading-[0.8] font-black text-black tabular-nums tracking-tighter select-none scale-y-110 drop-shadow-sm">
                                 {currentQty}

@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -21,8 +22,6 @@
       body { 
         overscroll-behavior-y: contain; 
         touch-action: manipulation; 
-        background-color: #f8fafc;
-        color: #0f172a;
         font-family: 'Inter', sans-serif;
         font-size: 16px;
         min-height: 100dvh;
@@ -30,11 +29,39 @@
         overflow-x: hidden;
       }
 
-      /* Scrollbars invisibles pero funcionales */
-      .no-scrollbar::-webkit-scrollbar { display: none; }
-      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      /* --- MOTOR DE TEMAS LOGICOUNT --- */
+      
+      /* 1. TEMA WARM (Sepia) */
+      .theme-warm { background-color: #fff7ed !important; }
+      .theme-warm .bg-white { background-color: #fffbeb !important; }
+      .theme-warm .bg-slate-50 { background-color: #fff7ed !important; }
+      .theme-warm .text-slate-900 { color: #431407 !important; }
+      
+      /* 2. TEMA NAVY (Azul Profundo) */
+      .theme-navy { background-color: #020617 !important; }
+      .theme-navy .bg-white { background-color: #0f172a !important; border-color: #1e293b !important; }
+      .theme-navy .bg-slate-50 { background-color: #020617 !important; }
+      .theme-navy .text-slate-900, .theme-navy .text-slate-800 { color: #f1f5f9 !important; }
+      .theme-navy .border-slate-200 { border-color: #1e293b !important; }
 
-      /* Animaciones de entrada suaves optimizadas para GPU móvil */
+      /* 3. TEMA CONTRAST (Accesibilidad) */
+      .theme-contrast { background-color: #000000 !important; }
+      .theme-contrast .bg-white, .theme-contrast .bg-slate-50 { background-color: #000000 !important; border: 2px solid #facc15 !important; }
+      .theme-contrast .text-slate-900, .theme-contrast .text-slate-600 { color: #ffffff !important; }
+      .theme-contrast .text-blue-600 { color: #facc15 !important; }
+      .theme-contrast button { border: 2px solid #ffffff !important; }
+
+      /* 4. TEMA OLED (Negro Puro) */
+      .theme-oled { background-color: #000000 !important; }
+      .theme-oled .bg-white { background-color: #000000 !important; border-color: #262626 !important; }
+      .theme-oled .bg-slate-50 { background-color: #000000 !important; }
+      .theme-oled .text-slate-900 { color: #ffffff !important; }
+
+      /* Helper para forzar Dark Mode en Tailwind cuando se usan temas oscuros */
+      .dark .text-slate-400 { color: #94a3b8 !important; }
+      .dark .bg-slate-100 { background-color: #1e293b !important; }
+
+      /* Animaciones */
       .page-transition {
         animation: slideUp 0.3s ease-out forwards;
         will-change: transform, opacity;
@@ -45,21 +72,8 @@
         to { transform: translateY(0); opacity: 1; }
       }
 
-      /* Efectos de éxito en ráfaga */
-      .scan-success-glow {
-        position: absolute;
-        inset: 0;
-        z-index: 5;
-        background: radial-gradient(circle at center, rgba(34, 197, 94, 0.15) 0%, transparent 70%);
-        pointer-events: none;
-        animation: pulseFade 0.4s ease-out forwards;
-      }
-
-      @keyframes pulseFade {
-        0% { opacity: 0; transform: scale(0.8); }
-        50% { opacity: 1; transform: scale(1); }
-        100% { opacity: 0; transform: scale(1.1); }
-      }
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 <script type="importmap">
 {
@@ -90,7 +104,7 @@
 }
 </script>
 </head>
-<body>
+<body class="theme-light">
     <div id="root"></div>
     <script type="module" src="index.tsx"></script>
 </body>

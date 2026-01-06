@@ -2,8 +2,12 @@
 import React, { useMemo, useRef, useEffect } from 'react';
 import { Product } from '../../types';
 import { Pencil, Trash2, Package, Cloud, CloudOff, AlertTriangle } from 'lucide-react';
-import { FixedSizeList } from 'react-window';
-import AutoSizer from 'react-virtualized-auto-sizer';
+// Fix: Use more resilient import pattern for react-window and AutoSizer due to type resolution issues in this environment
+import * as ReactWindow from 'react-window';
+import * as AutoSizerModule from 'react-virtualized-auto-sizer';
+
+const FixedSizeList = (ReactWindow as any).FixedSizeList || (ReactWindow as any).default?.FixedSizeList;
+const AutoSizer = (AutoSizerModule as any).default || AutoSizerModule;
 
 interface ProductListProps {
   products?: Product[];
@@ -63,7 +67,7 @@ const Row = ({ index, style, data }: { index: number; style: React.CSSProperties
 };
 
 export const ProductList: React.FC<ProductListProps> = ({ products, onEdit, onDelete, onDeleteAll, hasFilter }) => {
-  const listRef = useRef<FixedSizeList>(null);
+  const listRef = useRef<any>(null);
   const itemData = useMemo(() => ({ items: products || [], onEdit, onDelete, isMobile: false }), [products, onEdit, onDelete]);
 
   if (!products || products.length === 0) {
@@ -90,7 +94,7 @@ export const ProductList: React.FC<ProductListProps> = ({ products, onEdit, onDe
 
         <div className="flex-1 min-h-0">
             <AutoSizer>
-                {({ height, width }) => {
+                {({ height, width }: { height: number; width: number }) => {
                     const isMobile = width < 768; 
                     const itemSize = isMobile ? 130 : 64; 
                     return (

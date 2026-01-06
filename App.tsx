@@ -1,3 +1,4 @@
+
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { Home, Database, History, Layers, Container, Fingerprint, Cloud, Settings as SettingsIcon } from 'lucide-react';
@@ -70,8 +71,12 @@ const AppContent = () => {
   const currentView = location.pathname.split('/')[1] || 'dashboard';
   const isScanningMode = location.pathname.startsWith('/counting/');
 
+  // Logica de Temas centralizada
+  const theme = settings.theme || 'light';
+  const isDarkTheme = ['dark', 'oled', 'navy', 'contrast'].includes(theme);
+
   return (
-    <div className={`min-h-[100dvh] bg-slate-50 ${settings.theme === 'dark' || settings.theme === 'oled' ? 'dark bg-black' : ''}`}>
+    <div className={`min-h-[100dvh] transition-colors duration-500 theme-${theme} ${isDarkTheme ? 'dark' : ''} ${isDarkTheme ? 'bg-black' : 'bg-slate-50'}`}>
       <NetworkStatus />
       <div className="flex h-full overflow-hidden">
         {!isScanningMode && <Sidebar view={currentView} settings={settings} />}

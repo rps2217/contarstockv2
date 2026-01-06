@@ -3,8 +3,13 @@ import React from 'react';
 import { FileText, WifiOff, ExternalLink, Archive } from 'lucide-react';
 import { StartSessionModal } from './StartSessionModal';
 import { SearchBar } from './SearchBar';
-import { FixedSizeList } from 'react-window';
-import AutoSizer from 'react-virtualized-auto-sizer';
+// Fix: Use more resilient import pattern for react-window and AutoSizer due to type resolution issues in this environment
+import * as ReactWindow from 'react-window';
+import * as AutoSizerModule from 'react-virtualized-auto-sizer';
+
+const FixedSizeList = (ReactWindow as any).FixedSizeList || (ReactWindow as any).default?.FixedSizeList;
+const AutoSizer = (AutoSizerModule as any).default || AutoSizerModule;
+
 import { ReportDetail } from './reports/ReportDetail';
 import { ReportsHeader } from './reports/ReportsHeader';
 import { useNavigate } from 'react-router-dom';
@@ -59,7 +64,7 @@ export const Reports: React.FC = () => {
                         </div>
                     ) : (
                         <AutoSizer>
-                            {({ height, width }) => (
+                            {({ height, width }: { height: number; width: number }) => (
                                 <FixedSizeList 
                                     height={height} 
                                     width={width} 

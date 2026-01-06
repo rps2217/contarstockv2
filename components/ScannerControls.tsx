@@ -16,6 +16,7 @@ interface ScannerControlsProps {
 }
 
 export const ScannerControls: React.FC<ScannerControlsProps> = memo(({ 
+    session,
     sessionStats, 
     multiplier, 
     onCameraClick, 
@@ -24,6 +25,7 @@ export const ScannerControls: React.FC<ScannerControlsProps> = memo(({
 }) => {
     return (
         <div className="w-full bg-white border-t-8 border-black p-6 flex flex-col gap-6 max-w-lg mx-auto rounded-t-[3rem] shadow-[0_-10px_30px_rgba(0,0,0,0.2)]">
+            {/* STATS DE ALTO CONTRASTE */}
             <div className="flex items-center justify-between px-2">
                 <div className="flex flex-col">
                     <span className="text-xs uppercase font-black text-slate-500 tracking-[0.2em]">Total Unid.</span>
@@ -36,6 +38,7 @@ export const ScannerControls: React.FC<ScannerControlsProps> = memo(({
                 </div>
             </div>
 
+            {/* BOTONES GIGANTES */}
             <div className="grid grid-cols-3 gap-4 h-32">
                 <button 
                     onClick={onCameraClick}
