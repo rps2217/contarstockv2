@@ -1,4 +1,3 @@
-
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { Home, Database, History, Layers, Container, Fingerprint, Cloud, Settings as SettingsIcon } from 'lucide-react';
@@ -72,13 +71,13 @@ const AppContent = () => {
   const isScanningMode = location.pathname.startsWith('/counting/');
 
   return (
-    <div className={`min-h-screen bg-slate-50 ${settings.theme === 'dark' || settings.theme === 'oled' ? 'dark bg-black' : ''}`}>
+    <div className={`min-h-[100dvh] bg-slate-50 ${settings.theme === 'dark' || settings.theme === 'oled' ? 'dark bg-black' : ''}`}>
       <NetworkStatus />
-      <div className="flex">
+      <div className="flex h-full overflow-hidden">
         {!isScanningMode && <Sidebar view={currentView} settings={settings} />}
-        <main className={`flex-1 min-h-[100dvh] transition-all duration-300 ${!isScanningMode ? 'md:pl-64 pb-24 md:pb-0' : ''}`}>
+        <main className={`flex-1 min-h-[100dvh] relative overflow-y-auto no-scrollbar transition-all duration-300 ${!isScanningMode ? 'md:pl-64 pb-24 md:pb-0' : ''}`}>
           <ErrorBoundary>
-            <Suspense fallback={<div className="flex items-center justify-center h-screen"><div className="w-12 h-12 border-8 border-blue-600 border-t-transparent rounded-full animate-spin"></div></div>}>
+            <Suspense fallback={<div className="flex items-center justify-center h-screen"><div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div></div>}>
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/dashboard" element={<Dashboard />} />

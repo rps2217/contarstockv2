@@ -1,6 +1,5 @@
-
 import React, { useMemo, useRef, useEffect, useState } from 'react';
-import { X, ChevronLeft, Keyboard as KeyboardIcon, Hash, History as HistoryIcon, Trash2, Camera } from 'lucide-react';
+import { X, ChevronLeft, Keyboard as KeyboardIcon, Hash, History as HistoryIcon, Trash2, Camera, List } from 'lucide-react';
 import { CountingSession } from '../types';
 import { ExpirationModal } from './ExpirationModal';
 import { useScanner } from '../hooks/useScanner';
@@ -26,6 +25,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
   
   const [scansPerMinute, setScansPerMinute] = useState(0);
   const scanTimestampsRef = useRef<number[]>([]);
+  const [showRecentScansMobile, setShowRecentScansMobile] = useState(false);
 
   useEffect(() => {
     if (settings.speedometerEnabled && data.lastScan) {
@@ -60,6 +60,14 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
 
       <div className="flex-1 min-h-0 relative z-10 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
         <div className="lg:col-span-8 flex flex-col relative p-4 h-full">
+            {/* Botón flotante para ver historial en móvil */}
+            <button 
+                onClick={() => setShowRecentScansMobile(true)}
+                className="lg:hidden absolute top-4 right-4 z-40 p-4 bg-white/50 backdrop-blur-md rounded-2xl border border-slate-200 shadow-sm active:scale-90 transition-all text-slate-400"
+            >
+                <List className="w-6 h-6" />
+            </button>
+
             <div className="flex-1 flex flex-col justify-center items-center min-h-0">
                 <ScannerHero 
                     lastScan={data.lastScan}
@@ -92,11 +100,16 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
             </div>
         </div>
 
-        <div className="hidden lg:flex lg:col-span-4 bg-white border-l border-slate-200 flex-col overflow-hidden shadow-2xl">
+        {/* Panel Lateral - Adaptado para Móvil como Overlay */}
+        <div className={`
+            ${showRecentScansMobile ? 'flex fixed inset-0 z-[120]' : 'hidden lg:flex'} 
+            lg:relative lg:col-span-4 bg-white border-l border-slate-200 flex-col overflow-hidden shadow-2xl animate-in slide-in-from-right-full duration-300
+        `}>
             <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/80 backdrop-blur-sm">
                 <h3 className="font-black text-indigo-600 text-[10px] uppercase tracking-[0.2em] flex items-center gap-3">
                     <HistoryIcon className="w-4 h-4" /> Secuencia de Entrada
                 </h3>
+                <button onClick={() => setShowRecentScansMobile(false)} className="lg:hidden p-2 text-slate-400"><X className="w-6 h-6"/></button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar bg-slate-50/30">
                 {data.recentScans?.map((scan, idx) => (
@@ -110,9 +123,62 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
                         onToggleIncident={actions.handleToggleIncident}
                     />
                 ))}
+                {(!data.recentScans || data.recentScans.length === 0) && (
+                    <div className="h-full flex flex-col items-center justify-center opacity-20 py-20">
+                        <HistoryIcon className="w-12 h-12 mb-4" />
+                        <p className="font-black uppercase tracking-widest text-xs">Sin registros aún</p>
+                    </div>
+                )}
             </div>
+            {showRecentScansMobile && (
+                <div className="p-6 bg-white border-t border-slate-100">
+                    <button 
+                        onClick={() => setShowRecentScansMobile(false)}
+                        className="w-full py-4 bg-slate-900 text-white font-black rounded-2xl uppercase tracking-widest text-xs"
+                    >
+                        Cerrar Historial
+                    </button>
+                </div>
+            )}
         </div>
       </div>
+
+      {/* Teclado Manual Optimizado */}
+      {state.status === 'manual' && (
+          <div className="fixed inset-0 z-[200] bg-slate-900/60 backdrop-blur-md flex items-end md:items-center justify-center p-4 animate-in fade-in duration-300">
+              <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-6 md:p-10 animate-in slide-in-from-bottom-10">
+                  <div className="flex justify-between items-center mb-6">
+                      <h3 className="text-xl font-black uppercase tracking-tight flex items-center gap-3 text-slate-900">
+                          <KeyboardIcon className="w-6 h-6 text-indigo-600" /> Registro Manual
+                      </h3>
+                      <button onClick={() => state.setStatus('idle')} className="p-3 bg-slate-100 rounded-full text-slate-500 active:scale-90 transition-all"><X className="w-6 h-6"/></button>
+                  </div>
+                  
+                  <form onSubmit={actions.handleManualSubmit} className="space-y-6">
+                      <div className="grid grid-cols-3 gap-2">
+                          {[1, 5, 10, 12, 24, 50].map(v => (
+                              <button 
+                                type="button"
+                                key={v}
+                                onClick={() => state.setMultiplier(v)}
+                                className={`py-4 rounded-xl font-black border-2 transition-all text-xs ${state.multiplier === v ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg' : 'border-slate-100 text-slate-400 hover:border-indigo-200'}`}
+                              >x{v}</button>
+                          ))}
+                      </div>
+                      <input 
+                          autoFocus
+                          type="text"
+                          inputMode="numeric"
+                          value={state.manualInput}
+                          onChange={(e) => state.setManualInput(e.target.value)}
+                          placeholder="DIGITAR SKU"
+                          className="w-full h-20 bg-slate-50 border-4 border-slate-200 rounded-[1.5rem] text-3xl font-black text-center outline-none focus:border-indigo-500 text-slate-950 tracking-tighter shadow-inner"
+                      />
+                      <button type="submit" className="w-full h-16 bg-slate-900 text-white font-black rounded-2xl shadow-xl uppercase tracking-widest text-xs active:scale-95 transition-all">Registrar Ahora</button>
+                  </form>
+              </div>
+          </div>
+      )}
 
       {state.status === 'product_form' && (
           <ProductForm 
@@ -123,43 +189,6 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
           />
       )}
 
-      {state.status === 'manual' && (
-          <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-md flex items-end md:items-center justify-center p-4 animate-in fade-in duration-300">
-              <div className="bg-white w-full max-w-md rounded-[3rem] shadow-2xl p-10 animate-in slide-in-from-bottom-10">
-                  <div className="flex justify-between items-center mb-8">
-                      <h3 className="text-xl font-black uppercase tracking-tight flex items-center gap-3 text-slate-900">
-                          <KeyboardIcon className="w-6 h-6 text-indigo-600" /> Teclado
-                      </h3>
-                      <button onClick={() => state.setStatus('idle')} className="p-3 bg-slate-100 rounded-full text-slate-500 active:scale-90 transition-all"><X className="w-6 h-6"/></button>
-                  </div>
-                  
-                  <form onSubmit={actions.handleManualSubmit} className="space-y-8">
-                      <div className="grid grid-cols-3 gap-3">
-                          {[1, 2, 5, 10, 12, 24].map(v => (
-                              <button 
-                                type="button"
-                                key={v}
-                                onClick={() => state.setMultiplier(v)}
-                                className={`py-4 rounded-2xl font-black border-2 transition-all ${state.multiplier === v ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg' : 'border-slate-100 text-slate-400 hover:border-indigo-200'}`}
-                              >x{v}</button>
-                          ))}
-                      </div>
-                      <input 
-                          autoFocus
-                          type="text"
-                          inputMode="numeric"
-                          value={state.manualInput}
-                          // Fix: Use state.setManualInput instead of setManualInput as it is retrieved from the useScanner state object
-                          onChange={(e) => state.setManualInput(e.target.value)}
-                          placeholder="DIGITAR SKU"
-                          className="w-full h-24 bg-slate-50 border-4 border-slate-200 rounded-[2rem] text-4xl font-black text-center outline-none focus:border-indigo-500 text-slate-950 tracking-tighter shadow-inner"
-                      />
-                      <button type="submit" className="w-full h-20 bg-slate-900 text-white font-black rounded-3xl shadow-2xl uppercase tracking-widest text-sm active:scale-95 transition-all">Registrar Ahora</button>
-                  </form>
-              </div>
-          </div>
-      )}
-
       {state.status === 'camera' && (
           <CameraScanner 
             onScan={(code) => { actions.handleExternalScan(code); state.setStatus('idle'); }} 
@@ -168,15 +197,15 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
       )}
       
       {state.status === 'confirming' && (
-          <div className="fixed inset-0 bg-slate-950/60 z-[110] flex items-center justify-center p-6 backdrop-blur-xl animate-in fade-in">
-              <div className="bg-white p-12 rounded-[4rem] shadow-2xl text-center max-w-sm border-2 border-white">
-                  <div className="w-24 h-24 bg-indigo-50 text-indigo-600 rounded-[2.5rem] flex items-center justify-center mx-auto mb-10 shadow-inner"><X className="w-12 h-12" /></div>
-                  <h3 className="text-4xl font-black mb-4 uppercase tracking-tighter text-slate-900">Finalizar</h3>
-                  <p className="text-slate-400 text-sm font-bold uppercase tracking-widest mb-12 leading-relaxed">¿Desea cerrar la sesión activa y guardar el manifiesto?</p>
+          <div className="fixed inset-0 bg-slate-950/80 z-[210] flex items-center justify-center p-6 backdrop-blur-md animate-in fade-in">
+              <div className="bg-white p-8 md:p-12 rounded-[3rem] shadow-2xl text-center max-w-sm border-2 border-white">
+                  <div className="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-inner"><X className="w-10 h-10" /></div>
+                  <h3 className="text-3xl font-black mb-4 uppercase tracking-tighter text-slate-900">Finalizar</h3>
+                  <p className="text-slate-400 text-sm font-bold uppercase tracking-widest mb-10 leading-relaxed">¿Desea cerrar la sesión activa y guardar el manifiesto?</p>
                   
-                  <div className="flex flex-col gap-4">
-                      <button onClick={onCloseSession} className="bg-blue-600 text-white h-20 rounded-3xl font-black shadow-xl uppercase text-xs tracking-[0.2em] active:scale-95 transition-all">SÍ, GUARDAR TODO</button>
-                      <button onClick={actions.handleDiscard} className="bg-rose-50 text-rose-600 h-16 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2">BORRAR SESIÓN</button>
+                  <div className="flex flex-col gap-3">
+                      <button onClick={onCloseSession} className="bg-blue-600 text-white h-16 rounded-2xl font-black shadow-xl uppercase text-xs tracking-[0.2em] active:scale-95 transition-all">SÍ, GUARDAR TODO</button>
+                      <button onClick={actions.handleDiscard} className="bg-rose-50 text-rose-600 h-14 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2">BORRAR SESIÓN</button>
                       <button onClick={() => state.setStatus('idle')} className="text-slate-400 font-black py-4 uppercase text-[10px] tracking-[0.4em] hover:text-indigo-600">CANCELAR</button>
                   </div>
               </div>
