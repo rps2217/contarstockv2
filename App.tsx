@@ -10,17 +10,17 @@ import { Sidebar } from './components/Sidebar';
 import { runFullMetadataRepair } from './components/maintenance/RecalculateTool';
 import { logger } from './services/logger';
 
-// Lazy imports - Rutas explícitas con extensión para evitar fallos de resolución
-const Dashboard = lazy(() => import('./components/Dashboard.tsx'));
-const Reports = lazy(() => import('./components/Reports.tsx'));
-const DatabaseView = lazy(() => import('./components/Database.tsx'));
-const Sync = lazy(() => import('./components/SyncManagerUI.tsx'));
-const Consolidated = lazy(() => import('./components/Consolidated.tsx'));
-const Conciliator = lazy(() => import('./components/Conciliator.tsx'));
-const Reception = lazy(() => import('./components/Reception.tsx'));
-const Settings = lazy(() => import('./components/Settings.tsx'));
-const CountingView = lazy(() => import('./components/CountingView.tsx'));
-const AuditDashboard = lazy(() => import('./components/AuditDashboard.tsx'));
+// Lazy imports - Eliminadas extensiones .tsx para compatibilidad total con el bundler/servidor
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const Reports = lazy(() => import('./components/Reports'));
+const DatabaseView = lazy(() => import('./components/Database'));
+const Sync = lazy(() => import('./components/SyncManagerUI'));
+const Consolidated = lazy(() => import('./components/Consolidated'));
+const Conciliator = lazy(() => import('./components/Conciliator'));
+const Reception = lazy(() => import('./components/Reception'));
+const Settings = lazy(() => import('./components/Settings'));
+const CountingView = lazy(() => import('./components/CountingView'));
+const AuditDashboard = lazy(() => import('./components/AuditDashboard'));
 
 const NAV_REGISTRY: Record<string, { label: string, icon: any, path: string }> = {
   dashboard: { label: 'INICIO', icon: Home, path: '/dashboard' },
@@ -41,13 +41,13 @@ const MobileNav = ({ currentView }: { currentView: string }) => {
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-xl border-t border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.4)] pb-safe">
-        <div className="flex justify-around items-center h-20 px-2">
+        <div className="flex justify-around items-center h-20 px-4">
             {navItems.map((item) => {
                 const isActive = currentView === item.key;
                 const Icon = item.icon;
                 return (
                     <button key={item.key} onClick={() => navigate(item.path)} className={`flex flex-col items-center justify-center flex-1 h-full gap-1 transition-all ${isActive ? 'text-white' : 'text-slate-500'}`}>
-                        <div className={`p-2 rounded-xl transition-all duration-300 ${isActive ? 'bg-blue-600 shadow-lg shadow-blue-900/40' : ''}`}>
+                        <div className={`p-2 rounded-[1.2rem] transition-all duration-300 ${isActive ? 'bg-blue-600 shadow-lg shadow-blue-900/40' : ''}`}>
                             <Icon className={`w-6 h-6 ${isActive ? 'stroke-[3px]' : 'stroke-2'}`} />
                         </div>
                         <span className={`text-[8px] font-black uppercase tracking-widest ${isActive ? 'opacity-100' : 'opacity-40'}`}>{item.label}</span>
