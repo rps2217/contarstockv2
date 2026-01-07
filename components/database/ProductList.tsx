@@ -1,13 +1,14 @@
 
 import React, { useMemo, useRef } from 'react';
 import { Product } from '../../types';
-import { Pencil, Trash2, Package, Cloud, CloudOff } from 'lucide-react';
+import { Pencil, Trash2, Package, Cloud, CloudOff, AlertTriangle } from 'lucide-react';
 import * as ReactWindow from 'react-window';
 import * as AutoSizerModule from 'react-virtualized-auto-sizer';
 
-// Fix: Robust component extraction for Error #130
-const FixedSizeList = (ReactWindow as any).FixedSizeList || (ReactWindow as any).default?.FixedSizeList || (ReactWindow as any).default;
-const AutoSizer = (AutoSizerModule as any).default || AutoSizerModule;
+// Fix: Removed dangerous fallback to namespace object which caused Error #130
+const FixedSizeList = (ReactWindow as any).FixedSizeList || (ReactWindow as any).default?.FixedSizeList;
+// Fix: AutoSizer needs to handle both default export and CJS module pattern
+const AutoSizer = (AutoSizerModule as any).default || (AutoSizerModule as any).AutoSizer || AutoSizerModule;
 
 interface ProductListProps {
   products?: Product[];
@@ -69,6 +70,20 @@ const Row = ({ index, style, data }: { index: number; style: React.CSSProperties
 export const ProductList: React.FC<ProductListProps> = ({ products, onEdit, onDelete, onDeleteAll, hasFilter }) => {
   const listRef = useRef<any>(null);
   const itemData = useMemo(() => ({ items: products || [], onEdit, onDelete, isMobile: false }), [products, onEdit, onDelete]);
+
+  // Safety check for virtualization libraries
+  if (!FixedSizeList || !AutoSizer) {
+      return (
+          <div className="h-full flex flex-col items-center justify-center p-8 text-center bg-slate-50 rounded-[2.5rem] border-2 border-slate-200 border-dashed">
+              <AlertTriangle className="w-12 h-12 text-amber-500 mb-4" />
+              <h3 className="text-slate-900 font-black uppercase tracking-tight mb-2">Error de Librería Visual</h3>
+              <p className="text-slate-500 text-xs font-medium max-w-xs mx-auto">
+                  No se pudieron cargar los componentes de lista virtual. Por favor recargue la página.
+              </p>
+              <button onClick={() => window.location.reload()} className="mt-6 px-6 py-3 bg-slate-900 text-white rounded-xl font-bold text-xs uppercase tracking-widest active:scale-95 transition-all">Recargar</button>
+          </div>
+      );
+  }
 
   if (!products || products.length === 0) {
     return (

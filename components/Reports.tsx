@@ -1,13 +1,14 @@
 
 import React, { useCallback } from 'react';
-import { Archive, ExternalLink, WifiOff, ChevronDown } from 'lucide-react';
+import { Archive, ExternalLink, WifiOff, ChevronDown, AlertCircle } from 'lucide-react';
 import { StartSessionModal } from './StartSessionModal';
 import { SearchBar } from './SearchBar';
 import * as ReactWindow from 'react-window';
 import * as AutoSizerModule from 'react-virtualized-auto-sizer';
 
+// Fix: Safe extraction for Virtual List components
 const FixedSizeList = (ReactWindow as any).FixedSizeList || (ReactWindow as any).default?.FixedSizeList;
-const AutoSizer = (AutoSizerModule as any).default || AutoSizerModule;
+const AutoSizer = (AutoSizerModule as any).default || (AutoSizerModule as any).AutoSizer || AutoSizerModule;
 
 import { ReportDetail } from './reports/ReportDetail';
 import { ReportsHeader } from './reports/ReportsHeader';
@@ -39,23 +40,28 @@ export const Reports: React.FC = () => {
         );
     }
 
+    // Safety fallback for Virtual List failure
     if (!FixedSizeList || !AutoSizer) {
         return (
-            <div className="h-full overflow-y-auto p-4 space-y-2">
-                {state.sessions.map((session, idx) => (
-                    <SessionRow 
-                        key={session.id} 
-                        index={idx} 
-                        style={{}} 
-                        data={{ 
-                            sessions: state.sessions!, 
-                            onSelect: actions.setSelectedSessionId, 
-                            activeMenuId: state.activeMenuId, 
-                            onMenuToggle: actions.handleMenuToggle, 
-                            onDelete: actions.handleDeleteSession 
-                        }} 
-                    />
-                ))}
+            <div className="h-full flex flex-col items-center justify-center p-8 text-center opacity-60">
+                <AlertCircle className="w-8 h-8 mb-2 text-slate-400" />
+                <p className="text-xs text-slate-500 font-bold uppercase">Modo Simple (Error Gráfico)</p>
+                <div className="w-full mt-4 overflow-y-auto max-h-full space-y-2">
+                    {state.sessions.map((session, idx) => (
+                        <SessionRow 
+                            key={session.id} 
+                            index={idx} 
+                            style={{}} 
+                            data={{ 
+                                sessions: state.sessions!, 
+                                onSelect: actions.setSelectedSessionId, 
+                                activeMenuId: state.activeMenuId, 
+                                onMenuToggle: actions.handleMenuToggle, 
+                                onDelete: actions.handleDeleteSession 
+                            }} 
+                        />
+                    ))}
+                </div>
             </div>
         );
     }
