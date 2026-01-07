@@ -3,40 +3,42 @@ import { db } from '../db';
 import { ScanRecord, CountingSession } from '../types';
 import { generateUUID, sanitizeBarcode } from './utils';
 import { logger } from './logger';
+import { validateScanRecord } from './validator';
 
 let scanBuffer: ScanRecord[] = [];
 let flushTimer: any = null;
 let isFlushing = false;
-const MIRROR_KEY = 'logicount_emergency_buffer';
+const MIRROR_KEY = 'logicount_emergency_buffer_v2';
 
-// Recuperación de desastres
-(async () => {
+const recoverFromCrash = async () => {
     try {
         const mirrored = localStorage.getItem(MIRROR_KEY);
         if (mirrored) {
-            const parsed = JSON.parse(mirrored);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-                scanBuffer = [...scanBuffer, ...parsed];
+            const batch = JSON.parse(mirrored);
+            if (Array.isArray(batch) && batch.length > 0) {
+                console.warn(`[Blindaje] Rescatando ${batch.length} registros...`);
+                await (db as any).transaction('rw', db.scans, db.sessions, async () => {
+                    await db.scans.bulkAdd(batch);
+                    const sessionIds = Array.from(new Set(batch.map(s => s.sessionId)));
+                    for (const id of sessionIds) await recalculateSessionMetadata(id);
+                });
                 localStorage.removeItem(MIRROR_KEY);
-                flushBuffer();
             }
         }
-    } catch (e) {}
-})();
+    } catch (e) {
+        logger.error("Database", "Fallo en motor de recuperación", e);
+    }
+};
+
+recoverFromCrash();
 
 const saveMirror = () => {
     try {
-        if (scanBuffer.length > 0) {
-            localStorage.setItem(MIRROR_KEY, JSON.stringify(scanBuffer.slice(-500)));
-        } else {
-            localStorage.removeItem(MIRROR_KEY);
-        }
+        if (scanBuffer.length > 0) localStorage.setItem(MIRROR_KEY, JSON.stringify(scanBuffer));
+        else localStorage.removeItem(MIRROR_KEY);
     } catch (e) {}
 };
 
-/**
- * OPTIMIZACIÓN: FlushBuffer ahora actualiza contadores de forma más eficiente.
- */
 const flushBuffer = async () => {
     if (scanBuffer.length === 0 || isFlushing) return;
     isFlushing = true;
@@ -44,42 +46,82 @@ const flushBuffer = async () => {
     try {
         await (db as any).transaction('rw', db.scans, db.sessions, async () => {
             await db.scans.bulkAdd(batch);
-            
             const affectedSessions = new Set(batch.map(s => s.sessionId));
-            for (const sessionId of affectedSessions) {
-                // En lugar de contar todo, calculamos el delta del batch para esta sesión específica
-                const sessionScans = batch.filter(s => s.sessionId === sessionId);
-                const deltaUnits = sessionScans.reduce((acc, s) => acc + s.quantity, 0);
-                
-                const session = await db.sessions.get(sessionId);
-                if (session) {
-                    // Recalcular SKUs únicos es inevitable pero solo lo hacemos una vez al flush
-                    const allScansForSession = await db.scans.where('sessionId').equals(sessionId).toArray();
-                    const totalSKUs = new Set(allScansForSession.map(s => s.barcode)).size;
-                    const totalUnits = allScansForSession.reduce((acc, s) => acc + s.quantity, 0);
-                    
-                    await db.sessions.update(sessionId, { 
-                        totalUnits, 
-                        totalSKUs 
-                    });
-                }
-            }
+            for (const sessionId of affectedSessions) await recalculateSessionMetadata(sessionId);
         });
-
-        const writtenIds = new Set(batch.map(s => s.id));
-        scanBuffer = scanBuffer.filter(s => !writtenIds.has(s.id));
+        scanBuffer = scanBuffer.filter(s => !batch.find(b => b.id === s.id));
         saveMirror();
     } catch (e: any) {
-        logger.error("Database", "Error en persistencia de buffer", e);
+        logger.error("Database", "Error crítico en flush", e);
     } finally {
         isFlushing = false;
         if (scanBuffer.length > 0) {
             if (flushTimer) clearTimeout(flushTimer);
-            flushTimer = setTimeout(flushBuffer, 500);
-        } else {
-            flushTimer = null;
+            flushTimer = setTimeout(flushBuffer, 300);
+        } else flushTimer = null;
+    }
+};
+
+export const recalculateSessionMetadata = async (sessionId: string) => {
+    const scans = await db.scans.where('sessionId').equals(sessionId).toArray();
+    const totalUnits = scans.reduce((acc, s) => acc + s.quantity, 0);
+    const totalSKUs = new Set(scans.map(s => s.barcode)).size;
+    await db.sessions.update(sessionId, { totalUnits, totalSKUs });
+};
+
+export const addScan = async (sessionId: string, barcode: string, quantity: number, mm?: number, yyyy?: number): Promise<ScanRecord> => {
+    const validation = validateScanRecord({ sessionId, barcode, quantity, mm, yyyy });
+    
+    if (!validation.valid) {
+        throw new Error(`Escaneo Rechazado: ${validation.error}`);
+    }
+
+    const validatedData = validation.data!;
+    const record: ScanRecord = {
+        id: generateUUID(),
+        ...validatedData,
+        timestamp: Date.now(),
+        synced: 0
+    };
+    
+    scanBuffer.push(record);
+    saveMirror();
+    
+    if (flushTimer) clearTimeout(flushTimer);
+    flushTimer = setTimeout(flushBuffer, 200);
+    
+    return record;
+};
+
+export const undoLastScan = async (sessionId: string): Promise<string | null> => {
+    // Primero intentamos borrar del buffer si hay algo
+    if (scanBuffer.length > 0) {
+        const lastInBuffer = scanBuffer[scanBuffer.length - 1];
+        if (lastInBuffer.sessionId === sessionId) {
+            const barcode = lastInBuffer.barcode;
+            scanBuffer.pop();
+            saveMirror();
+            return barcode;
         }
     }
+
+    // Si no, buscamos en la DB el registro más reciente de esta sesión
+    const lastScan = await db.scans
+        .where('sessionId').equals(sessionId)
+        .reverse()
+        .sortBy('timestamp')
+        .then(results => results[0]);
+
+    if (lastScan) {
+        const barcode = lastScan.barcode;
+        await (db as any).transaction('rw', db.scans, db.sessions, async () => {
+            await db.scans.delete(lastScan.id);
+            await recalculateSessionMetadata(sessionId);
+        });
+        return barcode;
+    }
+
+    return null;
 };
 
 export const createSession = async (erpOrder: string, logisticsLabel: string): Promise<CountingSession> => {
@@ -100,30 +142,6 @@ export const createSession = async (erpOrder: string, logisticsLabel: string): P
   return newSession;
 };
 
-export const addScan = async (sessionId: string, barcode: string, quantity: number, mm?: number, yyyy?: number): Promise<ScanRecord> => {
-    if (quantity <= 0) throw new Error("La cantidad debe ser mayor a cero.");
-    
-    const record: ScanRecord = {
-        id: generateUUID(), 
-        sessionId, 
-        barcode: sanitizeBarcode(barcode),
-        quantity, 
-        timestamp: Date.now(), 
-        mm, 
-        yyyy, 
-        synced: 0
-    };
-    
-    scanBuffer.push(record);
-    saveMirror();
-    
-    // Flush más frecuente pero más ligero
-    if (scanBuffer.length >= 5) flushBuffer();
-    else if (!flushTimer) flushTimer = setTimeout(flushBuffer, 400);
-    
-    return record;
-};
-
 export const deleteSession = async (sessionId: string) => { 
     scanBuffer = scanBuffer.filter(s => s.sessionId !== sessionId);
     saveMirror();
@@ -139,8 +157,7 @@ export const updateScanQuantity = async (scanId: string, newQuantity: number) =>
     if (scan) {
         await (db as any).transaction('rw', db.scans, db.sessions, async () => {
             await db.scans.update(scanId, { quantity: newQuantity, synced: 0 }); 
-            const scans = await db.scans.where('sessionId').equals(scan.sessionId).toArray();
-            await db.sessions.update(scan.sessionId, { totalUnits: scans.reduce((acc, s) => acc + s.quantity, 0) });
+            await recalculateSessionMetadata(scan.sessionId);
         });
     }
 };
@@ -150,11 +167,7 @@ export const deleteScan = async (scanId: string) => {
     if (scan) { 
         await (db as any).transaction('rw', db.scans, db.sessions, async () => {
             await db.scans.delete(scanId); 
-            const scans = await db.scans.where('sessionId').equals(scan.sessionId).toArray();
-            await db.sessions.update(scan.sessionId, { 
-                totalUnits: scans.reduce((acc, s) => acc + s.quantity, 0), 
-                totalSKUs: new Set(scans.map(s => s.barcode)).size 
-            });
+            await recalculateSessionMetadata(scan.sessionId);
         });
     } 
 };
@@ -198,11 +211,7 @@ export const updateScanIncident = async (id: string, status: boolean) => {
 
 export const deleteSessionItem = async (sessionId: string, barcode: string) => {
     await db.scans.where('[sessionId+barcode]').equals([sessionId, barcode]).delete();
-    const scans = await db.scans.where('sessionId').equals(sessionId).toArray();
-    await db.sessions.update(sessionId, { 
-        totalUnits: scans.reduce((a, b) => a + b.quantity, 0),
-        totalSKUs: new Set(scans.map(s => s.barcode)).size
-    });
+    await recalculateSessionMetadata(sessionId);
 };
 
 export const adjustSessionItemQuantity = async (sessionId: string, barcode: string, delta: number) => {

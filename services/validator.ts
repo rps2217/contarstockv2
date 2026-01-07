@@ -1,50 +1,56 @@
 
-import { Product, CountingSession, ScanRecord } from '../types';
+import { z } from 'zod';
+import { Product, ScanRecord, CountingSession } from '../types';
 
 /**
- * Validates a Product object to ensure it meets database requirements.
+ * Esquema de Código de Barras:
+ * - Mínimo 3 caracteres, máximo 64.
+ * - Solo caracteres alfanuméricos y guiones (estándar logístico).
  */
-export const validateProduct = (product: Partial<Product>): { valid: boolean; error?: string } => {
-    if (!product.barcode || typeof product.barcode !== 'string' || product.barcode.trim().length < 3) {
-        return { valid: false, error: 'Código de barras demasiado corto o inválido' };
-    }
-    if (!product.name || typeof product.name !== 'string' || product.name.trim().length < 2) {
-        return { valid: false, error: 'Nombre de producto requerido' };
-    }
-    return { valid: true };
+export const BarcodeSchema = z.string()
+    .min(3, "Código demasiado corto")
+    .max(64, "Código demasiado largo")
+    .transform(val => val.trim().toUpperCase());
+
+/**
+ * Esquema de Producto: Blindaje del Catálogo
+ */
+export const ProductSchema = z.object({
+    barcode: BarcodeSchema,
+    name: z.string().min(2, "Nombre requerido").max(200),
+    category: z.string().default("GENERAL"),
+    supplier: z.string().optional().default(""),
+    supplierRut: z.string().optional().default(""),
+    syncStatus: z.enum(['synced', 'add', 'edit']).default('add')
+});
+
+/**
+ * Esquema de Escaneo: Blindaje del flujo ráfaga
+ */
+export const ScanRecordSchema = z.object({
+    sessionId: z.string().uuid("ID de sesión inválido"),
+    barcode: BarcodeSchema,
+    quantity: z.number().positive("La cantidad debe ser mayor a 0").max(10000, "Cantidad fuera de rango manual"),
+    mm: z.number().min(1).max(12).optional(),
+    yyyy: z.number().min(2020).max(2050).optional(),
+    timestamp: z.number().default(() => Date.now()),
+    isIncident: z.boolean().default(false)
+});
+
+export const validateProduct = (data: any) => {
+    const result = ProductSchema.safeParse(data);
+    return {
+        valid: result.success,
+        error: !result.success ? result.error.errors[0].message : undefined,
+        data: result.success ? result.data : undefined
+    };
 };
 
-/**
- * Validates a Session object.
- */
-export const validateSession = (session: Partial<CountingSession>): { valid: boolean; error?: string } => {
-    if (!session.erpOrder || session.erpOrder.trim() === '') {
-        return { valid: false, error: 'Orden ERP obligatoria' };
-    }
-    if (!session.logisticsLabel || session.logisticsLabel.trim() === '') {
-        return { valid: false, error: 'Etiqueta logística obligatoria' };
-    }
-    return { valid: true };
-};
-
-/**
- * Validador de escaneo para prevenir registros duplicados o corruptos en ráfaga.
- */
-export const validateScanRecord = (scan: Partial<ScanRecord>): boolean => {
-    if (!scan.barcode || !scan.sessionId || !scan.quantity) return false;
-    if (scan.quantity <= 0 || scan.quantity > 10000) return false; // Sanity check
-    return true;
-};
-
-/**
- * Safe parser that never throws, returns default if failed.
- */
-export const safeJsonParse = <T>(json: string, fallback: T): T => {
-    try {
-        if (!json) return fallback;
-        return JSON.parse(json);
-    } catch (e) {
-        console.error("JSON Parse Error Recovery:", e);
-        return fallback;
-    }
+export const validateScanRecord = (data: any) => {
+    const result = ScanRecordSchema.safeParse(data);
+    return {
+        valid: result.success,
+        error: !result.success ? result.error.errors[0].message : undefined,
+        data: result.success ? result.data : undefined
+    };
 };

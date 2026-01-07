@@ -15,7 +15,9 @@ const DEFAULT_SETTINGS: AppSettings = {
   controlTowerEnabled: false, 
   confirmDelete: true,
   autoRegisterUnknown: false, 
-  lowPerformanceMode: false, // Default: Full experience
+  lowPerformanceMode: false,
+  predictiveHintsEnabled: true, // Por defecto activo
+  continuousMode: true,        // Por defecto activo
   appSheetConfig: {
       appId: '',
       accessKey: '',

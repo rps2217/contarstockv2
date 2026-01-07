@@ -2,7 +2,7 @@
 import React from 'react';
 import { 
     Zap, Volume2, Mic, BarChart3, Gauge, AlertTriangle, Hash, Type, 
-    Smartphone, Cpu
+    Smartphone, Cpu, Sparkles, FastForward
 } from 'lucide-react';
 import { AppSettings } from '../../types';
 
@@ -40,6 +40,15 @@ export const OperationalSection: React.FC<Props> = ({ settings, updateSetting })
     return (
         <div className="space-y-4">
             <div className="bg-white rounded-[2.5rem] shadow-xl border-4 border-black overflow-hidden divide-y-4 divide-slate-50">
+                
+                <Item title="Sugerencias IA" sub="Anticipa el próximo SKU" icon={Sparkles} iconColor="text-indigo-600" iconBg="bg-indigo-50">
+                    <Toggle active={settings.predictiveHintsEnabled} onClick={() => updateSetting('predictiveHintsEnabled', !settings.predictiveHintsEnabled)} color="bg-indigo-600" />
+                </Item>
+
+                <Item title="Modo Continuo" sub="Escaneo sin interrupciones" icon={FastForward} iconColor="text-orange-600" iconBg="bg-orange-50">
+                    <Toggle active={settings.continuousMode} onClick={() => updateSetting('continuousMode', !settings.continuousMode)} color="bg-orange-600" />
+                </Item>
+
                 <Item title="Auto Registro" sub="Guardar items desconocidos" icon={Zap}>
                     <Toggle active={settings.autoRegisterUnknown} onClick={() => updateSetting('autoRegisterUnknown', !settings.autoRegisterUnknown)} />
                 </Item>

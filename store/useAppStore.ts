@@ -1,26 +1,50 @@
 
 import { create } from 'zustand';
-import { AppSettings, Theme } from '../types';
+import { AppSettings, ViewState } from '../types';
 import { getSettings, saveSettings } from '../services/settings';
 
-interface AppState {
+// --- SLICE: SETTINGS ---
+interface SettingsSlice {
   settings: AppSettings;
   updateSetting: (key: keyof AppSettings, value: any) => void;
   loadSettings: () => void;
 }
 
-export const useAppStore = create<AppState>((set) => ({
+const createSettingsSlice = (set: any): SettingsSlice => ({
   settings: getSettings(),
-  
   updateSetting: (key, value) => {
-    set((state) => {
+    set((state: any) => {
       const newSettings = { ...state.settings, [key]: value };
       saveSettings(newSettings);
       return { settings: newSettings };
     });
   },
-
   loadSettings: () => {
     set({ settings: getSettings() });
   }
+});
+
+// --- SLICE: UI STATE ---
+interface UISlice {
+  isSidebarOpen: boolean;
+  activeView: ViewState;
+  globalSearchQuery: string;
+  setSidebarOpen: (open: boolean) => void;
+  setActiveView: (view: ViewState) => void;
+  setGlobalSearch: (q: string) => void;
+}
+
+const createUISlice = (set: any): UISlice => ({
+  isSidebarOpen: false,
+  activeView: 'dashboard',
+  globalSearchQuery: '',
+  setSidebarOpen: (open) => set({ isSidebarOpen: open }),
+  setActiveView: (view) => set({ activeView: view }),
+  setGlobalSearch: (q) => set({ globalSearchQuery: q }),
+});
+
+// --- COMBINED STORE ---
+export const useAppStore = create<SettingsSlice & UISlice>((set) => ({
+  ...createSettingsSlice(set),
+  ...createUISlice(set),
 }));

@@ -1,6 +1,6 @@
 
 import React, { memo } from 'react';
-import { RotateCcw, AlertCircle, CheckCircle, Zap } from 'lucide-react';
+import { RotateCcw, AlertCircle, CheckCircle, Zap, Sparkles } from 'lucide-react';
 import { ScanRecord, ExpectedItem } from '../../types';
 
 interface ScannerHeroProps {
@@ -10,6 +10,8 @@ interface ScannerHeroProps {
     onRegisterPending: () => void;
     onToggleIncident: (e: React.MouseEvent, id: string, status: boolean) => void;
     expectedItem?: ExpectedItem | null;
+    predictions?: {barcode: string, name: string}[];
+    onPredictionClick?: (barcode: string) => void;
 }
 
 export const ScannerHero: React.FC<ScannerHeroProps> = memo(({ 
@@ -17,12 +19,14 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
     activeProductStats, 
     feedback, 
     onRegisterPending, 
-    expectedItem
+    expectedItem,
+    predictions = [],
+    onPredictionClick
 }) => {
     if (feedback === 'undo') {
         return (
             <div className="flex flex-col items-center justify-center h-full">
-                <div className="p-8 md:p-12 bg-slate-900 rounded-full mb-6 border-4 md:border-8 border-slate-700">
+                <div className="p-8 md:p-12 bg-slate-900 rounded-full mb-6 border-4 md:border-8 border-slate-700 animate-in zoom-in">
                     <RotateCcw className="w-16 h-16 md:w-24 md:h-24 text-white" />
                 </div>
                 <h2 className="text-3xl md:text-4xl font-black text-black uppercase tracking-tighter">BORRADO</h2>
@@ -73,8 +77,29 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
                             <div className="text-[10rem] md:text-[15rem] leading-[0.8] font-black text-black tabular-nums tracking-tighter select-none scale-y-110 drop-shadow-sm">
                                 {currentQty}
                             </div>
-                            <div className="text-[10px] md:text-sm font-black uppercase tracking-[0.5em] text-white bg-black px-6 md:px-10 py-1.5 md:py-2 rounded-full mt-6 md:mt-8">CONTADOS</div>
+                            <div className="text-[10px] md:sm font-black uppercase tracking-[0.5em] text-white bg-black px-6 md:px-10 py-1.5 md:py-2 rounded-full mt-6 md:mt-8">CONTADOS</div>
                         </div>
+
+                        {predictions.length > 0 && (
+                            <div className="mt-12 w-full max-w-lg animate-in slide-in-from-bottom-4">
+                                <div className="flex items-center gap-2 mb-3 px-4">
+                                    <Sparkles className="w-4 h-4 text-indigo-500" />
+                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Sugerencias IA</span>
+                                </div>
+                                <div className="flex gap-2 overflow-x-auto no-scrollbar px-4">
+                                    {predictions.map(p => (
+                                        <button 
+                                            key={p.barcode}
+                                            onClick={() => onPredictionClick?.(p.barcode)}
+                                            className="bg-white border-2 border-slate-200 p-3 rounded-2xl min-w-[140px] text-left hover:border-indigo-500 transition-all active:scale-95"
+                                        >
+                                            <div className="text-[8px] font-black text-indigo-600 uppercase mb-1 truncate">{p.name}</div>
+                                            <div className="text-xs font-mono font-bold text-slate-900">{p.barcode}</div>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

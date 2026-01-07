@@ -138,3 +138,5 @@ export const Consolidated: React.FC = () => {
         </div>
     );
 };
+
+export default Consolidated;

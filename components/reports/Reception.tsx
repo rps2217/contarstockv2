@@ -2,13 +2,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../db';
-import * as sessionService from '../services/sessionService'; 
-import { sanitizeBarcode } from '../services/utils';
-import { SoundFX } from '../services/audio';
-import { CameraScanner } from './CameraScanner';
+import { db } from '../../db';
+import * as sessionService from '../../services/sessionService'; 
+import { sanitizeBarcode } from '../../services/utils';
+import { SoundFX } from '../../services/audio';
+import { CameraScanner } from '../CameraScanner';
 import { ChevronLeft, Barcode, X, Container, Zap, Keyboard, Camera, List } from 'lucide-react';
-import { QueueManager } from './reception/QueueManager';
+import { QueueManager } from '../reception/QueueManager';
 
 export const Reception: React.FC = () => {
     const navigate = useNavigate();
@@ -73,7 +73,6 @@ export const Reception: React.FC = () => {
                 </div>
 
                 <div className="w-full max-w-sm bg-white/5 border border-white/10 rounded-[3rem] p-10 text-center mb-16 shadow-2xl relative">
-                    <button className="absolute top-6 right-6 text-white/20"><List className="w-5 h-5"/></button>
                     <div className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] mb-4">Total Ingresos</div>
                     <div className="flex items-center justify-center gap-6">
                         <Container className="w-12 h-12 text-white/10" />

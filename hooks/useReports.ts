@@ -1,4 +1,5 @@
-import React, { useState, useCallback } from 'react';
+
+import React, { useState, useCallback, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import * as sessionService from '../services/sessionService';
@@ -9,20 +10,30 @@ export const useReports = () => {
     const [isCleaning, setIsCleaning] = useState(false);
     const [isStartModalOpen, setIsStartModalOpen] = useState(false);
     const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+    
+    // Paginación Reactiva
+    const [limit, setLimit] = useState(50);
 
     const pendingSyncCount = useLiveQuery(() => db.scans.where('synced').equals(0).count(), [], 0);
 
     const sessions = useLiveQuery(async () => {
         const q = searchQuery.trim();
+        let collection;
+
         if (q) {
-            return await db.sessions
+            collection = db.sessions
                 .where('erpOrder').startsWithIgnoreCase(q)
-                .or('logisticsLabel').startsWithIgnoreCase(q)
-                .reverse()
-                .toArray();
+                .or('logisticsLabel').startsWithIgnoreCase(q);
+        } else {
+            collection = db.sessions.orderBy('createdAt');
         }
-        return await db.sessions.orderBy('createdAt').reverse().toArray();
-    }, [searchQuery], []);
+
+        return await collection.reverse().limit(limit).toArray();
+    }, [searchQuery, limit], []);
+
+    const loadMore = useCallback(() => {
+        setLimit(prev => prev + 50);
+    }, []);
 
     const handleCleanSynced = useCallback(async () => {
         if (!confirm("Se purgarán los datos ya respaldados en la nube. ¿Continuar?")) return;
@@ -56,7 +67,8 @@ export const useReports = () => {
             selectedSessionId,
             isCleaning,
             isStartModalOpen,
-            activeMenuId
+            activeMenuId,
+            hasMore: sessions?.length === limit
         },
         actions: {
             setSearchQuery,
@@ -64,7 +76,8 @@ export const useReports = () => {
             setIsStartModalOpen,
             handleCleanSynced,
             handleDeleteSession,
-            handleMenuToggle
+            handleMenuToggle,
+            loadMore
         }
     };
 };

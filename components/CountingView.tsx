@@ -65,3 +65,5 @@ export const CountingView: React.FC = () => {
         />
     );
 };
+
+export default CountingView;

@@ -16,18 +16,45 @@ const formatDateTime = (ts: number): string => {
     return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
 };
 
-export const parseFlexibleDate = (v: any): number => {
-    if (!v) return Date.now();
-    if (typeof v === 'number') return (v > 30000 && v < 60000) ? new Date((v - 25569) * 86400 * 1000).getTime() : v;
-    const s = String(v).trim();
-    if (s.match(/^\d{4}-\d{2}-\d{2}/)) return new Date(s.replace(/-/g, '/')).getTime();
-    const ts = new Date(s).getTime();
-    return isNaN(ts) ? Date.now() : ts;
+// Fix: Added missing parseFlexibleDate function exported for syncManager.ts
+/**
+ * Intenta convertir una fecha de texto (Excel/AppSheet) a timestamp numérico
+ */
+export const parseFlexibleDate = (dateVal: any): number => {
+    if (!dateVal) return Date.now();
+    if (typeof dateVal === 'number') return dateVal;
+    
+    const parsed = Date.parse(dateVal);
+    if (!isNaN(parsed)) return parsed;
+    
+    try {
+        const d = new Date(dateVal);
+        if (!isNaN(d.getTime())) return d.getTime();
+    } catch (e) {}
+    
+    return Date.now();
 };
 
 /**
- * Helper para intentar subir filas una por una si falla el lote
+ * Worker Wrapper para preparación de datos
  */
+const prepareSyncPayload = (session: CountingSession, consolidated: any[]): Promise<any[]> => {
+    return new Promise((resolve, reject) => {
+        const worker = new Worker(new URL('../workers/syncPrep.worker.ts', import.meta.url), { type: 'module' });
+        worker.onmessage = (e) => {
+            if (e.data.success) resolve(e.data.rows);
+            else reject(new Error(e.data.error));
+            worker.terminate();
+        };
+        worker.postMessage({
+            consolidated,
+            session,
+            timestamp: formatDateTime(Date.now()),
+            uuidPrefix: generateUUID().substring(0, 8)
+        });
+    });
+};
+
 const syncRowsIndividually = async (
     config: any, 
     tableName: string, 
@@ -37,20 +64,18 @@ const syncRowsIndividually = async (
 ): Promise<{ successfulKeys: string[], failedCount: number }> => {
     const successfulKeys: string[] = [];
     let failedCount = 0;
-
     for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         try {
-            if (onProgress) onProgress(`[Fila ${i + 1}/${rows.length}] Procesando ${row[SHEET_COLUMNS.BARCODE] || 'registro'}...`);
-            
+            if (onProgress) onProgress(`[Fila ${i + 1}/${rows.length}] Enviando ${row[SHEET_COLUMNS.BARCODE]}...`);
             await sendToAppSheet(config, tableName, { 
                 Action: action, 
                 Properties: { Locale: "es-CL", Timezone: "UTC" }, 
                 Rows: [row] 
             });
-            successfulKeys.push(row[SHEET_COLUMNS.UNIQUE_KEY] || row["COD PRODUCTO"]);
+            successfulKeys.push(row[SHEET_COLUMNS.UNIQUE_KEY]);
         } catch (e: any) {
-            logger.warn('SyncRow', `Fallo en fila ${i + 1}: ${e.message}`);
+            logger.warn('SyncRow', `Fallo: ${e.message}`);
             failedCount++;
         }
     }
@@ -59,75 +84,46 @@ const syncRowsIndividually = async (
 
 export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg: string) => void): Promise<void> => {
   const config = getSettings().appSheetConfig;
-  if (!config?.appId || !config?.accessKey || !config?.countsTableName) throw new Error("Configuración AppSheet incompleta en Ajustes.");
+  if (!config?.appId || !config?.accessKey || !config?.countsTableName) throw new Error("Configuración incompleta.");
   
   const unsynced = await db.scans.where('sessionId').equals(session.id).filter(s => s.synced === 0).toArray();
   if (unsynced.length === 0) return;
 
-  if (onProgress) onProgress(`Preparando ${unsynced.length} registros para ${session.erpOrder}...`);
-  
+  if (onProgress) onProgress(`Consolidando registros...`);
   const consolidated = await aggregateScans(unsynced);
-  const rows = consolidated.map(item => ({
-      [SHEET_COLUMNS.ID]: generateUUID(),
-      [SHEET_COLUMNS.UNIQUE_KEY]: `${normalizeKey(session.erpOrder)}_${normalizeKey(session.logisticsLabel)}_${item.barcode}_${item.mm || 0}_${item.yyyy || 0}`,
-      [SHEET_COLUMNS.DATE]: formatDateTime(Date.now()),
-      [SHEET_COLUMNS.ERP_ORDER]: session.erpOrder,
-      [SHEET_COLUMNS.BARCODE]: item.barcode,
-      [SHEET_COLUMNS.PRODUCT_NAME]: item.productName,
-      [SHEET_COLUMNS.QUANTITY]: item.totalQuantity,
-      [SHEET_COLUMNS.LABEL]: session.logisticsLabel,
-      [SHEET_COLUMNS.MONTH]: item.mm || 0,
-      [SHEET_COLUMNS.YEAR]: item.yyyy || 0,
-      [SHEET_COLUMNS.INCIDENT]: item.isIncident ? "FRC" : ""
-  }));
+  
+  if (onProgress) onProgress(`Preparando payload en Worker...`);
+  const rows = await prepareSyncPayload(session, consolidated);
 
   try {
-      if (onProgress) onProgress(`Enviando lote de ${rows.length} items a la nube...`);
-      // Intento 1: Lote completo (Add)
+      if (onProgress) onProgress(`Enviando ${rows.length} filas...`);
       await sendToAppSheet(config, config.countsTableName, { 
           Action: "Add", 
           Properties: { Locale: "es-CL", Timezone: "UTC" }, 
           Rows: rows 
       });
       await markScansAsSynced(unsynced.map(s => s.id));
-      if (onProgress) onProgress(`Lote completado con éxito.`);
   } catch (err: any) {
-      // Intento 2: Si el lote falla, procesar uno por uno para no bloquear
-      if (onProgress) onProgress(`Fallo lote (posible duplicidad). Recuperando por fila...`);
-      logger.warn('Sync', `Fallo lote en ${session.erpOrder}. Iniciando respaldo atómico.`);
-      
+      if (onProgress) onProgress(`Fallo lote. Recuperando por ítem...`);
       const { successfulKeys, failedCount } = await syncRowsIndividually(config, config.countsTableName, rows, "Edit", onProgress);
       
-      // Marcar como sincronizados solo los que tuvieron éxito (basado en la clave única)
       const successfulSkus = new Set(successfulKeys.map(k => k.split('_')[2])); 
       const idsToMark = unsynced.filter(s => successfulSkus.has(s.barcode)).map(s => s.id);
-      
       if (idsToMark.length > 0) await markScansAsSynced(idsToMark);
-      if (failedCount > 0) throw new Error(`${failedCount} registros rechazados por la nube.`);
+      if (failedCount > 0) throw new Error(`${failedCount} errores.`);
   }
 };
 
 export const syncProductsToAppSheet = async (products: Product[], onProgress?: (msg: string) => void) => {
   const config = getSettings().appSheetConfig;
-  if (!config?.appId || !config?.accessKey || !config?.productsTableName) throw new Error("Configuración AppSheet incompleta.");
-  
-  const rows = products.map(p => ({ 
-      "COD PRODUCTO": p.barcode, 
-      "DESCRIPCION": p.name, 
-      "MUNDO": p.category, 
-      "PROVEEDOR": p.supplier, 
-      "RUT PROVEEDOR": p.supplierRut 
-  }));
-
+  if (!config?.appId || !config?.accessKey || !config?.productsTableName) throw new Error("Configuración incompleta.");
+  const rows = products.map(p => ({ "COD PRODUCTO": p.barcode, "DESCRIPCION": p.name, "MUNDO": p.category, "PROVEEDOR": p.supplier, "RUT PROVEEDOR": p.supplierRut }));
   try {
-      if (onProgress) onProgress(`Enviando catálogo (${rows.length} productos)...`);
       await sendToAppSheet(config, config.productsTableName, { Action: "Add", Properties: { Locale: "es-CL", Timezone: "UTC" }, Rows: rows });
       await markProductsAsSynced(products.map(p => p.barcode));
   } catch {
-      if (onProgress) onProgress(`Reintentando actualización de catálogo uno a uno...`);
-      const { successfulKeys, failedCount } = await syncRowsIndividually(config, config.productsTableName, rows, "Edit", onProgress);
+      const { successfulKeys } = await syncRowsIndividually(config, config.productsTableName, rows, "Edit", onProgress);
       if (successfulKeys.length > 0) await markProductsAsSynced(successfulKeys);
-      if (failedCount > 0) throw new Error(`${failedCount} productos no pudieron actualizarse.`);
   }
 };
 
@@ -147,11 +143,9 @@ export const fetchProductsFromCloud = async () => {
 
 export const syncReceptionToAppSheet = async (sessions: CountingSession[], onProgress?: (msg: string) => void) => {
     const config = getSettings().appSheetConfig;
-    if (!config?.appId || !config?.accessKey || !config?.receptionTableName) throw new Error("Configuración AppSheet incompleta.");
-    
+    if (!config?.appId || !config?.accessKey || !config?.receptionTableName) throw new Error("Configuración incompleta.");
     let success = 0, failed = 0;
     for (const s of sessions) {
-        if (onProgress) onProgress(`Sincronizando bulto: ${s.logisticsLabel}...`);
         const row = { "ID_RECEPCION": String(s.id), "FECHA_HORA": formatDateTime(s.createdAt), "ETIQUETA": String(s.logisticsLabel), "ESTADO": s.status === 'draft' ? 'PENDIENTE' : 'PROCESADO' };
         try {
             await sendToAppSheet(config, config.receptionTableName, { Action: "Add", Properties: { Locale: "es-CL", Timezone: "UTC" }, Rows: [row] });

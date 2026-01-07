@@ -60,7 +60,6 @@ export const Reception: React.FC = () => {
 
     return (
         <div className="flex flex-col h-full w-full bg-slate-900 text-white rounded-[2rem] overflow-hidden border border-slate-800 shadow-2xl relative">
-            {/* Header */}
             <div className="p-4 flex items-center justify-between border-b border-white/10 shrink-0 z-20 bg-slate-900/50 backdrop-blur-md">
                 <button onClick={() => navigate('/dashboard')} className="p-2 hover:bg-white/10 rounded-full text-white/70 transition-colors"><ChevronLeft className="w-6 h-6" /></button>
                 <div className="flex flex-col items-center">
@@ -73,7 +72,6 @@ export const Reception: React.FC = () => {
                 </button>
             </div>
 
-            {/* Main Area */}
             <div className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-y-auto no-scrollbar">
                 {lastScanned ? (
                     <div className="mb-12 text-center animate-in zoom-in duration-300">
@@ -104,14 +102,13 @@ export const Reception: React.FC = () => {
                         <Keyboard className="w-8 h-8 text-white/40 group-hover:text-white transition-colors" />
                         <span className="text-[10px] font-black uppercase tracking-widest text-white/60">Teclado</span>
                     </button>
-                    <button onClick={() => setIsCameraOpen(true)} className="bg-blue-600 hover:bg-blue-500 border border-blue-400 p-6 rounded-[2rem] flex flex-col items-center gap-3 active:scale-95 transition-all shadow-lg shadow-blue-900/50">
+                    <button onClick={() => setIsCameraOpen(true)} className="bg-blue-600 hover:bg-blue-50 border border-blue-400 p-6 rounded-[2rem] flex flex-col items-center gap-3 active:scale-95 transition-all shadow-lg shadow-blue-900/50">
                         <Camera className="w-8 h-8 text-white" />
                         <span className="text-[10px] font-black uppercase tracking-widest text-white">Cámara</span>
                     </button>
                 </div>
             </div>
 
-            {/* Modals */}
             {showManualInput && (
                 <div className="absolute inset-0 z-[60] bg-slate-900/90 backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in">
                     <div className="w-full max-w-sm">
@@ -132,7 +129,7 @@ export const Reception: React.FC = () => {
                                 placeholder="000000" 
                                 className="w-full h-24 bg-black/30 border-2 border-white/10 rounded-[2rem] text-4xl font-black text-center outline-none focus:border-blue-500 text-white tracking-widest placeholder:text-white/10 transition-colors" 
                             />
-                            <button type="submit" className="w-full h-16 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg active:scale-95 transition-all">
+                            <button type="submit" className="w-full h-16 bg-blue-600 hover:bg-blue-50 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg active:scale-95 transition-all">
                                 Confirmar
                             </button>
                         </form>
@@ -152,3 +149,5 @@ export const Reception: React.FC = () => {
         </div>
     );
 };
+
+export default Reception;

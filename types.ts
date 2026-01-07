@@ -57,7 +57,6 @@ export type ViewState = 'dashboard' | 'counting' | 'database' | 'reports' | 'set
 
 export type Theme = 'light' | 'dark' | 'contrast' | 'warm' | 'navy' | 'oled';
 
-// Fase 1: Estados del Escáner
 export type ScannerStatus = 'idle' | 'manual' | 'camera' | 'expiring' | 'confirming' | 'error' | 'success' | 'product_form';
 
 export interface AppSheetConfig {
@@ -79,6 +78,8 @@ export interface AppSettings {
   confirmDelete: boolean;
   autoRegisterUnknown: boolean; 
   lowPerformanceMode: boolean;
+  predictiveHintsEnabled: boolean; // Fase 3
+  continuousMode: boolean;        // Fase 3
   appSheetConfig?: AppSheetConfig;
   mobileNavConfig?: ViewState[]; 
 }

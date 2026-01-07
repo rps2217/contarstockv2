@@ -6,53 +6,41 @@ import { sanitizeBarcode } from './utils';
 import { validateProduct } from './validator';
 
 /**
- * REGLA DE ESTABILIDAD:
- * Los productos guardados mediante esta función deben ser sanitizados siempre.
- * Si el producto ya existe y es 'synced', cambiar a 'edit' para asegurar que se suba el cambio.
+ * Repository Pattern: Centraliza el acceso a la tabla de productos
  */
+export const getProductByBarcode = async (barcode: string): Promise<Product | undefined> => {
+    return await db.products.get(sanitizeBarcode(barcode));
+};
+
 export const saveProduct = async (product: Product) => {
-  const cleanBarcode = sanitizeBarcode(product.barcode);
-  const validation = validateProduct({ ...product, barcode: cleanBarcode });
-  if (!validation.valid) throw new Error(`Error: ${validation.error}`);
+  const validation = validateProduct(product);
+  if (!validation.valid) {
+      throw new Error(`Error de Integridad: ${validation.error}`);
+  }
   
-  const existing = await db.products.get(cleanBarcode);
+  const validatedData = validation.data!;
+  const existing = await db.products.get(validatedData.barcode);
+  
   let syncStatus: 'add' | 'edit' | 'synced' = 'add';
-  
   if (existing) {
-      // No bajamos de nivel 'add', pero si era 'synced' ahora es 'edit'
       syncStatus = existing.syncStatus === 'add' ? 'add' : 'edit';
   }
 
   await db.products.put({ 
-      ...product, 
-      barcode: cleanBarcode, 
-      syncStatus,
-      name: product.name || 'PENDIENTE' // Fallback de seguridad
+      ...validatedData,
+      syncStatus
   });
 };
 
 export const saveProductBatch = async (products: Product[]) => {
-    const valid = products.map(p => ({ ...p, barcode: sanitizeBarcode(p.barcode) }))
-                         .filter(p => validateProduct(p).valid);
-    if (valid.length > 0) await db.products.bulkPut(valid);
-};
+    const validBatch = products
+        .map(p => validateProduct(p))
+        .filter(v => v.valid)
+        .map(v => v.data!);
 
-export const createProductAlias = async (newBarcode: string, originalBarcode: string, fallbackName: string) => {
-    const masterProduct = await db.products.get(sanitizeBarcode(originalBarcode));
-    const newProduct: Product = {
-        barcode: sanitizeBarcode(newBarcode),
-        name: masterProduct ? masterProduct.name : fallbackName,
-        category: masterProduct?.category || 'ALIAS_DETECTADO',
-        supplier: masterProduct?.supplier || '',
-        supplierRut: masterProduct?.supplierRut || '',
-        syncStatus: 'add'
-    };
-    await saveProduct(newProduct);
-};
-
-export const markProductsAsSynced = async (barcodes: string[]) => {
-    if (barcodes.length === 0) return;
-    await db.products.where('barcode').anyOf(barcodes).modify({ syncStatus: 'synced' });
+    if (validBatch.length > 0) {
+        await db.products.bulkPut(validBatch);
+    }
 };
 
 export const deleteProduct = async (barcode: string) => {
@@ -61,6 +49,24 @@ export const deleteProduct = async (barcode: string) => {
 
 export const deleteAllProducts = async () => {
   await db.products.clear();
+};
+
+export const markProductsAsSynced = async (barcodes: string[]) => {
+    if (barcodes.length === 0) return;
+    await db.products.where('barcode').anyOf(barcodes).modify({ syncStatus: 'synced' });
+};
+
+export const createProductAlias = async (newBarcode: string, originalBarcode: string, fallbackName: string) => {
+    const masterProduct = await getProductByBarcode(originalBarcode);
+    const newProduct: Product = {
+        barcode: newBarcode,
+        name: masterProduct ? masterProduct.name : fallbackName,
+        category: masterProduct?.category || 'ALIAS_DETECTADO',
+        supplier: masterProduct?.supplier || '',
+        supplierRut: masterProduct?.supplierRut || '',
+        syncStatus: 'add'
+    };
+    await saveProduct(newProduct);
 };
 
 export const bulkImportProducts = async (csvText: string): Promise<number> => {
@@ -75,24 +81,21 @@ export const bulkImportProducts = async (csvText: string): Promise<number> => {
                 try {
                     const products: Product[] = [];
                     for (const row of results.data as any[]) {
-                        const rawBarcode = row['COD PRODUCTO'] || row['CODIGO'] || row['SKU'];
-                        const name = row['DESCRIPCION'] || row['PRODUCTO'];
-                        const category = row['MUNDO'] || row['CATEGORIA'] || '';
-                        const supplier = row['PROVEEDOR'] || '';
-                        const rut = row['RUT PROVEEDOR'] || '';
-
+                        const rawBarcode = row['COD PRODUCTO'] || row['CODIGO'] || row['SKU'] || row['EAN'];
+                        const name = row['DESCRIPCION'] || row['PRODUCTO'] || row['NOMBRE'];
+                        
                         if (rawBarcode && name) {
                             products.push({
-                                barcode: sanitizeBarcode(String(rawBarcode)),
-                                name: String(name).trim(),
-                                category: String(category).trim(),
-                                supplier: String(supplier).trim(),
-                                supplierRut: String(rut).trim(),
+                                barcode: String(rawBarcode),
+                                name: String(name),
+                                category: String(row['MUNDO'] || row['CATEGORIA'] || 'GENERAL'),
+                                supplier: String(row['PROVEEDOR'] || ''),
+                                supplierRut: String(row['RUT PROVEEDOR'] || ''),
                                 syncStatus: 'synced'
                             });
                         }
                     }
-                    if (products.length > 0) await db.products.bulkPut(products);
+                    await saveProductBatch(products);
                     resolve(products.length);
                 } catch (err) { reject(err); }
             },

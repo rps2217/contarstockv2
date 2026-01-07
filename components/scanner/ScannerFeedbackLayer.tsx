@@ -33,14 +33,12 @@ export const ScannerFeedbackLayer: React.FC<ScannerFeedbackLayerProps> = memo(({
     }
 
     return (
-        <>
-            {feedback === 'success' && <div className="scan-success-glow" />}
-            {feedback === 'error' && (
-                <div className="absolute inset-0 z-[5] bg-rose-500/5 animate-pulse pointer-events-none border-4 border-rose-500/20" />
-            )}
-            
-            <div className="absolute inset-0 z-0 opacity-[0.4] pointer-events-none" 
-                 style={{ backgroundImage: 'radial-gradient(#e2e8f0 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
-        </>
+        <div 
+            className={`absolute inset-0 z-0 transition-colors duration-300 pointer-events-none ${
+                feedback === 'success' ? 'bg-emerald-500/10' : 
+                feedback === 'error' ? 'bg-rose-500/20' : 
+                feedback === 'undo' ? 'bg-slate-200' : 'bg-transparent'
+            }`} 
+        />
     );
 });

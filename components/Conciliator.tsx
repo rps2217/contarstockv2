@@ -49,3 +49,5 @@ export const Conciliator: React.FC = () => {
         </div>
     );
 };
+
+export default Conciliator;

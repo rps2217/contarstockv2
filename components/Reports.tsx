@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { FileText, WifiOff, ExternalLink, Archive } from 'lucide-react';
+import React, { useCallback } from 'react';
+import { Archive, ExternalLink, WifiOff, ChevronDown } from 'lucide-react';
 import { StartSessionModal } from './StartSessionModal';
 import { SearchBar } from './SearchBar';
 import * as ReactWindow from 'react-window';
@@ -19,11 +19,16 @@ export const Reports: React.FC = () => {
   const navigate = useNavigate();
   const { state, actions } = useReports();
 
+  const onItemsRendered = useCallback(({ visibleStopIndex }: any) => {
+      if (state.hasMore && visibleStopIndex >= (state.sessions?.length || 0) - 5) {
+          actions.loadMore();
+      }
+  }, [state.hasMore, state.sessions?.length, actions]);
+
   if (state.selectedSessionId) {
       return <ReportDetail sessionId={state.selectedSessionId} onBack={() => actions.setSelectedSessionId(null)} />;
   }
 
-  // Lógica defensiva para el renderizado
   const renderSessions = () => {
     if (!state.sessions || state.sessions.length === 0) {
         return (
@@ -34,7 +39,6 @@ export const Reports: React.FC = () => {
         );
     }
 
-    // Si las librerías virtuales fallaron (Error #130 guard), usamos lista nativa
     if (!FixedSizeList || !AutoSizer) {
         return (
             <div className="h-full overflow-y-auto p-4 space-y-2">
@@ -56,7 +60,6 @@ export const Reports: React.FC = () => {
         );
     }
 
-    // Renderizado optimizado original
     return (
         <AutoSizer>
             {({ height, width }: { height: number; width: number }) => (
@@ -66,6 +69,7 @@ export const Reports: React.FC = () => {
                     itemCount={state.sessions!.length} 
                     itemSize={110} 
                     className="no-scrollbar" 
+                    onItemsRendered={onItemsRendered}
                     itemData={{ 
                         sessions: state.sessions, 
                         onSelect: actions.setSelectedSessionId, 
@@ -82,7 +86,7 @@ export const Reports: React.FC = () => {
   };
 
   return (
-        <div className="flex flex-col h-[calc(100dvh-6rem)] w-full page-transition px-4 pt-6">
+        <div className="flex flex-col h-full w-full page-transition px-4 pt-6 pb-24 md:pb-6">
             <ReportsHeader 
                 isCleaning={state.isCleaning} 
                 onClean={actions.handleCleanSynced} 
@@ -90,12 +94,12 @@ export const Reports: React.FC = () => {
                 onStartNew={() => actions.setIsStartModalOpen(true)} 
             />
             
-            <div className="mt-4 mb-6">
+            <div className="mt-4 mb-6 shrink-0">
                 <SearchBar onSearch={actions.setSearchQuery} placeholder="Filtrar por ERP o Bulto..." />
             </div>
 
             {state.pendingSyncCount > 0 && (
-                <button onClick={() => navigate('/sync')} className="w-full mb-4 bg-orange-600 p-4 rounded-2xl flex items-center justify-between shadow-lg shadow-orange-900/20 animate-pulse group border-b-4 border-orange-800">
+                <button onClick={() => navigate('/sync')} className="w-full mb-4 bg-orange-600 p-4 rounded-2xl flex items-center justify-between shadow-lg shadow-orange-900/20 animate-pulse group border-b-4 border-orange-800 shrink-0">
                     <div className="flex items-center gap-3">
                         <WifiOff className="w-5 h-5 text-white" />
                         <div className="text-left">
@@ -110,6 +114,7 @@ export const Reports: React.FC = () => {
             <div className="flex-1 min-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 rounded-[2rem] overflow-hidden shadow-sm relative">
                 <div className="absolute top-0 left-0 right-0 h-10 bg-slate-50 dark:bg-black/50 border-b border-slate-100 dark:border-white/5 flex items-center px-6 justify-between z-10">
                     <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">Firma Operativa</span>
+                    {state.hasMore && <span className="animate-bounce"><ChevronDown className="w-3 h-3 text-blue-500" /></span>}
                     <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">Estado</span>
                 </div>
                 
