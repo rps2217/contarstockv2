@@ -13,8 +13,12 @@ interface State {
   errorInfo: ErrorInfo | null;
 }
 
-// Fixed ErrorBoundary by using explicit Component import to ensure setState and props are available
-export class ErrorBoundary extends Component<Props, State> {
+/**
+ * Capturador de errores global para la aplicación React.
+ * Implementa la lógica de recuperación y reporte de fallos críticos.
+ */
+// Fix: Explicitly using React.Component to resolve type inheritance for setState and props
+export class ErrorBoundary extends React.Component<Props, State> {
   public state: State = {
     hasError: false,
     error: null,
@@ -47,7 +51,7 @@ export class ErrorBoundary extends Component<Props, State> {
         { stack: error.stack, componentStack: errorInfo.componentStack }
     ).catch(e => console.error("Failed to write crash log", e));
     
-    // Fix: Explicitly using setState from Component
+    // Fix: setState is now correctly recognized as an inherited method from React.Component
     this.setState({ errorInfo });
   }
 
@@ -111,7 +115,7 @@ export class ErrorBoundary extends Component<Props, State> {
       );
     }
 
-    // Fix: props.children is now correctly recognized as existing on the component instance
+    // Fix: props.children is now correctly recognized as an inherited property from React.Component
     return this.props.children;
   }
 }
