@@ -1,6 +1,6 @@
 
 import React, { useCallback } from 'react';
-import { Archive, ExternalLink, WifiOff, ChevronDown, AlertCircle } from 'lucide-react';
+import { Archive, ExternalLink, WifiOff, ChevronDown, Layers } from 'lucide-react';
 import { StartSessionModal } from './StartSessionModal';
 import { SearchBar } from './SearchBar';
 import * as ReactWindow from 'react-window';
@@ -40,13 +40,16 @@ export const Reports: React.FC = () => {
         );
     }
 
-    // Safety fallback for Virtual List failure
+    // Safety fallback: Render standard list if virtualization fails
     if (!FixedSizeList || !AutoSizer) {
         return (
-            <div className="h-full flex flex-col items-center justify-center p-8 text-center opacity-60">
-                <AlertCircle className="w-8 h-8 mb-2 text-slate-400" />
-                <p className="text-xs text-slate-500 font-bold uppercase">Modo Simple (Error Gráfico)</p>
-                <div className="w-full mt-4 overflow-y-auto max-h-full space-y-2">
+            <div className="h-full flex flex-col relative">
+                <div className="absolute bottom-2 right-4 z-10 pointer-events-none opacity-40">
+                    <div className="flex items-center gap-1.5 bg-slate-100 text-slate-500 px-2 py-1 rounded-md text-[8px] font-black uppercase">
+                        <Layers className="w-3 h-3" /> Vista Estándar
+                    </div>
+                </div>
+                <div className="w-full h-full overflow-y-auto space-y-2 no-scrollbar pb-20">
                     {state.sessions.map((session, idx) => (
                         <SessionRow 
                             key={session.id} 
@@ -61,6 +64,11 @@ export const Reports: React.FC = () => {
                             }} 
                         />
                     ))}
+                    {state.hasMore && (
+                        <div className="p-4 text-center">
+                            <button onClick={() => actions.loadMore()} className="text-xs font-bold text-blue-600">Cargar más...</button>
+                        </div>
+                    )}
                 </div>
             </div>
         );
