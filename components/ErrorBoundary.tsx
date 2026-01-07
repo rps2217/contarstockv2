@@ -17,8 +17,8 @@ interface State {
  * Capturador de errores global para la aplicación React.
  * Implementa la lógica de recuperación y reporte de fallos críticos.
  */
-// Fix: Explicitly using React.Component to resolve type inheritance for setState and props
-export class ErrorBoundary extends React.Component<Props, State> {
+// Fix: Inherit from Component directly to resolve inheritance issues causing setState and props to be unrecognized
+export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
     error: null,
@@ -51,7 +51,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
         { stack: error.stack, componentStack: errorInfo.componentStack }
     ).catch(e => console.error("Failed to write crash log", e));
     
-    // Fix: setState is now correctly recognized as an inherited method from React.Component
+    // Fix: Using setState which is now correctly recognized via direct Component inheritance
     this.setState({ errorInfo });
   }
 
@@ -115,7 +115,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
       );
     }
 
-    // Fix: props.children is now correctly recognized as an inherited property from React.Component
+    // Fix: Accessing this.props.children which is now correctly recognized via Component inheritance
     return this.props.children;
   }
 }

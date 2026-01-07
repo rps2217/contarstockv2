@@ -10,17 +10,17 @@ import { Sidebar } from './components/Sidebar';
 import { runFullMetadataRepair } from './components/maintenance/RecalculateTool';
 import { logger } from './services/logger';
 
-// Lazy imports - Rutas explícitas
-const Dashboard = lazy(() => import('./components/Dashboard'));
-const Reports = lazy(() => import('./components/Reports'));
-const DatabaseView = lazy(() => import('./components/Database'));
-const Sync = lazy(() => import('./components/SyncManagerUI'));
-const Consolidated = lazy(() => import('./components/Consolidated'));
-const Conciliator = lazy(() => import('./components/Conciliator'));
-const Reception = lazy(() => import('./components/Reception'));
-const Settings = lazy(() => import('./components/Settings'));
-const CountingView = lazy(() => import('./components/CountingView'));
-const AuditDashboard = lazy(() => import('./components/AuditDashboard'));
+// Lazy imports - Rutas explícitas con extensión para evitar fallos de resolución
+const Dashboard = lazy(() => import('./components/Dashboard.tsx'));
+const Reports = lazy(() => import('./components/Reports.tsx'));
+const DatabaseView = lazy(() => import('./components/Database.tsx'));
+const Sync = lazy(() => import('./components/SyncManagerUI.tsx'));
+const Consolidated = lazy(() => import('./components/Consolidated.tsx'));
+const Conciliator = lazy(() => import('./components/Conciliator.tsx'));
+const Reception = lazy(() => import('./components/Reception.tsx'));
+const Settings = lazy(() => import('./components/Settings.tsx'));
+const CountingView = lazy(() => import('./components/CountingView.tsx'));
+const AuditDashboard = lazy(() => import('./components/AuditDashboard.tsx'));
 
 const NAV_REGISTRY: Record<string, { label: string, icon: any, path: string }> = {
   dashboard: { label: 'INICIO', icon: Home, path: '/dashboard' },
@@ -41,16 +41,16 @@ const MobileNav = ({ currentView }: { currentView: string }) => {
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-xl border-t border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.4)] pb-safe">
-        <div className="flex justify-around items-center h-24 px-2">
+        <div className="flex justify-around items-center h-20 px-2">
             {navItems.map((item) => {
                 const isActive = currentView === item.key;
                 const Icon = item.icon;
                 return (
-                    <button key={item.key} onClick={() => navigate(item.path)} className={`flex flex-col items-center justify-center flex-1 h-full gap-2 transition-all ${isActive ? 'text-white scale-105' : 'text-slate-500'}`}>
-                        <div className={`p-3 rounded-2xl transition-all duration-300 ${isActive ? 'bg-blue-600 shadow-lg shadow-blue-900/40' : ''}`}>
-                            <Icon className={`w-7 h-7 ${isActive ? 'stroke-[3px]' : 'stroke-2'}`} />
+                    <button key={item.key} onClick={() => navigate(item.path)} className={`flex flex-col items-center justify-center flex-1 h-full gap-1 transition-all ${isActive ? 'text-white' : 'text-slate-500'}`}>
+                        <div className={`p-2 rounded-xl transition-all duration-300 ${isActive ? 'bg-blue-600 shadow-lg shadow-blue-900/40' : ''}`}>
+                            <Icon className={`w-6 h-6 ${isActive ? 'stroke-[3px]' : 'stroke-2'}`} />
                         </div>
-                        <span className={`text-[9px] font-black uppercase tracking-widest ${isActive ? 'opacity-100' : 'opacity-40'}`}>{item.label}</span>
+                        <span className={`text-[8px] font-black uppercase tracking-widest ${isActive ? 'opacity-100' : 'opacity-40'}`}>{item.label}</span>
                     </button>
                 );
             })}
@@ -79,16 +79,20 @@ const AppContent = () => {
   const isDarkTheme = ['dark', 'oled', 'navy', 'contrast'].includes(theme);
 
   return (
-    <div className={`fixed inset-0 overflow-hidden transition-colors duration-500 theme-${theme} ${isDarkTheme ? 'dark' : ''} ${isDarkTheme ? 'bg-black' : 'bg-slate-50'}`}>
+    <div className={`w-full h-full flex flex-col transition-colors duration-500 theme-${theme} ${isDarkTheme ? 'dark bg-black' : 'bg-slate-50'}`}>
       <NetworkStatus />
       
-      <div className="flex w-full h-full overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative">
         {!isScanningMode && <Sidebar view={currentView} settings={settings} />}
         
-        {/* Main Layout Container - Viewport Locked */}
-        <main className={`flex-1 flex flex-col relative w-full h-full overflow-hidden transition-all duration-300 ${!isScanningMode ? 'md:pl-64' : ''}`}>
+        <main className={`flex-1 relative overflow-hidden transition-all duration-300 ${!isScanningMode ? 'md:pl-64' : ''}`}>
           <ErrorBoundary>
-            <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div></div>}>
+            <Suspense fallback={
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/5 z-50">
+                    <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                    <span className="mt-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Cargando Módulo...</span>
+                </div>
+            }>
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/dashboard" element={<Dashboard />} />
