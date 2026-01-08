@@ -1,4 +1,4 @@
-import React, { ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home, Terminal } from 'lucide-react';
 import { logger } from '../services/logger';
 
@@ -16,8 +16,8 @@ interface State {
  * Capturador de errores global para la aplicación React.
  * Implementa la lógica de recuperación y reporte de fallos críticos.
  */
-// Fix: Use explicit React.Component to ensure props and setState are correctly inherited and recognized by TypeScript
-export class ErrorBoundary extends React.Component<Props, State> {
+// Fix: Explicitly extend Component from react to ensure TS recognizes inherited properties like props and methods like setState
+export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
     error: null,
@@ -50,7 +50,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
         { stack: error.stack, componentStack: errorInfo.componentStack }
     ).catch(e => console.error("Failed to write crash log", e));
     
-    // Fix: setState is a built-in method of React.Component
+    // Fix: Access setState through the correctly inherited method of React Component base class
     this.setState({ errorInfo });
   }
 
@@ -114,7 +114,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
       );
     }
 
-    // Fix: Access children from this.props which is correctly inherited from React.Component
+    // Fix: Access children from props correctly inherited from the base Component class
     return this.props.children;
   }
 }

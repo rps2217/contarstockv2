@@ -1,11 +1,12 @@
 
 import React, { memo } from 'react';
 import { RotateCcw, AlertCircle, CheckCircle, Zap, Sparkles } from 'lucide-react';
-import { ScanRecord, ExpectedItem } from '../../types';
+import { ScanRecord, ExpectedItem, Product } from '../../types';
 
 interface ScannerHeroProps {
     lastScan: ScanRecord | undefined;
-    activeProductStats: { totalQty: number; name: string; isUnknown: boolean };
+    activeProduct?: Product;
+    accumulatedQty?: number;
     feedback: 'idle' | 'success' | 'error' | 'undo';
     onRegisterPending: () => void;
     onToggleIncident: (e: React.MouseEvent, id: string, status: boolean) => void;
@@ -16,7 +17,8 @@ interface ScannerHeroProps {
 
 export const ScannerHero: React.FC<ScannerHeroProps> = memo(({ 
     lastScan, 
-    activeProductStats, 
+    activeProduct,
+    accumulatedQty = 0,
     feedback, 
     onRegisterPending, 
     expectedItem,
@@ -35,8 +37,8 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
     }
 
     if (lastScan) {
-        const isUnknown = activeProductStats.isUnknown;
-        const currentQty = activeProductStats.totalQty;
+        const isUnknown = activeProduct?.name === 'PENDIENTE' || !activeProduct;
+        const currentQty = accumulatedQty;
         const targetQty = expectedItem?.expectedQty || 0;
         const isOverCount = expectedItem && currentQty > targetQty;
         const isTargetReached = expectedItem && currentQty === targetQty;
@@ -74,7 +76,7 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
 
                         <div className="text-center w-full max-w-2xl mb-4">
                              <h1 className="text-2xl md:text-4xl font-black text-black leading-[1.1] uppercase px-6 break-words hyphens-auto">
-                                {activeProductStats.name}
+                                {activeProduct?.name || lastScan.barcode}
                              </h1>
                              <div className="text-lg md:text-xl font-mono font-black text-blue-800 mt-4 bg-blue-50 px-6 py-2 rounded-xl inline-block border-2 border-blue-200 uppercase tracking-widest shadow-sm">
                                 {lastScan.barcode}

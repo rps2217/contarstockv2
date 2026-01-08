@@ -29,38 +29,28 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
   const [showRecentScansMobile, setShowRecentScansMobile] = useState(false);
   const [voiceStatus, setVoiceStatus] = useState<'idle' | 'listening' | 'thinking'>('idle');
 
-  // ARQUITECTURA SEGURA VOZ-REACT:
-  // Usamos Refs para que el closure del LiveVoiceAssistant siempre tenga acceso 
-  // a los datos más recientes sin necesidad de reinicializar la conexión.
+  // ARQUITECTURA SEGURA VOZ-REACT
   const voiceAssistantRef = useRef<LiveVoiceAssistant | null>(null);
   const lastScanRef = useRef<ScanRecord | undefined>(undefined);
   const actionsRef = useRef(actions);
 
-  // Sincronizar Refs con el estado actual
   useEffect(() => {
       lastScanRef.current = data.lastScan;
       actionsRef.current = actions;
   }, [data.lastScan, actions]);
 
   useEffect(() => {
-      // Inicializar asistente una sola vez (Singleton por montaje)
       voiceAssistantRef.current = new LiveVoiceAssistant(
           (delta) => {
-              // Acceder al estado fresco a través de Refs
               const currentScan = lastScanRef.current;
               if (currentScan) {
                   actionsRef.current.handleQuantityChange(currentScan.id, currentScan.quantity, delta);
-              } else {
-                  console.warn("Comando de voz ignorado: No hay producto activo seleccionado.");
               }
           },
           (s) => setVoiceStatus(s)
       );
-
-      return () => {
-          voiceAssistantRef.current?.stop();
-      };
-  }, []); // Array vacío intencional para mantener la conexión persistente
+      return () => voiceAssistantRef.current?.stop();
+  }, []);
 
   const toggleVoice = () => {
       if (voiceStatus === 'idle') voiceAssistantRef.current?.start();
@@ -101,7 +91,8 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
             <div className="flex-1 flex flex-col justify-center items-center min-h-0 py-10">
                 <ScannerHero 
                     lastScan={data.lastScan}
-                    activeProductStats={data.activeProductStats}
+                    activeProduct={data.activeProduct}
+                    accumulatedQty={state.optimisticActiveQty}
                     feedback={state.feedback}
                     onRegisterPending={() => state.setStatus('product_form')}
                     onToggleIncident={actions.handleToggleIncident}

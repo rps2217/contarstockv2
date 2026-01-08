@@ -57,7 +57,7 @@ const flushBuffer = async () => {
         isFlushing = false;
         if (scanBuffer.length > 0) {
             if (flushTimer) clearTimeout(flushTimer);
-            flushTimer = setTimeout(flushBuffer, 200);
+            flushTimer = setTimeout(flushBuffer, 150);
         } else flushTimer = null;
     }
 };
@@ -78,7 +78,8 @@ export const addScan = async (sessionId: string, barcode: string, quantity: numb
     const record: ScanRecord = {
         id: generateUUID(),
         ...validatedData,
-        timestamp: Date.now() + (Math.random() * 0.1), // Sutil desfase para garantizar unicidad de orden
+        // Timestamp con precisión de microsegundo simulado para evitar colisiones en índices
+        timestamp: Date.now() + (Math.random() * 0.9), 
         synced: 0
     };
     
@@ -86,7 +87,7 @@ export const addScan = async (sessionId: string, barcode: string, quantity: numb
     saveMirror();
     
     if (flushTimer) clearTimeout(flushTimer);
-    flushTimer = setTimeout(flushBuffer, 100); // Latencia mínima para el buffer
+    flushTimer = setTimeout(flushBuffer, 80); // Flush más agresivo para evitar inconsistencias visuales
     
     return record;
 };
