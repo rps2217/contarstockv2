@@ -73,9 +73,18 @@ export const useScanner = (
             const qtyToAdd = multiplier;
             let finalMm = mm, finalYyyy = yyyy;
             
-            if (mm === undefined && yyyy === undefined) {
-                const prev = await db.scans.where('[sessionId+barcode]').equals([session.id, code]).filter(s => s.mm !== undefined).first();
-                if (prev) { finalMm = prev.mm; finalYyyy = prev.yyyy; }
+            // HERENCIA DE FECHA: Si no se provee fecha, buscamos si este SKU ya tiene fecha en esta sesión
+            if (finalMm === undefined && finalYyyy === undefined) {
+                const prev = await db.scans
+                    .where('[sessionId+barcode]')
+                    .equals([session.id, code])
+                    .filter(s => s.mm !== undefined)
+                    .first();
+                
+                if (prev) { 
+                    finalMm = prev.mm; 
+                    finalYyyy = prev.yyyy; 
+                }
             }
 
             const newScan = await sessionService.addScan(session.id, code, qtyToAdd, finalMm, finalYyyy);
@@ -125,19 +134,25 @@ export const useScanner = (
                 }
             }
 
-            const settings = getSettings();
-            const existsWithDate = await db.scans.where('[sessionId+barcode]').equals([session.id, cleanCode]).filter(s => s.mm !== undefined).first();
+            // REGLA DE ORO: ¿Ya existe este producto en esta sesión específica?
+            const alreadyInSession = await db.scans
+                .where('[sessionId+barcode]')
+                .equals([session.id, cleanCode])
+                .first();
             
-            if (existsWithDate && settings.continuousMode) {
+            if (alreadyInSession) {
+                // Ya conocemos el producto y su fecha para este bulto, procesar directo
                 completeScan(cleanCode);
-            } else if (!existsWithDate) {
+            } else {
+                // Es la primera vez que vemos este SKU en este bulto, pedir fecha
                 setPendingScanCode(cleanCode);
                 setPendingProductName(masterProduct.name);
                 setStatus('expiring');
-            } else {
-                completeScan(cleanCode);
             }
-        } catch (err) { setFeedback('error'); }
+        } catch (err) { 
+            console.error(err);
+            setFeedback('error'); 
+        }
     }, [session.id, completeScan]);
 
     const handleUndo = useCallback(async () => {
@@ -166,7 +181,6 @@ export const useScanner = (
                 if (keyBuffer.current.length >= 2) { processScan(keyBuffer.current); keyBuffer.current = ''; }
             } else if (e.key.length === 1) { keyBuffer.current += e.key; }
             
-            // Atajo de teclado para deshacer (Ctrl+Z o similar podría ser invasivo, usemos una tecla específica o chequeo)
             if (e.ctrlKey && e.key === 'z') {
                 e.preventDefault();
                 handleUndo();
