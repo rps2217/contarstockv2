@@ -1,5 +1,5 @@
 
-import React, { Suspense, lazy, useEffect } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { Home, Database, History, Layers, Container, Fingerprint, Cloud, Settings as SettingsIcon } from 'lucide-react';
 import { useAppStore } from './store/useAppStore';
@@ -10,17 +10,17 @@ import { Sidebar } from './components/Sidebar';
 import { runFullMetadataRepair } from './components/maintenance/RecalculateTool';
 import { logger } from './services/logger';
 
-// Lazy imports - Eliminadas extensiones .tsx para compatibilidad total con el bundler/servidor
-const Dashboard = lazy(() => import('./components/Dashboard'));
-const Reports = lazy(() => import('./components/Reports'));
-const DatabaseView = lazy(() => import('./components/Database'));
-const Sync = lazy(() => import('./components/SyncManagerUI'));
-const Consolidated = lazy(() => import('./components/Consolidated'));
-const Conciliator = lazy(() => import('./components/Conciliator'));
-const Reception = lazy(() => import('./components/Reception'));
-const Settings = lazy(() => import('./components/Settings'));
-const CountingView = lazy(() => import('./components/CountingView'));
-const AuditDashboard = lazy(() => import('./components/AuditDashboard'));
+// Lazy imports con rutas absolutas locales
+const Dashboard = lazy(() => import('./components/Dashboard.tsx'));
+const Reports = lazy(() => import('./components/Reports.tsx'));
+const DatabaseView = lazy(() => import('./components/Database.tsx'));
+const Sync = lazy(() => import('./components/SyncManagerUI.tsx'));
+const Consolidated = lazy(() => import('./components/Consolidated.tsx'));
+const Conciliator = lazy(() => import('./components/Conciliator.tsx'));
+const Reception = lazy(() => import('./components/Reception.tsx'));
+const Settings = lazy(() => import('./components/Settings.tsx'));
+const CountingView = lazy(() => import('./components/CountingView.tsx'));
+const AuditDashboard = lazy(() => import('./components/AuditDashboard.tsx'));
 
 const NAV_REGISTRY: Record<string, { label: string, icon: any, path: string }> = {
   dashboard: { label: 'INICIO', icon: Home, path: '/dashboard' },
@@ -62,23 +62,31 @@ const MobileNav = ({ currentView }: { currentView: string }) => {
 const AppContent = () => {
   const location = useLocation();
   const { settings } = useAppStore();
+  const [isHydrated, setIsHydrated] = useState(false);
   const currentView = location.pathname.split('/')[1] || 'dashboard';
   const isScanningMode = location.pathname.startsWith('/counting/');
 
   useEffect(() => {
       const bootRepair = async () => {
           try {
-              const fixedCount = await runFullMetadataRepair();
-              if (fixedCount > 0) logger.info('System', `Auto-sanación: ${fixedCount} cabeceras reparadas.`);
-          } catch (e) {}
+              await runFullMetadataRepair();
+              setIsHydrated(true);
+          } catch (e) {
+              setIsHydrated(true);
+          }
       };
       bootRepair();
   }, []);
 
+  if (!isHydrated) return (
+      <div className="h-screen w-full bg-[#0f172a] flex items-center justify-center">
+          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+  );
+
   const theme = settings.theme || 'light';
   const isDarkTheme = ['dark', 'oled', 'navy', 'contrast'].includes(theme);
 
-  // Dynamic background mapping
   let bgClass = 'bg-slate-50';
   if (theme === 'dark') bgClass = 'bg-slate-950';
   else if (theme === 'oled' || theme === 'contrast') bgClass = 'bg-black';
@@ -97,7 +105,7 @@ const AppContent = () => {
             <Suspense fallback={
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/5 z-50">
                     <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                    <span className="mt-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Cargando Módulo...</span>
+                    <span className="mt-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Iniciando...</span>
                 </div>
             }>
               <Routes>
