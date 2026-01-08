@@ -47,7 +47,7 @@ export const useScanner = (
         const scans = await db.scans.where('[sessionId+barcode]').equals([session.id, lastScan.barcode]).toArray();
         const qty = scans.reduce((acc, s) => acc + s.quantity, 0);
         const cached = hotProductCache.current.get(lastScan.barcode);
-        return { totalQty: qty, name: cached?.name || lastScan.barcode, isUnknown: !cached };
+        return { totalQty: qty, name: cached?.name || lastScan.barcode, isUnknown: cached?.name === 'PENDIENTE' };
     }, [lastScan, session.id]);
 
     const updatePredictions = useCallback(async (newBarcode: string) => {
@@ -119,19 +119,17 @@ export const useScanner = (
                 if (masterProduct) hotProductCache.current.set(cleanCode, masterProduct);
             }
             
+            // FLUJO ININTERRUMPIDO: Si no existe, registrar como PENDIENTE automáticamente
             if (!masterProduct) {
-                const settings = getSettings();
-                if (settings.autoRegisterUnknown) {
-                    const newProd: Product = { barcode: cleanCode, name: 'AUTOREGISTRADO', category: 'AUTO', syncStatus: 'add' };
-                    await productService.saveProduct(newProd);
-                    masterProduct = newProd;
-                    hotProductCache.current.set(cleanCode, newProd);
-                } else {
-                    setPendingScanCode(cleanCode);
-                    setPendingProductName('DESCONOCIDO');
-                    setStatus('product_form');
-                    return;
-                }
+                const newProd: Product = { 
+                    barcode: cleanCode, 
+                    name: 'PENDIENTE', 
+                    category: 'AUTO', 
+                    syncStatus: 'add' 
+                };
+                await productService.saveProduct(newProd);
+                masterProduct = newProd;
+                hotProductCache.current.set(cleanCode, newProd);
             }
 
             // REGLA DE ORO: ¿Ya existe este producto en esta sesión específica?
