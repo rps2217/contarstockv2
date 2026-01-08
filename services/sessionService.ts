@@ -16,7 +16,6 @@ const recoverFromCrash = async () => {
         if (mirrored) {
             const batch = JSON.parse(mirrored);
             if (Array.isArray(batch) && batch.length > 0) {
-                console.warn(`[Blindaje] Rescatando ${batch.length} registros...`);
                 await (db as any).transaction('rw', db.scans, db.sessions, async () => {
                     await db.scans.bulkAdd(batch);
                     const sessionIds = Array.from(new Set(batch.map(s => s.sessionId)));
@@ -49,7 +48,6 @@ const flushBuffer = async () => {
             const affectedSessions = new Set(batch.map(s => s.sessionId));
             for (const sessionId of affectedSessions) await recalculateSessionMetadata(sessionId);
         });
-        // Filtrar solo los que realmente se guardaron para evitar re-intentos de duplicados
         const savedIds = new Set(batch.map(b => b.id));
         scanBuffer = scanBuffer.filter(s => !savedIds.has(s.id));
         saveMirror();
@@ -59,7 +57,7 @@ const flushBuffer = async () => {
         isFlushing = false;
         if (scanBuffer.length > 0) {
             if (flushTimer) clearTimeout(flushTimer);
-            flushTimer = setTimeout(flushBuffer, 300);
+            flushTimer = setTimeout(flushBuffer, 200);
         } else flushTimer = null;
     }
 };
@@ -74,15 +72,13 @@ export const recalculateSessionMetadata = async (sessionId: string) => {
 export const addScan = async (sessionId: string, barcode: string, quantity: number, mm?: number, yyyy?: number): Promise<ScanRecord> => {
     const validation = validateScanRecord({ sessionId, barcode, quantity, mm, yyyy });
     
-    if (!validation.valid) {
-        throw new Error(`Escaneo Rechazado: ${validation.error}`);
-    }
+    if (!validation.valid) throw new Error(`Escaneo Rechazado: ${validation.error}`);
 
     const validatedData = validation.data!;
     const record: ScanRecord = {
         id: generateUUID(),
         ...validatedData,
-        timestamp: Date.now(),
+        timestamp: Date.now() + (Math.random() * 0.1), // Sutil desfase para garantizar unicidad de orden
         synced: 0
     };
     
@@ -90,8 +86,7 @@ export const addScan = async (sessionId: string, barcode: string, quantity: numb
     saveMirror();
     
     if (flushTimer) clearTimeout(flushTimer);
-    // Flush más rápido para conteo ráfaga pero sin saturar el bus
-    flushTimer = setTimeout(flushBuffer, 150);
+    flushTimer = setTimeout(flushBuffer, 100); // Latencia mínima para el buffer
     
     return record;
 };
@@ -121,7 +116,6 @@ export const undoLastScan = async (sessionId: string): Promise<string | null> =>
         });
         return barcode;
     }
-
     return null;
 };
 

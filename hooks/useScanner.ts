@@ -7,7 +7,7 @@ import * as productService from '../services/productService';
 import { sanitizeBarcode } from '../services/utils';
 import { getSettings } from '../services/settings';
 import { SoundFX } from '../services/audio';
-import { CountingSession, Product, ScannerStatus } from '../types';
+import { CountingSession, Product, ScannerStatus, ScanRecord } from '../types';
 import { predictNextSkus } from '../services/predictiveService';
 
 export const useScanner = (
@@ -15,58 +15,60 @@ export const useScanner = (
     onCloseSession: () => void, 
     onDiscardSession?: () => void
 ) => {
-    // --- ESTADOS DE UI ---
+    // --- ESTADOS DE CONTROL ---
     const [status, setStatus] = useState<ScannerStatus>('idle');
     const [feedback, setFeedback] = useState<'idle' | 'success' | 'error' | 'undo'>('idle');
-    const [lastScanId, setLastScanId] = useState<string | null>(null);
     const [manualInput, setManualInput] = useState('');
     const [multiplier, setMultiplier] = useState(1);
-    const [pendingScanCode, setPendingScanCode] = useState<string | null>(null);
-    const [pendingProductName, setPendingProductName] = useState('PENDIENTE');
     const [predictions, setPredictions] = useState<{barcode: string, name: string}[]>([]);
 
-    // --- CACHÉS DE ALTO RENDIMIENTO (MEMORY-FIRST) ---
+    // --- ESTADO OPTIMISTA (Elimina la sensación de lentitud) ---
+    const [activeProduct, setActiveProduct] = useState<{
+        barcode: string;
+        name: string;
+        totalQty: number;
+        isUnknown: boolean;
+    } | null>(null);
+
+    // --- PANTALLA DE EXPIRACIÓN ---
+    const [pendingScanCode, setPendingScanCode] = useState<string | null>(null);
+    const [pendingProductName, setPendingProductName] = useState('PENDIENTE');
+
+    // --- CACHÉS Y REFERENCIAS DE RENDIMIENTO ---
     const isProcessingRef = useRef(false);
-    const hotProductCache = useRef<Map<string, Product>>(new Map());
-    const sessionSeenSkus = useRef<Set<string>>(new Set()); // SKUs ya procesados en ESTE bulto
+    const sessionSeenSkus = useRef<Set<string>>(new Set());
     const keyBuffer = useRef('');
     const lastKeyTime = useRef(0);
 
-    // --- QUERIES REACTIVAS (MANTENIMIENTO DE LISTAS) ---
+    // --- QUERIES DE FONDO (Para Historial y Metadatos) ---
     const recentScans = useLiveQuery(
-        () => db.scans.where('sessionId').equals(session.id).reverse().limit(15).toArray(), 
+        () => db.scans.where('sessionId').equals(session.id).reverse().sortBy('timestamp').then(res => res.slice(0, 15)), 
         [session.id]
     );
 
     const sessionMetadata = useLiveQuery(() => db.sessions.get(session.id), [session.id]);
 
-    // --- LÓGICA DE INICIALIZACIÓN ---
+    // --- INICIALIZACIÓN DE CACHÉ DE SESIÓN ---
     useEffect(() => {
-        // Precargar SKUs ya existentes en esta sesión para evitar pedir fecha otra vez al recargar
-        const initSessionCache = async () => {
-            const scansInSession = await db.scans.where('sessionId').equals(session.id).toArray();
-            scansInSession.forEach(s => sessionSeenSkus.current.add(s.barcode));
+        const initCache = async () => {
+            const scans = await db.scans.where('sessionId').equals(session.id).toArray();
+            scans.forEach(s => sessionSeenSkus.current.add(s.barcode));
+            
+            // Si hay un último scan al cargar, establecerlo como activo para evitar el "LISTO" vacío
+            if (scans.length > 0) {
+                const last = scans.sort((a, b) => b.timestamp - a.timestamp)[0];
+                const prod = await db.products.get(last.barcode);
+                const total = scans.filter(s => s.barcode === last.barcode).reduce((acc, curr) => acc + curr.quantity, 0);
+                setActiveProduct({
+                    barcode: last.barcode,
+                    name: prod?.name || last.barcode,
+                    totalQty: total,
+                    isUnknown: prod?.name === 'PENDIENTE'
+                });
+            }
         };
-        initSessionCache();
+        initCache();
     }, [session.id]);
-
-    // --- DERIVADOS ---
-    const lastScan = useMemo(() => {
-        if (lastScanId) return recentScans?.find(s => s.id === lastScanId);
-        return recentScans?.[0];
-    }, [recentScans, lastScanId]);
-
-    const activeProductStats = useLiveQuery(async () => {
-        if (!lastScan) return { totalQty: 0, name: 'Listo', isUnknown: false };
-        const scans = await db.scans.where('[sessionId+barcode]').equals([session.id, lastScan.barcode]).toArray();
-        const qty = scans.reduce((acc, s) => acc + s.quantity, 0);
-        const cached = hotProductCache.current.get(lastScan.barcode) || await db.products.get(lastScan.barcode);
-        return { 
-            totalQty: qty, 
-            name: cached?.name || lastScan.barcode, 
-            isUnknown: cached?.name === 'PENDIENTE' 
-        };
-    }, [lastScan, session.id]);
 
     const updatePredictions = useCallback(async (newBarcode: string) => {
         const settings = getSettings();
@@ -82,53 +84,61 @@ export const useScanner = (
         } catch (e) {}
     }, []);
 
-    // --- ACCIÓN CORE: REGISTRO FINAL ---
+    // --- CORE: REGISTRO FINAL OPTIMIZADO ---
     const completeScan = useCallback(async (code: string, mm?: number, yyyy?: number) => {
         try {
-            const qtyToAdd = multiplier;
+            const currentMultiplier = multiplier; // Capturar valor actual
             let finalMm = mm, finalYyyy = yyyy;
             
-            // HERENCIA AUTOMÁTICA: Si no viene fecha, la buscamos en el historial del bulto
+            // Herencia de fecha
             if (finalMm === undefined) {
-                const prev = await db.scans
-                    .where('[sessionId+barcode]')
-                    .equals([session.id, code])
-                    .filter(s => s.mm !== undefined)
-                    .first();
-                if (prev) { 
-                    finalMm = prev.mm; 
-                    finalYyyy = prev.yyyy; 
-                }
+                const prev = await db.scans.where('[sessionId+barcode]').equals([session.id, code]).first();
+                if (prev) { finalMm = prev.mm; finalYyyy = prev.yyyy; }
             }
 
-            const newScan = await sessionService.addScan(session.id, code, qtyToAdd, finalMm, finalYyyy);
-            
-            // Actualizar Caché de Sesión
-            sessionSeenSkus.current.add(code);
-            
-            setLastScanId(newScan.id);
+            // 1. ACTUALIZACIÓN VISUAL INMEDIATA (Optimismo)
+            setActiveProduct(prev => {
+                const isSame = prev?.barcode === code;
+                return {
+                    barcode: code,
+                    name: isSame ? prev.name : (pendingProductName || code),
+                    totalQty: isSame ? (prev.totalQty + currentMultiplier) : currentMultiplier, // Nota: esto es una estimación, la DB mandará el dato real luego
+                    isUnknown: (pendingProductName === 'PENDIENTE')
+                };
+            });
+
             setFeedback('success');
-            SoundFX.play(qtyToAdd > 1 ? 'increment' : 'success');
+            SoundFX.play(currentMultiplier > 1 ? 'increment' : 'success');
+
+            // 2. PERSISTENCIA EN SEGUNDO PLANO
+            const newScan = await sessionService.addScan(session.id, code, currentMultiplier, finalMm, finalYyyy);
+            sessionSeenSkus.current.add(code);
+
+            // Re-sincronizar cantidad real desde la DB para evitar desajustes por el buffer
+            const allScansOfProduct = await db.scans.where('[sessionId+barcode]').equals([session.id, code]).toArray();
+            const totalReal = allScansOfProduct.reduce((acc, s) => acc + s.quantity, 0);
+            
+            setActiveProduct(prev => prev?.barcode === code ? { ...prev, totalQty: totalReal } : prev);
 
             const settings = getSettings();
             if (settings.ttsEnabled) {
-                const cachedProd = hotProductCache.current.get(code) || await db.products.get(code);
-                SoundFX.speak(settings.ttsMode === 'product' ? (cachedProd?.name || "Ok") : `${qtyToAdd}`);
+                const prod = await db.products.get(code);
+                SoundFX.speak(settings.ttsMode === 'product' ? (prod?.name || "Ok") : `${currentMultiplier}`);
             }
 
             updatePredictions(code);
             setMultiplier(1);
             setStatus('idle');
             setTimeout(() => setFeedback('idle'), 400); 
-        } catch (err: any) { 
+        } catch (err) { 
             setFeedback('error'); 
             SoundFX.play('error'); 
         } finally {
             isProcessingRef.current = false;
         }
-    }, [session.id, multiplier, updatePredictions]);
+    }, [session.id, multiplier, pendingProductName, updatePredictions]);
 
-    // --- ACCIÓN CORE: IDENTIFICACIÓN Y RUTEo ---
+    // --- CORE: IDENTIFICACIÓN ATÓMICA ---
     const processScan = useCallback(async (code: string) => {
         if (isProcessingRef.current) return;
         const cleanCode = sanitizeBarcode(code);
@@ -137,15 +147,11 @@ export const useScanner = (
         isProcessingRef.current = true;
         
         try {
-            let masterProduct = hotProductCache.current.get(cleanCode);
-            if (!masterProduct) {
-                masterProduct = await db.products.get(cleanCode);
-                if (masterProduct) hotProductCache.current.set(cleanCode, masterProduct);
-            }
-            
-            // REGLA: REGISTRO AUTOMÁTICO DE DESCONOCIDOS
-            if (!masterProduct) {
-                const settings = getSettings();
+            let prod = await db.products.get(cleanCode);
+            const settings = getSettings();
+
+            // REGLA: REGISTRO AUTOMÁTICO 'PENDIENTE'
+            if (!prod) {
                 if (settings.autoRegisterUnknown) {
                     const newProd: Product = { 
                         barcode: cleanCode, 
@@ -154,10 +160,8 @@ export const useScanner = (
                         syncStatus: 'add' 
                     };
                     await productService.saveProduct(newProd);
-                    masterProduct = newProd;
-                    hotProductCache.current.set(cleanCode, newProd);
+                    prod = newProd;
                 } else {
-                    // Si no está activo el auto-registro, pedir identificación manual
                     setPendingScanCode(cleanCode);
                     setPendingProductName('DESCONOCIDO');
                     setStatus('product_form');
@@ -166,21 +170,20 @@ export const useScanner = (
                 }
             }
 
-            // REGLA: ¿ES NUEVO EN ESTA SESIÓN/BULTO?
-            const isNewInSession = !sessionSeenSkus.current.has(cleanCode);
+            setPendingProductName(prod.name);
+
+            // ¿Necesita fecha? (Solo si es la primera vez que entra en este bulto específico)
+            const existsInSession = sessionSeenSkus.current.has(cleanCode);
             
-            if (isNewInSession) {
-                // Primera vez -> Pedir fecha
+            if (!existsInSession) {
                 setPendingScanCode(cleanCode);
-                setPendingProductName(masterProduct.name);
                 setStatus('expiring');
-                // Nota: El release de isProcessingRef ocurre en completeScan o si cancela
+                // isProcessingRef se libera en completeScan o al cancelar
             } else {
-                // Ya existe -> Registrar directo (Hereda fecha en completeScan)
                 await completeScan(cleanCode);
             }
         } catch (err) { 
-            console.error("Critical Scanner Error:", err);
+            console.error(err);
             setFeedback('error'); 
             isProcessingRef.current = false;
         }
@@ -192,7 +195,17 @@ export const useScanner = (
             if (undoneBarcode) {
                 setFeedback('undo');
                 SoundFX.play('delete');
-                if (navigator.vibrate) navigator.vibrate([10, 30, 10]);
+                
+                // Actualizar UI tras deshacer
+                const remaining = await db.scans.where('[sessionId+barcode]').equals([session.id, undoneBarcode]).toArray();
+                if (remaining.length > 0) {
+                    const total = remaining.reduce((acc, s) => acc + s.quantity, 0);
+                    setActiveProduct(prev => prev?.barcode === undoneBarcode ? { ...prev, totalQty: total } : prev);
+                } else {
+                    setActiveProduct(null);
+                    sessionSeenSkus.current.delete(undoneBarcode);
+                }
+
                 setTimeout(() => setFeedback('idle'), 800);
             }
         } catch (e) {
@@ -200,30 +213,19 @@ export const useScanner = (
         }
     }, [session.id]);
 
-    // --- GESTIÓN DE ENTRADA (KEYBOARD/SCANNER) ---
+    // --- KEYBOARD LISTENER ---
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (status !== 'idle' && status !== 'manual') return;
             if ((e.target as HTMLElement).tagName === 'INPUT') return;
-            
             const now = Date.now();
             if (now - lastKeyTime.current > 40) keyBuffer.current = '';
             lastKeyTime.current = now;
-
             if (e.key === 'Enter') {
                 e.preventDefault();
-                if (keyBuffer.current.length >= 2) { 
-                    processScan(keyBuffer.current); 
-                    keyBuffer.current = ''; 
-                }
-            } else if (e.key.length === 1) { 
-                keyBuffer.current += e.key; 
-            }
-            
-            if (e.ctrlKey && e.key === 'z') {
-                e.preventDefault();
-                handleUndo();
-            }
+                if (keyBuffer.current.length >= 2) { processScan(keyBuffer.current); keyBuffer.current = ''; }
+            } else if (e.key.length === 1) { keyBuffer.current += e.key; }
+            if (e.ctrlKey && e.key === 'z') { e.preventDefault(); handleUndo(); }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
@@ -233,37 +235,48 @@ export const useScanner = (
         state: { 
             status, setStatus, feedback, manualInput, setManualInput, multiplier, setMultiplier,
             pendingScanCode, pendingProductName, predictions,
-            optimisticActiveQty: activeProductStats?.totalQty || 0,
+            optimisticActiveQty: activeProduct?.totalQty || 0,
             optimisticTotalQty: sessionMetadata?.totalUnits || 0,
             optimisticUniqueSkus: sessionMetadata?.totalSKUs || 0
         },
-        data: { lastScan, recentScans, activeProductStats },
+        data: { 
+            lastScan: recentScans?.[0], // Usar el real de la DB para el historial lateral
+            recentScans, 
+            activeProductStats: activeProduct ? { 
+                totalQty: activeProduct.totalQty, 
+                name: activeProduct.name, 
+                isUnknown: activeProduct.isUnknown 
+            } : { totalQty: 0, name: 'Listo', isUnknown: false }
+        },
         actions: { 
             handleExternalScan: processScan,
-            handleManualSubmit: (e: any) => { 
-                e.preventDefault(); 
-                if (manualInput) processScan(manualInput); 
-                setManualInput(''); 
-            },
+            handleManualSubmit: (e: any) => { e.preventDefault(); if (manualInput) processScan(manualInput); setManualInput(''); },
             handleDeleteScan: async (e: any, id: string) => { 
                 e.stopPropagation(); 
+                const scan = await db.scans.get(id);
                 await sessionService.deleteScan(id); 
+                if (scan && activeProduct?.barcode === scan.barcode) {
+                    const remaining = await db.scans.where('[sessionId+barcode]').equals([session.id, scan.barcode]).toArray();
+                    const newTotal = remaining.reduce((acc, s) => acc + s.quantity, 0);
+                    setActiveProduct(prev => prev ? { ...prev, totalQty: newTotal } : null);
+                }
                 SoundFX.play('delete'); 
             },
             handleQuantityChange: async (id: string, current: number, delta: number) => { 
-                await sessionService.updateScanQuantity(id, Math.max(0, current + delta)); 
+                const newQty = Math.max(0, current + delta);
+                await sessionService.updateScanQuantity(id, newQty); 
+                const scan = await db.scans.get(id);
+                if (scan && activeProduct?.barcode === scan.barcode) {
+                    const remaining = await db.scans.where('[sessionId+barcode]').equals([session.id, scan.barcode]).toArray();
+                    setActiveProduct(prev => prev ? { ...prev, totalQty: remaining.reduce((a, s) => a + s.quantity, 0) } : null);
+                }
             },
             handleExpirationComplete: (mm?: number, yyyy?: number) => { 
                 if (pendingScanCode) completeScan(pendingScanCode, mm, yyyy); 
                 else isProcessingRef.current = false;
             },
-            handleToggleIncident: async (e: any, id: string, s: boolean) => { 
-                e.stopPropagation(); 
-                await sessionService.updateScanIncident(id, !s); 
-            },
-            handleDiscard: () => { 
-                if (confirm("¿Borrar sesión física?")) onDiscardSession?.(); 
-            },
+            handleToggleIncident: async (e: any, id: string, s: boolean) => { e.stopPropagation(); await sessionService.updateScanIncident(id, !s); },
+            handleDiscard: () => { if (confirm("¿Borrar sesión física?")) onDiscardSession?.(); },
             handleUndo
         }
     };
