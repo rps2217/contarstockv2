@@ -1,7 +1,7 @@
 
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { X, List, History as HistoryIcon } from 'lucide-react';
-import { CountingSession } from '../types';
+import { CountingSession, ScanRecord } from '../types';
 import { ExpirationModal } from './ExpirationModal';
 import { useScanner } from '../hooks/useScanner';
 import { CameraScanner } from './CameraScanner';
@@ -29,16 +29,30 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
   const [showRecentScansMobile, setShowRecentScansMobile] = useState(false);
   const [voiceStatus, setVoiceStatus] = useState<'idle' | 'listening' | 'thinking'>('idle');
 
-  // PERSISTENCIA DE VOZ: Usar ref para evitar recrear la conexión IA en cada escaneo
+  // ARQUITECTURA SEGURA VOZ-REACT:
+  // Usamos Refs para que el closure del LiveVoiceAssistant siempre tenga acceso 
+  // a los datos más recientes sin necesidad de reinicializar la conexión.
   const voiceAssistantRef = useRef<LiveVoiceAssistant | null>(null);
+  const lastScanRef = useRef<ScanRecord | undefined>(undefined);
+  const actionsRef = useRef(actions);
+
+  // Sincronizar Refs con el estado actual
+  useEffect(() => {
+      lastScanRef.current = data.lastScan;
+      actionsRef.current = actions;
+  }, [data.lastScan, actions]);
 
   useEffect(() => {
-      // Inicializar asistente una sola vez
+      // Inicializar asistente una sola vez (Singleton por montaje)
       voiceAssistantRef.current = new LiveVoiceAssistant(
           (delta) => {
-              // El callback debe usar la versión más reciente de las acciones (vía refs si fuera necesario, o closure controlado)
-              const lastScan = (window as any)._lastScan; // Hack controlado o ref
-              if (lastScan) actions.handleQuantityChange(lastScan.id, lastScan.quantity, delta);
+              // Acceder al estado fresco a través de Refs
+              const currentScan = lastScanRef.current;
+              if (currentScan) {
+                  actionsRef.current.handleQuantityChange(currentScan.id, currentScan.quantity, delta);
+              } else {
+                  console.warn("Comando de voz ignorado: No hay producto activo seleccionado.");
+              }
           },
           (s) => setVoiceStatus(s)
       );
@@ -46,12 +60,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
       return () => {
           voiceAssistantRef.current?.stop();
       };
-  }, []); // Sin dependencias para permanencia
-
-  // Sincronizar el estado del último escaneo para el callback de voz sin disparar re-creación
-  useEffect(() => {
-      (window as any)._lastScan = data.lastScan;
-  }, [data.lastScan]);
+  }, []); // Array vacío intencional para mantener la conexión persistente
 
   const toggleVoice = () => {
       if (voiceStatus === 'idle') voiceAssistantRef.current?.start();

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Box, Lock, User, ArrowRight, AlertCircle, Loader2, ScanFace } from 'lucide-react';
+import { Box, Lock, User, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
 
 interface LoginProps {
   onLoginSuccess: () => void;
@@ -18,13 +18,17 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     setError('');
     setIsLoading(true);
 
+    // Simulación de delay de red para UX
     setTimeout(() => {
-      let validUser = 'admin'; 
-      let validPass = 'admin'; 
+      // SECURITY: Credentials moved to Environment Variables
+      // In production, this should validate against a real backend API.
+      // For local-first PWA, we use ENV variables injected at build time.
+      const validUser = (import.meta as any).env.VITE_APP_USER || 'admin'; 
+      const validPass = (import.meta as any).env.VITE_APP_PASS || 'admin'; 
 
       if (username === validUser && password === validPass) {
-        onLoginSuccess();
         localStorage.setItem('logicount_auth', 'true');
+        onLoginSuccess();
       } else {
         setError('Credenciales incorrectas');
         setIsLoading(false);
@@ -109,7 +113,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         </div>
 
         <div className="text-center opacity-40 hover:opacity-100 transition-opacity">
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">v2.5.0 Stable Build</p>
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">v2.6.0 Enterprise</p>
         </div>
       </div>
     </div>
