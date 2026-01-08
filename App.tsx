@@ -78,8 +78,15 @@ const AppContent = () => {
   const theme = settings.theme || 'light';
   const isDarkTheme = ['dark', 'oled', 'navy', 'contrast'].includes(theme);
 
+  // Dynamic background mapping
+  let bgClass = 'bg-slate-50';
+  if (theme === 'dark') bgClass = 'bg-slate-950';
+  else if (theme === 'oled' || theme === 'contrast') bgClass = 'bg-black';
+  else if (theme === 'navy') bgClass = 'bg-[#0f172a]';
+  else if (theme === 'warm') bgClass = 'bg-orange-50';
+
   return (
-    <div className={`w-full h-full flex flex-col transition-colors duration-500 theme-${theme} ${isDarkTheme ? 'dark bg-black' : 'bg-slate-50'}`}>
+    <div className={`w-full h-full flex flex-col transition-colors duration-500 theme-${theme} ${isDarkTheme ? 'dark' : ''} ${bgClass}`}>
       <NetworkStatus />
       
       <div className="flex-1 flex overflow-hidden relative">

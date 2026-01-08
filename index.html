@@ -37,6 +37,38 @@
 
       .no-scrollbar::-webkit-scrollbar { display: none; }
       .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+      /* --- THEME OVERRIDES --- */
+      
+      /* NAVY THEME */
+      .theme-navy .dark\:bg-slate-900, .theme-navy .dark\:bg-black { 
+        background-color: #1e293b !important; /* Slate 800 */
+        border-color: #334155 !important;
+      }
+      .theme-navy.dark { background-color: #0f172a !important; }
+
+      /* CONTRAST THEME (High Visibility) */
+      .theme-contrast.dark { background-color: #000000 !important; }
+      .theme-contrast .dark\:bg-slate-900 { 
+        background-color: #000000 !important; 
+        border: 2px solid #FACC15 !important; /* Yellow-400 */
+      }
+      .theme-contrast .dark\:bg-white\/5 {
+        background-color: #111 !important;
+        border: 1px solid #FACC15 !important;
+      }
+      .theme-contrast .dark\:text-white { color: #FFFFFF !important; font-weight: 900; }
+      .theme-contrast .text-slate-400, .theme-contrast .text-slate-500 { 
+        color: #FACC15 !important; 
+        opacity: 1; 
+        font-weight: 700; 
+      }
+      .theme-contrast .text-blue-600 { color: #FACC15 !important; text-decoration: underline; }
+      
+      /* WARM THEME */
+      .theme-warm { background-color: #fff7ed !important; }
+      .theme-warm .bg-white { background-color: #fffaf0 !important; border-color: #fed7aa !important; }
+      
     </style>
 <script type="importmap">
 {
