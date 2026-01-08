@@ -38,8 +38,7 @@ const controlInventoryFunction: FunctionDeclaration = {
 };
 
 export class LiveVoiceAssistant {
-    // Fix: Always use process.env.API_KEY directly for initialization as per guidelines
-    private ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    private ai: GoogleGenAI | null = null;
     private audioCtx: AudioContext | null = null;
     private nextStartTime = 0;
     private session: any = null;
@@ -50,15 +49,20 @@ export class LiveVoiceAssistant {
     ) {}
 
     async start() {
+        // Blindaje: Si no hay API Key, abortamos silenciosamente en lugar de crashear la app.
         if (!process.env.API_KEY) {
-            console.error("Falta API Key de Gemini");
+            console.warn("Gemini API Key no detectada. Asistente de voz desactivado.");
             return;
         }
 
         try {
+            // Inicialización diferida: Solo creamos la instancia si se solicita
+            if (!this.ai) {
+                this.ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            }
+
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             
-            // Inicializar contextos de audio solo después de la interacción (al llamar start)
             if (!this.audioCtx) {
                 this.audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
             }
