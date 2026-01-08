@@ -49,7 +49,9 @@ const flushBuffer = async () => {
             const affectedSessions = new Set(batch.map(s => s.sessionId));
             for (const sessionId of affectedSessions) await recalculateSessionMetadata(sessionId);
         });
-        scanBuffer = scanBuffer.filter(s => !batch.find(b => b.id === s.id));
+        // Filtrar solo los que realmente se guardaron para evitar re-intentos de duplicados
+        const savedIds = new Set(batch.map(b => b.id));
+        scanBuffer = scanBuffer.filter(s => !savedIds.has(s.id));
         saveMirror();
     } catch (e: any) {
         logger.error("Database", "Error crítico en flush", e);
@@ -88,13 +90,13 @@ export const addScan = async (sessionId: string, barcode: string, quantity: numb
     saveMirror();
     
     if (flushTimer) clearTimeout(flushTimer);
-    flushTimer = setTimeout(flushBuffer, 200);
+    // Flush más rápido para conteo ráfaga pero sin saturar el bus
+    flushTimer = setTimeout(flushBuffer, 150);
     
     return record;
 };
 
 export const undoLastScan = async (sessionId: string): Promise<string | null> => {
-    // Primero intentamos borrar del buffer si hay algo
     if (scanBuffer.length > 0) {
         const lastInBuffer = scanBuffer[scanBuffer.length - 1];
         if (lastInBuffer.sessionId === sessionId) {
@@ -105,7 +107,6 @@ export const undoLastScan = async (sessionId: string): Promise<string | null> =>
         }
     }
 
-    // Si no, buscamos en la DB el registro más reciente de esta sesión
     const lastScan = await db.scans
         .where('sessionId').equals(sessionId)
         .reverse()
