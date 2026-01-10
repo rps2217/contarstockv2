@@ -1,44 +1,51 @@
+
 import { logger } from './logger';
+import { getSettings } from './settings';
+import { Product } from '../types';
 
 /**
- * Servicio de Puente para Google Apps Script (GAS)
- * Permite realizar operaciones de escritura masiva y lógica server-side.
+ * MOTOR CORE LOGICOUNT (GAS)
+ * Centraliza toda la comunicación con el Excel de Google.
  */
-export const sendToGas = async (url: string, payload: any): Promise<{ success: boolean, count?: number, error?: string }> => {
+export const callGas = async (action: string, payload: any): Promise<any> => {
+    const url = getSettings().appSheetConfig?.gasWebAppUrl;
+    if (!url) return { success: false, error: "Cloud URL no configurada en Ajustes" };
+
     try {
-        // Usamos 'text/plain' para evitar el preflight de CORS que a veces falla en Apps Script
-        // desde navegadores móviles o redes corporativas.
         const response = await fetch(url, {
             method: 'POST',
             mode: 'cors',
-            headers: {
-                'Content-Type': 'text/plain;charset=utf-8', 
-            },
-            body: JSON.stringify(payload)
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action, ...payload })
         });
-
-        // Apps Script responde con redirecciones (302) que el navegador sigue automáticamente.
         const rawText = await response.text();
-        
-        try {
-            // Intentamos parsear la respuesta.
-            const result = JSON.parse(rawText);
-            return result;
-        } catch (parseError) {
-            // Diagnóstico de errores comunes de Google
-            if (rawText.includes('Google Drive - Virus scan warning')) {
-                throw new Error("El archivo es demasiado grande para el escaneo de seguridad de Google.");
-            }
-            if (rawText.includes('script.google.com') || rawText.includes('<!DOCTYPE html>')) {
-                throw new Error("Error de permisos: Asegúrese de que la Web App esté publicada como 'Anyone' (Cualquier persona).");
-            }
-            
-            logger.error('GAS_BRIDGE', "Respuesta no JSON recibida", rawText.substring(0, 200));
-            throw new Error("La Web App de Google no respondió en el formato esperado.");
-        }
-
+        return JSON.parse(rawText);
     } catch (error: any) {
-        logger.error('GAS_BRIDGE', `Fallo en comunicación: ${error.message}`);
+        logger.error('GAS_ENGINE', `Error en acción [${action}]: ${error.message}`);
         return { success: false, error: error.message };
     }
+};
+
+/**
+ * TURBO-SYNC: Envío masivo de filas en un solo paquete JSON.
+ */
+export const sendToGas = async (payload: { tableName: string, rows: any[] }): Promise<any> => {
+    return await callGas('append_rows', payload);
+};
+
+/**
+ * CLOUD DICTIONARY: Busca un SKU en el maestro de la nube.
+ * Evita tener que cargar miles de productos en el móvil.
+ */
+export const lookupSkuHistory = async (barcode: string): Promise<Partial<Product> | null> => {
+    const res = await callGas('lookup_sku', { barcode });
+    return (res.success && res.product) ? res.product : null;
+};
+
+/**
+ * CLOUD FETCH: Recupera filas existentes para conciliación o descarga de progreso.
+ */
+export const fetchFromGas = async (tableName: string, filters: any = {}): Promise<any[]> => {
+    const res = await callGas('fetch_rows', { tableName, filters });
+    return res.success ? res.rows : [];
 };

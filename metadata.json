@@ -1,5 +1,5 @@
 {
-  "name": "LogiCount Pro Enterprise v2.6",
+  "name": "LogiCount Pro Enterprise v2.7",
   "description": "Sistema profesional auditado para gestión de inventario en tiempo real con arquitectura mobile-first y asistente de voz Gemini Live.",
   "requestFramePermissions": [
     "camera",

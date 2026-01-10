@@ -1,21 +1,14 @@
-
 import { db } from '../db';
 import { fetchCloudData, fetchProductsFromCloud, syncToAppSheet, syncReceptionToAppSheet, syncProductsToAppSheet, parseFlexibleDate } from './appsheet';
 import { SHEET_COLUMNS } from './constants';
-import { CountingSession, ScanRecord, Product, ConsolidatedItem } from '../types';
+import { CountingSession, Product } from '../types';
 import * as sessionService from './sessionService';
 import * as productService from './productService';
-import { generateCompositeKey, normalizeKey, sanitizeBarcode, generateUUID } from './utils';
+import { normalizeKey, sanitizeBarcode, generateUUID } from './utils';
 import { logger } from './logger';
-import { CloudInventoryRowSchema, CloudProductSchema, CloudReceptionRowSchema } from './schemas';
+import { CloudInventoryRowSchema, CloudProductSchema } from './schemas';
 import { useSyncStore } from '../store/useSyncStore';
-import { getSettings } from './settings';
-import { sendToGas } from './gasService';
-import { aggregateScans } from './aggregator';
 
-export { SYNC_ENGINE_VERSION } from './constants';
-
-const BATCH_SIZE = 50; 
 let isSyncingInProgress = false;
 
 export const resetSyncLock = () => {
@@ -32,36 +25,81 @@ export interface UploadGroup {
     type: 'inventory' | 'reception' | 'products';
 }
 
-const formatDateTime = (ts: number): string => {
-    const d = new Date(ts);
-    const pad = (n: number) => n.toString().padStart(2, '0');
-    return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
+export const pullOrderProgress = async (erpOrder: string): Promise<{ added: number, updated: number }> => {
+    if (!erpOrder) return { added: 0, updated: 0 };
+    const rawRows = await fetchCloudData({ erpFilter: erpOrder });
+    if (rawRows.length === 0) return { added: 0, updated: 0 };
+
+    let added = 0;
+    let updated = 0;
+
+    for (const row of rawRows) {
+        const parsed = CloudInventoryRowSchema.safeParse(row);
+        if (!parsed.success) continue;
+        
+        const cloudData = parsed.data;
+        const barcode = sanitizeBarcode(cloudData[SHEET_COLUMNS.BARCODE]);
+        const label = cloudData[SHEET_COLUMNS.LABEL] || "GENERAL";
+        
+        let session = await db.sessions
+            .where('erpOrder').equals(erpOrder)
+            .and(s => normalizeKey(s.logisticsLabel) === normalizeKey(label))
+            .first();
+            
+        if (!session) {
+            const sessionId = generateUUID();
+            await db.sessions.add({
+                id: sessionId,
+                erpOrder,
+                logisticsLabel: label,
+                createdAt: parseFlexibleDate(cloudData[SHEET_COLUMNS.DATE]),
+                status: 'completed',
+                totalUnits: 0,
+                totalSKUs: 0,
+                lastSyncTimestamp: Date.now()
+            });
+            session = (await db.sessions.get(sessionId))!;
+            added++;
+        }
+
+        const existingScan = await db.scans.where('[sessionId+barcode]').equals([session.id, barcode]).first();
+        if (!existingScan) {
+            await db.scans.add({
+                id: generateUUID(),
+                sessionId: session.id,
+                barcode,
+                quantity: cloudData[SHEET_COLUMNS.QUANTITY],
+                timestamp: parseFlexibleDate(cloudData[SHEET_COLUMNS.DATE]),
+                mm: cloudData[SHEET_COLUMNS.MONTH],
+                yyyy: cloudData[SHEET_COLUMNS.YEAR],
+                synced: 1,
+                isIncident: cloudData[SHEET_COLUMNS.INCIDENT] === "FRC"
+            });
+            updated++;
+        }
+    }
+
+    const affectedSessions = await db.sessions.where('erpOrder').equals(erpOrder).toArray();
+    for (const s of affectedSessions) await sessionService.updateSessionMetadata(s.id);
+
+    return { added, updated };
 };
 
 export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
     const groups: Record<string, UploadGroup> = {};
-    
     const unsyncedScans = await db.scans.where('synced').equals(0).toArray();
+    
     if (unsyncedScans.length > 0) {
         const sessionIds = Array.from(new Set(unsyncedScans.map(s => s.sessionId)));
         const sessions = await db.sessions.where('id').anyOf(sessionIds).toArray();
+        // Fix: Explicitly typing the Map to resolve 'unknown' property access errors in the loop below
         const sessionMap = new Map<string, CountingSession>(sessions.map(s => [s.id, s]));
 
         for (const scan of unsyncedScans) {
             const session = sessionMap.get(scan.sessionId);
             if (!session) continue;
             const erp = session.erpOrder;
-            
-            if (!groups[erp]) {
-                groups[erp] = {
-                    erpOrder: erp,
-                    sessionCount: 0,
-                    totalUnits: 0,
-                    sessionIds: [],
-                    logisticsLabels: [],
-                    type: 'inventory'
-                };
-            }
+            if (!groups[erp]) groups[erp] = { erpOrder: erp, sessionCount: 0, totalUnits: 0, sessionIds: [], logisticsLabels: [], type: 'inventory' };
             groups[erp].totalUnits += scan.quantity;
             if (!groups[erp].sessionIds.includes(session.id)) {
                 groups[erp].sessionIds.push(session.id);
@@ -70,37 +108,6 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
             }
         }
     }
-
-    const pendingDrafts: CountingSession[] = await db.sessions
-        .where('status').equals('draft')
-        .and(s => !s.lastSyncTimestamp)
-        .toArray() as CountingSession[];
-
-    if (pendingDrafts.length > 0) {
-        const receptionKey = "BITÁCORA RECEPCIÓN";
-        groups[receptionKey] = {
-            erpOrder: receptionKey,
-            sessionCount: pendingDrafts.length,
-            totalUnits: 0, 
-            sessionIds: pendingDrafts.map(d => d.id),
-            logisticsLabels: pendingDrafts.map(d => d.logisticsLabel),
-            type: 'reception'
-        };
-    }
-
-    const unsyncedProductsCount = await db.products.where('syncStatus').anyOf('add', 'edit').count();
-    if (unsyncedProductsCount > 0) {
-        const productKey = "ACTUALIZACIÓN DE CATÁLOGO";
-        groups[productKey] = {
-            erpOrder: productKey,
-            sessionCount: 1,
-            totalUnits: unsyncedProductsCount,
-            sessionIds: ['SYSTEM_PRODUCTS'],
-            logisticsLabels: ['MASTER_DATA'],
-            type: 'products'
-        };
-    }
-
     return Object.values(groups);
 };
 
@@ -109,109 +116,23 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
     isSyncingInProgress = true;
     useSyncStore.getState().setSyncing(true);
 
-    const settings = getSettings();
-    const gasUrl = settings.appSheetConfig?.gasWebAppUrl;
-
     try {
-        // --- LOGICA DE TURBO SYNC (GAS) ---
-        if (gasUrl && group.type === 'inventory') {
-            onProgress?.("Utilizando Protocolo TURBO-SYNC (GAS)...");
-            for (const sessionId of group.sessionIds) {
-                const session = await db.sessions.get(sessionId);
-                if (!session) continue;
-                
-                const unsynced = await db.scans.where('sessionId').equals(session.id).filter(s => s.synced === 0).toArray();
-                if (unsynced.length === 0) continue;
-
-                const consolidated = await aggregateScans(unsynced);
-                const timestamp = formatDateTime(Date.now());
-                
-                // Formatear filas para GAS (usando nombres de columnas directos del Spreadsheet)
-                const rows = consolidated.map(item => ({
-                    [SHEET_COLUMNS.ID]: generateUUID(),
-                    [SHEET_COLUMNS.UNIQUE_KEY]: `${session.erpOrder}_${session.logisticsLabel}_${item.barcode}_${item.mm || 0}_${item.yyyy || 0}`,
-                    [SHEET_COLUMNS.DATE]: timestamp,
-                    [SHEET_COLUMNS.ERP_ORDER]: session.erpOrder,
-                    [SHEET_COLUMNS.BARCODE]: item.barcode,
-                    [SHEET_COLUMNS.PRODUCT_NAME]: item.productName,
-                    [SHEET_COLUMNS.QUANTITY]: item.totalQuantity,
-                    [SHEET_COLUMNS.LABEL]: session.logisticsLabel,
-                    [SHEET_COLUMNS.MONTH]: item.mm || 0,
-                    [SHEET_COLUMNS.YEAR]: item.yyyy || 0,
-                    [SHEET_COLUMNS.INCIDENT]: item.isIncident ? "FRC" : ""
-                }));
-
-                const result = await sendToGas(gasUrl, {
-                    tableName: settings.appSheetConfig?.countsTableName,
-                    rows: rows
-                });
-
-                if (result.success) {
-                    await sessionService.markScansAsSynced(unsynced.map(s => s.id));
-                    await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
-                    onProgress?.(`✓ ${session.logisticsLabel} sincronizado vía GAS.`);
-                } else {
-                    throw new Error(`GAS falló: ${result.error}`);
-                }
-            }
-        } 
-        // --- FALLBACK A APPSHEET API TRADICIONAL ---
-        else if (group.type === 'reception') {
-            const drafts = await db.sessions.where('id').anyOf(group.sessionIds).toArray();
-            if (drafts.length === 0) return;
-            const result = await syncReceptionToAppSheet(drafts, onProgress);
-            if (result.failed > 0) throw new Error(`${result.failed} bultos fallaron.`);
-        } 
-        else if (group.type === 'products') {
-            const unsyncedProds = await db.products.where('syncStatus').anyOf('add', 'edit').toArray();
-            if (unsyncedProds.length > 0) {
-                await syncProductsToAppSheet(unsyncedProds, onProgress);
-            }
-        }
-        else {
-            for (const sessionId of group.sessionIds) {
-                const session = await db.sessions.get(sessionId);
-                if (!session) continue;
-                onProgress?.(`Iniciando subida de: ${session.logisticsLabel}`);
-                await syncToAppSheet(session, onProgress);
-                await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
-            }
+        for (const sessionId of group.sessionIds) {
+            const session = await db.sessions.get(sessionId);
+            if (!session) continue;
+            await syncToAppSheet(session, onProgress);
+            await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
         }
         useSyncStore.getState().setLastSyncTime(Date.now());
     } finally {
         isSyncingInProgress = false;
         useSyncStore.getState().setSyncing(false);
-        const remaining = await getPendingUploadGroups();
-        useSyncStore.getState().setPendingItems(remaining.length);
-    }
-};
-
-export const processSyncQueue = async () => {
-    if (isSyncingInProgress || !navigator.onLine) return;
-    try {
-        const pendingGroups = await getPendingUploadGroups();
-        useSyncStore.getState().setPendingItems(pendingGroups.length);
-        
-        if (pendingGroups.length > 0) {
-            for (const group of pendingGroups) {
-                try {
-                    await performBatchUpload(group);
-                } catch (e: any) {
-                    logger.warn('AutoSync', `Fallo en ${group.erpOrder}: ${e.message}`);
-                }
-            }
-        }
-    } catch (error) {
-        console.error("[AutoSync] Error:", error);
     }
 };
 
 export const importProductsFromAppSheet = async (): Promise<number> => {
-    logger.info('Sync', 'Descargando catálogo...');
     const rawRows = await fetchProductsFromCloud();
-    
     if (!rawRows || rawRows.length === 0) return 0;
-
     const validProducts: Product[] = [];
     for (const row of rawRows) {
         const result = CloudProductSchema.safeParse(row);
@@ -227,84 +148,9 @@ export const importProductsFromAppSheet = async (): Promise<number> => {
             });
         }
     }
-
     if (validProducts.length > 0) {
         await db.products.clear();
         await productService.saveProductBatch(validProducts);
-        logger.success('Sync', `Catálogo actualizado: ${validProducts.length} registros.`);
     }
     return validProducts.length;
-};
-
-export const restoreFromCloud = async (options?: { erpFilter?: string; dateRange?: { start: string, end: string }, skipExisting?: boolean }): Promise<{ sessions: number, items: number }> => {
-  const rawRows = await fetchCloudData(options);
-  if (rawRows.length === 0) return { sessions: 0, items: 0 };
-
-  const validRows = rawRows.map(r => CloudInventoryRowSchema.safeParse(r))
-                         .filter(p => p.success)
-                         .map(p => p.data!);
-
-  if (validRows.length === 0) return { sessions: 0, items: 0 };
-
-  const sessionsMap = new Map<string, typeof validRows>();
-  validRows.forEach(row => {
-    const key = generateCompositeKey(row[SHEET_COLUMNS.ERP_ORDER], row[SHEET_COLUMNS.LABEL]);
-    if (!sessionsMap.has(key)) sessionsMap.set(key, []);
-    sessionsMap.get(key)?.push(row);
-  });
-
-  let sessionsProcessed = 0;
-  let itemsRestored = 0;
-
-  for (const [key, sessionRows] of sessionsMap.entries()) {
-    const firstRow = sessionRows[0];
-    const erp = firstRow[SHEET_COLUMNS.ERP_ORDER];
-    const label = firstRow[SHEET_COLUMNS.LABEL] || "GENERAL";
-    
-    let localSession = await db.sessions.where('erpOrder').equals(erp)
-                               .and(s => normalizeKey(s.logisticsLabel) === normalizeKey(label))
-                               .first();
-    
-    if (options?.skipExisting && localSession) continue;
-
-    const sessionId = localSession ? localSession.id : generateUUID();
-    await db.scans.where('sessionId').equals(sessionId).delete();
-
-    const scansToAdd: ScanRecord[] = sessionRows.map(row => ({
-        id: generateUUID(),
-        sessionId,
-        barcode: sanitizeBarcode(row[SHEET_COLUMNS.BARCODE]),
-        quantity: row[SHEET_COLUMNS.QUANTITY],
-        timestamp: parseFlexibleDate(row[SHEET_COLUMNS.DATE]),
-        mm: row[SHEET_COLUMNS.MONTH],
-        yyyy: row[SHEET_COLUMNS.YEAR],
-        synced: 1, 
-        isIncident: row[SHEET_COLUMNS.INCIDENT] === "FRC"
-    }));
-
-    if (!localSession) {
-        await db.sessions.add({
-            id: sessionId,
-            erpOrder: erp,
-            logisticsLabel: label,
-            createdAt: parseFlexibleDate(firstRow[SHEET_COLUMNS.DATE]),
-            status: 'completed',
-            totalUnits: scansToAdd.reduce((a, b) => a + b.quantity, 0),
-            totalSKUs: new Set(scansToAdd.map(s => s.barcode)).size,
-            lastSyncTimestamp: Date.now()
-        });
-        sessionsProcessed++;
-    } else {
-        await db.sessions.update(sessionId, {
-            totalUnits: scansToAdd.reduce((a, b) => a + b.quantity, 0),
-            totalSKUs: new Set(scansToAdd.map(s => s.barcode)).size,
-            lastSyncTimestamp: Date.now()
-        });
-    }
-
-    if (scansToAdd.length > 0) await db.scans.bulkAdd(scansToAdd);
-    itemsRestored += scansToAdd.length;
-  }
-  
-  return { sessions: sessionsProcessed, items: itemsRestored };
 };

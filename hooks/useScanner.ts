@@ -6,35 +6,30 @@ import * as sessionService from '../services/sessionService';
 import { sanitizeBarcode } from '../services/utils';
 import { SoundFX } from '../services/audio';
 import { CountingSession, Product, ScannerStatus, ScanRecord } from '../types';
+import { lookupSkuHistory } from '../services/gasService';
 
 export const useScanner = (session: CountingSession, onFinish: () => void, onDiscard?: () => void) => {
-    // --- ESTADO DE UI ---
     const [status, setStatus] = useState<ScannerStatus>('idle');
     const [feedback, setFeedback] = useState<'idle' | 'success' | 'error' | 'undo'>('idle');
     const [manualInput, setManualInput] = useState('');
     const [multiplier, setMultiplier] = useState(1);
     
-    // --- ESTADO DE NEGOCIO (OPTIMISTA) ---
     const [currentScan, setCurrentScan] = useState<ScanRecord | null>(null);
     const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
     const [currentSkuTotal, setCurrentSkuTotal] = useState(0);
 
-    // --- CACHE DE SESIÓN (Rendimiento Crítico) ---
     const seenBarcodes = useRef<Set<string>>(new Set());
     const skuCounters = useRef<Map<string, number>>(new Map());
     const isLocked = useRef(false);
 
-    // --- DATOS TEMPORALES ---
     const [pendingScan, setPendingScan] = useState<{barcode: string, name: string} | null>(null);
 
-    // --- QUERIES REACTIVAS ---
     const recentHistory = useLiveQuery(
         () => db.scans.where('sessionId').equals(session.id).reverse().sortBy('timestamp').then(res => res.slice(0, 15)), 
         [session.id]
     );
     const sessionStats = useLiveQuery(() => db.sessions.get(session.id), [session.id]);
 
-    // Sincronización de cache al arrancar
     useEffect(() => {
         const syncCache = async () => {
             const allScans = await db.scans.where('sessionId').equals(session.id).toArray();
@@ -58,30 +53,22 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
         syncCache();
     }, [session.id]);
 
-    /**
-     * Tubería de Finalización: Persiste los datos y actualiza la UI
-     */
     const finalizeScanPipeline = useCallback(async (barcode: string, mm?: number, yyyy?: number) => {
         try {
             const qtyToAdd = multiplier;
-            
-            // 1. Actualización de Cache Síncrona (Latencia Cero)
             const newTotal = (skuCounters.current.get(barcode) || 0) + qtyToAdd;
             skuCounters.current.set(barcode, newTotal);
             seenBarcodes.current.add(barcode);
             
-            // 2. Persistencia en Buffer (Asíncrona)
             const scanRecord = await sessionService.addScanEvent(session.id, barcode, qtyToAdd, mm, yyyy);
             const productInfo = await db.products.get(barcode);
 
-            // 3. Feedback Visual e Inmediato
             setCurrentScan(scanRecord);
             setCurrentProduct(productInfo || null);
             setCurrentSkuTotal(newTotal);
             setFeedback('success');
             SoundFX.play(qtyToAdd > 1 ? 'increment' : 'success');
 
-            // 4. Limpieza de estado
             setMultiplier(1);
             setStatus('idle');
             setTimeout(() => setFeedback('idle'), 400);
@@ -93,29 +80,43 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
         }
     }, [session.id, multiplier]);
 
-    /**
-     * Tubería de Entrada: Valida el código y decide el flujo (Fecha o Directo)
-     */
     const handleInboundScan = useCallback(async (rawBarcode: string) => {
         if (isLocked.current) return;
         const barcode = sanitizeBarcode(rawBarcode);
         if (!barcode || barcode.length < 2) return;
 
         isLocked.current = true;
-        const product = await db.products.get(barcode);
         
-        // Auto-registro para mantener integridad de catálogo
+        // 1. PRIMERO: BUSCAR EN MÁSTER LOCAL (DEXIE)
+        let product = await db.products.get(barcode);
+        
+        // 2. SEGUNDO: SI NO ESTÁ, BUSCAR EN MÁSTER CLOUD (GAS)
+        if (!product && navigator.onLine) {
+            try {
+                const cloudResult = await lookupSkuHistory(barcode);
+                if (cloudResult && cloudResult.name) {
+                    const newProduct: Product = {
+                        barcode,
+                        name: cloudResult.name,
+                        category: cloudResult.category || 'MÁSTER CLOUD',
+                        syncStatus: 'synced'
+                    };
+                    await db.products.put(newProduct);
+                    product = newProduct;
+                }
+            } catch (e) { console.warn("Cloud lookup failed, proceeding offline"); }
+        }
+
+        // 3. TERCERO: SI SIGUE SIN APARECER, MARCAR COMO PENDIENTE
         if (!product) {
-            await db.products.put({ barcode, name: 'PENDIENTE', category: 'AUTO', syncStatus: 'add' });
+            await db.products.put({ barcode, name: 'PENDIENTE', category: 'NUEVO', syncStatus: 'add' });
         }
 
         setPendingScan({ barcode, name: product?.name || 'NUEVO PRODUCTO' });
 
-        // REGLA DE NEGOCIO: Solicitar fecha solo en la primera aparición del SKU en esta sesión
         if (!seenBarcodes.current.has(barcode)) {
             setStatus('expiring');
         } else {
-            // Heredar fecha del primer escaneo para consistencia del bulto
             const firstScan = await db.scans.where('[sessionId+barcode]').equals([session.id, barcode]).first();
             await finalizeScanPipeline(barcode, firstScan?.mm, firstScan?.yyyy);
         }
@@ -126,8 +127,6 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
         if (removedBarcode) {
             setFeedback('undo');
             SoundFX.play('delete');
-            
-            // Re-calcular cache tras borrado
             const scans = await db.scans.where('sessionId').equals(session.id).toArray();
             skuCounters.current.clear();
             scans.forEach(s => {
@@ -154,7 +153,6 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
             optimisticActiveQty: currentSkuTotal,
             optimisticTotalQty: sessionStats?.totalUnits || 0,
             optimisticUniqueSkus: sessionStats?.totalSKUs || 0,
-            // FIX: Added predictions array to prevent property access errors in UI
             predictions: [] 
         },
         data: { 
@@ -167,7 +165,7 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
             handleManualSubmit: (e: any) => { e.preventDefault(); if (manualInput) handleInboundScan(manualInput); setManualInput(''); },
             handleExpirationComplete: (mm?: number, yyyy?: number) => { if (pendingScan) finalizeScanPipeline(pendingScan.barcode, mm, yyyy); },
             handleUndo: handleUndoAction,
-            handleQuantityChange: sessionService.updateScanQuantity, // Mantener para compatibilidad
+            handleQuantityChange: sessionService.updateScanQuantity, 
             handleDeleteScan: sessionService.deleteScan,
             handleToggleIncident: sessionService.updateScanIncident,
             handleDiscard: () => { if (confirm("¿Borrar sesión física?")) onDiscard?.(); }

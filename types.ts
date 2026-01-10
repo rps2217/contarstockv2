@@ -57,7 +57,7 @@ export type ViewState = 'dashboard' | 'counting' | 'database' | 'reports' | 'set
 
 export type Theme = 'light' | 'dark' | 'contrast' | 'warm' | 'navy' | 'oled';
 
-export type ScannerStatus = 'idle' | 'manual' | 'camera' | 'expiring' | 'confirming' | 'error' | 'success' | 'product_form';
+export type ScannerStatus = 'idle' | 'manual' | 'camera' | 'expiring' | 'confirming' | 'error' | 'success' | 'product_form' | 'vision_audit';
 
 export interface AppSheetConfig {
   appId: string;
@@ -65,7 +65,7 @@ export interface AppSheetConfig {
   countsTableName: string;
   productsTableName: string;
   receptionTableName?: string;
-  gasWebAppUrl?: string; // Nuevo: Endpoint para Turbo-Sync
+  gasWebAppUrl?: string; 
 }
 
 export interface AppSettings {
@@ -124,13 +124,4 @@ export interface MatchResult {
     difference: number; 
   }[];
   potentialAliases: AliasSuggestion[]; 
-}
-
-export interface FileNode {
-  name: string;
-  path: string;
-  isFolder: boolean;
-  children?: FileNode[];
-  content?: string;
-  parent?: FileNode;
 }
