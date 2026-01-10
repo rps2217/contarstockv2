@@ -1,4 +1,4 @@
-import React, { ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home, Terminal } from 'lucide-react';
 import { logger } from '../services/logger';
 
@@ -16,9 +16,9 @@ interface State {
  * Capturador de errores global para la aplicación React.
  * Implementa la lógica de recuperación y reporte de fallos críticos.
  */
-// Fix: Use React.Component explicitly to ensure that TypeScript recognizes inherited properties like setState and props
-export class ErrorBoundary extends React.Component<Props, State> {
-  public state: State = {
+// Fix: Use Component directly from react import to ensure proper inheritance visibility for TypeScript
+export class ErrorBoundary extends Component<Props, State> {
+  public override state: State = {
     hasError: false,
     error: null,
     errorInfo: null
@@ -32,7 +32,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
     };
   }
 
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  public override componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
     
     // Detectar fallos de carga de módulos ESM
@@ -50,7 +50,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
         { stack: error.stack, componentStack: errorInfo.componentStack }
     ).catch(e => console.error("Failed to write crash log", e));
     
-    // Fix: Access setState via the member of React.Component class
+    // Fix: Access setState via the member inherited from Component class
     this.setState({ errorInfo });
   }
 
@@ -65,7 +65,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
     }
   };
 
-  public render(): ReactNode {
+  public override render(): ReactNode {
     if (this.state.hasError) {
       const errorMessage = this.state.error?.message || 'Error de inicialización del motor React';
 
@@ -114,7 +114,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
       );
     }
 
-    // Fix: Access children from props inherited from React.Component to resolve TS error
+    // Fix: Access children from props inherited from Component to resolve TS error
     return this.props.children;
   }
 }

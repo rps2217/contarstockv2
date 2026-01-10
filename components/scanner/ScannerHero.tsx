@@ -1,6 +1,6 @@
 
 import React, { memo } from 'react';
-import { RotateCcw, AlertCircle, CheckCircle, Zap, Sparkles } from 'lucide-react';
+import { RotateCcw, AlertCircle, CheckCircle, Zap, Sparkles, Pencil } from 'lucide-react';
 import { ScanRecord, ExpectedItem, Product } from '../../types';
 
 interface ScannerHeroProps {
@@ -45,73 +45,78 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
 
         return (
             <div className="w-full flex flex-col items-center justify-center px-4 py-6 animate-in fade-in duration-300">
-                {isUnknown ? (
-                    <div className="bg-white border-4 md:border-8 border-orange-600 p-8 md:p-12 rounded-[2.5rem] shadow-2xl w-full max-w-sm text-center">
-                        <AlertCircle className="w-16 h-16 text-orange-600 mx-auto mb-6" />
-                        <h2 className="text-2xl md:text-3xl font-black text-black mb-4 uppercase tracking-tight">CÓDIGO NUEVO</h2>
-                        <div className="bg-slate-100 py-6 px-6 rounded-2xl border-2 border-slate-300 font-mono font-black text-2xl text-slate-800 mb-8 break-all leading-tight">
-                            {lastScan.barcode}
+                {/* STATUS BAR (TOP) */}
+                <div className="mb-6 h-14 flex items-center justify-center">
+                    {isOverCount ? (
+                        <div className="bg-red-700 text-white px-8 py-3 rounded-2xl font-black text-lg border-4 border-red-950 flex items-center gap-3 animate-pulse uppercase shadow-xl">
+                            EXCESO: {currentQty - targetQty}
                         </div>
-                        <button onClick={onRegisterPending} className="w-full bg-black text-white font-black py-6 rounded-2xl text-lg uppercase tracking-widest active:translate-y-1 transition-all shadow-lg shadow-black/20">
-                            IDENTIFICAR
-                        </button>
-                    </div>
-                ) : (
-                    <div className="w-full flex flex-col items-center">
-                        <div className="mb-6">
-                            {isOverCount ? (
-                                <div className="bg-red-700 text-white px-8 py-3 rounded-2xl font-black text-lg border-4 border-red-950 flex items-center gap-3 animate-pulse uppercase shadow-xl">
-                                    EXCESO: {currentQty - targetQty}
-                                </div>
-                            ) : isTargetReached ? (
-                                <div className="bg-emerald-600 text-white px-8 py-3 rounded-2xl font-black text-lg border-4 border-emerald-950 flex items-center gap-3 uppercase shadow-xl">
-                                    <CheckCircle className="w-6 h-6" /> LISTO
-                                </div>
-                            ) : expectedItem ? (
-                                <div className="bg-blue-700 text-white px-8 py-3 rounded-2xl font-black text-lg border-4 border-blue-950 flex items-center gap-3 uppercase tracking-tighter shadow-xl">
-                                    FALTAN: {targetQty - currentQty}
-                                </div>
-                            ) : null}
+                    ) : isTargetReached ? (
+                        <div className="bg-emerald-600 text-white px-8 py-3 rounded-2xl font-black text-lg border-4 border-emerald-950 flex items-center gap-3 uppercase shadow-xl">
+                            <CheckCircle className="w-6 h-6" /> LISTO
                         </div>
+                    ) : expectedItem ? (
+                        <div className="bg-blue-700 text-white px-8 py-3 rounded-2xl font-black text-lg border-4 border-blue-950 flex items-center gap-3 uppercase tracking-tighter shadow-xl">
+                            FALTAN: {targetQty - currentQty}
+                        </div>
+                    ) : isUnknown ? (
+                        <div className="bg-amber-500 text-black px-6 py-2 rounded-xl font-black text-xs border-2 border-black flex items-center gap-2 uppercase tracking-widest animate-in slide-in-from-top-2">
+                            <AlertCircle className="w-4 h-4" /> Producto Nuevo Detectado
+                        </div>
+                    ) : null}
+                </div>
 
-                        <div className="text-center w-full max-w-2xl mb-4">
-                             <h1 className="text-2xl md:text-4xl font-black text-black leading-[1.1] uppercase px-6 break-words hyphens-auto">
-                                {activeProduct?.name || lastScan.barcode}
-                             </h1>
-                             <div className="text-lg md:text-xl font-mono font-black text-blue-800 mt-4 bg-blue-50 px-6 py-2 rounded-xl inline-block border-2 border-blue-200 uppercase tracking-widest shadow-sm">
-                                {lastScan.barcode}
-                             </div>
-                        </div>
-
-                        <div className="relative flex flex-col items-center mt-4">
-                            <div className="text-[12rem] md:text-[16rem] leading-[0.75] font-black text-black tabular-nums tracking-tighter select-none scale-y-110 drop-shadow-sm">
-                                {currentQty}
-                            </div>
-                            <div className="text-[10px] md:text-sm font-black uppercase tracking-[0.5em] text-white bg-black px-10 py-2.5 rounded-full mt-10 shadow-lg">
-                                REGISTRADOS
-                            </div>
-                        </div>
-
-                        {predictions.length > 0 && (
-                            <div className="mt-16 w-full max-w-lg animate-in slide-in-from-bottom-4">
-                                <div className="flex items-center gap-2 mb-4 px-6">
-                                    <Sparkles className="w-4 h-4 text-indigo-500" />
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sugerencias IA</span>
-                                </div>
-                                <div className="flex gap-3 overflow-x-auto no-scrollbar px-6">
-                                    {predictions.map(p => (
-                                        <button 
-                                            key={p.barcode}
-                                            onClick={() => onPredictionClick?.(p.barcode)}
-                                            className="bg-white border-2 border-slate-200 p-4 rounded-2xl min-w-[160px] text-left hover:border-indigo-500 transition-all active:scale-95 shadow-sm"
-                                        >
-                                            <div className="text-[9px] font-black text-indigo-600 uppercase mb-1.5 truncate">{p.name}</div>
-                                            <div className="text-xs font-mono font-bold text-slate-900">{p.barcode}</div>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
+                {/* PRODUCT INFO */}
+                <div className="text-center w-full max-w-2xl mb-2">
+                    <div className="flex flex-col items-center gap-2">
+                        <h1 className={`text-3xl md:text-5xl font-black leading-[1.1] uppercase px-4 break-words hyphens-auto transition-colors ${isUnknown ? 'text-slate-400 italic' : 'text-black'}`}>
+                            {activeProduct?.name || 'DESCONOCIDO'}
+                        </h1>
+                        
+                        {isUnknown && (
+                            <button 
+                                onClick={onRegisterPending}
+                                className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-md mt-2"
+                            >
+                                <Pencil className="w-3.5 h-3.5" /> Identificar Código
+                            </button>
                         )}
+                    </div>
+
+                    <div className="text-lg md:text-xl font-mono font-black text-blue-800 mt-6 bg-blue-50 px-6 py-2 rounded-xl inline-block border-2 border-blue-200 uppercase tracking-widest shadow-sm">
+                        {lastScan.barcode}
+                    </div>
+                </div>
+
+                {/* MAIN COUNTER (ALWAYS VISIBLE) */}
+                <div className="relative flex flex-col items-center mt-6">
+                    <div className="text-[13rem] md:text-[18rem] leading-[0.7] font-black text-black tabular-nums tracking-tighter select-none scale-y-110 drop-shadow-sm transition-all duration-150 animate-in zoom-in-95">
+                        {currentQty}
+                    </div>
+                    <div className="text-[10px] md:text-sm font-black uppercase tracking-[0.5em] text-white bg-black px-10 py-2.5 rounded-full mt-12 shadow-lg">
+                        UNIDADES
+                    </div>
+                </div>
+
+                {/* PREDICTIONS (IA) */}
+                {predictions.length > 0 && (
+                    <div className="mt-16 w-full max-w-lg animate-in slide-in-from-bottom-4">
+                        <div className="flex items-center gap-2 mb-4 px-6">
+                            <Sparkles className="w-4 h-4 text-indigo-500" />
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sugerencias IA</span>
+                        </div>
+                        <div className="flex gap-3 overflow-x-auto no-scrollbar px-6">
+                            {predictions.map(p => (
+                                <button 
+                                    key={p.barcode}
+                                    onClick={() => onPredictionClick?.(p.barcode)}
+                                    className="bg-white border-2 border-slate-200 p-4 rounded-2xl min-w-[160px] text-left hover:border-indigo-500 transition-all active:scale-95 shadow-sm"
+                                >
+                                    <div className="text-[9px] font-black text-indigo-600 uppercase mb-1.5 truncate">{p.name}</div>
+                                    <div className="text-xs font-mono font-bold text-slate-900">{p.barcode}</div>
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 )}
             </div>
