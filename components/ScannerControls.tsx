@@ -1,7 +1,7 @@
 
 import React, { memo } from 'react';
-import { Camera, Keyboard, Zap, Hash } from 'lucide-react';
-import { CountingSession } from '../../types';
+import { Camera, Keyboard } from 'lucide-react';
+import { CountingSession } from '../types';
 
 interface ScannerControlsProps {
     session: CountingSession;
@@ -16,7 +16,6 @@ interface ScannerControlsProps {
 }
 
 export const ScannerControls: React.FC<ScannerControlsProps> = memo(({ 
-    session,
     sessionStats, 
     multiplier, 
     onCameraClick, 
@@ -24,50 +23,45 @@ export const ScannerControls: React.FC<ScannerControlsProps> = memo(({
     onManualClick 
 }) => {
     return (
-        <div className="w-full bg-white border-t-8 border-black px-6 pt-6 pb-8 flex flex-col gap-8 max-w-xl mx-auto rounded-t-[2.5rem] shadow-[0_-20px_50px_rgba(0,0,0,0.15)]">
-            {/* STATS DE ALTO CONTRASTE CON MEJOR PADDING */}
-            <div className="flex items-center justify-between px-2">
-                <div className="flex flex-col">
-                    <span className="text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] mb-1">Total Unidades</span>
-                    <span className="text-5xl md:text-6xl font-black tabular-nums text-black leading-none">{sessionStats.totalQty}</span>
+        <div className="w-full bg-white px-6 py-6 flex items-center justify-between gap-4 border border-slate-200/60 rounded-[2.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.05)] relative z-50">
+            {/* STATS AREA */}
+            <div className="flex items-center gap-6 px-4">
+                <div className="flex flex-col items-center">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Unidades</span>
+                    <span className="text-4xl font-black text-slate-900 tabular-nums leading-none">{sessionStats.totalQty}</span>
                 </div>
-                
-                <div className="flex flex-col text-right">
-                    <span className="text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] mb-1">Variedad SKUs</span>
-                    <span className="text-5xl md:text-6xl font-black tabular-nums text-blue-700 leading-none">{sessionStats.uniqueSkus}</span>
+                <div className="w-px h-10 bg-slate-100"></div>
+                <div className="flex flex-col items-center">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Skus</span>
+                    <span className="text-4xl font-black text-blue-600 tabular-nums leading-none">{sessionStats.uniqueSkus}</span>
                 </div>
             </div>
 
-            {/* BOTONES GIGANTES REFORMATEADOS */}
-            <div className="grid grid-cols-3 gap-4 h-32">
+            {/* ACTION BUTTONS GROUP */}
+            <div className="flex items-center gap-3">
                 <button 
                     onClick={onCameraClick}
-                    className="bg-blue-50 text-blue-900 border-4 border-blue-900 rounded-2xl flex flex-col items-center justify-center gap-2 active:translate-y-2 transition-all shadow-md"
+                    className="w-16 h-16 bg-blue-50 border-2 border-blue-100 text-blue-600 rounded-2xl flex items-center justify-center active:scale-90 transition-all shadow-sm"
                 >
-                    <Camera className="w-10 h-10 stroke-[2.5px]" />
-                    <span className="text-[10px] font-black uppercase tracking-widest">CÁMARA</span>
+                    <Camera className="w-8 h-8 stroke-[2.5px]" />
                 </button>
 
                 <button 
                     onClick={onMultiplierClick}
-                    className={`rounded-2xl flex flex-col items-center justify-center transition-all border-4 shadow-xl active:scale-90 ${
-                        multiplier > 1 
-                        ? 'bg-black text-white border-black ring-8 ring-blue-100' 
-                        : 'bg-white text-black border-black hover:bg-slate-50'
-                    }`}
+                    className={`h-16 px-6 bg-slate-50 border-2 border-slate-200 rounded-2xl flex items-center gap-2 transition-all active:scale-95 shadow-sm ${multiplier > 1 ? 'bg-amber-400 border-amber-500 text-amber-950' : 'text-slate-700'}`}
                 >
-                    <span className="text-5xl font-black leading-tight">x{multiplier}</span>
-                    <span className="text-[9px] font-black uppercase tracking-widest -mt-1">MULTIPLICAR</span>
-                </button>
-                
-                <button 
-                    onClick={onManualClick}
-                    className="bg-black text-white border-4 border-black rounded-2xl flex flex-col items-center justify-center gap-2 active:translate-y-2 transition-all shadow-xl shadow-black/20"
-                >
-                    <Keyboard className="w-10 h-10 stroke-[2.5px]" />
-                    <span className="text-[10px] font-black uppercase tracking-widest">TECLADO</span>
+                    <span className="text-sm font-bold opacity-40 uppercase">x</span>
+                    <span className="text-3xl font-black tabular-nums">{multiplier}</span>
                 </button>
             </div>
+
+            {/* FLOATING KEYPAD TRIGGER ON RIGHT */}
+            <button 
+                onClick={onManualClick}
+                className="w-14 h-16 bg-black text-white rounded-2xl flex items-center justify-center active:scale-95 transition-all shadow-xl"
+            >
+                <Keyboard className="w-7 h-7 stroke-[2.5px]" />
+            </button>
         </div>
     );
 });
