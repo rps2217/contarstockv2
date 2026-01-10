@@ -65,6 +65,7 @@ export interface AppSheetConfig {
   countsTableName: string;
   productsTableName: string;
   receptionTableName?: string;
+  gasWebAppUrl?: string; // Nuevo: Endpoint para Turbo-Sync
 }
 
 export interface AppSettings {
@@ -78,8 +79,8 @@ export interface AppSettings {
   confirmDelete: boolean;
   autoRegisterUnknown: boolean; 
   lowPerformanceMode: boolean;
-  predictiveHintsEnabled: boolean; // Fase 3
-  continuousMode: boolean;        // Fase 3
+  predictiveHintsEnabled: boolean; 
+  continuousMode: boolean;        
   appSheetConfig?: AppSheetConfig;
   mobileNavConfig?: ViewState[]; 
 }

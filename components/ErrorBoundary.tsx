@@ -1,4 +1,3 @@
-
 import React, { ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home, Terminal } from 'lucide-react';
 import { logger } from '../services/logger';
@@ -17,7 +16,7 @@ interface State {
  * Capturador de errores global para la aplicación React.
  * Implementa la lógica de recuperación y reporte de fallos críticos.
  */
-// FIX: Extending React.Component explicitly to resolve 'setState' and 'props' type recognition issues
+// Using explicit React.Component to resolve inheritance detection issues in some environments
 export class ErrorBoundary extends React.Component<Props, State> {
   public state: State = {
     hasError: false,
@@ -51,7 +50,8 @@ export class ErrorBoundary extends React.Component<Props, State> {
         { stack: error.stack, componentStack: errorInfo.componentStack }
     ).catch(e => console.error("Failed to write crash log", e));
     
-    this.setState({ errorInfo });
+    // Fix: Access setState via any cast to resolve property not found error in specific environments
+    (this as any).setState({ errorInfo });
   }
 
   handleReload = () => {
@@ -114,6 +114,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
       );
     }
 
-    return this.props.children;
+    // Fix: Access children via any cast to resolve props not found error in specific environments
+    return (this as any).props.children;
   }
 }

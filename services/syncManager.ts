@@ -9,6 +9,9 @@ import { generateCompositeKey, normalizeKey, sanitizeBarcode, generateUUID } fro
 import { logger } from './logger';
 import { CloudInventoryRowSchema, CloudProductSchema, CloudReceptionRowSchema } from './schemas';
 import { useSyncStore } from '../store/useSyncStore';
+import { getSettings } from './settings';
+import { sendToGas } from './gasService';
+import { aggregateScans } from './aggregator';
 
 export { SYNC_ENGINE_VERSION } from './constants';
 
@@ -28,6 +31,12 @@ export interface UploadGroup {
     logisticsLabels: string[];
     type: 'inventory' | 'reception' | 'products';
 }
+
+const formatDateTime = (ts: number): string => {
+    const d = new Date(ts);
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
+};
 
 export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
     const groups: Record<string, UploadGroup> = {};
@@ -100,8 +109,54 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
     isSyncingInProgress = true;
     useSyncStore.getState().setSyncing(true);
 
+    const settings = getSettings();
+    const gasUrl = settings.appSheetConfig?.gasWebAppUrl;
+
     try {
-        if (group.type === 'reception') {
+        // --- LOGICA DE TURBO SYNC (GAS) ---
+        if (gasUrl && group.type === 'inventory') {
+            onProgress?.("Utilizando Protocolo TURBO-SYNC (GAS)...");
+            for (const sessionId of group.sessionIds) {
+                const session = await db.sessions.get(sessionId);
+                if (!session) continue;
+                
+                const unsynced = await db.scans.where('sessionId').equals(session.id).filter(s => s.synced === 0).toArray();
+                if (unsynced.length === 0) continue;
+
+                const consolidated = await aggregateScans(unsynced);
+                const timestamp = formatDateTime(Date.now());
+                
+                // Formatear filas para GAS (usando nombres de columnas directos del Spreadsheet)
+                const rows = consolidated.map(item => ({
+                    [SHEET_COLUMNS.ID]: generateUUID(),
+                    [SHEET_COLUMNS.UNIQUE_KEY]: `${session.erpOrder}_${session.logisticsLabel}_${item.barcode}_${item.mm || 0}_${item.yyyy || 0}`,
+                    [SHEET_COLUMNS.DATE]: timestamp,
+                    [SHEET_COLUMNS.ERP_ORDER]: session.erpOrder,
+                    [SHEET_COLUMNS.BARCODE]: item.barcode,
+                    [SHEET_COLUMNS.PRODUCT_NAME]: item.productName,
+                    [SHEET_COLUMNS.QUANTITY]: item.totalQuantity,
+                    [SHEET_COLUMNS.LABEL]: session.logisticsLabel,
+                    [SHEET_COLUMNS.MONTH]: item.mm || 0,
+                    [SHEET_COLUMNS.YEAR]: item.yyyy || 0,
+                    [SHEET_COLUMNS.INCIDENT]: item.isIncident ? "FRC" : ""
+                }));
+
+                const result = await sendToGas(gasUrl, {
+                    tableName: settings.appSheetConfig?.countsTableName,
+                    rows: rows
+                });
+
+                if (result.success) {
+                    await sessionService.markScansAsSynced(unsynced.map(s => s.id));
+                    await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
+                    onProgress?.(`✓ ${session.logisticsLabel} sincronizado vía GAS.`);
+                } else {
+                    throw new Error(`GAS falló: ${result.error}`);
+                }
+            }
+        } 
+        // --- FALLBACK A APPSHEET API TRADICIONAL ---
+        else if (group.type === 'reception') {
             const drafts = await db.sessions.where('id').anyOf(group.sessionIds).toArray();
             if (drafts.length === 0) return;
             const result = await syncReceptionToAppSheet(drafts, onProgress);
