@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import * as sessionService from '../services/sessionService'; 
@@ -22,20 +22,22 @@ export const useScanner = (
     const [multiplier, setMultiplier] = useState(1);
     const [predictions, setPredictions] = useState<{barcode: string, name: string}[]>([]);
 
-    // --- ESTADO ACTIVO LOCAL (OPTIMISTIC UI) ---
+    // --- EL CORAZÓN DE LA SOLUCIÓN: ESTADO OPTIMISTA ---
     const [activeScan, setActiveScan] = useState<ScanRecord | null>(null);
     const [activeProduct, setActiveProduct] = useState<Product | null>(null);
     const [accumulatedQty, setAccumulatedQty] = useState(0);
 
+    // --- TRACKERS DE SESIÓN (Refs para evitar cierres de estado obsoletos) ---
+    const sessionSeenSkus = useRef<Set<string>>(new Set());
+    const sessionCountsRef = useRef<Map<string, number>>(new Map());
+    
+    const isProcessingRef = useRef(false);
+    const keyBuffer = useRef('');
+    const lastKeyTime = useRef(0);
+
     // --- PANTALLA DE CONTROL ---
     const [pendingScanCode, setPendingScanCode] = useState<string | null>(null);
     const [pendingProductName, setPendingProductName] = useState('PENDIENTE');
-
-    // --- REFERENCIAS DE RENDIMIENTO ---
-    const isProcessingRef = useRef(false);
-    const sessionSeenSkus = useRef<Set<string>>(new Set());
-    const keyBuffer = useRef('');
-    const lastKeyTime = useRef(0);
 
     // --- QUERIES REACTIVAS ---
     const recentScans = useLiveQuery(
@@ -45,20 +47,28 @@ export const useScanner = (
 
     const sessionMetadata = useLiveQuery(() => db.sessions.get(session.id), [session.id]);
 
-    // --- INICIALIZACIÓN ---
+    // --- INICIALIZACIÓN DE CACHÉ LOCAL ---
     useEffect(() => {
         const initCache = async () => {
             const scans = await db.scans.where('sessionId').equals(session.id).toArray();
-            scans.forEach(s => sessionSeenSkus.current.add(s.barcode));
+            
+            // Poblar rastreadores
+            sessionSeenSkus.current.clear();
+            sessionCountsRef.current.clear();
+            
+            scans.forEach(s => {
+                sessionSeenSkus.current.add(s.barcode);
+                const current = sessionCountsRef.current.get(s.barcode) || 0;
+                sessionCountsRef.current.set(s.barcode, current + s.quantity);
+            });
             
             if (scans.length > 0) {
                 const last = scans.sort((a, b) => b.timestamp - a.timestamp)[0];
                 const prod = await db.products.get(last.barcode);
-                const total = scans.filter(s => s.barcode === last.barcode).reduce((acc, curr) => acc + curr.quantity, 0);
                 
                 setActiveScan(last);
                 setActiveProduct(prod || null);
-                setAccumulatedQty(total);
+                setAccumulatedQty(sessionCountsRef.current.get(last.barcode) || 0);
             }
         };
         initCache();
@@ -84,34 +94,34 @@ export const useScanner = (
             const qtyToAdd = multiplier;
             let finalMm = mm, finalYyyy = yyyy;
             
+            // Recuperar fecha previa si no se proporcionó
             if (finalMm === undefined) {
                 const prev = await db.scans.where('[sessionId+barcode]').equals([session.id, code]).first();
                 if (prev) { finalMm = prev.mm; finalYyyy = prev.yyyy; }
             }
 
-            let baseQty = 0;
-            if (activeScan?.barcode === code) {
-                baseQty = accumulatedQty;
-            } else {
-                const scans = await db.scans.where('[sessionId+barcode]').equals([session.id, code]).toArray();
-                baseQty = scans.reduce((acc, s) => acc + s.quantity, 0);
-            }
-
-            const newScan = await sessionService.addScan(session.id, code, qtyToAdd, finalMm, finalYyyy);
+            // 1. ACTUALIZAR RASTREADOR SÍNCRONO (Elimina el "pegado" del contador)
+            const currentTotal = sessionCountsRef.current.get(code) || 0;
+            const newTotal = currentTotal + qtyToAdd;
+            sessionCountsRef.current.set(code, newTotal);
             sessionSeenSkus.current.add(code);
 
+            // 2. DISPARAR GUARDADO EN DB (Asíncrono con buffer)
+            const newScan = await sessionService.addScan(session.id, code, qtyToAdd, finalMm, finalYyyy);
+
+            // 3. ACTUALIZAR UI INSTANTÁNEAMENTE
             const prod = await db.products.get(code);
-            
             setActiveScan(newScan);
             setActiveProduct(prod || null);
-            setAccumulatedQty(baseQty + qtyToAdd);
+            setAccumulatedQty(newTotal);
 
+            // Feedback
             setFeedback('success');
             SoundFX.play(qtyToAdd > 1 ? 'increment' : 'success');
 
             const settings = getSettings();
             if (settings.ttsEnabled) {
-                SoundFX.speak(settings.ttsMode === 'product' ? (prod?.name || "Pendiente") : `${qtyToAdd}`);
+                SoundFX.speak(settings.ttsMode === 'product' ? (prod?.name || "Ok") : `${qtyToAdd}`);
             }
 
             updatePredictions(code);
@@ -125,9 +135,9 @@ export const useScanner = (
         } finally {
             isProcessingRef.current = false;
         }
-    }, [session.id, multiplier, updatePredictions, activeScan, accumulatedQty]);
+    }, [session.id, multiplier, updatePredictions]);
 
-    // --- PROCESAMIENTO SIN INTERRUPCIONES ---
+    // --- PROCESAMIENTO CON SOLICITUD DE FECHA ---
     const processScan = useCallback(async (code: string) => {
         if (isProcessingRef.current) return;
         const cleanCode = sanitizeBarcode(code);
@@ -138,7 +148,7 @@ export const useScanner = (
         try {
             let prod = await db.products.get(cleanCode);
 
-            // CORRECCIÓN ROBUSTA: Registro automático siempre activo en flujo de conteo
+            // Auto-registro de desconocidos
             if (!prod) {
                 const newProd: Product = { 
                     barcode: cleanCode, 
@@ -155,9 +165,8 @@ export const useScanner = (
 
             const isNewInSession = !sessionSeenSkus.current.has(cleanCode);
             
-            // Si el producto es nuevo en el bulto y tiene política de vencimientos, pedimos fecha.
-            // Si no, registramos directo. Nunca mostramos el formulario de producto (ProductForm).
-            if (isNewInSession && session.isVerifiedMode) {
+            // MANDATORIO: Si es la primera vez en el bulto, pedir fecha
+            if (isNewInSession) {
                 setStatus('expiring');
             } else {
                 await completeScan(cleanCode);
@@ -167,7 +176,7 @@ export const useScanner = (
             setFeedback('error'); 
             isProcessingRef.current = false;
         }
-    }, [session.id, session.isVerifiedMode, completeScan]);
+    }, [completeScan]);
 
     const handleUndo = useCallback(async () => {
         try {
@@ -176,19 +185,27 @@ export const useScanner = (
                 setFeedback('undo');
                 SoundFX.play('delete');
                 
+                // Actualizar rastreador local tras deshacer
                 const scans = await db.scans.where('sessionId').equals(session.id).toArray();
+                sessionCountsRef.current.clear();
+                sessionSeenSkus.current.clear();
+                
+                scans.forEach(s => {
+                    sessionSeenSkus.current.add(s.barcode);
+                    const curr = sessionCountsRef.current.get(s.barcode) || 0;
+                    sessionCountsRef.current.set(s.barcode, curr + s.quantity);
+                });
+
                 if (scans.length > 0) {
                     const last = scans.sort((a, b) => b.timestamp - a.timestamp)[0];
                     const prod = await db.products.get(last.barcode);
-                    const total = scans.filter(s => s.barcode === last.barcode).reduce((acc, curr) => acc + curr.quantity, 0);
                     setActiveScan(last);
                     setActiveProduct(prod || null);
-                    setAccumulatedQty(total);
+                    setAccumulatedQty(sessionCountsRef.current.get(last.barcode) || 0);
                 } else {
                     setActiveScan(null);
                     setActiveProduct(null);
                     setAccumulatedQty(0);
-                    sessionSeenSkus.current.clear();
                 }
 
                 setTimeout(() => setFeedback('idle'), 800);
@@ -198,7 +215,7 @@ export const useScanner = (
         }
     }, [session.id]);
 
-    // --- GESTOR DE ENTRADA RÁPIDA ---
+    // --- TECLADO ESCÁNER ---
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (status !== 'idle' && status !== 'manual') return;
@@ -234,27 +251,30 @@ export const useScanner = (
             handleManualSubmit: (e: any) => { e.preventDefault(); if (manualInput) processScan(manualInput); setManualInput(''); },
             handleDeleteScan: async (e: any, id: string) => { 
                 e.stopPropagation(); 
+                const scan = await db.scans.get(id);
+                if (!scan) return;
+                
                 await sessionService.deleteScan(id); 
                 SoundFX.play('delete'); 
                 
+                // Recalcular conteo local
+                const current = sessionCountsRef.current.get(scan.barcode) || 0;
+                sessionCountsRef.current.set(scan.barcode, Math.max(0, current - scan.quantity));
+
                 if (activeScan?.id === id) {
-                    const scans = await db.scans.where('sessionId').equals(session.id).toArray();
-                    if (scans.length > 0) {
-                        const last = scans.sort((a, b) => b.timestamp - a.timestamp)[0];
-                        const prod = await db.products.get(last.barcode);
-                        setActiveScan(last);
-                        setActiveProduct(prod || null);
-                        setAccumulatedQty(scans.filter(s => s.barcode === last.barcode).reduce((a, b) => a + b.quantity, 0));
-                    } else {
-                        setActiveScan(null);
-                        setActiveProduct(null);
-                        setAccumulatedQty(0);
-                    }
+                    setAccumulatedQty(sessionCountsRef.current.get(scan.barcode) || 0);
                 }
             },
             handleQuantityChange: async (id: string, current: number, delta: number) => { 
+                const scan = await db.scans.get(id);
+                if (!scan) return;
                 const newQty = Math.max(0, current + delta);
                 await sessionService.updateScanQuantity(id, newQty); 
+                
+                // Actualizar rastreador local
+                const barcodeTotal = sessionCountsRef.current.get(scan.barcode) || 0;
+                sessionCountsRef.current.set(scan.barcode, barcodeTotal + delta);
+
                 if (activeScan?.id === id) {
                    setAccumulatedQty(prev => prev + delta);
                 }

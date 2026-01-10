@@ -88,9 +88,12 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
                     </div>
                 </div>
 
-                {/* MAIN COUNTER (ALWAYS VISIBLE) */}
+                {/* MAIN COUNTER (SYNCED & ANIMATED) */}
                 <div className="relative flex flex-col items-center mt-6">
-                    <div className="text-[13rem] md:text-[18rem] leading-[0.7] font-black text-black tabular-nums tracking-tighter select-none scale-y-110 drop-shadow-sm transition-all duration-150 animate-in zoom-in-95">
+                    <div 
+                        key={currentQty} 
+                        className="text-[13rem] md:text-[18rem] leading-[0.7] font-black text-black tabular-nums tracking-tighter select-none scale-y-110 drop-shadow-sm transition-all duration-150 animate-in zoom-in-95"
+                    >
                         {currentQty}
                     </div>
                     <div className="text-[10px] md:text-sm font-black uppercase tracking-[0.5em] text-white bg-black px-10 py-2.5 rounded-full mt-12 shadow-lg">

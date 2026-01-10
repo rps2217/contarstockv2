@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home, Terminal } from 'lucide-react';
 import { logger } from '../services/logger';
 
@@ -16,9 +16,10 @@ interface State {
  * Capturador de errores global para la aplicación React.
  * Implementa la lógica de recuperación y reporte de fallos críticos.
  */
-// Fix: Use Component directly from react import to ensure proper inheritance visibility for TypeScript
-export class ErrorBoundary extends Component<Props, State> {
-  public override state: State = {
+// Fix: Explicitly use React.Component to ensure proper inheritance visibility for TypeScript
+export class ErrorBoundary extends React.Component<Props, State> {
+  // Fix: Removed override modifier because inheritance recognition was failing in this environment
+  public state: State = {
     hasError: false,
     error: null,
     errorInfo: null
@@ -32,7 +33,8 @@ export class ErrorBoundary extends Component<Props, State> {
     };
   }
 
-  public override componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  // Fix: Removed override modifier to satisfy compiler checks
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
     
     // Detectar fallos de carga de módulos ESM
@@ -50,7 +52,7 @@ export class ErrorBoundary extends Component<Props, State> {
         { stack: error.stack, componentStack: errorInfo.componentStack }
     ).catch(e => console.error("Failed to write crash log", e));
     
-    // Fix: Access setState via the member inherited from Component class
+    // Fix: setState is now correctly inherited from React.Component
     this.setState({ errorInfo });
   }
 
@@ -65,7 +67,8 @@ export class ErrorBoundary extends Component<Props, State> {
     }
   };
 
-  public override render(): ReactNode {
+  // Fix: Removed override modifier
+  public render(): ReactNode {
     if (this.state.hasError) {
       const errorMessage = this.state.error?.message || 'Error de inicialización del motor React';
 
@@ -114,7 +117,7 @@ export class ErrorBoundary extends Component<Props, State> {
       );
     }
 
-    // Fix: Access children from props inherited from Component to resolve TS error
+    // Fix: props and children are now correctly resolved via inheritance from React.Component
     return this.props.children;
   }
 }
