@@ -22,12 +22,12 @@ export const useScanner = (
     const [multiplier, setMultiplier] = useState(1);
     const [predictions, setPredictions] = useState<{barcode: string, name: string}[]>([]);
 
-    // --- EL CORAZÓN DE LA SOLUCIÓN: ESTADO ACTIVO LOCAL ---
+    // --- ESTADO ACTIVO LOCAL (OPTIMISTIC UI) ---
     const [activeScan, setActiveScan] = useState<ScanRecord | null>(null);
     const [activeProduct, setActiveProduct] = useState<Product | null>(null);
     const [accumulatedQty, setAccumulatedQty] = useState(0);
 
-    // --- PANTALLA DE PRODUCTO NUEVO ---
+    // --- PANTALLA DE CONTROL ---
     const [pendingScanCode, setPendingScanCode] = useState<string | null>(null);
     const [pendingProductName, setPendingProductName] = useState('PENDIENTE');
 
@@ -37,7 +37,7 @@ export const useScanner = (
     const keyBuffer = useRef('');
     const lastKeyTime = useRef(0);
 
-    // --- QUERIES DE FONDO (Para Historial y Metadatos) ---
+    // --- QUERIES REACTIVAS ---
     const recentScans = useLiveQuery(
         () => db.scans.where('sessionId').equals(session.id).reverse().sortBy('timestamp').then(res => res.slice(0, 15)), 
         [session.id]
@@ -45,7 +45,7 @@ export const useScanner = (
 
     const sessionMetadata = useLiveQuery(() => db.sessions.get(session.id), [session.id]);
 
-    // --- INICIALIZACIÓN DETERMINISTA ---
+    // --- INICIALIZACIÓN ---
     useEffect(() => {
         const initCache = async () => {
             const scans = await db.scans.where('sessionId').equals(session.id).toArray();
@@ -78,45 +78,40 @@ export const useScanner = (
         } catch (e) {}
     }, []);
 
-    // --- ACCIÓN CORE: REGISTRO FINAL CON ACTUALIZACIÓN OPTIMISTA ---
+    // --- ACCIÓN CORE: REGISTRO FINAL OPTIMISTA ---
     const completeScan = useCallback(async (code: string, mm?: number, yyyy?: number) => {
         try {
             const qtyToAdd = multiplier;
             let finalMm = mm, finalYyyy = yyyy;
             
-            // Herencia de fecha automática
             if (finalMm === undefined) {
                 const prev = await db.scans.where('[sessionId+barcode]').equals([session.id, code]).first();
                 if (prev) { finalMm = prev.mm; finalYyyy = prev.yyyy; }
             }
 
-            // DETERMINAR TOTAL ACTUAL (Antes de la DB para evitar colisión con el buffer)
             let baseQty = 0;
             if (activeScan?.barcode === code) {
                 baseQty = accumulatedQty;
             } else {
-                // Si cambiamos de producto, consultamos el acumulado previo en DB
                 const scans = await db.scans.where('[sessionId+barcode]').equals([session.id, code]).toArray();
                 baseQty = scans.reduce((acc, s) => acc + s.quantity, 0);
             }
 
-            // Guardar en DB (Asíncrono)
             const newScan = await sessionService.addScan(session.id, code, qtyToAdd, finalMm, finalYyyy);
             sessionSeenSkus.current.add(code);
 
-            // ACTUALIZACIÓN SÍNCRONA E INSTANTÁNEA
             const prod = await db.products.get(code);
             
             setActiveScan(newScan);
             setActiveProduct(prod || null);
-            setAccumulatedQty(baseQty + qtyToAdd); // ACTUALIZACIÓN OPTIMISTA
+            setAccumulatedQty(baseQty + qtyToAdd);
 
             setFeedback('success');
             SoundFX.play(qtyToAdd > 1 ? 'increment' : 'success');
 
             const settings = getSettings();
             if (settings.ttsEnabled) {
-                SoundFX.speak(settings.ttsMode === 'product' ? (prod?.name || "Ok") : `${qtyToAdd}`);
+                SoundFX.speak(settings.ttsMode === 'product' ? (prod?.name || "Pendiente") : `${qtyToAdd}`);
             }
 
             updatePredictions(code);
@@ -132,6 +127,7 @@ export const useScanner = (
         }
     }, [session.id, multiplier, updatePredictions, activeScan, accumulatedQty]);
 
+    // --- PROCESAMIENTO SIN INTERRUPCIONES ---
     const processScan = useCallback(async (code: string) => {
         if (isProcessingRef.current) return;
         const cleanCode = sanitizeBarcode(code);
@@ -141,33 +137,27 @@ export const useScanner = (
         
         try {
             let prod = await db.products.get(cleanCode);
-            const settings = getSettings();
 
+            // CORRECCIÓN ROBUSTA: Registro automático siempre activo en flujo de conteo
             if (!prod) {
-                if (settings.autoRegisterUnknown) {
-                    const newProd: Product = { 
-                        barcode: cleanCode, 
-                        name: 'PENDIENTE', 
-                        category: 'AUTO', 
-                        syncStatus: 'add' 
-                    };
-                    await productService.saveProduct(newProd);
-                    prod = newProd;
-                } else {
-                    setPendingScanCode(cleanCode);
-                    setPendingProductName('DESCONOCIDO');
-                    setStatus('product_form');
-                    isProcessingRef.current = false;
-                    return;
-                }
+                const newProd: Product = { 
+                    barcode: cleanCode, 
+                    name: 'PENDIENTE', 
+                    category: 'AUTO', 
+                    syncStatus: 'add' 
+                };
+                await productService.saveProduct(newProd);
+                prod = newProd;
             }
 
             setPendingProductName(prod.name);
+            setPendingScanCode(cleanCode);
 
             const isNewInSession = !sessionSeenSkus.current.has(cleanCode);
             
-            if (isNewInSession) {
-                setPendingScanCode(cleanCode);
+            // Si el producto es nuevo en el bulto y tiene política de vencimientos, pedimos fecha.
+            // Si no, registramos directo. Nunca mostramos el formulario de producto (ProductForm).
+            if (isNewInSession && session.isVerifiedMode) {
                 setStatus('expiring');
             } else {
                 await completeScan(cleanCode);
@@ -177,7 +167,7 @@ export const useScanner = (
             setFeedback('error'); 
             isProcessingRef.current = false;
         }
-    }, [session.id, completeScan]);
+    }, [session.id, session.isVerifiedMode, completeScan]);
 
     const handleUndo = useCallback(async () => {
         try {
@@ -186,7 +176,6 @@ export const useScanner = (
                 setFeedback('undo');
                 SoundFX.play('delete');
                 
-                // Re-sincronizar el Hero tras borrar
                 const scans = await db.scans.where('sessionId').equals(session.id).toArray();
                 if (scans.length > 0) {
                     const last = scans.sort((a, b) => b.timestamp - a.timestamp)[0];
@@ -209,13 +198,13 @@ export const useScanner = (
         }
     }, [session.id]);
 
-    // --- TECLADO ESCÁNER ---
+    // --- GESTOR DE ENTRADA RÁPIDA ---
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (status !== 'idle' && status !== 'manual') return;
             if ((e.target as HTMLElement).tagName === 'INPUT') return;
             const now = Date.now();
-            if (now - lastKeyTime.current > 40) keyBuffer.current = '';
+            if (now - lastKeyTime.current > 45) keyBuffer.current = '';
             lastKeyTime.current = now;
             if (e.key === 'Enter') {
                 e.preventDefault();
