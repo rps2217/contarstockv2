@@ -23,7 +23,6 @@ export const useScanner = (
     const [predictions, setPredictions] = useState<{barcode: string, name: string}[]>([]);
 
     // --- EL CORAZÓN DE LA SOLUCIÓN: ESTADO ACTIVO LOCAL ---
-    // Este estado es síncrono y manda sobre la UI Hero
     const [activeScan, setActiveScan] = useState<ScanRecord | null>(null);
     const [activeProduct, setActiveProduct] = useState<Product | null>(null);
     const [accumulatedQty, setAccumulatedQty] = useState(0);
@@ -52,7 +51,6 @@ export const useScanner = (
             const scans = await db.scans.where('sessionId').equals(session.id).toArray();
             scans.forEach(s => sessionSeenSkus.current.add(s.barcode));
             
-            // Recuperar el registro más reciente real para el Hero
             if (scans.length > 0) {
                 const last = scans.sort((a, b) => b.timestamp - a.timestamp)[0];
                 const prod = await db.products.get(last.barcode);
@@ -80,7 +78,7 @@ export const useScanner = (
         } catch (e) {}
     }, []);
 
-    // --- ACCIÓN CORE: REGISTRO FINAL ---
+    // --- ACCIÓN CORE: REGISTRO FINAL CON ACTUALIZACIÓN OPTIMISTA ---
     const completeScan = useCallback(async (code: string, mm?: number, yyyy?: number) => {
         try {
             const qtyToAdd = multiplier;
@@ -92,19 +90,26 @@ export const useScanner = (
                 if (prev) { finalMm = prev.mm; finalYyyy = prev.yyyy; }
             }
 
-            // Guardar en DB
+            // DETERMINAR TOTAL ACTUAL (Antes de la DB para evitar colisión con el buffer)
+            let baseQty = 0;
+            if (activeScan?.barcode === code) {
+                baseQty = accumulatedQty;
+            } else {
+                // Si cambiamos de producto, consultamos el acumulado previo en DB
+                const scans = await db.scans.where('[sessionId+barcode]').equals([session.id, code]).toArray();
+                baseQty = scans.reduce((acc, s) => acc + s.quantity, 0);
+            }
+
+            // Guardar en DB (Asíncrono)
             const newScan = await sessionService.addScan(session.id, code, qtyToAdd, finalMm, finalYyyy);
             sessionSeenSkus.current.add(code);
 
-            // ACTUALIZACIÓN SÍNCRONA DE ESTADO ACTIVO
+            // ACTUALIZACIÓN SÍNCRONA E INSTANTÁNEA
             const prod = await db.products.get(code);
-            const allScansOfThisProduct = await db.scans.where('[sessionId+barcode]').equals([session.id, code]).toArray();
-            const totalUpdated = allScansOfThisProduct.reduce((a, b) => a + b.quantity, 0) + (newScan.synced === 0 ? 0 : 0); 
-            // Nota: recalculamos total desde la DB para máxima precisión
             
             setActiveScan(newScan);
             setActiveProduct(prod || null);
-            setAccumulatedQty(allScansOfThisProduct.reduce((a, b) => a + b.quantity, 0) || qtyToAdd);
+            setAccumulatedQty(baseQty + qtyToAdd); // ACTUALIZACIÓN OPTIMISTA
 
             setFeedback('success');
             SoundFX.play(qtyToAdd > 1 ? 'increment' : 'success');
@@ -119,14 +124,14 @@ export const useScanner = (
             setStatus('idle');
             setTimeout(() => setFeedback('idle'), 400); 
         } catch (err) { 
+            console.error("Scan Error:", err);
             setFeedback('error'); 
             SoundFX.play('error'); 
         } finally {
             isProcessingRef.current = false;
         }
-    }, [session.id, multiplier, updatePredictions]);
+    }, [session.id, multiplier, updatePredictions, activeScan, accumulatedQty]);
 
-    // --- ACCIÓN CORE: PROCESAMIENTO DETERMINISTA ---
     const processScan = useCallback(async (code: string) => {
         if (isProcessingRef.current) return;
         const cleanCode = sanitizeBarcode(code);
@@ -138,7 +143,6 @@ export const useScanner = (
             let prod = await db.products.get(cleanCode);
             const settings = getSettings();
 
-            // REGISTRO AUTOMÁTICO 'PENDIENTE'
             if (!prod) {
                 if (settings.autoRegisterUnknown) {
                     const newProd: Product = { 
@@ -160,13 +164,11 @@ export const useScanner = (
 
             setPendingProductName(prod.name);
 
-            // Determinación de Flujo: ¿Es la primera vez en este bulto?
             const isNewInSession = !sessionSeenSkus.current.has(cleanCode);
             
             if (isNewInSession) {
                 setPendingScanCode(cleanCode);
                 setStatus('expiring');
-                // Bloqueo se mantiene hasta que se complete o cancele la fecha
             } else {
                 await completeScan(cleanCode);
             }
@@ -245,7 +247,7 @@ export const useScanner = (
                 e.stopPropagation(); 
                 await sessionService.deleteScan(id); 
                 SoundFX.play('delete'); 
-                // Actualizar Hero si eliminamos el actual
+                
                 if (activeScan?.id === id) {
                     const scans = await db.scans.where('sessionId').equals(session.id).toArray();
                     if (scans.length > 0) {
@@ -264,7 +266,6 @@ export const useScanner = (
             handleQuantityChange: async (id: string, current: number, delta: number) => { 
                 const newQty = Math.max(0, current + delta);
                 await sessionService.updateScanQuantity(id, newQty); 
-                // Si el item modificado es el que está en el Hero, actualizar Hero
                 if (activeScan?.id === id) {
                    setAccumulatedQty(prev => prev + delta);
                 }
