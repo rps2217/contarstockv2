@@ -9,10 +9,7 @@ interface ScannerHeroProps {
     accumulatedQty?: number;
     feedback: 'idle' | 'success' | 'error' | 'undo';
     onRegisterPending: () => void;
-    onToggleIncident: (e: React.MouseEvent, id: string, status: boolean) => void;
     expectedItem?: ExpectedItem | null;
-    predictions?: {barcode: string, name: string}[];
-    onPredictionClick?: (barcode: string) => void;
 }
 
 export const ScannerHero: React.FC<ScannerHeroProps> = memo(({ 
@@ -21,115 +18,85 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
     accumulatedQty = 0,
     feedback, 
     onRegisterPending, 
-    expectedItem,
-    predictions = [],
-    onPredictionClick
+    expectedItem
 }) => {
+    // --- ESTADO: DESHACER ---
     if (feedback === 'undo') {
         return (
-            <div className="flex flex-col items-center justify-center h-full">
-                <div className="p-8 md:p-12 bg-slate-900 rounded-[2rem] mb-6 border-4 md:border-8 border-slate-700 animate-in zoom-in">
-                    <RotateCcw className="w-16 h-16 md:w-24 md:h-24 text-white" />
+            <div className="flex flex-col items-center justify-center animate-in zoom-in duration-300">
+                <div className="p-12 bg-slate-900 rounded-full mb-6 border-8 border-slate-700">
+                    <RotateCcw className="w-20 h-20 text-white" />
                 </div>
-                <h2 className="text-3xl md:text-4xl font-black text-black uppercase tracking-tighter">BORRADO</h2>
+                <h2 className="text-3xl font-black text-black uppercase tracking-tighter">BORRADO</h2>
             </div>
         );
     }
 
+    // --- ESTADO: ACTIVO ---
     if (lastScan) {
-        const isUnknown = activeProduct?.name === 'PENDIENTE' || !activeProduct;
-        const currentQty = accumulatedQty;
-        const targetQty = expectedItem?.expectedQty || 0;
-        const isOverCount = expectedItem && currentQty > targetQty;
-        const isTargetReached = expectedItem && currentQty === targetQty;
+        const isUnknown = !activeProduct || activeProduct.name === 'PENDIENTE';
+        const target = expectedItem?.expectedQty || 0;
+        const diff = accumulatedQty - target;
 
         return (
-            <div className="w-full flex flex-col items-center justify-center px-4 py-6 animate-in fade-in duration-300">
-                {/* STATUS BAR (TOP) */}
-                <div className="mb-6 h-14 flex items-center justify-center">
-                    {isOverCount ? (
-                        <div className="bg-red-700 text-white px-8 py-3 rounded-2xl font-black text-lg border-4 border-red-950 flex items-center gap-3 animate-pulse uppercase shadow-xl">
-                            EXCESO: {currentQty - targetQty}
+            <div className="w-full flex flex-col items-center justify-center px-4 animate-in fade-in duration-300">
+                {/* ALERT BAR */}
+                <div className="mb-10 h-12">
+                    {expectedItem && (
+                        <div className={`px-6 py-2 rounded-2xl font-black text-sm border-4 flex items-center gap-2 shadow-lg animate-in slide-in-from-top-4 ${
+                            diff > 0 ? 'bg-red-600 border-red-950 text-white animate-pulse' :
+                            diff === 0 ? 'bg-emerald-600 border-emerald-950 text-white' :
+                            'bg-blue-700 border-blue-950 text-white'
+                        }`}>
+                            {diff > 0 ? `SOBRAN: ${diff}` : diff === 0 ? 'OBJETIVO CUMPLIDO' : `FALTAN: ${Math.abs(diff)}`}
                         </div>
-                    ) : isTargetReached ? (
-                        <div className="bg-emerald-600 text-white px-8 py-3 rounded-2xl font-black text-lg border-4 border-emerald-950 flex items-center gap-3 uppercase shadow-xl">
-                            <CheckCircle className="w-6 h-6" /> LISTO
-                        </div>
-                    ) : expectedItem ? (
-                        <div className="bg-blue-700 text-white px-8 py-3 rounded-2xl font-black text-lg border-4 border-blue-950 flex items-center gap-3 uppercase tracking-tighter shadow-xl">
-                            FALTAN: {targetQty - currentQty}
-                        </div>
-                    ) : isUnknown ? (
-                        <div className="bg-amber-500 text-black px-6 py-2 rounded-xl font-black text-xs border-2 border-black flex items-center gap-2 uppercase tracking-widest animate-in slide-in-from-top-2">
+                    )}
+                    {isUnknown && !expectedItem && (
+                        <div className="bg-amber-500 text-black px-5 py-2 rounded-xl font-black text-[10px] border-2 border-black uppercase tracking-widest flex items-center gap-2">
                             <AlertCircle className="w-4 h-4" /> Producto Nuevo Detectado
                         </div>
-                    ) : null}
+                    )}
                 </div>
 
-                {/* PRODUCT INFO */}
-                <div className="text-center w-full max-w-2xl mb-2">
-                    <div className="flex flex-col items-center gap-2">
-                        <h1 className={`text-3xl md:text-5xl font-black leading-[1.1] uppercase px-4 break-words hyphens-auto transition-colors ${isUnknown ? 'text-slate-400 italic' : 'text-black'}`}>
-                            {activeProduct?.name || 'DESCONOCIDO'}
-                        </h1>
-                        
+                {/* PRODUCT IDENTIFIER */}
+                <div className="text-center max-w-2xl mb-8">
+                    <h1 className={`text-4xl md:text-5xl font-black uppercase leading-tight mb-4 tracking-tight ${isUnknown ? 'text-slate-400 italic' : 'text-black'}`}>
+                        {activeProduct?.name || 'DESCONOCIDO'}
+                    </h1>
+                    
+                    <div className="inline-flex flex-col items-center">
+                        <span className="font-mono font-black text-blue-800 bg-blue-50 px-6 py-2 rounded-xl border-2 border-blue-200 text-xl tracking-widest">
+                            {lastScan.barcode}
+                        </span>
                         {isUnknown && (
-                            <button 
-                                onClick={onRegisterPending}
-                                className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-md mt-2"
-                            >
-                                <Pencil className="w-3.5 h-3.5" /> Identificar Código
+                            <button onClick={onRegisterPending} className="mt-4 flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all">
+                                <Pencil className="w-3 h-3" /> Identificar Item
                             </button>
                         )}
                     </div>
-
-                    <div className="text-lg md:text-xl font-mono font-black text-blue-800 mt-6 bg-blue-50 px-6 py-2 rounded-xl inline-block border-2 border-blue-200 uppercase tracking-widest shadow-sm">
-                        {lastScan.barcode}
-                    </div>
                 </div>
 
-                {/* MAIN COUNTER (SYNCED & ANIMATED) */}
-                <div className="relative flex flex-col items-center mt-6">
+                {/* THE BIG COUNTER */}
+                <div className="relative flex flex-col items-center">
                     <div 
-                        key={currentQty} 
-                        className="text-[13rem] md:text-[18rem] leading-[0.7] font-black text-black tabular-nums tracking-tighter select-none scale-y-110 drop-shadow-sm transition-all duration-150 animate-in zoom-in-95"
+                        key={accumulatedQty} 
+                        className="text-[14rem] md:text-[20rem] leading-[0.75] font-black text-black tabular-nums tracking-tighter select-none animate-in zoom-in-95 duration-150"
                     >
-                        {currentQty}
+                        {accumulatedQty}
                     </div>
-                    <div className="text-[10px] md:text-sm font-black uppercase tracking-[0.5em] text-white bg-black px-10 py-2.5 rounded-full mt-12 shadow-lg">
-                        UNIDADES
+                    <div className="text-[10px] md:text-xs font-black uppercase tracking-[0.5em] text-white bg-black px-12 py-3 rounded-full mt-14 shadow-xl">
+                        Unidades Registradas
                     </div>
                 </div>
-
-                {/* PREDICTIONS (IA) */}
-                {predictions.length > 0 && (
-                    <div className="mt-16 w-full max-w-lg animate-in slide-in-from-bottom-4">
-                        <div className="flex items-center gap-2 mb-4 px-6">
-                            <Sparkles className="w-4 h-4 text-indigo-500" />
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sugerencias IA</span>
-                        </div>
-                        <div className="flex gap-3 overflow-x-auto no-scrollbar px-6">
-                            {predictions.map(p => (
-                                <button 
-                                    key={p.barcode}
-                                    onClick={() => onPredictionClick?.(p.barcode)}
-                                    className="bg-white border-2 border-slate-200 p-4 rounded-2xl min-w-[160px] text-left hover:border-indigo-500 transition-all active:scale-95 shadow-sm"
-                                >
-                                    <div className="text-[9px] font-black text-indigo-600 uppercase mb-1.5 truncate">{p.name}</div>
-                                    <div className="text-xs font-mono font-bold text-slate-900">{p.barcode}</div>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                )}
             </div>
         );
     }
 
+    // --- ESTADO: IDLE ---
     return (
-        <div className="flex-1 flex flex-col items-center justify-center py-20 opacity-10 animate-pulse">
-            <Zap className="w-24 h-24 md:w-32 md:h-32 text-blue-600 mb-8" />
-            <h2 className="text-4xl md:text-6xl font-black uppercase tracking-widest text-black italic">LISTO</h2>
+        <div className="flex flex-col items-center justify-center opacity-10 animate-pulse">
+            <Zap className="w-32 h-32 text-blue-600 mb-6" />
+            <h2 className="text-4xl font-black uppercase tracking-widest text-black">ESPERANDO</h2>
         </div>
     );
 });

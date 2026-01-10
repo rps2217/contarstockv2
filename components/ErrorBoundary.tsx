@@ -1,3 +1,4 @@
+
 import React, { ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home, Terminal } from 'lucide-react';
 import { logger } from '../services/logger';
@@ -16,9 +17,8 @@ interface State {
  * Capturador de errores global para la aplicación React.
  * Implementa la lógica de recuperación y reporte de fallos críticos.
  */
-// Fix: Explicitly use React.Component to ensure proper inheritance visibility for TypeScript
+// FIX: Extending React.Component explicitly to resolve 'setState' and 'props' type recognition issues
 export class ErrorBoundary extends React.Component<Props, State> {
-  // Fix: Removed override modifier because inheritance recognition was failing in this environment
   public state: State = {
     hasError: false,
     error: null,
@@ -33,7 +33,6 @@ export class ErrorBoundary extends React.Component<Props, State> {
     };
   }
 
-  // Fix: Removed override modifier to satisfy compiler checks
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
     
@@ -52,7 +51,6 @@ export class ErrorBoundary extends React.Component<Props, State> {
         { stack: error.stack, componentStack: errorInfo.componentStack }
     ).catch(e => console.error("Failed to write crash log", e));
     
-    // Fix: setState is now correctly inherited from React.Component
     this.setState({ errorInfo });
   }
 
@@ -67,7 +65,6 @@ export class ErrorBoundary extends React.Component<Props, State> {
     }
   };
 
-  // Fix: Removed override modifier
   public render(): ReactNode {
     if (this.state.hasError) {
       const errorMessage = this.state.error?.message || 'Error de inicialización del motor React';
@@ -117,7 +114,6 @@ export class ErrorBoundary extends React.Component<Props, State> {
       );
     }
 
-    // Fix: props and children are now correctly resolved via inheritance from React.Component
     return this.props.children;
   }
 }
