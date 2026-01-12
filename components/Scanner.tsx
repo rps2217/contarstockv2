@@ -1,5 +1,5 @@
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { List, Sparkles } from 'lucide-react';
 import { CountingSession, ConsolidatedItem } from '../types';
 import { useScanner } from '../hooks/useScanner';
@@ -28,6 +28,41 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
   const [showRecentScansMobile, setShowRecentScansMobile] = useState(false);
   const [isVisionOpen, setIsVisionOpen] = useState(false);
   const [consolidatedItems, setConsolidatedItems] = useState<ConsolidatedItem[]>([]);
+
+  // Refs para motor de captura HID (Escáner físico)
+  const scanBuffer = useRef('');
+  const lastKeyTime = useRef(0);
+
+  // EFECTO: CAPTURA DE ESCÁNER FÍSICO (MODO HID)
+  useEffect(() => {
+    // Solo escuchar si no hay modales de entrada manual o formularios abiertos
+    const isInputActive = state.status === 'manual' || state.status === 'product_form' || state.status === 'camera';
+    if (isInputActive) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+        // Evitar capturar si el foco está accidentalmente en un input real
+        if ((e.target as HTMLElement).tagName === 'INPUT') return;
+
+        const now = Date.now();
+        // Los escáneres disparan ráfagas muy rápidas (<50ms entre teclas)
+        if (now - lastKeyTime.current > 50) {
+            scanBuffer.current = '';
+        }
+        lastKeyTime.current = now;
+
+        if (e.key === 'Enter') {
+            if (scanBuffer.current.length >= 2) {
+                actions.handleExternalScan(scanBuffer.current);
+            }
+            scanBuffer.current = '';
+        } else if (e.key.length === 1) {
+            scanBuffer.current += e.key;
+        }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [state.status, actions]);
 
   const handleOpenVision = async () => {
       const scans = await aggregateScans(data.recentScans || []);
