@@ -12,7 +12,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   ttsEnabled: false, 
   ttsMode: 'count',  
   speedometerEnabled: false, 
-  controlTowerEnabled: false, 
+  // Fix: Removed controlTowerEnabled as it does not exist in AppSettings type
   confirmDelete: true,
   autoRegisterUnknown: false, 
   lowPerformanceMode: false,

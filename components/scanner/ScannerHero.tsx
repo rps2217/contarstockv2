@@ -1,6 +1,6 @@
 
 import React, { memo } from 'react';
-import { RotateCcw, ShieldCheck, History } from 'lucide-react';
+import { RotateCcw, ShieldCheck, History, AlertCircle } from 'lucide-react';
 import { ScanRecord, Product } from '../../types';
 
 interface ScannerHeroProps {
@@ -31,39 +31,42 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
 
     if (lastScan) {
         const isUnknown = !activeProduct || activeProduct.name === 'PENDIENTE';
-        const isMasterMatch = activeProduct && activeProduct.name !== 'PENDIENTE';
         
         return (
             <div className="w-full flex flex-col items-center justify-center px-4 animate-in fade-in duration-300">
-                <div className="mb-8">
-                    {isMasterMatch ? (
-                        <div className="bg-emerald-50 text-emerald-700 px-5 py-2 rounded-full font-black text-[9px] flex items-center gap-2 shadow-sm border border-emerald-100 uppercase tracking-widest">
-                            <ShieldCheck className="w-4 h-4" /> SKU Validado
+                <div className="mb-10">
+                    {!isUnknown ? (
+                        <div className="bg-emerald-50 text-emerald-700 px-6 py-2.5 rounded-full font-black text-[10px] flex items-center gap-2 shadow-sm border border-emerald-100 uppercase tracking-[0.2em]">
+                            <ShieldCheck className="w-4 h-4" /> SKU Verificado
                         </div>
                     ) : (
                         <button 
                             onClick={onRegisterPending}
-                            className="bg-rose-50 text-rose-600 px-5 py-2 rounded-full font-black text-[9px] flex items-center gap-2 shadow-sm border border-rose-100 uppercase tracking-widest animate-pulse"
+                            className="bg-orange-50 text-orange-600 px-6 py-2.5 rounded-full font-black text-[10px] flex items-center gap-2 shadow-lg border border-orange-200 uppercase tracking-[0.2em] animate-pulse"
                         >
-                             Item Desconocido - Toca para Registrar
+                             <AlertCircle className="w-4 h-4" /> Registrar Ítem
                         </button>
                     )}
                 </div>
 
-                <div className="text-center max-w-2xl mb-6">
-                    <h1 className="text-5xl md:text-6xl font-black uppercase leading-tight mb-2 tracking-tighter text-black">
-                        {activeProduct?.name || 'ÍTEM NUEVO'}
+                <div className="text-center max-w-3xl mb-8">
+                    <h1 className="text-5xl md:text-7xl font-black uppercase leading-[1] mb-3 tracking-tighter text-slate-900">
+                        {activeProduct?.name || 'PRODUCTO NUEVO'}
                     </h1>
-                    <span className="font-mono font-bold text-blue-600 text-lg tracking-[0.2em] opacity-60">
+                    <div className="inline-block font-mono font-black text-blue-600 text-2xl tracking-[0.3em] bg-blue-50 px-6 py-1.5 rounded-xl border border-blue-100">
                         {lastScan.barcode}
-                    </span>
+                    </div>
                 </div>
 
-                <div className="relative flex flex-col items-center mt-4">
-                    <div key={accumulatedQty} className="text-[14rem] md:text-[20rem] leading-none font-black text-black tabular-nums tracking-tighter select-none drop-shadow-md animate-in zoom-in duration-200">
+                <div className="relative flex flex-col items-center">
+                    {/* El contador ahora vibra visualmente al cambiar */}
+                    <div 
+                        key={accumulatedQty} 
+                        className="text-[16rem] md:text-[24rem] leading-none font-black text-black tabular-nums tracking-tighter select-none drop-shadow-xl animate-in zoom-in duration-150"
+                    >
                         {accumulatedQty}
                     </div>
-                    <div className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-300 mt-4 italic">
+                    <div className="text-[11px] font-black uppercase tracking-[0.6em] text-slate-300 mt-2 italic">
                         Unidades en Bulto
                     </div>
                 </div>
@@ -73,11 +76,11 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
 
     return (
         <div className="flex flex-col items-center justify-center py-20 animate-in fade-in duration-700">
-            <div className="relative mb-10 opacity-10">
-                <History className="w-48 h-48 text-slate-900" />
+            <div className="relative mb-12 opacity-5">
+                <History className="w-64 h-64 text-slate-900" />
             </div>
-            <h2 className="text-5xl font-black uppercase tracking-[0.2em] text-slate-200 italic leading-none text-center">
-                LISTO PARA<br/>ESCANEAR
+            <h2 className="text-6xl font-black uppercase tracking-[0.1em] text-slate-200 italic leading-none text-center">
+                LISTO PARA<br/>RECONOCER
             </h2>
         </div>
     );

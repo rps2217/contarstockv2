@@ -75,7 +75,6 @@ export interface AppSettings {
   ttsEnabled: boolean; 
   ttsMode: 'product' | 'count'; 
   speedometerEnabled: boolean; 
-  controlTowerEnabled: boolean; 
   confirmDelete: boolean;
   autoRegisterUnknown: boolean; 
   lowPerformanceMode: boolean;
@@ -85,43 +84,51 @@ export interface AppSettings {
   mobileNavConfig?: ViewState[]; 
 }
 
-export interface SyncJob {
-  id?: number;
-  session: CountingSession;
-  items: ConsolidatedItem[];
-  createdAt: number;
-  status: 'pending' | 'failed';
-  retryCount: number;
-  lastError?: string;
-}
-
 export interface ExpectedOrder {
   id: string;
-  internalId: string; 
-  items: { barcode: string; name: string; expectedQty: number }[];
+  internalId: string;
+  items: ExpectedItem[];
   totalExpectedUnits: number;
   totalExpectedSKUs: number;
   importedAt: number;
 }
 
-export interface AliasSuggestion {
-    physicalBarcode: string;
-    physicalName: string;
-    expectedBarcode: string;
-    expectedName: string;
-    quantity: number;
-}
-
 export interface MatchResult {
   expectedOrder: ExpectedOrder;
-  matchScore: number; 
+  matchScore: number;
   status: 'exact' | 'partial' | 'mismatch';
   details: {
     barcode: string;
     name: string;
     physicalQty: number;
     expectedQty: number;
-    difference: number; 
+    difference: number;
   }[];
-  potentialAliases: AliasSuggestion[]; 
+  potentialAliases: AliasSuggestion[];
+}
+
+export interface AliasSuggestion {
+  physicalBarcode: string;
+  physicalName: string;
+  expectedBarcode: string;
+  expectedName: string;
+  quantity: number;
+}
+
+export interface SyncJob {
+  id?: number;
+  status: 'pending' | 'processing' | 'failed' | 'success';
+  createdAt: number;
+  retryCount: number;
+  payload?: any;
+  type?: string;
+}
+
+// Added SyncConflict interface to support conflict detection in syncManager.ts
+export interface SyncConflict {
+  barcode: string;
+  productName: string;
+  localQuantity: number;
+  cloudQuantity: number;
+  timestamp: number;
 }
