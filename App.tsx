@@ -1,16 +1,17 @@
 
 import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { Home, Database, History, Layers, Container, Fingerprint, Cloud, Settings as SettingsIcon } from 'lucide-react';
+import { Home, Database, History, Layers, Container, Fingerprint, Cloud, Settings as SettingsIcon, ShieldAlert } from 'lucide-react';
 import { useAppStore } from './store/useAppStore';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { NetworkStatus } from './components/NetworkStatus';
 import { InstallPrompt } from './components/InstallPrompt';
 import { Sidebar } from './components/Sidebar';
 import { runFullMetadataRepair } from './components/maintenance/RecalculateTool';
+import { runFullSystemAudit } from './services/businessLogic.test';
 import { logger } from './services/logger';
 
-// Lazy imports con rutas absolutas locales
+// Lazy imports locales
 const Dashboard = lazy(() => import('./components/Dashboard.tsx'));
 const Reports = lazy(() => import('./components/Reports.tsx'));
 const DatabaseView = lazy(() => import('./components/Database.tsx'));
@@ -22,79 +23,59 @@ const Settings = lazy(() => import('./components/Settings.tsx'));
 const CountingView = lazy(() => import('./components/CountingView.tsx'));
 const AuditDashboard = lazy(() => import('./components/AuditDashboard.tsx'));
 
-const NAV_REGISTRY: Record<string, { label: string, icon: any, path: string }> = {
-  dashboard: { label: 'INICIO', icon: Home, path: '/dashboard' },
-  reports: { label: 'HISTORIAL', icon: History, path: '/reports' },
-  database: { label: 'DATOS', icon: Database, path: '/database' },
-  sync: { label: 'NUBE', icon: Cloud, path: '/sync' },
-  consolidated: { label: 'CONSOL.', icon: Layers, path: '/consolidated' },
-  reception: { label: 'RECEP.', icon: Container, path: '/reception' },
-  conciliator: { label: 'DETECT.', icon: Fingerprint, path: '/conciliator' },
-  settings: { label: 'AJUSTES', icon: SettingsIcon, path: '/settings' }
-};
-
-const MobileNav = ({ currentView }: { currentView: string }) => {
-  const navigate = useNavigate();
-  const { settings } = useAppStore();
-  const activeNavKeys = settings.mobileNavConfig && settings.mobileNavConfig.length > 0 ? settings.mobileNavConfig : ['dashboard', 'reports', 'database', 'sync'];
-  const navItems = activeNavKeys.map(key => ({ key, ...NAV_REGISTRY[key] })).filter(item => !!item.label);
-
-  return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-xl border-t border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.4)] pb-safe">
-        <div className="flex justify-around items-center h-20 px-4">
-            {navItems.map((item) => {
-                const isActive = currentView === item.key;
-                const Icon = item.icon;
-                return (
-                    <button key={item.key} onClick={() => navigate(item.path)} className={`flex flex-col items-center justify-center flex-1 h-full gap-1 transition-all ${isActive ? 'text-white' : 'text-slate-500'}`}>
-                        <div className={`p-2 rounded-[1.2rem] transition-all duration-300 ${isActive ? 'bg-blue-600 shadow-lg shadow-blue-900/40' : ''}`}>
-                            <Icon className={`w-6 h-6 ${isActive ? 'stroke-[3px]' : 'stroke-2'}`} />
-                        </div>
-                        <span className={`text-[8px] font-black uppercase tracking-widest ${isActive ? 'opacity-100' : 'opacity-40'}`}>{item.label}</span>
-                    </button>
-                );
-            })}
-        </div>
-    </nav>
-  );
-};
-
 const AppContent = () => {
   const location = useLocation();
   const { settings } = useAppStore();
-  const [isHydrated, setIsHydrated] = useState(false);
+  const [bootState, setBootState] = useState<'testing' | 'ready' | 'failed'>('testing');
+  const [failMsg, setFailMsg] = useState('');
+  
   const currentView = location.pathname.split('/')[1] || 'dashboard';
   const isScanningMode = location.pathname.startsWith('/counting/');
 
   useEffect(() => {
-      const bootRepair = async () => {
+      const bootSequence = async () => {
           try {
+              // 1. Auditoría de Regresión en tiempo real
+              const audit = await runFullSystemAudit();
+              if (audit.failed > 0) {
+                  setFailMsg("Se detectó una inconsistencia en el motor lógico. Reinicie la app.");
+                  setBootState('failed');
+                  return;
+              }
+              
+              // 2. Reparación de metadatos (Self-healing)
               await runFullMetadataRepair();
-              setIsHydrated(true);
+              
+              setBootState('ready');
+              logger.success('SYSTEM', 'Arranque seguro completado (0 regresiones detectadas).');
           } catch (e) {
-              setIsHydrated(true);
+              setBootState('failed');
           }
       };
-      bootRepair();
+      bootSequence();
   }, []);
 
-  if (!isHydrated) return (
-      <div className="h-screen w-full bg-[#0f172a] flex items-center justify-center">
-          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+  if (bootState === 'testing') return (
+      <div className="h-screen w-full bg-[#0f172a] flex flex-col items-center justify-center text-white">
+          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-6"></div>
+          <span className="text-[10px] font-black uppercase tracking-[0.3em] animate-pulse">Ejecutando Escudo de Regresión...</span>
+      </div>
+  );
+
+  if (bootState === 'failed') return (
+      <div className="h-screen w-full bg-rose-950 flex flex-col items-center justify-center p-8 text-center text-white">
+          <ShieldAlert className="w-20 h-20 text-rose-500 mb-6" />
+          <h2 className="text-2xl font-black uppercase mb-2">Bloqueo de Seguridad</h2>
+          <p className="text-rose-200 text-sm max-w-xs">{failMsg || "Error crítico en el motor de datos."}</p>
+          <button onClick={() => window.location.reload()} className="mt-8 bg-white text-rose-900 px-8 py-4 rounded-2xl font-black uppercase text-xs">Reintentar</button>
       </div>
   );
 
   const theme = settings.theme || 'light';
   const isDarkTheme = ['dark', 'oled', 'navy', 'contrast'].includes(theme);
 
-  let bgClass = 'bg-slate-50';
-  if (theme === 'dark') bgClass = 'bg-slate-950';
-  else if (theme === 'oled' || theme === 'contrast') bgClass = 'bg-black';
-  else if (theme === 'navy') bgClass = 'bg-[#0f172a]';
-  else if (theme === 'warm') bgClass = 'bg-orange-50';
-
   return (
-    <div className={`w-full h-full flex flex-col transition-colors duration-500 theme-${theme} ${isDarkTheme ? 'dark' : ''} ${bgClass}`}>
+    <div className={`w-full h-full flex flex-col transition-colors duration-500 theme-${theme} ${isDarkTheme ? 'dark' : ''}`}>
       <NetworkStatus />
       
       <div className="flex-1 flex overflow-hidden relative">
@@ -102,12 +83,7 @@ const AppContent = () => {
         
         <main className={`flex-1 relative overflow-hidden transition-all duration-300 ${!isScanningMode ? 'md:pl-64' : ''}`}>
           <ErrorBoundary>
-            <Suspense fallback={
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/5 z-50">
-                    <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                    <span className="mt-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Iniciando...</span>
-                </div>
-            }>
+            <Suspense fallback={<div className="h-full w-full flex items-center justify-center"><div className="w-10 h-10 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>}>
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/dashboard" element={<Dashboard />} />
@@ -126,18 +102,15 @@ const AppContent = () => {
         </main>
       </div>
       
-      {!isScanningMode && <MobileNav currentView={currentView} />}
       <InstallPrompt />
     </div>
   );
 };
 
-const App = () => {
-  return (
-    <Router>
-      <AppContent />
-    </Router>
-  );
-};
+const App = () => (
+  <Router>
+    <AppContent />
+  </Router>
+);
 
 export default App;
