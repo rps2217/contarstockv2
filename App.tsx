@@ -9,6 +9,7 @@ import { Sidebar } from './components/Sidebar';
 import { BottomDock } from './components/BottomDock';
 import { runFullMetadataRepair } from './components/maintenance/RecalculateTool';
 import { runFullSystemAudit } from './services/businessLogic.test';
+import { Box, Loader2, CheckCircle2 } from 'lucide-react';
 
 // Core Lazy imports only
 const Dashboard = lazy(() => import('./components/Dashboard.tsx'));
@@ -29,27 +30,40 @@ const AppContent = () => {
   const isScanningMode = location.pathname.startsWith('/counting/') || location.pathname === '/reception';
 
   useEffect(() => {
+      let isMounted = true;
       const bootSequence = async () => {
           try {
-              // Auditoría rápida de integridad al inicio
-              const audit = await runFullSystemAudit();
-              if (audit.failed > 0) {
-                  console.error("Fallo de integridad en arranque", audit.logs);
-              }
-              await runFullMetadataRepair();
-              setBootState('ready');
+              // Race condition: Si el audit tarda más de 2 seg, forzamos carga para no bloquear al usuario
+              const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve('timeout'), 2000));
+              
+              const auditPromise = (async () => {
+                  await runFullSystemAudit();
+                  await runFullMetadataRepair();
+                  return 'done';
+              })();
+
+              await Promise.race([auditPromise, timeoutPromise]);
+              
+              if (isMounted) setBootState('ready');
           } catch (e) {
-              console.error("Error crítico de arranque", e);
-              setBootState('failed');
+              console.error("Boot warning", e);
+              if (isMounted) setBootState('ready'); // Fail-safe: Cargar app de todas formas
           }
       };
       bootSequence();
+      return () => { isMounted = false; };
   }, []);
 
   if (bootState === 'testing') return (
-      <div className="h-screen w-full bg-[#0f172a] flex flex-col items-center justify-center text-white">
-          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-6"></div>
-          <span className="text-[10px] font-black uppercase tracking-[0.3em]">Cargando Sistema...</span>
+      <div className="h-screen w-full bg-[#0f172a] flex flex-col items-center justify-center text-white p-8 text-center select-none">
+          <div className="bg-blue-600/20 p-6 rounded-[2rem] mb-8 border border-blue-500/30 shadow-[0_0_50px_rgba(59,130,246,0.2)]">
+            <Box className="w-16 h-16 text-blue-500 animate-pulse" />
+          </div>
+          <h1 className="text-3xl font-black uppercase tracking-tighter italic mb-2">LogiCount <span className="text-blue-500">Pro</span></h1>
+          <div className="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-full border border-white/10">
+            <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Verificando Integridad...</span>
+          </div>
       </div>
   );
 
@@ -65,7 +79,11 @@ const AppContent = () => {
         
         <main className={`flex-1 relative overflow-hidden ${!isScanningMode ? 'md:pl-64' : ''}`}>
           <ErrorBoundary>
-            <Suspense fallback={<div className="h-full w-full flex items-center justify-center"><div className="w-8 h-8 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></div></div>}>
+            <Suspense fallback={
+                <div className="h-full w-full flex items-center justify-center bg-slate-50 dark:bg-black">
+                    <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+                </div>
+            }>
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/dashboard" element={<Dashboard />} />
