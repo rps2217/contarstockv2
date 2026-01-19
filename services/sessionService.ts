@@ -30,6 +30,7 @@ const commitBufferToDatabase = async () => {
 
         await (db as any).transaction('rw', db.scans, db.sessions, async () => {
             await db.scans.bulkAdd(recordsToSave);
+            // Optimización: Solo actualizar metadatos de las sesiones afectadas una vez por lote
             const affectedIds = Array.from(new Set(recordsToSave.map(s => s.sessionId)));
             for (const id of affectedIds) {
                 await updateSessionMetadata(id);
@@ -50,7 +51,7 @@ const commitBufferToDatabase = async () => {
         }
 
         if (retryableItems.length > 0) {
-            // Reinsertar al principio para mantener orden relativo aproximado
+            // Reinsertar al principio para mantener orden
             writeBuffer = [...retryableItems, ...writeBuffer];
             // Re-programar intento con backoff
             if (!flushTimeout) flushTimeout = setTimeout(commitBufferToDatabase, BUFFER_DELAY_MS * 2);
@@ -85,7 +86,7 @@ export const addScanEvent = async (sessionId: string, barcode: string, quantity:
         quantity,
         mm,
         yyyy,
-        timestamp: Date.now(), // Removed Math.random() for cleaner timestamps
+        timestamp: Date.now(),
         synced: 0
     };
 
@@ -204,11 +205,9 @@ export const deleteScan = async (e: any, id: string) => {
 };
 
 export const undoLastAction = async (sessionId: string): Promise<string | null> => {
-    // 1. Check Buffer First
     const bufferIdx = writeBuffer.findIndex(item => item.record.sessionId === sessionId);
     if (bufferIdx !== -1) {
-        // Remove from buffer (LIFO logic needs to check from end, but array operations are cleaner this way)
-        // Optimization: Find the *last* addition for this session
+        // Optimización: Eliminar desde el buffer si aún no se ha guardado
         for (let i = writeBuffer.length - 1; i >= 0; i--) {
             if (writeBuffer[i].record.sessionId === sessionId) {
                 const [removed] = writeBuffer.splice(i, 1);
@@ -217,8 +216,7 @@ export const undoLastAction = async (sessionId: string): Promise<string | null> 
         }
     }
 
-    // 2. Check Database
-    // Using index optimized query
+    // Si ya está en DB, borrar usando índice optimizado
     const lastPersisted = await db.scans
         .where('[sessionId+timestamp]')
         .between([sessionId, Dexie.minKey], [sessionId, Dexie.maxKey])

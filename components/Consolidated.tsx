@@ -1,10 +1,8 @@
 
 import React, { useState, useMemo } from 'react';
-import { Layers, ChevronLeft, Package, Box, FileSpreadsheet, FileText, ArrowRight, Upload, ShieldCheck, AlertTriangle, Cloud } from 'lucide-react';
+import { Layers, ChevronLeft, Package, Box, ArrowRight, Upload, AlertTriangle, Cloud } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
-import { CountingSession } from '../types';
-import { exportToExcel, exportToPDF } from '../services/export';
 import { aggregateScans } from '../services/aggregator';
 import { SearchBar } from './SearchBar';
 import { useNavigate } from 'react-router-dom';
@@ -53,10 +51,6 @@ export const Consolidated: React.FC = () => {
                             <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase leading-none">{selectedErp}</h2>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Visión Consolidada de Carga</p>
                         </div>
-                    </div>
-                    <div className="flex gap-2">
-                        <button onClick={() => details && exportToExcel({ id: 'V', erpOrder: selectedErp, logisticsLabel: 'MULTI', createdAt: details.lastDate, status: 'completed' } as any, details.items)} className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-100 transition-colors"><FileSpreadsheet className="w-5 h-5" /></button>
-                        <button onClick={() => details && exportToPDF({ id: 'V', erpOrder: selectedErp, logisticsLabel: 'MULTI', createdAt: details.lastDate, status: 'completed' } as any, details.items)} className="p-2.5 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-100 transition-colors"><FileText className="w-5 h-5" /></button>
                     </div>
                 </div>
 
@@ -138,5 +132,3 @@ export const Consolidated: React.FC = () => {
         </div>
     );
 };
-
-export default Consolidated;

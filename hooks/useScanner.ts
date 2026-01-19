@@ -6,7 +6,6 @@ import * as sessionService from '../services/sessionService';
 import { sanitizeBarcode } from '../services/utils';
 import { SoundFX } from '../services/audio';
 import { CountingSession, Product, ScannerStatus, ScanRecord } from '../types';
-import { lookupSkuHistory } from '../services/gasService';
 import { Dexie } from 'dexie';
 
 export const useScanner = (session: CountingSession, onFinish: () => void, onDiscard?: () => void) => {
@@ -25,8 +24,7 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
 
     const [pendingScan, setPendingScan] = useState<{barcode: string, name: string} | null>(null);
 
-    // OPTIMIZACIÓN CRÍTICA: Uso de índice compuesto [sessionId+timestamp]
-    // Evita cargar toda la sesión en memoria para ordenar.
+    // OPTIMIZACIÓN: Solo traer los últimos 15 items sin ordenar todo el array
     const recentHistory = useLiveQuery(
         () => db.scans
             .where('[sessionId+timestamp]')
@@ -41,17 +39,17 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
 
     useEffect(() => {
         const syncCache = async () => {
-            // Usamos .each() para minimizar impacto en memoria al construir caché
             skuCounters.current.clear();
             seenBarcodes.current.clear();
             
+            // Construcción ligera de caché
             await db.scans.where('sessionId').equals(session.id).each(s => {
                 seenBarcodes.current.add(s.barcode);
                 const prev = skuCounters.current.get(s.barcode) || 0;
                 skuCounters.current.set(s.barcode, prev + s.quantity);
             });
 
-            // Obtener el último para mostrar estado actual (Optimizado)
+            // Estado inicial UI
             const lastScanArray = await db.scans
                 .where('[sessionId+timestamp]')
                 .between([session.id, Dexie.minKey], [session.id, Dexie.maxKey])
@@ -93,7 +91,7 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
             setFeedback('error');
             SoundFX.play('error');
         } finally {
-            // Liberación asegurada del lock
+            // CRÍTICO: Siempre liberar el lock
             isLocked.current = false;
         }
     }, [session.id, multiplier]);
@@ -106,50 +104,25 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
         isLocked.current = true;
         
         try {
-            // 1. PRIMERO: BUSCAR EN MÁSTER LOCAL (DEXIE)
             let product = await db.products.get(barcode);
             
-            // 2. SEGUNDO: SI NO ESTÁ, BUSCAR EN MÁSTER CLOUD (GAS)
-            if (!product && navigator.onLine) {
-                try {
-                    const cloudResult = await lookupSkuHistory(barcode);
-                    if (cloudResult && cloudResult.name) {
-                        const newProduct: Product = {
-                            barcode,
-                            name: cloudResult.name,
-                            category: cloudResult.category || 'MÁSTER CLOUD',
-                            syncStatus: 'synced'
-                        };
-                        await db.products.put(newProduct);
-                        product = newProduct;
-                    }
-                } catch (e) { console.warn("Cloud lookup failed, proceeding offline"); }
-            }
-
-            // 3. TERCERO: SI SIGUE SIN APARECER, MARCAR COMO PENDIENTE
             if (!product) {
-                await db.products.put({ barcode, name: 'PENDIENTE', category: 'NUEVO', syncStatus: 'add' });
+                // Registro implícito rápido para no bloquear
+                const newProd: Product = { barcode, name: 'PENDIENTE', category: 'NUEVO', syncStatus: 'add' };
+                await db.products.put(newProd);
+                product = newProd;
             }
 
-            // Actualizar referencia para UI si es necesario confirmar
-            if (!seenBarcodes.current.has(barcode)) {
-                setPendingScan({ barcode, name: product?.name || 'NUEVO PRODUCTO' });
-                setStatus('expiring');
-                // Nota: finalizeScanPipeline se llamará desde el modal de expiración
-                // por lo tanto NO liberamos el lock aquí si entramos en flujo expiring,
-                // el lock se libera en finalizeScanPipeline.
-                return; 
-            } else {
-                // Flujo rápido (ya visto)
-                const firstScan = await db.scans.where('[sessionId+barcode]').equals([session.id, barcode]).first();
-                await finalizeScanPipeline(barcode, firstScan?.mm, firstScan?.yyyy);
-            }
+            // Si es producto nuevo real (no visto en esta sesión), pedir confirmación opcional
+            // Para "Martillo Industrial", preferimos velocidad, así que eliminamos flujos complejos de expiración por defecto
+            const firstScan = await db.scans.where('[sessionId+barcode]').equals([session.id, barcode]).first();
+            await finalizeScanPipeline(barcode, firstScan?.mm, firstScan?.yyyy);
 
         } catch (error) {
             console.error("Critical Scanner Error:", error);
             setFeedback('error');
             SoundFX.play('error');
-            isLocked.current = false; // Liberación de emergencia
+            isLocked.current = false;
         }
     }, [session.id, finalizeScanPipeline]);
 
@@ -159,11 +132,9 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
             setFeedback('undo');
             SoundFX.play('delete');
             
-            // Recálculo ligero de caché local para UI
             const currentCount = skuCounters.current.get(removedBarcode);
             if (currentCount !== undefined) {
-                // Asumimos que undoLastAction elimina la última cantidad agregada (normalmente 1 o el multiplicador)
-                // Para simplificar, forzamos recarga del último scan real
+                // Recargar estado UI
                 const lastScanArray = await db.scans
                     .where('[sessionId+timestamp]')
                     .between([session.id, Dexie.minKey], [session.id, Dexie.maxKey])
@@ -173,8 +144,8 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
                 
                 if (lastScanArray.length > 0) {
                     const last = lastScanArray[0];
-                    // Recalcular contador específico desde DB para exactitud
                     let realTotal = 0;
+                    // Recálculo seguro
                     await db.scans.where({sessionId: session.id, barcode: last.barcode}).each(s => realTotal += s.quantity);
                     skuCounters.current.set(last.barcode, realTotal);
                     
@@ -185,7 +156,6 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
                     setCurrentSkuTotal(0);
                 }
             }
-            
             setTimeout(() => setFeedback('idle'), 500);
         }
     }, [session.id]);
@@ -197,8 +167,7 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
             pendingProductName: pendingScan?.name,
             optimisticActiveQty: currentSkuTotal,
             optimisticTotalQty: sessionStats?.totalUnits || 0,
-            optimisticUniqueSkus: sessionStats?.totalSKUs || 0,
-            predictions: [] 
+            optimisticUniqueSkus: sessionStats?.totalSKUs || 0
         },
         data: { 
             lastScan: currentScan || undefined, 
@@ -209,13 +178,8 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
             handleExternalScan: handleInboundScan,
             handleManualSubmit: (e: any) => { e.preventDefault(); if (manualInput) handleInboundScan(manualInput); setManualInput(''); },
             handleExpirationComplete: (mm?: number, yyyy?: number) => { 
-                if (pendingScan) {
-                    finalizeScanPipeline(pendingScan.barcode, mm, yyyy);
-                } else {
-                    // Fallback de seguridad
-                    isLocked.current = false;
-                    setStatus('idle');
-                }
+                if (pendingScan) finalizeScanPipeline(pendingScan.barcode, mm, yyyy);
+                else { isLocked.current = false; setStatus('idle'); }
             },
             handleUndo: handleUndoAction,
             handleQuantityChange: sessionService.updateScanQuantity, 

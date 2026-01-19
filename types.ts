@@ -15,6 +15,15 @@ export interface ExpectedItem {
   expectedQty: number;
 }
 
+export interface ExpectedOrder {
+  id: string;
+  internalId: string;
+  items: ExpectedItem[];
+  totalExpectedUnits: number;
+  totalExpectedSKUs: number;
+  importedAt: number;
+}
+
 export interface CountingSession {
   id: string;
   erpOrder: string;
@@ -53,11 +62,35 @@ export interface ConsolidatedItem {
   isIncident?: boolean;
 }
 
-export type ViewState = 'dashboard' | 'counting' | 'database' | 'reports' | 'settings' | 'consolidated' | 'conciliator' | 'reception' | 'sync';
+export interface AliasSuggestion {
+  physicalBarcode: string;
+  physicalName: string;
+  expectedBarcode: string;
+  expectedName: string;
+  quantity: number;
+}
+
+export interface MatchDetail {
+  barcode: string;
+  name: string;
+  physicalQty: number;
+  expectedQty: number;
+  difference: number;
+}
+
+export interface MatchResult {
+  expectedOrder: ExpectedOrder;
+  matchScore: number;
+  status: 'exact' | 'partial' | 'mismatch';
+  details: MatchDetail[];
+  potentialAliases: AliasSuggestion[];
+}
+
+export type ViewState = 'dashboard' | 'counting' | 'database' | 'reports' | 'settings' | 'consolidated' | 'reception' | 'sync' | 'conciliator';
 
 export type Theme = 'light' | 'dark' | 'contrast' | 'warm' | 'navy' | 'oled';
 
-export type ScannerStatus = 'idle' | 'manual' | 'camera' | 'expiring' | 'confirming' | 'error' | 'success' | 'product_form' | 'vision_audit';
+export type ScannerStatus = 'idle' | 'manual' | 'camera' | 'expiring' | 'confirming' | 'error' | 'success' | 'product_form';
 
 export interface AppSheetConfig {
   appId: string;
@@ -84,37 +117,6 @@ export interface AppSettings {
   mobileNavConfig?: ViewState[]; 
 }
 
-export interface ExpectedOrder {
-  id: string;
-  internalId: string;
-  items: ExpectedItem[];
-  totalExpectedUnits: number;
-  totalExpectedSKUs: number;
-  importedAt: number;
-}
-
-export interface MatchResult {
-  expectedOrder: ExpectedOrder;
-  matchScore: number;
-  status: 'exact' | 'partial' | 'mismatch';
-  details: {
-    barcode: string;
-    name: string;
-    physicalQty: number;
-    expectedQty: number;
-    difference: number;
-  }[];
-  potentialAliases: AliasSuggestion[];
-}
-
-export interface AliasSuggestion {
-  physicalBarcode: string;
-  physicalName: string;
-  expectedBarcode: string;
-  expectedName: string;
-  quantity: number;
-}
-
 export interface SyncJob {
   id?: number;
   status: 'pending' | 'processing' | 'failed' | 'success';
@@ -124,7 +126,6 @@ export interface SyncJob {
   type?: string;
 }
 
-// Added SyncConflict interface to support conflict detection in syncManager.ts
 export interface SyncConflict {
   barcode: string;
   productName: string;

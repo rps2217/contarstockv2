@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Home, Database, History, Layers, Container, Fingerprint, Cloud, Box, Settings } from 'lucide-react';
+import { Home, Database, History, Layers, Container, Cloud, Box, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AppSettings } from '../types';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -46,7 +46,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ view }) => {
         </div>
         <div>
           <h1 className="text-white font-black text-xl leading-none uppercase tracking-tighter">LogiCount</h1>
-          <p className="text-blue-400 text-[9px] font-black uppercase tracking-[0.3em] mt-1">Enterprise</p>
+          <p className="text-blue-400 text-[9px] font-black uppercase tracking-[0.3em] mt-1">Core</p>
         </div>
       </div>
 
@@ -59,7 +59,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ view }) => {
         <div className="text-[9px] font-black text-slate-500 uppercase tracking-[0.3em] px-4 mb-4 mt-8">Herramientas</div>
         <NavItem path="/reception" activeKey="reception" label="Recepción" icon={Container} />
         <NavItem path="/consolidated" activeKey="consolidated" label="Consolidados" icon={Layers} />
-        <NavItem path="/conciliator" activeKey="conciliator" label="Detective" icon={Fingerprint} />
         <NavItem path="/sync" activeKey="sync" label="Cloud Sync" icon={Cloud} badge={pendingCount} />
       </nav>
 

@@ -12,12 +12,11 @@ const DEFAULT_SETTINGS: AppSettings = {
   ttsEnabled: false, 
   ttsMode: 'count',  
   speedometerEnabled: false, 
-  // Fix: Removed controlTowerEnabled as it does not exist in AppSettings type
   confirmDelete: true,
   autoRegisterUnknown: false, 
   lowPerformanceMode: false,
-  predictiveHintsEnabled: true, // Por defecto activo
-  continuousMode: true,        // Por defecto activo
+  predictiveHintsEnabled: false,
+  continuousMode: true,        
   appSheetConfig: {
       appId: '',
       accessKey: '',

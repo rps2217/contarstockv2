@@ -1,13 +1,9 @@
 
-import React, { useState } from 'react';
-import { ChevronLeft, FileSpreadsheet, FileText, Sparkles, Trash2, Minus, Plus, Cloud, CloudOff } from 'lucide-react';
-import { ConsolidatedItem, CountingSession } from '../../types';
+import React from 'react';
+import { ChevronLeft, Trash2, Minus, Plus, Cloud, CloudOff } from 'lucide-react';
 import * as sessionService from '../../services/sessionService';
-import { analyzeConsolidation } from '../../services/gemini';
-import { exportToExcel, exportToPDF } from '../../services/export';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
-import { aggregateScans } from '../../services/aggregator';
 
 interface ReportDetailProps {
     sessionId: string;
@@ -15,9 +11,6 @@ interface ReportDetailProps {
 }
 
 export const ReportDetail: React.FC<ReportDetailProps> = ({ sessionId, onBack }) => {
-    const [loadingAi, setLoadingAi] = useState(false);
-    const [aiReport, setAiReport] = useState<string>('');
-
     const fullSelectedSession = useLiveQuery(() => db.sessions.get(sessionId), [sessionId]);
 
     const consolidation = useLiveQuery(async () => {
@@ -28,7 +21,6 @@ export const ReportDetail: React.FC<ReportDetailProps> = ({ sessionId, onBack })
         const productMap: Record<string, string> = {};
         products.forEach(p => productMap[p.barcode] = p.name);
 
-        // Agregación personalizada para mostrar estado de sincronización
         const aggregation: Record<string, any> = {};
         for (const scan of scans) {
             const key = `${scan.barcode}_${scan.mm || 0}_${scan.yyyy || 0}`;
@@ -40,7 +32,7 @@ export const ReportDetail: React.FC<ReportDetailProps> = ({ sessionId, onBack })
                     scans: 0,
                     mm: scan.mm,
                     yyyy: scan.yyyy,
-                    isSynced: true // Asumimos sincronizado hasta encontrar uno que no
+                    isSynced: true
                 };
             }
             aggregation[key].totalQuantity += scan.quantity;
@@ -77,11 +69,6 @@ export const ReportDetail: React.FC<ReportDetailProps> = ({ sessionId, onBack })
 
             <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-24 no-scrollbar">
                 <div className="max-w-4xl mx-auto space-y-6">
-                    <div className="grid grid-cols-2 gap-3">
-                        <button onClick={() => fullSelectedSession && exportToExcel(fullSelectedSession, consolidation)} className="bg-emerald-50 border-2 border-emerald-100 text-emerald-700 py-4 rounded-2xl shadow-sm font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"><FileSpreadsheet className="w-4 h-4" /> Excel</button>
-                        <button onClick={() => fullSelectedSession && exportToPDF(fullSelectedSession, consolidation)} className="bg-rose-50 border-2 border-rose-100 text-rose-700 py-4 rounded-2xl shadow-sm font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"><FileText className="w-4 h-4" /> PDF</button>
-                    </div>
-
                     <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden">
                         <div className="px-8 py-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
                             <span className="font-black text-slate-900 text-[10px] uppercase tracking-widest">Matriz de Productos</span>
