@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { LayoutTemplate, Home, Database, History, Layers, Container, Fingerprint, Cloud } from 'lucide-react';
+import { LayoutTemplate, Home, Database, History, Layers, Container, Fingerprint, Cloud, CheckCircle2 } from 'lucide-react';
 import { AppSettings, ViewState } from '../../types';
 
 interface Props {
@@ -10,73 +10,73 @@ interface Props {
 
 export const NavigationSection: React.FC<Props> = ({ settings, updateSetting }) => {
     const availableNavItems: {id: ViewState, label: string, icon: any}[] = [
-        { id: 'dashboard', label: 'Inicio', icon: Home },
-        { id: 'database', label: 'Datos', icon: Database },
+        { id: 'dashboard', label: 'Métricas', icon: Home },
         { id: 'reports', label: 'Historial', icon: History },
+        { id: 'database', label: 'Catálogo', icon: Database },
+        { id: 'reception', label: 'Recepción', icon: Container },
         { id: 'consolidated', label: 'Consol.', icon: Layers },
-        { id: 'reception', label: 'Recep.', icon: Container },
-        { id: 'conciliator', label: 'Detect.', icon: Fingerprint },
         { id: 'sync', label: 'Nube', icon: Cloud },
+        { id: 'conciliator', label: 'Detective', icon: Fingerprint },
     ];
 
+    const currentNav = settings.mobileNavConfig || ['dashboard', 'database', 'reports'];
+
     const toggleNavOption = (id: ViewState) => {
-        let current = [...(settings.mobileNavConfig || ['dashboard', 'database', 'reports'])];
+        let next = [...currentNav];
         
-        if (current.includes(id)) {
-            // No permitir dejar el dock vacío
-            if (current.length <= 1) return;
-            current = current.filter(i => i !== id);
+        if (next.includes(id)) {
+            if (next.length <= 1) return; // Mínimo 1
+            next = next.filter(i => i !== id);
         } else {
-            // Límite de 5 elementos para mantener la estética y usabilidad
-            if (current.length >= 5) {
-                alert("El Dock inferior admite un máximo de 5 accesos directos.");
+            if (next.length >= 5) {
+                // Feedback visual de error (vibración fuerte)
+                if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
                 return;
             }
-            current.push(id);
+            next.push(id);
         }
         
-        updateSetting('mobileNavConfig', current);
-        
-        // Feedback háptico opcional si está disponible
         if (navigator.vibrate) navigator.vibrate(10);
+        updateSetting('mobileNavConfig', next);
     };
 
     return (
-        <section className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 p-8">
-            <div className="flex items-center gap-3 mb-2">
-                <div className="bg-indigo-50 p-2.5 rounded-xl">
-                    <LayoutTemplate className="w-6 h-6 text-indigo-600" />
-                </div>
-                <div>
-                    <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">Navegación Móvil</h2>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Personalizar Dock Inferior</p>
-                </div>
+        <section className="space-y-4 animate-in slide-in-from-bottom-2">
+            <div className="flex justify-between items-end px-2">
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-2">Dock Inferior</h3>
+                <span className={`text-[10px] font-black px-2 py-0.5 rounded-md uppercase ${currentNav.length === 5 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
+                    {currentNav.length}/5 Slots
+                </span>
             </div>
             
-            <p className="text-xs text-slate-500 mb-8 mt-4 leading-relaxed">
-                Seleccione hasta <span className="font-bold text-slate-900">5 elementos</span> para anclar en la barra de navegación rápida de su dispositivo móvil.
-            </p>
-            
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 gap-3">
                 {availableNavItems.map(item => {
-                    const isActive = (settings.mobileNavConfig || []).includes(item.id);
+                    const isActive = currentNav.includes(item.id);
                     const Icon = item.icon;
                     return (
                         <button 
                             key={item.id}
                             onClick={() => toggleNavOption(item.id)}
-                            className={`flex flex-col items-center justify-center p-5 rounded-[1.5rem] border-2 transition-all duration-300 relative group active:scale-95 ${
-                                isActive 
-                                ? 'bg-indigo-50 border-indigo-500 text-indigo-700 shadow-md shadow-indigo-100 ring-4 ring-indigo-50' 
-                                : 'bg-white border-slate-100 text-slate-300 hover:border-slate-200 hover:text-slate-400'
-                            }`}
+                            className={`
+                                w-full p-4 rounded-2xl border-2 flex items-center justify-between transition-all active:scale-[0.99]
+                                ${isActive 
+                                    ? 'bg-white border-blue-600 shadow-lg shadow-blue-100 z-10' 
+                                    : 'bg-slate-50 border-transparent opacity-60 hover:opacity-100'
+                                }
+                            `}
                         >
-                            <Icon className={`w-7 h-7 mb-2 transition-transform group-hover:scale-110 ${isActive ? 'text-indigo-600' : ''}`} />
-                            <span className="text-[10px] font-black uppercase tracking-tighter">{item.label}</span>
+                            <div className="flex items-center gap-4">
+                                <div className={`p-2.5 rounded-xl ${isActive ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-400'}`}>
+                                    <Icon className="w-5 h-5" />
+                                </div>
+                                <span className={`text-xs font-black uppercase tracking-widest ${isActive ? 'text-slate-900' : 'text-slate-400'}`}>
+                                    {item.label}
+                                </span>
+                            </div>
                             
-                            {isActive && (
-                                <div className="absolute top-2 right-2 w-2 h-2 bg-indigo-600 rounded-full animate-pulse" />
-                            )}
+                            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${isActive ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
+                                {isActive && <CheckCircle2 className="w-4 h-4 text-white" />}
+                            </div>
                         </button>
                     );
                 })}
