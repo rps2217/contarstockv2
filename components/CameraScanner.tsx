@@ -10,26 +10,44 @@ interface CameraScannerProps {
 }
 
 export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose }) => {
-    const scannerRef = useRef<Html5Qrcode | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [lastScanned, setLastScanned] = useState<string | null>(null);
     const [feedbackStatus, setFeedbackStatus] = useState<'success' | 'error' | null>(null);
-    const isProcessing = useRef(false);
+    const scannerRef = useRef<Html5Qrcode | null>(null);
+    const isScanningRef = useRef(false);
+    
+    // Unique ID for this instance to prevent collision in React's strict mode double mount
     const uniqueId = useRef(`scanner-${Math.random().toString(36).substr(2, 9)}`).current;
 
     useEffect(() => {
         let isMounted = true;
-        const html5QrCode = new Html5Qrcode(uniqueId);
-        scannerRef.current = html5QrCode;
         
-        const startScanner = async () => {
+        const initScanner = async () => {
+            // Cleanup any previous instance if it exists (safety check)
+            if (scannerRef.current) {
+                try { await scannerRef.current.stop(); } catch(e) {}
+            }
+
+            const html5QrCode = new Html5Qrcode(uniqueId);
+            scannerRef.current = html5QrCode;
+
             try {
+                // Ensure element exists
+                const el = document.getElementById(uniqueId);
+                if (!el) {
+                    console.warn("Scanner element not found");
+                    return;
+                }
+
+                isScanningRef.current = true;
                 await html5QrCode.start(
                     { facingMode: "environment" }, 
                     { fps: 15, qrbox: { width: 260, height: 260 } },
                     (decodedText) => {
-                        if (!isMounted || isProcessing.current) return;
-                        isProcessing.current = true;
+                        if (!isMounted) return;
+                        
+                        // Prevent multi-trigger
+                        html5QrCode.pause(true); 
                         
                         setError(null);
                         setLastScanned(decodedText);
@@ -45,19 +63,25 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose })
                     () => {}
                 );
             } catch (err: any) {
+                isScanningRef.current = false;
+                console.error("Camera init error", err);
                 if (isMounted) setError("No se pudo acceder a la cámara. Verifique permisos.");
             }
         };
 
-        startScanner();
+        // Small delay to ensure DOM is ready
+        const timer = setTimeout(initScanner, 100);
 
         return () => {
             isMounted = false;
-            if (html5QrCode.isScanning) {
-                html5QrCode.stop().catch(() => {}).finally(() => html5QrCode.clear());
+            clearTimeout(timer);
+            if (scannerRef.current && isScanningRef.current) {
+                scannerRef.current.stop()
+                    .then(() => scannerRef.current?.clear())
+                    .catch((err) => console.warn("Scanner clean error", err));
             }
         };
-    }, []); // IMPORTANTE: Array vacío para ejecutar una sola vez
+    }, []);
 
     return (
         <div className="fixed inset-0 z-[80] bg-black flex flex-col animate-in fade-in duration-300">

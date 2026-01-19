@@ -11,18 +11,30 @@ export const callGas = async (action: string, payload: any): Promise<any> => {
     const url = getSettings().appSheetConfig?.gasWebAppUrl;
     if (!url) return { success: false, error: "Cloud URL no configurada en Ajustes" };
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+
     try {
         const response = await fetch(url, {
             method: 'POST',
             mode: 'cors',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action, ...payload })
+            body: JSON.stringify({ action, ...payload }),
+            signal: controller.signal
         });
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP Error ${response.status}`);
+        }
+
         const rawText = await response.text();
         return JSON.parse(rawText);
     } catch (error: any) {
-        logger.error('GAS_ENGINE', `Error en acción [${action}]: ${error.message}`);
-        return { success: false, error: error.message };
+        clearTimeout(timeoutId);
+        const errorMsg = error.name === 'AbortError' ? 'Tiempo de espera agotado' : error.message;
+        logger.error('GAS_ENGINE', `Error en acción [${action}]: ${errorMsg}`);
+        return { success: false, error: errorMsg };
     }
 };
 

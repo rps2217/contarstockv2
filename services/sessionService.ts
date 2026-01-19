@@ -1,45 +1,80 @@
 
+import { Dexie } from 'dexie';
 import { db } from '../db';
 import { ScanRecord, CountingSession } from '../types';
 import { generateUUID, normalizeKey } from './utils';
 import { logger } from './logger';
 import { IntegrityGuard } from './integrityGuard';
 
-let writeBuffer: ScanRecord[] = [];
+let writeBuffer: { record: ScanRecord, retries: number }[] = [];
 let flushTimeout: any = null;
 const BUFFER_DELAY_MS = 100;
+const MAX_RETRIES = 3;
 
 /**
  * Persistencia Blindada: Valida integridad antes del commit.
+ * Mejorada con lógica de reintentos limitados.
  */
 const commitBufferToDatabase = async () => {
     if (writeBuffer.length === 0) return;
-    const batch = [...writeBuffer];
+    
+    // Extraemos el lote actual y limpiamos el buffer global
+    const currentBatch = [...writeBuffer];
     writeBuffer = [];
     
+    const recordsToSave = currentBatch.map(item => item.record);
+
     try {
         // Validación preventiva de todo el lote
-        batch.forEach(scan => IntegrityGuard.validateScan(scan));
+        recordsToSave.forEach(scan => IntegrityGuard.validateScan(scan));
 
         await (db as any).transaction('rw', db.scans, db.sessions, async () => {
-            await db.scans.bulkAdd(batch);
-            const affectedIds = Array.from(new Set(batch.map(s => s.sessionId)));
+            await db.scans.bulkAdd(recordsToSave);
+            const affectedIds = Array.from(new Set(recordsToSave.map(s => s.sessionId)));
             for (const id of affectedIds) {
                 await updateSessionMetadata(id);
             }
         });
     } catch (error: any) {
-        logger.error("CRITICAL_RECOVERY", "Fallo de integridad en escritura", error.message);
-        // Si falla, devolvemos al buffer para no perder datos, pero alertamos
-        writeBuffer = [...batch, ...writeBuffer];
+        logger.error("WRITE_FAIL", "Fallo de escritura en lote", error.message);
+        
+        // Estrategia de recuperación:
+        // Devolver al buffer solo items que no hayan excedido reintentos
+        const retryableItems = currentBatch
+            .map(item => ({ ...item, retries: item.retries + 1 }))
+            .filter(item => item.retries < MAX_RETRIES);
+
+        if (retryableItems.length < currentBatch.length) {
+            const lostCount = currentBatch.length - retryableItems.length;
+            logger.error("DATA_LOSS_PREVENTION", `Descartados ${lostCount} registros corruptos tras ${MAX_RETRIES} intentos.`);
+        }
+
+        if (retryableItems.length > 0) {
+            // Reinsertar al principio para mantener orden relativo aproximado
+            writeBuffer = [...retryableItems, ...writeBuffer];
+            // Re-programar intento con backoff
+            if (!flushTimeout) flushTimeout = setTimeout(commitBufferToDatabase, BUFFER_DELAY_MS * 2);
+        }
     }
 };
 
+/**
+ * Optimización de Memoria: Usa cursores en lugar de cargar todo el array
+ */
 export const updateSessionMetadata = async (sessionId: string) => {
-    const scans = await db.scans.where('sessionId').equals(sessionId).toArray();
-    const totalUnits = scans.reduce((acc, s) => acc + s.quantity, 0);
-    const totalSKUs = new Set(scans.map(s => s.barcode)).size;
-    await db.sessions.update(sessionId, { totalUnits, totalSKUs });
+    let totalUnits = 0;
+    const uniqueSkus = new Set<string>();
+
+    // .each() es más eficiente en memoria que .toArray() para grandes volúmenes
+    await db.scans.where('sessionId').equals(sessionId).each(s => {
+        totalUnits += s.quantity;
+        uniqueSkus.add(s.barcode);
+    });
+
+    await db.sessions.update(sessionId, { 
+        totalUnits, 
+        totalSKUs: uniqueSkus.size 
+    });
 };
 
 export const addScanEvent = async (sessionId: string, barcode: string, quantity: number, mm?: number, yyyy?: number): Promise<ScanRecord> => {
@@ -50,16 +85,18 @@ export const addScanEvent = async (sessionId: string, barcode: string, quantity:
         quantity,
         mm,
         yyyy,
-        timestamp: Date.now() + Math.random(),
+        timestamp: Date.now(), // Removed Math.random() for cleaner timestamps
         synced: 0
     };
 
     // Validación inmediata antes de entrar al buffer
     IntegrityGuard.validateScan(newRecord);
 
-    writeBuffer.push(newRecord);
+    writeBuffer.push({ record: newRecord, retries: 0 });
+    
     if (flushTimeout) clearTimeout(flushTimeout);
     flushTimeout = setTimeout(commitBufferToDatabase, BUFFER_DELAY_MS);
+    
     return newRecord;
 };
 
@@ -82,7 +119,6 @@ export const createSession = async (erp: string, label: string): Promise<Countin
     return s;
 };
 
-// --- FIX: Added missing createDraftSession for high-speed reception mode ---
 export const createDraftSession = async (label: string): Promise<CountingSession> => {
     const s: CountingSession = { 
         id: generateUUID(), 
@@ -103,7 +139,11 @@ export const deleteSession = async (id: string) => {
 };
 
 export const closeSession = async (id: string) => { 
-    await commitBufferToDatabase(); 
+    // Forzar escritura pendiente antes de cerrar
+    if (flushTimeout) {
+        clearTimeout(flushTimeout);
+        await commitBufferToDatabase();
+    }
     await db.sessions.update(id, { status: 'completed' }); 
 };
 
@@ -118,15 +158,15 @@ export const cleanSyncedSessions = async (): Promise<number> => {
     return ids.length;
 };
 
-// --- FIX: Added missing markScansAsSynced for cloud synchronization tracking ---
 export const markScansAsSynced = async (ids: string[]) => {
     if (ids.length === 0) return;
     await db.scans.where('id').anyOf(ids).modify({ synced: 1 });
 };
 
 export const recalculateSessionMetadata = updateSessionMetadata;
+
 export const adjustSessionItemQuantity = async (sessionId: string, barcode: string, delta: number) => {
-    const lastScan = await db.scans.where('[sessionId+barcode]').equals([sessionId, barcode]).reverse().sortBy('timestamp').then(r => r[0]);
+    const lastScan = await db.scans.where('[sessionId+barcode]').equals([sessionId, barcode]).reverse().first();
     if (lastScan) {
         const newQty = Math.max(1, lastScan.quantity + delta);
         await db.scans.update(lastScan.id, { quantity: newQty });
@@ -134,7 +174,6 @@ export const adjustSessionItemQuantity = async (sessionId: string, barcode: stri
     }
 };
 
-// --- FIX: Added missing updateScanQuantity for real-time scanner adjustments ---
 export const updateScanQuantity = async (id: string, currentQty: number, delta: number) => {
     const scan = await db.scans.get(id);
     if (scan) {
@@ -144,7 +183,6 @@ export const updateScanQuantity = async (id: string, currentQty: number, delta: 
     }
 };
 
-// --- FIX: Added missing updateScanIncident for FRC (Falla Real de Conteo) flagging ---
 export const updateScanIncident = async (e: any, id: string, currentStatus: boolean) => {
     const scan = await db.scans.get(id);
     if (scan) {
@@ -166,13 +204,27 @@ export const deleteScan = async (e: any, id: string) => {
 };
 
 export const undoLastAction = async (sessionId: string): Promise<string | null> => {
-    const volatileIdx = [...writeBuffer].reverse().findIndex(s => s.sessionId === sessionId);
-    if (volatileIdx !== -1) {
-        const actualIdx = writeBuffer.length - 1 - volatileIdx;
-        const [removed] = writeBuffer.splice(actualIdx, 1);
-        return removed.barcode;
+    // 1. Check Buffer First
+    const bufferIdx = writeBuffer.findIndex(item => item.record.sessionId === sessionId);
+    if (bufferIdx !== -1) {
+        // Remove from buffer (LIFO logic needs to check from end, but array operations are cleaner this way)
+        // Optimization: Find the *last* addition for this session
+        for (let i = writeBuffer.length - 1; i >= 0; i--) {
+            if (writeBuffer[i].record.sessionId === sessionId) {
+                const [removed] = writeBuffer.splice(i, 1);
+                return removed.record.barcode;
+            }
+        }
     }
-    const lastPersisted = await db.scans.where('sessionId').equals(sessionId).reverse().sortBy('timestamp').then(r => r[0]);
+
+    // 2. Check Database
+    // Using index optimized query
+    const lastPersisted = await db.scans
+        .where('[sessionId+timestamp]')
+        .between([sessionId, Dexie.minKey], [sessionId, Dexie.maxKey])
+        .reverse()
+        .first();
+
     if (lastPersisted) {
         await db.scans.delete(lastPersisted.id);
         await updateSessionMetadata(sessionId);

@@ -7,6 +7,7 @@ import { sanitizeBarcode } from '../services/utils';
 import { SoundFX } from '../services/audio';
 import { CountingSession, Product, ScannerStatus, ScanRecord } from '../types';
 import { lookupSkuHistory } from '../services/gasService';
+import { Dexie } from 'dexie';
 
 export const useScanner = (session: CountingSession, onFinish: () => void, onDiscard?: () => void) => {
     const [status, setStatus] = useState<ScannerStatus>('idle');
@@ -24,26 +25,42 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
 
     const [pendingScan, setPendingScan] = useState<{barcode: string, name: string} | null>(null);
 
+    // OPTIMIZACIÓN CRÍTICA: Uso de índice compuesto [sessionId+timestamp]
+    // Evita cargar toda la sesión en memoria para ordenar.
     const recentHistory = useLiveQuery(
-        () => db.scans.where('sessionId').equals(session.id).reverse().sortBy('timestamp').then(res => res.slice(0, 15)), 
+        () => db.scans
+            .where('[sessionId+timestamp]')
+            .between([session.id, Dexie.minKey], [session.id, Dexie.maxKey], true, true)
+            .reverse()
+            .limit(15)
+            .toArray(), 
         [session.id]
     );
+    
     const sessionStats = useLiveQuery(() => db.sessions.get(session.id), [session.id]);
 
     useEffect(() => {
         const syncCache = async () => {
-            const allScans = await db.scans.where('sessionId').equals(session.id).toArray();
+            // Usamos .each() para minimizar impacto en memoria al construir caché
             skuCounters.current.clear();
             seenBarcodes.current.clear();
             
-            allScans.forEach(s => {
+            await db.scans.where('sessionId').equals(session.id).each(s => {
                 seenBarcodes.current.add(s.barcode);
                 const prev = skuCounters.current.get(s.barcode) || 0;
                 skuCounters.current.set(s.barcode, prev + s.quantity);
             });
 
-            if (allScans.length > 0) {
-                const last = allScans.sort((a,b) => b.timestamp - a.timestamp)[0];
+            // Obtener el último para mostrar estado actual (Optimizado)
+            const lastScanArray = await db.scans
+                .where('[sessionId+timestamp]')
+                .between([session.id, Dexie.minKey], [session.id, Dexie.maxKey])
+                .reverse()
+                .limit(1)
+                .toArray();
+
+            if (lastScanArray.length > 0) {
+                const last = lastScanArray[0];
                 const p = await db.products.get(last.barcode);
                 setCurrentScan(last);
                 setCurrentProduct(p || null);
@@ -76,6 +93,7 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
             setFeedback('error');
             SoundFX.play('error');
         } finally {
+            // Liberación asegurada del lock
             isLocked.current = false;
         }
     }, [session.id, multiplier]);
@@ -87,38 +105,51 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
 
         isLocked.current = true;
         
-        // 1. PRIMERO: BUSCAR EN MÁSTER LOCAL (DEXIE)
-        let product = await db.products.get(barcode);
-        
-        // 2. SEGUNDO: SI NO ESTÁ, BUSCAR EN MÁSTER CLOUD (GAS)
-        if (!product && navigator.onLine) {
-            try {
-                const cloudResult = await lookupSkuHistory(barcode);
-                if (cloudResult && cloudResult.name) {
-                    const newProduct: Product = {
-                        barcode,
-                        name: cloudResult.name,
-                        category: cloudResult.category || 'MÁSTER CLOUD',
-                        syncStatus: 'synced'
-                    };
-                    await db.products.put(newProduct);
-                    product = newProduct;
-                }
-            } catch (e) { console.warn("Cloud lookup failed, proceeding offline"); }
-        }
+        try {
+            // 1. PRIMERO: BUSCAR EN MÁSTER LOCAL (DEXIE)
+            let product = await db.products.get(barcode);
+            
+            // 2. SEGUNDO: SI NO ESTÁ, BUSCAR EN MÁSTER CLOUD (GAS)
+            if (!product && navigator.onLine) {
+                try {
+                    const cloudResult = await lookupSkuHistory(barcode);
+                    if (cloudResult && cloudResult.name) {
+                        const newProduct: Product = {
+                            barcode,
+                            name: cloudResult.name,
+                            category: cloudResult.category || 'MÁSTER CLOUD',
+                            syncStatus: 'synced'
+                        };
+                        await db.products.put(newProduct);
+                        product = newProduct;
+                    }
+                } catch (e) { console.warn("Cloud lookup failed, proceeding offline"); }
+            }
 
-        // 3. TERCERO: SI SIGUE SIN APARECER, MARCAR COMO PENDIENTE
-        if (!product) {
-            await db.products.put({ barcode, name: 'PENDIENTE', category: 'NUEVO', syncStatus: 'add' });
-        }
+            // 3. TERCERO: SI SIGUE SIN APARECER, MARCAR COMO PENDIENTE
+            if (!product) {
+                await db.products.put({ barcode, name: 'PENDIENTE', category: 'NUEVO', syncStatus: 'add' });
+            }
 
-        setPendingScan({ barcode, name: product?.name || 'NUEVO PRODUCTO' });
+            // Actualizar referencia para UI si es necesario confirmar
+            if (!seenBarcodes.current.has(barcode)) {
+                setPendingScan({ barcode, name: product?.name || 'NUEVO PRODUCTO' });
+                setStatus('expiring');
+                // Nota: finalizeScanPipeline se llamará desde el modal de expiración
+                // por lo tanto NO liberamos el lock aquí si entramos en flujo expiring,
+                // el lock se libera en finalizeScanPipeline.
+                return; 
+            } else {
+                // Flujo rápido (ya visto)
+                const firstScan = await db.scans.where('[sessionId+barcode]').equals([session.id, barcode]).first();
+                await finalizeScanPipeline(barcode, firstScan?.mm, firstScan?.yyyy);
+            }
 
-        if (!seenBarcodes.current.has(barcode)) {
-            setStatus('expiring');
-        } else {
-            const firstScan = await db.scans.where('[sessionId+barcode]').equals([session.id, barcode]).first();
-            await finalizeScanPipeline(barcode, firstScan?.mm, firstScan?.yyyy);
+        } catch (error) {
+            console.error("Critical Scanner Error:", error);
+            setFeedback('error');
+            SoundFX.play('error');
+            isLocked.current = false; // Liberación de emergencia
         }
     }, [session.id, finalizeScanPipeline]);
 
@@ -127,20 +158,34 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
         if (removedBarcode) {
             setFeedback('undo');
             SoundFX.play('delete');
-            const scans = await db.scans.where('sessionId').equals(session.id).toArray();
-            skuCounters.current.clear();
-            scans.forEach(s => {
-                const c = skuCounters.current.get(s.barcode) || 0;
-                skuCounters.current.set(s.barcode, c + s.quantity);
-            });
             
-            if (scans.length > 0) {
-                const last = scans.sort((a,b) => b.timestamp - a.timestamp)[0];
-                setCurrentSkuTotal(skuCounters.current.get(last.barcode) || 0);
-            } else {
-                setCurrentSkuTotal(0);
-                setCurrentScan(null);
+            // Recálculo ligero de caché local para UI
+            const currentCount = skuCounters.current.get(removedBarcode);
+            if (currentCount !== undefined) {
+                // Asumimos que undoLastAction elimina la última cantidad agregada (normalmente 1 o el multiplicador)
+                // Para simplificar, forzamos recarga del último scan real
+                const lastScanArray = await db.scans
+                    .where('[sessionId+timestamp]')
+                    .between([session.id, Dexie.minKey], [session.id, Dexie.maxKey])
+                    .reverse()
+                    .limit(1)
+                    .toArray();
+                
+                if (lastScanArray.length > 0) {
+                    const last = lastScanArray[0];
+                    // Recalcular contador específico desde DB para exactitud
+                    let realTotal = 0;
+                    await db.scans.where({sessionId: session.id, barcode: last.barcode}).each(s => realTotal += s.quantity);
+                    skuCounters.current.set(last.barcode, realTotal);
+                    
+                    setCurrentScan(last);
+                    setCurrentSkuTotal(realTotal);
+                } else {
+                    setCurrentScan(null);
+                    setCurrentSkuTotal(0);
+                }
             }
+            
             setTimeout(() => setFeedback('idle'), 500);
         }
     }, [session.id]);
@@ -163,7 +208,15 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
         actions: { 
             handleExternalScan: handleInboundScan,
             handleManualSubmit: (e: any) => { e.preventDefault(); if (manualInput) handleInboundScan(manualInput); setManualInput(''); },
-            handleExpirationComplete: (mm?: number, yyyy?: number) => { if (pendingScan) finalizeScanPipeline(pendingScan.barcode, mm, yyyy); },
+            handleExpirationComplete: (mm?: number, yyyy?: number) => { 
+                if (pendingScan) {
+                    finalizeScanPipeline(pendingScan.barcode, mm, yyyy);
+                } else {
+                    // Fallback de seguridad
+                    isLocked.current = false;
+                    setStatus('idle');
+                }
+            },
             handleUndo: handleUndoAction,
             handleQuantityChange: sessionService.updateScanQuantity, 
             handleDeleteScan: sessionService.deleteScan,
