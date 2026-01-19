@@ -1,12 +1,12 @@
 
-import React, { useCallback } from 'react';
-import { Archive, ExternalLink, WifiOff, ChevronDown, Layers } from 'lucide-react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Archive, ExternalLink, WifiOff, ChevronDown, Layers, AlertCircle } from 'lucide-react';
 import { StartSessionModal } from './StartSessionModal';
 import { SearchBar } from './SearchBar';
 import * as ReactWindow from 'react-window';
 import * as AutoSizerModule from 'react-virtualized-auto-sizer';
 
-// Fix: Safe extraction for Virtual List components
+// Safe extraction for Virtual List components
 const FixedSizeList = (ReactWindow as any).FixedSizeList || (ReactWindow as any).default?.FixedSizeList;
 const AutoSizer = (AutoSizerModule as any).default || (AutoSizerModule as any).AutoSizer || AutoSizerModule;
 
@@ -19,6 +19,14 @@ import { useReports } from '../hooks/useReports';
 export const Reports: React.FC = () => {
   const navigate = useNavigate();
   const { state, actions } = useReports();
+  const [libError, setLibError] = useState(false);
+
+  // Safety check for library loading
+  useEffect(() => {
+      if (!FixedSizeList || !AutoSizer) {
+          setLibError(true);
+      }
+  }, []);
 
   const onItemsRendered = useCallback(({ visibleStopIndex }: any) => {
       if (state.hasMore && visibleStopIndex >= (state.sessions?.length || 0) - 5) {
@@ -40,29 +48,30 @@ export const Reports: React.FC = () => {
         );
     }
 
-    // Safety fallback: Render standard list if virtualization fails
-    if (!FixedSizeList || !AutoSizer) {
+    // Safety fallback: Render standard list if virtualization fails or libraries are missing
+    if (libError || !FixedSizeList || !AutoSizer) {
         return (
             <div className="h-full flex flex-col relative">
                 <div className="absolute bottom-2 right-4 z-10 pointer-events-none opacity-40">
                     <div className="flex items-center gap-1.5 bg-slate-100 text-slate-500 px-2 py-1 rounded-md text-[8px] font-black uppercase">
-                        <Layers className="w-3 h-3" /> Vista Estándar
+                        <AlertCircle className="w-3 h-3" /> Modo Seguro
                     </div>
                 </div>
-                <div className="w-full h-full overflow-y-auto space-y-2 no-scrollbar pb-20">
+                <div className="w-full h-full overflow-y-auto space-y-2 no-scrollbar pb-20 p-2">
                     {state.sessions.map((session, idx) => (
-                        <SessionRow 
-                            key={session.id} 
-                            index={idx} 
-                            style={{}} 
-                            data={{ 
-                                sessions: state.sessions!, 
-                                onSelect: actions.setSelectedSessionId, 
-                                activeMenuId: state.activeMenuId, 
-                                onMenuToggle: actions.handleMenuToggle, 
-                                onDelete: actions.handleDeleteSession 
-                            }} 
-                        />
+                        <div key={session.id} className="h-[110px]">
+                            <SessionRow 
+                                index={idx} 
+                                style={{ height: '100%', width: '100%' }} 
+                                data={{ 
+                                    sessions: state.sessions!, 
+                                    onSelect: actions.setSelectedSessionId, 
+                                    activeMenuId: state.activeMenuId, 
+                                    onMenuToggle: actions.handleMenuToggle, 
+                                    onDelete: actions.handleDeleteSession 
+                                }} 
+                            />
+                        </div>
                     ))}
                     {state.hasMore && (
                         <div className="p-4 text-center">
@@ -74,6 +83,7 @@ export const Reports: React.FC = () => {
         );
     }
 
+    // Optimized Virtual List
     return (
         <AutoSizer>
             {({ height, width }: { height: number; width: number }) => (

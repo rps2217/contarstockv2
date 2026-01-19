@@ -1,12 +1,12 @@
+
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Product } from '../../types';
-import { Pencil, Trash2, Package, Cloud, CloudOff, AlertTriangle, Layers } from 'lucide-react';
+import { Pencil, Trash2, Package, Cloud, CloudOff, Layers, AlertCircle } from 'lucide-react';
 import * as ReactWindow from 'react-window';
 import * as AutoSizerModule from 'react-virtualized-auto-sizer';
 
-// Fix: Removed dangerous fallback to namespace object which caused Error #130
+// Extraction defensiva de componentes
 const FixedSizeList = (ReactWindow as any).FixedSizeList || (ReactWindow as any).default?.FixedSizeList;
-// Fix: AutoSizer needs to handle both default export and CJS module pattern
 const AutoSizer = (AutoSizerModule as any).default || (AutoSizerModule as any).AutoSizer || AutoSizerModule;
 
 interface ProductListProps {
@@ -80,6 +80,7 @@ const Row: React.FC<RowProps> = ({ index, style, data }) => {
 export const ProductList: React.FC<ProductListProps> = ({ products, onEdit, onDelete, onDeleteAll, hasFilter }) => {
   const listRef = useRef<any>(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [libError, setLibError] = useState(false);
 
   useEffect(() => {
       const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -87,7 +88,13 @@ export const ProductList: React.FC<ProductListProps> = ({ products, onEdit, onDe
       return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const itemData = useMemo(() => ({ items: products || [], onEdit, onDelete, isMobile: false }), [products, onEdit, onDelete]);
+  // SAFETY CHECK: Ensure libraries are loaded correctly
+  useEffect(() => {
+      if (!FixedSizeList || !AutoSizer) {
+          console.warn("Virtual List libraries failed to load. Falling back to standard rendering.");
+          setLibError(true);
+      }
+  }, []);
 
   if (!products || products.length === 0) {
     return (
@@ -101,14 +108,14 @@ export const ProductList: React.FC<ProductListProps> = ({ products, onEdit, onDe
     );
   }
 
-  // --- MODO FALLBACK (Cuando fallan librerías virtuales) ---
-  if (!FixedSizeList || !AutoSizer) {
+  // --- MODO FALLBACK / COMPATIBILIDAD ---
+  // Se activa si las librerías fallan o si estamos en un entorno inestable
+  if (libError || !FixedSizeList || !AutoSizer) {
       return (
           <div className="h-full flex flex-col bg-slate-50 md:bg-white md:rounded-[2.5rem] md:border md:border-slate-200 shadow-xl overflow-hidden relative">
-              {/* Indicador discreto de modo compatibilidad */}
               <div className="absolute bottom-2 right-6 z-10 pointer-events-none opacity-50">
                   <div className="flex items-center gap-1.5 bg-amber-50 text-amber-700 px-2 py-1 rounded-md text-[9px] font-black uppercase border border-amber-100">
-                      <Layers className="w-3 h-3" /> Modo Compatibilidad
+                      <AlertCircle className="w-3 h-3" /> Modo Seguro
                   </div>
               </div>
 
@@ -120,7 +127,7 @@ export const ProductList: React.FC<ProductListProps> = ({ products, onEdit, onDe
                   <div className="w-24 text-right text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Acciones</div>
               </div>
 
-              <div className="flex-1 overflow-y-auto no-scrollbar">
+              <div className="flex-1 overflow-y-auto">
                   {products.map((_, index) => (
                       <Row 
                         key={products[index].barcode} 
