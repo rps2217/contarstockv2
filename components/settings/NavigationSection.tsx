@@ -29,7 +29,6 @@ export const NavigationSection: React.FC<Props> = ({ settings, updateSetting }) 
             next = next.filter(i => i !== id);
         } else {
             if (next.length >= 5) {
-                // Feedback visual de error (vibración fuerte)
                 if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
                 return;
             }

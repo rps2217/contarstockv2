@@ -104,7 +104,7 @@ export const OperationalSection: React.FC<Props> = ({ settings, updateSetting })
                     {['count', 'product'].map((mode) => (
                         <button
                             key={mode}
-                            onClick={() => updateSetting('ttsMode', mode)}
+                            onClick={() => updateSetting('ttsMode', mode as any)}
                             className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${
                                 settings.ttsMode === mode 
                                 ? 'bg-white text-blue-600 shadow-sm border border-slate-200' 
