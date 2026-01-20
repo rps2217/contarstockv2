@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { ScanLine, Container, Cloud, Settings, AlertTriangle, CheckCircle2, Zap, ArrowRight, Activity } from 'lucide-react';
+import { ScanLine, Container, Cloud, Settings, AlertTriangle, CheckCircle2, Zap, ArrowRight, Activity, ShieldAlert } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
@@ -17,6 +17,11 @@ const Dashboard: React.FC = () => {
 
   const pendingCount = stats?.pendingSync || 0;
   const isSyncNeeded = pendingCount > 0;
+
+  const startMassiveBlind = () => {
+      const batchId = `BLIND-${new Date().toISOString().slice(11,19).replace(/:/g,'')}`;
+      navigate(`/massive/${batchId}`);
+  };
 
   return (
     <div className="h-full w-full overflow-y-auto no-scrollbar px-5 pt-8 pb-32 bg-slate-50 dark:bg-black font-sans">
@@ -95,6 +100,21 @@ const Dashboard: React.FC = () => {
                 </div>
             </div>
             <ArrowRight className="w-6 h-6 text-white/30 group-hover:translate-x-2 transition-transform" />
+        </button>
+
+        {/* BOTÓN MODO CIEGO (Protocolo Industrial) */}
+        <button 
+            onClick={startMassiveBlind}
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white p-8 rounded-[2.5rem] flex items-center justify-between group transition-all active:scale-95 shadow-xl border-4 border-black"
+        >
+            <div className="flex items-center gap-6">
+                <div className="bg-black/20 p-4 rounded-2xl"><ShieldAlert className="w-8 h-8 text-white" /></div>
+                <div className="text-left">
+                    <h2 className="text-xl font-black uppercase tracking-tight italic">Escudo Ciego</h2>
+                    <p className="text-[9px] font-bold text-white/60 uppercase tracking-[0.3em] mt-1">Ráfaga masiva sin diálogos</p>
+                </div>
+            </div>
+            <Zap className="w-6 h-6 text-white animate-pulse" />
         </button>
 
         <div className="grid grid-cols-2 gap-4">

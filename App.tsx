@@ -20,6 +20,7 @@ const Consolidated = lazy(() => import('./components/Consolidated.tsx'));
 const Reception = lazy(() => import('./components/Reception.tsx'));
 const Settings = lazy(() => import('./components/Settings.tsx'));
 const CountingView = lazy(() => import('./components/CountingView.tsx'));
+const MassiveBlindView = lazy(() => import('./components/MassiveBlindView.tsx'));
 
 const AppContent = () => {
   const location = useLocation();
@@ -27,7 +28,9 @@ const AppContent = () => {
   const [bootState, setBootState] = useState<'testing' | 'ready' | 'failed'>('testing');
   
   const currentView = location.pathname.split('/')[1] || 'dashboard';
-  const isScanningMode = location.pathname.startsWith('/counting/') || location.pathname === '/reception';
+  const isScanningMode = location.pathname.startsWith('/counting/') || 
+                         location.pathname === '/reception' || 
+                         location.pathname.startsWith('/massive/');
 
   useEffect(() => {
       let isMounted = true;
@@ -90,6 +93,7 @@ const AppContent = () => {
                 <Route path="/reception" element={<Reception />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/counting/:id" element={<CountingView />} />
+                <Route path="/massive/:batchId" element={<MassiveBlindView />} />
               </Routes>
             </Suspense>
           </ErrorBoundary>
