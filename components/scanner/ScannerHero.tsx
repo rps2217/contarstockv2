@@ -1,6 +1,6 @@
 
-import React, { memo } from 'react';
-import { RotateCcw, ShieldCheck, History, AlertCircle, Box } from 'lucide-react';
+import React, { memo, useEffect } from 'react';
+import { RotateCcw, ShieldCheck, AlertCircle, Box } from 'lucide-react';
 import { ScanRecord, Product } from '../../types';
 
 interface ScannerHeroProps {
@@ -19,82 +19,78 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
     onRegisterPending
 }) => {
     
-    // ESTADO: DESHACER
+    // PROTOCOLO HÁPTICO: Vibración física al confirmar incremento
+    useEffect(() => {
+        if (feedback === 'success' && navigator.vibrate) {
+            navigator.vibrate(15);
+        }
+    }, [feedback, accumulatedQty]);
+
     if (feedback === 'undo') {
         return (
             <div className="flex flex-col items-center justify-center h-full animate-in zoom-in duration-200">
-                <div className="bg-slate-200 p-8 rounded-full mb-4">
-                    <RotateCcw className="w-16 h-16 text-slate-500" />
+                <div className="bg-slate-900 p-12 rounded-full mb-6 border-8 border-amber-500 shadow-2xl">
+                    <RotateCcw className="w-16 h-16 text-white" />
                 </div>
-                <h2 className="text-2xl font-black text-slate-400 uppercase tracking-widest">Deshecho</h2>
+                <h2 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-[0.3em] italic">Deshecho</h2>
             </div>
         );
     }
 
-    // ESTADO: ESCANEO ACTIVO
     if (lastScan) {
         const isUnknown = !activeProduct || activeProduct.name === 'PENDIENTE';
         
-        // Colores de estado masivos para visión periférica
-        const containerClass = feedback === 'success' 
-            ? 'bg-emerald-50 border-emerald-500' 
-            : (isUnknown ? 'bg-orange-50 border-orange-400' : 'bg-white border-slate-200');
-
-        const textClass = feedback === 'success' ? 'text-emerald-900' : 'text-slate-900';
-
         return (
-            <div className={`w-full h-full flex flex-col items-center justify-center px-4 py-6 transition-colors duration-300 rounded-[3rem] border-4 ${containerClass} shadow-sm`}>
+            <div className={`w-full h-full flex flex-col items-center justify-center px-4 py-8 transition-all duration-150 rounded-[4rem] border-[6px] ${
+                feedback === 'success' ? 'bg-emerald-500 border-black' : (isUnknown ? 'bg-amber-400 border-black' : 'bg-white border-slate-900')
+            } shadow-2xl`}>
                 
-                {/* Indicador Superior */}
-                <div className="mb-4">
+                {/* STATUS LED PILL */}
+                <div className="mb-6">
                     {!isUnknown ? (
-                        <div className={`px-4 py-1.5 rounded-full font-black text-[10px] uppercase tracking-[0.2em] flex items-center gap-2 ${feedback === 'success' ? 'bg-emerald-200 text-emerald-800' : 'bg-slate-100 text-slate-500'}`}>
-                            <ShieldCheck className="w-3 h-3" /> SKU Verificado
+                        <div className={`px-6 py-2 rounded-full font-black text-[11px] uppercase tracking-[0.3em] flex items-center gap-3 border-2 ${feedback === 'success' ? 'bg-black text-white border-black' : 'bg-emerald-100 text-emerald-900 border-emerald-200'}`}>
+                            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+                            SKU VALIDADO
                         </div>
                     ) : (
                         <button 
                             onClick={onRegisterPending}
-                            className="bg-orange-500 text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest flex items-center gap-2 shadow-lg animate-pulse"
+                            className="bg-black text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-3 shadow-2xl active:scale-95"
                         >
-                             <AlertCircle className="w-4 h-4" /> Registrar Ítem
+                             <AlertCircle className="w-5 h-5 text-amber-400" /> REGISTRAR ÍTEM
                         </button>
                     )}
                 </div>
 
-                {/* Nombre del Producto (Legibilidad Máxima) */}
-                <div className="text-center w-full mb-6">
-                    <h1 className={`text-3xl md:text-5xl font-black uppercase leading-tight tracking-tight line-clamp-3 ${textClass}`}>
-                        {activeProduct?.name || 'PRODUCTO DESCONOCIDO'}
+                <div className="text-center w-full mb-4 px-6">
+                    <h1 className={`text-4xl md:text-6xl font-black uppercase leading-[0.9] tracking-tighter line-clamp-2 ${feedback === 'success' ? 'text-white' : 'text-slate-900'}`}>
+                        {activeProduct?.name || 'DESCONOCIDO'}
                     </h1>
-                    <div className="mt-2 inline-block font-mono font-bold text-slate-400 text-lg tracking-widest">
+                    <div className={`mt-3 inline-block font-mono font-black text-2xl tracking-[0.2em] ${feedback === 'success' ? 'text-black/40' : 'text-blue-600'}`}>
                         {lastScan.barcode}
                     </div>
                 </div>
 
-                {/* Contador Gigante (Foco Principal) */}
-                <div className="relative flex flex-col items-center bg-white/50 rounded-3xl px-12 py-4 border border-black/5">
-                    <div 
-                        key={accumulatedQty} 
-                        className={`text-[10rem] md:text-[14rem] leading-none font-black tabular-nums tracking-tighter select-none transition-transform duration-100 ${feedback === 'success' ? 'scale-110 text-emerald-600' : 'text-slate-900'}`}
-                    >
+                {/* CONTADOR MONSTRUOSO (Martillo Industrial) */}
+                <div className={`relative flex flex-col items-center justify-center w-full transition-transform ${feedback === 'success' ? 'scale-110' : ''}`}>
+                    <div className={`text-[15rem] md:text-[20rem] leading-[0.8] font-black tabular-nums tracking-tighter select-none font-mono drop-shadow-[0_10px_0_rgba(0,0,0,0.1)] ${feedback === 'success' ? 'text-black' : 'text-slate-900'}`}>
                         {accumulatedQty}
                     </div>
-                    <div className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-400 -mt-2">
-                        Total SKU
+                    <div className={`text-[12px] font-black uppercase tracking-[0.6em] -mt-2 ${feedback === 'success' ? 'text-black/50' : 'text-slate-400'}`}>
+                        UNIDADES EN BULTO
                     </div>
                 </div>
             </div>
         );
     }
 
-    // ESTADO: REPOSO (Llamado a la acción claro)
     return (
         <div className="flex flex-col items-center justify-center h-full opacity-20">
-            <div className="border-4 border-dashed border-slate-900 rounded-[2rem] p-12 mb-6">
-                <Box className="w-24 h-24 text-slate-900" />
+            <div className="border-[8px] border-dashed border-slate-900 rounded-[4rem] p-20 mb-8">
+                <Box className="w-32 h-32 text-slate-900" />
             </div>
-            <h2 className="text-2xl font-black uppercase tracking-[0.2em] text-slate-900 text-center">
-                Esperando<br/>Escaneo
+            <h2 className="text-4xl font-black uppercase tracking-[0.3em] text-slate-900 text-center italic">
+                SISTEMA<br/>LISTO
             </h2>
         </div>
     );
