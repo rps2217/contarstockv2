@@ -17,8 +17,13 @@ export const useMassiveScanner = (batchId: string) => {
     const [isFlash, setIsFlash] = useState(false);
     const buffer = useRef('');
     const lastKeyTime = useRef(0);
+    
+    // Motor Anti-Spam (Debounce por SKU)
+    const lastProcessedCode = useRef<string | null>(null);
+    const lastProcessedTime = useRef<number>(0);
+    const DEBOUNCE_WINDOW = 2500; // 2.5 segundos de bloqueo para el mismo SKU
 
-    // Consulta consolidada: Suma cantidades y busca nombres en la DB maestra
+    // Consulta consolidada
     const items = useLiveQuery(async () => {
         const rawScans = await massiveDb.blindScans
             .where('batchId')
@@ -26,7 +31,6 @@ export const useMassiveScanner = (batchId: string) => {
             .toArray();
 
         const products = await masterDb.products.toArray();
-        // Explicitly type the map to avoid 'unknown' type inference issues
         const prodMap = new Map<string, string>(products.map(p => [p.barcode, p.name]));
 
         const aggregation = new Map<string, ConsolidatedBlindItem>();
@@ -39,7 +43,6 @@ export const useMassiveScanner = (batchId: string) => {
             } else {
                 aggregation.set(scan.barcode, {
                     barcode: scan.barcode,
-                    // FIX: prodMap.get returns string | undefined because of explicit typing above
                     name: prodMap.get(scan.barcode) || 'SKU DESCONOCIDO',
                     totalQuantity: scan.quantity,
                     lastTimestamp: scan.timestamp
@@ -54,17 +57,36 @@ export const useMassiveScanner = (batchId: string) => {
         const clean = sanitizeBarcode(code);
         if (!clean || clean.length < 3) return;
 
+        const now = Date.now();
+        
+        // --- LÓGICA ANTI-SPAM INDUSTRIAL ---
+        // Si el código es el mismo que el anterior y estamos dentro de la ventana de tiempo, ignorar.
+        if (clean === lastProcessedCode.current && (now - lastProcessedTime.current) < DEBOUNCE_WINDOW) {
+            return;
+        }
+
         try {
             await massiveDb.blindScans.add({
                 batchId,
                 barcode: clean,
                 quantity: qty,
-                timestamp: Date.now()
+                timestamp: now
             });
 
+            // Actualizar rastro para el siguiente escaneo
+            lastProcessedCode.current = clean;
+            lastProcessedTime.current = now;
+
+            // Feedback Visual y Auditivo (Beep Distintivo)
             setIsFlash(true);
-            SoundFX.play(qty > 0 ? 'increment' : 'delete');
-            if (navigator.vibrate) navigator.vibrate(qty > 0 ? 15 : 30);
+            
+            // Usamos 'success' para nuevos ingresos y 'increment' para ajustes manuales si se prefiere
+            // En modo ráfaga, un beep de éxito es el estándar industrial
+            SoundFX.play(qty > 0 ? 'success' : 'delete');
+            
+            // ELIMINADO: SoundFX.speak(p.name) para cumplir requerimiento de "Solo Beep"
+
+            if (navigator.vibrate) navigator.vibrate(qty > 0 ? 30 : 60);
             setTimeout(() => setIsFlash(false), 100);
         } catch (e) {
             SoundFX.play('error');
@@ -72,6 +94,8 @@ export const useMassiveScanner = (batchId: string) => {
     }, [batchId]);
 
     const updateItemQty = useCallback(async (barcode: string, delta: number) => {
+        // En ajustes manuales (+/-) desactivamos el anti-spam temporalmente para permitir clics rápidos
+        lastProcessedCode.current = null; 
         await registerScan(barcode, delta);
     }, [registerScan]);
 
