@@ -9,7 +9,7 @@ import { Sidebar } from './components/Sidebar';
 import { BottomDock } from './components/BottomDock';
 import { runFullMetadataRepair } from './components/maintenance/RecalculateTool';
 import { runFullSystemAudit } from './services/businessLogic.test';
-import { Box, Loader2 } from 'lucide-react';
+import { Box } from 'lucide-react';
 
 // Core Lazy imports
 const Dashboard = lazy(() => import('./components/Dashboard.tsx'));
@@ -33,7 +33,7 @@ const AppContent = () => {
       let isMounted = true;
       const bootSequence = async () => {
           try {
-              const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve('timeout'), 2000));
+              const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve('timeout'), 1500));
               const auditPromise = (async () => {
                   await runFullSystemAudit();
                   await runFullMetadataRepair();
@@ -42,7 +42,6 @@ const AppContent = () => {
               await Promise.race([auditPromise, timeoutPromise]);
               if (isMounted) setBootState('ready');
           } catch (e) {
-              console.error("Boot warning", e);
               if (isMounted) setBootState('ready');
           }
       };
@@ -51,14 +50,14 @@ const AppContent = () => {
   }, []);
 
   if (bootState === 'testing') return (
-      <div className="h-screen w-full bg-[#0f172a] flex flex-col items-center justify-center text-white p-8 text-center select-none">
-          <div className="bg-blue-600/20 p-6 rounded-[2rem] mb-8 border border-blue-500/30 shadow-[0_0_50px_rgba(59,130,246,0.2)]">
+      <div className="h-screen w-full bg-[#0f172a] flex flex-col items-center justify-center text-white p-8 text-center select-none font-sans">
+          <div className="bg-blue-600/20 p-6 rounded-[2rem] mb-8 border border-blue-500/30">
             <Box className="w-16 h-16 text-blue-500 animate-pulse" />
           </div>
           <h1 className="text-3xl font-black uppercase tracking-tighter italic mb-2">LogiCount <span className="text-blue-500">Pro</span></h1>
           <div className="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-full border border-white/10">
             <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Verificando Integridad...</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Verificando...</span>
           </div>
       </div>
   );
@@ -76,7 +75,7 @@ const AppContent = () => {
         <main className={`flex-1 relative overflow-hidden ${!isScanningMode ? 'md:pl-64' : ''}`}>
           <ErrorBoundary>
             <Suspense fallback={
-                <div className="h-full w-full flex flex-col items-center justify-center bg-slate-50 dark:bg-black">
+                <div className="h-full w-full flex flex-col items-center justify-center bg-slate-50 dark:bg-black p-12">
                     <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest animate-pulse">Cargando Módulo...</p>
                 </div>
