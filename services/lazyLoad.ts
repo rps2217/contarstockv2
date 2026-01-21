@@ -1,32 +1,33 @@
-import React, { ComponentType, LazyExoticComponent } from 'react';
+
+import { lazy, ComponentType, LazyExoticComponent } from 'react';
 
 /**
- * Wraps React.lazy to automatically reload the page if a chunk fails to load.
- * This fixes the "Failed to fetch dynamically imported module" error that happens
- * when a new version is deployed while a user has the app open.
+ * Envuelve React.lazy para reintentar la carga si falla (común en despliegues de Vercel/Vite).
+ * Si falla por un error de red o de archivo inexistente (mismatch de versión), 
+ * fuerza una recarga de la página una única vez.
  */
 export const lazyWithRetry = (
   componentImport: () => Promise<{ default: ComponentType<any> }>
 ): LazyExoticComponent<ComponentType<any>> => {
-  return React.lazy(async () => {
-    const pageHasAlreadyBeenForceRefreshed = JSON.parse(
-      window.sessionStorage.getItem('page-has-been-force-refreshed') || 'false'
+  return lazy(async () => {
+    const hasRefreshed = JSON.parse(
+      window.sessionStorage.getItem('lazy-retry-refreshed') || 'false'
     );
 
     try {
       const component = await componentImport();
-      window.sessionStorage.setItem('page-has-been-force-refreshed', 'false');
+      // Si carga con éxito, reseteamos el flag de recarga
+      window.sessionStorage.setItem('lazy-retry-refreshed', 'false');
       return component;
-    } catch (error: any) {
-      if (!pageHasAlreadyBeenForceRefreshed) {
-        // Assuming that the user is not on the latest version of the application.
-        // Let's refresh the page immediately.
-        console.log("Version mismatch detected. Reloading...");
-        window.sessionStorage.setItem('page-has-been-force-refreshed', 'true');
+    } catch (error) {
+      if (!hasRefreshed) {
+        // Marcamos que ya intentamos recargar para evitar bucles infinitos
+        window.sessionStorage.setItem('lazy-retry-refreshed', 'true');
+        console.warn("Versión de aplicación desactualizada detectada. Recargando núcleo...");
         window.location.reload();
+        return { default: () => null } as any;
       }
-      
-      // If we already reloaded and it still fails, it's a real network error or bug.
+      // Si ya recargamos y sigue fallando, lanzamos el error al ErrorBoundary
       throw error;
     }
   });

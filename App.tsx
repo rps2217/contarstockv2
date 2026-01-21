@@ -1,5 +1,5 @@
 
-import React, { Suspense, lazy, useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { useAppStore } from './store/useAppStore';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -10,17 +10,18 @@ import { BottomDock } from './components/BottomDock';
 import { runFullMetadataRepair } from './components/maintenance/RecalculateTool';
 import { runFullSystemAudit } from './services/businessLogic.test';
 import { Box } from 'lucide-react';
+import { lazyWithRetry } from './services/lazyLoad';
 
-// Core Lazy imports
-const Dashboard = lazy(() => import('./components/Dashboard.tsx'));
-const Reports = lazy(() => import('./components/Reports.tsx'));
-const DatabaseView = lazy(() => import('./components/Database.tsx'));
-const Sync = lazy(() => import('./components/SyncManagerUI.tsx'));
-const Consolidated = lazy(() => import('./components/Consolidated.tsx'));
-const Reception = lazy(() => import('./components/Reception.tsx'));
-const Settings = lazy(() => import('./components/Settings.tsx'));
-const CountingView = lazy(() => import('./components/CountingView.tsx'));
-const MassiveBlindView = lazy(() => import('./components/MassiveBlindView.tsx'));
+// Core Lazy imports con motor de recuperación automática
+const Dashboard = lazyWithRetry(() => import('./components/Dashboard.tsx'));
+const Reports = lazyWithRetry(() => import('./components/Reports.tsx'));
+const DatabaseView = lazyWithRetry(() => import('./components/Database.tsx'));
+const Sync = lazyWithRetry(() => import('./components/SyncManagerUI.tsx'));
+const Consolidated = lazyWithRetry(() => import('./components/Consolidated.tsx'));
+const Reception = lazyWithRetry(() => import('./components/Reception.tsx'));
+const Settings = lazyWithRetry(() => import('./components/Settings.tsx'));
+const CountingView = lazyWithRetry(() => import('./components/CountingView.tsx'));
+const MassiveBlindView = lazyWithRetry(() => import('./components/MassiveBlindView.tsx'));
 
 const AppContent = () => {
   const location = useLocation();
@@ -80,7 +81,7 @@ const AppContent = () => {
             <Suspense fallback={
                 <div className="h-full w-full flex flex-col items-center justify-center bg-slate-50 dark:bg-black p-12">
                     <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest animate-pulse">Cargando Módulo...</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest animate-pulse">Iniciando Módulo...</p>
                 </div>
             }>
               <Routes>

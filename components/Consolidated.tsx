@@ -132,3 +132,6 @@ export const Consolidated: React.FC = () => {
         </div>
     );
 };
+
+// Added default export for React.lazy support
+export default Consolidated;
