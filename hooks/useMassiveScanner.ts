@@ -72,6 +72,7 @@ export const useMassiveScanner = (batchId: string) => {
             setIsFlash(true);
             SoundFX.play(qty > 0 ? 'success' : 'delete');
             
+            // Removed redundant and incorrect setTimeout(() => setIsFlash(true), 120)
             setTimeout(() => setIsFlash(false), 120);
         } catch (e) {
             SoundFX.play('error');
@@ -100,4 +101,4 @@ export const useMassiveScanner = (batchId: string) => {
     const totalUnits = items?.reduce((acc, curr) => acc + curr.totalQuantity, 0) || 0;
 
     return { items, totalUnits, isFlash, lastScannedCode, registerScan, updateItemQty: registerScan };
-}, [batchId]);
+};

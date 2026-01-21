@@ -8,6 +8,10 @@ import { SoundFX } from '../services/audio';
 import { CountingSession, Product, ScannerStatus, ScanRecord } from '../types';
 import { Dexie } from 'dexie';
 
+/**
+ * HOOK DE ESCANEO INDUSTRIAL v6.0
+ * Diseñado para ráfagas de alta velocidad (>100 scans/min)
+ */
 export const useScanner = (session: CountingSession, onFinish: () => void, onDiscard?: () => void) => {
     const [status, setStatus] = useState<ScannerStatus>('idle');
     const [feedback, setFeedback] = useState<'idle' | 'success' | 'error' | 'undo'>('idle');
@@ -18,153 +22,100 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
     const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
     const [currentSkuTotal, setCurrentSkuTotal] = useState(0);
 
-    const seenBarcodes = useRef<Set<string>>(new Set());
     const skuCounters = useRef<Map<string, number>>(new Map());
     const isLocked = useRef(false);
+    const hidBuffer = useRef('');
+    const lastKeyTime = useRef(0);
 
-    const [pendingScan, setPendingScan] = useState<{barcode: string, name: string} | null>(null);
-
-    // OPTIMIZACIÓN: Solo traer los últimos 15 items sin ordenar todo el array
+    // Consulta reactiva optimizada: solo trae lo mínimo necesario para el log
     const recentHistory = useLiveQuery(
         () => db.scans
             .where('[sessionId+timestamp]')
             .between([session.id, Dexie.minKey], [session.id, Dexie.maxKey], true, true)
             .reverse()
-            .limit(15)
+            .limit(10)
             .toArray(), 
         [session.id]
     );
     
     const sessionStats = useLiveQuery(() => db.sessions.get(session.id), [session.id]);
 
+    // Sincronización de caché al inicio para evitar lag en el primer escaneo
     useEffect(() => {
         const syncCache = async () => {
             skuCounters.current.clear();
-            seenBarcodes.current.clear();
-            
-            // Construcción ligera de caché
             await db.scans.where('sessionId').equals(session.id).each(s => {
-                seenBarcodes.current.add(s.barcode);
                 const prev = skuCounters.current.get(s.barcode) || 0;
                 skuCounters.current.set(s.barcode, prev + s.quantity);
             });
-
-            // Estado inicial UI
-            const lastScanArray = await db.scans
-                .where('[sessionId+timestamp]')
-                .between([session.id, Dexie.minKey], [session.id, Dexie.maxKey])
-                .reverse()
-                .limit(1)
-                .toArray();
-
-            if (lastScanArray.length > 0) {
-                const last = lastScanArray[0];
-                const p = await db.products.get(last.barcode);
-                setCurrentScan(last);
-                setCurrentProduct(p || null);
-                setCurrentSkuTotal(skuCounters.current.get(last.barcode) || 0);
-            }
         };
         syncCache();
     }, [session.id]);
 
-    const finalizeScanPipeline = useCallback(async (barcode: string, mm?: number, yyyy?: number) => {
+    const finalizeScanPipeline = useCallback(async (barcode: string, qty: number) => {
         try {
-            const qtyToAdd = multiplier;
-            const newTotal = (skuCounters.current.get(barcode) || 0) + qtyToAdd;
+            const newTotal = (skuCounters.current.get(barcode) || 0) + qty;
             skuCounters.current.set(barcode, newTotal);
-            seenBarcodes.current.add(barcode);
             
-            const scanRecord = await sessionService.addScanEvent(session.id, barcode, qtyToAdd, mm, yyyy);
+            // Persistencia en background
+            const scanRecord = await sessionService.addScanEvent(session.id, barcode, qty);
             const productInfo = await db.products.get(barcode);
 
+            // Actualización UI instantánea
             setCurrentScan(scanRecord);
-            setCurrentProduct(productInfo || null);
+            setCurrentProduct(productInfo || { barcode, name: 'SKU NUEVO', category: 'N/A' });
             setCurrentSkuTotal(newTotal);
+            
             setFeedback('success');
-            SoundFX.play(qtyToAdd > 1 ? 'increment' : 'success');
-
-            setMultiplier(1);
-            setStatus('idle');
-            setTimeout(() => setFeedback('idle'), 400);
+            SoundFX.play(qty > 1 ? 'increment' : 'success');
+            
+            setTimeout(() => setFeedback('idle'), 300);
         } catch (err) {
             setFeedback('error');
             SoundFX.play('error');
         } finally {
-            // CRÍTICO: Siempre liberar el lock
             isLocked.current = false;
         }
-    }, [session.id, multiplier]);
+    }, [session.id]);
 
-    const handleInboundScan = useCallback(async (rawBarcode: string) => {
+    const handleInboundScan = useCallback((rawBarcode: string) => {
         if (isLocked.current) return;
         const barcode = sanitizeBarcode(rawBarcode);
         if (!barcode || barcode.length < 2) return;
 
         isLocked.current = true;
+        const qtyToApply = multiplier;
+        setMultiplier(1); // Reset multiplicador tras uso
         
-        try {
-            let product = await db.products.get(barcode);
-            
-            if (!product) {
-                // Registro implícito rápido para no bloquear
-                const newProd: Product = { barcode, name: 'PENDIENTE', category: 'NUEVO', syncStatus: 'add' };
-                await db.products.put(newProd);
-                product = newProd;
-            }
+        finalizeScanPipeline(barcode, qtyToApply);
+    }, [multiplier, finalizeScanPipeline]);
 
-            // Si es producto nuevo real (no visto en esta sesión), pedir confirmación opcional
-            // Para "Martillo Industrial", preferimos velocidad, así que eliminamos flujos complejos de expiración por defecto
-            const firstScan = await db.scans.where('[sessionId+barcode]').equals([session.id, barcode]).first();
-            await finalizeScanPipeline(barcode, firstScan?.mm, firstScan?.yyyy);
+    // MOTOR HID GLOBAL (Protocolo Martillo)
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.target as HTMLElement).tagName === 'INPUT') return;
 
-        } catch (error) {
-            console.error("Critical Scanner Error:", error);
-            setFeedback('error');
-            SoundFX.play('error');
-            isLocked.current = false;
-        }
-    }, [session.id, finalizeScanPipeline]);
+            const now = Date.now();
+            if (now - lastKeyTime.current > 40) hidBuffer.current = '';
+            lastKeyTime.current = now;
 
-    const handleUndoAction = useCallback(async () => {
-        const removedBarcode = await sessionService.undoLastAction(session.id);
-        if (removedBarcode) {
-            setFeedback('undo');
-            SoundFX.play('delete');
-            
-            const currentCount = skuCounters.current.get(removedBarcode);
-            if (currentCount !== undefined) {
-                // Recargar estado UI
-                const lastScanArray = await db.scans
-                    .where('[sessionId+timestamp]')
-                    .between([session.id, Dexie.minKey], [session.id, Dexie.maxKey])
-                    .reverse()
-                    .limit(1)
-                    .toArray();
-                
-                if (lastScanArray.length > 0) {
-                    const last = lastScanArray[0];
-                    let realTotal = 0;
-                    // Recálculo seguro
-                    await db.scans.where({sessionId: session.id, barcode: last.barcode}).each(s => realTotal += s.quantity);
-                    skuCounters.current.set(last.barcode, realTotal);
-                    
-                    setCurrentScan(last);
-                    setCurrentSkuTotal(realTotal);
-                } else {
-                    setCurrentScan(null);
-                    setCurrentSkuTotal(0);
+            if (e.key === 'Enter') {
+                if (hidBuffer.current.length >= 2) {
+                    handleInboundScan(hidBuffer.current);
                 }
+                hidBuffer.current = '';
+            } else if (e.key.length === 1) {
+                hidBuffer.current += e.key;
             }
-            setTimeout(() => setFeedback('idle'), 500);
-        }
-    }, [session.id]);
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [handleInboundScan]);
 
     return {
         state: { 
             status, setStatus, feedback, manualInput, setManualInput, multiplier, setMultiplier,
-            pendingScanCode: pendingScan?.barcode,
-            pendingProductName: pendingScan?.name,
             optimisticActiveQty: currentSkuTotal,
             optimisticTotalQty: sessionStats?.totalUnits || 0,
             optimisticUniqueSkus: sessionStats?.totalSKUs || 0
@@ -177,15 +128,21 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
         actions: { 
             handleExternalScan: handleInboundScan,
             handleManualSubmit: (e: any) => { e.preventDefault(); if (manualInput) handleInboundScan(manualInput); setManualInput(''); },
-            handleExpirationComplete: (mm?: number, yyyy?: number) => { 
-                if (pendingScan) finalizeScanPipeline(pendingScan.barcode, mm, yyyy);
-                else { isLocked.current = false; setStatus('idle'); }
+            handleUndo: async () => {
+                const removed = await sessionService.undoLastAction(session.id);
+                if (removed) {
+                    const prev = skuCounters.current.get(removed) || 0;
+                    skuCounters.current.set(removed, Math.max(0, prev - 1));
+                    setFeedback('undo');
+                    SoundFX.play('delete');
+                    setTimeout(() => setFeedback('idle'), 400);
+                }
             },
-            handleUndo: handleUndoAction,
             handleQuantityChange: sessionService.updateScanQuantity, 
             handleDeleteScan: sessionService.deleteScan,
+            // Added handleToggleIncident to fix the missing property error in Scanner component
             handleToggleIncident: sessionService.updateScanIncident,
-            handleDiscard: () => { if (confirm("¿Borrar sesión física?")) onDiscard?.(); }
+            handleDiscard: () => { if (confirm("¿DESCARTAR SESIÓN?")) onDiscard?.(); }
         }
     };
 };
