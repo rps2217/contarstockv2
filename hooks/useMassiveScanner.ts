@@ -13,17 +13,22 @@ export interface ConsolidatedBlindItem {
     lastTimestamp: number;
 }
 
+/**
+ * MOTOR DE ESCANEO INDUSTRIAL v4.5 - PROTOCOLO MARTILLO
+ * Optimizado para: Cámaras, Escáneres HID (USB/BT) y Láseres Integrados (PDA).
+ */
 export const useMassiveScanner = (batchId: string) => {
     const [isFlash, setIsFlash] = useState(false);
     const [lastScannedCode, setLastScannedCode] = useState<string | null>(null);
     const buffer = useRef('');
     const lastKeyTime = useRef(0);
     
-    // Motor de Colisión Mecánico (Evita re-procesamiento por SKU en ráfaga rápida)
+    // Motor de Colisión Mecánico
+    // REBOUNCE_MS: 300ms es el estándar para hardware físico (evita lecturas dobles por error óptico 
+    // pero permite ráfagas rápidas de gatillo manual).
     const collisionGuard = useRef<Map<string, number>>(new Map());
-    const REBOUNCE_MS = 1400;
+    const REBOUNCE_MS = 300; 
 
-    // Consulta reactiva blindada
     const items = useLiveQuery(async () => {
         try {
             const rawScans = await massiveDb.blindScans.where('batchId').equals(batchId).toArray();
@@ -45,6 +50,7 @@ export const useMassiveScanner = (batchId: string) => {
                     });
                 }
             }
+            // Los más recientes arriba para feedback inmediato
             return Array.from(aggregation.values()).sort((a, b) => b.lastTimestamp - a.lastTimestamp);
         } catch (e) {
             return [];
@@ -58,41 +64,50 @@ export const useMassiveScanner = (batchId: string) => {
         const now = Date.now();
         const lastTime = collisionGuard.current.get(clean) || 0;
         
-        // MOTOR DE COLISIÓN: Bloqueo de rebote óptico
+        // Bloqueo de seguridad para evitar duplicados accidentales del sensor óptico
         if (qty > 0 && (now - lastTime) < REBOUNCE_MS) return;
 
-        try {
-            collisionGuard.current.set(clean, now);
-            
-            // UI Feedback (Atomic Update)
-            setLastScannedCode(clean);
-            setIsFlash(true);
-            SoundFX.play(qty > 0 ? 'success' : 'delete');
-            setTimeout(() => setIsFlash(false), 80);
+        collisionGuard.current.set(clean, now);
+        
+        // Feedback Atómico de UI
+        setLastScannedCode(clean);
+        setIsFlash(true);
+        
+        // El sonido de éxito debe ser inmediato
+        SoundFX.play(qty > 0 ? 'success' : 'delete');
+        
+        // Vibración corta para Handhelds industriales
+        if (navigator.vibrate) navigator.vibrate(30);
 
-            // Persistencia asíncrona fuera del ciclo de render para evitar invariantes
-            massiveDb.blindScans.add({
-                batchId,
-                barcode: clean,
-                quantity: qty,
-                timestamp: now
-            }).catch(err => console.error("CollisionEngine_WriteError", err));
+        setTimeout(() => setIsFlash(false), 100);
 
-        } catch (e) {
-            console.error("CollisionEngine_Fatal", e);
-        }
+        // Persistencia asíncrona desvinculada del hilo principal
+        massiveDb.blindScans.add({
+            batchId,
+            barcode: clean,
+            quantity: qty,
+            timestamp: now
+        }).catch(err => console.error("DB_COMMIT_ERROR", err));
+
     }, [batchId]);
 
-    // Listener HID Industrial
+    // LISTENER HID (Escáner físico / Láser integrado)
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            // No capturar si el usuario está escribiendo en un input de texto
             if ((e.target as HTMLElement).tagName === 'INPUT') return;
+
             const now = Date.now();
-            if (now - lastKeyTime.current > 40) buffer.current = ''; 
+            // Los escáneres físicos disparan ráfagas < 30ms
+            if (now - lastKeyTime.current > 50) {
+                buffer.current = ''; 
+            }
             lastKeyTime.current = now;
 
             if (e.key === 'Enter') {
-                if (buffer.current.length >= 3) registerScan(buffer.current);
+                if (buffer.current.length >= 3) {
+                    registerScan(buffer.current);
+                }
                 buffer.current = '';
             } else if (e.key.length === 1) {
                 buffer.current += e.key;

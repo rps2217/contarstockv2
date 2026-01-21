@@ -1,8 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMassiveScanner } from '../hooks/useMassiveScanner';
-import { ChevronLeft, Trash2, Plus, Minus, ScanLine, History, Lock, Unlock, Loader2, Zap, Smartphone } from 'lucide-react';
+import { ChevronLeft, Trash2, Plus, Minus, ScanLine, History, Loader2, Zap, Smartphone, Cpu } from 'lucide-react';
 import { massiveDb } from '../db.massive';
 import { CameraScanner } from './CameraScanner';
 
@@ -13,6 +13,7 @@ const MassiveBlindView: React.FC = () => {
     
     const [isTriggerActive, setIsTriggerActive] = useState(false);
     const [isCameraActive, setIsCameraActive] = useState(false);
+    const [hwStatus, setHwStatus] = useState<'connected' | 'idle'>('connected');
 
     const handleReset = async () => {
         if (confirm("¿RESET BATCH?")) {
@@ -23,7 +24,6 @@ const MassiveBlindView: React.FC = () => {
 
     const toggleTrigger = (active: boolean) => {
         if (active !== isTriggerActive) {
-            if (active && navigator.vibrate) navigator.vibrate(20);
             setIsTriggerActive(active);
         }
     };
@@ -31,7 +31,7 @@ const MassiveBlindView: React.FC = () => {
     if (items === undefined) return (
         <div className="h-screen w-full bg-slate-950 flex flex-col items-center justify-center">
             <Loader2 className="w-10 h-10 text-blue-500 animate-spin mb-4" />
-            <span className="text-[8px] font-black text-white/40 uppercase tracking-[0.5em]">BUFFER_SYNC_INITIALIZING</span>
+            <span className="text-[8px] font-black text-white/40 uppercase tracking-[0.5em]">INITIALIZING_LASER_CORE</span>
         </div>
     );
 
@@ -46,7 +46,7 @@ const MassiveBlindView: React.FC = () => {
                     <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
                             <div className="w-1.5 h-1.5 rounded-full bg-blue-500 led-active"></div>
-                            <span className="text-[8px] font-black text-blue-500 uppercase tracking-widest italic block truncate">MARTILLO_V4.2</span>
+                            <span className="text-[8px] font-black text-blue-500 uppercase tracking-widest italic block truncate">MARTILLO_PRO_V4.5</span>
                         </div>
                         <span className="text-[10px] text-white/40 font-black tracking-widest uppercase truncate block">{batchId}</span>
                     </div>
@@ -68,12 +68,18 @@ const MassiveBlindView: React.FC = () => {
                     <CameraScanner onScan={registerScan} onClose={() => setIsCameraActive(false)} isTriggered={isTriggerActive} />
                 ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center gap-6 p-8 text-center bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.05)_0%,transparent_70%)]">
-                        <div className="w-20 h-20 border-4 border-dashed border-white/10 rounded-full flex items-center justify-center animate-[radar-pulse_2s_infinite]">
-                            <Smartphone className="w-8 h-8 text-white/10" />
+                        <div className="w-20 h-20 border-4 border-dashed border-white/10 rounded-full flex items-center justify-center">
+                            <Cpu className="w-8 h-8 text-blue-500/30 animate-pulse" />
                         </div>
-                        <button onClick={() => setIsCameraActive(true)} className="bg-white text-black px-10 py-5 font-black text-[11px] uppercase tracking-[0.4em] border-b-[10px] border-slate-400 active:translate-y-2 active:border-b-0 transition-all rounded-none">
-                            INIT_OPTICS
-                        </button>
+                        <div className="space-y-4">
+                            <button onClick={() => setIsCameraActive(true)} className="bg-white text-black px-10 py-5 font-black text-[11px] uppercase tracking-[0.4em] border-b-[10px] border-slate-400 active:translate-y-2 active:border-b-0 transition-all rounded-none block w-full">
+                                ACTIVATE_OPTICS
+                            </button>
+                            <div className="flex items-center justify-center gap-2 text-emerald-500/50">
+                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 led-active"></div>
+                                <span className="text-[7px] font-black uppercase tracking-widest">Hardware_HID_Ready</span>
+                            </div>
+                        </div>
                     </div>
                 )}
                 
@@ -97,22 +103,26 @@ const MassiveBlindView: React.FC = () => {
                 >
                     {isTriggerActive ? (
                         <>
-                            <Unlock className="w-10 h-10 text-white animate-pulse" />
-                            <span className="text-[9px] font-black uppercase tracking-[0.5em] text-white">CAPTURING_ACTIVE</span>
+                            <div className="absolute inset-0 bg-blue-400/10 animate-pulse"></div>
+                            <Zap className="w-10 h-10 text-white animate-bounce" />
+                            <span className="text-[9px] font-black uppercase tracking-[0.5em] text-white z-10">BURST_ACTIVE</span>
                         </>
                     ) : (
                         <>
                             <ScanLine className="w-10 h-10 text-slate-400" />
-                            <span className="text-lg font-black uppercase tracking-[0.2em] italic">SHOOT_BURST</span>
+                            <span className="text-lg font-black uppercase tracking-[0.2em] italic">TOUCH_OR_ZAP</span>
                         </>
                     )}
                 </button>
             </div>
 
             <div className="h-[28vh] overflow-y-auto no-scrollbar bg-slate-950 p-3">
-                <div className="flex items-center gap-2 mb-3 opacity-20 px-1">
-                    <History className="w-3 h-3" />
-                    <span className="text-[7px] font-black uppercase tracking-widest">LIVE_DATA_STREAM</span>
+                <div className="flex items-center justify-between mb-3 opacity-20 px-1">
+                    <div className="flex items-center gap-2">
+                        <History className="w-3 h-3" />
+                        <span className="text-[7px] font-black uppercase tracking-widest">REALTIME_LOG</span>
+                    </div>
+                    <span className="text-[7px] font-black uppercase tracking-widest">{hwStatus === 'connected' ? 'PORT_HID:OK' : 'PORT:WAIT'}</span>
                 </div>
 
                 <div className="space-y-1.5 pb-10">
@@ -125,14 +135,14 @@ const MassiveBlindView: React.FC = () => {
                                 </div>
                                 <h3 className="text-white font-black text-[10px] uppercase truncate italic leading-none opacity-80">{item.name}</h3>
                             </div>
-                            <div className="flex items-center gap-4 shrink-0">
+                            <div className="flex items-center gap-3 shrink-0">
                                 <div className="text-right">
                                     <div className="text-xl font-black text-white tabular-nums leading-none tracking-tighter">{item.totalQuantity}</div>
                                     <span className="text-[6px] font-bold text-white/20 uppercase tracking-widest mt-1 block">UNIT</span>
                                 </div>
                                 <div className="flex gap-1">
-                                    <button onClick={() => registerScan(item.barcode, 1)} className="w-9 h-9 bg-white/5 text-white flex items-center justify-center border border-white/10 active:bg-blue-600 rounded-lg"><Plus className="w-4 h-4"/></button>
-                                    <button onClick={() => registerScan(item.barcode, -1)} className="w-9 h-9 bg-white/5 text-rose-500 flex items-center justify-center border border-white/10 active:bg-rose-600 rounded-lg"><Minus className="w-4 h-4"/></button>
+                                    <button onClick={() => registerScan(item.barcode, 1)} className="w-8 h-8 bg-white/5 text-white flex items-center justify-center border border-white/10 active:bg-blue-600 rounded-lg"><Plus className="w-4 h-4"/></button>
+                                    <button onClick={() => registerScan(item.barcode, -1)} className="w-8 h-8 bg-white/5 text-rose-500 flex items-center justify-center border border-white/10 active:bg-rose-600 rounded-lg"><Minus className="w-4 h-4"/></button>
                                 </div>
                             </div>
                         </div>
