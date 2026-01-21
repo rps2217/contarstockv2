@@ -1,24 +1,23 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
-import { X, Camera, Zap, AlertTriangle, CheckCircle2, Lock, Unlock } from 'lucide-react';
+import { X, Camera, Lock, Unlock, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { SoundFX } from '../services/audio';
 
 interface CameraScannerProps {
     onScan: (code: string) => void;
     onClose: () => void;
     inline?: boolean;
-    isTriggered?: boolean; // Nuevo prop para control de gatillo
+    isTriggered?: boolean;
 }
 
-export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose, inline = true, isTriggered = true }) => {
+export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose, inline = true, isTriggered = false }) => {
     const [error, setError] = useState<string | null>(null);
     const [feedbackStatus, setFeedbackStatus] = useState<'success' | null>(null);
     const scannerRef = useRef<Html5Qrcode | null>(null);
     const isScanningRef = useRef(false);
     const lastScanTime = useRef(0);
-    
-    const uniqueId = useRef(`scanner-${Math.random().toString(36).substr(2, 9)}`).current;
+    const uniqueId = useRef(`v8-scanner-${Math.random().toString(36).substr(2, 5)}`).current;
 
     useEffect(() => {
         let isMounted = true;
@@ -32,96 +31,86 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose, i
             scannerRef.current = html5QrCode;
 
             try {
-                const el = document.getElementById(uniqueId);
-                if (!el) return;
-
                 isScanningRef.current = true;
                 await html5QrCode.start(
                     { facingMode: "environment" }, 
-                    { fps: 25, qrbox: { width: 280, height: 280 } },
+                    { fps: 30, qrbox: { width: 280, height: 280 }, aspectRatio: 1.0 },
                     (decodedText) => {
-                        if (!isMounted) return;
+                        if (!isMounted || !isTriggered) return;
                         
-                        // LÓGICA DE GATILLO: Solo procesamos si el gatillo está presionado
-                        // y ha pasado tiempo suficiente desde el último escaneo
                         const now = Date.now();
-                        if (!isTriggered || (now - lastScanTime.current < 1500)) return;
+                        if (now - lastScanTime.current < 1200) return;
                         
                         lastScanTime.current = now;
-                        setError(null);
                         setFeedbackStatus('success');
-                        SoundFX.play('success');
                         
-                        if (navigator.vibrate) navigator.vibrate(60);
-                        
+                        if (navigator.vibrate) navigator.vibrate(50);
                         onScan(decodedText);
                         
                         setTimeout(() => {
                             if (isMounted) setFeedbackStatus(null);
-                        }, 300);
+                        }, 200);
                     },
                     () => {}
                 );
             } catch (err: any) {
                 isScanningRef.current = false;
-                if (isMounted) setError("Error de Cámara. Verifique permisos.");
+                if (isMounted) setError("Motor Óptico Detenido");
             }
         };
 
-        const timer = setTimeout(initScanner, 100);
-
+        const timer = setTimeout(initScanner, 50);
         return () => {
             isMounted = false;
             clearTimeout(timer);
             if (scannerRef.current && isScanningRef.current) {
-                scannerRef.current.stop()
-                    .then(() => scannerRef.current?.clear())
-                    .catch((err) => console.warn("Scanner clean error", err));
+                scannerRef.current.stop().catch(() => {});
             }
         };
-    }, [isTriggered]); // Reiniciar si el estado del gatillo cambia (opcional, mejor manejarlo interno)
+    }, [uniqueId]);
 
     return (
-        <div className={`${inline ? 'w-full h-full relative' : 'fixed inset-0 z-[80]'} bg-black flex flex-col overflow-hidden`}>
-            {/* Capa de Estado del Gatillo */}
-            {!isTriggered && !error && (
-                <div className="absolute inset-0 z-40 bg-black/40 backdrop-grayscale flex flex-col items-center justify-center pointer-events-none transition-all duration-300">
-                    <div className="bg-black/60 p-6 rounded-full border-2 border-white/20 mb-4">
-                        <Lock className="w-12 h-12 text-white/40" />
+        <div className={`${inline ? 'w-full h-full relative' : 'fixed inset-0 z-[100]'} bg-black overflow-hidden`}>
+            
+            {/* CAPA DE SEGURO (BLOQUEO COGNITIVO) */}
+            <div className={`absolute inset-0 z-40 transition-all duration-300 pointer-events-none flex flex-col items-center justify-center ${isTriggered ? 'bg-transparent opacity-0' : 'bg-rose-950/40 backdrop-grayscale'}`}>
+                {!isTriggered && !error && (
+                    <div className="bg-black/80 p-5 rounded-full border-4 border-rose-600 animate-pulse">
+                        <Lock className="w-10 h-10 text-rose-600" />
                     </div>
-                    <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em]">Cámara en Espera</span>
-                </div>
-            )}
+                )}
+            </div>
 
+            {/* LASER DE IMPACTO */}
             {isTriggered && !feedbackStatus && (
-                <div className="absolute inset-0 z-30 pointer-events-none border-[12px] border-blue-500/20 animate-pulse">
-                    <div className="absolute top-1/2 left-0 right-0 h-1 bg-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.5)]"></div>
+                <div className="absolute inset-0 z-30 pointer-events-none">
+                    <div className="absolute top-1/2 left-0 right-0 h-1 bg-red-600/50 shadow-[0_0_20px_rgba(220,38,38,0.8)] animate-pulse"></div>
+                    <div className="absolute inset-0 border-[16px] border-white/5"></div>
                 </div>
             )}
 
-            <div className="flex-1 relative bg-black flex flex-col justify-center overflow-hidden">
+            <div className="flex-1 relative bg-black flex flex-col justify-center overflow-hidden h-full">
                 {feedbackStatus === 'success' && (
-                    <div className="absolute inset-0 z-[60] bg-emerald-600/40 backdrop-blur-sm flex flex-col items-center justify-center transition-all">
-                        <div className="bg-emerald-500 rounded-full p-8 shadow-2xl animate-in zoom-in duration-150">
-                            <CheckCircle2 className="w-20 h-20 text-white" />
+                    <div className="absolute inset-0 z-[60] bg-emerald-600/60 backdrop-blur-sm flex items-center justify-center">
+                        <div className="bg-white rounded-full p-6 shadow-[0_0_50px_rgba(255,255,255,0.4)] animate-in zoom-in duration-100">
+                            <Unlock className="w-16 h-16 text-emerald-600" />
                         </div>
                     </div>
                 )}
                 
                 {error && (
-                    <div className="text-center p-8 z-50 bg-black flex flex-col items-center justify-center h-full">
-                        <AlertTriangle className="w-12 h-12 text-rose-500 mb-4" />
-                        <h3 className="text-white font-bold text-sm mb-4">{error}</h3>
-                        <button onClick={onClose} className="bg-white text-black px-6 py-2 rounded-xl font-black text-[10px] uppercase">Reintentar</button>
+                    <div className="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center p-8 text-center">
+                        <AlertTriangle className="w-16 h-16 text-rose-500 mb-6" />
+                        <h3 className="text-white font-black uppercase tracking-widest">{error}</h3>
+                        <button onClick={onClose} className="mt-8 bg-white text-black px-10 py-4 font-black uppercase text-xs rounded-none border-b-8 border-slate-300">Cerrar</button>
                     </div>
                 )}
                 
-                <div id={uniqueId} className={`w-full h-full transition-opacity duration-500 ${isTriggered ? 'opacity-100' : 'opacity-40'}`}></div>
+                <div id={uniqueId} className={`w-full h-full transition-all duration-500 ${isTriggered ? 'scale-100 opacity-100 grayscale-0' : 'scale-95 opacity-30 grayscale'}`}></div>
             </div>
             
             <style>{`
                 #${uniqueId} video { width: 100% !important; height: 100% !important; object-fit: cover !important; }
-                #${uniqueId} { overflow: hidden; }
             `}</style>
         </div>
     );

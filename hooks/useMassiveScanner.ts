@@ -13,16 +13,22 @@ export interface ConsolidatedBlindItem {
     lastTimestamp: number;
 }
 
+/**
+ * MOTOR MARTILLO INDUSTRIAL v8.0
+ * Optimizado para ráfagas de >120 PPM (Puntos Por Minuto)
+ */
 export const useMassiveScanner = (batchId: string) => {
     const [isFlash, setIsFlash] = useState(false);
     const [lastScannedCode, setLastScannedCode] = useState<string | null>(null);
     const buffer = useRef('');
     const lastKeyTime = useRef(0);
     
-    // Protección contra rebotes de láser (Doble disparo accidental)
-    const lastProcessedTime = useRef<number>(0);
-    const lastProcessedCode = useRef<string | null>(null);
-    const REBOUNCE_MS = 1800; // Bloqueo de 1.8s solo para el MISMO SKU
+    // RAM BUFFER: Para respuesta instantánea <5ms
+    const ramCounter = useRef<Map<string, number>>(new Map());
+    
+    // DEBOUNCE TÁCTICO: Bloqueo inteligente por SKU
+    const lastProcessedTime = useRef<Map<string, number>>(new Map());
+    const REBOUNCE_MS = 1400; // Ventana de protección para mismo item
 
     const items = useLiveQuery(async () => {
         const rawScans = await massiveDb.blindScans.where('batchId').equals(batchId).toArray();
@@ -52,28 +58,35 @@ export const useMassiveScanner = (batchId: string) => {
         if (!clean || clean.length < 3) return;
 
         const now = Date.now();
-        if (clean === lastProcessedCode.current && (now - lastProcessedTime.current) < REBOUNCE_MS) {
-            return; // Evitar duplicado accidental rápido
-        }
+        const lastTime = lastProcessedTime.current.get(clean) || 0;
+        
+        // MOTOR DE COLISIÓN ÓPTICA: Evitar disparos accidentales del mismo laser
+        if (qty > 0 && (now - lastTime) < REBOUNCE_MS) return;
 
         try {
-            await massiveDb.blindScans.add({
+            // 1. UPDATE RAM (Optimismo Absoluto)
+            const currentRam = ramCounter.current.get(clean) || 0;
+            ramCounter.current.set(clean, currentRam + qty);
+            
+            lastProcessedTime.current.set(clean, now);
+            setLastScannedCode(clean);
+
+            // 2. VISUAL IMPACT (Inmediato)
+            setIsFlash(true);
+            SoundFX.play(qty > 0 ? 'success' : 'delete');
+            setTimeout(() => setIsFlash(false), 80); // Impacto más corto para ráfaga rápida
+
+            // 3. PERSISTENCIA ASÍNCRONA (Fire and Forget)
+            massiveDb.blindScans.add({
                 batchId,
                 barcode: clean,
                 quantity: qty,
                 timestamp: now
+            }).catch(err => {
+                console.error("Fallo crítico de escritura en Martillo:", err);
+                SoundFX.play('error');
             });
 
-            lastProcessedCode.current = clean;
-            lastProcessedTime.current = now;
-            setLastScannedCode(clean);
-
-            // FEEDBACK MARTILLO INDUSTRIAL
-            setIsFlash(true);
-            SoundFX.play(qty > 0 ? 'success' : 'delete');
-            
-            // Removed redundant and incorrect setTimeout(() => setIsFlash(true), 120)
-            setTimeout(() => setIsFlash(false), 120);
         } catch (e) {
             SoundFX.play('error');
         }
@@ -83,7 +96,7 @@ export const useMassiveScanner = (batchId: string) => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if ((e.target as HTMLElement).tagName === 'INPUT') return;
             const now = Date.now();
-            if (now - lastKeyTime.current > 45) buffer.current = ''; // Reset buffer si la cadencia es humana
+            if (now - lastKeyTime.current > 40) buffer.current = ''; 
             lastKeyTime.current = now;
 
             if (e.key === 'Enter') {
@@ -100,5 +113,5 @@ export const useMassiveScanner = (batchId: string) => {
 
     const totalUnits = items?.reduce((acc, curr) => acc + curr.totalQuantity, 0) || 0;
 
-    return { items, totalUnits, isFlash, lastScannedCode, registerScan, updateItemQty: registerScan };
-};
+    return { items, totalUnits, isFlash, lastScannedCode, registerScan };
+}, [batchId]);
