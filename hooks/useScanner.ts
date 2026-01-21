@@ -1,20 +1,26 @@
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import * as sessionService from '../services/sessionService'; 
+import * as productService from '../services/productService';
 import { sanitizeBarcode } from '../services/utils';
 import { SoundFX } from '../services/audio';
+import { getSettings } from '../services/settings';
 import { CountingSession, Product, ScannerStatus, ScanRecord } from '../types';
 import { Dexie } from 'dexie';
 
+export type ScannerFeedback = 'idle' | 'success' | 'error' | 'undo' | 'unknown' | 'incident';
+
 /**
- * HOOK DE ESCANEO INDUSTRIAL v6.0
- * Diseñado para ráfagas de alta velocidad (>100 scans/min)
+ * HOOK DE ESCANEO INDUSTRIAL v7.0 - PROTOCOLO MARTILLO
+ * Optimizado para ráfagas extremas y operación 'manos libres'.
  */
 export const useScanner = (session: CountingSession, onFinish: () => void, onDiscard?: () => void) => {
+    const settings = useMemo(() => getSettings(), []);
+    
     const [status, setStatus] = useState<ScannerStatus>('idle');
-    const [feedback, setFeedback] = useState<'idle' | 'success' | 'error' | 'undo'>('idle');
+    const [feedback, setFeedback] = useState<ScannerFeedback>('idle');
     const [manualInput, setManualInput] = useState('');
     const [multiplier, setMultiplier] = useState(1);
     
@@ -27,20 +33,20 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
     const hidBuffer = useRef('');
     const lastKeyTime = useRef(0);
 
-    // Consulta reactiva optimizada: solo trae lo mínimo necesario para el log
+    // Consulta reactiva del historial reciente
     const recentHistory = useLiveQuery(
         () => db.scans
             .where('[sessionId+timestamp]')
             .between([session.id, Dexie.minKey], [session.id, Dexie.maxKey], true, true)
             .reverse()
-            .limit(10)
+            .limit(15)
             .toArray(), 
         [session.id]
     );
     
     const sessionStats = useLiveQuery(() => db.sessions.get(session.id), [session.id]);
 
-    // Sincronización de caché al inicio para evitar lag en el primer escaneo
+    // Sincronización inicial de caché
     useEffect(() => {
         const syncCache = async () => {
             skuCounters.current.clear();
@@ -52,32 +58,74 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
         syncCache();
     }, [session.id]);
 
+    /**
+     * PIPELINE DE PROCESAMIENTO CRÍTICO
+     */
     const finalizeScanPipeline = useCallback(async (barcode: string, qty: number) => {
         try {
+            // 1. Verificación de Producto (Maestro)
+            let product = await productService.getProductByBarcode(barcode);
+            let isAutoRegistered = false;
+
+            if (!product) {
+                if (settings.autoRegisterUnknown) {
+                    // REGISTRO SILENCIOSO: No detiene el flujo
+                    product = {
+                        barcode,
+                        name: `PENDIENTE - ${barcode}`,
+                        category: 'POR_CLASIFICAR',
+                        syncStatus: 'add'
+                    };
+                    await productService.saveProduct(product);
+                    isAutoRegistered = true;
+                } else {
+                    // Si no hay auto-registro, el producto es 'Desconocido'
+                    product = { barcode, name: 'DESCONOCIDO', category: 'N/A' };
+                }
+            }
+
+            // 2. Actualización de Contadores Locales (UI Optimista)
             const newTotal = (skuCounters.current.get(barcode) || 0) + qty;
             skuCounters.current.set(barcode, newTotal);
             
-            // Persistencia en background
+            // 3. Persistencia en Segundo Plano
             const scanRecord = await sessionService.addScanEvent(session.id, barcode, qty);
-            const productInfo = await db.products.get(barcode);
 
-            // Actualización UI instantánea
+            // 4. Feedback Sensorial y Visual
             setCurrentScan(scanRecord);
-            setCurrentProduct(productInfo || { barcode, name: 'SKU NUEVO', category: 'N/A' });
+            setCurrentProduct(product);
             setCurrentSkuTotal(newTotal);
             
-            setFeedback('success');
-            SoundFX.play(qty > 1 ? 'increment' : 'success');
+            if (isAutoRegistered) {
+                setFeedback('unknown');
+                SoundFX.play('increment'); // Sonido distintivo para nuevo
+            } else {
+                setFeedback('success');
+                SoundFX.play(qty > 1 ? 'increment' : 'success');
+            }
+
+            // 5. Motor de Voz (TTS)
+            if (settings.ttsEnabled) {
+                const ttsText = settings.ttsMode === 'count' 
+                    ? `${newTotal}` 
+                    : `${product.name.substring(0, 20)}, ${newTotal}`;
+                SoundFX.speak(ttsText);
+            }
             
-            setTimeout(() => setFeedback('idle'), 300);
+            // Auto-limpieza de feedback flash
+            setTimeout(() => setFeedback('idle'), 250);
+
         } catch (err) {
             setFeedback('error');
             SoundFX.play('error');
         } finally {
             isLocked.current = false;
         }
-    }, [session.id]);
+    }, [session.id, settings]);
 
+    /**
+     * MANEJADOR DE ENTRADA (LÁSER / TECLADO)
+     */
     const handleInboundScan = useCallback((rawBarcode: string) => {
         if (isLocked.current) return;
         const barcode = sanitizeBarcode(rawBarcode);
@@ -85,12 +133,12 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
 
         isLocked.current = true;
         const qtyToApply = multiplier;
-        setMultiplier(1); // Reset multiplicador tras uso
+        setMultiplier(1); // Reset de seguridad tras aplicar
         
         finalizeScanPipeline(barcode, qtyToApply);
     }, [multiplier, finalizeScanPipeline]);
 
-    // MOTOR HID GLOBAL (Protocolo Martillo)
+    // Escucha de Hardware (Protocolo Martillo)
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if ((e.target as HTMLElement).tagName === 'INPUT') return;
@@ -100,9 +148,7 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
             lastKeyTime.current = now;
 
             if (e.key === 'Enter') {
-                if (hidBuffer.current.length >= 2) {
-                    handleInboundScan(hidBuffer.current);
-                }
+                if (hidBuffer.current.length >= 2) handleInboundScan(hidBuffer.current);
                 hidBuffer.current = '';
             } else if (e.key.length === 1) {
                 hidBuffer.current += e.key;
@@ -127,7 +173,11 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
         },
         actions: { 
             handleExternalScan: handleInboundScan,
-            handleManualSubmit: (e: any) => { e.preventDefault(); if (manualInput) handleInboundScan(manualInput); setManualInput(''); },
+            handleManualSubmit: (e: any) => { 
+                e.preventDefault(); 
+                if (manualInput) handleInboundScan(manualInput); 
+                setManualInput(''); 
+            },
             handleUndo: async () => {
                 const removed = await sessionService.undoLastAction(session.id);
                 if (removed) {
@@ -140,9 +190,13 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
             },
             handleQuantityChange: sessionService.updateScanQuantity, 
             handleDeleteScan: sessionService.deleteScan,
-            // Added handleToggleIncident to fix the missing property error in Scanner component
-            handleToggleIncident: sessionService.updateScanIncident,
-            handleDiscard: () => { if (confirm("¿DESCARTAR SESIÓN?")) onDiscard?.(); }
+            handleToggleIncident: async (e: any, id: string, current: boolean) => {
+                await sessionService.updateScanIncident(e, id, current);
+                setFeedback('incident');
+                setTimeout(() => setFeedback('idle'), 500);
+            },
+            handleDiscard: () => { if (confirm("¿DESCARTAR SESIÓN?")) onDiscard?.(); },
+            clearMultiplier: () => setMultiplier(1)
         }
     };
 };

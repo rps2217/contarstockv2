@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { ScanLine, Container, Cloud, Settings, AlertTriangle, CheckCircle2, Zap, ArrowRight, Activity, ShieldAlert, Radio } from 'lucide-react';
+import { ScanLine, Container, Settings, Zap, ArrowRight, Activity, ShieldAlert, Radio, Database, History } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
@@ -18,145 +18,92 @@ const Dashboard: React.FC = () => {
   const pendingCount = stats?.pendingSync || 0;
   const isSyncNeeded = pendingCount > 0;
 
-  const startMassiveBlind = () => {
-      const batchId = `BLIND-${new Date().toISOString().slice(11,19).replace(/:/g,'')}`;
-      navigate(`/massive/${batchId}`);
-  };
-
   return (
-    <div className="h-full w-full overflow-y-auto no-scrollbar bg-black font-mono select-none">
+    <div className="h-full w-full bg-black font-mono select-none overflow-x-hidden">
       
-      {/* TACTICAL STATUS BAR (TOP) */}
-      <div className="px-6 pt-8 pb-4 flex justify-between items-end border-b border-white/5 bg-black/50 backdrop-blur-xl sticky top-0 z-50">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-                <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
-                <span className="text-[10px] font-black text-blue-500 uppercase tracking-[0.3em]">System.Link.Active</span>
-            </div>
-            <h1 className="text-3xl font-black text-white uppercase tracking-tighter italic">
-                LOGI<span className="text-blue-600">COUNT</span>
-            </h1>
+      {/* MINIMAL STATUS HEADER */}
+      <div className="px-6 py-6 border-b-4 border-white/10 flex justify-between items-center bg-[#0a0a0a]">
+          <div className="flex flex-col">
+              <span className="text-[10px] font-black text-blue-500 tracking-[0.4em] uppercase leading-none mb-1">LogiCount.Core</span>
+              <h1 className="text-2xl font-black text-white italic tracking-tighter uppercase">Terminal_01</h1>
           </div>
-          <div className="text-right">
-             <span className="text-[8px] font-black text-white/30 uppercase tracking-widest block">Core Engine</span>
-             <span className="text-[10px] font-black text-white bg-white/10 px-2 py-0.5 rounded border border-white/10 uppercase tracking-widest">v3.1-HAMMER</span>
+          <div className="flex items-center gap-3">
+              <div className={`w-3 h-3 rounded-full ${isSyncNeeded ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`}></div>
+              <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">{isSyncNeeded ? 'Sync_Req' : 'Online'}</span>
           </div>
       </div>
 
-      <div className="px-5 pt-6 pb-32 space-y-4 max-w-2xl mx-auto">
+      <div className="p-4 space-y-3 max-w-2xl mx-auto">
         
-        {/* COMMS BEACON (TRANSMISSION STATUS) */}
-        <button 
-            onClick={() => navigate('/sync')}
-            className={`w-full p-6 rounded-[2.5rem] border-4 flex items-center justify-between transition-all active:scale-[0.97] group ${
-                isSyncNeeded 
-                ? 'bg-amber-500/10 border-amber-500 text-amber-500' 
-                : 'bg-emerald-500/10 border-emerald-500 text-emerald-500'
-            }`}
-        >
-            <div className="flex items-center gap-5">
-                <div className={`p-4 rounded-3xl ${isSyncNeeded ? 'bg-amber-500 text-black animate-pulse' : 'bg-emerald-500 text-black'}`}>
-                    <Radio className="w-8 h-8 stroke-[3px]" />
-                </div>
-                <div className="text-left">
-                    <div className="text-[10px] font-black uppercase tracking-[0.4em] opacity-60">Status de Enlace</div>
-                    <div className="text-3xl font-black tracking-tighter uppercase italic leading-none">
-                        {isSyncNeeded ? 'Pendientes' : 'Sincronizado'}
-                    </div>
-                </div>
-            </div>
-            {isSyncNeeded && (
-                <div className="bg-amber-500/20 px-4 py-2 rounded-2xl border border-amber-500/30 text-xs font-black">
-                    {pendingCount} PKT
-                </div>
-            )}
-        </button>
-
-        {/* PERFORMANCE CORE (MAIN METRIC) */}
-        <div className="bg-[#0a0a0a] p-8 rounded-[3rem] border-2 border-white/10 flex items-center justify-between overflow-hidden relative">
-            <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
-                <Zap className="w-64 h-64 -mr-20 -mt-20" />
-            </div>
-            
-            <div className="relative z-10">
-                <div className="text-[10px] font-black text-white/40 uppercase tracking-[0.5em] mb-2 flex items-center gap-2">
-                    <Activity className="w-3 h-3 text-blue-500" /> Rendimiento Turno
-                </div>
-                <div className="text-8xl font-black text-white tabular-nums tracking-tighter leading-none drop-shadow-[0_0_20px_rgba(255,255,255,0.1)]">
+        {/* CRITICAL METRIC BLOCK */}
+        <div className="bg-[#111] border-4 border-white/5 p-6 rounded-none flex items-center justify-between">
+            <div>
+                <span className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em] block mb-2">Total_Shift_Units</span>
+                <div className="text-7xl font-black text-white tabular-nums tracking-tighter leading-none">
                     {stats?.scansToday || 0}
                 </div>
-                <div className="mt-2 text-[10px] font-black text-blue-600 uppercase tracking-widest bg-blue-600/10 px-3 py-1 rounded-full border border-blue-600/20 inline-block">
-                    Unidades Procesadas
-                </div>
             </div>
+            <Activity className="w-12 h-12 text-blue-600 opacity-20" />
         </div>
 
-        {/* PRIMARY TACTICAL ACTIONS */}
-        <div className="grid grid-cols-1 gap-4">
+        {/* ACTIONS: HIGH CONTRAST BOXES */}
+        <div className="grid grid-cols-1 gap-3">
             
-            {/* INVENTARIO (STANDARD) */}
+            {/* INVENTARIO RAPIDO */}
             <button 
                 onClick={() => navigate('/reports')}
-                className="w-full h-32 bg-white text-black rounded-[2.5rem] flex items-center justify-between px-8 group transition-all active:scale-[0.98] border-b-[8px] border-slate-300"
+                className="w-full h-28 bg-white text-black rounded-none flex items-center px-6 gap-6 active:bg-blue-500 active:text-white transition-colors border-b-8 border-slate-300"
             >
-                <div className="flex items-center gap-6">
-                    <div className="bg-black text-white p-4 rounded-[1.8rem]">
-                        <ScanLine className="w-10 h-10 stroke-[2.5px]" />
-                    </div>
-                    <div className="text-left">
-                        <h2 className="text-2xl font-black uppercase tracking-tighter italic leading-none">Nueva Carga</h2>
-                        <p className="text-[10px] font-black text-black/40 uppercase tracking-widest mt-1">Modo Auditoría Local</p>
-                    </div>
+                <div className="bg-black text-white p-3">
+                    <ScanLine className="w-10 h-10" />
                 </div>
-                <ArrowRight className="w-8 h-8 text-black/20 group-hover:translate-x-2 transition-transform" />
+                <div className="text-left flex-1">
+                    <h2 className="text-2xl font-black uppercase italic leading-none">Nueva_Carga</h2>
+                    <span className="text-[10px] font-black opacity-40 uppercase tracking-widest mt-1 block">Standard_Audit_v3</span>
+                </div>
+                <ArrowRight className="w-6 h-6 opacity-20" />
             </button>
 
-            {/* ESCUDO CIEGO (HIGH-SPEED) */}
+            {/* MODO MARTILLO (BURST) */}
             <button 
-                onClick={startMassiveBlind}
-                className="w-full h-32 bg-indigo-600 text-white rounded-[2.5rem] flex items-center justify-between px-8 group transition-all active:scale-[0.98] border-b-[8px] border-indigo-900 shadow-xl shadow-indigo-900/20"
+                onClick={() => navigate(`/massive/BURST-${Date.now()}`)}
+                className="w-full h-28 bg-blue-600 text-white rounded-none flex items-center px-6 gap-6 active:bg-white active:text-blue-600 transition-colors border-b-8 border-blue-900"
             >
-                <div className="flex items-center gap-6">
-                    <div className="bg-black/30 p-4 rounded-[1.8rem] border border-white/20">
-                        <ShieldAlert className="w-10 h-10 text-white animate-pulse" />
-                    </div>
-                    <div className="text-left">
-                        <h2 className="text-2xl font-black uppercase tracking-tighter italic leading-none">Escudo Ciego</h2>
-                        <p className="text-[10px] font-black text-white/50 uppercase tracking-widest mt-1">Ráfaga Industrial H-Speed</p>
-                    </div>
+                <div className="bg-black/40 p-3 border border-white/20">
+                    <Zap className="w-10 h-10 fill-current" />
                 </div>
-                <Zap className="w-8 h-8 text-white fill-current" />
+                <div className="text-left flex-1">
+                    <h2 className="text-2xl font-black uppercase italic leading-none">Modo_Martillo</h2>
+                    <span className="text-[10px] font-black text-white/50 uppercase tracking-widest mt-1 block">High_Speed_Blind_Scan</span>
+                </div>
+                <ShieldAlert className="w-6 h-6 animate-pulse" />
             </button>
 
-            {/* SECONDARY UTILS (VERTICAL FLOW) */}
-            <div className="grid grid-cols-1 gap-4">
+            {/* UTILS GRID - NO GRASA */}
+            <div className="grid grid-cols-2 gap-3">
                 <button 
-                    onClick={() => navigate('/reception')}
-                    className="w-full h-24 bg-[#0f0f0f] border-2 border-white/5 rounded-[2.5rem] flex items-center gap-6 px-8 transition-all active:scale-95"
+                    onClick={() => navigate('/database')}
+                    className="h-24 bg-[#111] border-2 border-white/10 flex flex-col items-center justify-center gap-2 active:bg-white active:text-black"
                 >
-                    <div className="p-3 rounded-2xl bg-white/5 text-blue-400">
-                        <Container className="w-8 h-8" />
-                    </div>
-                    <div className="text-left">
-                        <h2 className="text-lg font-black text-white uppercase tracking-tight italic leading-none">Recepción</h2>
-                        <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em] mt-1">Entrada de Bultos</p>
-                    </div>
+                    <Database className="w-6 h-6" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Catálogo</span>
                 </button>
-
                 <button 
-                    onClick={() => navigate('/settings')}
-                    className="w-full h-24 bg-[#0f0f0f] border-2 border-white/5 rounded-[2.5rem] flex items-center gap-6 px-8 transition-all active:scale-95"
+                    onClick={() => navigate('/sync')}
+                    className={`h-24 border-2 flex flex-col items-center justify-center gap-2 transition-colors ${isSyncNeeded ? 'bg-amber-500/10 border-amber-500 text-amber-500 animate-pulse' : 'bg-[#111] border-white/10 text-white/40'}`}
                 >
-                    <div className="p-3 rounded-2xl bg-white/5 text-white/40">
-                        <Settings className="w-8 h-8" />
-                    </div>
-                    <div className="text-left">
-                        <h2 className="text-lg font-black text-white uppercase tracking-tight italic leading-none">Soporte</h2>
-                        <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em] mt-1">Configuración Core</p>
-                    </div>
+                    <Radio className="w-6 h-6" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">{isSyncNeeded ? 'Sincronizar' : 'Cloud_OK'}</span>
                 </button>
             </div>
 
+            <button 
+                onClick={() => navigate('/settings')}
+                className="w-full h-16 bg-[#0a0a0a] border-2 border-white/5 text-white/30 flex items-center justify-center gap-3 active:text-white"
+            >
+                <Settings className="w-4 h-4" />
+                <span className="text-[9px] font-black uppercase tracking-[0.4em]">Configuración_Sistema</span>
+            </button>
         </div>
 
       </div>
