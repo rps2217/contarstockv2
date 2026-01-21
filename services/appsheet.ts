@@ -6,7 +6,7 @@ import { markScansAsSynced } from "./sessionService";
 import { markProductsAsSynced } from "./productService";
 import { db } from "../db";
 import { SHEET_COLUMNS } from "./constants";
-import { sendToGas, callGas, fetchFromGas } from "./gasService";
+import { sendToGas, fetchFromGas } from "./gasService";
 import { aggregateScans } from "./aggregator";
 
 /**
@@ -35,7 +35,7 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
       [SHEET_COLUMNS.INCIDENT]: item.isIncident ? "FRC" : ""
   }));
 
-  if (onProgress) onProgress(`Enviando paquete Turbo-Sync...`);
+  if (onProgress) onProgress(`Enviando a Google Sheets...`);
   
   const result = await sendToGas({ 
       tableName: config?.countsTableName || "CONTEOS", 
@@ -46,15 +46,8 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
       await markScansAsSynced(unsynced.map(s => s.id));
       if (onProgress) onProgress(`Sincronización Exitosa.`);
   } else {
-      throw new Error(result.error || "Fallo en el servidor GAS");
+      throw new Error(result.error || "Fallo en el servidor de Google");
   }
-};
-
-/**
- * Descarga de progreso global desde la nube.
- */
-export const fetchCloudData = async (params: { erpFilter?: string }): Promise<any[]> => {
-  return await fetchFromGas("CONTEOS", params);
 };
 
 /**
@@ -72,9 +65,10 @@ export const syncReceptionToAppSheet = async (session: CountingSession): Promise
     if (!result.success) throw new Error(result.error);
 };
 
-/**
- * Gestión de Catálogo Maestro en la Nube
- */
+export const fetchProductsFromCloud = async (): Promise<any[]> => {
+  return await fetchFromGas("PRODUCTOS", {});
+};
+
 export const syncProductsToAppSheet = async (products: Product[]): Promise<void> => {
     const config = getSettings().appSheetConfig;
     const rows = products.map(p => ({
@@ -92,12 +86,6 @@ export const syncProductsToAppSheet = async (products: Product[]): Promise<void>
     }
 };
 
-export const fetchProductsFromCloud = async (): Promise<any[]> => {
-  return await fetchFromGas("PRODUCTOS", {});
-};
-
-export const parseFlexibleDate = (dateStr: any): number => {
-    if (!dateStr) return Date.now();
-    const d = new Date(dateStr);
-    return isNaN(d.getTime()) ? Date.now() : d.getTime();
+export const fetchCloudData = async (params: { erpFilter?: string }): Promise<any[]> => {
+  return await fetchFromGas("CONTEOS", params);
 };

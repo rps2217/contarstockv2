@@ -2,9 +2,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMassiveScanner } from '../hooks/useMassiveScanner';
-import { ChevronLeft, Trash2, Plus, Minus, ScanLine, History, Loader2, Zap, Smartphone, Cpu } from 'lucide-react';
+import { ChevronLeft, Trash2, Plus, Minus, ScanLine, History, Loader2, Zap, Smartphone, Cpu, FileSpreadsheet, Save, CheckCircle2 } from 'lucide-react';
 import { massiveDb } from '../db.massive';
 import { CameraScanner } from './CameraScanner';
+import { exportMassiveToExcel } from '../services/massiveExport';
+import { migrateMassiveToMaster } from '../services/massiveSync';
 
 const MassiveBlindView: React.FC = () => {
     const navigate = useNavigate();
@@ -14,11 +16,33 @@ const MassiveBlindView: React.FC = () => {
     const [isTriggerActive, setIsTriggerActive] = useState(false);
     const [isCameraActive, setIsCameraActive] = useState(false);
     const [hwStatus, setHwStatus] = useState<'connected' | 'idle'>('connected');
+    const [isMigrating, setIsMigrating] = useState(false);
 
     const handleReset = async () => {
-        if (confirm("¿RESET BATCH?")) {
+        if (confirm("¿RESET BATCH? Se borrarán todos los datos actuales del modo martillo.")) {
             await massiveDb.blindScans.where('batchId').equals(batchId).delete();
             window.location.reload();
+        }
+    };
+
+    const handleExportExcel = () => {
+        if (!items || items.length === 0) return;
+        exportMassiveToExcel(batchId, items);
+    };
+
+    const handleFinalize = async () => {
+        if (!items || items.length === 0) return;
+        if (!confirm("¿Finalizar lote? Los datos se moverán al historial para sincronizar con la nube.")) return;
+        
+        setIsMigrating(true);
+        try {
+            await migrateMassiveToMaster(batchId);
+            alert("Lote guardado en el historial. Ahora puedes sincronizarlo desde 'Gestor Nube'.");
+            navigate('/dashboard');
+        } catch (e: any) {
+            alert("Error: " + e.message);
+        } finally {
+            setIsMigrating(false);
         }
     };
 
@@ -52,12 +76,24 @@ const MassiveBlindView: React.FC = () => {
                     </div>
                 </div>
                 
-                <div className="flex items-center gap-4 shrink-0 ml-2">
-                    <div className="text-right pr-3 border-r border-white/10">
-                        <div className="text-2xl font-black text-white tabular-nums leading-none tracking-tighter">{totalUnits}</div>
-                        <span className="text-[6px] font-black text-white/20 uppercase tracking-[0.2em] mt-1 block">REG_UNITS</span>
-                    </div>
-                    <button onClick={handleReset} className="w-9 h-9 bg-rose-950/20 text-rose-500 flex items-center justify-center rounded-lg border border-rose-500/10 active:bg-rose-600 active:text-white transition-all">
+                <div className="flex items-center gap-2">
+                    <button 
+                        onClick={handleExportExcel}
+                        disabled={totalUnits === 0}
+                        className="w-10 h-10 bg-emerald-600 text-white flex items-center justify-center rounded-lg border border-emerald-500/20 active:scale-90 transition-all disabled:opacity-30"
+                        title="Exportar Excel"
+                    >
+                        <FileSpreadsheet className="w-5 h-5" />
+                    </button>
+                    <button 
+                        onClick={handleFinalize}
+                        disabled={totalUnits === 0 || isMigrating}
+                        className="w-10 h-10 bg-blue-600 text-white flex items-center justify-center rounded-lg border border-blue-500/20 active:scale-90 transition-all disabled:opacity-30"
+                        title="Finalizar y Mover a Historial"
+                    >
+                        {isMigrating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                    </button>
+                    <button onClick={handleReset} className="w-10 h-10 bg-rose-950/20 text-rose-500 flex items-center justify-center rounded-lg border border-rose-500/10 active:bg-rose-600 active:text-white transition-all">
                         <Trash2 className="w-4 h-4" />
                     </button>
                 </div>
@@ -83,6 +119,19 @@ const MassiveBlindView: React.FC = () => {
                     </div>
                 )}
                 
+                <div className="absolute top-4 right-4 z-50">
+                     <div className="bg-black/60 backdrop-blur-md border-2 border-white/10 p-3 rounded-2xl flex items-center gap-4">
+                        <div className="text-right">
+                            <div className="text-2xl font-black text-white tabular-nums leading-none tracking-tighter">{totalUnits}</div>
+                            <span className="text-[6px] font-black text-white/40 uppercase tracking-[0.2em] mt-1 block">TOTAL_UNITS</span>
+                        </div>
+                        <div className="text-right border-l border-white/10 pl-4">
+                            <div className="text-2xl font-black text-blue-500 tabular-nums leading-none tracking-tighter">{items.length}</div>
+                            <span className="text-[6px] font-black text-white/20 uppercase tracking-[0.2em] mt-1 block">UNIQUE_SKUS</span>
+                        </div>
+                     </div>
+                </div>
+
                 {lastScannedCode && !isFlash && (
                     <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-blue-600 text-white px-5 py-2 font-black text-[9px] uppercase tracking-[0.3em] italic border-2 border-black shadow-2xl animate-in slide-in-from-top-2">
                         SKU: {lastScannedCode}

@@ -1,6 +1,7 @@
 
 import { db } from '../db';
-import { fetchCloudData, fetchProductsFromCloud, syncToAppSheet, syncReceptionToAppSheet, syncProductsToAppSheet, parseFlexibleDate } from './appsheet';
+// Fix: Removed non-existent export parseFlexibleDate from appsheet service
+import { fetchCloudData, fetchProductsFromCloud, syncToAppSheet, syncReceptionToAppSheet, syncProductsToAppSheet } from './appsheet';
 import { SHEET_COLUMNS } from './constants';
 import { CountingSession, Product, SyncConflict } from '../types';
 import * as sessionService from './sessionService';
