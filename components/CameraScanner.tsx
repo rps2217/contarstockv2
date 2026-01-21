@@ -17,15 +17,19 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose, i
     const scannerRef = useRef<Html5Qrcode | null>(null);
     const isScanningRef = useRef(false);
     const lastScanTime = useRef(0);
+    
+    // IMPORTANTE: Ref para evitar cierres obsoletos en el callback asíncrono del scanner
+    const triggerRef = useRef(isTriggered);
+    useEffect(() => { triggerRef.current = isTriggered; }, [isTriggered]);
+
     const uniqueId = useRef(`v8-scanner-${Math.random().toString(36).substr(2, 5)}`).current;
 
     useEffect(() => {
         let isMounted = true;
         
         const initScanner = async () => {
-            if (scannerRef.current) {
-                try { await scannerRef.current.stop(); } catch(e) {}
-            }
+            // Evitar múltiples instancias
+            if (scannerRef.current && isScanningRef.current) return;
 
             const html5QrCode = new Html5Qrcode(uniqueId);
             scannerRef.current = html5QrCode;
@@ -36,7 +40,8 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose, i
                     { facingMode: "environment" }, 
                     { fps: 30, qrbox: { width: 280, height: 280 }, aspectRatio: 1.0 },
                     (decodedText) => {
-                        if (!isMounted || !isTriggered) return;
+                        // Usamos la ref para verificar si el gatillo está presionado en este instante
+                        if (!isMounted || !triggerRef.current) return;
                         
                         const now = Date.now();
                         if (now - lastScanTime.current < 1200) return;
@@ -51,28 +56,31 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose, i
                             if (isMounted) setFeedbackStatus(null);
                         }, 200);
                     },
-                    () => {}
+                    () => {} // Ignorar fallos de lectura de frame
                 );
             } catch (err: any) {
                 isScanningRef.current = false;
-                if (isMounted) setError("Motor Óptico Detenido");
+                if (isMounted) setError("No se pudo inicializar el motor óptico");
             }
         };
 
-        const timer = setTimeout(initScanner, 50);
+        const timer = setTimeout(initScanner, 100);
+
         return () => {
             isMounted = false;
             clearTimeout(timer);
-            if (scannerRef.current && isScanningRef.current) {
-                scannerRef.current.stop().catch(() => {});
+            if (scannerRef.current) {
+                scannerRef.current.stop().catch(() => {}).finally(() => {
+                    isScanningRef.current = false;
+                });
             }
         };
-    }, [uniqueId]);
+    }, [uniqueId, onScan]); // Solo dependemos del ID y el callback de salida
 
     return (
         <div className={`${inline ? 'w-full h-full relative' : 'fixed inset-0 z-[100]'} bg-black overflow-hidden`}>
             
-            {/* CAPA DE SEGURO (BLOQUEO COGNITIVO) */}
+            {/* CAPA DE SEGURO */}
             <div className={`absolute inset-0 z-40 transition-all duration-300 pointer-events-none flex flex-col items-center justify-center ${isTriggered ? 'bg-transparent opacity-0' : 'bg-rose-950/40 backdrop-grayscale'}`}>
                 {!isTriggered && !error && (
                     <div className="bg-black/80 p-5 rounded-full border-4 border-rose-600 animate-pulse">
@@ -101,8 +109,8 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose, i
                 {error && (
                     <div className="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center p-8 text-center">
                         <AlertTriangle className="w-16 h-16 text-rose-500 mb-6" />
-                        <h3 className="text-white font-black uppercase tracking-widest">{error}</h3>
-                        <button onClick={onClose} className="mt-8 bg-white text-black px-10 py-4 font-black uppercase text-xs rounded-none border-b-8 border-slate-300">Cerrar</button>
+                        <h3 className="text-white font-black uppercase tracking-widest text-sm">{error}</h3>
+                        <button onClick={onClose} className="mt-8 bg-white text-black px-10 py-4 font-black uppercase text-[10px] rounded-none border-b-8 border-slate-300">Cerrar</button>
                     </div>
                 )}
                 

@@ -4,84 +4,58 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-route
 import { useAppStore } from './store/useAppStore';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { NetworkStatus } from './components/NetworkStatus';
-import { InstallPrompt } from './components/InstallPrompt';
 import { Sidebar } from './components/Sidebar';
 import { BottomDock } from './components/BottomDock';
-import { runFullMetadataRepair } from './components/maintenance/RecalculateTool';
-import { runFullSystemAudit } from './services/businessLogic.test';
-import { Box } from 'lucide-react';
+import { SystemStatus } from './components/SystemStatus';
+import { Box, Loader2 } from 'lucide-react';
 import { lazyWithRetry } from './services/lazyLoad';
 
-// Core Lazy imports con motor de recuperación automática
 const Dashboard = lazyWithRetry(() => import('./components/Dashboard.tsx'));
 const Reports = lazyWithRetry(() => import('./components/Reports.tsx'));
 const DatabaseView = lazyWithRetry(() => import('./components/Database.tsx'));
 const Sync = lazyWithRetry(() => import('./components/SyncManagerUI.tsx'));
-const Consolidated = lazyWithRetry(() => import('./components/Consolidated.tsx'));
 const Reception = lazyWithRetry(() => import('./components/Reception.tsx'));
 const Settings = lazyWithRetry(() => import('./components/Settings.tsx'));
-const CountingView = lazyWithRetry(() => import('./components/CountingView.tsx'));
 const MassiveBlindView = lazyWithRetry(() => import('./components/MassiveBlindView.tsx'));
 
 const AppContent = () => {
   const location = useLocation();
   const { settings } = useAppStore();
-  const [bootState, setBootState] = useState<'testing' | 'ready' | 'failed'>('testing');
+  const [bootState, setBootState] = useState<'testing' | 'ready'>('testing');
   
-  const currentView = location.pathname.split('/')[1] || 'dashboard';
   const isScanningMode = location.pathname.startsWith('/counting/') || 
                          location.pathname === '/reception' || 
                          location.pathname.startsWith('/massive/');
 
   useEffect(() => {
-      let isMounted = true;
-      const bootSequence = async () => {
-          try {
-              const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve('timeout'), 1500));
-              const auditPromise = (async () => {
-                  await runFullSystemAudit();
-                  await runFullMetadataRepair();
-                  return 'done';
-              })();
-              await Promise.race([auditPromise, timeoutPromise]);
-              if (isMounted) setBootState('ready');
-          } catch (e) {
-              if (isMounted) setBootState('ready');
-          }
-      };
-      bootSequence();
-      return () => { isMounted = false; };
+    const timer = setTimeout(() => setBootState('ready'), 800);
+    return () => clearTimeout(timer);
   }, []);
 
   if (bootState === 'testing') return (
-      <div className="h-screen w-full bg-[#0f172a] flex flex-col items-center justify-center text-white p-8 text-center select-none font-sans">
-          <div className="bg-blue-600/20 p-6 rounded-[2rem] mb-8 border border-blue-500/30">
-            <Box className="w-16 h-16 text-blue-500 animate-pulse" />
-          </div>
-          <h1 className="text-3xl font-black uppercase tracking-tighter italic mb-2">LogiCount <span className="text-blue-500">Pro</span></h1>
-          <div className="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-full border border-white/10">
-            <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Verificando...</span>
-          </div>
-      </div>
+    <div className="h-screen w-full bg-slate-950 flex flex-col items-center justify-center text-white p-8">
+        <div className="p-8 border-4 border-blue-600 rounded-[2.5rem] mb-6">
+          <Box className="w-16 h-16 text-blue-500 animate-pulse" />
+        </div>
+        <h1 className="text-3xl font-black uppercase tracking-tighter italic">LogiCount <span className="text-blue-500">Pro</span></h1>
+        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 mt-4 animate-pulse">Initializing_Kernel_v4.0</p>
+    </div>
   );
 
-  const theme = settings.theme || 'light';
-  const isDarkTheme = ['dark', 'oled'].includes(theme);
-
   return (
-    <div className={`w-full h-full flex flex-col theme-${theme} ${isDarkTheme ? 'dark' : ''}`}>
+    <div className={`w-full h-full flex flex-col bg-slate-950 text-slate-100 font-mono selection:bg-blue-500 selection:text-white`}>
+      <SystemStatus />
       <NetworkStatus />
       
       <div className="flex-1 flex overflow-hidden relative">
-        {!isScanningMode && <Sidebar view={currentView} settings={settings} />}
+        {!isScanningMode && <Sidebar view={location.pathname.split('/')[1] || 'dashboard'} settings={settings} />}
         
-        <main className={`flex-1 relative overflow-hidden ${!isScanningMode ? 'md:pl-64' : ''}`}>
+        <main className={`flex-1 relative overflow-hidden transition-all duration-500 ${!isScanningMode ? 'md:pl-64' : ''}`}>
           <ErrorBoundary>
             <Suspense fallback={
-                <div className="h-full w-full flex flex-col items-center justify-center bg-slate-50 dark:bg-black p-12">
-                    <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest animate-pulse">Iniciando Módulo...</p>
+                <div className="h-full w-full flex flex-col items-center justify-center bg-slate-950 p-12">
+                    <Loader2 className="w-12 h-12 text-blue-600 animate-spin mb-4" />
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Loading_Module...</p>
                 </div>
             }>
               <Routes>
@@ -90,10 +64,8 @@ const AppContent = () => {
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/database" element={<DatabaseView />} />
                 <Route path="/sync" element={<Sync />} />
-                <Route path="/consolidated" element={<Consolidated />} />
                 <Route path="/reception" element={<Reception />} />
                 <Route path="/settings" element={<Settings />} />
-                <Route path="/counting/:id" element={<CountingView />} />
                 <Route path="/massive/:batchId" element={<MassiveBlindView />} />
               </Routes>
             </Suspense>
@@ -101,8 +73,7 @@ const AppContent = () => {
         </main>
       </div>
       
-      {!isScanningMode && <BottomDock currentView={currentView} settings={settings} />}
-      <InstallPrompt />
+      {!isScanningMode && <BottomDock currentView={location.pathname.split('/')[1] || 'dashboard'} settings={settings} />}
     </div>
   );
 };
