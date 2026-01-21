@@ -6,48 +6,43 @@ const KEYS = {
 };
 
 const DEFAULT_SETTINGS: AppSettings = {
-  theme: 'light',
+  theme: 'dark',
   soundEnabled: true,
   hapticsEnabled: true,
   ttsEnabled: false, 
   ttsMode: 'count',  
-  speedometerEnabled: false, 
+  speedometerEnabled: true, 
   confirmDelete: true,
-  autoRegisterUnknown: false, 
+  autoRegisterUnknown: true, 
   lowPerformanceMode: false,
   predictiveHintsEnabled: false,
   continuousMode: true,        
   appSheetConfig: {
       appId: '',
       accessKey: '',
-      countsTableName: '',
-      productsTableName: '',
+      countsTableName: 'CONTEOS',
+      productsTableName: 'PRODUCTOS',
       receptionTableName: 'RECEPCION_BULTOS'
   },
-  mobileNavConfig: ['dashboard', 'database', 'reports'] 
+  mobileNavConfig: ['dashboard', 'reports', 'sync', 'database'] 
 };
 
 export const getSettings = (): AppSettings => {
   try {
     const data = localStorage.getItem(KEYS.SETTINGS);
-    const parsed = data ? JSON.parse(data) : {};
+    if (!data) return DEFAULT_SETTINGS;
     
-    const config = parsed.appSheetConfig || {};
-    if (config.tableName && !config.countsTableName) {
-        config.countsTableName = config.tableName;
-    }
-
+    const parsed = JSON.parse(data);
     return { 
         ...DEFAULT_SETTINGS, 
         ...parsed,
         appSheetConfig: {
             ...DEFAULT_SETTINGS.appSheetConfig,
-            ...config
-        },
-        mobileNavConfig: parsed.mobileNavConfig || DEFAULT_SETTINGS.mobileNavConfig
+            ...(parsed.appSheetConfig || {})
+        }
     };
   } catch (e) {
-    console.error("Error reading settings", e);
+    console.error("Critical: Settings recovery failed", e);
     return DEFAULT_SETTINGS;
   }
 };
