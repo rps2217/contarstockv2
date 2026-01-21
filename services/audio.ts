@@ -4,7 +4,6 @@ import { getSettings } from './settings';
 class AudioService {
   private ctx: AudioContext | null = null;
   private synth: SpeechSynthesis | null = null;
-  // SECURITY: Keep reference to prevent Garbage Collection from cutting audio short on Android/Chrome
   private activeUtterance: SpeechSynthesisUtterance | null = null;
 
   constructor() {
@@ -29,50 +28,25 @@ class AudioService {
   public speak(text: string) {
       const settings = getSettings();
       if (!settings.ttsEnabled || !this.synth) return;
-
-      // Cancel previous utterance to avoid queue buildup
       this.synth.cancel();
-
-      // Simple cleanup of product names for better speech
-      const cleanText = text
-        .toLowerCase()
-        .replace(/beb\./g, 'bebida')
-        .replace(/unid\./g, 'unidades')
-        .replace(/\./g, ' punto ')
-        .substring(0, 80); // Limit length
-
-      // Create new utterance
-      const utterance = new SpeechSynthesisUtterance(cleanText);
-      utterance.rate = 1.1; // Slightly faster
+      const utterance = new SpeechSynthesisUtterance(text.substring(0, 60));
+      utterance.rate = 1.3;
       utterance.pitch = 1.0;
-      utterance.lang = 'es-ES'; // Default Spanish
-
-      // BINDING: Hold reference
+      utterance.lang = 'es-ES';
       this.activeUtterance = utterance;
-
-      // CLEANUP: Release reference when done
-      utterance.onend = () => {
-          this.activeUtterance = null;
-      };
-      utterance.onerror = (e) => {
-          console.warn("TTS Error:", e);
-          this.activeUtterance = null;
-      };
-
       this.synth.speak(utterance);
   }
 
   public play(type: 'success' | 'error' | 'delete' | 'increment') {
     const settings = getSettings();
     
-    // Haptics
+    // Haptics de alto impacto
     if (settings.hapticsEnabled && navigator.vibrate) {
-        if (type === 'error') navigator.vibrate([50, 50, 50]);
-        else if (type === 'increment') navigator.vibrate(15); // Short tick
-        else navigator.vibrate(50);
+        if (type === 'error') navigator.vibrate([100, 50, 100]);
+        else if (type === 'success') navigator.vibrate(40);
+        else navigator.vibrate(20);
     }
 
-    // Audio check
     if (!settings.soundEnabled) return;
 
     const ctx = this.getContext();
@@ -87,34 +61,35 @@ class AudioService {
       gain.connect(ctx.destination);
 
       switch (type) {
-        case 'success': // New Product (Higher pitch, clear)
-          osc.frequency.setValueAtTime(1000, now);
-          osc.frequency.exponentialRampToValueAtTime(1500, now + 0.1);
-          osc.type = 'sine';
-          gain.gain.setValueAtTime(0.1, now);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-          osc.start(now);
-          osc.stop(now + 0.15);
-          break;
-        case 'increment': // Same Product (Short, lower tick)
-          osc.frequency.setValueAtTime(800, now);
-          osc.type = 'sine'; // Softer than square
-          gain.gain.setValueAtTime(0.05, now);
+        case 'success': 
+          // BEEP INDUSTRIAL: Onda cuadrada para máxima penetración en ruido ambiente
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(1200, now);
+          gain.gain.setValueAtTime(0.15, now);
           gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
           osc.start(now);
           osc.stop(now + 0.08);
           break;
+        case 'increment':
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(800, now);
+          gain.gain.setValueAtTime(0.1, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+          osc.start(now);
+          osc.stop(now + 0.05);
+          break;
         case 'delete':
-          osc.frequency.setValueAtTime(600, now);
-          osc.type = 'square';
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(400, now);
           gain.gain.setValueAtTime(0.1, now);
           gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
           osc.start(now);
           osc.stop(now + 0.15);
           break;
         case 'error':
-          osc.frequency.setValueAtTime(150, now);
           osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(100, now);
+          osc.frequency.linearRampToValueAtTime(50, now + 0.3);
           gain.gain.setValueAtTime(0.2, now);
           gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
           osc.start(now);
@@ -122,7 +97,7 @@ class AudioService {
           break;
       }
     } catch (e) {
-      console.warn("Audio playback error", e);
+      console.warn("Audio error", e);
     }
   }
 }
