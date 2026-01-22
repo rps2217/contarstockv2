@@ -3,15 +3,14 @@ import { CountingSession, Product } from "../types";
 import { getSettings } from "./settings"; 
 import { generateUUID } from "./utils";
 import { markScansAsSynced } from "./sessionService"; 
+import { markProductsAsSynced } from "./productService";
 import { db } from "../db";
+import { SHEET_COLUMNS } from "./constants";
 import { sendToGas, fetchFromGas } from "./gasService";
-import { sendToAppSheet } from "../infrastructure/api/appsheetClient";
 import { aggregateScans } from "./aggregator";
 
 /**
- * Sincronización Inteligente Enrutada
- * MODO_MARTILLO -> Pestaña "CONTEOS"
- * NORMAL / NUEVA CARGA -> Pestaña "CONSOLIDADOS"
+ * Sincronización de Sesiones vía Turbo-Sync (GAS)
  */
 export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg: string) => void): Promise<void> => {
   const config = getSettings().appSheetConfig;
@@ -19,92 +18,41 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
   
   if (unsynced.length === 0) return;
 
-  if (onProgress) onProgress(`Consolidando registros...`);
+  if (onProgress) onProgress(`Consolidando datos locales...`);
   const consolidated = await aggregateScans(unsynced);
   
-  // Mapeo de columnas estándar para Script Turbo v5.2
   const rows = consolidated.map(item => ({
-      "ID_REGISTRO": generateUUID(),
-      "CLAVE_UNICA": `${session.erpOrder}_${session.logisticsLabel}_${item.barcode}_${item.mm || 0}_${item.yyyy || 0}`,
-      "FECHA": new Date().toISOString().split('T')[0],
-      "ERP": session.erpOrder, 
-      "CODIGO": item.barcode,
-      "PRODUCTO": item.productName,
-      "CANTIDAD": item.totalQuantity,
-      "ETIQUETAS": session.logisticsLabel, 
-      "MM": item.mm || 0,
-      "YYYY": item.yyyy || 0,
-      "FRC": item.isIncident ? "FRC" : ""
+      [SHEET_COLUMNS.ID]: generateUUID().substring(0,8),
+      [SHEET_COLUMNS.UNIQUE_KEY]: `${session.erpOrder}_${session.logisticsLabel}_${item.barcode}_${item.mm || 0}_${item.yyyy || 0}`,
+      [SHEET_COLUMNS.DATE]: new Date().toISOString(),
+      [SHEET_COLUMNS.ERP_ORDER]: session.erpOrder,
+      [SHEET_COLUMNS.BARCODE]: item.barcode,
+      [SHEET_COLUMNS.PRODUCT_NAME]: item.productName,
+      [SHEET_COLUMNS.QUANTITY]: item.totalQuantity,
+      [SHEET_COLUMNS.LABEL]: session.logisticsLabel,
+      [SHEET_COLUMNS.MONTH]: item.mm || 0,
+      [SHEET_COLUMNS.YEAR]: item.yyyy || 0,
+      [SHEET_COLUMNS.INCIDENT]: item.isIncident ? "FRC" : ""
   }));
 
-  // LÓGICA DE ENRUTAMIENTO DE PESTAÑA
-  let tableName = config?.countsTableName || "CONSOLIDADOS";
+  if (onProgress) onProgress(`Enviando a Google Sheets...`);
   
-  if (session.erpOrder === "MODO_MARTILLO") {
-      tableName = "CONTEOS"; // El martillo siempre va a Conteos
-  }
+  const result = await sendToGas({ 
+      tableName: config?.countsTableName || "CONTEOS", 
+      rows 
+  });
 
-  if (onProgress) onProgress(`Subiendo a ${tableName}...`);
-
-  try {
-      if (config?.gasWebAppUrl) {
-          const result = await sendToGas({ tableName, rows });
-          if (!result.success) throw new Error(result.error || "Fallo en Script de Google");
-      } else {
-          await sendToAppSheet(config!, tableName, {
-              Action: "Add",
-              Properties: { Locale: "es-ES", Timezone: "UTC" },
-              Rows: rows
-          });
-      }
-
+  if (result.success) {
       await markScansAsSynced(unsynced.map(s => s.id));
-      if (onProgress) onProgress(`Sincronización en ${tableName} Exitosa.`);
-  } catch (e: any) {
-      console.error("Sync Error:", e);
-      throw new Error(`Fallo de conexión: ${e.message}`);
+      if (onProgress) onProgress(`Sincronización Exitosa.`);
+  } else {
+      throw new Error(result.error || "Fallo en el servidor de Google");
   }
 };
 
-export const fetchProductsFromCloud = async (): Promise<any[]> => {
-  const config = getSettings().appSheetConfig;
-  if (config?.gasWebAppUrl) {
-      return await fetchFromGas(config.productsTableName || "PRODUCTOS", {});
-  }
-  return [];
-};
-
-export const fetchCloudData = async (filters: { erpFilter?: string }): Promise<any[]> => {
-    const config = getSettings().appSheetConfig;
-    if (config?.gasWebAppUrl) {
-        // Por defecto buscamos en CONSOLIDADOS para el Detective
-        return await fetchFromGas(config.countsTableName || "CONSOLIDADOS", filters);
-    }
-    return [];
-};
-
-export const syncProductsToAppSheet = async (products: Product[]): Promise<void> => {
-    const config = getSettings().appSheetConfig;
-    const rows = products.map(p => ({
-        "PROVEEDOR": p.supplier || "",
-        "MUNDO": p.category,
-        "COD PRODUCTO": p.barcode,
-        "DESCRIPCION": p.name,
-        "MARCA BCM 5,0": "", 
-        "RUT PROVEEDOR": p.supplierRut || ""
-    }));
-
-    if (config?.gasWebAppUrl) {
-        await sendToGas({ tableName: config.productsTableName || "PRODUCTOS", rows });
-    } else {
-        await sendToAppSheet(config!, config.productsTableName || "PRODUCTOS", {
-            Action: "Add",
-            Properties: { Locale: "es-ES", Timezone: "UTC" },
-            Rows: rows
-        });
-    }
-};
-
+/**
+ * Sincronización de Recepción (Ráfaga)
+ */
 export const syncReceptionToAppSheet = async (session: CountingSession): Promise<void> => {
     const config = getSettings().appSheetConfig;
     const rows = [{
@@ -113,14 +61,31 @@ export const syncReceptionToAppSheet = async (session: CountingSession): Promise
         "ETIQUETA": session.logisticsLabel,
         "ESTADO": "RECIBIDO"
     }];
+    const result = await sendToGas({ tableName: config?.receptionTableName || "RECEPCION_BULTOS", rows });
+    if (!result.success) throw new Error(result.error);
+};
 
-    const tableName = config?.receptionTableName || "RECEPCION_BULTOS";
+export const fetchProductsFromCloud = async (): Promise<any[]> => {
+  return await fetchFromGas("PRODUCTOS", {});
+};
 
-    if (config?.gasWebAppUrl) {
-        await sendToGas({ tableName, rows });
+export const syncProductsToAppSheet = async (products: Product[]): Promise<void> => {
+    const config = getSettings().appSheetConfig;
+    const rows = products.map(p => ({
+        "CODIGO": p.barcode,
+        "PRODUCTO": p.name,
+        "CATEGORIA": p.category,
+        "PROVEEDOR": p.supplier,
+        "RUT": p.supplierRut
+    }));
+    const result = await sendToGas({ tableName: config?.productsTableName || "PRODUCTOS", rows });
+    if (result.success) {
+        await markProductsAsSynced(products.map(p => p.barcode));
     } else {
-        await sendToAppSheet(config!, tableName, {
-            Action: "Add", Properties: { Locale: "es-ES", Timezone: "UTC" }, Rows: rows
-        });
+        throw new Error(result.error);
     }
+};
+
+export const fetchCloudData = async (params: { erpFilter?: string }): Promise<any[]> => {
+  return await fetchFromGas("CONTEOS", params);
 };

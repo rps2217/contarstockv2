@@ -17,19 +17,18 @@ const cleanString = z.union([z.string(), z.number(), z.null(), z.undefined()])
  */
 export const CloudProductSchema = z.record(z.any()).transform((raw) => {
     const normalized: Record<string, any> = {};
+    // Normalizar todas las llaves a mayúsculas y quitar acentos básicos para comparación robusta
     Object.keys(raw).forEach(k => {
-        // Normalizamos la llave para que no importe si tiene espacios o acentos
         const key = k.trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         normalized[key] = raw[k];
     });
 
-    // Mapeo flexible priorizando tu estructura:
-    // PROVEEDOR; MUNDO; COD PRODUCTO; DESCRIPCION; RUT PROVEEDOR
-    const barcode = normalized["COD PRODUCTO"] || normalized["CODPRODUCTO"] || normalized["CODIGO"] || normalized["SKU"] || normalized["BARCODE"] || "";
-    const name = normalized["DESCRIPCION"] || normalized["PRODUCTO"] || normalized["NOMBRE"] || normalized["ITEM"] || "Sin descripción";
+    // Mapeo flexible
+    const barcode = normalized["COD PRODUCTO"] || normalized["CODIGO"] || normalized["SKU"] || normalized["BARCODE"] || normalized["EAN"] || "";
+    const name = normalized["DESCRIPCION"] || normalized["PRODUCTO"] || normalized["NOMBRE"] || normalized["DESCRIP"] || normalized["ITEM"] || "Sin descripción";
     const category = normalized["MUNDO"] || normalized["CATEGORIA"] || normalized["CATEGORY"] || "GENERAL";
     const supplier = normalized["PROVEEDOR"] || normalized["SUPPLIER"] || "";
-    const supplierRut = normalized["RUT PROVEEDOR"] || normalized["RUTPROVEEDOR"] || normalized["RUT"] || "";
+    const supplierRut = normalized["RUT PROVEEDOR"] || normalized["RUT"] || "";
 
     return {
         barcode: String(barcode).trim(),
@@ -46,6 +45,7 @@ export const CloudProductSchema = z.record(z.any()).transform((raw) => {
     supplierRut: z.string().default("")
 }));
 
+// Mantener esquemas de inventario para compatibilidad
 export const CloudInventoryRowSchema = z.object({
     [SHEET_COLUMNS.ERP_ORDER]: cleanString,
     [SHEET_COLUMNS.LABEL]: cleanString,
@@ -56,4 +56,11 @@ export const CloudInventoryRowSchema = z.object({
     [SHEET_COLUMNS.YEAR]: z.coerce.number().optional(),
     [SHEET_COLUMNS.PRODUCT_NAME]: cleanString.optional(),
     [SHEET_COLUMNS.INCIDENT]: cleanString.optional(),
+});
+
+export const CloudReceptionRowSchema = z.object({
+    "ID_RECEPCION": cleanString,
+    "FECHA_HORA": cleanString,
+    "ETIQUETA": cleanString,
+    "ESTADO": cleanString,
 });

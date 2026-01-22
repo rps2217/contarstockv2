@@ -15,7 +15,6 @@ export interface ConsolidatedBlindItem {
 
 /**
  * MOTOR DE ESCANEO INDUSTRIAL v4.5 - PROTOCOLO MARTILLO
- * Optimizado para: Cámaras, Escáneres HID (USB/BT) y Láseres Integrados (PDA).
  */
 export const useMassiveScanner = (batchId: string) => {
     const [isFlash, setIsFlash] = useState(false);
@@ -23,9 +22,6 @@ export const useMassiveScanner = (batchId: string) => {
     const buffer = useRef('');
     const lastKeyTime = useRef(0);
     
-    // Motor de Colisión Mecánico
-    // REBOUNCE_MS: 300ms es el estándar para hardware físico (evita lecturas dobles por error óptico 
-    // pero permite ráfagas rápidas de gatillo manual).
     const collisionGuard = useRef<Map<string, number>>(new Map());
     const REBOUNCE_MS = 300; 
 
@@ -50,7 +46,6 @@ export const useMassiveScanner = (batchId: string) => {
                     });
                 }
             }
-            // Los más recientes arriba para feedback inmediato
             return Array.from(aggregation.values()).sort((a, b) => b.lastTimestamp - a.lastTimestamp);
         } catch (e) {
             return [];
@@ -64,61 +59,46 @@ export const useMassiveScanner = (batchId: string) => {
         const now = Date.now();
         const lastTime = collisionGuard.current.get(clean) || 0;
         
-        // Bloqueo de seguridad para evitar duplicados accidentales del sensor óptico
         if (qty > 0 && (now - lastTime) < REBOUNCE_MS) return;
-
         collisionGuard.current.set(clean, now);
         
-        // Feedback Atómico de UI
         setLastScannedCode(clean);
         setIsFlash(true);
-        
-        // El sonido de éxito debe ser inmediato
         SoundFX.play(qty > 0 ? 'success' : 'delete');
-        
-        // Vibración corta para Handhelds industriales
         if (navigator.vibrate) navigator.vibrate(30);
 
         setTimeout(() => setIsFlash(false), 100);
 
-        // Persistencia asíncrona desvinculada del hilo principal
         massiveDb.blindScans.add({
             batchId,
             barcode: clean,
             quantity: qty,
             timestamp: now
         }).catch(err => console.error("DB_COMMIT_ERROR", err));
-
     }, [batchId]);
 
-    // LISTENER HID (Escáner físico / Láser integrado)
+    const removeItemCompletely = useCallback(async (barcode: string) => {
+        await massiveDb.blindScans.where('batchId').equals(batchId).and(s => s.barcode === barcode).delete();
+        SoundFX.play('delete');
+    }, [batchId]);
+
+    // LISTENER HID (Escáner físico)
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            // No capturar si el usuario está escribiendo en un input de texto
             if ((e.target as HTMLElement).tagName === 'INPUT') return;
-
             const now = Date.now();
-            // Los escáneres físicos disparan ráfagas < 30ms
-            if (now - lastKeyTime.current > 50) {
-                buffer.current = ''; 
-            }
+            if (now - lastKeyTime.current > 50) buffer.current = ''; 
             lastKeyTime.current = now;
-
             if (e.key === 'Enter') {
-                if (buffer.current.length >= 3) {
-                    registerScan(buffer.current);
-                }
+                if (buffer.current.length >= 3) registerScan(buffer.current);
                 buffer.current = '';
-            } else if (e.key.length === 1) {
-                buffer.current += e.key;
-            }
+            } else if (e.key.length === 1) buffer.current += e.key;
         };
-
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [registerScan]);
 
     const totalUnits = items?.reduce((acc, curr) => acc + curr.totalQuantity, 0) || 0;
 
-    return { items, totalUnits, isFlash, lastScannedCode, registerScan };
+    return { items, totalUnits, isFlash, lastScannedCode, registerScan, removeItemCompletely };
 };
