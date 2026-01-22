@@ -297,7 +297,11 @@ const MassiveBlindView: React.FC = () => {
             {/* MODAL: VISOR DE SKU / CÓDIGO (TAMAÑO INDUSTRIAL) */}
             {viewingBarcode && (
                 <div className="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center p-0 animate-in fade-in duration-300">
-                    <button onClick={() => setViewingBarcode(null)} className="absolute top-6 right-6 w-16 h-16 bg-white/10 text-white flex items-center justify-center rounded-full active:bg-rose-600 transition-colors z-[110] backdrop-blur-md">
+                    {/* Botón de cerrar sólido para evitar efecto de mancha */}
+                    <button 
+                        onClick={() => setViewingBarcode(null)} 
+                        className="absolute top-6 right-6 w-16 h-16 bg-slate-800 text-white flex items-center justify-center rounded-full active:bg-rose-600 transition-all z-[110] shadow-2xl border-2 border-white/10"
+                    >
                         <X className="w-10 h-10"/>
                     </button>
                     
