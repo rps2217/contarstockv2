@@ -10,28 +10,30 @@ export interface ConsolidatedBlindItem {
     barcode: string;
     name: string;
     totalQuantity: number;
+    expectedQty?: number;
     lastTimestamp: number;
 }
 
-/**
- * MOTOR DE ESCANEO INDUSTRIAL v4.5 - PROTOCOLO MARTILLO
- */
 export const useMassiveScanner = (batchId: string) => {
     const [isFlash, setIsFlash] = useState(false);
     const [lastScannedCode, setLastScannedCode] = useState<string | null>(null);
     const buffer = useRef('');
     const lastKeyTime = useRef(0);
-    
     const collisionGuard = useRef<Map<string, number>>(new Map());
-    const REBOUNCE_MS = 300; 
+    const REBOUNCE_MS = 250; 
 
     const items = useLiveQuery(async () => {
         try {
             const rawScans = await massiveDb.blindScans.where('batchId').equals(batchId).toArray();
+            const manifests = await massiveDb.blindManifests.where('batchId').equals(batchId).toArray();
             const products = await masterDb.products.toArray();
+            
             const prodMap = new Map<string, string>(products.map(p => [p.barcode, p.name]));
+            const manifestMap = new Map<string, number>(manifests.map(m => [m.barcode, m.expectedQty]));
+            
             const aggregation = new Map<string, ConsolidatedBlindItem>();
 
+            // Primero procesamos lo que se ha escaneado
             for (const scan of rawScans) {
                 const existing = aggregation.get(scan.barcode);
                 if (existing) {
@@ -42,10 +44,25 @@ export const useMassiveScanner = (batchId: string) => {
                         barcode: scan.barcode,
                         name: prodMap.get(scan.barcode) || 'SKU_NO_IDENTIFICADO',
                         totalQuantity: scan.quantity,
+                        expectedQty: manifestMap.get(scan.barcode),
                         lastTimestamp: scan.timestamp
                     });
                 }
             }
+
+            // Opcional: Mostrar también lo que falta por escanear del manifiesto
+            for (const m of manifests) {
+                if (!aggregation.has(m.barcode)) {
+                    aggregation.set(m.barcode, {
+                        barcode: m.barcode,
+                        name: prodMap.get(m.barcode) || 'PENDIENTE_POR_ESCANEAR',
+                        totalQuantity: 0,
+                        expectedQty: m.expectedQty,
+                        lastTimestamp: 0
+                    });
+                }
+            }
+
             return Array.from(aggregation.values()).sort((a, b) => b.lastTimestamp - a.lastTimestamp);
         } catch (e) {
             return [];
@@ -58,7 +75,6 @@ export const useMassiveScanner = (batchId: string) => {
 
         const now = Date.now();
         const lastTime = collisionGuard.current.get(clean) || 0;
-        
         if (qty > 0 && (now - lastTime) < REBOUNCE_MS) return;
         collisionGuard.current.set(clean, now);
         
@@ -70,11 +86,8 @@ export const useMassiveScanner = (batchId: string) => {
         setTimeout(() => setIsFlash(false), 100);
 
         massiveDb.blindScans.add({
-            batchId,
-            barcode: clean,
-            quantity: qty,
-            timestamp: now
-        }).catch(err => console.error("DB_COMMIT_ERROR", err));
+            batchId, barcode: clean, quantity: qty, timestamp: now
+        });
     }, [batchId]);
 
     const removeItemCompletely = useCallback(async (barcode: string) => {
@@ -82,7 +95,6 @@ export const useMassiveScanner = (batchId: string) => {
         SoundFX.play('delete');
     }, [batchId]);
 
-    // LISTENER HID (Escáner físico)
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if ((e.target as HTMLElement).tagName === 'INPUT') return;
@@ -100,5 +112,5 @@ export const useMassiveScanner = (batchId: string) => {
 
     const totalUnits = items?.reduce((acc, curr) => acc + curr.totalQuantity, 0) || 0;
 
-    return { items, totalUnits, isFlash, lastScannedCode, registerScan, removeItemCompletely };
+    return { items: items || [], totalUnits, isFlash, lastScannedCode, registerScan, removeItemCompletely };
 };

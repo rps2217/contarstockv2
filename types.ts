@@ -46,6 +46,7 @@ export interface ScanRecord {
   barcode: string;
   timestamp: number;
   quantity: number;
+  expectedQty?: number;
   mm?: number;
   yyyy?: number;
   synced?: number;
@@ -56,6 +57,8 @@ export interface ConsolidatedItem {
   barcode: string;
   productName: string;
   totalQuantity: number;
+  expectedQuantity?: number;
+  difference?: number;
   scans: number;
   mm?: number;
   yyyy?: number;
