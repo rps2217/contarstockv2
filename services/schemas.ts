@@ -17,15 +17,15 @@ const cleanString = z.union([z.string(), z.number(), z.null(), z.undefined()])
  */
 export const CloudProductSchema = z.record(z.any()).transform((raw) => {
     const normalized: Record<string, any> = {};
-    // Normalizar todas las llaves a mayúsculas y quitar acentos básicos para comparación robusta
     Object.keys(raw).forEach(k => {
         const key = k.trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         normalized[key] = raw[k];
     });
 
-    // Mapeo flexible
-    const barcode = normalized["COD PRODUCTO"] || normalized["CODIGO"] || normalized["SKU"] || normalized["BARCODE"] || normalized["EAN"] || "";
-    const name = normalized["DESCRIPCION"] || normalized["PRODUCTO"] || normalized["NOMBRE"] || normalized["DESCRIP"] || normalized["ITEM"] || "Sin descripción";
+    // Mapeo flexible Priorizando tu estructura:
+    // PROVEEDOR; MUNDO; COD PRODUCTO; DESCRIPCION; RUT PROVEEDOR
+    const barcode = normalized["COD PRODUCTO"] || normalized["CODIGO"] || normalized["SKU"] || normalized["BARCODE"] || "";
+    const name = normalized["DESCRIPCION"] || normalized["PRODUCTO"] || normalized["NOMBRE"] || normalized["ITEM"] || "Sin descripción";
     const category = normalized["MUNDO"] || normalized["CATEGORIA"] || normalized["CATEGORY"] || "GENERAL";
     const supplier = normalized["PROVEEDOR"] || normalized["SUPPLIER"] || "";
     const supplierRut = normalized["RUT PROVEEDOR"] || normalized["RUT"] || "";
@@ -45,7 +45,6 @@ export const CloudProductSchema = z.record(z.any()).transform((raw) => {
     supplierRut: z.string().default("")
 }));
 
-// Mantener esquemas de inventario para compatibilidad
 export const CloudInventoryRowSchema = z.object({
     [SHEET_COLUMNS.ERP_ORDER]: cleanString,
     [SHEET_COLUMNS.LABEL]: cleanString,

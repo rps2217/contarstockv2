@@ -20,7 +20,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   appSheetConfig: {
       appId: '',
       accessKey: '',
-      countsTableName: 'CONTEOS',
+      countsTableName: 'CONSOLIDADOS', // Ajustado a tu hoja de cálculo
       productsTableName: 'PRODUCTOS',
       receptionTableName: 'RECEPCION_BULTOS'
   },
