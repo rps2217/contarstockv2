@@ -9,7 +9,9 @@ import { sendToAppSheet } from "../infrastructure/api/appsheetClient";
 import { aggregateScans } from "./aggregator";
 
 /**
- * Sincronización Inteligente a Google Sheet (Pestaña CONTEOS)
+ * Sincronización Inteligente Enrutada
+ * MODO_MARTILLO -> Pestaña "CONTEOS"
+ * NORMAL / NUEVA CARGA -> Pestaña "CONSOLIDADOS"
  */
 export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg: string) => void): Promise<void> => {
   const config = getSettings().appSheetConfig;
@@ -17,32 +19,37 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
   
   if (unsynced.length === 0) return;
 
-  if (onProgress) onProgress(`Consolidando pasillo...`);
+  if (onProgress) onProgress(`Consolidando registros...`);
   const consolidated = await aggregateScans(unsynced);
   
-  // Mapeo exacto para la pestaña CONTEOS
+  // Mapeo de columnas estándar para Script Turbo v5.2
   const rows = consolidated.map(item => ({
       "ID_REGISTRO": generateUUID(),
       "CLAVE_UNICA": `${session.erpOrder}_${session.logisticsLabel}_${item.barcode}_${item.mm || 0}_${item.yyyy || 0}`,
       "FECHA": new Date().toISOString().split('T')[0],
-      "ERP": session.erpOrder, // Será "MODO_MARTILLO" para capturas de pasillo
+      "ERP": session.erpOrder, 
       "CODIGO": item.barcode,
       "PRODUCTO": item.productName,
       "CANTIDAD": item.totalQuantity,
-      "ETIQUETAS": session.logisticsLabel, // Aquí va el ID del lote del martillo
+      "ETIQUETAS": session.logisticsLabel, 
       "MM": item.mm || 0,
       "YYYY": item.yyyy || 0,
       "FRC": item.isIncident ? "FRC" : ""
   }));
 
-  const tableName = config?.countsTableName || "CONTEOS";
+  // LÓGICA DE ENRUTAMIENTO DE PESTAÑA
+  let tableName = config?.countsTableName || "CONSOLIDADOS";
+  
+  if (session.erpOrder === "MODO_MARTILLO") {
+      tableName = "CONTEOS"; // El martillo siempre va a Conteos
+  }
 
   if (onProgress) onProgress(`Subiendo a ${tableName}...`);
 
   try {
       if (config?.gasWebAppUrl) {
           const result = await sendToGas({ tableName, rows });
-          if (!result.success) throw new Error(result.error);
+          if (!result.success) throw new Error(result.error || "Fallo en Script de Google");
       } else {
           await sendToAppSheet(config!, tableName, {
               Action: "Add",
@@ -52,9 +59,10 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
       }
 
       await markScansAsSynced(unsynced.map(s => s.id));
-      if (onProgress) onProgress(`Sincronización Exitosa.`);
+      if (onProgress) onProgress(`Sincronización en ${tableName} Exitosa.`);
   } catch (e: any) {
-      throw new Error(`Error de red: ${e.message}`);
+      console.error("Sync Error:", e);
+      throw new Error(`Fallo de conexión: ${e.message}`);
   }
 };
 
@@ -69,7 +77,8 @@ export const fetchProductsFromCloud = async (): Promise<any[]> => {
 export const fetchCloudData = async (filters: { erpFilter?: string }): Promise<any[]> => {
     const config = getSettings().appSheetConfig;
     if (config?.gasWebAppUrl) {
-        return await fetchFromGas(config.countsTableName || "CONTEOS", filters);
+        // Por defecto buscamos en CONSOLIDADOS para el Detective
+        return await fetchFromGas(config.countsTableName || "CONSOLIDADOS", filters);
     }
     return [];
 };
@@ -105,10 +114,12 @@ export const syncReceptionToAppSheet = async (session: CountingSession): Promise
         "ESTADO": "RECIBIDO"
     }];
 
+    const tableName = config?.receptionTableName || "RECEPCION_BULTOS";
+
     if (config?.gasWebAppUrl) {
-        await sendToGas({ tableName: config.receptionTableName || "RECEPCION_BULTOS", rows });
+        await sendToGas({ tableName, rows });
     } else {
-        await sendToAppSheet(config!, config.receptionTableName || "RECEPCION_BULTOS", {
+        await sendToAppSheet(config!, tableName, {
             Action: "Add", Properties: { Locale: "es-ES", Timezone: "UTC" }, Rows: rows
         });
     }

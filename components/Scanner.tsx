@@ -115,6 +115,8 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
 
         {state.status === 'camera' && (
             <CameraScanner 
+                isTriggered={true}
+                inline={false}
                 onScan={(code) => { actions.handleExternalScan(code); state.setStatus('idle'); }} 
                 onClose={() => state.setStatus('idle')} 
             />
