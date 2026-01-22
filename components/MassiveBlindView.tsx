@@ -9,13 +9,13 @@ import { exportMassiveToExcel } from '../services/massiveExport';
 import { migrateMassiveToMaster } from '../services/massiveSync';
 
 /**
- * RENDERIZADOR TÁCTICO DE CÓDIGO DE BARRAS - TAMAÑO INDUSTRIAL
- * Genera un patrón visual de alto contraste optimizado para captura láser.
+ * RENDERIZADOR TÁCTICO DE CÓDIGO DE BARRAS - TAMAÑO INDUSTRIAL XL
+ * Genera un patrón visual de alto contraste y altura masiva optimizado para captura láser.
  */
 const BarcodeRenderer: React.FC<{ value: string }> = ({ value }) => {
     if (!value) return null;
     
-    // Diccionario extendido de patrones para representación visual (Simulación robusta)
+    // Diccionario de patrones para representación visual (Code 39 Sim)
     const charTable: Record<string, string> = {
         '0': '11011001100', '1': '11001101100', '2': '11001100110', '3': '10010011000',
         '4': '10010001100', '5': '10001001100', '6': '10011001000', '7': '10011000100',
@@ -28,7 +28,7 @@ const BarcodeRenderer: React.FC<{ value: string }> = ({ value }) => {
     const stop = '1100011101011';
     
     let pattern = start;
-    const safeValue = value.toUpperCase().replace(/[^A-Z0-9\-\. \/\*]/g, '').substring(0, 16);
+    const safeValue = value.toUpperCase().replace(/[^A-Z0-9\-\. \/\*]/g, '').substring(0, 14);
     
     for (const char of safeValue) {
         pattern += charTable[char] || '10101010110';
@@ -36,16 +36,23 @@ const BarcodeRenderer: React.FC<{ value: string }> = ({ value }) => {
     pattern += stop;
 
     return (
-        <div className="flex justify-center items-center bg-white p-2 w-full">
-            <div className="flex w-full h-48 md:h-64 items-stretch justify-center bg-white">
+        <div className="bg-white p-4 w-full flex flex-col items-center">
+            {/* Zona de silencio superior */}
+            <div className="w-full h-8 bg-white"></div>
+            
+            {/* El patrón de barras - Ocupa todo el ancho posible */}
+            <div className="flex w-full h-64 items-stretch justify-center bg-white px-2">
                 {pattern.split('').map((bit, i) => (
                     <div 
                         key={i} 
-                        className={`${bit === '1' ? 'bg-black' : 'bg-transparent'}`} 
-                        style={{ width: '4px', minWidth: '2px' }}
+                        className={`${bit === '1' ? 'bg-black' : 'bg-transparent'} flex-1`} 
+                        style={{ minWidth: '1px' }}
                     />
                 ))}
             </div>
+            
+            {/* Zona de silencio inferior */}
+            <div className="w-full h-8 bg-white"></div>
         </div>
     );
 };
@@ -289,36 +296,35 @@ const MassiveBlindView: React.FC = () => {
 
             {/* MODAL: VISOR DE SKU / CÓDIGO (TAMAÑO INDUSTRIAL) */}
             {viewingBarcode && (
-                <div className="fixed inset-0 z-[100] bg-slate-950/98 backdrop-blur-md flex flex-col items-center justify-center p-4 animate-in fade-in slide-in-from-bottom-10 duration-300">
-                    <button onClick={() => setViewingBarcode(null)} className="absolute top-8 right-8 w-14 h-14 bg-white/10 text-white flex items-center justify-center rounded-full active:bg-rose-600 transition-colors z-[110]"><X className="w-8 h-8"/></button>
+                <div className="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center p-0 animate-in fade-in duration-300">
+                    <button onClick={() => setViewingBarcode(null)} className="absolute top-6 right-6 w-16 h-16 bg-white/10 text-white flex items-center justify-center rounded-full active:bg-rose-600 transition-colors z-[110] backdrop-blur-md">
+                        <X className="w-10 h-10"/>
+                    </button>
                     
-                    <div className="w-full max-w-xl bg-white p-10 rounded-[3rem] text-center shadow-2xl relative overflow-hidden flex flex-col items-center">
-                        <div className="absolute top-0 left-0 w-full h-3 bg-blue-600"></div>
-                        
-                        <div className="mb-8 w-full text-slate-400">
-                            <Barcode className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                            <h2 className="text-xs font-black uppercase tracking-[0.4em] line-clamp-2 px-4">{viewingBarcode.name}</h2>
+                    <div className="w-full h-full flex flex-col items-center justify-center bg-white p-4">
+                        <div className="w-full max-w-2xl text-center mb-10">
+                            <h2 className="text-black font-black text-xl uppercase tracking-tighter mb-2 line-clamp-1">{viewingBarcode.name}</h2>
+                            <div className="bg-black text-white py-2 px-6 inline-block rounded-full font-mono text-lg font-black tracking-widest uppercase">
+                                SKU: {viewingBarcode.barcode}
+                            </div>
                         </div>
-                        
-                        {/* CÓDIGO DE BARRAS GIGANTE */}
-                        <div className="w-full mb-8 bg-white border-y border-slate-100 py-6 overflow-hidden">
+
+                        {/* EL CÓDIGO DE BARRAS REALMENTE GIGANTE */}
+                        <div className="w-full flex justify-center items-center overflow-hidden mb-12">
                             <BarcodeRenderer value={viewingBarcode.barcode} />
                         </div>
 
-                        {/* NÚMERO DE SKU GIGANTE */}
-                        <div className="mb-8 w-full">
-                            <div className="text-5xl md:text-7xl font-black text-slate-900 tracking-tighter font-mono break-all leading-tight bg-slate-50 p-6 rounded-3xl border border-slate-100">
-                                {viewingBarcode.barcode}
+                        <div className="w-full max-w-sm px-6">
+                            <div className="text-center text-slate-400 font-bold uppercase tracking-[0.5em] text-[10px] mb-8 animate-pulse">
+                                READY_FOR_LASER_CAPTURE
                             </div>
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em] mt-4 block">READY_FOR_LASER_CAPTURE</span>
+                            <button 
+                                onClick={() => setViewingBarcode(null)}
+                                className="w-full py-8 bg-slate-950 text-white rounded-3xl font-black uppercase tracking-widest text-lg active:scale-95 transition-all shadow-2xl border-2 border-white/20"
+                            >
+                                CERRAR VISOR
+                            </button>
                         </div>
-
-                        <button 
-                            onClick={() => setViewingBarcode(null)}
-                            className="w-full py-6 bg-slate-900 text-white rounded-[2rem] font-black uppercase tracking-widest text-sm active:scale-95 transition-all shadow-xl"
-                        >
-                            Cerrar Visor
-                        </button>
                     </div>
                 </div>
             )}
