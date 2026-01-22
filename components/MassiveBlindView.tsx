@@ -190,6 +190,7 @@ const MassiveBlindView: React.FC = () => {
                 <button 
                     onMouseDown={() => setIsTriggerActive(true)}
                     onMouseUp={() => setIsTriggerActive(false)}
+                    onMouseLeave={() => setIsTriggerActive(false)}
                     onTouchStart={() => setIsTriggerActive(true)}
                     onTouchEnd={() => setIsTriggerActive(false)}
                     onContextMenu={(e) => e.preventDefault()}

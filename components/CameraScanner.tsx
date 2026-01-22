@@ -80,8 +80,8 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose, i
             
             {/* RETÍCULO HUD */}
             <div className="absolute inset-0 z-30 pointer-events-none flex items-center justify-center">
-                <div className={`w-64 h-64 border-2 transition-all duration-300 rounded-3xl flex items-center justify-center ${isTriggered ? 'border-blue-500/40 scale-100' : 'border-white/10 scale-90 opacity-20'}`}>
-                    <Target className={`w-12 h-12 transition-all duration-500 ${isTriggered ? 'text-blue-500 opacity-30 animate-pulse' : 'text-white'}`} />
+                <div className={`w-64 h-64 border-2 transition-all duration-150 rounded-3xl flex items-center justify-center ${isTriggered ? 'border-blue-500/40 scale-100' : 'border-white/10 scale-90 opacity-20'}`}>
+                    <Target className={`w-12 h-12 transition-all duration-300 ${isTriggered ? 'text-blue-500 opacity-30 animate-pulse' : 'text-white'}`} />
                     
                     {/* Esquinas Técnicas */}
                     <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-blue-500 rounded-tl-xl"></div>
@@ -96,7 +96,8 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose, i
                 )}
             </div>
 
-            <div className={`absolute inset-0 z-40 transition-all duration-500 pointer-events-none flex flex-col items-center justify-center ${isTriggered ? 'bg-transparent opacity-0' : 'bg-black/80 backdrop-blur-sm'}`}>
+            {/* VELO DE BLOQUEO (TRANSICIÓN ULTRARRÁPIDA 75ms) */}
+            <div className={`absolute inset-0 z-40 transition-all duration-75 pointer-events-none flex flex-col items-center justify-center ${isTriggered ? 'bg-transparent opacity-0' : 'bg-black/80 backdrop-blur-sm'}`}>
                 {!isTriggered && !error && (
                     <div className="flex flex-col items-center gap-4">
                         <div className="bg-slate-900 border-4 border-white/5 p-5 rounded-full text-blue-500">
@@ -122,7 +123,8 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose, i
                     </div>
                 )}
                 
-                <div id={SCANNER_DOM_ID} className={`w-full h-full transition-all duration-700 ${isTriggered ? 'opacity-100 scale-100' : 'opacity-10 scale-110 grayscale blur-sm'}`}></div>
+                {/* VIDEO ENGINE (TRANSICIÓN 150ms) */}
+                <div id={SCANNER_DOM_ID} className={`w-full h-full transition-all duration-150 ${isTriggered ? 'opacity-100 scale-100' : 'opacity-10 scale-110 grayscale blur-sm'}`}></div>
             </div>
             
             <style>{`
