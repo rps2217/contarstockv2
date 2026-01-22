@@ -9,8 +9,7 @@ import { sendToAppSheet } from "../infrastructure/api/appsheetClient";
 import { aggregateScans } from "./aggregator";
 
 /**
- * Sincronización Inteligente
- * Detecta si debe usar el motor Turbo (GAS) o la API oficial.
+ * Sincronización Inteligente a Google Sheet (Pestaña CONTEOS)
  */
 export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg: string) => void): Promise<void> => {
   const config = getSettings().appSheetConfig;
@@ -18,50 +17,47 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
   
   if (unsynced.length === 0) return;
 
-  if (onProgress) onProgress(`Consolidando datos...`);
+  if (onProgress) onProgress(`Consolidando pasillo...`);
   const consolidated = await aggregateScans(unsynced);
   
-  // Mapeo de filas compatible con la imagen del usuario
+  // Mapeo exacto para la pestaña CONTEOS
   const rows = consolidated.map(item => ({
-      "ID_REGISTRO": generateUUID(), // UUID completo para coincidir con la captura
+      "ID_REGISTRO": generateUUID(),
       "CLAVE_UNICA": `${session.erpOrder}_${session.logisticsLabel}_${item.barcode}_${item.mm || 0}_${item.yyyy || 0}`,
-      "FECHA": new Date().toISOString().split('T')[0], // Formato YYYY-MM-DD como en la imagen
-      "ERP": session.erpOrder,
+      "FECHA": new Date().toISOString().split('T')[0],
+      "ERP": session.erpOrder, // Será "MODO_MARTILLO" para capturas de pasillo
       "CODIGO": item.barcode,
       "PRODUCTO": item.productName,
       "CANTIDAD": item.totalQuantity,
-      "ETIQUETAS": session.logisticsLabel,
+      "ETIQUETAS": session.logisticsLabel, // Aquí va el ID del lote del martillo
       "MM": item.mm || 0,
       "YYYY": item.yyyy || 0,
       "FRC": item.isIncident ? "FRC" : ""
   }));
 
-  if (onProgress) onProgress(`Sincronizando vía ${config?.gasWebAppUrl ? 'TURBO-GAS' : 'API-APPSHEET'}...`);
+  const tableName = config?.countsTableName || "CONTEOS";
+
+  if (onProgress) onProgress(`Subiendo a ${tableName}...`);
 
   try {
       if (config?.gasWebAppUrl) {
-          // MODO TURBO (Google Apps Script)
-          const result = await sendToGas({ tableName: config.countsTableName || "CONTEOS", rows });
+          const result = await sendToGas({ tableName, rows });
           if (!result.success) throw new Error(result.error);
       } else {
-          // MODO ESTÁNDAR (API AppSheet)
-          await sendToAppSheet(config!, config!.countsTableName || "CONTEOS", {
+          await sendToAppSheet(config!, tableName, {
               Action: "Add",
-              Properties: { Locale: "es-ES", Timezone: "Central Brazilian Standard Time" },
+              Properties: { Locale: "es-ES", Timezone: "UTC" },
               Rows: rows
           });
       }
 
       await markScansAsSynced(unsynced.map(s => s.id));
-      if (onProgress) onProgress(`Éxito.`);
+      if (onProgress) onProgress(`Sincronización Exitosa.`);
   } catch (e: any) {
-      throw new Error(`Fallo de conexión: ${e.message}`);
+      throw new Error(`Error de red: ${e.message}`);
   }
 };
 
-/**
- * DESCARGA DE PRODUCTOS
- */
 export const fetchProductsFromCloud = async (): Promise<any[]> => {
   const config = getSettings().appSheetConfig;
   if (config?.gasWebAppUrl) {
@@ -70,9 +66,6 @@ export const fetchProductsFromCloud = async (): Promise<any[]> => {
   return [];
 };
 
-/**
- * Recupera datos de conteos desde la nube (Turbo GAS o API)
- */
 export const fetchCloudData = async (filters: { erpFilter?: string }): Promise<any[]> => {
     const config = getSettings().appSheetConfig;
     if (config?.gasWebAppUrl) {
@@ -81,9 +74,6 @@ export const fetchCloudData = async (filters: { erpFilter?: string }): Promise<a
     return [];
 };
 
-/**
- * SINCRONIZACIÓN DE PRODUCTOS AL MAESTRO
- */
 export const syncProductsToAppSheet = async (products: Product[]): Promise<void> => {
     const config = getSettings().appSheetConfig;
     const rows = products.map(p => ({
