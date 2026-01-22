@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Smartphone, Zap, QrCode, Share2, Copy, Check } from 'lucide-react';
+import { Smartphone, Zap, QrCode, Share2, Copy, Check, X, MonitorSmartphone } from 'lucide-react';
 import { AppSettings, AppSheetConfig } from '../../types';
 import { CameraScanner } from '../CameraScanner';
 
@@ -11,14 +11,8 @@ interface Props {
 
 export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
     const [isScanning, setIsScanning] = useState(false);
+    const [showExportQR, setShowExportQR] = useState(false);
     const [copySuccess, setCopySuccess] = useState(false);
-
-    const handleConfigChange = (key: keyof AppSheetConfig, value: string) => {
-        updateSetting('appSheetConfig', {
-            ...(settings.appSheetConfig || {}),
-            [key]: value
-        });
-    };
 
     const config = settings.appSheetConfig || {
         appId: '',
@@ -29,34 +23,26 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
         gasWebAppUrl: ''
     };
 
-    const handleExportConfig = async () => {
-        const payload = {
-            t: 'lc_cfg',
-            cfg: config
-        };
-        const configString = JSON.stringify(payload);
+    const configPayload = JSON.stringify({
+        t: 'lc_cfg',
+        cfg: config
+    });
 
-        // Intentar compartir de forma nativa si está disponible (Android/iOS)
-        if (navigator.share) {
-            try {
-                await navigator.share({
-                    title: 'Configuración LogiCount Pro',
-                    text: configString
-                });
-                return;
-            } catch (e) {
-                // Fallback a copiar si falla el share
-            }
-        }
+    const handleConfigChange = (key: keyof AppSheetConfig, value: string) => {
+        updateSetting('appSheetConfig', {
+            ...config,
+            [key]: value
+        });
+    };
 
-        // Fallback: Copiar al portapapeles
+    const handleCopyConfig = async () => {
         try {
-            await navigator.clipboard.writeText(configString);
+            await navigator.clipboard.writeText(configPayload);
             setCopySuccess(true);
             if (navigator.vibrate) navigator.vibrate(20);
             setTimeout(() => setCopySuccess(false), 2000);
         } catch (err) {
-            alert("No se pudo copiar la configuración.");
+            alert("No se pudo copiar al portapapeles.");
         }
     };
 
@@ -73,6 +59,9 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
         </div>
     );
 
+    // URL para generar el QR dinámicamente usando un servicio ligero y seguro
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(configPayload)}`;
+
     return (
         <div className="space-y-8 animate-in slide-in-from-bottom-2 pb-10">
             
@@ -81,23 +70,23 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
                 
                 <div className="flex justify-between items-start mb-6 relative z-10">
                     <div>
-                        <h3 className="text-xl font-black uppercase italic">AppSheet API</h3>
-                        <p className="text-[10px] text-white/50 font-bold uppercase tracking-widest mt-1">Gestión de Credenciales</p>
+                        <h3 className="text-xl font-black uppercase italic leading-tight">AppSheet API</h3>
+                        <p className="text-[10px] text-white/50 font-bold uppercase tracking-widest mt-1">Conectividad Cloud</p>
                     </div>
                     <div className="flex gap-2">
                         <button 
-                            onClick={handleExportConfig}
-                            className={`p-3 rounded-xl backdrop-blur-md active:scale-95 transition-all flex items-center gap-2 ${copySuccess ? 'bg-emerald-500' : 'bg-white/10 hover:bg-white/20 border border-white/10'}`}
-                            title="Exportar Configuración"
+                            onClick={() => setShowExportQR(true)}
+                            className="bg-white/10 hover:bg-white/20 p-3 rounded-xl border border-white/10 transition-all active:scale-95"
+                            title="Mostrar QR de Exportación"
                         >
-                            {copySuccess ? <Check className="w-5 h-5 text-white" /> : <Share2 className="w-5 h-5 text-white" />}
+                            <QrCode className="w-5 h-5 text-white" />
                         </button>
                         <button 
                             onClick={() => setIsScanning(true)} 
                             className="bg-blue-600 hover:bg-blue-500 p-3 rounded-xl shadow-lg active:scale-95 transition-all"
-                            title="Importar escaneando"
+                            title="Importar desde otro QR"
                         >
-                            <QrCode className="w-5 h-5 text-white" />
+                            <MonitorSmartphone className="w-5 h-5 text-white" />
                         </button>
                     </div>
                 </div>
@@ -123,18 +112,15 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
                         />
                     </div>
                 </div>
-
-                {copySuccess && (
-                    <div className="absolute bottom-2 left-0 right-0 text-center animate-in slide-in-from-bottom-2">
-                        <span className="text-[7px] font-black text-emerald-400 uppercase tracking-widest">Configuración Copiada al Portapapeles</span>
-                    </div>
-                )}
             </div>
 
             <div className="space-y-4">
                 <div className="flex items-center justify-between px-2">
-                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Tablas de Datos</h3>
-                    <span className="text-[8px] font-bold text-slate-300 italic">Debe coincidir con Google Sheets</span>
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Mapeo de Tablas</h3>
+                    <button onClick={handleCopyConfig} className="text-[8px] font-black text-blue-600 uppercase flex items-center gap-1">
+                        {copySuccess ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                        {copySuccess ? 'Copiado' : 'Copiar JSON'}
+                    </button>
                 </div>
                 <InputField label="Tabla Inventario" value={config.countsTableName} field="countsTableName" placeholder="CONTEOS" />
                 <InputField label="Tabla Productos" value={config.productsTableName} field="productsTableName" placeholder="PRODUCTOS" />
@@ -147,15 +133,54 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
                 </div>
                 <div className="flex items-center gap-3 mb-4">
                     <div className="bg-amber-100 p-2 rounded-lg text-amber-600"><Zap className="w-5 h-5" /></div>
-                    <h3 className="text-sm font-black text-amber-800 uppercase tracking-wide">Google Script (Turbo)</h3>
+                    <h3 className="text-sm font-black text-amber-800 uppercase tracking-wide">Google Script Turbo</h3>
                 </div>
                 <input 
                     value={config.gasWebAppUrl || ''} 
                     onChange={(e) => handleConfigChange('gasWebAppUrl', e.target.value)}
-                    className="w-full h-12 px-4 bg-white border border-amber-200 rounded-xl text-[10px] font-mono text-amber-900 focus:border-amber-500 outline-none placeholder:text-amber-200/50"
-                    placeholder="https://script.google.com/macros/s/..."
+                    className="w-full h-12 px-4 bg-white border border-amber-200 rounded-xl text-[10px] font-mono text-amber-900 focus:border-amber-500 outline-none"
+                    placeholder="https://script.google.com/..."
                 />
             </div>
+
+            {/* MODAL DE EXPORTACIÓN QR */}
+            {showExportQR && (
+                <div className="fixed inset-0 z-[100] bg-slate-950/90 backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in duration-300">
+                    <div className="bg-white w-full max-w-sm rounded-[3rem] p-8 text-center shadow-2xl relative overflow-hidden">
+                        <div className="absolute top-0 left-0 right-0 h-2 bg-blue-600"></div>
+                        <button onClick={() => setShowExportQR(false)} className="absolute top-6 right-6 p-2 bg-slate-100 rounded-full text-slate-400 active:bg-rose-100 active:text-rose-600 transition-all">
+                            <X className="w-6 h-6" />
+                        </button>
+                        
+                        <div className="mb-8 mt-4">
+                            <h2 className="text-2xl font-black text-slate-900 uppercase italic tracking-tighter">Clonar Terminal</h2>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Escanee con otro dispositivo</p>
+                        </div>
+
+                        <div className="bg-white p-4 border-4 border-slate-900 rounded-3xl inline-block shadow-inner mb-8">
+                            <img 
+                                src={qrUrl} 
+                                alt="Config QR" 
+                                className="w-64 h-64"
+                                onLoad={() => { if (navigator.vibrate) navigator.vibrate(50); }}
+                            />
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-center gap-2 text-emerald-600">
+                                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                                <span className="text-[10px] font-black uppercase tracking-widest">Paquete lc_cfg Generado</span>
+                            </div>
+                            <button 
+                                onClick={() => setShowExportQR(false)}
+                                className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-xs active:scale-95 transition-all shadow-xl"
+                            >
+                                Finalizar Exportación
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {isScanning && (
                 <CameraScanner onScan={(data) => { 
@@ -163,12 +188,12 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
                         const p = JSON.parse(data);
                         if (p.t === 'lc_cfg' && p.cfg) {
                             updateSetting('appSheetConfig', p.cfg);
-                            alert("Configuración Cargada con Éxito");
+                            alert("Configuración cargada con éxito. Terminal vinculada.");
                         } else {
-                            alert("Código QR no reconocido como configuración de LogiCount.");
+                            alert("Código QR no reconocido como configuración de LogiCount Pro.");
                         }
                     } catch (e) {
-                        alert("Error al leer el código. Asegúrese de que sea un JSON válido.");
+                        alert("Error al leer el código. Asegúrese de que sea un QR de LogiCount.");
                     }
                     setIsScanning(false);
                 }} onClose={() => setIsScanning(false)} />
