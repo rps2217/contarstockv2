@@ -169,20 +169,25 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
             )}
 
             {isScanning && (
-                <CameraScanner onScan={(data) => { 
-                    try {
-                        const p = JSON.parse(data);
-                        if (p.t === 'lc_cfg' && p.cfg) {
-                            updateSetting('appSheetConfig', p.cfg);
-                            alert("Configuración Cargada con Éxito");
-                        } else {
-                            alert("El código escaneado no es una configuración válida de LogiCount.");
+                <CameraScanner 
+                    isTriggered={true}
+                    inline={false}
+                    onScan={(data) => { 
+                        try {
+                            const p = JSON.parse(data);
+                            if (p.t === 'lc_cfg' && p.cfg) {
+                                updateSetting('appSheetConfig', p.cfg);
+                                alert("Configuración Cargada con Éxito");
+                            } else {
+                                alert("El código escaneado no es una configuración válida de LogiCount.");
+                            }
+                        } catch (e) {
+                            alert("Error al leer el código QR.");
                         }
-                    } catch (e) {
-                        alert("Error al leer el código QR.");
-                    }
-                    setIsScanning(false);
-                }} onClose={() => setIsScanning(false)} />
+                        setIsScanning(false);
+                    }} 
+                    onClose={() => setIsScanning(false)} 
+                />
             )}
         </div>
     );
