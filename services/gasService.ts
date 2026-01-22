@@ -3,41 +3,41 @@ import { logger } from './logger';
 import { getSettings } from './settings';
 
 /**
- * MOTOR DE COMUNICACIÓN CON TU SCRIPT GAS (v4.0 COMPATIBLE)
+ * MOTOR DE COMUNICACIÓN CON TU SCRIPT GAS
+ * Ajustado para evitar bloqueos de CORS y permitir lectura de errores.
  */
 export const callGas = async (action: string, payload: any): Promise<any> => {
     const config = getSettings().appSheetConfig;
     const url = config?.gasWebAppUrl;
     
     if (!url) {
-        const error = "URL de Google Script no configurada. Ve a Configuración > Nube.";
-        console.error("[GAS_ENGINE] Config Missing:", error);
+        const error = "URL de Google Script no configurada.";
         return { success: false, error };
     }
 
     try {
-        console.log(`[GAS_ENGINE] Dispatching: ${action}`, payload);
-        
+        // IMPORTANTE: No usamos 'no-cors' para fetch_rows porque necesitamos leer el JSON.
+        // Si el script de Google está bien publicado como "Cualquier persona", CORS no será un problema.
         const response = await fetch(url, {
             method: 'POST',
-            mode: 'no-cors', // Importante para Google Apps Script Web Apps si fallan los pre-flights
+            mode: 'cors',
+            headers: {
+                'Content-Type': 'text/plain;charset=utf-8', 
+            },
             body: JSON.stringify({ action, ...payload })
         });
-        
-        // El modo 'no-cors' no permite leer el cuerpo de la respuesta por seguridad del navegador.
-        // Pero para 'append_rows' (subida) es suficiente.
-        // Si es una descarga ('fetch_rows'), intentaremos el modo normal.
-        
-        if (action === 'fetch_rows' || action === 'lookup_sku') {
-            const corsResponse = await fetch(url, {
-                method: 'POST',
-                body: JSON.stringify({ action, ...payload })
-            });
-            const rawText = await corsResponse.text();
-            return JSON.parse(rawText);
+
+        if (!response.ok) {
+            throw new Error(`HTTP Error ${response.status}`);
         }
 
-        return { success: true, message: "Petición enviada (modo ráfaga)" };
+        const rawText = await response.text();
+        try {
+            return JSON.parse(rawText);
+        } catch (e) {
+            console.error("[GAS_ENGINE] Response not JSON:", rawText);
+            throw new Error("El servidor no devolvió un formato válido.");
+        }
 
     } catch (error: any) {
         logger.error('GAS_ENGINE', `Error [${action}]: ${error.message}`);
@@ -45,32 +45,14 @@ export const callGas = async (action: string, payload: any): Promise<any> => {
     }
 };
 
-/**
- * Recupera todas las filas de una tabla
- */
 export const fetchFromGas = async (tableName: string, filters: any = {}): Promise<any[]> => {
-    try {
-        const res = await callGas('fetch_rows', { tableName, filters });
-        if (res && res.success) {
-            return res.rows || [];
-        }
-        throw new Error(res?.error || "Respuesta inválida del servidor");
-    } catch (e: any) {
-        console.error("[GAS_FETCH] Failed:", e.message);
-        throw e;
+    const res = await callGas('fetch_rows', { tableName, filters });
+    if (res && res.success) {
+        return res.rows || [];
     }
+    throw new Error(res?.error || "Error al conectar con la nube");
 };
 
-/**
- * Busca un producto en el Maestro
- */
-export const cloudLookupSku = async (barcode: string): Promise<any> => {
-    return await callGas('lookup_sku', { barcode });
-};
-
-/**
- * Inserta filas
- */
 export const sendToGas = async (payload: { tableName: string, rows: any[] }): Promise<any> => {
     return await callGas('append_rows', payload);
 };
