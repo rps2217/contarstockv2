@@ -1,14 +1,10 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Archive, ExternalLink, WifiOff, ChevronDown, Layers, AlertCircle, Zap, Package } from 'lucide-react';
+import { Archive, ExternalLink, WifiOff, Zap, Package } from 'lucide-react';
 import { StartSessionModal } from './StartSessionModal';
 import { SearchBar } from './SearchBar';
-import * as ReactWindow from 'react-window';
-import * as AutoSizerModule from 'react-virtualized-auto-sizer';
-
-const FixedSizeList = (ReactWindow as any).FixedSizeList || (ReactWindow as any).default?.FixedSizeList;
-const AutoSizer = (AutoSizerModule as any).default || (AutoSizerModule as any).AutoSizer || AutoSizerModule;
-
+import { FixedSizeList } from 'react-window';
+import AutoSizer from 'react-virtualized-auto-sizer';
 import { ReportDetail } from './reports/ReportDetail';
 import { ReportsHeader } from './reports/ReportsHeader';
 import { useNavigate } from 'react-router-dom';
@@ -18,14 +14,7 @@ import { useReports } from '../hooks/useReports';
 export const Reports: React.FC = () => {
   const navigate = useNavigate();
   const { state, actions } = useReports();
-  const [libError, setLibError] = useState(false);
   const isHammerArchive = state.filterType === 'hammer';
-
-  useEffect(() => {
-      if (!FixedSizeList || !AutoSizer) {
-          setLibError(true);
-      }
-  }, []);
 
   const onItemsRendered = useCallback(({ visibleStopIndex }: any) => {
       if (state.hasMore && visibleStopIndex >= (state.sessions?.length || 0) - 5) {
@@ -37,6 +26,9 @@ export const Reports: React.FC = () => {
       return <ReportDetail sessionId={state.selectedSessionId} onBack={() => actions.setSelectedSessionId(null)} />;
   }
 
+  const ListComponent = FixedSizeList as any;
+  const AutoSizerComponent = AutoSizer as any;
+
   const renderSessions = () => {
     if (!state.sessions || state.sessions.length === 0) {
         return (
@@ -47,34 +39,31 @@ export const Reports: React.FC = () => {
         );
     }
 
-    if (libError || !FixedSizeList || !AutoSizer) {
+    if (!ListComponent || !AutoSizerComponent) {
         return (
-            <div className="h-full flex flex-col relative">
-                <div className="w-full h-full overflow-y-auto space-y-2 no-scrollbar pb-20 p-2">
-                    {state.sessions.map((session, idx) => (
-                        <div key={session.id} className="h-[110px]">
-                            <SessionRow 
-                                index={idx} 
-                                style={{ height: '100%', width: '100%' }} 
-                                data={{ 
-                                    sessions: state.sessions!, 
-                                    onSelect: actions.setSelectedSessionId, 
-                                    activeMenuId: state.activeMenuId, 
-                                    onMenuToggle: actions.handleMenuToggle, 
-                                    onDelete: actions.handleDeleteSession 
-                                }} 
-                            />
-                        </div>
-                    ))}
-                </div>
+            <div className="h-full overflow-y-auto p-4 space-y-2 no-scrollbar">
+                {state.sessions.map((session, idx) => (
+                    <SessionRow 
+                        key={session.id}
+                        index={idx} 
+                        style={{}} 
+                        data={{ 
+                            sessions: state.sessions!, 
+                            onSelect: actions.setSelectedSessionId, 
+                            activeMenuId: state.activeMenuId, 
+                            onMenuToggle: actions.handleMenuToggle, 
+                            onDelete: actions.handleDeleteSession 
+                        }} 
+                    />
+                ))}
             </div>
         );
     }
 
     return (
-        <AutoSizer>
+        <AutoSizerComponent>
             {({ height, width }: { height: number; width: number }) => (
-                <FixedSizeList 
+                <ListComponent 
                     height={height} 
                     width={width} 
                     itemCount={state.sessions!.length} 
@@ -90,9 +79,9 @@ export const Reports: React.FC = () => {
                     }}
                 >
                     {SessionRow}
-                </FixedSizeList>
+                </ListComponent>
             )}
-        </AutoSizer>
+        </AutoSizerComponent>
     );
   };
 
@@ -130,7 +119,6 @@ export const Reports: React.FC = () => {
                             <div className="text-[9px] text-orange-100 font-bold uppercase">{state.pendingSyncCount} registros en cola</div>
                         </div>
                     </div>
-                    <ExternalLink className="w-4 h-4 text-white opacity-60" />
                 </button>
             )}
 

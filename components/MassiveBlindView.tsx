@@ -5,19 +5,16 @@ import { useMassiveScanner, ConsolidatedBlindItem } from '../hooks/useMassiveSca
 import { ChevronLeft, Trash2, Plus, Minus, ScanLine, Loader2, Zap, FileSpreadsheet, Save, X, Upload, MapPin } from 'lucide-react';
 import { massiveDb } from '../db.massive';
 import { CameraScanner } from './CameraScanner';
-import { exportMassiveToExcel } from '../services/massiveExport';
 import { migrateMassiveToMaster } from '../services/massiveSync';
 import * as XLSX from 'xlsx';
 import { sanitizeBarcode } from '../services/utils';
-import * as ReactWindow from 'react-window';
-import * as AutoSizerModule from 'react-virtualized-auto-sizer';
-
-const FixedSizeList = (ReactWindow as any).FixedSizeList || (ReactWindow as any).default?.FixedSizeList;
-const AutoSizer = (AutoSizerModule as any).default || (AutoSizerModule as any).AutoSizer || AutoSizerModule;
+import { FixedSizeList } from 'react-window';
+import AutoSizer from 'react-virtualized-auto-sizer';
 
 // Componente de Fila Optimizado
 const MassiveItemRow = memo(({ index, style, data }: any) => {
     const item = data.items[index];
+    if (!item) return null;
     const { registerScan, handleDecrement, setEditingItem } = data;
     
     const hasTarget = item.expectedQty !== undefined;
@@ -124,7 +121,8 @@ const MassiveBlindView: React.FC = () => {
     };
 
     const totalExpected = items.reduce((acc, curr) => acc + (curr.expectedQty || 0), 0);
-    const progressPercent = totalExpected > 0 ? Math.min(100, (totalUnits / totalExpected) * 100) : 0;
+    const ListComponent = FixedSizeList as any;
+    const AutoSizerComponent = AutoSizer as any;
 
     return (
         <div className="h-screen w-full flex flex-col font-mono bg-slate-950 select-none overflow-hidden text-white">
@@ -169,19 +167,23 @@ const MassiveBlindView: React.FC = () => {
             </div>
 
             <div className="h-[35vh] bg-slate-950">
-                <AutoSizer>
-                    {({ height, width }: any) => (
-                        <FixedSizeList
-                            height={height}
-                            width={width}
-                            itemCount={items.length}
-                            itemSize={76}
-                            itemData={{ items, registerScan, handleDecrement, setEditingItem }}
-                        >
-                            {MassiveItemRow}
-                        </FixedSizeList>
-                    )}
-                </AutoSizer>
+                {ListComponent && AutoSizerComponent ? (
+                    <AutoSizerComponent>
+                        {({ height, width }: any) => (
+                            <ListComponent
+                                height={height}
+                                width={width}
+                                itemCount={items.length}
+                                itemSize={76}
+                                itemData={{ items, registerScan, handleDecrement, setEditingItem }}
+                            >
+                                {MassiveItemRow}
+                            </ListComponent>
+                        )}
+                    </AutoSizerComponent>
+                ) : (
+                    <div className="p-10 text-center text-slate-500">Iniciando motor de listas...</div>
+                )}
             </div>
 
             {editingItem && (

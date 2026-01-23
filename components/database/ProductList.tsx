@@ -1,13 +1,9 @@
 
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Product } from '../../types';
-import { Pencil, Trash2, Package, Cloud, CloudOff, Layers, AlertCircle } from 'lucide-react';
-import * as ReactWindow from 'react-window';
-import * as AutoSizerModule from 'react-virtualized-auto-sizer';
-
-// Extraction defensiva de componentes
-const FixedSizeList = (ReactWindow as any).FixedSizeList || (ReactWindow as any).default?.FixedSizeList;
-const AutoSizer = (AutoSizerModule as any).default || (AutoSizerModule as any).AutoSizer || AutoSizerModule;
+import { Pencil, Trash2, Package, Cloud, CloudOff, AlertCircle } from 'lucide-react';
+import { FixedSizeList } from 'react-window';
+import AutoSizer from 'react-virtualized-auto-sizer';
 
 interface ProductListProps {
   products?: Product[];
@@ -78,22 +74,14 @@ const Row: React.FC<RowProps> = ({ index, style, data }) => {
 };
 
 export const ProductList: React.FC<ProductListProps> = ({ products, onEdit, onDelete, onDeleteAll, hasFilter }) => {
-  const listRef = useRef<any>(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [libError, setLibError] = useState(false);
+  const ListComponent = FixedSizeList as any;
+  const AutoSizerComponent = AutoSizer as any;
 
   useEffect(() => {
       const handleResize = () => setIsMobile(window.innerWidth < 768);
       window.addEventListener('resize', handleResize);
       return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // SAFETY CHECK: Ensure libraries are loaded correctly
-  useEffect(() => {
-      if (!FixedSizeList || !AutoSizer) {
-          console.warn("Virtual List libraries failed to load. Falling back to standard rendering.");
-          setLibError(true);
-      }
   }, []);
 
   if (!products || products.length === 0) {
@@ -108,40 +96,21 @@ export const ProductList: React.FC<ProductListProps> = ({ products, onEdit, onDe
     );
   }
 
-  // --- MODO FALLBACK / COMPATIBILIDAD ---
-  // Se activa si las librerías fallan o si estamos en un entorno inestable
-  if (libError || !FixedSizeList || !AutoSizer) {
+  if (!ListComponent || !AutoSizerComponent) {
       return (
-          <div className="h-full flex flex-col bg-slate-50 md:bg-white md:rounded-[2.5rem] md:border md:border-slate-200 shadow-xl overflow-hidden relative">
-              <div className="absolute bottom-2 right-6 z-10 pointer-events-none opacity-50">
-                  <div className="flex items-center gap-1.5 bg-amber-50 text-amber-700 px-2 py-1 rounded-md text-[9px] font-black uppercase border border-amber-100">
-                      <AlertCircle className="w-3 h-3" /> Modo Seguro
-                  </div>
-              </div>
-
-              <div className="hidden md:flex bg-slate-50/80 border-b border-slate-100 px-8 py-4 shrink-0">
-                  <div className="w-40 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">EAN / SKU</div>
-                  <div className="flex-1 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] px-8">Descripción de Producto</div>
-                  <div className="w-40 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Familia</div>
-                  <div className="w-40 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Proveedor</div>
-                  <div className="w-24 text-right text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Acciones</div>
-              </div>
-
-              <div className="flex-1 overflow-y-auto">
-                  {products.map((_, index) => (
-                      <Row 
-                        key={products[index].barcode} 
-                        index={index} 
-                        style={{}} 
-                        data={{ items: products, isMobile, onEdit, onDelete }} 
-                      />
-                  ))}
-              </div>
+          <div className="h-full overflow-y-auto bg-slate-50">
+              {products.map((p) => (
+                  <Row 
+                    key={p.barcode} 
+                    index={0} 
+                    style={{ height: isMobile ? 140 : 64 }} 
+                    data={{ items: [p], isMobile, onEdit, onDelete }} 
+                  />
+              ))}
           </div>
       );
   }
 
-  // --- MODO OPTIMIZADO (Virtual Scroller) ---
   return (
     <div className="h-full flex flex-col bg-slate-50 md:bg-white md:rounded-[2.5rem] md:border md:border-slate-200 shadow-xl overflow-hidden">
         <div className="hidden md:flex bg-slate-50/80 border-b border-slate-100 px-8 py-4 shrink-0">
@@ -153,13 +122,12 @@ export const ProductList: React.FC<ProductListProps> = ({ products, onEdit, onDe
         </div>
 
         <div className="flex-1 min-h-0">
-            <AutoSizer>
+            <AutoSizerComponent>
                 {({ height, width }: { height: number; width: number }) => {
                     const isMobileRender = width < 768; 
                     const itemSize = isMobileRender ? 140 : 64; 
                     return (
-                        <FixedSizeList
-                            ref={listRef}
+                        <ListComponent
                             height={height}
                             width={width}
                             itemCount={products.length}
@@ -168,10 +136,10 @@ export const ProductList: React.FC<ProductListProps> = ({ products, onEdit, onDe
                             className="no-scrollbar"
                         >
                             {Row}
-                        </FixedSizeList>
+                        </ListComponent>
                     );
                 }}
-            </AutoSizer>
+            </AutoSizerComponent>
         </div>
     </div>
   );
