@@ -42,7 +42,7 @@ const SmartWindow = ({ items, itemHeight, renderRow: RenderRow, data, onItemsRen
             <div className="absolute top-0 left-0 w-full" style={{ transform: `translateY(${startIndex * itemHeight}px)` }}>
                 {visibleItems.map((item: any, idx: number) => (
                     <div key={item.id} style={{ height: itemHeight }}>
-                        {/* FIX: Renderizar como componente */}
+                        {/* FIX: Renderizado correcto mediante tag JSX */}
                         <RenderRow index={startIndex + idx} data={data} />
                     </div>
                 ))}

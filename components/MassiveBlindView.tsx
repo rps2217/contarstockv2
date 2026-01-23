@@ -2,7 +2,7 @@
 import React, { useState, useRef, memo, useMemo, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMassiveScanner, ConsolidatedBlindItem } from '../hooks/useMassiveScanner';
-import { ChevronLeft, Plus, Minus, ScanLine, Loader2, Zap, Save, X, Upload, MapPin } from 'lucide-react';
+import { ChevronLeft, Plus, Minus, ScanLine, Loader2, Zap, Save, X, Upload, MapPin, Barcode } from 'lucide-react';
 import { massiveDb } from '../db.massive';
 import { CameraScanner } from './CameraScanner';
 import { migrateMassiveToMaster } from '../services/massiveSync';
@@ -38,7 +38,7 @@ const SmartWindow = ({ items, itemHeight, renderRow: RenderRow, data }: any) => 
             <div className="absolute top-0 left-0 w-full" style={{ transform: `translateY(${startIndex * itemHeight}px)` }}>
                 {visibleItems.map((item: any, idx: number) => (
                     <div key={item.barcode} style={{ height: itemHeight }}>
-                        {/* FIX: Renderizar como componente, no como función */}
+                        {/* Renderizado correcto como componente JSX */}
                         <RenderRow index={startIndex + idx} data={data} />
                     </div>
                 ))}
@@ -73,6 +73,7 @@ const MassiveItemRow = memo(({ index, data }: any) => {
     return (
         <div className="px-3 py-1 h-full">
             <div className={`h-full border p-2 rounded-xl flex items-center justify-between transition-colors ${bgColorClass}`}>
+                {/* ZONA DEL DESCRIPTOR: Activa modal de escaneo */}
                 <div className="flex-1 min-w-0 pr-4 py-2 cursor-pointer" onClick={() => setEditingItem(item)}>
                     <div className="flex items-center gap-2 mb-1">
                         <div className={`w-1.5 h-1.5 rounded-full ${isPerfect ? 'bg-emerald-500' : (isUnder || isZero ? 'bg-rose-500' : 'bg-blue-500')} led-active`}></div>
@@ -214,16 +215,47 @@ const MassiveBlindView: React.FC = () => {
                 />
             </div>
 
+            {/* MODAL DE DESCRIPTOR: Muestra código para ser escaneado */}
             {editingItem && (
-                <div className="fixed inset-0 z-[100] bg-slate-950/95 flex flex-col items-center justify-center p-6 animate-in fade-in">
-                    <button onClick={() => setEditingItem(null)} className="absolute top-8 right-8 w-12 h-12 bg-white/10 rounded-full"><X className="w-6 h-6 mx-auto" /></button>
-                    <h2 className="text-2xl font-black mb-10 text-center uppercase">{editingItem.name}</h2>
-                    <div className="flex items-center gap-10">
-                        <button onClick={() => handleDecrement(editingItem)} className="w-20 h-20 bg-white text-black rounded-full font-black text-3xl">-</button>
-                        <div className="text-8xl font-black tabular-nums">{items.find(i => i.barcode === editingItem.barcode)?.totalQuantity || 0}</div>
-                        <button onClick={() => registerScan(editingItem.barcode, 1)} className="w-20 h-20 bg-blue-600 rounded-full font-black text-3xl">+</button>
+                <div className="fixed inset-0 z-[100] bg-slate-950/98 flex flex-col items-center justify-center p-6 animate-in fade-in duration-300">
+                    <button onClick={() => setEditingItem(null)} className="absolute top-8 right-8 w-14 h-14 bg-white/10 rounded-full active:scale-90 border border-white/10"><X className="w-8 h-8 mx-auto" /></button>
+                    
+                    <div className="w-full max-w-sm text-center mb-10">
+                        <span className="text-[10px] font-black text-blue-500 uppercase tracking-[0.4em] block mb-4 italic">SKU_PRESENTATION_MODE</span>
+                        <h2 className="text-3xl font-black mb-2 uppercase italic leading-tight text-white/90">{editingItem.name}</h2>
+                        {editingItem.loc && <div className="text-rose-500 font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 mb-4"><MapPin className="w-3 h-3"/> {editingItem.loc}</div>}
                     </div>
-                    <button onClick={() => setEditingItem(null)} className="mt-20 bg-white text-black px-12 py-4 rounded-2xl font-black uppercase">Confirmar</button>
+
+                    {/* ZONA DE ESCANEO: El código en grande y con diseño de tarjeta industrial */}
+                    <div className="bg-white text-black p-8 rounded-3xl w-full max-w-sm shadow-[0_0_50px_rgba(255,255,255,0.1)] border-b-[16px] border-slate-300 relative group active:scale-95 transition-transform">
+                        <div className="flex justify-between items-center mb-6 opacity-30">
+                            <Barcode className="w-6 h-6" />
+                            <span className="text-[8px] font-black uppercase tracking-widest">Digital_Asset_Pass</span>
+                        </div>
+                        <div className="text-center py-4">
+                            <div className="text-4xl font-black tracking-[0.2em] font-mono break-all leading-tight">
+                                {editingItem.barcode}
+                            </div>
+                        </div>
+                        <div className="mt-8 flex justify-center">
+                            <div className="w-full h-1.5 bg-black/10 rounded-full overflow-hidden">
+                                <div className="h-full bg-blue-600 w-full animate-pulse"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-10 mt-16">
+                        <button onClick={() => handleDecrement(editingItem)} className="w-20 h-20 bg-white/5 border-2 border-white/10 text-white rounded-full font-black text-3xl active:bg-rose-600 transition-colors">-</button>
+                        <div className="flex flex-col items-center">
+                            <div className="text-8xl font-black tabular-nums tracking-tighter leading-none">
+                                {items.find(i => i.barcode === editingItem.barcode)?.totalQuantity || 0}
+                            </div>
+                            <span className="text-[10px] font-black text-white/30 uppercase tracking-widest mt-2">Unidades Actuales</span>
+                        </div>
+                        <button onClick={() => registerScan(editingItem.barcode, 1)} className="w-20 h-20 bg-blue-600 text-white rounded-full font-black text-3xl shadow-xl shadow-blue-900/40 active:scale-110 transition-all">+</button>
+                    </div>
+
+                    <button onClick={() => setEditingItem(null)} className="mt-16 bg-white text-black px-16 py-5 rounded-2xl font-black uppercase tracking-[0.3em] active:scale-90 shadow-2xl">Confirmar_Y_Cerrar</button>
                 </div>
             )}
             
