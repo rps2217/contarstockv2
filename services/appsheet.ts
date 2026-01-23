@@ -8,11 +8,14 @@ import { db } from "../db";
 import { sendToGas, fetchFromGas } from "./gasService";
 import { aggregateScans } from "./aggregator";
 
+/**
+ * MOTOR DE SINCRONIZACIÓN CLOUD
+ * Rutea datos según el tipo de sesión: 'hammer' (Logs) o 'standard' (Consolidado).
+ */
 export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg: string) => void): Promise<void> => {
   const config = getSettings().appSheetConfig;
   const isHammerMode = session.sessionType === 'hammer';
   
-  // Obtenemos solo los no sincronizados
   const unsynced = await db.scans.where('sessionId').equals(session.id).filter(s => s.synced === 0).toArray();
   if (unsynced.length === 0) return;
 
@@ -20,29 +23,27 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
   let targetTable = "";
 
   if (isHammerMode) {
-      // --- RUTA A: MODO MARTILLO (LOGS DETALLADOS) ---
-      // Se envía cada escaneo individualmente a la tabla de CONTEOS
-      // OPTIMIZACIÓN: Se eliminan columnas MM y YYYY (irrelevantes para conteo)
+      // --- FLUJO MARTILLO: CADA ESCANEO ES UNA FILA EN "CONTEOS" ---
       targetTable = config?.countsTableName || "CONTEOS";
       if (onProgress) onProgress(`Subiendo LOGS a: ${targetTable}`);
       
       rows = unsynced.map(record => {
           const dateObj = new Date(record.timestamp);
+          // Estas llaves deben ser idénticas a las del Script de Google
           return {
               "ID_REGISTRO": record.id,
-              "CLAVE_UNICA": `${session.erpOrder}_${session.logisticsLabel}_${record.barcode}_${record.id.substring(0,4)}`,
+              "CLAVE_UNICA": `${session.erpOrder}_${session.logisticsLabel}_${record.barcode}_${record.id.substring(0,6)}`,
               "FECHA": dateObj.toLocaleString(),
               "ERP": session.erpOrder,
               "CODIGO": record.barcode,
-              "PRODUCTO": "Audit_Martillo", // Placeholder
+              "PRODUCTO": "Audit_Martillo", 
               "CANTIDAD": record.quantity,
               "ETIQUETAS": session.logisticsLabel,
-              "FRC": record.isIncident ? "SI" : ""
+              "FRC": record.isIncident ? "SI" : "NO"
           };
       });
   } else {
-      // --- RUTA B: NUEVA CARGA (RESUMEN CONSOLIDADO) ---
-      // Se agrupan los escaneos por SKU y se envían a CONSOLIDADOS
+      // --- FLUJO ESTÁNDAR: RESUMEN AGRUPADO EN "CONSOLIDADOS" ---
       targetTable = config?.consolidatedTableName || "CONSOLIDADOS";
       if (onProgress) onProgress(`Subiendo RESUMEN a: ${targetTable}`);
       
@@ -61,15 +62,14 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
       }));
   }
 
-  // Envío con validación estricta de respuesta
+  // Envío al motor Turbo de Google
   const result = await sendToGas({ tableName: targetTable, rows });
 
   if (result && result.success) {
       await markScansAsSynced(unsynced.map(s => s.id));
       if (onProgress) onProgress(`✓ Sincronización exitosa.`);
   } else {
-      // Ahora este error SÍ se mostrará en la UI gracias a la eliminación de no-cors
-      throw new Error(result?.error || `Error desconocido al escribir en ${targetTable}`);
+      throw new Error(result?.error || `Fallo en comunicación con ${targetTable}`);
   }
 };
 

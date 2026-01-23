@@ -23,18 +23,25 @@ export const useMassiveScanner = (batchId: string) => {
     const collisionGuard = useRef<Map<string, number>>(new Map());
     const REBOUNCE_MS = 250; 
 
-    // El useLiveQuery es clave para la persistencia: reacciona a los cambios en massiveDb
     const items = useLiveQuery(async () => {
         try {
             if (!batchId) return [];
             
             const rawScans = await massiveDb.blindScans.where('batchId').equals(batchId).toArray();
             const manifests = await massiveDb.blindManifests.where('batchId').equals(batchId).toArray();
-            const products = await masterDb.products.toArray();
+            
+            // OPTIMIZACIÓN CRÍTICA: Solo buscamos productos que existen en el lote actual
+            const barcodesInBatch = new Set([
+                ...rawScans.map(s => s.barcode),
+                ...manifests.map(m => m.barcode)
+            ]);
+            
+            const products = await masterDb.products
+                .where('barcode')
+                .anyOf(Array.from(barcodesInBatch))
+                .toArray();
             
             const prodMap = new Map<string, string>(products.map(p => [p.barcode, p.name]));
-            
-            // Mapa avanzado del manifiesto (Incluye Qty, Nombre y Loc)
             const manifestMap = new Map<string, { qty: number, name?: string, loc?: string }>(
                 manifests.map(m => [m.barcode, { qty: m.expectedQty, name: m.name, loc: m.loc }])
             );
@@ -61,7 +68,7 @@ export const useMassiveScanner = (batchId: string) => {
                 }
             }
 
-            // 2. Incluir items del manifiesto aún no escaneados (Feedback de "Faltantes")
+            // 2. Incluir items del manifiesto aún no escaneados
             for (const m of manifests) {
                 if (!aggregation.has(m.barcode)) {
                     aggregation.set(m.barcode, {
@@ -75,14 +82,14 @@ export const useMassiveScanner = (batchId: string) => {
                 }
             }
 
-            // Ordenar: Items con mayor actividad reciente o por ubicación
             return Array.from(aggregation.values()).sort((a, b) => {
+                // Prioridad: Actividad reciente > Ubicación
                 if (a.totalQuantity > 0 && b.totalQuantity === 0) return -1;
                 if (b.totalQuantity > 0 && a.totalQuantity === 0) return 1;
                 return b.lastTimestamp - a.lastTimestamp;
             });
         } catch (e) {
-            console.error("Error cargando datos del Modo Martillo:", e);
+            console.error("Error en agregación masiva:", e);
             return [];
         }
     }, [batchId]);
@@ -103,7 +110,6 @@ export const useMassiveScanner = (batchId: string) => {
 
         setTimeout(() => setIsFlash(false), 100);
 
-        // PERSISTENCIA INMEDIATA EN DB
         await massiveDb.blindScans.add({
             batchId, barcode: clean, quantity: qty, timestamp: now
         });
