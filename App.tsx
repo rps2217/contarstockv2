@@ -9,6 +9,7 @@ import { BottomDock } from './components/BottomDock';
 import { SystemStatus } from './components/SystemStatus';
 import { Box, Loader2 } from 'lucide-react';
 import { lazyWithRetry } from './services/lazyLoad';
+import { initPersistence } from './services/backupService';
 
 const Dashboard = lazyWithRetry(() => import('./components/Dashboard.tsx'));
 const Reports = lazyWithRetry(() => import('./components/Reports.tsx'));
@@ -30,6 +31,8 @@ const AppContent = () => {
                          location.pathname.startsWith('/massive/');
 
   useEffect(() => {
+    // Solicitar persistencia de almacenamiento una vez al inicio
+    initPersistence();
     const timer = setTimeout(() => setBootState('ready'), 800);
     return () => clearTimeout(timer);
   }, []);

@@ -23,8 +23,11 @@ export const useMassiveScanner = (batchId: string) => {
     const collisionGuard = useRef<Map<string, number>>(new Map());
     const REBOUNCE_MS = 250; 
 
+    // El useLiveQuery es clave para la persistencia: reacciona a los cambios en massiveDb
     const items = useLiveQuery(async () => {
         try {
+            if (!batchId) return [];
+            
             const rawScans = await massiveDb.blindScans.where('batchId').equals(batchId).toArray();
             const manifests = await massiveDb.blindManifests.where('batchId').equals(batchId).toArray();
             const products = await masterDb.products.toArray();
@@ -49,7 +52,6 @@ export const useMassiveScanner = (batchId: string) => {
                 } else {
                     aggregation.set(scan.barcode, {
                         barcode: scan.barcode,
-                        // Prioridad: Manifiesto > DB Maestra > Default
                         name: manInfo?.name || prodMap.get(scan.barcode) || 'SKU_NO_IDENTIFICADO',
                         loc: manInfo?.loc,
                         totalQuantity: scan.quantity,
@@ -73,12 +75,14 @@ export const useMassiveScanner = (batchId: string) => {
                 }
             }
 
-            // Ordenar por Ubicación (LOC) y luego por Fecha para flujo logístico lógico
+            // Ordenar: Items con mayor actividad reciente o por ubicación
             return Array.from(aggregation.values()).sort((a, b) => {
-                if (a.loc && b.loc) return a.loc.localeCompare(b.loc);
+                if (a.totalQuantity > 0 && b.totalQuantity === 0) return -1;
+                if (b.totalQuantity > 0 && a.totalQuantity === 0) return 1;
                 return b.lastTimestamp - a.lastTimestamp;
             });
         } catch (e) {
+            console.error("Error cargando datos del Modo Martillo:", e);
             return [];
         }
     }, [batchId]);
@@ -99,6 +103,7 @@ export const useMassiveScanner = (batchId: string) => {
 
         setTimeout(() => setIsFlash(false), 100);
 
+        // PERSISTENCIA INMEDIATA EN DB
         await massiveDb.blindScans.add({
             batchId, barcode: clean, quantity: qty, timestamp: now
         });

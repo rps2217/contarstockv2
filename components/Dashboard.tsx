@@ -1,12 +1,14 @@
 
-import React from 'react';
-import { ScanLine, Database, Radio, Activity, Zap, ArrowRight, Settings, Box } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ScanLine, Database, Radio, Activity, Zap, ArrowRight, Settings, Box, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
+import { massiveDb } from '../db.massive';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
+  const [isEnteringMartillo, setIsEnteringMartillo] = useState(false);
   
   const stats = useLiveQuery(async () => {
       const today = new Date().setHours(0,0,0,0);
@@ -17,13 +19,32 @@ const Dashboard: React.FC = () => {
 
   const isSyncNeeded = (stats?.pendingSync || 0) > 0;
 
-  const MainButton = ({ onClick, icon: Icon, title, sub, color, border }: any) => (
+  // Lógica para reasumir sesión de martillo o crear una nueva
+  const handleEnterMartillo = async () => {
+    setIsEnteringMartillo(true);
+    try {
+        const lastScan = await massiveDb.blindScans.orderBy('timestamp').reverse().first();
+        const lastManifest = await massiveDb.blindManifests.toCollection().first();
+        
+        // Si hay algún dato en la DB masiva, usamos ese batchId para no perder el trabajo
+        const activeBatchId = lastScan?.batchId || lastManifest?.batchId || `MARTILLO-${Date.now()}`;
+        
+        navigate(`/massive/${activeBatchId}`);
+    } catch (e) {
+        navigate(`/massive/MARTILLO-${Date.now()}`);
+    } finally {
+        setIsEnteringMartillo(false);
+    }
+  };
+
+  const MainButton = ({ onClick, icon: Icon, title, sub, color, border, loading }: any) => (
     <button 
         onClick={onClick}
-        className={`w-full h-28 ${color} text-white flex items-center px-6 gap-5 transition-all active:translate-y-1 border-b-[10px] ${border} mb-4 group overflow-hidden relative`}
+        disabled={loading}
+        className={`w-full h-28 ${color} text-white flex items-center px-6 gap-5 transition-all active:translate-y-1 border-b-[10px] ${border} mb-4 group overflow-hidden relative disabled:opacity-50`}
     >
         <div className="bg-black/30 p-4 border-2 border-white/10 shrink-0">
-            <Icon className="w-8 h-8" />
+            {loading ? <Loader2 className="w-8 h-8 animate-spin" /> : <Icon className="w-8 h-8" />}
         </div>
         <div className="text-left flex-1 min-w-0">
             <h2 className="text-xl font-black uppercase italic leading-none tracking-tighter truncate">{title}</h2>
@@ -83,12 +104,13 @@ const Dashboard: React.FC = () => {
                 border="border-slate-950"
             />
             <MainButton 
-                onClick={() => navigate(`/massive/MARTILLO-${Date.now()}`)}
+                onClick={handleEnterMartillo}
                 icon={Zap}
                 title="Modo_Martillo"
                 sub="HIGH_SPEED_BURST"
                 color="bg-blue-600"
                 border="border-blue-900"
+                loading={isEnteringMartillo}
             />
         </div>
 
