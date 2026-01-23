@@ -15,12 +15,12 @@ export const migrateMassiveToMaster = async (batchId: string): Promise<string> =
 
         const manifestMap = new Map<string, number>(manifests.map(m => [m.barcode, m.expectedQty]));
 
-        // IMPORTANTE: El nombre de la orden ERP debe empezar con MARTILLO_
-        // para que el motor de sincronización use la tabla CONTEOS
+        // Nombre descriptivo
         const erpOrder = `MARTILLO_${batchId.substring(0, 8)}`;
         const sessionLabel = batchId;
         
-        const session = await createSession(erpOrder, sessionLabel);
+        // FUNDAMENTAL: Pasar 'hammer' como tercer argumento
+        const session = await createSession(erpOrder, sessionLabel, 'hammer');
 
         const recordsToMigrate: ScanRecord[] = rawScans.map(scan => {
             const expected = manifestMap.get(scan.barcode);
@@ -43,7 +43,7 @@ export const migrateMassiveToMaster = async (batchId: string): Promise<string> =
         await massiveDb.blindScans.where('batchId').equals(batchId).delete();
         await massiveDb.blindManifests.where('batchId').equals(batchId).delete();
 
-        logger.success('MASSIVE_MIGRATION', `Lote ${batchId} migrado como ${erpOrder}`);
+        logger.success('MASSIVE_MIGRATION', `Lote ${batchId} migrado correctamente como TIPO MARTILLO`);
         return session.id;
     } catch (e: any) {
         logger.error('MASSIVE_MIGRATION_FAIL', e.message);

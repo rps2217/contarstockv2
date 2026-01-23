@@ -11,26 +11,15 @@ let flushTimeout: any = null;
 const BUFFER_DELAY_MS = 100;
 const MAX_RETRIES = 3;
 
-/**
- * Persistencia Blindada: Valida integridad antes del commit.
- * Mejorada con lógica de reintentos limitados.
- */
 const commitBufferToDatabase = async () => {
     if (writeBuffer.length === 0) return;
-    
-    // Extraemos el lote actual y limpiamos el buffer global
     const currentBatch = [...writeBuffer];
     writeBuffer = [];
-    
     const recordsToSave = currentBatch.map(item => item.record);
-
     try {
-        // Validación preventiva de todo el lote
         recordsToSave.forEach(scan => IntegrityGuard.validateScan(scan));
-
         await (db as any).transaction('rw', db.scans, db.sessions, async () => {
             await db.scans.bulkAdd(recordsToSave);
-            // Optimización: Solo actualizar metadatos de las sesiones afectadas una vez por lote
             const affectedIds = Array.from(new Set(recordsToSave.map(s => s.sessionId)));
             for (const id of affectedIds) {
                 await updateSessionMetadata(id);
@@ -38,40 +27,27 @@ const commitBufferToDatabase = async () => {
         });
     } catch (error: any) {
         logger.error("WRITE_FAIL", "Fallo de escritura en lote", error.message);
-        
-        // Estrategia de recuperación:
-        // Devolver al buffer solo items que no hayan excedido reintentos
         const retryableItems = currentBatch
             .map(item => ({ ...item, retries: item.retries + 1 }))
             .filter(item => item.retries < MAX_RETRIES);
-
         if (retryableItems.length < currentBatch.length) {
             const lostCount = currentBatch.length - retryableItems.length;
             logger.error("DATA_LOSS_PREVENTION", `Descartados ${lostCount} registros corruptos tras ${MAX_RETRIES} intentos.`);
         }
-
         if (retryableItems.length > 0) {
-            // Reinsertar al principio para mantener orden
             writeBuffer = [...retryableItems, ...writeBuffer];
-            // Re-programar intento con backoff
             if (!flushTimeout) flushTimeout = setTimeout(commitBufferToDatabase, BUFFER_DELAY_MS * 2);
         }
     }
 };
 
-/**
- * Optimización de Memoria: Usa cursores en lugar de cargar todo el array
- */
 export const updateSessionMetadata = async (sessionId: string) => {
     let totalUnits = 0;
     const uniqueSkus = new Set<string>();
-
-    // .each() es más eficiente en memoria que .toArray() para grandes volúmenes
     await db.scans.where('sessionId').equals(sessionId).each(s => {
         totalUnits += s.quantity;
         uniqueSkus.add(s.barcode);
     });
-
     await db.sessions.update(sessionId, { 
         totalUnits, 
         totalSKUs: uniqueSkus.size 
@@ -89,15 +65,10 @@ export const addScanEvent = async (sessionId: string, barcode: string, quantity:
         timestamp: Date.now(),
         synced: 0
     };
-
-    // Validación inmediata antes de entrar al buffer
     IntegrityGuard.validateScan(newRecord);
-
     writeBuffer.push({ record: newRecord, retries: 0 });
-    
     if (flushTimeout) clearTimeout(flushTimeout);
     flushTimeout = setTimeout(commitBufferToDatabase, BUFFER_DELAY_MS);
-    
     return newRecord;
 };
 
@@ -106,13 +77,14 @@ export const checkLabelExists = async (label: string): Promise<boolean> => {
     return count > 0;
 };
 
-export const createSession = async (erp: string, label: string): Promise<CountingSession> => {
+export const createSession = async (erp: string, label: string, type: 'standard' | 'hammer' = 'standard'): Promise<CountingSession> => {
     const s: CountingSession = { 
         id: generateUUID(), 
         erpOrder: erp.trim(), 
         logisticsLabel: label.trim(), 
         createdAt: Date.now(), 
         status: 'active', 
+        sessionType: type,
         totalUnits: 0, 
         totalSKUs: 0 
     };
@@ -127,6 +99,7 @@ export const createDraftSession = async (label: string): Promise<CountingSession
         logisticsLabel: label.trim(), 
         createdAt: Date.now(), 
         status: 'draft', 
+        sessionType: 'standard',
         totalUnits: 0, 
         totalSKUs: 0 
     };
@@ -140,7 +113,6 @@ export const deleteSession = async (id: string) => {
 };
 
 export const closeSession = async (id: string) => { 
-    // Forzar escritura pendiente antes de cerrar
     if (flushTimeout) {
         clearTimeout(flushTimeout);
         await commitBufferToDatabase();
@@ -207,7 +179,6 @@ export const deleteScan = async (e: any, id: string) => {
 export const undoLastAction = async (sessionId: string): Promise<string | null> => {
     const bufferIdx = writeBuffer.findIndex(item => item.record.sessionId === sessionId);
     if (bufferIdx !== -1) {
-        // Optimización: Eliminar desde el buffer si aún no se ha guardado
         for (let i = writeBuffer.length - 1; i >= 0; i--) {
             if (writeBuffer[i].record.sessionId === sessionId) {
                 const [removed] = writeBuffer.splice(i, 1);
@@ -215,14 +186,11 @@ export const undoLastAction = async (sessionId: string): Promise<string | null> 
             }
         }
     }
-
-    // Si ya está en DB, borrar usando índice optimizado
     const lastPersisted = await db.scans
         .where('[sessionId+timestamp]')
         .between([sessionId, Dexie.minKey], [sessionId, Dexie.maxKey])
         .reverse()
         .first();
-
     if (lastPersisted) {
         await db.scans.delete(lastPersisted.id);
         await updateSessionMetadata(sessionId);

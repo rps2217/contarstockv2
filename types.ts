@@ -30,6 +30,7 @@ export interface CountingSession {
   logisticsLabel: string;
   createdAt: number;
   status: 'active' | 'completed' | 'draft';
+  sessionType: 'standard' | 'hammer'; // CLAVE PARA ENRUTAMIENTO
   totalUnits?: number;
   totalSKUs?: number;
   lastSyncTimestamp?: number;

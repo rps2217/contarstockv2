@@ -10,16 +10,15 @@ import { sendToGas, fetchFromGas } from "./gasService";
 import { aggregateScans } from "./aggregator";
 
 /**
- * MOTOR DE SINCRONIZACIÓN INTELIGENTE v8.0
- * Decide el destino y el formato según el origen de la sesión.
+ * MOTOR DE SINCRONIZACIÓN INDUSTRIAL v9.0
+ * Utiliza sessionType (hammer vs standard) para decidir el destino en Excel.
  */
 export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg: string) => void): Promise<void> => {
   const config = getSettings().appSheetConfig;
   
-  // 1. Determinar si es Modo Martillo
-  const isHammerMode = session.erpOrder.startsWith("MARTILLO_") || session.erpOrder === "MODO_MARTILLO";
+  // Ruteo basado en el tipo de sesión persistido en BD
+  const isHammerMode = session.sessionType === 'hammer';
   
-  // Obtenemos los registros pendientes
   const unsynced = await db.scans.where('sessionId').equals(session.id).filter(s => s.synced === 0).toArray();
   if (unsynced.length === 0) return;
 
@@ -27,9 +26,9 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
   let targetTable = "";
 
   if (isHammerMode) {
-      // --- FLUJO MARTILLO: LOG DETALLADO 1:1 ---
+      // --- FLUJO MARTILLO -> VA A LA HOJA "CONTEOS" (O LA CONFIGURADA) ---
       targetTable = config?.countsTableName || "CONTEOS";
-      if (onProgress) onProgress(`Preparando LOG DETALLADO para ${targetTable}...`);
+      if (onProgress) onProgress(`Enrutando LOG DETALLADO (Martillo) a ${targetTable}...`);
       
       rows = unsynced.map(record => ({
           [SHEET_COLUMNS.ID]: record.id.substring(0, 12),
@@ -45,9 +44,9 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
           [SHEET_COLUMNS.INCIDENT]: record.isIncident ? "FRC" : ""
       }));
   } else {
-      // --- FLUJO NUEVA CARGA: CONSOLIDADO POR SKU ---
+      // --- FLUJO ESTÁNDAR -> VA A LA HOJA "CONSOLIDADO" ---
       targetTable = "CONSOLIDADO";
-      if (onProgress) onProgress(`Agregando productos para ${targetTable}...`);
+      if (onProgress) onProgress(`Enrutando RESUMEN (Nueva Carga) a ${targetTable}...`);
       
       const consolidated: ConsolidatedItem[] = await aggregateScans(unsynced);
       
@@ -65,7 +64,7 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
       }));
   }
 
-  if (onProgress) onProgress(`Subiendo ${rows.length} filas a ${targetTable}...`);
+  if (onProgress) onProgress(`Subiendo ${rows.length} registros a la pestaña ${targetTable}...`);
   
   const result = await sendToGas({ 
       tableName: targetTable, 
@@ -74,9 +73,9 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
 
   if (result.success) {
       await markScansAsSynced(unsynced.map(s => s.id));
-      if (onProgress) onProgress(`Sincronización en ${targetTable} finalizada.`);
+      if (onProgress) onProgress(`Sincronización en ${targetTable} finalizada con éxito.`);
   } else {
-      throw new Error(result.error || "Fallo en el servidor GAS");
+      throw new Error(result.error || `Fallo al escribir en la pestaña ${targetTable}`);
   }
 };
 
