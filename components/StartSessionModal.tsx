@@ -146,7 +146,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
             </div>
         </div>
 
-        {isCameraOpen && <CameraScanner onScan={(code) => { setLabelId(sanitizeBarcode(code)); setIsCameraOpen(false); setActiveKeypadField('erp'); }} onClose={() => setIsCameraOpen(false)} />}
+        {isCameraOpen && <CameraScanner isTriggered={true} onScan={(code) => { setLabelId(sanitizeBarcode(code)); setIsCameraOpen(false); setActiveKeypadField('erp'); }} onClose={() => setIsCameraOpen(false)} />}
     </div>
   );
 };

@@ -227,7 +227,7 @@ export const Reception: React.FC = () => {
                 </div>
             )}
 
-            {isCameraOpen && <CameraScanner onScan={(code) => { setIsCameraOpen(false); handleScan(code); }} onClose={() => setIsCameraOpen(false)} />}
+            {isCameraOpen && <CameraScanner isTriggered={true} onScan={(code) => { setIsCameraOpen(false); handleScan(code); }} onClose={() => setIsCameraOpen(false)} />}
             
             <QueueManager 
                 isOpen={showQueueModal} 

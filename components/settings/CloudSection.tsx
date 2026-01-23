@@ -183,20 +183,22 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
             )}
 
             {isScanning && (
-                <CameraScanner onScan={(data) => { 
-                    try {
-                        const p = JSON.parse(data);
-                        if (p.t === 'lc_cfg' && p.cfg) {
-                            updateSetting('appSheetConfig', p.cfg);
-                            alert("Configuración cargada con éxito. Terminal vinculada.");
-                        } else {
-                            alert("Código QR no reconocido como configuración de LogiCount Pro.");
+                <CameraScanner 
+                    isTriggered={true}
+                    onScan={(data) => { 
+                        try {
+                            const p = JSON.parse(data);
+                            if (p.t === 'lc_cfg' && p.cfg) {
+                                updateSetting('appSheetConfig', p.cfg);
+                                alert("Configuración cargada con éxito. Terminal vinculada.");
+                            } else {
+                                alert("Código QR no reconocido como configuración de LogiCount Pro.");
+                            }
+                        } catch (e) {
+                            alert("Error al leer el código. Asegúrese de que sea un QR de LogiCount.");
                         }
-                    } catch (e) {
-                        alert("Error al leer el código. Asegúrese de que sea un QR de LogiCount.");
-                    }
-                    setIsScanning(false);
-                }} onClose={() => setIsScanning(false)} />
+                        setIsScanning(false);
+                    }} onClose={() => setIsScanning(false)} />
             )}
         </div>
     );
