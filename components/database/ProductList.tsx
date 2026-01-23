@@ -1,14 +1,40 @@
-
-import React, { useMemo, useRef, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef, memo } from 'react';
 import { Product } from '../../types';
-import { Pencil, Trash2, Package, Cloud, CloudOff, AlertCircle } from 'lucide-react';
+import { Pencil, Trash2, Package, Cloud, CloudOff } from 'lucide-react';
 
-// Importación omnicanal para compatibilidad con ESM.sh
-import * as RW from 'react-window';
-import * as AS from 'react-virtualized-auto-sizer';
+// --- VIRTUALIZADOR INTERNO ESTABLE ---
+const SmartWindow = ({ items, itemHeight, renderRow, data }: any) => {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [scrollTop, setScrollTop] = useState(0);
+    const [containerHeight, setContainerHeight] = useState(0);
 
-const ListComponent: any = (RW as any).FixedSizeList || (RW as any).default?.FixedSizeList || (RW as any).default;
-const AutoSizerComponent: any = (AS as any).AutoSizer || (AS as any).default?.AutoSizer || (AS as any).default;
+    useEffect(() => {
+        const updateHeight = () => { if (containerRef.current) setContainerHeight(containerRef.current.offsetHeight); };
+        updateHeight();
+        window.addEventListener('resize', updateHeight);
+        return () => window.removeEventListener('resize', updateHeight);
+    }, []);
+
+    const onScroll = (e: any) => setScrollTop(e.currentTarget.scrollTop);
+
+    const startIndex = Math.max(0, Math.floor(scrollTop / itemHeight) - 2);
+    const endIndex = Math.min(items.length, Math.ceil((scrollTop + containerHeight) / itemHeight) + 2);
+    const visibleItems = items.slice(startIndex, endIndex);
+    const totalHeight = items.length * itemHeight;
+
+    return (
+        <div ref={containerRef} onScroll={onScroll} className="h-full w-full overflow-y-auto no-scrollbar relative">
+            <div style={{ height: totalHeight, width: '100%', pointerEvents: 'none' }} />
+            <div className="absolute top-0 left-0 w-full" style={{ transform: `translateY(${startIndex * itemHeight}px)` }}>
+                {visibleItems.map((item: any, idx: number) => (
+                    <div key={item.barcode} style={{ height: itemHeight }}>
+                        {renderRow({ index: startIndex + idx, data })}
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
 
 interface ProductListProps {
   products?: Product[];
@@ -18,37 +44,25 @@ interface ProductListProps {
   hasFilter: boolean;
 }
 
-interface RowProps {
-    index: number;
-    style: React.CSSProperties;
-    data: { 
-        isMobile: boolean; 
-        items: Product[]; 
-        onEdit: (p: Product) => void; 
-        onDelete: (id: string) => void; 
-    };
-}
-
-const Row: React.FC<RowProps> = ({ index, style, data }) => {
+// Added missing 'memo' import to the React import list and added this memo wrapper for performance
+const Row = memo(({ index, data }: any) => {
     const p = data.items[index];
     if (!p) return null;
     const { isMobile, onEdit, onDelete } = data;
 
     if (isMobile) {
         return (
-            <div style={style} className="px-4 py-2">
+            <div className="px-4 py-2 h-full">
                 <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 p-5 h-full flex flex-col justify-between active:scale-[0.98] transition-all overflow-hidden relative">
                     <div className="absolute top-0 right-0 p-4 opacity-30">
                         {p.syncStatus === 'synced' ? <Cloud className="w-4 h-4 text-emerald-500" /> : <CloudOff className="w-4 h-4 text-amber-500" />}
                     </div>
-
                     <div className="flex-1 min-w-0 pr-6">
                         <div className="flex items-center gap-2 mb-1.5">
                              <span className="text-[8px] font-black bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full uppercase tracking-widest border border-slate-200">{p.category || 'GENERAL'}</span>
                         </div>
                         <h3 className="font-black text-slate-900 text-sm leading-[1.2] line-clamp-2 uppercase tracking-tight">{p.name}</h3>
                     </div>
-                    
                     <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-50">
                         <span className="font-mono text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-100">{p.barcode}</span>
                         <div className="flex gap-2">
@@ -62,7 +76,7 @@ const Row: React.FC<RowProps> = ({ index, style, data }) => {
     }
 
     return (
-        <div style={style} className="flex items-center border-b border-slate-100 hover:bg-indigo-50/30 transition-colors px-6 bg-white text-sm group h-16">
+        <div className="flex items-center border-b border-slate-100 hover:bg-indigo-50/30 transition-colors px-6 bg-white text-sm group h-full">
             <div className="w-40 shrink-0 flex items-center gap-3">
                 <div className={`w-2 h-2 rounded-full ${p.syncStatus === 'synced' ? 'bg-emerald-400' : 'bg-amber-400'}`} />
                 <span className="font-mono text-slate-600 font-bold bg-slate-50 px-2 py-1 rounded border border-slate-200 truncate flex-1 text-center">{p.barcode}</span>
@@ -76,7 +90,7 @@ const Row: React.FC<RowProps> = ({ index, style, data }) => {
             </div>
         </div>
     );
-};
+});
 
 export const ProductList: React.FC<ProductListProps> = ({ products, onEdit, onDelete, onDeleteAll, hasFilter }) => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -99,20 +113,7 @@ export const ProductList: React.FC<ProductListProps> = ({ products, onEdit, onDe
     );
   }
 
-  if (!ListComponent || !AutoSizerComponent) {
-      return (
-          <div className="h-full overflow-y-auto bg-slate-50">
-              {products.map((p) => (
-                  <Row 
-                    key={p.barcode} 
-                    index={0} 
-                    style={{ height: isMobile ? 140 : 64 }} 
-                    data={{ items: [p], isMobile, onEdit, onDelete }} 
-                  />
-              ))}
-          </div>
-      );
-  }
+  const itemHeight = isMobile ? 140 : 64;
 
   return (
     <div className="h-full flex flex-col bg-slate-50 md:bg-white md:rounded-[2.5rem] md:border md:border-slate-200 shadow-xl overflow-hidden">
@@ -125,24 +126,12 @@ export const ProductList: React.FC<ProductListProps> = ({ products, onEdit, onDe
         </div>
 
         <div className="flex-1 min-h-0">
-            <AutoSizerComponent>
-                {({ height, width }: { height: number; width: number }) => {
-                    const isMobileRender = width < 768; 
-                    const itemSize = isMobileRender ? 140 : 64; 
-                    return (
-                        <ListComponent
-                            height={height}
-                            width={width}
-                            itemCount={products.length}
-                            itemSize={itemSize}
-                            itemData={{ items: products, onEdit, onDelete, isMobile: isMobileRender }}
-                            className="no-scrollbar"
-                        >
-                            {Row}
-                        </ListComponent>
-                    );
-                }}
-            </AutoSizerComponent>
+            <SmartWindow 
+                items={products}
+                itemHeight={itemHeight}
+                renderRow={Row}
+                data={{ items: products, isMobile, onEdit, onDelete }}
+            />
         </div>
     </div>
   );

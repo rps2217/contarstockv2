@@ -1,23 +1,59 @@
 
-import React, { useState, useRef, memo } from 'react';
+import React, { useState, useRef, memo, useMemo, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMassiveScanner, ConsolidatedBlindItem } from '../hooks/useMassiveScanner';
-import { ChevronLeft, Trash2, Plus, Minus, ScanLine, Loader2, Zap, FileSpreadsheet, Save, X, Upload, MapPin } from 'lucide-react';
+import { ChevronLeft, Plus, Minus, ScanLine, Loader2, Zap, Save, X, Upload, MapPin } from 'lucide-react';
 import { massiveDb } from '../db.massive';
 import { CameraScanner } from './CameraScanner';
 import { migrateMassiveToMaster } from '../services/massiveSync';
 import * as XLSX from 'xlsx';
 import { sanitizeBarcode } from '../services/utils';
 
-// Importación omnicanal para compatibilidad con ESM.sh
-import * as RW from 'react-window';
-import * as AS from 'react-virtualized-auto-sizer';
+// --- COMPONENTE VIRTUALIZADOR NATIVO (SMART-WINDOW) ---
+// Renderiza solo lo que el usuario ve. 60fps garantizados.
+const SmartWindow = ({ items, itemHeight, renderRow, data }: any) => {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [scrollTop, setScrollTop] = useState(0);
+    const [containerHeight, setContainerHeight] = useState(0);
 
-const ListComponent: any = (RW as any).FixedSizeList || (RW as any).default?.FixedSizeList || (RW as any).default;
-const AutoSizerComponent: any = (AS as any).AutoSizer || (AS as any).default?.AutoSizer || (AS as any).default;
+    useEffect(() => {
+        const updateHeight = () => {
+            if (containerRef.current) setContainerHeight(containerRef.current.offsetHeight);
+        };
+        updateHeight();
+        window.addEventListener('resize', updateHeight);
+        return () => window.removeEventListener('resize', updateHeight);
+    }, []);
 
-// Componente de Fila Optimizado
-const MassiveItemRow = memo(({ index, style, data }: any) => {
+    const onScroll = (e: any) => setScrollTop(e.currentTarget.scrollTop);
+
+    const startIndex = Math.max(0, Math.floor(scrollTop / itemHeight) - 2);
+    const endIndex = Math.min(items.length, Math.ceil((scrollTop + containerHeight) / itemHeight) + 2);
+    
+    const visibleItems = items.slice(startIndex, endIndex);
+    const totalHeight = items.length * itemHeight;
+
+    return (
+        <div ref={containerRef} onScroll={onScroll} className="h-full w-full overflow-y-auto no-scrollbar relative bg-slate-950">
+            <div style={{ height: totalHeight, width: '100%', pointerEvents: 'none' }} />
+            <div className="absolute top-0 left-0 w-full" style={{ transform: `translateY(${startIndex * itemHeight}px)` }}>
+                {visibleItems.map((item: any, idx: number) => (
+                    <div key={item.barcode} style={{ height: itemHeight }}>
+                        {renderRow({ index: startIndex + idx, data })}
+                    </div>
+                ))}
+            </div>
+            {items.length === 0 && (
+                <div className="absolute inset-0 flex items-center justify-center text-slate-700 text-[10px] font-black uppercase tracking-widest">
+                    Esperando captura...
+                </div>
+            )}
+        </div>
+    );
+};
+
+// Fila del motor de ráfaga
+const MassiveItemRow = memo(({ index, data }: any) => {
     const item = data.items[index];
     if (!item) return null;
     const { registerScan, handleDecrement, setEditingItem } = data;
@@ -35,9 +71,9 @@ const MassiveItemRow = memo(({ index, style, data }: any) => {
     else if (isZero) bgColorClass = 'bg-slate-900/90 border-white/10 opacity-60';
 
     return (
-        <div style={style} className="px-3 py-1">
+        <div className="px-3 py-1 h-full">
             <div className={`h-full border p-2 rounded-xl flex items-center justify-between transition-colors ${bgColorClass}`}>
-                <div className="flex-1 min-w-0 pr-4 py-2 cursor-pointer">
+                <div className="flex-1 min-w-0 pr-4 py-2 cursor-pointer" onClick={() => setEditingItem(item)}>
                     <div className="flex items-center gap-2 mb-1">
                         <div className={`w-1.5 h-1.5 rounded-full ${isPerfect ? 'bg-emerald-500' : (isUnder || isZero ? 'bg-rose-500' : 'bg-blue-500')} led-active`}></div>
                         <span className="text-[8px] font-black text-blue-500 uppercase tracking-tighter truncate">{item.barcode}</span>
@@ -51,15 +87,15 @@ const MassiveItemRow = memo(({ index, style, data }: any) => {
                 </div>
                 
                 <div className="flex items-center gap-3 shrink-0">
-                    <div className="text-right px-2 min-w-[60px] cursor-pointer" onClick={() => setEditingItem(item)}>
+                    <div className="text-right px-2 min-w-[60px]">
                         <div className="text-2xl font-black text-white tabular-nums leading-none tracking-tighter">
                             {item.totalQuantity}
                             {hasTarget && <span className="text-[10px] text-white/30 ml-1">/ {item.expectedQty}</span>}
                         </div>
                     </div>
                     <div className="flex gap-1.5">
-                        <button onClick={() => registerScan(item.barcode, 1)} className="w-10 h-10 bg-white/10 text-white flex items-center justify-center border border-white/10 rounded-xl"><Plus className="w-5 h-5"/></button>
-                        <button onClick={() => handleDecrement(item)} className="w-10 h-10 bg-white/10 text-rose-500 flex items-center justify-center border border-white/10 rounded-xl"><Minus className="w-5 h-5"/></button>
+                        <button onClick={() => registerScan(item.barcode, 1)} className="w-10 h-10 bg-white/10 text-white flex items-center justify-center border border-white/10 rounded-xl active:bg-blue-600"><Plus className="w-5 h-5"/></button>
+                        <button onClick={() => handleDecrement(item)} className="w-10 h-10 bg-white/10 text-rose-500 flex items-center justify-center border border-white/10 rounded-xl active:bg-rose-600"><Minus className="w-5 h-5"/></button>
                     </div>
                 </div>
             </div>
@@ -70,7 +106,7 @@ const MassiveItemRow = memo(({ index, style, data }: any) => {
 const MassiveBlindView: React.FC = () => {
     const navigate = useNavigate();
     const { batchId = 'CORE' } = useParams();
-    const { items, totalUnits, isFlash, lastScannedCode, registerScan, removeItemCompletely } = useMassiveScanner(batchId);
+    const { items, totalUnits, isFlash, registerScan, removeItemCompletely } = useMassiveScanner(batchId);
     
     const [isTriggerActive, setIsTriggerActive] = useState(false);
     const [isCameraActive, setIsCameraActive] = useState(false);
@@ -169,25 +205,14 @@ const MassiveBlindView: React.FC = () => {
                 </button>
             </div>
 
-            <div className="h-[35vh] bg-slate-950">
-                {AutoSizerComponent && ListComponent ? (
-                    <AutoSizerComponent>
-                        {({ height, width }: any) => (
-                            <ListComponent
-                                height={height}
-                                width={width}
-                                itemCount={items.length}
-                                itemSize={76}
-                                itemData={{ items, registerScan, handleDecrement, setEditingItem }}
-                                className="no-scrollbar"
-                            >
-                                {MassiveItemRow}
-                            </ListComponent>
-                        )}
-                    </AutoSizerComponent>
-                ) : (
-                    <div className="p-10 text-center text-slate-500">Iniciando motor de listas...</div>
-                )}
+            {/* MOTOR SMART-WINDOW: SUSTITUYE A REACT-WINDOW PARA ESTABILIDAD TOTAL */}
+            <div className="h-[35vh]">
+                <SmartWindow 
+                    items={items} 
+                    itemHeight={76} 
+                    renderRow={MassiveItemRow} 
+                    data={{ items, registerScan, handleDecrement, setEditingItem }} 
+                />
             </div>
 
             {editingItem && (

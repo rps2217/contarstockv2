@@ -1,6 +1,6 @@
 
-import React, { useCallback, useEffect, useState } from 'react';
-import { Archive, ExternalLink, WifiOff, Zap, Package } from 'lucide-react';
+import React, { useCallback, useMemo, useState, useRef, useEffect } from 'react';
+import { Archive, WifiOff, Zap, Package, ChevronLeft } from 'lucide-react';
 import { StartSessionModal } from './StartSessionModal';
 import { SearchBar } from './SearchBar';
 import { ReportDetail } from './reports/ReportDetail';
@@ -9,12 +9,46 @@ import { useNavigate } from 'react-router-dom';
 import { SessionRow } from './reports/SessionRow';
 import { useReports } from '../hooks/useReports';
 
-// Importación omnicanal para compatibilidad con ESM.sh
-import * as RW from 'react-window';
-import * as AS from 'react-virtualized-auto-sizer';
+// --- VIRTUALIZADOR INTERNO ESTABLE ---
+const SmartWindow = ({ items, itemHeight, renderRow, data, onItemsRendered }: any) => {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [scrollTop, setScrollTop] = useState(0);
+    const [containerHeight, setContainerHeight] = useState(0);
 
-const ListComponent: any = (RW as any).FixedSizeList || (RW as any).default?.FixedSizeList || (RW as any).default;
-const AutoSizerComponent: any = (AS as any).AutoSizer || (AS as any).default?.AutoSizer || (AS as any).default;
+    useEffect(() => {
+        const updateHeight = () => { if (containerRef.current) setContainerHeight(containerRef.current.offsetHeight); };
+        updateHeight();
+        window.addEventListener('resize', updateHeight);
+        return () => window.removeEventListener('resize', updateHeight);
+    }, []);
+
+    const onScroll = (e: any) => {
+        const top = e.currentTarget.scrollTop;
+        setScrollTop(top);
+        if (onItemsRendered) {
+            const visibleStopIndex = Math.ceil((top + containerHeight) / itemHeight);
+            onItemsRendered({ visibleStopIndex });
+        }
+    };
+
+    const startIndex = Math.max(0, Math.floor(scrollTop / itemHeight) - 2);
+    const endIndex = Math.min(items.length, Math.ceil((scrollTop + containerHeight) / itemHeight) + 2);
+    const visibleItems = items.slice(startIndex, endIndex);
+    const totalHeight = items.length * itemHeight;
+
+    return (
+        <div ref={containerRef} onScroll={onScroll} className="h-full w-full overflow-y-auto no-scrollbar relative">
+            <div style={{ height: totalHeight, width: '100%', pointerEvents: 'none' }} />
+            <div className="absolute top-0 left-0 w-full" style={{ transform: `translateY(${startIndex * itemHeight}px)` }}>
+                {visibleItems.map((item: any, idx: number) => (
+                    <div key={item.id} style={{ height: itemHeight }}>
+                        {renderRow({ index: startIndex + idx, data })}
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
 
 export const Reports: React.FC = () => {
   const navigate = useNavigate();
@@ -30,62 +64,6 @@ export const Reports: React.FC = () => {
   if (state.selectedSessionId) {
       return <ReportDetail sessionId={state.selectedSessionId} onBack={() => actions.setSelectedSessionId(null)} />;
   }
-
-  const renderSessions = () => {
-    if (!state.sessions || state.sessions.length === 0) {
-        return (
-            <div className="h-full flex flex-col items-center justify-center text-slate-300">
-                <Archive className="w-12 h-12 mb-3 opacity-20" />
-                <p className="text-[10px] font-black uppercase tracking-widest">Lista vacía</p>
-            </div>
-        );
-    }
-
-    if (!ListComponent || !AutoSizerComponent) {
-        return (
-            <div className="h-full overflow-y-auto p-4 space-y-2 no-scrollbar">
-                {state.sessions.map((session, idx) => (
-                    <SessionRow 
-                        key={session.id}
-                        index={idx} 
-                        style={{}} 
-                        data={{ 
-                            sessions: state.sessions!, 
-                            onSelect: actions.setSelectedSessionId, 
-                            activeMenuId: state.activeMenuId, 
-                            onMenuToggle: actions.handleMenuToggle, 
-                            onDelete: actions.handleDeleteSession 
-                        }} 
-                    />
-                ))}
-            </div>
-        );
-    }
-
-    return (
-        <AutoSizerComponent>
-            {({ height, width }: { height: number; width: number }) => (
-                <ListComponent 
-                    height={height} 
-                    width={width} 
-                    itemCount={state.sessions!.length} 
-                    itemSize={110} 
-                    className="no-scrollbar" 
-                    onItemsRendered={onItemsRendered}
-                    itemData={{ 
-                        sessions: state.sessions, 
-                        onSelect: actions.setSelectedSessionId, 
-                        activeMenuId: state.activeMenuId, 
-                        onMenuToggle: actions.handleMenuToggle, 
-                        onDelete: actions.handleDeleteSession 
-                    }}
-                >
-                    {SessionRow}
-                </ListComponent>
-            )}
-        </AutoSizerComponent>
-    );
-  };
 
   return (
         <div className="flex flex-col h-full w-full page-transition px-4 pt-6 pb-24 md:pb-6">
@@ -131,7 +109,26 @@ export const Reports: React.FC = () => {
                 </div>
                 
                 <div className="h-full pt-10">
-                    {renderSessions()}
+                    {(!state.sessions || state.sessions.length === 0) ? (
+                        <div className="h-full flex flex-col items-center justify-center text-slate-300">
+                            <Archive className="w-12 h-12 mb-3 opacity-20" />
+                            <p className="text-[10px] font-black uppercase tracking-widest">Lista vacía</p>
+                        </div>
+                    ) : (
+                        <SmartWindow 
+                            items={state.sessions}
+                            itemHeight={110}
+                            onItemsRendered={onItemsRendered}
+                            renderRow={SessionRow}
+                            data={{ 
+                                sessions: state.sessions, 
+                                onSelect: actions.setSelectedSessionId, 
+                                activeMenuId: state.activeMenuId, 
+                                onMenuToggle: actions.handleMenuToggle, 
+                                onDelete: actions.handleDeleteSession 
+                            }}
+                        />
+                    )}
                 </div>
             </div>
             
