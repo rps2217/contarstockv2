@@ -9,6 +9,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 export interface ConsolidatedBlindItem {
     barcode: string;
     name: string;
+    loc?: string;
     totalQuantity: number;
     expectedQty?: number;
     lastTimestamp: number;
@@ -29,33 +30,42 @@ export const useMassiveScanner = (batchId: string) => {
             const products = await masterDb.products.toArray();
             
             const prodMap = new Map<string, string>(products.map(p => [p.barcode, p.name]));
-            const manifestMap = new Map<string, number>(manifests.map(m => [m.barcode, m.expectedQty]));
+            
+            // Mapa avanzado del manifiesto (Incluye Qty, Nombre y Loc)
+            const manifestMap = new Map<string, { qty: number, name?: string, loc?: string }>(
+                manifests.map(m => [m.barcode, { qty: m.expectedQty, name: m.name, loc: m.loc }])
+            );
             
             const aggregation = new Map<string, ConsolidatedBlindItem>();
 
-            // Primero procesamos lo que se ha escaneado
+            // 1. Procesar registros escaneados
             for (const scan of rawScans) {
+                const manInfo = manifestMap.get(scan.barcode);
                 const existing = aggregation.get(scan.barcode);
+                
                 if (existing) {
                     existing.totalQuantity += scan.quantity;
                     existing.lastTimestamp = Math.max(existing.lastTimestamp, scan.timestamp);
                 } else {
                     aggregation.set(scan.barcode, {
                         barcode: scan.barcode,
-                        name: prodMap.get(scan.barcode) || 'SKU_NO_IDENTIFICADO',
+                        // Prioridad: Manifiesto > DB Maestra > Default
+                        name: manInfo?.name || prodMap.get(scan.barcode) || 'SKU_NO_IDENTIFICADO',
+                        loc: manInfo?.loc,
                         totalQuantity: scan.quantity,
-                        expectedQty: manifestMap.get(scan.barcode),
+                        expectedQty: manInfo?.qty,
                         lastTimestamp: scan.timestamp
                     });
                 }
             }
 
-            // Opcional: Mostrar también lo que falta por escanear del manifiesto
+            // 2. Incluir items del manifiesto aún no escaneados (Feedback de "Faltantes")
             for (const m of manifests) {
                 if (!aggregation.has(m.barcode)) {
                     aggregation.set(m.barcode, {
                         barcode: m.barcode,
-                        name: prodMap.get(m.barcode) || 'PENDIENTE_POR_ESCANEAR',
+                        name: m.name || prodMap.get(m.barcode) || 'PENDIENTE_POR_ESCANEAR',
+                        loc: m.loc,
                         totalQuantity: 0,
                         expectedQty: m.expectedQty,
                         lastTimestamp: 0
@@ -63,7 +73,11 @@ export const useMassiveScanner = (batchId: string) => {
                 }
             }
 
-            return Array.from(aggregation.values()).sort((a, b) => b.lastTimestamp - a.lastTimestamp);
+            // Ordenar por Ubicación (LOC) y luego por Fecha para flujo logístico lógico
+            return Array.from(aggregation.values()).sort((a, b) => {
+                if (a.loc && b.loc) return a.loc.localeCompare(b.loc);
+                return b.lastTimestamp - a.lastTimestamp;
+            });
         } catch (e) {
             return [];
         }
@@ -85,7 +99,7 @@ export const useMassiveScanner = (batchId: string) => {
 
         setTimeout(() => setIsFlash(false), 100);
 
-        massiveDb.blindScans.add({
+        await massiveDb.blindScans.add({
             batchId, barcode: clean, quantity: qty, timestamp: now
         });
     }, [batchId]);

@@ -2,7 +2,7 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMassiveScanner, ConsolidatedBlindItem } from '../hooks/useMassiveScanner';
-import { ChevronLeft, Trash2, Plus, Minus, ScanLine, History, Loader2, Zap, Cpu, FileSpreadsheet, Save, X, Barcode, AlertTriangle, Upload, Target, CheckCircle } from 'lucide-react';
+import { ChevronLeft, Trash2, Plus, Minus, ScanLine, History, Loader2, Zap, Cpu, FileSpreadsheet, Save, X, Barcode, AlertTriangle, Upload, Target, CheckCircle, MapPin } from 'lucide-react';
 import { massiveDb } from '../db.massive';
 import { CameraScanner } from './CameraScanner';
 import { exportMassiveToExcel } from '../services/massiveExport';
@@ -64,17 +64,21 @@ const MassiveBlindView: React.FC = () => {
                 const sheet = workbook.Sheets[workbook.SheetNames[0]];
                 const json: any[] = XLSX.utils.sheet_to_json(sheet);
 
+                // Mapeo dinámico basado en las columnas de la imagen
                 const manifestItems = json.map(row => {
-                    const barcode = sanitizeBarcode(String(row['SKU'] || row['CODIGO'] || row['BARCODE'] || ''));
-                    const expectedQty = Number(row['CANTIDAD'] || row['CANT'] || row['QTY'] || 0);
-                    return { batchId, barcode, expectedQty };
-                }).filter(i => i.barcode && i.expectedQty > 0);
+                    const barcode = sanitizeBarcode(String(row['CODIGO'] || row['SKU'] || row['BARCODE'] || ''));
+                    const name = String(row['PRODUCTO'] || row['DESCRIPCION'] || '').trim();
+                    const loc = String(row['LOC'] || row['UBICACION'] || '').trim();
+                    const expectedQty = Number(row['STOCK FINAL'] || row['CANTIDAD'] || row['QTY'] || 0);
+                    
+                    return { batchId, barcode, name, loc, expectedQty };
+                }).filter(i => i.barcode && i.expectedQty >= 0);
 
                 await massiveDb.blindManifests.where('batchId').equals(batchId).delete();
                 await massiveDb.blindManifests.bulkAdd(manifestItems);
-                alert(`${manifestItems.length} items cargados como referencia.`);
+                alert(`${manifestItems.length} items cargados con ubicaciones y stocks finales.`);
             } catch (err) {
-                alert("Error al procesar el manifiesto.");
+                alert("Error al procesar el archivo. Verifique los encabezados: CODIGO, PRODUCTO, LOC, STOCK FINAL.");
             } finally {
                 setIsImporting(false);
             }
@@ -96,7 +100,7 @@ const MassiveBlindView: React.FC = () => {
         setIsMigrating(true);
         try {
             await migrateMassiveToMaster(batchId);
-            alert("Lote guardado en el historial con datos de auditoría.");
+            alert("Lote guardado en el historial.");
             navigate('/dashboard');
         } catch (e: any) {
             alert("Error: " + e.message);
@@ -116,7 +120,7 @@ const MassiveBlindView: React.FC = () => {
                         <ChevronLeft className="w-6 h-6" />
                     </button>
                     <div className="min-w-0">
-                        <span className="text-[8px] font-black text-blue-500 uppercase tracking-widest block italic truncate">MARTILLO_PRO_V4.5</span>
+                        <span className="text-[8px] font-black text-blue-500 uppercase tracking-widest block italic truncate">MARTILLO_PRO_V4.6</span>
                         <span className="text-[10px] text-white/40 font-black tracking-widest uppercase truncate block">{batchId}</span>
                     </div>
                 </div>
@@ -216,6 +220,11 @@ const MassiveBlindView: React.FC = () => {
                                     <div className="flex items-center gap-2 mb-1">
                                         <div className={`w-1.5 h-1.5 rounded-full ${isPerfect ? 'bg-emerald-500' : 'bg-blue-500'} led-active`}></div>
                                         <span className="text-[8px] font-black text-blue-500 uppercase tracking-tighter truncate">{item.barcode}</span>
+                                        {item.loc && (
+                                            <span className="bg-white/10 text-white text-[7px] font-black px-1.5 py-0.5 rounded flex items-center gap-1 uppercase tracking-widest border border-white/10">
+                                                <MapPin className="w-2 h-2 text-rose-500" /> {item.loc}
+                                            </span>
+                                        )}
                                     </div>
                                     <h3 className="text-white font-black text-[10px] uppercase truncate italic opacity-80">{item.name}</h3>
                                 </div>
@@ -252,6 +261,7 @@ const MassiveBlindView: React.FC = () => {
                     <div className="text-center mb-12">
                         <span className="text-[10px] font-black text-blue-500 uppercase tracking-[0.5em] mb-4 block">MANUAL_QUANTITY_CONTROL</span>
                         <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter">{editingItem.name}</h2>
+                        {editingItem.loc && <div className="text-rose-500 font-black text-sm mt-2 flex items-center justify-center gap-2"><MapPin className="w-4 h-4"/> UBICACIÓN: {editingItem.loc}</div>}
                     </div>
                     <div className="flex items-center justify-center gap-10">
                         <button onClick={() => registerScan(editingItem.barcode, -1)} className="w-24 h-24 bg-white text-black rounded-full flex items-center justify-center"><Minus className="w-8 h-8" /></button>
@@ -270,6 +280,7 @@ const MassiveBlindView: React.FC = () => {
                     <div className="w-full text-center mb-10 px-6">
                         <h2 className="text-black font-black text-xl uppercase tracking-tighter mb-2 line-clamp-1">{viewingBarcode.name}</h2>
                         <div className="bg-black text-white py-2 px-6 inline-block rounded-full font-mono text-lg font-black tracking-widest uppercase">SKU: {viewingBarcode.barcode}</div>
+                        {viewingBarcode.loc && <div className="text-rose-600 font-black text-lg mt-4 flex items-center justify-center gap-2"><MapPin className="w-6 h-6"/> {viewingBarcode.loc}</div>}
                     </div>
                     <BarcodeRenderer value={viewingBarcode.barcode} />
                     <button onClick={() => setViewingBarcode(null)} className="mt-12 w-64 py-6 bg-slate-950 text-white rounded-3xl font-black uppercase tracking-widest">CERRAR VISOR</button>
