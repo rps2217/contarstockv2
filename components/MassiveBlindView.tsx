@@ -10,8 +10,7 @@ import * as XLSX from 'xlsx';
 import { sanitizeBarcode } from '../services/utils';
 
 // --- COMPONENTE VIRTUALIZADOR NATIVO (SMART-WINDOW) ---
-// Renderiza solo lo que el usuario ve. 60fps garantizados.
-const SmartWindow = ({ items, itemHeight, renderRow, data }: any) => {
+const SmartWindow = ({ items, itemHeight, renderRow: RenderRow, data }: any) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [scrollTop, setScrollTop] = useState(0);
     const [containerHeight, setContainerHeight] = useState(0);
@@ -25,7 +24,7 @@ const SmartWindow = ({ items, itemHeight, renderRow, data }: any) => {
         return () => window.removeEventListener('resize', updateHeight);
     }, []);
 
-    const onScroll = (e: any) => setScrollTop(e.currentTarget.scrollTop);
+    const onScroll = (e: React.UIEvent<HTMLDivElement>) => setScrollTop(e.currentTarget.scrollTop);
 
     const startIndex = Math.max(0, Math.floor(scrollTop / itemHeight) - 2);
     const endIndex = Math.min(items.length, Math.ceil((scrollTop + containerHeight) / itemHeight) + 2);
@@ -39,7 +38,8 @@ const SmartWindow = ({ items, itemHeight, renderRow, data }: any) => {
             <div className="absolute top-0 left-0 w-full" style={{ transform: `translateY(${startIndex * itemHeight}px)` }}>
                 {visibleItems.map((item: any, idx: number) => (
                     <div key={item.barcode} style={{ height: itemHeight }}>
-                        {renderRow({ index: startIndex + idx, data })}
+                        {/* FIX: Renderizar como componente, no como función */}
+                        <RenderRow index={startIndex + idx} data={data} />
                     </div>
                 ))}
             </div>
@@ -106,7 +106,7 @@ const MassiveItemRow = memo(({ index, data }: any) => {
 const MassiveBlindView: React.FC = () => {
     const navigate = useNavigate();
     const { batchId = 'CORE' } = useParams();
-    const { items, totalUnits, isFlash, registerScan, removeItemCompletely } = useMassiveScanner(batchId);
+    const { items, totalUnits, isFlash, registerScan, removeItemCompletely } = useMassiveScanner(batchId || 'CORE');
     
     const [isTriggerActive, setIsTriggerActive] = useState(false);
     const [isCameraActive, setIsCameraActive] = useState(false);
@@ -135,14 +135,14 @@ const MassiveBlindView: React.FC = () => {
                 const json: any[] = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
 
                 const manifestItems = json.map(row => ({
-                    batchId, 
+                    batchId: batchId || 'CORE', 
                     barcode: sanitizeBarcode(String(row['CODIGO'] || row['SKU'] || row['BARCODE'] || '')),
                     name: String(row['PRODUCTO'] || row['DESCRIPCION'] || '').trim(),
                     loc: String(row['LOC'] || row['UBICACION'] || '').trim(),
                     expectedQty: Number(row['STOCK FINAL'] || row['CANTIDAD'] || row['QTY'] || 0)
                 })).filter(i => i.barcode && i.expectedQty >= 0);
 
-                await massiveDb.blindManifests.where('batchId').equals(batchId).delete();
+                await massiveDb.blindManifests.where('batchId').equals(batchId || 'CORE').delete();
                 await massiveDb.blindManifests.bulkAdd(manifestItems);
             } catch (err) { alert("Error al importar stock."); }
             finally { setIsImporting(false); }
@@ -155,7 +155,7 @@ const MassiveBlindView: React.FC = () => {
         if (!confirm("¿Finalizar lote y subir a la nube?")) return;
         setIsMigrating(true);
         try {
-            await migrateMassiveToMaster(batchId);
+            await migrateMassiveToMaster(batchId || 'CORE');
             navigate('/dashboard');
         } catch (e: any) { alert(e.message); }
         finally { setIsMigrating(false); }
@@ -205,7 +205,6 @@ const MassiveBlindView: React.FC = () => {
                 </button>
             </div>
 
-            {/* MOTOR SMART-WINDOW: SUSTITUYE A REACT-WINDOW PARA ESTABILIDAD TOTAL */}
             <div className="h-[35vh]">
                 <SmartWindow 
                     items={items} 

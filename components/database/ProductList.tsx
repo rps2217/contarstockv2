@@ -1,9 +1,10 @@
+
 import React, { useMemo, useState, useEffect, useRef, memo } from 'react';
 import { Product } from '../../types';
 import { Pencil, Trash2, Package, Cloud, CloudOff } from 'lucide-react';
 
 // --- VIRTUALIZADOR INTERNO ESTABLE ---
-const SmartWindow = ({ items, itemHeight, renderRow, data }: any) => {
+const SmartWindow = ({ items, itemHeight, renderRow: RenderRow, data }: any) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [scrollTop, setScrollTop] = useState(0);
     const [containerHeight, setContainerHeight] = useState(0);
@@ -15,7 +16,7 @@ const SmartWindow = ({ items, itemHeight, renderRow, data }: any) => {
         return () => window.removeEventListener('resize', updateHeight);
     }, []);
 
-    const onScroll = (e: any) => setScrollTop(e.currentTarget.scrollTop);
+    const onScroll = (e: React.UIEvent<HTMLDivElement>) => setScrollTop(e.currentTarget.scrollTop);
 
     const startIndex = Math.max(0, Math.floor(scrollTop / itemHeight) - 2);
     const endIndex = Math.min(items.length, Math.ceil((scrollTop + containerHeight) / itemHeight) + 2);
@@ -28,7 +29,8 @@ const SmartWindow = ({ items, itemHeight, renderRow, data }: any) => {
             <div className="absolute top-0 left-0 w-full" style={{ transform: `translateY(${startIndex * itemHeight}px)` }}>
                 {visibleItems.map((item: any, idx: number) => (
                     <div key={item.barcode} style={{ height: itemHeight }}>
-                        {renderRow({ index: startIndex + idx, data })}
+                        {/* FIX: Renderizar componente correctamente */}
+                        <RenderRow index={startIndex + idx} data={data} />
                     </div>
                 ))}
             </div>
@@ -44,7 +46,6 @@ interface ProductListProps {
   hasFilter: boolean;
 }
 
-// Added missing 'memo' import to the React import list and added this memo wrapper for performance
 const Row = memo(({ index, data }: any) => {
     const p = data.items[index];
     if (!p) return null;

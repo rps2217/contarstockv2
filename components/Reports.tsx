@@ -10,7 +10,7 @@ import { SessionRow } from './reports/SessionRow';
 import { useReports } from '../hooks/useReports';
 
 // --- VIRTUALIZADOR INTERNO ESTABLE ---
-const SmartWindow = ({ items, itemHeight, renderRow, data, onItemsRendered }: any) => {
+const SmartWindow = ({ items, itemHeight, renderRow: RenderRow, data, onItemsRendered }: any) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [scrollTop, setScrollTop] = useState(0);
     const [containerHeight, setContainerHeight] = useState(0);
@@ -22,7 +22,7 @@ const SmartWindow = ({ items, itemHeight, renderRow, data, onItemsRendered }: an
         return () => window.removeEventListener('resize', updateHeight);
     }, []);
 
-    const onScroll = (e: any) => {
+    const onScroll = (e: React.UIEvent<HTMLDivElement>) => {
         const top = e.currentTarget.scrollTop;
         setScrollTop(top);
         if (onItemsRendered) {
@@ -42,7 +42,8 @@ const SmartWindow = ({ items, itemHeight, renderRow, data, onItemsRendered }: an
             <div className="absolute top-0 left-0 w-full" style={{ transform: `translateY(${startIndex * itemHeight}px)` }}>
                 {visibleItems.map((item: any, idx: number) => (
                     <div key={item.id} style={{ height: itemHeight }}>
-                        {renderRow({ index: startIndex + idx, data })}
+                        {/* FIX: Renderizar como componente */}
+                        <RenderRow index={startIndex + idx} data={data} />
                     </div>
                 ))}
             </div>
