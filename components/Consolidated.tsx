@@ -14,7 +14,13 @@ export const Consolidated: React.FC = () => {
     const [detailSearchQuery, setDetailSearchQuery] = useState('');
 
     const erpGroups = useLiveQuery(async () => {
-        let sessions = searchQuery ? await db.sessions.where('erpOrder').startsWithIgnoreCase(searchQuery).limit(200).toArray() : await db.sessions.orderBy('createdAt').reverse().limit(200).toArray();
+        // SEGREGACIÓN: Solo sumamos bultos de tipo 'standard'
+        let sessions = await db.sessions.where('sessionType').equals('standard').toArray();
+        
+        if (searchQuery) {
+            sessions = sessions.filter(s => s.erpOrder.toLowerCase().includes(searchQuery.toLowerCase()));
+        }
+
         const groups: Record<string, any> = {};
         for (const s of sessions) {
             if (!groups[s.erpOrder]) groups[s.erpOrder] = { count: 0, lastDate: 0, totalUnits: 0, allSynced: true, alertCount: 0 };
@@ -29,7 +35,8 @@ export const Consolidated: React.FC = () => {
 
     const details = useLiveQuery(async () => {
         if (!selectedErp) return null;
-        const sessions = await db.sessions.where('erpOrder').equals(selectedErp).toArray();
+        // SEGREGACIÓN: Detalle estricto de carga estándar
+        const sessions = await db.sessions.where('erpOrder').equals(selectedErp).and(s => s.sessionType === 'standard').toArray();
         const scans = await db.scans.where('sessionId').anyOf(sessions.map(s => s.id)).toArray();
         return { items: await aggregateScans(scans), sessionsCount: sessions.length, lastDate: Math.max(...sessions.map(s => s.createdAt)), isFullySynced: sessions.every(s => !!s.lastSyncTimestamp) };
     }, [selectedErp]);
@@ -100,7 +107,7 @@ export const Consolidated: React.FC = () => {
                 <div className="p-4 bg-indigo-600 text-white rounded-[1.5rem] shadow-xl shadow-indigo-200"><Layers className="w-8 h-8" /></div>
                 <div>
                     <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase leading-none">Consolidados</h1>
-                    <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-2">Visión Corporativa por Orden de Compra</p>
+                    <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-2">Visión Corporativa (Excluye Auditorías)</p>
                 </div>
             </div>
 
@@ -117,7 +124,6 @@ export const Consolidated: React.FC = () => {
                             <div className="flex items-center gap-3 mb-3">
                                  <span className="bg-indigo-50 text-indigo-700 text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-indigo-100">GRUPO ERP</span>
                                  {group.allSynced && <Upload className="w-3 h-3 text-emerald-500" />}
-                                 {group.alertCount > 0 && <AlertTriangle className="w-3 h-3 text-rose-500" />}
                             </div>
                             <h3 className="text-2xl font-black text-slate-900 tracking-tight">{group.erp}</h3>
                             <div className="flex items-center gap-6 text-[10px] text-slate-400 font-black uppercase tracking-widest mt-3">
@@ -128,10 +134,15 @@ export const Consolidated: React.FC = () => {
                         <div className="w-12 h-12 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-inner"><ArrowRight className="w-6 h-6" /></div>
                     </button>
                 ))}
+                {erpGroups?.length === 0 && (
+                    <div className="text-center py-20 opacity-30">
+                        <Layers className="w-16 h-16 mx-auto mb-4" />
+                        <p className="font-black uppercase tracking-widest text-xs">Sin cargas estandar para consolidar</p>
+                    </div>
+                )}
             </div>
         </div>
     );
 };
 
-// Added default export for React.lazy support
 export default Consolidated;

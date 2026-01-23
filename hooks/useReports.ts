@@ -3,33 +3,44 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import * as sessionService from '../services/sessionService';
+import { useLocation } from 'react-router-dom';
 
 export const useReports = () => {
+    const location = useLocation();
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
     const [isCleaning, setIsCleaning] = useState(false);
     const [isStartModalOpen, setIsStartModalOpen] = useState(false);
     const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
     
-    // Paginación Reactiva
+    // Determinamos qué tipo de historial mostrar basado en la ruta o parámetro
+    const searchParams = new URLSearchParams(location.search);
+    const filterType = searchParams.get('type') || 'standard';
+
     const [limit, setLimit] = useState(50);
 
     const pendingSyncCount = useLiveQuery(() => db.scans.where('synced').equals(0).count(), [], 0);
 
     const sessions = useLiveQuery(async () => {
         const q = searchQuery.trim();
-        let collection;
+        
+        // SEGREGACIÓN CRÍTICA: Filtramos por tipo para que no se mezclen
+        let collection = db.sessions.where('sessionType').equals(filterType);
 
         if (q) {
-            collection = db.sessions
-                .where('erpOrder').startsWithIgnoreCase(q)
-                .or('logisticsLabel').startsWithIgnoreCase(q);
-        } else {
-            collection = db.sessions.orderBy('createdAt');
+            // Si hay búsqueda, aplicamos filtro adicional manual sobre la colección por rendimiento
+            return await collection
+                .filter(s => 
+                    s.erpOrder.toLowerCase().includes(q.toLowerCase()) || 
+                    s.logisticsLabel.toLowerCase().includes(q.toLowerCase())
+                )
+                .reverse()
+                .limit(limit)
+                .toArray();
         }
 
         return await collection.reverse().limit(limit).toArray();
-    }, [searchQuery, limit], []);
+    }, [searchQuery, limit, filterType], []);
 
     const loadMore = useCallback(() => {
         setLimit(prev => prev + 50);
@@ -68,6 +79,7 @@ export const useReports = () => {
             isCleaning,
             isStartModalOpen,
             activeMenuId,
+            filterType,
             hasMore: sessions?.length === limit
         },
         actions: {

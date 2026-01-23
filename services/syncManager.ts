@@ -1,21 +1,14 @@
 
 import { db } from '../db';
-// Fix: Removed non-existent export parseFlexibleDate from appsheet service
-import { fetchCloudData, fetchProductsFromCloud, syncToAppSheet, syncReceptionToAppSheet, syncProductsToAppSheet } from './appsheet';
-import { SHEET_COLUMNS } from './constants';
+import { syncToAppSheet, fetchProductsFromCloud } from './appsheet';
 import { CountingSession, Product, SyncConflict } from '../types';
-import * as sessionService from './sessionService';
-import * as productService from './productService';
-import { normalizeKey, sanitizeBarcode, generateUUID } from './utils';
 import { logger } from './logger';
-import { CloudInventoryRowSchema, CloudProductSchema } from './schemas';
 import { useSyncStore } from '../store/useSyncStore';
+import { saveProductBatch } from './productService';
+import { CloudProductSchema } from './schemas';
 
 let isSyncingInProgress = false;
 
-/**
- * MOTOR DE SINCRONIZACIÓN v7.0 (Conflict-Aware)
- */
 export const resetSyncLock = () => {
     isSyncingInProgress = false;
     useSyncStore.getState().setSyncing(false);
@@ -28,22 +21,8 @@ export interface UploadGroup {
     sessionIds: string[];
     logisticsLabels: string[];
     type: 'inventory' | 'reception' | 'products';
+    isHammer: boolean; // NUEVO: Flag para visualización
 }
-
-/**
- * Compara datos locales contra nube antes de subir para evitar "pisar" el trabajo de otros.
- */
-export const detectConflicts = async (sessionId: string): Promise<SyncConflict[]> => {
-    const session = await db.sessions.get(sessionId);
-    if (!session) return [];
-
-    const localScans = await db.scans.where('sessionId').equals(sessionId).toArray();
-    const cloudRows = await fetchCloudData({ erpFilter: session.erpOrder });
-    
-    const conflicts: SyncConflict[] = [];
-    // Lógica de comparación de hashes o totales por SKU...
-    return conflicts; 
-};
 
 export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
     const groups: Record<string, UploadGroup> = {};
@@ -58,7 +37,17 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
             const session = sessionMap.get(scan.sessionId);
             if (!session) continue;
             const erp = session.erpOrder;
-            if (!groups[erp]) groups[erp] = { erpOrder: erp, sessionCount: 0, totalUnits: 0, sessionIds: [], logisticsLabels: [], type: 'inventory' };
+            if (!groups[erp]) {
+                groups[erp] = { 
+                    erpOrder: erp, 
+                    sessionCount: 0, 
+                    totalUnits: 0, 
+                    sessionIds: [], 
+                    logisticsLabels: [], 
+                    type: 'inventory',
+                    isHammer: session.sessionType === 'hammer'
+                };
+            }
             groups[erp].totalUnits += scan.quantity;
             if (!groups[erp].sessionIds.includes(session.id)) {
                 groups[erp].sessionIds.push(session.id);
@@ -71,10 +60,7 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
 };
 
 export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: string) => void): Promise<void> => {
-    if (isSyncingInProgress) {
-        logger.warn("SYNC", "Sincronización ya en curso. Abortando duplicado.");
-        return;
-    }
+    if (isSyncingInProgress) return;
     isSyncingInProgress = true;
     useSyncStore.getState().setSyncing(true);
 
@@ -82,10 +68,6 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
         for (const sessionId of group.sessionIds) {
             const session = await db.sessions.get(sessionId);
             if (!session) continue;
-            
-            if (onProgress) onProgress(`Validando integridad de ${session.logisticsLabel}...`);
-            
-            // Verificación preventiva de duplicados en la nube
             await syncToAppSheet(session, onProgress);
             await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
         }
@@ -99,35 +81,36 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
     }
 };
 
-// Fix: Added missing importProductsFromAppSheet function
+// FIX: Added missing exported function required by useProductDatabase hook to resolve 'no exported member' error.
 /**
- * Descarga y actualiza el catálogo maestro local desde la nube.
+ * Descarga el maestro de productos desde la nube y actualiza la base local.
+ * Implementación coordinada para resolver el error de importación en el catálogo.
  */
 export const importProductsFromAppSheet = async (): Promise<number> => {
     try {
+        // Obtenemos los datos crudos desde el servicio de integración
         const rawProducts = await fetchProductsFromCloud();
-        if (!rawProducts || rawProducts.length === 0) return 0;
-
-        const products: Product[] = rawProducts.map(rp => {
-            try {
-                // Using CloudProductSchema to normalize different field names from cloud
-                const validated = CloudProductSchema.parse(rp);
-                return {
-                    ...validated,
-                    syncStatus: 'synced' as const
-                };
-            } catch (e) {
-                console.warn("Ignorando fila de producto inválida:", rp, e);
-                return null;
-            }
-        }).filter(p => p !== null) as Product[];
+        
+        // Mapeo y validación de productos mediante esquema robusto definido en schemas.ts
+        const products: Product[] = rawProducts
+            .map(p => {
+                const result = CloudProductSchema.safeParse(p);
+                return result.success ? result.data : null;
+            })
+            .filter((p): p is Product => p !== null)
+            .map(p => ({ 
+                ...p, 
+                syncStatus: 'synced' as const 
+            }));
 
         if (products.length > 0) {
-            await productService.saveProductBatch(products);
+            // Persistencia masiva en IndexedDB
+            await saveProductBatch(products);
         }
+        
         return products.length;
     } catch (e: any) {
-        logger.error("SYNC_PRODS_FAIL", e.message);
+        logger.error("FETCH_PRODUCTS_FAIL", `Error al descargar catálogo: ${e.message}`);
         throw e;
     }
 };

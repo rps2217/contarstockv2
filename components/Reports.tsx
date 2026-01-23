@@ -1,12 +1,11 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Archive, ExternalLink, WifiOff, ChevronDown, Layers, AlertCircle } from 'lucide-react';
+import { Archive, ExternalLink, WifiOff, ChevronDown, Layers, AlertCircle, Zap, Package } from 'lucide-react';
 import { StartSessionModal } from './StartSessionModal';
 import { SearchBar } from './SearchBar';
 import * as ReactWindow from 'react-window';
 import * as AutoSizerModule from 'react-virtualized-auto-sizer';
 
-// Safe extraction for Virtual List components
 const FixedSizeList = (ReactWindow as any).FixedSizeList || (ReactWindow as any).default?.FixedSizeList;
 const AutoSizer = (AutoSizerModule as any).default || (AutoSizerModule as any).AutoSizer || AutoSizerModule;
 
@@ -20,8 +19,8 @@ export const Reports: React.FC = () => {
   const navigate = useNavigate();
   const { state, actions } = useReports();
   const [libError, setLibError] = useState(false);
+  const isHammerArchive = state.filterType === 'hammer';
 
-  // Safety check for library loading
   useEffect(() => {
       if (!FixedSizeList || !AutoSizer) {
           setLibError(true);
@@ -48,15 +47,9 @@ export const Reports: React.FC = () => {
         );
     }
 
-    // Safety fallback: Render standard list if virtualization fails or libraries are missing
     if (libError || !FixedSizeList || !AutoSizer) {
         return (
             <div className="h-full flex flex-col relative">
-                <div className="absolute bottom-2 right-4 z-10 pointer-events-none opacity-40">
-                    <div className="flex items-center gap-1.5 bg-slate-100 text-slate-500 px-2 py-1 rounded-md text-[8px] font-black uppercase">
-                        <AlertCircle className="w-3 h-3" /> Modo Seguro
-                    </div>
-                </div>
                 <div className="w-full h-full overflow-y-auto space-y-2 no-scrollbar pb-20 p-2">
                     {state.sessions.map((session, idx) => (
                         <div key={session.id} className="h-[110px]">
@@ -73,17 +66,11 @@ export const Reports: React.FC = () => {
                             />
                         </div>
                     ))}
-                    {state.hasMore && (
-                        <div className="p-4 text-center">
-                            <button onClick={() => actions.loadMore()} className="text-xs font-bold text-blue-600">Cargar más...</button>
-                        </div>
-                    )}
                 </div>
             </div>
         );
     }
 
-    // Optimized Virtual List
     return (
         <AutoSizer>
             {({ height, width }: { height: number; width: number }) => (
@@ -111,6 +98,18 @@ export const Reports: React.FC = () => {
 
   return (
         <div className="flex flex-col h-full w-full page-transition px-4 pt-6 pb-24 md:pb-6">
+            <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                    {isHammerArchive ? <Zap className="w-6 h-6 text-blue-500" /> : <Package className="w-6 h-6 text-indigo-500" />}
+                    <h1 className="text-2xl font-black text-slate-900 tracking-tighter uppercase italic">
+                        {isHammerArchive ? 'Archivo Martillo' : 'Historial de Carga'}
+                    </h1>
+                </div>
+                {isHammerArchive && (
+                    <button onClick={() => navigate('/reports')} className="text-[10px] font-black bg-slate-100 text-slate-500 px-3 py-1.5 rounded-lg uppercase">Ver Cargas</button>
+                )}
+            </div>
+
             <ReportsHeader 
                 isCleaning={state.isCleaning} 
                 onClean={actions.handleCleanSynced} 
@@ -127,8 +126,8 @@ export const Reports: React.FC = () => {
                     <div className="flex items-center gap-3">
                         <WifiOff className="w-5 h-5 text-white" />
                         <div className="text-left">
-                            <div className="text-[10px] font-black text-white uppercase tracking-widest">En cola de subida</div>
-                            <div className="text-[9px] text-orange-100 font-bold uppercase">{state.pendingSyncCount} registros sin respaldo</div>
+                            <div className="text-[10px] font-black text-white uppercase tracking-widest">Sincronización Pendiente</div>
+                            <div className="text-[9px] text-orange-100 font-bold uppercase">{state.pendingSyncCount} registros en cola</div>
                         </div>
                     </div>
                     <ExternalLink className="w-4 h-4 text-white opacity-60" />
@@ -138,7 +137,6 @@ export const Reports: React.FC = () => {
             <div className="flex-1 min-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 rounded-[2rem] overflow-hidden shadow-sm relative">
                 <div className="absolute top-0 left-0 right-0 h-10 bg-slate-50 dark:bg-black/50 border-b border-slate-100 dark:border-white/5 flex items-center px-6 justify-between z-10">
                     <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">Firma Operativa</span>
-                    {state.hasMore && <span className="animate-bounce"><ChevronDown className="w-3 h-3 text-blue-500" /></span>}
                     <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">Estado</span>
                 </div>
                 
