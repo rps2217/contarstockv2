@@ -64,7 +64,6 @@ const MassiveBlindView: React.FC = () => {
                 const sheet = workbook.Sheets[workbook.SheetNames[0]];
                 const json: any[] = XLSX.utils.sheet_to_json(sheet);
 
-                // Mapeo dinámico basado en las columnas de la imagen
                 const manifestItems = json.map(row => {
                     const barcode = sanitizeBarcode(String(row['CODIGO'] || row['SKU'] || row['BARCODE'] || ''));
                     const name = String(row['PRODUCTO'] || row['DESCRIPCION'] || '').trim();
@@ -76,9 +75,8 @@ const MassiveBlindView: React.FC = () => {
 
                 await massiveDb.blindManifests.where('batchId').equals(batchId).delete();
                 await massiveDb.blindManifests.bulkAdd(manifestItems);
-                alert(`${manifestItems.length} items cargados con ubicaciones y stocks finales.`);
             } catch (err) {
-                alert("Error al procesar el archivo. Verifique los encabezados: CODIGO, PRODUCTO, LOC, STOCK FINAL.");
+                alert("Error al procesar el archivo. Verifique los encabezados.");
             } finally {
                 setIsImporting(false);
             }
@@ -100,7 +98,6 @@ const MassiveBlindView: React.FC = () => {
         setIsMigrating(true);
         try {
             await migrateMassiveToMaster(batchId);
-            alert("Lote guardado en el historial.");
             navigate('/dashboard');
         } catch (e: any) {
             alert("Error: " + e.message);
@@ -213,12 +210,21 @@ const MassiveBlindView: React.FC = () => {
                         const hasTarget = item.expectedQty !== undefined;
                         const isPerfect = hasTarget && item.totalQuantity === item.expectedQty;
                         const isOver = hasTarget && item.totalQuantity > item.expectedQty;
-                        
+                        const isUnder = hasTarget && item.totalQuantity < item.expectedQty && item.totalQuantity > 0;
+                        const isZero = hasTarget && item.totalQuantity === 0;
+
+                        // NUEVA LÓGICA DE COLORES: Resaltar faltantes en rojo (Rose)
+                        let bgColorClass = 'bg-slate-900/60 border-white/5';
+                        if (isPerfect) bgColorClass = 'bg-emerald-900/40 border-emerald-500/30';
+                        else if (isOver) bgColorClass = 'bg-amber-900/40 border-amber-500/30';
+                        else if (isUnder) bgColorClass = 'bg-rose-900/40 border-rose-500/30'; // RESALTE FALTANTES
+                        else if (isZero) bgColorClass = 'bg-slate-900/90 border-white/10 opacity-60';
+
                         return (
-                            <div key={item.barcode} className={`border p-2 rounded-xl flex items-center justify-between transition-colors ${isPerfect ? 'bg-emerald-900/40 border-emerald-500/30' : (isOver ? 'bg-amber-900/40 border-amber-500/30' : 'bg-slate-900/60 border-white/5')}`}>
+                            <div key={item.barcode} className={`border p-2 rounded-xl flex items-center justify-between transition-colors ${bgColorClass}`}>
                                 <div className="flex-1 min-w-0 pr-4 py-2" onClick={() => setViewingBarcode(item)}>
                                     <div className="flex items-center gap-2 mb-1">
-                                        <div className={`w-1.5 h-1.5 rounded-full ${isPerfect ? 'bg-emerald-500' : 'bg-blue-500'} led-active`}></div>
+                                        <div className={`w-1.5 h-1.5 rounded-full ${isPerfect ? 'bg-emerald-500' : (isUnder || isZero ? 'bg-rose-500' : 'bg-blue-500')} led-active`}></div>
                                         <span className="text-[8px] font-black text-blue-500 uppercase tracking-tighter truncate">{item.barcode}</span>
                                         {item.loc && (
                                             <span className="bg-white/10 text-white text-[7px] font-black px-1.5 py-0.5 rounded flex items-center gap-1 uppercase tracking-widest border border-white/10">
@@ -236,7 +242,7 @@ const MassiveBlindView: React.FC = () => {
                                             {hasTarget && <span className="text-[10px] text-white/30 ml-1">/ {item.expectedQty}</span>}
                                         </div>
                                         {hasTarget && (
-                                            <span className={`text-[6px] font-bold uppercase tracking-widest mt-1 block ${isPerfect ? 'text-emerald-400' : (isOver ? 'text-amber-400' : 'text-white/20')}`}>
+                                            <span className={`text-[6px] font-bold uppercase tracking-widest mt-1 block ${isPerfect ? 'text-emerald-400' : (isOver ? 'text-amber-400' : (isUnder || isZero ? 'text-rose-400' : 'text-white/20'))}`}>
                                                 {isPerfect ? 'OBJETIVO_OK' : (isOver ? `SOBRAN ${item.totalQuantity - item.expectedQty!}` : `FALTAN ${item.expectedQty! - item.totalQuantity}`)}
                                             </span>
                                         )}
@@ -252,7 +258,6 @@ const MassiveBlindView: React.FC = () => {
                 </div>
             </div>
 
-            {/* MODALES DE SOPORTE */}
             {editingItem && (
                 <div className="fixed inset-0 z-[100] bg-slate-950/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 animate-in fade-in zoom-in duration-200">
                     <button onClick={() => setEditingItem(null)} className="absolute top-8 right-8 w-14 h-14 bg-white/5 text-white flex items-center justify-center rounded-full active:bg-rose-600 transition-colors">
