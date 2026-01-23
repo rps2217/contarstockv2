@@ -10,6 +10,7 @@ import * as XLSX from 'xlsx';
 import { sanitizeBarcode } from '../services/utils';
 
 // --- COMPONENTE VIRTUALIZADOR NATIVO (SMART-WINDOW) ---
+// Se ha corregido para usar <RenderRow /> evitando el error "s is not a function"
 const SmartWindow = ({ items, itemHeight, renderRow: RenderRow, data }: any) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [scrollTop, setScrollTop] = useState(0);
@@ -38,13 +39,14 @@ const SmartWindow = ({ items, itemHeight, renderRow: RenderRow, data }: any) => 
             <div className="absolute top-0 left-0 w-full" style={{ transform: `translateY(${startIndex * itemHeight}px)` }}>
                 {visibleItems.map((item: any, idx: number) => (
                     <div key={item.barcode} style={{ height: itemHeight }}>
+                        {/* FIX: Renderizado como componente JSX para soportar React.memo */}
                         <RenderRow index={startIndex + idx} data={data} />
                     </div>
                 ))}
             </div>
             {items.length === 0 && (
-                <div className="absolute inset-0 flex items-center justify-center text-slate-700 text-[10px] font-black uppercase tracking-widest">
-                    Esperando captura...
+                <div className="absolute inset-0 flex items-center justify-center text-slate-700 text-[10px] font-black uppercase tracking-widest text-center px-10">
+                    Esperando captura o carga de manifiesto...
                 </div>
             )}
         </div>
@@ -213,47 +215,49 @@ const MassiveBlindView: React.FC = () => {
                 />
             </div>
 
-            {/* MODAL VISOR DE CÓDIGO (Referencia Visual Exacta) */}
+            {/* MODAL VISOR DE CÓDIGO (Optimizado para móvil y escaneo láser) */}
             {editingItem && (
-                <div className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center animate-in fade-in duration-300">
+                <div className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-between p-6 md:p-12 animate-in fade-in duration-300">
                     
-                    {/* Header: Nombre del Producto */}
-                    <div className="w-full text-center px-6 mb-4">
-                        <h2 className="text-2xl font-black text-black uppercase tracking-tight leading-tight">
+                    {/* Header: Nombre del Producto (Arriba) */}
+                    <div className="w-full text-center mt-4">
+                        <h2 className="text-2xl md:text-4xl font-black text-black uppercase tracking-tight leading-tight px-4 line-clamp-2 italic">
                             {editingItem.name}
                         </h2>
                     </div>
 
-                    {/* Pill de SKU: Negro con texto Blanco */}
-                    <div className="bg-black text-white px-10 py-3 rounded-full mb-12 shadow-xl">
-                        <span className="font-black text-xl tracking-widest uppercase">
-                            SKU: {editingItem.barcode}
-                        </span>
-                    </div>
+                    <div className="flex flex-col items-center w-full">
+                        {/* Pill de SKU: Negro con texto Blanco (Céntrico) */}
+                        <div className="bg-black text-white px-10 py-3 rounded-full mb-10 shadow-2xl flex items-center gap-2">
+                            <span className="font-black text-xl md:text-2xl tracking-widest uppercase">
+                                SKU: {editingItem.barcode}
+                            </span>
+                        </div>
 
-                    {/* Zona del Código de Barras Real (Escaneable) */}
-                    <div className="w-full flex items-center justify-center overflow-hidden mb-16 h-80">
-                        {/* 
-                            Libre Barcode 128 requiere que el texto esté rodeado por caracteres especiales 
-                            o sea procesado para ser válido. Aquí lo usamos como representación visual real.
-                        */}
-                        <div className="barcode-font text-[14rem] text-black leading-none select-none whitespace-nowrap px-4 scale-x-125">
-                            {editingItem.barcode}
+                        {/* Zona del Código de Barras (Cuerpo Central - Ajustado dinámicamente) */}
+                        <div className="w-full flex items-center justify-center overflow-hidden h-64 md:h-96 bg-white">
+                            <div className="barcode-font text-black leading-none select-none whitespace-nowrap px-4" 
+                                 style={{ 
+                                     fontSize: `${Math.min(18, 200 / editingItem.barcode.length)}rem`,
+                                     transform: 'scaleX(1.3)'
+                                 }}>
+                                {editingItem.barcode}
+                            </div>
+                        </div>
+
+                        {/* Subtítulo HUD */}
+                        <div className="mt-10">
+                            <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.5em] italic animate-pulse">
+                                READY_FOR_LASER_CAPTURE
+                            </span>
                         </div>
                     </div>
 
-                    {/* Subtítulo HUD */}
-                    <div className="mb-20">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] italic">
-                            READY_FOR_LASER_CAPTURE
-                        </span>
-                    </div>
-
-                    {/* Botón de Cierre Masivo */}
-                    <div className="w-full max-w-sm px-6">
+                    {/* Botón de Cierre Masivo (Abajo) */}
+                    <div className="w-full max-w-sm mb-6">
                         <button 
                             onClick={() => setEditingItem(null)}
-                            className="w-full bg-[#0a0a1a] text-white py-8 rounded-3xl font-black text-xl uppercase tracking-[0.2em] shadow-2xl active:scale-95 transition-all border-b-8 border-black"
+                            className="w-full bg-[#020617] text-white py-8 rounded-[2rem] font-black text-xl uppercase tracking-[0.2em] shadow-2xl active:scale-95 transition-all border-b-[12px] border-black"
                         >
                             CERRAR VISOR
                         </button>
