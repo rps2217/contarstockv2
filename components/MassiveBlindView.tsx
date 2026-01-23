@@ -8,8 +8,13 @@ import { CameraScanner } from './CameraScanner';
 import { migrateMassiveToMaster } from '../services/massiveSync';
 import * as XLSX from 'xlsx';
 import { sanitizeBarcode } from '../services/utils';
-import { FixedSizeList } from 'react-window';
-import AutoSizer from 'react-virtualized-auto-sizer';
+
+// Importación omnicanal para compatibilidad con ESM.sh
+import * as RW from 'react-window';
+import * as AS from 'react-virtualized-auto-sizer';
+
+const ListComponent: any = (RW as any).FixedSizeList || (RW as any).default?.FixedSizeList || (RW as any).default;
+const AutoSizerComponent: any = (AS as any).AutoSizer || (AS as any).default?.AutoSizer || (AS as any).default;
 
 // Componente de Fila Optimizado
 const MassiveItemRow = memo(({ index, style, data }: any) => {
@@ -121,8 +126,6 @@ const MassiveBlindView: React.FC = () => {
     };
 
     const totalExpected = items.reduce((acc, curr) => acc + (curr.expectedQty || 0), 0);
-    const ListComponent = FixedSizeList as any;
-    const AutoSizerComponent = AutoSizer as any;
 
     return (
         <div className="h-screen w-full flex flex-col font-mono bg-slate-950 select-none overflow-hidden text-white">
@@ -167,7 +170,7 @@ const MassiveBlindView: React.FC = () => {
             </div>
 
             <div className="h-[35vh] bg-slate-950">
-                {ListComponent && AutoSizerComponent ? (
+                {AutoSizerComponent && ListComponent ? (
                     <AutoSizerComponent>
                         {({ height, width }: any) => (
                             <ListComponent
@@ -176,6 +179,7 @@ const MassiveBlindView: React.FC = () => {
                                 itemCount={items.length}
                                 itemSize={76}
                                 itemData={{ items, registerScan, handleDecrement, setEditingItem }}
+                                className="no-scrollbar"
                             >
                                 {MassiveItemRow}
                             </ListComponent>

@@ -2,8 +2,13 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Product } from '../../types';
 import { Pencil, Trash2, Package, Cloud, CloudOff, AlertCircle } from 'lucide-react';
-import { FixedSizeList } from 'react-window';
-import AutoSizer from 'react-virtualized-auto-sizer';
+
+// Importación omnicanal para compatibilidad con ESM.sh
+import * as RW from 'react-window';
+import * as AS from 'react-virtualized-auto-sizer';
+
+const ListComponent: any = (RW as any).FixedSizeList || (RW as any).default?.FixedSizeList || (RW as any).default;
+const AutoSizerComponent: any = (AS as any).AutoSizer || (AS as any).default?.AutoSizer || (AS as any).default;
 
 interface ProductListProps {
   products?: Product[];
@@ -75,8 +80,6 @@ const Row: React.FC<RowProps> = ({ index, style, data }) => {
 
 export const ProductList: React.FC<ProductListProps> = ({ products, onEdit, onDelete, onDeleteAll, hasFilter }) => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const ListComponent = FixedSizeList as any;
-  const AutoSizerComponent = AutoSizer as any;
 
   useEffect(() => {
       const handleResize = () => setIsMobile(window.innerWidth < 768);

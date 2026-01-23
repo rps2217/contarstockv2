@@ -3,13 +3,18 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Archive, ExternalLink, WifiOff, Zap, Package } from 'lucide-react';
 import { StartSessionModal } from './StartSessionModal';
 import { SearchBar } from './SearchBar';
-import { FixedSizeList } from 'react-window';
-import AutoSizer from 'react-virtualized-auto-sizer';
 import { ReportDetail } from './reports/ReportDetail';
 import { ReportsHeader } from './reports/ReportsHeader';
 import { useNavigate } from 'react-router-dom';
 import { SessionRow } from './reports/SessionRow';
 import { useReports } from '../hooks/useReports';
+
+// Importación omnicanal para compatibilidad con ESM.sh
+import * as RW from 'react-window';
+import * as AS from 'react-virtualized-auto-sizer';
+
+const ListComponent: any = (RW as any).FixedSizeList || (RW as any).default?.FixedSizeList || (RW as any).default;
+const AutoSizerComponent: any = (AS as any).AutoSizer || (AS as any).default?.AutoSizer || (AS as any).default;
 
 export const Reports: React.FC = () => {
   const navigate = useNavigate();
@@ -25,9 +30,6 @@ export const Reports: React.FC = () => {
   if (state.selectedSessionId) {
       return <ReportDetail sessionId={state.selectedSessionId} onBack={() => actions.setSelectedSessionId(null)} />;
   }
-
-  const ListComponent = FixedSizeList as any;
-  const AutoSizerComponent = AutoSizer as any;
 
   const renderSessions = () => {
     if (!state.sessions || state.sessions.length === 0) {
