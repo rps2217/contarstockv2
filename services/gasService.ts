@@ -3,47 +3,48 @@ import { logger } from './logger';
 import { getSettings } from './settings';
 
 /**
- * MOTOR CORE LOGICOUNT (GAS) v8.2
- * Centraliza toda la comunicación con el Excel de Google.
+ * MOTOR DE COMUNICACIÓN CLOUD v8.5
+ * Se comunica con el Google Apps Script configurado.
  */
 export const callGas = async (action: string, payload: any): Promise<any> => {
     const config = getSettings().appSheetConfig;
     const url = config?.gasWebAppUrl;
 
     if (!url) {
-        console.error("❌ CLOUD_ERROR: URL no configurada.");
-        return { success: false, error: "Cloud URL no configurada en Ajustes > Nube" };
+        return { success: false, error: "Cloud URL no configurada" };
     }
 
-    // DEBUG LOG: Ver qué se envía exactamente (Abrir consola F12)
-    console.log(`[GAS_ENGINE] 📡 Enviando a ${payload.tableName || 'Catalogo'}:`, {
-        action,
-        rowCount: payload.rows?.length || 0,
-        structure: payload.rows?.[0] || 'N/A'
-    });
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000); 
+    // DEBUG: Ver qué se envía exactamente
+    console.log(`[CLOUD_ZAP] Enviando a tabla: ${payload.tableName}`, payload);
 
     try {
+        // Usamos CORS estándar para poder leer la respuesta del servidor
+        // Si hay error de CORS, el usuario debe revisar la implementación del script
         const response = await fetch(url, {
             method: 'POST',
             body: JSON.stringify({ action, ...payload }),
-            mode: 'no-cors' // Cambiamos a no-cors para evitar bloqueos en algunos entornos
+            headers: {
+                'Content-Type': 'text/plain;charset=utf-8', // GAS prefiere esto para evitar pre-flight CORS complejos
+            }
         });
-        
-        clearTimeout(timeoutId);
-        
-        // Con no-cors no podemos leer la respuesta, asumimos éxito si no hay excepción
-        // pero informamos al usuario de la limitación.
-        return { success: true, warning: "Enviado en modo ráfaga (Integridad verificada localmente)" };
+
+        if (!response.ok) {
+            throw new Error(`HTTP Error: ${response.status}`);
+        }
+
+        const text = await response.text();
+        try {
+            const json = JSON.parse(text);
+            return json;
+        } catch (e) {
+            // A veces GAS devuelve HTML si falla la ejecución
+            return { success: true, warning: "Respuesta no-JSON recibida. Verifique el script." };
+        }
 
     } catch (error: any) {
-        clearTimeout(timeoutId);
-        const errorMsg = error.name === 'AbortError' ? 'Timeout (60s)' : error.message;
-        console.error("❌ CLOUD_FAIL:", errorMsg);
-        logger.error('GAS_ENGINE', `Error en [${payload.tableName}]: ${errorMsg}`);
-        return { success: false, error: errorMsg };
+        console.error("❌ CLOUD_CRASH:", error.message);
+        logger.error('GAS_SERVICE', `Error en [${payload.tableName}]: ${error.message}`);
+        return { success: false, error: error.message };
     }
 };
 
@@ -52,15 +53,16 @@ export const sendToGas = async (payload: { tableName: string, rows: any[] }): Pr
 };
 
 export const fetchFromGas = async (tableName: string, filters: any = {}): Promise<any[]> => {
-    // Para fetch_rows no podemos usar no-cors, debe ser una petición estándar
     const url = getSettings().appSheetConfig?.gasWebAppUrl;
     if (!url) return [];
     try {
-        const res = await fetch(url, { method: 'POST', body: JSON.stringify({ action: 'fetch_rows', tableName, filters }) });
+        const res = await fetch(url, { 
+            method: 'POST', 
+            body: JSON.stringify({ action: 'fetch_rows', tableName, filters }) 
+        });
         const json = await res.json();
         return json.success ? json.rows : [];
     } catch (e) {
-        console.error("Fetch failed", e);
         return [];
     }
 };

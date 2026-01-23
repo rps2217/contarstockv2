@@ -8,7 +8,8 @@ import { ScanRecord } from '../types';
 
 /**
  * MIGRACIÓN DE DATOS: MODO MARTILLO -> MAESTRO
- * Asegura que el bulto migrado tenga la firma técnica HM- para independencia total.
+ * El bulto migrado se marca como 'hammer' para que el motor de sincronización
+ * sepa que debe ir a la tabla de LOGS (CONTEOS).
  */
 export const migrateMassiveToMaster = async (batchId: string): Promise<string> => {
     try {
@@ -17,13 +18,15 @@ export const migrateMassiveToMaster = async (batchId: string): Promise<string> =
         
         if (rawScans.length === 0) throw new Error("No hay datos para migrar.");
 
-        const manifestMap = new Map<string, number>(manifests.map(m => [m.barcode, m.expectedQty]));
+        const manifestMap = new Map<string, {qty: number, mm?: number, yyyy?: number}>(
+            manifests.map(m => [m.barcode, { qty: m.expectedQty }])
+        );
 
-        // Prefijo HM- garantiza que estos registros nunca se mezclen con OCs reales en auditorías
+        // Prefijo HM- para trazabilidad
         const erpOrder = `HM-${batchId.substring(0, 8).toUpperCase()}`;
         const sessionLabel = batchId;
         
-        // El tercer parámetro 'hammer' es vital para el ruteo de sincronización
+        // El tipo 'hammer' es CRÍTICO para que vaya a la pestaña CONTEOS
         const session = await createSession(erpOrder, sessionLabel, 'hammer');
 
         const recordsToMigrate: ScanRecord[] = rawScans.map(scan => {
@@ -34,7 +37,10 @@ export const migrateMassiveToMaster = async (batchId: string): Promise<string> =
                 barcode: scan.barcode,
                 quantity: scan.quantity,
                 timestamp: scan.timestamp,
-                expectedQty: expected || 0,
+                expectedQty: expected?.qty || 0,
+                // Preservar fechas si el log lo requiere
+                mm: new Date(scan.timestamp).getMonth() + 1,
+                yyyy: new Date(scan.timestamp).getFullYear(),
                 synced: 0
             };
         });
@@ -44,11 +50,11 @@ export const migrateMassiveToMaster = async (batchId: string): Promise<string> =
             await updateSessionMetadata(session.id);
         });
 
-        // Limpieza atómica tras migración exitosa
+        // Limpieza de buffer tras éxito
         await massiveDb.blindScans.where('batchId').equals(batchId).delete();
         await massiveDb.blindManifests.where('batchId').equals(batchId).delete();
 
-        logger.success('MASSIVE_MIGRATION', `Bulto [${batchId}] archivado con éxito.`);
+        logger.success('MASSIVE_MIGRATION', `Bulto [${batchId}] archivado para sincronización.`);
         return session.id;
     } catch (e: any) {
         logger.error('MASSIVE_MIGRATION_FAIL', e.message);

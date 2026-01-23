@@ -5,7 +5,6 @@ import { generateUUID } from "./utils";
 import { markScansAsSynced } from "./sessionService"; 
 import { markProductsAsSynced } from "./productService";
 import { db } from "../db";
-import { SHEET_COLUMNS } from "./constants";
 import { sendToGas, fetchFromGas } from "./gasService";
 import { aggregateScans } from "./aggregator";
 
@@ -20,9 +19,9 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
   let targetTable = "";
 
   if (isHammerMode) {
-      // CANAL MARTILLO -> Tabla de Logs (CONTEOS)
+      // RUTA MARTILLO -> LOGS DETALLADOS
       targetTable = config?.countsTableName || "CONTEOS";
-      if (onProgress) onProgress(`Sincronizando LOG a: ${targetTable}`);
+      if (onProgress) onProgress(`Subiendo LOGS a: ${targetTable}`);
       
       rows = unsynced.map(record => ({
           "ID_REGISTRO": record.id,
@@ -38,9 +37,9 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
           "FRC": record.isIncident ? "SI" : ""
       }));
   } else {
-      // CANAL ESTÁNDAR -> Tabla de Resumen (CONSOLIDADOS)
+      // RUTA ESTÁNDAR -> RESUMEN CONSOLIDADO
       targetTable = config?.consolidatedTableName || "CONSOLIDADOS";
-      if (onProgress) onProgress(`Sincronizando RESUMEN a: ${targetTable}`);
+      if (onProgress) onProgress(`Subiendo RESUMEN a: ${targetTable}`);
       
       const consolidated: ConsolidatedItem[] = await aggregateScans(unsynced);
       
@@ -59,11 +58,11 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
 
   const result = await sendToGas({ tableName: targetTable, rows });
 
-  if (result.success) {
+  if (result && result.success) {
       await markScansAsSynced(unsynced.map(s => s.id));
-      if (onProgress) onProgress(`✓ ${targetTable} actualizado.`);
+      if (onProgress) onProgress(`✓ Sincronización exitosa.`);
   } else {
-      throw new Error(result.error || `Fallo en ${targetTable}`);
+      throw new Error(result?.error || "Error desconocido en el servidor de Google");
   }
 };
 
@@ -82,14 +81,9 @@ export const syncProductsToAppSheet = async (products: Product[]): Promise<void>
         "RUT": p.supplierRut
     }));
     const result = await sendToGas({ tableName: config?.productsTableName || "PRODUCTOS", rows });
-    if (result.success) {
+    if (result && result.success) {
         await markProductsAsSynced(products.map(p => p.barcode));
     } else {
-        throw new Error(result.error);
+        throw new Error(result?.error || "Fallo al sincronizar productos");
     }
-};
-
-export const fetchCloudData = async (params: { erpFilter?: string }): Promise<any[]> => {
-  const config = getSettings().appSheetConfig;
-  return await fetchFromGas(config?.countsTableName || "CONTEOS", params);
 };
