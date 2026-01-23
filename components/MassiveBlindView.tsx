@@ -10,7 +10,6 @@ import * as XLSX from 'xlsx';
 import { sanitizeBarcode } from '../services/utils';
 
 // --- COMPONENTE VIRTUALIZADOR NATIVO (SMART-WINDOW) ---
-// Se ha corregido para usar <RenderRow /> evitando el error "s is not a function"
 const SmartWindow = ({ items, itemHeight, renderRow: RenderRow, data }: any) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [scrollTop, setScrollTop] = useState(0);
@@ -39,7 +38,6 @@ const SmartWindow = ({ items, itemHeight, renderRow: RenderRow, data }: any) => 
             <div className="absolute top-0 left-0 w-full" style={{ transform: `translateY(${startIndex * itemHeight}px)` }}>
                 {visibleItems.map((item: any, idx: number) => (
                     <div key={item.barcode} style={{ height: itemHeight }}>
-                        {/* FIX: Renderizado como componente JSX para soportar React.memo */}
                         <RenderRow index={startIndex + idx} data={data} />
                     </div>
                 ))}
@@ -215,49 +213,56 @@ const MassiveBlindView: React.FC = () => {
                 />
             </div>
 
-            {/* MODAL VISOR DE CÓDIGO (Optimizado para móvil y escaneo láser) */}
+            {/* MODAL VISOR DE CÓDIGO (Referencia Visual Exacta y Ajustada a Móvil) */}
             {editingItem && (
-                <div className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-between p-6 md:p-12 animate-in fade-in duration-300">
+                <div className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-between p-8 md:p-12 animate-in fade-in duration-300">
                     
                     {/* Header: Nombre del Producto (Arriba) */}
-                    <div className="w-full text-center mt-4">
-                        <h2 className="text-2xl md:text-4xl font-black text-black uppercase tracking-tight leading-tight px-4 line-clamp-2 italic">
+                    <div className="w-full text-center mt-6">
+                        <h2 className="text-3xl font-black text-black uppercase tracking-tight leading-tight px-4 italic">
                             {editingItem.name}
                         </h2>
                     </div>
 
-                    <div className="flex flex-col items-center w-full">
+                    <div className="flex flex-col items-center w-full max-w-sm">
                         {/* Pill de SKU: Negro con texto Blanco (Céntrico) */}
-                        <div className="bg-black text-white px-10 py-3 rounded-full mb-10 shadow-2xl flex items-center gap-2">
-                            <span className="font-black text-xl md:text-2xl tracking-widest uppercase">
+                        <div className="bg-black text-white px-10 py-4 rounded-full mb-12 shadow-xl flex items-center justify-center min-w-[280px]">
+                            <span className="font-black text-2xl tracking-widest uppercase">
                                 SKU: {editingItem.barcode}
                             </span>
                         </div>
 
-                        {/* Zona del Código de Barras (Cuerpo Central - Ajustado dinámicamente) */}
-                        <div className="w-full flex items-center justify-center overflow-hidden h-64 md:h-96 bg-white">
-                            <div className="barcode-font text-black leading-none select-none whitespace-nowrap px-4" 
+                        {/* Zona del Código de Barras (Escaneable y Contenido) */}
+                        <div className="w-full flex items-center justify-center bg-white overflow-hidden p-2">
+                            {/* 
+                                Ajuste crítico: El fontSize ahora se basa en vw para asegurar que las barras
+                                no se desborden horizontalmente. Se reduce la altura (leading-none) y se elimina el transform
+                                que causaba el desborde en el eje X.
+                            */}
+                            <div className="barcode-font text-black leading-none select-none whitespace-nowrap" 
                                  style={{ 
-                                     fontSize: `${Math.min(18, 200 / editingItem.barcode.length)}rem`,
-                                     transform: 'scaleX(1.3)'
+                                     fontSize: `${Math.min(15, 80 / editingItem.barcode.length)}vw`,
+                                     maxHeight: '40vh',
+                                     width: '100%',
+                                     textAlign: 'center'
                                  }}>
                                 {editingItem.barcode}
                             </div>
                         </div>
 
                         {/* Subtítulo HUD */}
-                        <div className="mt-10">
-                            <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.5em] italic animate-pulse">
+                        <div className="mt-12">
+                            <span className="text-[12px] font-black text-slate-400 uppercase tracking-[0.5em] italic animate-pulse">
                                 READY_FOR_LASER_CAPTURE
                             </span>
                         </div>
                     </div>
 
                     {/* Botón de Cierre Masivo (Abajo) */}
-                    <div className="w-full max-w-sm mb-6">
+                    <div className="w-full max-w-sm mb-10">
                         <button 
                             onClick={() => setEditingItem(null)}
-                            className="w-full bg-[#020617] text-white py-8 rounded-[2rem] font-black text-xl uppercase tracking-[0.2em] shadow-2xl active:scale-95 transition-all border-b-[12px] border-black"
+                            className="w-full bg-[#030712] text-white py-9 rounded-[2.5rem] font-black text-2xl uppercase tracking-[0.2em] shadow-2xl active:scale-95 transition-all border-b-[14px] border-black"
                         >
                             CERRAR VISOR
                         </button>
