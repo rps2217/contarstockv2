@@ -30,7 +30,7 @@ export interface CountingSession {
   logisticsLabel: string;
   createdAt: number;
   status: 'active' | 'completed' | 'draft';
-  sessionType: 'standard' | 'hammer'; // CLAVE PARA ENRUTAMIENTO
+  sessionType: 'standard' | 'hammer'; 
   totalUnits?: number;
   totalSKUs?: number;
   lastSyncTimestamp?: number;
@@ -66,30 +66,6 @@ export interface ConsolidatedItem {
   isIncident?: boolean;
 }
 
-export interface AliasSuggestion {
-  physicalBarcode: string;
-  physicalName: string;
-  expectedBarcode: string;
-  expectedName: string;
-  quantity: number;
-}
-
-export interface MatchDetail {
-  barcode: string;
-  name: string;
-  physicalQty: number;
-  expectedQty: number;
-  difference: number;
-}
-
-export interface MatchResult {
-  expectedOrder: ExpectedOrder;
-  matchScore: number;
-  status: 'exact' | 'partial' | 'mismatch';
-  details: MatchDetail[];
-  potentialAliases: AliasSuggestion[];
-}
-
 export type ViewState = 'dashboard' | 'counting' | 'database' | 'reports' | 'settings' | 'consolidated' | 'reception' | 'sync' | 'conciliator';
 
 export type Theme = 'light' | 'dark' | 'contrast' | 'warm' | 'navy' | 'oled';
@@ -99,7 +75,8 @@ export type ScannerStatus = 'idle' | 'manual' | 'camera' | 'expiring' | 'confirm
 export interface AppSheetConfig {
   appId: string;
   accessKey: string;
-  countsTableName: string;
+  countsTableName: string;       // Destino para MODO MARTILLO (Logs)
+  consolidatedTableName: string; // Destino para NUEVA CARGA (Resumen)
   productsTableName: string;
   receptionTableName?: string;
   gasWebAppUrl?: string; 
@@ -136,4 +113,27 @@ export interface SyncConflict {
   localQuantity: number;
   cloudQuantity: number;
   timestamp: number;
+}
+
+// Added missing interfaces for Conciliator/Detective module to resolve import errors
+export interface AliasSuggestion {
+  physicalBarcode: string;
+  physicalName: string;
+  expectedBarcode: string;
+  expectedName: string;
+  quantity: number;
+}
+
+export interface MatchResult {
+  expectedOrder: ExpectedOrder;
+  matchScore: number;
+  status: 'exact' | 'partial' | 'mismatch';
+  details: {
+    barcode: string;
+    name: string;
+    physicalQty: number;
+    expectedQty: number;
+    difference: number;
+  }[];
+  potentialAliases: AliasSuggestion[];
 }

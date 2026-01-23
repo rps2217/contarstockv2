@@ -10,13 +10,13 @@ import { sendToGas, fetchFromGas } from "./gasService";
 import { aggregateScans } from "./aggregator";
 
 /**
- * MOTOR DE SINCRONIZACIÓN INDUSTRIAL v9.0
- * Utiliza sessionType (hammer vs standard) para decidir el destino en Excel.
+ * MOTOR DE SINCRONIZACIÓN INDUSTRIAL v10.0
+ * Forzado de ruteo por sessionType: Hammer -> Conteos, Standard -> Consolidado.
  */
 export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg: string) => void): Promise<void> => {
   const config = getSettings().appSheetConfig;
   
-  // Ruteo basado en el tipo de sesión persistido en BD
+  // Ruteo INMUTABLE basado en el tipo técnico guardado en la DB
   const isHammerMode = session.sessionType === 'hammer';
   
   const unsynced = await db.scans.where('sessionId').equals(session.id).filter(s => s.synced === 0).toArray();
@@ -26,9 +26,9 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
   let targetTable = "";
 
   if (isHammerMode) {
-      // --- FLUJO MARTILLO -> VA A LA HOJA "CONTEOS" (O LA CONFIGURADA) ---
+      // --- FLUJO MARTILLO (LOG DETALLADO) ---
       targetTable = config?.countsTableName || "CONTEOS";
-      if (onProgress) onProgress(`Enrutando LOG DETALLADO (Martillo) a ${targetTable}...`);
+      if (onProgress) onProgress(`Enviando LOGS a tabla: ${targetTable}`);
       
       rows = unsynced.map(record => ({
           [SHEET_COLUMNS.ID]: record.id.substring(0, 12),
@@ -36,7 +36,7 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
           [SHEET_COLUMNS.DATE]: new Date(record.timestamp).toISOString(),
           [SHEET_COLUMNS.ERP_ORDER]: session.erpOrder,
           [SHEET_COLUMNS.BARCODE]: record.barcode,
-          [SHEET_COLUMNS.PRODUCT_NAME]: "Industrial_Hammer_Log",
+          [SHEET_COLUMNS.PRODUCT_NAME]: "Log_Martillo_Industrial",
           [SHEET_COLUMNS.QUANTITY]: record.quantity,
           [SHEET_COLUMNS.LABEL]: session.logisticsLabel,
           [SHEET_COLUMNS.MONTH]: record.mm || 0,
@@ -44,9 +44,9 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
           [SHEET_COLUMNS.INCIDENT]: record.isIncident ? "FRC" : ""
       }));
   } else {
-      // --- FLUJO ESTÁNDAR -> VA A LA HOJA "CONSOLIDADO" ---
-      targetTable = "CONSOLIDADO";
-      if (onProgress) onProgress(`Enrutando RESUMEN (Nueva Carga) a ${targetTable}...`);
+      // --- FLUJO ESTÁNDAR (RESUMEN SUMADO) ---
+      targetTable = config?.consolidatedTableName || "CONSOLIDADO";
+      if (onProgress) onProgress(`Enviando RESUMEN a tabla: ${targetTable}`);
       
       const consolidated: ConsolidatedItem[] = await aggregateScans(unsynced);
       
@@ -64,8 +64,6 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
       }));
   }
 
-  if (onProgress) onProgress(`Subiendo ${rows.length} registros a la pestaña ${targetTable}...`);
-  
   const result = await sendToGas({ 
       tableName: targetTable, 
       rows 
@@ -73,9 +71,9 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
 
   if (result.success) {
       await markScansAsSynced(unsynced.map(s => s.id));
-      if (onProgress) onProgress(`Sincronización en ${targetTable} finalizada con éxito.`);
+      if (onProgress) onProgress(`Sincronización en ${targetTable} finalizada.`);
   } else {
-      throw new Error(result.error || `Fallo al escribir en la pestaña ${targetTable}`);
+      throw new Error(result.error || `Fallo al escribir en ${targetTable}`);
   }
 };
 

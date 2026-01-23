@@ -20,7 +20,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   appSheetConfig: {
       appId: '',
       accessKey: '',
-      countsTableName: 'CONTEOS',
+      countsTableName: 'CONTEOS',         // Hoja para Log detallado (Martillo)
+      consolidatedTableName: 'CONSOLIDADO', // Hoja para Resumen (Nueva Carga)
       productsTableName: 'PRODUCTOS',
       receptionTableName: 'RECEPCION_BULTOS'
   },
