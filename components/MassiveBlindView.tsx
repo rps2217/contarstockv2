@@ -52,6 +52,18 @@ const MassiveBlindView: React.FC = () => {
     const [viewingBarcode, setViewingBarcode] = useState<ConsolidatedBlindItem | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // Lógica de seguridad para decremento
+    const handleDecrement = (item: ConsolidatedBlindItem) => {
+        if (item.totalQuantity <= 1) {
+            if (confirm(`¿Eliminar ítem ${item.barcode} del lote actual?`)) {
+                removeItemCompletely(item.barcode);
+                if (editingItem?.barcode === item.barcode) setEditingItem(null);
+            }
+        } else {
+            registerScan(item.barcode, -1);
+        }
+    };
+
     const handleImportManifest = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -213,11 +225,10 @@ const MassiveBlindView: React.FC = () => {
                         const isUnder = hasTarget && item.totalQuantity < item.expectedQty && item.totalQuantity > 0;
                         const isZero = hasTarget && item.totalQuantity === 0;
 
-                        // NUEVA LÓGICA DE COLORES: Resaltar faltantes en rojo (Rose)
                         let bgColorClass = 'bg-slate-900/60 border-white/5';
                         if (isPerfect) bgColorClass = 'bg-emerald-900/40 border-emerald-500/30';
                         else if (isOver) bgColorClass = 'bg-amber-900/40 border-amber-500/30';
-                        else if (isUnder) bgColorClass = 'bg-rose-900/40 border-rose-500/30'; // RESALTE FALTANTES
+                        else if (isUnder) bgColorClass = 'bg-rose-900/40 border-rose-500/30'; 
                         else if (isZero) bgColorClass = 'bg-slate-900/90 border-white/10 opacity-60';
 
                         return (
@@ -249,7 +260,7 @@ const MassiveBlindView: React.FC = () => {
                                     </div>
                                     <div className="flex gap-1.5">
                                         <button onClick={() => registerScan(item.barcode, 1)} className="w-10 h-10 bg-white/10 text-white flex items-center justify-center border border-white/10 rounded-xl"><Plus className="w-5 h-5"/></button>
-                                        <button onClick={() => registerScan(item.barcode, -1)} className="w-10 h-10 bg-white/10 text-rose-500 flex items-center justify-center border border-white/10 rounded-xl"><Minus className="w-5 h-5"/></button>
+                                        <button onClick={() => handleDecrement(item)} className="w-10 h-10 bg-white/10 text-rose-500 flex items-center justify-center border border-white/10 rounded-xl"><Minus className="w-5 h-5"/></button>
                                     </div>
                                 </div>
                             </div>
@@ -269,7 +280,7 @@ const MassiveBlindView: React.FC = () => {
                         {editingItem.loc && <div className="text-rose-500 font-black text-sm mt-2 flex items-center justify-center gap-2"><MapPin className="w-4 h-4"/> UBICACIÓN: {editingItem.loc}</div>}
                     </div>
                     <div className="flex items-center justify-center gap-10">
-                        <button onClick={() => registerScan(editingItem.barcode, -1)} className="w-24 h-24 bg-white text-black rounded-full flex items-center justify-center"><Minus className="w-8 h-8" /></button>
+                        <button onClick={() => handleDecrement(editingItem)} className="w-24 h-24 bg-white text-black rounded-full flex items-center justify-center"><Minus className="w-8 h-8" /></button>
                         <div className="text-9xl font-black text-white">{items.find(i => i.barcode === editingItem.barcode)?.totalQuantity || 0}</div>
                         <button onClick={() => registerScan(editingItem.barcode, 1)} className="w-24 h-24 bg-blue-600 text-white rounded-full flex items-center justify-center"><Plus className="w-8 h-8" /></button>
                     </div>
