@@ -1,12 +1,13 @@
 
 import React, { memo } from 'react';
-import { Truck, Cloud, MoreVertical, Trash2, ShieldCheck, AlertCircle } from 'lucide-react';
+import { Truck, Cloud, MoreVertical, Trash2, ShieldCheck, AlertCircle, Zap, Package } from 'lucide-react';
 
 export const SessionRow = memo(({ index, style, data }: any) => {
     const session = data.sessions[index];
     if (!session) return null;
     
     const { onSelect, activeMenuId, onMenuToggle, onDelete } = data;
+    const isHammer = session.sessionType === 'hammer';
     const isCertified = session.auditStatus === 'verified';
     const hasIssues = session.auditStatus === 'failed';
 
@@ -16,13 +17,21 @@ export const SessionRow = memo(({ index, style, data }: any) => {
                 onClick={() => onSelect(session.id)}
                 className={`bg-white dark:bg-slate-900 border-2 rounded-[1.8rem] h-full flex items-center px-5 gap-4 transition-all active:scale-[0.98] shadow-sm relative overflow-hidden ${isCertified ? 'border-emerald-400/50 bg-emerald-50/20' : (hasIssues ? 'border-rose-400/50' : 'border-slate-100 dark:border-white/5')}`}
             >
+                {/* Indicador Lateral de Tipo */}
+                <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${isHammer ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'}`} />
+
                 <div className="flex-1 min-w-0 py-2">
                     <div className="flex items-center gap-2 mb-1.5">
-                         <span className="text-[10px] font-black text-slate-500 bg-slate-50 dark:bg-white/5 px-2 py-0.5 rounded-lg border border-slate-100 dark:border-white/10 uppercase tracking-widest">
+                         {/* Etiqueta de Tipo de Módulo */}
+                         <div className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[7px] font-black uppercase tracking-widest ${isHammer ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'bg-slate-100 dark:bg-white/5 text-slate-500 border border-slate-200 dark:border-white/10'}`}>
+                            {isHammer ? <Zap className="w-2.5 h-2.5" /> : <Package className="w-2.5 h-2.5" />}
+                            {isHammer ? 'Modo Martillo' : 'Nueva Carga'}
+                         </div>
+                         
+                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
                             {new Date(session.createdAt).toLocaleDateString()}
                          </span>
                          {session.lastSyncTimestamp && <Cloud className="w-4 h-4 text-blue-500" />}
-                         {isCertified && <ShieldCheck className="w-4 h-4 text-emerald-500" />}
                     </div>
                     <h3 className="text-xl font-black text-black dark:text-white uppercase truncate tracking-tight leading-tight">
                         {session.erpOrder}
@@ -35,7 +44,7 @@ export const SessionRow = memo(({ index, style, data }: any) => {
                 <div className="flex items-center gap-3 shrink-0">
                     <div className="text-right">
                         <div className="text-3xl font-black text-black dark:text-white tabular-nums tracking-tighter leading-none">{session.totalUnits || 0}</div>
-                        <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">U.</div>
+                        <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">U. Total</div>
                     </div>
                     
                     <button 

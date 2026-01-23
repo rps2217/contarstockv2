@@ -10,13 +10,13 @@ import { sendToGas, fetchFromGas } from "./gasService";
 import { aggregateScans } from "./aggregator";
 
 /**
- * MOTOR DE SINCRONIZACIÓN INDUSTRIAL v10.0
- * Forzado de ruteo por sessionType: Hammer -> Conteos, Standard -> Consolidado.
+ * MOTOR DE SINCRONIZACIÓN INDUSTRIAL v11.0
+ * Independencia de canales:
+ * 1. Nueva Carga -> Cloud Consolidado (Sumarizado)
+ * 2. Martillo -> Cloud Conteos (Log Detallado por evento)
  */
 export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg: string) => void): Promise<void> => {
   const config = getSettings().appSheetConfig;
-  
-  // Ruteo INMUTABLE basado en el tipo técnico guardado en la DB
   const isHammerMode = session.sessionType === 'hammer';
   
   const unsynced = await db.scans.where('sessionId').equals(session.id).filter(s => s.synced === 0).toArray();
@@ -26,27 +26,27 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
   let targetTable = "";
 
   if (isHammerMode) {
-      // --- FLUJO MARTILLO (LOG DETALLADO) ---
+      // CANAL MARTILLO: Enviamos el historial exacto del operario (Log de Auditoría)
       targetTable = config?.countsTableName || "CONTEOS";
-      if (onProgress) onProgress(`Enviando LOGS a tabla: ${targetTable}`);
+      if (onProgress) onProgress(`Enviando LOG DETALLADO a: ${targetTable}`);
       
       rows = unsynced.map(record => ({
-          [SHEET_COLUMNS.ID]: record.id.substring(0, 12),
-          [SHEET_COLUMNS.UNIQUE_KEY]: `${session.erpOrder}_${session.logisticsLabel}_${record.barcode}_${record.id.substring(0,6)}`,
+          [SHEET_COLUMNS.ID]: record.id,
+          [SHEET_COLUMNS.UNIQUE_KEY]: `${session.erpOrder}_${session.logisticsLabel}_${record.barcode}_${record.id.substring(0,4)}`,
           [SHEET_COLUMNS.DATE]: new Date(record.timestamp).toISOString(),
           [SHEET_COLUMNS.ERP_ORDER]: session.erpOrder,
           [SHEET_COLUMNS.BARCODE]: record.barcode,
-          [SHEET_COLUMNS.PRODUCT_NAME]: "Log_Martillo_Industrial",
+          [SHEET_COLUMNS.PRODUCT_NAME]: "Martillo_Log_Puro",
           [SHEET_COLUMNS.QUANTITY]: record.quantity,
           [SHEET_COLUMNS.LABEL]: session.logisticsLabel,
           [SHEET_COLUMNS.MONTH]: record.mm || 0,
           [SHEET_COLUMNS.YEAR]: record.yyyy || 0,
-          [SHEET_COLUMNS.INCIDENT]: record.isIncident ? "FRC" : ""
+          [SHEET_COLUMNS.INCIDENT]: record.isIncident ? "SI" : ""
       }));
   } else {
-      // --- FLUJO ESTÁNDAR (RESUMEN SUMADO) ---
+      // CANAL ESTÁNDAR: Enviamos el resumen sumado por SKU (Eficiencia de Datos)
       targetTable = config?.consolidatedTableName || "CONSOLIDADO";
-      if (onProgress) onProgress(`Enviando RESUMEN a tabla: ${targetTable}`);
+      if (onProgress) onProgress(`Enviando RESUMEN SUMARIZADO a: ${targetTable}`);
       
       const consolidated: ConsolidatedItem[] = await aggregateScans(unsynced);
       
@@ -59,21 +59,17 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
           "CODIGO": item.barcode,
           "PRODUCTO": item.productName,
           "CANTIDAD": item.totalQuantity,
-          "TOTAL_ESCANEOS": item.scans,
           "INCIDENCIAS": item.isIncident ? "SI" : "NO"
       }));
   }
 
-  const result = await sendToGas({ 
-      tableName: targetTable, 
-      rows 
-  });
+  const result = await sendToGas({ tableName: targetTable, rows });
 
   if (result.success) {
       await markScansAsSynced(unsynced.map(s => s.id));
-      if (onProgress) onProgress(`Sincronización en ${targetTable} finalizada.`);
+      if (onProgress) onProgress(`✓ Canal ${targetTable} sincronizado.`);
   } else {
-      throw new Error(result.error || `Fallo al escribir en ${targetTable}`);
+      throw new Error(result.error || `Fallo crítico en canal ${targetTable}`);
   }
 };
 

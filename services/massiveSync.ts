@@ -6,6 +6,10 @@ import { logger } from './logger';
 import { generateUUID } from './utils';
 import { ScanRecord } from '../types';
 
+/**
+ * MIGRACIÓN DE DATOS: MODO MARTILLO -> MAESTRO
+ * Asegura que el bulto migrado tenga la firma técnica HM- para independencia total.
+ */
 export const migrateMassiveToMaster = async (batchId: string): Promise<string> => {
     try {
         const rawScans = await massiveDb.blindScans.where('batchId').equals(batchId).toArray();
@@ -15,11 +19,11 @@ export const migrateMassiveToMaster = async (batchId: string): Promise<string> =
 
         const manifestMap = new Map<string, number>(manifests.map(m => [m.barcode, m.expectedQty]));
 
-        // Nombre descriptivo
-        const erpOrder = `MARTILLO_${batchId.substring(0, 8)}`;
+        // Prefijo HM- garantiza que estos registros nunca se mezclen con OCs reales en auditorías
+        const erpOrder = `HM-${batchId.substring(0, 8).toUpperCase()}`;
         const sessionLabel = batchId;
         
-        // FUNDAMENTAL: Pasar 'hammer' como tercer argumento
+        // El tercer parámetro 'hammer' es vital para el ruteo de sincronización
         const session = await createSession(erpOrder, sessionLabel, 'hammer');
 
         const recordsToMigrate: ScanRecord[] = rawScans.map(scan => {
@@ -40,10 +44,11 @@ export const migrateMassiveToMaster = async (batchId: string): Promise<string> =
             await updateSessionMetadata(session.id);
         });
 
+        // Limpieza atómica tras migración exitosa
         await massiveDb.blindScans.where('batchId').equals(batchId).delete();
         await massiveDb.blindManifests.where('batchId').equals(batchId).delete();
 
-        logger.success('MASSIVE_MIGRATION', `Lote ${batchId} migrado correctamente como TIPO MARTILLO`);
+        logger.success('MASSIVE_MIGRATION', `Bulto [${batchId}] archivado con éxito.`);
         return session.id;
     } catch (e: any) {
         logger.error('MASSIVE_MIGRATION_FAIL', e.message);
