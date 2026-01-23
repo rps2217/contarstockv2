@@ -3,8 +3,9 @@ import { logger } from './logger';
 import { getSettings } from './settings';
 
 /**
- * MOTOR DE COMUNICACIÓN CLOUD v8.5
+ * MOTOR DE COMUNICACIÓN CLOUD v9.0 (Transparent Mode)
  * Se comunica con el Google Apps Script configurado.
+ * Elimina 'no-cors' para garantizar la integridad de la respuesta.
  */
 export const callGas = async (action: string, payload: any): Promise<any> => {
     const config = getSettings().appSheetConfig;
@@ -18,27 +19,37 @@ export const callGas = async (action: string, payload: any): Promise<any> => {
     console.log(`[CLOUD_ZAP] Enviando a tabla: ${payload.tableName}`, payload);
 
     try {
-        // Usamos CORS estándar para poder leer la respuesta del servidor
-        // Si hay error de CORS, el usuario debe revisar la implementación del script
+        // CRÍTICO: Usamos CORS estándar. 
+        // El script de Google debe devolver los encabezados CORS correctos.
+        // Content-Type text/plain evita el preflight OPTIONS estricto de algunos navegadores.
         const response = await fetch(url, {
             method: 'POST',
             body: JSON.stringify({ action, ...payload }),
             headers: {
-                'Content-Type': 'text/plain;charset=utf-8', // GAS prefiere esto para evitar pre-flight CORS complejos
+                'Content-Type': 'text/plain;charset=utf-8', 
             }
         });
 
         if (!response.ok) {
-            throw new Error(`HTTP Error: ${response.status}`);
+            throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
         }
 
         const text = await response.text();
+        
         try {
             const json = JSON.parse(text);
+            // Validar que el script de Google confirmó éxito lógico
+            if (json.success === false) {
+                throw new Error(json.error || "Error lógico en Google Script");
+            }
             return json;
         } catch (e) {
-            // A veces GAS devuelve HTML si falla la ejecución
-            return { success: true, warning: "Respuesta no-JSON recibida. Verifique el script." };
+            console.warn("Respuesta no-JSON recibida:", text);
+            // Si devuelve HTML (página de error de Google), lanzamos error
+            if (text.includes("<!DOCTYPE html>")) {
+                throw new Error("El Script de Google devolvió una página de error HTML. Verifique los logs del Script.");
+            }
+            return { success: true, warning: "Respuesta cruda recibida" };
         }
 
     } catch (error: any) {

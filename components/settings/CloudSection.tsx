@@ -140,16 +140,20 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
             )}
 
             {isScanning && (
-                <CameraScanner onScan={(data) => { 
-                    try {
-                        const p = JSON.parse(data);
-                        if (p.t === 'lc_cfg' && p.cfg) {
-                            updateSetting('appSheetConfig', p.cfg);
-                            alert("Configuración cargada.");
-                        }
-                    } catch (e) {}
-                    setIsScanning(false);
-                }} onClose={() => setIsScanning(false)} />
+                <CameraScanner 
+                    isTriggered={true}
+                    onScan={(data) => { 
+                        try {
+                            const p = JSON.parse(data);
+                            if (p.t === 'lc_cfg' && p.cfg) {
+                                updateSetting('appSheetConfig', p.cfg);
+                                alert("Configuración cargada.");
+                            }
+                        } catch (e) {}
+                        setIsScanning(false);
+                    }} 
+                    onClose={() => setIsScanning(false)} 
+                />
             )}
         </div>
     );

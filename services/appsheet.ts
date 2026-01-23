@@ -12,6 +12,7 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
   const config = getSettings().appSheetConfig;
   const isHammerMode = session.sessionType === 'hammer';
   
+  // Obtenemos solo los no sincronizados
   const unsynced = await db.scans.where('sessionId').equals(session.id).filter(s => s.synced === 0).toArray();
   if (unsynced.length === 0) return;
 
@@ -19,25 +20,29 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
   let targetTable = "";
 
   if (isHammerMode) {
-      // RUTA MARTILLO -> LOGS DETALLADOS
+      // --- RUTA A: MODO MARTILLO (LOGS DETALLADOS) ---
+      // Se envía cada escaneo individualmente a la tabla de CONTEOS
+      // OPTIMIZACIÓN: Se eliminan columnas MM y YYYY (irrelevantes para conteo)
       targetTable = config?.countsTableName || "CONTEOS";
       if (onProgress) onProgress(`Subiendo LOGS a: ${targetTable}`);
       
-      rows = unsynced.map(record => ({
-          "ID_REGISTRO": record.id,
-          "CLAVE_UNICA": `${session.erpOrder}_${session.logisticsLabel}_${record.barcode}_${record.id.substring(0,4)}`,
-          "FECHA": new Date(record.timestamp).toLocaleString(),
-          "ERP": session.erpOrder,
-          "CODIGO": record.barcode,
-          "PRODUCTO": "Audit_Martillo",
-          "CANTIDAD": record.quantity,
-          "ETIQUETAS": session.logisticsLabel,
-          "MM": record.mm || 0,
-          "YYYY": record.yyyy || 0,
-          "FRC": record.isIncident ? "SI" : ""
-      }));
+      rows = unsynced.map(record => {
+          const dateObj = new Date(record.timestamp);
+          return {
+              "ID_REGISTRO": record.id,
+              "CLAVE_UNICA": `${session.erpOrder}_${session.logisticsLabel}_${record.barcode}_${record.id.substring(0,4)}`,
+              "FECHA": dateObj.toLocaleString(),
+              "ERP": session.erpOrder,
+              "CODIGO": record.barcode,
+              "PRODUCTO": "Audit_Martillo", // Placeholder
+              "CANTIDAD": record.quantity,
+              "ETIQUETAS": session.logisticsLabel,
+              "FRC": record.isIncident ? "SI" : ""
+          };
+      });
   } else {
-      // RUTA ESTÁNDAR -> RESUMEN CONSOLIDADO
+      // --- RUTA B: NUEVA CARGA (RESUMEN CONSOLIDADO) ---
+      // Se agrupan los escaneos por SKU y se envían a CONSOLIDADOS
       targetTable = config?.consolidatedTableName || "CONSOLIDADOS";
       if (onProgress) onProgress(`Subiendo RESUMEN a: ${targetTable}`);
       
@@ -56,13 +61,15 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
       }));
   }
 
+  // Envío con validación estricta de respuesta
   const result = await sendToGas({ tableName: targetTable, rows });
 
   if (result && result.success) {
       await markScansAsSynced(unsynced.map(s => s.id));
       if (onProgress) onProgress(`✓ Sincronización exitosa.`);
   } else {
-      throw new Error(result?.error || "Error desconocido en el servidor de Google");
+      // Ahora este error SÍ se mostrará en la UI gracias a la eliminación de no-cors
+      throw new Error(result?.error || `Error desconocido al escribir en ${targetTable}`);
   }
 };
 

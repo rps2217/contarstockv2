@@ -8,8 +8,8 @@ import { ScanRecord } from '../types';
 
 /**
  * MIGRACIÓN DE DATOS: MODO MARTILLO -> MAESTRO
- * El bulto migrado se marca como 'hammer' para que el motor de sincronización
- * sepa que debe ir a la tabla de LOGS (CONTEOS).
+ * Transfiere los datos crudos a la base principal.
+ * OPTIMIZACIÓN: Se eliminan columnas de fecha (MM/YYYY) ya que es un módulo de conteo puro.
  */
 export const migrateMassiveToMaster = async (batchId: string): Promise<string> => {
     try {
@@ -18,30 +18,23 @@ export const migrateMassiveToMaster = async (batchId: string): Promise<string> =
         
         if (rawScans.length === 0) throw new Error("No hay datos para migrar.");
 
-        const manifestMap = new Map<string, {qty: number, mm?: number, yyyy?: number}>(
-            manifests.map(m => [m.barcode, { qty: m.expectedQty }])
-        );
-
-        // Prefijo HM- para trazabilidad
+        // Prefijo HM- para identificar visualmente cargas de Martillo
         const erpOrder = `HM-${batchId.substring(0, 8).toUpperCase()}`;
         const sessionLabel = batchId;
         
-        // El tipo 'hammer' es CRÍTICO para que vaya a la pestaña CONTEOS
+        // CRÍTICO: sessionType 'hammer' activa el ruteo a la tabla de logs detallados
         const session = await createSession(erpOrder, sessionLabel, 'hammer');
 
         const recordsToMigrate: ScanRecord[] = rawScans.map(scan => {
-            const expected = manifestMap.get(scan.barcode);
             return {
                 id: generateUUID(),
                 sessionId: session.id,
                 barcode: scan.barcode,
                 quantity: scan.quantity,
                 timestamp: scan.timestamp,
-                expectedQty: expected?.qty || 0,
-                // Preservar fechas si el log lo requiere
-                mm: new Date(scan.timestamp).getMonth() + 1,
-                yyyy: new Date(scan.timestamp).getFullYear(),
-                synced: 0
+                // NO incluimos MM ni YYYY, es irrelevante para conteo masivo
+                synced: 0,
+                isIncident: false 
             };
         });
 
@@ -50,7 +43,7 @@ export const migrateMassiveToMaster = async (batchId: string): Promise<string> =
             await updateSessionMetadata(session.id);
         });
 
-        // Limpieza de buffer tras éxito
+        // Limpieza tras éxito
         await massiveDb.blindScans.where('batchId').equals(batchId).delete();
         await massiveDb.blindManifests.where('batchId').equals(batchId).delete();
 
