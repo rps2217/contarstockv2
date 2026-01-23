@@ -12,6 +12,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap');
+      /* Fuente para generar códigos de barras reales desde texto */
+      @import url('https://fonts.googleapis.com/css2?family=Libre+Barcode+128&display=swap');
       
       :root {
         --safe-area-inset-top: env(safe-area-inset-top);
@@ -42,6 +44,10 @@
         display: flex;
         flex-direction: column;
         overflow: hidden;
+      }
+
+      .barcode-font {
+        font-family: 'Libre Barcode 128', cursive;
       }
 
       /* Animación de escaneo láser HUD */
