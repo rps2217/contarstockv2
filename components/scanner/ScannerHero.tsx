@@ -2,12 +2,15 @@
 import React, { memo, useEffect } from 'react';
 import { RotateCcw, AlertCircle, Box } from 'lucide-react';
 import { ScanRecord, Product } from '../../types';
+// Add missing import for ScannerFeedback type to resolve assignability error
+import { ScannerFeedback } from '../../hooks/useScanner';
 
 interface ScannerHeroProps {
     lastScan: ScanRecord | undefined;
     activeProduct?: Product;
     accumulatedQty?: number;
-    feedback: 'idle' | 'success' | 'error' | 'undo';
+    // Fix: Use the full ScannerFeedback type instead of a restricted union of 4 values
+    feedback: ScannerFeedback;
     onRegisterPending: () => void;
 }
 

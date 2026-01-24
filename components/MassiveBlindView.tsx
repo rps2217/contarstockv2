@@ -213,58 +213,52 @@ const MassiveBlindView: React.FC = () => {
                 />
             </div>
 
-            {/* MODAL VISOR DE CÓDIGO (Referencia Visual Exacta y Ajustada a Móvil) */}
+            {/* VISOR DE CÓDIGO DE BARRAS ULTRA-ESCANEABLE (MODO FULL-SCREEN) */}
             {editingItem && (
-                <div className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-between p-8 md:p-12 animate-in fade-in duration-300">
+                <div className="fixed inset-0 z-[200] bg-white flex flex-col items-center justify-between animate-in fade-in duration-300">
                     
-                    {/* Header: Nombre del Producto (Arriba) */}
-                    <div className="w-full text-center mt-6">
-                        <h2 className="text-3xl font-black text-black uppercase tracking-tight leading-tight px-4 italic">
-                            {editingItem.name}
-                        </h2>
-                    </div>
-
-                    <div className="flex flex-col items-center w-full max-w-sm">
-                        {/* Pill de SKU: Negro con texto Blanco (Céntrico) */}
-                        <div className="bg-black text-white px-10 py-4 rounded-full mb-12 shadow-xl flex items-center justify-center min-w-[280px]">
-                            <span className="font-black text-2xl tracking-widest uppercase">
-                                SKU: {editingItem.barcode}
-                            </span>
-                        </div>
-
-                        {/* Zona del Código de Barras (Escaneable y Contenido) */}
-                        <div className="w-full flex items-center justify-center bg-white overflow-hidden p-2">
-                            {/* 
-                                Ajuste crítico: El fontSize ahora se basa en vw para asegurar que las barras
-                                no se desborden horizontalmente. Se reduce la altura (leading-none) y se elimina el transform
-                                que causaba el desborde en el eje X.
-                            */}
-                            <div className="barcode-font text-black leading-none select-none whitespace-nowrap" 
-                                 style={{ 
-                                     fontSize: `${Math.min(15, 80 / editingItem.barcode.length)}vw`,
-                                     maxHeight: '40vh',
-                                     width: '100%',
-                                     textAlign: 'center'
-                                 }}>
+                    {/* Header Minimalista: SKU Textual */}
+                    <div className="w-full pt-10 px-6 flex justify-center shrink-0">
+                        <div className="bg-black text-white px-12 py-3 rounded-full shadow-lg">
+                            <span className="font-black text-2xl tracking-[0.1em] uppercase">
                                 {editingItem.barcode}
-                            </div>
-                        </div>
-
-                        {/* Subtítulo HUD */}
-                        <div className="mt-12">
-                            <span className="text-[12px] font-black text-slate-400 uppercase tracking-[0.5em] italic animate-pulse">
-                                READY_FOR_LASER_CAPTURE
                             </span>
                         </div>
                     </div>
 
-                    {/* Botón de Cierre Masivo (Abajo) */}
-                    <div className="w-full max-w-sm mb-10">
+                    {/* ZONA DE ESCANEO LÁSER: ELONGACIÓN MÁXIMA */}
+                    <div className="flex-1 w-full flex items-center justify-center overflow-hidden bg-white">
+                        {/* 
+                            REGLAS DE ESCANEABILIDAD:
+                            - scale-y-[5]: Estira las barras verticalmente x5 para facilitar el cruce del láser.
+                            - fontSize: Calculado según longitud del código para evitar desborde lateral (overflow).
+                            - rotate-0: Mantenemos horizontal para máxima compatibilidad con el sweep del láser.
+                        */}
+                        <div 
+                            className="barcode-font text-black select-none whitespace-nowrap leading-none transition-all text-center"
+                            style={{ 
+                                fontSize: `${Math.min(32, 95 / (editingItem.barcode.length * 0.5))}vw`,
+                                transform: 'scaleY(5)',
+                                transformOrigin: 'center center',
+                                padding: '0 20px'
+                            }}
+                        >
+                            {editingItem.barcode}
+                        </div>
+                    </div>
+
+                    {/* Botón de Cierre "Ciego" (Fácil de presionar sin mirar) */}
+                    <div className="w-full shrink-0">
+                        <div className="text-center mb-4">
+                            <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.5em] animate-pulse">
+                                AIM_LASER_HERE
+                            </span>
+                        </div>
                         <button 
                             onClick={() => setEditingItem(null)}
-                            className="w-full bg-[#030712] text-white py-9 rounded-[2.5rem] font-black text-2xl uppercase tracking-[0.2em] shadow-2xl active:scale-95 transition-all border-b-[14px] border-black"
+                            className="w-full bg-[#0a0a0a] text-white py-12 font-black text-2xl uppercase tracking-[0.4em] active:bg-blue-600 transition-colors"
                         >
-                            CERRAR VISOR
+                            CERRAR_VISOR
                         </button>
                     </div>
                 </div>

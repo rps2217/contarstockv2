@@ -8,7 +8,8 @@ import * as settingsService from '../services/settings';
 import { ScannerFeedbackLayer } from './scanner/ScannerFeedbackLayer';
 import { ScannerHeader } from './scanner/ScannerHeader';
 import { ScannerHero } from './scanner/ScannerHero';
-import { ScannerControls } from './ScannerControls';
+// Fix: Use the correct featured ScannerControls component from the subfolder that matches the passed props
+import { ScannerControls } from './scanner/ScannerControls';
 import { ScanItem } from './ScanItem';
 import { NumericKeypad } from './NumericKeypad';
 import { CameraScanner } from './CameraScanner';
@@ -122,7 +123,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
 
         {state.status === 'confirming' && (
             <div className="fixed inset-0 z-[200] bg-slate-900/90 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in">
-                <div className="bg-white rounded-[3rem] p-10 w-full max-w-sm text-center shadow-2xl border-t-8 border-black">
+                <div className="bg-white rounded-[3rem] p-10 w-full max-sm text-center shadow-2xl border-t-8 border-black">
                     <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic mb-4">¿Finalizar?</h2>
                     <p className="text-slate-500 mb-10 font-bold uppercase tracking-widest text-[10px]">El contenido quedará guardado localmente.</p>
                     <div className="grid grid-cols-1 gap-4">
