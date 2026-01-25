@@ -2,7 +2,7 @@
 import React, { useState, useRef, memo, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMassiveScanner, ConsolidatedBlindItem } from '../hooks/useMassiveScanner';
-import { ChevronLeft, Plus, Minus, ScanLine, Zap, Save, Upload, Database, Camera, Target } from 'lucide-react';
+import { ChevronLeft, Plus, Minus, ScanLine, Zap, Save, Upload, Database, Camera, Target, Barcode, X } from 'lucide-react';
 import { CameraScanner } from './CameraScanner';
 import { migrateMassiveToMaster } from '../services/massiveSync';
 
@@ -89,6 +89,7 @@ const MassiveBlindView: React.FC = () => {
     
     const [isTriggerActive, setIsTriggerActive] = useState(false);
     const [isMigrating, setIsMigrating] = useState(false);
+    const [showBarcodeModal, setShowBarcodeModal] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleDecrement = useCallback((item: ConsolidatedBlindItem) => {
@@ -115,19 +116,29 @@ const MassiveBlindView: React.FC = () => {
             {/* STICKY TOP HEADER */}
             <header className="h-14 px-4 flex items-center justify-between border-b-2 border-white/5 bg-slate-900/50 shrink-0 z-50">
                 <div className="flex items-center gap-3">
-                    <button onClick={() => navigate('/dashboard')} className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl active:bg-blue-600"><ChevronLeft className="w-6 h-6" /></button>
-                    <span className="text-[10px] text-white/40 font-black tracking-widest uppercase truncate max-w-[120px]">{batchId}</span>
+                    <button onClick={() => navigate('/dashboard')} className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl active:bg-blue-600 transition-colors"><ChevronLeft className="w-6 h-6" /></button>
+                    <span className="text-[10px] text-white/40 font-black tracking-widest uppercase truncate max-w-[100px]">{batchId}</span>
                 </div>
                 <div className="flex gap-2">
+                    {/* BOTÓN GENERADOR DE CÓDIGO DE BARRAS */}
+                    <button 
+                        disabled={!lastScannedItem}
+                        onClick={() => setShowBarcodeModal(true)} 
+                        className={`w-10 h-10 flex items-center justify-center rounded-xl border border-white/10 active:bg-blue-600 transition-all ${!lastScannedItem ? 'opacity-20 grayscale' : 'bg-white/10'}`}
+                    >
+                        <Barcode className="w-5 h-5 text-white" />
+                    </button>
+
                     <button onClick={() => fileInputRef.current?.click()} className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl border border-white/10 active:bg-amber-600"><Upload className="w-4 h-4 text-white/60" /></button>
                     <input ref={fileInputRef} type="file" className="hidden" accept=".xlsx" onChange={() => {}} />
+                    
                     <button onClick={handleFinalize} disabled={!items.length || isMigrating} className="w-14 h-10 bg-blue-600 rounded-xl active:scale-95 flex items-center justify-center shadow-lg shadow-blue-900/40">
                         {isMigrating ? <Zap className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
                     </button>
                 </div>
             </header>
 
-            {/* ZONA SUPERIOR: VISOR HUD "PUNTO DE FOCO" (MEJORADO) */}
+            {/* ZONA SUPERIOR: VISOR HUD "PUNTO DE FOCO" */}
             <div className="h-[42vh] bg-black relative flex flex-col overflow-hidden border-b-2 border-white/5 shrink-0">
                 <div className="w-full h-full flex items-stretch">
                     {lastScannedItem ? (
@@ -140,7 +151,7 @@ const MassiveBlindView: React.FC = () => {
                                 <Minus className="w-12 h-12 text-rose-500 active:text-white" />
                             </button>
 
-                            {/* DISPLAY CENTRAL (60% ANCHO - TOTALMENTE CENTRADO) */}
+                            {/* DISPLAY CENTRAL (60% ANCHO) */}
                             <div className="flex-1 flex flex-col items-center justify-center px-4 text-center">
                                 <div className="mb-6 w-full max-w-xs">
                                     <span className="text-blue-500 font-mono text-[11px] font-black tracking-[0.2em] block mb-1 drop-shadow-sm">
@@ -219,6 +230,41 @@ const MassiveBlindView: React.FC = () => {
                     />
                 </div>
             </div>
+
+            {/* MODAL GENERADOR DE CÓDIGO DE BARRAS (LEGIBILIDAD EXTREMA) */}
+            {showBarcodeModal && lastScannedItem && (
+                <div className="fixed inset-0 z-[1000] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in zoom-in duration-200">
+                    <div className="bg-white w-full max-w-sm rounded-[3rem] overflow-hidden shadow-2xl flex flex-col items-center">
+                        <div className="w-full bg-slate-50 p-6 border-b border-slate-100 flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-blue-600 rounded-xl text-white"><Barcode className="w-5 h-5" /></div>
+                                <h3 className="text-slate-900 font-black uppercase tracking-tight text-sm">Visual_SKU_Beam</h3>
+                            </div>
+                            <button onClick={() => setShowBarcodeModal(false)} className="p-2 bg-white text-slate-400 rounded-full shadow-sm active:scale-90 transition-transform"><X className="w-6 h-6" /></button>
+                        </div>
+                        
+                        <div className="p-10 text-center w-full">
+                             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{lastScannedItem.name}</h4>
+                             
+                             {/* EL CÓDIGO DE BARRAS (BLANCO Y NEGRO PURO PARA LÁSER) */}
+                             <div className="bg-white border-4 border-slate-100 p-8 rounded-3xl mb-6 shadow-inner flex flex-col items-center justify-center">
+                                 <div className="barcode-font text-[100px] leading-none text-black select-none mb-4 tracking-normal" style={{ letterSpacing: '0px' }}>
+                                     {lastScannedItem.barcode}
+                                 </div>
+                                 <div className="font-mono text-2xl font-black text-slate-900 tracking-[0.3em]">
+                                     {lastScannedItem.barcode}
+                                 </div>
+                             </div>
+
+                             <p className="text-[9px] font-bold text-blue-600 uppercase tracking-[0.4em] animate-pulse">Ajuste el brillo para escanear</p>
+                        </div>
+                        
+                        <div className="w-full p-6 bg-slate-50 border-t border-slate-100">
+                            <button onClick={() => setShowBarcodeModal(false)} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs active:scale-95 transition-all">Cerrar Visor</button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <style>{`
                 .flash-active { animation: flash-hit 0.15s ease-out forwards; }
