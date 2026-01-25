@@ -39,7 +39,7 @@ const SmartWindow = ({ items, itemHeight, renderRow: RenderRow, data }: any) => 
     );
 };
 
-// --- FILA DE HISTORIAL (SELECCIONABLE) ---
+// --- FILA DE HISTORIAL (ESTADOS DE COLOR LLAMATIVOS) ---
 const MassiveItemRow = memo(({ index, data }: any) => {
     const item = data.items[index];
     if (!item) return null;
@@ -47,35 +47,51 @@ const MassiveItemRow = memo(({ index, data }: any) => {
     
     const isActive = activeBarcode === item.barcode;
     const hasTarget = item.expectedQty !== undefined;
-    const isPerfect = hasTarget && item.totalQuantity === item.expectedQty;
+    
+    // Determinación de color por estado
+    let statusClasses = 'bg-slate-900/40 border-white/5'; // Default neutral
+    
+    if (hasTarget) {
+        const count = item.totalQuantity;
+        const target = item.expectedQty || 0;
+        
+        if (count === target) {
+            statusClasses = 'bg-emerald-600 border-emerald-400'; // COINCIDE (VERDE)
+        } else if (count < target) {
+            statusClasses = 'bg-red-600 border-red-400'; // MENOR (ROJO)
+        } else {
+            statusClasses = 'bg-[#ff8c69] border-[#ff7247]'; // MAYOR (SALMÓN)
+        }
+    }
+
+    // Si está activo, le damos un brillo especial pero mantenemos el color del estado si tiene target
+    const activeOverlay = isActive ? 'ring-4 ring-white ring-inset shadow-[0_0_25px_rgba(255,255,255,0.3)] z-10 scale-[1.02]' : '';
+    const activeBlue = (isActive && !hasTarget) ? 'bg-blue-600 border-blue-400' : '';
 
     return (
         <div className="px-3 py-1 h-full">
             <button 
                 onClick={() => onSelect(item.barcode)}
-                className={`w-full h-full border-2 p-4 rounded-2xl flex items-center justify-between transition-all text-left active:scale-[0.98] ${
-                    isActive 
-                    ? 'bg-blue-600 border-blue-400 shadow-lg shadow-blue-900/40' 
-                    : isPerfect 
-                        ? 'bg-emerald-950/20 border-emerald-500/30' 
-                        : 'bg-slate-900/40 border-white/5'
-                }`}
+                className={`w-full h-full border-2 p-4 rounded-2xl flex items-center justify-between transition-all text-left active:scale-[0.98] ${statusClasses} ${activeBlue} ${activeOverlay}`}
             >
                 <div className="flex-1 min-w-0 pr-4">
-                    <span className={`text-[9px] font-black font-mono tracking-tight block mb-0.5 ${isActive ? 'text-blue-100' : 'text-blue-500'}`}>
+                    <span className={`text-[10px] font-black font-mono tracking-tight block mb-0.5 ${isActive ? 'text-white' : 'text-white/60'}`}>
                         {item.barcode}
                     </span>
-                    <h3 className={`font-bold text-[11px] uppercase truncate leading-none ${isActive ? 'text-white' : 'text-white/70'}`}>
+                    <h3 className={`font-black text-[12px] uppercase truncate leading-none ${isActive ? 'text-white' : 'text-white/90'}`}>
                         {item.name}
                     </h3>
                 </div>
                 
                 <div className="flex items-center gap-3">
                     <div className="text-right tabular-nums">
-                        <span className={`text-2xl font-black ${isActive ? 'text-white' : 'text-white/90'}`}>{item.totalQuantity}</span>
-                        {hasTarget && <span className={`text-[9px] ml-1 font-black ${isActive ? 'text-blue-200' : 'text-white/20'}`}>/ {item.expectedQty}</span>}
+                        <div className="text-2xl font-black text-white leading-none">{item.totalQuantity}</div>
+                        {hasTarget && (
+                            <div className="text-[10px] font-black text-white/50 mt-1 uppercase tracking-tighter">
+                                Obj: {item.expectedQty}
+                            </div>
+                        )}
                     </div>
-                    {isActive && <div className="w-2 h-2 rounded-full bg-white animate-pulse"></div>}
                 </div>
             </button>
         </div>
@@ -110,6 +126,19 @@ const MassiveBlindView: React.FC = () => {
         finally { setIsMigrating(false); }
     };
 
+    // Color dinámico para el HUD superior
+    const getHudColor = () => {
+        if (!lastScannedItem) return 'bg-black';
+        if (lastScannedItem.expectedQty === undefined) return 'bg-blue-600'; // Modo ciego puro
+        
+        const count = lastScannedItem.totalQuantity;
+        const target = lastScannedItem.expectedQty;
+        
+        if (count === target) return 'bg-emerald-600';
+        if (count < target) return 'bg-red-600';
+        return 'bg-[#ff8c69]'; // Salmón
+    };
+
     return (
         <div className="h-screen w-full flex flex-col font-mono bg-black select-none overflow-hidden text-white">
             
@@ -137,23 +166,23 @@ const MassiveBlindView: React.FC = () => {
                 </div>
             </header>
 
-            {/* ZONA SUPERIOR: VISOR HUD "PUNTO DE FOCO" */}
-            <div className="h-[42vh] bg-black relative flex flex-col overflow-hidden border-b-2 border-white/5 shrink-0">
+            {/* ZONA SUPERIOR: VISOR HUD DINÁMICO */}
+            <div className={`h-[42vh] relative flex flex-col overflow-hidden border-b-2 border-white/5 shrink-0 transition-colors duration-300 ${getHudColor()}`}>
                 <div className="w-full h-full flex items-stretch">
                     {lastScannedItem ? (
                         <>
-                            {/* PAD MENOS (20% ANCHO) */}
+                            {/* PAD MENOS */}
                             <button 
                                 onPointerDown={(e) => { e.preventDefault(); handleDecrement(lastScannedItem); }}
-                                className="w-1/5 bg-rose-600/5 active:bg-rose-600 flex items-center justify-center transition-colors border-r border-white/5"
+                                className="w-1/5 bg-black/10 active:bg-black/40 flex items-center justify-center transition-colors border-r border-white/10"
                             >
-                                <Minus className="w-12 h-12 text-rose-500 active:text-white" />
+                                <Minus className="w-12 h-12 text-white/80" />
                             </button>
 
-                            {/* DISPLAY CENTRAL (60% ANCHO) */}
+                            {/* DISPLAY CENTRAL */}
                             <div className="flex-1 flex flex-col items-center justify-center px-4 text-center">
-                                <div className="mb-6 w-full max-w-xs">
-                                    <span className="text-blue-500 font-mono text-[11px] font-black tracking-[0.2em] block mb-1 drop-shadow-sm">
+                                <div className="mb-4 w-full max-w-xs">
+                                    <span className="text-white/60 font-mono text-[11px] font-black tracking-[0.2em] block mb-1">
                                         {lastScannedItem.barcode}
                                     </span>
                                     <h2 className="text-white font-black text-xs md:text-sm uppercase tracking-tight line-clamp-2 leading-tight">
@@ -161,23 +190,24 @@ const MassiveBlindView: React.FC = () => {
                                     </h2>
                                 </div>
                                 
-                                <div className="relative group">
-                                    <div className="text-[12rem] font-black tabular-nums leading-none text-white drop-shadow-[0_0_50px_rgba(59,130,246,0.25)] transition-all">
+                                <div className="relative">
+                                    <div className="text-[12rem] font-black tabular-nums leading-none text-white drop-shadow-2xl">
                                         {lastScannedItem.totalQuantity}
                                     </div>
-                                    <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center">
-                                        <div className="h-0.5 w-12 bg-blue-600/40 mb-2"></div>
-                                        <div className="text-[9px] font-black uppercase text-white/20 tracking-[0.6em] whitespace-nowrap italic">QTY_ACTIVE_HUB</div>
-                                    </div>
+                                    {lastScannedItem.expectedQty !== undefined && (
+                                        <div className="bg-white/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mt-2 inline-block">
+                                            Objetivo: {lastScannedItem.expectedQty}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
-                            {/* PAD MAS (20% ANCHO) */}
+                            {/* PAD MAS */}
                             <button 
                                 onPointerDown={(e) => { e.preventDefault(); registerScan(lastScannedItem.barcode, 1); }}
-                                className="w-1/5 bg-emerald-600/5 active:bg-emerald-600 flex items-center justify-center transition-colors border-l border-white/5"
+                                className="w-1/5 bg-black/10 active:bg-black/40 flex items-center justify-center transition-colors border-l border-white/10"
                             >
-                                <Plus className="w-12 h-12 text-emerald-500 active:text-white" />
+                                <Plus className="w-12 h-12 text-white/80" />
                             </button>
                         </>
                     ) : (
@@ -187,7 +217,7 @@ const MassiveBlindView: React.FC = () => {
                         </div>
                     )}
                 </div>
-                {isFlash && <div className="absolute inset-0 z-[300] bg-blue-500/20 pointer-events-none flash-active"></div>}
+                {isFlash && <div className="absolute inset-0 z-[300] bg-white/30 pointer-events-none flash-active"></div>}
             </div>
 
             {/* TRIGGER ÓPTICO (HOLD TO SCAN) */}
@@ -230,7 +260,7 @@ const MassiveBlindView: React.FC = () => {
                 </div>
             </div>
 
-            {/* MODAL GENERADOR DE CÓDIGO DE BARRAS (OPTIMIZADO PARA SCAN) */}
+            {/* MODAL GENERADOR DE CÓDIGO DE BARRAS */}
             {showBarcodeModal && lastScannedItem && (
                 <div className="fixed inset-0 z-[1000] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in zoom-in duration-200">
                     <div className="bg-white w-full max-w-sm rounded-[3rem] overflow-hidden shadow-2xl flex flex-col items-center">
@@ -244,10 +274,7 @@ const MassiveBlindView: React.FC = () => {
                         
                         <div className="p-8 text-center w-full">
                              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 leading-tight max-w-[80%] mx-auto">{lastScannedItem.name}</h4>
-                             
-                             {/* ZONA DE ESCANEO (RE-DISEÑADA PARA EVITAR RECORTES) */}
                              <div className="bg-white p-4 py-10 rounded-[2rem] mb-6 flex flex-col items-center justify-center border-2 border-slate-50 overflow-hidden">
-                                 {/* Quiet Zone lateral garantizada por el padding px-10 */}
                                  <div className="barcode-font text-[75px] leading-none text-black select-none mb-6 tracking-normal whitespace-nowrap px-10" style={{ letterSpacing: '0px' }}>
                                      {lastScannedItem.barcode}
                                  </div>
@@ -255,7 +282,6 @@ const MassiveBlindView: React.FC = () => {
                                      {lastScannedItem.barcode}
                                  </div>
                              </div>
-
                              <div className="flex flex-col items-center gap-2">
                                 <p className="text-[9px] font-bold text-blue-600 uppercase tracking-[0.4em] animate-pulse">Suba el brillo al máximo</p>
                                 <div className="h-1 w-12 bg-blue-500/20 rounded-full"></div>
