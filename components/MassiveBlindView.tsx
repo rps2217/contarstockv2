@@ -2,13 +2,14 @@
 import React, { useState, useRef, memo, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMassiveScanner, ConsolidatedBlindItem } from '../hooks/useMassiveScanner';
-import { ChevronLeft, Plus, Minus, ScanLine, Loader2, Zap, Save, Upload, MapPin, Barcode, Gauge, Database } from 'lucide-react';
+import { ChevronLeft, Plus, Minus, ScanLine, Loader2, Zap, Save, Upload, MapPin, Barcode, Gauge, Database, Camera, X } from 'lucide-react';
 import { massiveDb } from '../db.massive';
 import { CameraScanner } from './CameraScanner';
 import { migrateMassiveToMaster } from '../services/massiveSync';
 import * as XLSX from 'xlsx';
 import { sanitizeBarcode } from '../services/utils';
 
+// --- VIRTUALIZADOR ---
 const SmartWindow = ({ items, itemHeight, renderRow: RenderRow, data }: any) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [scrollTop, setScrollTop] = useState(0);
@@ -22,10 +23,8 @@ const SmartWindow = ({ items, itemHeight, renderRow: RenderRow, data }: any) => 
     }, []);
 
     const onScroll = (e: React.UIEvent<HTMLDivElement>) => setScrollTop(e.currentTarget.scrollTop);
-
     const startIndex = Math.max(0, Math.floor(scrollTop / itemHeight) - 2);
     const endIndex = Math.min(items.length, Math.ceil((scrollTop + containerHeight) / itemHeight) + 2);
-    
     const visibleItems = items.slice(startIndex, endIndex);
     const totalHeight = items.length * itemHeight;
 
@@ -39,16 +38,11 @@ const SmartWindow = ({ items, itemHeight, renderRow: RenderRow, data }: any) => 
                     </div>
                 ))}
             </div>
-            {items.length === 0 && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-800 p-12 text-center">
-                    <Barcode className="w-16 h-16 mb-4 opacity-10" />
-                    <p className="text-[10px] font-black uppercase tracking-[0.4em] opacity-40">Waiting_For_Optical_Data</p>
-                </div>
-            )}
         </div>
     );
 };
 
+// --- FILA ---
 const MassiveItemRow = memo(({ index, data }: any) => {
     const item = data.items[index];
     if (!item) return null;
@@ -95,9 +89,8 @@ const MassiveItemRow = memo(({ index, data }: any) => {
 const MassiveBlindView: React.FC = () => {
     const navigate = useNavigate();
     const { batchId = 'CORE' } = useParams();
-    const { items, totalUnits, velocity, isFlash, isFlushing, lastScannedCode, registerScan, removeItemCompletely } = useMassiveScanner(batchId || 'CORE');
+    const { items, totalUnits, lastScannedItem, velocity, isFlash, registerScan, removeItemCompletely } = useMassiveScanner(batchId || 'CORE');
     
-    const [isTriggerActive, setIsTriggerActive] = useState(false);
     const [isCameraActive, setIsCameraActive] = useState(false);
     const [isMigrating, setIsMigrating] = useState(false);
     const [editingItem, setEditingItem] = useState<ConsolidatedBlindItem | null>(null);
@@ -121,127 +114,129 @@ const MassiveBlindView: React.FC = () => {
         finally { setIsMigrating(false); }
     };
 
-    const totalExpected = items.reduce((acc, curr) => acc + (curr.expectedQty || 0), 0);
-
     return (
         <div className="h-screen w-full flex flex-col font-mono bg-slate-950 select-none overflow-hidden text-white">
             
-            <header className="h-16 px-4 flex items-center justify-between border-b-2 border-white/5 bg-slate-900 shrink-0 z-50">
+            {/* STICKY TOP HEADER */}
+            <header className="h-14 px-4 flex items-center justify-between border-b-2 border-white/5 bg-slate-900 shrink-0 z-50">
                 <div className="flex items-center gap-3">
-                    <button onClick={() => navigate('/dashboard')} className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl border border-white/10 active:bg-blue-600 transition-colors">
-                        <ChevronLeft className="w-6 h-6" />
-                    </button>
-                    <div className="min-w-0">
-                        <span className="text-[7px] font-black text-blue-500 uppercase tracking-widest block italic">HAMMER_ULTRA_V11</span>
-                        <span className="text-[9px] text-white/40 font-black tracking-widest uppercase truncate block">{batchId}</span>
-                    </div>
+                    <button onClick={() => navigate('/dashboard')} className="w-9 h-9 flex items-center justify-center bg-white/5 rounded-lg active:bg-blue-600"><ChevronLeft className="w-5 h-5" /></button>
+                    <span className="text-[10px] text-white/40 font-black tracking-widest uppercase truncate max-w-[100px]">{batchId}</span>
                 </div>
-                
                 <div className="flex gap-2">
-                    <div className="flex items-center gap-2 bg-black/40 px-3 py-1.5 rounded-xl border border-white/5 mr-1">
-                        <div className={`w-1.5 h-1.5 rounded-full ${isFlushing ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`}></div>
-                        <Database className="w-3 h-3 text-white/20" />
+                    <div className="bg-black/40 px-3 py-1.5 rounded-lg border border-white/5 flex items-center gap-2">
+                        <Gauge className="w-3 h-3 text-blue-500" />
+                        <span className="text-[10px] font-black">{velocity} UPM</span>
                     </div>
-                    <button onClick={() => fileInputRef.current?.click()} className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 active:bg-amber-600">
-                        <Upload className="w-5 h-5 text-white/60" />
-                    </button>
-                    <input ref={fileInputRef} type="file" className="hidden" accept=".xlsx" onChange={() => {}} />
-                    <button onClick={handleFinalize} disabled={!items.length || isMigrating} className="w-10 h-10 bg-blue-600 rounded-xl active:scale-95 shadow-lg shadow-blue-900/20 flex items-center justify-center">
-                        <Save className="w-5 h-5" />
-                    </button>
+                    <button onClick={handleFinalize} disabled={!items.length || isMigrating} className="w-14 h-9 bg-blue-600 rounded-lg active:scale-95 flex items-center justify-center"><Save className="w-5 h-5" /></button>
                 </div>
             </header>
 
-            <div className="h-44 shrink-0 bg-black relative flex items-center justify-between px-6 border-b-2 border-white/5 overflow-hidden">
-                <div className="relative z-10">
-                    <div className="text-[9px] font-black text-blue-400 uppercase tracking-[0.4em] mb-1 flex items-center gap-2">
-                         <div className="w-1.5 h-1.5 rounded-full bg-blue-500 led-active"></div> PRODUCTION_OUTPUT
-                    </div>
-                    <div className="text-[7rem] font-black tabular-nums tracking-tighter leading-none italic">{totalUnits}</div>
-                    <div className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] mt-1 flex items-center gap-3">
-                        <span>Units_In_Batch</span>
-                        {totalExpected > 0 && <span className="text-white/40">Expected: {totalExpected}</span>}
-                    </div>
-                </div>
-                
-                <div className="text-right z-10 flex flex-col items-end gap-4">
-                    <div className="bg-slate-900/80 border border-white/10 p-3 rounded-2xl min-w-[120px]">
-                        <div className="flex items-center justify-between mb-1">
-                             <Gauge className={`w-3.5 h-3.5 ${velocity > 30 ? 'text-amber-500' : 'text-blue-500'}`} />
-                             <span className="text-[8px] font-black text-white/40 uppercase">Cadence</span>
-                        </div>
-                        <div className="text-2xl font-black tabular-nums">{velocity}<span className="text-[10px] ml-1 opacity-40">UPM</span></div>
-                    </div>
-
-                    {lastScannedCode && (
-                        <div className="animate-in slide-in-from-right-4 duration-150">
-                            <div className="text-[8px] font-black text-emerald-500 uppercase tracking-widest mb-1">Capture_OK</div>
-                            <div className="text-xl font-black bg-emerald-500 text-black px-3 py-1 rounded shadow-lg rotate-1">
-                                {lastScannedCode}
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                <div className="absolute inset-0 opacity-5 pointer-events-none">
-                    <div className="absolute top-0 left-0 w-full h-full bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:20px_20px]"></div>
-                </div>
-            </div>
-
-            <div className="flex-1 min-h-0 relative bg-slate-900/30">
+            {/* ZONA SUPERIOR: DUAL-HUD / CAMERA */}
+            <div className="h-[45vh] bg-black relative flex flex-col overflow-hidden">
                 {isCameraActive ? (
-                    <CameraScanner onScan={registerScan} onClose={() => setIsCameraActive(false)} isTriggered={isTriggerActive} />
+                    <div className="w-full h-full relative">
+                        <CameraScanner onScan={registerScan} onClose={() => setIsCameraActive(false)} isTriggered={true} />
+                        <button onClick={() => setIsCameraActive(false)} className="absolute top-4 right-4 z-[100] w-12 h-12 bg-rose-600 rounded-full flex items-center justify-center shadow-2xl active:scale-90"><X className="w-6 h-6" /></button>
+                    </div>
                 ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center gap-6 p-8">
-                        <button 
-                            onClick={() => setIsCameraActive(true)} 
-                            className="bg-white text-black px-12 py-5 rounded-full font-black text-xl uppercase tracking-[0.4em] shadow-2xl active:scale-95 transition-all border-b-[8px] border-slate-300"
-                        >
-                            ENGAGE_OPTICS
-                        </button>
-                        <span className="text-[9px] font-black text-white/20 uppercase tracking-[0.3em]">Hardware_Trigger_Ready</span>
+                    <div className="w-full h-full flex flex-col p-6 animate-in fade-in zoom-in duration-300">
+                        {lastScannedItem ? (
+                            <div className="flex-1 flex flex-col items-center justify-between">
+                                {/* Descriptor Superior */}
+                                <div className="text-center w-full">
+                                    <div className="inline-block bg-blue-600/10 border border-blue-500/20 px-4 py-1 rounded-full mb-2">
+                                        <span className="text-[10px] font-black text-blue-400 tracking-widest uppercase italic">Última_Captura</span>
+                                    </div>
+                                    <h2 className="text-white font-black text-lg uppercase truncate leading-none mb-1">{lastScannedItem.name}</h2>
+                                    <span className="text-blue-500 font-mono text-sm font-black tracking-tighter">{lastScannedItem.barcode}</span>
+                                </div>
+
+                                {/* Cantidad Gigante y Botones de Ajuste */}
+                                <div className="flex items-center justify-between w-full max-w-sm">
+                                    <button onClick={() => handleDecrement(lastScannedItem)} className="w-20 h-20 bg-white/5 border-2 border-white/10 text-rose-500 rounded-3xl flex items-center justify-center active:bg-rose-600 active:text-white transition-all shadow-xl">
+                                        <Minus className="w-10 h-10" />
+                                    </button>
+                                    
+                                    <div className="text-center">
+                                        <div className="text-[10rem] font-black leading-none tabular-nums drop-shadow-[0_0_30px_rgba(255,255,255,0.1)]">
+                                            {lastScannedItem.totalQuantity}
+                                        </div>
+                                    </div>
+
+                                    <button onClick={() => registerScan(lastScannedItem.barcode, 1)} className="w-20 h-20 bg-white/5 border-2 border-white/10 text-emerald-500 rounded-3xl flex items-center justify-center active:bg-emerald-600 active:text-white transition-all shadow-xl">
+                                        <Plus className="w-10 h-10" />
+                                    </button>
+                                </div>
+
+                                {/* Switcher a Cámara */}
+                                <button 
+                                    onClick={() => setIsCameraActive(true)}
+                                    className="bg-white text-black px-12 py-4 rounded-[2rem] font-black text-xs uppercase tracking-[0.4em] shadow-xl active:scale-95 transition-all border-b-8 border-slate-300 mt-4"
+                                >
+                                    ACTIVATE_LENS
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="flex-1 flex flex-col items-center justify-center gap-6">
+                                <div className="text-center opacity-30">
+                                    <Zap className="w-20 h-20 mx-auto mb-4 text-white animate-pulse" />
+                                    <p className="text-[10px] font-black uppercase tracking-[0.5em]">System_Idle_Waiting_Hardware</p>
+                                </div>
+                                <button 
+                                    onClick={() => setIsCameraActive(true)}
+                                    className="bg-white text-black px-14 py-5 rounded-full font-black text-sm uppercase tracking-[0.4em] shadow-2xl active:scale-95 border-b-[10px] border-slate-300"
+                                >
+                                    OPEN_CAMERA
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
+                {/* Indicador de Unidades Totales Sesión */}
+                <div className="absolute bottom-4 left-6 z-20 bg-slate-900/80 px-4 py-2 rounded-2xl border border-white/10">
+                    <span className="text-[8px] font-black text-white/30 uppercase tracking-widest block mb-0.5">Total_Units</span>
+                    <span className="text-2xl font-black text-white tabular-nums">{totalUnits}</span>
+                </div>
             </div>
 
-            <div className="bg-slate-900 p-4 shrink-0 border-t-2 border-white/5">
-                <button 
-                    onMouseDown={() => setIsTriggerActive(true)} onMouseUp={() => setIsTriggerActive(false)}
-                    onTouchStart={() => setIsTriggerActive(true)} onTouchEnd={() => setIsTriggerActive(false)}
-                    className={`w-full h-24 flex flex-col items-center justify-center gap-2 rounded-[2rem] transition-all duration-75 active:scale-[0.98] ${
-                        isTriggerActive 
-                        ? 'bg-blue-600 shadow-inner scale-[0.99]' 
-                        : 'bg-white text-black border-b-[8px] border-slate-300'
-                    }`}
-                >
-                    {isTriggerActive ? <Zap className="w-8 h-8 animate-bounce" /> : <ScanLine className="w-8 h-8" />}
-                    <span className="text-xs font-black uppercase tracking-[0.4em]">{isTriggerActive ? 'SCANNING' : 'PUSH_FOR_BURST'}</span>
-                </button>
+            {/* ZONA INFERIOR: MATRIZ INTELIGENTE */}
+            <div className="flex-1 border-t-4 border-white/5">
+                <div className="bg-slate-900 px-6 py-3 border-b border-white/5 flex justify-between items-center">
+                     <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                        <Database className="w-3 h-3" /> Batch_Matrix
+                     </span>
+                     <div className="flex gap-4">
+                        <button onClick={() => fileInputRef.current?.click()} className="text-[9px] font-black text-blue-400 uppercase tracking-widest">Import_Manifest</button>
+                        <input ref={fileInputRef} type="file" className="hidden" accept=".xlsx" onChange={() => {}} />
+                     </div>
+                </div>
+                <div className="h-[calc(55vh-100px)]">
+                    <SmartWindow 
+                        items={items} 
+                        itemHeight={68} 
+                        renderRow={MassiveItemRow} 
+                        data={{ items, registerScan, handleDecrement, setEditingItem }} 
+                    />
+                </div>
             </div>
 
-            <div className="h-[28vh]">
-                <SmartWindow 
-                    items={items} 
-                    itemHeight={68} 
-                    renderRow={MassiveItemRow} 
-                    data={{ items, registerScan, handleDecrement, setEditingItem }} 
-                />
-            </div>
-
+            {/* MODAL DE CÓDIGO DE BARRAS (FULLSCREEN) */}
             {editingItem && (
                 <div className="fixed inset-0 z-[200] bg-white flex flex-col items-center justify-between p-8 animate-in fade-in duration-200">
                     <div className="w-full text-center mt-6">
-                         <div className="bg-black text-white px-8 py-3 rounded-full inline-block shadow-2xl border-4 border-slate-100">
-                             <span className="text-2xl font-black tracking-[0.3em] uppercase">SKU: {editingItem.barcode}</span>
+                         <div className="bg-black text-white px-8 py-4 rounded-full inline-block shadow-2xl border-4 border-slate-100">
+                             <span className="text-2xl font-black tracking-[0.3em] uppercase">{editingItem.barcode}</span>
                          </div>
+                         <h3 className="mt-4 font-bold text-slate-400 uppercase">{editingItem.name}</h3>
                     </div>
 
-                    <div className="flex-1 w-full flex items-center justify-center overflow-hidden bg-white">
+                    <div className="flex-1 w-full flex items-center justify-center overflow-hidden">
                         <div 
                             className="barcode-font text-black select-none whitespace-nowrap leading-none"
                             style={{ 
-                                fontSize: `${Math.min(30, 100 / (editingItem.barcode.length * 0.6))}vw`,
-                                transform: 'scaleY(4)',
+                                fontSize: `${Math.min(32, 100 / (editingItem.barcode.length * 0.6))}vw`,
+                                transform: 'scaleY(6)',
                                 transformOrigin: 'center'
                             }}
                         >
@@ -251,9 +246,9 @@ const MassiveBlindView: React.FC = () => {
 
                     <button 
                         onClick={() => setEditingItem(null)}
-                        className="w-full bg-black text-white py-10 rounded-[3rem] font-black text-2xl uppercase tracking-[0.4em] shadow-2xl active:scale-95 transition-all border-b-[12px] border-slate-800"
+                        className="w-full bg-[#050505] text-white py-12 rounded-[3rem] font-black text-2xl uppercase tracking-[0.5em] shadow-[0_30px_60px_rgba(0,0,0,0.3)] active:bg-blue-600 transition-all border-b-[15px] border-black"
                     >
-                        DISMISS
+                        CLOSE_HUD
                     </button>
                 </div>
             )}
