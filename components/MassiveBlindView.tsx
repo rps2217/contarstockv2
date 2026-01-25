@@ -1,12 +1,12 @@
 
-import React, { useState, useRef, memo, useEffect } from 'react';
+import React, { useState, useRef, memo, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMassiveScanner, ConsolidatedBlindItem } from '../hooks/useMassiveScanner';
-import { ChevronLeft, Plus, Minus, ScanLine, Zap, Save, Upload, Database, Camera, X, Target } from 'lucide-react';
+import { ChevronLeft, Plus, Minus, ScanLine, Zap, Save, Upload, Database, Camera, X } from 'lucide-react';
 import { CameraScanner } from './CameraScanner';
 import { migrateMassiveToMaster } from '../services/massiveSync';
 
-// --- VIRTUALIZADOR ESTABLE ---
+// --- VIRTUALIZADOR MOBILE ---
 const SmartWindow = ({ items, itemHeight, renderRow: RenderRow, data }: any) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [scrollTop, setScrollTop] = useState(0);
@@ -20,13 +20,13 @@ const SmartWindow = ({ items, itemHeight, renderRow: RenderRow, data }: any) => 
     }, []);
 
     const onScroll = (e: React.UIEvent<HTMLDivElement>) => setScrollTop(e.currentTarget.scrollTop);
-    const startIndex = Math.max(0, Math.floor(scrollTop / itemHeight) - 2);
-    const endIndex = Math.min(items.length, Math.ceil((scrollTop + containerHeight) / itemHeight) + 2);
+    const startIndex = Math.max(0, Math.floor(scrollTop / itemHeight) - 1);
+    const endIndex = Math.min(items.length, Math.ceil((scrollTop + containerHeight) / itemHeight) + 1);
     const visibleItems = items.slice(startIndex, endIndex);
     const totalHeight = items.length * itemHeight;
 
     return (
-        <div ref={containerRef} onScroll={onScroll} className="h-full w-full overflow-y-auto no-scrollbar relative bg-slate-950">
+        <div ref={containerRef} onScroll={onScroll} className="h-full w-full overflow-y-auto no-scrollbar relative bg-black">
             <div style={{ height: totalHeight, width: '100%', pointerEvents: 'none' }} />
             <div className="absolute top-0 left-0 w-full" style={{ transform: `translateY(${startIndex * itemHeight}px)` }}>
                 {visibleItems.map((item: any, idx: number) => (
@@ -39,7 +39,7 @@ const SmartWindow = ({ items, itemHeight, renderRow: RenderRow, data }: any) => 
     );
 };
 
-// --- FILA DE LISTA ---
+// --- FILA DE HISTORIAL ---
 const MassiveItemRow = memo(({ index, data }: any) => {
     const item = data.items[index];
     if (!item) return null;
@@ -47,32 +47,21 @@ const MassiveItemRow = memo(({ index, data }: any) => {
     
     const hasTarget = item.expectedQty !== undefined;
     const isPerfect = hasTarget && item.totalQuantity === item.expectedQty;
-    const isOver = hasTarget && item.totalQuantity > item.expectedQty;
-    const isUnder = hasTarget && item.totalQuantity < item.expectedQty && item.totalQuantity > 0;
-
-    let statusColor = 'bg-slate-900 border-white/5';
-    if (isPerfect) statusColor = 'bg-emerald-950/40 border-emerald-500/30';
-    else if (isOver) statusColor = 'bg-amber-950/40 border-amber-500/30';
-    else if (isUnder) statusColor = 'bg-rose-950/40 border-rose-500/30';
 
     return (
-        <div className="px-2 py-0.5 h-full">
-            <div className={`h-full border p-3 rounded-2xl flex items-center justify-between transition-all ${statusColor}`}>
+        <div className="px-3 py-1 h-full">
+            <div className={`h-full border p-3 rounded-2xl flex items-center justify-between transition-all bg-slate-900/50 ${isPerfect ? 'border-emerald-500/40 bg-emerald-950/20' : 'border-white/5'}`}>
                 <div className="flex-1 min-w-0 pr-4">
-                    <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-[9px] font-black text-blue-500 font-mono tracking-tight">{item.barcode}</span>
-                        {item.loc && <span className="bg-white/5 text-white/30 text-[7px] font-black px-1 py-0.5 rounded uppercase tracking-tighter">{item.loc}</span>}
-                    </div>
-                    <h3 className="text-white font-bold text-[11px] uppercase truncate opacity-70 leading-none">{item.name}</h3>
+                    <span className="text-[10px] font-black text-blue-500 font-mono tracking-tight block mb-0.5">{item.barcode}</span>
+                    <h3 className="text-white font-bold text-[12px] uppercase truncate opacity-70 leading-none">{item.name}</h3>
                 </div>
                 
-                <div className="flex items-center gap-2">
-                    <div className="text-right px-2 min-w-[45px]">
-                        <div className="text-2xl font-black text-white tabular-nums leading-none tracking-tighter">
-                            {item.totalQuantity}
-                        </div>
+                <div className="flex items-center gap-3">
+                    <div className="text-right tabular-nums">
+                        <span className="text-2xl font-black text-white">{item.totalQuantity}</span>
+                        {hasTarget && <span className="text-[9px] text-white/20 ml-1">/ {item.expectedQty}</span>}
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1.5">
                         <button onClick={() => registerScan(item.barcode, 1)} className="w-10 h-10 bg-white/5 text-white flex items-center justify-center border border-white/10 rounded-xl active:bg-blue-600"><Plus className="w-5 h-5"/></button>
                         <button onClick={() => handleDecrement(item)} className="w-10 h-10 bg-white/5 text-rose-500 flex items-center justify-center border border-white/10 rounded-xl active:bg-rose-600"><Minus className="w-5 h-5"/></button>
                     </div>
@@ -91,13 +80,13 @@ const MassiveBlindView: React.FC = () => {
     const [isMigrating, setIsMigrating] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const handleDecrement = (item: ConsolidatedBlindItem) => {
+    const handleDecrement = useCallback((item: ConsolidatedBlindItem) => {
         if (item.totalQuantity <= 1) {
             if (confirm(`¿Eliminar SKU ${item.barcode}?`)) removeItemCompletely(item.barcode);
         } else {
             registerScan(item.barcode, -1);
         }
-    };
+    }, [registerScan, removeItemCompletely]);
 
     const handleFinalize = async () => {
         if (!items.length) return;
@@ -110,117 +99,111 @@ const MassiveBlindView: React.FC = () => {
     };
 
     return (
-        <div className="h-screen w-full flex flex-col font-mono bg-slate-950 select-none overflow-hidden text-white">
+        <div className="h-screen w-full flex flex-col font-mono bg-black select-none overflow-hidden text-white">
             
             {/* STICKY TOP HEADER */}
-            <header className="h-14 px-4 flex items-center justify-between border-b-2 border-white/5 bg-slate-900 shrink-0 z-50">
+            <header className="h-14 px-4 flex items-center justify-between border-b-2 border-white/5 bg-slate-900/50 shrink-0 z-50">
                 <div className="flex items-center gap-3">
-                    <button onClick={() => navigate('/dashboard')} className="w-9 h-9 flex items-center justify-center bg-white/5 rounded-lg active:bg-blue-600"><ChevronLeft className="w-5 h-5" /></button>
-                    <span className="text-[10px] text-white/40 font-black tracking-widest uppercase truncate max-w-[150px]">{batchId}</span>
+                    <button onClick={() => navigate('/dashboard')} className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl active:bg-blue-600"><ChevronLeft className="w-6 h-6" /></button>
+                    <span className="text-[10px] text-white/40 font-black tracking-widest uppercase truncate max-w-[120px] italic">{batchId}</span>
                 </div>
                 <div className="flex gap-2">
-                    <button onClick={() => fileInputRef.current?.click()} className="w-10 h-9 flex items-center justify-center bg-white/5 rounded-lg border border-white/5 active:bg-amber-600"><Upload className="w-4 h-4" /></button>
+                    <button onClick={() => fileInputRef.current?.click()} className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl border border-white/10 active:bg-amber-600"><Upload className="w-4 h-4 text-white/60" /></button>
                     <input ref={fileInputRef} type="file" className="hidden" accept=".xlsx" onChange={() => {}} />
-                    <button onClick={handleFinalize} disabled={!items.length || isMigrating} className="w-14 h-9 bg-blue-600 rounded-lg active:scale-95 flex items-center justify-center shadow-lg shadow-blue-900/20 transition-all">
+                    <button onClick={handleFinalize} disabled={!items.length || isMigrating} className="w-14 h-10 bg-blue-600 rounded-xl active:scale-95 flex items-center justify-center shadow-lg shadow-blue-900/40">
                         {isMigrating ? <Zap className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
                     </button>
                 </div>
             </header>
 
-            {/* ZONA SUPERIOR: HUD DINÁMICO (40% Altura) */}
-            <div className="h-[40vh] bg-black relative flex flex-col overflow-hidden border-b-4 border-white/5">
-                <div className="w-full h-full flex flex-col p-6 animate-in fade-in duration-200">
+            {/* ZONA SUPERIOR: HUD ERGONÓMICO (35% Altura) */}
+            <div className="h-[35vh] bg-[#050505] relative flex flex-col overflow-hidden border-b border-white/5">
+                <div className="w-full h-full flex items-center justify-between p-2">
                     {lastScannedItem ? (
-                        <div className="flex-1 flex flex-col items-center justify-around">
-                            {/* Descriptor Superior */}
-                            <div className="text-center w-full">
-                                <div className="inline-block bg-blue-600/10 border border-blue-500/20 px-4 py-1 rounded-full mb-3">
-                                    <span className="text-[10px] font-black text-blue-400 tracking-widest uppercase italic">ÚLTIMA_CAPTURADA</span>
-                                </div>
-                                <h2 className="text-white font-black text-xl uppercase truncate leading-tight mb-1">{lastScannedItem.name}</h2>
-                                <span className="text-blue-500 font-mono text-sm font-black tracking-tighter">{lastScannedItem.barcode}</span>
-                            </div>
+                        <>
+                            {/* PAD MENOS (LADO IZQUIERDO) */}
+                            <button 
+                                onPointerDown={(e) => { e.preventDefault(); handleDecrement(lastScannedItem); }}
+                                className="w-1/4 h-full bg-rose-600/5 hover:bg-rose-600/10 active:bg-rose-600 rounded-2xl flex items-center justify-center transition-colors border-r border-white/5"
+                            >
+                                <Minus className="w-12 h-12 text-rose-500 active:text-white" />
+                            </button>
 
-                            {/* Área de Control de Cantidad (Touch Targets Gigantes) */}
-                            <div className="flex items-center justify-between w-full max-w-sm">
-                                <button 
-                                    onMouseDown={() => handleDecrement(lastScannedItem)}
-                                    onTouchStart={(e) => { e.preventDefault(); handleDecrement(lastScannedItem); }}
-                                    className="w-20 h-20 bg-white/5 border-2 border-white/10 text-rose-500 rounded-3xl flex items-center justify-center active:bg-rose-600 active:text-white transition-all shadow-xl"
-                                >
-                                    <Minus className="w-12 h-12" />
-                                </button>
+                            {/* DISPLAY CENTRAL */}
+                            <div className="flex-1 flex flex-col items-center justify-center px-2 text-center pointer-events-none">
+                                <div className="bg-blue-600/20 px-3 py-0.5 rounded-full mb-2">
+                                    <span className="text-[9px] font-black text-blue-400 tracking-widest uppercase">CAPTURED_SKU</span>
+                                </div>
+                                <h2 className="text-white font-black text-sm uppercase truncate w-full mb-1">{lastScannedItem.name}</h2>
+                                <span className="text-blue-500 font-mono text-[10px] font-black tracking-widest mb-4">{lastScannedItem.barcode}</span>
                                 
-                                <div className="text-center">
-                                    <div className="text-[13rem] font-black leading-none tabular-nums drop-shadow-[0_0_40px_rgba(59,130,246,0.3)] text-white select-none">
+                                <div className="relative">
+                                    <div className="text-8xl font-black tabular-nums leading-none drop-shadow-[0_0_20px_rgba(59,130,246,0.3)]">
                                         {lastScannedItem.totalQuantity}
                                     </div>
+                                    <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 text-[8px] font-black uppercase text-white/30 tracking-[0.4em]">TOTAL_QTY</div>
                                 </div>
-
-                                <button 
-                                    onMouseDown={() => registerScan(lastScannedItem.barcode, 1)}
-                                    onTouchStart={(e) => { e.preventDefault(); registerScan(lastScannedItem.barcode, 1); }}
-                                    className="w-20 h-20 bg-white/5 border-2 border-white/10 text-emerald-500 rounded-3xl flex items-center justify-center active:bg-emerald-600 active:text-white transition-all shadow-xl"
-                                >
-                                    <Plus className="w-12 h-12" />
-                                </button>
                             </div>
-                        </div>
+
+                            {/* PAD MAS (LADO DERECHO) */}
+                            <button 
+                                onPointerDown={(e) => { e.preventDefault(); registerScan(lastScannedItem.barcode, 1); }}
+                                className="w-1/4 h-full bg-emerald-600/5 hover:bg-emerald-600/10 active:bg-emerald-600 rounded-2xl flex items-center justify-center transition-colors border-l border-white/5"
+                            >
+                                <Plus className="w-12 h-12 text-emerald-500 active:text-white" />
+                            </button>
+                        </>
                     ) : (
-                        <div className="flex-1 flex flex-col items-center justify-center opacity-20">
+                        <div className="w-full flex flex-col items-center justify-center opacity-20">
                             <Zap className="w-16 h-16 mb-4 animate-pulse" />
-                            <p className="text-[10px] font-black uppercase tracking-[0.5em]">Puerto_Láser_Activo</p>
+                            <p className="text-[10px] font-black uppercase tracking-[0.5em]">Waiting_Laser_Inbound</p>
                         </div>
                     )}
                 </div>
-                {/* Flash confirmación */}
-                {isFlash && <div className="absolute inset-0 z-[300] bg-blue-500/30 pointer-events-none flash-active"></div>}
+                {isFlash && <div className="absolute inset-0 z-[300] bg-blue-500/20 pointer-events-none flash-active"></div>}
             </div>
 
-            {/* BARRA CENTRAL: GATILLO ÓPTICO (Hold-to-Scan) (15% Altura aprox) */}
-            <div className="h-28 shrink-0 bg-slate-900 border-b-4 border-white/5 flex items-center px-4 relative z-40">
+            {/* BARRA CENTRAL: TRIGGER ÓPTICO (HOLD TO SCAN) */}
+            <div className="h-24 shrink-0 bg-slate-950 flex items-center px-4 relative z-40">
                 <button 
-                    onMouseDown={() => setIsTriggerActive(true)} 
-                    onMouseUp={() => setIsTriggerActive(false)}
-                    onTouchStart={(e) => { e.preventDefault(); setIsTriggerActive(true); }} 
-                    onTouchEnd={(e) => { e.preventDefault(); setIsTriggerActive(false); }}
-                    onContextMenu={(e) => e.preventDefault()}
-                    className={`flex-1 h-20 rounded-2xl flex items-center justify-center gap-4 transition-all duration-75 active:scale-[0.98] border-b-[8px] ${
+                    onPointerDown={() => { if(navigator.vibrate) navigator.vibrate(40); setIsTriggerActive(true); }} 
+                    onPointerUp={() => setIsTriggerActive(false)}
+                    onPointerLeave={() => setIsTriggerActive(false)}
+                    className={`flex-1 h-16 rounded-[1.2rem] flex items-center justify-center gap-4 transition-all duration-75 active:scale-[0.97] border-b-8 ${
                         isTriggerActive 
-                        ? 'bg-blue-600 border-blue-800 translate-y-1 border-b-0' 
-                        : 'bg-white text-black border-slate-300'
+                        ? 'bg-blue-600 border-blue-800 translate-y-1 border-b-0 shadow-inner' 
+                        : 'bg-white text-black border-slate-300 shadow-xl'
                     }`}
                 >
                     {isTriggerActive ? <ScanLine className="w-8 h-8 animate-bounce" /> : <Camera className="w-8 h-8" />}
-                    <span className="text-sm font-black uppercase tracking-[0.4em]">{isTriggerActive ? 'LENS_OPEN' : 'PRESIONAR_PARA_ESCANEAR'}</span>
+                    <span className="text-xs font-black uppercase tracking-[0.3em]">{isTriggerActive ? 'LENS_ACTIVE' : 'MANTENER_PARA_ESCANEAR'}</span>
                 </button>
 
-                {/* Cámara superpuesta (Solo activa si el trigger está presionado) */}
+                {/* VISOR DE CÁMARA (FULLSCREEN HOLD) */}
                 {isTriggerActive && (
-                    <div className="fixed inset-0 z-[100] animate-in fade-in zoom-in duration-100">
+                    <div className="fixed inset-0 z-[100] animate-in fade-in zoom-in duration-75">
                          <CameraScanner onScan={registerScan} onClose={() => setIsTriggerActive(false)} isTriggered={true} />
                     </div>
                 )}
             </div>
 
-            {/* ZONA INFERIOR: HISTORIAL DE BATCH (Resto del espacio) */}
-            <div className="flex-1 min-h-0 bg-black">
-                <div className="bg-slate-900/50 px-6 py-2 border-b border-white/5 flex justify-between items-center shrink-0">
-                     <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                        <Database className="w-3 h-3" /> Batch_Records
+            {/* ZONA INFERIOR: HISTORIAL MATRICIAL */}
+            <div className="flex-1 min-h-0 bg-black border-t border-white/5">
+                <div className="bg-slate-900/30 px-6 py-2 border-b border-white/5 flex justify-between items-center shrink-0">
+                     <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2 italic">
+                        <Database className="w-3 h-3" /> Batch_Records_Stream
                      </span>
                 </div>
                 <div className="h-full">
                     <SmartWindow 
                         items={items} 
-                        itemHeight={68} 
+                        itemHeight={72} 
                         renderRow={MassiveItemRow} 
                         data={{ items, registerScan, handleDecrement }} 
                     />
                 </div>
             </div>
 
-            {/* CONFIRMACIÓN DE ELIMINACIÓN DE REGISTRO */}
             <style>{`
                 .flash-active { animation: flash-hit 0.1s ease-out forwards; }
                 @keyframes flash-hit { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }

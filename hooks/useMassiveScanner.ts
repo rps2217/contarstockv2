@@ -15,21 +15,15 @@ export interface ConsolidatedBlindItem {
     lastTimestamp: number;
 }
 
-/**
- * ENGINE MARTILLO v15.0 - ULTRA LATENCY OPTIMIZED
- */
 export const useMassiveScanner = (batchId: string) => {
     const [isFlash, setIsFlash] = useState(false);
     const [lastScannedCode, setLastScannedCode] = useState<string | null>(null);
-    
-    // Estado volátil para respuesta visual instantánea en el HUD
     const [optimisticItem, setOptimisticItem] = useState<ConsolidatedBlindItem | null>(null);
     
     const buffer = useRef('');
     const lastKeyTime = useRef(0);
     const writeQueue = useRef<{barcode: string, qty: number, ts: number}[]>([]);
     
-    // Sincronización de fondo con la DB
     const dbItems = useLiveQuery(async () => {
         if (!batchId) return [];
         const rawScans = await massiveDb.blindScans.where('batchId').equals(batchId).toArray();
@@ -78,11 +72,15 @@ export const useMassiveScanner = (batchId: string) => {
 
         const sorted = Array.from(aggregation.values()).sort((a, b) => b.lastTimestamp - a.lastTimestamp);
         
-        // Mantener el ítem optimista actualizado si la DB cambia por debajo
+        // Sincronizar el ítem optimista con la DB si existe
         if (lastScannedCode) {
             const currentInDb = sorted.find(i => i.barcode === lastScannedCode);
             if (currentInDb) {
-                setOptimisticItem(prev => prev ? { ...currentInDb, totalQuantity: Math.max(prev.totalQuantity, currentInDb.totalQuantity) } : currentInDb);
+                setOptimisticItem(prev => {
+                    if (!prev || prev.barcode !== currentInDb.barcode) return currentInDb;
+                    // Mantener la cantidad más alta (la optimista suele ir por delante)
+                    return { ...currentInDb, totalQuantity: Math.max(prev.totalQuantity, currentInDb.totalQuantity) };
+                });
             }
         }
 
@@ -107,29 +105,25 @@ export const useMassiveScanner = (batchId: string) => {
         const clean = sanitizeBarcode(code);
         if (!clean || clean.length < 3) return;
 
-        const now = Date.now();
-        
-        // 1. Feedback Inmediato (Flash + Sound)
-        setIsFlash(true);
-        setLastScannedCode(clean);
+        // FEEDBACK INSTANTÁNEO SENSORIAL
         SoundFX.play(qty > 0 ? 'success' : 'delete');
-        if (navigator.vibrate) navigator.vibrate(25);
-        setTimeout(() => setIsFlash(false), 80);
+        if (navigator.vibrate) navigator.vibrate(20);
+        setIsFlash(true);
+        setTimeout(() => setIsFlash(false), 50);
 
-        // 2. Actualización Optimista del HUD (Sin esperar a la DB)
+        const now = Date.now();
+        setLastScannedCode(clean);
+
+        // ACTUALIZACIÓN OPTIMISTA DE UI
         setOptimisticItem(prev => {
             if (prev && prev.barcode === clean) {
                 return { ...prev, totalQuantity: Math.max(0, prev.totalQuantity + qty), lastTimestamp: now };
             }
-            // Si es un SKU nuevo, buscamos datos básicos en lo que ya tenemos
-            const existingInList = dbItems?.find(i => i.barcode === clean);
-            if (existingInList) {
-                return { ...existingInList, totalQuantity: existingInList.totalQuantity + qty, lastTimestamp: now };
-            }
-            return { barcode: clean, name: 'CARGANDO...', totalQuantity: qty, lastTimestamp: now };
+            const existing = dbItems?.find(i => i.barcode === clean);
+            if (existing) return { ...existing, totalQuantity: existing.totalQuantity + qty, lastTimestamp: now };
+            return { barcode: clean, name: 'IDENTIFICANDO...', totalQuantity: qty, lastTimestamp: now };
         });
 
-        // 3. Queue para persistencia diferida
         writeQueue.current.push({ barcode: clean, qty, ts: now });
     }, [dbItems]);
 
@@ -139,14 +133,14 @@ export const useMassiveScanner = (batchId: string) => {
             setLastScannedCode(null);
             setOptimisticItem(null);
         }
+        SoundFX.play('delete');
     }, [batchId, lastScannedCode]);
 
-    // Listener de Hardware (Láser USB/BT)
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if ((e.target as HTMLElement).tagName === 'INPUT') return;
             const now = Date.now();
-            if (now - lastKeyTime.current > 40) buffer.current = ''; 
+            if (now - lastKeyTime.current > 45) buffer.current = ''; 
             lastKeyTime.current = now;
             if (e.key === 'Enter') {
                 if (buffer.current.length >= 3) registerScan(buffer.current);
