@@ -120,7 +120,6 @@ const MassiveBlindView: React.FC = () => {
                     <span className="text-[10px] text-white/40 font-black tracking-widest uppercase truncate max-w-[100px]">{batchId}</span>
                 </div>
                 <div className="flex gap-2">
-                    {/* BOTÓN GENERADOR DE CÓDIGO DE BARRAS */}
                     <button 
                         disabled={!lastScannedItem}
                         onClick={() => setShowBarcodeModal(true)} 
@@ -231,36 +230,40 @@ const MassiveBlindView: React.FC = () => {
                 </div>
             </div>
 
-            {/* MODAL GENERADOR DE CÓDIGO DE BARRAS (LEGIBILIDAD EXTREMA) */}
+            {/* MODAL GENERADOR DE CÓDIGO DE BARRAS (OPTIMIZADO PARA SCAN) */}
             {showBarcodeModal && lastScannedItem && (
-                <div className="fixed inset-0 z-[1000] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in zoom-in duration-200">
+                <div className="fixed inset-0 z-[1000] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in zoom-in duration-200">
                     <div className="bg-white w-full max-w-sm rounded-[3rem] overflow-hidden shadow-2xl flex flex-col items-center">
                         <div className="w-full bg-slate-50 p-6 border-b border-slate-100 flex justify-between items-center">
                             <div className="flex items-center gap-3">
-                                <div className="p-2 bg-blue-600 rounded-xl text-white"><Barcode className="w-5 h-5" /></div>
+                                <div className="p-2 bg-blue-600 rounded-xl text-white shadow-lg shadow-blue-200"><Barcode className="w-5 h-5" /></div>
                                 <h3 className="text-slate-900 font-black uppercase tracking-tight text-sm">Visual_SKU_Beam</h3>
                             </div>
                             <button onClick={() => setShowBarcodeModal(false)} className="p-2 bg-white text-slate-400 rounded-full shadow-sm active:scale-90 transition-transform"><X className="w-6 h-6" /></button>
                         </div>
                         
-                        <div className="p-10 text-center w-full">
-                             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{lastScannedItem.name}</h4>
+                        <div className="p-8 text-center w-full">
+                             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 leading-tight max-w-[80%] mx-auto">{lastScannedItem.name}</h4>
                              
-                             {/* EL CÓDIGO DE BARRAS (BLANCO Y NEGRO PURO PARA LÁSER) */}
-                             <div className="bg-white border-4 border-slate-100 p-8 rounded-3xl mb-6 shadow-inner flex flex-col items-center justify-center">
-                                 <div className="barcode-font text-[100px] leading-none text-black select-none mb-4 tracking-normal" style={{ letterSpacing: '0px' }}>
+                             {/* ZONA DE ESCANEO (RE-DISEÑADA PARA EVITAR RECORTES) */}
+                             <div className="bg-white p-4 py-10 rounded-[2rem] mb-6 flex flex-col items-center justify-center border-2 border-slate-50 overflow-hidden">
+                                 {/* Quiet Zone lateral garantizada por el padding px-10 */}
+                                 <div className="barcode-font text-[75px] leading-none text-black select-none mb-6 tracking-normal whitespace-nowrap px-10" style={{ letterSpacing: '0px' }}>
                                      {lastScannedItem.barcode}
                                  </div>
-                                 <div className="font-mono text-2xl font-black text-slate-900 tracking-[0.3em]">
+                                 <div className="font-mono text-xl font-black text-slate-900 tracking-[0.4em] bg-slate-50 px-4 py-1 rounded-lg">
                                      {lastScannedItem.barcode}
                                  </div>
                              </div>
 
-                             <p className="text-[9px] font-bold text-blue-600 uppercase tracking-[0.4em] animate-pulse">Ajuste el brillo para escanear</p>
+                             <div className="flex flex-col items-center gap-2">
+                                <p className="text-[9px] font-bold text-blue-600 uppercase tracking-[0.4em] animate-pulse">Suba el brillo al máximo</p>
+                                <div className="h-1 w-12 bg-blue-500/20 rounded-full"></div>
+                             </div>
                         </div>
                         
                         <div className="w-full p-6 bg-slate-50 border-t border-slate-100">
-                            <button onClick={() => setShowBarcodeModal(false)} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs active:scale-95 transition-all">Cerrar Visor</button>
+                            <button onClick={() => setShowBarcodeModal(false)} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs active:scale-95 transition-all shadow-xl">Cerrar Visor</button>
                         </div>
                     </div>
                 </div>
