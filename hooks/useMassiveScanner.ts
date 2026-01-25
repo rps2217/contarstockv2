@@ -16,22 +16,24 @@ export interface ConsolidatedBlindItem {
 }
 
 /**
- * HOOK MARTILLO INDUSTRIAL v10.0 - ENGINE OPTIMIZED
- * Utiliza un patrón de "Write-Behind" para garantizar 60FPS.
+ * MOTOR MARTILLO INDUSTRIAL v11.0 - PERFORMANCE ENGINE
+ * Diseñado para entornos de 100+ escaneos por minuto.
  */
 export const useMassiveScanner = (batchId: string) => {
     const [isFlash, setIsFlash] = useState(false);
     const [lastScannedCode, setLastScannedCode] = useState<string | null>(null);
+    const [isFlushing, setIsFlushing] = useState(false);
     
-    // Caché volátil para respuesta instantánea (UI)
-    const [optimisticItems, setOptimisticItems] = useState<Map<string, number>>(new Map());
+    // Unidades en tiempo real (Bypass de DB para la UI principal)
+    const [rtTotalUnits, setRtTotalUnits] = useState(0);
+    const [velocity, setVelocity] = useState(0); // Scans per minute (UPM)
     
     const buffer = useRef('');
     const lastKeyTime = useRef(0);
-    const collisionGuard = useRef<Map<string, number>>(new Map());
     const writeQueue = useRef<{barcode: string, qty: number, ts: number}[]>([]);
+    const scanTimestamps = useRef<number[]>([]);
     
-    // Consulta reactiva de la DB (Fuente de verdad)
+    // Consulta reactiva (Fuente de verdad persistida)
     const dbItems = useLiveQuery(async () => {
         if (!batchId) return [];
         const rawScans = await massiveDb.blindScans.where('batchId').equals(batchId).toArray();
@@ -40,15 +42,16 @@ export const useMassiveScanner = (batchId: string) => {
         const barcodesInBatch = new Set([...rawScans.map(s => s.barcode), ...manifests.map(m => m.barcode)]);
         const products = await masterDb.products.where('barcode').anyOf(Array.from(barcodesInBatch)).toArray();
         
-        // Explicitly type Maps to resolve 'unknown' property access and arithmetic errors
         const prodMap = new Map<string, string>(products.map(p => [p.barcode, p.name]));
         const manifestMap = new Map<string, { qty: number, name?: string, loc?: string }>(
             manifests.map(m => [m.barcode, { qty: m.expectedQty, name: m.name, loc: m.loc }])
         );
         
         const aggregation = new Map<string, ConsolidatedBlindItem>();
+        let runningTotal = 0;
 
         for (const scan of rawScans) {
+            runningTotal += scan.quantity;
             const manInfo = manifestMap.get(scan.barcode);
             const existing = aggregation.get(scan.barcode);
             if (existing) {
@@ -57,17 +60,17 @@ export const useMassiveScanner = (batchId: string) => {
             } else {
                 aggregation.set(scan.barcode, {
                     barcode: scan.barcode,
-                    // FIX: Explicitly typed manifestMap provides typed manInfo to resolve 'unknown' property access
                     name: manInfo?.name || prodMap.get(scan.barcode) || 'SKU_DESCONOCIDO',
-                    // FIX: Explicitly typed manifestMap provides typed manInfo to resolve 'unknown' property access
                     loc: manInfo?.loc,
                     totalQuantity: scan.quantity,
-                    // FIX: Explicitly typed manifestMap provides typed manInfo to resolve 'unknown' property access
                     expectedQty: manInfo?.qty,
                     lastTimestamp: scan.timestamp
                 });
             }
         }
+
+        // Sincronizar RT total con DB al cargar
+        setRtTotalUnits(runningTotal);
 
         for (const m of manifests) {
             if (!aggregation.has(m.barcode)) {
@@ -85,22 +88,39 @@ export const useMassiveScanner = (batchId: string) => {
         return Array.from(aggregation.values()).sort((a, b) => b.lastTimestamp - a.lastTimestamp);
     }, [batchId]);
 
-    // Persistencia debounced para no bloquear el hilo principal
+    // Persistencia Agrupada (Batch Write)
     const flushToDb = useCallback(async () => {
         if (writeQueue.current.length === 0) return;
+        setIsFlushing(true);
         const batch = [...writeQueue.current];
         writeQueue.current = [];
         
-        const records = batch.map(b => ({
-            batchId, barcode: b.barcode, quantity: b.qty, timestamp: b.ts
-        }));
-        
-        await massiveDb.blindScans.bulkAdd(records);
+        try {
+            const records = batch.map(b => ({
+                batchId, barcode: b.barcode, quantity: b.qty, timestamp: b.ts
+            }));
+            await massiveDb.blindScans.bulkAdd(records);
+        } catch (e) {
+            console.error("Flush error, re-queuing...", e);
+            writeQueue.current = [...batch, ...writeQueue.current];
+        } finally {
+            setIsFlushing(false);
+        }
     }, [batchId]);
 
+    // Monitor de Velocidad (UPM)
     useEffect(() => {
-        const timer = setInterval(flushToDb, 1000);
-        return () => clearInterval(timer);
+        const interval = setInterval(() => {
+            const now = Date.now();
+            const oneMinuteAgo = now - 60000;
+            // Limpiar timestamps viejos
+            scanTimestamps.current = scanTimestamps.current.filter(ts => ts > oneMinuteAgo);
+            setVelocity(scanTimestamps.current.length);
+            
+            // Flush automático
+            flushToDb();
+        }, 1000);
+        return () => clearInterval(interval);
     }, [flushToDb]);
 
     const registerScan = useCallback(async (code: string, qty: number = 1) => {
@@ -109,37 +129,35 @@ export const useMassiveScanner = (batchId: string) => {
 
         const now = Date.now();
         
-        // 1. Feedback Sensorial (0ms latency)
+        // 1. Efectos Tácticos (0ms)
         setIsFlash(true);
         setLastScannedCode(clean);
+        setRtTotalUnits(prev => prev + qty);
+        scanTimestamps.current.push(now);
+        
         SoundFX.play(qty > 0 ? 'success' : 'delete');
         if (navigator.vibrate) navigator.vibrate(25);
         setTimeout(() => setIsFlash(false), 80);
 
-        // 2. Registro en cola de escritura
+        // 2. Queue for Persistence
         writeQueue.current.push({ barcode: clean, qty, ts: now });
-
-        // 3. Actualización Optimista de la UI (Caché local)
-        setOptimisticItems(prev => {
-            // FIX: Explicitly typing the Map ensures get() returns number|undefined instead of unknown, fixing arithmetic '+' operator error.
-            const next = new Map<string, number>(prev);
-            const currentQty = next.get(clean) || 0;
-            next.set(clean, currentQty + qty);
-            return next;
-        });
     }, []);
 
     const removeItemCompletely = useCallback(async (barcode: string) => {
         await massiveDb.blindScans.where('batchId').equals(batchId).and(s => s.barcode === barcode).delete();
+        // Recalcular total RT tras borrado
+        const newTotal = (await massiveDb.blindScans.where('batchId').equals(batchId).toArray())
+            .reduce((acc, s) => acc + s.quantity, 0);
+        setRtTotalUnits(newTotal);
         SoundFX.play('delete');
     }, [batchId]);
 
-    // Listener de Hardware optimizado
+    // Listener HID de Alta Velocidad
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if ((e.target as HTMLElement).tagName === 'INPUT') return;
             const now = Date.now();
-            if (now - lastKeyTime.current > 40) buffer.current = ''; 
+            if (now - lastKeyTime.current > 50) buffer.current = ''; 
             lastKeyTime.current = now;
             if (e.key === 'Enter') {
                 if (buffer.current.length >= 3) registerScan(buffer.current);
@@ -150,12 +168,12 @@ export const useMassiveScanner = (batchId: string) => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [registerScan]);
 
-    const totalUnits = dbItems?.reduce((acc, curr) => acc + curr.totalQuantity, 0) || 0;
-
     return { 
         items: dbItems || [], 
-        totalUnits, 
+        totalUnits: rtTotalUnits, // Usamos el valor Real-Time
+        velocity,
         isFlash, 
+        isFlushing,
         lastScannedCode, 
         registerScan, 
         removeItemCompletely 
