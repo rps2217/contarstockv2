@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { massiveDb } from '../db.massive';
 import { db as masterDb } from '../db';
 import { SoundFX } from '../services/audio';
@@ -17,8 +17,8 @@ export interface ConsolidatedBlindItem {
 
 export const useMassiveScanner = (batchId: string) => {
     const [isFlash, setIsFlash] = useState(false);
-    const [lastScannedCode, setLastScannedCode] = useState<string | null>(null);
-    const [optimisticItem, setOptimisticItem] = useState<ConsolidatedBlindItem | null>(null);
+    const [activeBarcode, setActiveBarcode] = useState<string | null>(null);
+    const [optimisticQty, setOptimisticQty] = useState<number | null>(null);
     
     const buffer = useRef('');
     const lastKeyTime = useRef(0);
@@ -70,22 +70,21 @@ export const useMassiveScanner = (batchId: string) => {
             }
         }
 
-        const sorted = Array.from(aggregation.values()).sort((a, b) => b.lastTimestamp - a.lastTimestamp);
-        
-        // Sincronizar el ítem optimista con la DB si existe
-        if (lastScannedCode) {
-            const currentInDb = sorted.find(i => i.barcode === lastScannedCode);
-            if (currentInDb) {
-                setOptimisticItem(prev => {
-                    if (!prev || prev.barcode !== currentInDb.barcode) return currentInDb;
-                    // Mantener la cantidad más alta (la optimista suele ir por delante)
-                    return { ...currentInDb, totalQuantity: Math.max(prev.totalQuantity, currentInDb.totalQuantity) };
-                });
-            }
-        }
+        // ORDENAMIENTO DE FOCO ÚNICO: El ítem activo siempre va primero, luego por recencia.
+        return Array.from(aggregation.values()).sort((a, b) => {
+            if (a.barcode === activeBarcode) return -1;
+            if (b.barcode === activeBarcode) return 1;
+            return b.lastTimestamp - a.lastTimestamp;
+        });
+    }, [batchId, activeBarcode]);
 
-        return sorted;
-    }, [batchId, lastScannedCode]);
+    // Sincronizar la cantidad del HUD con los datos reales de la DB cuando cambian
+    useEffect(() => {
+        if (activeBarcode && dbItems) {
+            const item = dbItems.find(i => i.barcode === activeBarcode);
+            if (item) setOptimisticQty(item.totalQuantity);
+        }
+    }, [activeBarcode, dbItems]);
 
     const flushToDb = useCallback(async () => {
         if (writeQueue.current.length === 0) return;
@@ -97,50 +96,53 @@ export const useMassiveScanner = (batchId: string) => {
     }, [batchId]);
 
     useEffect(() => {
-        const timer = setInterval(flushToDb, 1000);
+        const timer = setInterval(flushToDb, 800);
         return () => clearInterval(timer);
     }, [flushToDb]);
+
+    const selectItem = useCallback((barcode: string) => {
+        setActiveBarcode(barcode);
+        SoundFX.play('increment'); // Sonido sutil de selección
+        if (navigator.vibrate) navigator.vibrate(15);
+    }, []);
 
     const registerScan = useCallback(async (code: string, qty: number = 1) => {
         const clean = sanitizeBarcode(code);
         if (!clean || clean.length < 3) return;
 
-        // FEEDBACK INSTANTÁNEO SENSORIAL
+        const now = Date.now();
+        setActiveBarcode(clean);
+
+        // Feedback sensorial inmediato
         SoundFX.play(qty > 0 ? 'success' : 'delete');
-        if (navigator.vibrate) navigator.vibrate(20);
         setIsFlash(true);
+        if (navigator.vibrate) navigator.vibrate(qty > 0 ? 25 : [50, 30]);
         setTimeout(() => setIsFlash(false), 50);
 
-        const now = Date.now();
-        setLastScannedCode(clean);
-
-        // ACTUALIZACIÓN OPTIMISTA DE UI
-        setOptimisticItem(prev => {
-            if (prev && prev.barcode === clean) {
-                return { ...prev, totalQuantity: Math.max(0, prev.totalQuantity + qty), lastTimestamp: now };
-            }
-            const existing = dbItems?.find(i => i.barcode === clean);
-            if (existing) return { ...existing, totalQuantity: existing.totalQuantity + qty, lastTimestamp: now };
-            return { barcode: clean, name: 'IDENTIFICANDO...', totalQuantity: qty, lastTimestamp: now };
+        // Actualización optimista del HUD
+        setOptimisticQty(prev => {
+            const baseQty = clean === activeBarcode ? (prev || 0) : (dbItems?.find(i => i.barcode === clean)?.totalQuantity || 0);
+            return Math.max(0, baseQty + qty);
         });
 
         writeQueue.current.push({ barcode: clean, qty, ts: now });
-    }, [dbItems]);
+    }, [activeBarcode, dbItems]);
 
     const removeItemCompletely = useCallback(async (barcode: string) => {
         await massiveDb.blindScans.where('batchId').equals(batchId).and(s => s.barcode === barcode).delete();
-        if (lastScannedCode === barcode) {
-            setLastScannedCode(null);
-            setOptimisticItem(null);
+        if (activeBarcode === barcode) {
+            setActiveBarcode(null);
+            setOptimisticQty(null);
         }
         SoundFX.play('delete');
-    }, [batchId, lastScannedCode]);
+    }, [batchId, activeBarcode]);
 
+    // Hardware Laser Listener
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if ((e.target as HTMLElement).tagName === 'INPUT') return;
             const now = Date.now();
-            if (now - lastKeyTime.current > 45) buffer.current = ''; 
+            if (now - lastKeyTime.current > 40) buffer.current = ''; 
             lastKeyTime.current = now;
             if (e.key === 'Enter') {
                 if (buffer.current.length >= 3) registerScan(buffer.current);
@@ -151,11 +153,16 @@ export const useMassiveScanner = (batchId: string) => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [registerScan]);
 
+    const lastScannedItem = activeBarcode && dbItems 
+        ? dbItems.find(i => i.barcode === activeBarcode) 
+        : null;
+
     return { 
         items: dbItems || [], 
-        lastScannedItem: optimisticItem,
+        lastScannedItem: lastScannedItem ? { ...lastScannedItem, totalQuantity: optimisticQty ?? lastScannedItem.totalQuantity } : null,
         isFlash, 
         registerScan, 
+        selectItem,
         removeItemCompletely 
     };
 };
