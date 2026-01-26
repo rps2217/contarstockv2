@@ -2,7 +2,7 @@
 import React, { useState, useRef, memo, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMassiveScanner, ConsolidatedBlindItem } from '../hooks/useMassiveScanner';
-import { ChevronLeft, Plus, Minus, ScanLine, Zap, Save, Upload, Database, Camera, Target, Barcode, X, Loader2 } from 'lucide-react';
+import { ChevronLeft, Plus, Minus, ScanLine, Zap, Save, Upload, Database, Camera, Target, Barcode, X, Loader2, RotateCcw } from 'lucide-react';
 import { CameraScanner } from './CameraScanner';
 import { migrateMassiveToMaster } from '../services/massiveSync';
 import * as XLSX from 'xlsx';
@@ -102,7 +102,7 @@ const MassiveItemRow = memo(({ index, data }: any) => {
 const MassiveBlindView: React.FC = () => {
     const navigate = useNavigate();
     const { batchId = 'CORE' } = useParams();
-    const { items, lastScannedItem, isFlash, registerScan, selectItem, removeItemCompletely } = useMassiveScanner(batchId || 'CORE');
+    const { items, lastScannedItem, isFlash, registerScan, selectItem, removeItemCompletely, resetBatch } = useMassiveScanner(batchId || 'CORE');
     
     const [isTriggerActive, setIsTriggerActive] = useState(false);
     const [isMigrating, setIsMigrating] = useState(false);
@@ -175,6 +175,12 @@ const MassiveBlindView: React.FC = () => {
         finally { setIsMigrating(false); }
     };
 
+    const handleFullReset = () => {
+        if (window.confirm("⚠️ ¿BORRAR TODO EL LOTE?\n\nEsta acción eliminará todos los escaneos físicos y el manifiesto cargado para empezar desde cero.")) {
+            resetBatch();
+        }
+    };
+
     const getHudColor = useMemo(() => {
         if (!lastScannedItem) return 'bg-black';
         if (lastScannedItem.expectedQty === undefined) return 'bg-blue-600'; 
@@ -194,6 +200,15 @@ const MassiveBlindView: React.FC = () => {
                     <span className="text-[10px] text-white/40 font-black tracking-widest uppercase truncate max-w-[100px]">{batchId}</span>
                 </div>
                 <div className="flex gap-2">
+                    {/* BOTÓN RESET TOTAL */}
+                    <button 
+                        onClick={handleFullReset}
+                        className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl border border-white/10 active:bg-rose-600 transition-colors"
+                        title="Empezar desde cero"
+                    >
+                        <RotateCcw className="w-4 h-4 text-white/60" />
+                    </button>
+
                     <button 
                         disabled={!lastScannedItem}
                         onClick={() => setShowBarcodeModal(true)} 
@@ -291,7 +306,7 @@ const MassiveBlindView: React.FC = () => {
             </div>
 
             {showBarcodeModal && lastScannedItem && (
-                <div className="fixed inset-0 z-[1000] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in zoom-in duration-200">
+                <div className="fixed inset-0 z-1000 bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in zoom-in duration-200">
                     <div className="bg-white w-full max-w-sm rounded-[3rem] overflow-hidden shadow-2xl flex flex-col items-center">
                         <div className="w-full bg-slate-50 p-6 border-b border-slate-100 flex justify-between items-center">
                             <div className="flex items-center gap-3">

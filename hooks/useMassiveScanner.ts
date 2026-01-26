@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { massiveDb } from '../db.massive';
 import { db as masterDb } from '../db';
@@ -30,26 +31,20 @@ export const useMassiveScanner = (batchId: string) => {
     const dbItems = useLiveQuery(async () => {
         if (!batchId) return [];
         
-        // 1. Obtención paralela de datos crudos
         const [rawScans, manifests] = await Promise.all([
             massiveDb.blindScans.where('batchId').equals(batchId).toArray(),
             massiveDb.blindManifests.where('batchId').equals(batchId).toArray()
         ]);
         
-        // 2. Mapeo de Catálogo (Solo SKUs presentes en este lote)
         const uniqueBarcodes = Array.from(new Set([...rawScans.map(s => s.barcode), ...manifests.map(m => m.barcode)]));
         const products = await masterDb.products.where('barcode').anyOf(uniqueBarcodes).toArray();
-        // Fix: Added explicit type parameters to Map constructor to prevent 'unknown' inference which causes string assignment errors
         const prodMap = new Map<string, string>(products.map(p => [p.barcode, p.name]));
         
-        // 3. Agregación en un solo paso O(n)
         const aggregation = new Map<string, ConsolidatedBlindItem>();
 
-        // Primero inicializamos con el manifiesto (objetivo)
         for (const m of manifests) {
             aggregation.set(m.barcode, {
                 barcode: m.barcode,
-                // Fix: Access typed prodMap to ensure result is string | undefined to satisfy ConsolidatedBlindItem.name
                 name: m.name || prodMap.get(m.barcode) || 'CARGANDO...',
                 loc: m.loc,
                 totalQuantity: 0,
@@ -58,7 +53,6 @@ export const useMassiveScanner = (batchId: string) => {
             });
         }
 
-        // Sumamos los escaneos físicos
         for (const scan of rawScans) {
             const existing = aggregation.get(scan.barcode);
             if (existing) {
@@ -67,7 +61,6 @@ export const useMassiveScanner = (batchId: string) => {
             } else {
                 aggregation.set(scan.barcode, {
                     barcode: scan.barcode,
-                    // Fix: Access typed prodMap to ensure result is string | undefined to satisfy ConsolidatedBlindItem.name
                     name: prodMap.get(scan.barcode) || 'SKU_DESCONOCIDO',
                     totalQuantity: scan.quantity,
                     lastTimestamp: scan.timestamp
@@ -75,7 +68,6 @@ export const useMassiveScanner = (batchId: string) => {
             }
         }
 
-        // 4. Ordenamiento de prioridad: Activo > Reciente > Resto
         return Array.from(aggregation.values()).sort((a, b) => {
             if (a.barcode === activeBarcode) return -1;
             if (b.barcode === activeBarcode) return 1;
@@ -83,13 +75,10 @@ export const useMassiveScanner = (batchId: string) => {
         });
     }, [batchId, activeBarcode]);
 
-    // Sincronización inteligente de HUD para evitar saltos visuales
     useEffect(() => {
         if (activeBarcode && dbItems) {
             const item = dbItems.find(i => i.barcode === activeBarcode);
             if (item) {
-                // Solo actualizamos si el valor real de DB es mayor o igual al optimista 
-                // o si no hay cambios pendientes en la cola.
                 if (writeQueue.current.length === 0 || item.totalQuantity >= (optimisticQty || 0)) {
                     setOptimisticQty(item.totalQuantity);
                 }
@@ -97,7 +86,6 @@ export const useMassiveScanner = (batchId: string) => {
         }
     }, [dbItems, activeBarcode]);
 
-    // Flush de ráfaga optimizado (350ms para balancear CPU y persistencia)
     const flushToDb = useCallback(async () => {
         if (writeQueue.current.length === 0) return;
         const batch = [...writeQueue.current];
@@ -107,7 +95,6 @@ export const useMassiveScanner = (batchId: string) => {
                 batchId, barcode: b.barcode, quantity: b.qty, timestamp: b.ts
             })));
         } catch (e) {
-            // Re-encolamos en caso de fallo crítico de DB
             writeQueue.current = [...batch, ...writeQueue.current];
         }
     }, [batchId]);
@@ -120,7 +107,7 @@ export const useMassiveScanner = (batchId: string) => {
     const selectItem = useCallback((barcode: string) => {
         const clean = sanitizeBarcode(barcode);
         setActiveBarcode(clean);
-        setOptimisticQty(null); // Forzar recarga desde DB para el nuevo item
+        setOptimisticQty(null); 
         if (navigator.vibrate) navigator.vibrate(10);
     }, []);
 
@@ -131,13 +118,11 @@ export const useMassiveScanner = (batchId: string) => {
         const now = Date.now();
         const isSame = clean === activeBarcode;
         
-        // 1. Feedback inmediato (Crítico para el operario)
         SoundFX.play(qty > 0 ? (qty > 1 ? 'increment' : 'success') : 'delete');
         setIsFlash(true);
         if (navigator.vibrate) navigator.vibrate(qty > 0 ? 25 : [40, 20]);
         setTimeout(() => setIsFlash(false), 60);
 
-        // 2. Estado Optimista (Cero latencia visual)
         if (!isSame) setActiveBarcode(clean);
         
         setOptimisticQty(prev => {
@@ -145,7 +130,6 @@ export const useMassiveScanner = (batchId: string) => {
             return Math.max(0, base + qty);
         });
 
-        // 3. Encolar para persistencia asíncrona
         writeQueue.current.push({ barcode: clean, qty, ts: now });
     }, [activeBarcode, dbItems]);
 
@@ -158,7 +142,21 @@ export const useMassiveScanner = (batchId: string) => {
         SoundFX.play('delete');
     }, [batchId, activeBarcode]);
 
-    // Motor de captura HID de alto rendimiento
+    /**
+     * RESET TOTAL DEL LOTE
+     */
+    const resetBatch = useCallback(async () => {
+        await Promise.all([
+            massiveDb.blindScans.where('batchId').equals(batchId).delete(),
+            massiveDb.blindManifests.where('batchId').equals(batchId).delete()
+        ]);
+        setActiveBarcode(null);
+        setOptimisticQty(null);
+        writeQueue.current = [];
+        SoundFX.play('delete');
+        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+    }, [batchId]);
+
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') return;
@@ -192,6 +190,7 @@ export const useMassiveScanner = (batchId: string) => {
         isFlash, 
         registerScan, 
         selectItem,
-        removeItemCompletely 
+        removeItemCompletely,
+        resetBatch
     };
 };
