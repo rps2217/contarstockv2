@@ -22,17 +22,15 @@ export const useReports = () => {
     const pendingSyncCount = useLiveQuery(() => db.scans.where('synced').equals(0).count(), [], 0);
 
     const sessions = useLiveQuery(async () => {
-        const q = searchQuery.trim();
+        const q = searchQuery.trim().toLowerCase();
         
-        // SEGREGACIÓN CRÍTICA: Filtramos por tipo para que no se mezclen
         let collection = db.sessions.where('sessionType').equals(filterType);
 
         if (q) {
-            // Si hay búsqueda, aplicamos filtro adicional manual sobre la colección por rendimiento
             return await collection
                 .filter(s => 
-                    s.erpOrder.toLowerCase().includes(q.toLowerCase()) || 
-                    s.logisticsLabel.toLowerCase().includes(q.toLowerCase())
+                    (s.erpOrder?.toLowerCase() || '').includes(q) || 
+                    (s.logisticsLabel?.toLowerCase() || '').includes(q)
                 )
                 .reverse()
                 .limit(limit)

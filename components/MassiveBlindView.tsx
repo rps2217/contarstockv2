@@ -47,7 +47,7 @@ const SmartWindow = ({ items, itemHeight, renderRow: RenderRow, data }: any) => 
     );
 };
 
-// --- FILA DE HISTORIAL (LIGERA) ---
+// --- FILA DE HISTORIAL ---
 const MassiveItemRow = memo(({ index, data }: any) => {
     const item = data.items[index];
     if (!item) return null;
@@ -132,30 +132,39 @@ const MassiveBlindView: React.FC = () => {
                 const sheet = workbook.Sheets[workbook.SheetNames[0]];
                 const json = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
 
-                if (json.length < 2) throw new Error("Archivo vacío");
+                if (!json || json.length < 2) throw new Error("Archivo sin datos detectados.");
 
-                const headers = json[0].map(h => String(h).toUpperCase().trim());
-                const skuIdx = headers.findIndex(h => h.includes('SKU') || h.includes('COD') || h.includes('EAN'));
+                // --- FIX CRITICO: Blindaje de lectura de encabezados ---
+                // Convertimos json[0] en un array real y sanitizamos cada celda para evitar 'undefined'
+                const headers = Array.from(json[0]).map(h => String(h || '').toUpperCase().trim());
+
+                const skuIdx = headers.findIndex(h => h.includes('SKU') || h.includes('COD') || h.includes('EAN') || h.includes('ITEM'));
                 const nameIdx = headers.findIndex(h => h.includes('DESC') || h.includes('NOM') || h.includes('PROD'));
-                const qtyIdx = headers.findIndex(h => h.includes('CANT') || h.includes('QTY') || h.includes('OBJ') || h.includes('EXPECTED'));
+                const qtyIdx = headers.findIndex(h => h.includes('CANT') || h.includes('QTY') || h.includes('OBJ') || h.includes('EXPECTED') || h.includes('UNID'));
                 const locIdx = headers.findIndex(h => h.includes('LOC') || h.includes('UBIC'));
 
-                if (skuIdx === -1 || qtyIdx === -1) throw new Error("Columnas 'SKU' y 'CANTIDAD' no detectadas");
+                if (skuIdx === -1 || qtyIdx === -1) throw new Error("No se detectaron columnas de 'SKU' o 'CANTIDAD'.");
 
-                const newItems = json.slice(1).map(row => ({
-                    batchId,
-                    barcode: sanitizeBarcode(String(row[skuIdx] || '')),
-                    name: String(row[nameIdx] || 'PRODUCTO NUEVO').trim(),
-                    expectedQty: Number(row[qtyIdx] || 0),
-                    loc: locIdx !== -1 ? String(row[locIdx] || '') : undefined
-                })).filter(i => i.barcode && i.expectedQty >= 0);
+                const newItems = json.slice(1).map(row => {
+                    if (!row || row.length === 0) return null;
+                    const barcode = sanitizeBarcode(String(row[skuIdx] || ''));
+                    if (!barcode) return null;
+
+                    return {
+                        batchId,
+                        barcode,
+                        name: String(row[nameIdx] || 'PRODUCTO NUEVO').trim(),
+                        expectedQty: Number(row[qtyIdx] || 0),
+                        loc: locIdx !== -1 ? String(row[locIdx] || '') : undefined
+                    };
+                }).filter((i): i is any => i !== null && i.expectedQty >= 0);
 
                 await massiveDb.blindManifests.where('batchId').equals(batchId).delete();
                 await massiveDb.blindManifests.bulkAdd(newItems);
                 
                 SoundFX.play('success');
             } catch (err: any) {
-                alert(`Error: ${err.message}`);
+                alert(`Error de Procesamiento: ${err.message}`);
                 SoundFX.play('error');
             } finally {
                 setIsImporting(false);
@@ -176,7 +185,7 @@ const MassiveBlindView: React.FC = () => {
     };
 
     const handleFullReset = () => {
-        if (window.confirm("⚠️ ¿BORRAR TODO EL LOTE?\n\nEsta acción eliminará todos los escaneos físicos y el manifiesto cargado para empezar desde cero.")) {
+        if (window.confirm("⚠️ ¿BORRAR TODO EL LOTE?\n\nEsta acción eliminará todos los escaneos físicos y el manifiesto cargado.")) {
             resetBatch();
         }
     };
@@ -200,7 +209,6 @@ const MassiveBlindView: React.FC = () => {
                     <span className="text-[10px] text-white/40 font-black tracking-widest uppercase truncate max-w-[100px]">{batchId}</span>
                 </div>
                 <div className="flex gap-2">
-                    {/* BOTÓN RESET TOTAL */}
                     <button 
                         onClick={handleFullReset}
                         className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl border border-white/10 active:bg-rose-600 transition-colors"
@@ -337,7 +345,7 @@ const MassiveBlindView: React.FC = () => {
             )}
 
             <style>{`
-                .flash-active { animation: flash-hit 0.1s ease-out forwards; }
+                .flash-active { animation: flash-hit 0.15s ease-out forwards; }
                 @keyframes flash-hit { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
             `}</style>
         </div>
