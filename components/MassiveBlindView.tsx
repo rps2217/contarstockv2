@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, memo, useEffect, useCallback } from 'react';
+import React, { useState, useRef, memo, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMassiveScanner, ConsolidatedBlindItem } from '../hooks/useMassiveScanner';
 import { ChevronLeft, Plus, Minus, ScanLine, Zap, Save, Upload, Database, Camera, Target, Barcode, X, Loader2 } from 'lucide-react';
@@ -10,7 +10,7 @@ import { massiveDb } from '../db.massive';
 import { sanitizeBarcode } from '../services/utils';
 import { SoundFX } from '../services/audio';
 
-// --- VIRTUALIZADOR MOBILE ---
+// --- VIRTUALIZADOR MOBILE OPTIMIZADO ---
 const SmartWindow = ({ items, itemHeight, renderRow: RenderRow, data }: any) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [scrollTop, setScrollTop] = useState(0);
@@ -19,18 +19,22 @@ const SmartWindow = ({ items, itemHeight, renderRow: RenderRow, data }: any) => 
     useEffect(() => {
         const updateHeight = () => { if (containerRef.current) setContainerHeight(containerRef.current.offsetHeight); };
         updateHeight();
-        window.addEventListener('resize', updateHeight);
-        return () => window.removeEventListener('resize', updateHeight);
+        const obs = new ResizeObserver(updateHeight);
+        if (containerRef.current) obs.observe(containerRef.current);
+        return () => obs.disconnect();
     }, []);
 
-    const onScroll = (e: React.UIEvent<HTMLDivElement>) => setScrollTop(e.currentTarget.scrollTop);
-    const startIndex = Math.max(0, Math.floor(scrollTop / itemHeight) - 2);
-    const endIndex = Math.min(items.length, Math.ceil((scrollTop + containerHeight) / itemHeight) + 2);
-    const visibleItems = items.slice(startIndex, endIndex);
+    const onScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+        setScrollTop(e.currentTarget.scrollTop);
+    }, []);
+
+    const startIndex = Math.max(0, Math.floor(scrollTop / itemHeight) - 3);
+    const endIndex = Math.min(items.length, Math.ceil((scrollTop + containerHeight) / itemHeight) + 3);
+    const visibleItems = useMemo(() => items.slice(startIndex, endIndex), [items, startIndex, endIndex]);
     const totalHeight = items.length * itemHeight;
 
     return (
-        <div ref={containerRef} onScroll={onScroll} className="h-full w-full overflow-y-auto no-scrollbar relative bg-black">
+        <div ref={containerRef} onScroll={onScroll} className="h-full w-full overflow-y-auto no-scrollbar relative bg-black will-change-scroll">
             <div style={{ height: totalHeight, width: '100%', pointerEvents: 'none' }} />
             <div className="absolute top-0 left-0 w-full" style={{ transform: `translateY(${startIndex * itemHeight}px)` }}>
                 {visibleItems.map((item: any) => (
@@ -43,7 +47,7 @@ const SmartWindow = ({ items, itemHeight, renderRow: RenderRow, data }: any) => 
     );
 };
 
-// --- FILA DE HISTORIAL ---
+// --- FILA DE HISTORIAL (LIGERA) ---
 const MassiveItemRow = memo(({ index, data }: any) => {
     const item = data.items[index];
     if (!item) return null;
@@ -146,16 +150,12 @@ const MassiveBlindView: React.FC = () => {
                     loc: locIdx !== -1 ? String(row[locIdx] || '') : undefined
                 })).filter(i => i.barcode && i.expectedQty >= 0);
 
-                // --- LOGICA DE REEMPLAZO ---
-                // Limpiamos lo anterior del mismo lote
                 await massiveDb.blindManifests.where('batchId').equals(batchId).delete();
-                // Insertamos lo nuevo
                 await massiveDb.blindManifests.bulkAdd(newItems);
                 
                 SoundFX.play('success');
-                alert(`Cargados ${newItems.length} items de manifiesto.`);
             } catch (err: any) {
-                alert(`Error al cargar: ${err.message}`);
+                alert(`Error: ${err.message}`);
                 SoundFX.play('error');
             } finally {
                 setIsImporting(false);
@@ -175,7 +175,7 @@ const MassiveBlindView: React.FC = () => {
         finally { setIsMigrating(false); }
     };
 
-    const getHudColor = () => {
+    const getHudColor = useMemo(() => {
         if (!lastScannedItem) return 'bg-black';
         if (lastScannedItem.expectedQty === undefined) return 'bg-blue-600'; 
         const count = lastScannedItem.totalQuantity;
@@ -183,7 +183,7 @@ const MassiveBlindView: React.FC = () => {
         if (count === target) return 'bg-emerald-600';
         if (count < target) return 'bg-red-600';
         return 'bg-[#ff8c69]'; 
-    };
+    }, [lastScannedItem]);
 
     return (
         <div className="h-screen w-full flex flex-col font-mono bg-black select-none overflow-hidden text-white">
@@ -217,7 +217,7 @@ const MassiveBlindView: React.FC = () => {
                 </div>
             </header>
 
-            <div className={`h-[42vh] relative flex flex-col overflow-hidden border-b-2 border-white/5 shrink-0 transition-colors duration-300 ${getHudColor()}`}>
+            <div className={`h-[42vh] relative flex flex-col overflow-hidden border-b-2 border-white/5 shrink-0 transition-colors duration-300 ${getHudColor}`}>
                 <div className="w-full h-full flex items-stretch">
                     {lastScannedItem ? (
                         <>
@@ -322,7 +322,7 @@ const MassiveBlindView: React.FC = () => {
             )}
 
             <style>{`
-                .flash-active { animation: flash-hit 0.15s ease-out forwards; }
+                .flash-active { animation: flash-hit 0.1s ease-out forwards; }
                 @keyframes flash-hit { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
             `}</style>
         </div>
