@@ -2,9 +2,13 @@
 import React, { useState, useRef, memo, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMassiveScanner, ConsolidatedBlindItem } from '../hooks/useMassiveScanner';
-import { ChevronLeft, Plus, Minus, ScanLine, Zap, Save, Upload, Database, Camera, Target, Barcode, X } from 'lucide-react';
+import { ChevronLeft, Plus, Minus, ScanLine, Zap, Save, Upload, Database, Camera, Target, Barcode, X, Loader2 } from 'lucide-react';
 import { CameraScanner } from './CameraScanner';
 import { migrateMassiveToMaster } from '../services/massiveSync';
+import * as XLSX from 'xlsx';
+import { massiveDb } from '../db.massive';
+import { sanitizeBarcode } from '../services/utils';
+import { SoundFX } from '../services/audio';
 
 // --- VIRTUALIZADOR MOBILE ---
 const SmartWindow = ({ items, itemHeight, renderRow: RenderRow, data }: any) => {
@@ -39,7 +43,7 @@ const SmartWindow = ({ items, itemHeight, renderRow: RenderRow, data }: any) => 
     );
 };
 
-// --- FILA DE HISTORIAL (ESTADOS DE COLOR LLAMATIVOS) ---
+// --- FILA DE HISTORIAL ---
 const MassiveItemRow = memo(({ index, data }: any) => {
     const item = data.items[index];
     if (!item) return null;
@@ -48,23 +52,16 @@ const MassiveItemRow = memo(({ index, data }: any) => {
     const isActive = activeBarcode === item.barcode;
     const hasTarget = item.expectedQty !== undefined;
     
-    // Determinación de color por estado
-    let statusClasses = 'bg-slate-900/40 border-white/5'; // Default neutral
+    let statusClasses = 'bg-slate-900/40 border-white/5'; 
     
     if (hasTarget) {
         const count = item.totalQuantity;
         const target = item.expectedQty || 0;
-        
-        if (count === target) {
-            statusClasses = 'bg-emerald-600 border-emerald-400'; // COINCIDE (VERDE)
-        } else if (count < target) {
-            statusClasses = 'bg-red-600 border-red-400'; // MENOR (ROJO)
-        } else {
-            statusClasses = 'bg-[#ff8c69] border-[#ff7247]'; // MAYOR (SALMÓN)
-        }
+        if (count === target) statusClasses = 'bg-emerald-600 border-emerald-400'; 
+        else if (count < target) statusClasses = 'bg-red-600 border-red-400'; 
+        else statusClasses = 'bg-[#ff8c69] border-[#ff7247]'; 
     }
 
-    // Si está activo, le damos un brillo especial pero mantenemos el color del estado si tiene target
     const activeOverlay = isActive ? 'ring-4 ring-white ring-inset shadow-[0_0_25px_rgba(255,255,255,0.3)] z-10 scale-[1.02]' : '';
     const activeBlue = (isActive && !hasTarget) ? 'bg-blue-600 border-blue-400' : '';
 
@@ -105,6 +102,7 @@ const MassiveBlindView: React.FC = () => {
     
     const [isTriggerActive, setIsTriggerActive] = useState(false);
     const [isMigrating, setIsMigrating] = useState(false);
+    const [isImporting, setIsImporting] = useState(false);
     const [showBarcodeModal, setShowBarcodeModal] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -116,6 +114,57 @@ const MassiveBlindView: React.FC = () => {
         }
     }, [registerScan, removeItemCompletely]);
 
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !batchId) return;
+
+        setIsImporting(true);
+        const reader = new FileReader();
+        
+        reader.onload = async (evt) => {
+            try {
+                const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const json = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
+
+                if (json.length < 2) throw new Error("Archivo vacío");
+
+                const headers = json[0].map(h => String(h).toUpperCase().trim());
+                const skuIdx = headers.findIndex(h => h.includes('SKU') || h.includes('COD') || h.includes('EAN'));
+                const nameIdx = headers.findIndex(h => h.includes('DESC') || h.includes('NOM') || h.includes('PROD'));
+                const qtyIdx = headers.findIndex(h => h.includes('CANT') || h.includes('QTY') || h.includes('OBJ') || h.includes('EXPECTED'));
+                const locIdx = headers.findIndex(h => h.includes('LOC') || h.includes('UBIC'));
+
+                if (skuIdx === -1 || qtyIdx === -1) throw new Error("Columnas 'SKU' y 'CANTIDAD' no detectadas");
+
+                const newItems = json.slice(1).map(row => ({
+                    batchId,
+                    barcode: sanitizeBarcode(String(row[skuIdx] || '')),
+                    name: String(row[nameIdx] || 'PRODUCTO NUEVO').trim(),
+                    expectedQty: Number(row[qtyIdx] || 0),
+                    loc: locIdx !== -1 ? String(row[locIdx] || '') : undefined
+                })).filter(i => i.barcode && i.expectedQty >= 0);
+
+                // --- LOGICA DE REEMPLAZO ---
+                // Limpiamos lo anterior del mismo lote
+                await massiveDb.blindManifests.where('batchId').equals(batchId).delete();
+                // Insertamos lo nuevo
+                await massiveDb.blindManifests.bulkAdd(newItems);
+                
+                SoundFX.play('success');
+                alert(`Cargados ${newItems.length} items de manifiesto.`);
+            } catch (err: any) {
+                alert(`Error al cargar: ${err.message}`);
+                SoundFX.play('error');
+            } finally {
+                setIsImporting(false);
+                if (fileInputRef.current) fileInputRef.current.value = '';
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    };
+
     const handleFinalize = async () => {
         if (!items.length) return;
         setIsMigrating(true);
@@ -126,23 +175,19 @@ const MassiveBlindView: React.FC = () => {
         finally { setIsMigrating(false); }
     };
 
-    // Color dinámico para el HUD superior
     const getHudColor = () => {
         if (!lastScannedItem) return 'bg-black';
-        if (lastScannedItem.expectedQty === undefined) return 'bg-blue-600'; // Modo ciego puro
-        
+        if (lastScannedItem.expectedQty === undefined) return 'bg-blue-600'; 
         const count = lastScannedItem.totalQuantity;
         const target = lastScannedItem.expectedQty;
-        
         if (count === target) return 'bg-emerald-600';
         if (count < target) return 'bg-red-600';
-        return 'bg-[#ff8c69]'; // Salmón
+        return 'bg-[#ff8c69]'; 
     };
 
     return (
         <div className="h-screen w-full flex flex-col font-mono bg-black select-none overflow-hidden text-white">
             
-            {/* STICKY TOP HEADER */}
             <header className="h-14 px-4 flex items-center justify-between border-b-2 border-white/5 bg-slate-900/50 shrink-0 z-50">
                 <div className="flex items-center gap-3">
                     <button onClick={() => navigate('/dashboard')} className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl active:bg-blue-600 transition-colors"><ChevronLeft className="w-6 h-6" /></button>
@@ -157,43 +202,35 @@ const MassiveBlindView: React.FC = () => {
                         <Barcode className="w-5 h-5 text-white" />
                     </button>
 
-                    <button onClick={() => fileInputRef.current?.click()} className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl border border-white/10 active:bg-amber-600"><Upload className="w-4 h-4 text-white/60" /></button>
-                    <input ref={fileInputRef} type="file" className="hidden" accept=".xlsx" onChange={() => {}} />
+                    <button 
+                        disabled={isImporting}
+                        onClick={() => fileInputRef.current?.click()} 
+                        className={`w-10 h-10 flex items-center justify-center rounded-xl border border-white/10 transition-all ${isImporting ? 'bg-amber-600 animate-pulse' : 'bg-white/5 active:bg-amber-600'}`}
+                    >
+                        {isImporting ? <Loader2 className="w-4 h-4 text-white animate-spin" /> : <Upload className="w-4 h-4 text-white/60" />}
+                    </button>
+                    <input ref={fileInputRef} type="file" className="hidden" accept=".xlsx" onChange={handleFileUpload} />
                     
-                    <button onClick={handleFinalize} disabled={!items.length || isMigrating} className="w-14 h-10 bg-blue-600 rounded-xl active:scale-95 flex items-center justify-center shadow-lg shadow-blue-900/40">
+                    <button onClick={handleFinalize} disabled={!items.length || isMigrating || isImporting} className="w-14 h-10 bg-blue-600 rounded-xl active:scale-95 flex items-center justify-center shadow-lg shadow-blue-900/40">
                         {isMigrating ? <Zap className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
                     </button>
                 </div>
             </header>
 
-            {/* ZONA SUPERIOR: VISOR HUD DINÁMICO */}
             <div className={`h-[42vh] relative flex flex-col overflow-hidden border-b-2 border-white/5 shrink-0 transition-colors duration-300 ${getHudColor()}`}>
                 <div className="w-full h-full flex items-stretch">
                     {lastScannedItem ? (
                         <>
-                            {/* PAD MENOS */}
-                            <button 
-                                onPointerDown={(e) => { e.preventDefault(); handleDecrement(lastScannedItem); }}
-                                className="w-1/5 bg-black/10 active:bg-black/40 flex items-center justify-center transition-colors border-r border-white/10"
-                            >
+                            <button onPointerDown={(e) => { e.preventDefault(); handleDecrement(lastScannedItem); }} className="w-1/5 bg-black/10 active:bg-black/40 flex items-center justify-center transition-colors border-r border-white/10">
                                 <Minus className="w-12 h-12 text-white/80" />
                             </button>
-
-                            {/* DISPLAY CENTRAL */}
                             <div className="flex-1 flex flex-col items-center justify-center px-4 text-center">
                                 <div className="mb-4 w-full max-w-xs">
-                                    <span className="text-white/60 font-mono text-[11px] font-black tracking-[0.2em] block mb-1">
-                                        {lastScannedItem.barcode}
-                                    </span>
-                                    <h2 className="text-white font-black text-xs md:text-sm uppercase tracking-tight line-clamp-2 leading-tight">
-                                        {lastScannedItem.name}
-                                    </h2>
+                                    <span className="text-white/60 font-mono text-[11px] font-black tracking-[0.2em] block mb-1">{lastScannedItem.barcode}</span>
+                                    <h2 className="text-white font-black text-xs md:text-sm uppercase tracking-tight line-clamp-2 leading-tight">{lastScannedItem.name}</h2>
                                 </div>
-                                
                                 <div className="relative">
-                                    <div className="text-[12rem] font-black tabular-nums leading-none text-white drop-shadow-2xl">
-                                        {lastScannedItem.totalQuantity}
-                                    </div>
+                                    <div className="text-[12rem] font-black tabular-nums leading-none text-white drop-shadow-2xl">{lastScannedItem.totalQuantity}</div>
                                     {lastScannedItem.expectedQty !== undefined && (
                                         <div className="bg-white/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mt-2 inline-block">
                                             Objetivo: {lastScannedItem.expectedQty}
@@ -201,12 +238,7 @@ const MassiveBlindView: React.FC = () => {
                                     )}
                                 </div>
                             </div>
-
-                            {/* PAD MAS */}
-                            <button 
-                                onPointerDown={(e) => { e.preventDefault(); registerScan(lastScannedItem.barcode, 1); }}
-                                className="w-1/5 bg-black/10 active:bg-black/40 flex items-center justify-center transition-colors border-l border-white/10"
-                            >
+                            <button onPointerDown={(e) => { e.preventDefault(); registerScan(lastScannedItem.barcode, 1); }} className="w-1/5 bg-black/10 active:bg-black/40 flex items-center justify-center transition-colors border-l border-white/10">
                                 <Plus className="w-12 h-12 text-white/80" />
                             </button>
                         </>
@@ -220,7 +252,6 @@ const MassiveBlindView: React.FC = () => {
                 {isFlash && <div className="absolute inset-0 z-[300] bg-white/30 pointer-events-none flash-active"></div>}
             </div>
 
-            {/* TRIGGER ÓPTICO (HOLD TO SCAN) */}
             <div className="h-24 shrink-0 bg-slate-900 flex items-center px-4 relative z-40 border-b-8 border-black">
                 <button 
                     onPointerDown={() => { if(navigator.vibrate) navigator.vibrate(40); setIsTriggerActive(true); }} 
@@ -243,7 +274,6 @@ const MassiveBlindView: React.FC = () => {
                 )}
             </div>
 
-            {/* HISTORIAL TÁCTICO */}
             <div className="flex-1 min-h-0 bg-black">
                 <div className="bg-slate-900/30 px-6 py-2 border-b border-white/5 flex justify-between items-center shrink-0">
                      <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
@@ -260,7 +290,6 @@ const MassiveBlindView: React.FC = () => {
                 </div>
             </div>
 
-            {/* MODAL GENERADOR DE CÓDIGO DE BARRAS */}
             {showBarcodeModal && lastScannedItem && (
                 <div className="fixed inset-0 z-[1000] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in zoom-in duration-200">
                     <div className="bg-white w-full max-w-sm rounded-[3rem] overflow-hidden shadow-2xl flex flex-col items-center">
@@ -282,10 +311,7 @@ const MassiveBlindView: React.FC = () => {
                                      {lastScannedItem.barcode}
                                  </div>
                              </div>
-                             <div className="flex flex-col items-center gap-2">
-                                <p className="text-[9px] font-bold text-blue-600 uppercase tracking-[0.4em] animate-pulse">Suba el brillo al máximo</p>
-                                <div className="h-1 w-12 bg-blue-500/20 rounded-full"></div>
-                             </div>
+                             <p className="text-[9px] font-bold text-blue-600 uppercase tracking-[0.4em] animate-pulse">Suba el brillo al máximo</p>
                         </div>
                         
                         <div className="w-full p-6 bg-slate-50 border-t border-slate-100">
