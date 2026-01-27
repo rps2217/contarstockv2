@@ -11,7 +11,7 @@ import { SHEET_COLUMNS } from "./constants";
 
 /**
  * MOTOR DE SINCRONIZACIÓN CLOUD
- * Rutea datos según el tipo de sesión: 'hammer' (Logs) o 'standard' (Consolidado).
+ * Rutea datos según el tipo de sesión.
  */
 export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg: string) => void): Promise<void> => {
   const config = getSettings().appSheetConfig;
@@ -23,34 +23,38 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
   let rows = [];
   let targetTable = "";
 
+  // --- PREPARACIÓN DE DATOS (CONSOLIDACIÓN) ---
+  // Tanto para Martillo como para Estándar, el usuario quiere ver TOTALES y NOMBRES, no logs individuales.
+  
+  // 1. Agrupar escaneos por código (suma cantidades y busca nombres en DB)
+  const consolidatedItems: ConsolidatedItem[] = await aggregateScans(unsynced);
+
   if (isHammerMode) {
-      // --- FLUJO MARTILLO: CADA ESCANEO ES UNA FILA EN "CONTEOS" ---
-      // IMPORTANTE: La hoja en Google Sheets debe tener estos encabezados exactos en la Fila 1
+      // --- MODO MARTILLO: Salida a "CONTEOS" pero Consolidada ---
       targetTable = config?.countsTableName || "CONTEOS";
-      if (onProgress) onProgress(`Subiendo LOGS a: ${targetTable}`);
+      if (onProgress) onProgress(`Consolidando Martillo en: ${targetTable}`);
       
-      rows = unsynced.map(record => {
-          const dateObj = new Date(record.timestamp);
+      rows = consolidatedItems.map(item => {
           return {
-              [SHEET_COLUMNS.ID]: record.id,
-              [SHEET_COLUMNS.UNIQUE_KEY]: `${session.erpOrder}_${session.logisticsLabel}_${record.barcode}_${record.id.substring(0,6)}`,
-              [SHEET_COLUMNS.DATE]: dateObj.toLocaleString(),
+              [SHEET_COLUMNS.ID]: generateUUID(), // ID único para la fila del reporte
+              // Clave única compuesta: ERP + Lote + SKU para evitar duplicados lógicos
+              [SHEET_COLUMNS.UNIQUE_KEY]: `${session.erpOrder}_${session.logisticsLabel}_${item.barcode}`,
+              [SHEET_COLUMNS.DATE]: new Date().toLocaleString(),
               [SHEET_COLUMNS.ERP_ORDER]: session.erpOrder,
-              [SHEET_COLUMNS.BARCODE]: record.barcode,
-              [SHEET_COLUMNS.PRODUCT_NAME]: "Audit_Martillo", 
-              [SHEET_COLUMNS.QUANTITY]: record.quantity,
+              [SHEET_COLUMNS.BARCODE]: item.barcode,
+              [SHEET_COLUMNS.PRODUCT_NAME]: item.productName, // Nombre real recuperado de la base de datos
+              [SHEET_COLUMNS.QUANTITY]: item.totalQuantity,   // Cantidad sumada total
               [SHEET_COLUMNS.LABEL]: session.logisticsLabel,
-              [SHEET_COLUMNS.INCIDENT]: record.isIncident ? "SI" : "NO"
+              [SHEET_COLUMNS.INCIDENT]: item.isIncident ? "SI" : "NO"
           };
       });
+
   } else {
-      // --- FLUJO ESTÁNDAR: RESUMEN AGRUPADO EN "CONSOLIDADOS" ---
+      // --- MODO ESTÁNDAR: Salida a "CONSOLIDADOS" ---
       targetTable = config?.consolidatedTableName || "CONSOLIDADOS";
       if (onProgress) onProgress(`Subiendo RESUMEN a: ${targetTable}`);
       
-      const consolidated: ConsolidatedItem[] = await aggregateScans(unsynced);
-      
-      rows = consolidated.map(item => ({
+      rows = consolidatedItems.map(item => ({
           "ID_CONSOLIDADO": generateUUID().substring(0, 8),
           [SHEET_COLUMNS.UNIQUE_KEY]: `${session.erpOrder}_${session.logisticsLabel}_${item.barcode}`,
           [SHEET_COLUMNS.DATE]: new Date().toLocaleString(),
