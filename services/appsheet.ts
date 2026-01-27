@@ -24,47 +24,60 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
   let targetTable = "";
 
   // --- PREPARACIÓN DE DATOS (CONSOLIDACIÓN) ---
-  // Tanto para Martillo como para Estándar, el usuario quiere ver TOTALES y NOMBRES, no logs individuales.
-  
-  // 1. Agrupar escaneos por código (suma cantidades y busca nombres en DB)
   const consolidatedItems: ConsolidatedItem[] = await aggregateScans(unsynced);
 
   if (isHammerMode) {
-      // --- MODO MARTILLO: Salida a "CONTEOS" pero Consolidada ---
+      // --- MODO MARTILLO ---
       targetTable = config?.countsTableName || "CONTEOS";
       if (onProgress) onProgress(`Consolidando Martillo en: ${targetTable}`);
       
       rows = consolidatedItems.map(item => {
+          const physical = item.totalQuantity;
+          // Nota: Actualmente el modo martillo post-migración no retiene el esperado localmente en scans,
+          // por lo que se envía 0 por defecto si no está disponible, permitiendo rellenarlo en el Excel después si es necesario.
+          const expected = item.expectedQuantity || 0; 
+          const difference = physical - expected;
+
           return {
-              [SHEET_COLUMNS.ID]: generateUUID(), // ID único para la fila del reporte
-              // Clave única compuesta: ERP + Lote + SKU para evitar duplicados lógicos
+              [SHEET_COLUMNS.ID]: generateUUID(),
               [SHEET_COLUMNS.UNIQUE_KEY]: `${session.erpOrder}_${session.logisticsLabel}_${item.barcode}`,
               [SHEET_COLUMNS.DATE]: new Date().toLocaleString(),
               [SHEET_COLUMNS.ERP_ORDER]: session.erpOrder,
               [SHEET_COLUMNS.BARCODE]: item.barcode,
-              [SHEET_COLUMNS.PRODUCT_NAME]: item.productName, // Nombre real recuperado de la base de datos
-              [SHEET_COLUMNS.QUANTITY]: item.totalQuantity,   // Cantidad sumada total
+              [SHEET_COLUMNS.PRODUCT_NAME]: item.productName,
+              [SHEET_COLUMNS.QUANTITY]: physical,
+              [SHEET_COLUMNS.EXPECTED]: expected, // Nueva Columna
+              [SHEET_COLUMNS.DIFF]: difference,   // Nueva Columna
               [SHEET_COLUMNS.LABEL]: session.logisticsLabel,
               [SHEET_COLUMNS.INCIDENT]: item.isIncident ? "SI" : "NO"
           };
       });
 
   } else {
-      // --- MODO ESTÁNDAR: Salida a "CONSOLIDADOS" ---
+      // --- MODO ESTÁNDAR ---
       targetTable = config?.consolidatedTableName || "CONSOLIDADOS";
       if (onProgress) onProgress(`Subiendo RESUMEN a: ${targetTable}`);
       
-      rows = consolidatedItems.map(item => ({
-          "ID_CONSOLIDADO": generateUUID().substring(0, 8),
-          [SHEET_COLUMNS.UNIQUE_KEY]: `${session.erpOrder}_${session.logisticsLabel}_${item.barcode}`,
-          [SHEET_COLUMNS.DATE]: new Date().toLocaleString(),
-          [SHEET_COLUMNS.ERP_ORDER]: session.erpOrder,
-          [SHEET_COLUMNS.LABEL]: session.logisticsLabel,
-          [SHEET_COLUMNS.BARCODE]: item.barcode,
-          [SHEET_COLUMNS.PRODUCT_NAME]: item.productName,
-          [SHEET_COLUMNS.QUANTITY]: item.totalQuantity,
-          "INCIDENCIAS": item.isIncident ? "SI" : "NO"
-      }));
+      rows = consolidatedItems.map(item => {
+          const physical = item.totalQuantity;
+          const expected = item.expectedQuantity || 0;
+          const difference = physical - expected;
+
+          return {
+            "ID_CONSOLIDADO": generateUUID().substring(0, 8),
+            [SHEET_COLUMNS.UNIQUE_KEY]: `${session.erpOrder}_${session.logisticsLabel}_${item.barcode}`,
+            [SHEET_COLUMNS.DATE]: new Date().toLocaleString(),
+            [SHEET_COLUMNS.ERP_ORDER]: session.erpOrder,
+            [SHEET_COLUMNS.LABEL]: session.logisticsLabel,
+            [SHEET_COLUMNS.BARCODE]: item.barcode,
+            [SHEET_COLUMNS.PRODUCT_NAME]: item.productName,
+            [SHEET_COLUMNS.QUANTITY]: physical,
+            // Agregamos también al consolidado por consistencia
+            [SHEET_COLUMNS.EXPECTED]: expected, 
+            [SHEET_COLUMNS.DIFF]: difference,
+            "INCIDENCIAS": item.isIncident ? "SI" : "NO"
+          };
+      });
   }
 
   // Envío al motor Turbo de Google
