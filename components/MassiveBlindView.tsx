@@ -2,7 +2,7 @@
 import React, { useState, useRef, memo, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMassiveScanner, ConsolidatedBlindItem } from '../hooks/useMassiveScanner';
-import { ChevronLeft, Plus, Minus, ScanLine, Zap, Save, Upload, Database, Camera, Target, Barcode, X, Loader2, RotateCcw, CloudDownload } from 'lucide-react';
+import { ChevronLeft, Plus, Minus, ScanLine, Zap, Save, Upload, Database, Camera, Target, Barcode, X, Loader2, RotateCcw, Download } from 'lucide-react';
 import { CameraScanner } from './CameraScanner';
 import { migrateMassiveToMaster, importManifestFromCloud } from '../services/massiveSync';
 import * as XLSX from 'xlsx';
@@ -254,7 +254,7 @@ const MassiveBlindView: React.FC = () => {
                         className={`w-10 h-10 flex items-center justify-center rounded-xl border border-white/10 transition-all ${isImporting ? 'bg-indigo-600 animate-pulse' : 'bg-indigo-600/20 active:bg-indigo-600'}`}
                         title="Descargar STOCK de Nube"
                     >
-                        {isImporting ? <Loader2 className="w-4 h-4 text-white animate-spin" /> : <CloudDownload className="w-4 h-4 text-white" />}
+                        {isImporting ? <Loader2 className="w-4 h-4 text-white animate-spin" /> : <Download className="w-4 h-4 text-white" />}
                     </button>
 
                     {/* BOTÓN EXCEL (SECUNDARIO, OCULTO EN INPUT) */}
