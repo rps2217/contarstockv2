@@ -17,13 +17,11 @@ const cleanString = z.union([z.string(), z.number(), z.null(), z.undefined()])
  */
 export const CloudProductSchema = z.record(z.any()).transform((raw) => {
     const normalized: Record<string, any> = {};
-    // Normalizar todas las llaves a mayúsculas y quitar acentos básicos para comparación robusta
     Object.keys(raw).forEach(k => {
         const key = k.trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         normalized[key] = raw[k];
     });
 
-    // Mapeo flexible
     const barcode = normalized["COD PRODUCTO"] || normalized["CODIGO"] || normalized["SKU"] || normalized["BARCODE"] || normalized["EAN"] || "";
     const name = normalized["DESCRIPCION"] || normalized["PRODUCTO"] || normalized["NOMBRE"] || normalized["DESCRIP"] || normalized["ITEM"] || "Sin descripción";
     const category = normalized["MUNDO"] || normalized["CATEGORIA"] || normalized["CATEGORY"] || "GENERAL";
@@ -43,6 +41,36 @@ export const CloudProductSchema = z.record(z.any()).transform((raw) => {
     category: z.string().default("GENERAL"),
     supplier: z.string().default(""),
     supplierRut: z.string().default("")
+}));
+
+/**
+ * ESQUEMA PARA MANIFIESTO DE STOCK (Modo Martillo)
+ * Descarga desde hoja "STOCK" o similar.
+ */
+export const CloudStockSchema = z.record(z.any()).transform((raw) => {
+    const normalized: Record<string, any> = {};
+    Object.keys(raw).forEach(k => {
+        const key = k.trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        normalized[key] = raw[k];
+    });
+
+    const barcode = normalized["CODIGO"] || normalized["SKU"] || normalized["EAN"] || normalized["ITEM"] || "";
+    const name = normalized["DESCRIPCION"] || normalized["NOMBRE"] || normalized["PRODUCTO"] || "Producto Desconocido";
+    // Acepta múltiples variantes para la cantidad esperada
+    const qty = normalized["CANTIDAD"] || normalized["STOCK"] || normalized["QTY"] || normalized["SALDO"] || normalized["UNIDADES"] || 0;
+    const loc = normalized["UBICACION"] || normalized["LOC"] || normalized["POSICION"] || "";
+
+    return {
+        barcode: String(barcode).trim(),
+        name: String(name).trim(),
+        expectedQty: Number(qty),
+        loc: String(loc).trim()
+    };
+}).pipe(z.object({
+    barcode: z.string().min(1, "SKU Inválido"),
+    name: z.string(),
+    expectedQty: z.number().min(0),
+    loc: z.string().optional()
 }));
 
 // Mantener esquemas de inventario para compatibilidad

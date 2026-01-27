@@ -2,9 +2,9 @@
 import React, { useState, useRef, memo, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMassiveScanner, ConsolidatedBlindItem } from '../hooks/useMassiveScanner';
-import { ChevronLeft, Plus, Minus, ScanLine, Zap, Save, Upload, Database, Camera, Target, Barcode, X, Loader2, RotateCcw } from 'lucide-react';
+import { ChevronLeft, Plus, Minus, ScanLine, Zap, Save, Upload, Database, Camera, Target, Barcode, X, Loader2, RotateCcw, CloudDownload } from 'lucide-react';
 import { CameraScanner } from './CameraScanner';
-import { migrateMassiveToMaster } from '../services/massiveSync';
+import { migrateMassiveToMaster, importManifestFromCloud } from '../services/massiveSync';
 import * as XLSX from 'xlsx';
 import { massiveDb } from '../db.massive';
 import { sanitizeBarcode } from '../services/utils';
@@ -118,6 +118,7 @@ const MassiveBlindView: React.FC = () => {
         }
     }, [registerScan, removeItemCompletely]);
 
+    // Función de carga por Excel (Legacy / Respaldo)
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file || !batchId) return;
@@ -134,8 +135,6 @@ const MassiveBlindView: React.FC = () => {
 
                 if (!json || json.length < 2) throw new Error("Archivo sin datos detectados.");
 
-                // --- FIX CRITICO: Blindaje de lectura de encabezados ---
-                // Convertimos json[0] en un array real y sanitizamos cada celda para evitar 'undefined'
                 const headers = Array.from(json[0]).map(h => String(h || '').toUpperCase().trim());
 
                 const skuIdx = headers.findIndex(h => h.includes('SKU') || h.includes('COD') || h.includes('EAN') || h.includes('ITEM'));
@@ -163,6 +162,7 @@ const MassiveBlindView: React.FC = () => {
                 await massiveDb.blindManifests.bulkAdd(newItems);
                 
                 SoundFX.play('success');
+                alert(`Cargados ${newItems.length} registros desde Excel.`);
             } catch (err: any) {
                 alert(`Error de Procesamiento: ${err.message}`);
                 SoundFX.play('error');
@@ -172,6 +172,28 @@ const MassiveBlindView: React.FC = () => {
             }
         };
         reader.readAsArrayBuffer(file);
+    };
+
+    // NUEVA FUNCIÓN: Carga desde Google Sheets (STOCK)
+    const handleCloudImport = async () => {
+        if (!navigator.onLine) {
+            alert("Se requiere conexión a internet para descargar el Stock.");
+            return;
+        }
+        
+        if (!confirm("¿Descargar 'STOCK' desde la nube?\nEsto reemplazará el manifiesto actual.")) return;
+
+        setIsImporting(true);
+        try {
+            const count = await importManifestFromCloud(batchId || 'CORE');
+            SoundFX.play('success');
+            alert(`✅ Stock Descargado: ${count} registros.`);
+        } catch (e: any) {
+            alert(`Error de Nube: ${e.message}`);
+            SoundFX.play('error');
+        } finally {
+            setIsImporting(false);
+        }
     };
 
     const handleFinalize = async () => {
@@ -225,13 +247,17 @@ const MassiveBlindView: React.FC = () => {
                         <Barcode className="w-5 h-5 text-white" />
                     </button>
 
+                    {/* BOTÓN NUBE (PRINCIPAL) */}
                     <button 
                         disabled={isImporting}
-                        onClick={() => fileInputRef.current?.click()} 
-                        className={`w-10 h-10 flex items-center justify-center rounded-xl border border-white/10 transition-all ${isImporting ? 'bg-amber-600 animate-pulse' : 'bg-white/5 active:bg-amber-600'}`}
+                        onClick={handleCloudImport} 
+                        className={`w-10 h-10 flex items-center justify-center rounded-xl border border-white/10 transition-all ${isImporting ? 'bg-indigo-600 animate-pulse' : 'bg-indigo-600/20 active:bg-indigo-600'}`}
+                        title="Descargar STOCK de Nube"
                     >
-                        {isImporting ? <Loader2 className="w-4 h-4 text-white animate-spin" /> : <Upload className="w-4 h-4 text-white/60" />}
+                        {isImporting ? <Loader2 className="w-4 h-4 text-white animate-spin" /> : <CloudDownload className="w-4 h-4 text-white" />}
                     </button>
+
+                    {/* BOTÓN EXCEL (SECUNDARIO, OCULTO EN INPUT) */}
                     <input ref={fileInputRef} type="file" className="hidden" accept=".xlsx" onChange={handleFileUpload} />
                     
                     <button onClick={handleFinalize} disabled={!items.length || isMigrating || isImporting} className="w-14 h-10 bg-blue-600 rounded-xl active:scale-95 flex items-center justify-center shadow-lg shadow-blue-900/40">
