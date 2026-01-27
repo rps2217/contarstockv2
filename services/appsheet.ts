@@ -26,6 +26,16 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
   // --- PREPARACIÓN DE DATOS (CONSOLIDACIÓN) ---
   const consolidatedItems: ConsolidatedItem[] = await aggregateScans(unsynced);
 
+  // --- MAPEO DE STOCK ESPERADO (CRÍTICO) ---
+  // Recuperamos la información teórica almacenada en la sesión (si existe)
+  // para enriquecer el reporte con lo que el sistema "esperaba".
+  const expectedMap = new Map<string, number>();
+  if (session.expectedItems && session.expectedItems.length > 0) {
+      session.expectedItems.forEach(item => {
+          expectedMap.set(item.barcode, item.expectedQty);
+      });
+  }
+
   if (isHammerMode) {
       // --- MODO MARTILLO ---
       targetTable = config?.countsTableName || "CONTEOS";
@@ -33,9 +43,9 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
       
       rows = consolidatedItems.map(item => {
           const physical = item.totalQuantity;
-          // Nota: Actualmente el modo martillo post-migración no retiene el esperado localmente en scans,
-          // por lo que se envía 0 por defecto si no está disponible, permitiendo rellenarlo en el Excel después si es necesario.
-          const expected = item.expectedQuantity || 0; 
+          
+          // Recuperamos el teórico del mapa o usamos el del item si ya viniera (fallback)
+          const expected = expectedMap.get(item.barcode) || item.expectedQuantity || 0; 
           const difference = physical - expected;
 
           return {
@@ -46,8 +56,8 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
               [SHEET_COLUMNS.BARCODE]: item.barcode,
               [SHEET_COLUMNS.PRODUCT_NAME]: item.productName,
               [SHEET_COLUMNS.QUANTITY]: physical,
-              [SHEET_COLUMNS.EXPECTED]: expected, // Nueva Columna
-              [SHEET_COLUMNS.DIFF]: difference,   // Nueva Columna
+              [SHEET_COLUMNS.EXPECTED]: expected, // Ahora sí lleva el dato real
+              [SHEET_COLUMNS.DIFF]: difference,
               [SHEET_COLUMNS.LABEL]: session.logisticsLabel,
               [SHEET_COLUMNS.INCIDENT]: item.isIncident ? "SI" : "NO"
           };
@@ -60,7 +70,7 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
       
       rows = consolidatedItems.map(item => {
           const physical = item.totalQuantity;
-          const expected = item.expectedQuantity || 0;
+          const expected = expectedMap.get(item.barcode) || item.expectedQuantity || 0;
           const difference = physical - expected;
 
           return {
@@ -72,7 +82,6 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
             [SHEET_COLUMNS.BARCODE]: item.barcode,
             [SHEET_COLUMNS.PRODUCT_NAME]: item.productName,
             [SHEET_COLUMNS.QUANTITY]: physical,
-            // Agregamos también al consolidado por consistencia
             [SHEET_COLUMNS.EXPECTED]: expected, 
             [SHEET_COLUMNS.DIFF]: difference,
             "INCIDENCIAS": item.isIncident ? "SI" : "NO"

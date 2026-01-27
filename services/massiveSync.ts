@@ -4,17 +4,18 @@ import { massiveDb } from '../db.massive';
 import { createSession, updateSessionMetadata } from './sessionService';
 import { logger } from './logger';
 import { generateUUID, sanitizeBarcode } from './utils';
-import { ScanRecord } from '../types';
+import { ScanRecord, ExpectedItem } from '../types';
 import { fetchFromGas } from './gasService';
 import { CloudStockSchema } from './schemas';
 
 /**
  * MIGRACIÓN DE DATOS: MODO MARTILLO -> MAESTRO
- * Transfiere los datos crudos a la base principal.
+ * Transfiere los datos crudos a la base principal e incluye el STOCK ESPERADO.
  */
 export const migrateMassiveToMaster = async (batchId: string): Promise<string> => {
     try {
         const rawScans = await massiveDb.blindScans.where('batchId').equals(batchId).toArray();
+        const manifestItems = await massiveDb.blindManifests.where('batchId').equals(batchId).toArray();
         
         if (rawScans.length === 0) throw new Error("No hay datos para migrar.");
 
@@ -22,8 +23,25 @@ export const migrateMassiveToMaster = async (batchId: string): Promise<string> =
         const erpOrder = `HM-${batchId.substring(0, 8).toUpperCase()}`;
         const sessionLabel = batchId;
         
+        // 1. Crear Sesión
         const session = await createSession(erpOrder, sessionLabel, 'hammer');
 
+        // 2. Transformar Manifiesto (Stock Teórico) y guardarlo en la sesión
+        // Esto es CRÍTICO para que al subir a la nube aparezca el Stock Esperado
+        const expectedItems: ExpectedItem[] = manifestItems.map(m => ({
+            barcode: m.barcode,
+            name: m.name || "Producto Martillo",
+            expectedQty: m.expectedQty
+        }));
+
+        if (expectedItems.length > 0) {
+            await db.sessions.update(session.id, { 
+                expectedItems: expectedItems,
+                isVerifiedMode: true // Activamos modo verificado para que UI muestre diferencias
+            });
+        }
+
+        // 3. Transformar Escaneos Físicos
         const recordsToMigrate: ScanRecord[] = rawScans.map(scan => {
             return {
                 id: generateUUID(),
