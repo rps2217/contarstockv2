@@ -7,6 +7,7 @@ import { markProductsAsSynced } from "./productService";
 import { db } from "../db";
 import { sendToGas, fetchFromGas } from "./gasService";
 import { aggregateScans } from "./aggregator";
+import { SHEET_COLUMNS } from "./constants";
 
 /**
  * MOTOR DE SINCRONIZACIÓN CLOUD
@@ -24,22 +25,22 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
 
   if (isHammerMode) {
       // --- FLUJO MARTILLO: CADA ESCANEO ES UNA FILA EN "CONTEOS" ---
+      // IMPORTANTE: La hoja en Google Sheets debe tener estos encabezados exactos en la Fila 1
       targetTable = config?.countsTableName || "CONTEOS";
       if (onProgress) onProgress(`Subiendo LOGS a: ${targetTable}`);
       
       rows = unsynced.map(record => {
           const dateObj = new Date(record.timestamp);
-          // Estas llaves deben ser idénticas a las del Script de Google
           return {
-              "ID_REGISTRO": record.id,
-              "CLAVE_UNICA": `${session.erpOrder}_${session.logisticsLabel}_${record.barcode}_${record.id.substring(0,6)}`,
-              "FECHA": dateObj.toLocaleString(),
-              "ERP": session.erpOrder,
-              "CODIGO": record.barcode,
-              "PRODUCTO": "Audit_Martillo", 
-              "CANTIDAD": record.quantity,
-              "ETIQUETAS": session.logisticsLabel,
-              "FRC": record.isIncident ? "SI" : "NO"
+              [SHEET_COLUMNS.ID]: record.id,
+              [SHEET_COLUMNS.UNIQUE_KEY]: `${session.erpOrder}_${session.logisticsLabel}_${record.barcode}_${record.id.substring(0,6)}`,
+              [SHEET_COLUMNS.DATE]: dateObj.toLocaleString(),
+              [SHEET_COLUMNS.ERP_ORDER]: session.erpOrder,
+              [SHEET_COLUMNS.BARCODE]: record.barcode,
+              [SHEET_COLUMNS.PRODUCT_NAME]: "Audit_Martillo", 
+              [SHEET_COLUMNS.QUANTITY]: record.quantity,
+              [SHEET_COLUMNS.LABEL]: session.logisticsLabel,
+              [SHEET_COLUMNS.INCIDENT]: record.isIncident ? "SI" : "NO"
           };
       });
   } else {
@@ -51,13 +52,13 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
       
       rows = consolidated.map(item => ({
           "ID_CONSOLIDADO": generateUUID().substring(0, 8),
-          "CLAVE_UNICA": `${session.erpOrder}_${session.logisticsLabel}_${item.barcode}`,
-          "FECHA": new Date().toLocaleString(),
-          "ERP": session.erpOrder,
-          "ETIQUETA": session.logisticsLabel,
-          "CODIGO": item.barcode,
-          "PRODUCTO": item.productName,
-          "CANTIDAD": item.totalQuantity,
+          [SHEET_COLUMNS.UNIQUE_KEY]: `${session.erpOrder}_${session.logisticsLabel}_${item.barcode}`,
+          [SHEET_COLUMNS.DATE]: new Date().toLocaleString(),
+          [SHEET_COLUMNS.ERP_ORDER]: session.erpOrder,
+          [SHEET_COLUMNS.LABEL]: session.logisticsLabel,
+          [SHEET_COLUMNS.BARCODE]: item.barcode,
+          [SHEET_COLUMNS.PRODUCT_NAME]: item.productName,
+          [SHEET_COLUMNS.QUANTITY]: item.totalQuantity,
           "INCIDENCIAS": item.isIncident ? "SI" : "NO"
       }));
   }
@@ -69,7 +70,7 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
       await markScansAsSynced(unsynced.map(s => s.id));
       if (onProgress) onProgress(`✓ Sincronización exitosa.`);
   } else {
-      throw new Error(result?.error || `Fallo en comunicación con ${targetTable}`);
+      throw new Error(result?.error || `Fallo en comunicación con ${targetTable}. Verifique que la hoja tenga los encabezados correctos.`);
   }
 };
 
@@ -81,8 +82,8 @@ export const fetchProductsFromCloud = async (): Promise<any[]> => {
 export const syncProductsToAppSheet = async (products: Product[]): Promise<void> => {
     const config = getSettings().appSheetConfig;
     const rows = products.map(p => ({
-        "CODIGO": p.barcode,
-        "PRODUCTO": p.name,
+        [SHEET_COLUMNS.BARCODE]: p.barcode,
+        [SHEET_COLUMNS.PRODUCT_NAME]: p.name,
         "CATEGORIA": p.category,
         "PROVEEDOR": p.supplier,
         "RUT": p.supplierRut
