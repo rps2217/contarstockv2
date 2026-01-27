@@ -15,7 +15,6 @@ import { CloudStockSchema } from './schemas';
 export const migrateMassiveToMaster = async (batchId: string): Promise<string> => {
     try {
         const rawScans = await massiveDb.blindScans.where('batchId').equals(batchId).toArray();
-        // const manifests = await massiveDb.blindManifests.where('batchId').equals(batchId).toArray(); // Unused
         
         if (rawScans.length === 0) throw new Error("No hay datos para migrar.");
 
@@ -23,7 +22,6 @@ export const migrateMassiveToMaster = async (batchId: string): Promise<string> =
         const erpOrder = `HM-${batchId.substring(0, 8).toUpperCase()}`;
         const sessionLabel = batchId;
         
-        // CRÍTICO: sessionType 'hammer' activa el ruteo a la tabla de logs detallados
         const session = await createSession(erpOrder, sessionLabel, 'hammer');
 
         const recordsToMigrate: ScanRecord[] = rawScans.map(scan => {
@@ -33,7 +31,6 @@ export const migrateMassiveToMaster = async (batchId: string): Promise<string> =
                 barcode: scan.barcode,
                 quantity: scan.quantity,
                 timestamp: scan.timestamp,
-                // NO incluimos MM ni YYYY, es irrelevante para conteo masivo
                 synced: 0,
                 isIncident: false 
             };
@@ -63,10 +60,11 @@ export const migrateMassiveToMaster = async (batchId: string): Promise<string> =
 export const importManifestFromCloud = async (batchId: string): Promise<number> => {
     try {
         // 1. Descargar datos crudos desde Google Sheet (Hoja 'STOCK')
+        // El script de Google debe tener mapeado 'STOCK' a la hoja correspondiente
         const rawRows = await fetchFromGas('STOCK');
         
         if (!rawRows || rawRows.length === 0) {
-            throw new Error("La hoja STOCK está vacía o no existe.");
+            throw new Error("La hoja STOCK está vacía o no existe en la nube.");
         }
 
         // 2. Mapeo y validación segura con Zod
@@ -85,7 +83,7 @@ export const importManifestFromCloud = async (batchId: string): Promise<number> 
             }));
 
         if (newManifestItems.length === 0) {
-            throw new Error("No se encontraron registros válidos en la hoja STOCK (Verifique columnas SKU/CANTIDAD).");
+            throw new Error("Datos descargados inválidos. Verifique columnas: CODIGO, PRODUCTO, STOCK FINAL.");
         }
 
         // 3. Reemplazo atómico del manifiesto para este lote

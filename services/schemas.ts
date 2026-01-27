@@ -13,7 +13,6 @@ const cleanString = z.union([z.string(), z.number(), z.null(), z.undefined()])
 
 /**
  * NORMALIZADOR UNIVERSAL DE PRODUCTOS
- * Mapea variaciones de nombres de columnas a nuestro esquema interno.
  */
 export const CloudProductSchema = z.record(z.any()).transform((raw) => {
     const normalized: Record<string, any> = {};
@@ -45,20 +44,24 @@ export const CloudProductSchema = z.record(z.any()).transform((raw) => {
 
 /**
  * ESQUEMA PARA MANIFIESTO DE STOCK (Modo Martillo)
- * Descarga desde hoja "STOCK" o similar.
+ * Adaptado a la estructura: CODIGO | PRODUCTO | LOC | STOCK FINAL
  */
 export const CloudStockSchema = z.record(z.any()).transform((raw) => {
     const normalized: Record<string, any> = {};
     Object.keys(raw).forEach(k => {
-        const key = k.trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        // Normalizamos keys: "STOCK FINAL" -> "STOCKFINAL", "CODIGO" -> "CODIGO"
+        const key = k.trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
         normalized[key] = raw[k];
     });
 
+    // Mapeo basado en tu imagen de Excel
     const barcode = normalized["CODIGO"] || normalized["SKU"] || normalized["EAN"] || normalized["ITEM"] || "";
-    const name = normalized["DESCRIPCION"] || normalized["NOMBRE"] || normalized["PRODUCTO"] || "Producto Desconocido";
-    // Acepta múltiples variantes para la cantidad esperada
-    const qty = normalized["CANTIDAD"] || normalized["STOCK"] || normalized["QTY"] || normalized["SALDO"] || normalized["UNIDADES"] || 0;
-    const loc = normalized["UBICACION"] || normalized["LOC"] || normalized["POSICION"] || "";
+    const name = normalized["PRODUCTO"] || normalized["DESCRIPCION"] || normalized["NOMBRE"] || "Producto Desconocido";
+    
+    // Prioridad a "STOCKFINAL"
+    const qty = normalized["STOCKFINAL"] || normalized["STOCK"] || normalized["CANTIDAD"] || normalized["QTY"] || normalized["SALDO"] || 0;
+    
+    const loc = normalized["LOC"] || normalized["UBICACION"] || normalized["POSICION"] || "";
 
     return {
         barcode: String(barcode).trim(),

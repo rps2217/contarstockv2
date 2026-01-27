@@ -139,10 +139,10 @@ const MassiveBlindView: React.FC = () => {
 
                 const skuIdx = headers.findIndex(h => h.includes('SKU') || h.includes('COD') || h.includes('EAN') || h.includes('ITEM'));
                 const nameIdx = headers.findIndex(h => h.includes('DESC') || h.includes('NOM') || h.includes('PROD'));
-                const qtyIdx = headers.findIndex(h => h.includes('CANT') || h.includes('QTY') || h.includes('OBJ') || h.includes('EXPECTED') || h.includes('UNID'));
+                const qtyIdx = headers.findIndex(h => h.includes('CANT') || h.includes('QTY') || h.includes('OBJ') || h.includes('EXPECTED') || h.includes('UNID') || h.includes('STOCK'));
                 const locIdx = headers.findIndex(h => h.includes('LOC') || h.includes('UBIC'));
 
-                if (skuIdx === -1 || qtyIdx === -1) throw new Error("No se detectaron columnas de 'SKU' o 'CANTIDAD'.");
+                if (skuIdx === -1 || qtyIdx === -1) throw new Error("No se detectaron columnas de 'CODIGO' o 'STOCK FINAL'.");
 
                 const newItems = json.slice(1).map(row => {
                     if (!row || row.length === 0) return null;
