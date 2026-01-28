@@ -1,8 +1,7 @@
-
 import React, { useState, useRef, memo, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMassiveScanner, ConsolidatedBlindItem } from '../hooks/useMassiveScanner';
-import { ChevronLeft, Plus, Minus, ScanLine, Zap, Save, Upload, Database, Camera, Target, Barcode, X, Loader2, RotateCcw, Download } from 'lucide-react';
+import { ChevronLeft, Plus, Minus, ScanLine, Zap, Save, Upload, Database, Camera, Target, Barcode, X, Loader2, RotateCcw, Download, Printer } from 'lucide-react';
 import { CameraScanner } from './CameraScanner';
 import { migrateMassiveToMaster, importManifestFromCloud } from '../services/massiveSync';
 import * as XLSX from 'xlsx';
@@ -118,6 +117,83 @@ const MassiveBlindView: React.FC = () => {
         }
     }, [registerScan, removeItemCompletely]);
 
+    const handlePrintBarcode = (barcode: string, name: string) => {
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) {
+            alert("Por favor permite las ventanas emergentes para imprimir.");
+            return;
+        }
+
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Imprimir SKU ${barcode}</title>
+                <style>
+                    @import url('https://fonts.googleapis.com/css2?family=Libre+Barcode+128&family=JetBrains+Mono:wght@700&display=swap');
+                    
+                    body {
+                        margin: 0;
+                        padding: 2mm;
+                        width: 72mm; /* Optimizado para impresoras de 80mm con márgenes */
+                        font-family: 'JetBrains Mono', monospace;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        text-align: center;
+                        background: white;
+                    }
+                    
+                    .barcode {
+                        font-family: 'Libre Barcode 128', cursive;
+                        font-size: 80px; 
+                        line-height: 1;
+                        margin: 2mm 0;
+                        white-space: nowrap;
+                    }
+                    
+                    .sku-text {
+                        font-size: 20px;
+                        font-weight: 800;
+                        letter-spacing: 1px;
+                        margin-bottom: 1mm;
+                        color: black;
+                    }
+                    
+                    .name-text {
+                        font-size: 11px;
+                        font-weight: 400;
+                        text-transform: uppercase;
+                        max-width: 90%;
+                        overflow: hidden;
+                        display: -webkit-box;
+                        -webkit-line-clamp: 2;
+                        -webkit-box-orient: vertical;
+                        color: #333;
+                    }
+
+                    @media print {
+                        @page { margin: 0; size: 80mm auto; }
+                        body { width: 100%; padding: 5mm 0; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="barcode">${barcode}</div>
+                <div class="sku-text">${barcode}</div>
+                <div class="name-text">${name}</div>
+                <script>
+                    window.onload = () => {
+                        window.print();
+                        setTimeout(() => window.close(), 500);
+                    };
+                </script>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+    };
+
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file || !batchId) return;
@@ -215,7 +291,7 @@ const MassiveBlindView: React.FC = () => {
                 <div className="w-full h-full flex items-stretch">
                     {lastScannedItem ? (
                         <>
-                            <button onPointerDown={(e) => { e.preventDefault(); handleDecrement(lastScannedItem); }} className="w-1/5 bg-black/10 active:bg-black/40 flex items-center justify-center border-r border-white/10">
+                            <button onPointerDown={(e) => { e.preventDefault(); handleDecrement(lastScannedItem); }} className="w/1/5 bg-black/10 active:bg-black/40 flex items-center justify-center border-r border-white/10">
                                 <Minus className="w-12 h-12 text-white/80" />
                             </button>
                             <div className="flex-1 flex flex-col items-center justify-center px-4 text-center">
@@ -230,7 +306,7 @@ const MassiveBlindView: React.FC = () => {
                                     )}
                                 </div>
                             </div>
-                            <button onPointerDown={(e) => { e.preventDefault(); registerScan(lastScannedItem.barcode, 1); }} className="w-1/5 bg-black/10 active:bg-black/40 flex items-center justify-center border-l border-white/10">
+                            <button onPointerDown={(e) => { e.preventDefault(); registerScan(lastScannedItem.barcode, 1); }} className="w/1/5 bg-black/10 active:bg-black/40 flex items-center justify-center border-l border-white/10">
                                 <Plus className="w-12 h-12 text-white/80" />
                             </button>
                         </>
@@ -284,9 +360,21 @@ const MassiveBlindView: React.FC = () => {
                                  <div className="barcode-font text-[75px] leading-none text-black mb-6 whitespace-nowrap">{lastScannedItem.barcode}</div>
                                  <div className="font-mono text-xl font-black text-slate-900 tracking-[0.4em] bg-slate-50 px-4 py-1 rounded-lg">{lastScannedItem.barcode}</div>
                              </div>
+                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-4 line-clamp-2">{lastScannedItem.name}</p>
                         </div>
-                        <div className="w-full p-6 bg-slate-50">
-                            <button onClick={() => setShowBarcodeModal(false)} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase text-xs">Cerrar Visor</button>
+                        <div className="w-full p-6 bg-slate-50 grid grid-cols-2 gap-3">
+                            <button 
+                                onClick={() => handlePrintBarcode(lastScannedItem.barcode, lastScannedItem.name)}
+                                className="bg-blue-600 text-white py-4 rounded-2xl font-black uppercase text-xs flex items-center justify-center gap-2 active:scale-95 shadow-lg shadow-blue-200"
+                            >
+                                <Printer className="w-4 h-4" /> Imprimir
+                            </button>
+                            <button 
+                                onClick={() => setShowBarcodeModal(false)} 
+                                className="bg-slate-900 text-white py-4 rounded-2xl font-black uppercase text-xs active:scale-95 shadow-lg"
+                            >
+                                Cerrar
+                            </button>
                         </div>
                     </div>
                 </div>
