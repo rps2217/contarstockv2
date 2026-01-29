@@ -117,10 +117,13 @@ const MassiveBlindView: React.FC = () => {
         }
     }, [registerScan, removeItemCompletely]);
 
+    /**
+     * LÓGICA DE IMPRESIÓN TÉRMICA (80mm)
+     */
     const handlePrintBarcode = (barcode: string, name: string) => {
         const printWindow = window.open('', '_blank');
         if (!printWindow) {
-            alert("Por favor permite las ventanas emergentes para imprimir.");
+            alert("Bloqueador de ventanas detectado. Por favor, permita ventanas emergentes.");
             return;
         }
 
@@ -128,53 +131,66 @@ const MassiveBlindView: React.FC = () => {
             <!DOCTYPE html>
             <html>
             <head>
-                <title>Imprimir SKU ${barcode}</title>
+                <title>Etiqueta SKU ${barcode}</title>
                 <style>
                     @import url('https://fonts.googleapis.com/css2?family=Libre+Barcode+128&family=JetBrains+Mono:wght@700&display=swap');
                     
+                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                    
                     body {
-                        margin: 0;
-                        padding: 2mm;
-                        width: 72mm; /* Optimizado para impresoras de 80mm con márgenes */
+                        width: 72mm; /* Ajuste para papel de 80mm dejando margen físico */
+                        padding: 5mm;
                         font-family: 'JetBrains Mono', monospace;
                         display: flex;
                         flex-direction: column;
                         align-items: center;
                         text-align: center;
                         background: white;
+                        color: black;
                     }
                     
                     .barcode {
                         font-family: 'Libre Barcode 128', cursive;
-                        font-size: 80px; 
-                        line-height: 1;
-                        margin: 2mm 0;
+                        font-size: 85px; 
+                        line-height: 1.1;
+                        margin-bottom: 2mm;
                         white-space: nowrap;
                     }
                     
                     .sku-text {
-                        font-size: 20px;
+                        font-size: 22px;
                         font-weight: 800;
-                        letter-spacing: 1px;
-                        margin-bottom: 1mm;
-                        color: black;
+                        letter-spacing: 2px;
+                        margin-bottom: 3mm;
                     }
                     
                     .name-text {
-                        font-size: 11px;
-                        font-weight: 400;
+                        font-size: 12px;
+                        font-weight: 700;
                         text-transform: uppercase;
-                        max-width: 90%;
-                        overflow: hidden;
+                        max-width: 100%;
                         display: -webkit-box;
-                        -webkit-line-clamp: 2;
+                        -webkit-line-clamp: 3;
                         -webkit-box-orient: vertical;
-                        color: #333;
+                        overflow: hidden;
+                        line-height: 1.2;
+                    }
+
+                    .footer {
+                        margin-top: 5mm;
+                        font-size: 8px;
+                        border-top: 1px dashed #ccc;
+                        padding-top: 2mm;
+                        width: 100%;
+                        color: #666;
                     }
 
                     @media print {
-                        @page { margin: 0; size: 80mm auto; }
-                        body { width: 100%; padding: 5mm 0; }
+                        @page { 
+                            margin: 0; 
+                            size: 80mm auto; 
+                        }
+                        body { width: 100%; }
                     }
                 </style>
             </head>
@@ -182,6 +198,7 @@ const MassiveBlindView: React.FC = () => {
                 <div class="barcode">${barcode}</div>
                 <div class="sku-text">${barcode}</div>
                 <div class="name-text">${name}</div>
+                <div class="footer">LOGICOUNT PRO TERMINAL • ${new Date().toLocaleString()}</div>
                 <script>
                     window.onload = () => {
                         window.print();
@@ -192,48 +209,6 @@ const MassiveBlindView: React.FC = () => {
             </html>
         `);
         printWindow.document.close();
-    };
-
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file || !batchId) return;
-        setIsImporting(true);
-        const reader = new FileReader();
-        reader.onload = async (evt) => {
-            try {
-                const data = new Uint8Array(evt.target?.result as ArrayBuffer);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                const json = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
-                if (!json || json.length < 2) throw new Error("Archivo sin datos.");
-                const headers = Array.from(json[0]).map(h => String(h || '').toUpperCase().trim());
-                const skuIdx = headers.findIndex(h => h.includes('SKU') || h.includes('COD') || h.includes('EAN') || h.includes('ITEM'));
-                const nameIdx = headers.findIndex(h => h.includes('DESC') || h.includes('NOM') || h.includes('PROD'));
-                const qtyIdx = headers.findIndex(h => h.includes('CANT') || h.includes('QTY') || h.includes('OBJ') || h.includes('EXPECTED') || h.includes('UNID') || h.includes('STOCK'));
-                const locIdx = headers.findIndex(h => h.includes('LOC') || h.includes('UBIC'));
-                if (skuIdx === -1 || qtyIdx === -1) throw new Error("Faltan columnas críticas.");
-                const newItems = json.slice(1).map(row => {
-                    if (!row || row.length === 0) return null;
-                    const barcode = sanitizeBarcode(String(row[skuIdx] || ''));
-                    if (!barcode) return null;
-                    return {
-                        batchId, barcode,
-                        name: String(row[nameIdx] || 'PRODUCTO NUEVO').trim(),
-                        expectedQty: Number(row[qtyIdx] || 0),
-                        loc: locIdx !== -1 ? String(row[locIdx] || '') : undefined
-                    };
-                }).filter((i): i is any => i !== null && i.expectedQty >= 0);
-                await massiveDb.blindManifests.where('batchId').equals(batchId).delete();
-                await massiveDb.blindManifests.bulkAdd(newItems);
-                SoundFX.play('success');
-            } catch (err: any) {
-                alert(err.message);
-                SoundFX.play('error');
-            } finally {
-                setIsImporting(false);
-            }
-        };
-        reader.readAsArrayBuffer(file);
     };
 
     const handleCloudImport = async () => {
@@ -291,7 +266,7 @@ const MassiveBlindView: React.FC = () => {
                 <div className="w-full h-full flex items-stretch">
                     {lastScannedItem ? (
                         <>
-                            <button onPointerDown={(e) => { e.preventDefault(); handleDecrement(lastScannedItem); }} className="w/1/5 bg-black/10 active:bg-black/40 flex items-center justify-center border-r border-white/10">
+                            <button onPointerDown={(e) => { e.preventDefault(); handleDecrement(lastScannedItem); }} className="w-1/5 bg-black/10 active:bg-black/40 flex items-center justify-center border-r border-white/10">
                                 <Minus className="w-12 h-12 text-white/80" />
                             </button>
                             <div className="flex-1 flex flex-col items-center justify-center px-4 text-center">
@@ -306,7 +281,7 @@ const MassiveBlindView: React.FC = () => {
                                     )}
                                 </div>
                             </div>
-                            <button onPointerDown={(e) => { e.preventDefault(); registerScan(lastScannedItem.barcode, 1); }} className="w/1/5 bg-black/10 active:bg-black/40 flex items-center justify-center border-l border-white/10">
+                            <button onPointerDown={(e) => { e.preventDefault(); registerScan(lastScannedItem.barcode, 1); }} className="w-1/5 bg-black/10 active:bg-black/40 flex items-center justify-center border-l border-white/10">
                                 <Plus className="w-12 h-12 text-white/80" />
                             </button>
                         </>
@@ -356,7 +331,7 @@ const MassiveBlindView: React.FC = () => {
                             <button onClick={() => setShowBarcodeModal(false)} className="p-2 bg-white text-slate-400 rounded-full active:scale-90"><X className="w-6 h-6" /></button>
                         </div>
                         <div className="p-8 text-center w-full">
-                             <div className="bg-white p-4 py-10 rounded-[2rem] mb-6 flex flex-col items-center border-2 border-slate-50 overflow-hidden">
+                             <div className="bg-white p-4 py-10 rounded-[2rem] mb-4 flex flex-col items-center border-2 border-slate-50 overflow-hidden">
                                  <div className="barcode-font text-[75px] leading-none text-black mb-6 whitespace-nowrap">{lastScannedItem.barcode}</div>
                                  <div className="font-mono text-xl font-black text-slate-900 tracking-[0.4em] bg-slate-50 px-4 py-1 rounded-lg">{lastScannedItem.barcode}</div>
                              </div>
