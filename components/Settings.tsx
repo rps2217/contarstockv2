@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { 
     Settings as SettingsIcon, ArrowLeft, Share2, Palette, Cloud, 
-    Zap, LayoutTemplate, ShieldCheck, ChevronRight
+    Zap, LayoutTemplate, ShieldCheck, Printer
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../store/useAppStore';
@@ -13,8 +13,9 @@ import { NavigationSection } from './settings/NavigationSection';
 import { SupportSection } from './settings/SupportSection';
 import { CloudSection } from './settings/CloudSection';
 import { ThemeSection } from './settings/ThemeSection';
+import { PrinterSection } from './settings/PrinterSection';
 
-type TabId = 'general' | 'theme' | 'cloud' | 'nav' | 'system';
+type TabId = 'general' | 'theme' | 'printer' | 'cloud' | 'nav' | 'system';
 
 export const Settings: React.FC = () => {
   const navigate = useNavigate();
@@ -24,6 +25,7 @@ export const Settings: React.FC = () => {
   const tabs: { id: TabId; label: string; icon: any; color: string; bg: string }[] = [
       { id: 'general', label: 'Operativa', icon: Zap, color: 'text-amber-600', bg: 'bg-amber-50' },
       { id: 'theme', label: 'Estilo', icon: Palette, color: 'text-pink-600', bg: 'bg-pink-50' },
+      { id: 'printer', label: 'Hardware', icon: Printer, color: 'text-blue-600', bg: 'bg-blue-50' },
       { id: 'nav', label: 'Dock', icon: LayoutTemplate, color: 'text-indigo-600', bg: 'bg-indigo-50' },
       { id: 'cloud', label: 'Nube', icon: Cloud, color: 'text-blue-600', bg: 'bg-blue-50' },
       { id: 'system', label: 'Soporte', icon: ShieldCheck, color: 'text-emerald-600', bg: 'bg-emerald-50' },
@@ -81,6 +83,7 @@ export const Settings: React.FC = () => {
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
                 {activeTab === 'general' && <OperationalSection settings={settings} updateSetting={updateSetting} />}
                 {activeTab === 'theme' && <ThemeSection settings={settings} updateSetting={updateSetting} />}
+                {activeTab === 'printer' && <PrinterSection settings={settings} updateSetting={updateSetting} />}
                 {activeTab === 'nav' && <NavigationSection settings={settings} updateSetting={updateSetting} />}
                 {activeTab === 'cloud' && <CloudSection settings={settings} updateSetting={updateSetting} />}
                 {activeTab === 'system' && <SupportSection />}

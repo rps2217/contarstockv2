@@ -75,11 +75,19 @@ export type ScannerStatus = 'idle' | 'manual' | 'camera' | 'expiring' | 'confirm
 export interface AppSheetConfig {
   appId: string;
   accessKey: string;
-  countsTableName: string;       // Destino para MODO MARTILLO (Logs)
-  consolidatedTableName: string; // Destino para NUEVA CARGA (Resumen)
+  countsTableName: string;
+  consolidatedTableName: string;
   productsTableName: string;
   receptionTableName?: string;
   gasWebAppUrl?: string; 
+}
+
+export interface ThermalPrinterConfig {
+  enabled: boolean;
+  type: 'usb' | 'bluetooth';
+  paperWidth: '58mm' | '80mm';
+  autoCut: boolean;
+  deviceName?: string;
 }
 
 export interface AppSettings {
@@ -95,6 +103,7 @@ export interface AppSettings {
   predictiveHintsEnabled: boolean; 
   continuousMode: boolean;        
   appSheetConfig?: AppSheetConfig;
+  thermalPrinter?: ThermalPrinterConfig;
   mobileNavConfig?: ViewState[]; 
 }
 
@@ -115,7 +124,6 @@ export interface SyncConflict {
   timestamp: number;
 }
 
-// Added missing interfaces for Conciliator/Detective module to resolve import errors
 export interface AliasSuggestion {
   physicalBarcode: string;
   physicalName: string;

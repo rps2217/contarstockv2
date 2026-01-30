@@ -1,3 +1,4 @@
+
 import React, { useState, memo, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMassiveScanner, ConsolidatedBlindItem } from '../hooks/useMassiveScanner';
@@ -7,8 +8,10 @@ import { migrateMassiveToMaster, importManifestFromCloud } from '../services/mas
 import { SoundFX } from '../services/audio';
 import { VirtualList } from './common/VirtualList';
 import { printBarcode } from '../services/printerService';
+import { thermalPrinter } from '../services/thermalPrinterService';
 import { IndustrialButton } from './common/IndustrialButton';
 import { Modal } from './common/Modal';
+import { useAppStore } from '../store/useAppStore';
 
 // --- FILA DE HISTORIAL ---
 const MassiveItemRow = memo(({ index, data }: any) => {
@@ -65,12 +68,14 @@ const MassiveItemRow = memo(({ index, data }: any) => {
 const MassiveBlindView: React.FC = () => {
     const navigate = useNavigate();
     const { batchId = 'CORE' } = useParams();
+    const { settings } = useAppStore();
     const { items, lastScannedItem, feedback, registerScan, selectItem, removeItemCompletely, resetBatch } = useMassiveScanner(batchId || 'CORE');
     
     const [isTriggerActive, setIsTriggerActive] = useState(false);
     const [isMigrating, setIsMigrating] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
     const [showBarcodeModal, setShowBarcodeModal] = useState(false);
+    const [isPrinting, setIsPrinting] = useState(false);
     
     const handleDecrement = useCallback((item: ConsolidatedBlindItem) => {
         if (item.totalQuantity <= 1) {
@@ -79,6 +84,23 @@ const MassiveBlindView: React.FC = () => {
             registerScan(item.barcode, -1);
         }
     }, [registerScan, removeItemCompletely]);
+
+    const handleThermalPrint = async () => {
+        if (!lastScannedItem || !thermalPrinter.isConnected()) return;
+        setIsPrinting(true);
+        try {
+            await thermalPrinter.printLabel(
+                lastScannedItem.barcode, 
+                lastScannedItem.name, 
+                lastScannedItem.totalQuantity
+            );
+            SoundFX.play('success');
+        } catch (e) {
+            alert("Error al imprimir.");
+        } finally {
+            setIsPrinting(false);
+        }
+    };
 
     const handleCloudImport = async () => {
         if (!navigator.onLine) { alert("Sin conexión"); return; }
@@ -129,6 +151,15 @@ const MassiveBlindView: React.FC = () => {
                     <span className="text-[10px] text-white/40 font-black tracking-widest uppercase truncate max-w-[100px]">{batchId}</span>
                 </div>
                 <div className="flex gap-2">
+                    {thermalPrinter.isConnected() && (
+                         <button 
+                            disabled={!lastScannedItem || isPrinting} 
+                            onClick={handleThermalPrint} 
+                            className={`w-10 h-10 flex items-center justify-center rounded-xl border border-white/10 ${isPrinting ? 'bg-amber-500 animate-pulse' : 'bg-emerald-600 active:bg-emerald-400'}`}
+                         >
+                            <Printer className="w-4 h-4 text-white" />
+                         </button>
+                    )}
                     <button onClick={() => { if(confirm("¿Borrar todo?")) resetBatch(); }} className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl border border-white/10 active:bg-rose-600"><RotateCcw className="w-4 h-4 text-white/60" /></button>
                     <button disabled={!lastScannedItem} onClick={() => setShowBarcodeModal(true)} className={`w-10 h-10 flex items-center justify-center rounded-xl border border-white/10 ${!lastScannedItem ? 'opacity-20' : 'bg-white/10 active:bg-blue-600'}`}><Barcode className="w-5 h-5 text-white" /></button>
                     <button disabled={isImporting} onClick={handleCloudImport} className={`w-10 h-10 flex items-center justify-center rounded-xl border border-white/10 ${isImporting ? 'bg-indigo-600 animate-pulse' : 'bg-indigo-600/20 active:bg-indigo-600'}`}><Download className="w-4 h-4 text-white" /></button>
