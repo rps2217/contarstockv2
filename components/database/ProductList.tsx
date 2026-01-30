@@ -1,42 +1,7 @@
-
-import React, { useMemo, useState, useEffect, useRef, memo } from 'react';
+import React, { useState, useEffect, memo, useMemo } from 'react';
 import { Product } from '../../types';
 import { Pencil, Trash2, Package, Cloud, CloudOff } from 'lucide-react';
-
-// --- VIRTUALIZADOR INTERNO ESTABLE ---
-const SmartWindow = ({ items, itemHeight, renderRow: RenderRow, data }: any) => {
-    const containerRef = useRef<HTMLDivElement>(null);
-    const [scrollTop, setScrollTop] = useState(0);
-    const [containerHeight, setContainerHeight] = useState(0);
-
-    useEffect(() => {
-        const updateHeight = () => { if (containerRef.current) setContainerHeight(containerRef.current.offsetHeight); };
-        updateHeight();
-        window.addEventListener('resize', updateHeight);
-        return () => window.removeEventListener('resize', updateHeight);
-    }, []);
-
-    const onScroll = (e: React.UIEvent<HTMLDivElement>) => setScrollTop(e.currentTarget.scrollTop);
-
-    const startIndex = Math.max(0, Math.floor(scrollTop / itemHeight) - 2);
-    const endIndex = Math.min(items.length, Math.ceil((scrollTop + containerHeight) / itemHeight) + 2);
-    const visibleItems = items.slice(startIndex, endIndex);
-    const totalHeight = items.length * itemHeight;
-
-    return (
-        <div ref={containerRef} onScroll={onScroll} className="h-full w-full overflow-y-auto no-scrollbar relative">
-            <div style={{ height: totalHeight, width: '100%', pointerEvents: 'none' }} />
-            <div className="absolute top-0 left-0 w-full" style={{ transform: `translateY(${startIndex * itemHeight}px)` }}>
-                {visibleItems.map((item: any, idx: number) => (
-                    <div key={item.barcode} style={{ height: itemHeight }}>
-                        {/* Renderizado robusto como componente React */}
-                        <RenderRow index={startIndex + idx} data={data} />
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-};
+import { VirtualList } from '../common/VirtualList';
 
 interface ProductListProps {
   products?: Product[];
@@ -102,6 +67,9 @@ export const ProductList: React.FC<ProductListProps> = ({ products, onEdit, onDe
       return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  const rowData = useMemo(() => ({ isMobile, onEdit, onDelete }), [isMobile, onEdit, onDelete]);
+  const itemHeight = isMobile ? 140 : 64;
+
   if (!products || products.length === 0) {
     return (
       <div className="bg-white rounded-[2.5rem] border-2 border-slate-100 p-16 text-center h-full flex flex-col items-center justify-center shadow-inner">
@@ -114,8 +82,6 @@ export const ProductList: React.FC<ProductListProps> = ({ products, onEdit, onDe
     );
   }
 
-  const itemHeight = isMobile ? 140 : 64;
-
   return (
     <div className="h-full flex flex-col bg-slate-50 md:bg-white md:rounded-[2.5rem] md:border md:border-slate-200 shadow-xl overflow-hidden">
         <div className="hidden md:flex bg-slate-50/80 border-b border-slate-100 px-8 py-4 shrink-0">
@@ -127,11 +93,11 @@ export const ProductList: React.FC<ProductListProps> = ({ products, onEdit, onDe
         </div>
 
         <div className="flex-1 min-h-0">
-            <SmartWindow 
+            <VirtualList 
                 items={products}
                 itemHeight={itemHeight}
                 renderRow={Row}
-                data={{ items: products, isMobile, onEdit, onDelete }}
+                rowData={rowData}
             />
         </div>
     </div>

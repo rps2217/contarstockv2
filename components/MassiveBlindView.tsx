@@ -1,50 +1,11 @@
-import React, { useState, useRef, memo, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, memo, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMassiveScanner, ConsolidatedBlindItem } from '../hooks/useMassiveScanner';
-import { ChevronLeft, Plus, Minus, ScanLine, Zap, Save, Upload, Database, Camera, Target, Barcode, X, Loader2, RotateCcw, Download, Printer } from 'lucide-react';
+import { ChevronLeft, Plus, Minus, ScanLine, Save, Upload, Camera, Target, Barcode, X, RotateCcw, Download, Printer } from 'lucide-react';
 import { CameraScanner } from './CameraScanner';
 import { migrateMassiveToMaster, importManifestFromCloud } from '../services/massiveSync';
-import * as XLSX from 'xlsx';
-import { massiveDb } from '../db.massive';
-import { sanitizeBarcode } from '../services/utils';
 import { SoundFX } from '../services/audio';
-
-// --- VIRTUALIZADOR MOBILE OPTIMIZADO ---
-const SmartWindow = ({ items, itemHeight, renderRow: RenderRow, data }: any) => {
-    const containerRef = useRef<HTMLDivElement>(null);
-    const [scrollTop, setScrollTop] = useState(0);
-    const [containerHeight, setContainerHeight] = useState(0);
-
-    useEffect(() => {
-        const updateHeight = () => { if (containerRef.current) setContainerHeight(containerRef.current.offsetHeight); };
-        updateHeight();
-        const obs = new ResizeObserver(updateHeight);
-        if (containerRef.current) obs.observe(containerRef.current);
-        return () => obs.disconnect();
-    }, []);
-
-    const onScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-        setScrollTop(e.currentTarget.scrollTop);
-    }, []);
-
-    const startIndex = Math.max(0, Math.floor(scrollTop / itemHeight) - 3);
-    const endIndex = Math.min(items.length, Math.ceil((scrollTop + containerHeight) / itemHeight) + 3);
-    const visibleItems = useMemo(() => items.slice(startIndex, endIndex), [items, startIndex, endIndex]);
-    const totalHeight = items.length * itemHeight;
-
-    return (
-        <div ref={containerRef} onScroll={onScroll} className="h-full w-full overflow-y-auto no-scrollbar relative bg-black will-change-scroll">
-            <div style={{ height: totalHeight, width: '100%', pointerEvents: 'none' }} />
-            <div className="absolute top-0 left-0 w-full" style={{ transform: `translateY(${startIndex * itemHeight}px)` }}>
-                {visibleItems.map((item: any) => (
-                    <div key={item.barcode} style={{ height: itemHeight }}>
-                        <RenderRow index={items.indexOf(item)} data={data} />
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-};
+import { VirtualList } from './common/VirtualList';
 
 // --- FILA DE HISTORIAL ---
 const MassiveItemRow = memo(({ index, data }: any) => {
@@ -116,14 +77,10 @@ const MassiveBlindView: React.FC = () => {
         }
     }, [registerScan, removeItemCompletely]);
 
-    // ... (El resto de la lógica de impresión y manejo de eventos se mantiene igual)
+    // ... (Lógica de impresión y eventos idéntica)
     const handlePrintBarcode = (barcode: string, name: string) => {
         const printWindow = window.open('', '_blank');
-        if (!printWindow) {
-            alert("Bloqueador de ventanas detectado.");
-            return;
-        }
-        // ... (HTML de impresión omitido por brevedad, se mantiene igual que el original)
+        if (!printWindow) { alert("Bloqueador de ventanas detectado."); return; }
         printWindow.document.write(`<html><body><h1>${barcode}</h1></body></html>`); 
         printWindow.document.close();
         printWindow.print();
@@ -164,6 +121,11 @@ const MassiveBlindView: React.FC = () => {
         if (count < target) return 'bg-red-600';
         return 'bg-[#ff8c69]'; 
     }, [lastScannedItem]);
+
+    const rowData = useMemo(() => ({
+        onSelect: selectItem,
+        activeBarcode: lastScannedItem?.barcode
+    }), [selectItem, lastScannedItem?.barcode]);
 
     return (
         <div className="h-screen w-full flex flex-col font-mono bg-black select-none overflow-hidden text-white">
@@ -233,15 +195,17 @@ const MassiveBlindView: React.FC = () => {
 
             <div className="flex-1 min-h-0 bg-black">
                 <div className="h-full">
-                    <SmartWindow 
-                        items={items} 
-                        itemHeight={84} 
-                        renderRow={MassiveItemRow} 
-                        data={{ items, onSelect: selectItem, activeBarcode: lastScannedItem?.barcode }} 
+                    <VirtualList 
+                        items={items}
+                        itemHeight={84}
+                        renderRow={MassiveItemRow}
+                        rowData={rowData}
+                        className="bg-black"
                     />
                 </div>
             </div>
 
+            {/* Modal de Barcode (sin cambios) */}
             {showBarcodeModal && lastScannedItem && (
                 <div className="fixed inset-0 z-[1000] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
                     <div className="bg-white w-full max-w-sm rounded-[3rem] overflow-hidden shadow-2xl flex flex-col items-center">
@@ -257,16 +221,10 @@ const MassiveBlindView: React.FC = () => {
                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-4 line-clamp-2">{lastScannedItem.name}</p>
                         </div>
                         <div className="w-full p-6 bg-slate-50 grid grid-cols-2 gap-3">
-                            <button 
-                                onClick={() => handlePrintBarcode(lastScannedItem.barcode, lastScannedItem.name)}
-                                className="bg-blue-600 text-white py-4 rounded-2xl font-black uppercase text-xs flex items-center justify-center gap-2 active:scale-95 shadow-lg shadow-blue-200"
-                            >
+                            <button onClick={() => handlePrintBarcode(lastScannedItem.barcode, lastScannedItem.name)} className="bg-blue-600 text-white py-4 rounded-2xl font-black uppercase text-xs flex items-center justify-center gap-2 active:scale-95 shadow-lg shadow-blue-200">
                                 <Printer className="w-4 h-4" /> Imprimir
                             </button>
-                            <button 
-                                onClick={() => setShowBarcodeModal(false)} 
-                                className="bg-slate-900 text-white py-4 rounded-2xl font-black uppercase text-xs active:scale-95 shadow-lg"
-                            >
+                            <button onClick={() => setShowBarcodeModal(false)} className="bg-slate-900 text-white py-4 rounded-2xl font-black uppercase text-xs active:scale-95 shadow-lg">
                                 Cerrar
                             </button>
                         </div>

@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo, useState, useRef, useEffect } from 'react';
-import { Archive, WifiOff, Zap, Package, ChevronLeft } from 'lucide-react';
+import React, { useCallback, useMemo } from 'react';
+import { Archive, WifiOff, Zap, Package } from 'lucide-react';
 import { StartSessionModal } from './StartSessionModal';
 import { SearchBar } from './SearchBar';
 import { ReportDetail } from './reports/ReportDetail';
@@ -7,68 +7,25 @@ import { ReportsHeader } from './reports/ReportsHeader';
 import { useNavigate } from 'react-router-dom';
 import { SessionRow } from './reports/SessionRow';
 import { useReports } from '../hooks/useReports';
-
-// --- VIRTUALIZADOR INTERNO ESTABLE ---
-const SmartWindow = ({ items, itemHeight, renderRow: RenderRow, data, onItemsRendered }: any) => {
-    const containerRef = useRef<HTMLDivElement>(null);
-    const [scrollTop, setScrollTop] = useState(0);
-    const [containerHeight, setContainerHeight] = useState(0);
-
-    useEffect(() => {
-        const updateHeight = () => { if (containerRef.current) setContainerHeight(containerRef.current.offsetHeight); };
-        updateHeight();
-        window.addEventListener('resize', updateHeight);
-        return () => window.removeEventListener('resize', updateHeight);
-    }, []);
-
-    const onScroll = (e: React.UIEvent<HTMLDivElement>) => {
-        const top = e.currentTarget.scrollTop;
-        setScrollTop(top);
-        if (onItemsRendered) {
-            const visibleStopIndex = Math.ceil((top + containerHeight) / itemHeight);
-            onItemsRendered({ visibleStopIndex });
-        }
-    };
-
-    const startIndex = Math.max(0, Math.floor(scrollTop / itemHeight) - 2);
-    const endIndex = Math.min(items.length, Math.ceil((scrollTop + containerHeight) / itemHeight) + 2);
-    const visibleItems = items.slice(startIndex, endIndex);
-    const totalHeight = items.length * itemHeight;
-
-    return (
-        <div ref={containerRef} onScroll={onScroll} className="h-full w-full overflow-y-auto no-scrollbar relative">
-            <div style={{ height: totalHeight, width: '100%', pointerEvents: 'none' }} />
-            <div className="absolute top-0 left-0 w-full" style={{ transform: `translateY(${startIndex * itemHeight}px)` }}>
-                {visibleItems.map((item: any, idx: number) => (
-                    <div key={item.id} style={{ height: itemHeight }}>
-                        {/* FIX: Renderizado correcto mediante tag JSX */}
-                        <RenderRow index={startIndex + idx} data={data} />
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-};
+import { VirtualList } from './common/VirtualList';
 
 export const Reports: React.FC = () => {
   const navigate = useNavigate();
   const { state, actions } = useReports();
   const isHammerArchive = state.filterType === 'hammer';
 
-  const onItemsRendered = useCallback(({ visibleStopIndex }: any) => {
-      if (state.hasMore && visibleStopIndex >= (state.sessions?.length || 0) - 5) {
-          actions.loadMore();
-      }
-  }, [state.hasMore, state.sessions?.length, actions]);
+  // Manejador de scroll infinito simplificado
+  const handleEndReached = useCallback(() => {
+      if (state.hasMore) actions.loadMore();
+  }, [state.hasMore, actions]);
 
-  // OPTIMIZACIÓN: Memoizar 'data' para evitar re-renderizados innecesarios en SmartWindow/SessionRow
-  const listData = useMemo(() => ({
-      sessions: state.sessions, 
+  // Datos pasados a cada fila
+  const rowData = useMemo(() => ({
       onSelect: actions.setSelectedSessionId, 
       activeMenuId: state.activeMenuId, 
       onMenuToggle: actions.handleMenuToggle, 
       onDelete: actions.handleDeleteSession 
-  }), [state.sessions, state.activeMenuId, actions.setSelectedSessionId, actions.handleMenuToggle, actions.handleDeleteSession]);
+  }), [state.activeMenuId, actions.setSelectedSessionId, actions.handleMenuToggle, actions.handleDeleteSession]);
 
   if (state.selectedSessionId) {
       return <ReportDetail sessionId={state.selectedSessionId} onBack={() => actions.setSelectedSessionId(null)} />;
@@ -118,20 +75,19 @@ export const Reports: React.FC = () => {
                 </div>
                 
                 <div className="h-full pt-10">
-                    {(!state.sessions || state.sessions.length === 0) ? (
-                        <div className="h-full flex flex-col items-center justify-center text-slate-300">
-                            <Archive className="w-12 h-12 mb-3 opacity-20" />
-                            <p className="text-[10px] font-black uppercase tracking-widest">Lista vacía</p>
-                        </div>
-                    ) : (
-                        <SmartWindow 
-                            items={state.sessions}
-                            itemHeight={110}
-                            onItemsRendered={onItemsRendered}
-                            renderRow={SessionRow}
-                            data={listData} 
-                        />
-                    )}
+                    <VirtualList 
+                        items={state.sessions || []}
+                        itemHeight={110}
+                        renderRow={SessionRow}
+                        rowData={rowData}
+                        onEndReached={handleEndReached}
+                        emptyState={
+                            <div className="flex flex-col items-center">
+                                <Archive className="w-12 h-12 mb-3 opacity-20" />
+                                <p className="text-[10px] font-black uppercase tracking-widest">Sin registros</p>
+                            </div>
+                        }
+                    />
                 </div>
             </div>
             
