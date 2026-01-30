@@ -1,19 +1,18 @@
 
 /**
- * LOGICOUNT PRO - CLOUD ENGINE V10.7 (FIX: NULL SPREADSHEET)
+ * LOGICOUNT PRO - CLOUD ENGINE V10.8 (FIX: BINARY BLOB ERROR)
  * Instrucciones: Pega el ID de tu Excel abajo.
  */
 
-const SPREADSHEET_ID = ""; // <--- PEGA AQUÍ EL ID DE TU EXCEL ENTRE LAS COMILLAS
+const SPREADSHEET_ID = ""; // <--- RECUERDA PEGAR TU ID AQUÍ
 
 function getSpreadsheet() {
   if (SPREADSHEET_ID && SPREADSHEET_ID !== "") {
     return SpreadsheetApp.openById(SPREADSHEET_ID);
   }
-  // Si no hay ID, intenta el modo vinculado
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   if (!ss) {
-    throw new Error("ERROR CRÍTICO: El script no está vinculado a un Excel. Por favor, coloca el ID del Excel en la variable SPREADSHEET_ID al principio del código.");
+    throw new Error("ERROR: Coloque el ID del Excel en SPREADSHEET_ID.");
   }
   return ss;
 }
@@ -25,10 +24,18 @@ function doPost(e) {
     const action = requestData.action;
     let rows = requestData.rows;
 
+    // --- CORRECCIÓN DE DESCOMPRESIÓN ---
     if (requestData.metadata && requestData.metadata.compressed && typeof rows === 'string') {
       const decoded = Utilities.base64Decode(rows);
-      const unzipped = Utilities.ungzip(Utilities.newBlob(decoded));
-      rows = JSON.parse(unzipped.getDataAsString());
+      // Creamos el Blob con MIME TYPE explícito para evitar el error de objeto nulo
+      const zipBlob = Utilities.newBlob(decoded, "application/zip");
+      // Descomprimimos (unzip devuelve un array de Blobs)
+      const unzippedFiles = Utilities.unzip(zipBlob);
+      if (unzippedFiles.length > 0) {
+        rows = JSON.parse(unzippedFiles[0].getDataAsString());
+      } else {
+        throw new Error("El paquete de datos llegó vacío o corrupto.");
+      }
     }
 
     switch (action) {
@@ -94,7 +101,7 @@ function appendRows(tableName, rows) {
 function fetchRows(tableName) {
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(tableName);
-  if (!sheet) return { success: false, error: "La pestaña '" + tableName + "' no existe en este Excel." };
+  if (!sheet) return { success: false, error: "La pestaña '" + tableName + "' no existe." };
 
   const values = sheet.getDataRange().getValues();
   if (values.length < 1) return { success: true, rows: [] };
