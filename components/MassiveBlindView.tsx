@@ -136,7 +136,8 @@ const MassiveBlindView: React.FC = () => {
                 </div>
             </header>
 
-            <div className={`h-[42vh] relative flex flex-col overflow-hidden border-b-2 border-white/5 shrink-0 transition-colors duration-200 ${getHudColor}`}>
+            {/* ÁREA HUD (VISUALIZACIÓN) */}
+            <div className={`h-[40vh] relative flex flex-col overflow-hidden border-b-2 border-white/5 shrink-0 transition-colors duration-200 ${getHudColor}`}>
                 <div className="w-full h-full flex items-stretch">
                     {lastScannedItem ? (
                         <>
@@ -169,23 +170,7 @@ const MassiveBlindView: React.FC = () => {
                 {feedback === 'success' && <div className="absolute inset-0 z-[300] bg-white/40 pointer-events-none flash-active"></div>}
             </div>
 
-            <div className="h-24 shrink-0 bg-slate-900 flex items-center px-4 relative z-40 border-b-8 border-black">
-                <button 
-                    onPointerDown={(e) => { e.preventDefault(); if(navigator.vibrate) navigator.vibrate(40); setIsTriggerActive(true); }} 
-                    onPointerUp={() => setIsTriggerActive(false)}
-                    onPointerLeave={() => setIsTriggerActive(false)}
-                    className={`flex-1 h-16 rounded-3xl flex items-center justify-center gap-4 transition-all duration-75 active:scale-[0.98] border-b-8 ${isTriggerActive ? 'bg-blue-600 border-blue-800 translate-y-1 border-b-0' : 'bg-white text-black border-slate-300 shadow-xl'}`}
-                >
-                    {isTriggerActive ? <ScanLine className="w-8 h-8 animate-bounce" /> : <Camera className="w-8 h-8" />}
-                    <span className="text-xs font-black uppercase tracking-[0.3em]">{isTriggerActive ? 'LENS_ACTIVE' : 'MANTENER_PARA_ESCANEAR'}</span>
-                </button>
-                {isTriggerActive && (
-                    <div className="fixed inset-0 z-[100] animate-in fade-in duration-75">
-                         <CameraScanner onScan={registerScan} onClose={() => setIsTriggerActive(false)} isTriggered={true} />
-                    </div>
-                )}
-            </div>
-
+            {/* ÁREA CENTRAL (HISTORIAL) */}
             <div className="flex-1 min-h-0 bg-black">
                 <div className="h-full">
                     <VirtualList 
@@ -196,6 +181,24 @@ const MassiveBlindView: React.FC = () => {
                         className="bg-black"
                     />
                 </div>
+            </div>
+
+            {/* GATILLO INFERIOR (THUMB-READY) */}
+            <div className="h-28 md:h-32 shrink-0 bg-slate-900 flex items-center px-4 relative z-40 border-t-8 border-black pb-safe">
+                <button 
+                    onPointerDown={(e) => { e.preventDefault(); if(navigator.vibrate) navigator.vibrate(40); setIsTriggerActive(true); }} 
+                    onPointerUp={() => setIsTriggerActive(false)}
+                    onPointerLeave={() => setIsTriggerActive(false)}
+                    className={`flex-1 h-16 md:h-20 rounded-3xl flex items-center justify-center gap-4 transition-all duration-75 active:scale-[0.98] border-b-8 ${isTriggerActive ? 'bg-blue-600 border-blue-800 translate-y-1 border-b-0' : 'bg-white text-black border-slate-300 shadow-xl shadow-black/40'}`}
+                >
+                    {isTriggerActive ? <ScanLine className="w-8 h-8 animate-bounce" /> : <Camera className="w-8 h-8" />}
+                    <span className="text-xs font-black uppercase tracking-[0.3em]">{isTriggerActive ? 'LENS_ACTIVE' : 'MANTENER_PARA_ESCANEAR'}</span>
+                </button>
+                {isTriggerActive && (
+                    <div className="fixed inset-0 z-[100] animate-in fade-in duration-75">
+                         <CameraScanner onScan={registerScan} onClose={() => setIsTriggerActive(false)} isTriggered={true} />
+                    </div>
+                )}
             </div>
 
             <Modal 
