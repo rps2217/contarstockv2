@@ -1,13 +1,12 @@
-
 import { logger } from './logger';
 import { getSettings } from './settings';
+import { compressData } from './utils';
 
 /**
- * MOTOR DE COMUNICACIÓN CLOUD v9.0 (Transparent Mode)
- * Se comunica con el Google Apps Script configurado.
- * Elimina 'no-cors' para garantizar la integridad de la respuesta.
+ * MOTOR DE COMUNICACIÓN CLOUD v10.0 (Enterprise Turbo)
+ * Implementa seguridad, compresión y logs de servidor.
  */
-export const callGas = async (action: string, payload: any): Promise<any> => {
+export const callGas = async (action: string, payload: any, compress: boolean = false): Promise<any> => {
     const config = getSettings().appSheetConfig;
     const url = config?.gasWebAppUrl;
 
@@ -15,65 +14,54 @@ export const callGas = async (action: string, payload: any): Promise<any> => {
         return { success: false, error: "Cloud URL no configurada" };
     }
 
-    // DEBUG: Ver qué se envía exactamente
-    console.log(`[CLOUD_ZAP] Enviando a tabla: ${payload.tableName}`, payload);
-
     try {
-        // CRÍTICO: Usamos CORS estándar. 
-        // El script de Google debe devolver los encabezados CORS correctos.
-        // Content-Type text/plain evita el preflight OPTIONS estricto de algunos navegadores.
+        let finalPayload = { 
+            action, 
+            ...payload,
+            metadata: {
+                timestamp: Date.now(),
+                version: "3.1.0-Turbo",
+                compressed: compress
+            }
+        };
+
+        // Si se requiere compresión, envolvemos los datos en un ZIP
+        if (compress && payload.rows) {
+            const compressedRows = await compressData(payload.rows);
+            finalPayload.rows = compressedRows;
+        }
+
         const response = await fetch(url, {
             method: 'POST',
-            body: JSON.stringify({ action, ...payload }),
-            headers: {
-                'Content-Type': 'text/plain;charset=utf-8', 
-            }
+            body: JSON.stringify(finalPayload),
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
         });
 
-        if (!response.ok) {
-            throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
-        }
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
         const text = await response.text();
-        
-        try {
-            const json = JSON.parse(text);
-            // Validar que el script de Google confirmó éxito lógico
-            if (json.success === false) {
-                throw new Error(json.error || "Error lógico en Google Script");
-            }
-            return json;
-        } catch (e) {
-            console.warn("Respuesta no-JSON recibida:", text);
-            // Si devuelve HTML (página de error de Google), lanzamos error
-            if (text.includes("<!DOCTYPE html>")) {
-                throw new Error("El Script de Google devolvió una página de error HTML. Verifique los logs del Script.");
-            }
-            return { success: true, warning: "Respuesta cruda recibida" };
+        const json = JSON.parse(text);
+
+        if (json.success === false) {
+            throw new Error(json.error || "Error lógico en el servidor");
         }
+
+        return json;
 
     } catch (error: any) {
         console.error("❌ CLOUD_CRASH:", error.message);
-        logger.error('GAS_SERVICE', `Error en [${payload.tableName}]: ${error.message}`);
+        logger.error('GAS_SERVICE', `Fallo en acción [${action}]: ${error.message}`);
         return { success: false, error: error.message };
     }
 };
 
 export const sendToGas = async (payload: { tableName: string, rows: any[] }): Promise<any> => {
-    return await callGas('append_rows', payload);
+    // Activamos compresión para envíos masivos (>10 filas)
+    const shouldCompress = payload.rows.length > 10;
+    return await callGas('append_rows', payload, shouldCompress);
 };
 
 export const fetchFromGas = async (tableName: string, filters: any = {}): Promise<any[]> => {
-    const url = getSettings().appSheetConfig?.gasWebAppUrl;
-    if (!url) return [];
-    try {
-        const res = await fetch(url, { 
-            method: 'POST', 
-            body: JSON.stringify({ action: 'fetch_rows', tableName, filters }) 
-        });
-        const json = await res.json();
-        return json.success ? json.rows : [];
-    } catch (e) {
-        return [];
-    }
+    const res = await callGas('fetch_rows', { tableName, filters });
+    return res.success ? res.rows : [];
 };

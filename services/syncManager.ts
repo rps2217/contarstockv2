@@ -1,11 +1,13 @@
-
 import { db } from '../db';
-import { syncToAppSheet, fetchProductsFromCloud } from './appsheet';
-import { CountingSession, Product, SyncConflict } from '../types';
+// Fix: Removed fetchFromGas as it is not exported from ./appsheet
+import { syncToAppSheet } from './appsheet';
+import { CountingSession, Product } from '../types';
 import { logger } from './logger';
 import { useSyncStore } from '../store/useSyncStore';
 import { saveProductBatch } from './productService';
 import { CloudProductSchema } from './schemas';
+// Fix: Added fetchFromGas to imports from ./gasService
+import { callGas, fetchFromGas } from './gasService';
 
 let isSyncingInProgress = false;
 
@@ -21,7 +23,7 @@ export interface UploadGroup {
     sessionIds: string[];
     logisticsLabels: string[];
     type: 'inventory' | 'reception' | 'products';
-    isHammer: boolean; // NUEVO: Flag para visualización
+    isHammer: boolean;
 }
 
 export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
@@ -81,36 +83,43 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
     }
 };
 
-// FIX: Added missing exported function required by useProductDatabase hook to resolve 'no exported member' error.
 /**
- * Descarga el maestro de productos desde la nube y actualiza la base local.
- * Implementación coordinada para resolver el error de importación en el catálogo.
+ * SMART SYNC v10: Descarga incremental de productos.
+ * Solo descarga lo modificado desde la última sincronización.
  */
 export const importProductsFromAppSheet = async (): Promise<number> => {
     try {
-        // Obtenemos los datos crudos desde el servicio de integración
-        const rawProducts = await fetchProductsFromCloud();
+        // Recuperamos el timestamp de la última descarga exitosa de LocalStorage
+        const lastSyncTimestamp = localStorage.getItem('last_product_sync_time') || '0';
         
-        // Mapeo y validación de productos mediante esquema robusto definido en schemas.ts
+        // Llamamos a GAS con el filtro de fecha (Sincronización Delta)
+        const response = await callGas('fetch_rows', { 
+            tableName: "PRODUCTOS", 
+            since: lastSyncTimestamp 
+        });
+
+        if (!response.success) throw new Error(response.error);
+        
+        const rawProducts = response.rows || [];
+        if (rawProducts.length === 0) return 0;
+
         const products: Product[] = rawProducts
-            .map(p => {
+            .map((p: any) => {
                 const result = CloudProductSchema.safeParse(p);
                 return result.success ? result.data : null;
             })
             .filter((p): p is Product => p !== null)
-            .map(p => ({ 
-                ...p, 
-                syncStatus: 'synced' as const 
-            }));
+            .map(p => ({ ...p, syncStatus: 'synced' as const }));
 
         if (products.length > 0) {
-            // Persistencia masiva en IndexedDB
             await saveProductBatch(products);
+            // Actualizamos la marca de tiempo con lo que devuelva el servidor
+            localStorage.setItem('last_product_sync_time', response.server_timestamp || String(Date.now()));
         }
         
         return products.length;
     } catch (e: any) {
-        logger.error("FETCH_PRODUCTS_FAIL", `Error al descargar catálogo: ${e.message}`);
+        logger.error("FETCH_PRODUCTS_FAIL", `Error en Smart Sync: ${e.message}`);
         throw e;
     }
 };

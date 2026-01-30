@@ -1,7 +1,7 @@
-
 /**
- * LogiCount Pro - Utilidades de Sistema
+ * LogiCount Pro - Utilidades de Sistema v10
  */
+import JSZip from 'jszip';
 
 export const generateUUID = (): string => {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
@@ -30,26 +30,23 @@ export const formatLogDate = (timestamp: number): string => {
 };
 
 /**
- * Genera una firma única para bultos (ERP + Etiqueta).
+ * COMPRESIÓN INDUSTRIAL: Convierte JSON a ZIP Base64 para transporte ligero.
  */
+export const compressData = async (data: any): Promise<string> => {
+    const zip = new JSZip();
+    zip.file("payload.json", JSON.stringify(data));
+    return await zip.generateAsync({ 
+        type: "base64", 
+        compression: "DEFLATE",
+        compressionOptions: { level: 6 }
+    });
+};
+
 export const generateSessionSignature = (erp: string, label: string): string => {
     const normalize = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z0-9-]/g, "");
     return `${normalize(erp)}_${normalize(label || "GENERAL")}`;
 };
 
-// --- FIX: Missing utility functions for key normalization and composition ---
-
-/**
- * Normalización de llaves compuestas
- */
 export const normalizeKey = (val: string): string => sanitizeBarcode(val);
-
-/**
- * Normalización de SKU para comparación robusta
- */
 export const normalizeSku = (val: string): string => sanitizeBarcode(val);
-
-/**
- * Genera una llave compuesta para búsqueda o sincronización en la nube
- */
 export const generateCompositeKey = (erp: string, label: string): string => generateSessionSignature(erp, label);
