@@ -1,6 +1,6 @@
 /**
- * LOGICOUNT PRO - CLOUD ENGINE V10 (HYBRID LEGACY/TURBO)
- * Combina la velocidad de v10 con la estructura de datos de v9.
+ * LOGICOUNT PRO - CLOUD ENGINE V10 (SERVER SIDE) - FIX 10.1
+ * Este código soluciona el error 'Cannot read properties of null'
  */
 
 const CONFIG = {
@@ -8,75 +8,49 @@ const CONFIG = {
   DATE_COLUMN_NAME: "FECHA_MODIFICACION"
 };
 
-// MAPA DE CABECERAS (Heredado de v9 para compatibilidad total)
-const HEADERS_MAP = {
-  "CONTEOS": [
-    "ID_REGISTRO", "CLAVE_UNICA", "FECHA", "ERP", 
-    "CODIGO", "PRODUCTO", "CANTIDAD", "ETIQUETAS", "FRC"
-  ],
-  "CONSOLIDADOS": [
-    "ID_CONSOLIDADO", "CLAVE_UNICA", "FECHA", "ERP", 
-    "ETIQUETA", "CODIGO", "PRODUCTO", "CANTIDAD", "INCIDENCIAS"
-  ],
-  "PRODUCTOS": [
-    "CODIGO", "PRODUCTO", "CATEGORIA", "PROVEEDOR", "RUT"
-  ],
-  "RECEPCION_BULTOS": [
-    "ID_RECEPCION", "FECHA_HORA", "ETIQUETA", "ESTADO"
-  ]
-};
-
 /**
- * PUNTO DE ENTRADA HTTP POST
- * Maneja la concurrencia y distribuye la carga.
+ * Función auxiliar para obtener el Spreadsheet de forma segura
  */
+function getSafeSpreadsheet() {
+  const ss = SpreadsheetApp.getActive();
+  if (!ss) {
+    throw new Error("ERROR_VINCULO: El script no detecta el Excel activo. Asegúrate de desplegarlo como 'Cualquiera' y que el script esté dentro del archivo de Google Sheets (Extensiones > Apps Script).");
+  }
+  return ss;
+}
+
 function doPost(e) {
-  // 1. PROTECCIÓN CONTRA EJECUCIÓN MANUAL (Consola)
-  if (!e || !e.postData) {
-    return ContentService.createTextOutput(JSON.stringify({ 
-      success: false, 
-      error: "Modo Consola Detectado: Use la función 'testDoPost()' para pruebas manuales." 
-    })).setMimeType(ContentService.MimeType.JSON);
-  }
-
-  // 2. LOCK SERVICE (Heredado de v9) - Vital para Modo Martillo
-  var lock = LockService.getScriptLock();
-  // Esperamos hasta 30s para obtener turno exclusivo de escritura
-  if (!lock.tryLock(30000)) {
-    return ContentService.createTextOutput(JSON.stringify({ 
-      success: false, 
-      error: "Servidor ocupado (High Traffic). Reintente en unos segundos." 
-    })).setMimeType(ContentService.MimeType.JSON);
-  }
-
   const startTime = new Date().getTime();
   let response = { success: false, error: "Unknown Error" };
-
+  
   try {
     const requestData = JSON.parse(e.postData.contents);
     const action = requestData.action;
     const metadata = requestData.metadata || {};
     
-    // Log ligero
-    logToSheet("INFO", action, "Recibido", metadata);
+    // Log inicial
+    try { logToSheet("INFO", action, "Petición recibida", metadata); } catch(e) {}
 
-    // 3. DESCOMPRESIÓN (Motor v10)
+    // Manejo de Compresión
     let rows = requestData.rows;
     if (metadata.compressed && typeof rows === 'string') {
       rows = decompressData(rows);
     }
 
-    // 4. ENRUTADOR
+    // Enrutador
     switch (action) {
       case 'append_rows':
         response = appendRows(requestData.tableName, rows);
         break;
+        
       case 'fetch_rows':
         response = fetchRows(requestData.tableName, requestData.since);
         break;
+
       case 'ping':
-        response = { success: true, message: "Engine v10 Hybrid Online", timestamp: new Date().getTime() };
+        response = { success: true, message: "Engine v10.1 Online", timestamp: new Date().getTime() };
         break;
+
       default:
         throw new Error("Acción no reconocida: " + action);
     }
@@ -87,54 +61,30 @@ function doPost(e) {
   } catch (err) {
     response.success = false;
     response.error = err.message;
-    logToSheet("ERROR", "CRITICAL", err.message, e.postData ? "POST Payload" : "No Data");
-  } finally {
-    lock.releaseLock(); // Liberar semáforo siempre
+    console.error("CRITICAL_FAIL: " + err.message);
   }
 
   return ContentService.createTextOutput(JSON.stringify(response))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-/**
- * ESCRIBIR FILAS CON MAPEO ESTRICTO (Legacy Compatible)
- */
 function appendRows(tableName, rows) {
-  if (!rows || !Array.isArray(rows) || rows.length === 0) {
-    return { success: true, message: "Nada que insertar", rows_written: 0 };
-  }
+  if (!rows || !Array.isArray(rows)) throw new Error("Rows must be an array");
   
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSafeSpreadsheet();
   let sheet = ss.getSheetByName(tableName);
   
-  // Crear hoja si no existe usando HEADERS_MAP
   if (!sheet) {
     sheet = ss.insertSheet(tableName);
-    const defaultHeaders = HEADERS_MAP[tableName] || Object.keys(rows[0]);
-    sheet.appendRow(defaultHeaders);
-    // Formato visual v9
-    sheet.getRange("1:1").setFontWeight("bold").setBackground("#3b82f6").setFontColor("white").setVerticalAlignment("middle");
-    sheet.setFrozenRows(1);
+    const headers = Object.keys(rows[0]);
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
   }
 
-  // Mapeo Inteligente: Alinea el JSON entrante con las columnas existentes
-  const currentHeaders = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  
-  const dataToAppend = rows.map(row => {
-    return currentHeaders.map(header => {
-      // Normalización de claves para ser tolerante a mayúsculas/minúsculas
-      const key = Object.keys(row).find(k => k.toUpperCase() === header.toUpperCase());
-      const val = key ? row[key] : "";
-      // Forzamos String para evitar bugs de formato en Google Sheets
-      return (val !== undefined && val !== null) ? String(val) : "";
-    });
-  });
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const dataToAppend = rows.map(row => headers.map(h => row[h] || ""));
 
-  // Escritura en bloque
-  if (dataToAppend.length > 0) {
-    sheet.getRange(sheet.getLastRow() + 1, 1, dataToAppend.length, currentHeaders.length)
-         .setValues(dataToAppend);
-  }
+  sheet.getRange(sheet.getLastRow() + 1, 1, dataToAppend.length, headers.length)
+       .setValues(dataToAppend);
 
   return { 
     success: true, 
@@ -143,13 +93,12 @@ function appendRows(tableName, rows) {
   };
 }
 
-/**
- * LEER FILAS CON DELTA SYNC (Motor v10)
- */
 function fetchRows(tableName, since = 0) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSafeSpreadsheet();
   const sheet = ss.getSheetByName(tableName);
-  if (!sheet) return { success: true, rows: [] };
+  if (!sheet) {
+    throw new Error("No existe la hoja llamada: " + tableName + ". Crea una pestaña con ese nombre exactamente.");
+  }
 
   const values = sheet.getDataRange().getValues();
   if (values.length < 2) return { success: true, rows: [] };
@@ -158,34 +107,21 @@ function fetchRows(tableName, since = 0) {
   const rows = [];
   const sinceTs = parseInt(since) || 0;
 
-  // Buscar columna de fecha compatible con v9 o v10
-  let dateColIdx = headers.findIndex(h => 
-    h === CONFIG.DATE_COLUMN_NAME || h === "FECHA" || h === "FECHA_HORA"
-  );
+  let dateColIdx = headers.findIndex(h => {
+    const head = String(h).toUpperCase();
+    return head.includes("FECHA") || head === CONFIG.DATE_COLUMN_NAME;
+  });
 
   for (let i = 1; i < values.length; i++) {
     const rowObj = {};
-    // Limpieza: solo columnas con nombre
-    for (let j = 0; j < headers.length; j++) {
-      if (headers[j]) rowObj[headers[j]] = values[i][j];
-    }
+    headers.forEach((h, idx) => rowObj[h] = values[i][idx]);
     
-    // Filtro Delta Sync
     if (sinceTs > 0 && dateColIdx !== -1) {
-      // Intentamos parsear la fecha del sheet
-      const cellValue = values[i][dateColIdx];
-      let rowDate = 0;
-      
-      if (cellValue instanceof Date) {
-        rowDate = cellValue.getTime();
-      } else if (typeof cellValue === 'string') {
-        // Soporte para fechas string v9 ("DD/MM/YYYY HH:mm")
-        rowDate = new Date(cellValue).getTime(); 
+      const cellVal = values[i][dateColIdx];
+      if (cellVal instanceof Date) {
+        if (cellVal.getTime() <= sinceTs) continue;
       }
-
-      if (rowDate > 0 && rowDate <= sinceTs) continue; 
     }
-    
     rows.push(rowObj);
   }
 
@@ -198,39 +134,15 @@ function decompressData(base64String) {
     const unzipped = Utilities.ungzip(Utilities.newBlob(decoded));
     return JSON.parse(unzipped.getDataAsString());
   } catch (e) {
-    throw new Error("Error Descompresión: " + e.message);
+    throw new Error("Fallo descompresión: " + e.message);
   }
 }
 
 function logToSheet(level, module, msg, details) {
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const ss = SpreadsheetApp.getActive();
     let sheet = ss.getSheetByName(CONFIG.LOG_SHEET_NAME);
-    if (!sheet) {
-        try { sheet = ss.insertSheet(CONFIG.LOG_SHEET_NAME); sheet.appendRow(["TIME", "LVL", "MOD", "MSG", "DTL"]); } catch(e) { return; }
-    }
-    sheet.appendRow([new Date(), level, module, msg, String(details)]);
+    if (!sheet) return;
+    sheet.appendRow([new Date(), level, module, msg, JSON.stringify(details)]);
   } catch (e) {}
-}
-
-/**
- * HERRAMIENTA DE PRUEBA (Ejecutar manualmente en el editor)
- */
-function testDoPost() {
-  const mockEvent = {
-    postData: {
-      contents: JSON.stringify({
-        action: "ping",
-        metadata: { source: "test_console" }
-      })
-    }
-  };
-  Logger.log("Iniciando prueba...");
-  const result = doPost(mockEvent);
-  Logger.log("Resultado: " + result.getContent());
-}
-
-function doGet(e) {
-  return ContentService.createTextOutput(JSON.stringify({ status: "online", version: "v10-Hybrid" }))
-    .setMimeType(ContentService.MimeType.JSON);
 }
