@@ -6,6 +6,9 @@ import { CameraScanner } from './CameraScanner';
 import { migrateMassiveToMaster, importManifestFromCloud } from '../services/massiveSync';
 import { SoundFX } from '../services/audio';
 import { VirtualList } from './common/VirtualList';
+import { printBarcode } from '../services/printerService';
+import { IndustrialButton } from './common/IndustrialButton';
+import { Modal } from './common/Modal';
 
 // --- FILA DE HISTORIAL ---
 const MassiveItemRow = memo(({ index, data }: any) => {
@@ -76,15 +79,6 @@ const MassiveBlindView: React.FC = () => {
             registerScan(item.barcode, -1);
         }
     }, [registerScan, removeItemCompletely]);
-
-    // ... (Lógica de impresión y eventos idéntica)
-    const handlePrintBarcode = (barcode: string, name: string) => {
-        const printWindow = window.open('', '_blank');
-        if (!printWindow) { alert("Bloqueador de ventanas detectado."); return; }
-        printWindow.document.write(`<html><body><h1>${barcode}</h1></body></html>`); 
-        printWindow.document.close();
-        printWindow.print();
-    };
 
     const handleCloudImport = async () => {
         if (!navigator.onLine) { alert("Sin conexión"); return; }
@@ -172,7 +166,6 @@ const MassiveBlindView: React.FC = () => {
                         </div>
                     )}
                 </div>
-                {/* Visual Feedback Layer: Mapeamos el estado 'success' al flash blanco */}
                 {feedback === 'success' && <div className="absolute inset-0 z-[300] bg-white/40 pointer-events-none flash-active"></div>}
             </div>
 
@@ -205,32 +198,39 @@ const MassiveBlindView: React.FC = () => {
                 </div>
             </div>
 
-            {/* Modal de Barcode (sin cambios) */}
-            {showBarcodeModal && lastScannedItem && (
-                <div className="fixed inset-0 z-[1000] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
-                    <div className="bg-white w-full max-w-sm rounded-[3rem] overflow-hidden shadow-2xl flex flex-col items-center">
-                        <div className="w-full bg-slate-50 p-6 border-b border-slate-100 flex justify-between items-center">
-                            <h3 className="text-slate-900 font-black uppercase tracking-tight text-sm">Visual_SKU_Beam</h3>
-                            <button onClick={() => setShowBarcodeModal(false)} className="p-2 bg-white text-slate-400 rounded-full active:scale-90"><X className="w-6 h-6" /></button>
+            <Modal 
+                isOpen={showBarcodeModal && !!lastScannedItem} 
+                onClose={() => setShowBarcodeModal(false)}
+                title="Visual SKU Beam"
+                variant="center"
+                className="max-w-sm"
+            >
+                {lastScannedItem && (
+                    <div className="p-6">
+                        <div className="bg-white p-4 py-10 rounded-[2rem] mb-4 flex flex-col items-center border-2 border-slate-50 overflow-hidden shadow-inner">
+                            <div className="barcode-font text-[75px] leading-none text-black mb-6 whitespace-nowrap">{lastScannedItem.barcode}</div>
+                            <div className="font-mono text-xl font-black text-slate-900 tracking-[0.4em] bg-slate-50 px-4 py-1 rounded-lg">{lastScannedItem.barcode}</div>
                         </div>
-                        <div className="p-8 text-center w-full">
-                             <div className="bg-white p-4 py-10 rounded-[2rem] mb-4 flex flex-col items-center border-2 border-slate-50 overflow-hidden">
-                                 <div className="barcode-font text-[75px] leading-none text-black mb-6 whitespace-nowrap">{lastScannedItem.barcode}</div>
-                                 <div className="font-mono text-xl font-black text-slate-900 tracking-[0.4em] bg-slate-50 px-4 py-1 rounded-lg">{lastScannedItem.barcode}</div>
-                             </div>
-                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-4 line-clamp-2">{lastScannedItem.name}</p>
-                        </div>
-                        <div className="w-full p-6 bg-slate-50 grid grid-cols-2 gap-3">
-                            <button onClick={() => handlePrintBarcode(lastScannedItem.barcode, lastScannedItem.name)} className="bg-blue-600 text-white py-4 rounded-2xl font-black uppercase text-xs flex items-center justify-center gap-2 active:scale-95 shadow-lg shadow-blue-200">
-                                <Printer className="w-4 h-4" /> Imprimir
-                            </button>
-                            <button onClick={() => setShowBarcodeModal(false)} className="bg-slate-900 text-white py-4 rounded-2xl font-black uppercase text-xs active:scale-95 shadow-lg">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-4 line-clamp-2 text-center mb-6">{lastScannedItem.name}</p>
+                        
+                        <div className="grid grid-cols-2 gap-3">
+                            <IndustrialButton 
+                                variant="primary" 
+                                icon={Printer} 
+                                onClick={() => printBarcode(lastScannedItem.barcode, lastScannedItem.name)}
+                            >
+                                Imprimir
+                            </IndustrialButton>
+                            <IndustrialButton 
+                                variant="secondary" 
+                                onClick={() => setShowBarcodeModal(false)}
+                            >
                                 Cerrar
-                            </button>
+                            </IndustrialButton>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+            </Modal>
         </div>
     );
 };

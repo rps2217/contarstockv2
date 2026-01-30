@@ -53,9 +53,10 @@ export const Modal: React.FC<ModalProps> = ({
         'fullscreen': 'flex items-center justify-center'
     };
 
+    // Optimizaciones de GPU: will-change-transform
     const contentClasses = {
-        'center': 'rounded-[2.5rem] animate-in zoom-in-95 duration-200',
-        'bottom-sheet': 'w-full rounded-t-[2.5rem] md:rounded-[2.5rem] animate-in slide-in-from-bottom-8 md:zoom-in-95 duration-300',
+        'center': 'rounded-[2.5rem] animate-in zoom-in-95 duration-200 will-change-transform',
+        'bottom-sheet': 'w-full rounded-t-[2.5rem] md:rounded-[2.5rem] animate-in slide-in-from-bottom-8 md:zoom-in-95 duration-300 will-change-transform',
         'fullscreen': 'w-full h-full rounded-none animate-in fade-in duration-200'
     };
 
@@ -90,7 +91,7 @@ export const Modal: React.FC<ModalProps> = ({
                 )}
 
                 {/* Área de Contenido Scrollable */}
-                <div className="flex-1 overflow-y-auto no-scrollbar relative">
+                <div className="flex-1 overflow-y-auto no-scrollbar relative transform-gpu">
                     {children}
                 </div>
             </div>

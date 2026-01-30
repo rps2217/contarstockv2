@@ -1,10 +1,10 @@
-
-import React, { useState, useEffect } from 'react';
-import { ScanLine, Database, Radio, Activity, Zap, ArrowRight, Settings, Box, Loader2, History, Gauge } from 'lucide-react';
+import React, { useState } from 'react';
+import { ScanLine, Database, Radio, Zap, History, Settings, Gauge } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { massiveDb } from '../db.massive';
+import { IndustrialButton } from './common/IndustrialButton';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -33,37 +33,23 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const MainButton = ({ onClick, icon: Icon, title, sub, color, border, loading, secondaryAction }: any) => (
-    <div className="relative mb-2 group">
-        <button 
-            onClick={onClick}
-            disabled={loading}
-            className={`w-full h-32 ${color} text-white flex items-center px-6 gap-6 transition-all active:translate-y-1 border-b-[10px] ${border} overflow-hidden relative disabled:opacity-50 rounded-[2rem]`}
-        >
-            <div className="bg-black/30 p-5 border-2 border-white/10 shrink-0 rounded-2xl transition-transform group-hover:scale-110">
-                {loading ? <Loader2 className="w-10 h-10 animate-spin" /> : <Icon className="w-10 h-10" />}
+  const MainButton = ({ onClick, icon: Icon, title, sub, loading, colorClass }: any) => (
+    <button 
+        onClick={onClick}
+        disabled={loading}
+        className={`w-full h-32 ${colorClass} text-white flex items-center px-6 gap-6 transition-all active:translate-y-1 border-b-[10px] overflow-hidden relative disabled:opacity-50 rounded-[2rem] shadow-xl group`}
+    >
+        <div className="bg-black/30 p-5 border-2 border-white/10 shrink-0 rounded-2xl transition-transform group-hover:scale-110">
+            <Icon className="w-10 h-10" />
+        </div>
+        <div className="text-left flex-1 min-w-0">
+            <h2 className="text-2xl font-black uppercase italic leading-none tracking-tighter truncate">{title}</h2>
+            <div className="flex items-center gap-2 mt-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-white/40 led-active"></div>
+                <span className="text-[8px] font-bold text-white/50 uppercase tracking-[0.2em] truncate">{sub}</span>
             </div>
-            <div className="text-left flex-1 min-w-0">
-                <h2 className="text-2xl font-black uppercase italic leading-none tracking-tighter truncate">{title}</h2>
-                <div className="flex items-center gap-2 mt-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-white/40 led-active"></div>
-                    <span className="text-[8px] font-bold text-white/50 uppercase tracking-[0.2em] truncate">{sub}</span>
-                </div>
-            </div>
-            <div className="absolute right-0 top-0 h-full w-14 bg-white/5 flex items-center justify-center border-l border-white/5">
-                <ArrowRight className="w-5 h-5 opacity-30 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
-            </div>
-        </button>
-        {secondaryAction && (
-            <button 
-                onClick={(e) => { e.stopPropagation(); secondaryAction.onClick(); }}
-                className="absolute -top-1 -right-1 bg-black border-2 border-white/20 p-2.5 rounded-xl text-white/40 hover:text-white hover:bg-blue-600 transition-all shadow-xl z-20"
-                title={secondaryAction.title}
-            >
-                <secondaryAction.icon className="w-4 h-4" />
-            </button>
-        )}
-    </div>
+        </div>
+    </button>
   );
 
   return (
@@ -96,23 +82,24 @@ const Dashboard: React.FC = () => {
                 icon={ScanLine}
                 title="Nueva_Carga"
                 sub="CARGAS_DOCUMENTADAS"
-                color="bg-slate-800"
-                border="border-slate-950"
+                colorClass="bg-slate-800 border-slate-950"
             />
-            <MainButton 
-                onClick={handleEnterMartillo}
-                icon={Zap}
-                title="Modo_Martillo"
-                sub="AUDITORIA_RAPIDA"
-                color="bg-blue-600"
-                border="border-blue-900"
-                loading={isEnteringMartillo}
-                secondaryAction={{
-                    icon: History,
-                    title: "Ver Archivo Martillo",
-                    onClick: () => navigate('/reports?type=hammer')
-                }}
-            />
+            <div className="relative">
+                <MainButton 
+                    onClick={handleEnterMartillo}
+                    icon={Zap}
+                    title="Modo_Martillo"
+                    sub="AUDITORIA_RAPIDA"
+                    loading={isEnteringMartillo}
+                    colorClass="bg-blue-600 border-blue-900"
+                />
+                <button 
+                    onClick={(e) => { e.stopPropagation(); navigate('/reports?type=hammer'); }}
+                    className="absolute -top-2 -right-2 bg-black border-2 border-white/20 p-3 rounded-2xl text-white/40 hover:text-white hover:bg-blue-600 transition-all shadow-xl z-20"
+                >
+                    <History className="w-5 h-5" />
+                </button>
+            </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -130,10 +117,14 @@ const Dashboard: React.FC = () => {
             </button>
         </div>
 
-        <button onClick={() => navigate('/settings')} className="w-full h-16 bg-black/40 border-2 border-white/5 text-white/20 flex items-center justify-center gap-3 active:text-white active:bg-white/5 transition-all rounded-2xl">
-            <Settings className="w-4 h-4" />
-            <span className="text-[8px] font-black uppercase tracking-[0.5em]">CONFIG_DEL_SISTEMA</span>
-        </button>
+        <IndustrialButton 
+            variant="black" 
+            onClick={() => navigate('/settings')} 
+            icon={Settings}
+            className="border-white/5 text-white/30 hover:text-white"
+        >
+            CONFIG_DEL_SISTEMA
+        </IndustrialButton>
       </div>
     </div>
   );
