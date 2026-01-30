@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, RotateCcw, Database, Loader2, Activity, ShieldCheck, Bug, Trash2 } from 'lucide-react';
+import { RefreshCw, RotateCcw, Database, Loader2, Activity, ShieldCheck, Bug, Trash2, LogOut } from 'lucide-react';
 import { checkSystemHealth, repairSystem, HealthReport } from '../../services/maintenance';
 import { runFullSystemAudit, DiagnosticResult } from '../../services/businessLogic.test';
 
@@ -12,6 +12,13 @@ export const SupportSection: React.FC = () => {
 
     useEffect(() => { loadHealth(); }, []);
     const loadHealth = async () => { setHealth(await checkSystemHealth()); };
+
+    const handleLogout = () => {
+        if (confirm("¿Cerrar sesión de esta terminal?")) {
+            localStorage.removeItem('logicount_auth');
+            window.location.href = '/';
+        }
+    };
 
     return (
         <div className="space-y-4">
@@ -66,11 +73,11 @@ export const SupportSection: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-                <button onClick={() => window.location.reload()} className="bg-white border-4 border-black p-6 rounded-[2.5rem] flex flex-col items-center gap-2 active:scale-95 transition-all">
-                    <RefreshCw className="w-8 h-8 text-blue-600 stroke-[3px]" />
-                    <span className="text-[10px] font-black uppercase">Reiniciar</span>
+                <button onClick={handleLogout} className="bg-slate-900 text-white border-4 border-black p-6 rounded-[2.5rem] flex flex-col items-center gap-2 active:scale-95 transition-all">
+                    <LogOut className="w-8 h-8 text-blue-400 stroke-[3px]" />
+                    <span className="text-[10px] font-black uppercase">Salir</span>
                 </button>
-                <button onClick={() => { localStorage.clear(); window.location.href = '/'; }} className="bg-white border-4 border-red-600 p-6 rounded-[2.5rem] flex flex-col items-center gap-2 active:scale-95 transition-all">
+                <button onClick={() => { if(confirm("¿BORRAR TODO? Esta acción es irreversible.")) { localStorage.clear(); window.location.href = '/'; } }} className="bg-white border-4 border-red-600 p-6 rounded-[2.5rem] flex flex-col items-center gap-2 active:scale-95 transition-all">
                     <Trash2 className="w-8 h-8 text-red-600 stroke-[3px]" />
                     <span className="text-[10px] font-black uppercase text-red-600">Full Reset</span>
                 </button>

@@ -1,6 +1,6 @@
 
 import React, { Suspense, useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { useAppStore } from './store/useAppStore';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { NetworkStatus } from './components/NetworkStatus';
@@ -10,6 +10,7 @@ import { SystemStatus } from './components/SystemStatus';
 import { Box, Loader2 } from 'lucide-react';
 import { lazyWithRetry } from './services/lazyLoad';
 import { initPersistence } from './services/backupService';
+import { Login } from './components/Login';
 
 const Dashboard = lazyWithRetry(() => import('./components/Dashboard.tsx'));
 const Reports = lazyWithRetry(() => import('./components/Reports.tsx'));
@@ -25,14 +26,21 @@ const AppContent = () => {
   const location = useLocation();
   const { settings } = useAppStore();
   const [bootState, setBootState] = useState<'testing' | 'ready'>('testing');
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   
   const isScanningMode = location.pathname.startsWith('/counting/') || 
                          location.pathname === '/reception' || 
                          location.pathname.startsWith('/massive/');
 
   useEffect(() => {
-    // Solicitar persistencia de almacenamiento una vez al inicio
+    // 1. Solicitar persistencia
     initPersistence();
+    
+    // 2. Verificar Sesión Persistente (Offline Friendly)
+    const authStatus = localStorage.getItem('logicount_auth') === 'true';
+    setIsAuthenticated(authStatus);
+
+    // 3. Simular chequeo de kernel
     const timer = setTimeout(() => setBootState('ready'), 800);
     return () => clearTimeout(timer);
   }, []);
@@ -49,7 +57,8 @@ const AppContent = () => {
 
   const currentThemeClass = themeClasses[settings.theme] || themeClasses.dark;
 
-  if (bootState === 'testing') return (
+  // Pantalla de Carga Inicial
+  if (bootState === 'testing' || isAuthenticated === null) return (
     <div className="h-screen w-full bg-slate-950 flex flex-col items-center justify-center text-white p-8">
         <div className="p-8 border-4 border-blue-600 rounded-[2.5rem] mb-6">
           <Box className="w-16 h-16 text-blue-500 animate-pulse" />
@@ -58,6 +67,11 @@ const AppContent = () => {
         <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 mt-4 animate-pulse">Initializing_Kernel_v4.5</p>
     </div>
   );
+
+  // Guardián de Autenticación
+  if (!isAuthenticated) {
+    return <Login onLoginSuccess={() => setIsAuthenticated(true)} />;
+  }
 
   return (
     <div className={`w-full h-full flex flex-col transition-colors duration-500 ${currentThemeClass} font-mono selection:bg-blue-500 selection:text-white`}>
@@ -86,6 +100,8 @@ const AppContent = () => {
                 <Route path="/conciliator" element={<Conciliator />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/massive/:batchId" element={<MassiveBlindView />} />
+                {/* Redirección de seguridad para rutas no encontradas */}
+                <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Suspense>
           </ErrorBoundary>
