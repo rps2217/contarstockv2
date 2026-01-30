@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Camera } from 'lucide-react';
+import { Camera } from 'lucide-react';
 import { CountingSession } from '../types';
 import * as sessionService from '../services/sessionService'; 
 import { sanitizeBarcode } from '../services/utils';
@@ -7,6 +7,7 @@ import { NumericKeypad } from './NumericKeypad';
 import { CameraScanner } from './CameraScanner';
 import { SoundFX } from '../services/audio';
 import { useHIDScanner } from '../hooks/useHIDScanner';
+import { Modal } from './common/Modal';
 
 interface StartSessionModalProps {
   isOpen: boolean;
@@ -21,15 +22,13 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
   const [activeKeypadField, setActiveKeypadField] = useState<'label' | 'erp'>('label');
   const [isCameraOpen, setIsCameraOpen] = useState(false);
 
-  // IMPLEMENTACIÓN NUEVO HOOK
-  // Maneja inteligentemente a qué campo asignar el escaneo
   useHIDScanner({
       isEnabled: isOpen && !isCameraOpen,
       onScan: (raw) => {
           const cleanCode = sanitizeBarcode(raw);
           if (activeKeypadField === 'label') {
               setLabelId(cleanCode);
-              setActiveKeypadField('erp'); // Salto automático
+              setActiveKeypadField('erp'); 
               SoundFX.play('success');
           } else {
               setErpOrder(cleanCode);
@@ -37,8 +36,6 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
           }
       }
   });
-
-  if (!isOpen) return null;
 
   const handleStart = async () => {
     if (!erpOrder.trim() || !labelId.trim()) { 
@@ -56,10 +53,14 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center">
-        <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-md" onClick={onClose} />
-        <div className="relative w-full bg-white rounded-t-[3rem] md:rounded-[3rem] animate-in slide-in-from-bottom-8 duration-300 md:max-w-md overflow-hidden border-t-8 border-black">
-            
+    <>
+        <Modal 
+            isOpen={isOpen} 
+            onClose={onClose} 
+            variant="bottom-sheet"
+            className="md:max-w-md border-t-8 border-black"
+            showCloseButton={false} // Custom header below
+        >
             <div className="p-8 pb-4">
                 <h2 className="text-3xl font-black text-slate-900 tracking-tighter italic uppercase">Nueva Carga</h2>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Conteo Físico Local</p>
@@ -120,9 +121,9 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
                     Abrir Bulto
                 </button>
             </div>
-        </div>
+        </Modal>
 
         {isCameraOpen && <CameraScanner isTriggered={true} onScan={(code) => { setLabelId(sanitizeBarcode(code)); setIsCameraOpen(false); setActiveKeypadField('erp'); }} onClose={() => setIsCameraOpen(false)} />}
-    </div>
+    </>
   );
 };
