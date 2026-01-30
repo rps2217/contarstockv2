@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Smartphone, Zap, QrCode, Share2, Copy, Check, X, MonitorSmartphone, CloudDownload, Loader2, Info } from 'lucide-react';
+import { Smartphone, Zap, QrCode, Share2, Copy, Check, X, MonitorSmartphone, DownloadCloud, Loader2, Info } from 'lucide-react';
 import { AppSettings, AppSheetConfig } from '../../types';
 import { CameraScanner } from '../CameraScanner';
 import { fetchSystemConfig } from '../../services/gasService';
@@ -127,7 +127,7 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
                 >
                     <div className="flex items-center gap-4">
                         <div className={`p-3 rounded-2xl ${isUpdatingConfig ? 'bg-slate-200' : 'bg-white/20'}`}>
-                            {isUpdatingConfig ? <Loader2 className="w-6 h-6 animate-spin text-indigo-600" /> : <CloudDownload className="w-6 h-6" />}
+                            {isUpdatingConfig ? <Loader2 className="w-6 h-6 animate-spin text-indigo-600" /> : <DownloadCloud className="w-6 h-6" />}
                         </div>
                         <div className="text-left">
                             <div className="font-black uppercase tracking-widest text-xs">Sincronizar Terminal</div>
