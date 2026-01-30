@@ -1,20 +1,39 @@
 /**
- * LOGICOUNT PRO - CLOUD ENGINE V10 (SERVER SIDE) - FIX 10.1
- * Este código soluciona el error 'Cannot read properties of null'
+ * LOGICOUNT PRO - CLOUD ENGINE V10.2 (ULTRA RESILIENT)
+ * Soluciona el error 'Cannot read properties of null (reading getSheetByName)'
  */
 
 const CONFIG = {
+  // SI EL ERROR PERSISTE: Copia el ID de tu Google Sheet de la URL 
+  // Ejemplo: https://docs.google.com/spreadsheets/d/ESTE_ES_EL_ID/edit
+  // Y pégalo aquí abajo entre las comillas:
+  HARDCODED_SS_ID: "", 
   LOG_SHEET_NAME: "SYSTEM_LOGS",
   DATE_COLUMN_NAME: "FECHA_MODIFICACION"
 };
 
 /**
- * Función auxiliar para obtener el Spreadsheet de forma segura
+ * Obtiene el Spreadsheet buscando todas las vías posibles
  */
 function getSafeSpreadsheet() {
-  const ss = SpreadsheetApp.getActive();
+  let ss = null;
+  
+  // Intento 1: Contexto de script vinculado
+  try { ss = SpreadsheetApp.getActiveSpreadsheet(); } catch(e) {}
+  
+  // Intento 2: Apertura por ID (Si el usuario lo configuró)
+  if (!ss && CONFIG.HARDCODED_SS_ID) {
+    try { ss = SpreadsheetApp.openById(CONFIG.HARDCODED_SS_ID); } catch(e) {}
+  }
+  
+  // Intento 3: Re-intento con API de apertura activa
   if (!ss) {
-    throw new Error("ERROR_VINCULO: El script no detecta el Excel activo. Asegúrate de desplegarlo como 'Cualquiera' y que el script esté dentro del archivo de Google Sheets (Extensiones > Apps Script).");
+    try { ss = SpreadsheetApp.getActive(); } catch(e) {}
+  }
+
+  if (!ss) {
+    throw new Error("ERROR_VINCULO: El script no tiene permisos o no está vinculado a un Excel. " +
+                    "SOLUCIÓN: En el archivo GAS_SERVER_V10.gs, busca 'HARDCODED_SS_ID' y pega el ID de tu Excel.");
   }
   return ss;
 }
@@ -24,12 +43,16 @@ function doPost(e) {
   let response = { success: false, error: "Unknown Error" };
   
   try {
+    if (!e || !e.postData || !e.postData.contents) {
+      throw new Error("Petición vacía o mal formada.");
+    }
+
     const requestData = JSON.parse(e.postData.contents);
     const action = requestData.action;
     const metadata = requestData.metadata || {};
     
-    // Log inicial
-    try { logToSheet("INFO", action, "Petición recibida", metadata); } catch(e) {}
+    // Log de auditoría
+    try { logToSheet("INFO", action, "Petición recibida", metadata); } catch(err) {}
 
     // Manejo de Compresión
     let rows = requestData.rows;
@@ -37,18 +60,25 @@ function doPost(e) {
       rows = decompressData(rows);
     }
 
-    // Enrutador
+    // ENRUTADOR DE ACCIONES
     switch (action) {
       case 'append_rows':
         response = appendRows(requestData.tableName, rows);
         break;
         
       case 'fetch_rows':
+        // El parámetro 'since' viene como timestamp (ej: 1712345678)
         response = fetchRows(requestData.tableName, requestData.since);
         break;
 
       case 'ping':
-        response = { success: true, message: "Engine v10.1 Online", timestamp: new Date().getTime() };
+        const ss = getSafeSpreadsheet();
+        response = { 
+          success: true, 
+          message: "Engine v10.2 Online", 
+          ss_name: ss.getName(),
+          timestamp: new Date().getTime() 
+        };
         break;
 
       default:
@@ -61,13 +91,15 @@ function doPost(e) {
   } catch (err) {
     response.success = false;
     response.error = err.message;
-    console.error("CRITICAL_FAIL: " + err.message);
   }
 
   return ContentService.createTextOutput(JSON.stringify(response))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+/**
+ * ESCRIBIR FILAS
+ */
 function appendRows(tableName, rows) {
   if (!rows || !Array.isArray(rows)) throw new Error("Rows must be an array");
   
@@ -80,8 +112,15 @@ function appendRows(tableName, rows) {
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
   }
 
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  const dataToAppend = rows.map(row => headers.map(h => row[h] || ""));
+  const lastCol = sheet.getLastColumn() || 1;
+  const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  
+  const dataToAppend = rows.map(row => {
+    return headers.map(h => {
+      const val = row[h];
+      return (val === undefined || val === null) ? "" : val;
+    });
+  });
 
   sheet.getRange(sheet.getLastRow() + 1, 1, dataToAppend.length, headers.length)
        .setValues(dataToAppend);
@@ -93,11 +132,14 @@ function appendRows(tableName, rows) {
   };
 }
 
+/**
+ * LEER FILAS (Con filtro Delta mejorado)
+ */
 function fetchRows(tableName, since = 0) {
   const ss = getSafeSpreadsheet();
   const sheet = ss.getSheetByName(tableName);
   if (!sheet) {
-    throw new Error("No existe la hoja llamada: " + tableName + ". Crea una pestaña con ese nombre exactamente.");
+    throw new Error("No existe la hoja: '" + tableName + "'. Verifica las mayúsculas.");
   }
 
   const values = sheet.getDataRange().getValues();
@@ -107,6 +149,7 @@ function fetchRows(tableName, since = 0) {
   const rows = [];
   const sinceTs = parseInt(since) || 0;
 
+  // Encontrar columna de fecha
   let dateColIdx = headers.findIndex(h => {
     const head = String(h).toUpperCase();
     return head.includes("FECHA") || head === CONFIG.DATE_COLUMN_NAME;
@@ -116,16 +159,30 @@ function fetchRows(tableName, since = 0) {
     const rowObj = {};
     headers.forEach((h, idx) => rowObj[h] = values[i][idx]);
     
+    // Filtro Delta Sync
     if (sinceTs > 0 && dateColIdx !== -1) {
       const cellVal = values[i][dateColIdx];
+      let rowTs = 0;
+      
       if (cellVal instanceof Date) {
-        if (cellVal.getTime() <= sinceTs) continue;
+        rowTs = cellVal.getTime();
+      } else if (typeof cellVal === 'string' && cellVal.length > 0) {
+        rowTs = new Date(cellVal).getTime();
       }
+
+      // Si la fila es más antigua que el último sync, la ignoramos
+      if (rowTs > 0 && rowTs <= sinceTs) continue;
     }
+    
     rows.push(rowObj);
   }
 
-  return { success: true, rows: rows, server_timestamp: new Date().getTime() };
+  return { 
+    success: true, 
+    rows: rows, 
+    server_timestamp: new Date().getTime(),
+    count: rows.length
+  };
 }
 
 function decompressData(base64String) {
@@ -134,13 +191,13 @@ function decompressData(base64String) {
     const unzipped = Utilities.ungzip(Utilities.newBlob(decoded));
     return JSON.parse(unzipped.getDataAsString());
   } catch (e) {
-    throw new Error("Fallo descompresión: " + e.message);
+    throw new Error("Fallo descompresión servidor: " + e.message);
   }
 }
 
 function logToSheet(level, module, msg, details) {
   try {
-    const ss = SpreadsheetApp.getActive();
+    const ss = getSafeSpreadsheet();
     let sheet = ss.getSheetByName(CONFIG.LOG_SHEET_NAME);
     if (!sheet) return;
     sheet.appendRow([new Date(), level, module, msg, JSON.stringify(details)]);
