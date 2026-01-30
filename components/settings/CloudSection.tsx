@@ -1,8 +1,9 @@
-
 import React, { useState } from 'react';
-import { Smartphone, Zap, QrCode, Share2, Copy, Check, X, MonitorSmartphone } from 'lucide-react';
+import { Smartphone, Zap, QrCode, Share2, Copy, Check, X, MonitorSmartphone, CloudDownload, Loader2, Info } from 'lucide-react';
 import { AppSettings, AppSheetConfig } from '../../types';
 import { CameraScanner } from '../CameraScanner';
+import { fetchSystemConfig } from '../../services/gasService';
+import { SoundFX } from '../../services/audio';
 
 interface Props {
     settings: AppSettings;
@@ -13,6 +14,7 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
     const [isScanning, setIsScanning] = useState(false);
     const [showExportQR, setShowExportQR] = useState(false);
     const [copySuccess, setCopySuccess] = useState(false);
+    const [isUpdatingConfig, setIsUpdatingConfig] = useState(false);
 
     const config = settings.appSheetConfig || {
         appId: '',
@@ -34,6 +36,27 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
             ...config,
             [key]: value
         });
+    };
+
+    const handleDownloadMasterConfig = async () => {
+        if (!config.gasWebAppUrl) {
+            alert("Primero debes configurar la URL de Google Script manualmente o por QR.");
+            return;
+        }
+
+        setIsUpdatingConfig(true);
+        try {
+            const newConfig = await fetchSystemConfig();
+            updateSetting('appSheetConfig', newConfig);
+            SoundFX.play('success');
+            if (navigator.vibrate) navigator.vibrate([40, 10, 40]);
+            alert("✅ Configuración de sistema actualizada desde la nube.");
+        } catch (err: any) {
+            SoundFX.play('error');
+            alert(`Error: ${err.message}\n\nVerifica que la pestaña 'CONFIG_SISTEMA' exista en tu Excel.`);
+        } finally {
+            setIsUpdatingConfig(false);
+        }
     };
 
     const handleCopyConfig = async () => {
@@ -95,9 +118,33 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
                 </div>
             </div>
 
+            {/* BOTÓN MAESTRO DE SINCRONIZACIÓN */}
+            <div className="px-1">
+                <button 
+                    onClick={handleDownloadMasterConfig}
+                    disabled={isUpdatingConfig}
+                    className={`w-full p-6 rounded-[2rem] border-4 flex items-center justify-between transition-all active:scale-[0.98] shadow-lg ${isUpdatingConfig ? 'bg-slate-100 border-slate-200' : 'bg-indigo-600 border-indigo-700 text-white shadow-indigo-200'}`}
+                >
+                    <div className="flex items-center gap-4">
+                        <div className={`p-3 rounded-2xl ${isUpdatingConfig ? 'bg-slate-200' : 'bg-white/20'}`}>
+                            {isUpdatingConfig ? <Loader2 className="w-6 h-6 animate-spin text-indigo-600" /> : <CloudDownload className="w-6 h-6" />}
+                        </div>
+                        <div className="text-left">
+                            <div className="font-black uppercase tracking-widest text-xs">Sincronizar Terminal</div>
+                            <div className={`text-[10px] font-bold uppercase ${isUpdatingConfig ? 'text-slate-400' : 'text-indigo-100'}`}>Descargar Pestaña CONFIG_SISTEMA</div>
+                        </div>
+                    </div>
+                    {!isUpdatingConfig && <Zap className="w-5 h-5 text-yellow-400 fill-yellow-400" />}
+                </button>
+                <p className="mt-4 px-4 text-[9px] text-slate-400 font-bold uppercase leading-relaxed flex gap-2">
+                    <Info className="w-3 h-3 shrink-0" />
+                    Crea una pestaña llamada 'CONFIG_SISTEMA' en tu Excel para gestionar todos los dispositivos desde la nube.
+                </p>
+            </div>
+
             <div className="space-y-4">
                 <div className="flex items-center justify-between px-2">
-                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Mapeo de Tablas</h3>
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Mapeo de Tablas Local</h3>
                     <button onClick={handleCopyConfig} className="text-[8px] font-black text-blue-600 uppercase flex items-center gap-1">
                         {copySuccess ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                         {copySuccess ? 'Copiado' : 'Copiar JSON'}
@@ -141,7 +188,6 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
 
             {isScanning && (
                 <CameraScanner 
-                    isTriggered={true}
                     onScan={(data) => { 
                         try {
                             const p = JSON.parse(data);
