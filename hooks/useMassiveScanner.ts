@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { massiveDb } from '../db.massive';
 import { db as masterDb } from '../db';
@@ -95,20 +94,26 @@ export const useMassiveScanner = (batchId: string) => {
     const flushToDb = useCallback(async () => {
         if (writeQueue.current.length === 0) return;
         const batch = [...writeQueue.current];
-        writeQueue.current = [];
+        writeQueue.current = []; // Limpiar cola inmediatamente
         try {
             await massiveDb.blindScans.bulkAdd(batch.map(b => ({
                 batchId, barcode: b.barcode, quantity: b.qty, timestamp: b.ts
             })));
         } catch (e) {
             console.error("Fallo persistencia Martillo", e);
+            // Si falla, reinsertamos al principio de la cola para reintentar
             writeQueue.current = [...batch, ...writeQueue.current];
         }
     }, [batchId]);
 
+    // OPTIMIZACIÓN CRÍTICA: Flush al desmontar
     useEffect(() => {
         const timer = setInterval(flushToDb, 300);
-        return () => clearInterval(timer);
+        return () => {
+            clearInterval(timer);
+            // Forzar guardado síncrono de lo que quede en cola al salir
+            flushToDb();
+        };
     }, [flushToDb]);
 
     /**
@@ -153,22 +158,24 @@ export const useMassiveScanner = (batchId: string) => {
     }, [activeBarcode]);
 
     const removeItemCompletely = useCallback(async (barcode: string) => {
+        // Forzamos flush antes de borrar para evitar que la cola reescriba el item
+        await flushToDb();
         await massiveDb.blindScans.where('batchId').equals(batchId).and(s => s.barcode === barcode).delete();
         if (activeBarcode === barcode) {
             setActiveBarcode(null);
             setOptimisticQty(null);
         }
         SoundFX.play('delete');
-    }, [batchId, activeBarcode]);
+    }, [batchId, activeBarcode, flushToDb]);
 
     const resetBatch = useCallback(async () => {
+        writeQueue.current = []; // Vaciar cola memoria primero
         await Promise.all([
             massiveDb.blindScans.where('batchId').equals(batchId).delete(),
             massiveDb.blindManifests.where('batchId').equals(batchId).delete()
         ]);
         setActiveBarcode(null);
         setOptimisticQty(null);
-        writeQueue.current = [];
         SoundFX.play('delete');
     }, [batchId]);
 

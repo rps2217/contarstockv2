@@ -1,4 +1,3 @@
-
 import React, { useCallback, useMemo, useState, useRef, useEffect } from 'react';
 import { Archive, WifiOff, Zap, Package, ChevronLeft } from 'lucide-react';
 import { StartSessionModal } from './StartSessionModal';
@@ -62,6 +61,15 @@ export const Reports: React.FC = () => {
       }
   }, [state.hasMore, state.sessions?.length, actions]);
 
+  // OPTIMIZACIÓN: Memoizar 'data' para evitar re-renderizados innecesarios en SmartWindow/SessionRow
+  const listData = useMemo(() => ({
+      sessions: state.sessions, 
+      onSelect: actions.setSelectedSessionId, 
+      activeMenuId: state.activeMenuId, 
+      onMenuToggle: actions.handleMenuToggle, 
+      onDelete: actions.handleDeleteSession 
+  }), [state.sessions, state.activeMenuId, actions.setSelectedSessionId, actions.handleMenuToggle, actions.handleDeleteSession]);
+
   if (state.selectedSessionId) {
       return <ReportDetail sessionId={state.selectedSessionId} onBack={() => actions.setSelectedSessionId(null)} />;
   }
@@ -121,13 +129,7 @@ export const Reports: React.FC = () => {
                             itemHeight={110}
                             onItemsRendered={onItemsRendered}
                             renderRow={SessionRow}
-                            data={{ 
-                                sessions: state.sessions, 
-                                onSelect: actions.setSelectedSessionId, 
-                                activeMenuId: state.activeMenuId, 
-                                onMenuToggle: actions.handleMenuToggle, 
-                                onDelete: actions.handleDeleteSession 
-                            }}
+                            data={listData} 
                         />
                     )}
                 </div>

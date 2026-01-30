@@ -1,13 +1,13 @@
-
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import * as XLSX from 'xlsx';
 import { CountingSession, ConsolidatedItem, MatchResult } from '../types';
 
 /**
  * Generates and downloads an Excel file (.xlsx) containing the session data.
+ * Optimized with Dynamic Import to reduce initial bundle size.
  */
-export const exportToExcel = (session: CountingSession, items: ConsolidatedItem[]) => {
+export const exportToExcel = async (session: CountingSession, items: ConsolidatedItem[]) => {
+  // Dynamic Import
+  const XLSX = await import('xlsx');
+
   // 1. Prepare Data Structure for Excel
   const data = items.map(item => ({
     'Código/SKU': item.barcode,
@@ -45,8 +45,12 @@ export const exportToExcel = (session: CountingSession, items: ConsolidatedItem[
 
 /**
  * Generates and downloads a professional PDF Manifest.
+ * Optimized with Dynamic Import.
  */
-export const exportToPDF = (session: CountingSession, items: ConsolidatedItem[]) => {
+export const exportToPDF = async (session: CountingSession, items: ConsolidatedItem[]) => {
+  const { jsPDF } = await import('jspdf');
+  const { default: autoTable } = await import('jspdf-autotable');
+
   const doc = new jsPDF();
   
   // --- Header ---
@@ -141,7 +145,10 @@ export const exportToPDF = (session: CountingSession, items: ConsolidatedItem[])
 /**
  * Generates a specific Discrepancy Report from the Detective/Conciliator module.
  */
-export const exportDiscrepancyPDF = (match: MatchResult, sessionLabel: string) => {
+export const exportDiscrepancyPDF = async (match: MatchResult, sessionLabel: string) => {
+    const { jsPDF } = await import('jspdf');
+    const { default: autoTable } = await import('jspdf-autotable');
+
     const doc = new jsPDF();
     
     // --- Header ---
@@ -209,4 +216,4 @@ export const exportDiscrepancyPDF = (match: MatchResult, sessionLabel: string) =
   
     // Save
     doc.save(`Discrepancias_${match.expectedOrder.internalId}.pdf`);
-  };
+};
