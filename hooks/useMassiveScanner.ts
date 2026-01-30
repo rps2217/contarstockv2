@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { massiveDb } from '../db.massive';
 import { db as masterDb } from '../db';
-import { SoundFX } from '../services/audio';
 import { sanitizeBarcode } from '../services/utils';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useFeedbackSystem } from './useFeedbackSystem';
 
 export interface ConsolidatedBlindItem {
     barcode: string;
@@ -16,10 +16,12 @@ export interface ConsolidatedBlindItem {
 
 /**
  * HOOK ULTRA-SENSITIVO PARA MODO MARTILLO INDUSTRIAL
- * Minimiza latencia y resiste ciclos de suspensión del SO.
+ * Refactorizado para usar sistema de feedback unificado.
  */
 export const useMassiveScanner = (batchId: string) => {
-    const [isFlash, setIsFlash] = useState(false);
+    // Sistema de Feedback (50ms para latencia ultra baja en martillo)
+    const { feedback, trigger } = useFeedbackSystem(50);
+    
     const [activeBarcode, setActiveBarcode] = useState<string | null>(null);
     const [optimisticQty, setOptimisticQty] = useState<number | null>(null);
     
@@ -27,7 +29,7 @@ export const useMassiveScanner = (batchId: string) => {
     const lastKeyTime = useRef(0);
     const writeQueue = useRef<{barcode: string, qty: number, ts: number}[]>([]);
     
-    // Referencia de sombra para evitar cierres obsoletos (stale closures) en el manejador de eventos
+    // Referencia de sombra para evitar cierres obsoletos
     const itemsRef = useRef<ConsolidatedBlindItem[]>([]);
 
     // Consulta reactiva
@@ -81,12 +83,9 @@ export const useMassiveScanner = (batchId: string) => {
         return sorted;
     }, [batchId, activeBarcode]);
 
-    // Sincronización de seguridad al recuperar el foco del navegador (post-bloqueo)
+    // Sincronización post-suspensión
     useEffect(() => {
-        const handleFocus = () => {
-            buffer.current = ''; // Limpiar buffer corrupto
-            console.log("[Martillo] Motor reactivado post-suspensión");
-        };
+        const handleFocus = () => { buffer.current = ''; };
         window.addEventListener('focus', handleFocus);
         return () => window.removeEventListener('focus', handleFocus);
     }, []);
@@ -94,30 +93,28 @@ export const useMassiveScanner = (batchId: string) => {
     const flushToDb = useCallback(async () => {
         if (writeQueue.current.length === 0) return;
         const batch = [...writeQueue.current];
-        writeQueue.current = []; // Limpiar cola inmediatamente
+        writeQueue.current = []; 
         try {
             await massiveDb.blindScans.bulkAdd(batch.map(b => ({
                 batchId, barcode: b.barcode, quantity: b.qty, timestamp: b.ts
             })));
         } catch (e) {
             console.error("Fallo persistencia Martillo", e);
-            // Si falla, reinsertamos al principio de la cola para reintentar
             writeQueue.current = [...batch, ...writeQueue.current];
         }
     }, [batchId]);
 
-    // OPTIMIZACIÓN CRÍTICA: Flush al desmontar
+    // Flush loop
     useEffect(() => {
         const timer = setInterval(flushToDb, 300);
         return () => {
             clearInterval(timer);
-            // Forzar guardado síncrono de lo que quede en cola al salir
             flushToDb();
         };
     }, [flushToDb]);
 
     /**
-     * REGISTRO ULTRA-RÁPIDO (Optimismo Total)
+     * REGISTRO ULTRA-RÁPIDO
      */
     const registerScan = useCallback(async (code: string, qty: number = 1) => {
         const clean = sanitizeBarcode(code);
@@ -126,60 +123,58 @@ export const useMassiveScanner = (batchId: string) => {
         const now = Date.now();
         const isSame = clean === activeBarcode;
         
-        // 1. Feedback sensorial inmediato (0ms latencia)
-        SoundFX.play(qty > 0 ? (qty > 1 ? 'increment' : 'success') : 'delete');
-        setIsFlash(true);
-        if (navigator.vibrate) navigator.vibrate(qty > 0 ? 25 : [40, 20]);
-        setTimeout(() => setIsFlash(false), 50);
+        // 1. Feedback Unificado (Latencia casi cero)
+        if (qty > 0) {
+            trigger('success', { sound: qty > 1 ? 'increment' : 'success', vibration: qty > 1 ? 25 : 40 });
+        } else {
+            trigger('undo', { sound: 'delete', vibration: [40, 20] });
+        }
 
-        // 2. Actualización de estado local (UI) instantánea
+        // 2. UI Optimista
         if (!isSame) setActiveBarcode(clean);
         
         setOptimisticQty(prev => {
-            // Buscamos el valor base real en la Ref (que es síncrona), no en el estado asíncrono
             const baseReal = itemsRef.current.find(i => i.barcode === clean)?.totalQuantity ?? 0;
             const currentUI = isSame ? (prev ?? baseReal) : baseReal;
             return Math.max(0, currentUI + qty);
         });
 
-        // 3. Encolar para disco (Background)
+        // 3. Cola Disco
         writeQueue.current.push({ barcode: clean, qty, ts: now });
-    }, [activeBarcode]);
+    }, [activeBarcode, trigger]);
 
     const selectItem = useCallback((barcode: string) => {
         const clean = sanitizeBarcode(barcode);
         if (activeBarcode === clean) return;
         
         setActiveBarcode(clean);
-        // Al seleccionar manualmente, reseteamos el optimismo para leer el valor real del disco
         const realVal = itemsRef.current.find(i => i.barcode === clean)?.totalQuantity ?? 0;
         setOptimisticQty(realVal); 
         if (navigator.vibrate) navigator.vibrate(10);
     }, [activeBarcode]);
 
     const removeItemCompletely = useCallback(async (barcode: string) => {
-        // Forzamos flush antes de borrar para evitar que la cola reescriba el item
         await flushToDb();
         await massiveDb.blindScans.where('batchId').equals(batchId).and(s => s.barcode === barcode).delete();
         if (activeBarcode === barcode) {
             setActiveBarcode(null);
             setOptimisticQty(null);
         }
-        SoundFX.play('delete');
-    }, [batchId, activeBarcode, flushToDb]);
+        trigger('undo');
+    }, [batchId, activeBarcode, flushToDb, trigger]);
 
     const resetBatch = useCallback(async () => {
-        writeQueue.current = []; // Vaciar cola memoria primero
+        writeQueue.current = []; 
         await Promise.all([
             massiveDb.blindScans.where('batchId').equals(batchId).delete(),
             massiveDb.blindManifests.where('batchId').equals(batchId).delete()
         ]);
         setActiveBarcode(null);
         setOptimisticQty(null);
-        SoundFX.play('delete');
-    }, [batchId]);
+        trigger('undo');
+    }, [batchId, trigger]);
 
-    // Motor HID Inmortal
+    // Motor HID
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') return;
@@ -202,12 +197,10 @@ export const useMassiveScanner = (batchId: string) => {
         return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
     }, [registerScan]);
 
-    // Priorización de visualización: Optimista > Real
     const lastScannedItem = useMemo(() => {
         if (!activeBarcode) return null;
         const realItem = dbItems?.find(i => i.barcode === activeBarcode);
         
-        // Si no hay item real aún, creamos un placeholder para que la UI no parpadee
         if (!realItem) {
             return {
                 barcode: activeBarcode,
@@ -226,7 +219,7 @@ export const useMassiveScanner = (batchId: string) => {
     return { 
         items: dbItems || [], 
         lastScannedItem,
-        isFlash, 
+        feedback, // Exponemos el objeto feedback estandarizado en lugar de isFlash
         registerScan, 
         selectItem,
         removeItemCompletely,

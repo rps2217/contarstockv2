@@ -9,18 +9,22 @@ import { getSettings } from '../services/settings';
 import { CountingSession, Product, ScannerStatus, ScanRecord } from '../types';
 import { Dexie } from 'dexie';
 import { useHIDScanner } from './useHIDScanner';
+import { useFeedbackSystem, FeedbackStatus } from './useFeedbackSystem';
 
-export type ScannerFeedback = 'idle' | 'success' | 'error' | 'undo' | 'unknown' | 'incident';
+// Re-exportamos el tipo para compatibilidad con componentes UI
+export type ScannerFeedback = FeedbackStatus; 
 
 /**
- * HOOK DE ESCANEO INDUSTRIAL v8.0 - PROTOCOLO MARTILLO (Refactorizado)
- * Lógica de negocio pura. Delega la captura de hardware a useHIDScanner.
+ * HOOK DE ESCANEO INDUSTRIAL v8.1 - LOGIC ONLY
+ * Ahora delega Input (HIDScanner) y Output (FeedbackSystem) a hooks especializados.
  */
 export const useScanner = (session: CountingSession, onFinish: () => void, onDiscard?: () => void) => {
     const settings = useMemo(() => getSettings(), []);
     
+    // Hooks de Sistemas
+    const { feedback, trigger } = useFeedbackSystem(250);
+    
     const [status, setStatus] = useState<ScannerStatus>('idle');
-    const [feedback, setFeedback] = useState<ScannerFeedback>('idle');
     const [manualInput, setManualInput] = useState('');
     const [multiplier, setMultiplier] = useState(1);
     
@@ -67,7 +71,6 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
 
             if (!product) {
                 if (settings.autoRegisterUnknown) {
-                    // REGISTRO SILENCIOSO: No detiene el flujo
                     product = {
                         barcode,
                         name: `PENDIENTE - ${barcode}`,
@@ -77,7 +80,6 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
                     await productService.saveProduct(product);
                     isAutoRegistered = true;
                 } else {
-                    // Si no hay auto-registro, el producto es 'Desconocido'
                     product = { barcode, name: 'DESCONOCIDO', category: 'N/A' };
                 }
             }
@@ -89,37 +91,33 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
             // 3. Persistencia en Segundo Plano
             const scanRecord = await sessionService.addScanEvent(session.id, barcode, qty);
 
-            // 4. Feedback Sensorial y Visual
+            // 4. Actualizar Estado UI Local
             setCurrentScan(scanRecord);
             setCurrentProduct(product);
             setCurrentSkuTotal(newTotal);
             
+            // 5. Disparar Feedback Estandarizado
             if (isAutoRegistered) {
-                setFeedback('unknown');
-                SoundFX.play('increment'); // Sonido distintivo para nuevo
+                trigger('unknown', { sound: 'increment' }); // Nuevo producto suena distinto
             } else {
-                setFeedback('success');
-                SoundFX.play(qty > 1 ? 'increment' : 'success');
+                // Si qty > 1 (multiplicador), usamos sonido 'increment' que es más sutil que el 'success' fuerte
+                trigger('success', { sound: qty > 1 ? 'increment' : 'success' });
             }
 
-            // 5. Motor de Voz (TTS)
+            // 6. Motor de Voz (TTS) - Opcional
             if (settings.ttsEnabled) {
                 const ttsText = settings.ttsMode === 'count' 
                     ? `${newTotal}` 
                     : `${product.name.substring(0, 20)}, ${newTotal}`;
                 SoundFX.speak(ttsText);
             }
-            
-            // Auto-limpieza de feedback flash
-            setTimeout(() => setFeedback('idle'), 250);
 
         } catch (err) {
-            setFeedback('error');
-            SoundFX.play('error');
+            trigger('error');
         } finally {
             isLocked.current = false;
         }
-    }, [session.id, settings]);
+    }, [session.id, settings, trigger]);
 
     /**
      * MANEJADOR DE ENTRADA (LÁSER / TECLADO)
@@ -136,11 +134,11 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
         finalizeScanPipeline(barcode, qtyToApply);
     }, [multiplier, finalizeScanPipeline]);
 
-    // Implementación del nuevo Hook Modular
+    // Input System
     useHIDScanner({
         onScan: handleInboundScan,
         minChars: 2,
-        isEnabled: status === 'idle' // Solo escanear si no hay modales abiertos
+        isEnabled: status === 'idle'
     });
 
     return {
@@ -167,17 +165,14 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
                 if (removed) {
                     const prev = skuCounters.current.get(removed) || 0;
                     skuCounters.current.set(removed, Math.max(0, prev - 1));
-                    setFeedback('undo');
-                    SoundFX.play('delete');
-                    setTimeout(() => setFeedback('idle'), 400);
+                    trigger('undo');
                 }
             },
             handleQuantityChange: sessionService.updateScanQuantity, 
             handleDeleteScan: sessionService.deleteScan,
             handleToggleIncident: async (e: any, id: string, current: boolean) => {
                 await sessionService.updateScanIncident(e, id, current);
-                setFeedback('incident');
-                setTimeout(() => setFeedback('idle'), 500);
+                trigger('incident');
             },
             handleDiscard: () => { if (confirm("¿DESCARTAR SESIÓN?")) onDiscard?.(); },
             clearMultiplier: () => setMultiplier(1)
