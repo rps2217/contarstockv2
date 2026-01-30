@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
@@ -9,12 +8,13 @@ import { SoundFX } from '../services/audio';
 import { getSettings } from '../services/settings';
 import { CountingSession, Product, ScannerStatus, ScanRecord } from '../types';
 import { Dexie } from 'dexie';
+import { useHIDScanner } from './useHIDScanner';
 
 export type ScannerFeedback = 'idle' | 'success' | 'error' | 'undo' | 'unknown' | 'incident';
 
 /**
- * HOOK DE ESCANEO INDUSTRIAL v7.0 - PROTOCOLO MARTILLO
- * Optimizado para ráfagas extremas y operación 'manos libres'.
+ * HOOK DE ESCANEO INDUSTRIAL v8.0 - PROTOCOLO MARTILLO (Refactorizado)
+ * Lógica de negocio pura. Delega la captura de hardware a useHIDScanner.
  */
 export const useScanner = (session: CountingSession, onFinish: () => void, onDiscard?: () => void) => {
     const settings = useMemo(() => getSettings(), []);
@@ -30,8 +30,6 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
 
     const skuCounters = useRef<Map<string, number>>(new Map());
     const isLocked = useRef(false);
-    const hidBuffer = useRef('');
-    const lastKeyTime = useRef(0);
 
     // Consulta reactiva del historial reciente
     const recentHistory = useLiveQuery(
@@ -138,26 +136,12 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
         finalizeScanPipeline(barcode, qtyToApply);
     }, [multiplier, finalizeScanPipeline]);
 
-    // Escucha de Hardware (Protocolo Martillo)
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if ((e.target as HTMLElement).tagName === 'INPUT') return;
-
-            const now = Date.now();
-            if (now - lastKeyTime.current > 40) hidBuffer.current = '';
-            lastKeyTime.current = now;
-
-            if (e.key === 'Enter') {
-                if (hidBuffer.current.length >= 2) handleInboundScan(hidBuffer.current);
-                hidBuffer.current = '';
-            } else if (e.key.length === 1) {
-                hidBuffer.current += e.key;
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [handleInboundScan]);
+    // Implementación del nuevo Hook Modular
+    useHIDScanner({
+        onScan: handleInboundScan,
+        minChars: 2,
+        isEnabled: status === 'idle' // Solo escanear si no hay modales abiertos
+    });
 
     return {
         state: { 

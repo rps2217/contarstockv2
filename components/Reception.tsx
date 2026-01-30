@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
@@ -7,9 +6,9 @@ import * as sessionService from '../services/sessionService';
 import { sanitizeBarcode } from '../services/utils';
 import { SoundFX } from '../services/audio';
 import { CameraScanner } from './CameraScanner';
-// Added X to the lucide-react imports
-import { ChevronLeft, Container, Zap, Keyboard, Camera, List, AlertTriangle, Battery, Sun, Moon, X } from 'lucide-react';
+import { ChevronLeft, Container, Zap, Keyboard, Camera, List, AlertTriangle, Sun, Moon, X } from 'lucide-react';
 import { QueueManager } from './reception/QueueManager';
+import { useHIDScanner } from '../hooks/useHIDScanner';
 
 export const Reception: React.FC = () => {
     const navigate = useNavigate();
@@ -21,10 +20,7 @@ export const Reception: React.FC = () => {
     // Estados de feedback de alta velocidad
     const [lastAction, setLastAction] = useState<{type: 'success' | 'duplicate', label: string} | null>(null);
     const [flashActive, setFlashActive] = useState(false);
-    const [isEcoMode, setIsEcoMode] = useState(false); // Modo ahorro para uso con escáner físico
-
-    const buffer = useRef('');
-    const lastKeyTime = useRef(0);
+    const [isEcoMode, setIsEcoMode] = useState(false);
 
     const draftCount = useLiveQuery(() => db.sessions.where('status').equals('draft').count(), [], 0);
     const unsyncedDrafts = useLiveQuery(() => db.sessions.where('status').equals('draft').and(s => !s.lastSyncTimestamp).reverse().toArray(), [], []);
@@ -51,10 +47,8 @@ export const Reception: React.FC = () => {
             SoundFX.play('success');
             if (navigator.vibrate) navigator.vibrate(40);
             
-            // El flash dura poco para no molestar pero confirmar visualmente
             setTimeout(() => setFlashActive(false), 300);
             
-            // En modo ECO, limpiamos el mensaje del último SKU tras 2 segundos
             if (isEcoMode) {
                 setTimeout(() => setLastAction(prev => prev?.type === 'success' ? null : prev), 2000);
             }
@@ -70,35 +64,14 @@ export const Reception: React.FC = () => {
         setShowManualInput(false); 
     };
 
-    // MOTOR DE ESCUCHA GLOBAL (Optimizado para Escáner USB/BT)
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            // Si hay un modal crítico (duplicado) bloqueamos el buffer hasta limpiar
-            if (lastAction?.type === 'duplicate') return;
-            
-            // Ignorar si el usuario está escribiendo manualmente en el input
-            if ((e.target as HTMLElement).tagName === 'INPUT' && !showManualInput) return;
-
-            const now = Date.now();
-            // Los escáneres envían ráfagas de caracteres con < 30ms de diferencia
-            if (now - lastKeyTime.current > 50) {
-                buffer.current = ''; 
-            }
-            lastKeyTime.current = now;
-
-            if (e.key === 'Enter') {
-                if (buffer.current.length >= 3) {
-                    handleScan(buffer.current);
-                }
-                buffer.current = '';
-            } else if (e.key.length === 1) {
-                buffer.current += e.key;
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [lastAction, isEcoMode]);
+    // IMPLEMENTACIÓN DEL NUEVO HOOK MODULAR
+    useHIDScanner({
+        onScan: handleScan,
+        minChars: 3,
+        // Deshabilitar escáner si hay un modal de duplicado o entrada manual activa (excepto si el foco no está en el input)
+        isEnabled: lastAction?.type !== 'duplicate' && !showManualInput,
+        maxLatency: 60 // Un poco más tolerante en recepción
+    });
 
     // UI DINÁMICA SEGÚN MODO
     const bgColor = flashActive 
@@ -169,7 +142,6 @@ export const Reception: React.FC = () => {
 
                 {/* CONTADOR DE PRODUCCIÓN (EL CORAZÓN DE LA UI) */}
                 <div className="relative mb-12">
-                    {/* Resplandor de fondo solo en modo estándar */}
                     {!isEcoMode && <div className="absolute inset-0 bg-blue-600/10 blur-[100px] rounded-full"></div>}
                     
                     <div className={`relative flex flex-col items-center justify-center transition-all duration-500 ${isEcoMode ? 'scale-110' : ''}`}>
@@ -183,7 +155,6 @@ export const Reception: React.FC = () => {
                     </div>
                 </div>
 
-                {/* BOTONES DE SOPORTE (OCULTOS O PEQUEÑOS EN MODO ECO) */}
                 <div className={`grid grid-cols-2 gap-4 w-full max-w-sm transition-opacity duration-500 ${isEcoMode ? 'opacity-10 pointer-events-none' : 'opacity-100'}`}>
                     <button onClick={() => setShowManualInput(true)} className="bg-white/5 hover:bg-white/10 border-2 border-white/10 p-6 rounded-[2.5rem] flex flex-col items-center gap-3 transition-all active:scale-95">
                         <Keyboard className="w-8 h-8 text-white/30" />
@@ -195,7 +166,6 @@ export const Reception: React.FC = () => {
                     </button>
                 </div>
                 
-                {/* FOOTER DE ESTADO */}
                 <div className="mt-auto pb-8 text-center">
                     <div className={`inline-flex items-center gap-3 px-6 py-2 rounded-full border ${isEcoMode ? 'bg-white/5 border-white/5 text-white/20' : 'bg-blue-600/10 border-blue-500/20 text-blue-400'}`}>
                         <div className={`w-2 h-2 rounded-full animate-pulse ${isEcoMode ? 'bg-white/20' : 'bg-blue-500'}`}></div>
@@ -204,13 +174,11 @@ export const Reception: React.FC = () => {
                 </div>
             </div>
 
-            {/* MODAL MANUAL */}
             {showManualInput && (
                 <div className="absolute inset-0 z-[60] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in">
                     <div className="w-full max-w-sm">
                         <div className="flex justify-between items-center mb-10">
                             <h3 className="text-xl font-black uppercase tracking-widest text-white italic">Entrada Manual</h3>
-                            {/* Fixed: Added X icon from lucide-react to resolve 'Cannot find name X' error */}
                             <button onClick={() => setShowManualInput(false)} className="p-3 bg-white/5 rounded-full text-white"><X className="w-6 h-6"/></button>
                         </div>
                         <form onSubmit={handleManualSubmit}>

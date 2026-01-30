@@ -1,12 +1,12 @@
-
-import React, { useState, useEffect, useRef } from 'react';
-import { X, Camera, Loader2, ScanBarcode, Zap } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Camera } from 'lucide-react';
 import { CountingSession } from '../types';
 import * as sessionService from '../services/sessionService'; 
 import { sanitizeBarcode } from '../services/utils';
 import { NumericKeypad } from './NumericKeypad';
 import { CameraScanner } from './CameraScanner';
 import { SoundFX } from '../services/audio';
+import { useHIDScanner } from '../hooks/useHIDScanner';
 
 interface StartSessionModalProps {
   isOpen: boolean;
@@ -21,46 +21,22 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
   const [activeKeypadField, setActiveKeypadField] = useState<'label' | 'erp'>('label');
   const [isCameraOpen, setIsCameraOpen] = useState(false);
 
-  // Refs para motor de captura HID (Escáner físico)
-  const scanBuffer = useRef('');
-  const lastKeyTime = useRef(0);
-
-  // Efecto para escuchar el escáner de hardware
-  useEffect(() => {
-    if (!isOpen || isCameraOpen) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-        // Ignorar si el usuario está en un input real por error
-        if ((e.target as HTMLElement).tagName === 'INPUT') return;
-
-        const now = Date.now();
-        // Los escáneres disparan ráfagas muy rápidas (<50ms entre teclas)
-        if (now - lastKeyTime.current > 50) {
-            scanBuffer.current = '';
-        }
-        lastKeyTime.current = now;
-
-        if (e.key === 'Enter') {
-            if (scanBuffer.current.length >= 2) {
-                const cleanCode = sanitizeBarcode(scanBuffer.current);
-                if (activeKeypadField === 'label') {
-                    setLabelId(cleanCode);
-                    setActiveKeypadField('erp'); // Salto automático para flujo rápido
-                    SoundFX.play('success');
-                } else {
-                    setErpOrder(cleanCode);
-                    SoundFX.play('success');
-                }
-            }
-            scanBuffer.current = '';
-        } else if (e.key.length === 1) {
-            scanBuffer.current += e.key;
-        }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, isCameraOpen, activeKeypadField]);
+  // IMPLEMENTACIÓN NUEVO HOOK
+  // Maneja inteligentemente a qué campo asignar el escaneo
+  useHIDScanner({
+      isEnabled: isOpen && !isCameraOpen,
+      onScan: (raw) => {
+          const cleanCode = sanitizeBarcode(raw);
+          if (activeKeypadField === 'label') {
+              setLabelId(cleanCode);
+              setActiveKeypadField('erp'); // Salto automático
+              SoundFX.play('success');
+          } else {
+              setErpOrder(cleanCode);
+              SoundFX.play('success');
+          }
+      }
+  });
 
   if (!isOpen) return null;
 
