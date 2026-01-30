@@ -1,3 +1,4 @@
+
 import { CountingSession, Product, ScanRecord, ConsolidatedItem } from "../types";
 import { getSettings } from "./settings"; 
 import { generateUUID } from "./utils";
@@ -8,10 +9,6 @@ import { sendToGas, callGas } from "./gasService";
 import { aggregateScans } from "./aggregator";
 import { SHEET_COLUMNS } from "./constants";
 
-/**
- * MOTOR DE SINCRONIZACIÓN CLOUD v10
- * Implementa atomicidad y verificación de servidor.
- */
 export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg: string) => void): Promise<void> => {
   const config = getSettings().appSheetConfig;
   const isHammerMode = session.sessionType === 'hammer';
@@ -25,16 +22,20 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
       session.expectedItems.forEach(item => expectedMap.set(item.barcode, item.expectedQty));
   }
 
-  const targetTable = isHammerMode ? (config?.countsTableName || "CONTEOS") : (config?.consolidatedTableName || "CONSOLIDADOS");
-  if (onProgress) onProgress(`Sincronizando ${consolidatedItems.length} SKUs en ${targetTable}...`);
+  // PRIORIDAD: Modo Martillo -> countsTableName (CONTEOS). Modo Estándar -> consolidatedTableName (CONSOLIDADO)
+  const targetTable = isHammerMode 
+    ? (config?.countsTableName || "CONTEOS") 
+    : (config?.consolidatedTableName || "CONSOLIDADO");
+
+  if (onProgress) onProgress(`Enviando a [${targetTable}]...`);
 
   const rows = consolidatedItems.map(item => {
       const physical = item.totalQuantity;
       const expected = expectedMap.get(item.barcode) || 0;
       return {
           [SHEET_COLUMNS.ID]: generateUUID(),
-          [SHEET_COLUMNS.UNIQUE_KEY]: `${session.erpOrder}_${session.logisticsLabel}_${item.barcode}`,
-          [SHEET_COLUMNS.DATE]: new Date().toLocaleString(),
+          [SHEET_COLUMNS.UNIQUE_KEY]: `${session.erpOrder}_${session.logisticsLabel}_${item.barcode}_${Date.now()}`,
+          [SHEET_COLUMNS.DATE]: new Date().toLocaleString('es-CL'),
           [SHEET_COLUMNS.ERP_ORDER]: session.erpOrder,
           [SHEET_COLUMNS.BARCODE]: item.barcode,
           [SHEET_COLUMNS.PRODUCT_NAME]: item.productName,
@@ -46,16 +47,14 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
       };
   });
 
-  // Envío con compresión automática si es masivo
   const result = await sendToGas({ tableName: targetTable, rows });
 
   if (result && result.success) {
-      // Verificación de integridad: El servidor debe confirmar cuántas filas escribió
       if (result.rows_written === 0 && rows.length > 0) {
-          throw new Error("El servidor no confirmó la escritura de datos.");
+          throw new Error("El servidor no pudo escribir las filas. Verifica cabeceras.");
       }
       await markScansAsSynced(unsynced.map(s => s.id));
-      if (onProgress) onProgress(`✓ Confirmado por servidor: ${result.rows_written} registros.`);
+      if (onProgress) onProgress(`✓ ${result.rows_written} filas en ${targetTable}.`);
   } else {
       throw new Error(result?.error || "Fallo crítico de comunicación.");
   }

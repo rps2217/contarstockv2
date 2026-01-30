@@ -1,12 +1,11 @@
+
 import { db } from '../db';
-// Fix: Removed fetchFromGas as it is not exported from ./appsheet
 import { syncToAppSheet } from './appsheet';
 import { CountingSession, Product } from '../types';
 import { logger } from './logger';
 import { useSyncStore } from '../store/useSyncStore';
 import { saveProductBatch } from './productService';
 import { CloudProductSchema } from './schemas';
-// Fix: Added fetchFromGas to imports from ./gasService
 import { callGas, fetchFromGas } from './gasService';
 
 let isSyncingInProgress = false;
@@ -22,7 +21,7 @@ export interface UploadGroup {
     totalUnits: number;
     sessionIds: string[];
     logisticsLabels: string[];
-    type: 'inventory' | 'reception' | 'products';
+    type: 'inventory' | 'reception' | 'products' | 'orphans';
     isHammer: boolean;
 }
 
@@ -37,7 +36,24 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
 
         for (const scan of unsyncedScans) {
             const session = sessionMap.get(scan.sessionId);
-            if (!session) continue;
+            
+            // CASO: REGISTRO HUÉRFANO (El scan existe pero su sesión fue borrada o no se encuentra)
+            if (!session) {
+                if (!groups['SISTEMA_RESIDUAL']) {
+                    groups['SISTEMA_RESIDUAL'] = {
+                        erpOrder: 'REGISTROS_HUERFANOS',
+                        sessionCount: 1,
+                        totalUnits: 0,
+                        sessionIds: ['ORPHAN'],
+                        logisticsLabels: ['Recuperado de Memoria'],
+                        type: 'orphans',
+                        isHammer: true
+                    };
+                }
+                groups['SISTEMA_RESIDUAL'].totalUnits += scan.quantity;
+                continue;
+            }
+
             const erp = session.erpOrder;
             if (!groups[erp]) {
                 groups[erp] = { 
@@ -67,11 +83,20 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
     useSyncStore.getState().setSyncing(true);
 
     try {
-        for (const sessionId of group.sessionIds) {
-            const session = await db.sessions.get(sessionId);
-            if (!session) continue;
-            await syncToAppSheet(session, onProgress);
-            await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
+        // Manejo especial para huérfanos
+        if (group.erpOrder === 'REGISTROS_HUERFANOS') {
+            const unsynced = await db.scans.where('synced').equals(0).toArray();
+            const orphanIds = unsynced.filter(s => !s.sessionId || s.sessionId === 'ORPHAN').map(s => s.id);
+            // Simplemente los marcamos como subidos o los procesamos como una carga general
+            if (onProgress) onProgress("Limpiando registros residuales...");
+            await db.scans.where('id').anyOf(orphanIds).modify({ synced: 1 });
+        } else {
+            for (const sessionId of group.sessionIds) {
+                const session = await db.sessions.get(sessionId);
+                if (!session) continue;
+                await syncToAppSheet(session, onProgress);
+                await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
+            }
         }
         useSyncStore.getState().setLastSyncTime(Date.now());
     } catch (e: any) {
@@ -83,16 +108,9 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
     }
 };
 
-/**
- * SMART SYNC v10: Descarga incremental de productos.
- * Solo descarga lo modificado desde la última sincronización.
- */
 export const importProductsFromAppSheet = async (): Promise<number> => {
     try {
-        // Recuperamos el timestamp de la última descarga exitosa de LocalStorage
         const lastSyncTimestamp = localStorage.getItem('last_product_sync_time') || '0';
-        
-        // Llamamos a GAS con el filtro de fecha (Sincronización Delta)
         const response = await callGas('fetch_rows', { 
             tableName: "PRODUCTOS", 
             since: lastSyncTimestamp 
@@ -113,7 +131,6 @@ export const importProductsFromAppSheet = async (): Promise<number> => {
 
         if (products.length > 0) {
             await saveProductBatch(products);
-            // Actualizamos la marca de tiempo con lo que devuelva el servidor
             localStorage.setItem('last_product_sync_time', response.server_timestamp || String(Date.now()));
         }
         
