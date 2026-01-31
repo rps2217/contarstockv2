@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { RefreshCw, RotateCcw, Database, Loader2, Activity, ShieldCheck, Bug, Trash2, LogOut, Sparkles, Download, Upload, FileJson } from 'lucide-center';
+import { RefreshCw, RotateCcw, Database, Loader2, Activity, ShieldCheck, Bug, Trash2, LogOut, Sparkles, Download, Upload, FileJson } from 'lucide-react';
 import { checkSystemHealth, repairSystem, HealthReport } from '../../services/maintenance';
 import { runFullSystemAudit, DiagnosticResult } from '../../services/businessLogic.test';
 import { SoundFX } from '../../services/audio';
