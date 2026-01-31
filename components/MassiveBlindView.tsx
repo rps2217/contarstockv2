@@ -239,39 +239,45 @@ const MassiveBlindView: React.FC = () => {
                 )}
             </div>
 
-            {/* MODAL DE ETIQUETA E IMPRESIÓN (DISEÑO PROFESIONAL REFORZADO) */}
+            {/* MODAL DE ETIQUETA E IMPRESIÓN: MAX PRIORIDAD AL CÓDIGO (DISEÑO 100% PROFESIONAL) */}
             <Modal 
                 isOpen={showLabelModal} 
                 onClose={() => setShowLabelModal(false)} 
                 title="Generador de Etiqueta"
                 variant="center"
-                className="max-w-md"
+                className="max-w-md w-[95vw]"
             >
-                <div className="p-6 text-center flex flex-col items-center">
-                    {/* VISOR DE ETIQUETA ESCALABLE */}
-                    <div className="w-full bg-white text-black p-6 rounded-[2.5rem] border-[6px] border-slate-900 mb-8 shadow-2xl relative overflow-hidden flex flex-col items-center">
-                        <div className="text-[10px] font-black uppercase tracking-[0.4em] mb-4 text-slate-400">LogiCount Industrial System</div>
-                        <div className="text-lg font-black uppercase leading-tight mb-6 px-4 w-full break-words">{lastScannedItem?.name}</div>
+                <div className="p-4 text-center flex flex-col items-center">
+                    {/* VISOR DE ETIQUETA: Optimizada para no desbordar y alta legibilidad */}
+                    <div className="w-full bg-white text-black p-4 py-8 rounded-[1.5rem] border-[4px] border-slate-900 mb-6 shadow-2xl relative flex flex-col items-center justify-center overflow-hidden">
+                        {/* Header de la etiqueta: Texto discreto */}
+                        <div className="text-[8px] font-black uppercase tracking-[0.4em] mb-4 text-slate-300">LOGICOUNT SYSTEM v4.5</div>
                         
-                        {/* CÓDIGO DE BARRAS DINÁMICO: Nunca escapa del ancho */}
-                        <div className="w-full bg-white py-6 flex items-center justify-center overflow-hidden">
-                            <div className="barcode-font text-[18vw] sm:text-[80px] leading-none select-none tracking-tight whitespace-nowrap px-4 border-x-8 border-transparent">
+                        {/* Nombre del producto: Limpio y centrado */}
+                        <div className="text-sm font-bold uppercase leading-tight mb-4 px-2 w-full break-words max-h-12 overflow-hidden text-center">
+                            {lastScannedItem?.name}
+                        </div>
+                        
+                        {/* CÓDIGO DE BARRAS: EL PROTAGONISTA. Escalado dinámico y centrado */}
+                        <div className="w-full bg-white py-4 flex items-center justify-center overflow-hidden min-h-[140px] border-y border-slate-100 mb-4">
+                            <div className="barcode-font text-[100px] leading-none select-none tracking-tight whitespace-nowrap px-6 border-x-8 border-transparent scale-[1.0] transform-gpu">
                                 {lastScannedItem?.barcode}
                             </div>
                         </div>
                         
-                        <div className="text-2xl font-black tracking-[0.3em] font-mono mt-4 border-t-2 border-slate-100 pt-4 w-full">
+                        {/* Texto del SKU: Alta visibilidad bajo las barras */}
+                        <div className="text-3xl font-black tracking-[0.35em] font-mono text-center">
                             {lastScannedItem?.barcode}
                         </div>
-                        
-                        <div className="mt-8 pt-4 border-t-4 border-dashed border-slate-200 w-full flex justify-between items-center px-6">
-                            <span className="text-[10px] font-black uppercase text-slate-400">Cantidad Registrada:</span>
-                            <span className="text-4xl font-black tabular-nums">{lastScannedItem?.totalQuantity}</span>
+
+                        {/* Cantidad: Muy secundaria como solicitaste */}
+                        <div className="mt-6 text-[9px] font-black text-slate-300 uppercase tracking-widest border-t border-slate-50 pt-2 w-full">
+                            Registro Interno: {lastScannedItem?.totalQuantity} U.
                         </div>
                     </div>
 
-                    {/* BOTONES DE ACCIÓN */}
-                    <div className="grid grid-cols-1 gap-3 w-full max-w-xs">
+                    {/* BOTONES DE ACCIÓN: Mantenemos funcionalidad de hardware */}
+                    <div className="grid grid-cols-1 gap-3 w-full px-2">
                         <IndustrialButton 
                             onClick={handleThermalPrint} 
                             isLoading={isPrinting}
@@ -282,23 +288,35 @@ const MassiveBlindView: React.FC = () => {
                             Impresión Térmica
                         </IndustrialButton>
                         
-                        <IndustrialButton 
-                            onClick={() => lastScannedItem && printBarcode(lastScannedItem.barcode, lastScannedItem.name, `STOCK_AUDIT: ${lastScannedItem.totalQuantity}`)} 
-                            variant="black" 
-                            icon={FileText} 
-                            fullWidth
-                        >
-                            Exportar PDF / A4
-                        </IndustrialButton>
-                        
-                        <button 
-                            onClick={() => setShowLabelModal(false)} 
-                            className="mt-4 text-slate-400 font-black uppercase text-[10px] tracking-[0.2em] py-2"
-                        >
-                            Volver al Panel
-                        </button>
+                        <div className="grid grid-cols-2 gap-2">
+                             <IndustrialButton 
+                                onClick={() => lastScannedItem && printBarcode(lastScannedItem.barcode, lastScannedItem.name, `STOCK_AUDIT: ${lastScannedItem.totalQuantity}`)} 
+                                variant="black" 
+                                icon={FileText} 
+                                fullWidth
+                                className="h-12 text-[10px]"
+                            >
+                                PDF A4
+                            </IndustrialButton>
+                            <button 
+                                onClick={() => setShowLabelModal(false)} 
+                                className="bg-slate-100 text-slate-500 font-black uppercase text-[10px] tracking-[0.1em] rounded-2xl active:bg-slate-200"
+                            >
+                                Cerrar
+                            </button>
+                        </div>
                     </div>
                 </div>
+                
+                {/* Estilo local para asegurar que el código de barras NUNCA se rompa */}
+                <style>{`
+                    .barcode-font {
+                        font-size: min(25vw, 100px);
+                        display: inline-block;
+                        width: auto;
+                        max-width: 100%;
+                    }
+                `}</style>
             </Modal>
 
             {isChangingLocation && (

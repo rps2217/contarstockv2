@@ -48,10 +48,12 @@
 
       .barcode-font {
         font-family: 'Libre Barcode 128', cursive;
-        /* Optimización crítica para escáneres: bordes definidos */
+        /* Optimización crítica: Evitar suavizado que borra las barras finas */
         image-rendering: pixelated;
         text-rendering: optimizeSpeed;
         -webkit-font-smoothing: none;
+        -moz-osx-font-smoothing: grayscale;
+        white-space: nowrap;
       }
 
       /* Animación de escaneo láser HUD */
