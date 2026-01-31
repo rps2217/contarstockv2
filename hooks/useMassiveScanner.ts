@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { massiveDb } from '../db.massive';
 import { db as masterDb } from '../db';
@@ -14,25 +15,19 @@ export interface ConsolidatedBlindItem {
     lastTimestamp: number;
 }
 
-/**
- * HOOK ULTRA-SENSITIVO PARA MODO MARTILLO INDUSTRIAL
- * Refactorizado para usar sistema de feedback unificado.
- */
 export const useMassiveScanner = (batchId: string) => {
-    // Sistema de Feedback (50ms para latencia ultra baja en martillo)
     const { feedback, trigger } = useFeedbackSystem(50);
     
     const [activeBarcode, setActiveBarcode] = useState<string | null>(null);
     const [optimisticQty, setOptimisticQty] = useState<number | null>(null);
+    const [multiplier, setMultiplier] = useState(1);
+    const [currentLocation, setCurrentLocation] = useState('BODEGA_GRAL');
     
     const buffer = useRef('');
     const lastKeyTime = useRef(0);
-    const writeQueue = useRef<{barcode: string, qty: number, ts: number}[]>([]);
-    
-    // Referencia de sombra para evitar cierres obsoletos
+    const writeQueue = useRef<{barcode: string, qty: number, loc: string, ts: number}[]>([]);
     const itemsRef = useRef<ConsolidatedBlindItem[]>([]);
 
-    // Consulta reactiva
     const dbItems = useLiveQuery(async () => {
         if (!batchId) return [];
         
@@ -83,20 +78,17 @@ export const useMassiveScanner = (batchId: string) => {
         return sorted;
     }, [batchId, activeBarcode]);
 
-    // Sincronización post-suspensión
-    useEffect(() => {
-        const handleFocus = () => { buffer.current = ''; };
-        window.addEventListener('focus', handleFocus);
-        return () => window.removeEventListener('focus', handleFocus);
-    }, []);
-
     const flushToDb = useCallback(async () => {
         if (writeQueue.current.length === 0) return;
         const batch = [...writeQueue.current];
         writeQueue.current = []; 
         try {
             await massiveDb.blindScans.bulkAdd(batch.map(b => ({
-                batchId, barcode: b.barcode, quantity: b.qty, timestamp: b.ts
+                batchId, 
+                barcode: b.barcode, 
+                quantity: b.qty, 
+                location: b.loc,
+                timestamp: b.ts
             })));
         } catch (e) {
             console.error("Fallo persistencia Martillo", e);
@@ -104,7 +96,6 @@ export const useMassiveScanner = (batchId: string) => {
         }
     }, [batchId]);
 
-    // Flush loop
     useEffect(() => {
         const timer = setInterval(flushToDb, 300);
         return () => {
@@ -113,35 +104,32 @@ export const useMassiveScanner = (batchId: string) => {
         };
     }, [flushToDb]);
 
-    /**
-     * REGISTRO ULTRA-RÁPIDO
-     */
-    const registerScan = useCallback(async (code: string, qty: number = 1) => {
+    const registerScan = useCallback(async (code: string, qtyOverride?: number) => {
         const clean = sanitizeBarcode(code);
         if (!clean || clean.length < 2) return;
 
         const now = Date.now();
         const isSame = clean === activeBarcode;
         
-        // 1. Feedback Unificado (Latencia casi cero)
-        if (qty > 0) {
-            trigger('success', { sound: qty > 1 ? 'increment' : 'success', vibration: qty > 1 ? 25 : 40 });
+        const qtyToApply = qtyOverride !== undefined ? qtyOverride : multiplier;
+        if (qtyOverride === undefined) setMultiplier(1);
+
+        if (qtyToApply > 0) {
+            trigger('success', { sound: qtyToApply > 1 ? 'increment' : 'success', vibration: qtyToApply > 1 ? 25 : 40 });
         } else {
             trigger('undo', { sound: 'delete', vibration: [40, 20] });
         }
 
-        // 2. UI Optimista
         if (!isSame) setActiveBarcode(clean);
         
         setOptimisticQty(prev => {
             const baseReal = itemsRef.current.find(i => i.barcode === clean)?.totalQuantity ?? 0;
             const currentUI = isSame ? (prev ?? baseReal) : baseReal;
-            return Math.max(0, currentUI + qty);
+            return Math.max(0, currentUI + qtyToApply);
         });
 
-        // 3. Cola Disco
-        writeQueue.current.push({ barcode: clean, qty, ts: now });
-    }, [activeBarcode, trigger]);
+        writeQueue.current.push({ barcode: clean, qty: qtyToApply, loc: currentLocation, ts: now });
+    }, [activeBarcode, trigger, multiplier, currentLocation]);
 
     const selectItem = useCallback((barcode: string) => {
         const clean = sanitizeBarcode(barcode);
@@ -174,24 +162,17 @@ export const useMassiveScanner = (batchId: string) => {
         trigger('undo');
     }, [batchId, trigger]);
 
-    // Motor HID
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') return;
-            
             const now = Date.now();
             if (now - lastKeyTime.current > 50) buffer.current = ''; 
             lastKeyTime.current = now;
-
             if (e.key === 'Enter') {
-                if (buffer.current.length >= 2) {
-                    registerScan(buffer.current);
-                }
+                if (buffer.current.length >= 2) registerScan(buffer.current);
                 buffer.current = '';
                 e.preventDefault();
-            } else if (e.key.length === 1) {
-                buffer.current += e.key;
-            }
+            } else if (e.key.length === 1) buffer.current += e.key;
         };
         window.addEventListener('keydown', handleKeyDown, { capture: true });
         return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
@@ -200,7 +181,6 @@ export const useMassiveScanner = (batchId: string) => {
     const lastScannedItem = useMemo(() => {
         if (!activeBarcode) return null;
         const realItem = dbItems?.find(i => i.barcode === activeBarcode);
-        
         if (!realItem) {
             return {
                 barcode: activeBarcode,
@@ -209,7 +189,6 @@ export const useMassiveScanner = (batchId: string) => {
                 lastTimestamp: Date.now()
             };
         }
-
         return { 
             ...realItem, 
             totalQuantity: optimisticQty !== null ? optimisticQty : realItem.totalQuantity 
@@ -219,7 +198,11 @@ export const useMassiveScanner = (batchId: string) => {
     return { 
         items: dbItems || [], 
         lastScannedItem,
-        feedback, // Exponemos el objeto feedback estandarizado en lugar de isFlash
+        feedback,
+        multiplier,
+        setMultiplier,
+        currentLocation,
+        setCurrentLocation,
         registerScan, 
         selectItem,
         removeItemCompletely,

@@ -54,7 +54,14 @@ export const updateSessionMetadata = async (sessionId: string) => {
     });
 };
 
-export const addScanEvent = async (sessionId: string, barcode: string, quantity: number, mm?: number, yyyy?: number): Promise<ScanRecord> => {
+export const addScanEvent = async (
+    sessionId: string, 
+    barcode: string, 
+    quantity: number, 
+    mm?: number, 
+    yyyy?: number,
+    location?: string
+): Promise<ScanRecord> => {
     const newRecord: ScanRecord = {
         id: generateUUID(),
         sessionId,
@@ -62,6 +69,7 @@ export const addScanEvent = async (sessionId: string, barcode: string, quantity:
         quantity,
         mm,
         yyyy,
+        location, // NUEVO: Se guarda la ubicación
         timestamp: Date.now(),
         synced: 0
     };

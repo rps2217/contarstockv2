@@ -6,6 +6,7 @@ export interface BlindScan {
   batchId: string;
   barcode: string;
   quantity: number;
+  location?: string; // NUEVO: Ubicación física
   timestamp: number;
 }
 
@@ -13,8 +14,8 @@ export interface BlindManifestItem {
   id?: number;
   batchId: string;
   barcode: string;
-  name?: string;     // Nombre del producto desde el Excel
-  loc?: string;      // Ubicación desde el Excel
+  name?: string;
+  loc?: string;
   expectedQty: number;
 }
 
@@ -24,8 +25,8 @@ export class MassiveBlindDB extends Dexie {
 
   constructor() {
     super('MassiveBlindDB');
-    (this as any).version(4).stores({ // Subimos versión para aplicar cambios
-      blindScans: '++id, batchId, barcode, timestamp',
+    (this as any).version(5).stores({ // Bump version to 5
+      blindScans: '++id, batchId, barcode, location, timestamp',
       blindManifests: '++id, batchId, barcode, loc, [batchId+barcode]'
     });
   }

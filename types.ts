@@ -48,6 +48,7 @@ export interface ScanRecord {
   timestamp: number;
   quantity: number;
   expectedQty?: number;
+  location?: string; // CAMBIO: Ubicación física del conteo
   mm?: number;
   yyyy?: number;
   synced?: number;
@@ -61,6 +62,7 @@ export interface ConsolidatedItem {
   expectedQuantity?: number;
   difference?: number;
   scans: number;
+  location?: string;
   mm?: number;
   yyyy?: number;
   isIncident?: boolean;

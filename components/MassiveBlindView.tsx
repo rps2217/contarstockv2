@@ -2,7 +2,7 @@
 import React, { useState, memo, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMassiveScanner, ConsolidatedBlindItem } from '../hooks/useMassiveScanner';
-import { ChevronLeft, Plus, Minus, ScanLine, Save, Upload, Camera, Target, Barcode, X, RotateCcw, Download, Printer } from 'lucide-react';
+import { ChevronLeft, Plus, Minus, ScanLine, Save, Upload, Camera, Target, Barcode, X, RotateCcw, Download, Printer, MapPin } from 'lucide-react';
 import { CameraScanner } from './CameraScanner';
 import { migrateMassiveToMaster, importManifestFromCloud } from '../services/massiveSync';
 import { SoundFX } from '../services/audio';
@@ -56,15 +56,18 @@ const MassiveItemRow = memo(({ index, data }: any) => {
 const MassiveBlindView: React.FC = () => {
     const navigate = useNavigate();
     const { batchId = 'CORE' } = useParams();
-    const { items, lastScannedItem, feedback, registerScan, selectItem, removeItemCompletely, resetBatch } = useMassiveScanner(batchId || 'CORE');
+    const { 
+        items, lastScannedItem, feedback, multiplier, setMultiplier, 
+        currentLocation, setCurrentLocation, registerScan, selectItem, 
+        removeItemCompletely, resetBatch 
+    } = useMassiveScanner(batchId || 'CORE');
     
     const [isTriggerActive, setIsTriggerActive] = useState(false);
     const [isMigrating, setIsMigrating] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
-    const [showBarcodeModal, setShowBarcodeModal] = useState(false);
     const [isPrinting, setIsPrinting] = useState(false);
-    
-    // Fix: Added handleCloudImport to download manifest from Google Sheets
+    const [isChangingLocation, setIsChangingLocation] = useState(false);
+
     const handleCloudImport = async () => {
         if (!batchId) return;
         setIsImporting(true);
@@ -80,7 +83,6 @@ const MassiveBlindView: React.FC = () => {
         }
     };
 
-    // Fix: Added handleFinalize to migrate session data to permanent storage
     const handleFinalize = async () => {
         if (!batchId || !items.length) return;
         if (!confirm("¿Finalizar auditoría y archivar en historial?")) return;
@@ -121,7 +123,17 @@ const MassiveBlindView: React.FC = () => {
     return (
         <div className="h-screen w-full flex flex-col font-mono bg-black select-none overflow-hidden text-white">
             <header className="h-14 px-4 flex items-center justify-between border-b border-white/10 bg-slate-900/80 shrink-0 z-50">
-                <button onClick={() => navigate('/dashboard')} className="p-2.5 bg-white/5 rounded-xl active:bg-blue-600"><ChevronLeft className="w-5 h-5" /></button>
+                <div className="flex items-center gap-2">
+                    <button onClick={() => navigate('/dashboard')} className="p-2.5 bg-white/5 rounded-xl active:bg-blue-600"><ChevronLeft className="w-5 h-5" /></button>
+                    <button 
+                        onClick={() => setIsChangingLocation(true)}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-all group"
+                    >
+                        <MapPin className="w-3.5 h-3.5 text-blue-400" />
+                        <span className="text-[9px] font-black uppercase truncate max-w-[80px]">{currentLocation}</span>
+                    </button>
+                </div>
+                
                 <div className="flex gap-2">
                     {thermalPrinter.isConnected() && (
                          <button disabled={!lastScannedItem || isPrinting} onClick={async () => { setIsPrinting(true); await thermalPrinter.printLabel(lastScannedItem!.barcode, lastScannedItem!.name, lastScannedItem!.totalQuantity); setIsPrinting(false); }} className={`w-10 h-10 flex items-center justify-center rounded-xl border border-white/10 ${isPrinting ? 'bg-amber-500 animate-pulse' : 'bg-emerald-600'}`}><Printer className="w-4 h-4 text-white" /></button>
@@ -132,8 +144,7 @@ const MassiveBlindView: React.FC = () => {
                 </div>
             </header>
 
-            {/* HUD CON REFINAMIENTO TÉCNICO */}
-            <div className={`h-[42vh] relative flex flex-col overflow-hidden border-b-4 border-black shrink-0 transition-colors duration-300 ${getHudColor}`}>
+            <div className={`h-[38vh] relative flex flex-col overflow-hidden border-b-4 border-black shrink-0 transition-colors duration-300 ${getHudColor}`}>
                 <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-transparent opacity-50"></div>
                 <div className="w-full h-full flex items-stretch relative z-10">
                     {lastScannedItem ? (
@@ -142,22 +153,22 @@ const MassiveBlindView: React.FC = () => {
                                 <Minus className="w-12 h-12 text-white/40 active:text-white" />
                             </button>
                             <div className="flex-1 flex flex-col items-center justify-center px-4 text-center">
-                                <div className="mb-4">
-                                    <span className="text-white/40 font-mono text-[10px] font-black tracking-[0.3em] block mb-1 uppercase">{lastScannedItem.barcode}</span>
-                                    <h2 className="text-white font-black text-sm md:text-base uppercase tracking-tight line-clamp-2 px-4 leading-tight">{lastScannedItem.name}</h2>
+                                <div className="mb-2">
+                                    <span className="text-white/40 font-mono text-[9px] font-black tracking-[0.3em] block mb-1 uppercase">{lastScannedItem.barcode}</span>
+                                    <h2 className="text-white font-black text-xs md:text-sm uppercase tracking-tight line-clamp-2 px-4 leading-tight">{lastScannedItem.name}</h2>
                                 </div>
                                 <div className="relative">
-                                    <div className="text-[12.5rem] md:text-[15rem] font-black tabular-nums leading-none tracking-tighter drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+                                    <div className="text-[10rem] md:text-[12rem] font-black tabular-nums leading-none tracking-tighter drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
                                         {lastScannedItem.totalQuantity}
                                     </div>
                                     {lastScannedItem.expectedQty !== undefined && (
-                                        <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-black/40 backdrop-blur-md border border-white/20 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] whitespace-nowrap">
+                                        <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-black/40 backdrop-blur-md border border-white/20 px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.2em] whitespace-nowrap">
                                             Meta: {lastScannedItem.expectedQty}
                                         </div>
                                     )}
                                 </div>
                             </div>
-                            <button onPointerDown={(e) => { e.preventDefault(); registerScan(lastScannedItem.barcode, 1); }} className="w-1/4 bg-black/10 active:bg-black/30 flex items-center justify-center border-l border-white/5">
+                            <button onPointerDown={(e) => { e.preventDefault(); registerScan(lastScannedItem.barcode); }} className="w-1/4 bg-black/10 active:bg-black/30 flex items-center justify-center border-l border-white/5">
                                 <Plus className="w-12 h-12 text-white/40 active:text-white" />
                             </button>
                         </>
@@ -171,8 +182,21 @@ const MassiveBlindView: React.FC = () => {
                 {feedback === 'success' && <div className="absolute inset-0 z-50 bg-white/20 pointer-events-none animate-flash-quick"></div>}
             </div>
 
-            <div className="flex-1 min-h-0 bg-black">
-                <VirtualList items={items} itemHeight={88} renderRow={MassiveItemRow} rowData={rowData} className="bg-black/20" />
+            <div className="flex-1 min-h-0 bg-black flex flex-col">
+                <div className="shrink-0 p-3 bg-slate-900/50 border-b border-white/5 grid grid-cols-4 gap-2">
+                    {[1, 5, 10, 20].map(val => (
+                        <button
+                            key={val}
+                            onClick={() => { setMultiplier(val); if(navigator.vibrate) navigator.vibrate(10); }}
+                            className={`h-11 rounded-xl font-black text-xs flex items-center justify-center transition-all border-2 ${multiplier === val ? 'bg-amber-500 border-amber-600 text-black shadow-lg scale-105' : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10'}`}
+                        >
+                            +{val}
+                        </button>
+                    ))}
+                </div>
+                <div className="flex-1 min-h-0">
+                    <VirtualList items={items} itemHeight={88} renderRow={MassiveItemRow} rowData={rowData} className="bg-black/20" />
+                </div>
             </div>
 
             <div className="h-24 md:h-28 shrink-0 bg-slate-900 border-t border-white/5 flex items-center px-4 z-40 pb-safe">
@@ -187,10 +211,41 @@ const MassiveBlindView: React.FC = () => {
                 </button>
                 {isTriggerActive && (
                     <div className="fixed inset-0 z-[100]">
-                         <CameraScanner onScan={registerScan} onClose={() => setIsTriggerActive(false)} isTriggered={true} />
+                         <CameraScanner onScan={(code) => { registerScan(code); setIsTriggerActive(false); }} onClose={() => setIsTriggerActive(false)} isTriggered={true} />
                     </div>
                 )}
             </div>
+
+            {isChangingLocation && (
+                <div className="fixed inset-0 z-[210] bg-black/90 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in">
+                    <div className="bg-slate-900 border-2 border-white/10 rounded-[2.5rem] p-8 w-full max-w-sm shadow-2xl">
+                        <div className="flex items-center gap-3 mb-6">
+                            <MapPin className="text-blue-500 w-6 h-6" />
+                            <h3 className="text-xl font-black uppercase tracking-tight">Establecer Ubicación</h3>
+                        </div>
+                        <input 
+                            autoFocus
+                            className="w-full h-16 bg-black border-4 border-white/5 rounded-2xl text-center font-black text-2xl uppercase tracking-widest outline-none focus:border-blue-500 transition-all text-white"
+                            placeholder="PASILLO A..."
+                            defaultValue={currentLocation}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    setCurrentLocation((e.target as HTMLInputElement).value.toUpperCase());
+                                    setIsChangingLocation(false);
+                                }
+                            }}
+                        />
+                        <div className="mt-6 flex gap-3">
+                            <button onClick={() => setIsChangingLocation(false)} className="flex-1 py-4 bg-white/5 text-white/40 font-black uppercase text-xs rounded-xl">Cerrar</button>
+                            <button onClick={() => {
+                                const val = (document.querySelector('input[placeholder="PASILLO A..."]') as HTMLInputElement).value;
+                                setCurrentLocation(val.toUpperCase());
+                                setIsChangingLocation(false);
+                            }} className="flex-1 py-4 bg-blue-600 text-white font-black uppercase text-xs rounded-xl shadow-lg">Confirmar</button>
+                        </div>
+                    </div>
+                </div>
+            )}
             
             <style>{`
                 @keyframes flash-quick { 0% { opacity: 1; } 100% { opacity: 0; } }

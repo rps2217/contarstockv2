@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
@@ -11,22 +12,16 @@ import { Dexie } from 'dexie';
 import { useHIDScanner } from './useHIDScanner';
 import { useFeedbackSystem, FeedbackStatus } from './useFeedbackSystem';
 
-// Re-exportamos el tipo para compatibilidad con componentes UI
 export type ScannerFeedback = FeedbackStatus; 
 
-/**
- * HOOK DE ESCANEO INDUSTRIAL v8.1 - LOGIC ONLY
- * Ahora delega Input (HIDScanner) y Output (FeedbackSystem) a hooks especializados.
- */
 export const useScanner = (session: CountingSession, onFinish: () => void, onDiscard?: () => void) => {
     const settings = useMemo(() => getSettings(), []);
-    
-    // Hooks de Sistemas
     const { feedback, trigger } = useFeedbackSystem(250);
     
     const [status, setStatus] = useState<ScannerStatus>('idle');
     const [manualInput, setManualInput] = useState('');
     const [multiplier, setMultiplier] = useState(1);
+    const [currentLocation, setCurrentLocation] = useState('BODEGA_GRAL'); // Nueva ubicación persistente
     
     const [currentScan, setCurrentScan] = useState<ScanRecord | null>(null);
     const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
@@ -35,7 +30,6 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
     const skuCounters = useRef<Map<string, number>>(new Map());
     const isLocked = useRef(false);
 
-    // Consulta reactiva del historial reciente
     const recentHistory = useLiveQuery(
         () => db.scans
             .where('[sessionId+timestamp]')
@@ -48,7 +42,6 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
     
     const sessionStats = useLiveQuery(() => db.sessions.get(session.id), [session.id]);
 
-    // Sincronización inicial de caché
     useEffect(() => {
         const syncCache = async () => {
             skuCounters.current.clear();
@@ -60,12 +53,8 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
         syncCache();
     }, [session.id]);
 
-    /**
-     * PIPELINE DE PROCESAMIENTO CRÍTICO
-     */
     const finalizeScanPipeline = useCallback(async (barcode: string, qty: number) => {
         try {
-            // 1. Verificación de Producto (Maestro)
             let product = await productService.getProductByBarcode(barcode);
             let isAutoRegistered = false;
 
@@ -84,27 +73,29 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
                 }
             }
 
-            // 2. Actualización de Contadores Locales (UI Optimista)
             const newTotal = (skuCounters.current.get(barcode) || 0) + qty;
             skuCounters.current.set(barcode, newTotal);
             
-            // 3. Persistencia en Segundo Plano
-            const scanRecord = await sessionService.addScanEvent(session.id, barcode, qty);
+            // Persistencia con UBICACIÓN
+            const scanRecord = await sessionService.addScanEvent(
+                session.id, 
+                barcode, 
+                qty, 
+                undefined, 
+                undefined, 
+                currentLocation
+            );
 
-            // 4. Actualizar Estado UI Local
             setCurrentScan(scanRecord);
             setCurrentProduct(product);
             setCurrentSkuTotal(newTotal);
             
-            // 5. Disparar Feedback Estandarizado
             if (isAutoRegistered) {
-                trigger('unknown', { sound: 'increment' }); // Nuevo producto suena distinto
+                trigger('unknown', { sound: 'increment' });
             } else {
-                // Si qty > 1 (multiplicador), usamos sonido 'increment' que es más sutil que el 'success' fuerte
                 trigger('success', { sound: qty > 1 ? 'increment' : 'success' });
             }
 
-            // 6. Motor de Voz (TTS) - Opcional
             if (settings.ttsEnabled) {
                 const ttsText = settings.ttsMode === 'count' 
                     ? `${newTotal}` 
@@ -117,11 +108,8 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
         } finally {
             isLocked.current = false;
         }
-    }, [session.id, settings, trigger]);
+    }, [session.id, settings, trigger, currentLocation]);
 
-    /**
-     * MANEJADOR DE ENTRADA (LÁSER / TECLADO)
-     */
     const handleInboundScan = useCallback((rawBarcode: string) => {
         if (isLocked.current) return;
         const barcode = sanitizeBarcode(rawBarcode);
@@ -129,12 +117,11 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
 
         isLocked.current = true;
         const qtyToApply = multiplier;
-        setMultiplier(1); // Reset de seguridad tras aplicar
+        setMultiplier(1); 
         
         finalizeScanPipeline(barcode, qtyToApply);
     }, [multiplier, finalizeScanPipeline]);
 
-    // Input System
     useHIDScanner({
         onScan: handleInboundScan,
         minChars: 2,
@@ -144,6 +131,7 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
     return {
         state: { 
             status, setStatus, feedback, manualInput, setManualInput, multiplier, setMultiplier,
+            currentLocation, setCurrentLocation,
             optimisticActiveQty: currentSkuTotal,
             optimisticTotalQty: sessionStats?.totalUnits || 0,
             optimisticUniqueSkus: sessionStats?.totalSKUs || 0

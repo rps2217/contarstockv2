@@ -1,6 +1,6 @@
 
 import React, { useMemo, useState } from 'react';
-import { List } from 'lucide-react';
+import { List, MapPin } from 'lucide-react';
 import { CountingSession } from '../types';
 import { useScanner } from '../hooks/useScanner';
 import * as settingsService from '../services/settings';
@@ -8,7 +8,6 @@ import * as settingsService from '../services/settings';
 import { ScannerFeedbackLayer } from './scanner/ScannerFeedbackLayer';
 import { ScannerHeader } from './scanner/ScannerHeader';
 import { ScannerHero } from './scanner/ScannerHero';
-// Fix: Use the correct featured ScannerControls component from the subfolder that matches the passed props
 import { ScannerControls } from './scanner/ScannerControls';
 import { ScanItem } from './ScanItem';
 import { NumericKeypad } from './NumericKeypad';
@@ -24,6 +23,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
   const { state, data, actions } = useScanner(session, onCloseSession, onDiscardSession);
   const settings = useMemo(() => settingsService.getSettings(), []);
   const [showRecentScansMobile, setShowRecentScansMobile] = useState(false);
+  const [isChangingLocation, setIsChangingLocation] = useState(false);
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-white text-slate-900 overflow-hidden font-sans select-none page-transition">
@@ -31,8 +31,8 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
 
       <ScannerHeader 
         erpOrder={session.erpOrder}
-        scansPerMinute={0} 
-        showSpeedometer={settings.speedometerEnabled}
+        location={state.currentLocation}
+        onLocationClick={() => setIsChangingLocation(true)}
         onPause={() => state.setStatus('confirming')}
         onUndo={actions.handleUndo}
         canUndo={!!data.lastScan || state.feedback === 'success'}
@@ -67,7 +67,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
                     showSpeedometer={settings.speedometerEnabled}
                     hasCameraSupport={true}
                     onCameraClick={() => state.setStatus('camera')}
-                    onMultiplierClick={() => state.setMultiplier(m => m >= 99 ? 1 : m + 1)} 
+                    onMultiplierClick={(val) => state.setMultiplier(val)} 
                     onManualClick={() => state.setStatus('manual')}
                 />
             </div>
@@ -99,6 +99,37 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
         </div>
 
         {/* MODALES */}
+        {isChangingLocation && (
+            <div className="fixed inset-0 z-[210] bg-black/60 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in">
+                <div className="bg-white rounded-[2.5rem] p-8 w-full max-w-sm shadow-2xl">
+                    <div className="flex items-center gap-3 mb-6">
+                        <MapPin className="text-blue-600 w-6 h-6" />
+                        <h3 className="text-xl font-black uppercase tracking-tight">Set Ubicación</h3>
+                    </div>
+                    <input 
+                        autoFocus
+                        className="w-full h-16 bg-slate-50 border-4 border-slate-100 rounded-2xl text-center font-black text-2xl uppercase tracking-widest outline-none focus:border-blue-500 transition-all"
+                        placeholder="PASILLO A..."
+                        defaultValue={state.currentLocation}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                state.setCurrentLocation((e.target as HTMLInputElement).value.toUpperCase());
+                                setIsChangingLocation(false);
+                            }
+                        }}
+                    />
+                    <div className="mt-6 flex gap-3">
+                        <button onClick={() => setIsChangingLocation(false)} className="flex-1 py-4 bg-slate-100 text-slate-600 font-black uppercase text-xs rounded-xl">Cancelar</button>
+                        <button onClick={() => {
+                            const val = (document.querySelector('input[placeholder="PASILLO A..."]') as HTMLInputElement).value;
+                            state.setCurrentLocation(val.toUpperCase());
+                            setIsChangingLocation(false);
+                        }} className="flex-1 py-4 bg-blue-600 text-white font-black uppercase text-xs rounded-xl shadow-lg">Confirmar</button>
+                    </div>
+                </div>
+            </div>
+        )}
+
         {state.status === 'manual' && (
             <NumericKeypad 
                 isOpen={true} 
