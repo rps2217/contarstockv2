@@ -1,8 +1,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
-import { Lock, Unlock, AlertTriangle, CheckCircle2, Target } from 'lucide-react';
-import { SoundFX } from '../services/audio';
+import { Lock, AlertTriangle, CheckCircle2, Target, Zap, Activity } from 'lucide-react';
 
 interface CameraScannerProps {
     onScan: (code: string) => void;
@@ -14,7 +13,13 @@ interface CameraScannerProps {
 export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose, inline = true, isTriggered = false }) => {
     const [error, setError] = useState<string | null>(null);
     const [feedbackStatus, setFeedbackStatus] = useState<'success' | null>(null);
+    const [engineType, setEngineType] = useState<'native' | 'wasm' | 'init'>('init');
+    
+    const videoRef = useRef<HTMLVideoElement>(null);
     const scannerRef = useRef<Html5Qrcode | null>(null);
+    const streamRef = useRef<MediaStream | null>(null);
+    const requestRef = useRef<number>();
+    
     const lastScanTime = useRef(0);
     const triggerRef = useRef(isTriggered);
     const isComponentMounted = useRef(true);
@@ -23,57 +28,127 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose, i
 
     useEffect(() => { triggerRef.current = isTriggered; }, [isTriggered]);
 
+    // --- MOTOR DE DETECCIÓN NATIVO (Barcode Detection API) ---
+    const startNativeEngine = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { 
+                    facingMode: 'environment',
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                } 
+            });
+            
+            streamRef.current = stream;
+            
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream;
+                await videoRef.current.play();
+            }
+
+            const formats = ['qr_code', 'ean_13', 'code_128', 'code_39', 'ean_8', 'upc_a', 'itf'];
+            // @ts-ignore - La API es experimental en TS pero soportada en Chrome/Android
+            const detector = new window.BarcodeDetector({ formats });
+            setEngineType('native');
+
+            const detectLoop = async () => {
+                if (!videoRef.current || !isComponentMounted.current) return;
+
+                try {
+                    // Solo procesamos si el gatillo está activo (ahorro de batería masivo)
+                    if (triggerRef.current && videoRef.current.readyState === 4) {
+                        const barcodes = await detector.detect(videoRef.current);
+                        
+                        if (barcodes.length > 0) {
+                            const rawValue = barcodes[0].rawValue;
+                            handleSuccessfulScan(rawValue);
+                        }
+                    }
+                } catch (e) {
+                    // Errores silenciosos en el loop para no detener el video
+                }
+                
+                requestRef.current = requestAnimationFrame(detectLoop);
+            };
+
+            detectLoop();
+
+        } catch (err) {
+            console.warn("Native Engine Failed, falling back...", err);
+            startLegacyEngine();
+        }
+    };
+
+    // --- MOTOR LEGACY (HTML5-QRCODE) ---
+    const startLegacyEngine = async () => {
+        try {
+            const oldScanner = document.getElementById(SCANNER_DOM_ID);
+            if (oldScanner) oldScanner.innerHTML = "";
+
+            const scannerInstance = new Html5Qrcode(SCANNER_DOM_ID);
+            scannerRef.current = scannerInstance;
+            setEngineType('wasm');
+
+            await scannerInstance.start(
+                { facingMode: "environment" }, 
+                { fps: 20, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
+                (decodedText) => {
+                    if (triggerRef.current) handleSuccessfulScan(decodedText);
+                },
+                () => {}
+            );
+        } catch (err: any) {
+            if (isComponentMounted.current) setError("OPTICAL_ENGINE_FAILURE");
+        }
+    };
+
+    // --- LÓGICA DE PROCESAMIENTO UNIFICADA ---
+    const handleSuccessfulScan = (code: string) => {
+        if (!isComponentMounted.current) return;
+        
+        const now = Date.now();
+        if (now - lastScanTime.current < 1200) return; // Debounce global
+        
+        lastScanTime.current = now;
+        setFeedbackStatus('success');
+        
+        if (navigator.vibrate) navigator.vibrate(40);
+        onScan(code);
+        
+        setTimeout(() => {
+            if (isComponentMounted.current) setFeedbackStatus(null);
+        }, 350);
+    };
+
+    // --- INICIALIZACIÓN ---
     useEffect(() => {
         isComponentMounted.current = true;
-        let scannerInstance: Html5Qrcode | null = null;
 
-        const startEngine = async () => {
-            try {
-                const oldScanner = document.getElementById(SCANNER_DOM_ID);
-                if (oldScanner) oldScanner.innerHTML = "";
-
-                scannerInstance = new Html5Qrcode(SCANNER_DOM_ID);
-                scannerRef.current = scannerInstance;
-
-                await scannerInstance.start(
-                    { facingMode: "environment" }, 
-                    { fps: 30, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
-                    (decodedText) => {
-                        if (!isComponentMounted.current || !triggerRef.current) return;
-                        
-                        const now = Date.now();
-                        if (now - lastScanTime.current < 1200) return;
-                        
-                        lastScanTime.current = now;
-                        setFeedbackStatus('success');
-                        
-                        if (navigator.vibrate) navigator.vibrate(40);
-                        onScan(decodedText);
-                        
-                        setTimeout(() => {
-                            if (isComponentMounted.current) setFeedbackStatus(null);
-                        }, 250);
-                    },
-                    () => {}
-                );
-            } catch (err: any) {
-                if (isComponentMounted.current) {
-                    setError("OPTICAL_ENGINE_LOCK_FAILURE");
-                }
-            }
-        };
-
-        startEngine();
+        // Detección de Capacidades
+        // @ts-ignore
+        if ('BarcodeDetector' in window && typeof window.BarcodeDetector.detect === 'function') {
+            startNativeEngine();
+        } else {
+            startLegacyEngine();
+        }
 
         return () => {
             isComponentMounted.current = false;
-            if (scannerInstance && scannerInstance.isScanning) {
-                scannerInstance.stop().catch(() => {}).finally(() => {
+            
+            // Cleanup Nativo
+            if (requestRef.current) cancelAnimationFrame(requestRef.current);
+            if (streamRef.current) {
+                streamRef.current.getTracks().forEach(track => track.stop());
+            }
+
+            // Cleanup Legacy
+            if (scannerRef.current && scannerRef.current.isScanning) {
+                scannerRef.current.stop().catch(() => {}).finally(() => {
                     scannerRef.current = null;
                 });
             }
         };
-    }, [onScan]);
+    }, []);
 
     return (
         <div className={`${inline ? 'w-full h-full relative' : 'fixed inset-0 z-[100]'} bg-black overflow-hidden`}>
@@ -96,16 +171,24 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose, i
                 )}
             </div>
 
-            {/* VELO DE BLOQUEO (TRANSICIÓN ULTRARRÁPIDA 75ms) */}
+            {/* VELO DE BLOQUEO */}
             <div className={`absolute inset-0 z-40 transition-all duration-75 pointer-events-none flex flex-col items-center justify-center ${isTriggered ? 'bg-transparent opacity-0' : 'bg-black/80 backdrop-blur-sm'}`}>
                 {!isTriggered && !error && (
                     <div className="flex flex-col items-center gap-4">
-                        <div className="bg-slate-900 border-4 border-white/5 p-5 rounded-full text-blue-500">
+                        <div className="bg-slate-900 border-4 border-white/5 p-5 rounded-full text-blue-500 shadow-2xl">
                             <Lock className="w-10 h-10" />
                         </div>
                         <span className="text-[10px] font-black text-white/30 uppercase tracking-[0.5em]">LENS_LOCKED</span>
                     </div>
                 )}
+            </div>
+
+            {/* INDICADOR DE MOTOR ACTIVO */}
+            <div className="absolute top-4 right-4 z-50 pointer-events-none">
+                <div className={`flex items-center gap-2 px-3 py-1 rounded-full border ${engineType === 'native' ? 'bg-blue-900/40 border-blue-500/30 text-blue-400' : 'bg-orange-900/40 border-orange-500/30 text-orange-400'}`}>
+                    {engineType === 'native' ? <Zap className="w-3 h-3 fill-current" /> : <Activity className="w-3 h-3" />}
+                    <span className="text-[9px] font-black uppercase tracking-widest">{engineType === 'native' ? 'GPU_NATIVE' : 'CPU_LEGACY'}</span>
+                </div>
             </div>
 
             <div className="flex-1 relative bg-black flex flex-col justify-center h-full">
@@ -123,8 +206,19 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose, i
                     </div>
                 )}
                 
-                {/* VIDEO ENGINE (TRANSICIÓN 150ms) */}
-                <div id={SCANNER_DOM_ID} className={`w-full h-full transition-all duration-150 ${isTriggered ? 'opacity-100 scale-100' : 'opacity-10 scale-110 grayscale blur-sm'}`}></div>
+                {/* ELEMENTO DE VIDEO NATIVO */}
+                <video 
+                    ref={videoRef} 
+                    className={`w-full h-full object-cover transition-all duration-150 ${engineType === 'native' ? 'block' : 'hidden'} ${isTriggered ? 'opacity-100 scale-100' : 'opacity-10 scale-110 grayscale blur-sm'}`} 
+                    playsInline 
+                    muted
+                />
+
+                {/* ELEMENTO HTML5-QRCODE FALLBACK */}
+                <div 
+                    id={SCANNER_DOM_ID} 
+                    className={`w-full h-full transition-all duration-150 ${engineType === 'wasm' ? 'block' : 'hidden'} ${isTriggered ? 'opacity-100 scale-100' : 'opacity-10 scale-110 grayscale blur-sm'}`}
+                ></div>
             </div>
             
             <style>{`
