@@ -2,7 +2,7 @@
 import React, { useState, memo, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMassiveScanner, ConsolidatedBlindItem } from '../hooks/useMassiveScanner';
-import { ChevronLeft, Plus, Minus, ScanLine, Save, Upload, Camera, Target, Barcode, X, RotateCcw, Download, Printer, MapPin } from 'lucide-react';
+import { ChevronLeft, Plus, Minus, ScanLine, Save, Upload, Camera, Target, Barcode, X, RotateCcw, Download, Printer, MapPin, FileText } from 'lucide-react';
 import { CameraScanner } from './CameraScanner';
 import { migrateMassiveToMaster, importManifestFromCloud } from '../services/massiveSync';
 import { SoundFX } from '../services/audio';
@@ -11,7 +11,6 @@ import { printBarcode } from '../services/printerService';
 import { thermalPrinter } from '../services/thermalPrinterService';
 import { IndustrialButton } from './common/IndustrialButton';
 import { Modal } from './common/Modal';
-import { useAppStore } from '../store/useAppStore';
 
 const MassiveItemRow = memo(({ index, data }: any) => {
     const item = data.items[index];
@@ -67,6 +66,7 @@ const MassiveBlindView: React.FC = () => {
     const [isImporting, setIsImporting] = useState(false);
     const [isPrinting, setIsPrinting] = useState(false);
     const [isChangingLocation, setIsChangingLocation] = useState(false);
+    const [showLabelModal, setShowLabelModal] = useState(false);
 
     const handleCloudImport = async () => {
         if (!batchId) return;
@@ -108,6 +108,24 @@ const MassiveBlindView: React.FC = () => {
         }
     }, [registerScan, removeItemCompletely]);
 
+    const handleThermalPrint = async () => {
+        if (!lastScannedItem || isPrinting) return;
+        setIsPrinting(true);
+        try {
+            await thermalPrinter.printLabel(
+                lastScannedItem.barcode, 
+                lastScannedItem.name, 
+                lastScannedItem.totalQuantity
+            );
+            SoundFX.play('success');
+        } catch (e) {
+            SoundFX.play('error');
+            alert("Error de conexión con impresora.");
+        } finally {
+            setIsPrinting(false);
+        }
+    };
+
     const getHudColor = useMemo(() => {
         if (!lastScannedItem) return 'bg-slate-950';
         if (lastScannedItem.expectedQty === undefined) return 'bg-blue-700'; 
@@ -135,9 +153,14 @@ const MassiveBlindView: React.FC = () => {
                 </div>
                 
                 <div className="flex gap-2">
-                    {thermalPrinter.isConnected() && (
-                         <button disabled={!lastScannedItem || isPrinting} onClick={async () => { setIsPrinting(true); await thermalPrinter.printLabel(lastScannedItem!.barcode, lastScannedItem!.name, lastScannedItem!.totalQuantity); setIsPrinting(false); }} className={`w-10 h-10 flex items-center justify-center rounded-xl border border-white/10 ${isPrinting ? 'bg-amber-500 animate-pulse' : 'bg-emerald-600'}`}><Printer className="w-4 h-4 text-white" /></button>
-                    )}
+                    <button 
+                        disabled={!lastScannedItem}
+                        onClick={() => { SoundFX.play('success'); setShowLabelModal(true); }}
+                        className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl border border-white/10 active:bg-blue-600 disabled:opacity-20 transition-all"
+                        title="Imprimir Etiqueta"
+                    >
+                        <Barcode className={`w-5 h-5 ${lastScannedItem ? 'text-blue-400' : 'text-white/20'}`} />
+                    </button>
                     <button onClick={() => { if(confirm("¿Borrar todo?")) resetBatch(); }} className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl border border-white/10 active:bg-rose-600"><RotateCcw className="w-4 h-4 text-white/60" /></button>
                     <button onClick={handleCloudImport} className="w-10 h-10 flex items-center justify-center bg-indigo-600/20 rounded-xl border border-indigo-500/20"><Download className="w-4 h-4 text-indigo-400" /></button>
                     <button onClick={handleFinalize} disabled={!items.length || isMigrating} className="w-14 h-10 bg-blue-600 rounded-xl active:scale-95 flex items-center justify-center shadow-lg shadow-blue-900/20"><Save className="w-5 h-5" /></button>
@@ -215,6 +238,64 @@ const MassiveBlindView: React.FC = () => {
                     </div>
                 )}
             </div>
+
+            {/* MODAL DE ETIQUETA E IMPRESIÓN (RESTAURADO) */}
+            <Modal 
+                isOpen={showLabelModal} 
+                onClose={() => setShowLabelModal(false)} 
+                title="Generador de Etiqueta"
+                variant="center"
+                className="max-w-sm"
+            >
+                <div className="p-8 text-center flex flex-col items-center">
+                    {/* VISOR DE ETIQUETA REAL */}
+                    <div className="w-full bg-white text-black p-8 rounded-3xl border-4 border-black mb-8 shadow-inner animate-in zoom-in-95">
+                        <div className="text-[9px] font-black uppercase tracking-[0.4em] mb-4 text-slate-400">LogiCount Industrial System</div>
+                        <div className="text-xl font-black uppercase leading-tight mb-2 truncate px-2">{lastScannedItem?.name}</div>
+                        
+                        {/* CÓDIGO DE BARRAS VISUAL */}
+                        <div className="barcode-font text-[90px] leading-none my-6 select-none bg-slate-50 py-4 rounded-xl">
+                            {lastScannedItem?.barcode}
+                        </div>
+                        
+                        <div className="text-2xl font-black tracking-[0.25em] font-mono">{lastScannedItem?.barcode}</div>
+                        
+                        <div className="mt-6 pt-4 border-t border-dashed border-slate-200 flex justify-between items-center px-4">
+                            <span className="text-[10px] font-black uppercase text-slate-400">Cantidad Total:</span>
+                            <span className="text-3xl font-black tabular-nums">{lastScannedItem?.totalQuantity}</span>
+                        </div>
+                    </div>
+
+                    {/* BOTONES DE ACCIÓN INDUSTRIAL */}
+                    <div className="grid grid-cols-1 gap-4 w-full">
+                        <IndustrialButton 
+                            onClick={handleThermalPrint} 
+                            isLoading={isPrinting}
+                            variant="primary" 
+                            icon={Printer} 
+                            fullWidth
+                        >
+                            Impresión Térmica
+                        </IndustrialButton>
+                        
+                        <IndustrialButton 
+                            onClick={() => lastScannedItem && printBarcode(lastScannedItem.barcode, lastScannedItem.name, `STOCK_AUDIT: ${lastScannedItem.totalQuantity}`)} 
+                            variant="black" 
+                            icon={FileText} 
+                            fullWidth
+                        >
+                            Exportar PDF / A4
+                        </IndustrialButton>
+                        
+                        <button 
+                            onClick={() => setShowLabelModal(false)} 
+                            className="mt-4 text-slate-400 font-black uppercase text-[10px] tracking-[0.2em] hover:text-black transition-colors"
+                        >
+                            Cerrar Visor
+                        </button>
+                    </div>
+                </div>
+            </Modal>
 
             {isChangingLocation && (
                 <div className="fixed inset-0 z-[210] bg-black/90 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in">
