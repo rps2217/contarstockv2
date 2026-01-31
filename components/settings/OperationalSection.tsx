@@ -17,10 +17,11 @@ export const OperationalSection: React.FC<Props> = ({ settings, updateSetting })
         updateSetting(key, !settings[key]);
     };
 
+    // Componente para filas completas con descripción
     const IndustrialSwitch = ({ active, label, icon: Icon, onClick, description }: any) => (
         <button 
             onClick={onClick}
-            className={`w-full p-5 rounded-3xl border-4 transition-all duration-200 flex items-center justify-between group active:scale-[0.98] ${
+            className={`w-full p-5 rounded-[2.5rem] border-4 transition-all duration-200 flex items-center justify-between group active:scale-[0.98] ${
                 active 
                 ? 'bg-blue-600 border-blue-700 text-white shadow-xl shadow-blue-900/20' 
                 : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'
@@ -39,14 +40,38 @@ export const OperationalSection: React.FC<Props> = ({ settings, updateSetting })
                     </div>
                 </div>
             </div>
-            <div className={`w-12 h-6 rounded-full border-2 relative transition-all ${active ? 'bg-white border-white' : 'bg-slate-200 border-slate-300'}`}>
+            <div className={`w-12 h-6 rounded-full border-2 shrink-0 relative transition-all ${active ? 'bg-white border-white' : 'bg-slate-200 border-slate-300'}`}>
                 <div className={`absolute top-0.5 bottom-0.5 w-4 bg-slate-900 rounded-full shadow-sm transition-all ${active ? 'right-1' : 'left-1'}`} />
             </div>
         </button>
     );
 
+    // Componente compacto para la rejilla sensorial (2 columnas)
+    const CompactSwitch = ({ active, label, icon: Icon, onClick }: any) => (
+        <button 
+            onClick={onClick}
+            className={`w-full p-4 rounded-[2rem] border-4 transition-all duration-200 flex flex-col gap-3 group active:scale-[0.98] ${
+                active 
+                ? 'bg-blue-600 border-blue-700 text-white shadow-lg shadow-blue-900/20' 
+                : 'bg-white border-slate-200 text-slate-400'
+            }`}
+        >
+            <div className="flex items-center justify-between w-full">
+                <div className={`p-2 rounded-xl transition-colors ${active ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                    <Icon className="w-5 h-5 stroke-[3px]" />
+                </div>
+                <div className={`w-10 h-5 rounded-full border-2 shrink-0 relative transition-all ${active ? 'bg-white border-white' : 'bg-slate-200 border-slate-300'}`}>
+                    <div className={`absolute top-0.5 bottom-0.5 w-3 bg-slate-900 rounded-full transition-all ${active ? 'right-1' : 'left-1'}`} />
+                </div>
+            </div>
+            <div className={`font-black uppercase tracking-[0.15em] text-[11px] text-left leading-none ${active ? 'text-white' : 'text-slate-900'}`}>
+                {label}
+            </div>
+        </button>
+    );
+
     return (
-        <div className="space-y-3 animate-in slide-in-from-bottom-2">
+        <div className="space-y-4 animate-in slide-in-from-bottom-2 px-1">
             <h3 className="ml-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-2">Motor de Ejecución</h3>
             
             <IndustrialSwitch 
@@ -65,20 +90,21 @@ export const OperationalSection: React.FC<Props> = ({ settings, updateSetting })
                 icon={Zap}
             />
 
-            <div className="h-px bg-slate-200 my-4 mx-4"></div>
+            <div className="h-px bg-slate-200 my-4 mx-4 opacity-50"></div>
+            
             <h3 className="ml-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-2">Interfaz Sensorial</h3>
 
             <div className="grid grid-cols-2 gap-3">
-                <IndustrialSwitch 
+                <CompactSwitch 
                     active={settings.soundEnabled} 
                     onClick={() => handleToggle('soundEnabled')}
                     label="Audio"
                     icon={Volume2}
                 />
-                <IndustrialSwitch 
+                <CompactSwitch 
                     active={settings.hapticsEnabled} 
                     onClick={() => handleToggle('hapticsEnabled')}
-                    label="Hápitico"
+                    label="Háptico"
                     icon={Smartphone}
                 />
             </div>
@@ -91,7 +117,8 @@ export const OperationalSection: React.FC<Props> = ({ settings, updateSetting })
                 icon={Mic}
             />
 
-            <div className="h-px bg-slate-200 my-4 mx-4"></div>
+            <div className="h-px bg-slate-200 my-4 mx-4 opacity-50"></div>
+            
             <h3 className="ml-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-2">Protección de Datos</h3>
 
             <IndustrialSwitch 
