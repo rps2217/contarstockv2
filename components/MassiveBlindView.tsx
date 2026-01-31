@@ -239,35 +239,39 @@ const MassiveBlindView: React.FC = () => {
                 )}
             </div>
 
-            {/* MODAL DE ETIQUETA E IMPRESIÓN (RESTAURADO) */}
+            {/* MODAL DE ETIQUETA E IMPRESIÓN (DISEÑO PROFESIONAL REFORZADO) */}
             <Modal 
                 isOpen={showLabelModal} 
                 onClose={() => setShowLabelModal(false)} 
                 title="Generador de Etiqueta"
                 variant="center"
-                className="max-w-sm"
+                className="max-w-md"
             >
-                <div className="p-8 text-center flex flex-col items-center">
-                    {/* VISOR DE ETIQUETA REAL */}
-                    <div className="w-full bg-white text-black p-8 rounded-3xl border-4 border-black mb-8 shadow-inner animate-in zoom-in-95">
-                        <div className="text-[9px] font-black uppercase tracking-[0.4em] mb-4 text-slate-400">LogiCount Industrial System</div>
-                        <div className="text-xl font-black uppercase leading-tight mb-2 truncate px-2">{lastScannedItem?.name}</div>
+                <div className="p-6 text-center flex flex-col items-center">
+                    {/* VISOR DE ETIQUETA ESCALABLE */}
+                    <div className="w-full bg-white text-black p-6 rounded-[2.5rem] border-[6px] border-slate-900 mb-8 shadow-2xl relative overflow-hidden flex flex-col items-center">
+                        <div className="text-[10px] font-black uppercase tracking-[0.4em] mb-4 text-slate-400">LogiCount Industrial System</div>
+                        <div className="text-lg font-black uppercase leading-tight mb-6 px-4 w-full break-words">{lastScannedItem?.name}</div>
                         
-                        {/* CÓDIGO DE BARRAS VISUAL */}
-                        <div className="barcode-font text-[90px] leading-none my-6 select-none bg-slate-50 py-4 rounded-xl">
+                        {/* CÓDIGO DE BARRAS DINÁMICO: Nunca escapa del ancho */}
+                        <div className="w-full bg-white py-6 flex items-center justify-center overflow-hidden">
+                            <div className="barcode-font text-[18vw] sm:text-[80px] leading-none select-none tracking-tight whitespace-nowrap px-4 border-x-8 border-transparent">
+                                {lastScannedItem?.barcode}
+                            </div>
+                        </div>
+                        
+                        <div className="text-2xl font-black tracking-[0.3em] font-mono mt-4 border-t-2 border-slate-100 pt-4 w-full">
                             {lastScannedItem?.barcode}
                         </div>
                         
-                        <div className="text-2xl font-black tracking-[0.25em] font-mono">{lastScannedItem?.barcode}</div>
-                        
-                        <div className="mt-6 pt-4 border-t border-dashed border-slate-200 flex justify-between items-center px-4">
-                            <span className="text-[10px] font-black uppercase text-slate-400">Cantidad Total:</span>
-                            <span className="text-3xl font-black tabular-nums">{lastScannedItem?.totalQuantity}</span>
+                        <div className="mt-8 pt-4 border-t-4 border-dashed border-slate-200 w-full flex justify-between items-center px-6">
+                            <span className="text-[10px] font-black uppercase text-slate-400">Cantidad Registrada:</span>
+                            <span className="text-4xl font-black tabular-nums">{lastScannedItem?.totalQuantity}</span>
                         </div>
                     </div>
 
-                    {/* BOTONES DE ACCIÓN INDUSTRIAL */}
-                    <div className="grid grid-cols-1 gap-4 w-full">
+                    {/* BOTONES DE ACCIÓN */}
+                    <div className="grid grid-cols-1 gap-3 w-full max-w-xs">
                         <IndustrialButton 
                             onClick={handleThermalPrint} 
                             isLoading={isPrinting}
@@ -289,9 +293,9 @@ const MassiveBlindView: React.FC = () => {
                         
                         <button 
                             onClick={() => setShowLabelModal(false)} 
-                            className="mt-4 text-slate-400 font-black uppercase text-[10px] tracking-[0.2em] hover:text-black transition-colors"
+                            className="mt-4 text-slate-400 font-black uppercase text-[10px] tracking-[0.2em] py-2"
                         >
-                            Cerrar Visor
+                            Volver al Panel
                         </button>
                     </div>
                 </div>
