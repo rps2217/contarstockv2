@@ -23,6 +23,7 @@ export const SupportSection: React.FC = () => {
 
     /**
      * REINICIO SUAVE: Limpia cache de interfaz sin tocar la base de datos.
+     * FIX: Redirige a '/' para evitar errores 404 en servidores sin configuración SPA.
      */
     const handleSoftUpdate = async () => {
         SoundFX.play('success');
@@ -43,8 +44,9 @@ export const SupportSection: React.FC = () => {
             }
         }
         
-        // 3. Recarga forzada rompiendo cache con timestamp
-        window.location.href = window.location.pathname + '?v=' + Date.now();
+        // 3. Redirección forzada a la raíz con cache-buster
+        // Usamos '/' en lugar de window.location.pathname para garantizar que el servidor cargue index.html
+        window.location.href = '/?v=' + Date.now();
     };
 
     return (

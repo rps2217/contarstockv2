@@ -1,9 +1,8 @@
 
 import React, { useState } from 'react';
-import { Smartphone, Zap, QrCode, Share2, Copy, Check, X, MonitorSmartphone, DownloadCloud, Loader2, Info, Link2 } from 'lucide-react';
+import { Smartphone, Zap, QrCode, Share2, Copy, Check, X, MonitorSmartphone, DownloadCloud, Loader2, Info, Link2, FileSpreadsheet } from 'lucide-react';
 import { AppSettings, AppSheetConfig } from '../../types';
-import { CameraScanner } from '../CameraScanner';
-import { fetchSystemConfig, callGas } from '../../services/gasService';
+import { bootstrapConfigById, fetchSystemConfig, callGas } from '../../services/gasService';
 import { SoundFX } from '../../services/audio';
 
 interface Props {
@@ -12,10 +11,8 @@ interface Props {
 }
 
 export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
-    const [isScanning, setIsScanning] = useState(false);
-    const [showExportQR, setShowExportQR] = useState(false);
-    const [copySuccess, setCopySuccess] = useState(false);
-    const [isUpdatingConfig, setIsUpdatingConfig] = useState(false);
+    const [ssIdInput, setSsIdInput] = useState('');
+    const [isBootstrapping, setIsBootstrapping] = useState(false);
     const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'ok' | 'fail'>('idle');
 
     const config = settings.appSheetConfig || {
@@ -26,6 +23,25 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
         productsTableName: 'PRODUCTOS',
         receptionTableName: 'RECEPCION_BULTOS',
         gasWebAppUrl: ''
+    };
+
+    const handleBootstrap = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!ssIdInput) return;
+        
+        setIsBootstrapping(true);
+        try {
+            const newConfig = await bootstrapConfigById(ssIdInput);
+            updateSetting('appSheetConfig', newConfig);
+            SoundFX.play('success');
+            setSsIdInput('');
+            alert("✅ ¡Vínculo Maestro Exitoso! Todos los parámetros han sido cargados.");
+        } catch (err: any) {
+            SoundFX.play('error');
+            alert(`Error de vinculación: ${err.message}`);
+        } finally {
+            setIsBootstrapping(false);
+        }
     };
 
     const handleTestConnection = async () => {
@@ -47,75 +63,79 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
         updateSetting('appSheetConfig', { ...config, [key]: value });
     };
 
-    const handleDownloadMasterConfig = async () => {
-        setIsUpdatingConfig(true);
-        try {
-            const newConfig = await fetchSystemConfig();
-            updateSetting('appSheetConfig', newConfig);
-            SoundFX.play('success');
-            alert("✅ Configuración actualizada.");
-        } catch (err: any) {
-            SoundFX.play('error');
-            alert(`Error: ${err.message}`);
-        } finally {
-            setIsUpdatingConfig(false);
-        }
-    };
-
     return (
         <div className="space-y-8 animate-in slide-in-from-bottom-2 pb-10">
-            <div className="bg-black text-white p-6 rounded-[2.5rem] shadow-xl relative overflow-hidden">
-                <h3 className="text-xl font-black uppercase italic">AppSheet API</h3>
-                <div className="space-y-4 mt-6">
+            {/* NUEVO PANEL: ASISTENTE DE VINCULACIÓN POR ID */}
+            <div className="bg-indigo-600 p-6 rounded-[2.5rem] shadow-xl text-white relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-8 bg-white/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
+                <div className="relative z-10">
+                    <div className="flex items-center gap-3 mb-4">
+                        <FileSpreadsheet className="w-6 h-6 text-indigo-200" />
+                        <h3 className="text-xl font-black uppercase italic tracking-tighter">Vinculación Maestra</h3>
+                    </div>
+                    <p className="text-[10px] font-bold text-indigo-100 uppercase tracking-widest mb-6 leading-relaxed">
+                        Pega el ID o URL de tu Excel para traer la configuración de respaldo automáticamente.
+                    </p>
+                    
+                    <form onSubmit={handleBootstrap} className="space-y-3">
+                        <input 
+                            value={ssIdInput}
+                            onChange={(e) => setSsIdInput(e.target.value)}
+                            placeholder="ID del Spreadsheet..."
+                            className="w-full h-14 bg-white/10 border-2 border-white/20 rounded-2xl px-4 text-sm font-bold placeholder:text-white/40 outline-none focus:bg-white/20 focus:border-white transition-all"
+                        />
+                        <button 
+                            disabled={isBootstrapping || !ssIdInput}
+                            className="w-full h-14 bg-white text-indigo-600 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                            {isBootstrapping ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-4 h-4 fill-current" />}
+                            Vincular Nube
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            {/* PANEL TRADICIONAL DE MANUAL API */}
+            <div className="bg-black text-white p-6 rounded-[2.5rem] shadow-xl">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-sm font-black uppercase tracking-widest text-white/50">AppSheet API (Manual)</h3>
+                    {config.appId && <Check className="text-emerald-500 w-5 h-5" />}
+                </div>
+                <div className="space-y-4">
                     <div className="space-y-1">
-                        <label className="text-[8px] font-black text-white/40 uppercase">Application ID</label>
-                        <input value={config.appId} onChange={(e) => handleConfigChange('appId', e.target.value)} className="w-full bg-white/10 border border-white/10 rounded-xl p-3 font-mono text-xs text-white" />
+                        <label className="text-[8px] font-black text-white/40 uppercase ml-2">Application ID</label>
+                        <input value={config.appId} onChange={(e) => handleConfigChange('appId', e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 font-mono text-[10px] text-white" />
                     </div>
                     <div className="space-y-1">
-                        <label className="text-[8px] font-black text-white/40 uppercase">Access Key</label>
-                        <input type="password" value={config.accessKey} onChange={(e) => handleConfigChange('accessKey', e.target.value)} className="w-full bg-white/10 border border-white/10 rounded-xl p-3 font-mono text-xs text-white" />
+                        <label className="text-[8px] font-black text-white/40 uppercase ml-2">Access Key</label>
+                        <input type="password" value={config.accessKey} onChange={(e) => handleConfigChange('accessKey', e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 font-mono text-[10px] text-white" />
                     </div>
                 </div>
             </div>
 
             <div className="px-1 space-y-3">
                 <button 
-                    onClick={handleDownloadMasterConfig}
-                    disabled={isUpdatingConfig}
-                    className={`w-full p-6 rounded-[2rem] border-4 flex items-center justify-between transition-all ${isUpdatingConfig ? 'bg-slate-100 border-slate-200' : 'bg-indigo-600 border-indigo-700 text-white shadow-lg'}`}
-                >
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 bg-white/20 rounded-2xl">
-                            {isUpdatingConfig ? <Loader2 className="animate-spin" /> : <DownloadCloud />}
-                        </div>
-                        <div className="text-left">
-                            <div className="font-black uppercase text-xs">Sincronizar Terminal</div>
-                            <div className="text-[10px] font-bold opacity-80 uppercase">Leer CONFIG_SISTEMA</div>
-                        </div>
-                    </div>
-                    <Zap className="w-5 h-5 text-yellow-400 fill-yellow-400" />
-                </button>
-
-                <button 
                     onClick={handleTestConnection}
-                    className={`w-full py-4 rounded-2xl border-2 font-black text-xs uppercase tracking-widest transition-all ${testStatus === 'ok' ? 'bg-emerald-500 border-emerald-600 text-white' : (testStatus === 'fail' ? 'bg-rose-500 border-rose-600 text-white' : 'bg-white border-slate-200 text-slate-600')}`}
+                    className={`w-full py-5 rounded-2xl border-4 font-black text-xs uppercase tracking-widest transition-all ${testStatus === 'ok' ? 'bg-emerald-500 border-emerald-600 text-white' : (testStatus === 'fail' ? 'bg-rose-500 border-rose-600 text-white' : 'bg-white border-slate-200 text-slate-600 shadow-sm')}`}
                 >
-                    {testStatus === 'testing' ? <Loader2 className="animate-spin mx-auto" /> : (testStatus === 'ok' ? '¡CONEXIÓN EXITOSA!' : (testStatus === 'fail' ? 'ERROR DE VÍNCULO' : 'PROBAR CONEXIÓN'))}
+                    {testStatus === 'testing' ? <Loader2 className="animate-spin mx-auto w-5 h-5" /> : (testStatus === 'ok' ? '¡CONEXIÓN EXITOSA!' : (testStatus === 'fail' ? 'ERROR DE VÍNCULO' : 'PROBAR MOTOR CLOUD'))}
                 </button>
             </div>
 
             <div className="space-y-4">
                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] px-2">Mapeo de Tablas</h3>
-                <input value={config.countsTableName} onChange={(e) => handleConfigChange('countsTableName', e.target.value)} className="w-full h-14 px-4 bg-slate-100 border-2 border-slate-200 rounded-xl font-bold" placeholder="Tabla Logs" />
-                <input value={config.consolidatedTableName} onChange={(e) => handleConfigChange('consolidatedTableName', e.target.value)} className="w-full h-14 px-4 bg-slate-100 border-2 border-slate-200 rounded-xl font-bold" placeholder="Tabla Resumen" />
+                <div className="grid grid-cols-1 gap-2">
+                    <input value={config.countsTableName} onChange={(e) => handleConfigChange('countsTableName', e.target.value)} className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs" placeholder="Tabla Logs" />
+                    <input value={config.consolidatedTableName} onChange={(e) => handleConfigChange('consolidatedTableName', e.target.value)} className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs" placeholder="Tabla Resumen" />
+                </div>
             </div>
 
-            <div className="bg-amber-50 border-2 border-amber-100 rounded-[2rem] p-6">
+            <div className="bg-slate-900 border-2 border-slate-800 rounded-[2rem] p-6 text-white">
                 <div className="flex items-center gap-3 mb-4">
-                    <Link2 className="text-amber-600" />
-                    <h3 className="text-sm font-black text-amber-800 uppercase">Google Script URL</h3>
+                    <Link2 className="text-blue-400 w-5 h-5" />
+                    <h3 className="text-xs font-black uppercase tracking-widest">Google Script Endpoint</h3>
                 </div>
-                <input value={config.gasWebAppUrl || ''} onChange={(e) => handleConfigChange('gasWebAppUrl', e.target.value)} className="w-full h-12 px-4 bg-white border border-amber-200 rounded-xl text-[10px] font-mono" placeholder="https://script.google.com/..." />
+                <input value={config.gasWebAppUrl || ''} onChange={(e) => handleConfigChange('gasWebAppUrl', e.target.value)} className="w-full h-12 px-4 bg-white/5 border border-white/10 rounded-xl text-[9px] font-mono text-blue-300" placeholder="https://script.google.com/..." />
             </div>
         </div>
     );

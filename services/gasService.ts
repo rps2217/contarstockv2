@@ -3,6 +3,64 @@ import { logger } from './logger';
 import { getSettings } from './settings';
 import { compressData } from './utils';
 import { AppSheetConfig } from '../types';
+import Papa from 'papaparse';
+
+/**
+ * Descarga la configuración inicial usando solo el ID del Excel.
+ * No requiere GAS_URL previa.
+ */
+export const bootstrapConfigById = async (spreadsheetId: string): Promise<AppSheetConfig> => {
+    // Limpiamos el ID por si pegan la URL completa
+    const idMatch = spreadsheetId.match(/\/d\/([a-zA-Z0-9-_]+)/);
+    const cleanId = idMatch ? idMatch[1] : spreadsheetId.trim();
+
+    if (!cleanId || cleanId.length < 10) throw new Error("ID de Excel no válido");
+
+    // Usamos el motor de consulta de Google (no requiere API Key si el doc es público/lector)
+    const url = `https://docs.google.com/spreadsheets/d/${cleanId}/gviz/tq?tqx=out:csv&sheet=CONFIG_SISTEMA`;
+
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("No se pudo acceder al Excel. Verifique que 'Cualquier persona con el enlace' pueda leer.");
+        
+        const csvText = await response.text();
+        
+        return new Promise((resolve, reject) => {
+            Papa.parse(csvText, {
+                header: true,
+                skipEmptyLines: true,
+                complete: (results) => {
+                    if (results.data.length === 0) return reject(new Error("La pestaña CONFIG_SISTEMA está vacía."));
+                    
+                    const master: any = results.data[0];
+                    // Normalizamos keys (Google exporta a veces con espacios o mayúsculas raras)
+                    const findVal = (keys: string[]) => {
+                        const foundKey = Object.keys(master).find(k => keys.includes(k.trim().toUpperCase()));
+                        return foundKey ? String(master[foundKey]).trim() : '';
+                    };
+
+                    const config: AppSheetConfig = {
+                        appId: findVal(['APP_ID', 'APPID', 'APPLICATION_ID']),
+                        accessKey: findVal(['ACCESS_KEY', 'ACCESSKEY', 'KEY']),
+                        countsTableName: findVal(['TABLE_LOGS', 'TABLA_CONTEOS', 'CONTEOS']) || 'CONTEOS',
+                        consolidatedTableName: findVal(['TABLE_CONSOLIDADO', 'TABLA_RESUMEN', 'CONSOLIDADO']) || 'CONSOLIDADO',
+                        productsTableName: findVal(['TABLE_PRODUCTOS', 'PRODUCTOS']) || 'PRODUCTOS',
+                        receptionTableName: findVal(['TABLE_RECEPCION', 'RECEPCION']) || 'RECEPCION_BULTOS',
+                        gasWebAppUrl: findVal(['GAS_URL', 'URL_GAS', 'SCRIPT_URL'])
+                    };
+
+                    if (!config.gasWebAppUrl) return reject(new Error("No se encontró la URL de Google Script en el Excel."));
+                    
+                    resolve(config);
+                },
+                error: (err) => reject(err)
+            });
+        });
+    } catch (err: any) {
+        logger.error('BOOTSTRAP_FAIL', err.message);
+        throw err;
+    }
+};
 
 export const callGas = async (action: string, payload: any, compress: boolean = false): Promise<any> => {
     const config = getSettings().appSheetConfig;
@@ -40,7 +98,6 @@ export const callGas = async (action: string, payload: any, compress: boolean = 
         }
 
         if (json.success === false) {
-            // ALERTA CRÍTICA: Mostramos el error real al usuario
             alert(`❌ Error del Servidor Cloud:\n${json.error}`);
             throw new Error(json.error);
         }
