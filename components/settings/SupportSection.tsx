@@ -1,15 +1,17 @@
 
-import React, { useState, useEffect } from 'react';
-import { RefreshCw, RotateCcw, Database, Loader2, Activity, ShieldCheck, Bug, Trash2, LogOut, Sparkles } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { RefreshCw, RotateCcw, Database, Loader2, Activity, ShieldCheck, Bug, Trash2, LogOut, Sparkles, Download, Upload, FileJson } from 'lucide-center';
 import { checkSystemHealth, repairSystem, HealthReport } from '../../services/maintenance';
 import { runFullSystemAudit, DiagnosticResult } from '../../services/businessLogic.test';
 import { SoundFX } from '../../services/audio';
+import { getSettings, saveSettings } from '../../services/settings';
 
 export const SupportSection: React.FC = () => {
     const [health, setHealth] = useState<HealthReport | null>(null);
     const [isRepairing, setIsRepairing] = useState(false);
     const [isRunningAudit, setIsRunningAudit] = useState(false);
     const [auditResult, setAuditResult] = useState<DiagnosticResult | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => { loadHealth(); }, []);
     const loadHealth = async () => { setHealth(await checkSystemHealth()); };
@@ -21,36 +23,75 @@ export const SupportSection: React.FC = () => {
         }
     };
 
-    /**
-     * REINICIO SUAVE: Limpia cache de interfaz sin tocar la base de datos.
-     * FIX: Redirige a '/' para evitar errores 404 en servidores sin configuración SPA.
-     */
     const handleSoftUpdate = async () => {
         SoundFX.play('success');
         if (navigator.vibrate) navigator.vibrate(100);
-        
-        // 1. Limpiar flags de carga perezosa y estados temporales
         sessionStorage.clear();
-        
-        // 2. Intentar desregistrar service workers para forzar pull de nueva versión
         if ('serviceWorker' in navigator) {
             try {
                 const registrations = await navigator.serviceWorker.getRegistrations();
-                for (let registration of registrations) {
-                    await registration.unregister();
-                }
-            } catch (e) {
-                console.warn("SW Unregister failed", e);
-            }
+                for (let registration of registrations) { await registration.unregister(); }
+            } catch (e) {}
         }
-        
-        // 3. Redirección forzada a la raíz con cache-buster
-        // Usamos '/' en lugar de window.location.pathname para garantizar que el servidor cargue index.html
         window.location.href = '/?v=' + Date.now();
+    };
+
+    // --- RESPALDO LOCAL DE CONFIGURACIÓN (Independiente de GAS) ---
+    
+    const exportConfig = () => {
+        const settings = getSettings();
+        const blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `LogiCount_Config_${new Date().toISOString().slice(0,10)}.json`;
+        a.click();
+        SoundFX.play('success');
+    };
+
+    const importConfig = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            try {
+                const config = JSON.parse(event.target?.result as string);
+                if (!config.appSheetConfig) throw new Error("Archivo no válido");
+                await saveSettings(config);
+                SoundFX.play('success');
+                alert("✅ Configuración cargada. Reiniciando...");
+                window.location.reload();
+            } catch (err) {
+                alert("Error al leer archivo de configuración.");
+            }
+        };
+        reader.readAsText(file);
     };
 
     return (
         <div className="space-y-4">
+            {/* PANEL DE CONFIGURACIÓN OFFLINE */}
+            <div className="bg-slate-900 rounded-[2.5rem] p-6 text-white border-4 border-black">
+                <div className="flex items-center gap-3 mb-6">
+                    <FileJson className="text-blue-400 w-6 h-6" />
+                    <h3 className="text-lg font-black uppercase italic tracking-tight">Respaldo Offline</h3>
+                </div>
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-6 leading-relaxed">
+                    Mueve tu configuración entre terminales sin usar internet mediante archivos JSON.
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                    <button onClick={exportConfig} className="bg-white/10 border border-white/10 hover:bg-white/20 p-4 rounded-2xl flex flex-col items-center gap-2 transition-all">
+                        <Download className="w-5 h-5 text-blue-400" />
+                        <span className="text-[9px] font-black uppercase">Exportar</span>
+                    </button>
+                    <button onClick={() => fileInputRef.current?.click()} className="bg-white/10 border border-white/10 hover:bg-white/20 p-4 rounded-2xl flex flex-col items-center gap-2 transition-all">
+                        <Upload className="w-5 h-5 text-emerald-400" />
+                        <span className="text-[9px] font-black uppercase">Importar</span>
+                    </button>
+                </div>
+                <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={importConfig} />
+            </div>
+
             <div className="bg-white rounded-[2.5rem] shadow-xl border-4 border-black p-6">
                 <div className="flex items-center justify-between mb-8">
                     <h2 className="text-xl font-black text-black uppercase italic flex items-center gap-2">
@@ -76,7 +117,7 @@ export const SupportSection: React.FC = () => {
                 </div>
 
                 {auditResult && (
-                    <div className="bg-slate-900 rounded-[2rem] p-5 mb-6 animate-in zoom-in-95">
+                    <div className="bg-slate-900 rounded-[2rem] p-5 mb-6">
                         <div className="flex justify-between items-center mb-4">
                             <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Resumen Auditoría</span>
                             <span className="text-[10px] font-black text-white/50">{auditResult.totalLatency.toFixed(0)}ms</span>
@@ -101,7 +142,6 @@ export const SupportSection: React.FC = () => {
                 </button>
             </div>
 
-            {/* BOTÓN DE RECARGA DE INTERFAZ (SOFT RESET) */}
             <button 
                 onClick={handleSoftUpdate}
                 className="w-full bg-indigo-600 text-white border-4 border-black p-6 rounded-[2.5rem] flex items-center justify-between group active:scale-95 transition-all shadow-xl"
