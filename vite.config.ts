@@ -14,6 +14,7 @@ export default defineConfig(({ mode }) => {
         react(),
         VitePWA({
           strategies: 'injectManifest',
+          srcDir: '.', // <--- CRÍTICO: Indica que sw.ts está en la raíz
           filename: 'sw.ts',
           registerType: 'autoUpdate',
           devOptions: {
