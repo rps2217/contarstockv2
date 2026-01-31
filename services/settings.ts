@@ -1,5 +1,6 @@
 
 import { AppSettings } from '../types';
+import { db } from '../db';
 
 const KEYS = {
   SETTINGS: 'logicount_settings',
@@ -48,6 +49,14 @@ export const getSettings = (): AppSettings => {
   }
 };
 
-export const saveSettings = (settings: AppSettings) => {
+export const saveSettings = async (settings: AppSettings) => {
+  // 1. Guardar en LocalStorage (Síncrono, para la UI)
   localStorage.setItem(KEYS.SETTINGS, JSON.stringify(settings));
+  
+  // 2. Guardar en IndexedDB (Asíncrono, para el Service Worker)
+  try {
+      await db.settings.put({ key: 'app_config', value: settings });
+  } catch (e) {
+      console.warn("No se pudo persistir configuración para SW", e);
+  }
 };

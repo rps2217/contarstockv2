@@ -12,6 +12,11 @@ export interface SystemLog {
   timestamp: number;
 }
 
+export interface KVSettings {
+  key: string;
+  value: any;
+}
+
 export class LogiCountDB extends Dexie {
   products!: Table<Product>;
   sessions!: Table<CountingSession>;
@@ -19,17 +24,19 @@ export class LogiCountDB extends Dexie {
   syncQueue!: Table<SyncJob>;
   expectedOrders!: Table<ExpectedOrder>;
   logs!: Table<SystemLog>;
+  settings!: Table<KVSettings>;
 
   constructor() {
     super('LogiCountDB');
-    // Version bumped to 18 to include sessionType properly
-    (this as any).version(18).stores({
+    // Version bumped to 19 to include settings table
+    (this as any).version(19).stores({
       products: '&barcode, name, syncStatus', 
       sessions: 'id, status, createdAt, erpOrder, logisticsLabel, sessionType, auditStatus, [erpOrder+createdAt], [status+lastSyncTimestamp]', 
       scans: 'id, sessionId, barcode, timestamp, synced, isIncident, [sessionId+synced], [sessionId+barcode], [sessionId+timestamp]',
       syncQueue: '++id, status, createdAt, retryCount',
       expectedOrders: 'id, internalId',
-      logs: '++id, level, module, timestamp'
+      logs: '++id, level, module, timestamp',
+      settings: '&key'
     });
   }
 }

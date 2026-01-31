@@ -11,6 +11,18 @@ let flushTimeout: any = null;
 const BUFFER_DELAY_MS = 100;
 const MAX_RETRIES = 3;
 
+// --- REGISTRO DE BACKGROUND SYNC ---
+const triggerBackgroundSync = async () => {
+    if ('serviceWorker' in navigator && 'SyncManager' in window) {
+        try {
+            const registration = await navigator.serviceWorker.ready;
+            await (registration as any).sync.register('sync-bultos');
+        } catch (e) {
+            // Silencioso: Background Sync no soportado o falló el registro
+        }
+    }
+};
+
 const commitBufferToDatabase = async () => {
     if (writeBuffer.length === 0) return;
     const currentBatch = [...writeBuffer];
@@ -25,6 +37,10 @@ const commitBufferToDatabase = async () => {
                 await updateSessionMetadata(id);
             }
         });
+        
+        // ACTIVAR RED DE SEGURIDAD
+        triggerBackgroundSync();
+
     } catch (error: any) {
         logger.error("WRITE_FAIL", "Fallo de escritura en lote", error.message);
         const retryableItems = currentBatch
@@ -69,7 +85,7 @@ export const addScanEvent = async (
         quantity,
         mm,
         yyyy,
-        location, // NUEVO: Se guarda la ubicación
+        location, 
         timestamp: Date.now(),
         synced: 0
     };
@@ -112,6 +128,7 @@ export const createDraftSession = async (label: string): Promise<CountingSession
         totalSKUs: 0 
     };
     await db.sessions.add(s);
+    triggerBackgroundSync(); // También intentar sincronizar al crear borradores
     return s;
 };
 
@@ -125,7 +142,8 @@ export const closeSession = async (id: string) => {
         clearTimeout(flushTimeout);
         await commitBufferToDatabase();
     }
-    await db.sessions.update(id, { status: 'completed' }); 
+    await db.sessions.update(id, { status: 'completed' });
+    triggerBackgroundSync();
 };
 
 export const cleanSyncedSessions = async (): Promise<number> => {
@@ -152,6 +170,7 @@ export const adjustSessionItemQuantity = async (sessionId: string, barcode: stri
         const newQty = Math.max(1, lastScan.quantity + delta);
         await db.scans.update(lastScan.id, { quantity: newQty });
         await updateSessionMetadata(sessionId);
+        triggerBackgroundSync();
     }
 };
 
@@ -161,6 +180,7 @@ export const updateScanQuantity = async (id: string, currentQty: number, delta: 
         const newQty = Math.max(1, currentQty + delta);
         await db.scans.update(id, { quantity: newQty });
         await updateSessionMetadata(scan.sessionId);
+        triggerBackgroundSync();
     }
 };
 
@@ -168,6 +188,7 @@ export const updateScanIncident = async (e: any, id: string, currentStatus: bool
     const scan = await db.scans.get(id);
     if (scan) {
         await db.scans.update(id, { isIncident: !currentStatus });
+        triggerBackgroundSync();
     }
 };
 
