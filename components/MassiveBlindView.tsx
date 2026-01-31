@@ -13,7 +13,6 @@ import { IndustrialButton } from './common/IndustrialButton';
 import { Modal } from './common/Modal';
 import { useAppStore } from '../store/useAppStore';
 
-// --- FILA DE HISTORIAL ---
 const MassiveItemRow = memo(({ index, data }: any) => {
     const item = data.items[index];
     if (!item) return null;
@@ -23,42 +22,31 @@ const MassiveItemRow = memo(({ index, data }: any) => {
     const hasTarget = item.expectedQty !== undefined;
     
     let statusClasses = 'bg-slate-900/40 border-white/5'; 
-    
     if (hasTarget) {
         const count = item.totalQuantity;
         const target = item.expectedQty || 0;
         if (count === target) statusClasses = 'bg-emerald-600 border-emerald-400'; 
-        else if (count < target) statusClasses = 'bg-red-600 border-red-400'; 
-        else statusClasses = 'bg-[#ff8c69] border-[#ff7247]'; 
+        else if (count < target) statusClasses = 'bg-rose-700 border-rose-500'; 
+        else statusClasses = 'bg-amber-600 border-amber-400'; 
     }
-
-    const activeOverlay = isActive ? 'ring-4 ring-white ring-inset shadow-[0_0_25px_rgba(255,255,255,0.3)] z-10 scale-[1.02]' : '';
-    const activeBlue = (isActive && !hasTarget) ? 'bg-blue-600 border-blue-400' : '';
 
     return (
         <div className="px-3 py-1 h-full">
             <button 
                 onClick={() => onSelect(item.barcode)}
-                className={`w-full h-full border-2 p-4 rounded-2xl flex items-center justify-between transition-all text-left active:scale-[0.98] ${statusClasses} ${activeBlue} ${activeOverlay}`}
+                className={`w-full h-full border-2 p-4 rounded-2xl flex items-center justify-between transition-all text-left active:scale-[0.98] ${statusClasses} ${isActive ? 'ring-4 ring-white shadow-2xl scale-[1.02] z-10' : ''}`}
             >
                 <div className="flex-1 min-w-0 pr-4">
-                    <span className={`text-[10px] font-black font-mono tracking-tight block mb-0.5 ${isActive ? 'text-white' : 'text-white/60'}`}>
+                    <span className="text-[9px] font-black font-mono tracking-widest block mb-1 opacity-50">
                         {item.barcode}
                     </span>
-                    <h3 className={`font-black text-[12px] uppercase truncate leading-none ${isActive ? 'text-white' : 'text-white/90'}`}>
+                    <h3 className="font-black text-[13px] uppercase truncate leading-none">
                         {item.name}
                     </h3>
                 </div>
-                
-                <div className="flex items-center gap-3">
-                    <div className="text-right tabular-nums">
-                        <div className="text-2xl font-black text-white leading-none">{item.totalQuantity}</div>
-                        {hasTarget && (
-                            <div className="text-[10px] font-black text-white/50 mt-1 uppercase tracking-tighter">
-                                Obj: {item.expectedQty}
-                            </div>
-                        )}
-                    </div>
+                <div className="text-right">
+                    <div className="text-3xl font-black tabular-nums leading-none">{item.totalQuantity}</div>
+                    {hasTarget && <div className="text-[8px] font-black uppercase opacity-60 mt-1">OBJ: {item.expectedQty}</div>}
                 </div>
             </button>
         </div>
@@ -68,7 +56,6 @@ const MassiveItemRow = memo(({ index, data }: any) => {
 const MassiveBlindView: React.FC = () => {
     const navigate = useNavigate();
     const { batchId = 'CORE' } = useParams();
-    const { settings } = useAppStore();
     const { items, lastScannedItem, feedback, registerScan, selectItem, removeItemCompletely, resetBatch } = useMassiveScanner(batchId || 'CORE');
     
     const [isTriggerActive, setIsTriggerActive] = useState(false);
@@ -77,6 +64,40 @@ const MassiveBlindView: React.FC = () => {
     const [showBarcodeModal, setShowBarcodeModal] = useState(false);
     const [isPrinting, setIsPrinting] = useState(false);
     
+    // Fix: Added handleCloudImport to download manifest from Google Sheets
+    const handleCloudImport = async () => {
+        if (!batchId) return;
+        setIsImporting(true);
+        try {
+            const count = await importManifestFromCloud(batchId);
+            SoundFX.play('success');
+            alert(`✓ Descargados ${count} items del maestro STOCK.`);
+        } catch (err: any) {
+            SoundFX.play('error');
+            alert(`Error: ${err.message}`);
+        } finally {
+            setIsImporting(false);
+        }
+    };
+
+    // Fix: Added handleFinalize to migrate session data to permanent storage
+    const handleFinalize = async () => {
+        if (!batchId || !items.length) return;
+        if (!confirm("¿Finalizar auditoría y archivar en historial?")) return;
+        
+        setIsMigrating(true);
+        try {
+            await migrateMassiveToMaster(batchId);
+            SoundFX.play('success');
+            navigate('/reports?type=hammer');
+        } catch (err: any) {
+            SoundFX.play('error');
+            alert(`Fallo al migrar: ${err.message}`);
+        } finally {
+            setIsMigrating(false);
+        }
+    };
+
     const handleDecrement = useCallback((item: ConsolidatedBlindItem) => {
         if (item.totalQuantity <= 1) {
             if (confirm(`¿Eliminar SKU ${item.barcode}?`)) removeItemCompletely(item.barcode);
@@ -85,186 +106,96 @@ const MassiveBlindView: React.FC = () => {
         }
     }, [registerScan, removeItemCompletely]);
 
-    const handleThermalPrint = async () => {
-        if (!lastScannedItem || !thermalPrinter.isConnected()) return;
-        setIsPrinting(true);
-        try {
-            await thermalPrinter.printLabel(
-                lastScannedItem.barcode, 
-                lastScannedItem.name, 
-                lastScannedItem.totalQuantity
-            );
-            SoundFX.play('success');
-        } catch (e) {
-            alert("Error al imprimir.");
-        } finally {
-            setIsPrinting(false);
-        }
-    };
-
-    const handleCloudImport = async () => {
-        if (!navigator.onLine) { alert("Sin conexión"); return; }
-        if (!confirm("¿Descargar STOCK?")) return;
-        setIsImporting(true);
-        try {
-            const count = await importManifestFromCloud(batchId || 'CORE');
-            SoundFX.play('success');
-            alert(`✅ Stock Descargado: ${count} registros.`);
-        } catch (e: any) {
-            alert(`Error: ${e.message}`);
-            SoundFX.play('error');
-        } finally {
-            setIsImporting(false);
-        }
-    };
-
-    const handleFinalize = async () => {
-        if (!items.length) return;
-        setIsMigrating(true);
-        try {
-            await migrateMassiveToMaster(batchId || 'CORE');
-            navigate('/dashboard');
-        } catch (e: any) { alert(e.message); }
-        finally { setIsMigrating(false); }
-    };
-
     const getHudColor = useMemo(() => {
-        if (!lastScannedItem) return 'bg-black';
-        if (lastScannedItem.expectedQty === undefined) return 'bg-blue-600'; 
+        if (!lastScannedItem) return 'bg-slate-950';
+        if (lastScannedItem.expectedQty === undefined) return 'bg-blue-700'; 
         const count = lastScannedItem.totalQuantity;
         const target = lastScannedItem.expectedQty;
         if (count === target) return 'bg-emerald-600';
-        if (count < target) return 'bg-red-600';
-        return 'bg-[#ff8c69]'; 
+        if (count < target) return 'bg-rose-700';
+        return 'bg-amber-600'; 
     }, [lastScannedItem]);
 
-    const rowData = useMemo(() => ({
-        onSelect: selectItem,
-        activeBarcode: lastScannedItem?.barcode
-    }), [selectItem, lastScannedItem?.barcode]);
+    const rowData = useMemo(() => ({ onSelect: selectItem, activeBarcode: lastScannedItem?.barcode }), [selectItem, lastScannedItem?.barcode]);
 
     return (
         <div className="h-screen w-full flex flex-col font-mono bg-black select-none overflow-hidden text-white">
-            <header className="h-14 px-4 flex items-center justify-between border-b-2 border-white/5 bg-slate-900/50 shrink-0 z-50">
-                <div className="flex items-center gap-3">
-                    <button onClick={() => navigate('/dashboard')} className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl active:bg-blue-600"><ChevronLeft className="w-6 h-6" /></button>
-                    <span className="text-[10px] text-white/40 font-black tracking-widest uppercase truncate max-w-[100px]">{batchId}</span>
-                </div>
+            <header className="h-14 px-4 flex items-center justify-between border-b border-white/10 bg-slate-900/80 shrink-0 z-50">
+                <button onClick={() => navigate('/dashboard')} className="p-2.5 bg-white/5 rounded-xl active:bg-blue-600"><ChevronLeft className="w-5 h-5" /></button>
                 <div className="flex gap-2">
                     {thermalPrinter.isConnected() && (
-                         <button 
-                            disabled={!lastScannedItem || isPrinting} 
-                            onClick={handleThermalPrint} 
-                            className={`w-10 h-10 flex items-center justify-center rounded-xl border border-white/10 ${isPrinting ? 'bg-amber-500 animate-pulse' : 'bg-emerald-600 active:bg-emerald-400'}`}
-                         >
-                            <Printer className="w-4 h-4 text-white" />
-                         </button>
+                         <button disabled={!lastScannedItem || isPrinting} onClick={async () => { setIsPrinting(true); await thermalPrinter.printLabel(lastScannedItem!.barcode, lastScannedItem!.name, lastScannedItem!.totalQuantity); setIsPrinting(false); }} className={`w-10 h-10 flex items-center justify-center rounded-xl border border-white/10 ${isPrinting ? 'bg-amber-500 animate-pulse' : 'bg-emerald-600'}`}><Printer className="w-4 h-4 text-white" /></button>
                     )}
                     <button onClick={() => { if(confirm("¿Borrar todo?")) resetBatch(); }} className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl border border-white/10 active:bg-rose-600"><RotateCcw className="w-4 h-4 text-white/60" /></button>
-                    <button disabled={!lastScannedItem} onClick={() => setShowBarcodeModal(true)} className={`w-10 h-10 flex items-center justify-center rounded-xl border border-white/10 ${!lastScannedItem ? 'opacity-20' : 'bg-white/10 active:bg-blue-600'}`}><Barcode className="w-5 h-5 text-white" /></button>
-                    <button disabled={isImporting} onClick={handleCloudImport} className={`w-10 h-10 flex items-center justify-center rounded-xl border border-white/10 ${isImporting ? 'bg-indigo-600 animate-pulse' : 'bg-indigo-600/20 active:bg-indigo-600'}`}><Download className="w-4 h-4 text-white" /></button>
-                    <button onClick={handleFinalize} disabled={!items.length || isMigrating || isImporting} className="w-14 h-10 bg-blue-600 rounded-xl active:scale-95 flex items-center justify-center shadow-lg"><Save className="w-5 h-5" /></button>
+                    <button onClick={handleCloudImport} className="w-10 h-10 flex items-center justify-center bg-indigo-600/20 rounded-xl border border-indigo-500/20"><Download className="w-4 h-4 text-indigo-400" /></button>
+                    <button onClick={handleFinalize} disabled={!items.length || isMigrating} className="w-14 h-10 bg-blue-600 rounded-xl active:scale-95 flex items-center justify-center shadow-lg shadow-blue-900/20"><Save className="w-5 h-5" /></button>
                 </div>
             </header>
 
-            {/* ÁREA HUD (VISUALIZACIÓN) */}
-            <div className={`h-[40vh] relative flex flex-col overflow-hidden border-b-2 border-white/5 shrink-0 transition-colors duration-200 ${getHudColor}`}>
-                <div className="w-full h-full flex items-stretch">
+            {/* HUD CON REFINAMIENTO TÉCNICO */}
+            <div className={`h-[42vh] relative flex flex-col overflow-hidden border-b-4 border-black shrink-0 transition-colors duration-300 ${getHudColor}`}>
+                <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-transparent opacity-50"></div>
+                <div className="w-full h-full flex items-stretch relative z-10">
                     {lastScannedItem ? (
                         <>
-                            <button onPointerDown={(e) => { e.preventDefault(); handleDecrement(lastScannedItem); }} className="w-1/5 bg-black/10 active:bg-black/40 flex items-center justify-center border-r border-white/10">
-                                <Minus className="w-12 h-12 text-white/80" />
+                            <button onPointerDown={(e) => { e.preventDefault(); handleDecrement(lastScannedItem); }} className="w-1/4 bg-black/10 active:bg-black/30 flex items-center justify-center border-r border-white/5">
+                                <Minus className="w-12 h-12 text-white/40 active:text-white" />
                             </button>
                             <div className="flex-1 flex flex-col items-center justify-center px-4 text-center">
-                                <div className="mb-4 w-full max-w-xs">
-                                    <span className="text-white/60 font-mono text-[11px] font-black tracking-[0.2em] block mb-1">{lastScannedItem.barcode}</span>
-                                    <h2 className="text-white font-black text-xs md:text-sm uppercase tracking-tight line-clamp-2 leading-tight">{lastScannedItem.name}</h2>
+                                <div className="mb-4">
+                                    <span className="text-white/40 font-mono text-[10px] font-black tracking-[0.3em] block mb-1 uppercase">{lastScannedItem.barcode}</span>
+                                    <h2 className="text-white font-black text-sm md:text-base uppercase tracking-tight line-clamp-2 px-4 leading-tight">{lastScannedItem.name}</h2>
                                 </div>
                                 <div className="relative">
-                                    <div className="text-[12rem] font-black tabular-nums leading-none text-white drop-shadow-2xl">{lastScannedItem.totalQuantity}</div>
+                                    <div className="text-[12.5rem] md:text-[15rem] font-black tabular-nums leading-none tracking-tighter drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+                                        {lastScannedItem.totalQuantity}
+                                    </div>
                                     {lastScannedItem.expectedQty !== undefined && (
-                                        <div className="bg-white/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mt-2 inline-block">OBJETIVO: {lastScannedItem.expectedQty}</div>
+                                        <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-black/40 backdrop-blur-md border border-white/20 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] whitespace-nowrap">
+                                            Meta: {lastScannedItem.expectedQty}
+                                        </div>
                                     )}
                                 </div>
                             </div>
-                            <button onPointerDown={(e) => { e.preventDefault(); registerScan(lastScannedItem.barcode, 1); }} className="w-1/5 bg-black/10 active:bg-black/40 flex items-center justify-center border-l border-white/10">
-                                <Plus className="w-12 h-12 text-white/80" />
+                            <button onPointerDown={(e) => { e.preventDefault(); registerScan(lastScannedItem.barcode, 1); }} className="w-1/4 bg-black/10 active:bg-black/30 flex items-center justify-center border-l border-white/5">
+                                <Plus className="w-12 h-12 text-white/40 active:text-white" />
                             </button>
                         </>
                     ) : (
                         <div className="w-full flex flex-col items-center justify-center opacity-10">
-                            <Target className="w-24 h-24 mb-6 animate-pulse" />
-                            <p className="text-[12px] font-black uppercase tracking-[0.6em]">Ready_For_Laser</p>
+                            <Target className="w-20 h-20 mb-4 animate-pulse" />
+                            <p className="text-[10px] font-black uppercase tracking-[0.8em]">Esperando_Input_Laser</p>
                         </div>
                     )}
                 </div>
-                {feedback === 'success' && <div className="absolute inset-0 z-[300] bg-white/40 pointer-events-none flash-active"></div>}
+                {feedback === 'success' && <div className="absolute inset-0 z-50 bg-white/20 pointer-events-none animate-flash-quick"></div>}
             </div>
 
-            {/* ÁREA CENTRAL (HISTORIAL) */}
             <div className="flex-1 min-h-0 bg-black">
-                <div className="h-full">
-                    <VirtualList 
-                        items={items}
-                        itemHeight={84}
-                        renderRow={MassiveItemRow}
-                        rowData={rowData}
-                        className="bg-black"
-                    />
-                </div>
+                <VirtualList items={items} itemHeight={88} renderRow={MassiveItemRow} rowData={rowData} className="bg-black/20" />
             </div>
 
-            {/* GATILLO INFERIOR (THUMB-READY) */}
-            <div className="h-28 md:h-32 shrink-0 bg-slate-900 flex items-center px-4 relative z-40 border-t-8 border-black pb-safe">
+            <div className="h-24 md:h-28 shrink-0 bg-slate-900 border-t border-white/5 flex items-center px-4 z-40 pb-safe">
                 <button 
                     onPointerDown={(e) => { e.preventDefault(); if(navigator.vibrate) navigator.vibrate(40); setIsTriggerActive(true); }} 
                     onPointerUp={() => setIsTriggerActive(false)}
                     onPointerLeave={() => setIsTriggerActive(false)}
-                    className={`flex-1 h-16 md:h-20 rounded-3xl flex items-center justify-center gap-4 transition-all duration-75 active:scale-[0.98] border-b-8 ${isTriggerActive ? 'bg-blue-600 border-blue-800 translate-y-1 border-b-0' : 'bg-white text-black border-slate-300 shadow-xl shadow-black/40'}`}
+                    className={`flex-1 h-14 md:h-16 rounded-2xl flex items-center justify-center gap-4 transition-all duration-75 active:scale-[0.98] border-b-4 ${isTriggerActive ? 'bg-blue-600 border-blue-800 translate-y-1 border-b-0' : 'bg-white text-black border-slate-300 shadow-xl'}`}
                 >
-                    {isTriggerActive ? <ScanLine className="w-8 h-8 animate-bounce" /> : <Camera className="w-8 h-8" />}
-                    <span className="text-xs font-black uppercase tracking-[0.3em]">{isTriggerActive ? 'LENS_ACTIVE' : 'MANTENER_PARA_ESCANEAR'}</span>
+                    <Camera className="w-6 h-6" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.3em]">{isTriggerActive ? 'LENS_OPEN' : 'GATILLO_OPTICO'}</span>
                 </button>
                 {isTriggerActive && (
-                    <div className="fixed inset-0 z-[100] animate-in fade-in duration-75">
+                    <div className="fixed inset-0 z-[100]">
                          <CameraScanner onScan={registerScan} onClose={() => setIsTriggerActive(false)} isTriggered={true} />
                     </div>
                 )}
             </div>
-
-            <Modal 
-                isOpen={showBarcodeModal && !!lastScannedItem} 
-                onClose={() => setShowBarcodeModal(false)}
-                title="Visual SKU Beam"
-                variant="center"
-                className="max-w-sm"
-            >
-                {lastScannedItem && (
-                    <div className="p-6">
-                        <div className="bg-white p-4 py-10 rounded-[2rem] mb-4 flex flex-col items-center border-2 border-slate-50 overflow-hidden shadow-inner">
-                            <div className="barcode-font text-[75px] leading-none text-black mb-6 whitespace-nowrap">{lastScannedItem.barcode}</div>
-                            <div className="font-mono text-xl font-black text-slate-900 tracking-[0.4em] bg-slate-50 px-4 py-1 rounded-lg">{lastScannedItem.barcode}</div>
-                        </div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-4 line-clamp-2 text-center mb-6">{lastScannedItem.name}</p>
-                        
-                        <div className="grid grid-cols-2 gap-3">
-                            <IndustrialButton 
-                                variant="primary" 
-                                icon={Printer} 
-                                onClick={() => printBarcode(lastScannedItem.barcode, lastScannedItem.name)}
-                            >
-                                Imprimir
-                            </IndustrialButton>
-                            <IndustrialButton 
-                                variant="secondary" 
-                                onClick={() => setShowBarcodeModal(false)}
-                            >
-                                Cerrar
-                            </IndustrialButton>
-                        </div>
-                    </div>
-                )}
-            </Modal>
+            
+            <style>{`
+                @keyframes flash-quick { 0% { opacity: 1; } 100% { opacity: 0; } }
+                .animate-flash-quick { animation: flash-quick 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+            `}</style>
         </div>
     );
 };

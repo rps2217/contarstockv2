@@ -1,6 +1,4 @@
-/**
- * LogiCount Pro - Utilidades de Sistema v10
- */
+
 import JSZip from 'jszip';
 
 export const generateUUID = (): string => {
@@ -12,26 +10,29 @@ export const generateUUID = (): string => {
 };
 
 /**
- * Normaliza códigos de barras para evitar duplicados por espacios o caracteres invisibles.
+ * Formatea un SKU para visualización industrial: ABC-1234-XYZ
+ */
+export const chunkSku = (sku: string): string => {
+    if (!sku) return "";
+    return sku.match(/.{1,4}/g)?.join('-') || sku;
+};
+
+/**
+ * Normalización reforzada: elimina caracteres no imprimibles y espacios ocultos
  */
 export const sanitizeBarcode = (code: string): string => {
     if (!code) return "";
     return code.trim().toUpperCase()
-        .replace(/[\x00-\x1F\x7F-\x9F\u200B-\u200D\uFEFF]/g, "");
+        .replace(/[\x00-\x1F\x7F-\x9F\u200B-\u200D\uFEFF]/g, "")
+        .replace(/\s+/g, "");
 };
 
-/**
- * Formatea fechas para AppSheet y reportes internos.
- */
 export const formatLogDate = (timestamp: number): string => {
     const d = new Date(timestamp);
     const pad = (n: number) => n.toString().padStart(2, '0');
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 };
 
-/**
- * COMPRESIÓN INDUSTRIAL: Convierte JSON a ZIP Base64 para transporte ligero.
- */
 export const compressData = async (data: any): Promise<string> => {
     const zip = new JSZip();
     zip.file("payload.json", JSON.stringify(data));
@@ -49,4 +50,3 @@ export const generateSessionSignature = (erp: string, label: string): string => 
 
 export const normalizeKey = (val: string): string => sanitizeBarcode(val);
 export const normalizeSku = (val: string): string => sanitizeBarcode(val);
-export const generateCompositeKey = (erp: string, label: string): string => generateSessionSignature(erp, label);

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Wifi, WifiOff, Battery, BatteryWarning, HardDrive, Cloud, RefreshCw } from 'lucide-react';
+import { Wifi, WifiOff, Battery, BatteryWarning, HardDrive, Cloud, RefreshCw, Zap } from 'lucide-react';
 import { useSyncStore } from '../store/useSyncStore';
 
 export const SystemStatus: React.FC = () => {
@@ -10,33 +10,20 @@ export const SystemStatus: React.FC = () => {
   const [isCharging, setIsCharging] = useState(false);
   const [storageCritical, setStorageCritical] = useState(false);
   
-  const { isSyncing, pendingItems } = useSyncStore();
+  const { isSyncing } = useSyncStore();
 
   useEffect(() => {
-    const handleOnline = () => {
-      setIsOnline(true);
-      setShowBackOnline(true);
-      setTimeout(() => setShowBackOnline(false), 3000);
-    };
+    const handleOnline = () => { setIsOnline(true); setShowBackOnline(true); setTimeout(() => setShowBackOnline(false), 3000); };
     const handleOffline = () => setIsOnline(false);
-
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    let batteryRef: any = null;
-    const updateBattery = () => {
-        if (batteryRef) {
-            setBatteryLevel(batteryRef.level * 100);
-            setIsCharging(batteryRef.charging);
-        }
-    };
-
     if ('getBattery' in navigator) {
         (navigator as any).getBattery().then((b: any) => {
-            batteryRef = b;
-            updateBattery();
-            b.addEventListener('levelchange', updateBattery);
-            b.addEventListener('chargingchange', updateBattery);
+            const update = () => { setBatteryLevel(b.level * 100); setIsCharging(b.charging); };
+            update();
+            b.addEventListener('levelchange', update);
+            b.addEventListener('chargingchange', update);
         });
     }
 
@@ -55,57 +42,50 @@ export const SystemStatus: React.FC = () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       clearInterval(storageInterval);
-      if (batteryRef) {
-          batteryRef.removeEventListener('levelchange', updateBattery);
-          batteryRef.removeEventListener('chargingchange', updateBattery);
-      }
     };
   }, []);
 
   const alerts = [];
 
-  // --- 1. CLOUD SYNC INDICATOR (SILENT) ---
   if (isSyncing) {
     alerts.push(
-        <div key="sync" className="bg-indigo-600 text-white px-4 py-1.5 text-[10px] font-black flex items-center justify-center gap-2 animate-in slide-in-from-top-full">
+        <div key="sync" className="bg-indigo-600 text-white px-4 py-1 text-[9px] font-black flex items-center justify-center gap-2 border-b border-indigo-700 shadow-lg">
             <RefreshCw className="w-3 h-3 animate-spin" />
-            <span className="uppercase tracking-[0.2em]">Sincronización en curso...</span>
+            <span className="uppercase tracking-widest">Sincronizando con Nube...</span>
         </div>
     );
   }
 
-  // --- 2. NETWORK ---
   if (!isOnline) {
       alerts.push(
-          <div key="net" className="bg-slate-900 text-rose-400 px-4 py-1.5 text-[10px] font-black flex items-center justify-center gap-2 border-b border-white/5">
+          <div key="net" className="bg-rose-700 text-white px-4 py-1 text-[9px] font-black flex items-center justify-center gap-2 border-b border-rose-800">
               <WifiOff className="w-3 h-3" />
-              <span className="uppercase tracking-[0.2em]">Modo Offline - Datos Seguros</span>
+              <span className="uppercase tracking-widest">Modo Local - Sin Red</span>
           </div>
       );
   } else if (showBackOnline) {
       alerts.push(
-          <div key="net-back" className="bg-emerald-500 text-white px-4 py-1.5 text-[10px] font-black flex items-center justify-center gap-2 animate-in slide-in-from-top-full fade-out duration-1000">
+          <div key="net-back" className="bg-emerald-600 text-white px-4 py-1 text-[9px] font-black flex items-center justify-center gap-2 animate-in slide-in-from-top-full duration-500">
               <Wifi className="w-3 h-3" />
-              <span className="uppercase tracking-[0.2em]">Conectado</span>
+              <span className="uppercase tracking-widest">Conexión Restaurada</span>
           </div>
       );
   }
 
-  // --- 3. HARDWARE ALERTS ---
-  if (batteryLevel !== null && batteryLevel < 15 && !isCharging) {
+  if (batteryLevel !== null && batteryLevel < 20 && !isCharging) {
       alerts.push(
-          <div key="batt" className="bg-amber-500 text-amber-950 px-4 py-1 text-[9px] font-black flex items-center justify-center gap-2">
+          <div key="batt" className="bg-amber-500 text-black px-4 py-1 text-[9px] font-black flex items-center justify-center gap-2 border-b border-amber-600">
               <BatteryWarning className="w-3 h-3" />
-              <span>BATERÍA BAJA ({batteryLevel.toFixed(0)}%)</span>
+              <span className="uppercase tracking-widest">Batería al {batteryLevel.toFixed(0)}% - Conecte PDA</span>
           </div>
       );
   }
 
   if (storageCritical) {
       alerts.push(
-          <div key="store" className="bg-rose-600 text-white px-4 py-1 text-[9px] font-black flex items-center justify-center gap-2">
+          <div key="store" className="bg-rose-900 text-white px-4 py-1 text-[9px] font-black flex items-center justify-center gap-2 border-b border-black">
               <HardDrive className="w-3 h-3" />
-              <span>MEMORIA CASI LLENA - SINCRONICE PRONTO</span>
+              <span className="uppercase tracking-widest">Memoria Crítica - Vacíe Base Local</span>
           </div>
       );
   }
@@ -113,7 +93,7 @@ export const SystemStatus: React.FC = () => {
   if (alerts.length === 0) return null;
 
   return (
-      <div className="fixed top-0 left-0 right-0 z-[100] shadow-2xl flex flex-col pointer-events-none">
+      <div className="fixed top-0 left-0 right-0 z-[100] flex flex-col pointer-events-none select-none">
           {alerts}
       </div>
   );
