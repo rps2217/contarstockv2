@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, RotateCcw, Database, Loader2, Activity, ShieldCheck, Bug, Trash2, LogOut } from 'lucide-react';
+import { RefreshCw, RotateCcw, Database, Loader2, Activity, ShieldCheck, Bug, Trash2, LogOut, Sparkles } from 'lucide-react';
 import { checkSystemHealth, repairSystem, HealthReport } from '../../services/maintenance';
 import { runFullSystemAudit, DiagnosticResult } from '../../services/businessLogic.test';
+import { SoundFX } from '../../services/audio';
 
 export const SupportSection: React.FC = () => {
     const [health, setHealth] = useState<HealthReport | null>(null);
@@ -18,6 +19,32 @@ export const SupportSection: React.FC = () => {
             localStorage.removeItem('logicount_auth');
             window.location.href = '/';
         }
+    };
+
+    /**
+     * REINICIO SUAVE: Limpia cache de interfaz sin tocar la base de datos.
+     */
+    const handleSoftUpdate = async () => {
+        SoundFX.play('success');
+        if (navigator.vibrate) navigator.vibrate(100);
+        
+        // 1. Limpiar flags de carga perezosa y estados temporales
+        sessionStorage.clear();
+        
+        // 2. Intentar desregistrar service workers para forzar pull de nueva versión
+        if ('serviceWorker' in navigator) {
+            try {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                for (let registration of registrations) {
+                    await registration.unregister();
+                }
+            } catch (e) {
+                console.warn("SW Unregister failed", e);
+            }
+        }
+        
+        // 3. Recarga forzada rompiendo cache con timestamp
+        window.location.href = window.location.pathname + '?v=' + Date.now();
     };
 
     return (
@@ -71,6 +98,23 @@ export const SupportSection: React.FC = () => {
                     Limpieza Profunda
                 </button>
             </div>
+
+            {/* BOTÓN DE RECARGA DE INTERFAZ (SOFT RESET) */}
+            <button 
+                onClick={handleSoftUpdate}
+                className="w-full bg-indigo-600 text-white border-4 border-black p-6 rounded-[2.5rem] flex items-center justify-between group active:scale-95 transition-all shadow-xl"
+            >
+                <div className="flex items-center gap-4">
+                    <div className="bg-white/20 p-3 rounded-2xl group-hover:rotate-180 transition-transform duration-500">
+                        <RefreshCw className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="text-left">
+                        <div className="text-xs font-black uppercase">Refrescar Interfaz</div>
+                        <div className="text-[8px] font-bold opacity-60 uppercase tracking-widest">Forzar actualización de vista</div>
+                    </div>
+                </div>
+                <Sparkles className="w-5 h-5 text-indigo-300" />
+            </button>
 
             <div className="grid grid-cols-2 gap-4">
                 <button onClick={handleLogout} className="bg-slate-900 text-white border-4 border-black p-6 rounded-[2.5rem] flex flex-col items-center gap-2 active:scale-95 transition-all">
