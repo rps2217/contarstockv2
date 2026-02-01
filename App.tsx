@@ -32,28 +32,35 @@ const AppContent = () => {
                          location.pathname === '/reception' || 
                          location.pathname.startsWith('/massive/');
 
-  // --- MOTOR DE TEMAS V2 ---
   useEffect(() => {
-    // Inyección directa al DOM para rendimiento nativo (Zero-Runtime Overhead)
-    // Esto habilita las variables CSS definidas en index.html
-    document.body.setAttribute('data-theme', settings.theme || 'dark');
-    
-    // Mantenemos la clase 'dark' de Tailwind por compatibilidad con algunos componentes legados
-    if (['dark', 'navy', 'terminal'].includes(settings.theme)) {
-        document.documentElement.classList.add('dark');
-    } else {
-        document.documentElement.classList.remove('dark');
-    }
-  }, [settings.theme]);
-
-  useEffect(() => {
+    // 1. Solicitar persistencia
     initPersistence();
+    
+    // 2. Verificar Sesión Persistente (Offline Friendly)
     const authStatus = localStorage.getItem('logicount_auth') === 'true';
     setIsAuthenticated(authStatus);
+
+    // 3. Simular chequeo de kernel
     const timer = setTimeout(() => setBootState('ready'), 800);
     return () => clearTimeout(timer);
   }, []);
 
+  // Mapeo de clases de tema industrial
+  const themeClasses: Record<string, string> = {
+    'light': 'bg-slate-50 text-slate-900',
+    'dark': 'bg-slate-950 text-slate-100',
+    'navy': 'bg-blue-950 text-blue-50',
+    'oled': 'bg-black text-white',
+    'warm': 'bg-orange-50 text-orange-950',
+    'contrast': 'bg-yellow-400 text-black'
+  };
+
+  const currentThemeClass = themeClasses[settings.theme] || themeClasses.dark;
+  
+  // Determinar si activar modo oscuro global para componentes internos (Tailwind dark:)
+  const isDarkMode = ['dark', 'navy', 'oled'].includes(settings.theme);
+
+  // Pantalla de Carga Inicial
   if (bootState === 'testing' || isAuthenticated === null) return (
     <div className="h-screen w-full bg-slate-950 flex flex-col items-center justify-center text-white p-8">
         <div className="p-8 border-4 border-blue-600 rounded-[2.5rem] mb-6">
@@ -64,13 +71,13 @@ const AppContent = () => {
     </div>
   );
 
+  // Guardián de Autenticación
   if (!isAuthenticated) {
     return <Login onLoginSuccess={() => setIsAuthenticated(true)} />;
   }
 
   return (
-    // Usamos bg-app-main para que responda al tema
-    <div className="w-full h-full flex flex-col bg-app-main text-app-text font-mono selection:bg-app-accent selection:text-white transition-colors duration-300">
+    <div className={`w-full h-full flex flex-col transition-colors duration-500 ${currentThemeClass} ${isDarkMode ? 'dark' : ''} font-mono selection:bg-blue-500 selection:text-white`}>
       <SystemStatus />
       <NetworkStatus />
       
@@ -81,8 +88,8 @@ const AppContent = () => {
           <ErrorBoundary>
             <Suspense fallback={
                 <div className="h-full w-full flex flex-col items-center justify-center p-12">
-                    <Loader2 className="w-12 h-12 text-app-accent animate-spin mb-4" />
-                    <p className="text-[10px] font-black text-app-muted uppercase tracking-widest">Loading_Module...</p>
+                    <Loader2 className="w-12 h-12 text-blue-600 animate-spin mb-4" />
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Loading_Module...</p>
                 </div>
             }>
               <Routes>
@@ -96,6 +103,7 @@ const AppContent = () => {
                 <Route path="/conciliator" element={<Conciliator />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/massive/:batchId" element={<MassiveBlindView />} />
+                {/* Redirección de seguridad para rutas no encontradas */}
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Suspense>

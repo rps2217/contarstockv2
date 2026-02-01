@@ -28,7 +28,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
   const [isScreenLocked, setIsScreenLocked] = useState(false);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-app-main text-app-text overflow-hidden font-sans select-none page-transition">
+    <div className="fixed inset-0 z-50 flex flex-col bg-white text-slate-900 overflow-hidden font-sans select-none page-transition">
       <ScannerFeedbackLayer feedback={state.feedback} />
 
       <ScannerHeader 
@@ -46,7 +46,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
             
             <button 
                 onClick={() => setShowRecentScansMobile(true)}
-                className="lg:hidden absolute top-4 right-4 z-40 w-14 h-14 bg-app-surface/80 backdrop-blur-md rounded-app border border-app-border shadow-xl text-app-accent flex items-center justify-center"
+                className="lg:hidden absolute top-4 right-4 z-40 w-14 h-14 bg-white/80 backdrop-blur-md rounded-2xl border border-slate-200 shadow-xl text-blue-600 flex items-center justify-center"
             >
                 <List className="w-7 h-7" />
             </button>
@@ -78,13 +78,13 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
 
         <div className={`
             ${showRecentScansMobile ? 'flex fixed inset-0 z-[120]' : 'hidden lg:flex'} 
-            lg:relative lg:col-span-4 bg-app-surface border-l border-app-border flex-col overflow-hidden shadow-2xl
+            lg:relative lg:col-span-4 bg-slate-50 border-l border-slate-200 flex-col overflow-hidden shadow-2xl
         `}>
-            <div className="p-6 border-b border-app-border flex items-center justify-between bg-app-card">
-                <h3 className="font-black text-app-text text-xs uppercase tracking-widest">
+            <div className="p-6 border-b border-slate-200 flex items-center justify-between bg-white">
+                <h3 className="font-black text-slate-900 text-xs uppercase tracking-widest">
                     Items en Bulto
                 </h3>
-                <button onClick={() => setShowRecentScansMobile(false)} className="lg:hidden p-3 bg-app-main rounded-app text-app-muted font-black text-[10px] uppercase">Cerrar</button>
+                <button onClick={() => setShowRecentScansMobile(false)} className="lg:hidden p-3 bg-slate-100 rounded-xl text-slate-500 font-black text-[10px] uppercase">Cerrar</button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar pb-24">
                 {data.recentScans?.map((scan, idx) => (
@@ -104,14 +104,14 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
         {/* MODALES */}
         {isChangingLocation && (
             <div className="fixed inset-0 z-[210] bg-black/60 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in">
-                <div className="bg-app-surface rounded-[2.5rem] p-8 w-full max-w-sm shadow-2xl border-4 border-app-border">
+                <div className="bg-white rounded-[2.5rem] p-8 w-full max-w-sm shadow-2xl">
                     <div className="flex items-center gap-3 mb-6">
-                        <MapPin className="text-app-accent w-6 h-6" />
-                        <h3 className="text-xl font-black uppercase tracking-tight text-app-text">Set Ubicación</h3>
+                        <MapPin className="text-blue-600 w-6 h-6" />
+                        <h3 className="text-xl font-black uppercase tracking-tight">Set Ubicación</h3>
                     </div>
                     <input 
                         autoFocus
-                        className="w-full h-16 bg-app-main border-4 border-app-border rounded-app text-center font-black text-2xl uppercase tracking-widest outline-none focus:border-app-accent transition-all text-app-text"
+                        className="w-full h-16 bg-slate-50 border-4 border-slate-100 rounded-2xl text-center font-black text-2xl uppercase tracking-widest outline-none focus:border-blue-500 transition-all"
                         placeholder="PASILLO A..."
                         defaultValue={state.currentLocation}
                         onKeyDown={(e) => {
@@ -122,12 +122,12 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
                         }}
                     />
                     <div className="mt-6 flex gap-3">
-                        <button onClick={() => setIsChangingLocation(false)} className="flex-1 py-4 bg-app-main text-app-muted font-black uppercase text-xs rounded-app border border-app-border">Cancelar</button>
+                        <button onClick={() => setIsChangingLocation(false)} className="flex-1 py-4 bg-slate-100 text-slate-600 font-black uppercase text-xs rounded-xl">Cancelar</button>
                         <button onClick={() => {
                             const val = (document.querySelector('input[placeholder="PASILLO A..."]') as HTMLInputElement).value;
                             state.setCurrentLocation(val.toUpperCase());
                             setIsChangingLocation(false);
-                        }} className="flex-1 py-4 bg-app-accent text-white font-black uppercase text-xs rounded-app shadow-lg">Confirmar</button>
+                        }} className="flex-1 py-4 bg-blue-600 text-white font-black uppercase text-xs rounded-xl shadow-lg">Confirmar</button>
                     </div>
                 </div>
             </div>
@@ -156,14 +156,14 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
         )}
 
         {state.status === 'confirming' && (
-            <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in">
-                <div className="bg-app-card rounded-[3rem] p-10 w-full max-sm text-center shadow-2xl border-t-8 border-app-accent">
-                    <h2 className="text-3xl font-black text-app-text uppercase tracking-tighter italic mb-4">¿Finalizar?</h2>
-                    <p className="text-app-muted mb-10 font-bold uppercase tracking-widest text-[10px]">El contenido quedará guardado localmente.</p>
+            <div className="fixed inset-0 z-[200] bg-slate-900/90 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in">
+                <div className="bg-white rounded-[3rem] p-10 w-full max-sm text-center shadow-2xl border-t-8 border-black">
+                    <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic mb-4">¿Finalizar?</h2>
+                    <p className="text-slate-500 mb-10 font-bold uppercase tracking-widest text-[10px]">El contenido quedará guardado localmente.</p>
                     <div className="grid grid-cols-1 gap-4">
-                        <button onClick={onCloseSession} className="w-full bg-app-accent text-white py-5 rounded-app font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all">Guardar y Cerrar</button>
-                        <button onClick={() => state.setStatus('idle')} className="w-full bg-app-main text-app-text border-2 border-app-border py-5 rounded-app font-black uppercase tracking-widest active:scale-95 transition-all">Seguir Contando</button>
-                        <button onClick={actions.handleDiscard} className="w-full mt-4 text-app-danger font-black uppercase tracking-widest text-[9px] hover:text-white">Eliminar bulto por completo</button>
+                        <button onClick={onCloseSession} className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all hover:bg-blue-700">Guardar y Cerrar</button>
+                        <button onClick={() => state.setStatus('idle')} className="w-full bg-slate-100 text-slate-600 py-5 rounded-2xl font-black uppercase tracking-widest active:scale-95 transition-all">Seguir Contando</button>
+                        <button onClick={actions.handleDiscard} className="w-full mt-4 text-rose-500 font-black uppercase tracking-widest text-[9px] hover:text-rose-700">Eliminar bulto por completo</button>
                     </div>
                 </div>
             </div>
