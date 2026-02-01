@@ -1,24 +1,23 @@
 
 import React, { memo } from 'react';
-import { ChevronLeft, MapPin, Save, MoreVertical } from 'lucide-react';
+import { ChevronLeft, Save, MoreVertical, Lock } from 'lucide-react';
 
 interface Props {
-    location: string;
     isMigrating: boolean;
     hasItems: boolean;
     onBack: () => void;
-    onChangeLocation: () => void;
     onFinalize: () => void;
     onOpenTools: () => void;
+    onLock: () => void;
 }
 
 export const MassiveHeader: React.FC<Props> = memo(({ 
-    location, isMigrating, hasItems, 
-    onBack, onChangeLocation, onFinalize, onOpenTools 
+    isMigrating, hasItems, 
+    onBack, onFinalize, onOpenTools, onLock
 }) => {
     return (
         <header className="h-16 px-4 flex items-center justify-between border-b border-white/10 bg-slate-900 shadow-2xl shrink-0 z-50">
-            {/* IZQUIERDA: Navegación y Ubicación */}
+            {/* IZQUIERDA: Navegación y Bloqueo Rápido */}
             <div className="flex items-center gap-3">
                 <button 
                     onClick={onBack} 
@@ -27,13 +26,14 @@ export const MassiveHeader: React.FC<Props> = memo(({
                     <ChevronLeft className="w-6 h-6 text-white" />
                 </button>
                 
+                {/* BOTÓN DE BLOQUEO RÁPIDO (Antes Ubicación) */}
                 <button 
-                    onClick={onChangeLocation}
-                    className="flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 active:scale-95 transition-all"
+                    onClick={onLock}
+                    className="flex items-center gap-2 px-4 py-2 bg-amber-500/10 border border-amber-500/30 rounded-xl active:bg-amber-500 active:text-black transition-all group"
                 >
-                    <MapPin className="w-3.5 h-3.5 text-blue-400" />
-                    <span className="text-[10px] font-black uppercase tracking-tighter text-white truncate max-w-[100px]">
-                        {location}
+                    <Lock className="w-4 h-4 text-amber-500 group-active:text-black" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-amber-500 group-active:text-black">
+                        Bloquear
                     </span>
                 </button>
             </div>

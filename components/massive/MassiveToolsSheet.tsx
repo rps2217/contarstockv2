@@ -1,30 +1,36 @@
 
 import React from 'react';
-import { Lock, Barcode, RotateCcw, Download, X } from 'lucide-react';
+import { Barcode, RotateCcw, Download, X, MapPin } from 'lucide-react';
 import { Modal } from '../common/Modal';
 
 interface Props {
     isOpen: boolean;
     onClose: () => void;
     hasActiveItem: boolean;
-    onLock: () => void;
+    location: string;
+    onChangeLocation: () => void;
     onShowLabel: () => void;
     onReset: () => void;
     onImport: () => void;
 }
 
 export const MassiveToolsSheet: React.FC<Props> = ({ 
-    isOpen, onClose, hasActiveItem, onLock, onShowLabel, onReset, onImport 
+    isOpen, onClose, hasActiveItem, location, onChangeLocation, onShowLabel, onReset, onImport 
 }) => {
     
-    const ToolButton = ({ onClick, icon: Icon, label, color, disabled = false }: any) => (
+    const ToolButton = ({ onClick, icon: Icon, label, color, disabled = false, sublabel }: any) => (
         <button
             disabled={disabled}
             onClick={() => { onClick(); onClose(); }}
             className={`flex flex-col items-center justify-center p-6 bg-slate-900 rounded-[2rem] border-2 border-white/5 active:scale-95 transition-all disabled:opacity-20 ${color}`}
         >
             <Icon className="w-8 h-8 mb-3" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-center">{label}</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-center leading-tight">{label}</span>
+            {sublabel && (
+                <span className="text-[8px] font-bold opacity-60 mt-1 uppercase tracking-tight truncate w-full px-2 text-center">
+                    {sublabel}
+                </span>
+            )}
         </button>
     );
 
@@ -48,24 +54,26 @@ export const MassiveToolsSheet: React.FC<Props> = ({
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
+                    {/* Botón de Ubicación ahora está aquí */}
                     <ToolButton 
-                        onClick={onLock} 
-                        icon={Lock} 
-                        label="Bloquear Pantalla" 
-                        color="text-amber-400 border-amber-500/20" 
+                        onClick={onChangeLocation} 
+                        icon={MapPin} 
+                        label="Set Ubicación" 
+                        sublabel={location}
+                        color="text-blue-400 border-blue-500/20" 
                     />
                     <ToolButton 
                         disabled={!hasActiveItem}
                         onClick={onShowLabel} 
                         icon={Barcode} 
                         label="Imprimir Etiqueta" 
-                        color="text-blue-400 border-blue-500/20" 
+                        color="text-indigo-400 border-indigo-500/20" 
                     />
                     <ToolButton 
                         onClick={onImport} 
                         icon={Download} 
                         label="Importar Stock Cloud" 
-                        color="text-indigo-400 border-indigo-500/20" 
+                        color="text-emerald-400 border-emerald-500/20" 
                     />
                     <ToolButton 
                         onClick={onReset} 

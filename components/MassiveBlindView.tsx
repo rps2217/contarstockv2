@@ -143,13 +143,12 @@ const MassiveBlindView: React.FC = () => {
         <div className="h-screen w-full flex flex-col font-mono bg-black select-none overflow-hidden text-white">
             
             <MassiveHeader 
-                location={currentLocation}
                 isMigrating={isMigrating}
                 hasItems={items.length > 0}
                 onBack={() => navigate('/dashboard')}
-                onChangeLocation={() => setIsChangingLocation(true)}
                 onFinalize={handleFinalize}
                 onOpenTools={() => setIsToolsOpen(true)}
+                onLock={() => setIsScreenLocked(true)}
             />
 
             <MassiveHUD 
@@ -225,7 +224,8 @@ const MassiveBlindView: React.FC = () => {
                 isOpen={isToolsOpen}
                 onClose={() => setIsToolsOpen(false)}
                 hasActiveItem={!!lastScannedItem}
-                onLock={() => setIsScreenLocked(true)}
+                location={currentLocation}
+                onChangeLocation={() => setIsChangingLocation(true)}
                 onShowLabel={() => { SoundFX.play('success'); setShowLabelModal(true); }}
                 onReset={() => { if(confirm("¿Borrar todo?")) resetBatch(); }}
                 onImport={handleCloudImport}
