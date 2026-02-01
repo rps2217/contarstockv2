@@ -125,10 +125,6 @@ const MassiveBlindView: React.FC = () => {
 
     const handleKeypadConfirm = () => {
         if (manualCode.length > 0) {
-            // Registramos el código ingresado manualmente como si fuera un escaneo
-            // El multiplicador actual (si hay alguno seleccionado en los otros botones) se aplicará dentro de registerScan si así está programado, 
-            // o pasamos '1' por defecto si queremos que manual sea siempre unitario.
-            // Aquí asumimos que manual respeta el multiplicador activo (ej: manual +20).
             registerScan(manualCode);
         }
         setShowKeypad(false);
@@ -164,7 +160,7 @@ const MassiveBlindView: React.FC = () => {
 
             <div className="flex-1 min-h-0 bg-black flex flex-col">
                 <div className="shrink-0 p-3 bg-slate-900/50 border-b border-white/5 grid grid-cols-4 gap-2">
-                    {/* Botón de Entrada Manual (Reemplaza al +1) */}
+                    {/* Botón de Entrada Manual */}
                     <button
                         onClick={handleOpenKeypad}
                         className="h-11 rounded-xl font-black text-xs flex items-center justify-center gap-2 transition-all border-2 bg-slate-800 border-slate-700 text-white shadow-lg active:scale-95 hover:bg-slate-700"
@@ -207,11 +203,12 @@ const MassiveBlindView: React.FC = () => {
                 </div>
             )}
 
-            {/* TECLADO DE INGRESO MANUAL DE SKU */}
+            {/* TECLADO CON VISOR INTEGRADO */}
             <NumericKeypad 
                 isOpen={showKeypad}
                 onClose={() => setShowKeypad(false)}
-                title={manualCode ? `EAN: ${manualCode}` : "Ingresar Código Manual"}
+                title="Ingresar Código Manual"
+                value={manualCode}
                 onInput={(v) => setManualCode(prev => prev + v)}
                 onDelete={() => setManualCode(prev => prev.slice(0, -1))}
                 onConfirm={handleKeypadConfirm}
