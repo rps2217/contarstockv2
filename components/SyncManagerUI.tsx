@@ -1,8 +1,9 @@
 
 import React from 'react';
-import { Cloud, ChevronLeft, Loader2, CheckCircle2, ArrowUpCircle, Package, Zap, AlertCircle, Info } from 'lucide-react';
+import { Cloud, ChevronLeft, Loader2, ArrowUpCircle, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSyncManager } from '../hooks/useSyncManager';
+import { SyncGroupCard } from './sync/SyncGroupCard';
 
 export const SyncManagerUI: React.FC = () => {
     const navigate = useNavigate();
@@ -27,7 +28,6 @@ export const SyncManagerUI: React.FC = () => {
             </div>
 
             <div className="flex-1 flex flex-col p-6 overflow-hidden">
-                
                 <div className="mb-6 bg-blue-50 border-2 border-blue-100 p-4 rounded-2xl flex gap-3">
                     <Info className="w-5 h-5 text-blue-600 shrink-0" />
                     <p className="text-[10px] text-blue-800 font-bold uppercase leading-relaxed">
@@ -43,36 +43,9 @@ export const SyncManagerUI: React.FC = () => {
                             <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Todo Sincronizado</h3>
                         </div>
                     ) : (
-                        state.uiGroups.map(g => {
-                            const isOrphan = g.erpOrder === 'REGISTROS_HUERFANOS';
-                            return (
-                                <div key={g.erpOrder} className={`bg-white dark:bg-slate-900 p-6 rounded-[2rem] border-2 shadow-sm flex justify-between items-center transition-all ${isOrphan ? 'border-amber-200 bg-amber-50/30' : (g.isHammer ? 'border-blue-100 dark:border-blue-900/30' : 'border-slate-100 dark:border-white/5')}`}>
-                                    <div className="flex items-center gap-5">
-                                        <div className={`p-4 rounded-2xl ${g.uiStatus === 'success' ? 'bg-emerald-100 text-emerald-600' : (isOrphan ? 'bg-amber-500 text-white' : (g.isHammer ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400'))}`}>
-                                            {isOrphan ? <AlertCircle className="w-6 h-6" /> : (g.isHammer ? <Zap className="w-6 h-6" /> : <Package className="w-6 h-6" />)}
-                                        </div>
-                                        <div>
-                                            <div className="font-black text-lg text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-2">
-                                                {isOrphan ? 'Registros Residuales' : g.erpOrder}
-                                                {g.isHammer && !isOrphan && <span className="text-[7px] font-black bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded uppercase">Martillo</span>}
-                                            </div>
-                                            <div className="text-[10px] text-slate-400 font-bold uppercase mt-1">
-                                                {isOrphan ? 'Picks sin bulto asignado' : `${g.sessionCount} Bultos`} • {g.totalUnits} Unidades
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        {g.uiStatus === 'uploading' ? (
-                                            <Loader2 className="animate-spin text-blue-600 w-6 h-6" />
-                                        ) : g.uiStatus === 'success' ? (
-                                            <CheckCircle2 className="text-emerald-500 w-8 h-8" />
-                                        ) : (
-                                            <div className={`w-3 h-3 rounded-full animate-pulse ${isOrphan ? 'bg-amber-500' : (g.isHammer ? 'bg-blue-500' : 'bg-slate-300')}`}></div>
-                                        )}
-                                    </div>
-                                </div>
-                            );
-                        })
+                        state.uiGroups.map(g => (
+                            <SyncGroupCard key={g.erpOrder} group={g} uiStatus={g.uiStatus} />
+                        ))
                     )}
                 </div>
             </div>
