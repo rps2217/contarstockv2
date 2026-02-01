@@ -2,7 +2,7 @@
 import React, { useState, memo, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMassiveScanner, ConsolidatedBlindItem } from '../hooks/useMassiveScanner';
-import { Camera, MapPin } from 'lucide-react';
+import { Camera, MapPin, GripHorizontal } from 'lucide-react';
 import { CameraScanner } from './CameraScanner';
 import { migrateMassiveToMaster, importManifestFromCloud } from '../services/massiveSync';
 import { SoundFX } from '../services/audio';
@@ -10,6 +10,7 @@ import { VirtualList } from './common/VirtualList';
 import { printBarcode } from '../services/printerService';
 import { thermalPrinter } from '../services/thermalPrinterService';
 import { getRowStyles } from '../services/uiLogic';
+import { NumericKeypad } from './NumericKeypad';
 
 // Subcomponentes Atómicos
 import { MassiveHUD } from './massive/MassiveHUD';
@@ -61,6 +62,10 @@ const MassiveBlindView: React.FC = () => {
     const [isPrinting, setIsPrinting] = useState(false);
     const [isChangingLocation, setIsChangingLocation] = useState(false);
     const [showLabelModal, setShowLabelModal] = useState(false);
+    
+    // Estados para Teclado Numérico Manual
+    const [showKeypad, setShowKeypad] = useState(false);
+    const [keypadValue, setKeypadValue] = useState('');
 
     const handleCloudImport = async () => {
         setIsImporting(true);
@@ -113,7 +118,25 @@ const MassiveBlindView: React.FC = () => {
         }
     };
 
+    const handleOpenKeypad = () => {
+        setKeypadValue('');
+        setShowKeypad(true);
+    };
+
+    const handleKeypadConfirm = () => {
+        const val = parseInt(keypadValue);
+        if (!isNaN(val) && val > 0) {
+            setMultiplier(val);
+            SoundFX.play('success');
+        }
+        setShowKeypad(false);
+    };
+
     const rowData = useMemo(() => ({ onSelect: selectItem, activeBarcode: lastScannedItem?.barcode }), [selectItem, lastScannedItem?.barcode]);
+
+    // Valores rápidos para el grid
+    const quickValues = [5, 10, 20];
+    const isCustomMultiplier = !quickValues.includes(multiplier) && multiplier !== 1;
 
     return (
         <div className="h-screen w-full flex flex-col font-mono bg-black select-none overflow-hidden text-white">
@@ -140,7 +163,16 @@ const MassiveBlindView: React.FC = () => {
 
             <div className="flex-1 min-h-0 bg-black flex flex-col">
                 <div className="shrink-0 p-3 bg-slate-900/50 border-b border-white/5 grid grid-cols-4 gap-2">
-                    {[1, 5, 10, 20].map(val => (
+                    {/* Botón de Teclado Numérico (Reemplaza al +1) */}
+                    <button
+                        onClick={handleOpenKeypad}
+                        className={`h-11 rounded-xl font-black text-xs flex items-center justify-center transition-all border-2 ${isCustomMultiplier ? 'bg-indigo-600 border-indigo-400 text-white shadow-lg' : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10'}`}
+                    >
+                        {isCustomMultiplier ? `x${multiplier}` : <GripHorizontal className="w-5 h-5" />}
+                    </button>
+
+                    {/* Botones Rápidos Preset */}
+                    {quickValues.map(val => (
                         <button
                             key={val}
                             onClick={() => { setMultiplier(val); if(navigator.vibrate) navigator.vibrate(10); }}
@@ -173,6 +205,16 @@ const MassiveBlindView: React.FC = () => {
                 </div>
             )}
 
+            {/* TECLADO MULTIPLICADOR */}
+            <NumericKeypad 
+                isOpen={showKeypad}
+                onClose={() => setShowKeypad(false)}
+                title={keypadValue ? `Cant: ${keypadValue}` : "Multiplicador Manual"}
+                onInput={(v) => setKeypadValue(prev => (prev + v).slice(0, 5))} // Max 5 dígitos
+                onDelete={() => setKeypadValue(prev => prev.slice(0, -1))}
+                onConfirm={handleKeypadConfirm}
+            />
+
             <MassiveLabelModal 
                 isOpen={showLabelModal} 
                 onClose={() => setShowLabelModal(false)}
@@ -182,7 +224,7 @@ const MassiveBlindView: React.FC = () => {
                 onPrintPDF={() => lastScannedItem && printBarcode(lastScannedItem.barcode, lastScannedItem.name, `STOCK_AUDIT: ${lastScannedItem.totalQuantity}`)}
             />
 
-            {/* Modal Ubicación (Simple enough to keep mostly generic or inline for now, but cleaner) */}
+            {/* Modal Ubicación */}
             {isChangingLocation && (
                 <div className="fixed inset-0 z-[210] bg-black/90 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in">
                     <div className="bg-slate-900 border-2 border-white/10 rounded-[2.5rem] p-8 w-full max-w-sm shadow-2xl">
