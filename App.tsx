@@ -1,4 +1,3 @@
-
 import React, { Suspense, useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { useAppStore } from './store/useAppStore';
@@ -12,15 +11,15 @@ import { lazyWithRetry } from './services/lazyLoad';
 import { initPersistence } from './services/backupService';
 import { Login } from './components/Login';
 
-const Dashboard = lazyWithRetry(() => import('./components/Dashboard.tsx'));
-const Reports = lazyWithRetry(() => import('./components/Reports.tsx'));
-const DatabaseView = lazyWithRetry(() => import('./components/Database.tsx'));
-const Sync = lazyWithRetry(() => import('./components/SyncManagerUI.tsx'));
-const Reception = lazyWithRetry(() => import('./components/Reception.tsx'));
-const Settings = lazyWithRetry(() => import('./components/Settings.tsx'));
-const MassiveBlindView = lazyWithRetry(() => import('./components/MassiveBlindView.tsx'));
-const Consolidated = lazyWithRetry(() => import('./components/Consolidated.tsx'));
-const Conciliator = lazyWithRetry(() => import('./components/Conciliator.tsx'));
+const Dashboard = lazyWithRetry(() => import('./components/Dashboard'));
+const Reports = lazyWithRetry(() => import('./components/Reports'));
+const DatabaseView = lazyWithRetry(() => import('./components/Database'));
+const Sync = lazyWithRetry(() => import('./components/SyncManagerUI'));
+const Reception = lazyWithRetry(() => import('./components/Reception'));
+const Settings = lazyWithRetry(() => import('./components/Settings'));
+const MassiveBlindView = lazyWithRetry(() => import('./components/MassiveBlindView'));
+const Consolidated = lazyWithRetry(() => import('./components/Consolidated'));
+const Conciliator = lazyWithRetry(() => import('./components/Conciliator'));
 
 const AppContent = () => {
   const location = useLocation();

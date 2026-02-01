@@ -1,39 +1,10 @@
-
-import React, { useState } from 'react';
+import React from 'react';
 import { ScanLine, Database, Radio, Zap, History, Settings, Gauge, UserCircle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../db';
-import { massiveDb } from '../db.massive';
+import { useDashboard } from '../hooks/useDashboard';
 import { IndustrialButton } from './common/IndustrialButton';
 
 const Dashboard: React.FC = () => {
-  const navigate = useNavigate();
-  const [isEnteringMartillo, setIsEnteringMartillo] = useState(false);
-  
-  const stats = useLiveQuery(async () => {
-      const today = new Date().setHours(0,0,0,0);
-      const scansToday = await db.scans.where('timestamp').above(today).count();
-      const pendingSync = await db.scans.where('synced').equals(0).count();
-      return { scansToday, pendingSync };
-  }, []);
-
-  const operatorId = localStorage.getItem('logicount_operator_id') || 'SIN_IDENTIFICAR';
-  const isSyncNeeded = (stats?.pendingSync || 0) > 0;
-
-  const handleEnterMartillo = async () => {
-    setIsEnteringMartillo(true);
-    try {
-        const lastScan = await massiveDb.blindScans.orderBy('timestamp').reverse().first();
-        const lastManifest = await massiveDb.blindManifests.toCollection().first();
-        const activeBatchId = lastScan?.batchId || lastManifest?.batchId || `MARTILLO-${Date.now()}`;
-        navigate(`/massive/${activeBatchId}`);
-    } catch (e) {
-        navigate(`/massive/MARTILLO-${Date.now()}`);
-    } finally {
-        setIsEnteringMartillo(false);
-    }
-  };
+  const { stats, operatorId, isSyncNeeded, isEnteringMartillo, handleEnterMartillo, navigate } = useDashboard();
 
   const MainButton = ({ onClick, icon: Icon, title, sub, loading, colorClass }: any) => (
     <button 
@@ -69,7 +40,7 @@ const Dashboard: React.FC = () => {
           <div className="flex flex-col items-end shrink-0 gap-2">
               <div className="bg-blue-600/10 border border-blue-500/20 px-3 py-1.5 rounded-xl flex items-center gap-2 shadow-inner">
                   <Gauge className="w-3 h-3 text-blue-400" />
-                  <span className="text-[10px] font-black text-white tabular-nums tracking-widest">{stats?.scansToday || 0}</span>
+                  <span className="text-[10px] font-black text-white tabular-nums tracking-widest">{stats.scansToday || 0}</span>
                   <span className="text-[6px] font-black text-blue-400 uppercase opacity-60">Picks</span>
               </div>
           </div>
@@ -96,7 +67,7 @@ const Dashboard: React.FC = () => {
                 />
                 <button 
                     onClick={(e) => { e.stopPropagation(); navigate('/reports?type=hammer'); }}
-                    className="absolute -top-2 -right-2 bg-black border-2 border-white/20 p-3 rounded-2xl text-white/40 hover:text-white hover:bg-blue-600 transition-all shadow-xl z-20"
+                    className="absolute -top-2 -right-2 bg-black border-2 border-white/20 p-3 rounded-2xl text-white/40 hover:text-white hover:bg-blue-600 transition-all shadow-xl z-20 active:scale-90"
                 >
                     <History className="w-5 h-5" />
                 </button>
