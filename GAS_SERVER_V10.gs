@@ -18,9 +18,11 @@ function getSpreadsheet() {
 }
 
 function doPost(e) {
-  // BLOQUEO DE SEGURIDAD: Evita escrituras simultáneas que corrompan datos
+  // BLOQUEO DE SEGURIDAD (CRÍTICO): 
+  // Obliga a las peticiones a esperar su turno (hasta 30s) para escribir.
+  // Sin esto, datos concurrentes corrompen el inventario.
   const lock = LockService.getScriptLock();
-  // Esperar hasta 30 segundos para obtener turno de escritura. Si falla, el cliente reintentará.
+  
   try {
     lock.waitLock(30000); 
   } catch (e) {
@@ -87,36 +89,29 @@ function appendRows(tableName, rows) {
   let lastCol = sheet.getLastColumn();
   let headers = [];
   
-  // Inicialización de Cabeceras (Solo si la hoja es nueva o vacía)
+  // Inicialización de Cabeceras
   if (lastCol === 0 || sheet.getRange(1, 1).getValue() === "") {
     headers = Object.keys(rows[0]);
-    // Forzamos que todas las columnas sean Texto Plano para evitar que Sheets convierta "00123" en 123
     const headerRange = sheet.getRange(1, 1, 1, headers.length);
     headerRange.setValues([headers]);
     headerRange.setFontWeight("bold").setBackground("#f3f3f3");
-    
-    // Formato de columnas completas como texto (prevención de corrupción de SKUs)
-    sheet.getRange(2, 1, 1000, headers.length).setNumberFormat("@");
+    sheet.getRange(2, 1, 1000, headers.length).setNumberFormat("@"); // Todo Texto
     sheet.setFrozenRows(1);
   } else {
     headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
   }
 
-  // Mapeo Rápido: Asegura que los datos coincidan con el orden de las columnas
+  // Mapeo Rápido
   const dataToAppend = rows.map(row => {
     return headers.map(h => {
       const hClean = String(h).trim().toUpperCase();
-      // Búsqueda insensible a mayúsculas/minúsculas
       const key = Object.keys(row).find(k => k.trim().toUpperCase() === hClean);
       const val = key ? row[key] : "";
-      
-      // Sanitización básica para evitar fórmulas inyectadas
       if (typeof val === 'string' && val.startsWith('=')) return "'" + val;
       return val;
     });
   });
 
-  // ESCRITURA EN BLOQUE (BATCH WRITE) - O(1) Operación
   if (dataToAppend.length > 0) {
     sheet.getRange(sheet.getLastRow() + 1, 1, dataToAppend.length, headers.length).setValues(dataToAppend);
   }
@@ -134,7 +129,6 @@ function fetchRows(tableName) {
   const sheet = ss.getSheetByName(tableName);
   if (!sheet) return { success: false, error: "La pestaña '" + tableName + "' no existe." };
 
-  // Optimización: Leer solo datos con contenido
   const lastRow = sheet.getLastRow();
   const lastCol = sheet.getLastColumn();
   

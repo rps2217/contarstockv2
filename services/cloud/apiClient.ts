@@ -34,7 +34,7 @@ export const cloudApi = {
             }
         };
 
-        // Compresión condicional (Solo si vale la pena el costo de CPU)
+        // Compresión condicional
         if (compress && payload.rows) {
             try {
                 bodyToSend.rows = await compressData(payload.rows);
@@ -118,8 +118,6 @@ export const cloudApi = {
     },
 
     async appendRows(tableName: string, rows: any[]) {
-        // Aumentamos el umbral de compresión a 50 para facilitar depuración en logs de Google
-        // Para 1-3 usuarios, enviar texto plano es más rápido que comprimir/descomprimir pequeñas cantidades
         return this.post('append_rows', { tableName, rows }, rows.length > 50);
     }
 };
