@@ -55,6 +55,9 @@ const AppContent = () => {
   };
 
   const currentThemeClass = themeClasses[settings.theme] || themeClasses.dark;
+  
+  // Determinar si activar modo oscuro global para componentes internos (Tailwind dark:)
+  const isDarkMode = ['dark', 'navy', 'oled'].includes(settings.theme);
 
   // Pantalla de Carga Inicial
   if (bootState === 'testing' || isAuthenticated === null) return (
@@ -73,7 +76,7 @@ const AppContent = () => {
   }
 
   return (
-    <div className={`w-full h-full flex flex-col transition-colors duration-500 ${currentThemeClass} font-mono selection:bg-blue-500 selection:text-white`}>
+    <div className={`w-full h-full flex flex-col transition-colors duration-500 ${currentThemeClass} ${isDarkMode ? 'dark' : ''} font-mono selection:bg-blue-500 selection:text-white`}>
       <SystemStatus />
       <NetworkStatus />
       
