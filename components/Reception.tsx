@@ -3,9 +3,10 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useReception } from '../hooks/useReception';
 import { CameraScanner } from './CameraScanner';
-import { ChevronLeft, List, AlertTriangle, Sun, Moon, X } from 'lucide-react';
+import { ChevronLeft, List, AlertTriangle, Sun, Moon, X, Keyboard, Camera, ArrowRight } from 'lucide-react';
 import { QueueManager } from './reception/QueueManager';
 import { ReceptionHero } from './reception/ReceptionHero';
+import { IndustrialButton } from './common/IndustrialButton';
 
 export const Reception: React.FC = () => {
     const navigate = useNavigate();
@@ -19,78 +20,119 @@ export const Reception: React.FC = () => {
     };
 
     // UI DINÁMICA SEGÚN MODO
+    // Usamos colores consistentes con el resto de la app (Slate 950 base)
     const bgColor = state.flashActive 
-        ? 'bg-emerald-500' 
-        : (state.lastAction?.type === 'duplicate' ? 'bg-rose-700' : (state.isEcoMode ? 'bg-black' : 'bg-slate-900'));
+        ? 'bg-blue-600' 
+        : (state.lastAction?.type === 'duplicate' ? 'bg-rose-900' : 'bg-slate-950');
 
     return (
-        <div className={`flex flex-col h-full w-full transition-colors duration-300 overflow-hidden relative ${bgColor}`}>
+        <div className={`flex flex-col h-full w-full transition-colors duration-200 overflow-hidden relative ${bgColor} text-white font-mono`}>
             
-            {/* OVERLAY DUPLICADO (BLOQUEANTE POR SEGURIDAD) */}
+            {/* OVERLAY DUPLICADO (BLOQUEANTE) */}
             {state.lastAction?.type === 'duplicate' && (
-                <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center p-8 text-center animate-in fade-in">
-                    <div className="bg-white p-8 rounded-full mb-8 shadow-2xl animate-bounce">
-                        <AlertTriangle className="w-20 h-20 text-rose-600" />
+                <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center p-8 text-center animate-in fade-in zoom-in duration-200 bg-rose-950/90 backdrop-blur-sm">
+                    <div className="bg-rose-500 p-8 rounded-full mb-8 shadow-2xl animate-bounce">
+                        <AlertTriangle className="w-20 h-20 text-white" />
                     </div>
-                    <h2 className="text-5xl font-black text-white uppercase tracking-tighter mb-4">¡DUPLICADO!</h2>
-                    <p className="text-rose-100 font-bold text-2xl mb-12 italic">
-                        La etiqueta <span className="underline decoration-white underline-offset-8">{state.lastAction.label}</span> ya está registrada.
+                    <h2 className="text-4xl font-black text-white uppercase tracking-tighter mb-4">¡DUPLICADO!</h2>
+                    <p className="text-rose-200 font-bold text-xl mb-12 max-w-xs mx-auto leading-relaxed">
+                        La etiqueta <br/><span className="text-white bg-rose-800 px-2 rounded decoration-white underline-offset-4">{state.lastAction.label}</span><br/> ya fue escaneada.
                     </p>
-                    <button 
+                    <IndustrialButton 
+                        variant="ghost"
                         onClick={actions.clearError}
-                        className="bg-white text-rose-700 px-16 py-6 rounded-3xl font-black uppercase tracking-[0.2em] shadow-2xl active:scale-95 transition-all text-xl"
+                        className="bg-white text-rose-700 hover:bg-rose-50 w-full max-w-sm"
                     >
-                        Limpiar Error
-                    </button>
+                        ENTENDIDO
+                    </IndustrialButton>
                 </div>
             )}
 
-            {/* HEADER MINIMALISTA */}
-            <div className={`p-4 flex items-center justify-between shrink-0 z-20 border-b ${state.isEcoMode ? 'bg-black border-white/5' : 'bg-black/20 border-white/5'}`}>
-                <button onClick={() => navigate('/dashboard')} className="p-2 hover:bg-white/10 rounded-full text-white/40"><ChevronLeft className="w-6 h-6" /></button>
+            {/* HEADER INDUSTRIAL */}
+            <div className="p-4 flex items-center justify-between shrink-0 z-20 border-b-4 border-white/5 bg-black/20 backdrop-blur-sm">
+                <button onClick={() => navigate('/dashboard')} className="p-3 hover:bg-white/10 rounded-2xl text-white/60 transition-all active:scale-90 border-2 border-transparent hover:border-white/10">
+                    <ChevronLeft className="w-6 h-6" />
+                </button>
                 
-                <div className="flex items-center gap-4">
-                    <button 
-                        onClick={() => state.setIsEcoMode(!state.isEcoMode)}
-                        className={`flex items-center gap-2 px-4 py-1.5 rounded-full border transition-all ${state.isEcoMode ? 'bg-emerald-900/30 border-emerald-500/50 text-emerald-400' : 'bg-white/5 border-white/10 text-white/40'}`}
-                    >
-                        {state.isEcoMode ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
-                        <span className="text-[10px] font-black uppercase tracking-widest">{state.isEcoMode ? 'Modo Eco Activo' : 'Modo Estándar'}</span>
-                    </button>
+                <div className="flex flex-col items-center">
+                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">Módulo</span>
+                    <span className="text-lg font-black uppercase tracking-widest text-white italic">Recepción</span>
                 </div>
 
-                <button onClick={() => state.setShowQueueModal(true)} className="p-2 hover:bg-white/10 rounded-full text-white/40 relative">
+                <button 
+                    onClick={() => state.setShowQueueModal(true)} 
+                    className="p-3 hover:bg-white/10 rounded-2xl text-white/60 relative border-2 border-transparent hover:border-white/10 active:scale-90 transition-all"
+                >
                     <List className="w-6 h-6" />
-                    {state.draftCount > 0 && <span className="absolute top-2 right-2 w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>}
+                    {state.draftCount > 0 && (
+                        <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-blue-500 border-2 border-black rounded-full animate-pulse"></span>
+                    )}
                 </button>
             </div>
 
-            {/* HERO COMPONENT (VISUALS) */}
+            {/* HERO COMPONENT */}
             <ReceptionHero 
                 lastAction={state.lastAction}
                 draftCount={state.draftCount}
                 isEcoMode={state.isEcoMode}
-                onToggleManual={() => state.setShowManualInput(true)}
-                onCameraClick={() => state.setIsCameraOpen(true)}
+                onToggleManual={() => state.setShowManualInput(true)} // Dummy func, buttons controlled below
+                onCameraClick={() => state.setIsCameraOpen(true)}     // Dummy func
             />
 
-            {/* INPUT MANUAL MODAL */}
+            {/* ACCIONES PRINCIPALES (FOOTER) */}
+            <div className="p-6 pb-safe-area grid grid-cols-2 gap-4 shrink-0 bg-slate-900/50 border-t border-white/5">
+                <IndustrialButton 
+                    variant="secondary"
+                    icon={Keyboard}
+                    onClick={() => state.setShowManualInput(true)}
+                    className="bg-slate-800 border-slate-700 text-slate-300 hover:text-white hover:border-slate-500 h-20"
+                >
+                    TECLADO
+                </IndustrialButton>
+                
+                <IndustrialButton 
+                    variant="primary"
+                    icon={Camera}
+                    onClick={() => state.setIsCameraOpen(true)}
+                    className="h-20"
+                >
+                    CÁMARA
+                </IndustrialButton>
+            </div>
+
+            {/* MODAL INPUT MANUAL (ESTILO MARTILLO) */}
             {state.showManualInput && (
-                <div className="absolute inset-0 z-[60] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in">
+                <div className="absolute inset-0 z-[60] bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in duration-200">
                     <div className="w-full max-w-sm">
-                        <div className="flex justify-between items-center mb-10">
-                            <h3 className="text-xl font-black uppercase tracking-widest text-white italic">Entrada Manual</h3>
-                            <button onClick={() => state.setShowManualInput(false)} className="p-3 bg-white/5 rounded-full text-white"><X className="w-6 h-6"/></button>
+                        <div className="flex justify-end mb-4">
+                            <button onClick={() => state.setShowManualInput(false)} className="p-4 bg-white/10 rounded-full text-white hover:bg-white/20 active:scale-90 transition-all">
+                                <X className="w-6 h-6"/>
+                            </button>
                         </div>
+                        
+                        <div className="text-center mb-8">
+                            <h3 className="text-2xl font-black uppercase tracking-tighter text-white italic">Entrada Manual</h3>
+                            <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-2">Digite ID de Etiqueta</p>
+                        </div>
+
                         <form onSubmit={handleManualSubmit}>
                             <input 
                                 autoFocus 
                                 value={inputValue} 
-                                onChange={(e) => setInputValue(e.target.value.replace(/[^a-zA-Z0-9]/g, ''))} 
+                                onChange={(e) => setInputValue(e.target.value.replace(/[^a-zA-Z0-9-]/g, '').toUpperCase())} 
                                 type="text" 
-                                className="w-full h-24 bg-white/5 border-4 border-white/10 rounded-3xl text-4xl font-black text-center outline-none focus:border-blue-500 text-white tracking-widest mb-8" 
+                                className="w-full h-24 bg-black border-4 border-white/10 rounded-[2rem] text-4xl font-black text-center outline-none focus:border-blue-500 text-white tracking-widest mb-6 transition-colors shadow-inner font-mono"
+                                placeholder="LBL-..."
                             />
-                            <button type="submit" className="w-full h-20 bg-blue-600 text-white rounded-3xl font-black uppercase tracking-widest text-sm shadow-2xl active:scale-95 transition-all">Confirmar</button>
+                            <IndustrialButton 
+                                type="submit" 
+                                variant="primary" 
+                                icon={ArrowRight} 
+                                fullWidth
+                                disabled={inputValue.length < 3}
+                            >
+                                REGISTRAR
+                            </IndustrialButton>
                         </form>
                     </div>
                 </div>
