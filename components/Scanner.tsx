@@ -12,6 +12,7 @@ import { ScannerControls } from './scanner/ScannerControls';
 import { ScanItem } from './ScanItem';
 import { NumericKeypad } from './NumericKeypad';
 import { CameraScanner } from './CameraScanner';
+import { ScreenLockOverlay } from './common/ScreenLockOverlay';
 
 interface ScannerProps {
   session: CountingSession;
@@ -24,6 +25,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
   const settings = useMemo(() => settingsService.getSettings(), []);
   const [showRecentScansMobile, setShowRecentScansMobile] = useState(false);
   const [isChangingLocation, setIsChangingLocation] = useState(false);
+  const [isScreenLocked, setIsScreenLocked] = useState(false);
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-white text-slate-900 overflow-hidden font-sans select-none page-transition">
@@ -35,6 +37,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
         onLocationClick={() => setIsChangingLocation(true)}
         onPause={() => state.setStatus('confirming')}
         onUndo={actions.handleUndo}
+        onLock={() => setIsScreenLocked(true)}
         canUndo={!!data.lastScan || state.feedback === 'success'}
       />
 
@@ -165,6 +168,12 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
                 </div>
             </div>
         )}
+
+        {/* OVERLAY DE BLOQUEO DE PANTALLA */}
+        <ScreenLockOverlay 
+            isLocked={isScreenLocked} 
+            onUnlock={() => setIsScreenLocked(false)} 
+        />
       </div>
     </div>
   );

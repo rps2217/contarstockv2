@@ -11,6 +11,7 @@ import { printBarcode } from '../services/printerService';
 import { thermalPrinter } from '../services/thermalPrinterService';
 import { getRowStyles } from '../services/uiLogic';
 import { NumericKeypad } from './NumericKeypad';
+import { ScreenLockOverlay } from './common/ScreenLockOverlay';
 
 // Subcomponentes Atómicos
 import { MassiveHUD } from './massive/MassiveHUD';
@@ -62,6 +63,7 @@ const MassiveBlindView: React.FC = () => {
     const [isPrinting, setIsPrinting] = useState(false);
     const [isChangingLocation, setIsChangingLocation] = useState(false);
     const [showLabelModal, setShowLabelModal] = useState(false);
+    const [isScreenLocked, setIsScreenLocked] = useState(false);
     
     // Estados para Teclado Numérico Manual (Modo Input Código)
     const [showKeypad, setShowKeypad] = useState(false);
@@ -149,6 +151,7 @@ const MassiveBlindView: React.FC = () => {
                 onReset={() => { if(confirm("¿Borrar todo?")) resetBatch(); }}
                 onImport={handleCloudImport}
                 onFinalize={handleFinalize}
+                onLock={() => setIsScreenLocked(true)}
             />
 
             <MassiveHUD 
@@ -250,6 +253,9 @@ const MassiveBlindView: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            {/* OVERLAY DE BLOQUEO */}
+            <ScreenLockOverlay isLocked={isScreenLocked} onUnlock={() => setIsScreenLocked(false)} />
         </div>
     );
 };

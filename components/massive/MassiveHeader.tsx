@@ -1,6 +1,6 @@
 
 import React, { memo } from 'react';
-import { ChevronLeft, MapPin, Barcode, RotateCcw, Download, Save } from 'lucide-react';
+import { ChevronLeft, MapPin, Barcode, RotateCcw, Download, Save, Lock } from 'lucide-react';
 
 interface Props {
     location: string;
@@ -13,11 +13,12 @@ interface Props {
     onReset: () => void;
     onImport: () => void;
     onFinalize: () => void;
+    onLock: () => void;
 }
 
 export const MassiveHeader: React.FC<Props> = memo(({ 
     location, hasActiveItem, isMigrating, hasItems, 
-    onBack, onChangeLocation, onShowLabel, onReset, onImport, onFinalize 
+    onBack, onChangeLocation, onShowLabel, onReset, onImport, onFinalize, onLock 
 }) => {
     return (
         <header className="h-14 px-4 flex items-center justify-between border-b border-white/10 bg-slate-900/80 shrink-0 z-50">
@@ -35,6 +36,14 @@ export const MassiveHeader: React.FC<Props> = memo(({
             </div>
             
             <div className="flex gap-2">
+                <button 
+                    onClick={onLock}
+                    className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl border border-white/10 active:bg-white/20 transition-all"
+                    title="Bloquear Pantalla"
+                >
+                    <Lock className="w-4 h-4 text-white/60" />
+                </button>
+
                 <button 
                     disabled={!hasActiveItem}
                     onClick={onShowLabel}
