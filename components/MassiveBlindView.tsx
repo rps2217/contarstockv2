@@ -2,7 +2,7 @@
 import React, { useState, memo, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMassiveScanner, ConsolidatedBlindItem } from '../hooks/useMassiveScanner';
-import { ChevronLeft, Plus, Minus, ScanLine, Save, Upload, Camera, Target, Barcode, X, RotateCcw, Download, Printer, MapPin, FileText } from 'lucide-react';
+import { Camera, Save, Download, RotateCcw, Barcode, MapPin, ChevronLeft, Printer, FileText } from 'lucide-react';
 import { CameraScanner } from './CameraScanner';
 import { migrateMassiveToMaster, importManifestFromCloud } from '../services/massiveSync';
 import { SoundFX } from '../services/audio';
@@ -11,30 +11,21 @@ import { printBarcode } from '../services/printerService';
 import { thermalPrinter } from '../services/thermalPrinterService';
 import { IndustrialButton } from './common/IndustrialButton';
 import { Modal } from './common/Modal';
+import { getRowStyles } from '../services/uiLogic';
+import { MassiveHUD } from './massive/MassiveHUD';
 
+// --- ROW COMPONENT (Memoized & DRY) ---
 const MassiveItemRow = memo(({ index, data }: any) => {
     const item = data.items[index];
     if (!item) return null;
     const { onSelect, activeBarcode } = data;
     
     const isActive = activeBarcode === item.barcode;
-    const hasTarget = item.expectedQty !== undefined;
-    
-    let statusClasses = 'bg-slate-900/40 border-white/5'; 
-    if (hasTarget) {
-        const count = item.totalQuantity;
-        const target = item.expectedQty || 0;
-        if (count === target) statusClasses = 'bg-emerald-600 border-emerald-400'; 
-        else if (count < target) statusClasses = 'bg-rose-700 border-rose-500'; 
-        else statusClasses = 'bg-amber-600 border-amber-400'; 
-    }
+    const className = getRowStyles(item.totalQuantity, item.expectedQty, isActive);
 
     return (
         <div className="px-3 py-1 h-full">
-            <button 
-                onClick={() => onSelect(item.barcode)}
-                className={`w-full h-full border-2 p-4 rounded-2xl flex items-center justify-between transition-all text-left active:scale-[0.98] ${statusClasses} ${isActive ? 'ring-4 ring-white shadow-2xl scale-[1.02] z-10' : ''}`}
-            >
+            <button onClick={() => onSelect(item.barcode)} className={className}>
                 <div className="flex-1 min-w-0 pr-4">
                     <span className="text-[9px] font-black font-mono tracking-widest block mb-1 opacity-50">
                         {item.barcode}
@@ -45,22 +36,28 @@ const MassiveItemRow = memo(({ index, data }: any) => {
                 </div>
                 <div className="text-right">
                     <div className="text-3xl font-black tabular-nums leading-none">{item.totalQuantity}</div>
-                    {hasTarget && <div className="text-[8px] font-black uppercase opacity-60 mt-1">OBJ: {item.expectedQty}</div>}
+                    {item.expectedQty !== undefined && (
+                        <div className="text-[8px] font-black uppercase opacity-60 mt-1">OBJ: {item.expectedQty}</div>
+                    )}
                 </div>
             </button>
         </div>
     );
 });
 
+// --- MAIN VIEW ---
 const MassiveBlindView: React.FC = () => {
     const navigate = useNavigate();
     const { batchId = 'CORE' } = useParams();
+    
+    // State Logic Hook
     const { 
         items, lastScannedItem, feedback, multiplier, setMultiplier, 
         currentLocation, setCurrentLocation, registerScan, selectItem, 
         removeItemCompletely, resetBatch 
-    } = useMassiveScanner(batchId || 'CORE');
+    } = useMassiveScanner(batchId);
     
+    // UI Local State
     const [isTriggerActive, setIsTriggerActive] = useState(false);
     const [isMigrating, setIsMigrating] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
@@ -68,8 +65,8 @@ const MassiveBlindView: React.FC = () => {
     const [isChangingLocation, setIsChangingLocation] = useState(false);
     const [showLabelModal, setShowLabelModal] = useState(false);
 
+    // --- HANDLERS ---
     const handleCloudImport = async () => {
-        if (!batchId) return;
         setIsImporting(true);
         try {
             const count = await importManifestFromCloud(batchId);
@@ -84,9 +81,7 @@ const MassiveBlindView: React.FC = () => {
     };
 
     const handleFinalize = async () => {
-        if (!batchId || !items.length) return;
-        if (!confirm("¿Finalizar auditoría y archivar en historial?")) return;
-        
+        if (!items.length || !confirm("¿Finalizar auditoría y archivar en historial?")) return;
         setIsMigrating(true);
         try {
             await migrateMassiveToMaster(batchId);
@@ -112,11 +107,7 @@ const MassiveBlindView: React.FC = () => {
         if (!lastScannedItem || isPrinting) return;
         setIsPrinting(true);
         try {
-            await thermalPrinter.printLabel(
-                lastScannedItem.barcode, 
-                lastScannedItem.name, 
-                lastScannedItem.totalQuantity
-            );
+            await thermalPrinter.printLabel(lastScannedItem.barcode, lastScannedItem.name, lastScannedItem.totalQuantity);
             SoundFX.play('success');
         } catch (e) {
             SoundFX.play('error');
@@ -126,20 +117,11 @@ const MassiveBlindView: React.FC = () => {
         }
     };
 
-    const getHudColor = useMemo(() => {
-        if (!lastScannedItem) return 'bg-slate-950';
-        if (lastScannedItem.expectedQty === undefined) return 'bg-blue-700'; 
-        const count = lastScannedItem.totalQuantity;
-        const target = lastScannedItem.expectedQty;
-        if (count === target) return 'bg-emerald-600';
-        if (count < target) return 'bg-rose-700';
-        return 'bg-amber-600'; 
-    }, [lastScannedItem]);
-
     const rowData = useMemo(() => ({ onSelect: selectItem, activeBarcode: lastScannedItem?.barcode }), [selectItem, lastScannedItem?.barcode]);
 
     return (
         <div className="h-screen w-full flex flex-col font-mono bg-black select-none overflow-hidden text-white">
+            {/* HEADER */}
             <header className="h-14 px-4 flex items-center justify-between border-b border-white/10 bg-slate-900/80 shrink-0 z-50">
                 <div className="flex items-center gap-2">
                     <button onClick={() => navigate('/dashboard')} className="p-2.5 bg-white/5 rounded-xl active:bg-blue-600"><ChevronLeft className="w-5 h-5" /></button>
@@ -157,7 +139,6 @@ const MassiveBlindView: React.FC = () => {
                         disabled={!lastScannedItem}
                         onClick={() => { SoundFX.play('success'); setShowLabelModal(true); }}
                         className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl border border-white/10 active:bg-blue-600 disabled:opacity-20 transition-all"
-                        title="Imprimir Etiqueta"
                     >
                         <Barcode className={`w-5 h-5 ${lastScannedItem ? 'text-blue-400' : 'text-white/20'}`} />
                     </button>
@@ -167,44 +148,15 @@ const MassiveBlindView: React.FC = () => {
                 </div>
             </header>
 
-            <div className={`h-[38vh] relative flex flex-col overflow-hidden border-b-4 border-black shrink-0 transition-colors duration-300 ${getHudColor}`}>
-                <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-transparent opacity-50"></div>
-                <div className="w-full h-full flex items-stretch relative z-10">
-                    {lastScannedItem ? (
-                        <>
-                            <button onPointerDown={(e) => { e.preventDefault(); handleDecrement(lastScannedItem); }} className="w-1/4 bg-black/10 active:bg-black/30 flex items-center justify-center border-r border-white/5">
-                                <Minus className="w-12 h-12 text-white/40 active:text-white" />
-                            </button>
-                            <div className="flex-1 flex flex-col items-center justify-center px-4 text-center">
-                                <div className="mb-2">
-                                    <span className="text-white/40 font-mono text-[9px] font-black tracking-[0.3em] block mb-1 uppercase">{lastScannedItem.barcode}</span>
-                                    <h2 className="text-white font-black text-xs md:text-sm uppercase tracking-tight line-clamp-2 px-4 leading-tight">{lastScannedItem.name}</h2>
-                                </div>
-                                <div className="relative">
-                                    <div className="text-[10rem] md:text-[12rem] font-black tabular-nums leading-none tracking-tighter drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
-                                        {lastScannedItem.totalQuantity}
-                                    </div>
-                                    {lastScannedItem.expectedQty !== undefined && (
-                                        <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-black/40 backdrop-blur-md border border-white/20 px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.2em] whitespace-nowrap">
-                                            Meta: {lastScannedItem.expectedQty}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                            <button onPointerDown={(e) => { e.preventDefault(); registerScan(lastScannedItem.barcode); }} className="w-1/4 bg-black/10 active:bg-black/30 flex items-center justify-center border-l border-white/5">
-                                <Plus className="w-12 h-12 text-white/40 active:text-white" />
-                            </button>
-                        </>
-                    ) : (
-                        <div className="w-full flex flex-col items-center justify-center opacity-10">
-                            <Target className="w-20 h-20 mb-4 animate-pulse" />
-                            <p className="text-[10px] font-black uppercase tracking-[0.8em]">Esperando_Input_Laser</p>
-                        </div>
-                    )}
-                </div>
-                {feedback === 'success' && <div className="absolute inset-0 z-50 bg-white/20 pointer-events-none animate-flash-quick"></div>}
-            </div>
+            {/* HUD (HEAD UP DISPLAY) */}
+            <MassiveHUD 
+                item={lastScannedItem} 
+                feedback={feedback} 
+                onDecrement={handleDecrement} 
+                onIncrement={(code) => registerScan(code)} 
+            />
 
+            {/* LIST AREA */}
             <div className="flex-1 min-h-0 bg-black flex flex-col">
                 <div className="shrink-0 p-3 bg-slate-900/50 border-b border-white/5 grid grid-cols-4 gap-2">
                     {[1, 5, 10, 20].map(val => (
@@ -222,6 +174,7 @@ const MassiveBlindView: React.FC = () => {
                 </div>
             </div>
 
+            {/* FOOTER TRIGGER */}
             <div className="h-24 md:h-28 shrink-0 bg-slate-900 border-t border-white/5 flex items-center px-4 z-40 pb-safe">
                 <button 
                     onPointerDown={(e) => { e.preventDefault(); if(navigator.vibrate) navigator.vibrate(40); setIsTriggerActive(true); }} 
@@ -232,91 +185,35 @@ const MassiveBlindView: React.FC = () => {
                     <Camera className="w-6 h-6" />
                     <span className="text-[10px] font-black uppercase tracking-[0.3em]">{isTriggerActive ? 'LENS_OPEN' : 'GATILLO_OPTICO'}</span>
                 </button>
-                {isTriggerActive && (
-                    <div className="fixed inset-0 z-[100]">
-                         <CameraScanner onScan={(code) => { registerScan(code); setIsTriggerActive(false); }} onClose={() => setIsTriggerActive(false)} isTriggered={true} />
-                    </div>
-                )}
             </div>
 
-            {/* MODAL DE ETIQUETA E IMPRESIÓN: MAX PRIORIDAD AL CÓDIGO (DISEÑO 100% PROFESIONAL) */}
-            <Modal 
-                isOpen={showLabelModal} 
-                onClose={() => setShowLabelModal(false)} 
-                title="Generador de Etiqueta"
-                variant="center"
-                className="max-w-md w-[95vw]"
-            >
+            {isTriggerActive && (
+                <div className="fixed inset-0 z-[100]">
+                     <CameraScanner onScan={(code) => { registerScan(code); setIsTriggerActive(false); }} onClose={() => setIsTriggerActive(false)} isTriggered={true} />
+                </div>
+            )}
+
+            {/* MODALES */}
+            <Modal isOpen={showLabelModal} onClose={() => setShowLabelModal(false)} title="Generador de Etiqueta" variant="center" className="max-w-md w-[95vw]">
                 <div className="p-4 text-center flex flex-col items-center">
-                    {/* VISOR DE ETIQUETA: Optimizada para no desbordar y alta legibilidad */}
                     <div className="w-full bg-white text-black p-4 py-8 rounded-[1.5rem] border-[4px] border-slate-900 mb-6 shadow-2xl relative flex flex-col items-center justify-center overflow-hidden">
-                        {/* Header de la etiqueta: Texto discreto */}
                         <div className="text-[8px] font-black uppercase tracking-[0.4em] mb-4 text-slate-300">LOGICOUNT SYSTEM v4.5</div>
-                        
-                        {/* Nombre del producto: Limpio y centrado */}
-                        <div className="text-sm font-bold uppercase leading-tight mb-4 px-2 w-full break-words max-h-12 overflow-hidden text-center">
-                            {lastScannedItem?.name}
-                        </div>
-                        
-                        {/* CÓDIGO DE BARRAS: EL PROTAGONISTA. Escalado dinámico y centrado */}
+                        <div className="text-sm font-bold uppercase leading-tight mb-4 px-2 w-full break-words max-h-12 overflow-hidden text-center">{lastScannedItem?.name}</div>
                         <div className="w-full bg-white py-4 flex items-center justify-center overflow-hidden min-h-[140px] border-y border-slate-100 mb-4">
-                            <div className="barcode-font text-[100px] leading-none select-none tracking-tight whitespace-nowrap px-6 border-x-8 border-transparent scale-[1.0] transform-gpu">
-                                {lastScannedItem?.barcode}
-                            </div>
+                            <div className="barcode-font text-[100px] leading-none select-none tracking-tight whitespace-nowrap px-6 border-x-8 border-transparent scale-[1.0] transform-gpu">{lastScannedItem?.barcode}</div>
                         </div>
-                        
-                        {/* Texto del SKU: Alta visibilidad bajo las barras */}
-                        <div className="text-3xl font-black tracking-[0.35em] font-mono text-center">
-                            {lastScannedItem?.barcode}
-                        </div>
-
-                        {/* Cantidad: Muy secundaria como solicitaste */}
-                        <div className="mt-6 text-[9px] font-black text-slate-300 uppercase tracking-widest border-t border-slate-50 pt-2 w-full">
-                            Registro Interno: {lastScannedItem?.totalQuantity} U.
-                        </div>
+                        <div className="text-3xl font-black tracking-[0.35em] font-mono text-center">{lastScannedItem?.barcode}</div>
+                        <div className="mt-6 text-[9px] font-black text-slate-300 uppercase tracking-widest border-t border-slate-50 pt-2 w-full">Registro Interno: {lastScannedItem?.totalQuantity} U.</div>
                     </div>
-
-                    {/* BOTONES DE ACCIÓN: Mantenemos funcionalidad de hardware */}
                     <div className="grid grid-cols-1 gap-3 w-full px-2">
-                        <IndustrialButton 
-                            onClick={handleThermalPrint} 
-                            isLoading={isPrinting}
-                            variant="primary" 
-                            icon={Printer} 
-                            fullWidth
-                        >
-                            Impresión Térmica
-                        </IndustrialButton>
-                        
+                        <IndustrialButton onClick={handleThermalPrint} isLoading={isPrinting} variant="primary" icon={Printer} fullWidth>Impresión Térmica</IndustrialButton>
                         <div className="grid grid-cols-2 gap-2">
-                             <IndustrialButton 
-                                onClick={() => lastScannedItem && printBarcode(lastScannedItem.barcode, lastScannedItem.name, `STOCK_AUDIT: ${lastScannedItem.totalQuantity}`)} 
-                                variant="black" 
-                                icon={FileText} 
-                                fullWidth
-                                className="h-12 text-[10px]"
-                            >
-                                PDF A4
-                            </IndustrialButton>
-                            <button 
-                                onClick={() => setShowLabelModal(false)} 
-                                className="bg-slate-100 text-slate-500 font-black uppercase text-[10px] tracking-[0.1em] rounded-2xl active:bg-slate-200"
-                            >
-                                Cerrar
-                            </button>
+                             <IndustrialButton onClick={() => lastScannedItem && printBarcode(lastScannedItem.barcode, lastScannedItem.name, `STOCK_AUDIT: ${lastScannedItem.totalQuantity}`)} variant="black" icon={FileText} fullWidth className="h-12 text-[10px]">PDF A4</IndustrialButton>
+                            <button onClick={() => setShowLabelModal(false)} className="bg-slate-100 text-slate-500 font-black uppercase text-[10px] tracking-[0.1em] rounded-2xl active:bg-slate-200">Cerrar</button>
                         </div>
                     </div>
                 </div>
-                
-                {/* Estilo local para asegurar que el código de barras NUNCA se rompa */}
-                <style>{`
-                    .barcode-font {
-                        font-size: min(25vw, 100px);
-                        display: inline-block;
-                        width: auto;
-                        max-width: 100%;
-                    }
-                `}</style>
+                <style>{`.barcode-font { font-size: min(25vw, 100px); display: inline-block; width: auto; max-width: 100%; }`}</style>
             </Modal>
 
             {isChangingLocation && (
@@ -326,34 +223,14 @@ const MassiveBlindView: React.FC = () => {
                             <MapPin className="text-blue-500 w-6 h-6" />
                             <h3 className="text-xl font-black uppercase tracking-tight">Establecer Ubicación</h3>
                         </div>
-                        <input 
-                            autoFocus
-                            className="w-full h-16 bg-black border-4 border-white/5 rounded-2xl text-center font-black text-2xl uppercase tracking-widest outline-none focus:border-blue-500 transition-all text-white"
-                            placeholder="PASILLO A..."
-                            defaultValue={currentLocation}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                    setCurrentLocation((e.target as HTMLInputElement).value.toUpperCase());
-                                    setIsChangingLocation(false);
-                                }
-                            }}
-                        />
+                        <input autoFocus className="w-full h-16 bg-black border-4 border-white/5 rounded-2xl text-center font-black text-2xl uppercase tracking-widest outline-none focus:border-blue-500 transition-all text-white" placeholder="PASILLO A..." defaultValue={currentLocation} onKeyDown={(e) => { if (e.key === 'Enter') { setCurrentLocation((e.target as HTMLInputElement).value.toUpperCase()); setIsChangingLocation(false); } }} />
                         <div className="mt-6 flex gap-3">
                             <button onClick={() => setIsChangingLocation(false)} className="flex-1 py-4 bg-white/5 text-white/40 font-black uppercase text-xs rounded-xl">Cerrar</button>
-                            <button onClick={() => {
-                                const val = (document.querySelector('input[placeholder="PASILLO A..."]') as HTMLInputElement).value;
-                                setCurrentLocation(val.toUpperCase());
-                                setIsChangingLocation(false);
-                            }} className="flex-1 py-4 bg-blue-600 text-white font-black uppercase text-xs rounded-xl shadow-lg">Confirmar</button>
+                            <button onClick={() => { const val = (document.querySelector('input[placeholder="PASILLO A..."]') as HTMLInputElement).value; setCurrentLocation(val.toUpperCase()); setIsChangingLocation(false); }} className="flex-1 py-4 bg-blue-600 text-white font-black uppercase text-xs rounded-xl shadow-lg">Confirmar</button>
                         </div>
                     </div>
                 </div>
             )}
-            
-            <style>{`
-                @keyframes flash-quick { 0% { opacity: 1; } 100% { opacity: 0; } }
-                .animate-flash-quick { animation: flash-quick 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
-            `}</style>
         </div>
     );
 };

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { Lock, AlertTriangle, CheckCircle2, Target, Zap, Activity } from 'lucide-react';
@@ -18,7 +17,8 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose, i
     const videoRef = useRef<HTMLVideoElement>(null);
     const scannerRef = useRef<Html5Qrcode | null>(null);
     const streamRef = useRef<MediaStream | null>(null);
-    const requestRef = useRef<number>();
+    // Fix: Added undefined as initial value to requestRef to avoid "Expected 1 arguments, but got 0" error.
+    const requestRef = useRef<number | undefined>(undefined);
     
     const lastScanTime = useRef(0);
     const triggerRef = useRef(isTriggered);

@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { ScanLine, Database, Radio, Zap, History, Settings, Gauge } from 'lucide-react';
+import { ScanLine, Database, Radio, Zap, History, Settings, Gauge, UserCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
@@ -17,6 +18,7 @@ const Dashboard: React.FC = () => {
       return { scansToday, pendingSync };
   }, []);
 
+  const operatorId = localStorage.getItem('logicount_operator_id') || 'SIN_IDENTIFICAR';
   const isSyncNeeded = (stats?.pendingSync || 0) > 0;
 
   const handleEnterMartillo = async () => {
@@ -57,7 +59,10 @@ const Dashboard: React.FC = () => {
       
       <header className="px-6 py-6 border-b-4 border-white/5 bg-slate-900/40 flex justify-between items-center sticky top-0 z-50 backdrop-blur-md">
           <div className="flex flex-col min-w-0">
-              <span className="text-[7px] font-black text-blue-500 tracking-[0.4em] uppercase mb-1">TERMINAL_LOGISTICA_V4.5</span>
+              <div className="flex items-center gap-2 mb-1">
+                  <UserCircle className="w-3.5 h-3.5 text-blue-500" />
+                  <span className="text-[9px] font-black text-blue-400 tracking-widest uppercase truncate">{operatorId}</span>
+              </div>
               <h1 className="text-2xl font-black text-white italic tracking-tighter uppercase leading-none truncate">PANEL_DE_CONTROL</h1>
           </div>
           
@@ -66,10 +71,6 @@ const Dashboard: React.FC = () => {
                   <Gauge className="w-3 h-3 text-blue-400" />
                   <span className="text-[10px] font-black text-white tabular-nums tracking-widest">{stats?.scansToday || 0}</span>
                   <span className="text-[6px] font-black text-blue-400 uppercase opacity-60">Picks</span>
-              </div>
-              <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full led-active ${isSyncNeeded ? 'bg-amber-500' : 'bg-emerald-500'} border border-black`}></div>
-                  <span className="text-[7px] font-black text-white/30 uppercase tracking-widest">{isSyncNeeded ? 'SYNC_REQD' : 'ONLINE'}</span>
               </div>
           </div>
       </header>

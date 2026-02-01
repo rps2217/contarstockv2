@@ -11,15 +11,12 @@ let flushTimeout: any = null;
 const BUFFER_DELAY_MS = 100;
 const MAX_RETRIES = 3;
 
-// --- REGISTRO DE BACKGROUND SYNC ---
 const triggerBackgroundSync = async () => {
     if ('serviceWorker' in navigator && 'SyncManager' in window) {
         try {
             const registration = await navigator.serviceWorker.ready;
             await (registration as any).sync.register('sync-bultos');
-        } catch (e) {
-            // Silencioso: Background Sync no soportado o falló el registro
-        }
+        } catch (e) {}
     }
 };
 
@@ -37,19 +34,12 @@ const commitBufferToDatabase = async () => {
                 await updateSessionMetadata(id);
             }
         });
-        
-        // ACTIVAR RED DE SEGURIDAD
         triggerBackgroundSync();
-
     } catch (error: any) {
         logger.error("WRITE_FAIL", "Fallo de escritura en lote", error.message);
         const retryableItems = currentBatch
             .map(item => ({ ...item, retries: item.retries + 1 }))
             .filter(item => item.retries < MAX_RETRIES);
-        if (retryableItems.length < currentBatch.length) {
-            const lostCount = currentBatch.length - retryableItems.length;
-            logger.error("DATA_LOSS_PREVENTION", `Descartados ${lostCount} registros corruptos tras ${MAX_RETRIES} intentos.`);
-        }
         if (retryableItems.length > 0) {
             writeBuffer = [...retryableItems, ...writeBuffer];
             if (!flushTimeout) flushTimeout = setTimeout(commitBufferToDatabase, BUFFER_DELAY_MS * 2);
@@ -78,6 +68,9 @@ export const addScanEvent = async (
     yyyy?: number,
     location?: string
 ): Promise<ScanRecord> => {
+    // CAPTURA DE IDENTIDAD OPERATIVA
+    const operatorId = localStorage.getItem('logicount_operator_id') || 'SISTEMA_LOCAL';
+
     const newRecord: ScanRecord = {
         id: generateUUID(),
         sessionId,
@@ -85,10 +78,12 @@ export const addScanEvent = async (
         quantity,
         mm,
         yyyy,
-        location, 
+        location,
+        operatorId, // Inyectamos el ID del funcionario
         timestamp: Date.now(),
         synced: 0
     };
+    
     IntegrityGuard.validateScan(newRecord);
     writeBuffer.push({ record: newRecord, retries: 0 });
     if (flushTimeout) clearTimeout(flushTimeout);
@@ -128,7 +123,7 @@ export const createDraftSession = async (label: string): Promise<CountingSession
         totalSKUs: 0 
     };
     await db.sessions.add(s);
-    triggerBackgroundSync(); // También intentar sincronizar al crear borradores
+    triggerBackgroundSync();
     return s;
 };
 

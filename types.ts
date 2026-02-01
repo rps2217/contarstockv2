@@ -48,7 +48,8 @@ export interface ScanRecord {
   timestamp: number;
   quantity: number;
   expectedQty?: number;
-  location?: string; // CAMBIO: Ubicación física del conteo
+  location?: string;
+  operatorId?: string; // NUEVO: Identificador del funcionario que realizó el escaneo
   mm?: number;
   yyyy?: number;
   synced?: number;

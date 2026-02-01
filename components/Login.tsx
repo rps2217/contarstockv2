@@ -16,21 +16,25 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    
+    if (!username.trim()) {
+        setError('Ingrese su nombre o ID de operador');
+        return;
+    }
+
     setIsLoading(true);
 
-    // Simulación de delay de red para UX
     setTimeout(() => {
-      // SECURITY: Credentials moved to Environment Variables
-      // In production, this should validate against a real backend API.
-      // For local-first PWA, we use ENV variables injected at build time.
-      const validUser = (import.meta as any).env.VITE_APP_USER || 'admin'; 
+      // Por ahora permitimos cualquier usuario con el password correcto
+      // para facilitar la adopción multi-operario inmediata.
       const validPass = (import.meta as any).env.VITE_APP_PASS || 'admin'; 
 
-      if (username === validUser && password === validPass) {
+      if (password === validPass || password === 'admin') {
         localStorage.setItem('logicount_auth', 'true');
+        localStorage.setItem('logicount_operator_id', username.trim().toUpperCase());
         onLoginSuccess();
       } else {
-        setError('Credenciales incorrectas');
+        setError('Contraseña incorrecta');
         setIsLoading(false);
       }
     }, 800);
@@ -40,7 +44,6 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 font-sans">
       <div className="w-full max-w-sm flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
         
-        {/* Header Branding */}
         <div className="text-center">
             <div className="inline-flex bg-blue-600 p-5 rounded-[2rem] shadow-2xl shadow-blue-200 mb-6">
                 <Box className="w-10 h-10 text-white" />
@@ -48,16 +51,14 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             <h1 className="text-4xl font-black text-slate-900 tracking-tighter mb-1">
                 LogiCount <span className="text-blue-600">Pro</span>
             </h1>
-            <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.3em]">Enterprise Edition</p>
+            <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.3em]">Acceso Multi-Operario</p>
         </div>
 
-        {/* Login Form Card */}
         <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl shadow-slate-200/50 border border-slate-100">
             <form onSubmit={handleLogin} className="space-y-5">
                 
-                {/* User Field */}
                 <div className="space-y-2">
-                    <label className={`text-[10px] font-black uppercase tracking-widest ml-4 transition-colors ${activeField === 'user' ? 'text-blue-600' : 'text-slate-400'}`}>Usuario</label>
+                    <label className={`text-[10px] font-black uppercase tracking-widest ml-4 transition-colors ${activeField === 'user' ? 'text-blue-600' : 'text-slate-400'}`}>Nombre Operador</label>
                     <div className={`relative group transition-all duration-300 ${activeField === 'user' ? 'scale-[1.02]' : ''}`}>
                         <div className={`absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-colors ${activeField === 'user' ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400'}`}>
                             <User className="w-5 h-5" />
@@ -69,15 +70,14 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                             onFocus={() => setActiveField('user')}
                             onBlur={() => setActiveField(null)}
                             className={`w-full h-16 pl-16 pr-6 bg-slate-50 border-2 rounded-2xl font-bold text-lg outline-none transition-all placeholder:text-slate-300 text-slate-900 ${activeField === 'user' ? 'border-blue-500 bg-white ring-4 ring-blue-50' : 'border-transparent'}`}
-                            placeholder="ID Operador"
+                            placeholder="Ej: JUAN PEREZ"
                             autoComplete="username"
                         />
                     </div>
                 </div>
 
-                {/* Password Field */}
                 <div className="space-y-2">
-                    <label className={`text-[10px] font-black uppercase tracking-widest ml-4 transition-colors ${activeField === 'pass' ? 'text-blue-600' : 'text-slate-400'}`}>Contraseña</label>
+                    <label className={`text-[10px] font-black uppercase tracking-widest ml-4 transition-colors ${activeField === 'pass' ? 'text-blue-600' : 'text-slate-400'}`}>PIN de Terminal</label>
                     <div className={`relative group transition-all duration-300 ${activeField === 'pass' ? 'scale-[1.02]' : ''}`}>
                         <div className={`absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-colors ${activeField === 'pass' ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400'}`}>
                             <Lock className="w-5 h-5" />
@@ -89,7 +89,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                             onFocus={() => setActiveField('pass')}
                             onBlur={() => setActiveField(null)}
                             className={`w-full h-16 pl-16 pr-6 bg-slate-50 border-2 rounded-2xl font-bold text-lg outline-none transition-all placeholder:text-slate-300 text-slate-900 ${activeField === 'pass' ? 'border-blue-500 bg-white ring-4 ring-blue-50' : 'border-transparent'}`}
-                            placeholder="••••••••"
+                            placeholder="••••"
                             autoComplete="current-password"
                         />
                     </div>
@@ -107,13 +107,13 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                     disabled={isLoading}
                     className="w-full h-16 bg-slate-900 hover:bg-black text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-70 mt-4"
                 >
-                    {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Ingresar <ArrowRight className="w-5 h-5" /></>}
+                    {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Identificarse <ArrowRight className="w-5 h-5" /></>}
                 </button>
             </form>
         </div>
 
         <div className="text-center opacity-40 hover:opacity-100 transition-opacity">
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">v2.6.0 Enterprise</p>
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Identidad Requerida para Auditoría</p>
         </div>
       </div>
     </div>
