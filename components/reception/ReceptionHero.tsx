@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { Container, CheckCircle2 } from 'lucide-react';
+import React, { memo } from 'react';
+import { Container, CheckCircle2, AlertTriangle, Box } from 'lucide-react';
 
 interface Props {
     lastAction: { type: 'success' | 'duplicate', label: string } | null;
@@ -10,50 +10,48 @@ interface Props {
     onCameraClick: () => void;
 }
 
-export const ReceptionHero: React.FC<Props> = ({ 
+export const ReceptionHero: React.FC<Props> = memo(({ 
     lastAction, 
     draftCount, 
     isEcoMode
 }) => {
     return (
-        <div className="flex-1 flex flex-col items-center justify-center p-6 relative min-h-0">
+        <div className="h-[30vh] shrink-0 flex flex-col items-center justify-center p-4 relative border-b-4 border-black bg-slate-950 transition-colors duration-300 overflow-hidden">
             
-            {/* INDICADOR DE ÚLTIMA LECTURA */}
-            <div className="h-24 flex flex-col items-center justify-center mb-8 w-full">
-                {lastAction?.type === 'success' ? (
-                    <div className="text-center animate-in zoom-in duration-300 w-full">
-                        <div className="inline-flex items-center gap-2 bg-emerald-500/20 border border-emerald-500/50 px-4 py-1.5 rounded-full mb-3">
-                            <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                            <span className="text-[9px] font-black text-emerald-300 uppercase tracking-[0.2em]">Registrado</span>
+            {/* Efecto de Fondo */}
+            <div className="absolute inset-0 bg-gradient-to-b from-blue-900/10 to-transparent pointer-events-none"></div>
+
+            {/* Indicador de Estado / Último Scan */}
+            <div className="h-16 w-full flex items-center justify-center relative z-10 mb-2">
+                {lastAction ? (
+                    <div className={`flex flex-col items-center w-full animate-in zoom-in duration-200`}>
+                        <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full mb-1 border ${lastAction.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-rose-500/10 border-rose-500/30 text-rose-400'}`}>
+                            {lastAction.type === 'success' ? <CheckCircle2 className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
+                            <span className="text-[9px] font-black uppercase tracking-widest">{lastAction.type === 'success' ? 'REGISTRADO' : 'DUPLICADO'}</span>
                         </div>
-                        <div className={`font-mono font-black tracking-widest truncate w-full px-4 ${isEcoMode ? 'text-4xl text-white' : 'text-3xl text-white'}`}>
+                        <span className="font-mono font-black text-xl md:text-2xl text-white tracking-widest truncate max-w-full px-4">
                             {lastAction.label}
-                        </div>
+                        </span>
                     </div>
                 ) : (
                     <div className="opacity-20 flex flex-col items-center">
-                        <span className="text-[10px] font-black text-white uppercase tracking-[0.4em] mb-2">Estado</span>
-                        <span className="text-lg font-bold text-white uppercase tracking-widest">Esperando...</span>
+                        <Box className="w-6 h-6 mb-1" />
+                        <span className="text-[10px] font-black text-white uppercase tracking-[0.4em]">ESPERANDO_INPUT</span>
                     </div>
                 )}
             </div>
 
-            {/* CONTADOR DE PRODUCCIÓN */}
-            <div className="relative mb-8">
-                {!isEcoMode && (
-                    <div className="absolute inset-0 bg-blue-500/20 blur-[80px] rounded-full animate-pulse-slow"></div>
-                )}
-                
-                <div className="relative flex flex-col items-center justify-center">
-                    <div className="flex items-center justify-center gap-6">
-                        <Container className={`w-12 h-12 md:w-16 md:h-16 ${isEcoMode ? 'text-white/10' : 'text-blue-500'}`} />
-                        <span className="text-[10rem] md:text-[14rem] font-black tracking-tighter tabular-nums leading-none text-white drop-shadow-2xl">
-                            {draftCount}
-                        </span>
+            {/* Contador Gigante (Estilo Massive) */}
+            <div className="relative z-10 flex flex-col items-center justify-center flex-1">
+                <div className="flex items-center justify-center gap-4">
+                    <div className="text-[7rem] md:text-[9rem] font-black tabular-nums leading-none text-white drop-shadow-2xl tracking-tighter">
+                        {draftCount}
                     </div>
-                    <div className={`text-[10px] font-black uppercase tracking-[0.6em] mt-4 ${isEcoMode ? 'text-white/20' : 'text-blue-400'}`}>Bultos Sesión</div>
+                </div>
+                <div className="absolute -bottom-2 bg-slate-900/80 px-4 py-1 rounded-full border border-white/10 backdrop-blur-sm">
+                    <span className="text-[9px] font-black text-blue-400 uppercase tracking-[0.2em]">BULTOS EN COLA</span>
                 </div>
             </div>
         </div>
     );
-};
+});

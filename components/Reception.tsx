@@ -1,157 +1,174 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useReception } from '../hooks/useReception';
 import { CameraScanner } from './CameraScanner';
-import { ChevronLeft, List, AlertTriangle, Sun, Moon, X, Keyboard, Camera, ArrowRight } from 'lucide-react';
-import { QueueManager } from './reception/QueueManager';
+import { ChevronLeft, Keyboard, Camera, Trash2, Box } from 'lucide-react';
 import { ReceptionHero } from './reception/ReceptionHero';
-import { IndustrialButton } from './common/IndustrialButton';
+import { VirtualList } from './common/VirtualList';
+import { NumericKeypad } from './NumericKeypad';
+import { SoundFX } from '../services/audio';
+
+// Componente de Fila para la Lista Virtual (Estilo Martillo)
+const ReceptionRow = memo(({ index, data }: any) => {
+    const item = data.items[index];
+    if (!item) return null;
+    const { onDelete } = data;
+
+    return (
+        <div className="px-3 py-1 h-full">
+            <div className="w-full h-full border-2 border-white/5 bg-slate-900/40 p-4 rounded-2xl flex items-center justify-between transition-all active:scale-[0.98]">
+                <div className="flex items-center gap-4 overflow-hidden">
+                    <div className="w-10 h-10 rounded-xl bg-blue-900/20 text-blue-500 border border-blue-500/20 flex items-center justify-center shrink-0">
+                        <Box className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0">
+                        <div className="font-mono font-black text-white truncate text-sm uppercase tracking-wider">
+                            {item.logisticsLabel}
+                        </div>
+                        <div className="text-[9px] font-bold text-slate-500 uppercase mt-1 flex items-center gap-2">
+                            <span>{new Date(item.createdAt).toLocaleTimeString()}</span>
+                            <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
+                            <span className="text-blue-500">PENDIENTE</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <button 
+                    onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}
+                    className="w-10 h-10 flex items-center justify-center text-slate-600 hover:text-rose-500 hover:bg-rose-900/20 rounded-xl transition-all active:scale-90"
+                >
+                    <Trash2 className="w-5 h-5" />
+                </button>
+            </div>
+        </div>
+    );
+});
 
 export const Reception: React.FC = () => {
     const navigate = useNavigate();
     const { state, actions } = useReception();
-    const [inputValue, setInputValue] = useState('');
+    
+    // Estados locales para UI interactiva
+    const [isTriggerActive, setIsTriggerActive] = useState(false);
+    const [manualCode, setManualCode] = useState('');
 
-    const handleManualSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        actions.handleManualSubmit(inputValue);
-        setInputValue('');
+    const handleKeypadConfirm = () => {
+        if (manualCode.length > 0) {
+            actions.handleManualSubmit(manualCode);
+            setManualCode('');
+        }
+        state.setShowManualInput(false);
     };
 
-    // UI DINÁMICA SEGÚN MODO
-    // Usamos colores consistentes con el resto de la app (Slate 950 base)
-    const bgColor = state.flashActive 
+    // Datos memoizados para la lista virtual
+    const rowData = useMemo(() => ({ 
+        onDelete: actions.deleteDraft 
+    }), [actions.deleteDraft]);
+
+    // Color de fondo dinámico para feedback
+    const containerClass = state.flashActive 
         ? 'bg-blue-600' 
-        : (state.lastAction?.type === 'duplicate' ? 'bg-rose-900' : 'bg-slate-950');
+        : (state.lastAction?.type === 'duplicate' ? 'bg-rose-900' : 'bg-black');
 
     return (
-        <div className={`flex flex-col h-full w-full transition-colors duration-200 overflow-hidden relative ${bgColor} text-white font-mono`}>
+        <div className={`h-screen w-full flex flex-col font-mono select-none overflow-hidden text-white transition-colors duration-200 ${containerClass}`}>
             
-            {/* OVERLAY DUPLICADO (BLOQUEANTE) */}
-            {state.lastAction?.type === 'duplicate' && (
-                <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center p-8 text-center animate-in fade-in zoom-in duration-200 bg-rose-950/90 backdrop-blur-sm">
-                    <div className="bg-rose-500 p-8 rounded-full mb-8 shadow-2xl animate-bounce">
-                        <AlertTriangle className="w-20 h-20 text-white" />
-                    </div>
-                    <h2 className="text-4xl font-black text-white uppercase tracking-tighter mb-4">¡DUPLICADO!</h2>
-                    <p className="text-rose-200 font-bold text-xl mb-12 max-w-xs mx-auto leading-relaxed">
-                        La etiqueta <br/><span className="text-white bg-rose-800 px-2 rounded decoration-white underline-offset-4">{state.lastAction.label}</span><br/> ya fue escaneada.
-                    </p>
-                    <IndustrialButton 
-                        variant="ghost"
-                        onClick={actions.clearError}
-                        className="bg-white text-rose-700 hover:bg-rose-50 w-full max-w-sm"
-                    >
-                        ENTENDIDO
-                    </IndustrialButton>
-                </div>
-            )}
-
-            {/* HEADER INDUSTRIAL */}
-            <div className="p-4 flex items-center justify-between shrink-0 z-20 border-b-4 border-white/5 bg-black/20 backdrop-blur-sm">
-                <button onClick={() => navigate('/dashboard')} className="p-3 hover:bg-white/10 rounded-2xl text-white/60 transition-all active:scale-90 border-2 border-transparent hover:border-white/10">
-                    <ChevronLeft className="w-6 h-6" />
+            {/* 1. HEADER (Estilo Industrial Compacto) */}
+            <div className="h-14 px-4 flex items-center justify-between border-b border-white/10 bg-slate-900/80 shrink-0 z-20">
+                <button onClick={() => navigate('/dashboard')} className="p-2.5 bg-white/5 rounded-xl active:bg-blue-600 transition-colors">
+                    <ChevronLeft className="w-5 h-5 text-white" />
                 </button>
                 
                 <div className="flex flex-col items-center">
-                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">Módulo</span>
-                    <span className="text-lg font-black uppercase tracking-widest text-white italic">Recepción</span>
+                    <span className="text-[8px] font-black uppercase tracking-[0.3em] text-white/40">RECEPCIÓN</span>
+                    <span className="text-xs font-black uppercase tracking-widest text-white italic">Modo Ráfaga</span>
                 </div>
 
                 <button 
-                    onClick={() => state.setShowQueueModal(true)} 
-                    className="p-3 hover:bg-white/10 rounded-2xl text-white/60 relative border-2 border-transparent hover:border-white/10 active:scale-90 transition-all"
+                    onClick={actions.discardAllDrafts}
+                    disabled={state.unsyncedDrafts.length === 0}
+                    className="p-2.5 bg-white/5 rounded-xl text-rose-500 disabled:opacity-20 active:bg-rose-900/40 transition-colors"
                 >
-                    <List className="w-6 h-6" />
-                    {state.draftCount > 0 && (
-                        <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-blue-500 border-2 border-black rounded-full animate-pulse"></span>
-                    )}
+                    <Trash2 className="w-5 h-5" />
                 </button>
             </div>
 
-            {/* HERO COMPONENT */}
+            {/* 2. HUD (Panel de Instrumentos) */}
             <ReceptionHero 
                 lastAction={state.lastAction}
                 draftCount={state.draftCount}
                 isEcoMode={state.isEcoMode}
-                onToggleManual={() => state.setShowManualInput(true)} // Dummy func, buttons controlled below
-                onCameraClick={() => state.setIsCameraOpen(true)}     // Dummy func
+                onToggleManual={() => {}} // No usado aquí, controlado por toolbar
+                onCameraClick={() => {}}  // No usado aquí, controlado por gatillo
             />
 
-            {/* ACCIONES PRINCIPALES (FOOTER) */}
-            <div className="p-6 pb-safe-area grid grid-cols-2 gap-4 shrink-0 bg-slate-900/50 border-t border-white/5">
-                <IndustrialButton 
-                    variant="secondary"
-                    icon={Keyboard}
-                    onClick={() => state.setShowManualInput(true)}
-                    className="bg-slate-800 border-slate-700 text-slate-300 hover:text-white hover:border-slate-500 h-20"
-                >
-                    TECLADO
-                </IndustrialButton>
-                
-                <IndustrialButton 
-                    variant="primary"
-                    icon={Camera}
-                    onClick={() => state.setIsCameraOpen(true)}
-                    className="h-20"
-                >
-                    CÁMARA
-                </IndustrialButton>
+            {/* 3. ÁREA PRINCIPAL (Lista Virtual) */}
+            <div className="flex-1 min-h-0 bg-black flex flex-col relative">
+                {/* Barra de Herramientas Superior */}
+                <div className="shrink-0 p-3 bg-slate-900/50 border-b border-white/5 grid grid-cols-1 gap-2">
+                    <button
+                        onClick={() => { setManualCode(''); state.setShowManualInput(true); }}
+                        className="h-12 rounded-xl font-black text-xs flex items-center justify-center gap-2 transition-all border-2 bg-slate-800 border-slate-700 text-white shadow-lg active:scale-95 hover:bg-slate-700"
+                    >
+                        <Keyboard className="w-4 h-4" />
+                        <span>ENTRADA MANUAL</span>
+                    </button>
+                </div>
+
+                {/* Lista Scrollable */}
+                <div className="flex-1 min-h-0 relative">
+                    <VirtualList 
+                        items={state.unsyncedDrafts} 
+                        itemHeight={80} 
+                        renderRow={ReceptionRow} 
+                        rowData={rowData} 
+                        className="bg-black/20" 
+                        emptyState={
+                            <div className="flex flex-col items-center opacity-20 mt-10">
+                                <Box className="w-16 h-16 mb-4" />
+                                <p className="text-[10px] font-black uppercase tracking-widest">Cola Vacía</p>
+                            </div>
+                        }
+                    />
+                    {/* Sombra de scroll inferior */}
+                    <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black to-transparent pointer-events-none"></div>
+                </div>
             </div>
 
-            {/* MODAL INPUT MANUAL (ESTILO MARTILLO) */}
-            {state.showManualInput && (
-                <div className="absolute inset-0 z-[60] bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in duration-200">
-                    <div className="w-full max-w-sm">
-                        <div className="flex justify-end mb-4">
-                            <button onClick={() => state.setShowManualInput(false)} className="p-4 bg-white/10 rounded-full text-white hover:bg-white/20 active:scale-90 transition-all">
-                                <X className="w-6 h-6"/>
-                            </button>
-                        </div>
-                        
-                        <div className="text-center mb-8">
-                            <h3 className="text-2xl font-black uppercase tracking-tighter text-white italic">Entrada Manual</h3>
-                            <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-2">Digite ID de Etiqueta</p>
-                        </div>
+            {/* 4. GATILLO ÓPTICO (Estilo Martillo) */}
+            <div className="h-24 md:h-28 shrink-0 bg-slate-900 border-t border-white/5 flex items-center px-4 z-40 pb-safe">
+                <button 
+                    onPointerDown={(e) => { e.preventDefault(); if(navigator.vibrate) navigator.vibrate(40); setIsTriggerActive(true); }} 
+                    onPointerUp={() => setIsTriggerActive(false)}
+                    onPointerLeave={() => setIsTriggerActive(false)}
+                    className={`flex-1 h-14 md:h-16 rounded-2xl flex items-center justify-center gap-4 transition-all duration-75 active:scale-[0.98] border-b-4 ${isTriggerActive ? 'bg-blue-600 border-blue-800 translate-y-1 border-b-0' : 'bg-white text-black border-slate-300 shadow-xl'}`}
+                >
+                    <Camera className="w-6 h-6" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.3em]">{isTriggerActive ? 'LENS_OPEN' : 'GATILLO_OPTICO'}</span>
+                </button>
+            </div>
 
-                        <form onSubmit={handleManualSubmit}>
-                            <input 
-                                autoFocus 
-                                value={inputValue} 
-                                onChange={(e) => setInputValue(e.target.value.replace(/[^a-zA-Z0-9-]/g, '').toUpperCase())} 
-                                type="text" 
-                                className="w-full h-24 bg-black border-4 border-white/10 rounded-[2rem] text-4xl font-black text-center outline-none focus:border-blue-500 text-white tracking-widest mb-6 transition-colors shadow-inner font-mono"
-                                placeholder="LBL-..."
-                            />
-                            <IndustrialButton 
-                                type="submit" 
-                                variant="primary" 
-                                icon={ArrowRight} 
-                                fullWidth
-                                disabled={inputValue.length < 3}
-                            >
-                                REGISTRAR
-                            </IndustrialButton>
-                        </form>
-                    </div>
+            {/* LÓGICA DE CÁMARA */}
+            {(isTriggerActive || state.isCameraOpen) && (
+                <div className="fixed inset-0 z-[100]">
+                     <CameraScanner 
+                        onScan={(code) => { actions.handleScan(code); setIsTriggerActive(false); state.setIsCameraOpen(false); }} 
+                        onClose={() => { setIsTriggerActive(false); state.setIsCameraOpen(false); }} 
+                        isTriggered={true} 
+                    />
                 </div>
             )}
 
-            {state.isCameraOpen && (
-                <CameraScanner 
-                    isTriggered={true} 
-                    onScan={(code) => { state.setIsCameraOpen(false); actions.handleScan(code); }} 
-                    onClose={() => state.setIsCameraOpen(false)} 
-                />
-            )}
-            
-            <QueueManager 
-                isOpen={state.showQueueModal} 
-                onClose={() => state.setShowQueueModal(false)} 
-                drafts={state.unsyncedDrafts} 
-                onDelete={actions.deleteDraft} 
-                onDiscardAll={actions.discardAllDrafts} 
+            {/* TECLADO MANUAL */}
+            <NumericKeypad 
+                isOpen={state.showManualInput}
+                onClose={() => state.setShowManualInput(false)}
+                title="ID de Bulto / Etiqueta"
+                value={manualCode}
+                onInput={(v) => setManualCode(prev => prev + v)}
+                onDelete={() => setManualCode(prev => prev.slice(0, -1))}
+                onConfirm={handleKeypadConfirm}
             />
         </div>
     );
