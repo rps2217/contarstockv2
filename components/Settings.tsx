@@ -25,7 +25,6 @@ export const Settings: React.FC = () => {
 
   const handleShare = async () => {
       const data = { title: 'LogiCount Pro', url: window.location.href };
-      // Compatibilidad robusta: Si no hay share nativo, copiar al portapapeles
       if (navigator.share) {
           try { await navigator.share(data); } catch (e) {}
       } else {
@@ -37,35 +36,35 @@ export const Settings: React.FC = () => {
       }
   };
 
-  const tabs: { id: TabId; label: string; icon: any; color: string; bg: string }[] = [
-      { id: 'general', label: 'Operativa', icon: Zap, color: 'text-amber-600', bg: 'bg-amber-50' },
-      { id: 'theme', label: 'Estilo', icon: Palette, color: 'text-pink-600', bg: 'bg-pink-50' },
-      { id: 'printer', label: 'Hardware', icon: Printer, color: 'text-blue-600', bg: 'bg-blue-50' },
-      { id: 'nav', label: 'Dock', icon: LayoutTemplate, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-      { id: 'cloud', label: 'Nube', icon: Cloud, color: 'text-blue-600', bg: 'bg-blue-50' },
-      { id: 'system', label: 'Soporte', icon: ShieldCheck, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+  const tabs: { id: TabId; label: string; icon: any; }[] = [
+      { id: 'general', label: 'Operativa', icon: Zap },
+      { id: 'theme', label: 'Estilo', icon: Palette },
+      { id: 'printer', label: 'Hardware', icon: Printer },
+      { id: 'nav', label: 'Dock', icon: LayoutTemplate },
+      { id: 'cloud', label: 'Nube', icon: Cloud },
+      { id: 'system', label: 'Soporte', icon: ShieldCheck },
   ];
 
   return (
-    <div className="flex flex-col h-screen bg-slate-50 dark:bg-black font-sans">
+    <div className="flex flex-col h-screen bg-app-main font-sans text-app-text">
       
-      <header className="bg-white dark:bg-slate-900 border-b-4 border-slate-100 dark:border-white/5 px-4 pt-4 pb-3 shrink-0 z-30">
+      <header className="bg-app-surface border-b-4 border-app-border px-4 pt-4 pb-3 shrink-0 z-30">
         <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
                 <button 
                     onClick={() => navigate(-1)} 
-                    className="p-3 bg-slate-100 dark:bg-white/5 border-2 border-slate-200 dark:border-white/10 rounded-2xl text-black dark:text-white active:scale-90 transition-all"
+                    className="p-3 bg-app-main border-2 border-app-border rounded-app text-app-text active:scale-90 transition-all"
                 >
                     <ArrowLeft className="w-6 h-6 stroke-[3px]" />
                 </button>
-                <h1 className="text-2xl font-black tracking-tighter text-black dark:text-white uppercase italic">Configuración</h1>
+                <h1 className="text-2xl font-black tracking-tighter text-app-text uppercase italic">Configuración</h1>
             </div>
             <button 
                 onClick={handleShare}
-                className={`p-3 border-2 rounded-2xl transition-all active:scale-90 flex items-center gap-2 ${copied ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400'}`}
+                className={`p-3 border-2 rounded-app transition-all active:scale-90 flex items-center gap-2 ${copied ? 'bg-app-success/10 border-app-success text-app-success' : 'bg-app-main border-app-border text-app-muted'}`}
             >
                 {copied ? <Check className="w-6 h-6" /> : <Share2 className="w-6 h-6 stroke-[2.5px]" />}
-                {copied && <span className="text-[10px] font-black uppercase pr-1">Link Copiado</span>}
+                {copied && <span className="text-[10px] font-black uppercase pr-1">Copiado</span>}
             </button>
         </div>
 
@@ -77,14 +76,14 @@ export const Settings: React.FC = () => {
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
                         className={`
-                            flex items-center gap-2 px-5 py-3 rounded-2xl transition-all whitespace-nowrap border-2
+                            flex items-center gap-2 px-5 py-3 rounded-app transition-all whitespace-nowrap border-2
                             ${isActive 
-                                ? `bg-black dark:bg-blue-600 border-black dark:border-blue-500 text-white shadow-lg` 
-                                : `bg-white dark:bg-slate-800 border-slate-200 dark:border-white/5 text-slate-500`
+                                ? `bg-app-accent border-app-accent text-white shadow-lg` 
+                                : `bg-app-main border-app-border text-app-muted`
                             }
                         `}
                     >
-                        <tab.icon className={`w-4 h-4 ${isActive ? 'text-white' : tab.color} stroke-[3px]`} />
+                        <tab.icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-app-muted'} stroke-[3px]`} />
                         <span className="text-xs font-black uppercase tracking-widest">
                             {tab.label}
                         </span>
@@ -106,7 +105,7 @@ export const Settings: React.FC = () => {
             </div>
 
             <div className="text-center py-8 opacity-40">
-                <p className="text-[10px] font-black text-black dark:text-white uppercase tracking-[0.3em]">LogiCount Enterprise v2.5.5</p>
+                <p className="text-[10px] font-black text-app-muted uppercase tracking-[0.3em]">LogiCount Enterprise v2.6.0</p>
             </div>
         </div>
       </div>

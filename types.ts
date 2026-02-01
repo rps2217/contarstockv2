@@ -71,7 +71,7 @@ export interface ConsolidatedItem {
 
 export type ViewState = 'dashboard' | 'counting' | 'database' | 'reports' | 'settings' | 'consolidated' | 'reception' | 'sync' | 'conciliator';
 
-export type Theme = 'light' | 'dark' | 'contrast' | 'warm' | 'navy' | 'oled';
+export type Theme = 'light' | 'dark' | 'contrast' | 'warm' | 'navy' | 'oled' | 'terminal';
 
 export type ScannerStatus = 'idle' | 'manual' | 'camera' | 'expiring' | 'confirming' | 'error' | 'success' | 'product_form';
 

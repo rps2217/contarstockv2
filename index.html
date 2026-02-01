@@ -10,32 +10,125 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>LogiCount Pro - Rugged Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              app: {
+                main: 'var(--bg-main)',
+                surface: 'var(--bg-surface)',
+                card: 'var(--bg-card)',
+                text: 'var(--text-primary)',
+                muted: 'var(--text-muted)',
+                accent: 'var(--color-accent)',
+                border: 'var(--border-color)',
+                success: 'var(--color-success)',
+                warning: 'var(--color-warning)',
+                danger: 'var(--color-danger)'
+              }
+            },
+            borderRadius: {
+              'app': 'var(--radius-app)',
+              'app-lg': 'var(--radius-lg)'
+            },
+            fontFamily: {
+              mono: ['JetBrains Mono', 'monospace'],
+            }
+          }
+        }
+      }
+    </script>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap');
-      /* Fuente para generar códigos de barras reales desde texto */
       @import url('https://fonts.googleapis.com/css2?family=Libre+Barcode+128&display=swap');
       
       :root {
+        /* TEMA POR DEFECTO (Dark Industrial) */
+        --bg-main: #020617;       /* Slate 950 */
+        --bg-surface: #0f172a;    /* Slate 900 */
+        --bg-card: #1e293b;       /* Slate 800 */
+        --text-primary: #f8fafc;  /* Slate 50 */
+        --text-muted: #64748b;    /* Slate 500 */
+        --color-accent: #3b82f6;  /* Blue 500 */
+        --border-color: rgba(255,255,255,0.1);
+        --color-success: #10b981;
+        --color-warning: #f59e0b;
+        --color-danger: #ef4444;
+        --radius-app: 1rem;       /* Bordes redondeados */
+        --radius-lg: 1.5rem;
+        
         --safe-area-inset-top: env(safe-area-inset-top);
         --safe-area-inset-bottom: env(safe-area-inset-bottom);
-        --color-industrial-blue: #3b82f6;
-        --color-industrial-bg: #020617;
+      }
+
+      /* TEMA: TERMINAL (Hacker Mode) */
+      [data-theme='terminal'] {
+        --bg-main: #000000;
+        --bg-surface: #000000;
+        --bg-card: #000000;
+        --text-primary: #00ff41;  /* Matrix Green */
+        --text-muted: #008f11;
+        --color-accent: #00ff41;
+        --border-color: #00ff41;  /* Bordes sólidos visibles */
+        --color-success: #00ff41;
+        --color-warning: #00ff41; /* Monocromático forzado */
+        --color-danger: #00ff41;  /* Monocromático forzado */
+        --radius-app: 0px;        /* Cuadrado perfecto */
+        --radius-lg: 0px;
+      }
+
+      /* TEMA: NAVY (Bodega Azul) */
+      [data-theme='navy'] {
+        --bg-main: #0a192f;
+        --bg-surface: #112240;
+        --bg-card: #233554;
+        --text-primary: #e6f1ff;
+        --text-muted: #8892b0;
+        --color-accent: #64ffda;  /* Cyan */
+        --border-color: #233554;
+      }
+
+      /* TEMA: CONTRASTE (Exterior / Sol) */
+      [data-theme='contrast'] {
+        --bg-main: #ffffff;
+        --bg-surface: #ffffff;
+        --bg-card: #000000;
+        --text-primary: #000000;
+        --text-muted: #000000;
+        --color-accent: #000000;
+        --border-color: #000000;
+        --radius-app: 4px;
       }
 
       body { 
         overscroll-behavior-y: none;
         touch-action: manipulation;
         font-family: 'JetBrains Mono', monospace;
-        background-color: var(--color-industrial-bg);
-        background-image: 
-            radial-gradient(circle at 2px 2px, rgba(255,255,255,0.03) 1px, transparent 0);
-        background-size: 24px 24px;
+        background-color: var(--bg-main);
+        color: var(--text-primary);
         margin: 0;
         padding: 0;
         -webkit-user-select: none;
         user-select: none;
         -webkit-tap-highlight-color: transparent;
-        color: #f1f5f9;
+        transition: background-color 0.3s ease, color 0.3s ease;
+      }
+
+      /* Efecto CRT Scanline solo para modo terminal */
+      [data-theme='terminal'] body::after {
+        content: " ";
+        display: block;
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        right: 0;
+        background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+        z-index: 9999;
+        background-size: 100% 2px, 3px 100%;
+        pointer-events: none;
       }
 
       #root {
@@ -48,47 +141,25 @@
 
       .barcode-font {
         font-family: 'Libre Barcode 128', cursive;
-        /* Optimización crítica: Evitar suavizado que borra las barras finas */
         image-rendering: pixelated;
-        text-rendering: optimizeSpeed;
-        -webkit-font-smoothing: none;
-        -moz-osx-font-smoothing: grayscale;
         white-space: nowrap;
-      }
-
-      /* Animación de escaneo láser HUD */
-      @keyframes radar-pulse {
-        0% { transform: scale(1); opacity: 0.5; }
-        100% { transform: scale(1.1); opacity: 0; }
-      }
-
-      .led-active {
-        box-shadow: 0 0 8px currentColor;
-        animation: led-blink 1.5s infinite;
-      }
-
-      @keyframes led-blink {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.4; }
       }
 
       .no-scrollbar::-webkit-scrollbar { display: none; }
       .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       
-      * { box-shadow: none !important; }
+      /* En modo terminal, los bordes son importantes */
+      [data-theme='terminal'] * {
+         border-width: 1px !important;
+         box-shadow: none !important;
+      }
+      
+      /* Resetear sombras globales si se desea */
+      *:not([data-theme='terminal'] *) { box-shadow: none !important; }
       
       input, textarea {
         -webkit-user-select: text;
         user-select: text;
-      }
-
-      .flash-active {
-        animation: flash-step 0.15s steps(2);
-      }
-      @keyframes flash-step {
-        0% { background-color: transparent; }
-        50% { background-color: rgba(59, 130, 246, 0.4); }
-        100% { background-color: transparent; }
       }
     </style>
 <script type="importmap">
