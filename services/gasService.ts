@@ -1,9 +1,9 @@
 
 import { logger } from './logger';
 import { getSettings } from './settings';
-import { compressData } from './utils';
 import { AppSheetConfig } from '../types';
 import Papa from 'papaparse';
+import { cloudApi } from './cloud/apiClient';
 
 /**
  * Descarga la configuración inicial usando solo el ID del Excel.
@@ -33,7 +33,7 @@ export const bootstrapConfigById = async (spreadsheetId: string): Promise<AppShe
                     if (results.data.length === 0) return reject(new Error("La pestaña CONFIG_SISTEMA está vacía."));
                     
                     const master: any = results.data[0];
-                    // Normalizamos keys (Google exporta a veces con espacios o mayúsculas raras)
+                    // Normalizamos keys
                     const findVal = (keys: string[]) => {
                         const foundKey = Object.keys(master).find(k => keys.includes(k.trim().toUpperCase()));
                         return foundKey ? String(master[foundKey]).trim() : '';
@@ -62,60 +62,13 @@ export const bootstrapConfigById = async (spreadsheetId: string): Promise<AppShe
     }
 };
 
+// Wrapper de compatibilidad para componentes legacy, redirige a la nueva API
 export const callGas = async (action: string, payload: any, compress: boolean = false): Promise<any> => {
-    const config = getSettings().appSheetConfig;
-    const url = config?.gasWebAppUrl;
-
-    if (!url) throw new Error("Cloud URL no configurada");
-
-    try {
-        let finalPayload = { 
-            action, 
-            ...payload,
-            metadata: { timestamp: Date.now(), compressed: compress }
-        };
-
-        if (compress && payload.rows) {
-            finalPayload.rows = await compressData(payload.rows);
-        }
-
-        const response = await fetch(url, {
-            method: 'POST',
-            body: JSON.stringify(finalPayload),
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP Error ${response.status}: El servidor no respondió.`);
-        }
-
-        const text = await response.text();
-        let json;
-        try {
-            json = JSON.parse(text);
-        } catch (e) {
-            throw new Error("Respuesta no válida del servidor (posible error de script).");
-        }
-
-        if (json.success === false) {
-            alert(`❌ Error del Servidor Cloud:\n${json.error}`);
-            throw new Error(json.error);
-        }
-        
-        return json;
-    } catch (error: any) {
-        logger.error('GAS_SERVICE', `Fallo [${action}]: ${error.message}`);
-        throw error;
-    }
-};
-
-export const sendToGas = async (payload: { tableName: string, rows: any[] }): Promise<any> => {
-    return await callGas('append_rows', payload, payload.rows.length > 5);
+    return cloudApi.post(action, payload, compress);
 };
 
 export const fetchFromGas = async (tableName: string): Promise<any[]> => {
-    const res = await callGas('fetch_rows', { tableName });
-    if (!res.success) throw new Error(res.error);
+    const res = await cloudApi.fetchTable(tableName);
     return res.rows || [];
 };
 

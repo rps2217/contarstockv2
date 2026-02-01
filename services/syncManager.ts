@@ -1,12 +1,17 @@
 
 import { db } from '../db';
-import { syncToAppSheet } from './appsheet';
 import { CountingSession, Product } from '../types';
 import { logger } from './logger';
 import { useSyncStore } from '../store/useSyncStore';
 import { saveProductBatch } from './productService';
 import { CloudProductSchema } from './schemas';
-import { callGas, fetchFromGas } from './gasService';
+import { getSettings } from './settings';
+import { markScansAsSynced } from './sessionService';
+import { aggregateScans } from './aggregator';
+
+// Nuevas capas importadas
+import { cloudApi } from './cloud/apiClient';
+import { createInventoryPayload } from './cloud/mappers';
 
 let isSyncingInProgress = false;
 
@@ -37,7 +42,7 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
         for (const scan of unsyncedScans) {
             const session = sessionMap.get(scan.sessionId);
             
-            // CASO: REGISTRO HUÉRFANO (El scan existe pero su sesión fue borrada o no se encuentra)
+            // CASO: REGISTRO HUÉRFANO
             if (!session) {
                 if (!groups['SISTEMA_RESIDUAL']) {
                     groups['SISTEMA_RESIDUAL'] = {
@@ -83,19 +88,46 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
     useSyncStore.getState().setSyncing(true);
 
     try {
+        const config = getSettings().appSheetConfig;
+        
         // Manejo especial para huérfanos
         if (group.erpOrder === 'REGISTROS_HUERFANOS') {
+            if (onProgress) onProgress("Purgando registros residuales...");
             const unsynced = await db.scans.where('synced').equals(0).toArray();
             const orphanIds = unsynced.filter(s => !s.sessionId || s.sessionId === 'ORPHAN').map(s => s.id);
-            // Simplemente los marcamos como subidos o los procesamos como una carga general
-            if (onProgress) onProgress("Limpiando registros residuales...");
-            await db.scans.where('id').anyOf(orphanIds).modify({ synced: 1 });
+            await markScansAsSynced(orphanIds);
         } else {
+            // PROCESAMIENTO ESTÁNDAR
             for (const sessionId of group.sessionIds) {
                 const session = await db.sessions.get(sessionId);
                 if (!session) continue;
-                await syncToAppSheet(session, onProgress);
-                await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
+
+                if (onProgress) onProgress(`Procesando bulto ${session.logisticsLabel}...`);
+
+                // 1. Obtener datos crudos
+                const unsyncedScans = await db.scans.where('sessionId').equals(session.id).filter(s => s.synced === 0).toArray();
+                if (unsyncedScans.length === 0) continue;
+
+                // 2. Agregar (Lógica de Negocio)
+                const consolidatedItems = await aggregateScans(unsyncedScans);
+                
+                // 3. Mapear a DTO Cloud (Usando Mapper Compartido)
+                const payload = createInventoryPayload(session, consolidatedItems, 'manual');
+
+                // 4. Determinar Tabla Destino
+                const targetTable = session.sessionType === 'hammer' 
+                    ? (config?.countsTableName || "CONTEOS") 
+                    : (config?.consolidatedTableName || "CONSOLIDADO");
+
+                // 5. Enviar (Usando Capa de Transporte)
+                const result = await cloudApi.appendRows(targetTable, payload);
+
+                // 6. Actualizar Estado Local
+                if (result.success) {
+                    await markScansAsSynced(unsyncedScans.map(s => s.id));
+                    await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
+                    if (onProgress) onProgress(`✓ Subidos ${result.rows_written} registros.`);
+                }
             }
         }
         useSyncStore.getState().setLastSyncTime(Date.now());
@@ -110,13 +142,10 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
 
 export const importProductsFromAppSheet = async (): Promise<number> => {
     try {
+        const config = getSettings().appSheetConfig;
         const lastSyncTimestamp = localStorage.getItem('last_product_sync_time') || '0';
-        const response = await callGas('fetch_rows', { 
-            tableName: "PRODUCTOS", 
-            since: lastSyncTimestamp 
-        });
-
-        if (!response.success) throw new Error(response.error);
+        
+        const response = await cloudApi.fetchTable(config?.productsTableName || "PRODUCTOS", lastSyncTimestamp);
         
         const rawProducts = response.rows || [];
         if (rawProducts.length === 0) return 0;

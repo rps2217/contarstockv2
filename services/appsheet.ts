@@ -5,7 +5,8 @@ import { generateUUID } from "./utils";
 import { markScansAsSynced } from "./sessionService"; 
 import { markProductsAsSynced } from "./productService";
 import { db } from "../db";
-import { sendToGas, callGas } from "./gasService";
+import { callGas } from "./gasService";
+import { cloudApi } from "./cloud/apiClient";
 import { aggregateScans } from "./aggregator";
 import { SHEET_COLUMNS } from "./constants";
 
@@ -47,7 +48,7 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
       };
   });
 
-  const result = await sendToGas({ tableName: targetTable, rows });
+  const result = await cloudApi.appendRows(targetTable, rows);
 
   if (result && result.success) {
       if (result.rows_written === 0 && rows.length > 0) {
@@ -75,7 +76,7 @@ export const syncProductsToAppSheet = async (products: Product[]): Promise<void>
         "PROVEEDOR": p.supplier,
         "RUT": p.supplierRut
     }));
-    const result = await sendToGas({ tableName: config?.productsTableName || "PRODUCTOS", rows });
+    const result = await cloudApi.appendRows(config?.productsTableName || "PRODUCTOS", rows);
     if (result && result.success) {
         await markProductsAsSynced(products.map(p => p.barcode));
     } else {
