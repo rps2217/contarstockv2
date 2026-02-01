@@ -17,6 +17,7 @@ import { ScreenLockOverlay } from './common/ScreenLockOverlay';
 import { MassiveHUD } from './massive/MassiveHUD';
 import { MassiveHeader } from './massive/MassiveHeader';
 import { MassiveLabelModal } from './massive/MassiveLabelModal';
+import { MassiveToolsSheet } from './massive/MassiveToolsSheet';
 
 const MassiveItemRow = memo(({ index, data }: any) => {
     const item = data.items[index];
@@ -64,8 +65,9 @@ const MassiveBlindView: React.FC = () => {
     const [isChangingLocation, setIsChangingLocation] = useState(false);
     const [showLabelModal, setShowLabelModal] = useState(false);
     const [isScreenLocked, setIsScreenLocked] = useState(false);
+    const [isToolsOpen, setIsToolsOpen] = useState(false);
     
-    // Estados para Teclado Numérico Manual (Modo Input Código)
+    // Estados para Teclado Numérico Manual
     const [showKeypad, setShowKeypad] = useState(false);
     const [manualCode, setManualCode] = useState('');
 
@@ -142,16 +144,12 @@ const MassiveBlindView: React.FC = () => {
             
             <MassiveHeader 
                 location={currentLocation}
-                hasActiveItem={!!lastScannedItem}
                 isMigrating={isMigrating}
                 hasItems={items.length > 0}
                 onBack={() => navigate('/dashboard')}
                 onChangeLocation={() => setIsChangingLocation(true)}
-                onShowLabel={() => { SoundFX.play('success'); setShowLabelModal(true); }}
-                onReset={() => { if(confirm("¿Borrar todo?")) resetBatch(); }}
-                onImport={handleCloudImport}
                 onFinalize={handleFinalize}
-                onLock={() => setIsScreenLocked(true)}
+                onOpenTools={() => setIsToolsOpen(true)}
             />
 
             <MassiveHUD 
@@ -163,7 +161,6 @@ const MassiveBlindView: React.FC = () => {
 
             <div className="flex-1 min-h-0 bg-black flex flex-col">
                 <div className="shrink-0 p-3 bg-slate-900/50 border-b border-white/5 grid grid-cols-4 gap-2">
-                    {/* Botón de Entrada Manual */}
                     <button
                         onClick={handleOpenKeypad}
                         className="h-11 rounded-xl font-black text-xs flex items-center justify-center gap-2 transition-all border-2 bg-slate-800 border-slate-700 text-white shadow-lg active:scale-95 hover:bg-slate-700"
@@ -172,7 +169,6 @@ const MassiveBlindView: React.FC = () => {
                         <span>MANUAL</span>
                     </button>
 
-                    {/* Botones Rápidos Preset */}
                     {quickValues.map(val => (
                         <button
                             key={val}
@@ -206,7 +202,6 @@ const MassiveBlindView: React.FC = () => {
                 </div>
             )}
 
-            {/* TECLADO CON VISOR INTEGRADO */}
             <NumericKeypad 
                 isOpen={showKeypad}
                 onClose={() => setShowKeypad(false)}
@@ -224,6 +219,16 @@ const MassiveBlindView: React.FC = () => {
                 isPrinting={isPrinting}
                 onPrintThermal={handleThermalPrint}
                 onPrintPDF={() => lastScannedItem && printBarcode(lastScannedItem.barcode, lastScannedItem.name, `STOCK_AUDIT: ${lastScannedItem.totalQuantity}`)}
+            />
+
+            <MassiveToolsSheet 
+                isOpen={isToolsOpen}
+                onClose={() => setIsToolsOpen(false)}
+                hasActiveItem={!!lastScannedItem}
+                onLock={() => setIsScreenLocked(true)}
+                onShowLabel={() => { SoundFX.play('success'); setShowLabelModal(true); }}
+                onReset={() => { if(confirm("¿Borrar todo?")) resetBatch(); }}
+                onImport={handleCloudImport}
             />
 
             {/* Modal Ubicación */}
@@ -254,7 +259,6 @@ const MassiveBlindView: React.FC = () => {
                 </div>
             )}
 
-            {/* OVERLAY DE BLOQUEO */}
             <ScreenLockOverlay isLocked={isScreenLocked} onUnlock={() => setIsScreenLocked(false)} />
         </div>
     );
