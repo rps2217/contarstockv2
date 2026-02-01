@@ -11,6 +11,8 @@ precacheAndRoute(self.__WB_MANIFEST);
 
 // --- MOTOR DE SINCRONIZACIÓN EN SEGUNDO PLANO ---
 
+const UPLOAD_BATCH_SIZE = 500;
+
 self.addEventListener('sync', (event: any) => {
     if (event.tag === 'sync-bultos') {
         event.waitUntil(processBackgroundSync());
@@ -44,10 +46,8 @@ async function processBackgroundSync() {
             if (scansForSession.length === 0) continue;
 
             // 4. Agregación en memoria (Micro-Aggregator)
-            // NOTA: Replicamos lógica simple aquí para evitar traer todo el módulo 'aggregator.ts' que usa Workers
             const aggregation: Record<string, any> = {};
             
-            // Precarga de nombres para el mapper
             const uniqueSkus = Array.from(new Set(scansForSession.map(s => s.barcode)));
             const products = await db.products.where('barcode').anyOf(uniqueSkus).toArray();
             const productMap = new Map(products.map(p => [p.barcode, p.name]));
@@ -62,49 +62,57 @@ async function processBackgroundSync() {
                         mm: scan.mm, 
                         yyyy: scan.yyyy,
                         isIncident: scan.isIncident,
-                        // Campos opcionales para cumplir interfaz
                         scans: 0 
                     };
                 }
                 aggregation[key].totalQuantity += scan.quantity;
             });
 
-            // 5. Transformación (USANDO EL MAPPER COMPARTIDO - DRY)
-            const payloadRows = createInventoryPayload(
+            // 5. Transformación y Chunking
+            const fullPayload = createInventoryPayload(
                 session, 
                 Object.values(aggregation) as any[], 
                 'background'
             );
 
-            // 6. Transporte (Fetch directo para SW)
             const targetTable = session.sessionType === 'hammer' ? appConfig.countsTableName : appConfig.consolidatedTableName;
-            
-            const body = {
-                action: 'append_rows',
-                tableName: targetTable,
-                rows: payloadRows,
-                metadata: { timestamp: Date.now(), source: 'sw-unified' }
-            };
+            const totalBatches = Math.ceil(fullPayload.length / UPLOAD_BATCH_SIZE);
 
-            const response = await fetch(appConfig.gasWebAppUrl, {
-                method: 'POST',
-                body: JSON.stringify(body),
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-            });
+            for (let i = 0; i < totalBatches; i++) {
+                const chunk = fullPayload.slice(i * UPLOAD_BATCH_SIZE, (i + 1) * UPLOAD_BATCH_SIZE);
+                
+                const body = {
+                    action: 'append_rows',
+                    tableName: targetTable,
+                    rows: chunk,
+                    metadata: { timestamp: Date.now(), source: 'sw-unified-chunked' }
+                };
 
-            if (response.ok) {
-                const result = await response.json();
-                if (result.success) {
-                    const idsToUpdate = scansForSession.map(s => s.id);
-                    await db.scans.where('id').anyOf(idsToUpdate).modify({ synced: 1 });
-                    await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
+                const response = await fetch(appConfig.gasWebAppUrl, {
+                    method: 'POST',
+                    body: JSON.stringify(body),
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success) {
+                        // Marcamos scans sincronizados parcialmente
+                        const chunkBarcodes = new Set(chunk.map((r: any) => r['CODIGO'])); // Usar key real del mapper
+                        const idsToUpdate = scansForSession
+                            .filter(s => chunkBarcodes.has(s.barcode))
+                            .map(s => s.id);
+                            
+                        await db.scans.where('id').anyOf(idsToUpdate).modify({ synced: 1 });
+                    }
                 }
             }
+            await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
         }
 
     } catch (err) {
         console.error('[SW] Error Sync:', err);
-        throw err; // Reintentar luego
+        throw err;
     }
 }
 

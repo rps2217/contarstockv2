@@ -14,6 +14,7 @@ import { cloudApi } from './cloud/apiClient';
 import { createInventoryPayload } from './cloud/mappers';
 
 let isSyncingInProgress = false;
+const UPLOAD_BATCH_SIZE = 500; // Límite seguro para Google Apps Script
 
 export const resetSyncLock = () => {
     isSyncingInProgress = false;
@@ -90,7 +91,7 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
     try {
         const config = getSettings().appSheetConfig;
         
-        // Manejo especial para huérfanos
+        // Manejo especial para huérfanos (Purgado directo)
         if (group.erpOrder === 'REGISTROS_HUERFANOS') {
             if (onProgress) onProgress("Purgando registros residuales...");
             const unsynced = await db.scans.where('synced').equals(0).toArray();
@@ -102,7 +103,7 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
                 const session = await db.sessions.get(sessionId);
                 if (!session) continue;
 
-                if (onProgress) onProgress(`Procesando bulto ${session.logisticsLabel}...`);
+                if (onProgress) onProgress(`Preparando bulto ${session.logisticsLabel}...`);
 
                 // 1. Obtener datos crudos
                 const unsyncedScans = await db.scans.where('sessionId').equals(session.id).filter(s => s.synced === 0).toArray();
@@ -111,23 +112,49 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
                 // 2. Agregar (Lógica de Negocio)
                 const consolidatedItems = await aggregateScans(unsyncedScans);
                 
-                // 3. Mapear a DTO Cloud (Usando Mapper Compartido)
-                const payload = createInventoryPayload(session, consolidatedItems, 'manual');
+                // 3. Mapear a DTO Cloud
+                const fullPayload = createInventoryPayload(session, consolidatedItems, 'manual');
 
                 // 4. Determinar Tabla Destino
                 const targetTable = session.sessionType === 'hammer' 
                     ? (config?.countsTableName || "CONTEOS") 
                     : (config?.consolidatedTableName || "CONSOLIDADO");
 
-                // 5. Enviar (Usando Capa de Transporte)
-                const result = await cloudApi.appendRows(targetTable, payload);
+                // 5. ESTRATEGIA DE CHUNKING (Fragmentación)
+                const totalBatches = Math.ceil(fullPayload.length / UPLOAD_BATCH_SIZE);
+                
+                for (let i = 0; i < totalBatches; i++) {
+                    const start = i * UPLOAD_BATCH_SIZE;
+                    const end = start + UPLOAD_BATCH_SIZE;
+                    const chunk = fullPayload.slice(start, end);
+                    
+                    if (onProgress) onProgress(`Subiendo lote ${i + 1}/${totalBatches} (${chunk.length} items)...`);
 
-                // 6. Actualizar Estado Local
-                if (result.success) {
-                    await markScansAsSynced(unsyncedScans.map(s => s.id));
-                    await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
-                    if (onProgress) onProgress(`✓ Subidos ${result.rows_written} registros.`);
+                    // Enviar chunk
+                    const result = await cloudApi.appendRows(targetTable, chunk);
+
+                    if (result.success) {
+                        // Marcar SOLO los items de este chunk como sincronizados
+                        // Necesitamos mapear los barcodes del chunk a los IDs de los scans originales
+                        // Esta es una aproximación segura: Si el chunk subió, marcamos todos los scans que contribuyeron a esos items
+                        const chunkBarcodes = new Set(chunk.map((row: any) => row['CODIGO'])); // Usamos la key definida en CONSTANTS
+                        
+                        const scanIdsToMark = unsyncedScans
+                            .filter(s => chunkBarcodes.has(s.barcode))
+                            .map(s => s.id);
+
+                        await markScansAsSynced(scanIdsToMark);
+                        
+                        // Removemos los scans ya procesados de la lista de pendientes para no reprocesarlos en caso de lógica compleja
+                        // (Aunque en este flujo simple, el loop de chunks es lineal)
+                    } else {
+                        throw new Error(`Fallo en lote ${i+1}: ${result.error}`);
+                    }
                 }
+
+                // 6. Actualizar Timestamp de la sesión
+                await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
+                if (onProgress) onProgress(`✓ Bulto completado.`);
             }
         }
         useSyncStore.getState().setLastSyncTime(Date.now());
