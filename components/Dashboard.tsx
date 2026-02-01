@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ScanLine, Database, Radio, Zap, History, Settings, Gauge, UserCircle } from 'lucide-react';
 import { useDashboard } from '../hooks/useDashboard';
@@ -50,10 +51,10 @@ const Dashboard: React.FC = () => {
         
         <div className="grid grid-cols-1 gap-4">
             <MainButton 
-                onClick={() => navigate('/reports')}
+                onClick={() => navigate('/reports?create=true')}
                 icon={ScanLine}
                 title="Nueva_Carga"
-                sub="CARGAS_DOCUMENTADAS"
+                sub="INICIAR CONTEO AHORA"
                 colorClass="bg-slate-800 border-slate-950"
             />
             <div className="relative">

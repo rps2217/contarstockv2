@@ -1,18 +1,30 @@
-import React, { useCallback, useMemo } from 'react';
+
+import React, { useCallback, useMemo, useEffect } from 'react';
 import { Archive, WifiOff, Zap, Package } from 'lucide-react';
 import { StartSessionModal } from './StartSessionModal';
 import { SearchBar } from './SearchBar';
 import { ReportDetail } from './reports/ReportDetail';
 import { ReportsHeader } from './reports/ReportsHeader';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { SessionRow } from './reports/SessionRow';
 import { useReports } from '../hooks/useReports';
 import { VirtualList } from './common/VirtualList';
 
 export const Reports: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { state, actions } = useReports();
   const isHammerArchive = state.filterType === 'hammer';
+
+  // UX Fix: Auto-abrir modal si viene del Dashboard
+  useEffect(() => {
+      const params = new URLSearchParams(location.search);
+      if (params.get('create') === 'true') {
+          actions.setIsStartModalOpen(true);
+          // Limpiar URL para que no se reabra al refrescar
+          navigate(location.pathname, { replace: true });
+      }
+  }, [location, actions, navigate]);
 
   // Manejador de scroll infinito simplificado
   const handleEndReached = useCallback(() => {

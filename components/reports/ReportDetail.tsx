@@ -1,9 +1,11 @@
 
 import React from 'react';
-import { ChevronLeft, Trash2, Minus, Plus, Cloud, CloudOff } from 'lucide-react';
+import { ChevronLeft, Trash2, Minus, Plus, Cloud, CloudOff, FileSpreadsheet, FileText, Download } from 'lucide-react';
 import * as sessionService from '../../services/sessionService';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
+import { exportToExcel, exportToPDF } from '../../services/export';
+import { SoundFX } from '../../services/audio';
 
 interface ReportDetailProps {
     sessionId: string;
@@ -54,16 +56,34 @@ export const ReportDetail: React.FC<ReportDetailProps> = ({ sessionId, onBack })
         }
     };
 
+    const handleExport = (type: 'pdf' | 'excel') => {
+        if (!fullSelectedSession || !consolidation) return;
+        SoundFX.play('success');
+        if (type === 'excel') exportToExcel(fullSelectedSession, consolidation);
+        else exportToPDF(fullSelectedSession, consolidation);
+    };
+
     return (
         <div className="flex flex-col h-[calc(100vh-64px)] bg-slate-50">
-            <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center gap-3 shadow-sm sticky top-0 z-20">
-                <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full text-slate-600"><ChevronLeft className="w-5 h-5" /></button>
-                <div className="flex-1">
-                    <h2 className="font-black text-slate-900 leading-tight uppercase tracking-tight">{fullSelectedSession?.erpOrder}</h2>
-                    <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{fullSelectedSession?.logisticsLabel}</span>
-                        {fullSelectedSession?.lastSyncTimestamp && <Cloud className="w-3.5 h-3.5 text-blue-500" />}
+            <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between shadow-sm sticky top-0 z-20">
+                <div className="flex items-center gap-3">
+                    <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full text-slate-600"><ChevronLeft className="w-5 h-5" /></button>
+                    <div>
+                        <h2 className="font-black text-slate-900 leading-tight uppercase tracking-tight">{fullSelectedSession?.erpOrder}</h2>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{fullSelectedSession?.logisticsLabel}</span>
+                            {fullSelectedSession?.lastSyncTimestamp && <Cloud className="w-3.5 h-3.5 text-blue-500" />}
+                        </div>
                     </div>
+                </div>
+                
+                <div className="flex gap-2">
+                    <button onClick={() => handleExport('excel')} className="p-2 bg-green-50 text-green-700 rounded-xl border border-green-200 hover:bg-green-100 active:scale-95 transition-all">
+                        <FileSpreadsheet className="w-5 h-5" />
+                    </button>
+                    <button onClick={() => handleExport('pdf')} className="p-2 bg-rose-50 text-rose-700 rounded-xl border border-rose-200 hover:bg-rose-100 active:scale-95 transition-all">
+                        <FileText className="w-5 h-5" />
+                    </button>
                 </div>
             </div>
 

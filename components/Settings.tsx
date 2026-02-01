@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { 
     Settings as SettingsIcon, ArrowLeft, Share2, Palette, Cloud, 
-    Zap, LayoutTemplate, ShieldCheck, Printer
+    Zap, LayoutTemplate, ShieldCheck, Printer, Check
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../store/useAppStore';
@@ -21,6 +21,21 @@ export const Settings: React.FC = () => {
   const navigate = useNavigate();
   const { settings, updateSetting } = useAppStore(); 
   const [activeTab, setActiveTab] = useState<TabId>('general');
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = async () => {
+      const data = { title: 'LogiCount Pro', url: window.location.href };
+      // Compatibilidad robusta: Si no hay share nativo, copiar al portapapeles
+      if (navigator.share) {
+          try { await navigator.share(data); } catch (e) {}
+      } else {
+          try {
+              await navigator.clipboard.writeText(window.location.href);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 2000);
+          } catch (e) { alert("URL: " + window.location.href); }
+      }
+  };
 
   const tabs: { id: TabId; label: string; icon: any; color: string; bg: string }[] = [
       { id: 'general', label: 'Operativa', icon: Zap, color: 'text-amber-600', bg: 'bg-amber-50' },
@@ -46,10 +61,11 @@ export const Settings: React.FC = () => {
                 <h1 className="text-2xl font-black tracking-tighter text-black dark:text-white uppercase italic">Configuración</h1>
             </div>
             <button 
-                onClick={() => navigator.share?.({ title: 'LogiCount Pro', url: window.location.href })}
-                className="p-3 bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400 rounded-2xl active:scale-90"
+                onClick={handleShare}
+                className={`p-3 border-2 rounded-2xl transition-all active:scale-90 flex items-center gap-2 ${copied ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400'}`}
             >
-                <Share2 className="w-6 h-6 stroke-[2.5px]" />
+                {copied ? <Check className="w-6 h-6" /> : <Share2 className="w-6 h-6 stroke-[2.5px]" />}
+                {copied && <span className="text-[10px] font-black uppercase pr-1">Link Copiado</span>}
             </button>
         </div>
 
