@@ -2,7 +2,7 @@
 import React, { useState, memo, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMassiveScanner, ConsolidatedBlindItem } from '../hooks/useMassiveScanner';
-import { Camera, MapPin, GripHorizontal } from 'lucide-react';
+import { Camera, MapPin, Keyboard } from 'lucide-react';
 import { CameraScanner } from './CameraScanner';
 import { migrateMassiveToMaster, importManifestFromCloud } from '../services/massiveSync';
 import { SoundFX } from '../services/audio';
@@ -63,9 +63,9 @@ const MassiveBlindView: React.FC = () => {
     const [isChangingLocation, setIsChangingLocation] = useState(false);
     const [showLabelModal, setShowLabelModal] = useState(false);
     
-    // Estados para Teclado Numérico Manual
+    // Estados para Teclado Numérico Manual (Modo Input Código)
     const [showKeypad, setShowKeypad] = useState(false);
-    const [keypadValue, setKeypadValue] = useState('');
+    const [manualCode, setManualCode] = useState('');
 
     const handleCloudImport = async () => {
         setIsImporting(true);
@@ -119,15 +119,17 @@ const MassiveBlindView: React.FC = () => {
     };
 
     const handleOpenKeypad = () => {
-        setKeypadValue('');
+        setManualCode('');
         setShowKeypad(true);
     };
 
     const handleKeypadConfirm = () => {
-        const val = parseInt(keypadValue);
-        if (!isNaN(val) && val > 0) {
-            setMultiplier(val);
-            SoundFX.play('success');
+        if (manualCode.length > 0) {
+            // Registramos el código ingresado manualmente como si fuera un escaneo
+            // El multiplicador actual (si hay alguno seleccionado en los otros botones) se aplicará dentro de registerScan si así está programado, 
+            // o pasamos '1' por defecto si queremos que manual sea siempre unitario.
+            // Aquí asumimos que manual respeta el multiplicador activo (ej: manual +20).
+            registerScan(manualCode);
         }
         setShowKeypad(false);
     };
@@ -136,7 +138,6 @@ const MassiveBlindView: React.FC = () => {
 
     // Valores rápidos para el grid
     const quickValues = [5, 10, 20];
-    const isCustomMultiplier = !quickValues.includes(multiplier) && multiplier !== 1;
 
     return (
         <div className="h-screen w-full flex flex-col font-mono bg-black select-none overflow-hidden text-white">
@@ -163,12 +164,13 @@ const MassiveBlindView: React.FC = () => {
 
             <div className="flex-1 min-h-0 bg-black flex flex-col">
                 <div className="shrink-0 p-3 bg-slate-900/50 border-b border-white/5 grid grid-cols-4 gap-2">
-                    {/* Botón de Teclado Numérico (Reemplaza al +1) */}
+                    {/* Botón de Entrada Manual (Reemplaza al +1) */}
                     <button
                         onClick={handleOpenKeypad}
-                        className={`h-11 rounded-xl font-black text-xs flex items-center justify-center transition-all border-2 ${isCustomMultiplier ? 'bg-indigo-600 border-indigo-400 text-white shadow-lg' : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10'}`}
+                        className="h-11 rounded-xl font-black text-xs flex items-center justify-center gap-2 transition-all border-2 bg-slate-800 border-slate-700 text-white shadow-lg active:scale-95 hover:bg-slate-700"
                     >
-                        {isCustomMultiplier ? `x${multiplier}` : <GripHorizontal className="w-5 h-5" />}
+                        <Keyboard className="w-4 h-4" />
+                        <span>MANUAL</span>
                     </button>
 
                     {/* Botones Rápidos Preset */}
@@ -205,13 +207,13 @@ const MassiveBlindView: React.FC = () => {
                 </div>
             )}
 
-            {/* TECLADO MULTIPLICADOR */}
+            {/* TECLADO DE INGRESO MANUAL DE SKU */}
             <NumericKeypad 
                 isOpen={showKeypad}
                 onClose={() => setShowKeypad(false)}
-                title={keypadValue ? `Cant: ${keypadValue}` : "Multiplicador Manual"}
-                onInput={(v) => setKeypadValue(prev => (prev + v).slice(0, 5))} // Max 5 dígitos
-                onDelete={() => setKeypadValue(prev => prev.slice(0, -1))}
+                title={manualCode ? `EAN: ${manualCode}` : "Ingresar Código Manual"}
+                onInput={(v) => setManualCode(prev => prev + v)}
+                onDelete={() => setManualCode(prev => prev.slice(0, -1))}
                 onConfirm={handleKeypadConfirm}
             />
 
