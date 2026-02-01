@@ -107,8 +107,9 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
             <Modal isOpen={state.showQRModal} onClose={() => state.setShowQRModal(false)} title="Clonar Configuración" variant="center">
                 <div className="p-8 text-center flex flex-col items-center">
                     <div className="bg-white p-4 rounded-3xl shadow-inner border border-slate-100 mb-6">
-                        <img src={actions.generateConfigQR()} alt="Config QR" className="w-64 h-64" />
+                        <img src={actions.generateConfigQR()} alt="Config QR" className="w-64 h-64 mix-blend-multiply" />
                     </div>
+                    <p className="text-xs text-slate-500 font-bold mb-6 max-w-xs">Escanea esto con otro dispositivo LogiCount para copiar las llaves de acceso instantáneamente.</p>
                     <SettingsButton onClick={() => state.setShowQRModal(false)} label="Cerrar" variant="dark" />
                 </div>
             </Modal>

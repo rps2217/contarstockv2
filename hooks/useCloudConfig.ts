@@ -22,15 +22,25 @@ export const useCloudConfig = (settings: AppSettings, updateSetting: (k: keyof A
     };
 
     const generateConfigQR = useCallback(() => {
+        // Creamos un payload ligero para el QR
         const payload = { v: "1.0", type: "logicount_config", data: config };
         const encoded = btoa(JSON.stringify(payload));
+        // Usamos API pública para generar la imagen (Solución Low-Code efectiva)
         return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(encoded)}`;
     }, [config]);
 
     const handleQRScanSuccess = (rawCode: string) => {
         try {
-            const decoded = atob(rawCode);
-            const payload = JSON.parse(decoded);
+            // Intentamos decodificar Base64 por si es nuestro formato
+            let payload;
+            try {
+                const decoded = atob(rawCode);
+                payload = JSON.parse(decoded);
+            } catch {
+                // Si falla, asumimos que es un JSON directo
+                payload = JSON.parse(rawCode);
+            }
+
             if (payload.type === 'logicount_config' && payload.data) {
                 updateSetting('appSheetConfig', payload.data);
                 SoundFX.play('success');
@@ -41,7 +51,7 @@ export const useCloudConfig = (settings: AppSettings, updateSetting: (k: keyof A
             }
         } catch (e) {
             SoundFX.play('error');
-            alert("❌ QR no reconocido.");
+            alert("❌ El código escaneado no es una configuración válida de LogiCount.");
         }
     };
 
