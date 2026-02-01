@@ -1,5 +1,6 @@
+
 import React, { Suspense, useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { useAppStore } from './store/useAppStore';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { NetworkStatus } from './components/NetworkStatus';
