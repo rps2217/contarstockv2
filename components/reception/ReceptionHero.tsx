@@ -1,65 +1,76 @@
 
 import React from 'react';
-import { CheckCircle2, Zap, Box, Keyboard, Camera, Ban, List } from 'lucide-react';
+import { Container, Zap, Keyboard, Camera } from 'lucide-react';
 
 interface Props {
-    lastScanned: string | null;
+    lastAction: { type: 'success' | 'duplicate', label: string } | null;
     draftCount: number;
-    showManualInput: boolean;
-    hasCameraSupport: boolean;
+    isEcoMode: boolean;
     onToggleManual: () => void;
     onCameraClick: () => void;
-    onShowList: () => void;
 }
 
-export const ReceptionHero: React.FC<Props> = (props) => {
+export const ReceptionHero: React.FC<Props> = ({ 
+    lastAction, 
+    draftCount, 
+    isEcoMode, 
+    onToggleManual, 
+    onCameraClick 
+}) => {
     return (
-        <div className="flex flex-col items-center justify-center min-h-full pb-20 animate-in fade-in duration-500">
-            {props.lastScanned ? (
-                <div className="mb-10 animate-in zoom-in slide-in-from-bottom-6 duration-300 text-center">
-                    <div className="bg-emerald-100 text-emerald-700 border-2 border-emerald-200 px-8 py-3 rounded-full font-black uppercase tracking-widest mb-6 inline-flex items-center gap-3 shadow-sm">
-                        <CheckCircle2 className="w-6 h-6" /> Registrado con Éxito
+        <div className="flex-1 flex flex-col items-center justify-center p-6 relative">
+            
+            {/* INDICADOR DE ÚLTIMA LECTURA (FLOTANTE) */}
+            <div className="h-32 flex flex-col items-center justify-center mb-4">
+                {lastAction?.type === 'success' && (
+                    <div className="text-center animate-in slide-in-from-bottom-4 duration-300">
+                        <div className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.4em] mb-2">Lectura Confirmada</div>
+                        <div className={`font-mono font-black tracking-[0.2em] ${isEcoMode ? 'text-4xl text-white' : 'text-3xl text-white/90'}`}>
+                            {lastAction.label}
+                        </div>
                     </div>
-                    <h1 className="text-5xl md:text-8xl font-black text-slate-900 tracking-tighter break-all drop-shadow-sm">{props.lastScanned}</h1>
-                    <p className="text-slate-400 mt-4 font-black uppercase tracking-[0.3em] text-xs">Preparado para nuevo escaneo</p>
-                </div>
-            ) : (
-                <div className="mb-10 opacity-30 text-center">
-                    <div className="w-24 h-24 bg-blue-50 text-blue-600 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-inner"><Zap className="w-12 h-12" /></div>
-                    <h2 className="text-3xl font-black uppercase tracking-widest text-slate-900">Modo Recepción</h2>
-                    <p className="text-sm text-slate-500 mt-3 font-semibold uppercase tracking-wider">Escanee etiquetas de bultos sin interrupciones</p>
-                </div>
-            )}
+                )}
+                {(!lastAction && isEcoMode) && (
+                    <div className="flex flex-col items-center opacity-20">
+                        <Zap className="w-8 h-8 text-white mb-2 animate-pulse" />
+                        <span className="text-[10px] font-black text-white uppercase tracking-[0.3em]">Esperando Escaneo...</span>
+                    </div>
+                )}
+            </div>
 
-            <div className="bg-white rounded-[3rem] p-10 w-full max-w-sm border-2 border-slate-100 relative overflow-hidden group mb-12 shadow-2xl shadow-slate-200/50">
-                <div className="absolute top-0 right-0 p-24 bg-blue-50 rounded-full blur-3xl -mr-16 -mt-16 opacity-50"></div>
-                <div className="absolute top-6 right-6 z-20">
-                    <button onClick={props.onShowList} className="p-3 bg-slate-50 hover:bg-blue-600 rounded-2xl text-slate-400 hover:text-white transition-all flex items-center gap-2 text-xs font-black border border-slate-100 shadow-sm">
-                        <List className="w-5 h-5" /> <span className="hidden sm:inline">Listado</span>
-                    </button>
-                </div>
-                <div className="relative z-10 text-center mt-4">
-                    <div className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] mb-3 ml-1">Ingresos en Cola</div>
-                    <div className="text-9xl font-black text-slate-900 flex items-center justify-center gap-4">
-                        <Box className="w-14 h-14 text-blue-200" />
-                        {props.draftCount}
+            {/* CONTADOR DE PRODUCCIÓN (EL CORAZÓN DE LA UI) */}
+            <div className="relative mb-12">
+                {!isEcoMode && <div className="absolute inset-0 bg-blue-600/10 blur-[100px] rounded-full"></div>}
+                
+                <div className={`relative flex flex-col items-center justify-center transition-all duration-500 ${isEcoMode ? 'scale-110' : ''}`}>
+                    <div className={`text-[10px] font-black uppercase tracking-[0.5em] mb-6 ${isEcoMode ? 'text-white/20' : 'text-white/40'}`}>Bultos Sesión</div>
+                    <div className="flex items-center justify-center gap-8">
+                        <Container className={`w-16 h-16 ${isEcoMode ? 'text-white/5' : 'text-blue-500/20'}`} />
+                        <span className={`text-[12rem] md:text-[16rem] font-black tracking-tighter tabular-nums leading-none ${isEcoMode ? 'text-white/80' : 'text-white'} drop-shadow-2xl`}>
+                            {draftCount}
+                        </span>
                     </div>
                 </div>
             </div>
 
-            <div className="w-full max-w-sm">
-                {!props.showManualInput && (
-                    <div className="grid grid-cols-2 gap-6">
-                        <button onClick={props.onToggleManual} className="bg-white hover:bg-slate-50 text-slate-900 py-6 rounded-[2rem] font-black uppercase tracking-widest text-xs flex flex-col items-center justify-center gap-4 border-2 border-slate-100 shadow-xl shadow-slate-200/40 transition-all active:scale-95 group">
-                            <div className="p-3 bg-slate-50 rounded-2xl group-hover:bg-white transition-colors"><Keyboard className="w-7 h-7 text-slate-400" /></div> Teclado
-                        </button>
-                        <button onClick={props.onCameraClick} className={`py-6 rounded-[2rem] font-black uppercase tracking-widest text-xs flex flex-col items-center justify-center gap-4 border-2 shadow-xl transition-all active:scale-95 group ${props.hasCameraSupport ? 'bg-white text-slate-900 border-slate-100 hover:bg-slate-50 shadow-slate-200/40' : 'bg-slate-50 text-slate-300 border-slate-50 opacity-40'}`}>
-                            <div className={`p-3 rounded-2xl transition-colors ${props.hasCameraSupport ? 'bg-blue-50 group-hover:bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-300'}`}>
-                                {props.hasCameraSupport ? <Camera className="w-7 h-7" /> : <Ban className="w-7 h-7" />}
-                            </div> Cámara
-                        </button>
-                    </div>
-                )}
+            {/* CONTROLES SECUNDARIOS */}
+            <div className={`grid grid-cols-2 gap-4 w-full max-w-sm transition-opacity duration-500 ${isEcoMode ? 'opacity-10 pointer-events-none' : 'opacity-100'}`}>
+                <button onClick={onToggleManual} className="bg-white/5 hover:bg-white/10 border-2 border-white/10 p-6 rounded-[2.5rem] flex flex-col items-center gap-3 transition-all active:scale-95">
+                    <Keyboard className="w-8 h-8 text-white/30" />
+                    <span className="text-[9px] font-black uppercase tracking-widest text-white/50">Manual</span>
+                </button>
+                <button onClick={onCameraClick} className="bg-white/5 hover:bg-white/10 border-2 border-white/10 p-6 rounded-[2.5rem] flex flex-col items-center gap-3 transition-all active:scale-95">
+                    <Camera className="w-8 h-8 text-white/30" />
+                    <span className="text-[9px] font-black uppercase tracking-widest text-white/50">Cámara</span>
+                </button>
+            </div>
+            
+            {/* FOOTER HID */}
+            <div className="mt-auto pb-8 text-center">
+                <div className={`inline-flex items-center gap-3 px-6 py-2 rounded-full border ${isEcoMode ? 'bg-white/5 border-white/5 text-white/20' : 'bg-blue-600/10 border-blue-500/20 text-blue-400'}`}>
+                    <div className={`w-2 h-2 rounded-full animate-pulse ${isEcoMode ? 'bg-white/20' : 'bg-blue-500'}`}></div>
+                    <span className="text-[9px] font-black uppercase tracking-[0.3em]">Puerto HID: Activo</span>
+                </div>
             </div>
         </div>
     );
