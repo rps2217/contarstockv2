@@ -1,6 +1,6 @@
 
 /**
- * LOGICOUNT PRO - CLOUD ENGINE V10.8 (FIX: BINARY BLOB ERROR)
+ * LOGICOUNT PRO - CLOUD ENGINE V11.0 (ATOMIC LOCK & BATCH)
  * Instrucciones: Pega el ID de tu Excel abajo.
  */
 
@@ -18,23 +18,34 @@ function getSpreadsheet() {
 }
 
 function doPost(e) {
+  // BLOQUEO DE SEGURIDAD: Evita escrituras simultáneas que corrompan datos
+  const lock = LockService.getScriptLock();
+  // Esperar hasta 30 segundos para obtener turno de escritura. Si falla, el cliente reintentará.
+  try {
+    lock.waitLock(30000); 
+  } catch (e) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false, 
+      error: "Servidor ocupado (Timeout de Bloqueo). Intente nuevamente."
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
   let response = { success: false, error: "Error no identificado" };
+  
   try {
     const requestData = JSON.parse(e.postData.contents);
     const action = requestData.action;
     let rows = requestData.rows;
 
-    // --- CORRECCIÓN DE DESCOMPRESIÓN ---
+    // --- MOTOR DE DESCOMPRESIÓN ---
     if (requestData.metadata && requestData.metadata.compressed && typeof rows === 'string') {
       const decoded = Utilities.base64Decode(rows);
-      // Creamos el Blob con MIME TYPE explícito para evitar el error de objeto nulo
       const zipBlob = Utilities.newBlob(decoded, "application/zip");
-      // Descomprimimos (unzip devuelve un array de Blobs)
       const unzippedFiles = Utilities.unzip(zipBlob);
       if (unzippedFiles.length > 0) {
         rows = JSON.parse(unzippedFiles[0].getDataAsString());
       } else {
-        throw new Error("El paquete de datos llegó vacío o corrupto.");
+        throw new Error("El paquete comprimido llegó vacío.");
       }
     }
 
@@ -55,7 +66,11 @@ function doPost(e) {
   } catch (err) {
     response.success = false;
     response.error = err.toString();
+  } finally {
+    // IMPORTANTE: Liberar el bloqueo siempre, ocurra error o no
+    lock.releaseLock();
   }
+  
   return ContentService.createTextOutput(JSON.stringify(response)).setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -72,29 +87,45 @@ function appendRows(tableName, rows) {
   let lastCol = sheet.getLastColumn();
   let headers = [];
   
+  // Inicialización de Cabeceras (Solo si la hoja es nueva o vacía)
   if (lastCol === 0 || sheet.getRange(1, 1).getValue() === "") {
     headers = Object.keys(rows[0]);
-    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-    sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold").setBackground("#f3f3f3");
+    // Forzamos que todas las columnas sean Texto Plano para evitar que Sheets convierta "00123" en 123
+    const headerRange = sheet.getRange(1, 1, 1, headers.length);
+    headerRange.setValues([headers]);
+    headerRange.setFontWeight("bold").setBackground("#f3f3f3");
+    
+    // Formato de columnas completas como texto (prevención de corrupción de SKUs)
+    sheet.getRange(2, 1, 1000, headers.length).setNumberFormat("@");
     sheet.setFrozenRows(1);
   } else {
     headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
   }
 
+  // Mapeo Rápido: Asegura que los datos coincidan con el orden de las columnas
   const dataToAppend = rows.map(row => {
     return headers.map(h => {
       const hClean = String(h).trim().toUpperCase();
+      // Búsqueda insensible a mayúsculas/minúsculas
       const key = Object.keys(row).find(k => k.trim().toUpperCase() === hClean);
-      return key ? row[key] : "";
+      const val = key ? row[key] : "";
+      
+      // Sanitización básica para evitar fórmulas inyectadas
+      if (typeof val === 'string' && val.startsWith('=')) return "'" + val;
+      return val;
     });
   });
 
-  sheet.getRange(sheet.getLastRow() + 1, 1, dataToAppend.length, headers.length).setValues(dataToAppend);
+  // ESCRITURA EN BLOQUE (BATCH WRITE) - O(1) Operación
+  if (dataToAppend.length > 0) {
+    sheet.getRange(sheet.getLastRow() + 1, 1, dataToAppend.length, headers.length).setValues(dataToAppend);
+  }
   
   return { 
     success: true, 
     rows_written: dataToAppend.length,
-    sheet: tableName 
+    sheet: tableName,
+    timestamp: new Date().toISOString()
   };
 }
 
@@ -103,9 +134,13 @@ function fetchRows(tableName) {
   const sheet = ss.getSheetByName(tableName);
   if (!sheet) return { success: false, error: "La pestaña '" + tableName + "' no existe." };
 
-  const values = sheet.getDataRange().getValues();
-  if (values.length < 1) return { success: true, rows: [] };
+  // Optimización: Leer solo datos con contenido
+  const lastRow = sheet.getLastRow();
+  const lastCol = sheet.getLastColumn();
+  
+  if (lastRow < 2 || lastCol < 1) return { success: true, rows: [] };
 
+  const values = sheet.getRange(1, 1, lastRow, lastCol).getValues();
   const headers = values[0];
   const results = values.slice(1).map(row => {
     const obj = {};
@@ -115,5 +150,5 @@ function fetchRows(tableName) {
     return obj;
   });
 
-  return { success: true, rows: results };
+  return { success: true, rows: results, server_timestamp: new Date().getTime().toString() };
 }
