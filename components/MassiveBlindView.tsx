@@ -1,4 +1,4 @@
-import React, { useState, memo, useCallback, useMemo } from 'react';
+import React, { useState, memo, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMassiveScanner, ConsolidatedBlindItem } from '../hooks/useMassiveScanner';
 import { Camera, MapPin, Keyboard } from 'lucide-react';
@@ -70,6 +70,29 @@ const MassiveBlindView: React.FC = () => {
     const [showKeypad, setShowKeypad] = useState(false);
     const [manualCode, setManualCode] = useState('');
 
+    // --- LÓGICA DE AUTO-BLOQUEO (4 Segundos) ---
+    // Fix: Replace NodeJS.Timeout with ReturnType<typeof setTimeout> for browser compatibility
+    const autoLockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const AUTO_LOCK_DELAY = 4000;
+
+    const resetAutoLockTimer = useCallback(() => {
+        if (autoLockTimerRef.current) clearTimeout(autoLockTimerRef.current);
+        if (isScreenLocked) return;
+
+        autoLockTimerRef.current = setTimeout(() => {
+            setIsScreenLocked(true);
+            if (navigator.vibrate) navigator.vibrate(10);
+        }, AUTO_LOCK_DELAY);
+    }, [isScreenLocked]);
+
+    // Resetear timer en interacciones clave
+    useEffect(() => {
+        resetAutoLockTimer();
+        return () => { if (autoLockTimerRef.current) clearTimeout(autoLockTimerRef.current); };
+    }, [lastScannedItem, multiplier, resetAutoLockTimer]);
+
+    const handleInteraction = () => resetAutoLockTimer();
+
     const handleCloudImport = async () => {
         setIsImporting(true);
         try {
@@ -135,11 +158,15 @@ const MassiveBlindView: React.FC = () => {
 
     const rowData = useMemo(() => ({ onSelect: selectItem, activeBarcode: lastScannedItem?.barcode }), [selectItem, lastScannedItem?.barcode]);
 
-    // Valores rápidos para el grid de la barra de herramientas
+    // Valores rápidos para el grid
     const quickValues = [5, 10, 20];
 
     return (
-        <div className="h-screen w-full flex flex-col font-mono bg-black select-none overflow-hidden text-white">
+        <div 
+            className="h-screen w-full flex flex-col font-mono bg-black select-none overflow-hidden text-white"
+            onPointerDown={handleInteraction}
+            onKeyDown={handleInteraction}
+        >
             
             <MassiveHeader 
                 isMigrating={isMigrating}
@@ -258,7 +285,7 @@ const MassiveBlindView: React.FC = () => {
                 </div>
             )}
 
-            <ScreenLockOverlay isLocked={isScreenLocked} onUnlock={() => setIsScreenLocked(false)} />
+            <ScreenLockOverlay isLocked={isScreenLocked} onUnlock={() => { setIsScreenLocked(false); resetAutoLockTimer(); }} />
         </div>
     );
 };
