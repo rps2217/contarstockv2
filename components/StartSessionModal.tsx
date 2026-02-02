@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Camera, CloudDownload, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Camera, DownloadCloud, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { CountingSession, ExpectedItem } from '../types';
 import * as sessionService from '../services/sessionService'; 
 import { sanitizeBarcode } from '../services/utils';
@@ -133,7 +133,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
                             disabled={isCloudLoading || !erpOrder}
                             className={`h-12 w-12 rounded-xl flex items-center justify-center transition-all shadow-lg active:scale-90 ${cloudItems ? 'bg-emerald-500 text-white' : 'bg-blue-600 text-white disabled:opacity-30'}`}
                         >
-                            {isCloudLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (cloudItems ? <CheckCircle2 className="w-4 h-4" /> : <CloudDownload className="w-4 h-4" />)}
+                            {isCloudLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (cloudItems ? <CheckCircle2 className="w-4 h-4" /> : <DownloadCloud className="w-4 h-4" />)}
                         </button>
                     </div>
                     {cloudItems && (
