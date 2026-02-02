@@ -1,10 +1,13 @@
 
 import { Dexie } from 'dexie';
 import { db } from '../db';
-import { ScanRecord, CountingSession } from '../types';
-import { generateUUID, normalizeKey } from './utils';
+import { ScanRecord, CountingSession, ExpectedItem } from '../types';
+import { generateUUID, normalizeKey, sanitizeBarcode } from './utils';
 import { logger } from './logger';
 import { IntegrityGuard } from './integrityGuard';
+import { fetchFromGas } from './gasService';
+import { CloudOrderRowSchema } from './schemas';
+import { getSettings } from './settings';
 
 let writeBuffer: { record: ScanRecord, retries: number }[] = [];
 let flushTimeout: any = null;
@@ -60,6 +63,34 @@ export const updateSessionMetadata = async (sessionId: string) => {
     });
 };
 
+/**
+ * NUEVO: Descarga items esperados desde la pestaña PEDIDOS filtrando por ERP.
+ */
+export const fetchExpectedItemsFromCloud = async (erpOrder: string): Promise<ExpectedItem[]> => {
+    const config = getSettings().appSheetConfig;
+    const tableName = config?.ordersTableName || "PEDIDOS";
+    
+    try {
+        const rawRows = await fetchFromGas(tableName);
+        const erpClean = erpOrder.trim().toUpperCase();
+
+        return rawRows
+            .map(row => {
+                const result = CloudOrderRowSchema.safeParse(row);
+                return result.success ? result.data : null;
+            })
+            .filter(item => item !== null && item.erp.toUpperCase() === erpClean)
+            .map(item => ({
+                barcode: sanitizeBarcode(item!.barcode),
+                name: item!.name,
+                expectedQty: item!.qty
+            }));
+    } catch (e: any) {
+        logger.error('CLOUD_FETCH_ORDERS_FAIL', e.message);
+        throw e;
+    }
+};
+
 export const addScanEvent = async (
     sessionId: string, 
     barcode: string, 
@@ -68,7 +99,6 @@ export const addScanEvent = async (
     yyyy?: number,
     location?: string
 ): Promise<ScanRecord> => {
-    // CAPTURA DE IDENTIDAD OPERATIVA
     const operatorId = localStorage.getItem('logicount_operator_id') || 'SISTEMA_LOCAL';
 
     const newRecord: ScanRecord = {
@@ -79,7 +109,7 @@ export const addScanEvent = async (
         mm,
         yyyy,
         location,
-        operatorId, // Inyectamos el ID del funcionario
+        operatorId,
         timestamp: Date.now(),
         synced: 0
     };
@@ -96,7 +126,12 @@ export const checkLabelExists = async (label: string): Promise<boolean> => {
     return count > 0;
 };
 
-export const createSession = async (erp: string, label: string, type: 'standard' | 'hammer' = 'standard'): Promise<CountingSession> => {
+export const createSession = async (
+    erp: string, 
+    label: string, 
+    type: 'standard' | 'hammer' = 'standard',
+    expectedItems?: ExpectedItem[]
+): Promise<CountingSession> => {
     const s: CountingSession = { 
         id: generateUUID(), 
         erpOrder: erp.trim(), 
@@ -105,7 +140,9 @@ export const createSession = async (erp: string, label: string, type: 'standard'
         status: 'active', 
         sessionType: type,
         totalUnits: 0, 
-        totalSKUs: 0 
+        totalSKUs: 0,
+        isVerifiedMode: !!expectedItems && expectedItems.length > 0,
+        expectedItems: expectedItems
     };
     await db.sessions.add(s);
     return s;

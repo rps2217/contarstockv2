@@ -49,7 +49,7 @@ export interface ScanRecord {
   quantity: number;
   expectedQty?: number;
   location?: string;
-  operatorId?: string; // NUEVO: Identificador del funcionario que realizó el escaneo
+  operatorId?: string; 
   mm?: number;
   yyyy?: number;
   synced?: number;
@@ -82,6 +82,7 @@ export interface AppSheetConfig {
   consolidatedTableName: string;
   productsTableName: string;
   receptionTableName?: string;
+  ordersTableName?: string; // NUEVO: Pestaña para pre-cargar pedidos
   gasWebAppUrl?: string; 
 }
 

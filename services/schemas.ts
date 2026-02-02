@@ -2,18 +2,12 @@
 import { z } from 'zod';
 import { SHEET_COLUMNS } from './constants';
 
-/**
- * Helper to coerce various input types into a clean String.
- */
 const cleanString = z.union([z.string(), z.number(), z.null(), z.undefined()])
     .transform((val) => {
         if (val === null || val === undefined) return '';
         return String(val).trim();
     });
 
-/**
- * NORMALIZADOR UNIVERSAL DE PRODUCTOS
- */
 export const CloudProductSchema = z.record(z.any()).transform((raw) => {
     const normalized: Record<string, any> = {};
     Object.keys(raw).forEach(k => {
@@ -42,25 +36,16 @@ export const CloudProductSchema = z.record(z.any()).transform((raw) => {
     supplierRut: z.string().default("")
 }));
 
-/**
- * ESQUEMA PARA MANIFIESTO DE STOCK (Modo Martillo)
- * Adaptado a la estructura: CODIGO | PRODUCTO | LOC | STOCK FINAL
- */
 export const CloudStockSchema = z.record(z.any()).transform((raw) => {
     const normalized: Record<string, any> = {};
     Object.keys(raw).forEach(k => {
-        // Normalizamos keys: "STOCK FINAL" -> "STOCKFINAL", "CODIGO" -> "CODIGO"
         const key = k.trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
         normalized[key] = raw[k];
     });
 
-    // Mapeo basado en tu imagen de Excel
     const barcode = normalized["CODIGO"] || normalized["SKU"] || normalized["EAN"] || normalized["ITEM"] || "";
     const name = normalized["PRODUCTO"] || normalized["DESCRIPCION"] || normalized["NOMBRE"] || "Producto Desconocido";
-    
-    // Prioridad a "STOCKFINAL"
     const qty = normalized["STOCKFINAL"] || normalized["STOCK"] || normalized["CANTIDAD"] || normalized["QTY"] || normalized["SALDO"] || 0;
-    
     const loc = normalized["LOC"] || normalized["UBICACION"] || normalized["POSICION"] || "";
 
     return {
@@ -76,7 +61,27 @@ export const CloudStockSchema = z.record(z.any()).transform((raw) => {
     loc: z.string().optional()
 }));
 
-// Mantener esquemas de inventario para compatibilidad
+// NUEVO: Esquema para pedidos (Nueva Carga pre-cargada)
+export const CloudOrderRowSchema = z.record(z.any()).transform((raw) => {
+    const normalized: Record<string, any> = {};
+    Object.keys(raw).forEach(k => {
+        const key = k.trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
+        normalized[key] = raw[k];
+    });
+
+    return {
+        erp: String(normalized["ERP"] || normalized["ORDEN"] || normalized["DOCUMENTO"] || "").trim(),
+        barcode: String(normalized["CODIGO"] || normalized["SKU"] || normalized["EAN"] || "").trim(),
+        name: String(normalized["PRODUCTO"] || normalized["DESCRIPCION"] || "Producto Desconocido").trim(),
+        qty: Number(normalized["CANTIDAD"] || normalized["QTY"] || normalized["UNIDADES"] || 0)
+    };
+}).pipe(z.object({
+    erp: z.string().min(1),
+    barcode: z.string().min(1),
+    name: z.string(),
+    qty: z.number().positive()
+}));
+
 export const CloudInventoryRowSchema = z.object({
     [SHEET_COLUMNS.ERP_ORDER]: cleanString,
     [SHEET_COLUMNS.LABEL]: cleanString,

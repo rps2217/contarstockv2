@@ -21,10 +21,11 @@ const DEFAULT_SETTINGS: AppSettings = {
   appSheetConfig: {
       appId: '',
       accessKey: '',
-      countsTableName: 'CONTEOS',         // Hoja para Log detallado (Martillo)
-      consolidatedTableName: 'CONSOLIDADO', // Hoja para Resumen (Nueva Carga)
+      countsTableName: 'CONTEOS',         
+      consolidatedTableName: 'CONSOLIDADO', 
       productsTableName: 'PRODUCTOS',
-      receptionTableName: 'RECEPCION_BULTOS'
+      receptionTableName: 'RECEPCION_BULTOS',
+      ordersTableName: 'PEDIDOS' // Pestaña predeterminada para pre-carga
   },
   mobileNavConfig: ['dashboard', 'reports', 'sync', 'database'] 
 };
@@ -50,10 +51,8 @@ export const getSettings = (): AppSettings => {
 };
 
 export const saveSettings = async (settings: AppSettings) => {
-  // 1. Guardar en LocalStorage (Síncrono, para la UI)
   localStorage.setItem(KEYS.SETTINGS, JSON.stringify(settings));
   
-  // 2. Guardar en IndexedDB (Asíncrono, para el Service Worker)
   try {
       await db.settings.put({ key: 'app_config', value: settings });
   } catch (e) {

@@ -21,7 +21,7 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
     const [status, setStatus] = useState<ScannerStatus>('idle');
     const [manualInput, setManualInput] = useState('');
     const [multiplier, setMultiplier] = useState(1);
-    const [currentLocation, setCurrentLocation] = useState('BODEGA_GRAL'); // Nueva ubicación persistente
+    const [currentLocation, setCurrentLocation] = useState('BODEGA_GRAL'); 
     
     const [currentScan, setCurrentScan] = useState<ScanRecord | null>(null);
     const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
@@ -53,7 +53,7 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
         syncCache();
     }, [session.id]);
 
-    const finalizeScanPipeline = useCallback(async (barcode: string, qty: number) => {
+    const finalizeScanPipeline = useCallback(async (barcode: string, qty: number, mm?: number, yyyy?: number) => {
         try {
             let product = await productService.getProductByBarcode(barcode);
             let isAutoRegistered = false;
@@ -76,13 +76,12 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
             const newTotal = (skuCounters.current.get(barcode) || 0) + qty;
             skuCounters.current.set(barcode, newTotal);
             
-            // Persistencia con UBICACIÓN
             const scanRecord = await sessionService.addScanEvent(
                 session.id, 
                 barcode, 
                 qty, 
-                undefined, 
-                undefined, 
+                mm, 
+                yyyy, 
                 currentLocation
             );
 
@@ -110,7 +109,7 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
         }
     }, [session.id, settings, trigger, currentLocation]);
 
-    const handleInboundScan = useCallback((rawBarcode: string) => {
+    const handleInboundScan = useCallback((rawBarcode: string, mm?: number, yyyy?: number) => {
         if (isLocked.current) return;
         const barcode = sanitizeBarcode(rawBarcode);
         if (!barcode || barcode.length < 2) return;
@@ -119,13 +118,13 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
         const qtyToApply = multiplier;
         setMultiplier(1); 
         
-        finalizeScanPipeline(barcode, qtyToApply);
+        finalizeScanPipeline(barcode, qtyToApply, mm, yyyy);
     }, [multiplier, finalizeScanPipeline]);
 
+    // Hook HID desactivado aquí para que Scanner.tsx lo controle con la lógica de fechas
     useHIDScanner({
-        onScan: handleInboundScan,
-        minChars: 2,
-        isEnabled: status === 'idle'
+        onScan: (code) => {},
+        isEnabled: false 
     });
 
     return {
