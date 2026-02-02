@@ -43,7 +43,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
 
   const handleFetchFromCloud = async () => {
     if (!erpOrder.trim()) {
-        setError("Ingrese la Orden ERP para buscar en la nube");
+        setError("Ingrese la Orden ERP");
         return;
     }
     
@@ -53,7 +53,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
     try {
         const items = await sessionService.fetchExpectedItemsFromCloud(erpOrder);
         if (items.length === 0) {
-            setError("No se encontraron items para este pedido en el Cloud.");
+            setError("No hay items en Cloud.");
             setCloudItems(null);
             SoundFX.play('error');
         } else {
@@ -61,7 +61,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
             SoundFX.play('success');
         }
     } catch (err: any) {
-        setError("Error de red o configuración Cloud.");
+        setError("Error Cloud.");
         setCloudItems(null);
     } finally {
         setIsCloudLoading(false);
@@ -70,7 +70,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
 
   const handleStart = async () => {
     if (!erpOrder.trim() || !labelId.trim()) { 
-        setError('Complete ambos campos'); 
+        setError('Campos requeridos'); 
         return; 
     }
     
@@ -84,7 +84,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
         onSessionStart(session);
         onClose();
     } catch (err) {
-        setError("Error al crear sesión local");
+        setError("Error local");
     }
   };
 
@@ -94,62 +94,57 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
             isOpen={isOpen} 
             onClose={onClose} 
             variant="bottom-sheet"
-            className="md:max-w-md border-t-8 border-black max-h-[95dvh]"
-            showCloseButton={false}
+            className="md:max-w-md border-t-8 border-black max-h-[98dvh]"
+            showCloseButton={true}
         >
-            {/* Header más compacto */}
-            <div className="px-6 pt-6 pb-2">
-                <h2 className="text-2xl font-black text-slate-900 tracking-tighter italic uppercase leading-none">Nueva Carga</h2>
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">Conteo Físico Local</p>
-            </div>
-            
-            {/* Cuerpo con paddings reducidos */}
-            <div className="px-6 py-2 space-y-4">
+            {/* Cuerpo ultra-compacto (Sin título principal) */}
+            <div className="px-4 pt-4 pb-2 space-y-3">
                 {error && (
-                    <div className="bg-rose-50 text-rose-600 p-3 rounded-xl text-[10px] font-bold animate-in shake border border-rose-100 text-center flex items-center gap-2 justify-center">
-                        <AlertCircle className="w-3.5 h-3.5" />
+                    <div className="bg-rose-50 text-rose-600 p-2 rounded-xl text-[9px] font-black animate-in shake border border-rose-100 text-center flex items-center gap-2 justify-center">
+                        <AlertCircle className="w-3 h-3" />
                         {error}
                     </div>
                 )}
 
                 <div className="space-y-1">
-                    <label className="text-[9px] font-black text-slate-400 uppercase ml-1">ID Bulto (Etiqueta)</label>
+                    <label className="text-[8px] font-black text-slate-400 uppercase ml-1">Bulto / Etiqueta</label>
                     <div className="flex gap-2">
                         <div 
                             onClick={() => setActiveKeypadField('label')} 
-                            className={`flex-1 h-14 rounded-xl flex items-center justify-center font-black text-xl border-4 transition-all duration-200 ${activeKeypadField === 'label' ? 'bg-blue-50 border-blue-600 text-blue-700 shadow-inner' : 'bg-slate-50 border-slate-100 text-slate-900'}`}
+                            className={`flex-1 h-12 rounded-xl flex items-center justify-center font-black text-lg border-4 transition-all duration-200 ${activeKeypadField === 'label' ? 'bg-blue-50 border-blue-600 text-blue-700 shadow-inner' : 'bg-slate-50 border-slate-100 text-slate-900'}`}
                         >
                             {labelId || "---"}
                         </div>
-                        <button onClick={() => setIsCameraOpen(true)} className="h-14 w-14 bg-black text-white rounded-xl flex items-center justify-center active:scale-90 transition-transform shadow-lg"><Camera className="w-5 h-5" /></button>
+                        <button onClick={() => setIsCameraOpen(true)} className="h-12 w-12 bg-black text-white rounded-xl flex items-center justify-center active:scale-90 transition-transform shadow-lg"><Camera className="w-4 h-4" /></button>
                     </div>
                 </div>
 
                 <div className="space-y-1">
-                    <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Orden ERP (OC/Traspaso)</label>
+                    <label className="text-[8px] font-black text-slate-400 uppercase ml-1">Orden ERP</label>
                     <div className="flex gap-2">
                         <div 
                             onClick={() => setActiveKeypadField('erp')} 
-                            className={`flex-1 h-14 rounded-xl flex items-center justify-center font-black text-xl border-4 transition-all duration-200 ${activeKeypadField === 'erp' ? 'bg-indigo-50 border-indigo-600 text-indigo-700 shadow-inner' : 'bg-slate-50 border-slate-100 text-slate-900'}`}
+                            className={`flex-1 h-12 rounded-xl flex items-center justify-center font-black text-lg border-4 transition-all duration-200 ${activeKeypadField === 'erp' ? 'bg-indigo-50 border-indigo-600 text-indigo-700 shadow-inner' : 'bg-slate-50 border-slate-100 text-slate-900'}`}
                         >
                             {erpOrder || "---"}
                         </div>
                         <button 
                             onClick={handleFetchFromCloud}
                             disabled={isCloudLoading || !erpOrder}
-                            className={`h-14 w-14 rounded-xl flex items-center justify-center transition-all shadow-lg active:scale-90 ${cloudItems ? 'bg-emerald-500 text-white' : 'bg-blue-600 text-white disabled:opacity-30'}`}
+                            className={`h-12 w-12 rounded-xl flex items-center justify-center transition-all shadow-lg active:scale-90 ${cloudItems ? 'bg-emerald-500 text-white' : 'bg-blue-600 text-white disabled:opacity-30'}`}
                         >
-                            {isCloudLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (cloudItems ? <CheckCircle2 className="w-5 h-5" /> : <CloudDownload className="w-5 h-5" />)}
+                            {isCloudLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (cloudItems ? <CheckCircle2 className="w-4 h-4" /> : <CloudDownload className="w-4 h-4" />)}
                         </button>
                     </div>
                     {cloudItems && (
-                        <p className="text-[8px] font-black text-emerald-600 uppercase tracking-widest text-center mt-1 animate-in fade-in">
-                            ✓ {cloudItems.length} SKUs pre-cargados
+                        <p className="text-[7px] font-black text-emerald-600 uppercase tracking-widest text-center animate-in fade-in">
+                            ✓ {cloudItems.length} SKUs cargados
                         </p>
                     )}
                 </div>
 
-                <div className="md:hidden pt-2">
+                {/* Teclado numérico integrado más pequeño */}
+                <div className="md:hidden">
                     <NumericKeypad 
                         isOpen={true} 
                         embedded={true} 
@@ -170,13 +165,13 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
                 </div>
             </div>
 
-            {/* Footer con padding safe para evitar obstrucción de barra de sistema */}
-            <div className="p-6 pt-2 pb-safe-area">
+            {/* Footer con altura mínima */}
+            <div className="px-4 pt-1 pb-safe-area-inset-bottom">
                 <button 
                     onClick={handleStart} 
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black h-14 rounded-xl shadow-xl active:scale-95 uppercase tracking-widest transition-all text-xs"
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black h-14 rounded-2xl shadow-xl active:scale-95 uppercase tracking-[0.15em] transition-all text-xs"
                 >
-                    {cloudItems ? 'Iniciar Conteo Verificado' : 'Iniciar Conteo a Ciegas'}
+                    {cloudItems ? 'Iniciar Verificado' : 'Iniciar a Ciegas'}
                 </button>
             </div>
         </Modal>
