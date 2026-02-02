@@ -1,5 +1,5 @@
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import * as sessionService from '../services/sessionService';
@@ -34,6 +34,11 @@ export const useReception = () => {
             setLastAction({ type: 'duplicate', label: cleanCode });
             SoundFX.play('error');
             if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+            
+            // AUTO-UNLOCK: Limpiar advertencia tras 3 segundos para no bloquear el flujo
+            setTimeout(() => {
+                setLastAction(prev => prev?.label === cleanCode && prev.type === 'duplicate' ? null : prev);
+            }, 3000);
             return;
         }
 
@@ -48,21 +53,21 @@ export const useReception = () => {
             // Feedback visual temporal
             setTimeout(() => setFlashActive(false), 300);
             
-            // En modo Eco, limpiamos la pantalla rápido para evitar burn-in o distracción
-            if (isEcoMode) {
-                setTimeout(() => setLastAction(prev => prev?.type === 'success' ? null : prev), 2000);
-            }
+            // Limpieza automática del éxito
+            setTimeout(() => {
+                setLastAction(prev => prev?.label === cleanCode && prev.type === 'success' ? null : prev);
+            }, 2000);
         } catch (err: any) { 
             SoundFX.play('error'); 
         }
-    }, [isEcoMode]);
+    }, []);
 
     // HID Scanner Hook Integration
     useHIDScanner({
         onScan: handleScan,
         minChars: 3,
-        // Bloquear escáner si estamos resolviendo un duplicado o escribiendo manualmente
-        isEnabled: lastAction?.type !== 'duplicate' && !showManualInput,
+        // Permitimos el escaneo siempre, la lógica de duplicados se maneja internamente
+        isEnabled: !showManualInput,
         maxLatency: 60
     });
 

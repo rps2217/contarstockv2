@@ -1,15 +1,15 @@
 
-import React, { useState, useMemo, memo } from 'react';
+import React, { useState, useMemo, memo, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useReception } from '../hooks/useReception';
 import { CameraScanner } from './CameraScanner';
-import { ChevronLeft, Keyboard, Camera, Trash2, Box } from 'lucide-react';
+import { ChevronLeft, Keyboard, Camera, Trash2, Box, CloudSync, Lock } from 'lucide-react';
 import { ReceptionHero } from './reception/ReceptionHero';
 import { VirtualList } from './common/VirtualList';
 import { NumericKeypad } from './NumericKeypad';
+import { ScreenLockOverlay } from './common/ScreenLockOverlay';
 import { SoundFX } from '../services/audio';
 
-// Componente de Fila para la Lista Virtual (Estilo Martillo)
 const ReceptionRow = memo(({ index, data }: any) => {
     const item = data.items[index];
     if (!item) return null;
@@ -29,7 +29,7 @@ const ReceptionRow = memo(({ index, data }: any) => {
                         <div className="text-[9px] font-bold text-slate-500 uppercase mt-1 flex items-center gap-2">
                             <span>{new Date(item.createdAt).toLocaleTimeString()}</span>
                             <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
-                            <span className="text-blue-500">PENDIENTE</span>
+                            <span className="text-blue-500 font-black">PENDIENTE</span>
                         </div>
                     </div>
                 </div>
@@ -49,9 +49,30 @@ export const Reception: React.FC = () => {
     const navigate = useNavigate();
     const { state, actions } = useReception();
     
-    // Estados locales para UI interactiva
     const [isTriggerActive, setIsTriggerActive] = useState(false);
     const [manualCode, setManualCode] = useState('');
+    const [isScreenLocked, setIsScreenLocked] = useState(false);
+
+    // --- LÓGICA DE AUTO-BLOQUEO (4 Segundos) ---
+    const autoLockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const AUTO_LOCK_DELAY = 4000;
+
+    const resetAutoLockTimer = useCallback(() => {
+        if (autoLockTimerRef.current) clearTimeout(autoLockTimerRef.current);
+        if (isScreenLocked) return;
+
+        autoLockTimerRef.current = setTimeout(() => {
+            setIsScreenLocked(true);
+            if (navigator.vibrate) navigator.vibrate(10);
+        }, AUTO_LOCK_DELAY);
+    }, [isScreenLocked]);
+
+    useEffect(() => {
+        resetAutoLockTimer();
+        return () => { if (autoLockTimerRef.current) clearTimeout(autoLockTimerRef.current); };
+    }, [state.draftCount, state.lastAction, resetAutoLockTimer]);
+
+    const handleInteraction = () => resetAutoLockTimer();
 
     const handleKeypadConfirm = () => {
         if (manualCode.length > 0) {
@@ -61,62 +82,74 @@ export const Reception: React.FC = () => {
         state.setShowManualInput(false);
     };
 
-    // Datos memoizados para la lista virtual
     const rowData = useMemo(() => ({ 
         onDelete: actions.deleteDraft 
     }), [actions.deleteDraft]);
 
-    // Color de fondo dinámico para feedback
     const containerClass = state.flashActive 
         ? 'bg-blue-600' 
-        : (state.lastAction?.type === 'duplicate' ? 'bg-rose-900' : 'bg-black');
+        : (state.lastAction?.type === 'duplicate' ? 'bg-rose-950' : 'bg-black');
 
     return (
-        <div className={`h-screen w-full flex flex-col font-mono select-none overflow-hidden text-white transition-colors duration-200 ${containerClass}`}>
+        <div 
+            className={`h-screen w-full flex flex-col font-mono select-none overflow-hidden text-white transition-colors duration-200 ${containerClass}`}
+            onPointerDown={handleInteraction}
+            onKeyDown={handleInteraction}
+        >
             
-            {/* 1. HEADER (Estilo Industrial Compacto) */}
-            <div className="h-14 px-4 flex items-center justify-between border-b border-white/10 bg-slate-900/80 shrink-0 z-20">
-                <button onClick={() => navigate('/dashboard')} className="p-2.5 bg-white/5 rounded-xl active:bg-blue-600 transition-colors">
-                    <ChevronLeft className="w-5 h-5 text-white" />
-                </button>
-                
-                <div className="flex flex-col items-center">
-                    <span className="text-[8px] font-black uppercase tracking-[0.3em] text-white/40">RECEPCIÓN</span>
-                    <span className="text-xs font-black uppercase tracking-widest text-white italic">Modo Ráfaga</span>
+            {/* 1. HEADER INDUSTRIAL */}
+            <div className="h-16 px-4 flex items-center justify-between border-b border-white/10 bg-slate-900 shadow-2xl shrink-0 z-50">
+                <div className="flex items-center gap-3">
+                    <button onClick={() => navigate('/dashboard')} className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl active:bg-blue-600 transition-colors">
+                        <ChevronLeft className="w-6 h-6 text-white" />
+                    </button>
+                    
+                    <button 
+                        onClick={() => setIsScreenLocked(true)}
+                        className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/30 rounded-xl active:bg-amber-500 active:text-black transition-all"
+                    >
+                        <Lock className="w-4 h-4 text-amber-500" />
+                        <span className="text-[9px] font-black uppercase tracking-widest text-amber-500">Bloquear</span>
+                    </button>
                 </div>
 
-                <button 
-                    onClick={actions.discardAllDrafts}
-                    disabled={state.unsyncedDrafts.length === 0}
-                    className="p-2.5 bg-white/5 rounded-xl text-rose-500 disabled:opacity-20 active:bg-rose-900/40 transition-colors"
-                >
-                    <Trash2 className="w-5 h-5" />
-                </button>
+                <div className="flex flex-col items-center">
+                    <span className="text-[8px] font-black uppercase tracking-[0.3em] text-white/40 leading-none mb-1">RECEPCIÓN</span>
+                    <span className="text-xs font-black uppercase tracking-widest text-white italic">Burst_Mode</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <button 
+                        onClick={() => navigate('/sync')}
+                        className="h-10 px-4 bg-emerald-600 rounded-xl active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/40"
+                    >
+                        <CloudSync className="w-5 h-5 text-white" />
+                        <span className="text-[9px] font-black text-white uppercase tracking-widest hidden sm:inline">Subir</span>
+                    </button>
+                </div>
             </div>
 
-            {/* 2. HUD (Panel de Instrumentos) */}
+            {/* 2. HUD DINÁMICO */}
             <ReceptionHero 
                 lastAction={state.lastAction}
                 draftCount={state.draftCount}
                 isEcoMode={state.isEcoMode}
-                onToggleManual={() => {}} // No usado aquí, controlado por toolbar
-                onCameraClick={() => {}}  // No usado aquí, controlado por gatillo
+                onToggleManual={() => {}}
+                onCameraClick={() => {}}
             />
 
-            {/* 3. ÁREA PRINCIPAL (Lista Virtual) */}
+            {/* 3. ÁREA DE LISTA Y HERRAMIENTAS */}
             <div className="flex-1 min-h-0 bg-black flex flex-col relative">
-                {/* Barra de Herramientas Superior */}
                 <div className="shrink-0 p-3 bg-slate-900/50 border-b border-white/5 grid grid-cols-1 gap-2">
                     <button
                         onClick={() => { setManualCode(''); state.setShowManualInput(true); }}
-                        className="h-12 rounded-xl font-black text-xs flex items-center justify-center gap-2 transition-all border-2 bg-slate-800 border-slate-700 text-white shadow-lg active:scale-95 hover:bg-slate-700"
+                        className="h-11 rounded-xl font-black text-[10px] flex items-center justify-center gap-3 transition-all border-2 bg-slate-800 border-slate-700 text-white shadow-lg active:scale-95"
                     >
-                        <Keyboard className="w-4 h-4" />
-                        <span>ENTRADA MANUAL</span>
+                        <Keyboard className="w-4 h-4 text-blue-400" />
+                        <span>INGRESAR ETIQUETA MANUAL</span>
                     </button>
                 </div>
 
-                {/* Lista Scrollable */}
                 <div className="flex-1 min-h-0 relative">
                     <VirtualList 
                         items={state.unsyncedDrafts} 
@@ -125,31 +158,30 @@ export const Reception: React.FC = () => {
                         rowData={rowData} 
                         className="bg-black/20" 
                         emptyState={
-                            <div className="flex flex-col items-center opacity-20 mt-10">
-                                <Box className="w-16 h-16 mb-4" />
-                                <p className="text-[10px] font-black uppercase tracking-widest">Cola Vacía</p>
+                            <div className="flex flex-col items-center opacity-20 mt-16">
+                                <Box className="w-20 h-20 mb-4" />
+                                <p className="text-[10px] font-black uppercase tracking-[0.5em]">Esperando_Input</p>
                             </div>
                         }
                     />
-                    {/* Sombra de scroll inferior */}
-                    <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black to-transparent pointer-events-none"></div>
+                    <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-black to-transparent pointer-events-none"></div>
                 </div>
             </div>
 
-            {/* 4. GATILLO ÓPTICO (Estilo Martillo) */}
-            <div className="h-24 md:h-28 shrink-0 bg-slate-900 border-t border-white/5 flex items-center px-4 z-40 pb-safe">
+            {/* 4. GATILLO ÓPTICO */}
+            <div className="h-24 md:h-28 shrink-0 bg-slate-900 border-t border-white/5 flex items-center px-4 z-40 pb-6">
                 <button 
                     onPointerDown={(e) => { e.preventDefault(); if(navigator.vibrate) navigator.vibrate(40); setIsTriggerActive(true); }} 
                     onPointerUp={() => setIsTriggerActive(false)}
                     onPointerLeave={() => setIsTriggerActive(false)}
-                    className={`flex-1 h-14 md:h-16 rounded-2xl flex items-center justify-center gap-4 transition-all duration-75 active:scale-[0.98] border-b-4 ${isTriggerActive ? 'bg-blue-600 border-blue-800 translate-y-1 border-b-0' : 'bg-white text-black border-slate-300 shadow-xl'}`}
+                    className={`flex-1 h-16 rounded-2xl flex items-center justify-center gap-4 transition-all duration-75 active:scale-[0.98] border-b-4 ${isTriggerActive ? 'bg-blue-600 border-blue-800 translate-y-1 border-b-0 shadow-inner' : 'bg-white text-black border-slate-300 shadow-2xl'}`}
                 >
                     <Camera className="w-6 h-6" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.3em]">{isTriggerActive ? 'LENS_OPEN' : 'GATILLO_OPTICO'}</span>
+                    <span className="text-[11px] font-black uppercase tracking-[0.4em]">{isTriggerActive ? 'LENS_OPEN' : 'GATILLO_OPTICO'}</span>
                 </button>
             </div>
 
-            {/* LÓGICA DE CÁMARA */}
+            {/* MODALES Y OVERLAYS */}
             {(isTriggerActive || state.isCameraOpen) && (
                 <div className="fixed inset-0 z-[100]">
                      <CameraScanner 
@@ -160,16 +192,17 @@ export const Reception: React.FC = () => {
                 </div>
             )}
 
-            {/* TECLADO MANUAL */}
             <NumericKeypad 
                 isOpen={state.showManualInput}
                 onClose={() => state.setShowManualInput(false)}
-                title="ID de Bulto / Etiqueta"
+                title="Escribir Etiqueta"
                 value={manualCode}
                 onInput={(v) => setManualCode(prev => prev + v)}
                 onDelete={() => setManualCode(prev => prev.slice(0, -1))}
                 onConfirm={handleKeypadConfirm}
             />
+
+            <ScreenLockOverlay isLocked={isScreenLocked} onUnlock={() => { setIsScreenLocked(false); resetAutoLockTimer(); }} />
         </div>
     );
 };
