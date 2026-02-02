@@ -3,7 +3,7 @@ import React, { useState, useMemo, memo, useEffect, useCallback, useRef } from '
 import { useNavigate } from 'react-router-dom';
 import { useReception } from '../hooks/useReception';
 import { CameraScanner } from './CameraScanner';
-import { ChevronLeft, Keyboard, Camera, Trash2, Box, CloudSync, Lock } from 'lucide-react';
+import { ChevronLeft, Keyboard, Camera, Trash2, Box, Cloud, Lock } from 'lucide-react';
 import { ReceptionHero } from './reception/ReceptionHero';
 import { VirtualList } from './common/VirtualList';
 import { NumericKeypad } from './NumericKeypad';
@@ -123,7 +123,7 @@ export const Reception: React.FC = () => {
                         onClick={() => navigate('/sync')}
                         className="h-10 px-4 bg-emerald-600 rounded-xl active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/40"
                     >
-                        <CloudSync className="w-5 h-5 text-white" />
+                        <Cloud className="w-5 h-5 text-white" />
                         <span className="text-[9px] font-black text-white uppercase tracking-widest hidden sm:inline">Subir</span>
                     </button>
                 </div>
@@ -183,7 +183,7 @@ export const Reception: React.FC = () => {
 
             {/* MODALES Y OVERLAYS */}
             {(isTriggerActive || state.isCameraOpen) && (
-                <div className="fixed inset-0 z-[100]">
+                <div className="fixed inset-0 z-[250]">
                      <CameraScanner 
                         onScan={(code) => { actions.handleScan(code); setIsTriggerActive(false); state.setIsCameraOpen(false); }} 
                         onClose={() => { setIsTriggerActive(false); state.setIsCameraOpen(false); }} 
