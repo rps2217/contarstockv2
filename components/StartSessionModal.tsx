@@ -43,7 +43,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
 
   const handleFetchFromCloud = async () => {
     if (!erpOrder.trim()) {
-        setError("Ingrese la Orden ERP");
+        setError("Ingrese ERP");
         return;
     }
     
@@ -53,7 +53,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
     try {
         const items = await sessionService.fetchExpectedItemsFromCloud(erpOrder);
         if (items.length === 0) {
-            setError("No hay items en Cloud.");
+            setError("Sin items.");
             setCloudItems(null);
             SoundFX.play('error');
         } else {
@@ -70,7 +70,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
 
   const handleStart = async () => {
     if (!erpOrder.trim() || !labelId.trim()) { 
-        setError('Campos requeridos'); 
+        setError('Complete campos'); 
         return; 
     }
     
@@ -94,57 +94,59 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
             isOpen={isOpen} 
             onClose={onClose} 
             variant="bottom-sheet"
-            className="md:max-w-md border-t-8 border-black max-h-[98dvh]"
+            className="md:max-w-md border-t-4 border-blue-600 max-h-[98dvh]"
             showCloseButton={true}
         >
-            {/* Cuerpo ultra-compacto (Sin título principal) */}
-            <div className="px-4 pt-4 pb-2 space-y-3">
+            <div className="px-3 pt-3 pb-1 space-y-2">
                 {error && (
-                    <div className="bg-rose-50 text-rose-600 p-2 rounded-xl text-[9px] font-black animate-in shake border border-rose-100 text-center flex items-center gap-2 justify-center">
+                    <div className="bg-rose-50 text-rose-600 p-1.5 rounded-lg text-[9px] font-black border border-rose-100 text-center flex items-center gap-2 justify-center">
                         <AlertCircle className="w-3 h-3" />
                         {error}
                     </div>
                 )}
 
-                <div className="space-y-1">
-                    <label className="text-[8px] font-black text-slate-400 uppercase ml-1">Bulto / Etiqueta</label>
-                    <div className="flex gap-2">
+                {/* ID Bulto Row */}
+                <div className="flex gap-2 items-end">
+                    <div className="flex-1 space-y-0.5">
+                        <label className="text-[7px] font-black text-slate-400 uppercase ml-1">ID Bulto</label>
                         <div 
                             onClick={() => setActiveKeypadField('label')} 
-                            className={`flex-1 h-12 rounded-xl flex items-center justify-center font-black text-lg border-4 transition-all duration-200 ${activeKeypadField === 'label' ? 'bg-blue-50 border-blue-600 text-blue-700 shadow-inner' : 'bg-slate-50 border-slate-100 text-slate-900'}`}
+                            className={`h-10 rounded-lg flex items-center justify-center font-black text-base border-2 transition-all duration-200 ${activeKeypadField === 'label' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-slate-50 border-slate-200 text-slate-900'}`}
                         >
                             {labelId || "---"}
                         </div>
-                        <button onClick={() => setIsCameraOpen(true)} className="h-12 w-12 bg-black text-white rounded-xl flex items-center justify-center active:scale-90 transition-transform shadow-lg"><Camera className="w-4 h-4" /></button>
                     </div>
+                    <button onClick={() => setIsCameraOpen(true)} className="h-10 w-10 bg-black text-white rounded-lg flex items-center justify-center active:scale-90 transition-transform"><Camera className="w-4 h-4" /></button>
                 </div>
 
-                <div className="space-y-1">
-                    <label className="text-[8px] font-black text-slate-400 uppercase ml-1">Orden ERP</label>
-                    <div className="flex gap-2">
+                {/* ERP Row */}
+                <div className="flex gap-2 items-end">
+                    <div className="flex-1 space-y-0.5">
+                        <label className="text-[7px] font-black text-slate-400 uppercase ml-1">Orden ERP</label>
                         <div 
                             onClick={() => setActiveKeypadField('erp')} 
-                            className={`flex-1 h-12 rounded-xl flex items-center justify-center font-black text-lg border-4 transition-all duration-200 ${activeKeypadField === 'erp' ? 'bg-indigo-50 border-indigo-600 text-indigo-700 shadow-inner' : 'bg-slate-50 border-slate-100 text-slate-900'}`}
+                            className={`h-10 rounded-lg flex items-center justify-center font-black text-base border-2 transition-all duration-200 ${activeKeypadField === 'erp' ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'bg-slate-50 border-slate-200 text-slate-900'}`}
                         >
                             {erpOrder || "---"}
                         </div>
-                        <button 
-                            onClick={handleFetchFromCloud}
-                            disabled={isCloudLoading || !erpOrder}
-                            className={`h-12 w-12 rounded-xl flex items-center justify-center transition-all shadow-lg active:scale-90 ${cloudItems ? 'bg-emerald-500 text-white' : 'bg-blue-600 text-white disabled:opacity-30'}`}
-                        >
-                            {isCloudLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (cloudItems ? <CheckCircle2 className="w-4 h-4" /> : <DownloadCloud className="w-4 h-4" />)}
-                        </button>
                     </div>
-                    {cloudItems && (
-                        <p className="text-[7px] font-black text-emerald-600 uppercase tracking-widest text-center animate-in fade-in">
-                            ✓ {cloudItems.length} SKUs cargados
-                        </p>
-                    )}
+                    <button 
+                        onClick={handleFetchFromCloud}
+                        disabled={isCloudLoading || !erpOrder}
+                        className={`h-10 w-10 rounded-lg flex items-center justify-center transition-all ${cloudItems ? 'bg-emerald-500 text-white' : 'bg-slate-800 text-white disabled:opacity-20'}`}
+                    >
+                        {isCloudLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (cloudItems ? <CheckCircle2 className="w-4 h-4" /> : <DownloadCloud className="w-4 h-4" />)}
+                    </button>
                 </div>
 
-                {/* Teclado numérico integrado más pequeño */}
-                <div className="md:hidden">
+                {cloudItems && (
+                    <p className="text-[7px] font-black text-emerald-600 uppercase text-center mt-0 animate-in fade-in">
+                        ✓ {cloudItems.length} SKUs cargados
+                    </p>
+                )}
+
+                {/* Teclado numérico ultra-compacto */}
+                <div className="md:hidden pt-1">
                     <NumericKeypad 
                         isOpen={true} 
                         embedded={true} 
@@ -165,11 +167,11 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
                 </div>
             </div>
 
-            {/* Footer con altura mínima */}
-            <div className="px-4 pt-1 pb-safe-area-inset-bottom">
+            {/* Footer pegado al teclado */}
+            <div className="px-3 pb-2 pt-1">
                 <button 
                     onClick={handleStart} 
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black h-14 rounded-2xl shadow-xl active:scale-95 uppercase tracking-[0.15em] transition-all text-xs"
+                    className="w-full bg-blue-600 text-white font-black h-12 rounded-xl shadow-lg active:scale-95 uppercase tracking-widest text-[10px] transition-all"
                 >
                     {cloudItems ? 'Iniciar Verificado' : 'Iniciar a Ciegas'}
                 </button>
