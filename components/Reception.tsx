@@ -3,12 +3,11 @@ import React, { useState, useMemo, memo, useEffect, useCallback, useRef } from '
 import { useNavigate } from 'react-router-dom';
 import { useReception } from '../hooks/useReception';
 import { CameraScanner } from './CameraScanner';
-import { ChevronLeft, Keyboard, Camera, Trash2, Box, Cloud, Lock } from 'lucide-react';
+import { ChevronLeft, Keyboard, Camera, Trash2, Box, Cloud, Lock, Save, Loader2 } from 'lucide-react';
 import { ReceptionHero } from './reception/ReceptionHero';
 import { VirtualList } from './common/VirtualList';
 import { NumericKeypad } from './NumericKeypad';
 import { ScreenLockOverlay } from './common/ScreenLockOverlay';
-import { SoundFX } from '../services/audio';
 
 const ReceptionRow = memo(({ index, data }: any) => {
     const item = data.items[index];
@@ -29,14 +28,14 @@ const ReceptionRow = memo(({ index, data }: any) => {
                         <div className="text-[9px] font-bold text-slate-500 uppercase mt-1 flex items-center gap-2">
                             <span>{new Date(item.createdAt).toLocaleTimeString()}</span>
                             <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
-                            <span className="text-blue-500 font-black">PENDIENTE</span>
+                            <span className="text-blue-500 font-black tracking-tighter">BORRADOR</span>
                         </div>
                     </div>
                 </div>
                 
                 <button 
                     onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}
-                    className="w-10 h-10 flex items-center justify-center text-slate-600 hover:text-rose-500 hover:bg-rose-900/20 rounded-xl transition-all active:scale-90"
+                    className="w-10 h-10 flex items-center justify-center text-slate-700 hover:text-rose-500 hover:bg-rose-900/20 rounded-xl transition-all"
                 >
                     <Trash2 className="w-5 h-5" />
                 </button>
@@ -82,6 +81,14 @@ export const Reception: React.FC = () => {
         state.setShowManualInput(false);
     };
 
+    const onFinalizePress = async () => {
+        if (!state.draftCount) return;
+        if (confirm(`¿Confirmar recepción de ${state.draftCount} bultos? Esto los enviará a la cola de subida.`)) {
+            const ok = await actions.finalizeReception();
+            if (ok) navigate('/sync');
+        }
+    };
+
     const rowData = useMemo(() => ({ 
         onDelete: actions.deleteDraft 
     }), [actions.deleteDraft]);
@@ -115,16 +122,17 @@ export const Reception: React.FC = () => {
 
                 <div className="flex flex-col items-center">
                     <span className="text-[8px] font-black uppercase tracking-[0.3em] text-white/40 leading-none mb-1">RECEPCIÓN</span>
-                    <span className="text-xs font-black uppercase tracking-widest text-white italic">Burst_Mode</span>
+                    <span className="text-xs font-black uppercase tracking-widest text-white italic">Blind_Entry</span>
                 </div>
 
                 <div className="flex items-center gap-2">
                     <button 
-                        onClick={() => navigate('/sync')}
-                        className="h-10 px-4 bg-emerald-600 rounded-xl active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/40"
+                        onClick={onFinalizePress}
+                        disabled={state.draftCount === 0 || state.isFinalizing}
+                        className="h-10 px-4 bg-emerald-600 disabled:bg-slate-800 disabled:opacity-30 rounded-xl active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/40 transition-all"
                     >
-                        <Cloud className="w-5 h-5 text-white" />
-                        <span className="text-[9px] font-black text-white uppercase tracking-widest hidden sm:inline">Subir</span>
+                        {state.isFinalizing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 text-white" />}
+                        <span className="text-[9px] font-black text-white uppercase tracking-widest">Guardar</span>
                     </button>
                 </div>
             </div>

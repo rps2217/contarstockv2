@@ -33,6 +33,8 @@ export interface UploadGroup {
 
 export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
     const groups: Record<string, UploadGroup> = {};
+    
+    // 1. Grupos basados en ESCANEOS (Cargas e Inventario)
     const unsyncedScans = await db.scans.where('synced').equals(0).toArray();
     
     if (unsyncedScans.length > 0) {
@@ -43,7 +45,6 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
         for (const scan of unsyncedScans) {
             const session = sessionMap.get(scan.sessionId);
             
-            // CASO: REGISTRO HUÉRFANO
             if (!session) {
                 if (!groups['SISTEMA_RESIDUAL']) {
                     groups['SISTEMA_RESIDUAL'] = {
@@ -80,6 +81,26 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
             }
         }
     }
+
+    // 2. Grupos basados en SESIONES SIN ESCANEOS (Borradores de Recepción)
+    // Buscamos sesiones completadas que no tengan timestamp de sincronización
+    const unsyncedReception = await db.sessions
+        .where('status').equals('completed')
+        .and(s => !s.lastSyncTimestamp && (s.totalUnits === 0 || !s.totalUnits) && s.erpOrder === 'RECEPCION_BORRADOR')
+        .toArray();
+
+    if (unsyncedReception.length > 0) {
+        groups['RECEP_CLOUD'] = {
+            erpOrder: 'RECEPCIÓN_BULTOS',
+            sessionCount: unsyncedReception.length,
+            totalUnits: 0,
+            sessionIds: unsyncedReception.map(s => s.id),
+            logisticsLabels: unsyncedReception.map(s => s.logisticsLabel),
+            type: 'reception',
+            isHammer: false
+        };
+    }
+
     return Object.values(groups);
 };
 
@@ -91,70 +112,71 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
     try {
         const config = getSettings().appSheetConfig;
         
-        // Manejo especial para huérfanos (Purgado directo)
+        // Manejo especial para huérfanos
         if (group.erpOrder === 'REGISTROS_HUERFANOS') {
             if (onProgress) onProgress("Purgando registros residuales...");
             const unsynced = await db.scans.where('synced').equals(0).toArray();
             const orphanIds = unsynced.filter(s => !s.sessionId || s.sessionId === 'ORPHAN').map(s => s.id);
             await markScansAsSynced(orphanIds);
+        } else if (group.type === 'reception') {
+            // SUBIDA DE RECEPCIÓN (SOLO BULTOS)
+            if (onProgress) onProgress(`Subiendo registro de ${group.sessionCount} bultos...`);
+            const rows = group.sessionIds.map((id, idx) => ({
+                "ID_RECEPCION": id,
+                "FECHA_HORA": new Date().toLocaleString('es-CL'),
+                "ETIQUETA": group.logisticsLabels[idx],
+                "ESTADO": "INGRESADO"
+            }));
+            
+            const targetTable = config?.receptionTableName || "RECEPCION_BULTOS";
+            const result = await cloudApi.appendRows(targetTable, rows);
+            
+            if (result.success) {
+                await db.sessions.where('id').anyOf(group.sessionIds).modify({ lastSyncTimestamp: Date.now() });
+                if (onProgress) onProgress(`✓ Recepción sincronizada.`);
+            } else {
+                throw new Error(result.error);
+            }
         } else {
-            // PROCESAMIENTO ESTÁNDAR
+            // PROCESAMIENTO ESTÁNDAR DE INVENTARIO
             for (const sessionId of group.sessionIds) {
                 const session = await db.sessions.get(sessionId);
                 if (!session) continue;
 
                 if (onProgress) onProgress(`Preparando bulto ${session.logisticsLabel}...`);
 
-                // 1. Obtener datos crudos
                 const unsyncedScans = await db.scans.where('sessionId').equals(session.id).filter(s => s.synced === 0).toArray();
-                if (unsyncedScans.length === 0) continue;
+                if (unsyncedScans.length === 0) {
+                    // Si no hay scans pero es un bulto importante, igual marcamos como sincronizado
+                    await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
+                    continue;
+                }
 
-                // 2. Agregar (Lógica de Negocio)
                 const consolidatedItems = await aggregateScans(unsyncedScans);
-                
-                // 3. Mapear a DTO Cloud
                 const fullPayload = createInventoryPayload(session, consolidatedItems, 'manual');
 
-                // 4. Determinar Tabla Destino
                 const targetTable = session.sessionType === 'hammer' 
                     ? (config?.countsTableName || "CONTEOS") 
                     : (config?.consolidatedTableName || "CONSOLIDADO");
 
-                // 5. ESTRATEGIA DE CHUNKING (Fragmentación)
                 const totalBatches = Math.ceil(fullPayload.length / UPLOAD_BATCH_SIZE);
                 
                 for (let i = 0; i < totalBatches; i++) {
-                    const start = i * UPLOAD_BATCH_SIZE;
-                    const end = start + UPLOAD_BATCH_SIZE;
-                    const chunk = fullPayload.slice(start, end);
-                    
-                    if (onProgress) onProgress(`Subiendo lote ${i + 1}/${totalBatches} (${chunk.length} items)...`);
+                    const chunk = fullPayload.slice(i * UPLOAD_BATCH_SIZE, (i + 1) * UPLOAD_BATCH_SIZE);
+                    if (onProgress) onProgress(`Subiendo lote ${i + 1}/${totalBatches}...`);
 
-                    // Enviar chunk
                     const result = await cloudApi.appendRows(targetTable, chunk);
 
                     if (result.success) {
-                        // Marcar SOLO los items de este chunk como sincronizados
-                        // Necesitamos mapear los barcodes del chunk a los IDs de los scans originales
-                        // Esta es una aproximación segura: Si el chunk subió, marcamos todos los scans que contribuyeron a esos items
-                        const chunkBarcodes = new Set(chunk.map((row: any) => row['CODIGO'])); // Usamos la key definida en CONSTANTS
-                        
-                        const scanIdsToMark = unsyncedScans
-                            .filter(s => chunkBarcodes.has(s.barcode))
-                            .map(s => s.id);
-
+                        const chunkBarcodes = new Set(chunk.map((row: any) => row['CODIGO']));
+                        const scanIdsToMark = unsyncedScans.filter(s => chunkBarcodes.has(s.barcode)).map(s => s.id);
                         await markScansAsSynced(scanIdsToMark);
-                        
-                        // Removemos los scans ya procesados de la lista de pendientes para no reprocesarlos en caso de lógica compleja
-                        // (Aunque en este flujo simple, el loop de chunks es lineal)
                     } else {
                         throw new Error(`Fallo en lote ${i+1}: ${result.error}`);
                     }
                 }
 
-                // 6. Actualizar Timestamp de la sesión
                 await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
-                if (onProgress) onProgress(`✓ Bulto completado.`);
             }
         }
         useSyncStore.getState().setLastSyncTime(Date.now());
@@ -171,12 +193,9 @@ export const importProductsFromAppSheet = async (): Promise<number> => {
     try {
         const config = getSettings().appSheetConfig;
         const lastSyncTimestamp = localStorage.getItem('last_product_sync_time') || '0';
-        
         const response = await cloudApi.fetchTable(config?.productsTableName || "PRODUCTOS", lastSyncTimestamp);
-        
         const rawProducts = response.rows || [];
         if (rawProducts.length === 0) return 0;
-
         const products: Product[] = rawProducts
             .map((p: any) => {
                 const result = CloudProductSchema.safeParse(p);
@@ -184,12 +203,10 @@ export const importProductsFromAppSheet = async (): Promise<number> => {
             })
             .filter((p): p is Product => p !== null)
             .map(p => ({ ...p, syncStatus: 'synced' as const }));
-
         if (products.length > 0) {
             await saveProductBatch(products);
             localStorage.setItem('last_product_sync_time', response.server_timestamp || String(Date.now()));
         }
-        
         return products.length;
     } catch (e: any) {
         logger.error("FETCH_PRODUCTS_FAIL", `Error en Smart Sync: ${e.message}`);
