@@ -97,9 +97,9 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
             className="md:max-w-md border-t-4 border-blue-600 max-h-[98dvh]"
             showCloseButton={true}
         >
-            <div className="px-3 pt-3 pb-1 space-y-2">
+            <div className="px-3 pt-2 pb-1 space-y-1.5">
                 {error && (
-                    <div className="bg-rose-50 text-rose-600 p-1.5 rounded-lg text-[9px] font-black border border-rose-100 text-center flex items-center gap-2 justify-center">
+                    <div className="bg-rose-50 text-rose-600 p-1 rounded-lg text-[9px] font-black border border-rose-100 text-center flex items-center gap-2 justify-center">
                         <AlertCircle className="w-3 h-3" />
                         {error}
                     </div>
@@ -146,15 +146,16 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
                 )}
 
                 {/* Teclado numérico ultra-compacto */}
-                <div className="md:hidden pt-1">
+                <div className="md:hidden pt-0.5">
                     <NumericKeypad 
                         isOpen={true} 
                         embedded={true} 
                         onInput={(c) => { 
-                            if (activeKeypadField === 'erp') setErpOrder(p => p + c); 
-                            else setLabelId(p => p + c); 
+                            if (activeKeypadField === 'erp') {
+                                setErpOrder(p => p + c); 
+                                setCloudItems(null);
+                            } else setLabelId(p => p + c); 
                             setError('');
-                            if (activeKeypadField === 'erp') setCloudItems(null);
                         }} 
                         onDelete={() => { 
                             if (activeKeypadField === 'erp') {
@@ -167,8 +168,8 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
                 </div>
             </div>
 
-            {/* Footer pegado al teclado */}
-            <div className="px-3 pb-2 pt-1">
+            {/* Footer con padding extra para evitar que el dock lo alcance si hubiera algún remanente */}
+            <div className="px-3 pb-6 pt-1">
                 <button 
                     onClick={handleStart} 
                     className="w-full bg-blue-600 text-white font-black h-12 rounded-xl shadow-lg active:scale-95 uppercase tracking-widest text-[10px] transition-all"

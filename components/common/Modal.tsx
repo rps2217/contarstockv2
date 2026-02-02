@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 
@@ -13,20 +14,18 @@ interface ModalProps {
 
 /**
  * SISTEMA MODAL UNIFICADO
- * Aplica principios de 'Separation of Concerns' aislando la lógica de presentación
- * (animaciones, backdrop, scroll lock) del contenido de negocio.
+ * Z-index elevado a 200 para solapar la navegación global.
  */
 export const Modal: React.FC<ModalProps> = ({ 
     isOpen, 
     onClose, 
     children, 
     title, 
-    variant = 'bottom-sheet', // Por defecto actúa como hoja inferior en móvil, centro en desktop
+    variant = 'bottom-sheet',
     className = '',
     showCloseButton = true
 }) => {
     
-    // Efecto para manejo de Scroll Lock y Tecla ESC
     useEffect(() => {
         if (!isOpen) return;
 
@@ -34,7 +33,6 @@ export const Modal: React.FC<ModalProps> = ({
             if (e.key === 'Escape') onClose();
         };
 
-        // Bloquear scroll
         document.body.style.overflow = 'hidden';
         window.addEventListener('keydown', handleEsc);
 
@@ -46,14 +44,12 @@ export const Modal: React.FC<ModalProps> = ({
 
     if (!isOpen) return null;
 
-    // Clases base dinámicas según variante
     const containerClasses = {
         'center': 'flex items-center justify-center p-4',
         'bottom-sheet': 'flex items-end md:items-center justify-center md:p-4',
         'fullscreen': 'flex items-center justify-center'
     };
 
-    // Optimizaciones de GPU: will-change-transform
     const contentClasses = {
         'center': 'rounded-[2.5rem] animate-in zoom-in-95 duration-200 will-change-transform',
         'bottom-sheet': 'w-full rounded-t-[2.5rem] md:rounded-[2.5rem] animate-in slide-in-from-bottom-8 md:zoom-in-95 duration-300 will-change-transform',
@@ -61,21 +57,21 @@ export const Modal: React.FC<ModalProps> = ({
     };
 
     return (
-        <div className={`fixed inset-0 z-[60] ${containerClasses[variant]}`}>
-            {/* Backdrop con Blur y Fade */}
+        <div className={`fixed inset-0 z-[200] ${containerClasses[variant]}`}>
+            {/* Backdrop */}
             <div 
-                className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity animate-in fade-in duration-300" 
+                className="absolute inset-0 bg-slate-900/80 backdrop-blur-md transition-opacity animate-in fade-in duration-300" 
                 onClick={onClose} 
             />
             
             {/* Contenedor del Contenido */}
-            <div className={`relative bg-white shadow-2xl overflow-hidden flex flex-col max-h-[90dvh] ${contentClasses[variant]} ${className}`}>
+            <div className={`relative bg-white shadow-2xl overflow-hidden flex flex-col max-h-[95dvh] ${contentClasses[variant]} ${className}`}>
                 
-                {/* Header Opcional Integrado */}
+                {/* Header Opcional */}
                 {(title || showCloseButton) && (
-                    <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 shrink-0 bg-white z-10">
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0 bg-white z-10">
                         {title && (
-                            <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight leading-none">
+                            <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight leading-none">
                                 {title}
                             </h2>
                         )}
@@ -90,7 +86,6 @@ export const Modal: React.FC<ModalProps> = ({
                     </div>
                 )}
 
-                {/* Área de Contenido Scrollable */}
                 <div className="flex-1 overflow-y-auto no-scrollbar relative transform-gpu">
                     {children}
                 </div>
