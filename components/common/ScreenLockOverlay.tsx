@@ -61,7 +61,7 @@ export const ScreenLockOverlay: React.FC<Props> = ({ isLocked, onUnlock }) => {
 
     return (
         <div 
-            className="fixed inset-0 z-[150] bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-center select-none touch-none animate-in fade-in duration-300"
+            className="fixed inset-0 z-[150] bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-end pb-32 select-none touch-none animate-in fade-in duration-300"
             onClick={(e) => e.stopPropagation()} // Capturar todos los clicks
         >
             <div 
@@ -105,17 +105,17 @@ export const ScreenLockOverlay: React.FC<Props> = ({ isLocked, onUnlock }) => {
                 </div>
             </div>
 
-            <div className="mt-12 text-center space-y-2 pointer-events-none">
-                <h2 className="text-2xl font-black text-white uppercase tracking-tight">Pantalla Bloqueada</h2>
-                <p className="text-slate-400 font-bold uppercase tracking-widest text-xs animate-pulse">
+            <div className="mt-8 text-center space-y-1 pointer-events-none">
+                <h2 className="text-xl font-black text-white uppercase tracking-tight">Pantalla Bloqueada</h2>
+                <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] animate-pulse">
                     Mantenga presionado para desbloquear
                 </p>
             </div>
 
-            {/* Indicador de estado "Seguro" */}
-            <div className="absolute bottom-10 flex items-center gap-2 text-emerald-500/50 pointer-events-none">
-                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></div>
-                <span className="text-[10px] font-black uppercase tracking-[0.3em]">Scanner Activo</span>
+            {/* Indicador de estado "Seguro" - Movido al borde inferior */}
+            <div className="absolute bottom-12 flex items-center gap-2 text-emerald-500/30 pointer-events-none">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></div>
+                <span className="text-[8px] font-black uppercase tracking-[0.4em]">Engine_Safe_Lock</span>
             </div>
         </div>
     );
