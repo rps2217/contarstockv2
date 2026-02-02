@@ -21,6 +21,7 @@ const Settings = lazyWithRetry(() => import('./components/Settings'));
 const MassiveBlindView = lazyWithRetry(() => import('./components/MassiveBlindView'));
 const Consolidated = lazyWithRetry(() => import('./components/Consolidated'));
 const Conciliator = lazyWithRetry(() => import('./components/Conciliator'));
+const CountingView = lazyWithRetry(() => import('./components/CountingView'));
 
 const AppContent = () => {
   const location = useLocation();
@@ -102,6 +103,7 @@ const AppContent = () => {
                 <Route path="/consolidated" element={<Consolidated />} />
                 <Route path="/conciliator" element={<Conciliator />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/counting/:id" element={<CountingView />} />
                 <Route path="/massive/:batchId" element={<MassiveBlindView />} />
                 {/* Redirección de seguridad para rutas no encontradas */}
                 <Route path="*" element={<Navigate to="/" replace />} />
