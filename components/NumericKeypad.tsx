@@ -51,14 +51,14 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
   if (embedded) {
       if (!isOpen) return null;
       return (
-        <div className="w-full bg-slate-50 rounded-3xl p-1.5 touch-manipulation select-none">
-            <div className="grid grid-cols-3 gap-1.5">
+        <div className="w-full bg-slate-50 rounded-2xl p-1 touch-manipulation select-none">
+            <div className="grid grid-cols-3 gap-1">
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
                     <button
                         key={num}
                         type="button"
                         onClick={(e) => handlePress(e, num.toString())}
-                        className="h-14 bg-white text-slate-800 text-2xl font-bold rounded-xl shadow-[0_2px_0_#e2e8f0] active:shadow-none active:translate-y-[2px] transition-all flex items-center justify-center border border-slate-100"
+                        className="h-12 bg-white text-slate-800 text-xl font-bold rounded-lg shadow-[0_1px_0_#e2e8f0] active:shadow-none active:translate-y-[1px] transition-all flex items-center justify-center border border-slate-100"
                     >
                         {num}
                     </button>
@@ -67,7 +67,7 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
                 <button
                     type="button"
                     onClick={(e) => handlePress(e, "-")}
-                    className="h-14 bg-slate-100 text-slate-500 text-2xl font-bold rounded-xl shadow-[0_2px_0_#cbd5e1] active:shadow-none active:translate-y-[2px] transition-all flex items-center justify-center border border-slate-200"
+                    className="h-12 bg-slate-100 text-slate-500 text-xl font-bold rounded-lg shadow-[0_1px_0_#cbd5e1] active:shadow-none active:translate-y-[1px] transition-all flex items-center justify-center border border-slate-200"
                 >
                     -
                 </button>
@@ -75,7 +75,7 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
                 <button
                     type="button"
                     onClick={(e) => handlePress(e, "0")}
-                    className="h-14 bg-white text-slate-800 text-2xl font-bold rounded-xl shadow-[0_2px_0_#e2e8f0] active:shadow-none active:translate-y-[2px] transition-all flex items-center justify-center border border-slate-100"
+                    className="h-12 bg-white text-slate-800 text-xl font-bold rounded-lg shadow-[0_1px_0_#e2e8f0] active:shadow-none active:translate-y-[1px] transition-all flex items-center justify-center border border-slate-100"
                 >
                     0
                 </button>
@@ -83,9 +83,9 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
                 <button
                     type="button"
                     onClick={handleDeletePress}
-                    className="h-14 bg-rose-50 text-rose-500 rounded-xl shadow-[0_2px_0_#fecdd3] active:shadow-none active:translate-y-[2px] transition-all flex items-center justify-center border border-rose-100"
+                    className="h-12 bg-rose-50 text-rose-500 rounded-lg shadow-[0_1px_0_#fecdd3] active:shadow-none active:translate-y-[1px] transition-all flex items-center justify-center border border-rose-100"
                 >
-                    <Delete className="w-7 h-7" />
+                    <Delete className="w-6 h-6" />
                 </button>
             </div>
         </div>
