@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Box, Lock, User, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
 
@@ -25,9 +24,9 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     setIsLoading(true);
 
     setTimeout(() => {
-      // Por ahora permitimos cualquier usuario con el password correcto
-      // para facilitar la adopción multi-operario inmediata.
-      const validPass = (import.meta as any).env.VITE_APP_PASS || 'admin'; 
+      // Corrección: Uso de optional chaining (?.) para evitar crash si env es undefined
+      // Fallback a 'admin' si no hay configuración
+      const validPass = (import.meta as any).env?.VITE_APP_PASS || 'admin'; 
 
       if (password === validPass || password === 'admin') {
         localStorage.setItem('logicount_auth', 'true');
