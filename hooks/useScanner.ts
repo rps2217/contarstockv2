@@ -7,51 +7,42 @@ import * as productService from '../services/productService';
 import { sanitizeBarcode } from '../services/utils';
 import { SoundFX } from '../services/audio';
 import { getSettings } from '../services/settings';
-import { CountingSession, Product, ScannerStatus, ScanRecord } from '../types';
+import { CountingSession, Product, ScannerStatus, ScanRecord, ConsolidatedItem } from '../types';
 import { Dexie } from 'dexie';
-import { useHIDScanner } from './useHIDScanner';
 import { useFeedbackSystem, FeedbackStatus } from './useFeedbackSystem';
+import { aggregateScans } from '../services/aggregator';
 
 export type ScannerFeedback = FeedbackStatus; 
 
 export const useScanner = (session: CountingSession, onFinish: () => void, onDiscard?: () => void) => {
     const settings = useMemo(() => getSettings(), []);
-    const { feedback, trigger } = useFeedbackSystem(250);
+    const { feedback, trigger } = useFeedbackSystem(150);
     
     const [status, setStatus] = useState<ScannerStatus>('idle');
     const [manualInput, setManualInput] = useState('');
     const [multiplier, setMultiplier] = useState(1);
     const [currentLocation, setCurrentLocation] = useState('BODEGA_GRAL'); 
     
-    const [currentScan, setCurrentScan] = useState<ScanRecord | null>(null);
-    const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
-    const [currentSkuTotal, setCurrentSkuTotal] = useState(0);
+    const [activeBarcode, setActiveBarcode] = useState<string | null>(null);
+    const [optimisticQty, setOptimisticQty] = useState<number | null>(null);
 
-    const skuCounters = useRef<Map<string, number>>(new Map());
-    const isLocked = useRef(false);
+    const itemsRef = useRef<ConsolidatedItem[]>([]);
 
-    const recentHistory = useLiveQuery(
-        () => db.scans
-            .where('[sessionId+timestamp]')
-            .between([session.id, Dexie.minKey], [session.id, Dexie.maxKey], true, true)
-            .reverse()
-            .limit(15)
-            .toArray(), 
-        [session.id]
-    );
-    
-    const sessionStats = useLiveQuery(() => db.sessions.get(session.id), [session.id]);
+    // QUERY CONSOLIDADA: Igual que en modo Martillo
+    const consolidatedHistory = useLiveQuery(async () => {
+        const scans = await db.scans.where('sessionId').equals(session.id).toArray();
+        const items = await aggregateScans(scans);
+        
+        // Ordenar: Primero el activo, luego por orden de último escaneo/entrada
+        const sorted = items.sort((a, b) => {
+            if (a.barcode === activeBarcode) return -1;
+            if (b.barcode === activeBarcode) return 1;
+            return 0; // Se podría añadir un timestamp al agregador para mayor precisión
+        });
 
-    useEffect(() => {
-        const syncCache = async () => {
-            skuCounters.current.clear();
-            await db.scans.where('sessionId').equals(session.id).each(s => {
-                const prev = skuCounters.current.get(s.barcode) || 0;
-                skuCounters.current.set(s.barcode, prev + s.quantity);
-            });
-        };
-        syncCache();
-    }, [session.id]);
+        itemsRef.current = sorted;
+        return sorted;
+    }, [session.id, activeBarcode, feedback]);
 
     const finalizeScanPipeline = useCallback(async (barcode: string, qty: number, mm?: number, yyyy?: number) => {
         try {
@@ -73,10 +64,13 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
                 }
             }
 
-            const newTotal = (skuCounters.current.get(barcode) || 0) + qty;
-            skuCounters.current.set(barcode, newTotal);
+            // Actualizar Estado de HUD
+            setActiveBarcode(barcode);
+            const currentTotal = itemsRef.current.find(i => i.barcode === barcode)?.totalQuantity || 0;
+            setOptimisticQty(Math.max(0, currentTotal + qty));
             
-            const scanRecord = await sessionService.addScanEvent(
+            // Persistir en DB
+            await sessionService.addScanEvent(
                 session.id, 
                 barcode, 
                 qty, 
@@ -85,84 +79,70 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
                 currentLocation
             );
 
-            setCurrentScan(scanRecord);
-            setCurrentProduct(product);
-            setCurrentSkuTotal(newTotal);
-            
-            if (isAutoRegistered) {
-                trigger('unknown', { sound: 'increment' });
+            if (qty > 0) {
+                trigger(isAutoRegistered ? 'unknown' : 'success', { sound: qty > 1 ? 'increment' : 'success' });
             } else {
-                trigger('success', { sound: qty > 1 ? 'increment' : 'success' });
+                trigger('undo', { sound: 'delete' });
             }
 
-            if (settings.ttsEnabled) {
+            if (settings.ttsEnabled && qty > 0) {
                 const ttsText = settings.ttsMode === 'count' 
-                    ? `${newTotal}` 
-                    : `${product.name.substring(0, 20)}, ${newTotal}`;
+                    ? `${currentTotal + qty}` 
+                    : `${product.name.substring(0, 20)}, ${currentTotal + qty}`;
                 SoundFX.speak(ttsText);
             }
 
         } catch (err) {
             trigger('error');
-        } finally {
-            isLocked.current = false;
         }
     }, [session.id, settings, trigger, currentLocation]);
 
-    const handleInboundScan = useCallback((rawBarcode: string, mm?: number, yyyy?: number) => {
-        if (isLocked.current) return;
+    const handleInboundScan = useCallback((rawBarcode: string, mm?: number, yyyy?: number, qtyOverride?: number) => {
         const barcode = sanitizeBarcode(rawBarcode);
         if (!barcode || barcode.length < 2) return;
 
-        isLocked.current = true;
-        const qtyToApply = multiplier;
-        setMultiplier(1); 
+        const qtyToApply = qtyOverride !== undefined ? qtyOverride : multiplier;
+        if (qtyOverride === undefined) setMultiplier(1); 
         
         finalizeScanPipeline(barcode, qtyToApply, mm, yyyy);
     }, [multiplier, finalizeScanPipeline]);
 
-    // Hook HID desactivado aquí para que Scanner.tsx lo controle con la lógica de fechas
-    useHIDScanner({
-        onScan: (code) => {},
-        isEnabled: false 
-    });
+    const selectItem = useCallback((barcode: string) => {
+        setActiveBarcode(barcode);
+        const item = itemsRef.current.find(i => i.barcode === barcode);
+        setOptimisticQty(item?.totalQuantity || 0);
+        if (navigator.vibrate) navigator.vibrate(10);
+    }, []);
+
+    const lastScannedItem = useMemo(() => {
+        if (!activeBarcode) return undefined;
+        const realItem = consolidatedHistory?.find(i => i.barcode === activeBarcode);
+        if (!realItem && optimisticQty !== null) {
+            return { barcode: activeBarcode, productName: 'PROCESANDO...', totalQuantity: optimisticQty, scans: 1 } as any;
+        }
+        return realItem ? { ...realItem, totalQuantity: optimisticQty ?? realItem.totalQuantity } : undefined;
+    }, [consolidatedHistory, activeBarcode, optimisticQty]);
 
     return {
         state: { 
             status, setStatus, feedback, manualInput, setManualInput, multiplier, setMultiplier,
             currentLocation, setCurrentLocation,
-            optimisticActiveQty: currentSkuTotal,
-            optimisticTotalQty: sessionStats?.totalUnits || 0,
-            optimisticUniqueSkus: sessionStats?.totalSKUs || 0
+            optimisticActiveQty: optimisticQty || 0
         },
         data: { 
-            lastScan: currentScan || undefined, 
-            activeProduct: currentProduct || undefined, 
-            recentScans: recentHistory 
+            lastScan: lastScannedItem, 
+            recentScans: consolidatedHistory 
         },
         actions: { 
             handleExternalScan: handleInboundScan,
-            handleManualSubmit: (e: any) => { 
-                e.preventDefault(); 
-                if (manualInput) handleInboundScan(manualInput); 
-                setManualInput(''); 
+            selectItem,
+            handleQuantityChange: (barcode: string, qty: number) => handleInboundScan(barcode, undefined, undefined, qty),
+            handleDeleteProduct: async (barcode: string) => {
+                await sessionService.deleteSessionItem(session.id, barcode);
+                if (activeBarcode === barcode) { setActiveBarcode(null); setOptimisticQty(null); }
+                trigger('undo');
             },
-            handleUndo: async () => {
-                const removed = await sessionService.undoLastAction(session.id);
-                if (removed) {
-                    const prev = skuCounters.current.get(removed) || 0;
-                    skuCounters.current.set(removed, Math.max(0, prev - 1));
-                    trigger('undo');
-                }
-            },
-            handleQuantityChange: sessionService.updateScanQuantity, 
-            handleDeleteScan: sessionService.deleteScan,
-            handleToggleIncident: async (e: any, id: string, current: boolean) => {
-                await sessionService.updateScanIncident(e, id, current);
-                trigger('incident');
-            },
-            handleDiscard: () => { if (confirm("¿DESCARTAR SESIÓN?")) onDiscard?.(); },
-            clearMultiplier: () => setMultiplier(1)
+            handleDiscard: () => { if (confirm("¿DESCARTAR SESIÓN?")) onDiscard?.(); }
         }
     };
 };

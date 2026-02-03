@@ -1,12 +1,11 @@
 
 import React, { useMemo, useState, useCallback, useRef, useEffect, memo } from 'react';
 import { List, MapPin, Keyboard, ChevronLeft, Package, Clock, Camera, Trash2, MoreVertical, ShieldCheck, History, Lock } from 'lucide-react';
-import { CountingSession, ScanRecord } from '../types';
+import { CountingSession, ConsolidatedItem } from '../types';
 import { useScanner } from '../hooks/useScanner';
 import { useHIDScanner } from '../hooks/useHIDScanner';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
-import * as sessionService from '../services/sessionService';
 
 import { ScannerHero } from './scanner/ScannerHero';
 import { NumericKeypad } from './NumericKeypad';
@@ -29,7 +28,7 @@ const HistoryRow = memo(({ index, data }: any) => {
     
     const target = expectedItems?.find((ei: any) => ei.barcode === item.barcode)?.expectedQty;
     const isActive = activeBarcode === item.barcode;
-    const className = getRowStyles(item.quantity, target, isActive);
+    const className = getRowStyles(item.totalQuantity, target, isActive);
 
     return (
         <div className="px-3 py-1 h-full">
@@ -39,10 +38,10 @@ const HistoryRow = memo(({ index, data }: any) => {
                         <span className="text-[9px] font-black font-mono tracking-widest opacity-50 uppercase">{item.barcode}</span>
                         {item.mm && <span className="text-[7px] bg-white/10 px-1.5 py-0.5 rounded font-black">EXP: {item.mm}/{item.yyyy}</span>}
                     </div>
-                    <h3 className="font-black text-[12px] uppercase truncate leading-none">PRODUCTO_REGISTRADO</h3>
+                    <h3 className="font-black text-[12px] uppercase truncate leading-none">{item.productName}</h3>
                 </div>
                 <div className="text-right">
-                    <div className="text-2xl font-black tabular-nums leading-none">{item.quantity}</div>
+                    <div className="text-2xl font-black tabular-nums leading-none">{item.totalQuantity}</div>
                     {target !== undefined && <div className="text-[7px] font-black uppercase opacity-60 mt-1">META: {target}</div>}
                 </div>
             </button>
@@ -67,7 +66,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
     autoLockTimerRef.current = setTimeout(() => {
         setIsScreenLocked(true);
         if (navigator.vibrate) navigator.vibrate(10);
-    }, 4000);
+    }, 5000); // 5s en lugar de 4s para dar más margen
   }, [isScreenLocked]);
 
   useEffect(() => {
@@ -92,6 +91,18 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
       }
   }, [existingBarcodes, actions, isScreenLocked]);
 
+  const handleDecrement = useCallback(() => {
+      if (!data.lastScan) return;
+      const item = data.lastScan as any;
+      if (item.totalQuantity <= 1) {
+          if (confirm(`¿Eliminar SKU ${item.barcode} del bulto?`)) {
+              actions.handleDeleteProduct(item.barcode);
+          }
+      } else {
+          actions.handleQuantityChange(item.barcode, -1);
+      }
+  }, [data.lastScan, actions]);
+
   useHIDScanner({
       isEnabled: !showExpirationModal && !isScreenLocked && !state.status.includes('manual'),
       onScan: handleInbound
@@ -106,10 +117,10 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
   };
 
   const rowData = useMemo(() => ({ 
-      onSelect: actions.handleExternalScan, 
+      onSelect: actions.selectItem, 
       activeBarcode: data.lastScan?.barcode,
       expectedItems: session.expectedItems
-  }), [actions, data.lastScan, session.expectedItems]);
+  }), [actions.selectItem, data.lastScan, session.expectedItems]);
 
   const quickValues = [5, 10, 20];
 
@@ -140,17 +151,17 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
       </header>
       <div className="h-[38vh] shrink-0 relative">
           <ScannerHero 
-                lastScan={data.lastScan}
-                activeProduct={data.activeProduct}
+                lastScan={data.lastScan as any}
+                activeProduct={data.lastScan ? { name: (data.lastScan as any).productName, barcode: (data.lastScan as any).barcode } as any : undefined}
                 accumulatedQty={state.optimisticActiveQty}
                 feedback={state.feedback}
                 onRegisterPending={() => state.setStatus('product_form')}
                 expectedItem={session.expectedItems?.find(i => i.barcode === data.lastScan?.barcode)}
-                onDecrement={() => data.lastScan && actions.handleQuantityChange(data.lastScan.id, data.lastScan.quantity, -1)}
+                onDecrement={handleDecrement}
                 onIncrement={() => data.lastScan && handleInbound(data.lastScan.barcode)}
           />
       </div>
-      <div className="flex-1 min-h-0 bg-black flex flex-col relative">
+      <div className="flex-1 min-h-0 bg-black flex flex-col relative border-t-8 border-white/5">
           <div className="shrink-0 p-3 bg-slate-900/50 border-b border-white/5 grid grid-cols-4 gap-2">
                 <button onClick={() => state.setStatus('manual')} className="h-11 rounded-xl font-black text-[10px] flex items-center justify-center gap-2 transition-all border-2 bg-slate-800 border-slate-700 text-white shadow-lg active:scale-95">
                     <Keyboard className="w-4 h-4" /> <span>MANUAL</span>
@@ -162,7 +173,14 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
                 ))}
           </div>
           <div className="flex-1 min-h-0 relative">
-                <VirtualList items={data.recentScans || []} itemHeight={78} renderRow={HistoryRow} rowData={rowData} className="bg-black/20" emptyState={<div className="flex flex-col items-center opacity-20 mt-12"><History className="w-16 h-16 mb-4" /><p className="text-[9px] font-black uppercase tracking-[0.5em]">Historial_Vacío</p></div>} />
+                <VirtualList 
+                    items={data.recentScans || []} 
+                    itemHeight={78} 
+                    renderRow={HistoryRow} 
+                    rowData={rowData} 
+                    className="bg-black/20" 
+                    emptyState={<div className="flex flex-col items-center opacity-20 mt-12"><History className="w-16 h-16 mb-4" /><p className="text-[9px] font-black uppercase tracking-[0.5em]">Esperando Escaneo</p></div>} 
+                />
           </div>
       </div>
       <div className="h-24 md:h-28 shrink-0 bg-slate-900 border-t border-white/5 flex items-center px-4 z-40 pb-6">
@@ -183,7 +201,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
                   <div className="grid grid-cols-1 gap-3">
                       <button onClick={onCloseSession} className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all">Guardar y Cerrar</button>
                       <button onClick={() => state.setStatus('idle')} className="w-full bg-white/5 text-white/40 py-5 rounded-2xl font-black uppercase tracking-widest active:scale-95 transition-all">Seguir Contando</button>
-                      <button onClick={actions.handleDiscard} className="w-full mt-4 text-rose-500 font-black uppercase tracking-widest text-[8px] opacity-40 hover:opacity-100">Eliminar Sesión</button>
+                      <button onClick={onDiscardSession} className="w-full mt-4 text-rose-500 font-black uppercase tracking-widest text-[8px] opacity-40 hover:opacity-100">Eliminar Sesión</button>
                   </div>
               </div>
           </div>

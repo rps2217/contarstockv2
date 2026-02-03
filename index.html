@@ -12,7 +12,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap');
-      /* Fuente para generar códigos de barras reales desde texto */
       @import url('https://fonts.googleapis.com/css2?family=Libre+Barcode+128&display=swap');
       
       :root {
@@ -27,67 +26,16 @@
         touch-action: manipulation;
         font-family: 'JetBrains Mono', monospace;
         background-color: var(--color-industrial-bg);
-        background-image: 
-            radial-gradient(circle at 2px 2px, rgba(255,255,255,0.03) 1px, transparent 0);
-        background-size: 24px 24px;
         margin: 0;
         padding: 0;
         -webkit-user-select: none;
         user-select: none;
-        -webkit-tap-highlight-color: transparent;
         color: #f1f5f9;
       }
 
-      #root {
-        height: 100dvh;
-        width: 100vw;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-      }
-
-      .barcode-font {
-        font-family: 'Libre Barcode 128', cursive;
-        image-rendering: pixelated;
-        text-rendering: optimizeSpeed;
-        -webkit-font-smoothing: none;
-        -moz-osx-font-smoothing: grayscale;
-        white-space: nowrap;
-      }
-
-      @keyframes radar-pulse {
-        0% { transform: scale(1); opacity: 0.5; }
-        100% { transform: scale(1.1); opacity: 0; }
-      }
-
-      .led-active {
-        box-shadow: 0 0 8px currentColor;
-        animation: led-blink 1.5s infinite;
-      }
-
-      @keyframes led-blink {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.4; }
-      }
-
+      #root { height: 100dvh; width: 100vw; display: flex; flex-direction: column; overflow: hidden; }
       .no-scrollbar::-webkit-scrollbar { display: none; }
       .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      
-      * { box-shadow: none !important; }
-      
-      input, textarea {
-        -webkit-user-select: text;
-        user-select: text;
-      }
-
-      .flash-active {
-        animation: flash-step 0.15s steps(2);
-      }
-      @keyframes flash-step {
-        0% { background-color: transparent; }
-        50% { background-color: rgba(59, 130, 246, 0.4); }
-        100% { background-color: transparent; }
-      }
     </style>
 <script type="importmap">
 {
@@ -120,8 +68,8 @@
     "vite-plugin-pwa": "https://esm.sh/vite-plugin-pwa@^1.2.0",
     "webworker": "https://esm.sh/webworker@^0.8.4",
     "workbox-precaching": "https://esm.sh/workbox-precaching@^7.4.0",
-    "react/": "https://esm.sh/react@^19.2.4/",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.4/"
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "react/": "https://esm.sh/react@^19.2.4/"
   }
 }
 </script>
