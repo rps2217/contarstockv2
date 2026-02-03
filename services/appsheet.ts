@@ -1,14 +1,13 @@
 
 import { CountingSession, Product, ScanRecord, ConsolidatedItem } from "../types";
 import { getSettings } from "./settings"; 
-import { generateUUID } from "./utils";
 import { markScansAsSynced } from "./sessionService"; 
 import { markProductsAsSynced } from "./productService";
 import { db } from "../db";
 import { callGas } from "./gasService";
 import { cloudApi } from "./cloud/apiClient";
 import { aggregateScans } from "./aggregator";
-import { SHEET_COLUMNS } from "./constants";
+import { createInventoryPayload } from "./cloud/mappers";
 
 export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg: string) => void): Promise<void> => {
   const config = getSettings().appSheetConfig;
@@ -18,35 +17,16 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
   if (unsynced.length === 0) return;
 
   const consolidatedItems: ConsolidatedItem[] = await aggregateScans(unsynced);
-  const expectedMap = new Map<string, number>();
-  if (session.expectedItems) {
-      session.expectedItems.forEach(item => expectedMap.set(item.barcode, item.expectedQty));
-  }
-
-  // PRIORIDAD: Modo Martillo -> countsTableName (CONTEOS). Modo Estándar -> consolidatedTableName (CONSOLIDADO)
+  
+  // PRIORIDAD: Modo Martillo -> countsTableName (CONTEOS). Modo Estándar -> consolidatedTableName (CONSOLIDADOS)
   const targetTable = isHammerMode 
     ? (config?.countsTableName || "CONTEOS") 
-    : (config?.consolidatedTableName || "CONSOLIDADO");
+    : (config?.consolidatedTableName || "CONSOLIDADOS");
 
   if (onProgress) onProgress(`Enviando a [${targetTable}]...`);
 
-  const rows = consolidatedItems.map(item => {
-      const physical = item.totalQuantity;
-      const expected = expectedMap.get(item.barcode) || 0;
-      return {
-          [SHEET_COLUMNS.ID]: generateUUID(),
-          [SHEET_COLUMNS.UNIQUE_KEY]: `${session.erpOrder}_${session.logisticsLabel}_${item.barcode}_${Date.now()}`,
-          [SHEET_COLUMNS.DATE]: new Date().toLocaleString('es-CL'),
-          [SHEET_COLUMNS.ERP_ORDER]: session.erpOrder,
-          [SHEET_COLUMNS.BARCODE]: item.barcode,
-          [SHEET_COLUMNS.PRODUCT_NAME]: item.productName,
-          [SHEET_COLUMNS.QUANTITY]: physical,
-          [SHEET_COLUMNS.EXPECTED]: expected,
-          [SHEET_COLUMNS.DIFF]: physical - expected,
-          [SHEET_COLUMNS.LABEL]: session.logisticsLabel,
-          [SHEET_COLUMNS.INCIDENT]: item.isIncident ? "SI" : "NO"
-      };
-  });
+  // Usamos el mappers.ts para garantizar que la estructura sea idéntica en toda la app
+  const rows = createInventoryPayload(session, consolidatedItems, 'manual');
 
   const result = await cloudApi.appendRows(targetTable, rows);
 
@@ -70,8 +50,8 @@ export const fetchProductsFromCloud = async (): Promise<any[]> => {
 export const syncProductsToAppSheet = async (products: Product[]): Promise<void> => {
     const config = getSettings().appSheetConfig;
     const rows = products.map(p => ({
-        [SHEET_COLUMNS.BARCODE]: p.barcode,
-        [SHEET_COLUMNS.PRODUCT_NAME]: p.name,
+        "CODIGO": p.barcode,
+        "PRODUCTO": p.name,
         "CATEGORIA": p.category,
         "PROVEEDOR": p.supplier,
         "RUT": p.supplierRut

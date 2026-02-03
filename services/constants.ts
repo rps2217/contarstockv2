@@ -1,4 +1,3 @@
-
 export const SHEET_COLUMNS = {
     ID: "ID_REGISTRO",
     UNIQUE_KEY: "CLAVE_UNICA",
@@ -12,7 +11,9 @@ export const SHEET_COLUMNS = {
     LABEL: "ETIQUETAS",
     MONTH: "MM",
     YEAR: "YYYY",
-    INCIDENT: "FRC" 
+    INCIDENT: "FRC",
+    AUDIT_STATUS: "ESTADO_AUDITORIA",
+    AUDIT_SCORE: "PUNTAJE_AUDITORIA"
 };
 
-export const SYNC_ENGINE_VERSION = "6.4.0-HEADERS";
+export const SYNC_ENGINE_VERSION = "7.0.0-LEGACY-COMPAT";

@@ -1,4 +1,3 @@
-
 import { AppSettings } from '../types';
 import { db } from '../db';
 
@@ -22,10 +21,10 @@ const DEFAULT_SETTINGS: AppSettings = {
       appId: '',
       accessKey: '',
       countsTableName: 'CONTEOS',         
-      consolidatedTableName: 'CONSOLIDADO', 
+      consolidatedTableName: 'CONSOLIDADOS', // Volvemos al plural histórico
       productsTableName: 'PRODUCTOS',
       receptionTableName: 'RECEPCION_BULTOS',
-      ordersTableName: 'PEDIDOS' // Pestaña predeterminada para pre-carga
+      ordersTableName: 'PEDIDOS'
   },
   mobileNavConfig: ['dashboard', 'reports', 'sync', 'database'] 
 };
@@ -52,7 +51,6 @@ export const getSettings = (): AppSettings => {
 
 export const saveSettings = async (settings: AppSettings) => {
   localStorage.setItem(KEYS.SETTINGS, JSON.stringify(settings));
-  
   try {
       await db.settings.put({ key: 'app_config', value: settings });
   } catch (e) {

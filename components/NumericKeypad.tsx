@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { X, Check, Delete } from 'lucide-react';
 
