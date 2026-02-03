@@ -8,7 +8,6 @@ import { sanitizeBarcode } from '../services/utils';
 import { SoundFX } from '../services/audio';
 import { getSettings } from '../services/settings';
 import { CountingSession, Product, ScannerStatus, ScanRecord, ConsolidatedItem } from '../types';
-import { Dexie } from 'dexie';
 import { useFeedbackSystem, FeedbackStatus } from './useFeedbackSystem';
 import { aggregateScans } from '../services/aggregator';
 
@@ -62,22 +61,25 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
                 }
             }
 
-            // HERENCIA DE FECHA: Si el SKU ya existe en este bulto, usamos su fecha para consolidar
+            // HERENCIA DE ATRIBUTOS (FECHA): 
+            // Si el SKU ya existe, usamos su fecha para que no cree una nueva entrada separada
             let finalMM = mm;
             let finalYYYY = yyyy;
 
             if (!mm || !yyyy) {
-                const existing = itemsRef.current.find(i => i.barcode === barcode);
-                if (existing && existing.mm) {
-                    finalMM = existing.mm;
-                    finalYYYY = existing.yyyy;
+                const existingInList = itemsRef.current.find(i => i.barcode === barcode);
+                if (existingInList && existingInList.mm) {
+                    finalMM = existingInList.mm;
+                    finalYYYY = existingInList.yyyy;
                 }
             }
 
+            // Actualizar HUD
             setActiveBarcode(barcode);
             const currentTotal = itemsRef.current.find(i => i.barcode === barcode)?.totalQuantity || 0;
             setOptimisticQty(Math.max(0, currentTotal + qty));
             
+            // Persistencia
             await sessionService.addScanEvent(
                 session.id, 
                 barcode, 
@@ -110,6 +112,7 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
         if (!barcode || barcode.length < 2) return;
 
         const qtyToApply = qtyOverride !== undefined ? qtyOverride : multiplier;
+        // Si no es override, reseteamos multiplicador a 1
         if (qtyOverride === undefined) setMultiplier(1); 
         
         finalizeScanPipeline(barcode, qtyToApply, mm, yyyy);
@@ -149,7 +152,7 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
         actions: { 
             handleExternalScan: handleInboundScan,
             selectItem,
-            handleQuantityChange: (barcode: string, qty: number) => handleInboundScan(barcode, undefined, undefined, qty),
+            handleQuantityChange: (barcode: string, qty: number) => finalizeScanPipeline(barcode, qty),
             handleDeleteProduct: async (barcode: string) => {
                 await sessionService.deleteSessionItem(session.id, barcode);
                 if (activeBarcode === barcode) { setActiveBarcode(null); setOptimisticQty(null); }
