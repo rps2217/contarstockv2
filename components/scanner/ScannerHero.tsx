@@ -1,6 +1,6 @@
 
 import React, { memo } from 'react';
-import { RotateCcw, AlertCircle, CheckCircle, Minus, Plus, Calendar } from 'lucide-react';
+import { RotateCcw, AlertCircle, CheckCircle, Minus, Plus, Sparkles } from 'lucide-react';
 import { ScanRecord, Product, ExpectedItem } from '../../types';
 import { ScannerFeedback } from '../../hooks/useScanner';
 import { determineItemStatus, getStatusColorClasses } from '../../services/uiLogic';
@@ -45,7 +45,6 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
         const status = determineItemStatus(accumulatedQty, targetQty);
         const bgClass = getStatusColorClasses(status, 'bg');
 
-        // AJUSTE DINÁMICO DE FUENTE: Evita el recorte de números de 2 o 3 dígitos
         const getFontSizeClass = (val: number) => {
             if (val >= 100) return 'text-[6.5rem] md:text-[9rem]';
             if (val >= 10) return 'text-[9rem] md:text-[12rem]';
@@ -57,7 +56,6 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
                 <div className="absolute inset-0 z-0 pointer-events-none bg-gradient-to-b from-black/20 to-transparent"></div>
 
                 <div className="flex-1 flex items-stretch relative z-10">
-                    {/* ZONA DECREMENTAR */}
                     <button 
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDecrement?.(); }}
                         className="w-20 md:w-32 bg-black/5 active:bg-black/20 flex items-center justify-center border-r border-white/5 transition-all"
@@ -65,10 +63,14 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
                         <Minus className="w-12 h-12 text-white/30" />
                     </button>
 
-                    {/* VISOR PRINCIPAL */}
                     <div className="flex-1 flex flex-col items-center justify-center p-2 text-center overflow-hidden">
                         <div className="mb-1 w-full max-w-[90%]">
                             <div className="flex items-center justify-center gap-2 mb-1">
+                                {isUnknown && (
+                                    <span className="bg-amber-400 text-black px-2 py-0.5 rounded text-[8px] font-black uppercase flex items-center gap-1 animate-pulse">
+                                        <Sparkles className="w-2 h-2" /> NUEVO
+                                    </span>
+                                )}
                                 <span className="text-white/50 font-mono text-[9px] font-black tracking-widest uppercase truncate max-w-[120px]">
                                     {lastScan.barcode}
                                 </span>
@@ -97,7 +99,6 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
                         </div>
                     </div>
 
-                    {/* ZONA INCREMENTAR */}
                     <button 
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); onIncrement?.(); }}
                         className="w-20 md:w-32 bg-black/5 active:bg-black/20 flex items-center justify-center border-l border-white/5 transition-all"
@@ -105,15 +106,15 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
                         <Plus className="w-12 h-12 text-white/30" />
                     </button>
                 </div>
-
+                
+                {/* Botón flotante para identificar si el usuario desea hacerlo manualmente, pero sin bloquear */}
                 {isUnknown && (
-                    <div className="absolute inset-0 z-30 bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-8 animate-in fade-in">
-                        <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl text-center border-4 border-orange-500 w-full max-w-xs">
-                            <AlertCircle className="w-10 h-10 text-orange-500 mx-auto mb-4" />
-                            <h3 className="text-slate-900 font-black uppercase text-[10px] mb-6 tracking-widest">SKU no registrado</h3>
-                            <button onClick={onRegisterPending} className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black uppercase tracking-widest text-[10px]">Identificar ahora</button>
-                        </div>
-                    </div>
+                    <button 
+                        onClick={onRegisterPending}
+                        className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 text-white/60 text-[7px] font-black uppercase tracking-[0.2em] px-4 py-2 rounded-full transition-all active:scale-95"
+                    >
+                        Identificar SKU
+                    </button>
                 )}
             </div>
         );
