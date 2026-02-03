@@ -47,6 +47,14 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
       if (onConfirm) onConfirm();
   };
 
+  // Función para escalar el texto según longitud
+  const getVisorFontSize = (val: string) => {
+      if (val.length > 15) return 'text-xl';
+      if (val.length > 10) return 'text-2xl';
+      if (val.length > 7) return 'text-3xl';
+      return 'text-4xl';
+  };
+
   // --- MODO INTEGRADO (Dentro del Modal - Sin visor grande) ---
   if (embedded) {
       if (!isOpen) return null;
@@ -107,19 +115,19 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
         
         {/* Header con Título y Cerrar */}
         <div className="flex justify-between items-center mb-6 px-2">
-            <span className="text-slate-400 text-sm font-black uppercase tracking-widest">{title || "Entrada Manual"}</span>
+            <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest">{title || "Entrada Manual"}</span>
             <button onClick={onClose} className="p-3 text-slate-500 hover:text-slate-300 bg-slate-800 rounded-full active:bg-slate-700 transition-colors">
-                <X className="w-8 h-8" />
+                <X className="w-6 h-6" />
             </button>
         </div>
 
-        {/* VISOR (DISPLAY) */}
-        <div className="mb-8 bg-black rounded-3xl border-4 border-slate-800 p-6 flex items-center justify-end h-28 shadow-inner overflow-hidden">
-            <span className={`font-mono font-black text-5xl tracking-widest truncate ${value ? 'text-white' : 'text-slate-700'}`}>
-                {value || "0"}
+        {/* VISOR (DISPLAY) REDISEÑADO CON FUENTE DINÁMICA */}
+        <div className="mb-8 bg-black rounded-3xl border-4 border-slate-800 p-4 flex items-center justify-center h-24 shadow-inner overflow-hidden">
+            <div className={`font-mono font-black tracking-widest break-all text-center transition-all duration-200 ${getVisorFontSize(value)} ${value ? 'text-white' : 'text-slate-800'}`}>
+                {value || "SKU_PENDIENTE"}
                 {/* Cursor parpadeante */}
-                <span className="inline-block w-1 h-12 ml-2 bg-blue-500 animate-pulse align-middle"></span>
-            </span>
+                <span className="inline-block w-1 h-8 ml-1 bg-blue-500 animate-pulse align-middle"></span>
+            </div>
         </div>
 
         {/* Grid de Teclas Gigantes */}
@@ -128,7 +136,7 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
                 <button 
                     key={num} 
                     onClick={(e) => handlePress(e, num.toString())} 
-                    className="h-24 bg-slate-800 text-white text-4xl font-black rounded-3xl shadow-lg border-b-8 border-slate-950 active:border-b-0 active:translate-y-2 transition-all active:bg-slate-700 flex items-center justify-center"
+                    className="h-20 bg-slate-800 text-white text-3xl font-black rounded-3xl shadow-lg border-b-8 border-slate-950 active:border-b-0 active:translate-y-2 transition-all active:bg-slate-700 flex items-center justify-center"
                 >
                     {num}
                 </button>
@@ -136,17 +144,17 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
             
             {/* Botón Acción Izquierda: Confirmar o Guion */}
             {onConfirm ? (
-                <button onClick={handleConfirmPress} className="h-24 bg-emerald-600 text-white rounded-3xl shadow-lg border-b-8 border-emerald-950 active:border-b-0 active:translate-y-2 transition-all active:bg-emerald-700 flex items-center justify-center">
-                    <Check className="w-12 h-12 stroke-[5px]" />
+                <button onClick={handleConfirmPress} className="h-20 bg-emerald-600 text-white rounded-3xl shadow-lg border-b-8 border-emerald-950 active:border-b-0 active:translate-y-2 transition-all active:bg-emerald-700 flex items-center justify-center">
+                    <Check className="w-10 h-10 stroke-[5px]" />
                 </button>
             ) : (
-                <button onClick={(e) => handlePress(e, "-")} className="h-24 bg-slate-800 text-white text-3xl font-black rounded-3xl shadow-lg border-b-8 border-slate-950 active:border-b-0 active:translate-y-2 transition-all active:bg-slate-700 flex items-center justify-center">-</button>
+                <button onClick={(e) => handlePress(e, "-")} className="h-20 bg-slate-800 text-white text-3xl font-black rounded-3xl shadow-lg border-b-8 border-slate-950 active:border-b-0 active:translate-y-2 transition-all active:bg-slate-700 flex items-center justify-center">-</button>
             )}
 
-            <button onClick={(e) => handlePress(e, "0")} className="h-24 bg-slate-800 text-white text-4xl font-black rounded-3xl shadow-lg border-b-8 border-slate-950 active:border-b-0 active:translate-y-2 transition-all active:bg-slate-700 flex items-center justify-center">0</button>
+            <button onClick={(e) => handlePress(e, "0")} className="h-20 bg-slate-800 text-white text-3xl font-black rounded-3xl shadow-lg border-b-8 border-slate-950 active:border-b-0 active:translate-y-2 transition-all active:bg-slate-700 flex items-center justify-center">0</button>
             
-            <button onClick={handleDeletePress} className="h-24 bg-slate-800 text-rose-500 rounded-3xl shadow-lg border-b-8 border-slate-950 active:border-b-0 active:translate-y-2 transition-all flex items-center justify-center active:bg-slate-700">
-                <Delete className="w-12 h-12" />
+            <button onClick={handleDeletePress} className="h-20 bg-slate-800 text-rose-500 rounded-3xl shadow-lg border-b-8 border-slate-950 active:border-b-0 active:translate-y-2 transition-all flex items-center justify-center active:bg-slate-700">
+                <Delete className="w-10 h-10" />
             </button>
         </div>
       </div>

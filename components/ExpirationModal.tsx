@@ -39,28 +39,22 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({ onComplete, pr
 
         <div className="p-6">
           {step === 'year' ? (
-            <div className="space-y-3">
-              <p className="text-center text-slate-500 mb-4 text-sm font-medium">Seleccione el AÑO</p>
+            <div className="space-y-4">
+              <p className="text-center text-slate-500 mb-2 text-sm font-medium">Seleccione el AÑO</p>
               <div className="grid grid-cols-2 gap-4">
                 <button 
-                  onClick={() => handleYearSelect(2025)}
-                  className="bg-white border-2 border-slate-200 hover:border-blue-500 hover:bg-blue-50 text-slate-700 hover:text-blue-700 py-6 rounded-2xl text-2xl font-black transition-all shadow-sm active:scale-95"
-                >
-                  2025
-                </button>
-                <button 
                   onClick={() => handleYearSelect(2026)}
-                  className="bg-white border-2 border-slate-200 hover:border-blue-500 hover:bg-blue-50 text-slate-700 hover:text-blue-700 py-6 rounded-2xl text-2xl font-black transition-all shadow-sm active:scale-95"
+                  className="bg-white border-2 border-slate-200 hover:border-blue-500 hover:bg-blue-50 text-slate-700 hover:text-blue-700 py-10 rounded-2xl text-3xl font-black transition-all shadow-sm active:scale-95"
                 >
                   2026
                 </button>
+                <button 
+                  onClick={() => handleYearSelect(2027)}
+                  className="bg-white border-2 border-slate-200 hover:border-blue-500 hover:bg-blue-50 text-slate-700 hover:text-blue-700 py-10 rounded-2xl text-3xl font-black transition-all shadow-sm active:scale-95"
+                >
+                  2027
+                </button>
               </div>
-              <button 
-                onClick={() => handleYearSelect(2027)}
-                className="w-full bg-white border border-slate-200 text-slate-500 py-3 rounded-xl font-bold hover:bg-slate-50 transition-colors mt-2"
-              >
-                2027
-              </button>
             </div>
           ) : (
             <div className="space-y-4">
