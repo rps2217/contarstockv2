@@ -46,10 +46,8 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
         setError("Ingrese ERP");
         return;
     }
-    
     setIsCloudLoading(true);
     setError("");
-    
     try {
         const items = await sessionService.fetchExpectedItemsFromCloud(erpOrder);
         if (items.length === 0) {
@@ -73,7 +71,6 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
         setError('Complete campos'); 
         return; 
     }
-    
     try {
         const session = await sessionService.createSession(
             erpOrder, 
@@ -94,85 +91,76 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
             isOpen={isOpen} 
             onClose={onClose} 
             variant="bottom-sheet"
-            className="md:max-w-md border-t-4 border-blue-600 max-h-[98dvh]"
+            className="md:max-w-md border-t-4 border-blue-600 bg-slate-950 text-white"
             showCloseButton={true}
         >
-            <div className="px-3 pt-2 pb-1 space-y-1.5">
+            <div className="px-6 pt-4 pb-2 space-y-4">
+                <h2 className="text-xl font-black uppercase italic tracking-tighter text-white">Configurar Bulto</h2>
+
                 {error && (
-                    <div className="bg-rose-50 text-rose-600 p-1 rounded-lg text-[9px] font-black border border-rose-100 text-center flex items-center gap-2 justify-center">
-                        <AlertCircle className="w-3 h-3" />
+                    <div className="bg-rose-900/30 text-rose-400 p-3 rounded-2xl text-[10px] font-black border border-rose-500/30 flex items-center gap-3 animate-in shake">
+                        <AlertCircle className="w-4 h-4" />
                         {error}
                     </div>
                 )}
 
-                {/* ID Bulto Row */}
-                <div className="flex gap-2 items-end">
-                    <div className="flex-1 space-y-0.5">
-                        <label className="text-[7px] font-black text-slate-400 uppercase ml-1">ID Bulto</label>
-                        <div 
+                <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                        <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">ID Bulto</label>
+                        <button 
                             onClick={() => setActiveKeypadField('label')} 
-                            className={`h-10 rounded-lg flex items-center justify-center font-black text-base border-2 transition-all duration-200 ${activeKeypadField === 'label' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-slate-50 border-slate-200 text-slate-900'}`}
+                            className={`w-full h-14 rounded-2xl flex items-center justify-center font-mono font-black text-lg border-2 transition-all ${activeKeypadField === 'label' ? 'bg-blue-600 border-blue-400 text-white shadow-[0_0_15px_rgba(59,130,246,0.5)]' : 'bg-slate-900 border-white/5 text-slate-400'}`}
                         >
                             {labelId || "---"}
-                        </div>
+                        </button>
                     </div>
-                    <button onClick={() => setIsCameraOpen(true)} className="h-10 w-10 bg-black text-white rounded-lg flex items-center justify-center active:scale-90 transition-transform"><Camera className="w-4 h-4" /></button>
-                </div>
-
-                {/* ERP Row */}
-                <div className="flex gap-2 items-end">
-                    <div className="flex-1 space-y-0.5">
-                        <label className="text-[7px] font-black text-slate-400 uppercase ml-1">Orden ERP</label>
-                        <div 
+                    <div className="space-y-1.5">
+                        <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-1">Orden ERP</label>
+                        <button 
                             onClick={() => setActiveKeypadField('erp')} 
-                            className={`h-10 rounded-lg flex items-center justify-center font-black text-base border-2 transition-all duration-200 ${activeKeypadField === 'erp' ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'bg-slate-50 border-slate-200 text-slate-900'}`}
+                            className={`w-full h-14 rounded-2xl flex items-center justify-center font-mono font-black text-lg border-2 transition-all ${activeKeypadField === 'erp' ? 'bg-blue-600 border-blue-400 text-white shadow-[0_0_15px_rgba(59,130,246,0.5)]' : 'bg-slate-900 border-white/5 text-slate-400'}`}
                         >
                             {erpOrder || "---"}
-                        </div>
+                        </button>
                     </div>
+                </div>
+
+                <div className="flex gap-2">
+                    <button onClick={() => setIsCameraOpen(true)} className="flex-1 h-12 bg-white/5 border border-white/10 text-white rounded-xl flex items-center justify-center gap-2 font-black text-[10px] uppercase tracking-widest active:bg-blue-600 transition-colors">
+                        <Camera className="w-4 h-4" /> Escanear ID
+                    </button>
                     <button 
                         onClick={handleFetchFromCloud}
                         disabled={isCloudLoading || !erpOrder}
-                        className={`h-10 w-10 rounded-lg flex items-center justify-center transition-all ${cloudItems ? 'bg-emerald-500 text-white' : 'bg-slate-800 text-white disabled:opacity-20'}`}
+                        className={`flex-1 h-12 rounded-xl flex items-center justify-center gap-2 font-black text-[10px] uppercase tracking-widest transition-all ${cloudItems ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400 disabled:opacity-20'}`}
                     >
                         {isCloudLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (cloudItems ? <CheckCircle2 className="w-4 h-4" /> : <DownloadCloud className="w-4 h-4" />)}
+                        {cloudItems ? 'Items OK' : 'Cargar ERP'}
                     </button>
                 </div>
 
-                {cloudItems && (
-                    <p className="text-[7px] font-black text-emerald-600 uppercase text-center mt-0 animate-in fade-in">
-                        ✓ {cloudItems.length} SKUs cargados
-                    </p>
-                )}
-
-                {/* Teclado numérico ultra-compacto */}
-                <div className="md:hidden pt-0.5">
+                <div className="md:hidden">
                     <NumericKeypad 
                         isOpen={true} 
                         embedded={true} 
                         onInput={(c) => { 
-                            if (activeKeypadField === 'erp') {
-                                setErpOrder(p => p + c); 
-                                setCloudItems(null);
-                            } else setLabelId(p => p + c); 
+                            if (activeKeypadField === 'erp') { setErpOrder(p => p + c); setCloudItems(null); } 
+                            else setLabelId(p => p + c); 
                             setError('');
                         }} 
                         onDelete={() => { 
-                            if (activeKeypadField === 'erp') {
-                                setErpOrder(p => p.slice(0, -1)); 
-                                setCloudItems(null);
-                            }
+                            if (activeKeypadField === 'erp') { setErpOrder(p => p.slice(0, -1)); setCloudItems(null); }
                             else setLabelId(p => p.slice(0, -1)); 
                         }} 
+                        onConfirm={handleStart}
                     />
                 </div>
             </div>
 
-            {/* Footer con padding extra para evitar que el dock lo alcance si hubiera algún remanente */}
-            <div className="px-3 pb-6 pt-1">
+            <div className="p-6 pb-10">
                 <button 
                     onClick={handleStart} 
-                    className="w-full bg-blue-600 text-white font-black h-12 rounded-xl shadow-lg active:scale-95 uppercase tracking-widest text-[10px] transition-all"
+                    className="w-full bg-blue-600 text-white font-black h-16 rounded-3xl shadow-2xl active:scale-95 uppercase tracking-[0.3em] text-xs transition-all border-b-8 border-blue-900"
                 >
                     {cloudItems ? 'Iniciar Verificado' : 'Iniciar a Ciegas'}
                 </button>
