@@ -57,22 +57,6 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
   const [isScreenLocked, setIsScreenLocked] = useState(false);
   const [showExpirationModal, setShowExpirationModal] = useState(false);
   const [pendingBarcodeForDate, setPendingBarcodeForDate] = useState<string | null>(null);
-  
-  const autoLockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const resetAutoLock = useCallback(() => {
-    if (autoLockTimerRef.current) clearTimeout(autoLockTimerRef.current);
-    if (isScreenLocked) return;
-    autoLockTimerRef.current = setTimeout(() => {
-        setIsScreenLocked(true);
-        if (navigator.vibrate) navigator.vibrate(10);
-    }, 5000); // 5s en lugar de 4s para dar más margen
-  }, [isScreenLocked]);
-
-  useEffect(() => {
-      resetAutoLock();
-      return () => { if (autoLockTimerRef.current) clearTimeout(autoLockTimerRef.current); };
-  }, [data.lastScan, state.multiplier, resetAutoLock]);
 
   const existingBarcodes = useLiveQuery(async () => {
         const scans = await db.scans.where('sessionId').equals(session.id).toArray();
@@ -125,10 +109,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
   const quickValues = [5, 10, 20];
 
   return (
-    <div 
-        className="fixed inset-0 z-[100] flex flex-col bg-black text-white font-mono select-none overflow-hidden"
-        onPointerDown={resetAutoLock}
-    >
+    <div className="fixed inset-0 z-[100] flex flex-col bg-black text-white font-mono select-none overflow-hidden">
       <header className="h-16 px-4 flex items-center justify-between border-b border-white/10 bg-slate-900 shadow-2xl shrink-0 z-50">
           <div className="flex items-center gap-3">
               <button onClick={() => state.setStatus('confirming')} className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl active:bg-blue-600">
@@ -218,7 +199,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
               </div>
           </div>
       )}
-      <ScreenLockOverlay isLocked={isScreenLocked} onUnlock={() => { setIsScreenLocked(false); resetAutoLock(); }} />
+      <ScreenLockOverlay isLocked={isScreenLocked} onUnlock={() => { setIsScreenLocked(false); }} />
     </div>
   );
 };
