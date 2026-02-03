@@ -61,25 +61,27 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
                 }
             }
 
-            // HERENCIA DE ATRIBUTOS (FECHA): 
-            // Si el SKU ya existe, usamos su fecha para que no cree una nueva entrada separada
+            // BUSCAR ATRIBUTOS EXISTENTES (FECHA) PARA EVITAR DUPLICIDAD
+            // Si el usuario no pasó fecha, la heredamos del registro ya existente en la lista
             let finalMM = mm;
             let finalYYYY = yyyy;
 
-            if (!mm || !yyyy) {
-                const existingInList = itemsRef.current.find(i => i.barcode === barcode);
-                if (existingInList && existingInList.mm) {
-                    finalMM = existingInList.mm;
-                    finalYYYY = existingInList.yyyy;
-                }
+            const existingInList = itemsRef.current.find(i => i.barcode === barcode);
+            if (!finalMM && existingInList?.mm) {
+                finalMM = existingInList.mm;
+                finalYYYY = existingInList.yyyy;
             }
 
-            // Actualizar HUD
-            setActiveBarcode(barcode);
-            const currentTotal = itemsRef.current.find(i => i.barcode === barcode)?.totalQuantity || 0;
-            setOptimisticQty(Math.max(0, currentTotal + qty));
+            // ACTUALIZACIÓN OPTIMISTA ACUMULATIVA (Fix: Botón Restar/Sumar rápido)
+            setOptimisticQty(prev => {
+                const currentTotal = existingInList?.totalQuantity || 0;
+                const base = prev !== null ? prev : currentTotal;
+                return Math.max(0, base + qty);
+            });
             
-            // Persistencia
+            setActiveBarcode(barcode);
+            
+            // Persistencia en DB
             await sessionService.addScanEvent(
                 session.id, 
                 barcode, 
@@ -96,9 +98,10 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
             }
 
             if (settings.ttsEnabled && qty > 0) {
+                const totalCalculado = (existingInList?.totalQuantity || 0) + qty;
                 const ttsText = settings.ttsMode === 'count' 
-                    ? `${currentTotal + qty}` 
-                    : `${product.name.substring(0, 20)}, ${currentTotal + qty}`;
+                    ? `${totalCalculado}` 
+                    : `${product.name.substring(0, 20)}, ${totalCalculado}`;
                 SoundFX.speak(ttsText);
             }
 
@@ -112,7 +115,6 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
         if (!barcode || barcode.length < 2) return;
 
         const qtyToApply = qtyOverride !== undefined ? qtyOverride : multiplier;
-        // Si no es override, reseteamos multiplicador a 1
         if (qtyOverride === undefined) setMultiplier(1); 
         
         finalizeScanPipeline(barcode, qtyToApply, mm, yyyy);
@@ -128,15 +130,19 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
     const lastScannedItem = useMemo(() => {
         if (!activeBarcode) return undefined;
         const realItem = consolidatedHistory?.find(i => i.barcode === activeBarcode);
+        
+        // El visor siempre prioriza la cantidad optimista (rápida) sobre la real (lenta de DB)
+        const qtyToShow = optimisticQty !== null ? optimisticQty : (realItem?.totalQuantity || 0);
+
         if (!realItem && optimisticQty !== null) {
             return { 
                 barcode: activeBarcode, 
                 productName: 'PROCESANDO...', 
-                totalQuantity: optimisticQty, 
+                totalQuantity: qtyToShow, 
                 scans: 1 
             } as any;
         }
-        return realItem ? { ...realItem, totalQuantity: optimisticQty ?? realItem.totalQuantity } : undefined;
+        return realItem ? { ...realItem, totalQuantity: qtyToShow } : undefined;
     }, [consolidatedHistory, activeBarcode, optimisticQty]);
 
     return {
