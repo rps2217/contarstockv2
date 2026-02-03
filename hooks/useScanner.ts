@@ -28,16 +28,14 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
 
     const itemsRef = useRef<ConsolidatedItem[]>([]);
 
-    // QUERY CONSOLIDADA: Igual que en modo Martillo
     const consolidatedHistory = useLiveQuery(async () => {
         const scans = await db.scans.where('sessionId').equals(session.id).toArray();
         const items = await aggregateScans(scans);
         
-        // Ordenar: Primero el activo, luego por orden de último escaneo/entrada
         const sorted = items.sort((a, b) => {
             if (a.barcode === activeBarcode) return -1;
             if (b.barcode === activeBarcode) return 1;
-            return 0; // Se podría añadir un timestamp al agregador para mayor precisión
+            return 0;
         });
 
         itemsRef.current = sorted;
@@ -64,18 +62,28 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
                 }
             }
 
-            // Actualizar Estado de HUD
+            // HERENCIA DE FECHA: Si el SKU ya existe en este bulto, usamos su fecha para consolidar
+            let finalMM = mm;
+            let finalYYYY = yyyy;
+
+            if (!mm || !yyyy) {
+                const existing = itemsRef.current.find(i => i.barcode === barcode);
+                if (existing && existing.mm) {
+                    finalMM = existing.mm;
+                    finalYYYY = existing.yyyy;
+                }
+            }
+
             setActiveBarcode(barcode);
             const currentTotal = itemsRef.current.find(i => i.barcode === barcode)?.totalQuantity || 0;
             setOptimisticQty(Math.max(0, currentTotal + qty));
             
-            // Persistir en DB
             await sessionService.addScanEvent(
                 session.id, 
                 barcode, 
                 qty, 
-                mm, 
-                yyyy, 
+                finalMM, 
+                finalYYYY, 
                 currentLocation
             );
 
@@ -118,7 +126,12 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
         if (!activeBarcode) return undefined;
         const realItem = consolidatedHistory?.find(i => i.barcode === activeBarcode);
         if (!realItem && optimisticQty !== null) {
-            return { barcode: activeBarcode, productName: 'PROCESANDO...', totalQuantity: optimisticQty, scans: 1 } as any;
+            return { 
+                barcode: activeBarcode, 
+                productName: 'PROCESANDO...', 
+                totalQuantity: optimisticQty, 
+                scans: 1 
+            } as any;
         }
         return realItem ? { ...realItem, totalQuantity: optimisticQty ?? realItem.totalQuantity } : undefined;
     }, [consolidatedHistory, activeBarcode, optimisticQty]);
