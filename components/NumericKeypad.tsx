@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Delete, X, Check, DeleteIcon, Backspace } from 'lucide-react';
+import { X, Check, Delete } from 'lucide-react';
 
 interface NumericKeypadProps {
   isOpen: boolean;
@@ -115,7 +115,7 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
                 onClick={handleDeletePress} 
                 className="bg-slate-800 border-slate-950 text-rose-500"
             >
-                <Backspace className="w-10 h-10 stroke-[2.5px]" />
+                <Delete className="w-10 h-10 stroke-[2.5px]" />
             </KeyButton>
         </div>
     </div>
