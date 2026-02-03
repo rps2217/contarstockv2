@@ -1,6 +1,6 @@
 
 import React, { useMemo, useState, useCallback, useRef, useEffect, memo } from 'react';
-import { List, MapPin, Keyboard, ChevronLeft, Package, Clock, Camera, Trash2, MoreVertical, ShieldCheck, History, Lock } from 'lucide-react';
+import { List, MapPin, Keyboard, ChevronLeft, Package, Clock, Camera, Trash2, MoreVertical, ShieldCheck, History, Lock, Box } from 'lucide-react';
 import { CountingSession, ConsolidatedItem } from '../types';
 import { useScanner } from '../hooks/useScanner';
 import { useHIDScanner } from '../hooks/useHIDScanner';
@@ -15,7 +15,6 @@ import { ExpirationModal } from './ExpirationModal';
 import { VirtualList } from './common/VirtualList';
 import { getRowStyles } from '../services/uiLogic';
 
-// Add missing ScannerProps interface definition
 interface ScannerProps {
   session: CountingSession;
   onCloseSession: () => void;
@@ -41,6 +40,7 @@ const HistoryRow = memo(({ index, data }: any) => {
                         {item.mm && <span className="text-[7px] bg-white/10 px-1.5 py-0.5 rounded font-black">EXP: {item.mm}/{item.yyyy}</span>}
                     </div>
                     <h3 className="font-black text-[12px] uppercase truncate leading-none">{item.productName}</h3>
+                    <div className="text-[7px] font-bold text-white/30 uppercase mt-1">BULTO: {item.location}</div>
                 </div>
                 <div className="text-right">
                     <div className="text-2xl font-black tabular-nums leading-none">{displayQty}</div>
@@ -51,17 +51,17 @@ const HistoryRow = memo(({ index, data }: any) => {
     );
 });
 
-// Fixed: ScannerProps is now defined
 export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDiscardSession }) => {
   const { state, data, actions } = useScanner(session, onCloseSession, onDiscardSession);
   
   const [isTriggerActive, setIsTriggerActive] = useState(false);
   const [isChangingLocation, setIsChangingLocation] = useState(false);
+  const [isChangingLabel, setIsChangingLabel] = useState(false);
+  const [manualCode, setManualCode] = useState('');
   const [isScreenLocked, setIsScreenLocked] = useState(false);
   const [showExpirationModal, setShowExpirationModal] = useState(false);
   const [pendingBarcodeForDate, setPendingBarcodeForDate] = useState<string | null>(null);
 
-  // --- WAKE LOCK API (Prevención de suspensión) ---
   useEffect(() => {
     let wakeLock: any = null;
     const requestWakeLock = async () => {
@@ -131,11 +131,13 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
 
   const quickValues = [5, 10, 20];
 
+  const currentLabel = useLiveQuery(() => db.sessions.get(session.id).then(s => s?.logisticsLabel), [isChangingLabel], session.logisticsLabel);
+
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-black text-white font-mono select-none overflow-hidden">
       <header className="h-16 px-4 flex items-center justify-between border-b border-white/10 bg-slate-900 shadow-2xl shrink-0 z-50 relative">
           <div className="flex items-center gap-3">
-              <button onClick={() => state.setStatus('confirming')} className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl active:bg-blue-600">
+              <button onClick={() => state.setStatus('confirming')} className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl active:bg-blue-600 transition-colors">
                   <ChevronLeft className="w-6 h-6 text-white" />
               </button>
               <button onClick={() => setIsScreenLocked(true)} className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/30 rounded-xl active:bg-amber-500 active:text-black transition-all">
@@ -144,16 +146,18 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
               </button>
           </div>
           <div className="flex flex-col items-center">
-                <span className="text-[8px] font-black uppercase tracking-[0.3em] text-white/40 leading-none mb-1">NUEVA CARGA</span>
+                <span className="text-[8px] font-black uppercase tracking-[0.3em] text-white/40 leading-none mb-1">AUDITORIA ERP</span>
                 <span className="text-xs font-black uppercase tracking-widest text-white italic truncate max-w-[120px]">{session.erpOrder}</span>
           </div>
           <div className="flex items-center gap-2">
+              <button onClick={() => setIsChangingLabel(true)} className="px-3 h-10 bg-blue-600/20 border border-blue-500/30 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 text-blue-400">
+                  <Box className="w-3.5 h-3.5" /> {currentLabel}
+              </button>
               <button onClick={() => setIsChangingLocation(true)} className="px-3 h-10 bg-white/5 border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2">
-                  <MapPin className="w-3.5 h-3.5 text-blue-500" /> {state.currentLocation}
+                  <MapPin className="w-3.5 h-3.5 text-slate-500" /> {state.currentLocation}
               </button>
           </div>
 
-          {/* BARRA DE PROGRESO GLOBAL INTEGRADA EN HEADER */}
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/5 overflow-hidden">
              <div 
                 className={`h-full transition-all duration-1000 ease-out ${state.globalStats.progress >= 100 ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-blue-500'}`}
@@ -209,13 +213,35 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
           <ExpirationModal 
             productName={pendingBarcodeForDate} 
             onComplete={(mm, yyyy) => {
-                // Mejora: El modal ahora acepta un 3er parámetro interno para "recordar"
                 onExpirationComplete(mm, yyyy, (window as any)._rememberDateActive);
             }} 
           />
       )}
 
       {state.status === 'manual' && <NumericKeypad isOpen={true} title="SKU MANUAL" onClose={() => state.setStatus('idle')} value={state.manualInput} onInput={(c) => state.setManualInput(p => p + c)} onDelete={() => state.setManualInput(p => p.slice(0, -1))} onConfirm={() => { if (state.manualInput) handleInbound(state.manualInput); state.setManualInput(''); state.setStatus('idle'); }} />}
+      
+      {isChangingLabel && (
+          <div className="fixed inset-0 z-[300] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6">
+               <div className="bg-slate-900 border-4 border-blue-600/30 rounded-[3rem] p-8 w-full max-w-sm text-center shadow-2xl">
+                  <h2 className="text-xl font-black text-white uppercase mb-6 italic tracking-tight">Cambiar Bulto</h2>
+                  <NumericKeypad 
+                    isOpen={true} 
+                    embedded={true} 
+                    title="NUEVO_BULTO"
+                    value={manualCode}
+                    onInput={(c) => setManualCode(p => p + c)}
+                    onDelete={() => setManualCode(p => p.slice(0, -1))}
+                    onConfirm={async () => {
+                        if (manualCode) await actions.changeLogisticsLabel(manualCode);
+                        setManualCode('');
+                        setIsChangingLabel(false);
+                    }}
+                  />
+                  <button onClick={() => setIsChangingLabel(false)} className="mt-4 text-slate-500 font-black uppercase text-[10px] tracking-widest hover:text-white transition-colors">Cancelar</button>
+               </div>
+          </div>
+      )}
+
       {state.status === 'confirming' && (
           <div className="fixed inset-0 z-[300] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in">
               <div className="bg-slate-900 border-4 border-white/5 rounded-[3rem] p-10 w-full max-w-sm text-center shadow-2xl relative overflow-hidden">
@@ -226,18 +252,6 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
                       <button onClick={onCloseSession} className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all">Guardar y Cerrar</button>
                       <button onClick={() => state.setStatus('idle')} className="w-full bg-white/5 text-white/40 py-5 rounded-2xl font-black uppercase tracking-widest active:scale-95 transition-all">Seguir Contando</button>
                       <button onClick={onDiscardSession} className="w-full mt-4 text-rose-500 font-black uppercase tracking-widest text-[8px] opacity-40 hover:opacity-100">Eliminar Sesión</button>
-                  </div>
-              </div>
-          </div>
-      )}
-      {isChangingLocation && (
-          <div className="fixed inset-0 z-[210] bg-black/90 backdrop-blur-md flex items-center justify-center p-6 animate-in zoom-in-95">
-              <div className="bg-slate-900 border-2 border-white/10 rounded-[2.5rem] p-8 w-full max-w-sm shadow-2xl">
-                  <h3 className="text-xl font-black uppercase tracking-tight text-white mb-6">Establecer Ubicación</h3>
-                  <input autoFocus className="w-full h-16 bg-black border-4 border-white/5 rounded-2xl text-center font-black text-2xl uppercase tracking-widest outline-none focus:border-blue-500 transition-all text-white" placeholder="PASILLO A..." defaultValue={state.currentLocation} onKeyDown={(e) => { if (e.key === 'Enter') { state.setCurrentLocation((e.target as HTMLInputElement).value.toUpperCase()); setIsChangingLocation(false); } }} />
-                  <div className="mt-6 flex gap-3">
-                      <button onClick={() => setIsChangingLocation(false)} className="flex-1 py-4 bg-white/5 text-white/40 font-black uppercase text-xs rounded-xl">Cerrar</button>
-                      <button onClick={() => { const val = (document.querySelector('input[placeholder="PASILLO A..."]') as HTMLInputElement).value; state.setCurrentLocation(val.toUpperCase()); setIsChangingLocation(false); }} className="flex-1 py-4 bg-blue-600 text-white font-black uppercase text-xs rounded-xl shadow-lg">Confirmar</button>
                   </div>
               </div>
           </div>

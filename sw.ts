@@ -21,7 +21,6 @@ self.addEventListener('sync', (event: any) => {
 
 async function processBackgroundSync() {
     try {
-        // 1. Recuperar configuración
         const configRecord = await db.settings.get('app_config');
         if (!configRecord || !configRecord.value) return;
         
@@ -29,13 +28,9 @@ async function processBackgroundSync() {
         const appConfig = settings.appSheetConfig;
         if (!appConfig?.gasWebAppUrl) return;
 
-        // 2. Buscar pendientes
         const unsyncedScans = await db.scans.where('synced').equals(0).toArray();
         if (unsyncedScans.length === 0) return;
 
-        console.log(`[SW] Background Sync: ${unsyncedScans.length} items.`);
-
-        // 3. Agrupar por Sesión
         const sessionIds = Array.from(new Set(unsyncedScans.map(s => s.sessionId)));
         
         for (const sessionId of sessionIds) {
@@ -45,7 +40,8 @@ async function processBackgroundSync() {
             const scansForSession = unsyncedScans.filter(s => s.sessionId === sessionId);
             if (scansForSession.length === 0) continue;
 
-            // 4. Agregación en memoria (Micro-Aggregator)
+            // --- CONSOLIDACIÓN CRÍTICA EN SEGUNDO PLANO ---
+            // Agrupamos por Barcode + MM + YYYY + logisticsLabel (Bulto)
             const aggregation: Record<string, any> = {};
             
             const uniqueSkus = Array.from(new Set(scansForSession.map(s => s.barcode)));
@@ -53,7 +49,7 @@ async function processBackgroundSync() {
             const productMap = new Map(products.map(p => [p.barcode, p.name]));
 
             scansForSession.forEach(scan => {
-                const key = `${scan.barcode}_${scan.mm||0}_${scan.yyyy||0}`;
+                const key = `${scan.barcode}_${scan.mm||0}_${scan.yyyy||0}_${scan.logisticsLabel || 'UNSET'}`;
                 if (!aggregation[key]) {
                     aggregation[key] = {
                         barcode: scan.barcode,
@@ -61,6 +57,7 @@ async function processBackgroundSync() {
                         totalQuantity: 0,
                         mm: scan.mm, 
                         yyyy: scan.yyyy,
+                        location: scan.logisticsLabel, // Mantenemos el bulto específico
                         isIncident: scan.isIncident,
                         scans: 0 
                     };
@@ -68,7 +65,6 @@ async function processBackgroundSync() {
                 aggregation[key].totalQuantity += scan.quantity;
             });
 
-            // 5. Transformación y Chunking
             const fullPayload = createInventoryPayload(
                 session, 
                 Object.values(aggregation) as any[], 
@@ -85,7 +81,7 @@ async function processBackgroundSync() {
                     action: 'append_rows',
                     tableName: targetTable,
                     rows: chunk,
-                    metadata: { timestamp: Date.now(), source: 'sw-unified-chunked' }
+                    metadata: { timestamp: Date.now(), source: 'sw-background-consolidated' }
                 };
 
                 const response = await fetch(appConfig.gasWebAppUrl, {
@@ -97,10 +93,12 @@ async function processBackgroundSync() {
                 if (response.ok) {
                     const result = await response.json();
                     if (result.success) {
-                        // Marcamos scans sincronizados parcialmente
-                        const chunkBarcodes = new Set(chunk.map((r: any) => r['CODIGO'])); // Usar key real del mapper
+                        // Marcamos como sincronizados los scans originales que componen este chunk
+                        const chunkBarcodes = new Set(chunk.map((r: any) => r['CODIGO']));
+                        const chunkLabels = new Set(chunk.map((r: any) => r['ETIQUETAS']));
+                        
                         const idsToUpdate = scansForSession
-                            .filter(s => chunkBarcodes.has(s.barcode))
+                            .filter(s => chunkBarcodes.has(s.barcode) && chunkLabels.has(s.logisticsLabel))
                             .map(s => s.id);
                             
                         await db.scans.where('id').anyOf(idsToUpdate).modify({ synced: 1 });
@@ -109,9 +107,8 @@ async function processBackgroundSync() {
             }
             await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
         }
-
     } catch (err) {
-        console.error('[SW] Error Sync:', err);
+        console.error('[SW] Error Background Sync:', err);
         throw err;
     }
 }

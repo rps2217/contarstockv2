@@ -47,6 +47,8 @@ export interface ScanRecord {
   barcode: string;
   timestamp: number;
   quantity: number;
+  // Propiedad añadida para trazabilidad multi-bulto por sesión
+  logisticsLabel?: string;
   expectedQty?: number;
   location?: string;
   operatorId?: string; 
@@ -82,7 +84,7 @@ export interface AppSheetConfig {
   consolidatedTableName: string;
   productsTableName: string;
   receptionTableName?: string;
-  ordersTableName?: string; // NUEVO: Pestaña para pre-cargar pedidos
+  ordersTableName?: string; 
   gasWebAppUrl?: string; 
 }
 

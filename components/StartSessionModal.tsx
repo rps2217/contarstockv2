@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Camera, DownloadCloud, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
-import { CountingSession, ExpectedItem } from '../types';
+import { CountingSession, ExpectedItem, ExpectedOrder } from '../types';
 import * as sessionService from '../services/sessionService'; 
 import { sanitizeBarcode } from '../services/utils';
 import { NumericKeypad } from './NumericKeypad';
@@ -24,7 +24,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   
   const [isCloudLoading, setIsCloudLoading] = useState(false);
-  const [cloudItems, setCloudItems] = useState<ExpectedItem[] | null>(null);
+  const [cloudOrder, setCloudOrder] = useState<ExpectedOrder | null>(null);
 
   useHIDScanner({
       isEnabled: isOpen && !isCameraOpen,
@@ -49,18 +49,18 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
     setIsCloudLoading(true);
     setError("");
     try {
-        const items = await sessionService.fetchExpectedItemsFromCloud(erpOrder);
-        if (items.length === 0) {
+        const order = await sessionService.fetchExpectedItemsFromCloud(erpOrder);
+        if (!order || order.items.length === 0) {
             setError("Sin items.");
-            setCloudItems(null);
+            setCloudOrder(null);
             SoundFX.play('error');
         } else {
-            setCloudItems(items);
+            setCloudOrder(order);
             SoundFX.play('success');
         }
     } catch (err: any) {
         setError("Error Cloud.");
-        setCloudItems(null);
+        setCloudOrder(null);
     } finally {
         setIsCloudLoading(false);
     }
@@ -76,7 +76,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
             erpOrder, 
             labelId, 
             'standard', 
-            cloudItems || undefined
+            cloudOrder || undefined
         );
         onSessionStart(session);
         onClose();
@@ -132,10 +132,10 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
                     <button 
                         onClick={handleFetchFromCloud}
                         disabled={isCloudLoading || !erpOrder}
-                        className={`flex-1 h-12 rounded-xl flex items-center justify-center gap-2 font-black text-[10px] uppercase tracking-widest transition-all ${cloudItems ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400 disabled:opacity-20'}`}
+                        className={`flex-1 h-12 rounded-xl flex items-center justify-center gap-2 font-black text-[10px] uppercase tracking-widest transition-all ${cloudOrder ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400 disabled:opacity-20'}`}
                     >
-                        {isCloudLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (cloudItems ? <CheckCircle2 className="w-4 h-4" /> : <DownloadCloud className="w-4 h-4" />)}
-                        {cloudItems ? 'Items OK' : 'Cargar ERP'}
+                        {isCloudLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (cloudOrder ? <CheckCircle2 className="w-4 h-4" /> : <DownloadCloud className="w-4 h-4" />)}
+                        {cloudOrder ? 'Items OK' : 'Cargar ERP'}
                     </button>
                 </div>
 
@@ -144,12 +144,12 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
                         isOpen={true} 
                         embedded={true} 
                         onInput={(c) => { 
-                            if (activeKeypadField === 'erp') { setErpOrder(p => p + c); setCloudItems(null); } 
+                            if (activeKeypadField === 'erp') { setErpOrder(p => p + c); setCloudOrder(null); } 
                             else setLabelId(p => p + c); 
                             setError('');
                         }} 
                         onDelete={() => { 
-                            if (activeKeypadField === 'erp') { setErpOrder(p => p.slice(0, -1)); setCloudItems(null); }
+                            if (activeKeypadField === 'erp') { setErpOrder(p => p.slice(0, -1)); setCloudOrder(null); }
                             else setLabelId(p => p.slice(0, -1)); 
                         }} 
                         onConfirm={handleStart}
@@ -162,7 +162,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
                     onClick={handleStart} 
                     className="w-full bg-blue-600 text-white font-black h-16 rounded-3xl shadow-2xl active:scale-95 uppercase tracking-[0.3em] text-xs transition-all border-b-8 border-blue-900"
                 >
-                    {cloudItems ? 'Iniciar Verificado' : 'Iniciar a Ciegas'}
+                    {cloudOrder ? 'Iniciar Verificado' : 'Iniciar a Ciegas'}
                 </button>
             </div>
         </Modal>

@@ -1,7 +1,7 @@
 
 import { Dexie } from 'dexie';
 import { db } from '../db';
-import { ScanRecord, CountingSession, ExpectedItem } from '../types';
+import { ScanRecord, CountingSession, ExpectedOrder } from '../types';
 import { generateUUID, normalizeKey, sanitizeBarcode } from './utils';
 import { logger } from './logger';
 import { IntegrityGuard } from './integrityGuard';
@@ -63,10 +63,7 @@ export const updateSessionMetadata = async (sessionId: string) => {
     });
 };
 
-/**
- * NUEVO: Descarga items esperados desde la pestaña PEDIDOS filtrando por ERP.
- */
-export const fetchExpectedItemsFromCloud = async (erpOrder: string): Promise<ExpectedItem[]> => {
+export const fetchExpectedItemsFromCloud = async (erpOrder: string): Promise<ExpectedOrder | null> => {
     const config = getSettings().appSheetConfig;
     const tableName = config?.ordersTableName || "PEDIDOS";
     
@@ -74,7 +71,7 @@ export const fetchExpectedItemsFromCloud = async (erpOrder: string): Promise<Exp
         const rawRows = await fetchFromGas(tableName);
         const erpClean = erpOrder.trim().toUpperCase();
 
-        return rawRows
+        const items = rawRows
             .map(row => {
                 const result = CloudOrderRowSchema.safeParse(row);
                 return result.success ? result.data : null;
@@ -85,6 +82,17 @@ export const fetchExpectedItemsFromCloud = async (erpOrder: string): Promise<Exp
                 name: item!.name,
                 expectedQty: item!.qty
             }));
+            
+        if (items.length === 0) return null;
+
+        return {
+            id: generateUUID(),
+            internalId: erpClean,
+            items: items,
+            totalExpectedUnits: items.reduce((a, b) => a + b.expectedQty, 0),
+            totalExpectedSKUs: items.length,
+            importedAt: Date.now()
+        };
     } catch (e: any) {
         logger.error('CLOUD_FETCH_ORDERS_FAIL', e.message);
         throw e;
@@ -100,12 +108,17 @@ export const addScanEvent = async (
     location?: string
 ): Promise<ScanRecord> => {
     const operatorId = localStorage.getItem('logicount_operator_id') || 'SISTEMA_LOCAL';
+    
+    // Obtenemos el bulto activo de la sesión
+    const session = await db.sessions.get(sessionId);
+    const logisticsLabel = session?.logisticsLabel || 'DESCONOCIDO';
 
     const newRecord: ScanRecord = {
         id: generateUUID(),
         sessionId,
         barcode,
         quantity,
+        logisticsLabel, // Ahora cada pick guarda a qué bulto pertenece
         mm,
         yyyy,
         location,
@@ -121,6 +134,10 @@ export const addScanEvent = async (
     return newRecord;
 };
 
+export const updateSessionLabel = async (sessionId: string, newLabel: string) => {
+    await db.sessions.update(sessionId, { logisticsLabel: newLabel.trim().toUpperCase() });
+};
+
 export const checkLabelExists = async (label: string): Promise<boolean> => {
     const count = await db.sessions.where('logisticsLabel').equals(normalizeKey(label)).count();
     return count > 0;
@@ -130,19 +147,19 @@ export const createSession = async (
     erp: string, 
     label: string, 
     type: 'standard' | 'hammer' = 'standard',
-    expectedItems?: ExpectedItem[]
+    expectedItems?: ExpectedOrder
 ): Promise<CountingSession> => {
     const s: CountingSession = { 
         id: generateUUID(), 
-        erpOrder: erp.trim(), 
-        logisticsLabel: label.trim(), 
+        erpOrder: erp.trim().toUpperCase(), 
+        logisticsLabel: label.trim().toUpperCase(), 
         createdAt: Date.now(), 
         status: 'active', 
         sessionType: type,
         totalUnits: 0, 
         totalSKUs: 0,
-        isVerifiedMode: !!expectedItems && expectedItems.length > 0,
-        expectedItems: expectedItems
+        isVerifiedMode: !!expectedItems,
+        expectedItems: expectedItems?.items
     };
     await db.sessions.add(s);
     return s;
@@ -152,7 +169,7 @@ export const createDraftSession = async (label: string): Promise<CountingSession
     const s: CountingSession = { 
         id: generateUUID(), 
         erpOrder: 'RECEPCION_BORRADOR', 
-        logisticsLabel: label.trim(), 
+        logisticsLabel: label.trim().toUpperCase(), 
         createdAt: Date.now(), 
         status: 'draft', 
         sessionType: 'standard',

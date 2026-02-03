@@ -1,3 +1,4 @@
+
 import { ScanRecord, ConsolidatedItem } from "../types";
 import { db } from "../db";
 
@@ -7,7 +8,9 @@ let workerFailed = false;
 const aggregateScansSync = (scans: ScanRecord[], productMap: Record<string, string>): ConsolidatedItem[] => {
     const aggregation: Record<string, ConsolidatedItem> = {};
     for (const scan of scans) {
-        const key = `${scan.barcode}_${scan.mm || 0}_${scan.yyyy || 0}`;
+        // La clave ahora incluye logisticsLabel para separar por bulto real
+        const key = `${scan.barcode}_${scan.mm || 0}_${scan.yyyy || 0}_${scan.logisticsLabel || 'UNSET'}`;
+        
         if (!aggregation[key]) {
             aggregation[key] = {
                 barcode: scan.barcode,
@@ -16,6 +19,7 @@ const aggregateScansSync = (scans: ScanRecord[], productMap: Record<string, stri
                 scans: 0,
                 mm: scan.mm,
                 yyyy: scan.yyyy,
+                location: scan.logisticsLabel, // Usamos la ubicación/bulto específica del scan
                 isIncident: false
             };
         }

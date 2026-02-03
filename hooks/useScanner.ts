@@ -146,6 +146,11 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
         if (navigator.vibrate) navigator.vibrate(10);
     }, []);
 
+    const changeLogisticsLabel = useCallback(async (newLabel: string) => {
+        await sessionService.updateSessionLabel(session.id, newLabel);
+        trigger('success', { vibration: 60 });
+    }, [session.id, trigger]);
+
     const lastScannedItem = useMemo(() => {
         if (!activeBarcode) return undefined;
         const realItem = consolidatedHistory?.find(i => i.barcode === activeBarcode);
@@ -179,6 +184,7 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
             handleExternalScan: handleInboundScan,
             selectItem,
             setRememberedDate,
+            changeLogisticsLabel,
             handleQuantityChange: (barcode: string, qty: number) => finalizeScanPipeline(barcode, qty),
             handleDeleteProduct: async (barcode: string) => {
                 await sessionService.deleteSessionItem(session.id, barcode);

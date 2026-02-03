@@ -1,3 +1,4 @@
+
 import { CountingSession, ConsolidatedItem } from '../../types';
 import { SHEET_COLUMNS } from '../constants';
 import { generateUUID } from '../utils';
@@ -24,8 +25,11 @@ export const createInventoryPayload = (
         // Etiqueta de vencimiento para la CLAVE_UNICA
         const expiryPart = item.mm && item.yyyy ? `${item.mm}-${item.yyyy}` : 'SIN_FECHA';
         
+        // El label ahora proviene del item consolidado (trazabilidad por bulto)
+        const activeLabel = item.location || session.logisticsLabel;
+        
         // Formato solicitado: ERP_ETIQUETA_SKU_FECHAEXP
-        const uniqueKey = `${session.erpOrder}_${session.logisticsLabel}_${item.barcode}_${expiryPart}`;
+        const uniqueKey = `${session.erpOrder}_${activeLabel}_${item.barcode}_${expiryPart}`;
 
         return {
             [SHEET_COLUMNS.ID]: generateUUID(),
@@ -35,7 +39,7 @@ export const createInventoryPayload = (
             [SHEET_COLUMNS.BARCODE]: item.barcode,
             [SHEET_COLUMNS.PRODUCT_NAME]: item.productName || 'Cargando...',
             [SHEET_COLUMNS.QUANTITY]: item.totalQuantity,
-            [SHEET_COLUMNS.LABEL]: session.logisticsLabel,
+            [SHEET_COLUMNS.LABEL]: activeLabel,
             [SHEET_COLUMNS.MONTH]: item.mm || "",
             [SHEET_COLUMNS.YEAR]: item.yyyy || "",
             [SHEET_COLUMNS.INCIDENT]: item.isIncident ? "FRC" : "OK",

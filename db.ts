@@ -28,11 +28,11 @@ export class LogiCountDB extends Dexie {
 
   constructor() {
     super('LogiCountDB');
-    // Version bumped to 19 to include settings table
-    (this as any).version(19).stores({
+    // Version bumped to 20 to track label per scan for multi-bulto consolidation
+    (this as any).version(20).stores({
       products: '&barcode, name, syncStatus', 
       sessions: 'id, status, createdAt, erpOrder, logisticsLabel, sessionType, auditStatus, [erpOrder+createdAt], [status+lastSyncTimestamp]', 
-      scans: 'id, sessionId, barcode, timestamp, synced, isIncident, [sessionId+synced], [sessionId+barcode], [sessionId+timestamp]',
+      scans: 'id, sessionId, barcode, logisticsLabel, timestamp, synced, isIncident, [sessionId+synced], [sessionId+barcode], [sessionId+logisticsLabel]',
       syncQueue: '++id, status, createdAt, retryCount',
       expectedOrders: 'id, internalId',
       logs: '++id, level, module, timestamp',
