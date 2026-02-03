@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Calendar, CheckCircle2, XCircle } from 'lucide-react';
+import { Calendar, CheckCircle2, XCircle, Zap } from 'lucide-react';
 
 interface ExpirationModalProps {
   onComplete: (mm: number | undefined, yyyy: number | undefined) => void;
@@ -10,6 +10,10 @@ interface ExpirationModalProps {
 export const ExpirationModal: React.FC<ExpirationModalProps> = ({ onComplete, productName }) => {
   const [step, setStep] = useState<'year' | 'month'>('year');
   const [selectedYear, setSelectedYear] = useState<number | undefined>(undefined);
+  const [remember, setRemember] = useState(false);
+
+  // Inyectamos el estado en el objeto window para que Scanner pueda leerlo (Solución simple sin refactorizar props)
+  (window as any)._rememberDateActive = remember;
 
   const handleYearSelect = (year: number) => {
     setSelectedYear(year);
@@ -25,7 +29,7 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({ onComplete, pr
   };
 
   return (
-    <div className="fixed inset-0 z-[70] bg-slate-950/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[200] bg-slate-950/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
       <div className="w-full max-w-sm bg-white rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
         
         {/* Header */}
@@ -76,6 +80,20 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({ onComplete, pr
                </div>
             </div>
           )}
+
+          {/* TOGGLE RECORDAR (Smart Expiry) */}
+          <button 
+            onClick={() => setRemember(!remember)}
+            className={`mt-6 w-full p-4 rounded-2xl border-2 flex items-center justify-between transition-all ${remember ? 'bg-blue-600 border-blue-700 text-white shadow-lg' : 'bg-slate-50 border-slate-200 text-slate-400'}`}
+          >
+             <div className="flex items-center gap-3">
+                <Zap className={`w-5 h-5 ${remember ? 'text-white' : 'text-slate-300'}`} />
+                <span className="text-[10px] font-black uppercase tracking-widest">Fijar fecha ráfaga</span>
+             </div>
+             <div className={`w-10 h-5 rounded-full relative transition-all ${remember ? 'bg-white' : 'bg-slate-200'}`}>
+                <div className={`absolute top-0.5 w-4 h-4 bg-slate-900 rounded-full transition-all ${remember ? 'right-0.5' : 'left-0.5'}`} />
+             </div>
+          </button>
         </div>
 
         <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-between gap-3">

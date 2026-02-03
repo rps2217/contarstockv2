@@ -25,6 +25,9 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
     const [activeBarcode, setActiveBarcode] = useState<string | null>(null);
     const [optimisticQty, setOptimisticQty] = useState<number | null>(null);
 
+    // Memoria de fecha para escaneo continuo
+    const [rememberedDate, setRememberedDate] = useState<{mm: number, yyyy: number} | null>(null);
+
     const itemsRef = useRef<ConsolidatedItem[]>([]);
 
     const consolidatedHistory = useLiveQuery(async () => {
@@ -40,6 +43,15 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
         itemsRef.current = sorted;
         return sorted;
     }, [session.id, activeBarcode, feedback]);
+
+    // Cálculo de progreso global para el Header
+    const globalStats = useMemo(() => {
+        if (!consolidatedHistory) return { progress: 0, totalUnits: 0, totalExpected: 0 };
+        const units = consolidatedHistory.reduce((acc, i) => acc + i.totalQuantity, 0);
+        const expected = session.expectedItems?.reduce((acc, i) => acc + i.expectedQty, 0) || 0;
+        const progress = expected > 0 ? Math.min(100, (units / expected) * 100) : 0;
+        return { progress, totalUnits: units, totalExpected: expected };
+    }, [consolidatedHistory, session.expectedItems]);
 
     const finalizeScanPipeline = useCallback(async (barcode: string, qty: number, mm?: number, yyyy?: number) => {
         try {
@@ -65,18 +77,22 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
             let finalYYYY = yyyy;
 
             const existingInList = itemsRef.current.find(i => i.barcode === barcode);
-            if (!finalMM && existingInList?.mm) {
-                finalMM = existingInList.mm;
-                finalYYYY = existingInList.yyyy;
+            
+            // Lógica Smart Expiry: 1. Propia del scan, 2. Recordada en sesión, 3. Existente en lista
+            if (!finalMM) {
+                if (rememberedDate) {
+                    finalMM = rememberedDate.mm;
+                    finalYYYY = rememberedDate.yyyy;
+                } else if (existingInList?.mm) {
+                    finalMM = existingInList.mm;
+                    finalYYYY = existingInList.yyyy;
+                }
             }
 
-            // Actualizamos la cantidad optimista antes de la DB
-            setOptimisticQty(prev => {
-                const currentTotal = existingInList?.totalQuantity || 0;
-                const base = (prev !== null && activeBarcode === barcode) ? prev : currentTotal;
-                return Math.max(0, base + qty);
-            });
-            
+            const currentTotal = existingInList?.totalQuantity || 0;
+            const newTotal = Math.max(0, (activeBarcode === barcode ? (optimisticQty ?? currentTotal) : currentTotal) + qty);
+
+            setOptimisticQty(newTotal);
             setActiveBarcode(barcode);
             
             await sessionService.addScanEvent(
@@ -88,24 +104,30 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
                 currentLocation
             );
 
+            // Feedback háptico diferenciado
             if (qty > 0) {
-                trigger(isAutoRegistered ? 'unknown' : 'success', { sound: qty > 1 ? 'increment' : 'success' });
+                const target = session.expectedItems?.find(i => i.barcode === barcode)?.expectedQty;
+                const isGoalReached = target && newTotal === target;
+                
+                trigger(isAutoRegistered ? 'unknown' : 'success', { 
+                    sound: isGoalReached ? 'success' : (qty > 1 ? 'increment' : 'success'),
+                    vibration: isGoalReached ? [100, 50, 100] : (qty > 1 ? 25 : 40)
+                });
             } else {
-                trigger('undo', { sound: 'delete' });
+                trigger('undo', { sound: 'delete', vibration: [20, 20] });
             }
 
             if (settings.ttsEnabled && qty > 0) {
-                const totalCalculado = (existingInList?.totalQuantity || 0) + qty;
                 const ttsText = settings.ttsMode === 'count' 
-                    ? `${totalCalculado}` 
-                    : `${product.name.substring(0, 20)}, ${totalCalculado}`;
+                    ? `${newTotal}` 
+                    : `${product.name.substring(0, 20)}, ${newTotal}`;
                 SoundFX.speak(ttsText);
             }
 
         } catch (err) {
             trigger('error');
         }
-    }, [session.id, settings, trigger, currentLocation, activeBarcode]);
+    }, [session.id, session.expectedItems, settings, trigger, currentLocation, activeBarcode, optimisticQty, rememberedDate]);
 
     const handleInboundScan = useCallback((rawBarcode: string, mm?: number, yyyy?: number, qtyOverride?: number) => {
         const barcode = sanitizeBarcode(rawBarcode);
@@ -145,7 +167,9 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
             status, setStatus, feedback, manualInput, setManualInput, multiplier, setMultiplier,
             currentLocation, setCurrentLocation,
             optimisticActiveQty: optimisticQty || 0,
-            activeBarcode
+            activeBarcode,
+            globalStats,
+            rememberedDate
         },
         data: { 
             lastScan: lastScannedItem, 
@@ -154,6 +178,7 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
         actions: { 
             handleExternalScan: handleInboundScan,
             selectItem,
+            setRememberedDate,
             handleQuantityChange: (barcode: string, qty: number) => finalizeScanPipeline(barcode, qty),
             handleDeleteProduct: async (barcode: string) => {
                 await sessionService.deleteSessionItem(session.id, barcode);

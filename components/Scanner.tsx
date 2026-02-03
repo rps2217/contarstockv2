@@ -15,10 +15,11 @@ import { ExpirationModal } from './ExpirationModal';
 import { VirtualList } from './common/VirtualList';
 import { getRowStyles } from '../services/uiLogic';
 
+// Add missing ScannerProps interface definition
 interface ScannerProps {
   session: CountingSession;
   onCloseSession: () => void;
-  onDiscardSession?: () => void;
+  onDiscardSession: () => void;
 }
 
 const HistoryRow = memo(({ index, data }: any) => {
@@ -26,9 +27,7 @@ const HistoryRow = memo(({ index, data }: any) => {
     if (!item) return null;
     const { onSelect, activeBarcode, expectedItems, optimisticQty } = data;
     
-    // Si esta fila es la activa, usamos la cantidad del visor para que no haya desfase
     const displayQty = activeBarcode === item.barcode ? optimisticQty : item.totalQuantity;
-    
     const target = expectedItems?.find((ei: any) => ei.barcode === item.barcode)?.expectedQty;
     const isActive = activeBarcode === item.barcode;
     const className = getRowStyles(displayQty, target, isActive);
@@ -52,6 +51,7 @@ const HistoryRow = memo(({ index, data }: any) => {
     );
 });
 
+// Fixed: ScannerProps is now defined
 export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDiscardSession }) => {
   const { state, data, actions } = useScanner(session, onCloseSession, onDiscardSession);
   
@@ -61,6 +61,20 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
   const [showExpirationModal, setShowExpirationModal] = useState(false);
   const [pendingBarcodeForDate, setPendingBarcodeForDate] = useState<string | null>(null);
 
+  // --- WAKE LOCK API (Prevención de suspensión) ---
+  useEffect(() => {
+    let wakeLock: any = null;
+    const requestWakeLock = async () => {
+        try {
+            if ('wakeLock' in navigator) {
+                wakeLock = await (navigator as any).wakeLock.request('screen');
+            }
+        } catch (err) {}
+    };
+    requestWakeLock();
+    return () => { if (wakeLock) wakeLock.release(); };
+  }, []);
+
   const existingBarcodes = useLiveQuery(async () => {
         const scans = await db.scans.where('sessionId').equals(session.id).toArray();
         return new Set(scans.map(s => s.barcode));
@@ -69,14 +83,16 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
 
   const handleInbound = useCallback((barcode: string) => {
       if (isScreenLocked) return;
-      const alreadyHasDate = existingBarcodes?.has(barcode);
-      if (!alreadyHasDate) {
+      const alreadyHasDateInHistory = existingBarcodes?.has(barcode);
+      const hasDateInMemory = !!state.rememberedDate;
+
+      if (!alreadyHasDateInHistory && !hasDateInMemory) {
           setPendingBarcodeForDate(barcode);
           setShowExpirationModal(true);
       } else {
           actions.handleExternalScan(barcode);
       }
-  }, [existingBarcodes, actions, isScreenLocked]);
+  }, [existingBarcodes, actions, isScreenLocked, state.rememberedDate]);
 
   const handleDecrement = useCallback(() => {
       if (!data.lastScan) return;
@@ -95,7 +111,10 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
       onScan: handleInbound
   });
 
-  const onExpirationComplete = (mm?: number, yyyy?: number) => {
+  const onExpirationComplete = (mm?: number, yyyy?: number, remember: boolean = false) => {
+      if (remember && mm && yyyy) {
+          actions.setRememberedDate({ mm, yyyy });
+      }
       if (pendingBarcodeForDate) {
           actions.handleExternalScan(pendingBarcodeForDate, mm, yyyy);
       }
@@ -114,7 +133,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-black text-white font-mono select-none overflow-hidden">
-      <header className="h-16 px-4 flex items-center justify-between border-b border-white/10 bg-slate-900 shadow-2xl shrink-0 z-50">
+      <header className="h-16 px-4 flex items-center justify-between border-b border-white/10 bg-slate-900 shadow-2xl shrink-0 z-50 relative">
           <div className="flex items-center gap-3">
               <button onClick={() => state.setStatus('confirming')} className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl active:bg-blue-600">
                   <ChevronLeft className="w-6 h-6 text-white" />
@@ -133,7 +152,16 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
                   <MapPin className="w-3.5 h-3.5 text-blue-500" /> {state.currentLocation}
               </button>
           </div>
+
+          {/* BARRA DE PROGRESO GLOBAL INTEGRADA EN HEADER */}
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/5 overflow-hidden">
+             <div 
+                className={`h-full transition-all duration-1000 ease-out ${state.globalStats.progress >= 100 ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-blue-500'}`}
+                style={{ width: `${state.globalStats.progress}%` }}
+             />
+          </div>
       </header>
+
       <div className="h-[38vh] shrink-0 relative">
           <ScannerHero 
                 lastScan={data.lastScan as any}
@@ -146,6 +174,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
                 onIncrement={() => data.lastScan && handleInbound(data.lastScan.barcode)}
           />
       </div>
+
       <div className="flex-1 min-0 bg-black flex flex-col relative border-t-8 border-white/5">
           <div className="shrink-0 p-3 bg-slate-900/50 border-b border-white/5 grid grid-cols-4 gap-2">
                 <button onClick={() => state.setStatus('manual')} className="h-11 rounded-xl font-black text-[10px] flex items-center justify-center gap-2 transition-all border-2 bg-slate-800 border-slate-700 text-white shadow-lg active:scale-95">
@@ -175,7 +204,17 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
           </button>
       </div>
       {isTriggerActive && <div className="fixed inset-0 z-[250]"><CameraScanner onScan={(code) => { handleInbound(code); setIsTriggerActive(false); }} onClose={() => setIsTriggerActive(false)} isTriggered={true} /></div>}
-      {showExpirationModal && pendingBarcodeForDate && <ExpirationModal productName={pendingBarcodeForDate} onComplete={onExpirationComplete} />}
+      
+      {showExpirationModal && pendingBarcodeForDate && (
+          <ExpirationModal 
+            productName={pendingBarcodeForDate} 
+            onComplete={(mm, yyyy) => {
+                // Mejora: El modal ahora acepta un 3er parámetro interno para "recordar"
+                onExpirationComplete(mm, yyyy, (window as any)._rememberDateActive);
+            }} 
+          />
+      )}
+
       {state.status === 'manual' && <NumericKeypad isOpen={true} title="SKU MANUAL" onClose={() => state.setStatus('idle')} value={state.manualInput} onInput={(c) => state.setManualInput(p => p + c)} onDelete={() => state.setManualInput(p => p.slice(0, -1))} onConfirm={() => { if (state.manualInput) handleInbound(state.manualInput); state.setManualInput(''); state.setStatus('idle'); }} />}
       {state.status === 'confirming' && (
           <div className="fixed inset-0 z-[300] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in">
