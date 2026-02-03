@@ -250,28 +250,20 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
 
       {state.status === 'manual' && <NumericKeypad isOpen={true} title="SKU MANUAL" onClose={() => state.setStatus('idle')} value={state.manualInput} onInput={(c) => state.setManualInput(p => p + c)} onDelete={() => state.setManualInput(p => p.slice(0, -1))} onConfirm={() => { if (state.manualInput) handleInbound(state.manualInput); state.setManualInput(''); state.setStatus('idle'); }} />}
       
-      {/* MODAL CAMBIAR BULTO */}
-      {isChangingLabel && (
-          <div className="fixed inset-0 z-[300] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6">
-               <div className="bg-slate-900 border-4 border-blue-600/30 rounded-[3rem] p-8 w-full max-w-sm text-center shadow-2xl">
-                  <h2 className="text-xl font-black text-white uppercase mb-6 italic tracking-tight">Cambiar Bulto</h2>
-                  <NumericKeypad 
-                    isOpen={true} 
-                    embedded={true} 
-                    title="NUEVO_BULTO"
-                    value={manualCode}
-                    onInput={(c) => setManualCode(p => p + c)}
-                    onDelete={() => setManualCode(p => p.slice(0, -1))}
-                    onConfirm={async () => {
-                        if (manualCode) await actions.changeLogisticsLabel(manualCode);
-                        setManualCode('');
-                        setIsChangingLabel(false);
-                    }}
-                  />
-                  <button onClick={() => setIsChangingLabel(false)} className="mt-4 text-slate-500 font-black uppercase text-[10px] tracking-widest hover:text-white transition-colors">Cancelar</button>
-               </div>
-          </div>
-      )}
+      {/* TECLADO REUTILIZADO PARA CAMBIAR BULTO */}
+      <NumericKeypad 
+          isOpen={isChangingLabel}
+          onClose={() => { setIsChangingLabel(false); setManualCode(''); }}
+          title="CAMBIAR_BULTO"
+          value={manualCode}
+          onInput={(c) => setManualCode(p => p + c)}
+          onDelete={() => setManualCode(p => p.slice(0, -1))}
+          onConfirm={async () => {
+              if (manualCode) await actions.changeLogisticsLabel(manualCode);
+              setManualCode('');
+              setIsChangingLabel(false);
+          }}
+      />
 
       {/* MODAL CAMBIAR UBICACION */}
       {isChangingLocation && (
@@ -309,7 +301,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
           location={state.currentLocation}
           label={currentLabel || ''}
           onChangeLocation={() => setIsChangingLocation(true)}
-          onChangeLabel={() => setIsChangingLabel(true)}
+          onChangeLabel={() => { setManualCode(''); setIsChangingLabel(true); }}
           onShowLabel={() => setShowLabelModal(true)}
           onReset={handleResetSession}
       />
