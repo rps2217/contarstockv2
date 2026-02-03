@@ -1,6 +1,6 @@
 
 import React, { useMemo, useState, useCallback, useRef, useEffect, memo } from 'react';
-import { List, MapPin, Keyboard, ChevronLeft, Package, Clock, Camera, Trash2, MoreVertical, ShieldCheck, History } from 'lucide-react';
+import { List, MapPin, Keyboard, ChevronLeft, Package, Clock, Camera, Trash2, MoreVertical, ShieldCheck, History, Lock } from 'lucide-react';
 import { CountingSession, ScanRecord } from '../types';
 import { useScanner } from '../hooks/useScanner';
 import { useHIDScanner } from '../hooks/useHIDScanner';
@@ -27,7 +27,6 @@ const HistoryRow = memo(({ index, data }: any) => {
     if (!item) return null;
     const { onSelect, activeBarcode, expectedItems } = data;
     
-    // Buscar meta en el packing list de la sesión
     const target = expectedItems?.find((ei: any) => ei.barcode === item.barcode)?.expectedQty;
     const isActive = activeBarcode === item.barcode;
     const className = getRowStyles(item.quantity, target, isActive);
@@ -55,7 +54,6 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
   const { state, data, actions } = useScanner(session, onCloseSession, onDiscardSession);
   
   const [isTriggerActive, setIsTriggerActive] = useState(false);
-  const [showRecentScans, setShowRecentScans] = useState(false);
   const [isChangingLocation, setIsChangingLocation] = useState(false);
   const [isScreenLocked, setIsScreenLocked] = useState(false);
   const [showExpirationModal, setShowExpirationModal] = useState(false);
@@ -63,7 +61,6 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
   
   const autoLockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // --- LÓGICA DE AUTO-BLOQUEO ---
   const resetAutoLock = useCallback(() => {
     if (autoLockTimerRef.current) clearTimeout(autoLockTimerRef.current);
     if (isScreenLocked) return;
@@ -78,19 +75,15 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
       return () => { if (autoLockTimerRef.current) clearTimeout(autoLockTimerRef.current); };
   }, [data.lastScan, state.multiplier, resetAutoLock]);
 
-  // Verificar si ya escaneamos este SKU en este bulto
   const existingBarcodes = useLiveQuery(async () => {
         const scans = await db.scans.where('sessionId').equals(session.id).toArray();
         return new Set(scans.map(s => s.barcode));
     }, [session.id, data.lastScan]
   );
 
-  // Interceptor Central de Escaneo
   const handleInbound = useCallback((barcode: string) => {
       if (isScreenLocked) return;
-
       const alreadyHasDate = existingBarcodes?.has(barcode);
-      
       if (!alreadyHasDate) {
           setPendingBarcodeForDate(barcode);
           setShowExpirationModal(true);
@@ -99,7 +92,6 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
       }
   }, [existingBarcodes, actions, isScreenLocked]);
 
-  // HID Support (Pistolas)
   useHIDScanner({
       isEnabled: !showExpirationModal && !isScreenLocked && !state.status.includes('manual'),
       onScan: handleInbound
@@ -126,36 +118,26 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
         className="fixed inset-0 z-[100] flex flex-col bg-black text-white font-mono select-none overflow-hidden"
         onPointerDown={resetAutoLock}
     >
-      
-      {/* 1. CABECERA MARTILLO */}
       <header className="h-16 px-4 flex items-center justify-between border-b border-white/10 bg-slate-900 shadow-2xl shrink-0 z-50">
           <div className="flex items-center gap-3">
               <button onClick={() => state.setStatus('confirming')} className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl active:bg-blue-600">
                   <ChevronLeft className="w-6 h-6 text-white" />
               </button>
-              
-              <button 
-                onClick={() => setIsScreenLocked(true)}
-                className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/30 rounded-xl active:bg-amber-500 active:text-black transition-all"
-              >
+              <button onClick={() => setIsScreenLocked(true)} className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/30 rounded-xl active:bg-amber-500 active:text-black transition-all">
                   <Lock className="w-4 h-4 text-amber-500" />
                   <span className="text-[9px] font-black uppercase tracking-widest text-amber-500">Lock</span>
               </button>
           </div>
-
           <div className="flex flex-col items-center">
                 <span className="text-[8px] font-black uppercase tracking-[0.3em] text-white/40 leading-none mb-1">NUEVA CARGA</span>
                 <span className="text-xs font-black uppercase tracking-widest text-white italic truncate max-w-[120px]">{session.erpOrder}</span>
           </div>
-          
           <div className="flex items-center gap-2">
               <button onClick={() => setIsChangingLocation(true)} className="px-3 h-10 bg-white/5 border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2">
                   <MapPin className="w-3.5 h-3.5 text-blue-500" /> {state.currentLocation}
               </button>
           </div>
       </header>
-
-      {/* 2. HUD DINÁMICO */}
       <div className="h-[38vh] shrink-0 relative">
           <ScannerHero 
                 lastScan={data.lastScan}
@@ -168,79 +150,30 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
                 onIncrement={() => data.lastScan && handleInbound(data.lastScan.barcode)}
           />
       </div>
-
-      {/* 3. LISTA Y HERRAMIENTAS */}
       <div className="flex-1 min-h-0 bg-black flex flex-col relative">
           <div className="shrink-0 p-3 bg-slate-900/50 border-b border-white/5 grid grid-cols-4 gap-2">
-                <button
-                    onClick={() => state.setStatus('manual')}
-                    className="h-11 rounded-xl font-black text-[10px] flex items-center justify-center gap-2 transition-all border-2 bg-slate-800 border-slate-700 text-white shadow-lg active:scale-95"
-                >
+                <button onClick={() => state.setStatus('manual')} className="h-11 rounded-xl font-black text-[10px] flex items-center justify-center gap-2 transition-all border-2 bg-slate-800 border-slate-700 text-white shadow-lg active:scale-95">
                     <Keyboard className="w-4 h-4" /> <span>MANUAL</span>
                 </button>
-
                 {quickValues.map(val => (
-                    <button
-                        key={val}
-                        onClick={() => { state.setMultiplier(val); if(navigator.vibrate) navigator.vibrate(10); }}
-                        className={`h-11 rounded-xl font-black text-xs flex items-center justify-center transition-all border-2 ${state.multiplier === val ? 'bg-amber-500 border-amber-600 text-black shadow-lg scale-105' : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10'}`}
-                    >
+                    <button key={val} onClick={() => { state.setMultiplier(val); if(navigator.vibrate) navigator.vibrate(10); }} className={`h-11 rounded-xl font-black text-xs flex items-center justify-center transition-all border-2 ${state.multiplier === val ? 'bg-amber-500 border-amber-600 text-black shadow-lg scale-105' : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10'}`}>
                         +{val}
                     </button>
                 ))}
           </div>
-
           <div className="flex-1 min-h-0 relative">
-                <VirtualList 
-                    items={data.recentScans || []} 
-                    itemHeight={78} 
-                    renderRow={HistoryRow} 
-                    rowData={rowData} 
-                    className="bg-black/20"
-                    emptyState={
-                        <div className="flex flex-col items-center opacity-20 mt-12">
-                            <History className="w-16 h-16 mb-4" />
-                            <p className="text-[9px] font-black uppercase tracking-[0.5em]">Historial_Vacío</p>
-                        </div>
-                    }
-                />
+                <VirtualList items={data.recentScans || []} itemHeight={78} renderRow={HistoryRow} rowData={rowData} className="bg-black/20" emptyState={<div className="flex flex-col items-center opacity-20 mt-12"><History className="w-16 h-16 mb-4" /><p className="text-[9px] font-black uppercase tracking-[0.5em]">Historial_Vacío</p></div>} />
           </div>
       </div>
-
-      {/* 4. GATILLO ÓPTICO INFERIOR */}
       <div className="h-24 md:h-28 shrink-0 bg-slate-900 border-t border-white/5 flex items-center px-4 z-40 pb-6">
-          <button 
-              onPointerDown={(e) => { e.preventDefault(); if(navigator.vibrate) navigator.vibrate(40); setIsTriggerActive(true); }} 
-              onPointerUp={() => setIsTriggerActive(false)}
-              onPointerLeave={() => setIsTriggerActive(false)}
-              className={`flex-1 h-14 md:h-16 rounded-2xl flex items-center justify-center gap-4 transition-all duration-75 active:scale-[0.98] border-b-4 ${isTriggerActive ? 'bg-blue-600 border-blue-800 translate-y-1 border-b-0 shadow-inner' : 'bg-white text-black border-slate-300 shadow-2xl'}`}
-          >
+          <button onPointerDown={(e) => { e.preventDefault(); if(navigator.vibrate) navigator.vibrate(40); setIsTriggerActive(true); }} onPointerUp={() => setIsTriggerActive(false)} onPointerLeave={() => setIsTriggerActive(false)} className={`flex-1 h-14 md:h-16 rounded-2xl flex items-center justify-center gap-4 transition-all duration-75 active:scale-[0.98] border-b-4 ${isTriggerActive ? 'bg-blue-600 border-blue-800 translate-y-1 border-b-0 shadow-inner' : 'bg-white text-black border-slate-300 shadow-2xl'}`}>
               <Camera className="w-6 h-6" />
               <span className="text-[10px] font-black uppercase tracking-[0.4em]">{isTriggerActive ? 'LENS_OPEN' : 'GATILLO_OPTICO'}</span>
           </button>
       </div>
-
-      {/* MODALES Y OVERLAYS */}
-      {isTriggerActive && (
-          <div className="fixed inset-0 z-[250]">
-                <CameraScanner onScan={(code) => { handleInbound(code); setIsTriggerActive(false); }} onClose={() => setIsTriggerActive(false)} isTriggered={true} />
-          </div>
-      )}
-
-      {showExpirationModal && pendingBarcodeForDate && (
-          <ExpirationModal productName={pendingBarcodeForDate} onComplete={onExpirationComplete} />
-      )}
-
-      {state.status === 'manual' && (
-          <NumericKeypad 
-              isOpen={true} title="SKU MANUAL" onClose={() => state.setStatus('idle')}
-              value={state.manualInput}
-              onInput={(c) => state.setManualInput(p => p + c)}
-              onDelete={() => state.setManualInput(p => p.slice(0, -1))}
-              onConfirm={() => { if (state.manualInput) handleInbound(state.manualInput); state.setManualInput(''); state.setStatus('idle'); }}
-          />
-      )}
-
+      {isTriggerActive && <div className="fixed inset-0 z-[250]"><CameraScanner onScan={(code) => { handleInbound(code); setIsTriggerActive(false); }} onClose={() => setIsTriggerActive(false)} isTriggered={true} /></div>}
+      {showExpirationModal && pendingBarcodeForDate && <ExpirationModal productName={pendingBarcodeForDate} onComplete={onExpirationComplete} />}
+      {state.status === 'manual' && <NumericKeypad isOpen={true} title="SKU MANUAL" onClose={() => state.setStatus('idle')} value={state.manualInput} onInput={(c) => state.setManualInput(p => p + c)} onDelete={() => state.setManualInput(p => p.slice(0, -1))} onConfirm={() => { if (state.manualInput) handleInbound(state.manualInput); state.setManualInput(''); state.setStatus('idle'); }} />}
       {state.status === 'confirming' && (
           <div className="fixed inset-0 z-[300] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in">
               <div className="bg-slate-900 border-4 border-white/5 rounded-[3rem] p-10 w-full max-w-sm text-center shadow-2xl relative overflow-hidden">
@@ -255,35 +188,18 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
               </div>
           </div>
       )}
-
       {isChangingLocation && (
           <div className="fixed inset-0 z-[210] bg-black/90 backdrop-blur-md flex items-center justify-center p-6 animate-in zoom-in-95">
               <div className="bg-slate-900 border-2 border-white/10 rounded-[2.5rem] p-8 w-full max-w-sm shadow-2xl">
                   <h3 className="text-xl font-black uppercase tracking-tight text-white mb-6">Establecer Ubicación</h3>
-                  <input 
-                      autoFocus
-                      className="w-full h-16 bg-black border-4 border-white/5 rounded-2xl text-center font-black text-2xl uppercase tracking-widest outline-none focus:border-blue-500 transition-all text-white"
-                      placeholder="PASILLO A..."
-                      defaultValue={state.currentLocation}
-                      onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                              state.setCurrentLocation((e.target as HTMLInputElement).value.toUpperCase());
-                              setIsChangingLocation(false);
-                          }
-                      }}
-                  />
+                  <input autoFocus className="w-full h-16 bg-black border-4 border-white/5 rounded-2xl text-center font-black text-2xl uppercase tracking-widest outline-none focus:border-blue-500 transition-all text-white" placeholder="PASILLO A..." defaultValue={state.currentLocation} onKeyDown={(e) => { if (e.key === 'Enter') { state.setCurrentLocation((e.target as HTMLInputElement).value.toUpperCase()); setIsChangingLocation(false); } }} />
                   <div className="mt-6 flex gap-3">
                       <button onClick={() => setIsChangingLocation(false)} className="flex-1 py-4 bg-white/5 text-white/40 font-black uppercase text-xs rounded-xl">Cerrar</button>
-                      <button onClick={() => {
-                          const val = (document.querySelector('input[placeholder="PASILLO A..."]') as HTMLInputElement).value;
-                          state.setCurrentLocation(val.toUpperCase());
-                          setIsChangingLocation(false);
-                      }} className="flex-1 py-4 bg-blue-600 text-white font-black uppercase text-xs rounded-xl shadow-lg">Confirmar</button>
+                      <button onClick={() => { const val = (document.querySelector('input[placeholder="PASILLO A..."]') as HTMLInputElement).value; state.setCurrentLocation(val.toUpperCase()); setIsChangingLocation(false); }} className="flex-1 py-4 bg-blue-600 text-white font-black uppercase text-xs rounded-xl shadow-lg">Confirmar</button>
                   </div>
               </div>
           </div>
       )}
-
       <ScreenLockOverlay isLocked={isScreenLocked} onUnlock={() => { setIsScreenLocked(false); resetAutoLock(); }} />
     </div>
   );
