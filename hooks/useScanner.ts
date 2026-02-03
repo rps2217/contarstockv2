@@ -61,8 +61,6 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
                 }
             }
 
-            // BUSCAR ATRIBUTOS EXISTENTES (FECHA) PARA EVITAR DUPLICIDAD
-            // Si el usuario no pasó fecha, la heredamos del registro ya existente en la lista
             let finalMM = mm;
             let finalYYYY = yyyy;
 
@@ -72,16 +70,15 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
                 finalYYYY = existingInList.yyyy;
             }
 
-            // ACTUALIZACIÓN OPTIMISTA ACUMULATIVA (Fix: Botón Restar/Sumar rápido)
+            // Actualizamos la cantidad optimista antes de la DB
             setOptimisticQty(prev => {
                 const currentTotal = existingInList?.totalQuantity || 0;
-                const base = prev !== null ? prev : currentTotal;
+                const base = (prev !== null && activeBarcode === barcode) ? prev : currentTotal;
                 return Math.max(0, base + qty);
             });
             
             setActiveBarcode(barcode);
             
-            // Persistencia en DB
             await sessionService.addScanEvent(
                 session.id, 
                 barcode, 
@@ -108,7 +105,7 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
         } catch (err) {
             trigger('error');
         }
-    }, [session.id, settings, trigger, currentLocation]);
+    }, [session.id, settings, trigger, currentLocation, activeBarcode]);
 
     const handleInboundScan = useCallback((rawBarcode: string, mm?: number, yyyy?: number, qtyOverride?: number) => {
         const barcode = sanitizeBarcode(rawBarcode);
@@ -130,8 +127,6 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
     const lastScannedItem = useMemo(() => {
         if (!activeBarcode) return undefined;
         const realItem = consolidatedHistory?.find(i => i.barcode === activeBarcode);
-        
-        // El visor siempre prioriza la cantidad optimista (rápida) sobre la real (lenta de DB)
         const qtyToShow = optimisticQty !== null ? optimisticQty : (realItem?.totalQuantity || 0);
 
         if (!realItem && optimisticQty !== null) {
@@ -149,7 +144,8 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
         state: { 
             status, setStatus, feedback, manualInput, setManualInput, multiplier, setMultiplier,
             currentLocation, setCurrentLocation,
-            optimisticActiveQty: optimisticQty || 0
+            optimisticActiveQty: optimisticQty || 0,
+            activeBarcode
         },
         data: { 
             lastScan: lastScannedItem, 

@@ -24,11 +24,14 @@ interface ScannerProps {
 const HistoryRow = memo(({ index, data }: any) => {
     const item = data.items[index];
     if (!item) return null;
-    const { onSelect, activeBarcode, expectedItems } = data;
+    const { onSelect, activeBarcode, expectedItems, optimisticQty } = data;
+    
+    // Si esta fila es la activa, usamos la cantidad del visor para que no haya desfase
+    const displayQty = activeBarcode === item.barcode ? optimisticQty : item.totalQuantity;
     
     const target = expectedItems?.find((ei: any) => ei.barcode === item.barcode)?.expectedQty;
     const isActive = activeBarcode === item.barcode;
-    const className = getRowStyles(item.totalQuantity, target, isActive);
+    const className = getRowStyles(displayQty, target, isActive);
 
     return (
         <div className="px-3 py-1 h-full">
@@ -41,7 +44,7 @@ const HistoryRow = memo(({ index, data }: any) => {
                     <h3 className="font-black text-[12px] uppercase truncate leading-none">{item.productName}</h3>
                 </div>
                 <div className="text-right">
-                    <div className="text-2xl font-black tabular-nums leading-none">{item.totalQuantity}</div>
+                    <div className="text-2xl font-black tabular-nums leading-none">{displayQty}</div>
                     {target !== undefined && <div className="text-[7px] font-black uppercase opacity-60 mt-1">META: {target}</div>}
                 </div>
             </button>
@@ -102,9 +105,10 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
 
   const rowData = useMemo(() => ({ 
       onSelect: actions.selectItem, 
-      activeBarcode: data.lastScan?.barcode,
+      activeBarcode: state.activeBarcode,
+      optimisticQty: state.optimisticActiveQty,
       expectedItems: session.expectedItems
-  }), [actions.selectItem, data.lastScan, session.expectedItems]);
+  }), [actions.selectItem, state.activeBarcode, state.optimisticActiveQty, session.expectedItems]);
 
   const quickValues = [5, 10, 20];
 
@@ -142,7 +146,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
                 onIncrement={() => data.lastScan && handleInbound(data.lastScan.barcode)}
           />
       </div>
-      <div className="flex-1 min-h-0 bg-black flex flex-col relative border-t-8 border-white/5">
+      <div className="flex-1 min-0 bg-black flex flex-col relative border-t-8 border-white/5">
           <div className="shrink-0 p-3 bg-slate-900/50 border-b border-white/5 grid grid-cols-4 gap-2">
                 <button onClick={() => state.setStatus('manual')} className="h-11 rounded-xl font-black text-[10px] flex items-center justify-center gap-2 transition-all border-2 bg-slate-800 border-slate-700 text-white shadow-lg active:scale-95">
                     <Keyboard className="w-4 h-4" /> <span>MANUAL</span>
