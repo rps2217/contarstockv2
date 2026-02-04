@@ -1,3 +1,4 @@
+
 import React, { useState, memo, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMassiveScanner, ConsolidatedBlindItem } from '../hooks/useMassiveScanner';
@@ -15,7 +16,7 @@ import { ScreenLockOverlay } from './common/ScreenLockOverlay';
 // Subcomponentes Atómicos
 import { MassiveHUD } from './massive/MassiveHUD';
 import { MassiveHeader } from './massive/MassiveHeader';
-import { MassiveLabelModal } from './massive/MassiveLabelModal';
+import { BarcodeLabelModal } from './common/BarcodeLabelModal';
 import { MassiveToolsSheet } from './massive/MassiveToolsSheet';
 
 const MassiveItemRow = memo(({ index, data }: any) => {
@@ -71,7 +72,6 @@ const MassiveBlindView: React.FC = () => {
     const [manualCode, setManualCode] = useState('');
 
     // --- LÓGICA DE AUTO-BLOQUEO (4 Segundos) ---
-    // Fix: Replace NodeJS.Timeout with ReturnType<typeof setTimeout> for browser compatibility
     const autoLockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const AUTO_LOCK_DELAY = 4000;
 
@@ -237,10 +237,13 @@ const MassiveBlindView: React.FC = () => {
                 onConfirm={handleKeypadConfirm}
             />
 
-            <MassiveLabelModal 
+            <BarcodeLabelModal 
                 isOpen={showLabelModal} 
                 onClose={() => setShowLabelModal(false)}
-                item={lastScannedItem}
+                barcode={lastScannedItem?.barcode || ""}
+                productName={lastScannedItem?.name}
+                quantity={lastScannedItem?.totalQuantity}
+                meta={`AUDIT: ${batchId}`}
                 isPrinting={isPrinting}
                 onPrintThermal={handleThermalPrint}
                 onPrintPDF={() => lastScannedItem && printBarcode(lastScannedItem.barcode, lastScannedItem.name, `STOCK_AUDIT: ${lastScannedItem.totalQuantity}`)}

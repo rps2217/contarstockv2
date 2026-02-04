@@ -15,7 +15,7 @@ import { ExpirationModal } from './ExpirationModal';
 import { VirtualList } from './common/VirtualList';
 import { getRowStyles } from '../services/uiLogic';
 import { ScannerToolsSheet } from './scanner/ScannerToolsSheet';
-import { MassiveLabelModal } from './massive/MassiveLabelModal';
+import { BarcodeLabelModal } from './common/BarcodeLabelModal';
 import { thermalPrinter } from '../services/thermalPrinterService';
 import { printBarcode } from '../services/printerService';
 import { SoundFX } from '../services/audio';
@@ -306,10 +306,13 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
           onReset={handleResetSession}
       />
 
-      <MassiveLabelModal 
+      <BarcodeLabelModal 
           isOpen={showLabelModal}
           onClose={() => setShowLabelModal(false)}
-          item={data.lastScan ? { barcode: data.lastScan.barcode, name: (data.lastScan as any).productName, totalQuantity: (data.lastScan as any).totalQuantity } as any : null}
+          barcode={data.lastScan?.barcode || ""}
+          productName={(data.lastScan as any)?.productName}
+          quantity={data.lastScan?.totalQuantity}
+          meta={`ORDEN: ${session.erpOrder}`}
           isPrinting={isPrinting}
           onPrintThermal={handleThermalPrint}
           onPrintPDF={() => data.lastScan && printBarcode(data.lastScan.barcode, (data.lastScan as any).productName, `SESSION: ${session.erpOrder}`)}
