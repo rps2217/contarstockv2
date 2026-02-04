@@ -7,6 +7,7 @@ export interface Product {
   supplierRut?: string;
   price?: number;
   syncStatus?: 'synced' | 'add' | 'edit';
+  unitsPerBox?: number;
 }
 
 export interface ExpectedItem {
@@ -45,9 +46,9 @@ export interface ScanRecord {
   id: string;
   sessionId: string;
   barcode: string;
+  batch?: string; // CAMPO CRÍTICO: Lote del medicamento
   timestamp: number;
   quantity: number;
-  // Propiedad añadida para trazabilidad multi-bulto por sesión
   logisticsLabel?: string;
   expectedQty?: number;
   location?: string;
@@ -61,6 +62,7 @@ export interface ScanRecord {
 export interface ConsolidatedItem {
   barcode: string;
   productName: string;
+  batch?: string; // Lote consolidado
   totalQuantity: number;
   expectedQuantity?: number;
   difference?: number;
@@ -88,14 +90,6 @@ export interface AppSheetConfig {
   gasWebAppUrl?: string; 
 }
 
-export interface ThermalPrinterConfig {
-  enabled: boolean;
-  type: 'usb' | 'bluetooth';
-  paperWidth: '58mm' | '80mm';
-  autoCut: boolean;
-  deviceName?: string;
-}
-
 export interface AppSettings {
   theme: Theme;
   soundEnabled: boolean;
@@ -109,27 +103,10 @@ export interface AppSettings {
   predictiveHintsEnabled: boolean; 
   continuousMode: boolean;        
   appSheetConfig?: AppSheetConfig;
-  thermalPrinter?: ThermalPrinterConfig;
   mobileNavConfig?: ViewState[]; 
 }
 
-export interface SyncJob {
-  id?: number;
-  status: 'pending' | 'processing' | 'failed' | 'success';
-  createdAt: number;
-  retryCount: number;
-  payload?: any;
-  type?: string;
-}
-
-export interface SyncConflict {
-  barcode: string;
-  productName: string;
-  localQuantity: number;
-  cloudQuantity: number;
-  timestamp: number;
-}
-
+// Added AliasSuggestion interface
 export interface AliasSuggestion {
   physicalBarcode: string;
   physicalName: string;
@@ -138,6 +115,7 @@ export interface AliasSuggestion {
   quantity: number;
 }
 
+// Updated MatchResult to use AliasSuggestion
 export interface MatchResult {
   expectedOrder: ExpectedOrder;
   matchScore: number;
@@ -150,4 +128,14 @@ export interface MatchResult {
     difference: number;
   }[];
   potentialAliases: AliasSuggestion[];
+}
+
+// Added SyncJob interface for database queue
+export interface SyncJob {
+  id?: number;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  createdAt: number;
+  retryCount: number;
+  sessionId?: string;
+  payload?: any;
 }

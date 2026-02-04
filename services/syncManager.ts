@@ -14,7 +14,7 @@ import { cloudApi } from './cloud/apiClient';
 import { createInventoryPayload } from './cloud/mappers';
 
 let isSyncingInProgress = false;
-const UPLOAD_BATCH_SIZE = 500; // Límite seguro para Google Apps Script
+const UPLOAD_BATCH_SIZE = 500; 
 
 export const resetSyncLock = () => {
     isSyncingInProgress = false;
@@ -33,8 +33,6 @@ export interface UploadGroup {
 
 export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
     const groups: Record<string, UploadGroup> = {};
-    
-    // 1. Grupos basados en ESCANEOS (Cargas e Inventario)
     const unsyncedScans = await db.scans.where('synced').equals(0).toArray();
     
     if (unsyncedScans.length > 0) {
@@ -44,7 +42,6 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
 
         for (const scan of unsyncedScans) {
             const session = sessionMap.get(scan.sessionId);
-            
             if (!session) {
                 if (!groups['SISTEMA_RESIDUAL']) {
                     groups['SISTEMA_RESIDUAL'] = {
@@ -82,8 +79,6 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
         }
     }
 
-    // 2. Grupos basados en SESIONES SIN ESCANEOS (Borradores de Recepción)
-    // Buscamos sesiones completadas que no tengan timestamp de sincronización
     const unsyncedReception = await db.sessions
         .where('status').equals('completed')
         .and(s => !s.lastSyncTimestamp && (s.totalUnits === 0 || !s.totalUnits) && s.erpOrder === 'RECEPCION_BORRADOR')
@@ -112,14 +107,12 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
     try {
         const config = getSettings().appSheetConfig;
         
-        // Manejo especial para huérfanos
         if (group.erpOrder === 'REGISTROS_HUERFANOS') {
             if (onProgress) onProgress("Purgando registros residuales...");
             const unsynced = await db.scans.where('synced').equals(0).toArray();
             const orphanIds = unsynced.filter(s => !s.sessionId || s.sessionId === 'ORPHAN').map(s => s.id);
             await markScansAsSynced(orphanIds);
         } else if (group.type === 'reception') {
-            // SUBIDA DE RECEPCIÓN (SOLO BULTOS)
             if (onProgress) onProgress(`Subiendo registro de ${group.sessionCount} bultos...`);
             const rows = group.sessionIds.map((id, idx) => ({
                 "ID_RECEPCION": id,
@@ -127,10 +120,8 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
                 "ETIQUETA": group.logisticsLabels[idx],
                 "ESTADO": "INGRESADO"
             }));
-            
             const targetTable = config?.receptionTableName || "RECEPCION_BULTOS";
             const result = await cloudApi.appendRows(targetTable, rows);
-            
             if (result.success) {
                 await db.sessions.where('id').anyOf(group.sessionIds).modify({ lastSyncTimestamp: Date.now() });
                 if (onProgress) onProgress(`✓ Recepción sincronizada.`);
@@ -138,35 +129,26 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
                 throw new Error(result.error);
             }
         } else {
-            // PROCESAMIENTO ESTÁNDAR DE INVENTARIO
             for (const sessionId of group.sessionIds) {
                 const session = await db.sessions.get(sessionId);
                 if (!session) continue;
-
                 if (onProgress) onProgress(`Preparando bulto ${session.logisticsLabel}...`);
-
                 const unsyncedScans = await db.scans.where('sessionId').equals(session.id).filter(s => s.synced === 0).toArray();
                 if (unsyncedScans.length === 0) {
-                    // Si no hay scans pero es un bulto importante, igual marcamos como sincronizado
                     await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
                     continue;
                 }
-
                 const consolidatedItems = await aggregateScans(unsyncedScans);
                 const fullPayload = createInventoryPayload(session, consolidatedItems, 'manual');
-
                 const targetTable = session.sessionType === 'hammer' 
                     ? (config?.countsTableName || "CONTEOS") 
                     : (config?.consolidatedTableName || "CONSOLIDADO");
 
                 const totalBatches = Math.ceil(fullPayload.length / UPLOAD_BATCH_SIZE);
-                
                 for (let i = 0; i < totalBatches; i++) {
                     const chunk = fullPayload.slice(i * UPLOAD_BATCH_SIZE, (i + 1) * UPLOAD_BATCH_SIZE);
                     if (onProgress) onProgress(`Subiendo lote ${i + 1}/${totalBatches}...`);
-
                     const result = await cloudApi.appendRows(targetTable, chunk);
-
                     if (result.success) {
                         const chunkBarcodes = new Set(chunk.map((row: any) => row['CODIGO']));
                         const scanIdsToMark = unsyncedScans.filter(s => chunkBarcodes.has(s.barcode)).map(s => s.id);
@@ -175,7 +157,6 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
                         throw new Error(`Fallo en lote ${i+1}: ${result.error}`);
                     }
                 }
-
                 await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
             }
         }
@@ -189,13 +170,23 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
     }
 };
 
+/**
+ * MOTOR SMART SYNC V4.0 (IMPORTACIÓN)
+ * Solo descarga lo que ha cambiado desde la última descarga exitosa.
+ */
 export const importProductsFromAppSheet = async (): Promise<number> => {
     try {
         const config = getSettings().appSheetConfig;
+        
+        // Recuperamos el timestamp guardado de la última descarga exitosa
         const lastSyncTimestamp = localStorage.getItem('last_product_sync_time') || '0';
+        
+        // El servidor GAS ahora recibe este timestamp y filtra los resultados
         const response = await cloudApi.fetchTable(config?.productsTableName || "PRODUCTOS", lastSyncTimestamp);
         const rawProducts = response.rows || [];
+        
         if (rawProducts.length === 0) return 0;
+
         const products: Product[] = rawProducts
             .map((p: any) => {
                 const result = CloudProductSchema.safeParse(p);
@@ -203,10 +194,15 @@ export const importProductsFromAppSheet = async (): Promise<number> => {
             })
             .filter((p): p is Product => p !== null)
             .map(p => ({ ...p, syncStatus: 'synced' as const }));
+
         if (products.length > 0) {
+            // bulkPut realiza la lógica "Smart": Si el SKU existe lo actualiza, si no lo crea.
             await saveProductBatch(products);
+            
+            // Actualizamos nuestro marcador de tiempo con la hora del servidor
             localStorage.setItem('last_product_sync_time', response.server_timestamp || String(Date.now()));
         }
+
         return products.length;
     } catch (e: any) {
         logger.error("FETCH_PRODUCTS_FAIL", `Error en Smart Sync: ${e.message}`);
