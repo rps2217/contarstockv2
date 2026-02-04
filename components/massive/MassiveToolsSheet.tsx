@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { Barcode, RotateCcw, Download, X, MapPin } from 'lucide-react';
+import { Barcode, RotateCcw, Download, X, MapPin, Printer } from 'lucide-react';
 import { Modal } from '../common/Modal';
 
 interface Props {
@@ -11,10 +12,11 @@ interface Props {
     onShowLabel: () => void;
     onReset: () => void;
     onImport: () => void;
+    onPrintSummary: () => void;
 }
 
 export const MassiveToolsSheet: React.FC<Props> = ({ 
-    isOpen, onClose, hasActiveItem, location, onChangeLocation, onShowLabel, onReset, onImport 
+    isOpen, onClose, hasActiveItem, location, onChangeLocation, onShowLabel, onReset, onImport, onPrintSummary 
 }) => {
     
     const ToolButton = ({ onClick, icon: Icon, label, color, disabled = false, sublabel }: any) => (
@@ -44,8 +46,8 @@ export const MassiveToolsSheet: React.FC<Props> = ({
             <div className="p-8 pb-12 bg-black text-white">
                 <div className="flex justify-between items-center mb-8">
                     <div>
-                        <h2 className="text-xl font-black uppercase italic tracking-tight text-white">Utilidades</h2>
-                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">Configuración y Herramientas</p>
+                        <h2 className="text-xl font-black uppercase italic tracking-tight text-white">Acciones de Auditoría</h2>
+                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">Modo Martillo v4.5</p>
                     </div>
                     <button onClick={onClose} className="p-3 bg-white/5 rounded-full text-slate-400">
                         <X className="w-6 h-6" />
@@ -53,37 +55,42 @@ export const MassiveToolsSheet: React.FC<Props> = ({
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                    {/* Botón de Ubicación */}
                     <ToolButton 
-                        onClick={onChangeLocation} 
-                        icon={MapPin} 
-                        label="Set Ubicación" 
-                        sublabel={location}
-                        color="text-blue-400 border-blue-500/20" 
+                        onClick={onPrintSummary} 
+                        icon={Printer} 
+                        label="Imprimir Resumen" 
+                        color="text-emerald-400 border-emerald-500/20" 
                     />
                     <ToolButton 
                         disabled={!hasActiveItem}
                         onClick={onShowLabel} 
                         icon={Barcode} 
-                        label="Imprimir Etiqueta" 
+                        label="Etiqueta SKU" 
                         color="text-indigo-400 border-indigo-500/20" 
+                    />
+                    <ToolButton 
+                        onClick={onChangeLocation} 
+                        icon={MapPin} 
+                        label="Ubicación" 
+                        sublabel={location}
+                        color="text-blue-400 border-blue-500/20" 
                     />
                     <ToolButton 
                         onClick={onImport} 
                         icon={Download} 
-                        label="Importar Stock Cloud" 
-                        color="text-emerald-400 border-emerald-500/20" 
+                        label="Cargar Teórico" 
+                        color="text-amber-400 border-amber-500/20" 
                     />
                     <ToolButton 
                         onClick={onReset} 
                         icon={RotateCcw} 
-                        label="Borrar Todo" 
+                        label="Vaciar Todo" 
                         color="text-rose-500 border-rose-500/20" 
                     />
                 </div>
                 
                 <div className="mt-8 text-center">
-                    <p className="text-[8px] font-black text-slate-700 uppercase tracking-[0.4em]">LogiCount Pro Engine v4.5</p>
+                    <p className="text-[8px] font-black text-slate-700 uppercase tracking-[0.4em]">LogiCount Pro Hardware-Link</p>
                 </div>
             </div>
         </Modal>

@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { ConsolidatedItem } from "../types";
 
@@ -6,7 +7,6 @@ import { ConsolidatedItem } from "../types";
  * Analiza una imagen de una caja de medicamento y extrae Lote y Fecha.
  */
 export const extractPharmaData = async (imageBase64: string): Promise<{ batch: string, mm: number, yyyy: number } | null> => {
-    // Correct initialization using process.env.API_KEY
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     try {
@@ -15,9 +15,8 @@ export const extractPharmaData = async (imageBase64: string): Promise<{ batch: s
             contents: {
                 parts: [
                     { inlineData: { data: imageBase64, mimeType: "image/jpeg" } },
-                    { text: `Extrae de la imagen el número de LOTE (Batch/Lot) y la FECHA DE VENCIMIENTO (Expiry). 
-                             Responde estrictamente en JSON con este formato: {"batch": "string", "mm": number, "yyyy": number}. 
-                             Si no encuentras uno, usa null.` }
+                    { text: `Analiza la imagen de la caja. Extrae el número de LOTE (Batch/Lot) y la FECHA DE VENCIMIENTO (Expiry). 
+                             Responde estrictamente en JSON.` }
                 ]
             },
             config: {
@@ -25,18 +24,17 @@ export const extractPharmaData = async (imageBase64: string): Promise<{ batch: s
                 responseSchema: {
                     type: Type.OBJECT,
                     properties: {
-                        batch: { type: Type.STRING },
-                        mm: { type: Type.NUMBER },
-                        yyyy: { type: Type.NUMBER }
-                    }
+                        batch: { type: Type.STRING, description: "Número de lote detectado" },
+                        mm: { type: Type.NUMBER, description: "Mes de vencimiento (1-12)" },
+                        yyyy: { type: Type.NUMBER, description: "Año de vencimiento (4 dígitos)" }
+                    },
+                    required: ["batch", "mm", "yyyy"]
                 }
             }
         });
 
-        // Using .text property directly
         const text = response.text;
-        if (!text) return null;
-        return JSON.parse(text);
+        return text ? JSON.parse(text) : null;
     } catch (error) {
         console.error("Pharma OCR Error:", error);
         return null;
@@ -44,37 +42,29 @@ export const extractPharmaData = async (imageBase64: string): Promise<{ batch: s
 };
 
 /**
- * AUDITOR VISUAL IA (Fix: Added missing export auditWithVision)
- * Compara el inventario físico (vía foto) contra los registros locales.
+ * AUDITOR VISUAL IA
+ * Compara la carga física real (vía foto) contra el conteo del sistema.
  */
 export const auditWithVision = async (imageBase64: string, currentItems: ConsolidatedItem[]): Promise<{ summary: string, estimatedItems: { barcode: string, name: string, qty: number }[] } | null> => {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     const inventorySummary = currentItems.map(i => 
-        `- SKU: ${i.barcode} | ${i.productName} | Cant: ${i.totalQuantity}`
+        `- SKU: ${i.barcode} | ${i.productName} | Contado: ${i.totalQuantity}`
     ).join('\n');
 
     try {
         const response = await ai.models.generateContent({
-            model: "gemini-3-flash-preview",
+            model: "gemini-3-pro-preview",
             contents: {
                 parts: [
                     { inlineData: { data: imageBase64, mimeType: "image/jpeg" } },
-                    { text: `ROL: Auditor de Inventario Visual.
-                             TAREA: Compara la foto de la carga real contra el inventario registrado.
-                             INVENTARIO REGISTRADO:
+                    { text: `ROL: Auditor Logístico.
+                             TAREA: Compara la foto con los datos registrados.
+                             DATOS REGISTRADOS:
                              ${inventorySummary}
                              
                              REQUERIMIENTO:
-                             1. Identifica los productos visibles en la foto.
-                             2. Estima las cantidades visualmente.
-                             3. Genera un resumen ejecutivo breve del veredicto.
-                             
-                             Responde estrictamente en JSON con este formato: 
-                             {
-                               "summary": "string",
-                               "estimatedItems": [{"barcode": "string", "name": "string", "qty": number}]
-                             }` }
+                             Identifica discrepancias visuales. Si ves productos no registrados o cantidades que no cuadran, repórtalo.` }
                 ]
             },
             config: {
@@ -82,7 +72,7 @@ export const auditWithVision = async (imageBase64: string, currentItems: Consoli
                 responseSchema: {
                     type: Type.OBJECT,
                     properties: {
-                        summary: { type: Type.STRING },
+                        summary: { type: Type.STRING, description: "Resumen del veredicto de auditoría" },
                         estimatedItems: { 
                             type: Type.ARRAY,
                             items: {
@@ -101,12 +91,10 @@ export const auditWithVision = async (imageBase64: string, currentItems: Consoli
             }
         });
 
-        // Using .text property directly
         const text = response.text;
-        if (!text) return null;
-        return JSON.parse(text);
+        return text ? JSON.parse(text) : null;
     } catch (error: any) {
         console.error("Vision Audit Error:", error);
-        throw new Error("Error en el análisis visual de IA: " + error.message);
+        throw new Error("Fallo en inspección visual de IA.");
     }
 };

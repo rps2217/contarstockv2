@@ -69,6 +69,38 @@ const MassiveBlindView: React.FC = () => {
         }
     };
 
+    const handlePrintSummary = async () => {
+        if (!items.length) return;
+        if (!thermalPrinter.isConnected()) {
+            alert("Impresora no vinculada.");
+            return;
+        }
+
+        setIsPrinting(true);
+        try {
+            // El mapeo de productName e expectedQty ya viene consolidado en el hook useMassiveScanner
+            // Enriquecemos para el formato del servicio de impresión
+            const reportData = items.map(i => ({
+                barcode: i.barcode,
+                productName: i.name,
+                totalQuantity: i.totalQuantity,
+                expectedQuantity: i.expectedQty || 0
+            }));
+
+            await thermalPrinter.printSummaryReport(
+                `MARTILLO-${batchId.substring(0,6)}`,
+                currentLocation,
+                reportData
+            );
+            SoundFX.play('success');
+        } catch (e) {
+            alert("Fallo al imprimir.");
+            SoundFX.play('error');
+        } finally {
+            setIsPrinting(false);
+        }
+    };
+
     const handleFinalize = async () => {
         if (!items.length || !confirm("¿Cerrar auditoría y guardar en historial?")) return;
         setIsMigrating(true);
@@ -166,7 +198,8 @@ const MassiveBlindView: React.FC = () => {
             <MassiveToolsSheet 
                 isOpen={isToolsOpen} onClose={() => setIsToolsOpen(false)} hasActiveItem={!!lastScannedItem}
                 location={currentLocation} onChangeLocation={() => setIsChangingLocation(true)}
-                onShowLabel={() => setShowLabelModal(true)} onReset={() => { if(confirm("¿Resetear?")) resetBatch(); }} onImport={handleCloudImport}
+                onShowLabel={() => setShowLabelModal(true)} onReset={() => { if(confirm("¿Resetear?")) resetBatch(); }} 
+                onImport={handleCloudImport} onPrintSummary={handlePrintSummary}
             />
 
             <ScreenLockOverlay isLocked={isScreenLocked} onUnlock={() => setIsScreenLocked(false)} />

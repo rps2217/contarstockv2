@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Zap, Volume2, Mic, Cpu, FastForward, Smartphone, ShieldCheck } from 'lucide-react';
+import { Zap, Volume2, Mic, Cpu, FastForward, Smartphone, ShieldCheck, CalendarRange } from 'lucide-react';
 import { AppSettings } from '../../types';
 import { SettingsSection, SettingsToggle } from './common/SettingsUI';
 
@@ -25,6 +25,14 @@ export const OperationalSection: React.FC<Props> = ({ settings, updateSetting })
                 label="Gatillo Infinito"
                 description="Protocolo Martillo sin pausa"
                 icon={FastForward}
+            />
+
+            <SettingsToggle 
+                active={settings.batchTrackingEnabled} 
+                onClick={() => handleToggle('batchTrackingEnabled')}
+                label="Trazabilidad de Lotes"
+                description="Solicitar Lote y Vencimiento"
+                icon={CalendarRange}
             />
 
             <SettingsToggle 

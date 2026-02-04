@@ -1,22 +1,29 @@
 
 import { ScanRecord, ConsolidatedItem } from "../types";
 import { db } from "../db";
+import { getSettings } from "./settings";
 
 const aggregateScansSync = (scans: ScanRecord[], productMap: Record<string, string>): ConsolidatedItem[] => {
     const aggregation: Record<string, ConsolidatedItem> = {};
+    const settings = getSettings();
+    
     for (const scan of scans) {
-        // La clave ahora incluye BATCH para separar inventario farmacéutico por lotes
-        const key = `${scan.barcode}_${scan.batch || 'NO_BATCH'}_${scan.mm || 0}_${scan.yyyy || 0}_${scan.logisticsLabel || 'UNSET'}`;
+        // SI EL RASTREO ESTÁ DESACTIVADO, IGNORAMOS LOS CAMPOS DE FECHA Y LOTE EN LA CLAVE ÚNICA
+        const batchPart = settings.batchTrackingEnabled ? (scan.batch || 'NO_BATCH') : 'DISABLED';
+        const mmPart = settings.batchTrackingEnabled ? (scan.mm || 0) : 0;
+        const yyyyPart = settings.batchTrackingEnabled ? (scan.yyyy || 0) : 0;
+
+        const key = `${scan.barcode}_${batchPart}_${mmPart}_${yyyyPart}_${scan.logisticsLabel || 'UNSET'}`;
         
         if (!aggregation[key]) {
             aggregation[key] = {
                 barcode: scan.barcode,
                 productName: productMap[scan.barcode] || 'Cargando...',
-                batch: scan.batch,
+                batch: settings.batchTrackingEnabled ? scan.batch : undefined,
                 totalQuantity: 0,
                 scans: 0,
-                mm: scan.mm,
-                yyyy: scan.yyyy,
+                mm: settings.batchTrackingEnabled ? scan.mm : undefined,
+                yyyy: settings.batchTrackingEnabled ? scan.yyyy : undefined,
                 location: scan.logisticsLabel,
                 isIncident: false
             };

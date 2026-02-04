@@ -1,11 +1,12 @@
 
-import React from 'react';
-import { ChevronLeft, Trash2, Minus, Plus, Cloud, CloudOff, FileSpreadsheet, FileText, Download } from 'lucide-react';
+import React, { useState } from 'react';
+import { ChevronLeft, Trash2, Minus, Plus, Cloud, CloudOff, FileSpreadsheet, FileText, Printer, Loader2 } from 'lucide-react';
 import * as sessionService from '../../services/sessionService';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
 import { exportToExcel, exportToPDF } from '../../services/export';
 import { SoundFX } from '../../services/audio';
+import { thermalPrinter } from '../../services/thermalPrinterService';
 
 interface ReportDetailProps {
     sessionId: string;
@@ -13,6 +14,7 @@ interface ReportDetailProps {
 }
 
 export const ReportDetail: React.FC<ReportDetailProps> = ({ sessionId, onBack }) => {
+    const [isPrintingReport, setIsPrintingReport] = useState(false);
     const fullSelectedSession = useLiveQuery(() => db.sessions.get(sessionId), [sessionId]);
 
     const consolidation = useLiveQuery(async () => {
@@ -23,6 +25,9 @@ export const ReportDetail: React.FC<ReportDetailProps> = ({ sessionId, onBack })
         const productMap: Record<string, string> = {};
         products.forEach(p => productMap[p.barcode] = p.name);
 
+        const expectedMap: Record<string, number> = {};
+        fullSelectedSession?.expectedItems?.forEach(i => expectedMap[i.barcode] = i.expectedQty);
+
         const aggregation: Record<string, any> = {};
         for (const scan of scans) {
             const key = `${scan.barcode}_${scan.mm || 0}_${scan.yyyy || 0}`;
@@ -31,6 +36,7 @@ export const ReportDetail: React.FC<ReportDetailProps> = ({ sessionId, onBack })
                     barcode: scan.barcode,
                     productName: productMap[scan.barcode] || 'Cargando...',
                     totalQuantity: 0,
+                    expectedQuantity: expectedMap[scan.barcode] || 0,
                     scans: 0,
                     mm: scan.mm,
                     yyyy: scan.yyyy,
@@ -42,7 +48,7 @@ export const ReportDetail: React.FC<ReportDetailProps> = ({ sessionId, onBack })
             if (!scan.synced) aggregation[key].isSynced = false;
         }
         return Object.values(aggregation);
-    }, [sessionId], [] as any[]);
+    }, [sessionId, fullSelectedSession], [] as any[]);
 
     const handleIncrementItem = async (barcode: string) => {
         await sessionService.adjustSessionItemQuantity(sessionId, barcode, 1);
@@ -56,11 +62,36 @@ export const ReportDetail: React.FC<ReportDetailProps> = ({ sessionId, onBack })
         }
     };
 
-    const handleExport = (type: 'pdf' | 'excel') => {
+    const handleExport = (type: 'pdf' | 'excel' | 'thermal') => {
         if (!fullSelectedSession || !consolidation) return;
         SoundFX.play('success');
         if (type === 'excel') exportToExcel(fullSelectedSession, consolidation);
-        else exportToPDF(fullSelectedSession, consolidation);
+        else if (type === 'pdf') exportToPDF(fullSelectedSession, consolidation);
+        else handleThermalPrint();
+    };
+
+    const handleThermalPrint = async () => {
+        if (!fullSelectedSession || !consolidation.length) return;
+        
+        if (!thermalPrinter.isConnected()) {
+            alert("Impresora no conectada. Vaya a Configuración > Hardware.");
+            return;
+        }
+
+        setIsPrintingReport(true);
+        try {
+            await thermalPrinter.printSummaryReport(
+                fullSelectedSession.erpOrder,
+                fullSelectedSession.logisticsLabel,
+                consolidation
+            );
+            SoundFX.play('success');
+        } catch (e) {
+            alert("Error enviando datos a la impresora.");
+            SoundFX.play('error');
+        } finally {
+            setIsPrintingReport(false);
+        }
     };
 
     return (
@@ -78,6 +109,14 @@ export const ReportDetail: React.FC<ReportDetailProps> = ({ sessionId, onBack })
                 </div>
                 
                 <div className="flex gap-2">
+                    <button 
+                        onClick={() => handleExport('thermal')} 
+                        disabled={isPrintingReport}
+                        className="p-2 bg-slate-900 text-white rounded-xl hover:bg-black active:scale-95 transition-all shadow-md disabled:opacity-50"
+                        title="Impresión Térmica"
+                    >
+                        {isPrintingReport ? <Loader2 className="w-5 h-5 animate-spin" /> : <Printer className="w-5 h-5" />}
+                    </button>
                     <button onClick={() => handleExport('excel')} className="p-2 bg-green-50 text-green-700 rounded-xl border border-green-200 hover:bg-green-100 active:scale-95 transition-all">
                         <FileSpreadsheet className="w-5 h-5" />
                     </button>

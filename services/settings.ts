@@ -1,3 +1,4 @@
+
 import { AppSettings } from '../types';
 import { db } from '../db';
 
@@ -17,11 +18,12 @@ const DEFAULT_SETTINGS: AppSettings = {
   lowPerformanceMode: false,
   predictiveHintsEnabled: false,
   continuousMode: true,        
+  batchTrackingEnabled: false, // Desactivado por defecto según requerimiento
   appSheetConfig: {
       appId: '',
       accessKey: '',
       countsTableName: 'CONTEOS',         
-      consolidatedTableName: 'CONSOLIDADOS', // Volvemos al plural histórico
+      consolidatedTableName: 'CONSOLIDADOS', 
       productsTableName: 'PRODUCTOS',
       receptionTableName: 'RECEPCION_BULTOS',
       ordersTableName: 'PEDIDOS'

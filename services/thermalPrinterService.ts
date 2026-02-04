@@ -1,6 +1,6 @@
 
 /**
- * LOGICOUNT PRO - THERMAL ENGINE v1.1
+ * LOGICOUNT PRO - THERMAL ENGINE v1.2
  * Soporte dual: WebUSB (PC) + Web Bluetooth (Android/Mobile)
  */
 
@@ -34,9 +34,6 @@ class ThermalPrinterService {
   private bleCharacteristic: any = null;
   private bleDevice: any = null;
 
-  /**
-   * CONEXIÓN USB (Ideal para PC de Oficina)
-   */
   async connectUSB(): Promise<boolean> {
     try {
       this.usbDevice = await (navigator as any).usb.requestDevice({ filters: [] });
@@ -56,24 +53,19 @@ class ThermalPrinterService {
     }
   }
 
-  /**
-   * CONEXIÓN BLUETOOTH (Ideal para Android)
-   */
   async connectBluetooth(): Promise<boolean> {
     try {
       const device = await (navigator as any).bluetooth.requestDevice({
         filters: [
           { namePrefix: 'SLK' },
           { namePrefix: 'Sewoo' },
-          { services: ['000018f0-0000-1000-8000-00805f9b34fb'] }, // Genérico ESC/POS
-          { services: ['49535343-fe7d-4ae5-8fa9-9fafd205e455'] }  // Sewoo Bluetooth
+          { services: ['000018f0-0000-1000-8000-00805f9b34fb'] },
+          { services: ['49535343-fe7d-4ae5-8fa9-9fafd205e455'] }
         ],
         optionalServices: ['49535343-fe7d-4ae5-8fa9-9fafd205e455', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2']
       });
 
       const server = await device.gatt.connect();
-      
-      // Intentamos encontrar el servicio de escritura (normalmente serie transparente)
       const services = await server.getPrimaryServices();
       for (const service of services) {
         const characteristics = await service.getCharacteristics();
@@ -91,19 +83,14 @@ class ThermalPrinterService {
     }
   }
 
-  /**
-   * Envía datos binarios al hardware (USB o Bluetooth)
-   */
   async printRaw(data: Uint8Array) {
-    // Caso USB
     if (this.usbDevice && this.endpointOut !== null) {
       await this.usbDevice.transferOut(this.endpointOut, data);
       return;
     }
 
-    // Caso Bluetooth (Requiere fragmentación por límite de MTU)
     if (this.bleCharacteristic) {
-      const MTU = 20; // Límite conservador para BLE
+      const MTU = 20;
       for (let i = 0; i < data.length; i += MTU) {
         const chunk = data.slice(i, i + MTU);
         await this.bleCharacteristic.writeValue(chunk);
@@ -144,6 +131,74 @@ class ThermalPrinterService {
     ]);
 
     await this.printRaw(commands);
+  }
+
+  /**
+   * REPORTE RESUMEN DE DISCREPANCIAS
+   */
+  async printSummaryReport(erp: string, label: string, items: any[]) {
+      const encoder = new TextEncoder();
+      const esc = {
+          init: [0x1b, 0x40],
+          alignCenter: [0x1b, 0x61, 1],
+          alignLeft: [0x1b, 0x61, 0],
+          boldOn: [0x1b, 0x45, 1],
+          boldOff: [0x1b, 0x45, 0],
+          sizeNormal: [0x1d, 0x21, 0x00],
+          feed: [0x0a, 0x0a, 0x0a, 0x0a],
+          cut: [0x1d, 0x56, 0x42, 0x00]
+      };
+
+      let content = [
+          ...esc.init,
+          ...esc.alignCenter,
+          ...esc.boldOn,
+          ...encoder.encode("MANIFIESTO DE CARGA\n"),
+          ...encoder.encode("LOGICOUNT PRO v4.5\n"),
+          ...esc.boldOff,
+          ...encoder.encode("--------------------------------\n"),
+          ...esc.alignLeft,
+          ...encoder.encode(`ORDEN ERP: ${erp}\n`),
+          ...encoder.encode(`BULTOS   : ${label}\n`),
+          ...encoder.encode(`FECHA    : ${new Date().toLocaleString()}\n`),
+          ...encoder.encode("--------------------------------\n"),
+          ...esc.boldOn,
+          ...encoder.encode("DESC | SKU\n"),
+          ...encoder.encode("TEO   REAL   DIFF\n"),
+          ...esc.boldOff,
+          ...encoder.encode("--------------------------------\n")
+      ];
+
+      items.forEach(item => {
+          const sku = item.barcode.padEnd(20);
+          const name = (item.productName || 'SIN_DESC').substring(0, 32);
+          const theo = String(item.expectedQuantity || 0).padStart(5);
+          const real = String(item.totalQuantity || 0).padStart(7);
+          const diff = String(item.totalQuantity - (item.expectedQuantity || 0)).padStart(7);
+
+          const row = [
+              ...encoder.encode(`${name}\n`),
+              ...encoder.encode(`${sku}\n`),
+              ...encoder.encode(`${theo}  ${real}  ${diff}\n`),
+              ...encoder.encode("- - - - - - - - - - - - - - - -\n")
+          ];
+          content.push(...row);
+      });
+
+      const totalReal = items.reduce((acc, i) => acc + i.totalQuantity, 0);
+      const footer = [
+          ...esc.boldOn,
+          ...encoder.encode(`TOTAL UNIDADES: ${totalReal}\n`),
+          ...esc.boldOff,
+          ...encoder.encode("--------------------------------\n"),
+          ...encoder.encode("\n\n__________________________\n"),
+          ...esc.alignCenter,
+          ...encoder.encode("FIRMA AUDITORIA\n"),
+          ...esc.feed,
+          ...esc.cut
+      ];
+
+      await this.printRaw(new Uint8Array([...content, ...footer]));
   }
 
   isConnected(): boolean {

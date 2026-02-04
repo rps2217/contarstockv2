@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Calendar, Tag, CheckCircle2, Zap, ArrowRight, Sparkles, Camera, Loader2, X } from 'lucide-react';
+import { Calendar, Tag, ArrowRight, Sparkles, Loader2, X, Camera } from 'lucide-react';
 import { extractPharmaData } from '../services/geminiVisionService';
 import { SoundFX } from '../services/audio';
 
@@ -10,10 +10,11 @@ interface ExpirationModalProps {
 }
 
 export const ExpirationModal: React.FC<ExpirationModalProps> = ({ onComplete, productName }) => {
-  const [step, setStep] = useState<'batch' | 'year' | 'month' | 'ai_scan'>('batch');
+  const [step, setStep] = useState<'batch' | 'year' | 'month'>('batch');
   const [batch, setBatch] = useState('');
   const [selectedYear, setSelectedYear] = useState<number | undefined>(undefined);
   const [isAiLoading, setIsAiLoading] = useState(false);
+  
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -35,24 +36,20 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({ onComplete, pr
               if (result) {
                   setBatch(result.batch || '');
                   if (result.mm && result.yyyy) {
+                      // Autocompletado total si la IA es precisa
                       onComplete(result.mm, result.yyyy, result.batch);
                       SoundFX.play('success');
                   } else {
+                      // Si falta algo, vamos al siguiente paso manual
                       setStep('year');
                   }
               }
           };
       } catch (err) {
-          alert("No se pudo procesar la imagen");
+          alert("Error procesando imagen.");
       } finally {
           setIsAiLoading(false);
       }
-  };
-
-  const handleBatchSubmit = (e?: React.FormEvent) => {
-      e?.preventDefault();
-      if (!batch.trim()) return;
-      setStep('year');
   };
 
   const handleYearSelect = (year: number) => {
@@ -62,10 +59,6 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({ onComplete, pr
 
   const handleMonthSelect = (month: number) => {
     onComplete(month, selectedYear, batch.trim().toUpperCase());
-  };
-
-  const handleSkip = () => {
-    onComplete(undefined, undefined, batch.trim().toUpperCase() || 'SIN_LOTE');
   };
 
   return (
@@ -82,16 +75,16 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({ onComplete, pr
 
         <div className="p-6">
           {step === 'batch' && (
-            <div className="space-y-4 animate-in slide-in-from-right-4">
+            <div className="space-y-4">
                 <button 
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isAiLoading}
-                  className="w-full h-20 bg-indigo-50 border-2 border-dashed border-indigo-200 rounded-2xl flex items-center justify-center gap-4 group hover:bg-indigo-100 transition-all active:scale-95"
+                  className="w-full h-20 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl flex items-center justify-center gap-4 group transition-all active:scale-95 shadow-lg"
                 >
-                    {isAiLoading ? <Loader2 className="w-6 h-6 animate-spin text-indigo-600" /> : <Sparkles className="w-6 h-6 text-indigo-500 animate-pulse" />}
+                    {isAiLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Sparkles className="w-6 h-6 animate-pulse" />}
                     <div className="text-left">
-                        <div className="text-xs font-black text-indigo-700 uppercase tracking-widest">Escaneo Inteligente</div>
-                        <div className="text-[9px] font-bold text-indigo-400 uppercase">Leer caja automáticamente</div>
+                        <div className="text-xs font-black uppercase tracking-widest">Escaneo Inteligente</div>
+                        <div className="text-[9px] font-bold opacity-60 uppercase">Leer caja con IA</div>
                     </div>
                 </button>
                 
@@ -103,28 +96,29 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({ onComplete, pr
                     <div className="flex-grow border-t border-slate-100"></div>
                 </div>
 
-                <form onSubmit={handleBatchSubmit} className="space-y-4">
-                    <input 
-                        ref={inputRef}
-                        value={batch}
-                        onChange={(e) => setBatch(e.target.value)}
-                        placeholder="Número de LOTE"
-                        className="w-full h-16 bg-slate-50 border-4 border-slate-100 rounded-2xl text-center text-2xl font-black uppercase tracking-widest text-slate-900 outline-none focus:border-indigo-500 transition-all"
-                    />
-                    <button 
-                        disabled={!batch.trim()}
-                        className="w-full h-14 bg-indigo-600 disabled:opacity-30 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl flex items-center justify-center gap-3 transition-all active:scale-95"
-                    >
-                        Siguiente <ArrowRight className="w-5 h-5" />
-                    </button>
-                </form>
+                <input 
+                    ref={inputRef}
+                    value={batch}
+                    onChange={(e) => setBatch(e.target.value)}
+                    placeholder="LOTE"
+                    className="w-full h-16 bg-slate-50 border-4 border-slate-100 rounded-2xl text-center text-2xl font-black uppercase tracking-widest text-slate-900 outline-none focus:border-indigo-500 transition-all"
+                    onKeyDown={(e) => e.key === 'Enter' && batch.trim() && setStep('year')}
+                />
+                
+                <button 
+                    disabled={!batch.trim()}
+                    onClick={() => setStep('year')}
+                    className="w-full h-14 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 disabled:opacity-20"
+                >
+                    Continuar <ArrowRight className="w-5 h-5" />
+                </button>
             </div>
           )}
 
           {step === 'year' && (
-            <div className="space-y-4 animate-in slide-in-from-right-4 text-center">
+            <div className="space-y-4 text-center">
               <div className="bg-indigo-50 text-indigo-700 py-2 px-4 rounded-full inline-block text-[10px] font-black uppercase mb-2">LOTE: {batch}</div>
-              <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Seleccione Año Vencimiento</p>
+              <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Año Vencimiento</p>
               <div className="grid grid-cols-2 gap-3">
                 {[2025, 2026, 2027, 2028, 2029, 2030].map(y => (
                     <button key={y} onClick={() => handleYearSelect(y)} className="h-16 bg-white border-2 border-slate-100 rounded-xl font-black text-xl text-slate-700 hover:border-indigo-500 active:scale-95 transition-all">{y}</button>
@@ -134,14 +128,14 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({ onComplete, pr
           )}
 
           {step === 'month' && (
-            <div className="space-y-4 animate-in slide-in-from-right-4">
+            <div className="space-y-4">
                <div className="flex items-center justify-between px-2 mb-2">
                   <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Mes Venc.</p>
                   <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-lg text-[10px] font-black">AÑO {selectedYear}</span>
                </div>
                <div className="grid grid-cols-4 gap-2">
                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => (
-                   <button key={m} onClick={() => handleMonthSelect(m)} className="aspect-square flex items-center justify-center bg-white border-2 border-slate-100 rounded-xl font-black text-lg text-slate-700 hover:border-indigo-500 hover:bg-indigo-50 active:scale-90 transition-all">{m}</button>
+                   <button key={m} onClick={() => handleMonthSelect(m)} className="aspect-square flex items-center justify-center bg-white border-2 border-slate-100 rounded-xl font-black text-lg text-slate-700 hover:border-indigo-500 active:scale-90 transition-all">{m}</button>
                  ))}
                </div>
             </div>
@@ -149,7 +143,7 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({ onComplete, pr
         </div>
 
         <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-between gap-3">
-           <button onClick={handleSkip} className="flex-1 py-3 text-slate-400 font-bold hover:text-slate-600 transition-colors text-xs uppercase tracking-widest">Sin Fecha</button>
+           <button onClick={() => onComplete(undefined, undefined, batch.trim() || 'SIN_LOTE')} className="flex-1 py-3 text-slate-400 font-bold hover:text-slate-600 text-xs uppercase tracking-widest">Omitir Fecha</button>
            {step !== 'batch' && <button onClick={() => setStep(step === 'month' ? 'year' : 'batch')} className="px-6 py-3 bg-white border border-slate-200 rounded-xl text-slate-600 font-bold text-xs uppercase shadow-sm">Volver</button>}
         </div>
       </div>

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Barcode, Trash2, Box, X, MapPin } from 'lucide-react';
+import { Barcode, Trash2, Box, X, MapPin, Printer } from 'lucide-react';
 import { Modal } from '../common/Modal';
 
 interface Props {
@@ -13,11 +13,12 @@ interface Props {
     onChangeLabel: () => void;
     onShowLabel: () => void;
     onReset: () => void;
+    onPrintSummary: () => void;
 }
 
 export const ScannerToolsSheet: React.FC<Props> = ({ 
     isOpen, onClose, hasActiveItem, location, label, 
-    onChangeLocation, onChangeLabel, onShowLabel, onReset 
+    onChangeLocation, onChangeLabel, onShowLabel, onReset, onPrintSummary
 }) => {
     
     const ToolButton = ({ onClick, icon: Icon, label, color, disabled = false, sublabel }: any) => (
@@ -56,7 +57,6 @@ export const ScannerToolsSheet: React.FC<Props> = ({
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                    {/* Ubicación Física */}
                     <ToolButton 
                         onClick={onChangeLocation} 
                         icon={MapPin} 
@@ -64,7 +64,6 @@ export const ScannerToolsSheet: React.FC<Props> = ({
                         sublabel={location}
                         color="text-blue-400 border-blue-500/20" 
                     />
-                    {/* ID de Bulto / Bandeja */}
                     <ToolButton 
                         onClick={onChangeLabel} 
                         icon={Box} 
@@ -72,15 +71,19 @@ export const ScannerToolsSheet: React.FC<Props> = ({
                         sublabel={label}
                         color="text-indigo-400 border-indigo-500/20" 
                     />
-                    {/* Etiquetas */}
+                    <ToolButton 
+                        onClick={onPrintSummary} 
+                        icon={Printer} 
+                        label="Imprimir Resumen" 
+                        color="text-emerald-400 border-emerald-500/20" 
+                    />
                     <ToolButton 
                         disabled={!hasActiveItem}
                         onClick={onShowLabel} 
                         icon={Barcode} 
-                        label="Imprimir Etiqueta" 
-                        color="text-emerald-400 border-emerald-500/20" 
+                        label="Etiqueta SKU" 
+                        color="text-amber-400 border-amber-500/20" 
                     />
-                    {/* Borrado de Seguridad */}
                     <ToolButton 
                         onClick={onReset} 
                         icon={Trash2} 

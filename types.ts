@@ -46,7 +46,7 @@ export interface ScanRecord {
   id: string;
   sessionId: string;
   barcode: string;
-  batch?: string; // CAMPO CRÍTICO: Lote del medicamento
+  batch?: string; 
   timestamp: number;
   quantity: number;
   logisticsLabel?: string;
@@ -62,7 +62,7 @@ export interface ScanRecord {
 export interface ConsolidatedItem {
   barcode: string;
   productName: string;
-  batch?: string; // Lote consolidado
+  batch?: string; 
   totalQuantity: number;
   expectedQuantity?: number;
   difference?: number;
@@ -74,21 +74,8 @@ export interface ConsolidatedItem {
 }
 
 export type ViewState = 'dashboard' | 'counting' | 'database' | 'reports' | 'settings' | 'consolidated' | 'reception' | 'sync' | 'conciliator';
-
 export type Theme = 'light' | 'dark' | 'contrast' | 'warm' | 'navy' | 'oled';
-
 export type ScannerStatus = 'idle' | 'manual' | 'camera' | 'expiring' | 'confirming' | 'error' | 'success' | 'product_form';
-
-export interface AppSheetConfig {
-  appId: string;
-  accessKey: string;
-  countsTableName: string;
-  consolidatedTableName: string;
-  productsTableName: string;
-  receptionTableName?: string;
-  ordersTableName?: string; 
-  gasWebAppUrl?: string; 
-}
 
 export interface AppSettings {
   theme: Theme;
@@ -102,11 +89,22 @@ export interface AppSettings {
   lowPerformanceMode: boolean;
   predictiveHintsEnabled: boolean; 
   continuousMode: boolean;        
+  batchTrackingEnabled: boolean; // NUEVO: Interruptor global de lotes
   appSheetConfig?: AppSheetConfig;
   mobileNavConfig?: ViewState[]; 
 }
 
-// Added AliasSuggestion interface
+export interface AppSheetConfig {
+  appId: string;
+  accessKey: string;
+  countsTableName: string;
+  consolidatedTableName: string;
+  productsTableName: string;
+  receptionTableName?: string;
+  ordersTableName?: string; 
+  gasWebAppUrl?: string; 
+}
+
 export interface AliasSuggestion {
   physicalBarcode: string;
   physicalName: string;
@@ -115,7 +113,6 @@ export interface AliasSuggestion {
   quantity: number;
 }
 
-// Updated MatchResult to use AliasSuggestion
 export interface MatchResult {
   expectedOrder: ExpectedOrder;
   matchScore: number;
@@ -130,7 +127,6 @@ export interface MatchResult {
   potentialAliases: AliasSuggestion[];
 }
 
-// Added SyncJob interface for database queue
 export interface SyncJob {
   id?: number;
   status: 'pending' | 'processing' | 'completed' | 'failed';

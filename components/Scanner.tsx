@@ -6,6 +6,7 @@ import { useScanner } from '../hooks/useScanner';
 import { useHIDScanner } from '../hooks/useHIDScanner';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
+import { useAppStore } from '../store/useAppStore';
 
 import { ScannerHero } from './scanner/ScannerHero';
 import { NumericKeypad } from './NumericKeypad';
@@ -58,6 +59,7 @@ const HistoryRow = memo(({ index, data }: any) => {
 
 export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDiscardSession }) => {
   const { state, data, actions } = useScanner(session, onCloseSession, onDiscardSession);
+  const { settings } = useAppStore(); 
   
   const [isTriggerActive, setIsTriggerActive] = useState(false);
   const [isChangingLocation, setIsChangingLocation] = useState(false);
@@ -91,16 +93,19 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
 
   const handleInbound = useCallback((barcode: string) => {
       if (isScreenLocked) return;
+      if (!settings.batchTrackingEnabled) {
+          actions.handleExternalScan(barcode);
+          return;
+      }
       const alreadyHasDateInHistory = existingBarcodes?.has(barcode);
       const hasDateInMemory = !!state.rememberedDate;
-
       if (!alreadyHasDateInHistory && !hasDateInMemory) {
           setPendingBarcodeForDate(barcode);
           setShowExpirationModal(true);
       } else {
           actions.handleExternalScan(barcode);
       }
-  }, [existingBarcodes, actions, isScreenLocked, state.rememberedDate]);
+  }, [existingBarcodes, actions, isScreenLocked, state.rememberedDate, settings.batchTrackingEnabled]);
 
   const handleDecrement = useCallback(() => {
       if (!data.lastScan) return;
@@ -123,6 +128,36 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
       } catch (e) {
           SoundFX.play('error');
           alert("Error de conexión con impresora.");
+      } finally {
+          setIsPrinting(false);
+      }
+  };
+
+  const handlePrintSummary = async () => {
+      if (!data.recentScans || data.recentScans.length === 0) return;
+      
+      if (!thermalPrinter.isConnected()) {
+          alert("Impresora no vinculada.");
+          return;
+      }
+
+      setIsPrinting(true);
+      try {
+          // Inyectamos el teórico para el reporte
+          const enrichedItems = data.recentScans.map(item => ({
+              ...item,
+              expectedQuantity: session.expectedItems?.find(ei => ei.barcode === item.barcode)?.expectedQty || 0
+          }));
+
+          await thermalPrinter.printSummaryReport(
+              session.erpOrder,
+              session.logisticsLabel,
+              enrichedItems
+          );
+          SoundFX.play('success');
+      } catch (e) {
+          SoundFX.play('error');
+          alert("Error al imprimir manifiesto.");
       } finally {
           setIsPrinting(false);
       }
@@ -160,7 +195,6 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
   }), [actions.selectItem, state.activeBarcode, state.optimisticActiveQty, session.expectedItems]);
 
   const quickValues = [5, 10, 20];
-
   const currentLabel = useLiveQuery(() => db.sessions.get(session.id).then(s => s?.logisticsLabel), [isChangingLabel], session.logisticsLabel);
 
   return (
@@ -187,7 +221,6 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
                   <MoreVertical className="w-6 h-6" />
               </button>
           </div>
-
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/5 overflow-hidden">
              <div 
                 className={`h-full transition-all duration-1000 ease-out ${state.globalStats.progress >= 100 ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-blue-500'}`}
@@ -238,7 +271,6 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
           </button>
       </div>
       {isTriggerActive && <div className="fixed inset-0 z-[250]"><CameraScanner onScan={(code) => { handleInbound(code); setIsTriggerActive(false); }} onClose={() => setIsTriggerActive(false)} isTriggered={true} /></div>}
-      
       {showExpirationModal && pendingBarcodeForDate && (
           <ExpirationModal 
             productName={pendingBarcodeForDate} 
@@ -247,10 +279,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
             }} 
           />
       )}
-
       {state.status === 'manual' && <NumericKeypad isOpen={true} title="SKU MANUAL" onClose={() => state.setStatus('idle')} value={state.manualInput} onInput={(c) => state.setManualInput(p => p + c)} onDelete={() => state.setManualInput(p => p.slice(0, -1))} onConfirm={() => { if (state.manualInput) handleInbound(state.manualInput); state.setManualInput(''); state.setStatus('idle'); }} />}
-      
-      {/* TECLADO REUTILIZADO PARA CAMBIAR BULTO */}
       <NumericKeypad 
           isOpen={isChangingLabel}
           onClose={() => { setIsChangingLabel(false); setManualCode(''); }}
@@ -264,8 +293,6 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
               setIsChangingLabel(false);
           }}
       />
-
-      {/* MODAL CAMBIAR UBICACION */}
       {isChangingLocation && (
           <div className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in">
               <div className="bg-slate-900 border-2 border-white/10 rounded-[2.5rem] p-8 w-full max-w-sm shadow-2xl">
@@ -273,18 +300,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
                       <MapPin className="text-blue-500 w-6 h-6" />
                       <h3 className="text-xl font-black uppercase tracking-tight text-white">Establecer Ubicación</h3>
                   </div>
-                  <input 
-                      autoFocus 
-                      className="w-full h-16 bg-black border-4 border-white/5 rounded-2xl text-center font-black text-2xl uppercase tracking-widest outline-none focus:border-blue-500 transition-all text-white" 
-                      placeholder="BODEGA_GRAL" 
-                      defaultValue={state.currentLocation} 
-                      onKeyDown={(e) => { 
-                          if (e.key === 'Enter') { 
-                              state.setCurrentLocation((e.target as HTMLInputElement).value.toUpperCase()); 
-                              setIsChangingLocation(false); 
-                          } 
-                      }} 
-                  />
+                  <input autoFocus className="w-full h-16 bg-black border-4 border-white/5 rounded-2xl text-center font-black text-2xl uppercase tracking-widest outline-none focus:border-blue-500 transition-all text-white" placeholder="BODEGA_GRAL" defaultValue={state.currentLocation} onKeyDown={(e) => { if (e.key === 'Enter') { state.setCurrentLocation((e.target as HTMLInputElement).value.toUpperCase()); setIsChangingLocation(false); } }} />
                   <div className="mt-6 flex gap-3">
                       <button onClick={() => setIsChangingLocation(false)} className="flex-1 py-4 bg-white/5 text-white/40 font-black uppercase text-xs rounded-xl">Cerrar</button>
                       <button onClick={() => { const val = (document.querySelector('input[placeholder="BODEGA_GRAL"]') as HTMLInputElement).value; state.setCurrentLocation(val.toUpperCase()); setIsChangingLocation(false); }} className="flex-1 py-4 bg-blue-600 text-white font-black uppercase text-xs rounded-xl shadow-lg">Confirmar</button>
@@ -292,8 +308,6 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
               </div>
           </div>
       )}
-
-      {/* TOOLS SHEET */}
       <ScannerToolsSheet 
           isOpen={isToolsOpen}
           onClose={() => setIsToolsOpen(false)}
@@ -303,9 +317,9 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
           onChangeLocation={() => setIsChangingLocation(true)}
           onChangeLabel={() => { setManualCode(''); setIsChangingLabel(true); }}
           onShowLabel={() => setShowLabelModal(true)}
+          onPrintSummary={handlePrintSummary}
           onReset={handleResetSession}
       />
-
       <BarcodeLabelModal 
           isOpen={showLabelModal}
           onClose={() => setShowLabelModal(false)}
@@ -317,7 +331,6 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
           onPrintThermal={handleThermalPrint}
           onPrintPDF={() => data.lastScan && printBarcode(data.lastScan.barcode, (data.lastScan as any).productName, `SESSION: ${session.erpOrder}`)}
       />
-
       {state.status === 'confirming' && (
           <div className="fixed inset-0 z-[300] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in">
               <div className="bg-slate-900 border-4 border-white/5 rounded-[3rem] p-10 w-full max-w-sm text-center shadow-2xl relative overflow-hidden">
