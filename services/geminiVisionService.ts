@@ -1,21 +1,57 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { ConsolidatedItem } from "../types";
 
 /**
- * Realiza un análisis visual de una fotografía de carga para estimar cantidades.
+ * EXTRACTOR PHARMA OCR
+ * Analiza una imagen de una caja de medicamento y extrae Lote y Fecha.
  */
-export const auditWithVision = async (
-    imageBase64: string,
-    currentConsolidated: ConsolidatedItem[]
-): Promise<{ 
-    estimatedItems: { barcode: string, name: string, qty: number }[],
-    summary: string 
-}> => {
+export const extractPharmaData = async (imageBase64: string): Promise<{ batch: string, mm: number, yyyy: number } | null> => {
+    // Correct initialization using process.env.API_KEY
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
-    const inventoryContext = currentConsolidated.map(i => 
-        `SKU: ${i.barcode}, Nombre: ${i.productName}, Cantidad actual: ${i.totalQuantity}`
+    try {
+        const response = await ai.models.generateContent({
+            model: "gemini-3-flash-preview",
+            contents: {
+                parts: [
+                    { inlineData: { data: imageBase64, mimeType: "image/jpeg" } },
+                    { text: `Extrae de la imagen el número de LOTE (Batch/Lot) y la FECHA DE VENCIMIENTO (Expiry). 
+                             Responde estrictamente en JSON con este formato: {"batch": "string", "mm": number, "yyyy": number}. 
+                             Si no encuentras uno, usa null.` }
+                ]
+            },
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        batch: { type: Type.STRING },
+                        mm: { type: Type.NUMBER },
+                        yyyy: { type: Type.NUMBER }
+                    }
+                }
+            }
+        });
+
+        // Using .text property directly
+        const text = response.text;
+        if (!text) return null;
+        return JSON.parse(text);
+    } catch (error) {
+        console.error("Pharma OCR Error:", error);
+        return null;
+    }
+};
+
+/**
+ * AUDITOR VISUAL IA (Fix: Added missing export auditWithVision)
+ * Compara el inventario físico (vía foto) contra los registros locales.
+ */
+export const auditWithVision = async (imageBase64: string, currentItems: ConsolidatedItem[]): Promise<{ summary: string, estimatedItems: { barcode: string, name: string, qty: number }[] } | null> => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
+    const inventorySummary = currentItems.map(i => 
+        `- SKU: ${i.barcode} | ${i.productName} | Cant: ${i.totalQuantity}`
     ).join('\n');
 
     try {
@@ -24,18 +60,21 @@ export const auditWithVision = async (
             contents: {
                 parts: [
                     { inlineData: { data: imageBase64, mimeType: "image/jpeg" } },
-                    { text: `Actúa como un auditor de almacén experto. Analiza la fotografía adjunta. 
-                             Tu misión es contar los objetos visibles y compararlos con el conteo manual actual:
+                    { text: `ROL: Auditor de Inventario Visual.
+                             TAREA: Compara la foto de la carga real contra el inventario registrado.
+                             INVENTARIO REGISTRADO:
+                             ${inventorySummary}
                              
-                             CONTEO MANUAL:
-                             ${inventoryContext}
+                             REQUERIMIENTO:
+                             1. Identifica los productos visibles en la foto.
+                             2. Estima las cantidades visualmente.
+                             3. Genera un resumen ejecutivo breve del veredicto.
                              
-                             REQUERIMIENTOS:
-                             1. Identifica los productos en la foto.
-                             2. Estima la cantidad de cada uno.
-                             3. Si ves algo que no está en el conteo manual, identifícalo.
-                             4. Responde en formato JSON con 'estimatedItems' (array de objetos con barcode, name, qty) y 'summary' (texto explicativo de discrepancias).` 
-                    }
+                             Responde estrictamente en JSON con este formato: 
+                             {
+                               "summary": "string",
+                               "estimatedItems": [{"barcode": "string", "name": "string", "qty": number}]
+                             }` }
                 ]
             },
             config: {
@@ -43,7 +82,8 @@ export const auditWithVision = async (
                 responseSchema: {
                     type: Type.OBJECT,
                     properties: {
-                        estimatedItems: {
+                        summary: { type: Type.STRING },
+                        estimatedItems: { 
                             type: Type.ARRAY,
                             items: {
                                 type: Type.OBJECT,
@@ -54,19 +94,19 @@ export const auditWithVision = async (
                                 },
                                 required: ["barcode", "name", "qty"]
                             }
-                        },
-                        summary: { type: Type.STRING }
+                        }
                     },
-                    required: ["estimatedItems", "summary"]
+                    required: ["summary", "estimatedItems"]
                 }
             }
         });
 
+        // Using .text property directly
         const text = response.text;
-        if (!text) throw new Error("No se obtuvo respuesta de la IA.");
+        if (!text) return null;
         return JSON.parse(text);
     } catch (error: any) {
-        console.error("[VisionAudit] Error:", error);
-        throw new Error("El análisis visual falló: " + error.message);
+        console.error("Vision Audit Error:", error);
+        throw new Error("Error en el análisis visual de IA: " + error.message);
     }
 };

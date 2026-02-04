@@ -1,6 +1,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Calendar, Tag, CheckCircle2, Zap, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Calendar, Tag, CheckCircle2, Zap, ArrowRight, Sparkles, Camera, Loader2, X } from 'lucide-react';
+import { extractPharmaData } from '../services/geminiVisionService';
+import { SoundFX } from '../services/audio';
 
 interface ExpirationModalProps {
   onComplete: (mm?: number, yyyy?: number, batch?: string) => void;
@@ -8,15 +10,44 @@ interface ExpirationModalProps {
 }
 
 export const ExpirationModal: React.FC<ExpirationModalProps> = ({ onComplete, productName }) => {
-  const [step, setStep] = useState<'batch' | 'year' | 'month'>('batch');
+  const [step, setStep] = useState<'batch' | 'year' | 'month' | 'ai_scan'>('batch');
   const [batch, setBatch] = useState('');
   const [selectedYear, setSelectedYear] = useState<number | undefined>(undefined);
-  const [remember, setRemember] = useState(false);
+  const [isAiLoading, setIsAiLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
       if (step === 'batch') setTimeout(() => inputRef.current?.focus(), 100);
   }, [step]);
+
+  const handleAiScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      
+      setIsAiLoading(true);
+      try {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onloadend = async () => {
+              const base64 = (reader.result as string).split(',')[1];
+              const result = await extractPharmaData(base64);
+              if (result) {
+                  setBatch(result.batch || '');
+                  if (result.mm && result.yyyy) {
+                      onComplete(result.mm, result.yyyy, result.batch);
+                      SoundFX.play('success');
+                  } else {
+                      setStep('year');
+                  }
+              }
+          };
+      } catch (err) {
+          alert("No se pudo procesar la imagen");
+      } finally {
+          setIsAiLoading(false);
+      }
+  };
 
   const handleBatchSubmit = (e?: React.FormEvent) => {
       e?.preventDefault();
@@ -51,22 +82,43 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({ onComplete, pr
 
         <div className="p-6">
           {step === 'batch' && (
-            <form onSubmit={handleBatchSubmit} className="space-y-4 animate-in slide-in-from-right-4">
-                <p className="text-center text-slate-500 text-xs font-bold uppercase tracking-widest">Ingrese Número de LOTE</p>
-                <input 
-                    ref={inputRef}
-                    value={batch}
-                    onChange={(e) => setBatch(e.target.value)}
-                    placeholder="Ej: L230401..."
-                    className="w-full h-16 bg-slate-50 border-4 border-slate-100 rounded-2xl text-center text-2xl font-black uppercase tracking-widest text-slate-900 outline-none focus:border-indigo-500 transition-all"
-                />
+            <div className="space-y-4 animate-in slide-in-from-right-4">
                 <button 
-                    disabled={!batch.trim()}
-                    className="w-full h-14 bg-indigo-600 disabled:opacity-30 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl flex items-center justify-center gap-3 transition-all active:scale-95"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isAiLoading}
+                  className="w-full h-20 bg-indigo-50 border-2 border-dashed border-indigo-200 rounded-2xl flex items-center justify-center gap-4 group hover:bg-indigo-100 transition-all active:scale-95"
                 >
-                    Siguiente <ArrowRight className="w-5 h-5" />
+                    {isAiLoading ? <Loader2 className="w-6 h-6 animate-spin text-indigo-600" /> : <Sparkles className="w-6 h-6 text-indigo-500 animate-pulse" />}
+                    <div className="text-left">
+                        <div className="text-xs font-black text-indigo-700 uppercase tracking-widest">Escaneo Inteligente</div>
+                        <div className="text-[9px] font-bold text-indigo-400 uppercase">Leer caja automáticamente</div>
+                    </div>
                 </button>
-            </form>
+                
+                <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleAiScan} />
+
+                <div className="relative flex items-center py-2">
+                    <div className="flex-grow border-t border-slate-100"></div>
+                    <span className="flex-shrink-0 mx-4 text-slate-300 text-[9px] font-black uppercase">O Manual</span>
+                    <div className="flex-grow border-t border-slate-100"></div>
+                </div>
+
+                <form onSubmit={handleBatchSubmit} className="space-y-4">
+                    <input 
+                        ref={inputRef}
+                        value={batch}
+                        onChange={(e) => setBatch(e.target.value)}
+                        placeholder="Número de LOTE"
+                        className="w-full h-16 bg-slate-50 border-4 border-slate-100 rounded-2xl text-center text-2xl font-black uppercase tracking-widest text-slate-900 outline-none focus:border-indigo-500 transition-all"
+                    />
+                    <button 
+                        disabled={!batch.trim()}
+                        className="w-full h-14 bg-indigo-600 disabled:opacity-30 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl flex items-center justify-center gap-3 transition-all active:scale-95"
+                    >
+                        Siguiente <ArrowRight className="w-5 h-5" />
+                    </button>
+                </form>
+            </div>
           )}
 
           {step === 'year' && (
@@ -74,7 +126,7 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({ onComplete, pr
               <div className="bg-indigo-50 text-indigo-700 py-2 px-4 rounded-full inline-block text-[10px] font-black uppercase mb-2">LOTE: {batch}</div>
               <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Seleccione Año Vencimiento</p>
               <div className="grid grid-cols-2 gap-3">
-                {[2025, 2026, 2027, 2028].map(y => (
+                {[2025, 2026, 2027, 2028, 2029, 2030].map(y => (
                     <button key={y} onClick={() => handleYearSelect(y)} className="h-16 bg-white border-2 border-slate-100 rounded-xl font-black text-xl text-slate-700 hover:border-indigo-500 active:scale-95 transition-all">{y}</button>
                 ))}
               </div>
