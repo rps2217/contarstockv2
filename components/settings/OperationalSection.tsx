@@ -17,68 +17,69 @@ export const OperationalSection: React.FC<Props> = ({ settings, updateSetting })
     };
 
     return (
-        <SettingsSection title="Operativa">
+        <SettingsSection title="Preferencias de Campo">
             
             <SettingsToggle 
                 active={settings.continuousMode} 
                 onClick={() => handleToggle('continuousMode')}
-                label="Gatillo Infinito"
-                description="Protocolo Martillo sin pausa"
+                label="Escaneo Continuo"
+                description="Gatillo automático sin pausas"
                 icon={FastForward}
             />
 
             <SettingsToggle 
                 active={settings.batchTrackingEnabled} 
                 onClick={() => handleToggle('batchTrackingEnabled')}
-                label="Trazabilidad de Lotes"
-                description="Solicitar Lote y Vencimiento"
+                label="Gestión de Lotes"
+                description="Habilitar Lote y Vencimiento"
                 icon={CalendarRange}
             />
 
             <SettingsToggle 
                 active={settings.autoRegisterUnknown} 
                 onClick={() => handleToggle('autoRegisterUnknown')}
-                label="Auto-Captura"
-                description="Registrar SKUs nuevos al vuelo"
+                label="Auto-Registro"
+                description="Captura instantánea de SKUs nuevos"
                 icon={Zap}
             />
-
-            <div className="grid grid-cols-2 gap-3 my-4">
-                <SettingsToggle 
-                    active={settings.soundEnabled} 
-                    onClick={() => handleToggle('soundEnabled')}
-                    label="Audio"
-                    icon={Volume2}
-                />
-                <SettingsToggle 
-                    active={settings.hapticsEnabled} 
-                    onClick={() => handleToggle('hapticsEnabled')}
-                    label="Háptico"
-                    icon={Smartphone}
-                />
-            </div>
 
             <SettingsToggle 
                 active={settings.ttsEnabled} 
                 onClick={() => handleToggle('ttsEnabled')}
-                label="Voz AI"
-                description="Lectura audible de bultos"
+                label="Asistente de Voz"
+                description="Confirmación audible de registros"
                 icon={Mic}
+            />
+
+            <SettingsToggle 
+                active={settings.soundEnabled} 
+                onClick={() => handleToggle('soundEnabled')}
+                label="Feedback Sonoro"
+                description="Beeps industriales de confirmación"
+                icon={Volume2}
+            />
+            
+            <SettingsToggle 
+                active={settings.hapticsEnabled} 
+                onClick={() => handleToggle('hapticsEnabled')}
+                label="Feedback Háptico"
+                description="Vibración de alta penetración"
+                icon={Smartphone}
             />
 
             <SettingsToggle 
                 active={settings.confirmDelete} 
                 onClick={() => handleToggle('confirmDelete')}
                 label="Seguro de Borrado"
-                description="Evita eliminaciones accidentales"
+                description="Validar antes de eliminar picks"
                 icon={ShieldCheck}
             />
             
             <SettingsToggle 
                 active={settings.lowPerformanceMode} 
                 onClick={() => handleToggle('lowPerformanceMode')}
-                label="Modo Ultra-Eco"
-                description="Optimiza batería en PDAs"
+                label="Ahorro de Energía"
+                description="Optimización agresiva de batería"
                 icon={Cpu}
             />
         </SettingsSection>
