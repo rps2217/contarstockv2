@@ -20,6 +20,7 @@ import { BarcodeLabelModal } from './common/BarcodeLabelModal';
 import { thermalPrinter } from '../services/thermalPrinterService';
 import { printBarcode } from '../services/printerService';
 import { SoundFX } from '../services/audio';
+import { LocationSelectorModal } from './common/LocationSelectorModal';
 
 interface ScannerProps {
   session: CountingSession;
@@ -293,21 +294,14 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
               setIsChangingLabel(false);
           }}
       />
-      {isChangingLocation && (
-          <div className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in">
-              <div className="bg-slate-900 border-2 border-white/10 rounded-[2.5rem] p-8 w-full max-w-sm shadow-2xl">
-                  <div className="flex items-center gap-3 mb-6">
-                      <MapPin className="text-blue-500 w-6 h-6" />
-                      <h3 className="text-xl font-black uppercase tracking-tight text-white">Establecer Ubicación</h3>
-                  </div>
-                  <input autoFocus className="w-full h-16 bg-black border-4 border-white/5 rounded-2xl text-center font-black text-2xl uppercase tracking-widest outline-none focus:border-blue-500 transition-all text-white" placeholder="BODEGA_GRAL" defaultValue={state.currentLocation} onKeyDown={(e) => { if (e.key === 'Enter') { state.setCurrentLocation((e.target as HTMLInputElement).value.toUpperCase()); setIsChangingLocation(false); } }} />
-                  <div className="mt-6 flex gap-3">
-                      <button onClick={() => setIsChangingLocation(false)} className="flex-1 py-4 bg-white/5 text-white/40 font-black uppercase text-xs rounded-xl">Cerrar</button>
-                      <button onClick={() => { const val = (document.querySelector('input[placeholder="BODEGA_GRAL"]') as HTMLInputElement).value; state.setCurrentLocation(val.toUpperCase()); setIsChangingLocation(false); }} className="flex-1 py-4 bg-blue-600 text-white font-black uppercase text-xs rounded-xl shadow-lg">Confirmar</button>
-                  </div>
-              </div>
-          </div>
-      )}
+      
+      <LocationSelectorModal 
+          isOpen={isChangingLocation}
+          onClose={() => setIsChangingLocation(false)}
+          currentLocation={state.currentLocation}
+          onSelect={(name) => state.setCurrentLocation(name)}
+      />
+
       <ScannerToolsSheet 
           isOpen={isToolsOpen}
           onClose={() => setIsToolsOpen(false)}

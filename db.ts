@@ -17,6 +17,12 @@ export interface KVSettings {
   value: any;
 }
 
+export interface LocationEntry {
+  id?: number;
+  name: string;
+  lastUsed: number;
+}
+
 export class LogiCountDB extends Dexie {
   products!: Table<Product>;
   sessions!: Table<CountingSession>;
@@ -25,18 +31,19 @@ export class LogiCountDB extends Dexie {
   expectedOrders!: Table<ExpectedOrder>;
   logs!: Table<SystemLog>;
   settings!: Table<KVSettings>;
+  locations!: Table<LocationEntry>;
 
   constructor() {
     super('LogiCountDB');
-    // Version bumped to 20 to track label per scan for multi-bulto consolidation
-    (this as any).version(20).stores({
+    (this as any).version(21).stores({
       products: '&barcode, name, syncStatus', 
       sessions: 'id, status, createdAt, erpOrder, logisticsLabel, sessionType, auditStatus, [erpOrder+createdAt], [status+lastSyncTimestamp]', 
       scans: 'id, sessionId, barcode, logisticsLabel, timestamp, synced, isIncident, [sessionId+synced], [sessionId+barcode], [sessionId+logisticsLabel]',
       syncQueue: '++id, status, createdAt, retryCount',
       expectedOrders: 'id, internalId',
       logs: '++id, level, module, timestamp',
-      settings: '&key'
+      settings: '&key',
+      locations: '++id, &name, lastUsed'
     });
   }
 }

@@ -18,6 +18,7 @@ import { MassiveHeader } from './massive/MassiveHeader';
 import { MassiveItemRow } from './massive/MassiveItemRow';
 import { BarcodeLabelModal } from './common/BarcodeLabelModal';
 import { MassiveToolsSheet } from './massive/MassiveToolsSheet';
+import { LocationSelectorModal } from './common/LocationSelectorModal';
 
 const MassiveBlindView: React.FC = () => {
     const navigate = useNavigate();
@@ -153,7 +154,7 @@ const MassiveBlindView: React.FC = () => {
                 onIncrement={(code) => registerScan(code)} 
             />
 
-            <div className="flex-1 min-h-0 bg-black flex flex-col">
+            <div className="flex-1 min-0 bg-black flex flex-col">
                 <div className="shrink-0 p-3 bg-slate-900/50 border-b border-white/5 grid grid-cols-4 gap-2">
                     <button onClick={() => { setManualCode(''); setShowKeypad(true); }} className="h-11 rounded-xl font-black text-[10px] flex items-center justify-center gap-2 border-2 bg-slate-800 border-slate-700 text-white shadow-lg active:scale-95">
                         <Keyboard className="w-4 h-4" /> <span>MANUAL</span>
@@ -193,6 +194,13 @@ const MassiveBlindView: React.FC = () => {
                 barcode={lastScannedItem?.barcode || ""} productName={lastScannedItem?.name} quantity={lastScannedItem?.totalQuantity}
                 meta={`AUDIT: ${batchId}`} isPrinting={isPrinting} onPrintThermal={handleThermalPrint}
                 onPrintPDF={() => lastScannedItem && printBarcode(lastScannedItem.barcode, lastScannedItem.name, `AUDIT_ID: ${batchId}`)}
+            />
+
+            <LocationSelectorModal 
+                isOpen={isChangingLocation}
+                onClose={() => setIsChangingLocation(false)}
+                currentLocation={currentLocation}
+                onSelect={(name) => setCurrentLocation(name)}
             />
 
             <MassiveToolsSheet 
