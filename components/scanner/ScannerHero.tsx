@@ -1,9 +1,11 @@
 
-import React, { memo } from 'react';
-import { RotateCcw, CheckCircle, Minus, Plus, Sparkles, Tag } from 'lucide-react';
+import React, { memo, useEffect, useState } from 'react';
+// Fix: Added missing Target icon to imports from lucide-react
+import { RotateCcw, CheckCircle, Minus, Plus, Tag, ShieldAlert, Sparkles, Target } from 'lucide-react';
 import { ScanRecord, Product, ExpectedItem } from '../../types';
 import { ScannerFeedback } from '../../hooks/useScanner';
 import { determineItemStatus, getStatusColorClasses } from '../../services/uiLogic';
+import { detectCountAnomalies } from '../../services/aiInsightService';
 
 interface ScannerHeroProps {
     lastScan: ScanRecord | undefined;
@@ -19,6 +21,28 @@ interface ScannerHeroProps {
 export const ScannerHero: React.FC<ScannerHeroProps> = memo(({ 
     lastScan, activeProduct, accumulatedQty, feedback, onRegisterPending, expectedItem, onDecrement, onIncrement
 }) => {
+    const [aiWarning, setAiWarning] = useState<string | null>(null);
+
+    // Auditoría IA proactiva cuando el conteo cambia significativamente
+    useEffect(() => {
+        if (lastScan && accumulatedQty > 0 && (accumulatedQty % 10 === 0 || (expectedItem && accumulatedQty > expectedItem.expectedQty))) {
+            const check = async () => {
+                const result = await detectCountAnomalies({
+                    barcode: lastScan.barcode,
+                    productName: activeProduct?.name || 'Producto',
+                    totalQuantity: accumulatedQty,
+                    expectedQuantity: expectedItem?.expectedQty,
+                    scans: 1
+                });
+                if (result?.isAnomaly) setAiWarning(result.message);
+                else setAiWarning(null);
+            };
+            check();
+        } else {
+            setAiWarning(null);
+        }
+    }, [accumulatedQty, lastScan?.barcode]);
+
     if (feedback === 'undo') return <div className="h-full w-full flex flex-col items-center justify-center bg-slate-900 animate-in zoom-in duration-300"><RotateCcw className="w-20 h-20 text-slate-500 mb-4" /><h2 className="text-2xl font-black text-slate-500">BORRADO</h2></div>;
 
     if (lastScan) {
@@ -28,8 +52,16 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
 
         return (
             <div className={`w-full h-full flex flex-col relative transition-colors duration-300 ${bgClass}`}>
+                {/* Alerta de Anomalía IA */}
+                {aiWarning && (
+                    <div className="absolute top-4 left-4 right-4 z-50 bg-black/80 backdrop-blur-md border-2 border-amber-500 p-4 rounded-2xl flex items-start gap-3 animate-in slide-in-from-top-4 shadow-2xl">
+                        <ShieldAlert className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                        <div className="text-[10px] font-black text-amber-500 uppercase leading-tight">{aiWarning}</div>
+                    </div>
+                )}
+
                 <div className="flex-1 flex items-stretch relative z-10">
-                    <button onClick={onDecrement} className="w-20 md:w-32 bg-black/5 active:bg-black/20 flex items-center justify-center border-r border-white/5 transition-all"><Minus className="w-12 h-12 text-white/30" /></button>
+                    <button onClick={onDecrement} className="w-20 md:w-32 bg-black/10 active:bg-black/30 flex items-center justify-center border-r border-white/5 transition-all"><Minus className="w-12 h-12 text-white/30" /></button>
 
                     <div className="flex-1 flex flex-col items-center justify-center p-2 text-center overflow-hidden">
                         <div className="mb-1 w-full max-w-[90%]">
@@ -40,16 +72,22 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
                                     </span>
                                 )}
                                 <span className="text-white/50 font-mono text-[9px] font-black tracking-widest truncate max-w-[120px]">{lastScan.barcode}</span>
-                                {lastScan.mm && <span className="bg-white/10 px-1.5 py-0.5 rounded text-white/70 text-[8px] font-black">EXP: {lastScan.mm}/{lastScan.yyyy}</span>}
                             </div>
-                            <h1 className="text-white font-black text-[11px] md:text-sm uppercase tracking-tight line-clamp-1 leading-none italic">{activeProduct?.name || 'MEDICAMENTO_NUEVO'}</h1>
+                            {/* Fix: Changed invalid tailwind class 'md:sm' to 'md:text-sm' */}
+                            <h1 className="text-white font-black text-[11px] md:text-sm uppercase tracking-tight line-clamp-1 leading-none italic">{activeProduct?.name || 'REGISTRANDO_NUEVO...'}</h1>
                         </div>
 
-                        <div className="text-[12rem] md:text-[15rem] leading-none font-black tabular-nums tracking-tighter drop-shadow-2xl">{accumulatedQty}</div>
-                        {expectedItem && <div className="bg-black/40 backdrop-blur-md px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-2">META: {expectedItem.expectedQty} {accumulatedQty >= expectedItem.expectedQty && <CheckCircle className="w-3 h-3 text-emerald-400" />}</div>}
+                        <div className="text-[12rem] md:text-[15rem] leading-none font-black tabular-nums tracking-tighter drop-shadow-2xl transition-transform duration-100 active:scale-95">{accumulatedQty}</div>
+                        
+                        {expectedItem && (
+                            <div className="bg-black/40 backdrop-blur-md px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-2 border border-white/10">
+                                {accumulatedQty >= expectedItem.expectedQty ? <Sparkles className="w-3 h-3 text-emerald-400" /> : <Target className="w-3 h-3 text-blue-400" />}
+                                META: {expectedItem.expectedQty}
+                            </div>
+                        )}
                     </div>
 
-                    <button onClick={onIncrement} className="w-20 md:w-32 bg-black/5 active:bg-black/20 flex items-center justify-center border-l border-white/5 transition-all"><Plus className="w-12 h-12 text-white/30" /></button>
+                    <button onClick={onIncrement} className="w-20 md:w-32 bg-black/10 active:bg-black/30 flex items-center justify-center border-l border-white/5 transition-all"><Plus className="w-12 h-12 text-white/30" /></button>
                 </div>
                 {isUnknown && <button onClick={onRegisterPending} className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 bg-white/10 backdrop-blur-md border border-white/20 text-white/60 text-[7px] font-black uppercase tracking-[0.2em] px-4 py-2 rounded-full active:scale-95">Identificar SKU</button>}
             </div>

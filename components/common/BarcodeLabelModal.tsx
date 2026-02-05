@@ -31,14 +31,14 @@ export const BarcodeLabelModal: React.FC<BarcodeLabelModalProps> = ({
                 <div className="w-full mt-6 mb-8 flex flex-col items-center justify-center">
                     <div className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-300 mb-6 italic">Optical_Sync_Ready</div>
                     
-                    {/* EL CÓDIGO DE BARRAS ES EL PROTAGONISTA */}
-                    <div className="w-full bg-white flex items-center justify-center py-8 px-4 border-2 border-slate-100 rounded-3xl shadow-inner overflow-hidden">
-                        <div className="barcode-font text-[120px] leading-none select-none tracking-tight whitespace-nowrap scale-x-[1.2] transform-gpu">
+                    {/* EL CÓDIGO DE BARRAS ES EL PROTAGONISTA - Optimizado para Ancho Móvil */}
+                    <div className="w-full bg-white flex items-center justify-center py-10 px-2 border-2 border-slate-100 rounded-3xl shadow-inner overflow-hidden">
+                        <div className="barcode-font select-none whitespace-nowrap text-center transform-gpu">
                             {barcode}
                         </div>
                     </div>
 
-                    <div className="mt-6 text-4xl font-black tracking-[0.2em] font-mono text-slate-900 break-all text-center">
+                    <div className="mt-6 text-2xl md:text-3xl font-black tracking-[0.2em] font-mono text-slate-900 break-all text-center px-4">
                         {barcode}
                     </div>
                 </div>
@@ -88,6 +88,9 @@ export const BarcodeLabelModal: React.FC<BarcodeLabelModalProps> = ({
                     font-family: 'Libre Barcode 128', cursive;
                     line-height: 1;
                     color: black;
+                    /* Ajuste dinámico basado en el ancho de la pantalla para evitar cortes */
+                    font-size: clamp(60px, 18vw, 100px); 
+                    letter-spacing: 0;
                 }
             `}</style>
         </Modal>

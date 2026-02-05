@@ -38,6 +38,7 @@ export const MassiveHUD: React.FC<Props> = memo(({ item, feedback, onDecrement, 
                                 <span className="text-white/40 font-mono text-[9px] font-black tracking-[0.3em] block mb-1 uppercase truncate">
                                     {item.barcode}
                                 </span>
+                                {/* Fix: Changed invalid tailwind class 'md:sm' to 'md:text-sm' */}
                                 <h2 className="text-white font-black text-xs md:text-sm uppercase tracking-tight line-clamp-2 px-4 leading-tight">
                                     {item.name}
                                 </h2>
