@@ -13,13 +13,24 @@ export const useReports = () => {
     const [isStartModalOpen, setIsStartModalOpen] = useState(false);
     const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
     
-    // Determinamos qué tipo de historial mostrar basado en la ruta o parámetro
     const searchParams = new URLSearchParams(location.search);
     const filterType = searchParams.get('type') || 'standard';
 
     const [limit, setLimit] = useState(50);
 
     const pendingSyncCount = useLiveQuery(() => db.scans.where('synced').equals(0).count(), [], 0);
+
+    // Mapa de ERPs para identificar multi-bulto
+    const erpCounts = useLiveQuery(async () => {
+        const allSessions = await db.sessions.toArray();
+        const counts: Record<string, number> = {};
+        allSessions.forEach(s => {
+            if (s.erpOrder) {
+                counts[s.erpOrder] = (counts[s.erpOrder] || 0) + 1;
+            }
+        });
+        return counts;
+    }, []);
 
     const sessions = useLiveQuery(async () => {
         const q = searchQuery.trim().toLowerCase();
@@ -71,6 +82,7 @@ export const useReports = () => {
     return {
         state: {
             sessions,
+            erpCounts: erpCounts || {},
             pendingSyncCount,
             searchQuery,
             selectedSessionId,

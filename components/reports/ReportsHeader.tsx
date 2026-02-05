@@ -1,16 +1,16 @@
 
 import React from 'react';
-import { ChevronLeft, CheckCircle2, Eraser, Layers, Plus } from 'lucide-react';
+import { ChevronLeft, CheckCircle2, Eraser, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface Props {
     isCleaning: boolean;
     onClean: () => void;
-    onOpenConsolidated: () => void;
+    onOpenConsolidated?: () => void; // Marcado opcional por compatibilidad
     onStartNew: () => void;
 }
 
-export const ReportsHeader: React.FC<Props> = ({ isCleaning, onClean, onOpenConsolidated, onStartNew }) => {
+export const ReportsHeader: React.FC<Props> = ({ isCleaning, onClean, onStartNew }) => {
     const navigate = useNavigate();
     return (
         <div className="flex-none">
@@ -26,16 +26,13 @@ export const ReportsHeader: React.FC<Props> = ({ isCleaning, onClean, onOpenCons
                 <button 
                     onClick={onClean} 
                     disabled={isCleaning} 
-                    className="col-span-2 bg-slate-50 border border-slate-200 text-slate-600 font-bold py-2.5 rounded-xl hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 active:scale-95"
+                    className="bg-slate-50 border border-slate-200 text-slate-600 font-bold py-2.5 rounded-xl hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 active:scale-95"
                 >
                     {isCleaning ? <div className="w-4 h-4 border-2 border-slate-600 border-t-transparent rounded-full animate-spin" /> : <Eraser className="w-4 h-4" />}
-                    Limpiar Sincronizados
-                </button>
-                <button onClick={onOpenConsolidated} className="bg-white border border-slate-200 text-purple-700 font-bold py-2.5 rounded-xl hover:bg-purple-50 hover:border-purple-200 transition-colors flex items-center justify-center gap-2 shadow-sm active:scale-95">
-                    <Layers className="w-4 h-4" /> Consolidados
+                    Limpiar Cloud
                 </button>
                 <button onClick={onStartNew} className="bg-blue-600 text-white font-bold py-2.5 rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 shadow-md shadow-blue-200 active:scale-95">
-                    <Plus className="w-5 h-5" /> Iniciar Conteo
+                    <Plus className="w-5 h-5" /> Nueva Carga
                 </button>
             </div>
         </div>

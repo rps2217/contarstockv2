@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Home, Database, History, Cloud, Zap, Container, Layers, Settings } from 'lucide-react';
+import { Home, Database, History, Cloud, Zap, Container, Settings } from 'lucide-react';
 import { AppSettings, ViewState } from '../types';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
@@ -20,12 +20,11 @@ export const BottomDock: React.FC<Props> = ({ currentView, settings }) => {
         'reports': { label: 'HISTORY', icon: History, path: '/reports' },
         'database': { label: 'MASTER', icon: Database, path: '/database' },
         'reception': { label: 'RECEIVE', icon: Container, path: '/reception' },
-        'consolidated': { label: 'MERGE', icon: Layers, path: '/consolidated' },
         'sync': { label: 'CLOUD', icon: Cloud, path: '/sync' },
         'settings': { label: 'SETUP', icon: Settings, path: '/settings' }
     };
 
-    const activeNavKeys = settings.mobileNavConfig?.filter(k => k !== 'conciliator') || ['dashboard', 'reports', 'sync'];
+    const activeNavKeys = settings.mobileNavConfig?.filter(k => !['conciliator', 'consolidated'].includes(k)) || ['dashboard', 'reports', 'sync'];
     
     const navItems = activeNavKeys.map(key => ({
         id: key,

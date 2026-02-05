@@ -25,6 +25,39 @@ export interface ExpectedOrder {
   importedAt: number;
 }
 
+// Added missing SyncJob interface
+export interface SyncJob {
+  id?: number;
+  status: 'pending' | 'processing' | 'failed' | 'completed';
+  createdAt: number;
+  retryCount: number;
+  data?: any;
+}
+
+// Added missing AliasSuggestion interface
+export interface AliasSuggestion {
+  physicalBarcode: string;
+  physicalName: string;
+  expectedBarcode: string;
+  expectedName: string;
+  quantity: number;
+}
+
+// Added missing MatchResult interface
+export interface MatchResult {
+  expectedOrder: ExpectedOrder;
+  matchScore: number;
+  status: 'exact' | 'partial' | 'mismatch';
+  details: {
+    barcode: string;
+    name: string;
+    physicalQty: number;
+    expectedQty: number;
+    difference: number;
+  }[];
+  potentialAliases: AliasSuggestion[];
+}
+
 export interface CountingSession {
   id: string;
   erpOrder: string;
@@ -73,7 +106,8 @@ export interface ConsolidatedItem {
   isIncident?: boolean;
 }
 
-export type ViewState = 'dashboard' | 'counting' | 'database' | 'reports' | 'settings' | 'consolidated' | 'reception' | 'sync' | 'conciliator';
+// Updated ViewState to include 'consolidated'
+export type ViewState = 'dashboard' | 'counting' | 'database' | 'reports' | 'settings' | 'reception' | 'sync' | 'massive' | 'consolidated';
 export type Theme = 'light' | 'dark' | 'contrast' | 'warm' | 'navy' | 'oled';
 export type ScannerStatus = 'idle' | 'manual' | 'camera' | 'expiring' | 'confirming' | 'error' | 'success' | 'product_form';
 
@@ -89,7 +123,7 @@ export interface AppSettings {
   lowPerformanceMode: boolean;
   predictiveHintsEnabled: boolean; 
   continuousMode: boolean;        
-  batchTrackingEnabled: boolean; // NUEVO: Interruptor global de lotes
+  batchTrackingEnabled: boolean;
   appSheetConfig?: AppSheetConfig;
   mobileNavConfig?: ViewState[]; 
 }
@@ -103,35 +137,4 @@ export interface AppSheetConfig {
   receptionTableName?: string;
   ordersTableName?: string; 
   gasWebAppUrl?: string; 
-}
-
-export interface AliasSuggestion {
-  physicalBarcode: string;
-  physicalName: string;
-  expectedBarcode: string;
-  expectedName: string;
-  quantity: number;
-}
-
-export interface MatchResult {
-  expectedOrder: ExpectedOrder;
-  matchScore: number;
-  status: 'exact' | 'partial' | 'mismatch';
-  details: {
-    barcode: string;
-    name: string;
-    physicalQty: number;
-    expectedQty: number;
-    difference: number;
-  }[];
-  potentialAliases: AliasSuggestion[];
-}
-
-export interface SyncJob {
-  id?: number;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
-  createdAt: number;
-  retryCount: number;
-  sessionId?: string;
-  payload?: any;
 }

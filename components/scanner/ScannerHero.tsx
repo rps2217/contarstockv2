@@ -73,7 +73,7 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
                                 )}
                                 <span className="text-white/50 font-mono text-[9px] font-black tracking-widest truncate max-w-[120px]">{lastScan.barcode}</span>
                             </div>
-                            {/* Fix: Changed invalid tailwind class 'md:sm' to 'md:text-sm' */}
+                            {/* Fixed invalid tailwind class 'md:sm' to 'md:text-sm' */}
                             <h1 className="text-white font-black text-[11px] md:text-sm uppercase tracking-tight line-clamp-1 leading-none italic">{activeProduct?.name || 'REGISTRANDO_NUEVO...'}</h1>
                         </div>
 

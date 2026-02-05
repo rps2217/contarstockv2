@@ -19,7 +19,6 @@ const Sync = lazyWithRetry(() => import('./components/SyncManagerUI'));
 const Reception = lazyWithRetry(() => import('./components/Reception'));
 const Settings = lazyWithRetry(() => import('./components/Settings'));
 const MassiveBlindView = lazyWithRetry(() => import('./components/MassiveBlindView'));
-const Consolidated = lazyWithRetry(() => import('./components/Consolidated'));
 const CountingView = lazyWithRetry(() => import('./components/CountingView'));
 
 const AppContent = () => {
@@ -50,7 +49,6 @@ const AppContent = () => {
   };
 
   const currentThemeClass = themeClasses[settings.theme] || themeClasses.dark;
-  const isDarkMode = ['dark', 'navy', 'oled'].includes(settings.theme);
 
   if (bootState === 'testing' || isAuthenticated === null) return (
     <div className="h-screen w-full bg-slate-950 flex flex-col items-center justify-center text-white p-8">
@@ -62,12 +60,10 @@ const AppContent = () => {
     </div>
   );
 
-  if (!isAuthenticated) {
-    return <Login onLoginSuccess={() => setIsAuthenticated(true)} />;
-  }
+  if (!isAuthenticated) return <Login onLoginSuccess={() => setIsAuthenticated(true)} />;
 
   return (
-    <div className={`w-full h-full flex flex-col transition-colors duration-500 ${currentThemeClass} ${isDarkMode ? 'dark' : ''} font-mono selection:bg-blue-500 selection:text-white`}>
+    <div className={`w-full h-full flex flex-col transition-colors duration-500 ${currentThemeClass} font-mono`}>
       <SystemStatus />
       <NetworkStatus />
       
@@ -89,7 +85,6 @@ const AppContent = () => {
                 <Route path="/database" element={<DatabaseView />} />
                 <Route path="/sync" element={<Sync />} />
                 <Route path="/reception" element={<Reception />} />
-                <Route path="/consolidated" element={<Consolidated />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/counting/:id" element={<CountingView />} />
                 <Route path="/massive/:batchId" element={<MassiveBlindView />} />
