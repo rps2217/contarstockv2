@@ -7,10 +7,11 @@ import { NetworkStatus } from './components/NetworkStatus';
 import { Sidebar } from './components/Sidebar';
 import { BottomDock } from './components/BottomDock';
 import { SystemStatus } from './components/SystemStatus';
-import { Box, Loader2 } from 'lucide-react';
+import { Box, Loader2, Database, ShieldCheck, WifiOff, Cpu } from 'lucide-react';
 import { lazyWithRetry } from './services/lazyLoad';
 import { initPersistence } from './services/backupService';
 import { Login } from './components/Login';
+import { InitializationService, InitStep } from './services/initializationService';
 
 const Dashboard = lazyWithRetry(() => import('./components/Dashboard'));
 const Reports = lazyWithRetry(() => import('./components/Reports'));
@@ -24,7 +25,8 @@ const CountingView = lazyWithRetry(() => import('./components/CountingView'));
 const AppContent = () => {
   const location = useLocation();
   const { settings } = useAppStore();
-  const [bootState, setBootState] = useState<'testing' | 'ready'>('testing');
+  const [bootState, setBootState] = useState<'testing' | 'initializing' | 'ready'>('testing');
+  const [initStep, setInitStep] = useState<InitStep>('idle');
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   
   const isScanningMode = location.pathname.startsWith('/counting/') || 
@@ -35,9 +37,18 @@ const AppContent = () => {
     initPersistence();
     const authStatus = localStorage.getItem('logicount_auth') === 'true';
     setIsAuthenticated(authStatus);
-    const timer = setTimeout(() => setBootState('ready'), 800);
-    return () => clearTimeout(timer);
-  }, []);
+    
+    if (authStatus) {
+        setBootState('initializing');
+        InitializationService.run((step) => {
+            setInitStep(step);
+            if (step === 'ready') setBootState('ready');
+        });
+    } else {
+        const timer = setTimeout(() => setBootState('ready'), 800);
+        return () => clearTimeout(timer);
+    }
+  }, [isAuthenticated]);
 
   const themeClasses: Record<string, string> = {
     'light': 'bg-slate-50 text-slate-900',
@@ -50,15 +61,46 @@ const AppContent = () => {
 
   const currentThemeClass = themeClasses[settings.theme] || themeClasses.dark;
 
-  if (bootState === 'testing' || isAuthenticated === null) return (
-    <div className="h-screen w-full bg-slate-950 flex flex-col items-center justify-center text-white p-8">
-        <div className="p-8 border-4 border-blue-600 rounded-[2.5rem] mb-6">
-          <Box className="w-16 h-16 text-blue-500 animate-pulse" />
-        </div>
-        <h1 className="text-3xl font-black uppercase tracking-tighter italic">LogiCount <span className="text-blue-500">Pro</span></h1>
-        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 mt-4 animate-pulse">Initializing_Kernel_v4.5</p>
-    </div>
-  );
+  // PANTALLA DE CARGA INDUSTRIAL
+  if (bootState === 'testing' || bootState === 'initializing' || isAuthenticated === null) {
+    return (
+      <div className="h-screen w-full bg-slate-950 flex flex-col items-center justify-center text-white p-8 font-mono">
+          <div className="relative mb-10">
+            <div className="p-10 border-4 border-blue-600 rounded-[3rem] relative z-10 bg-slate-950">
+                {initStep === 'config' ? <Cpu className="w-16 h-16 text-blue-400 animate-pulse" /> : 
+                 initStep === 'database' ? <Database className="w-16 h-16 text-amber-500 animate-bounce" /> :
+                 initStep === 'offline' ? <WifiOff className="w-16 h-16 text-rose-500" /> :
+                 <Box className="w-16 h-16 text-blue-500 animate-pulse" />}
+            </div>
+            <div className="absolute inset-0 bg-blue-600 blur-[60px] opacity-20 animate-pulse"></div>
+          </div>
+
+          <h1 className="text-4xl font-black uppercase tracking-tighter italic mb-1">
+            LOGICOUNT <span className="text-blue-500">PRO</span>
+          </h1>
+          
+          <div className="mt-8 w-64">
+              <div className="flex justify-between items-center mb-2 px-1">
+                  <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
+                    {initStep === 'config' ? 'Sincronizando_Config' : 
+                     initStep === 'database' ? 'Refrescando_Catalogo' : 
+                     initStep === 'offline' ? 'Red_No_Disponible' :
+                     'Inicializando_Kernel'}
+                  </span>
+                  {initStep !== 'offline' && <Loader2 className="w-3 h-3 text-blue-500 animate-spin" />}
+              </div>
+              <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/10">
+                  <div 
+                    className={`h-full transition-all duration-500 ${initStep === 'offline' ? 'bg-rose-600 w-full' : 'bg-blue-600'} ${initStep === 'config' ? 'w-1/3' : initStep === 'database' ? 'w-2/3' : initStep === 'ready' ? 'w-full' : 'w-1/4'}`} 
+                  />
+              </div>
+              <p className="text-[7px] font-bold text-slate-600 uppercase tracking-[0.4em] mt-4 text-center">
+                v4.5.8_INDUSTRIAL_BUILD_STABLE
+              </p>
+          </div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) return <Login onLoginSuccess={() => setIsAuthenticated(true)} />;
 

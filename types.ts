@@ -25,7 +25,6 @@ export interface ExpectedOrder {
   importedAt: number;
 }
 
-// Added missing SyncJob interface
 export interface SyncJob {
   id?: number;
   status: 'pending' | 'processing' | 'failed' | 'completed';
@@ -34,7 +33,6 @@ export interface SyncJob {
   data?: any;
 }
 
-// Added missing AliasSuggestion interface
 export interface AliasSuggestion {
   physicalBarcode: string;
   physicalName: string;
@@ -43,7 +41,6 @@ export interface AliasSuggestion {
   quantity: number;
 }
 
-// Added missing MatchResult interface
 export interface MatchResult {
   expectedOrder: ExpectedOrder;
   matchScore: number;
@@ -106,8 +103,7 @@ export interface ConsolidatedItem {
   isIncident?: boolean;
 }
 
-// Updated ViewState to include 'consolidated'
-export type ViewState = 'dashboard' | 'counting' | 'database' | 'reports' | 'settings' | 'reception' | 'sync' | 'massive' | 'consolidated';
+export type ViewState = 'dashboard' | 'counting' | 'database' | 'reports' | 'settings' | 'reception' | 'sync' | 'massive';
 export type Theme = 'light' | 'dark' | 'contrast' | 'warm' | 'navy' | 'oled';
 export type ScannerStatus = 'idle' | 'manual' | 'camera' | 'expiring' | 'confirming' | 'error' | 'success' | 'product_form';
 

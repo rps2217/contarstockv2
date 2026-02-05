@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Home, Database, History, Layers, Container, Cloud, CheckCircle2 } from 'lucide-react';
+import { Home, Database, History, Container, Cloud } from 'lucide-react';
 import { AppSettings, ViewState } from '../../types';
 
 interface Props {
@@ -9,17 +9,16 @@ interface Props {
 }
 
 export const NavigationSection: React.FC<Props> = ({ settings, updateSetting }) => {
-    // Detective eliminado de la lista de opciones
+    // Lista filtrada: Solo módulos activos en la nueva arquitectura
     const availableNavItems: {id: ViewState, label: string, icon: any}[] = [
         { id: 'dashboard', label: 'Métricas', icon: Home },
         { id: 'reports', label: 'Historial', icon: History },
         { id: 'database', label: 'Catálogo', icon: Database },
         { id: 'reception', label: 'Recepción', icon: Container },
-        { id: 'consolidated', label: 'Consol.', icon: Layers },
         { id: 'sync', label: 'Nube', icon: Cloud },
     ];
 
-    const currentNav = settings.mobileNavConfig || ['dashboard', 'database', 'reports'];
+    const currentNav = settings.mobileNavConfig || ['dashboard', 'reports', 'sync'];
 
     const toggleNavOption = (id: ViewState) => {
         let next = [...currentNav];
@@ -40,9 +39,9 @@ export const NavigationSection: React.FC<Props> = ({ settings, updateSetting }) 
     return (
         <section className="space-y-6 animate-in slide-in-from-bottom-2">
             <div className="flex justify-between items-center px-4">
-                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Barra de Navegación</h3>
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Personalizar Dock</h3>
                 <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${currentNav.length === 5 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
-                    {currentNav.length}/5 Activos
+                    {currentNav.length}/5 Iconos
                 </span>
             </div>
             
@@ -55,7 +54,7 @@ export const NavigationSection: React.FC<Props> = ({ settings, updateSetting }) 
                             key={item.id}
                             onClick={() => toggleNavOption(item.id)}
                             className={`
-                                w-full p-6 rounded-[2rem] border-4 flex items-center justify-between transition-all active:scale-[0.97]
+                                w-full p-6 rounded-[2.5rem] border-4 flex items-center justify-between transition-all active:scale-[0.97]
                                 ${isActive 
                                     ? 'bg-blue-600 border-blue-400 text-white shadow-xl shadow-blue-900/20' 
                                     : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-white/5 opacity-80'

@@ -1,6 +1,6 @@
 
 import React, { memo } from 'react';
-import { Truck, Cloud, MoreVertical, Trash2, Layers, Zap, Package } from 'lucide-react';
+import { Truck, Cloud, MoreVertical, Trash2, Layers, Zap, Package, ShieldCheck, AlertCircle } from 'lucide-react';
 
 export const SessionRow = memo(({ index, style, data }: any) => {
     const session = data.items[index];
@@ -11,27 +11,39 @@ export const SessionRow = memo(({ index, style, data }: any) => {
     const erpCount = erpCounts ? erpCounts[session.erpOrder] || 0 : 0;
     const isMultiBulto = erpCount > 1;
 
+    // Lógica de Veredicto de Auditoría
+    const isVerified = session.auditStatus === 'verified' || (session.totalUnits > 0 && session.lastSyncTimestamp);
+    const hasIssues = session.auditStatus === 'failed';
+
     return (
         <div style={style} className="px-4 py-2">
             <div 
                 onClick={() => onSelect(session.id)}
                 className={`bg-white dark:bg-slate-900 border-4 rounded-[2.5rem] h-full flex items-center px-6 gap-5 transition-all active:scale-[0.98] shadow-sm relative overflow-hidden ${isMultiBulto ? 'border-indigo-100 dark:border-indigo-900/30' : 'border-slate-100 dark:border-white/5'}`}
             >
-                {/* INDICADOR LATERAL OPERATIVO */}
-                <div className={`absolute left-0 top-0 bottom-0 w-2.5 ${isHammer ? 'bg-blue-600' : (isMultiBulto ? 'bg-indigo-500' : 'bg-slate-300 dark:bg-slate-700')}`} />
+                {/* INDICADOR LATERAL OPERATIVO DINÁMICO */}
+                <div className={`absolute left-0 top-0 bottom-0 w-2.5 ${hasIssues ? 'bg-rose-500' : isVerified ? 'bg-emerald-500' : 'bg-blue-600'}`} />
 
                 <div className="flex-1 min-w-0 py-4">
                     <div className="flex items-center gap-2 mb-2">
-                         {/* Badge de Tipo de Carga */}
-                         <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[8px] font-black uppercase tracking-widest ${isHammer ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-white/10 text-slate-500'}`}>
-                            {isHammer ? <Zap className="w-3 h-3" /> : <Package className="w-3 h-3" />}
-                            {isHammer ? 'Modo Martillo' : 'Nueva Carga'}
-                         </div>
+                         {/* Badge de Estado de Auditoría */}
+                         {isVerified ? (
+                             <div className="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-md text-[8px] font-black uppercase tracking-widest flex items-center gap-1">
+                                <ShieldCheck className="w-3 h-3" /> Certificado
+                             </div>
+                         ) : hasIssues ? (
+                             <div className="bg-rose-100 text-rose-700 px-2.5 py-1 rounded-md text-[8px] font-black uppercase tracking-widest flex items-center gap-1">
+                                <AlertCircle className="w-3 h-3" /> Discrepancia
+                             </div>
+                         ) : (
+                             <div className="bg-blue-50 text-blue-600 px-2.5 py-1 rounded-md text-[8px] font-black uppercase tracking-widest">
+                                En Proceso
+                             </div>
+                         )}
                          
-                         {/* Badge de Multi-Bulto (Consolidados Unificado) */}
                          {isMultiBulto && (
-                             <div className="flex items-center gap-1.5 bg-indigo-600 text-white px-2.5 py-1 rounded-md text-[8px] font-black uppercase tracking-widest shadow-lg shadow-indigo-200 dark:shadow-none">
-                                <Layers className="w-3 h-3" /> Agrupado ({erpCount} Bultos)
+                             <div className="flex items-center gap-1.5 bg-indigo-600 text-white px-2.5 py-1 rounded-md text-[8px] font-black uppercase tracking-widest shadow-lg shadow-indigo-200">
+                                <Layers className="w-3 h-3" /> Agrupado ({erpCount})
                              </div>
                          )}
 
@@ -51,7 +63,7 @@ export const SessionRow = memo(({ index, style, data }: any) => {
                 <div className="flex items-center gap-4 shrink-0">
                     <div className="text-right">
                         <div className="text-4xl font-black text-slate-900 dark:text-white tabular-nums tracking-tighter leading-none">{session.totalUnits || 0}</div>
-                        <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">Unidades</div>
+                        <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1 italic">Picks</div>
                     </div>
                     
                     <button 
@@ -69,7 +81,7 @@ export const SessionRow = memo(({ index, style, data }: any) => {
                                     onClick={(e) => { e.stopPropagation(); onDelete(e, session.id); }}
                                     className="w-full text-left px-6 py-6 text-[11px] text-rose-600 font-black uppercase flex items-center gap-4 hover:bg-rose-50 transition-colors"
                                 >
-                                    <Trash2 className="w-4 h-4" /> Eliminar Registro
+                                    <Trash2 className="w-4 h-4" /> Borrar de Local
                                 </button>
                             </div>
                         </>

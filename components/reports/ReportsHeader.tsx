@@ -6,7 +6,6 @@ import { useNavigate } from 'react-router-dom';
 interface Props {
     isCleaning: boolean;
     onClean: () => void;
-    onOpenConsolidated?: () => void; // Marcado opcional por compatibilidad
     onStartNew: () => void;
 }
 
