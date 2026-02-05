@@ -79,8 +79,6 @@ const MassiveBlindView: React.FC = () => {
 
         setIsPrinting(true);
         try {
-            // El mapeo de productName e expectedQty ya viene consolidado en el hook useMassiveScanner
-            // Enriquecemos para el formato del servicio de impresión
             const reportData = items.map(i => ({
                 barcode: i.barcode,
                 productName: i.name,
@@ -136,7 +134,7 @@ const MassiveBlindView: React.FC = () => {
     }), [selectItem, lastScannedItem?.barcode]);
 
     return (
-        <div className="h-screen w-full flex flex-col font-mono bg-black select-none overflow-hidden text-white" onPointerDown={resetAutoLockTimer}>
+        <div className="fixed inset-0 z-[100] flex flex-col font-mono bg-black select-none overflow-hidden text-white" onPointerDown={resetAutoLockTimer}>
             
             <MassiveHeader 
                 isMigrating={isMigrating}
@@ -154,7 +152,7 @@ const MassiveBlindView: React.FC = () => {
                 onIncrement={(code) => registerScan(code)} 
             />
 
-            <div className="flex-1 min-0 bg-black flex flex-col">
+            <div className="flex-1 min-h-0 bg-black flex flex-col overflow-hidden">
                 <div className="shrink-0 p-3 bg-slate-900/50 border-b border-white/5 grid grid-cols-4 gap-2">
                     <button onClick={() => { setManualCode(''); setShowKeypad(true); }} className="h-11 rounded-xl font-black text-[10px] flex items-center justify-center gap-2 border-2 bg-slate-800 border-slate-700 text-white shadow-lg active:scale-95">
                         <Keyboard className="w-4 h-4" /> <span>MANUAL</span>
@@ -170,7 +168,8 @@ const MassiveBlindView: React.FC = () => {
                 </div>
             </div>
 
-            <div className="h-24 md:h-28 shrink-0 bg-slate-900 border-t border-white/5 flex items-center px-4 z-40 pb-safe">
+            {/* BOTÓN GATILLO - Posicionado con padding seguro */}
+            <div className="shrink-0 bg-slate-900 border-t border-white/5 flex items-center px-4 pt-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))] z-40">
                 <button 
                     onPointerDown={(e) => { e.preventDefault(); setIsTriggerActive(true); }} 
                     onPointerUp={() => setIsTriggerActive(false)}
@@ -181,7 +180,7 @@ const MassiveBlindView: React.FC = () => {
                 </button>
             </div>
 
-            {isTriggerActive && <div className="fixed inset-0 z-[100]"><CameraScanner onScan={(code) => { registerScan(code); setIsTriggerActive(false); }} onClose={() => setIsTriggerActive(false)} isTriggered={true} /></div>}
+            {isTriggerActive && <div className="fixed inset-0 z-[200]"><CameraScanner onScan={(code) => { registerScan(code); setIsTriggerActive(false); }} onClose={() => setIsTriggerActive(false)} isTriggered={true} /></div>}
 
             <NumericKeypad 
                 isOpen={showKeypad} onClose={() => setShowKeypad(false)} title="ENTRADA MANUAL" value={manualCode} 

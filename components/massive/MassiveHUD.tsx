@@ -18,7 +18,7 @@ export const MassiveHUD: React.FC<Props> = memo(({ item, feedback, onDecrement, 
     const bgClass = item ? getStatusColorClasses(status, 'bg') : 'bg-slate-950';
 
     return (
-        <div className={`h-[38vh] relative flex flex-col overflow-hidden border-b-4 border-black shrink-0 transition-colors duration-300 ${bgClass}`}>
+        <div className={`h-[32dvh] relative flex flex-col overflow-hidden border-b-4 border-black shrink-0 transition-colors duration-300 ${bgClass}`}>
             <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-transparent opacity-50"></div>
             
             <div className="w-full h-full flex items-stretch relative z-10">
@@ -38,7 +38,6 @@ export const MassiveHUD: React.FC<Props> = memo(({ item, feedback, onDecrement, 
                                 <span className="text-white/40 font-mono text-[9px] font-black tracking-[0.3em] block mb-1 uppercase truncate">
                                     {item.barcode}
                                 </span>
-                                {/* Fixed invalid tailwind class 'md:sm' to 'md:text-sm' */}
                                 <h2 className="text-white font-black text-xs md:text-sm uppercase tracking-tight line-clamp-2 px-4 leading-tight">
                                     {item.name}
                                 </h2>
