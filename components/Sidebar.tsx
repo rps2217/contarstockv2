@@ -27,7 +27,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ view }) => {
         }`}
       >
         <Icon className={`w-5 h-5 transition-transform group-hover:scale-110 group-active:scale-90 ${isActive ? 'text-white' : 'text-slate-600 group-hover:text-blue-400'}`} />
-        <span className="font-black text-[10px] uppercase tracking-[0.2em]">{label}</span>
+        <span className="font-black text-[10px] font-mono uppercase tracking-[0.2em]">{label}</span>
         
         {badge && badge > 0 && (
           <span className="absolute right-3 bg-amber-500 text-black text-[9px] font-black px-2 py-0.5 rounded-lg border-2 border-slate-900 shadow-md animate-pulse">
@@ -69,7 +69,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ view }) => {
             className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all border-2 ${view === 'settings' ? 'bg-slate-800 border-white/10 text-white' : 'text-slate-600 border-transparent hover:text-white'}`}
         >
             <Settings className="w-5 h-5" />
-            <span className="font-black text-[10px] uppercase tracking-[0.3em]">Setup</span>
+            <span className="font-black text-[10px] font-mono uppercase tracking-[0.3em]">Setup</span>
         </button>
       </div>
     </aside>

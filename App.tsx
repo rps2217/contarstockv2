@@ -20,7 +20,6 @@ const Reception = lazyWithRetry(() => import('./components/Reception'));
 const Settings = lazyWithRetry(() => import('./components/Settings'));
 const MassiveBlindView = lazyWithRetry(() => import('./components/MassiveBlindView'));
 const Consolidated = lazyWithRetry(() => import('./components/Consolidated'));
-const Conciliator = lazyWithRetry(() => import('./components/Conciliator'));
 const CountingView = lazyWithRetry(() => import('./components/CountingView'));
 
 const AppContent = () => {
@@ -34,19 +33,13 @@ const AppContent = () => {
                          location.pathname.startsWith('/massive/');
 
   useEffect(() => {
-    // 1. Solicitar persistencia
     initPersistence();
-    
-    // 2. Verificar Sesión Persistente (Offline Friendly)
     const authStatus = localStorage.getItem('logicount_auth') === 'true';
     setIsAuthenticated(authStatus);
-
-    // 3. Simular chequeo de kernel
     const timer = setTimeout(() => setBootState('ready'), 800);
     return () => clearTimeout(timer);
   }, []);
 
-  // Mapeo de clases de tema industrial
   const themeClasses: Record<string, string> = {
     'light': 'bg-slate-50 text-slate-900',
     'dark': 'bg-slate-950 text-slate-100',
@@ -57,11 +50,8 @@ const AppContent = () => {
   };
 
   const currentThemeClass = themeClasses[settings.theme] || themeClasses.dark;
-  
-  // Determinar si activar modo oscuro global para componentes internos (Tailwind dark:)
   const isDarkMode = ['dark', 'navy', 'oled'].includes(settings.theme);
 
-  // Pantalla de Carga Inicial
   if (bootState === 'testing' || isAuthenticated === null) return (
     <div className="h-screen w-full bg-slate-950 flex flex-col items-center justify-center text-white p-8">
         <div className="p-8 border-4 border-blue-600 rounded-[2.5rem] mb-6">
@@ -72,7 +62,6 @@ const AppContent = () => {
     </div>
   );
 
-  // Guardián de Autenticación
   if (!isAuthenticated) {
     return <Login onLoginSuccess={() => setIsAuthenticated(true)} />;
   }
@@ -101,11 +90,9 @@ const AppContent = () => {
                 <Route path="/sync" element={<Sync />} />
                 <Route path="/reception" element={<Reception />} />
                 <Route path="/consolidated" element={<Consolidated />} />
-                <Route path="/conciliator" element={<Conciliator />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/counting/:id" element={<CountingView />} />
                 <Route path="/massive/:batchId" element={<MassiveBlindView />} />
-                {/* Redirección de seguridad para rutas no encontradas */}
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Suspense>
