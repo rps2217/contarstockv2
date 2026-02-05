@@ -17,20 +17,16 @@ export interface ConsolidatedBlindItem {
 
 export const useMassiveScanner = (batchId: string) => {
     const { feedback, trigger } = useFeedbackSystem(50);
-    
     const [activeBarcode, setActiveBarcode] = useState<string | null>(null);
     const [optimisticQty, setOptimisticQty] = useState<number | null>(null);
     const [multiplier, setMultiplier] = useState(1);
     const [currentLocation, setCurrentLocation] = useState('BODEGA_GRAL');
     
-    const buffer = useRef('');
-    const lastKeyTime = useRef(0);
     const writeQueue = useRef<{barcode: string, qty: number, loc: string, ts: number}[]>([]);
     const itemsRef = useRef<ConsolidatedBlindItem[]>([]);
 
     const dbItems = useLiveQuery(async () => {
         if (!batchId) return [];
-        
         const [rawScans, manifests] = await Promise.all([
             massiveDb.blindScans.where('batchId').equals(batchId).toArray(),
             massiveDb.blindManifests.where('batchId').equals(batchId).toArray()
@@ -45,7 +41,7 @@ export const useMassiveScanner = (batchId: string) => {
         for (const m of manifests) {
             aggregation.set(m.barcode, {
                 barcode: m.barcode,
-                name: m.name || prodMap.get(m.barcode) || 'CARGANDO...',
+                name: m.name || prodMap.get(m.barcode) || 'SIN DESCRIPCIÓN',
                 loc: m.loc,
                 totalQuantity: 0,
                 expectedQty: m.expectedQty,
@@ -58,12 +54,14 @@ export const useMassiveScanner = (batchId: string) => {
             if (existing) {
                 existing.totalQuantity += scan.quantity;
                 existing.lastTimestamp = Math.max(existing.lastTimestamp, scan.timestamp);
+                if (scan.location) existing.loc = scan.location;
             } else {
                 aggregation.set(scan.barcode, {
                     barcode: scan.barcode,
                     name: prodMap.get(scan.barcode) || 'SKU_DESCONOCIDO',
                     totalQuantity: scan.quantity,
-                    lastTimestamp: scan.timestamp
+                    lastTimestamp: scan.timestamp,
+                    loc: scan.location
                 });
             }
         }
@@ -76,7 +74,7 @@ export const useMassiveScanner = (batchId: string) => {
 
         itemsRef.current = sorted;
         return sorted;
-    }, [batchId, activeBarcode]);
+    }, [batchId, activeBarcode, feedback]);
 
     const flushToDb = useCallback(async () => {
         if (writeQueue.current.length === 0) return;
@@ -91,121 +89,58 @@ export const useMassiveScanner = (batchId: string) => {
                 timestamp: b.ts
             })));
         } catch (e) {
-            console.error("Fallo persistencia Martillo", e);
             writeQueue.current = [...batch, ...writeQueue.current];
         }
     }, [batchId]);
 
     useEffect(() => {
         const timer = setInterval(flushToDb, 300);
-        return () => {
-            clearInterval(timer);
-            flushToDb();
-        };
+        return () => { clearInterval(timer); flushToDb(); };
     }, [flushToDb]);
 
     const registerScan = useCallback(async (code: string, qtyOverride?: number) => {
         const clean = sanitizeBarcode(code);
         if (!clean || clean.length < 2) return;
 
-        const now = Date.now();
-        const isSame = clean === activeBarcode;
-        
         const qtyToApply = qtyOverride !== undefined ? qtyOverride : multiplier;
         if (qtyOverride === undefined) setMultiplier(1);
 
-        if (qtyToApply > 0) {
-            trigger('success', { sound: qtyToApply > 1 ? 'increment' : 'success', vibration: qtyToApply > 1 ? 25 : 40 });
-        } else {
-            trigger('undo', { sound: 'delete', vibration: [40, 20] });
-        }
+        trigger(qtyToApply > 0 ? 'success' : 'undo', { 
+            sound: qtyToApply > 0 ? (qtyToApply > 1 ? 'increment' : 'success') : 'delete'
+        });
 
-        if (!isSame) setActiveBarcode(clean);
-        
+        setActiveBarcode(clean);
         setOptimisticQty(prev => {
             const baseReal = itemsRef.current.find(i => i.barcode === clean)?.totalQuantity ?? 0;
-            const currentUI = isSame ? (prev ?? baseReal) : baseReal;
+            const currentUI = clean === activeBarcode ? (prev ?? baseReal) : baseReal;
             return Math.max(0, currentUI + qtyToApply);
         });
 
-        writeQueue.current.push({ barcode: clean, qty: qtyToApply, loc: currentLocation, ts: now });
+        writeQueue.current.push({ barcode: clean, qty: qtyToApply, loc: currentLocation, ts: Date.now() });
     }, [activeBarcode, trigger, multiplier, currentLocation]);
-
-    const selectItem = useCallback((barcode: string) => {
-        const clean = sanitizeBarcode(barcode);
-        if (activeBarcode === clean) return;
-        
-        setActiveBarcode(clean);
-        const realVal = itemsRef.current.find(i => i.barcode === clean)?.totalQuantity ?? 0;
-        setOptimisticQty(realVal); 
-        if (navigator.vibrate) navigator.vibrate(10);
-    }, [activeBarcode]);
-
-    const removeItemCompletely = useCallback(async (barcode: string) => {
-        await flushToDb();
-        await massiveDb.blindScans.where('batchId').equals(batchId).and(s => s.barcode === barcode).delete();
-        if (activeBarcode === barcode) {
-            setActiveBarcode(null);
-            setOptimisticQty(null);
-        }
-        trigger('undo');
-    }, [batchId, activeBarcode, flushToDb, trigger]);
-
-    const resetBatch = useCallback(async () => {
-        writeQueue.current = []; 
-        await Promise.all([
-            massiveDb.blindScans.where('batchId').equals(batchId).delete(),
-            massiveDb.blindManifests.where('batchId').equals(batchId).delete()
-        ]);
-        setActiveBarcode(null);
-        setOptimisticQty(null);
-        trigger('undo');
-    }, [batchId, trigger]);
-
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') return;
-            const now = Date.now();
-            if (now - lastKeyTime.current > 50) buffer.current = ''; 
-            lastKeyTime.current = now;
-            if (e.key === 'Enter') {
-                if (buffer.current.length >= 2) registerScan(buffer.current);
-                buffer.current = '';
-                e.preventDefault();
-            } else if (e.key.length === 1) buffer.current += e.key;
-        };
-        window.addEventListener('keydown', handleKeyDown, { capture: true });
-        return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
-    }, [registerScan]);
-
-    const lastScannedItem = useMemo(() => {
-        if (!activeBarcode) return null;
-        const realItem = dbItems?.find(i => i.barcode === activeBarcode);
-        if (!realItem) {
-            return {
-                barcode: activeBarcode,
-                name: 'PROCESANDO...',
-                totalQuantity: optimisticQty || 0,
-                lastTimestamp: Date.now()
-            };
-        }
-        return { 
-            ...realItem, 
-            totalQuantity: optimisticQty !== null ? optimisticQty : realItem.totalQuantity 
-        };
-    }, [dbItems, activeBarcode, optimisticQty]);
 
     return { 
         items: dbItems || [], 
-        lastScannedItem,
+        lastScannedItem: useMemo(() => {
+            if (!activeBarcode) return null;
+            const real = dbItems?.find(i => i.barcode === activeBarcode);
+            return real ? { ...real, totalQuantity: optimisticQty ?? real.totalQuantity } : { barcode: activeBarcode, name: '...', totalQuantity: optimisticQty || 0, lastTimestamp: Date.now() } as any;
+        }, [dbItems, activeBarcode, optimisticQty]),
         feedback,
-        multiplier,
-        setMultiplier,
-        currentLocation,
-        setCurrentLocation,
+        multiplier, setMultiplier,
+        currentLocation, setCurrentLocation,
         registerScan, 
-        selectItem,
-        removeItemCompletely,
-        resetBatch
+        selectItem: (b: string) => { setActiveBarcode(b); setOptimisticQty(itemsRef.current.find(i => i.barcode === b)?.totalQuantity || 0); },
+        removeItemCompletely: async (barcode: string) => {
+            await massiveDb.blindScans.where({ batchId, barcode }).delete();
+            if (activeBarcode === barcode) setActiveBarcode(null);
+            trigger('undo');
+        },
+        resetBatch: async () => {
+            await massiveDb.blindScans.where('batchId').equals(batchId).delete();
+            await massiveDb.blindManifests.where('batchId').equals(batchId).delete();
+            setActiveBarcode(null);
+            trigger('undo');
+        }
     };
 };

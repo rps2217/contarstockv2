@@ -7,9 +7,10 @@ import * as productService from '../services/productService';
 import { sanitizeBarcode } from '../services/utils';
 import { SoundFX } from '../services/audio';
 import { getSettings } from '../services/settings';
-import { CountingSession, Product, ScannerStatus, ScanRecord, ConsolidatedItem } from '../types';
+import { CountingSession, ScannerStatus, ConsolidatedItem, ExpectedOrder } from '../types';
 import { useFeedbackSystem, FeedbackStatus } from './useFeedbackSystem';
 import { aggregateScans } from '../services/aggregator';
+import { calculateOrderMatch } from '../services/matcher';
 
 export type ScannerFeedback = FeedbackStatus; 
 
@@ -27,21 +28,30 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
     const [optimisticQty, setOptimisticQty] = useState<number | null>(null);
 
     const [rememberedDate, setRememberedDate] = useState<{mm: number, yyyy: number, batch: string} | null>(null);
+    const [deducedOrder, setDeducedOrder] = useState<ExpectedOrder | null>(null);
+    const [isDeducing, setIsDeducing] = useState(false);
+    const [hasOrdersInDb, setHasOrdersInDb] = useState<boolean | null>(null);
 
     const itemsRef = useRef<ConsolidatedItem[]>([]);
 
-    // --- LÓGICA DE CONSOLIDACIÓN UNIFICADA (TEÓRICO + FÍSICO) ---
+    // Verificar si hay órdenes cargadas al iniciar
+    useEffect(() => {
+        db.expectedOrders.count().then(count => setHasOrdersInDb(count > 0));
+    }, []);
+
+    const currentSessionData = useLiveQuery(() => db.sessions.get(session.id), [session.id]);
+    const activeExpectedItems = currentSessionData?.expectedItems || deducedOrder?.items || [];
+    const isVerified = currentSessionData?.isVerifiedMode || !!deducedOrder;
+
     const consolidatedHistory = useLiveQuery(async () => {
         const scans = await db.scans.where('sessionId').equals(session.id).toArray();
         const physicalItems = await aggregateScans(scans);
         
         let finalItems: ConsolidatedItem[] = [...physicalItems];
 
-        // Si es verificado, inyectamos los esperados que aún no tienen escaneo
-        if (session.isVerifiedMode && session.expectedItems) {
+        if (isVerified && activeExpectedItems.length > 0) {
             const scannedBarcodes = new Set(physicalItems.map(i => i.barcode));
-            
-            session.expectedItems.forEach(expected => {
+            activeExpectedItems.forEach(expected => {
                 if (!scannedBarcodes.has(expected.barcode)) {
                     finalItems.push({
                         barcode: expected.barcode,
@@ -52,11 +62,13 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
                         location: 'PENDIENTE',
                         isIncident: false
                     });
+                } else {
+                    const idx = finalItems.findIndex(fi => fi.barcode === expected.barcode);
+                    if (idx !== -1) finalItems[idx].expectedQuantity = expected.expectedQty;
                 }
             });
         }
 
-        // Ordenamiento: El activo arriba, luego por último escaneo o por nombre si no hay escaneos
         const sorted = finalItems.sort((a, b) => {
             if (a.barcode === activeBarcode) return -1;
             if (b.barcode === activeBarcode) return 1;
@@ -67,37 +79,71 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
 
         itemsRef.current = sorted;
         return sorted;
-    }, [session.id, session.isVerifiedMode, session.expectedItems, activeBarcode, activeBatch, feedback]);
+    }, [session.id, isVerified, activeExpectedItems, activeBarcode, feedback]);
+
+    // MOTOR DETECTIVE
+    useEffect(() => {
+        const isActuallySearching = currentSessionData?.erpOrder?.includes('BUSCANDO') || !currentSessionData?.isVerifiedMode;
+        if (!isActuallySearching || deducedOrder || !consolidatedHistory || !hasOrdersInDb) return;
+        
+        const physicalPicks = consolidatedHistory.filter(i => i.totalQuantity > 0);
+        if (physicalPicks.length < 1) return;
+
+        const runDeduction = async () => {
+            setIsDeducing(true);
+            const allExpected = await db.expectedOrders.toArray();
+            let bestMatch: any = null;
+
+            for (const order of allExpected) {
+                const match = calculateOrderMatch(physicalPicks, order);
+                if (match.matchScore > 85) { 
+                    if (!bestMatch || match.matchScore > bestMatch.matchScore) {
+                        bestMatch = match;
+                    }
+                }
+            }
+
+            if (bestMatch && bestMatch.matchScore > 92) {
+                setDeducedOrder(bestMatch.expectedOrder);
+                await db.sessions.update(session.id, {
+                    erpOrder: bestMatch.expectedOrder.internalId,
+                    expectedItems: bestMatch.expectedOrder.items,
+                    isVerifiedMode: true,
+                    auditStatus: 'pending'
+                });
+                SoundFX.play('success');
+            }
+            setIsDeducing(false);
+        };
+
+        const timer = setTimeout(runDeduction, 1500);
+        return () => clearTimeout(timer);
+    }, [consolidatedHistory, currentSessionData, deducedOrder, hasOrdersInDb]);
 
     const globalStats = useMemo(() => {
         if (!consolidatedHistory) return { progress: 0, totalUnits: 0, totalExpected: 0 };
         const units = consolidatedHistory.reduce((acc, i) => acc + i.totalQuantity, 0);
-        const expected = session.expectedItems?.reduce((acc, i) => acc + i.expectedQty, 0) || 0;
+        const expected = activeExpectedItems.reduce((acc, i) => acc + i.expectedQty, 0) || 0;
         const progress = expected > 0 ? Math.min(100, (units / expected) * 100) : 0;
         return { progress, totalUnits: units, totalExpected: expected };
-    }, [consolidatedHistory, session.expectedItems]);
+    }, [consolidatedHistory, activeExpectedItems]);
 
     const finalizeScanPipeline = useCallback(async (barcode: string, qty: number, mm?: number, yyyy?: number, batch?: string) => {
         try {
-            let product = await productService.getProductByBarcode(barcode);
+            const cleanBarcode = sanitizeBarcode(barcode);
+            let product = await productService.getProductByBarcode(cleanBarcode);
             let isAutoRegistered = false;
 
             if (!product) {
-                // Si es verificado, intentamos buscar en la lista de esperados del ERP
-                const expected = session.expectedItems?.find(ei => ei.barcode === barcode);
+                const expected = activeExpectedItems.find(ei => ei.barcode === cleanBarcode);
                 if (expected) {
-                    product = { barcode, name: expected.name, category: 'VERIFICADO' };
+                    product = { barcode: cleanBarcode, name: expected.name, category: 'VERIFICADO' };
                 } else if (settings.autoRegisterUnknown) {
-                    product = {
-                        barcode,
-                        name: `NUEVO_ITEM - ${barcode}`,
-                        category: 'MEDICAMENTO',
-                        syncStatus: 'add'
-                    };
+                    product = { barcode: cleanBarcode, name: `NUEVO_ITEM - ${cleanBarcode}`, category: 'GENERAL', syncStatus: 'add' };
                     await productService.saveProduct(product);
                     isAutoRegistered = true;
                 } else {
-                    product = { barcode, name: 'DESCONOCIDO', category: 'N/A' };
+                    product = { barcode: cleanBarcode, name: 'DESCONOCIDO', category: 'N/A' };
                 }
             }
 
@@ -105,52 +151,30 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
             let finalYYYY = yyyy;
             let finalBatch = batch;
 
-            const existingInList = itemsRef.current.find(i => i.barcode === barcode && (batch ? i.batch === batch : true));
-            
             if (!finalMM && rememberedDate && rememberedDate.batch === batch) {
                 finalMM = rememberedDate.mm;
                 finalYYYY = rememberedDate.yyyy;
-                finalBatch = rememberedDate.batch;
-            } else if (!finalMM && existingInList) {
-                finalMM = existingInList.mm;
-                finalYYYY = existingInList.yyyy;
-                finalBatch = existingInList.batch;
             }
 
+            const existingInList = itemsRef.current.find(i => i.barcode === cleanBarcode);
             const currentTotal = existingInList?.totalQuantity || 0;
-            const newTotal = Math.max(0, (activeBarcode === barcode && activeBatch === batch ? (optimisticQty ?? currentTotal) : currentTotal) + qty);
+            const newTotal = Math.max(0, currentTotal + qty);
 
             setOptimisticQty(newTotal);
-            setActiveBarcode(barcode);
+            setActiveBarcode(cleanBarcode);
             setActiveBatch(finalBatch || null);
             
-            await sessionService.addScanEvent(
-                session.id, 
-                barcode, 
-                qty, 
-                finalMM, 
-                finalYYYY, 
-                currentLocation,
-                finalBatch
-            );
+            await sessionService.addScanEvent(session.id, cleanBarcode, qty, finalMM, finalYYYY, currentLocation, finalBatch);
 
-            if (qty > 0) {
-                trigger(isAutoRegistered ? 'unknown' : 'success', { 
-                    sound: qty > 1 ? 'increment' : 'success',
-                    vibration: qty > 1 ? 25 : 40
-                });
-            } else {
-                trigger('undo', { sound: 'delete', vibration: [20, 20] });
-            }
+            trigger(qty > 0 ? (isAutoRegistered ? 'unknown' : 'success') : 'undo', { 
+                sound: qty > 0 ? (qty > 1 ? 'increment' : 'success') : 'delete'
+            });
 
-            if (settings.ttsEnabled && qty > 0) {
-                SoundFX.speak(`${newTotal}`);
-            }
-
+            if (settings.ttsEnabled && qty > 0) SoundFX.speak(`${newTotal}`);
         } catch (err) {
             trigger('error');
         }
-    }, [session.id, session.expectedItems, settings, trigger, currentLocation, activeBarcode, activeBatch, optimisticQty, rememberedDate]);
+    }, [session.id, activeExpectedItems, settings, trigger, currentLocation, rememberedDate]);
 
     const handleInboundScan = useCallback((rawBarcode: string, mm?: number, yyyy?: number, batch?: string, qtyOverride?: number) => {
         const barcode = sanitizeBarcode(rawBarcode);
@@ -160,30 +184,12 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
         finalizeScanPipeline(barcode, qtyToApply, mm, yyyy, batch);
     }, [multiplier, finalizeScanPipeline]);
 
-    const selectItem = useCallback((barcode: string, batch?: string) => {
-        setActiveBarcode(barcode);
-        setActiveBatch(batch || null);
-        const item = itemsRef.current.find(i => i.barcode === barcode && (batch ? i.batch === batch : true));
-        setOptimisticQty(item?.totalQuantity || 0);
-        if (navigator.vibrate) navigator.vibrate(10);
-    }, []);
-
     const lastScannedItem = useMemo(() => {
         if (!activeBarcode) return undefined;
-        const realItem = consolidatedHistory?.find(i => i.barcode === activeBarcode && (activeBatch ? i.batch === activeBatch : true));
+        const realItem = consolidatedHistory?.find(i => i.barcode === activeBarcode);
         const qtyToShow = optimisticQty !== null ? optimisticQty : (realItem?.totalQuantity || 0);
-
-        if (!realItem && optimisticQty !== null) {
-            return { 
-                barcode: activeBarcode, 
-                productName: 'REGISTRANDO...', 
-                batch: activeBatch || undefined,
-                totalQuantity: qtyToShow, 
-                scans: 1 
-            } as any;
-        }
-        return realItem ? { ...realItem, totalQuantity: qtyToShow } : undefined;
-    }, [consolidatedHistory, activeBarcode, activeBatch, optimisticQty]);
+        return realItem ? { ...realItem, totalQuantity: qtyToShow } : { barcode: activeBarcode, productName: '...', totalQuantity: qtyToShow, scans: 1 } as any;
+    }, [consolidatedHistory, activeBarcode, optimisticQty]);
 
     return {
         state: { 
@@ -192,7 +198,10 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
             optimisticActiveQty: optimisticQty || 0,
             activeBarcode,
             globalStats,
-            rememberedDate
+            rememberedDate,
+            isDeducing,
+            hasOrdersInDb,
+            deducedErp: currentSessionData?.erpOrder
         },
         data: { 
             lastScan: lastScannedItem, 
@@ -200,16 +209,13 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
         },
         actions: { 
             handleExternalScan: handleInboundScan,
-            selectItem,
+            selectItem: (b: string) => { setActiveBarcode(b); setOptimisticQty(itemsRef.current.find(i => i.barcode === b)?.totalQuantity || 0); },
             setRememberedDate: (val: any) => setRememberedDate(val),
             changeLogisticsLabel: (label: string) => sessionService.updateSessionLabel(session.id, label),
             handleQuantityChange: (barcode: string, qty: number, batch?: string) => finalizeScanPipeline(barcode, qty, undefined, undefined, batch),
             handleDeleteProduct: async (barcode: string, batch?: string) => {
                 await sessionService.deleteSessionItemByBatch(session.id, barcode, batch);
-                if (activeBarcode === barcode && (batch ? activeBatch === batch : true)) { 
-                    setActiveBarcode(null); 
-                    setOptimisticQty(null); 
-                }
+                if (activeBarcode === barcode) setActiveBarcode(null);
                 trigger('undo');
             }
         }

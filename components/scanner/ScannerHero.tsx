@@ -1,7 +1,6 @@
 
 import React, { memo, useEffect, useState } from 'react';
-// Fix: Added missing Target icon to imports from lucide-react
-import { RotateCcw, CheckCircle, Minus, Plus, Tag, ShieldAlert, Sparkles, Target } from 'lucide-react';
+import { RotateCcw, CheckCircle, Minus, Plus, Tag, ShieldAlert, Sparkles, Target, Search, Box } from 'lucide-react';
 import { ScanRecord, Product, ExpectedItem } from '../../types';
 import { ScannerFeedback } from '../../hooks/useScanner';
 import { determineItemStatus, getStatusColorClasses } from '../../services/uiLogic';
@@ -16,14 +15,16 @@ interface ScannerHeroProps {
     expectedItem?: ExpectedItem | null;
     onDecrement?: () => void;
     onIncrement?: () => void;
+    isDeducing?: boolean;
+    hasOrdersInDb?: boolean | null;
+    deducedErp?: string;
 }
 
 export const ScannerHero: React.FC<ScannerHeroProps> = memo(({ 
-    lastScan, activeProduct, accumulatedQty, feedback, onRegisterPending, expectedItem, onDecrement, onIncrement
+    lastScan, activeProduct, accumulatedQty, feedback, onRegisterPending, expectedItem, onDecrement, onIncrement, isDeducing, hasOrdersInDb, deducedErp
 }) => {
     const [aiWarning, setAiWarning] = useState<string | null>(null);
 
-    // Auditoría IA proactiva cuando el conteo cambia significativamente
     useEffect(() => {
         if (lastScan && accumulatedQty > 0 && (accumulatedQty % 10 === 0 || (expectedItem && accumulatedQty > expectedItem.expectedQty))) {
             const check = async () => {
@@ -45,18 +46,48 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
 
     if (feedback === 'undo') return <div className="h-full w-full flex flex-col items-center justify-center bg-slate-900 animate-in zoom-in duration-300"><RotateCcw className="w-20 h-20 text-slate-500 mb-4" /><h2 className="text-2xl font-black text-slate-500">BORRADO</h2></div>;
 
+    // ESTADO DE BÚSQUEDA IA O CIEGO
+    if (isDeducing && !expectedItem) {
+        return (
+            <div className="h-full w-full flex flex-col items-center justify-center bg-slate-900 text-white p-8">
+                <div className="relative">
+                    <Search className="w-16 h-16 text-orange-500 animate-pulse" />
+                    <Sparkles className="w-6 h-6 text-white absolute -top-2 -right-2 animate-bounce" />
+                </div>
+                <h2 className="text-xl font-black uppercase mt-6 tracking-widest animate-pulse">Analizando Contenido...</h2>
+                <p className="text-[10px] text-slate-500 uppercase mt-2 text-center font-bold tracking-widest">Identificando guía ERP por patrón de carga</p>
+            </div>
+        );
+    }
+
+    // SI NO HAY ÚLTIMO SCAN Y NO HAY ÓRDENES, INDICAMOS MODO CIEGO
+    if (!lastScan && hasOrdersInDb === false) {
+        return (
+            <div className="h-full w-full flex flex-col items-center justify-center bg-slate-950 opacity-40">
+                <Box className="w-16 h-16 mb-4" />
+                <h2 className="text-[10px] font-black uppercase tracking-[0.4em]">Conteo Ciego Activo</h2>
+                <p className="text-[8px] font-bold uppercase mt-2">Sin base de pedidos para comparar</p>
+            </div>
+        );
+    }
+
     if (lastScan) {
-        const isUnknown = !activeProduct || activeProduct.name.startsWith('PHARMA');
+        const isUnknown = !activeProduct || activeProduct.name.startsWith('PHARMA') || activeProduct.name.startsWith('NUEVO_ITEM');
         const status = determineItemStatus(accumulatedQty, expectedItem?.expectedQty);
         const bgClass = getStatusColorClasses(status, 'bg');
 
         return (
             <div className={`w-full h-full flex flex-col relative transition-colors duration-300 ${bgClass}`}>
-                {/* Alerta de Anomalía IA */}
                 {aiWarning && (
                     <div className="absolute top-4 left-4 right-4 z-50 bg-black/80 backdrop-blur-md border-2 border-amber-500 p-4 rounded-2xl flex items-start gap-3 animate-in slide-in-from-top-4 shadow-2xl">
                         <ShieldAlert className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
                         <div className="text-[10px] font-black text-amber-500 uppercase leading-tight">{aiWarning}</div>
+                    </div>
+                )}
+
+                {deducedErp && deducedErp.includes('BUSCANDO') && (
+                    <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-white/10 px-4 py-1 rounded-full border border-white/20 text-[7px] font-black text-white/40 uppercase tracking-[0.3em]">
+                        {hasOrdersInDb === false ? 'Conteo Libre: Base Cloud Vacía' : 'Escaneo Libre: Pendiente de Identificación'}
                     </div>
                 )}
 
@@ -73,8 +104,7 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
                                 )}
                                 <span className="text-white/50 font-mono text-[9px] font-black tracking-widest truncate max-w-[120px]">{lastScan.barcode}</span>
                             </div>
-                            {/* Fixed invalid tailwind class 'md:sm' to 'md:text-sm' */}
-                            <h1 className="text-white font-black text-[11px] md:text-sm uppercase tracking-tight line-clamp-1 leading-none italic">{activeProduct?.name || 'REGISTRANDO_NUEVO...'}</h1>
+                            <h1 className="text-white font-black text-[11px] md:text-sm uppercase tracking-tight line-clamp-1 leading-none italic">{activeProduct?.name || 'REGISTRANDO...'}</h1>
                         </div>
 
                         <div className="text-[12rem] md:text-[15rem] leading-none font-black tabular-nums tracking-tighter drop-shadow-2xl transition-transform duration-100 active:scale-95">{accumulatedQty}</div>
@@ -94,5 +124,5 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
         );
     }
 
-    return <div className="h-full w-full flex flex-col items-center justify-center bg-slate-950 opacity-20"><Tag className="w-16 h-16 mb-4 animate-pulse" /><h2 className="text-[10px] font-black uppercase tracking-[0.6em]">PHARMA_SCANNER_READY</h2></div>;
+    return <div className="h-full w-full flex flex-col items-center justify-center bg-slate-950 opacity-20"><Tag className="w-16 h-16 mb-4 animate-pulse" /><h2 className="text-[10px] font-black uppercase tracking-[0.6em]">SCANNER_READY</h2></div>;
 });
