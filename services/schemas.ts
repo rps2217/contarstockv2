@@ -61,7 +61,10 @@ export const CloudStockSchema = z.record(z.any()).transform((raw) => {
     loc: z.string().optional()
 }));
 
-// NUEVO: Esquema para pedidos (Nueva Carga pre-cargada)
+/**
+ * ESQUEMA DE PEDIDOS (NUEVA CARGA)
+ * Flexibilizado para capturar más tipos de cabeceras y permitir QTY >= 0.
+ */
 export const CloudOrderRowSchema = z.record(z.any()).transform((raw) => {
     const normalized: Record<string, any> = {};
     Object.keys(raw).forEach(k => {
@@ -69,17 +72,22 @@ export const CloudOrderRowSchema = z.record(z.any()).transform((raw) => {
         normalized[key] = raw[k];
     });
 
+    const erp = normalized["ERP"] || normalized["ORDEN"] || normalized["DOCUMENTO"] || normalized["DOC"] || normalized["NROORDEN"] || normalized["NUMERO"] || "";
+    const barcode = normalized["CODIGO"] || normalized["SKU"] || normalized["EAN"] || normalized["BARRAS"] || normalized["ITEM"] || "";
+    const name = normalized["PRODUCTO"] || normalized["DESCRIPCION"] || normalized["NOMBRE"] || normalized["DESC"] || "Producto Desconocido";
+    const qty = normalized["CANTIDAD"] || normalized["QTY"] || normalized["UNIDADES"] || normalized["UNID"] || normalized["CANT"] || 0;
+
     return {
-        erp: String(normalized["ERP"] || normalized["ORDEN"] || normalized["DOCUMENTO"] || "").trim(),
-        barcode: String(normalized["CODIGO"] || normalized["SKU"] || normalized["EAN"] || "").trim(),
-        name: String(normalized["PRODUCTO"] || normalized["DESCRIPCION"] || "Producto Desconocido").trim(),
-        qty: Number(normalized["CANTIDAD"] || normalized["QTY"] || normalized["UNIDADES"] || 0)
+        erp: String(erp).trim(),
+        barcode: String(barcode).trim(),
+        name: String(name).trim(),
+        qty: Number(qty)
     };
 }).pipe(z.object({
     erp: z.string().min(1),
     barcode: z.string().min(1),
     name: z.string(),
-    qty: z.number().positive()
+    qty: z.coerce.number().min(0) // Permitimos 0 para precarga de ítems faltantes
 }));
 
 export const CloudInventoryRowSchema = z.object({

@@ -30,19 +30,44 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
 
     const itemsRef = useRef<ConsolidatedItem[]>([]);
 
+    // --- LÓGICA DE CONSOLIDACIÓN UNIFICADA (TEÓRICO + FÍSICO) ---
     const consolidatedHistory = useLiveQuery(async () => {
         const scans = await db.scans.where('sessionId').equals(session.id).toArray();
-        const items = await aggregateScans(scans);
+        const physicalItems = await aggregateScans(scans);
         
-        const sorted = items.sort((a, b) => {
-            if (a.barcode === activeBarcode && a.batch === activeBatch) return -1;
-            if (b.barcode === activeBarcode && b.batch === activeBatch) return 1;
-            return 0;
+        let finalItems: ConsolidatedItem[] = [...physicalItems];
+
+        // Si es verificado, inyectamos los esperados que aún no tienen escaneo
+        if (session.isVerifiedMode && session.expectedItems) {
+            const scannedBarcodes = new Set(physicalItems.map(i => i.barcode));
+            
+            session.expectedItems.forEach(expected => {
+                if (!scannedBarcodes.has(expected.barcode)) {
+                    finalItems.push({
+                        barcode: expected.barcode,
+                        productName: expected.name,
+                        totalQuantity: 0,
+                        expectedQuantity: expected.expectedQty,
+                        scans: 0,
+                        location: 'PENDIENTE',
+                        isIncident: false
+                    });
+                }
+            });
+        }
+
+        // Ordenamiento: El activo arriba, luego por último escaneo o por nombre si no hay escaneos
+        const sorted = finalItems.sort((a, b) => {
+            if (a.barcode === activeBarcode) return -1;
+            if (b.barcode === activeBarcode) return 1;
+            if (a.scans > 0 && b.scans === 0) return -1;
+            if (b.scans > 0 && a.scans === 0) return 1;
+            return a.productName.localeCompare(b.productName);
         });
 
         itemsRef.current = sorted;
         return sorted;
-    }, [session.id, activeBarcode, activeBatch, feedback]);
+    }, [session.id, session.isVerifiedMode, session.expectedItems, activeBarcode, activeBatch, feedback]);
 
     const globalStats = useMemo(() => {
         if (!consolidatedHistory) return { progress: 0, totalUnits: 0, totalExpected: 0 };
@@ -58,10 +83,14 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
             let isAutoRegistered = false;
 
             if (!product) {
-                if (settings.autoRegisterUnknown) {
+                // Si es verificado, intentamos buscar en la lista de esperados del ERP
+                const expected = session.expectedItems?.find(ei => ei.barcode === barcode);
+                if (expected) {
+                    product = { barcode, name: expected.name, category: 'VERIFICADO' };
+                } else if (settings.autoRegisterUnknown) {
                     product = {
                         barcode,
-                        name: `PHARMA_ITEM - ${barcode}`,
+                        name: `NUEVO_ITEM - ${barcode}`,
                         category: 'MEDICAMENTO',
                         syncStatus: 'add'
                     };
@@ -76,7 +105,7 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
             let finalYYYY = yyyy;
             let finalBatch = batch;
 
-            const existingInList = itemsRef.current.find(i => i.barcode === barcode && i.batch === batch);
+            const existingInList = itemsRef.current.find(i => i.barcode === barcode && (batch ? i.batch === batch : true));
             
             if (!finalMM && rememberedDate && rememberedDate.batch === batch) {
                 finalMM = rememberedDate.mm;
@@ -121,7 +150,7 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
         } catch (err) {
             trigger('error');
         }
-    }, [session.id, settings, trigger, currentLocation, activeBarcode, activeBatch, optimisticQty, rememberedDate]);
+    }, [session.id, session.expectedItems, settings, trigger, currentLocation, activeBarcode, activeBatch, optimisticQty, rememberedDate]);
 
     const handleInboundScan = useCallback((rawBarcode: string, mm?: number, yyyy?: number, batch?: string, qtyOverride?: number) => {
         const barcode = sanitizeBarcode(rawBarcode);
@@ -134,14 +163,14 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
     const selectItem = useCallback((barcode: string, batch?: string) => {
         setActiveBarcode(barcode);
         setActiveBatch(batch || null);
-        const item = itemsRef.current.find(i => i.barcode === barcode && i.batch === batch);
+        const item = itemsRef.current.find(i => i.barcode === barcode && (batch ? i.batch === batch : true));
         setOptimisticQty(item?.totalQuantity || 0);
         if (navigator.vibrate) navigator.vibrate(10);
     }, []);
 
     const lastScannedItem = useMemo(() => {
         if (!activeBarcode) return undefined;
-        const realItem = consolidatedHistory?.find(i => i.barcode === activeBarcode && i.batch === activeBatch);
+        const realItem = consolidatedHistory?.find(i => i.barcode === activeBarcode && (activeBatch ? i.batch === activeBatch : true));
         const qtyToShow = optimisticQty !== null ? optimisticQty : (realItem?.totalQuantity || 0);
 
         if (!realItem && optimisticQty !== null) {
@@ -177,7 +206,10 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
             handleQuantityChange: (barcode: string, qty: number, batch?: string) => finalizeScanPipeline(barcode, qty, undefined, undefined, batch),
             handleDeleteProduct: async (barcode: string, batch?: string) => {
                 await sessionService.deleteSessionItemByBatch(session.id, barcode, batch);
-                if (activeBarcode === barcode && activeBatch === batch) { setActiveBarcode(null); setOptimisticQty(null); }
+                if (activeBarcode === barcode && (batch ? activeBatch === batch : true)) { 
+                    setActiveBarcode(null); 
+                    setOptimisticQty(null); 
+                }
                 trigger('undo');
             }
         }

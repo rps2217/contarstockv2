@@ -34,7 +34,7 @@ const HistoryRow = memo(({ index, data }: any) => {
     const { onSelect, activeBarcode, expectedItems, optimisticQty } = data;
     
     const displayQty = activeBarcode === item.barcode ? optimisticQty : item.totalQuantity;
-    const target = expectedItems?.find((ei: any) => ei.barcode === item.barcode)?.expectedQty;
+    const target = item.expectedQuantity ?? expectedItems?.find((ei: any) => ei.barcode === item.barcode)?.expectedQty;
     const isActive = activeBarcode === item.barcode;
     const className = getRowStyles(displayQty, target, isActive);
 
@@ -47,7 +47,7 @@ const HistoryRow = memo(({ index, data }: any) => {
                         {item.mm && <span className="text-[7px] bg-white/10 px-1.5 py-0.5 rounded font-black">EXP: {item.mm}/{item.yyyy}</span>}
                     </div>
                     <h3 className="font-black text-[12px] uppercase truncate leading-none">{item.productName}</h3>
-                    <div className="text-[7px] font-bold text-white/30 uppercase mt-1">BULTO: {item.location}</div>
+                    <div className="text-[7px] font-bold text-white/30 uppercase mt-1">ESTADO: {item.location}</div>
                 </div>
                 <div className="text-right">
                     <div className="text-2xl font-black tabular-nums leading-none">{displayQty}</div>
@@ -94,6 +94,14 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
 
   const handleInbound = useCallback((barcode: string) => {
       if (isScreenLocked) return;
+
+      // --- ENRUTAMIENTO HID ---
+      if (isChangingLabel) {
+          setManualCode(barcode);
+          SoundFX.play('success');
+          return;
+      }
+
       if (!settings.batchTrackingEnabled) {
           actions.handleExternalScan(barcode);
           return;
@@ -106,7 +114,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
       } else {
           actions.handleExternalScan(barcode);
       }
-  }, [existingBarcodes, actions, isScreenLocked, state.rememberedDate, settings.batchTrackingEnabled]);
+  }, [existingBarcodes, actions, isScreenLocked, state.rememberedDate, settings.batchTrackingEnabled, isChangingLabel]);
 
   const handleDecrement = useCallback(() => {
       if (!data.lastScan) return;
@@ -144,10 +152,9 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
 
       setIsPrinting(true);
       try {
-          // Inyectamos el teórico para el reporte
           const enrichedItems = data.recentScans.map(item => ({
               ...item,
-              expectedQuantity: session.expectedItems?.find(ei => ei.barcode === item.barcode)?.expectedQty || 0
+              expectedQuantity: item.expectedQuantity ?? session.expectedItems?.find(ei => ei.barcode === item.barcode)?.expectedQty ?? 0
           }));
 
           await thermalPrinter.printSummaryReport(
@@ -237,7 +244,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
                 accumulatedQty={state.optimisticActiveQty}
                 feedback={state.feedback}
                 onRegisterPending={() => state.setStatus('product_form')}
-                expectedItem={session.expectedItems?.find(i => i.barcode === data.lastScan?.barcode)}
+                expectedItem={session.expectedItems?.find(i => i.barcode === data.lastScan?.barcode) || (data.lastScan as any)?.expectedQuantity ? { barcode: data.lastScan!.barcode, name: (data.lastScan as any).productName, expectedQty: (data.lastScan as any).expectedQuantity } : null}
                 onDecrement={handleDecrement}
                 onIncrement={() => data.lastScan && handleInbound(data.lastScan.barcode)}
           />

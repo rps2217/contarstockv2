@@ -1,6 +1,6 @@
 
 /**
- * LOGICOUNT PRO - CLOUD ENGINE V11.5 (SMART DELTA SYNC)
+ * LOGICOUNT PRO - CLOUD ENGINE V11.6 (FIXED FETCH_ORDER)
  */
 
 const SPREADSHEET_ID = ""; 
@@ -48,8 +48,11 @@ function doPost(e) {
         response = appendRows(requestData.tableName, rows);
         break;
       case 'fetch_rows':
-        // Soporte para Smart Sync (Delta)
         response = fetchRows(requestData.tableName, requestData.since);
+        break;
+      case 'fetch_order':
+        // NUEVA ACCIÓN: Búsqueda de pedido específico
+        response = fetchOrder(requestData.erpOrder);
         break;
       case 'ping':
         const ssTest = getSpreadsheet();
@@ -66,6 +69,44 @@ function doPost(e) {
   }
   
   return ContentService.createTextOutput(JSON.stringify(response)).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * Busca todas las filas de un pedido específico en la pestaña de pedidos.
+ */
+function fetchOrder(erpId) {
+  if (!erpId) throw new Error("ID de pedido no proporcionado.");
+  
+  const ss = getSpreadsheet();
+  // Intenta buscar en PEDIDOS, ORDENES o la configurada. 
+  // Por defecto buscamos en PEDIDOS si no se especifica otra.
+  let sheet = ss.getSheetByName("PEDIDOS") || ss.getSheetByName("ORDENES") || ss.getSheets()[0];
+  
+  const values = sheet.getDataRange().getValues();
+  if (values.length < 2) return { success: true, rows: [] };
+  
+  const headers = values[0].map(h => String(h).trim().toUpperCase());
+  const erpColIdx = headers.findIndex(h => h.includes("ERP") || h.includes("ORDEN") || h.includes("DOC") || h.includes("NUMERO"));
+  
+  if (erpColIdx === -1) throw new Error("No se encontró columna de Identificador (ERP/ORDEN) en la hoja de pedidos.");
+  
+  const cleanSearch = String(erpId).trim().toUpperCase();
+  const results = [];
+  
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
+    const cellValue = String(row[erpColIdx]).trim().toUpperCase();
+    
+    if (cellValue === cleanSearch) {
+      const obj = {};
+      headers.forEach((h, idx) => {
+        if (h) obj[h] = row[idx];
+      });
+      results.push(obj);
+    }
+  }
+  
+  return { success: true, rows: results };
 }
 
 function appendRows(tableName, rows) {
@@ -98,10 +139,6 @@ function appendRows(tableName, rows) {
   return { success: true, rows_written: dataToAppend.length };
 }
 
-/**
- * LÓGICA SMART FETCH:
- * Si se envía el parámetro 'since', intenta filtrar filas por una columna de fecha.
- */
 function fetchRows(tableName, sinceTimestamp) {
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(tableName);
@@ -115,7 +152,6 @@ function fetchRows(tableName, sinceTimestamp) {
   const headers = values[0];
   const sinceTime = sinceTimestamp ? parseInt(sinceTimestamp) : 0;
 
-  // Buscamos si existe una columna de "TIMESTAMP" o "MODIFICADO" para hacer delta real
   const tsIdx = headers.findIndex(h => {
     const clean = String(h).toUpperCase();
     return clean.includes("MODIFICADO") || clean.includes("TIMESTAMP") || clean.includes("FECHA");
@@ -124,23 +160,15 @@ function fetchRows(tableName, sinceTimestamp) {
   const results = [];
   for (let i = 1; i < values.length; i++) {
     const row = values[i];
-    
-    // Si hay columna de tiempo, filtramos en el servidor para ahorrar ancho de banda
     if (tsIdx !== -1 && sinceTime > 0) {
       const rowDate = new Date(row[tsIdx]).getTime();
       if (rowDate <= sinceTime) continue; 
     }
-
     const obj = {};
     headers.forEach((h, idx) => {
       if (h) obj[String(h).trim().toUpperCase()] = row[idx];
     });
     results.push(obj);
   }
-
-  return { 
-    success: true, 
-    rows: results, 
-    server_timestamp: new Date().getTime().toString() 
-  };
+  return { success: true, rows: results, server_timestamp: new Date().getTime().toString() };
 }
