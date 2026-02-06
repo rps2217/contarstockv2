@@ -9,23 +9,28 @@ export const generateUUID = (): string => {
   });
 };
 
-/**
- * Formatea un SKU para visualización industrial: ABC-1234-XYZ
- */
 export const chunkSku = (sku: string): string => {
     if (!sku) return "";
     return sku.match(/.{1,4}/g)?.join('-') || sku;
 };
 
 /**
- * Normalización reforzada: elimina caracteres no imprimibles y espacios ocultos
+ * NORMALIZACIÓN CRÍTICA PARA COMPARACIÓN INDUSTRIAL
+ * 1. Trim y UpperCase.
+ * 2. Elimina ceros a la izquierda (evita fallos de match Excel vs Scanner).
+ * 3. Elimina caracteres no imprimibles y espacios.
  */
 export const sanitizeBarcode = (code: string): string => {
     if (!code) return "";
-    return code.trim().toUpperCase()
+    return String(code)
+        .trim()
+        .toUpperCase()
         .replace(/[\x00-\x1F\x7F-\x9F\u200B-\u200D\uFEFF]/g, "")
-        .replace(/\s+/g, "");
+        .replace(/\s+/g, "")
+        .replace(/^0+/, ""); 
 };
+
+export const normalizeSku = (val: string): string => sanitizeBarcode(val);
 
 export const formatLogDate = (timestamp: number): string => {
     const d = new Date(timestamp);
@@ -49,4 +54,3 @@ export const generateSessionSignature = (erp: string, label: string): string => 
 };
 
 export const normalizeKey = (val: string): string => sanitizeBarcode(val);
-export const normalizeSku = (val: string): string => sanitizeBarcode(val);
