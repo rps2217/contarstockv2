@@ -8,12 +8,14 @@ export interface Product {
   price?: number;
   syncStatus?: 'synced' | 'add' | 'edit';
   unitsPerBox?: number;
+  embedding?: number[]; // Almacena la firma semántica del nombre
 }
 
 export interface ExpectedItem {
   barcode: string;
   name: string;
   expectedQty: number;
+  embedding?: number[]; // Firma semántica para bultos ciegos
 }
 
 export interface ExpectedOrder {
@@ -39,11 +41,13 @@ export interface AliasSuggestion {
   expectedBarcode: string;
   expectedName: string;
   quantity: number;
+  confidence: number; // Porcentaje de similitud semántica
 }
 
 export interface MatchResult {
   expectedOrder: ExpectedOrder;
   matchScore: number;
+  semanticAffinities: number; // Cuántos items se unieron por significado
   status: 'exact' | 'partial' | 'mismatch';
   details: {
     barcode: string;
@@ -51,6 +55,7 @@ export interface MatchResult {
     physicalQty: number;
     expectedQty: number;
     difference: number;
+    isSemanticMatch?: boolean;
   }[];
   potentialAliases: AliasSuggestion[];
 }
@@ -101,6 +106,7 @@ export interface ConsolidatedItem {
   mm?: number;
   yyyy?: number;
   isIncident?: boolean;
+  embedding?: number[];
 }
 
 export type ViewState = 'dashboard' | 'counting' | 'database' | 'reports' | 'settings' | 'reception' | 'sync' | 'massive';

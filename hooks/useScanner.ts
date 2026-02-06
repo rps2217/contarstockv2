@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, useReducer } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import * as sessionService from '../services/sessionService'; 
@@ -8,18 +8,17 @@ import { predictIdealLocation } from '../services/slottingService';
 import { sanitizeBarcode, normalizeSku } from '../services/utils';
 import { SoundFX } from '../services/audio';
 import { getSettings } from '../services/settings';
-import { CountingSession, ScannerStatus, ConsolidatedItem, ExpectedOrder } from '../types';
+import { CountingSession, ScannerStatus, ConsolidatedItem, ExpectedOrder, Product } from '../types';
 import { useFeedbackSystem, FeedbackStatus } from './useFeedbackSystem';
 import { aggregateScans } from '../services/aggregator';
-import { calculateOrderMatch } from '../services/matcher';
-
-export type ScannerFeedback = FeedbackStatus;
+import { shouldPromptForBatch } from '../services/uiLogic';
+import { scannerReducer, ScannerState } from '../services/scannerMachine';
 
 export const useScanner = (session: CountingSession, onFinish: () => void) => {
     const settings = useMemo(() => getSettings(), []);
-    const { feedback, trigger } = useFeedbackSystem(150);
+    const { feedback, trigger } = useFeedbackSystem(200);
+    const [machineState, dispatch] = useReducer(scannerReducer, 'IDLE');
     
-    const [status, setStatus] = useState<ScannerStatus>('idle');
     const [multiplier, setMultiplier] = useState(1);
     const [currentLocation, setCurrentLocation] = useState('BODEGA_GRAL'); 
     const [aiLocationSuggestion, setAiLocationSuggestion] = useState<string | null>(null);
@@ -28,9 +27,12 @@ export const useScanner = (session: CountingSession, onFinish: () => void) => {
     const [rememberedDate, setRememberedDate] = useState<{mm: number, yyyy: number, batch: string} | null>(null);
     const [deducedOrder, setDeducedOrder] = useState<ExpectedOrder | null>(null);
     const [isDeducing, setIsDeducing] = useState(false);
+    
+    // RADAR SEMÁNTICO STATE
+    const [semanticNeighbors, setSemanticNeighbors] = useState<Product[]>([]);
+    const workerRef = useRef<Worker | null>(null);
 
     const itemsRef = useRef<ConsolidatedItem[]>([]);
-
     const currentSessionData = useLiveQuery(() => db.sessions.get(session.id), [session.id]);
     
     const activeExpectedItems = useMemo(() => {
@@ -85,57 +87,57 @@ export const useScanner = (session: CountingSession, onFinish: () => void) => {
         return sorted;
     }, [session.id, isVerified, activeExpectedItems, activeBarcode, feedback]);
 
-    // --- MOTOR DE DEDUCCIÓN (DETECTIVE v4.5) ---
+    // EFECTO: ACTIVAR RADAR CUANDO CAMBIA EL PRODUCTO ACTIVO
     useEffect(() => {
-        const erpLabel = currentSessionData?.erpOrder || '';
-        const isWaitingDeduction = erpLabel.includes('BUSCANDO') || erpLabel.includes('CONTEO_CIEGO');
+        if (!activeBarcode) return;
         
-        if (!isWaitingDeduction || deducedOrder || !consolidatedHistory) return;
-        
-        const physicalPicks = consolidatedHistory.filter(i => i.totalQuantity > 0);
-        // ACTIVACIÓN INMEDIATA: Empezar deducción desde 1 item escaneado
-        if (physicalPicks.length < 1) return; 
-
-        const runDeduction = async () => {
-            setIsDeducing(true);
-            const allExpected = await db.expectedOrders.toArray();
-            let bestMatch: any = null;
-
-            for (const order of allExpected) {
-                const match = calculateOrderMatch(physicalPicks, order);
-                // Umbral bajo de score para empezar a considerar
-                if (match.matchScore > 20) { 
-                    if (!bestMatch || match.matchScore > bestMatch.matchScore) {
-                        bestMatch = match;
-                    }
+        const triggerRadar = async () => {
+            const product = await productService.getProductByBarcode(activeBarcode);
+            if (product?.embedding) {
+                if (!workerRef.current) {
+                    workerRef.current = new Worker(new URL('../workers/detective.worker.ts', import.meta.url), { type: 'module' });
                 }
-            }
-
-            // Confianza mínima para asignar automáticamente
-            if (bestMatch && bestMatch.matchScore >= 60) {
-                setDeducedOrder(bestMatch.expectedOrder);
-                await db.sessions.update(session.id, {
-                    erpOrder: bestMatch.expectedOrder.internalId,
-                    expectedItems: bestMatch.expectedOrder.items,
-                    isVerifiedMode: true
+                const catalog = await db.products.toArray();
+                workerRef.current.postMessage({ 
+                    action: 'GET_SEMANTIC_NEIGHBORS', 
+                    targetEmbedding: product.embedding,
+                    catalog 
                 });
-                SoundFX.play('success');
+                workerRef.current.onmessage = (e) => {
+                    if (e.data.success && e.data.action === 'GET_SEMANTIC_NEIGHBORS') {
+                        setSemanticNeighbors(e.data.neighbors);
+                    }
+                };
+            } else {
+                setSemanticNeighbors([]);
             }
-            setIsDeducing(false);
         };
+        triggerRadar();
+    }, [activeBarcode]);
 
-        const timer = setTimeout(runDeduction, 500);
-        return () => clearTimeout(timer);
-    }, [consolidatedHistory, currentSessionData, deducedOrder, session.id]);
+    useEffect(() => {
+        if (machineState === 'FEEDBACK_SUCCESS' || machineState === 'FEEDBACK_ERROR') {
+            const timer = setTimeout(() => dispatch({ type: 'RESET' }), 200);
+            return () => clearTimeout(timer);
+        }
+    }, [machineState]);
 
     const finalizeScanPipeline = useCallback(async (barcode: string, qty: number, mm?: number, yyyy?: number, batch?: string) => {
+        if (machineState !== 'IDLE' && machineState !== 'LOOKING_UP' && machineState !== 'COMMITTING' && machineState !== 'MANUAL_ENTRY') {
+            return;
+        }
+        dispatch({ type: 'SCAN_INBOUND', barcode });
         try {
             const cleanBarcode = sanitizeBarcode(barcode);
             const normBarcode = normalizeSku(cleanBarcode);
-            
+            const needsPharma = shouldPromptForBatch(cleanBarcode, consolidatedHistory || [], settings) && (mm === undefined);
+            dispatch({ type: 'PRODUCT_RESOLVED', needsPharma });
+            if (needsPharma) {
+                setActiveBarcode(normBarcode);
+                return;
+            }
             let product = await productService.getProductByBarcode(cleanBarcode);
             let isAutoRegistered = false;
-
             if (!product) {
                 const expected = activeExpectedItems.find(ei => normalizeSku(ei.barcode) === normBarcode);
                 if (expected) {
@@ -148,40 +150,43 @@ export const useScanner = (session: CountingSession, onFinish: () => void) => {
                     product = { barcode: cleanBarcode, name: 'DESCONOCIDO', category: 'N/A' };
                 }
             }
-
             if (qty > 0 && product && currentLocation === 'BODEGA_GRAL') {
                 predictIdealLocation(product).then(suggestion => {
                     if (suggestion) setAiLocationSuggestion(suggestion);
                 });
             }
-
-            // Inyectar datos recordados SOLO si pertenecen a este mismo SKU
             const isSameSkuAsRemembered = rememberedDate && normBarcode === activeBarcode;
             const finalMM = mm || (isSameSkuAsRemembered ? rememberedDate.mm : undefined);
             const finalYYYY = yyyy || (isSameSkuAsRemembered ? rememberedDate.yyyy : undefined);
             const finalBatch = batch || (isSameSkuAsRemembered ? rememberedDate.batch : undefined);
-
             const existingInList = itemsRef.current.find(i => normalizeSku(i.barcode) === normBarcode);
             const currentTotal = existingInList?.totalQuantity || 0;
             const newTotal = Math.max(0, currentTotal + qty);
-
             setOptimisticQty(newTotal);
             setActiveBarcode(normBarcode);
-            
             await sessionService.addScanEvent(session.id, cleanBarcode, qty, finalMM, finalYYYY, currentLocation, finalBatch);
-
+            dispatch({ type: 'COMMIT_COMPLETE' });
             trigger(qty > 0 ? (isAutoRegistered ? 'unknown' : 'success') : 'undo');
             if (settings.ttsEnabled && qty > 0) SoundFX.speak(`${newTotal}`);
         } catch (err) {
+            dispatch({ type: 'ERROR_OCCURRED' });
             trigger('error');
         }
-    }, [session.id, activeExpectedItems, settings, trigger, currentLocation, rememberedDate, activeBarcode]);
+    }, [session.id, activeExpectedItems, settings, trigger, currentLocation, rememberedDate, activeBarcode, consolidatedHistory, machineState]);
 
     return {
         state: { 
-            status, setStatus, feedback, multiplier, setMultiplier,
+            machineState,
+            status: machineState.toLowerCase() as ScannerStatus,
+            setStatus: (s: ScannerStatus) => {
+                if (s === 'manual') dispatch({ type: 'OPEN_MANUAL' });
+                else if (s === 'confirming') dispatch({ type: 'TRIGGER_CLOSE' });
+                else if (s === 'idle') dispatch({ type: 'RESET' });
+            },
+            feedback, multiplier, setMultiplier,
             currentLocation, setCurrentLocation,
             aiLocationSuggestion, setAiLocationSuggestion,
+            semanticNeighbors,
             optimisticActiveQty: optimisticQty || 0,
             activeBarcode,
             rememberedDate,
@@ -206,7 +211,13 @@ export const useScanner = (session: CountingSession, onFinish: () => void) => {
                 setOptimisticQty(existing?.totalQuantity || 0); 
             },
             setRememberedDate: (val: any) => setRememberedDate(val),
-            changeLogisticsLabel: (label: string) => sessionService.updateSessionLabel(session.id, label),
+            handlePharmaComplete: (m?: number, y?: number, b?: string) => {
+                if (activeBarcode) {
+                    dispatch({ type: 'PHARMA_COMPLETE', mm: m, yyyy: y, batch: b });
+                    finalizeScanPipeline(activeBarcode, multiplier, m, y, b);
+                }
+            },
+            cancelPharma: () => dispatch({ type: 'RESET' }),
             handleDeleteProduct: async (barcode: string, batch?: string) => {
                 await sessionService.deleteSessionItemByBatch(session.id, barcode, batch);
                 if (activeBarcode === normalizeSku(barcode)) setActiveBarcode(null);

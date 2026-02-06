@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Product } from '../types';
 import { CheckCircle2, AlertTriangle } from 'lucide-react';
@@ -27,10 +26,14 @@ export const Database: React.FC = () => {
         usagePercent={usagePercent}
         isDownloading={state.isDownloading}
         isSyncing={state.isSyncing}
+        isVectorizing={state.isVectorizing}
+        vectorProgress={state.vectorProgress}
+        missingVectorsCount={state.missingVectorsCount}
         pendingChangesCount={state.pendingChangesCount}
         onSearch={actions.setSearchQuery}
         onDownload={actions.handleDownloadFromCloud}
         onSync={actions.handleSyncToCloud}
+        onVectorize={actions.handleVectorize}
         onImport={() => setIsImportOpen(true)}
         onCreate={handleOpenCreate}
       />

@@ -1,14 +1,12 @@
-
 import { ScanRecord, ConsolidatedItem } from "../types";
 import { db } from "../db";
 import { getSettings } from "./settings";
 
-const aggregateScansSync = (scans: ScanRecord[], productMap: Record<string, string>): ConsolidatedItem[] => {
+const aggregateScansSync = (scans: ScanRecord[], productMap: Map<string, {name: string, embedding?: number[]}>): ConsolidatedItem[] => {
     const aggregation: Record<string, ConsolidatedItem> = {};
     const settings = getSettings();
     
     for (const scan of scans) {
-        // SI EL RASTREO ESTÁ DESACTIVADO, IGNORAMOS LOS CAMPOS DE FECHA Y LOTE EN LA CLAVE ÚNICA
         const batchPart = settings.batchTrackingEnabled ? (scan.batch || 'NO_BATCH') : 'DISABLED';
         const mmPart = settings.batchTrackingEnabled ? (scan.mm || 0) : 0;
         const yyyyPart = settings.batchTrackingEnabled ? (scan.yyyy || 0) : 0;
@@ -16,9 +14,11 @@ const aggregateScansSync = (scans: ScanRecord[], productMap: Record<string, stri
         const key = `${scan.barcode}_${batchPart}_${mmPart}_${yyyyPart}_${scan.logisticsLabel || 'UNSET'}`;
         
         if (!aggregation[key]) {
+            const productInfo = productMap.get(scan.barcode);
             aggregation[key] = {
                 barcode: scan.barcode,
-                productName: productMap[scan.barcode] || 'Cargando...',
+                productName: productInfo?.name || 'Cargando...',
+                embedding: productInfo?.embedding,
                 batch: settings.batchTrackingEnabled ? scan.batch : undefined,
                 totalQuantity: 0,
                 scans: 0,
@@ -39,7 +39,11 @@ export const aggregateScans = async (scans: ScanRecord[]): Promise<ConsolidatedI
     if (scans.length === 0) return [];
     const uniqueBarcodes = Array.from(new Set(scans.map(s => s.barcode)));
     const products = await db.products.where('barcode').anyOf(uniqueBarcodes).toArray();
-    const productMap: Record<string, string> = {};
-    products.forEach(p => { productMap[p.barcode] = p.name; });
+    
+    const productMap = new Map<string, {name: string, embedding?: number[]}>();
+    products.forEach(p => { 
+        productMap.set(p.barcode, { name: p.name, embedding: p.embedding }); 
+    });
+    
     return aggregateScansSync(scans, productMap);
 };

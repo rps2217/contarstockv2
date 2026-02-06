@@ -12,10 +12,7 @@ import { CameraScanner } from './CameraScanner';
 import { ScreenLockOverlay } from './common/ScreenLockOverlay';
 import { ExpirationModal } from './ExpirationModal';
 import { VirtualList } from './common/VirtualList';
-import { getRowStyles, shouldPromptForBatch } from '../services/uiLogic';
-import { ScannerToolsSheet } from './scanner/ScannerToolsSheet';
-import { BarcodeLabelModal } from './common/BarcodeLabelModal';
-import { LocationSelectorModal } from './common/LocationSelectorModal';
+import { getRowStyles } from '../services/uiLogic';
 import { SoundFX } from '../services/audio';
 
 const HistoryRow = memo(({ index, data }: any) => {
@@ -46,23 +43,13 @@ export const Scanner: React.FC<{ session: CountingSession, onCloseSession: () =>
   
   const [isTriggerActive, setIsTriggerActive] = useState(false);
   const [isScreenLocked, setIsScreenLocked] = useState(false);
-  const [showExpirationModal, setShowExpirationModal] = useState(false);
-  const [pendingBarcode, setPendingBarcode] = useState<string | null>(null);
 
-  const handleInbound = useCallback((barcode: string) => {
-      if (isScreenLocked) return;
-      
-      // SoC: Delegar decisión de modal al servicio uiLogic
-      if (shouldPromptForBatch(barcode, data.recentScans || [], settings)) {
-          setPendingBarcode(barcode);
-          setShowExpirationModal(true);
-          if (navigator.vibrate) navigator.vibrate(20);
-      } else {
-          actions.handleExternalScan(barcode, state.multiplier);
-      }
-  }, [isScreenLocked, data.recentScans, settings, state.multiplier, actions]);
+  const isMachineAvailable = state.machineState === 'IDLE' || state.machineState === 'MANUAL_ENTRY';
 
-  useHIDScanner({ isEnabled: !showExpirationModal && !isScreenLocked && state.status === 'idle', onScan: handleInbound });
+  useHIDScanner({ 
+      isEnabled: !isScreenLocked && isMachineAvailable, 
+      onScan: (barcode) => actions.handleExternalScan(barcode, state.multiplier) 
+  });
 
   const rowData = useMemo(() => ({ onSelect: actions.selectItem, activeBarcode: state.activeBarcode, optimisticQty: state.optimisticActiveQty }), [actions.selectItem, state.activeBarcode, state.optimisticActiveQty]);
 
@@ -83,16 +70,18 @@ export const Scanner: React.FC<{ session: CountingSession, onCloseSession: () =>
                 onRegisterPending={() => {}} 
                 expectedItem={session.expectedItems?.find(i => normalizeSku(i.barcode) === state.activeBarcode)} 
                 onDecrement={() => actions.handleExternalScan(state.activeBarcode!, -1)} 
-                onIncrement={() => handleInbound(state.activeBarcode!)} 
+                onIncrement={() => actions.handleExternalScan(state.activeBarcode!, 1)} 
                 isDeducing={state.isDeducing} 
                 aiSuggestion={state.aiLocationSuggestion} 
                 onAcceptSuggestion={(loc) => { state.setCurrentLocation(loc); state.setAiLocationSuggestion(null); }} 
+                semanticNeighbors={state.semanticNeighbors}
+                onSelectNeighbor={(b) => actions.handleExternalScan(b, state.multiplier)}
           />
       </div>
 
       <div className="flex-1 min-0 bg-black flex flex-col relative">
           <div className="p-2 bg-slate-900/40 grid grid-cols-4 gap-2 border-b border-white/5">
-                <button onClick={() => state.setStatus('manual')} className="h-10 rounded-xl font-black text-[9px] bg-slate-800 border border-slate-700">MANUAL</button>
+                <button onClick={() => state.setStatus('manual')} className={`h-10 rounded-xl font-black text-[9px] border transition-all ${state.machineState === 'MANUAL_ENTRY' ? 'bg-blue-600 border-blue-400' : 'bg-slate-800 border-slate-700'}`}>MANUAL</button>
                 {[5, 10, 20].map(v => (
                     <button key={v} onClick={() => state.setMultiplier(v)} className={`h-10 rounded-xl font-black text-xs border-2 transition-all ${state.multiplier === v ? 'bg-amber-500 border-amber-600 text-black shadow-lg scale-105' : 'bg-white/5 border-white/10 text-white/30'}`}>
                         +{v}
@@ -113,27 +102,25 @@ export const Scanner: React.FC<{ session: CountingSession, onCloseSession: () =>
       <div className="h-20 shrink-0 bg-slate-950 border-t border-white/10 flex items-center px-4 pb-safe-area shadow-[0_-10px_30px_rgba(0,0,0,0.8)]">
           <button onPointerDown={() => setIsTriggerActive(true)} onPointerUp={() => setIsTriggerActive(false)} onPointerLeave={() => setIsTriggerActive(false)} className={`flex-1 h-14 rounded-2xl flex items-center justify-center gap-4 transition-all border-b-4 ${isTriggerActive ? 'bg-blue-600 border-blue-900 translate-y-1 border-b-0' : 'bg-white text-black border-slate-300'}`}>
               <Camera className="w-6 h-6" />
-              <span className="text-[10px] font-black uppercase tracking-[0.3em]">{isTriggerActive ? 'LENS_ACTIVE' : 'GATILLO_OPTICO'}</span>
+              <span className="text-[10px] font-black uppercase tracking-widest">{isTriggerActive ? 'LENS_ACTIVE' : 'GATILLO_OPTICO'}</span>
           </button>
       </div>
 
-      {isTriggerActive && <div className="fixed inset-0 z-[250]"><CameraScanner onScan={(c) => { handleInbound(c); setIsTriggerActive(false); }} onClose={() => setIsTriggerActive(false)} isTriggered={true} /></div>}
+      {isTriggerActive && <div className="fixed inset-0 z-[250]"><CameraScanner onScan={(c) => { actions.handleExternalScan(c, state.multiplier); setIsTriggerActive(false); }} onClose={() => setIsTriggerActive(false)} isTriggered={true} /></div>}
       
-      {showExpirationModal && pendingBarcode && (
+      {state.machineState === 'AWAITING_PHARMA' && state.activeBarcode && (
           <ExpirationModal 
-            productName={pendingBarcode} 
+            productName={state.activeBarcode} 
             onComplete={(m, y, b) => { 
                 if (m && y) actions.setRememberedDate({ mm: m, yyyy: y, batch: b || '' }); 
-                actions.handleExternalScan(pendingBarcode, state.multiplier, m, y, b); 
-                setShowExpirationModal(false); 
-                setPendingBarcode(null);
+                actions.handlePharmaComplete(m, y, b);
             }} 
           />
       )}
 
       <ScreenLockOverlay isLocked={isScreenLocked} onUnlock={() => setIsScreenLocked(false)} />
 
-      {state.status === 'confirming' && (
+      {state.machineState === 'CONFIRMING_CLOSE' && (
           <div className="fixed inset-0 z-[300] bg-black/95 flex items-center justify-center p-6 backdrop-blur-xl">
               <div className="bg-slate-900 p-10 rounded-[3rem] w-full max-w-sm text-center border-4 border-white/5 shadow-2xl">
                   <h2 className="text-2xl font-black mb-10 italic uppercase tracking-tighter">Cerrar_Bulto</h2>
@@ -143,7 +130,7 @@ export const Scanner: React.FC<{ session: CountingSession, onCloseSession: () =>
           </div>
       )}
       
-      {state.status === 'manual' && (
+      {state.machineState === 'MANUAL_ENTRY' && (
           <NumericKeypad 
             isOpen={true} 
             title="SKU MANUAL" 

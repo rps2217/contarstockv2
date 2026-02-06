@@ -1,10 +1,10 @@
-
 import React, { memo } from 'react';
 import { Lock, Coffee, AlertTriangle, Sparkles } from 'lucide-react';
-import { ScannerFeedback } from '../../hooks/useScanner';
+// Corrected import: FeedbackStatus is exported from useFeedbackSystem, not ScannerFeedback from useScanner
+import { FeedbackStatus } from '../../hooks/useFeedbackSystem';
 
 interface ScannerFeedbackLayerProps {
-    feedback: ScannerFeedback;
+    feedback: FeedbackStatus;
     isWindowFocused?: boolean;
     isIdle?: boolean;
 }

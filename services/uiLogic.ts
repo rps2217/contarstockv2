@@ -1,8 +1,7 @@
-
 import { ConsolidatedItem, AppSettings } from '../types';
 import { normalizeSku } from './utils';
 
-export type ItemStatus = 'success' | 'warning' | 'error' | 'neutral' | 'info' | 'mismatch';
+export type ItemStatus = 'success' | 'warning' | 'error' | 'neutral' | 'info' | 'mismatch' | 'semantic';
 
 /**
  * Determina el estado de un ítem basado en el progreso vs meta
@@ -16,7 +15,7 @@ export const determineItemStatus = (current: number, target?: number): ItemStatu
 };
 
 /**
- * Mapeo de colores industriales (Semáforo)
+ * Mapeo de colores industriales (Semáforo + Capa IA)
  */
 export const getStatusColorClasses = (status: ItemStatus, variant: 'bg' | 'border' | 'text' = 'bg'): string => {
     const map = {
@@ -25,37 +24,28 @@ export const getStatusColorClasses = (status: ItemStatus, variant: 'bg' | 'borde
         warning: { bg: 'bg-amber-600', border: 'border-amber-400', text: 'text-amber-500' },
         info: { bg: 'bg-blue-600', border: 'border-blue-400', text: 'text-blue-500' },
         mismatch: { bg: 'bg-purple-600', border: 'border-purple-400', text: 'text-purple-300' },
+        semantic: { bg: 'bg-indigo-600', border: 'border-violet-400', text: 'text-indigo-500' },
         neutral: { bg: 'bg-slate-800', border: 'border-white/10', text: 'text-slate-400' }
     };
     return map[status][variant] || '';
 };
 
 /**
- * SoC: Decisión centralizada sobre captura de metadatos (Fecha/Lote)
- * CRÍTICO: Debe retornar true si es el primer escaneo físico REAL de este SKU en el bulto.
+ * SoC: Decisión sobre captura de metadatos
  */
 export const shouldPromptForBatch = (
     barcode: string, 
     consolidatedItems: ConsolidatedItem[] | undefined, 
     settings: AppSettings
 ): boolean => {
-    // Si el rastreo de bultos está apagado globalmente, nunca preguntar
     if (!settings.batchTrackingEnabled) return false;
-    
-    // Si no hay historial aún, el primer scan siempre debe preguntar
     if (!consolidatedItems || consolidatedItems.length === 0) return true;
-
     const normInbound = normalizeSku(barcode);
-    
-    // IMPORTANTE: Buscamos si el SKU tiene CANTIDAD FÍSICA > 0.
-    // Ignoramos los items que están en la lista solo por ser "esperados" (location === 'GUÍA' y cantidad 0).
     const existingPhysical = consolidatedItems.find(i => 
         normalizeSku(i.barcode) === normInbound && 
         i.totalQuantity > 0 && 
         i.location !== 'GUÍA'
     );
-    
-    // Si no encontramos un registro físico previo con cantidad > 0, es un SKU nuevo para este bulto -> Pedir Fecha.
     return !existingPhysical;
 };
 

@@ -1,15 +1,15 @@
 
 import React, { memo } from 'react';
-import { RotateCcw, CheckCircle, Minus, Plus, Sparkles, Target, Search, Package, MapPin } from 'lucide-react';
+import { RotateCcw, CheckCircle, Minus, Plus, Sparkles, Target, Search, Package, MapPin, Brain } from 'lucide-react';
 import { ScanRecord, Product, ExpectedItem } from '../../types';
-import { ScannerFeedback } from '../../hooks/useScanner';
+import { FeedbackStatus } from '../../hooks/useFeedbackSystem';
 import { determineItemStatus, getStatusColorClasses } from '../../services/uiLogic';
 
 interface ScannerHeroProps {
     lastScan: ScanRecord | undefined;
     activeProduct: Product | undefined;
     accumulatedQty: number;
-    feedback: ScannerFeedback;
+    feedback: FeedbackStatus;
     onRegisterPending: () => void;
     expectedItem?: ExpectedItem | null;
     onDecrement?: () => void;
@@ -17,11 +17,14 @@ interface ScannerHeroProps {
     isDeducing?: boolean;
     aiSuggestion?: string | null;
     onAcceptSuggestion?: (loc: string) => void;
+    semanticNeighbors?: Product[];
+    onSelectNeighbor?: (barcode: string) => void;
 }
 
 export const ScannerHero: React.FC<ScannerHeroProps> = memo(({ 
     lastScan, activeProduct, accumulatedQty, feedback, onRegisterPending, expectedItem, 
-    onDecrement, onIncrement, isDeducing, aiSuggestion, onAcceptSuggestion
+    onDecrement, onIncrement, isDeducing, aiSuggestion, onAcceptSuggestion,
+    semanticNeighbors = [], onSelectNeighbor
 }) => {
     
     if (feedback === 'undo') return (
@@ -50,7 +53,7 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
         return (
             <div className={`w-full h-full flex flex-col relative transition-colors duration-300 ${bgClass}`}>
                 
-                {/* AI SUGGESTION CHIP */}
+                {/* AI SUGGESTION CHIP (Slotting) */}
                 {aiSuggestion && onAcceptSuggestion && (
                     <button 
                         onClick={() => onAcceptSuggestion(aiSuggestion)}
@@ -87,6 +90,25 @@ export const ScannerHero: React.FC<ScannerHeroProps> = memo(({
 
                     <button onClick={onIncrement} className="w-1/4 bg-black/10 active:bg-black/30 flex items-center justify-center border-l border-white/5"><Plus className="w-12 h-12 text-white/40 active:text-white" /></button>
                 </div>
+
+                {/* RADAR SEMÁNTICO: BURBUJAS DE PROXIMIDAD */}
+                {semanticNeighbors.length > 0 && onSelectNeighbor && (
+                    <div className="absolute -bottom-6 left-0 right-0 flex justify-center gap-2 px-4 z-30 overflow-x-auto no-scrollbar py-2">
+                        {semanticNeighbors.map(n => (
+                            <button 
+                                key={n.barcode}
+                                onClick={() => onSelectNeighbor(n.barcode)}
+                                className="bg-indigo-600 border-2 border-indigo-400 text-white px-4 py-2.5 rounded-2xl shadow-xl flex items-center gap-2 whitespace-nowrap active:scale-90 transition-all"
+                            >
+                                <Brain className="w-3 h-3" />
+                                <div className="text-left">
+                                    <div className="text-[8px] font-black uppercase tracking-tighter line-clamp-1 max-w-[120px] leading-none mb-0.5">{n.name}</div>
+                                    <div className="text-[7px] font-mono font-bold opacity-60 leading-none">{n.barcode}</div>
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                )}
 
                 {isUnknown && (
                     <button onClick={onRegisterPending} className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 bg-white/10 backdrop-blur-md border border-white/20 text-white/80 text-[8px] font-black uppercase tracking-[0.2em] px-5 py-2.5 rounded-full active:bg-white active:text-black">Identificar Nuevo Producto</button>

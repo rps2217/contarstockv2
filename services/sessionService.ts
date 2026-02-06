@@ -7,11 +7,12 @@ import { logger } from './logger';
 import { IntegrityGuard } from './integrityGuard';
 import { callGas } from './gasService';
 import { CloudOrderRowSchema } from './schemas';
+import { VectorService } from './vectorService';
 
 // BUFFER DE ALTA VELOCIDAD: Evita bloqueos de UI durante ráfagas de escaneo
 let writeBuffer: { record: ScanRecord, retries: number }[] = [];
 let flushTimeout: any = null;
-const BUFFER_DELAY_MS = 50; // Casi instantáneo pero agrupa escrituras
+const BUFFER_DELAY_MS = 50; 
 
 const triggerBackgroundSync = async () => {
     if ('serviceWorker' in navigator && 'SyncManager' in window) {
@@ -29,9 +30,7 @@ const commitBufferToDatabase = async () => {
     const recordsToSave = currentBatch.map(item => item.record);
     
     try {
-        // Escritura masiva en una sola transacción para eficiencia de disco (PDA Flash Storage)
         await db.scans.bulkAdd(recordsToSave);
-        
         const affectedIds = Array.from(new Set(recordsToSave.map(s => s.sessionId)));
         for (const id of affectedIds) {
             await updateSessionMetadata(id);
@@ -39,7 +38,6 @@ const commitBufferToDatabase = async () => {
         triggerBackgroundSync();
     } catch (error: any) {
         logger.error("DB_FLUSH_FAIL", error.message);
-        // Si falla, devolvemos al buffer para no perder datos
         writeBuffer = [...currentBatch, ...writeBuffer];
     }
 };
@@ -61,9 +59,6 @@ export const updateSessionMetadata = async (sessionId: string) => {
     });
 };
 
-/**
- * FIX: Added alias for recalculateSessionMetadata to satisfy RecalculateTool.ts
- */
 export const recalculateSessionMetadata = updateSessionMetadata;
 
 export const addScanEvent = async (
@@ -90,9 +85,7 @@ export const addScanEvent = async (
         synced: 0
     };
 
-    // Estrategia Optimista: Primero al buffer, luego a disco
     writeBuffer.push({ record: newRecord, retries: 0 });
-    
     if (flushTimeout) clearTimeout(flushTimeout);
     flushTimeout = setTimeout(commitBufferToDatabase, BUFFER_DELAY_MS);
     
@@ -140,6 +133,7 @@ export const fetchAllOrdersFromCloud = async (): Promise<number> => {
         if (res.success && res.rows) {
             const groups = new Map<string, ExpectedOrder>();
             
+            // 1. Agrupar items por Orden ERP
             res.rows.forEach((row: any) => {
                 const parsed = CloudOrderRowSchema.safeParse(row);
                 if (parsed.success) {
@@ -161,8 +155,21 @@ export const fetchAllOrdersFromCloud = async (): Promise<number> => {
                 }
             });
 
+            const orders = Array.from(groups.values());
+
+            // 2. ENTRENAMIENTO SEMÁNTICO (Solo si hay internet)
+            if (navigator.onLine) {
+                console.log("[SemanticBrain] Entrenando con pedidos de la nube...");
+                for (const order of orders) {
+                    for (const item of order.items) {
+                        // Generamos firma si no existe
+                        item.embedding = await VectorService.generateEmbedding(item.name) || undefined;
+                    }
+                }
+            }
+
             await db.expectedOrders.clear();
-            await db.expectedOrders.bulkAdd(Array.from(groups.values()));
+            await db.expectedOrders.bulkAdd(orders);
             return groups.size;
         }
         return 0;
@@ -172,9 +179,6 @@ export const fetchAllOrdersFromCloud = async (): Promise<number> => {
     }
 };
 
-/**
- * FIX: Added missing fetchExpectedItemsFromCloud for StartSessionModal.tsx
- */
 export const fetchExpectedItemsFromCloud = async (erpOrder: string): Promise<ExpectedOrder | null> => {
     try {
         const res = await callGas('fetch_rows', { tableName: 'PEDIDOS' });
@@ -187,7 +191,7 @@ export const fetchExpectedItemsFromCloud = async (erpOrder: string): Promise<Exp
 
             if (items.length === 0) return null;
 
-            return {
+            const order: ExpectedOrder = {
                 id: generateUUID(),
                 internalId: erpOrder,
                 items: items.map(i => ({ barcode: i.barcode, name: i.name, expectedQty: i.qty })),
@@ -195,6 +199,15 @@ export const fetchExpectedItemsFromCloud = async (erpOrder: string): Promise<Exp
                 totalExpectedSKUs: items.length,
                 importedAt: Date.now()
             };
+
+            // Entrenamiento rápido de la orden seleccionada
+            if (navigator.onLine) {
+                for (const item of order.items) {
+                    item.embedding = await VectorService.generateEmbedding(item.name) || undefined;
+                }
+            }
+
+            return order;
         }
         return null;
     } catch (err) {
@@ -225,9 +238,6 @@ export const cleanSyncedSessions = async (): Promise<number> => {
     return ids.length;
 };
 
-/**
- * FIX: Added missing markScansAsSynced for appsheet.ts and syncManager.ts
- */
 export const markScansAsSynced = async (ids: string[]) => {
     if (ids.length === 0) return;
     await db.scans.where('id').anyOf(ids).modify({ synced: 1 });
@@ -263,9 +273,6 @@ export const deleteSessionItemByBatch = async (sessionId: string, barcode: strin
     await updateSessionMetadata(sessionId);
 };
 
-/**
- * FIX: Added missing deleteSessionItem for ReportDetail.tsx
- */
 export const deleteSessionItem = async (sessionId: string, barcode: string) => {
     await db.scans.where('[sessionId+barcode]').equals([sessionId, barcode]).delete();
     await updateSessionMetadata(sessionId);
