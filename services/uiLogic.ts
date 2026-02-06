@@ -32,7 +32,7 @@ export const getStatusColorClasses = (status: ItemStatus, variant: 'bg' | 'borde
 
 /**
  * SoC: Decisión centralizada sobre captura de metadatos (Fecha/Lote)
- * CRÍTICO: Debe retornar true si es el primer escaneo físico del bulto actual.
+ * CRÍTICO: Debe retornar true si es el primer escaneo físico REAL de este SKU en el bulto.
  */
 export const shouldPromptForBatch = (
     barcode: string, 
@@ -42,19 +42,21 @@ export const shouldPromptForBatch = (
     // Si el rastreo de bultos está apagado globalmente, nunca preguntar
     if (!settings.batchTrackingEnabled) return false;
     
-    if (!consolidatedItems) return true;
+    // Si no hay historial aún, el primer scan siempre debe preguntar
+    if (!consolidatedItems || consolidatedItems.length === 0) return true;
 
     const normInbound = normalizeSku(barcode);
     
-    // Buscamos específicamente si este SKU ya tiene un registro de escaneo FÍSICO previo en esta sesión
-    const existingScanned = consolidatedItems.find(i => 
+    // IMPORTANTE: Buscamos si el SKU tiene CANTIDAD FÍSICA > 0.
+    // Ignoramos los items que están en la lista solo por ser "esperados" (location === 'GUÍA' y cantidad 0).
+    const existingPhysical = consolidatedItems.find(i => 
         normalizeSku(i.barcode) === normInbound && 
         i.totalQuantity > 0 && 
         i.location !== 'GUÍA'
     );
     
-    // Si no existe un escaneo físico previo (totalQty > 0), requerimos fecha/lote
-    return !existingScanned;
+    // Si no encontramos un registro físico previo con cantidad > 0, es un SKU nuevo para este bulto -> Pedir Fecha.
+    return !existingPhysical;
 };
 
 export const getRowStyles = (current: number, target?: number, isActive?: boolean) => {

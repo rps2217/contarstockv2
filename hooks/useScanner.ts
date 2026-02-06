@@ -85,14 +85,15 @@ export const useScanner = (session: CountingSession, onFinish: () => void) => {
         return sorted;
     }, [session.id, isVerified, activeExpectedItems, activeBarcode, feedback]);
 
-    // --- MOTOR DE DEDUCCIÓN (DETECTIVE) ---
+    // --- MOTOR DE DEDUCCIÓN (DETECTIVE v4.5) ---
     useEffect(() => {
         const erpLabel = currentSessionData?.erpOrder || '';
-        const needsDeduction = erpLabel.includes('BUSCANDO') || erpLabel.includes('CONTEO_CIEGO');
+        const isWaitingDeduction = erpLabel.includes('BUSCANDO') || erpLabel.includes('CONTEO_CIEGO');
         
-        if (!needsDeduction || deducedOrder || !consolidatedHistory) return;
+        if (!isWaitingDeduction || deducedOrder || !consolidatedHistory) return;
         
         const physicalPicks = consolidatedHistory.filter(i => i.totalQuantity > 0);
+        // ACTIVACIÓN INMEDIATA: Empezar deducción desde 1 item escaneado
         if (physicalPicks.length < 1) return; 
 
         const runDeduction = async () => {
@@ -102,13 +103,15 @@ export const useScanner = (session: CountingSession, onFinish: () => void) => {
 
             for (const order of allExpected) {
                 const match = calculateOrderMatch(physicalPicks, order);
-                if (match.matchScore > 30) {
+                // Umbral bajo de score para empezar a considerar
+                if (match.matchScore > 20) { 
                     if (!bestMatch || match.matchScore > bestMatch.matchScore) {
                         bestMatch = match;
                     }
                 }
             }
 
+            // Confianza mínima para asignar automáticamente
             if (bestMatch && bestMatch.matchScore >= 60) {
                 setDeducedOrder(bestMatch.expectedOrder);
                 await db.sessions.update(session.id, {
@@ -152,9 +155,11 @@ export const useScanner = (session: CountingSession, onFinish: () => void) => {
                 });
             }
 
-            const finalMM = mm || (rememberedDate && normBarcode === activeBarcode ? rememberedDate.mm : undefined);
-            const finalYYYY = yyyy || (rememberedDate && normBarcode === activeBarcode ? rememberedDate.yyyy : undefined);
-            const finalBatch = batch || (rememberedDate && normBarcode === activeBarcode ? rememberedDate.batch : undefined);
+            // Inyectar datos recordados SOLO si pertenecen a este mismo SKU
+            const isSameSkuAsRemembered = rememberedDate && normBarcode === activeBarcode;
+            const finalMM = mm || (isSameSkuAsRemembered ? rememberedDate.mm : undefined);
+            const finalYYYY = yyyy || (isSameSkuAsRemembered ? rememberedDate.yyyy : undefined);
+            const finalBatch = batch || (isSameSkuAsRemembered ? rememberedDate.batch : undefined);
 
             const existingInList = itemsRef.current.find(i => normalizeSku(i.barcode) === normBarcode);
             const currentTotal = existingInList?.totalQuantity || 0;

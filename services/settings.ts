@@ -18,7 +18,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   lowPerformanceMode: false,
   predictiveHintsEnabled: false,
   continuousMode: true,        
-  batchTrackingEnabled: true, // Forzado a True para asegurar captura de vencimientos
+  batchTrackingEnabled: true, // FORZADO: Siempre activo por defecto para evitar fugas de datos Pharma
   appSheetConfig: {
       appId: '',
       accessKey: '',

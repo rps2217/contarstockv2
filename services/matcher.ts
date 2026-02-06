@@ -58,7 +58,7 @@ export const importExpectedOrders = async (file: File): Promise<number> => {
           }
 
           const group = groups.get(internalId)!;
-          const existingItem = group.items.find(item => item.barcode === barcode);
+          const existingItem = group.items.find(item => normalizeSku(item.barcode) === normalizeSku(barcode));
           if (existingItem) {
             existingItem.expectedQty += qty;
           } else {
@@ -78,8 +78,8 @@ export const importExpectedOrders = async (file: File): Promise<number> => {
 };
 
 /**
- * ALGORITMO DE COINCIDENCIA MEJORADO (DETECTIVE v3)
- * Diseñado para detectar órdenes incluso con 1 solo ítem escaneado.
+ * ALGORITMO DE COINCIDENCIA MEJORADO (DETECTIVE v4.5)
+ * Capaz de identificar una orden desde el primer ítem escaneado si la huella es única.
  */
 export const calculateOrderMatch = (physicalItems: ConsolidatedItem[], order: ExpectedOrder): MatchResult => {
   const physicalMap = new Map<string, number>();
@@ -92,19 +92,18 @@ export const calculateOrderMatch = (physicalItems: ConsolidatedItem[], order: Ex
     expectedMap.set(normalizeSku(i.barcode), i.expectedQty);
   });
 
-  let skuMatches = 0;
+  let skuInOrderCount = 0;
   let qtyAccuracySum = 0;
   const details: any[] = [];
   const potentialAliases: AliasSuggestion[] = [];
 
-  // Analizar cada ítem de la orden esperada
+  // 1. Analizar items que DEBERÍAN estar
   order.items.forEach(exp => {
     const normSku = normalizeSku(exp.barcode);
     const physQty = physicalMap.get(normSku) || 0;
     
     if (physQty > 0) {
-        skuMatches++;
-        // Precisión de cantidad para este ítem específico
+        skuInOrderCount++;
         const accuracy = Math.min(physQty, exp.expectedQty) / Math.max(physQty, exp.expectedQty);
         qtyAccuracySum += accuracy;
     }
@@ -118,10 +117,12 @@ export const calculateOrderMatch = (physicalItems: ConsolidatedItem[], order: Ex
     });
   });
 
-  // Identificar ítems físicos que NO están en la orden (Extras)
+  // 2. Analizar items SOBRANTES (que no están en esta orden)
+  let extraItemsCount = 0;
   physicalItems.forEach(phys => {
       const normSku = normalizeSku(phys.barcode);
       if (!expectedMap.has(normSku) && phys.totalQuantity > 0) {
+          extraItemsCount++;
           details.push({
               barcode: phys.barcode,
               name: phys.productName,
@@ -132,22 +133,26 @@ export const calculateOrderMatch = (physicalItems: ConsolidatedItem[], order: Ex
       }
   });
 
-  // --- CÁLCULO DE SCORE DE DETECTIVE ---
   const totalPhysicalSkus = physicalMap.size;
   if (totalPhysicalSkus === 0) return { expectedOrder: order, matchScore: 0, status: 'mismatch', details, potentialAliases };
 
-  // 1. Ratio de pertenencia: ¿Qué porcentaje de lo que tengo escaneado existe en esta guía?
-  const precision = skuMatches / totalPhysicalSkus; 
+  // --- LÓGICA DE PUNTUACIÓN (BAYESIANA SIMPLIFICADA) ---
   
-  // 2. Coincidencia de cantidades de los items encontrados
-  const avgQtyAccuracy = skuMatches > 0 ? qtyAccuracySum / skuMatches : 0;
+  // Precisión: ¿De lo que he escaneado, cuánto pertenece a esta orden? (Castigo por extras)
+  const precision = skuInOrderCount / totalPhysicalSkus; 
+  
+  // Cobertura: ¿De esta orden, cuánto he avanzado ya?
+  const coverage = skuInOrderCount / order.totalExpectedSKUs;
 
-  // Score final: 70% precisión de pertenencia, 30% precisión de cantidad
-  const matchScore = (precision * 0.7 + avgQtyAccuracy * 0.3) * 100;
+  // Precisión de cantidades de los items que sí coincidieron
+  const avgQtyAccuracy = skuInOrderCount > 0 ? qtyAccuracySum / skuInOrderCount : 0;
+
+  // Score final: 60% Precisión de pertenencia, 20% Cobertura de orden, 20% Precisión de cantidad
+  const matchScore = (precision * 0.6 + coverage * 0.2 + avgQtyAccuracy * 0.2) * 100;
 
   let status: 'exact' | 'partial' | 'mismatch' = 'mismatch';
-  if (matchScore > 95 && skuMatches === order.totalExpectedSKUs) status = 'exact';
-  else if (matchScore > 35) status = 'partial';
+  if (matchScore > 98 && extraItemsCount === 0) status = 'exact';
+  else if (matchScore > 20) status = 'partial'; // Umbral bajo para permitir "Discovery" rápido
 
   return {
       expectedOrder: order,
