@@ -1,11 +1,26 @@
 
-import React from 'react';
-import { ScanLine, Radio, Zap, History, Database, Settings, UserCircle, Box } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ScanLine, Radio, Zap, History, Database, Settings, UserCircle, Activity, Gauge } from 'lucide-react';
 import { useDashboard } from '../hooks/useDashboard';
 import { IndustrialButton } from './common/IndustrialButton';
+import { db } from '../db';
 
 const Dashboard: React.FC = () => {
   const { stats, operatorId, isSyncNeeded, handleEnterMartillo, navigate } = useDashboard();
+  const [ipm, setIpm] = useState(0);
+
+  // Lógica de cálculo de IPM (Items Per Minute) en tiempo real
+  useEffect(() => {
+    const calcIpm = async () => {
+        const fiveMinsAgo = Date.now() - (5 * 60 * 1000);
+        const recentScans = await db.scans.where('timestamp').above(fiveMinsAgo).toArray();
+        const total = recentScans.reduce((acc, s) => acc + s.quantity, 0);
+        setIpm(Math.round(total / 5));
+    };
+    calcIpm();
+    const timer = setInterval(calcIpm, 30000);
+    return () => clearInterval(timer);
+  }, []);
 
   return (
     <div className="h-full w-full bg-black overflow-y-auto no-scrollbar pb-32 font-mono">
@@ -15,8 +30,8 @@ const Dashboard: React.FC = () => {
           <div className="flex justify-between items-center">
               <div>
                   <div className="flex items-center gap-2 mb-1">
-                      <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_#3b82f6]"></div>
-                      <span className="text-[9px] font-black text-blue-500 tracking-[0.3em] uppercase">System_Online</span>
+                      <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]"></div>
+                      <span className="text-[9px] font-black text-emerald-500 tracking-[0.3em] uppercase">Engine_Pulse_OK</span>
                   </div>
                   <h1 className="text-3xl font-black text-white italic tracking-tighter uppercase leading-none">
                       LOGI<span className="text-blue-500">COUNT</span>
@@ -34,7 +49,24 @@ const Dashboard: React.FC = () => {
 
       <div className="p-6 max-w-4xl mx-auto space-y-4">
         
-        {/* ACCIONES PRINCIPALES - Layout de Alta Visibilidad */}
+        {/* WIDGET DE PULSO (MÉTRICAS VIVAS) */}
+        <div className="bg-slate-900/40 border-2 border-white/5 rounded-[2.5rem] p-6 flex items-center justify-between shadow-2xl">
+            <div className="flex items-center gap-5">
+                <div className={`p-4 rounded-2xl bg-black/60 border-2 ${ipm > 10 ? 'border-emerald-500/30' : 'border-white/5'}`}>
+                    <Activity className={`w-8 h-8 ${ipm > 10 ? 'text-emerald-500 animate-pulse' : 'text-slate-600'}`} />
+                </div>
+                <div>
+                    <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Rendimiento Actual</div>
+                    <div className="text-3xl font-black text-white tabular-nums">{ipm} <span className="text-xs text-slate-500">IPM</span></div>
+                </div>
+            </div>
+            <div className="text-right">
+                <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Picks Hoy</div>
+                <div className="text-3xl font-black text-blue-500 tabular-nums">{stats?.scansToday || 0}</div>
+            </div>
+        </div>
+
+        {/* ACCIONES PRINCIPALES */}
         <div className="grid grid-cols-1 gap-4">
             <button 
                 onClick={() => navigate('/reports?create=true')}

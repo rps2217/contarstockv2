@@ -18,9 +18,9 @@ import { getRowStyles } from '../services/uiLogic';
 import { ScannerToolsSheet } from './scanner/ScannerToolsSheet';
 import { BarcodeLabelModal } from './common/BarcodeLabelModal';
 import { thermalPrinter } from '../services/thermalPrinterService';
-import { printBarcode } from '../services/printerService';
 import { SoundFX } from '../services/audio';
 import { LocationSelectorModal } from './common/LocationSelectorModal';
+import { LocationService } from '../services/locationService';
 
 interface ScannerProps {
   session: CountingSession;
@@ -39,18 +39,17 @@ const HistoryRow = memo(({ index, data }: any) => {
     const className = getRowStyles(displayQty, target, isActive);
 
     return (
-        <div className="px-3 py-1 h-full">
+        <div className="px-2 py-1 h-full">
             <button onClick={() => onSelect(item.barcode)} className={className}>
                 <div className="flex-1 min-w-0 pr-4">
-                    <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[9px] font-black font-mono tracking-widest opacity-50 uppercase">{item.barcode}</span>
+                    <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-[8px] font-black font-mono tracking-widest opacity-40 uppercase">{item.barcode}</span>
                         {item.mm && <span className="text-[7px] bg-white/10 px-1.5 py-0.5 rounded font-black">EXP: {item.mm}/{item.yyyy}</span>}
                     </div>
-                    <h3 className="font-black text-[12px] uppercase truncate leading-none">{item.productName}</h3>
+                    <h3 className="font-black text-[12px] uppercase truncate leading-none text-white/90">{item.productName}</h3>
                 </div>
                 <div className="text-right">
                     <div className="text-2xl font-black tabular-nums leading-none">{displayQty}</div>
-                    {target !== undefined && <div className="text-[7px] font-black uppercase opacity-60 mt-1">META: {target}</div>}
                 </div>
             </button>
         </div>
@@ -74,12 +73,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
 
   const handleInbound = useCallback((barcode: string) => {
       if (isScreenLocked) return;
-
-      if (isChangingLabel) {
-          setManualCode(barcode);
-          SoundFX.play('success');
-          return;
-      }
+      if (isChangingLabel) { setManualCode(barcode); SoundFX.play('success'); return; }
 
       if (!settings.batchTrackingEnabled) {
           actions.handleExternalScan(barcode);
@@ -110,6 +104,13 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
       }
   }, [data.lastScan, actions]);
 
+  const handleAcceptAiSuggestion = async (loc: string) => {
+      await LocationService.saveLocation(loc);
+      state.setCurrentLocation(loc);
+      state.setAiLocationSuggestion(null);
+      SoundFX.play('success');
+  };
+
   const rowData = useMemo(() => ({ 
       onSelect: actions.selectItem, 
       activeBarcode: state.activeBarcode,
@@ -122,34 +123,31 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-black text-white font-mono select-none overflow-hidden">
-      <header className="h-16 px-4 flex items-center justify-between border-b border-white/10 bg-slate-900 shadow-2xl shrink-0 z-50">
-          <div className="flex items-center gap-3">
-              <button onClick={() => state.setStatus('confirming')} className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl active:bg-blue-600">
+      {/* Header Compacto para Mobile */}
+      <header className="h-14 px-3 flex items-center justify-between border-b border-white/10 bg-slate-950 shrink-0 z-50 shadow-lg">
+          <div className="flex items-center gap-2">
+              <button onClick={() => state.setStatus('confirming')} className="p-2.5 bg-white/5 rounded-xl active:bg-blue-600 transition-colors">
                   <ChevronLeft className="w-6 h-6 text-white" />
               </button>
-              <button onClick={() => setIsScreenLocked(true)} className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/30 rounded-xl">
-                  <Lock className="w-4 h-4 text-amber-500" />
-                  <span className="text-[9px] font-black uppercase tracking-widest text-amber-500">Lock</span>
+              <button onClick={() => setIsScreenLocked(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-xl active:bg-amber-500 active:text-black">
+                  <Lock className="w-3.5 h-3.5" />
+                  <span className="text-[8px] font-black uppercase tracking-widest">Lock</span>
               </button>
           </div>
-          <div className="flex flex-col items-center min-w-0 px-2">
-                <span className="text-[7px] font-black uppercase tracking-[0.3em] text-white/40 leading-none mb-1 flex items-center gap-1">
-                   {state.isDeducing ? <Loader2 className="w-2 h-2 animate-spin" /> : (state.hasOrdersInDb === false ? <Box className="w-2 h-2 text-slate-500" /> : <Sparkles className="w-2 h-2 text-orange-400" />)} 
-                   {state.hasOrdersInDb === false ? 'CONTEO CIEGO' : 'AUDITORIA INTELIGENTE'}
-                </span>
-                <span className="text-xs font-black uppercase tracking-widest text-white italic truncate max-w-[140px]">
-                    {erpTitle}
-                </span>
+          <div className="flex flex-col items-center px-1 truncate">
+                <span className="text-[7px] font-black uppercase tracking-[0.2em] text-white/30 leading-none mb-0.5">ORDEN ERP</span>
+                <span className="text-[11px] font-black uppercase tracking-widest text-blue-400 truncate max-w-[120px]">{erpTitle}</span>
           </div>
-          <button onClick={() => setIsToolsOpen(true)} className="w-11 h-11 flex items-center justify-center bg-white/5 rounded-xl border border-white/10 active:bg-white/20 transition-all">
-              <MoreVertical className="w-6 h-6 text-white" />
+          <button onClick={() => setIsToolsOpen(true)} className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl active:bg-white/20 transition-all border border-white/10">
+              <MoreVertical className="w-6 h-6" />
           </button>
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/5 overflow-hidden">
-             <div className="h-full bg-blue-500 transition-all duration-1000 ease-out" style={{ width: `${state.globalStats.progress}%` }} />
+          <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/5">
+             <div className="h-full bg-blue-500 transition-all duration-700" style={{ width: `${state.globalStats.progress}%` }} />
           </div>
       </header>
 
-      <div className="h-[38vh] shrink-0 relative">
+      {/* Hero: Cantidad Grande (42% de altura) */}
+      <div className="h-[42vh] shrink-0 relative border-b-4 border-black">
           <ScannerHero 
                 lastScan={data.lastScan as any}
                 activeProduct={data.lastScan ? { name: (data.lastScan as any).productName, barcode: (data.lastScan as any).barcode } as any : undefined}
@@ -160,36 +158,43 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
                 onDecrement={handleDecrement}
                 onIncrement={() => data.lastScan && handleInbound(data.lastScan.barcode)}
                 isDeducing={state.isDeducing}
-                hasOrdersInDb={state.hasOrdersInDb}
-                deducedErp={state.deducedErp}
+                aiSuggestion={state.aiLocationSuggestion}
+                onAcceptSuggestion={handleAcceptAiSuggestion}
           />
       </div>
 
-      <div className="flex-1 min-0 bg-black flex flex-col relative border-t-8 border-white/5">
-          <div className="shrink-0 p-3 bg-slate-900/50 border-b border-white/5 grid grid-cols-4 gap-2">
-                <button onClick={() => state.setStatus('manual')} className="h-11 rounded-xl font-black text-[10px] bg-slate-800 border-slate-700 text-white shadow-lg active:scale-95">MANUAL</button>
+      {/* Lista de Histórico Compacta */}
+      <div className="flex-1 min-0 bg-black flex flex-col relative overflow-hidden">
+          <div className="shrink-0 p-2 bg-slate-900/40 border-b border-white/5 grid grid-cols-4 gap-2">
+                <button onClick={() => state.setStatus('manual')} className="h-10 rounded-xl font-black text-[9px] bg-slate-800 border border-slate-700 text-white active:scale-95">MANUAL</button>
                 {[5, 10, 20].map(val => (
-                    <button key={val} onClick={() => state.setMultiplier(val)} className={`h-11 rounded-xl font-black text-xs border-2 ${state.multiplier === val ? 'bg-amber-500 border-amber-600 text-black shadow-lg scale-105' : 'bg-white/5 border-white/10 text-white/40'}`}>
+                    <button key={val} onClick={() => state.setMultiplier(val)} className={`h-10 rounded-xl font-black text-[11px] border-2 transition-all ${state.multiplier === val ? 'bg-amber-500 border-amber-600 text-black scale-105 shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'bg-white/5 border-white/10 text-white/30'}`}>
                         +{val}
                     </button>
                 ))}
           </div>
-          <div className="flex-1 min-h-0 relative">
+          <div className="flex-1 min-h-0">
                 <VirtualList 
                     items={data.recentScans || []} 
-                    itemHeight={78} 
+                    itemHeight={70} 
                     renderRow={HistoryRow} 
                     rowData={rowData} 
                     className="bg-black/20" 
-                    emptyState={<div className="flex flex-col items-center opacity-20 mt-12"><History className="w-16 h-16 mb-4" /><p className="text-[9px] font-black uppercase tracking-[0.5em]">Esperando Escaneo</p></div>} 
+                    emptyState={<div className="flex flex-col items-center opacity-10 mt-12"><History className="w-12 h-12 mb-3" /><p className="text-[8px] font-black uppercase tracking-[0.4em]">Sin movimientos</p></div>} 
                 />
           </div>
       </div>
 
-      <div className="h-24 md:h-28 shrink-0 bg-slate-900 border-t border-white/5 flex items-center px-4 z-40 pb-safe-area">
-          <button onPointerDown={(e) => { e.preventDefault(); if(navigator.vibrate) navigator.vibrate(40); setIsTriggerActive(true); }} onPointerUp={() => setIsTriggerActive(false)} onPointerLeave={() => setIsTriggerActive(false)} className={`flex-1 h-14 md:h-16 rounded-2xl flex items-center justify-center gap-4 transition-all border-b-4 ${isTriggerActive ? 'bg-blue-600 border-blue-800 translate-y-1 border-b-0' : 'bg-white text-black border-slate-300 shadow-2xl'}`}>
+      {/* Disparador de Cámara Flotante / Inferior (Zona de Máximo Acceso) */}
+      <div className="h-20 md:h-24 shrink-0 bg-slate-950 border-t border-white/10 flex items-center px-4 z-40 pb-safe-area shadow-[0_-10px_30px_rgba(0,0,0,0.8)]">
+          <button 
+            onPointerDown={(e) => { e.preventDefault(); if(navigator.vibrate) navigator.vibrate(40); setIsTriggerActive(true); }} 
+            onPointerUp={() => setIsTriggerActive(false)} 
+            onPointerLeave={() => setIsTriggerActive(false)} 
+            className={`flex-1 h-14 rounded-2xl flex items-center justify-center gap-4 transition-all border-b-4 ${isTriggerActive ? 'bg-blue-600 border-blue-900 translate-y-1 border-b-0' : 'bg-white text-black border-slate-400 active:scale-[0.98]'}`}
+          >
               <Camera className="w-6 h-6" />
-              <span className="text-[10px] font-black uppercase tracking-[0.4em]">{isTriggerActive ? 'LENS_OPEN' : 'GATILLO_OPTICO'}</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.4em]">{isTriggerActive ? 'LENS_ACTVE' : 'LASER_TRIGGER'}</span>
           </button>
       </div>
 
@@ -207,7 +212,7 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
           />
       )}
 
-      <NumericKeypad isOpen={isChangingLabel} onClose={() => { setIsChangingLabel(false); setManualCode(''); }} title="CAMBIAR_BULTO" value={manualCode} onInput={(c) => setManualCode(p => p + c)} onDelete={() => setManualCode(p => p.slice(0, -1))} onConfirm={async () => { if (manualCode) await actions.changeLogisticsLabel(manualCode); setManualCode(''); setIsChangingLabel(false); }} />
+      <NumericKeypad isOpen={isChangingLabel} onClose={() => { setIsChangingLabel(false); setManualCode(''); }} title="SET_BULTO" value={manualCode} onInput={(c) => setManualCode(p => p + c)} onDelete={() => setManualCode(p => p.slice(0, -1))} onConfirm={async () => { if (manualCode) await actions.changeLogisticsLabel(manualCode); setManualCode(''); setIsChangingLabel(false); }} />
       <LocationSelectorModal isOpen={isChangingLocation} onClose={() => setIsChangingLocation(false)} currentLocation={state.currentLocation} onSelect={(name) => state.setCurrentLocation(name)} />
       <ScannerToolsSheet isOpen={isToolsOpen} onClose={() => setIsToolsOpen(false)} hasActiveItem={!!data.lastScan} location={state.currentLocation} label={currentLabel || ''} onChangeLocation={() => setIsChangingLocation(true)} onChangeLabel={() => { setManualCode(''); setIsChangingLabel(true); }} onShowLabel={() => setShowLabelModal(true)} onPrintSummary={() => {}} onReset={async () => { if (confirm("¿Vaciar bulto?")) await db.scans.where('sessionId').equals(session.id).delete(); }} />
 
@@ -215,19 +220,20 @@ export const Scanner: React.FC<ScannerProps> = ({ session, onCloseSession, onDis
       
       <BarcodeLabelModal isOpen={showLabelModal} onClose={() => setShowLabelModal(false)} barcode={data.lastScan?.barcode || ""} productName={(data.lastScan as any)?.productName} quantity={data.lastScan?.totalQuantity} meta={`ORDEN: ${erpTitle}`} isPrinting={isPrinting} onPrintThermal={async () => { setIsPrinting(true); try { await thermalPrinter.printLabel(data.lastScan!.barcode, (data.lastScan as any).productName, data.lastScan!.totalQuantity); } finally { setIsPrinting(false); } }} />
       
+      <ScreenLockOverlay isLocked={isScreenLocked} onUnlock={() => setIsScreenLocked(false)} />
+
       {state.status === 'confirming' && (
           <div className="fixed inset-0 z-[300] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6">
               <div className="bg-slate-900 border-4 border-white/5 rounded-[3rem] p-10 w-full max-w-sm text-center shadow-2xl">
-                  <h2 className="text-3xl font-black text-white uppercase italic mb-4">¿Finalizar?</h2>
-                  <p className="text-slate-500 mb-10 font-bold uppercase tracking-widest text-[9px]">El contenido se guardará localmente.</p>
+                  <h2 className="text-3xl font-black text-white uppercase italic mb-4 tracking-tighter italic">Cerrar_Bulto</h2>
+                  <p className="text-slate-500 mb-10 font-bold uppercase tracking-widest text-[9px]">El registro se guardará en local.</p>
                   <div className="grid gap-3">
-                      <button onClick={onCloseSession} className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black uppercase tracking-widest shadow-xl">Guardar y Cerrar</button>
-                      <button onClick={() => state.setStatus('idle')} className="w-full bg-white/5 text-white/40 py-5 rounded-2xl font-black uppercase tracking-widest">Cancelar</button>
+                      <button onClick={onCloseSession} className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all">Guardar y Finalizar</button>
+                      <button onClick={() => state.setStatus('idle')} className="w-full bg-white/5 text-white/40 py-5 rounded-2xl font-black uppercase tracking-widest active:bg-white/10 transition-all">Cancelar</button>
                   </div>
               </div>
           </div>
       )}
-      <ScreenLockOverlay isLocked={isScreenLocked} onUnlock={() => setIsScreenLocked(false)} />
     </div>
   );
 };

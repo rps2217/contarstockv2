@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import * as sessionService from '../services/sessionService'; 
 import * as productService from '../services/productService';
+import { predictIdealLocation } from '../services/slottingService';
 import { sanitizeBarcode } from '../services/utils';
 import { SoundFX } from '../services/audio';
 import { getSettings } from '../services/settings';
@@ -22,6 +23,7 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
     const [manualInput, setManualInput] = useState('');
     const [multiplier, setMultiplier] = useState(1);
     const [currentLocation, setCurrentLocation] = useState('BODEGA_GRAL'); 
+    const [aiLocationSuggestion, setAiLocationSuggestion] = useState<string | null>(null);
     
     const [activeBarcode, setActiveBarcode] = useState<string | null>(null);
     const [activeBatch, setActiveBatch] = useState<string | null>(null);
@@ -34,7 +36,6 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
 
     const itemsRef = useRef<ConsolidatedItem[]>([]);
 
-    // Verificar si hay órdenes cargadas al iniciar
     useEffect(() => {
         db.expectedOrders.count().then(count => setHasOrdersInDb(count > 0));
     }, []);
@@ -147,6 +148,13 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
                 }
             }
 
+            // --- IA SLOTTING INVOCATION ---
+            if (qty > 0 && product && currentLocation === 'BODEGA_GRAL') {
+                predictIdealLocation(product).then(suggestion => {
+                    if (suggestion) setAiLocationSuggestion(suggestion);
+                });
+            }
+
             let finalMM = mm;
             let finalYYYY = yyyy;
             let finalBatch = batch;
@@ -195,6 +203,7 @@ export const useScanner = (session: CountingSession, onFinish: () => void, onDis
         state: { 
             status, setStatus, feedback, manualInput, setManualInput, multiplier, setMultiplier,
             currentLocation, setCurrentLocation,
+            aiLocationSuggestion, setAiLocationSuggestion,
             optimisticActiveQty: optimisticQty || 0,
             activeBarcode,
             globalStats,

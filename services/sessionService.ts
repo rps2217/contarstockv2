@@ -1,3 +1,4 @@
+
 import { Dexie } from 'dexie';
 import { db } from '../db';
 import { ScanRecord, CountingSession, ExpectedOrder } from '../types';
@@ -7,9 +8,10 @@ import { IntegrityGuard } from './integrityGuard';
 import { callGas } from './gasService';
 import { CloudOrderRowSchema } from './schemas';
 
+// BUFFER DE ALTA VELOCIDAD: Evita bloqueos de UI durante ráfagas de escaneo
 let writeBuffer: { record: ScanRecord, retries: number }[] = [];
 let flushTimeout: any = null;
-const BUFFER_DELAY_MS = 100;
+const BUFFER_DELAY_MS = 50; // Casi instantáneo pero agrupa escrituras
 
 const triggerBackgroundSync = async () => {
     if ('serviceWorker' in navigator && 'SyncManager' in window) {
@@ -25,15 +27,20 @@ const commitBufferToDatabase = async () => {
     const currentBatch = [...writeBuffer];
     writeBuffer = [];
     const recordsToSave = currentBatch.map(item => item.record);
+    
     try {
+        // Escritura masiva en una sola transacción para eficiencia de disco (PDA Flash Storage)
         await db.scans.bulkAdd(recordsToSave);
+        
         const affectedIds = Array.from(new Set(recordsToSave.map(s => s.sessionId)));
         for (const id of affectedIds) {
             await updateSessionMetadata(id);
         }
         triggerBackgroundSync();
     } catch (error: any) {
-        logger.error("WRITE_FAIL", error.message);
+        logger.error("DB_FLUSH_FAIL", error.message);
+        // Si falla, devolvemos al buffer para no perder datos
+        writeBuffer = [...currentBatch, ...writeBuffer];
     }
 };
 
@@ -54,6 +61,9 @@ export const updateSessionMetadata = async (sessionId: string) => {
     });
 };
 
+/**
+ * FIX: Added alias for recalculateSessionMetadata to satisfy RecalculateTool.ts
+ */
 export const recalculateSessionMetadata = updateSessionMetadata;
 
 export const addScanEvent = async (
@@ -72,16 +82,20 @@ export const addScanEvent = async (
         barcode: sanitizeBarcode(barcode),
         quantity,
         batch,
-        logisticsLabel: session?.logisticsLabel || 'DESCONOCIDO',
+        logisticsLabel: session?.logisticsLabel || 'UNSET',
         mm,
         yyyy,
         location,
         timestamp: Date.now(),
         synced: 0
     };
+
+    // Estrategia Optimista: Primero al buffer, luego a disco
     writeBuffer.push({ record: newRecord, retries: 0 });
+    
     if (flushTimeout) clearTimeout(flushTimeout);
     flushTimeout = setTimeout(commitBufferToDatabase, BUFFER_DELAY_MS);
+    
     return newRecord;
 };
 
@@ -102,7 +116,6 @@ export const createSession = async (erp: string, label: string, type: 'standard'
     return s;
 };
 
-// Added createDraftSession function to fix property missing error in Reception view and hook
 export const createDraftSession = async (label: string): Promise<CountingSession> => {
     const s: CountingSession = { 
         id: generateUUID(), 
@@ -121,10 +134,6 @@ export const createDraftSession = async (label: string): Promise<CountingSession
     return s;
 };
 
-/**
- * DESCARGA MASIVA DE PEDIDOS
- * Almacena todos los pedidos en la tabla local expectedOrders para el motor detective.
- */
 export const fetchAllOrdersFromCloud = async (): Promise<number> => {
     try {
         const res = await callGas('fetch_rows', { tableName: 'PEDIDOS' });
@@ -158,42 +167,40 @@ export const fetchAllOrdersFromCloud = async (): Promise<number> => {
         }
         return 0;
     } catch (err) {
-        logger.error("FETCH_ALL_ORDERS_ERROR", err);
+        logger.error("FETCH_ORDERS_CRITICAL", err);
         return 0;
     }
 };
 
+/**
+ * FIX: Added missing fetchExpectedItemsFromCloud for StartSessionModal.tsx
+ */
 export const fetchExpectedItemsFromCloud = async (erpOrder: string): Promise<ExpectedOrder | null> => {
-  try {
-    const cleanErp = erpOrder.trim().toUpperCase();
-    const res = await callGas('fetch_order', { erpOrder: cleanErp });
-    
-    if (res.success && res.rows && res.rows.length > 0) {
-      const items = res.rows.map((row: any) => {
-        const parsed = CloudOrderRowSchema.safeParse(row);
-        if (!parsed.success) return null;
-        return {
-          barcode: parsed.data.barcode,
-          name: parsed.data.name,
-          expectedQty: parsed.data.qty
-        };
-      }).filter((i: any) => i !== null);
+    try {
+        const res = await callGas('fetch_rows', { tableName: 'PEDIDOS' });
+        if (res.success && res.rows) {
+            const items = res.rows
+                .map((row: any) => CloudOrderRowSchema.safeParse(row))
+                .filter((p): p is { success: true; data: any } => p.success)
+                .map(p => p.data)
+                .filter(d => d.erp === erpOrder);
 
-      if (items.length === 0) return null;
+            if (items.length === 0) return null;
 
-      return {
-        id: generateUUID(),
-        internalId: cleanErp,
-        items,
-        totalExpectedUnits: items.reduce((acc: number, i: any) => acc + i.expectedQty, 0),
-        totalExpectedSKUs: items.length,
-        importedAt: Date.now()
-      };
+            return {
+                id: generateUUID(),
+                internalId: erpOrder,
+                items: items.map(i => ({ barcode: i.barcode, name: i.name, expectedQty: i.qty })),
+                totalExpectedUnits: items.reduce((acc, i) => acc + i.qty, 0),
+                totalExpectedSKUs: items.length,
+                importedAt: Date.now()
+            };
+        }
+        return null;
+    } catch (err) {
+        logger.error("FETCH_SINGLE_ORDER_FAIL", err);
+        return null;
     }
-    return null;
-  } catch (err) {
-    return null;
-  }
 };
 
 export const closeSession = async (id: string) => { 
@@ -218,14 +225,17 @@ export const cleanSyncedSessions = async (): Promise<number> => {
     return ids.length;
 };
 
-export const checkLabelExists = async (label: string): Promise<boolean> => {
-    const count = await db.sessions.where('logisticsLabel').equals(label.trim().toUpperCase()).count();
-    return count > 0;
-};
-
+/**
+ * FIX: Added missing markScansAsSynced for appsheet.ts and syncManager.ts
+ */
 export const markScansAsSynced = async (ids: string[]) => {
     if (ids.length === 0) return;
     await db.scans.where('id').anyOf(ids).modify({ synced: 1 });
+};
+
+export const checkLabelExists = async (label: string): Promise<boolean> => {
+    const count = await db.sessions.where('logisticsLabel').equals(label.trim().toUpperCase()).count();
+    return count > 0;
 };
 
 export const updateSessionLabel = async (sessionId: string, newLabel: string) => {
@@ -243,11 +253,6 @@ export const adjustSessionItemQuantity = async (sessionId: string, barcode: stri
     }
 };
 
-export const deleteSessionItem = async (sessionId: string, barcode: string) => {
-    await db.scans.where('[sessionId+barcode]').equals([sessionId, barcode]).delete();
-    await updateSessionMetadata(sessionId);
-};
-
 export const deleteSessionItemByBatch = async (sessionId: string, barcode: string, batch?: string) => {
     const query = db.scans.where('[sessionId+barcode]').equals([sessionId, barcode]);
     if (batch) {
@@ -255,5 +260,13 @@ export const deleteSessionItemByBatch = async (sessionId: string, barcode: strin
     } else {
         await query.delete();
     }
+    await updateSessionMetadata(sessionId);
+};
+
+/**
+ * FIX: Added missing deleteSessionItem for ReportDetail.tsx
+ */
+export const deleteSessionItem = async (sessionId: string, barcode: string) => {
+    await db.scans.where('[sessionId+barcode]').equals([sessionId, barcode]).delete();
     await updateSessionMetadata(sessionId);
 };
