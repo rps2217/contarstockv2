@@ -12,8 +12,8 @@ export const ScreenLockOverlay: React.FC<Props> = ({ isLocked, onUnlock }) => {
     const [progress, setProgress] = useState(0);
     const intervalRef = useRef<any>(null);
     
-    // Duración requerida para desbloquear (ms)
-    const UNLOCK_DURATION = 1500;
+    // Duración requerida para desbloquear (ms) - Ajustado a 800ms para mayor velocidad
+    const UNLOCK_DURATION = 800; 
     const UPDATE_INTERVAL = 20;
 
     useEffect(() => {
