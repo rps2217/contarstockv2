@@ -36,36 +36,41 @@ export const useMassiveScanner = (batchId: string) => {
         
         const uniqueBarcodes = Array.from(new Set([...rawScans.map(s => s.barcode), ...manifests.map(m => m.barcode)]));
         const products = await masterDb.products.where('barcode').anyOf(uniqueBarcodes).toArray();
-        const prodMap = new Map(products.map(p => [p.barcode, p.name]));
+        // FIX: Explicitly type the prodMap to ensure .get() doesn't return unknown
+        const prodMap = new Map<string, string>(products.map(p => [p.barcode, p.name] as [string, string]));
         
         const aggregation = new Map<string, ConsolidatedBlindItem>();
 
         // Pre-cargar manifiesto teórico
         for (const m of manifests) {
-            aggregation.set(m.barcode, {
-                barcode: m.barcode,
-                name: m.name || prodMap.get(m.barcode) || 'SIN DESCRIPCIÓN',
-                loc: m.loc,
+            // FIX: Explicitly type iteration variable to avoid 'unknown' inference on properties
+            const item: BlindManifestItem = m;
+            aggregation.set(item.barcode, {
+                barcode: item.barcode,
+                name: item.name || prodMap.get(item.barcode) || 'SIN DESCRIPCIÓN',
+                loc: item.loc,
                 totalQuantity: 0,
-                expectedQty: m.expectedQty,
+                expectedQty: item.expectedQty,
                 lastTimestamp: 0
             });
         }
 
         // Sumar físico
         for (const scan of rawScans) {
-            const existing = aggregation.get(scan.barcode);
+            // FIX: Explicitly type iteration variable to avoid 'unknown' inference on properties
+            const s: BlindScan = scan;
+            const existing = aggregation.get(s.barcode);
             if (existing) {
-                existing.totalQuantity += scan.quantity;
-                existing.lastTimestamp = Math.max(existing.lastTimestamp, scan.timestamp);
-                if (scan.location) existing.loc = scan.location;
+                existing.totalQuantity += s.quantity;
+                existing.lastTimestamp = Math.max(existing.lastTimestamp, s.timestamp);
+                if (s.location) existing.loc = s.location;
             } else {
-                aggregation.set(scan.barcode, {
-                    barcode: scan.barcode,
-                    name: prodMap.get(scan.barcode) || 'SKU_DESCONOCIDO',
-                    totalQuantity: scan.quantity,
-                    lastTimestamp: scan.timestamp,
-                    loc: scan.location
+                aggregation.set(s.barcode, {
+                    barcode: s.barcode,
+                    name: prodMap.get(s.barcode) || 'SKU_DESCONOCIDO',
+                    totalQuantity: s.quantity,
+                    lastTimestamp: s.timestamp,
+                    loc: s.location
                 });
             }
         }

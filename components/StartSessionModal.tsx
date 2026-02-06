@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { DownloadCloud, Loader2, CheckCircle2, AlertCircle, FileSearch, Sparkles, Database, PackageSearch, Ghost } from 'lucide-react';
+import { DownloadCloud, Loader2, CheckCircle2, AlertCircle, FileSearch, Sparkles, Database, PackageSearch, Ghost, Camera, X } from 'lucide-react';
 import { CountingSession, ExpectedOrder } from '../types';
 import * as sessionService from '../services/sessionService'; 
 import { sanitizeBarcode } from '../services/utils';
@@ -10,6 +10,7 @@ import { useHIDScanner } from '../hooks/useHIDScanner';
 import { Modal } from './common/Modal';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
+import { CameraScanner } from './CameraScanner';
 
 interface StartSessionModalProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
   const [labelId, setLabelId] = useState('');
   const [error, setError] = useState('');
   const [activeKeypadField, setActiveKeypadField] = useState<'label' | 'erp'>('label');
+  const [isLabelCameraOpen, setIsLabelCameraOpen] = useState(false);
   
   const [isCloudLoading, setIsCloudLoading] = useState(false);
   const [isSyncingAll, setIsSyncingAll] = useState(false);
@@ -30,7 +32,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
   const ordersInLocalCount = useLiveQuery(() => db.expectedOrders.count(), [], 0);
 
   useHIDScanner({
-      isEnabled: isOpen,
+      isEnabled: isOpen && !isLabelCameraOpen,
       onScan: (raw) => {
           const cleanCode = sanitizeBarcode(raw);
           if (activeKeypadField === 'label') {
@@ -108,6 +110,16 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
     }
   };
 
+  const handleCameraScan = (code: string) => {
+      const clean = sanitizeBarcode(code);
+      if (clean) {
+          setLabelId(clean);
+          setIsLabelCameraOpen(false);
+          setActiveKeypadField('erp');
+          SoundFX.play('success');
+      }
+  };
+
   return (
     <Modal 
         isOpen={isOpen} 
@@ -137,17 +149,25 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
                 </span>
             </button>
 
-            {/* INPUT BULTO */}
+            {/* INPUT BULTO CON CÁMARA */}
             <div className="space-y-1">
                 <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-4">Etiqueta Física</span>
-                <button 
-                    onClick={() => setActiveKeypadField('label')} 
-                    className={`w-full h-20 rounded-2xl flex items-center justify-center font-mono font-black text-2xl border-4 transition-all duration-300 ${activeKeypadField === 'label' ? 'bg-blue-600 border-blue-400 text-white shadow-[0_0_20px_rgba(59,130,246,0.3)]' : 'bg-slate-900 border-white/5 text-slate-500'}`}
-                >
-                    <span className={`tracking-[0.1em] px-4 truncate ${!labelId ? 'opacity-30 text-lg italic' : ''}`}>
-                        {labelId || "ID_BULTO_SSCC"}
-                    </span>
-                </button>
+                <div className="flex gap-2">
+                    <button 
+                        onClick={() => setActiveKeypadField('label')} 
+                        className={`flex-1 h-20 rounded-2xl flex items-center justify-center font-mono font-black text-2xl border-4 transition-all duration-300 ${activeKeypadField === 'label' ? 'bg-blue-600 border-blue-400 text-white shadow-[0_0_20px_rgba(59,130,246,0.3)]' : 'bg-slate-900 border-white/5 text-slate-500'}`}
+                    >
+                        <span className={`tracking-[0.1em] px-4 truncate ${!labelId ? 'opacity-30 text-lg italic' : ''}`}>
+                            {labelId || "ID_BULTO_SSCC"}
+                        </span>
+                    </button>
+                    <button 
+                        onClick={() => setIsLabelCameraOpen(true)}
+                        className="w-20 h-20 bg-blue-600/20 border-4 border-blue-500/30 rounded-2xl flex items-center justify-center text-blue-400 active:bg-blue-600 active:text-white transition-all shadow-lg"
+                    >
+                        <Camera className="w-8 h-8" />
+                    </button>
+                </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -216,6 +236,17 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
                 {cloudOrder ? 'INICIAR VERIFICADO' : (erpOrder ? 'INICIAR MANUAL' : (ordersInLocalCount > 0 ? 'PISTEAR Y DEDUCIR' : 'PISTEAR SIN GUÍA'))}
             </button>
         </div>
+
+        {/* CÁMARA PARA ETIQUETA */}
+        {isLabelCameraOpen && (
+            <div className="fixed inset-0 z-[300]">
+                <CameraScanner 
+                    onScan={handleCameraScan} 
+                    onClose={() => setIsLabelCameraOpen(false)} 
+                    isTriggered={true} 
+                />
+            </div>
+        )}
     </Modal>
   );
 };
