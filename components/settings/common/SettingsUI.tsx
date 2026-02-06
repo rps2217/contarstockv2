@@ -3,56 +3,60 @@ import React from 'react';
 import { Loader2 } from 'lucide-react';
 
 export const SettingsSection = ({ children, title, className = "" }: any) => (
-    <div className={`space-y-6 mb-12 animate-in slide-in-from-bottom-2 ${className}`}>
+    <div className={`space-y-4 mb-10 animate-in slide-in-from-bottom-2 ${className}`}>
         {title && (
-            <h3 className="ml-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-4 flex items-center gap-3">
+            <h3 className="ml-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-4 flex items-center gap-3">
                 <div className="h-1.5 w-6 bg-blue-600 rounded-full"></div> {title}
             </h3>
         )}
-        <div className="space-y-4">
+        <div className={className.includes('grid') ? className : "space-y-3"}>
             {children}
         </div>
     </div>
 );
 
 export const SettingsCard = ({ children, className = "" }: any) => (
-    <div className={`bg-white dark:bg-slate-900 border-4 border-slate-100 dark:border-white/5 p-8 rounded-[3rem] shadow-sm ${className}`}>
+    <div className={`bg-white dark:bg-slate-900 border-4 border-slate-100 dark:border-white/5 p-6 rounded-[2.5rem] shadow-sm ${className}`}>
         {children}
     </div>
 );
 
+/**
+ * TOGGLE INDUSTRIAL VERTICAL
+ * Optimizado para Layout de 2 columnas.
+ */
 export const SettingsToggle = ({ active, label, description, icon: Icon, onClick }: any) => (
     <button 
         onClick={onClick}
-        className={`w-full p-6 rounded-[2.8rem] border-4 transition-all duration-300 flex items-center gap-6 active:scale-[0.97] group ${
+        className={`w-full h-44 p-5 rounded-[2.5rem] border-4 transition-all duration-300 flex flex-col items-center justify-between active:scale-[0.95] group relative overflow-hidden ${
             active 
-            ? 'bg-blue-600 border-blue-400 text-white shadow-xl shadow-blue-900/20' 
-            : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200 dark:bg-slate-900 dark:border-white/5'
+            ? 'bg-blue-600 border-blue-400 text-white shadow-xl shadow-blue-900/30' 
+            : 'bg-slate-100 dark:bg-slate-900 border-slate-200 dark:border-white/5 text-slate-400'
         }`}
     >
-        <div className={`p-5 rounded-3xl transition-colors shrink-0 ${active ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-black/20 text-slate-400'}`}>
-            <Icon className="w-9 h-9 stroke-[2.5px]" />
+        {/* Indicador de Estado LED */}
+        <div className={`absolute top-4 right-4 w-2 h-2 rounded-full ${active ? 'bg-white shadow-[0_0_10px_white] animate-pulse' : 'bg-slate-700'}`} />
+
+        <div className={`p-3 rounded-2xl transition-colors ${active ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-black/40 text-slate-500'}`}>
+            <Icon className="w-8 h-8 stroke-[2.5px]" />
         </div>
         
-        <div className="flex-1 text-left min-w-0">
-            <div className={`font-black uppercase tracking-[0.1em] text-[13px] mb-1.5 leading-none ${active ? 'text-white' : 'text-slate-900 dark:text-white'}`}>
+        <div className="text-center px-1">
+            <div className={`font-black uppercase tracking-tight text-[11px] leading-tight mb-1 ${active ? 'text-white' : 'text-slate-900 dark:text-slate-300'}`}>
                 {label}
             </div>
-            {description && (
-                <div className={`text-[10px] font-bold uppercase tracking-tight opacity-60 ${active ? 'text-blue-100' : 'text-slate-400'}`}>
-                    {description}
-                </div>
-            )}
+            <div className={`text-[8px] font-bold uppercase tracking-widest opacity-60 line-clamp-1 ${active ? 'text-blue-100' : 'text-slate-500'}`}>
+                {description}
+            </div>
         </div>
 
-        {/* Interruptor Visual Industrial */}
-        <div className={`w-18 h-11 rounded-full border-4 shrink-0 relative transition-all duration-300 flex items-center px-1.5 ${active ? 'bg-white/30 border-white' : 'bg-slate-100 border-slate-200 dark:bg-black/40 dark:border-white/10'}`}>
-            <div className={`w-6 h-6 rounded-full shadow-lg transition-all duration-300 transform ${active ? 'translate-x-7 bg-white scale-110' : 'translate-x-0 bg-slate-400 dark:bg-slate-600'}`} />
+        {/* Interruptor Estilo Hardware */}
+        <div className={`w-14 h-8 rounded-full border-2 shrink-0 relative transition-all flex items-center px-1 ${active ? 'bg-white/20 border-white' : 'bg-slate-200 dark:bg-black/40 border-slate-300 dark:border-white/10'}`}>
+            <div className={`w-5 h-5 rounded-full shadow-md transition-all transform ${active ? 'translate-x-6 bg-white' : 'translate-x-0 bg-slate-400 dark:bg-slate-600'}`} />
         </div>
     </button>
 );
 
-// Added missing SettingsInput component
 export const SettingsInput = ({ value, onChange, placeholder, className = "", ...props }: any) => (
     <input 
         value={value}
