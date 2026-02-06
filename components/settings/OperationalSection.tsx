@@ -17,21 +17,21 @@ export const OperationalSection: React.FC<Props> = ({ settings, updateSetting })
     };
 
     return (
-        <SettingsSection title="Preferencias de Campo" className="grid grid-cols-2 gap-3">
+        <SettingsSection title="Preferencias de Campo">
             
             <SettingsToggle 
                 active={settings.continuousMode} 
                 onClick={() => handleToggle('continuousMode')}
                 label="Escaneo Continuo"
-                description="Gatillo automático"
+                description="Gatillo automático sin pausas"
                 icon={FastForward}
             />
 
             <SettingsToggle 
                 active={settings.batchTrackingEnabled} 
                 onClick={() => handleToggle('batchTrackingEnabled')}
-                label="Gestión Lotes"
-                description="Habilitar Vencimientos"
+                label="Gestión de Lotes"
+                description="Habilitar lote y vencimiento"
                 icon={CalendarRange}
             />
 
@@ -39,47 +39,47 @@ export const OperationalSection: React.FC<Props> = ({ settings, updateSetting })
                 active={settings.autoRegisterUnknown} 
                 onClick={() => handleToggle('autoRegisterUnknown')}
                 label="Auto-Registro"
-                description="Captura instantánea"
+                description="Captura instantánea de SKUs nuevos"
                 icon={Zap}
             />
 
             <SettingsToggle 
                 active={settings.ttsEnabled} 
                 onClick={() => handleToggle('ttsEnabled')}
-                label="Voz IA"
-                description="Asistente audible"
+                label="Asistente de Voz IA"
+                description="Lectura audible de conteos"
                 icon={Mic}
             />
 
             <SettingsToggle 
                 active={settings.soundEnabled} 
                 onClick={() => handleToggle('soundEnabled')}
-                label="Audio Beep"
-                description="Feedback industrial"
+                label="Audio Feedback"
+                description="Beeps de confirmación industrial"
                 icon={Volume2}
             />
             
             <SettingsToggle 
                 active={settings.hapticsEnabled} 
                 onClick={() => handleToggle('hapticsEnabled')}
-                label="Vibración"
-                description="Respuesta táctil"
+                label="Respuesta Táctil"
+                description="Vibración al escanear"
                 icon={Smartphone}
             />
 
             <SettingsToggle 
                 active={settings.confirmDelete} 
                 onClick={() => handleToggle('confirmDelete')}
-                label="Safe Delete"
-                description="Confirmar borrados"
+                label="Modo Seguro"
+                description="Confirmar borrado de registros"
                 icon={ShieldCheck}
             />
             
             <SettingsToggle 
                 active={settings.lowPerformanceMode} 
                 onClick={() => handleToggle('lowPerformanceMode')}
-                label="Eco Mode"
-                description="Ahorro de batería"
+                label="Ahorro de Batería"
+                description="Optimizar consumo en turnos largos"
                 icon={Cpu}
             />
         </SettingsSection>
