@@ -31,20 +31,30 @@ export const getStatusColorClasses = (status: ItemStatus, variant: 'bg' | 'borde
 };
 
 /**
- * Protocolo SoC: Lógica de decisión para disparo de modal de vencimiento
+ * SoC: Decisión centralizada sobre captura de metadatos (Fecha/Lote)
+ * CRÍTICO: Debe retornar true si es el primer escaneo físico del bulto actual.
  */
 export const shouldPromptForBatch = (
     barcode: string, 
-    recentItems: ConsolidatedItem[], 
+    consolidatedItems: ConsolidatedItem[] | undefined, 
     settings: AppSettings
 ): boolean => {
+    // Si el rastreo de bultos está apagado globalmente, nunca preguntar
     if (!settings.batchTrackingEnabled) return false;
     
+    if (!consolidatedItems) return true;
+
     const normInbound = normalizeSku(barcode);
-    const existing = recentItems.find(i => normalizeSku(i.barcode) === normInbound);
     
-    // Si el ítem no existe o su cantidad es 0, requiere captura de fecha/lote
-    return !existing || existing.totalQuantity === 0;
+    // Buscamos específicamente si este SKU ya tiene un registro de escaneo FÍSICO previo en esta sesión
+    const existingScanned = consolidatedItems.find(i => 
+        normalizeSku(i.barcode) === normInbound && 
+        i.totalQuantity > 0 && 
+        i.location !== 'GUÍA'
+    );
+    
+    // Si no existe un escaneo físico previo (totalQty > 0), requerimos fecha/lote
+    return !existingScanned;
 };
 
 export const getRowStyles = (current: number, target?: number, isActive?: boolean) => {

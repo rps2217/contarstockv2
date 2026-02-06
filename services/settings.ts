@@ -18,7 +18,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   lowPerformanceMode: false,
   predictiveHintsEnabled: false,
   continuousMode: true,        
-  batchTrackingEnabled: false, // Desactivado por defecto según requerimiento
+  batchTrackingEnabled: true, // Forzado a True para asegurar captura de vencimientos
   appSheetConfig: {
       appId: '',
       accessKey: '',

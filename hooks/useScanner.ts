@@ -13,21 +13,18 @@ import { useFeedbackSystem, FeedbackStatus } from './useFeedbackSystem';
 import { aggregateScans } from '../services/aggregator';
 import { calculateOrderMatch } from '../services/matcher';
 
-export type ScannerFeedback = FeedbackStatus; 
+export type ScannerFeedback = FeedbackStatus;
 
 export const useScanner = (session: CountingSession, onFinish: () => void) => {
     const settings = useMemo(() => getSettings(), []);
     const { feedback, trigger } = useFeedbackSystem(150);
     
     const [status, setStatus] = useState<ScannerStatus>('idle');
-    const [manualInput, setManualInput] = useState('');
     const [multiplier, setMultiplier] = useState(1);
     const [currentLocation, setCurrentLocation] = useState('BODEGA_GRAL'); 
     const [aiLocationSuggestion, setAiLocationSuggestion] = useState<string | null>(null);
-    
     const [activeBarcode, setActiveBarcode] = useState<string | null>(null);
     const [optimisticQty, setOptimisticQty] = useState<number | null>(null);
-
     const [rememberedDate, setRememberedDate] = useState<{mm: number, yyyy: number, batch: string} | null>(null);
     const [deducedOrder, setDeducedOrder] = useState<ExpectedOrder | null>(null);
     const [isDeducing, setIsDeducing] = useState(false);
@@ -40,7 +37,7 @@ export const useScanner = (session: CountingSession, onFinish: () => void) => {
         return currentSessionData?.expectedItems || deducedOrder?.items || [];
     }, [currentSessionData?.expectedItems, deducedOrder?.items]);
 
-    const isVerified = currentSessionData?.isVerifiedMode || !!deducedOrder;
+    const isVerified = !!(currentSessionData?.isVerifiedMode || deducedOrder);
 
     const consolidatedHistory = useLiveQuery(async () => {
         const scans = await db.scans.where('sessionId').equals(session.id).toArray();
@@ -88,6 +85,46 @@ export const useScanner = (session: CountingSession, onFinish: () => void) => {
         return sorted;
     }, [session.id, isVerified, activeExpectedItems, activeBarcode, feedback]);
 
+    // --- MOTOR DE DEDUCCIÓN (DETECTIVE) ---
+    useEffect(() => {
+        const erpLabel = currentSessionData?.erpOrder || '';
+        const needsDeduction = erpLabel.includes('BUSCANDO') || erpLabel.includes('CONTEO_CIEGO');
+        
+        if (!needsDeduction || deducedOrder || !consolidatedHistory) return;
+        
+        const physicalPicks = consolidatedHistory.filter(i => i.totalQuantity > 0);
+        if (physicalPicks.length < 1) return; 
+
+        const runDeduction = async () => {
+            setIsDeducing(true);
+            const allExpected = await db.expectedOrders.toArray();
+            let bestMatch: any = null;
+
+            for (const order of allExpected) {
+                const match = calculateOrderMatch(physicalPicks, order);
+                if (match.matchScore > 30) {
+                    if (!bestMatch || match.matchScore > bestMatch.matchScore) {
+                        bestMatch = match;
+                    }
+                }
+            }
+
+            if (bestMatch && bestMatch.matchScore >= 60) {
+                setDeducedOrder(bestMatch.expectedOrder);
+                await db.sessions.update(session.id, {
+                    erpOrder: bestMatch.expectedOrder.internalId,
+                    expectedItems: bestMatch.expectedOrder.items,
+                    isVerifiedMode: true
+                });
+                SoundFX.play('success');
+            }
+            setIsDeducing(false);
+        };
+
+        const timer = setTimeout(runDeduction, 500);
+        return () => clearTimeout(timer);
+    }, [consolidatedHistory, currentSessionData, deducedOrder, session.id]);
+
     const finalizeScanPipeline = useCallback(async (barcode: string, qty: number, mm?: number, yyyy?: number, batch?: string) => {
         try {
             const cleanBarcode = sanitizeBarcode(barcode);
@@ -115,9 +152,9 @@ export const useScanner = (session: CountingSession, onFinish: () => void) => {
                 });
             }
 
-            const finalMM = mm || rememberedDate?.mm;
-            const finalYYYY = yyyy || rememberedDate?.yyyy;
-            const finalBatch = batch || rememberedDate?.batch;
+            const finalMM = mm || (rememberedDate && normBarcode === activeBarcode ? rememberedDate.mm : undefined);
+            const finalYYYY = yyyy || (rememberedDate && normBarcode === activeBarcode ? rememberedDate.yyyy : undefined);
+            const finalBatch = batch || (rememberedDate && normBarcode === activeBarcode ? rememberedDate.batch : undefined);
 
             const existingInList = itemsRef.current.find(i => normalizeSku(i.barcode) === normBarcode);
             const currentTotal = existingInList?.totalQuantity || 0;
@@ -133,46 +170,38 @@ export const useScanner = (session: CountingSession, onFinish: () => void) => {
         } catch (err) {
             trigger('error');
         }
-    }, [session.id, activeExpectedItems, settings, trigger, currentLocation, rememberedDate]);
-
-    const handleInboundScan = useCallback((rawBarcode: string, qtyOverride?: number, mm?: number, yyyy?: number, batch?: string) => {
-        const barcode = sanitizeBarcode(rawBarcode);
-        if (!barcode || barcode.length < 2) return;
-        const qtyToApply = qtyOverride !== undefined ? qtyOverride : multiplier;
-        if (qtyOverride === undefined) setMultiplier(1); 
-        finalizeScanPipeline(barcode, qtyToApply, mm, yyyy, batch);
-    }, [multiplier, finalizeScanPipeline]);
+    }, [session.id, activeExpectedItems, settings, trigger, currentLocation, rememberedDate, activeBarcode]);
 
     return {
         state: { 
-            status, setStatus, feedback, manualInput, setManualInput, multiplier, setMultiplier,
+            status, setStatus, feedback, multiplier, setMultiplier,
             currentLocation, setCurrentLocation,
             aiLocationSuggestion, setAiLocationSuggestion,
             optimisticActiveQty: optimisticQty || 0,
             activeBarcode,
             rememberedDate,
             isDeducing,
-            deducedErp: currentSessionData?.erpOrder
+            deducedErp: deducedOrder?.internalId || currentSessionData?.erpOrder
         },
         data: { 
             lastScan: useMemo(() => {
                 if (!activeBarcode) return undefined;
                 const realItem = consolidatedHistory?.find(i => normalizeSku(i.barcode) === activeBarcode);
-                const qtyToShow = optimisticQty !== null ? optimisticQty : (realItem?.totalQuantity || 0);
+                const qtyToShow = (optimisticQty !== null && activeBarcode === normalizeSku(realItem?.barcode || '')) ? optimisticQty : (realItem?.totalQuantity || 0);
                 return realItem ? { ...realItem, totalQuantity: qtyToShow } : { barcode: activeBarcode, productName: '...', totalQuantity: qtyToShow, scans: 1 } as any;
             }, [consolidatedHistory, activeBarcode, optimisticQty]),
             recentScans: consolidatedHistory 
         },
         actions: { 
-            handleExternalScan: handleInboundScan,
+            handleExternalScan: finalizeScanPipeline,
             selectItem: (b: string) => { 
                 const norm = normalizeSku(b);
                 setActiveBarcode(norm); 
-                setOptimisticQty(itemsRef.current.find(i => normalizeSku(i.barcode) === norm)?.totalQuantity || 0); 
+                const existing = itemsRef.current.find(i => normalizeSku(i.barcode) === norm);
+                setOptimisticQty(existing?.totalQuantity || 0); 
             },
             setRememberedDate: (val: any) => setRememberedDate(val),
             changeLogisticsLabel: (label: string) => sessionService.updateSessionLabel(session.id, label),
-            handleQuantityChange: (barcode: string, qty: number, batch?: string) => finalizeScanPipeline(barcode, qty, undefined, undefined, batch),
             handleDeleteProduct: async (barcode: string, batch?: string) => {
                 await sessionService.deleteSessionItemByBatch(session.id, barcode, batch);
                 if (activeBarcode === normalizeSku(barcode)) setActiveBarcode(null);
