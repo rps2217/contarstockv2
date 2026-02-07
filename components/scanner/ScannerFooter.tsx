@@ -1,17 +1,19 @@
 
 import React from 'react';
-import { Camera, Keyboard, Package, Trash2 } from 'lucide-react';
+import { Camera, Keyboard, Package, Zap } from 'lucide-react';
 
 interface Props {
     multiplier: number;
     unitsPerBox?: number;
+    isTriggerActive?: boolean;
     onMultiplierChange: (val: number) => void;
     onOpenManual: () => void;
-    onTriggerCamera: () => void;
+    onTriggerStart: () => void;
+    onTriggerEnd: () => void;
 }
 
 export const ScannerFooter: React.FC<Props> = ({ 
-    multiplier, unitsPerBox, onMultiplierChange, onOpenManual, onTriggerCamera 
+    multiplier, unitsPerBox, isTriggerActive, onMultiplierChange, onOpenManual, onTriggerStart, onTriggerEnd 
 }) => {
     return (
         <div className="h-24 shrink-0 bg-slate-950 border-t border-white/10 flex items-center px-4 gap-3 pb-safe-area shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
@@ -23,24 +25,32 @@ export const ScannerFooter: React.FC<Props> = ({
                 x{multiplier}
             </button>
 
-            {/* MULTIPLICADOR POR CAJA (Situación Probable/Útil) */}
+            {/* MULTIPLICADOR POR CAJA */}
             {unitsPerBox && unitsPerBox > 1 && (
                 <button 
                     onClick={() => onMultiplierChange(unitsPerBox)}
-                    className={`h-14 px-4 rounded-2xl font-black text-[10px] border-2 transition-all active:scale-90 flex flex-col items-center justify-center gap-0.5 ${multiplier === unitsPerBox ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-indigo-900/20 border-indigo-500/30 text-indigo-400'}`}
+                    className={`h-14 px-4 rounded-2xl font-black text-[10px] border-2 transition-all active:scale-90 flex flex-col items-center justify-center gap-0.5 ${multiplier === unitsPerBox ? 'bg-indigo-600 border-indigo-400 text-white shadow-[0_0_15px_rgba(79,70,229,0.4)]' : 'bg-indigo-900/20 border-indigo-500/30 text-indigo-400'}`}
                 >
                     <Package className="w-4 h-4" />
                     CAJA {unitsPerBox}
                 </button>
             )}
 
-            {/* GATILLO ÓPTICO PRINCIPAL */}
+            {/* GATILLO ÓPTICO (Modo Momentáneo) */}
             <button 
-                onPointerDown={(e) => { e.preventDefault(); onTriggerCamera(); }} 
-                className="flex-1 h-14 bg-white text-black rounded-2xl flex items-center justify-center gap-3 active:bg-blue-600 active:text-white transition-all border-b-4 border-slate-300 active:border-b-0 active:translate-y-1"
+                onPointerDown={(e) => { e.preventDefault(); onTriggerStart(); }}
+                onPointerUp={(e) => { e.preventDefault(); onTriggerEnd(); }}
+                onPointerLeave={(e) => { e.preventDefault(); onTriggerEnd(); }}
+                className={`flex-1 h-16 rounded-2xl flex items-center justify-center gap-4 transition-all duration-75 select-none touch-none border-b-4 active:border-b-0 active:translate-y-1 ${
+                    isTriggerActive 
+                    ? 'bg-blue-600 text-white border-blue-800 shadow-[0_0_20px_rgba(59,130,246,0.4)] scale-[0.98]' 
+                    : 'bg-white text-black border-slate-300 shadow-xl'
+                }`}
             >
-                <Camera className="w-6 h-6" />
-                <span className="text-[11px] font-black uppercase tracking-widest">Gatillo</span>
+                {isTriggerActive ? <Zap className="w-6 h-6 fill-current animate-pulse" /> : <Camera className="w-6 h-6" />}
+                <span className="text-[11px] font-black uppercase tracking-[0.2em]">
+                    {isTriggerActive ? 'LÁSER ACTIVADO' : 'MANTENER GATILLO'}
+                </span>
             </button>
 
             {/* ENTRADA MANUAL */}

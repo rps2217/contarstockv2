@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMassiveScanner } from '../hooks/useMassiveScanner';
 import { CameraScanner } from './CameraScanner';
@@ -38,6 +38,17 @@ export const MassiveBlindView: React.FC = () => {
         activeBarcode: state.lastScannedItem?.barcode 
     }), [actions.selectItem, state.lastScannedItem?.barcode]);
 
+    // GATILLO TÁCTICO: Funciones de manejo
+    const startTrigger = useCallback(() => {
+        if (isScreenLocked) return;
+        setIsTriggerActive(true);
+        if (navigator.vibrate) navigator.vibrate(30);
+    }, [isScreenLocked]);
+
+    const endTrigger = useCallback(() => {
+        setIsTriggerActive(false);
+    }, []);
+
     return (
         <div className="fixed inset-0 z-[100] flex flex-col font-mono bg-black select-none overflow-hidden text-white">
             
@@ -70,14 +81,21 @@ export const MassiveBlindView: React.FC = () => {
             <ScannerFooter 
                 multiplier={state.multiplier}
                 unitsPerBox={state.activeProduct?.unitsPerBox}
+                isTriggerActive={isTriggerActive}
                 onMultiplierChange={actions.setMultiplier}
                 onOpenManual={() => setShowKeypad(true)}
-                onTriggerCamera={() => setIsTriggerActive(true)}
+                onTriggerStart={startTrigger}
+                onTriggerEnd={endTrigger}
             />
 
+            {/* El componente CameraScanner SOLO existe mientras isTriggerActive es true */}
             {isTriggerActive && (
                 <div className="fixed inset-0 z-[200]">
-                    <CameraScanner onScan={(code) => { actions.registerScan(code); setIsTriggerActive(false); }} onClose={() => setIsTriggerActive(false)} isTriggered={true} />
+                    <CameraScanner 
+                        onScan={(code) => actions.registerScan(code)} 
+                        onClose={endTrigger} 
+                        isTriggered={true} 
+                    />
                 </div>
             )}
 
