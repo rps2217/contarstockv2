@@ -1,0 +1,162 @@
+
+import { useState, useEffect, useRef, useCallback, useReducer } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from '../../../db';
+import * as sessionService from '../../../services/sessionService'; 
+import * as productService from '../../../services/productService';
+import { sanitizeBarcode, normalizeSku } from '../../../services/utils';
+import { SoundFX } from '../../../services/audio';
+import { getSettings } from '../../../services/settings';
+import { useFeedbackSystem } from '../../../hooks/useFeedbackSystem';
+import { aggregateScans } from '../../../services/aggregator';
+import { shouldPromptForBatch } from '../../../services/uiLogic';
+import { scannerReducer, ScannerState } from '../../../services/scannerMachine';
+import { Product, ConsolidatedItem } from '../../../types';
+
+export const useCountingLogic = (sessionId: string | undefined, onExit: () => void) => {
+    const settings = getSettings();
+    const { feedback, trigger } = useFeedbackSystem(200);
+    const [machineState, dispatch] = useReducer(scannerReducer, 'IDLE');
+    
+    // Estado Persistente en RAM
+    const [multiplier, setMultiplier] = useState(1);
+    const [currentLocation, setCurrentLocation] = useState(() => localStorage.getItem('last_loc') || 'BODEGA_GRAL'); 
+    const [activeBarcode, setActiveBarcode] = useState<string | null>(null);
+    const [activeProduct, setActiveProduct] = useState<Product | null>(null);
+    const [optimisticQty, setOptimisticQty] = useState<number | null>(null);
+
+    const itemsRef = useRef<ConsolidatedItem[]>([]);
+    
+    useEffect(() => { localStorage.setItem('last_loc', currentLocation); }, [currentLocation]);
+
+    // Data Fetching Reactivo
+    const session = useLiveQuery(async () => {
+        if (!sessionId) return null;
+        return await db.sessions.get(sessionId);
+    }, [sessionId]);
+
+    const consolidatedHistory = useLiveQuery(async () => {
+        if (!sessionId) return [];
+        const scans = await db.scans.where('sessionId').equals(sessionId).toArray();
+        const physicalItems = await aggregateScans(scans);
+        
+        // Match con Guía (Si existe)
+        const expectedItems = session?.expectedItems || [];
+        const expectedMap = new Map(expectedItems.map(ei => [normalizeSku(ei.barcode), ei.expectedQty]));
+
+        const finalItems = physicalItems.map(pi => ({
+            ...pi,
+            expectedQuantity: expectedMap.get(normalizeSku(pi.barcode)) || 0
+        }));
+
+        if (session?.isVerifiedMode) {
+            const scannedBarcodes = new Set(physicalItems.map(pi => normalizeSku(pi.barcode)));
+            expectedItems.forEach(exp => {
+                if (!scannedBarcodes.has(normalizeSku(exp.barcode))) {
+                    finalItems.push({
+                        barcode: exp.barcode,
+                        productName: exp.name,
+                        totalQuantity: 0,
+                        expectedQuantity: exp.expectedQty,
+                        scans: 0,
+                        location: 'GUÍA'
+                    });
+                }
+            });
+        }
+
+        const sorted = finalItems.sort((a, b) => {
+            if (normalizeSku(a.barcode) === activeBarcode) return -1;
+            if (normalizeSku(b.barcode) === activeBarcode) return 1;
+            return b.totalQuantity - a.totalQuantity;
+        });
+
+        itemsRef.current = sorted;
+        return sorted;
+    }, [sessionId, session, activeBarcode, feedback]);
+
+    // Pipeline de Escaneo
+    const finalizeScanPipeline = useCallback(async (barcode: string, qty: number, mm?: number, yyyy?: number, batch?: string) => {
+        if (!sessionId) return;
+        
+        // Protección de Estado
+        if (machineState !== 'IDLE' && machineState !== 'LOOKING_UP' && machineState !== 'COMMITTING' && machineState !== 'MANUAL_ENTRY') return;
+
+        dispatch({ type: 'SCAN_INBOUND', barcode });
+        try {
+            const cleanBarcode = sanitizeBarcode(barcode);
+            const normBarcode = normalizeSku(cleanBarcode);
+            
+            // 1. Resolver Producto
+            let product = await productService.getProductByBarcode(cleanBarcode);
+            setActiveProduct(product || null);
+
+            // 2. Verificar Lotes (Pharma Check)
+            const needsPharma = shouldPromptForBatch(cleanBarcode, consolidatedHistory || [], settings) && (mm === undefined);
+            if (needsPharma) {
+                setActiveBarcode(normBarcode);
+                dispatch({ type: 'PRODUCT_RESOLVED', needsPharma: true });
+                return;
+            }
+            dispatch({ type: 'PRODUCT_RESOLVED', needsPharma: false });
+
+            // 3. Update Optimista (Zero Latency UI)
+            const existing = itemsRef.current.find(i => normalizeSku(i.barcode) === normBarcode);
+            const newTotal = Math.max(0, (existing?.totalQuantity || 0) + qty);
+            
+            setOptimisticQty(newTotal);
+            setActiveBarcode(normBarcode);
+
+            // 4. Persistencia (Async)
+            await sessionService.addScanEvent(sessionId, cleanBarcode, qty, mm, yyyy, currentLocation);
+            
+            dispatch({ type: 'COMMIT_COMPLETE' });
+            trigger(qty > 0 ? 'success' : 'undo');
+            
+            if (settings.ttsEnabled && qty > 0) SoundFX.speak(`${newTotal}`);
+
+        } catch (err) {
+            dispatch({ type: 'ERROR_OCCURRED' });
+            trigger('error');
+        }
+    }, [sessionId, settings, trigger, currentLocation, consolidatedHistory, machineState]);
+
+    return {
+        state: { 
+            isLoading: session === undefined,
+            status: machineState.toLowerCase(),
+            feedback, multiplier, currentLocation,
+            activeBarcode, activeProduct,
+            optimisticActiveQty: optimisticQty || 0
+        },
+        sessionData: {
+            session,
+            history: consolidatedHistory || []
+        },
+        actions: { 
+            setMultiplier, 
+            setCurrentLocation, 
+            handleExternalScan: finalizeScanPipeline,
+            selectItem: (b: string) => { 
+                const norm = normalizeSku(b);
+                setActiveBarcode(norm); 
+                const existing = itemsRef.current.find(i => normalizeSku(i.barcode) === norm);
+                setOptimisticQty(existing?.totalQuantity || 0); 
+                productService.getProductByBarcode(b).then(setActiveProduct);
+            },
+            handlePharmaComplete: (m?: number, y?: number, b?: string) => {
+                if (activeBarcode) finalizeScanPipeline(activeBarcode, multiplier, m, y, b);
+            },
+            undoLastScan: async () => {
+                if(sessionId) {
+                    const undone = await sessionService.undoLastAction(sessionId);
+                    if(undone) trigger('undo');
+                }
+            },
+            setStatus: (s: 'manual' | 'idle') => {
+                if (s === 'manual') dispatch({ type: 'OPEN_MANUAL' });
+                else dispatch({ type: 'RESET' });
+            }
+        }
+    };
+};
