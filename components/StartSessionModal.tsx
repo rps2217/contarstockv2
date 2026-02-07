@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
-import { DownloadCloud, Loader2, CheckCircle2, AlertCircle, FileSearch, Sparkles, Database, PackageSearch, Ghost, Camera, X } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { DownloadCloud, Loader2, AlertCircle, FileSearch, Sparkles, Database, Ghost, Camera, X, Box } from 'lucide-react';
 import { CountingSession, ExpectedOrder } from '../types';
 import * as sessionService from '../services/sessionService'; 
 import { sanitizeBarcode } from '../services/utils';
@@ -22,22 +22,22 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
   const [erpOrder, setErpOrder] = useState('');
   const [labelId, setLabelId] = useState('');
   const [error, setError] = useState('');
-  const [activeKeypadField, setActiveKeypadField] = useState<'label' | 'erp'>('label');
-  const [isLabelCameraOpen, setIsLabelCameraOpen] = useState(false);
+  const [activeField, setActiveField] = useState<'label' | 'erp'>('label');
   
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isCloudLoading, setIsCloudLoading] = useState(false);
-  const [isSyncingAll, setIsSyncingAll] = useState(false);
   const [cloudOrder, setCloudOrder] = useState<ExpectedOrder | null>(null);
 
   const ordersInLocalCount = useLiveQuery(() => db.expectedOrders.count(), [], 0);
 
+  // Scanner de hardware integrado
   useHIDScanner({
-      isEnabled: isOpen && !isLabelCameraOpen,
+      isEnabled: isOpen && !isCameraOpen,
       onScan: (raw) => {
           const cleanCode = sanitizeBarcode(raw);
-          if (activeKeypadField === 'label') {
+          if (activeField === 'label') {
               setLabelId(cleanCode);
-              setActiveKeypadField('erp'); 
+              setActiveField('erp'); 
               SoundFX.play('success');
           } else {
               setErpOrder(cleanCode);
@@ -46,19 +46,19 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
       }
   });
 
-  const handleFetchAll = async () => {
-    setIsSyncingAll(true);
-    try {
-        const count = await sessionService.fetchAllOrdersFromCloud();
-        SoundFX.play('success');
-        alert(`✓ ${count} Órdenes sincronizadas para modo Detective.`);
-    } catch (e: any) {
-        SoundFX.play('error');
-        setError("Error cargando base de pedidos: " + e.message);
-    } finally {
-        setIsSyncingAll(false);
-    }
-  };
+  const handleCameraScan = useCallback((code: string) => {
+      const clean = sanitizeBarcode(code);
+      if (clean) {
+          if (activeField === 'label') {
+              setLabelId(clean);
+              setActiveField('erp');
+          } else {
+              setErpOrder(clean);
+          }
+          setIsCameraOpen(false);
+          SoundFX.play('success');
+      }
+  }, [activeField]);
 
   const handleFetchFromCloud = async () => {
     if (!erpOrder.trim()) return;
@@ -67,7 +67,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
     try {
         const order = await sessionService.fetchExpectedItemsFromCloud(erpOrder);
         if (!order || order.items.length === 0) {
-            setError("Documento no encontrado");
+            setError("Documento no encontrado en nube");
             setCloudOrder(null);
             SoundFX.play('error');
         } else {
@@ -75,7 +75,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
             SoundFX.play('success');
         }
     } catch (err: any) {
-        setError("Fallo de conexión cloud");
+        setError("Error de red: " + err.message);
         setCloudOrder(null);
     } finally {
         setIsCloudLoading(false);
@@ -110,16 +110,6 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
     }
   };
 
-  const handleCameraScan = (code: string) => {
-      const clean = sanitizeBarcode(code);
-      if (clean) {
-          setLabelId(clean);
-          setIsLabelCameraOpen(false);
-          setActiveKeypadField('erp');
-          SoundFX.play('success');
-      }
-  };
-
   return (
     <Modal 
         isOpen={isOpen} 
@@ -128,100 +118,94 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
         className="md:max-w-md bg-slate-950 text-white"
         showCloseButton={true}
     >
-        <div className="px-6 pt-10 pb-2 space-y-4">
+        <div className="px-6 pt-10 pb-4 space-y-6">
             
             {error && (
                 <div className="bg-rose-900/40 text-rose-400 p-4 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-rose-500/30 flex items-center gap-3 animate-in shake">
-                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <AlertCircle className="w-5 h-5 shrink-0" />
                     {error}
                 </div>
             )}
 
-            {/* SYNC GENERAL BUTTON */}
-            <button 
-                onClick={handleFetchAll}
-                disabled={isSyncingAll}
-                className="w-full bg-indigo-600/20 border-2 border-indigo-500/30 py-3 rounded-2xl flex items-center justify-center gap-3 mb-2 active:scale-95 transition-all"
-            >
-                {isSyncingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <Database className="w-4 h-4 text-indigo-400" />}
-                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-indigo-100">
-                    Sincronizar Pedidos ({ordersInLocalCount})
-                </span>
-            </button>
-
-            {/* INPUT BULTO CON CÁMARA */}
-            <div className="space-y-1">
-                <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-4">Etiqueta Física</span>
+            {/* INPUT BULTO */}
+            <div className="space-y-2">
+                <div className="flex justify-between items-end px-2">
+                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Identificador de Bulto</span>
+                    {labelId && <span className="text-[9px] font-black text-emerald-500 uppercase">✓ Capturado</span>}
+                </div>
                 <div className="flex gap-2">
                     <button 
-                        onClick={() => setActiveKeypadField('label')} 
-                        className={`flex-1 h-20 rounded-2xl flex items-center justify-center font-mono font-black text-2xl border-4 transition-all duration-300 ${activeKeypadField === 'label' ? 'bg-blue-600 border-blue-400 text-white shadow-[0_0_20px_rgba(59,130,246,0.3)]' : 'bg-slate-900 border-white/5 text-slate-500'}`}
+                        onClick={() => setActiveField('label')} 
+                        className={`flex-1 h-20 rounded-3xl flex items-center justify-center font-mono font-black text-2xl border-4 transition-all duration-300 ${activeField === 'label' ? 'bg-blue-600 border-blue-400 text-white shadow-[0_0_25px_rgba(59,130,246,0.3)]' : 'bg-slate-900 border-white/5 text-slate-500'}`}
                     >
-                        <span className={`tracking-[0.1em] px-4 truncate ${!labelId ? 'opacity-30 text-lg italic' : ''}`}>
-                            {labelId || "ID_BULTO_SSCC"}
+                        <span className={`tracking-[0.1em] px-4 truncate ${!labelId ? 'opacity-20 italic text-lg' : ''}`}>
+                            {labelId || "ID_Bulto_SSCC"}
                         </span>
                     </button>
                     <button 
-                        onClick={() => setIsLabelCameraOpen(true)}
-                        className="w-20 h-20 bg-blue-600/20 border-4 border-blue-500/30 rounded-2xl flex items-center justify-center text-blue-400 active:bg-blue-600 active:text-white transition-all shadow-lg"
+                        onClick={() => { setActiveField('label'); setIsCameraOpen(true); }}
+                        className="w-20 h-20 bg-blue-500/10 border-4 border-blue-500/30 rounded-3xl flex items-center justify-center text-blue-400 active:bg-blue-600 active:text-white transition-all shadow-lg"
                     >
                         <Camera className="w-8 h-8" />
                     </button>
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-                <button 
-                    onClick={() => handleStart('detective')}
-                    className={`h-32 rounded-3xl border-4 flex flex-col items-center justify-center gap-3 transition-all active:scale-95 ${ordersInLocalCount > 0 ? 'bg-orange-600/20 border-orange-500/30' : 'bg-slate-900 border-white/5 opacity-80'}`}
-                >
-                    <div className={`p-3 rounded-2xl ${ordersInLocalCount > 0 ? 'bg-orange-500/20' : 'bg-white/5'}`}>
-                        {ordersInLocalCount > 0 ? <Sparkles className="w-6 h-6 text-orange-500" /> : <Ghost className="w-6 h-6 text-slate-500" />}
-                    </div>
-                    <div className="text-center">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-white/60 block">
-                            {ordersInLocalCount > 0 ? 'Deducir ERP' : 'Conteo Ciego'}
+            {/* INPUT ERP / DOCUMENTO */}
+            <div className="space-y-2">
+                <div className="flex justify-between items-end px-2">
+                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Orden de Compra / ERP</span>
+                </div>
+                <div className="flex gap-2">
+                    <button 
+                        onClick={() => setActiveField('erp')} 
+                        className={`flex-1 h-20 rounded-3xl flex items-center justify-center font-mono font-black text-2xl border-4 transition-all duration-300 ${activeField === 'erp' ? 'bg-slate-800 border-blue-400 text-white shadow-[0_0_25px_rgba(59,130,246,0.1)]' : 'bg-slate-900 border-white/5 text-slate-500'}`}
+                    >
+                        <span className={`tracking-[0.1em] px-4 truncate ${!erpOrder ? 'opacity-20 italic text-lg' : ''}`}>
+                            {erpOrder || "Escanear_ERP"}
                         </span>
-                        {ordersInLocalCount > 0 && <span className="text-[8px] font-bold text-orange-400 uppercase tracking-widest">{ordersInLocalCount} Guías</span>}
-                    </div>
-                </button>
-
-                <button 
-                    onClick={() => setActiveKeypadField('erp')}
-                    className={`h-32 rounded-3xl border-4 flex flex-col items-center justify-center gap-3 transition-all active:scale-95 ${activeKeypadField === 'erp' ? 'bg-blue-600 border-blue-400' : 'bg-slate-900 border-white/5'}`}
-                >
-                    <div className={`p-3 rounded-2xl ${activeKeypadField === 'erp' ? 'bg-white/20' : 'bg-blue-500/10'}`}>
-                        <FileSearch className={`w-6 h-6 ${activeKeypadField === 'erp' ? 'text-white' : 'text-blue-500'}`} />
-                    </div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-white/60">Manual / QR</span>
-                </button>
+                    </button>
+                    <button 
+                        onClick={() => { setActiveField('erp'); setIsCameraOpen(true); }}
+                        className="w-20 h-20 bg-amber-500/10 border-4 border-amber-500/30 rounded-3xl flex items-center justify-center text-amber-500 active:bg-amber-500 active:text-black transition-all shadow-lg"
+                    >
+                        <FileSearch className="w-8 h-8" />
+                    </button>
+                </div>
             </div>
 
-            {activeKeypadField === 'erp' && (
-                <div className="flex gap-2 animate-in slide-in-from-top-2">
-                    <div className="flex-[3] h-14 bg-slate-900 border-2 border-white/10 rounded-xl flex items-center justify-center font-mono font-black text-white">
-                        {erpOrder || "ORDEN_ERP"}
+            {erpOrder && !cloudOrder && (
+                <button 
+                    onClick={handleFetchFromCloud}
+                    disabled={isCloudLoading}
+                    className="w-full h-12 bg-emerald-600/20 border border-emerald-500/30 rounded-xl flex items-center justify-center gap-3 text-emerald-400 active:scale-[0.98] transition-all"
+                >
+                    {isCloudLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <DownloadCloud className="w-4 h-4" />}
+                    <span className="text-[10px] font-black uppercase tracking-widest">Validar ERP en Nube</span>
+                </button>
+            )}
+
+            {cloudOrder && (
+                <div className="bg-emerald-500/10 border-2 border-emerald-500/30 p-4 rounded-2xl flex items-center gap-4 animate-in zoom-in-95">
+                    <div className="bg-emerald-500 p-2 rounded-lg text-black"><Sparkles className="w-4 h-4" /></div>
+                    <div>
+                        <div className="text-[10px] font-black uppercase text-emerald-400">Verificación Cloud OK</div>
+                        <div className="text-xs font-bold text-white">{cloudOrder.items.length} ítems cargados</div>
                     </div>
-                    <button 
-                        onClick={handleFetchFromCloud}
-                        className="flex-1 bg-emerald-600 rounded-xl flex items-center justify-center"
-                    >
-                        {isCloudLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <DownloadCloud className="w-5 h-5" />}
-                    </button>
                 </div>
             )}
 
-            <div className="md:hidden pt-2">
+            <div className="md:hidden">
                 <NumericKeypad 
                     isOpen={true} 
                     embedded={true} 
                     onInput={(c) => { 
-                        if (activeKeypadField === 'erp') { setErpOrder(p => p + c); setCloudOrder(null); } 
+                        if (activeField === 'erp') { setErpOrder(p => p + c); setCloudOrder(null); } 
                         else setLabelId(p => p + c); 
                         setError('');
                     }} 
                     onDelete={() => { 
-                        if (activeKeypadField === 'erp') { setErpOrder(p => p.slice(0, -1)); setCloudOrder(null); }
+                        if (activeField === 'erp') { setErpOrder(p => p.slice(0, -1)); setCloudOrder(null); }
                         else setLabelId(p => p.slice(0, -1)); 
                     }} 
                 />
@@ -231,18 +215,18 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
         <div className="p-6 pb-12">
             <button 
                 onClick={() => handleStart(erpOrder ? 'manual' : 'detective')} 
-                className={`w-full font-black h-16 rounded-[2rem] shadow-2xl active:scale-95 uppercase tracking-[0.2em] text-xs transition-all border-b-8 flex items-center justify-center gap-3 ${erpOrder ? 'bg-blue-600 text-white border-blue-900' : 'bg-orange-600 text-white border-orange-900'}`}
+                className={`w-full font-black h-20 rounded-[2.5rem] shadow-2xl active:scale-95 uppercase tracking-[0.3em] text-sm transition-all border-b-8 flex items-center justify-center gap-3 ${erpOrder ? 'bg-blue-600 text-white border-blue-900' : 'bg-orange-600 text-white border-orange-900'}`}
             >
-                {cloudOrder ? 'INICIAR VERIFICADO' : (erpOrder ? 'INICIAR MANUAL' : (ordersInLocalCount > 0 ? 'PISTEAR Y DEDUCIR' : 'PISTEAR SIN GUÍA'))}
+                {cloudOrder ? 'INICIAR VERIFICADO' : (erpOrder ? 'INICIAR MANUAL' : 'PISTEAR SIN GUÍA')}
             </button>
         </div>
 
-        {/* CÁMARA PARA ETIQUETA */}
-        {isLabelCameraOpen && (
-            <div className="fixed inset-0 z-[300]">
+        {/* MODAL DE CÁMARA */}
+        {isCameraOpen && (
+            <div className="fixed inset-0 z-[500]">
                 <CameraScanner 
                     onScan={handleCameraScan} 
-                    onClose={() => setIsLabelCameraOpen(false)} 
+                    onClose={() => setIsCameraOpen(false)} 
                     isTriggered={true} 
                 />
             </div>
