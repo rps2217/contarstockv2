@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ChevronLeft, HardDrive, Upload, Loader2, FileSpreadsheet, Plus, RefreshCw, BrainCircuit, Sparkles } from 'lucide-react';
 import { SearchBar } from '../SearchBar';
@@ -42,16 +43,22 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
                          {/* BOTÓN CEREBRO IA */}
                          <button 
                             onClick={props.onVectorize} 
-                            disabled={props.isVectorizing}
-                            className={`p-3 rounded-xl transition-all relative ${props.missingVectorsCount ? 'bg-amber-100 text-amber-700 animate-pulse' : 'bg-slate-100 dark:bg-white/5 text-slate-400'}`}
-                            title="Sincronizar Cerebro Semántico"
+                            disabled={props.isVectorizing || !props.missingVectorsCount}
+                            className={`p-3 rounded-xl transition-all relative ${props.missingVectorsCount ? 'bg-amber-100 text-amber-700 shadow-md active:scale-95' : 'bg-slate-100 dark:bg-white/5 text-slate-400 opacity-50'}`}
+                            title="Entrenar Inteligencia Artificial"
                          >
                             {props.isVectorizing ? <RefreshCw className="w-5 h-5 animate-spin" /> : <BrainCircuit className="w-5 h-5" />}
+                            
+                            {/* BADGE MEJORADO: Muestra cantidad exacta */}
                             {props.missingVectorsCount ? (
-                                <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-[8px] font-black text-white flex items-center justify-center rounded-full border-2 border-white">
-                                    !
+                                <span className="absolute -top-2 -right-2 min-w-[1.25rem] h-5 px-1 bg-amber-500 text-[9px] font-black text-white flex items-center justify-center rounded-full border-2 border-white shadow-sm z-10 animate-in zoom-in">
+                                    {props.missingVectorsCount > 99 ? '99+' : props.missingVectorsCount}
                                 </span>
-                            ) : <Sparkles className="absolute -top-1 -right-1 w-3 h-3 text-amber-500" />}
+                            ) : null}
+                            
+                            {!props.missingVectorsCount && !props.isVectorizing && (
+                                <Sparkles className="absolute -top-1 -right-1 w-3 h-3 text-emerald-500" />
+                            )}
                         </button>
 
                          <button 
@@ -60,6 +67,11 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
                             className={`p-3 rounded-xl transition-all relative ${props.pendingChangesCount > 0 ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-100 dark:bg-white/5 text-slate-400'}`}
                          >
                             {props.isSyncing ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
+                            {props.pendingChangesCount > 0 && (
+                                <span className="absolute -top-2 -right-2 w-5 h-5 bg-indigo-500 text-[9px] font-black text-white flex items-center justify-center rounded-full border-2 border-white shadow-sm z-10">
+                                    {props.pendingChangesCount}
+                                </span>
+                            )}
                         </button>
 
                         <button onClick={props.onCreate} className="bg-blue-600 text-white p-3 rounded-xl shadow-lg active:scale-95 transition-all">
@@ -76,11 +88,21 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
                     <button onClick={props.onImport} className="w-12 h-11 bg-slate-900 dark:bg-blue-600 text-white rounded-xl flex items-center justify-center shadow-lg"><FileSpreadsheet className="w-5 h-5" /></button>
                 </div>
                 
+                {/* BARRA DE PROGRESO DE ENTRENAMIENTO */}
                 {props.isVectorizing && (
-                    <div className="bg-amber-50 border border-amber-100 p-2 rounded-lg flex items-center justify-between">
-                        <span className="text-[9px] font-black text-amber-700 uppercase tracking-widest animate-pulse">Entrenando Cerebro IA...</span>
-                        <div className="h-1 flex-1 mx-4 bg-amber-200 rounded-full overflow-hidden">
-                            <div className="h-full bg-amber-600" style={{ width: `${(props.vectorProgress?.current / props.vectorProgress?.total) * 100}%` }} />
+                    <div className="bg-amber-50 border border-amber-100 p-3 rounded-xl flex flex-col gap-1 shadow-sm animate-in slide-in-from-top-2">
+                        <div className="flex justify-between items-center text-[9px] font-black text-amber-700 uppercase tracking-widest">
+                            <span className="flex items-center gap-2"><Loader2 className="w-3 h-3 animate-spin"/> Entrenando Cerebro IA...</span>
+                            <span>{Math.round((props.vectorProgress?.current / (props.vectorProgress?.total || 1)) * 100)}%</span>
+                        </div>
+                        <div className="h-2 w-full bg-amber-100 rounded-full overflow-hidden">
+                            <div 
+                                className="h-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-300 ease-out" 
+                                style={{ width: `${(props.vectorProgress?.current / (props.vectorProgress?.total || 1)) * 100}%` }} 
+                            />
+                        </div>
+                        <div className="text-[8px] text-amber-600 font-bold text-center mt-0.5">
+                            Procesando {props.vectorProgress?.current} de {props.vectorProgress?.total} productos nuevos
                         </div>
                     </div>
                 )}
