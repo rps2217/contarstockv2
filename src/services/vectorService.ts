@@ -1,8 +1,19 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 import { db } from "../db";
+import { Product } from "../types";
 
 export const VectorService = {
+    /**
+     * Helper centralizado para determinar si a un producto le falta la firma IA.
+     */
+    needsEmbedding: (p: Product): boolean => {
+        if (!p.embedding) return true;
+        if (!Array.isArray(p.embedding)) return true;
+        if (p.embedding.length === 0) return true;
+        return false;
+    },
+
     /**
      * Genera una firma numérica (embedding) para un nombre de producto.
      */
@@ -38,24 +49,37 @@ export const VectorService = {
      * Procesa productos que requieren entrenamiento.
      */
     vectorizeMissingProducts: async (onProgress?: (count: number, total: number) => void) => {
+        console.log("[VectorService] >>> INICIANDO ANÁLISIS DE BASE DE DATOS...");
+        
         if (!navigator.onLine) throw new Error("Sin conexión a internet");
         if (!process.env.API_KEY) {
-            console.error("[VectorService] CRÍTICO: No se detecta API_KEY de Gemini en el entorno.");
+            console.error("[VectorService] CRÍTICO: No se detecta API_KEY de Gemini.");
             throw new Error("API Key no configurada");
         }
 
-        // Mejora del filtro: Detectar undefined, null o arrays vacíos
         const allProducts = await db.products.toArray();
-        const missing = allProducts.filter(p => 
-            p.embedding === undefined || 
-            p.embedding === null || 
-            (Array.isArray(p.embedding) && p.embedding.length === 0)
-        );
+        console.log(`[VectorService] Total productos en local: ${allProducts.length}`);
 
+        // Diagnóstico de los primeros 3 productos
+        if (allProducts.length > 0) {
+            console.log("[VectorService] Diagnóstico (Primeros 3):", allProducts.slice(0, 3).map(p => ({
+                sku: p.barcode,
+                name: p.name,
+                hasEmbedding: !!p.embedding,
+                embeddingType: typeof p.embedding,
+                embeddingLength: Array.isArray(p.embedding) ? p.embedding.length : 'N/A'
+            })));
+        }
+
+        const missing = allProducts.filter(p => VectorService.needsEmbedding(p));
         const total = missing.length;
-        console.log(`[VectorService] Iniciando entrenamiento. Pendientes: ${total} de un total de ${allProducts.length} productos.`);
 
-        if (total === 0) return 0;
+        console.log(`[VectorService] Resultado del filtro: ${total} productos pendientes.`);
+
+        if (total === 0) {
+            console.warn("[VectorService] No hay nada que procesar. ¿Quizás ya tienen firmas?");
+            return 0;
+        }
 
         let processed = 0;
         let successCount = 0;
@@ -69,9 +93,9 @@ export const VectorService = {
             }
 
             try {
-                // Pequeña pausa para evitar Rate Limit (429) de la API gratuita
+                // Pausa para evitar Rate Limit (429)
                 if (processed > 0 && processed % 5 === 0) {
-                    await new Promise(r => setTimeout(r, 1000));
+                    await new Promise(r => setTimeout(r, 1200));
                 }
 
                 const vector = await VectorService.generateEmbedding(product.name);
@@ -85,7 +109,7 @@ export const VectorService = {
                     consecutiveErrors = 0;
                 } else {
                     consecutiveErrors++;
-                    console.warn(`[VectorService] No se pudo generar vector para: ${product.name}`);
+                    console.warn(`[VectorService] Gemini devolvió null para: ${product.name}`);
                 }
             } catch (e) {
                 consecutiveErrors++;
@@ -96,7 +120,7 @@ export const VectorService = {
             }
         }
 
-        console.log(`[VectorService] Entrenamiento finalizado. Exitosos: ${successCount}, Procesados: ${processed}`);
+        console.log(`[VectorService] PROCESO FINALIZADO. Exitosos: ${successCount}`);
         return successCount;
     }
 };

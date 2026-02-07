@@ -38,11 +38,11 @@ export const useProductDatabase = () => {
 
     const pendingChangesCount = useLiveQuery(() => db.products.where('syncStatus').anyOf('add', 'edit').count(), [], 0);
     
-    // Filtro robusto para el Badge de notificación
+    // Conteo usando el helper unificado para evitar discrepancias
     const missingVectorsCount = useLiveQuery(async () => {
         const all = await db.products.toArray();
-        return all.filter(p => !p.embedding || (Array.isArray(p.embedding) && p.embedding.length === 0)).length;
-    }, [], 0);
+        return all.filter(p => VectorService.needsEmbedding(p)).length;
+    }, []);
 
     const showFeedback = useCallback((type: 'success' | 'error', msg: string) => {
         setFeedback({ type, msg });
@@ -54,6 +54,7 @@ export const useProductDatabase = () => {
             showFeedback('error', 'Se requiere internet');
             return;
         }
+        
         setIsVectorizing(true);
         setVectorProgress({ current: 0, total: 0 });
         
@@ -65,11 +66,11 @@ export const useProductDatabase = () => {
             if (count > 0) {
                 showFeedback('success', `${count} productos aprendidos`);
             } else {
-                showFeedback('error', 'No se detectaron productos nuevos');
+                showFeedback('error', 'Sin productos nuevos para aprender');
             }
         } catch (e: any) {
-            console.error("Fallo en vectorización:", e);
-            showFeedback('error', e.message || 'Error en IA');
+            console.error("[UI] Fallo en vectorización:", e);
+            showFeedback('error', e.message || 'Error en motor IA');
         } finally {
             setIsVectorizing(false);
         }
