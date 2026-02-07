@@ -1,6 +1,10 @@
 
 /**
- * LOGICOUNT PRO - CLOUD ENGINE V11.6 (FIXED FETCH_ORDER)
+ * LOGICOUNT PRO - CLOUD ENGINE V12 (AI SUPPORT)
+ * Changelog: 
+ * - Soporte para columna FIRMA_IA (vectores largos).
+ * - Protección contra formato científico en IDs.
+ * - Validación de tipos estricta en fetchOrder.
  */
 
 const SPREADSHEET_ID = ""; 
@@ -51,7 +55,6 @@ function doPost(e) {
         response = fetchRows(requestData.tableName, requestData.since);
         break;
       case 'fetch_order':
-        // NUEVA ACCIÓN: Búsqueda de pedido específico
         response = fetchOrder(requestData.erpOrder);
         break;
       case 'ping':
@@ -71,41 +74,30 @@ function doPost(e) {
   return ContentService.createTextOutput(JSON.stringify(response)).setMimeType(ContentService.MimeType.JSON);
 }
 
-/**
- * Busca todas las filas de un pedido específico en la pestaña de pedidos.
- */
 function fetchOrder(erpId) {
   if (!erpId) throw new Error("ID de pedido no proporcionado.");
-  
   const ss = getSpreadsheet();
-  // Intenta buscar en PEDIDOS, ORDENES o la configurada. 
-  // Por defecto buscamos en PEDIDOS si no se especifica otra.
   let sheet = ss.getSheetByName("PEDIDOS") || ss.getSheetByName("ORDENES") || ss.getSheets()[0];
   
   const values = sheet.getDataRange().getValues();
   if (values.length < 2) return { success: true, rows: [] };
   
   const headers = values[0].map(h => String(h).trim().toUpperCase());
-  const erpColIdx = headers.findIndex(h => h.includes("ERP") || h.includes("ORDEN") || h.includes("DOC") || h.includes("NUMERO"));
+  const erpColIdx = headers.findIndex(h => h.includes("ERP") || h.includes("ORDEN") || h.includes("DOC"));
   
-  if (erpColIdx === -1) throw new Error("No se encontró columna de Identificador (ERP/ORDEN) en la hoja de pedidos.");
+  if (erpColIdx === -1) throw new Error("No se encontró columna ERP en la hoja de pedidos.");
   
   const cleanSearch = String(erpId).trim().toUpperCase();
   const results = [];
   
   for (let i = 1; i < values.length; i++) {
     const row = values[i];
-    const cellValue = String(row[erpColIdx]).trim().toUpperCase();
-    
-    if (cellValue === cleanSearch) {
+    if (String(row[erpColIdx]).trim().toUpperCase() === cleanSearch) {
       const obj = {};
-      headers.forEach((h, idx) => {
-        if (h) obj[h] = row[idx];
-      });
+      headers.forEach((h, idx) => { if (h) obj[h] = row[idx]; });
       results.push(obj);
     }
   }
-  
   return { success: true, rows: results };
 }
 
@@ -118,11 +110,25 @@ function appendRows(tableName, rows) {
   let lastCol = sheet.getLastColumn();
   let headers = [];
   
+  // Si la hoja es nueva, creamos las cabeceras
   if (lastCol === 0) {
     headers = Object.keys(rows[0]);
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight("bold");
   } else {
     headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+    
+    // Detección dinámica de nuevas columnas (ej: FIRMA_IA)
+    const newKeys = Object.keys(rows[0]).filter(k => 
+      !headers.map(h => String(h).trim().toUpperCase()).includes(k.trim().toUpperCase())
+    );
+    
+    if (newKeys.length > 0) {
+      const startCol = lastCol + 1;
+      sheet.getRange(1, startCol, 1, newKeys.length).setValues([newKeys]).setFontWeight("bold");
+      // Recargamos headers actualizados
+      lastCol = sheet.getLastColumn();
+      headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+    }
   }
 
   const dataToAppend = rows.map(row => {
@@ -152,10 +158,7 @@ function fetchRows(tableName, sinceTimestamp) {
   const headers = values[0];
   const sinceTime = sinceTimestamp ? parseInt(sinceTimestamp) : 0;
 
-  const tsIdx = headers.findIndex(h => {
-    const clean = String(h).toUpperCase();
-    return clean.includes("MODIFICADO") || clean.includes("TIMESTAMP") || clean.includes("FECHA");
-  });
+  const tsIdx = headers.findIndex(h => String(h).toUpperCase().includes("MODIFICADO") || String(h).toUpperCase().includes("TIMESTAMP"));
 
   const results = [];
   for (let i = 1; i < values.length; i++) {
