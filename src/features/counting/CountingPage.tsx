@@ -1,10 +1,10 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useCountingLogic } from './hooks/useCountingLogic';
-import { ScannerHero } from '../../components/scanner/ScannerHero'; // Mover a shared en refactor futuro
-import { ScannerHistoryList } from '../../components/scanner/ScannerHistoryList'; // Mover a shared en refactor futuro
-import { ScannerHeader } from '../../components/scanner/ScannerHeader'; // Mover a shared en refactor futuro
+import { ScannerHero } from '../../components/scanner/ScannerHero';
+import { ScannerHistoryList } from '../../components/scanner/ScannerHistoryList';
+import { ScannerHeader } from '../../components/scanner/ScannerHeader';
 import { ScannerFooter } from '../../shared/components/controls/ScannerFooter';
 import { CameraScanner } from '../../components/CameraScanner';
 import { NumericKeypad } from '../../components/NumericKeypad';
@@ -15,15 +15,32 @@ import { Loader2, AlertCircle } from 'lucide-react';
 export const CountingPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    
-    // Custom Hook de Negocio (SoC)
     const { state, actions, sessionData } = useCountingLogic(id, () => navigate('/reports'));
 
-    // Estado UI Local (Presentational)
     const [isTriggerActive, setIsTriggerActive] = useState(false);
     const [isScreenLocked, setIsScreenLocked] = useState(false);
 
-    // Protocolo de Gatillo (Hardware Lifecycle)
+    // --- LÓGICA DE AUTO-BLOQUEO POR INACTIVIDAD ---
+    const autoLockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const AUTO_LOCK_DELAY = 5000;
+
+    const resetAutoLockTimer = useCallback(() => {
+        if (autoLockTimerRef.current) clearTimeout(autoLockTimerRef.current);
+        if (isScreenLocked) return;
+
+        autoLockTimerRef.current = setTimeout(() => {
+            setIsScreenLocked(true);
+            if (navigator.vibrate) navigator.vibrate(15);
+        }, AUTO_LOCK_DELAY);
+    }, [isScreenLocked]);
+
+    useEffect(() => {
+        resetAutoLockTimer();
+        return () => { if (autoLockTimerRef.current) clearTimeout(autoLockTimerRef.current); };
+    }, [state.activeBarcode, sessionData.history.length, resetAutoLockTimer]);
+
+    const handleInteraction = () => resetAutoLockTimer();
+
     const startTrigger = useCallback(() => {
         if (isScreenLocked || state.status === 'expiring') return;
         setIsTriggerActive(true);
@@ -56,12 +73,15 @@ export const CountingPage: React.FC = () => {
     }
 
     return (
-        <div className="fixed inset-0 z-[100] flex flex-col bg-black text-white font-mono overflow-hidden select-none">
-            
+        <div 
+            className="fixed inset-0 z-[100] flex flex-col bg-black text-white font-mono overflow-hidden select-none"
+            onPointerDown={handleInteraction}
+            onKeyDown={handleInteraction}
+        >
             <ScannerHeader 
                 erpOrder={sessionData.session.erpOrder}
                 location={state.currentLocation}
-                onLocationClick={() => {}} // TODO: Implementar modal de ubicación
+                onLocationClick={() => {}} 
                 onPause={() => navigate('/reports')}
                 onUndo={actions.undoLastScan}
                 onLock={() => setIsScreenLocked(true)}
@@ -76,8 +96,8 @@ export const CountingPage: React.FC = () => {
                     feedback={state.feedback} 
                     onRegisterPending={() => {}} 
                     expectedItem={sessionData.session.expectedItems?.find(i => i.barcode === state.activeBarcode)} 
-                    onDecrement={() => actions.handleExternalScan(state.activeBarcode!, -1)} 
-                    onIncrement={() => actions.handleExternalScan(state.activeBarcode!, 1)} 
+                    onDecrement={() => { actions.handleExternalScan(state.activeBarcode!, -1); handleInteraction(); }} 
+                    onIncrement={() => { actions.handleExternalScan(state.activeBarcode!, 1); handleInteraction(); }} 
                 />
             </div>
 
@@ -88,7 +108,6 @@ export const CountingPage: React.FC = () => {
                 onSelect={actions.selectItem} 
             />
 
-            {/* Componente Compartido (DRY) */}
             <ScannerFooter 
                 multiplier={state.multiplier}
                 unitsPerBox={state.activeProduct?.unitsPerBox}
@@ -99,22 +118,20 @@ export const CountingPage: React.FC = () => {
                 onTriggerEnd={endTrigger}
             />
 
-            {/* Capa de Hardware */}
             {isTriggerActive && (
                 <div className="fixed inset-0 z-[200]">
                     <CameraScanner 
-                        onScan={(code) => { actions.handleExternalScan(code, state.multiplier); setIsTriggerActive(false); }} 
+                        onScan={(code) => { actions.handleExternalScan(code, state.multiplier); setIsTriggerActive(false); handleInteraction(); }} 
                         onClose={endTrigger} 
                         isTriggered={true} 
                     />
                 </div>
             )}
             
-            {/* Modales de Flujo */}
             {state.status === 'expiring' && state.activeBarcode && (
                 <ExpirationModal 
                     productName={state.activeProduct?.name || state.activeBarcode} 
-                    onComplete={actions.handlePharmaComplete} 
+                    onComplete={(m, y, b) => { actions.handlePharmaComplete(m, y, b); handleInteraction(); }} 
                 />
             )}
 
@@ -123,13 +140,13 @@ export const CountingPage: React.FC = () => {
                     isOpen={true} 
                     title="EAN / SKU MANUAL" 
                     onClose={() => actions.setStatus('idle')} 
-                    onInput={(c) => actions.handleExternalScan(c, state.multiplier)} 
+                    onInput={(c) => { actions.handleExternalScan(c, state.multiplier); handleInteraction(); }} 
                     onDelete={() => {}} 
                     onConfirm={() => actions.setStatus('idle')} 
                 />
             )}
 
-            <ScreenLockOverlay isLocked={isScreenLocked} onUnlock={() => setIsScreenLocked(false)} />
+            <ScreenLockOverlay isLocked={isScreenLocked} onUnlock={() => { setIsScreenLocked(false); resetAutoLockTimer(); }} />
         </div>
     );
 };

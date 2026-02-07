@@ -1,30 +1,48 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useHammerLogic } from './hooks/useHammerLogic';
-import { migrateMassiveToMaster } from '../../services/massiveSync'; // Asumiendo que moverás los servicios después
+import { migrateMassiveToMaster } from '../../services/massiveSync';
 import { HammerHUD } from './components/HammerHUD';
 import { HammerHeader } from './components/HammerHeader';
 import { HammerList } from './components/HammerList';
 import { ScannerFooter } from '../../shared/components/controls/ScannerFooter';
-import { CameraScanner } from '../../components/CameraScanner'; // Legacy path, mover a shared/components en el futuro
-import { ScreenLockOverlay } from '../../components/common/ScreenLockOverlay'; // Legacy path
-import { NumericKeypad } from '../../components/NumericKeypad'; // Legacy path
+import { CameraScanner } from '../../components/CameraScanner';
+import { ScreenLockOverlay } from '../../components/common/ScreenLockOverlay';
+import { NumericKeypad } from '../../components/NumericKeypad';
 
 export const HammerPage: React.FC = () => {
     const navigate = useNavigate();
     const { batchId = 'CORE' } = useParams();
-    
-    // Separación de Lógica de Negocio (Custom Hook)
     const { state, actions } = useHammerLogic(batchId);
     
-    // Estado de UI Local (Presentational State)
     const [isTriggerActive, setIsTriggerActive] = useState(false);
     const [isScreenLocked, setIsScreenLocked] = useState(false);
     const [showKeypad, setShowKeypad] = useState(false);
     const [isMigrating, setIsMigrating] = useState(false);
 
-    // Manejador de Transición de Negocio
+    // --- LÓGICA DE AUTO-BLOQUEO POR INACTIVIDAD ---
+    const autoLockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const AUTO_LOCK_DELAY = 5000; // 5 segundos sin acción bloquean la pantalla
+
+    const resetAutoLockTimer = useCallback(() => {
+        if (autoLockTimerRef.current) clearTimeout(autoLockTimerRef.current);
+        if (isScreenLocked) return;
+
+        autoLockTimerRef.current = setTimeout(() => {
+            setIsScreenLocked(true);
+            if (navigator.vibrate) navigator.vibrate(15);
+        }, AUTO_LOCK_DELAY);
+    }, [isScreenLocked]);
+
+    // Resetear timer en cada interacción o cambio de estado de datos
+    useEffect(() => {
+        resetAutoLockTimer();
+        return () => { if (autoLockTimerRef.current) clearTimeout(autoLockTimerRef.current); };
+    }, [state.lastScannedItem, state.items.length, resetAutoLockTimer]);
+
+    const handleInteraction = () => resetAutoLockTimer();
+
     const handleFinalize = async () => {
         if (!state.items.length || !confirm("¿Cerrar auditoría y consolidar datos?")) return;
         setIsMigrating(true);
@@ -33,11 +51,9 @@ export const HammerPage: React.FC = () => {
             navigate('/reports?type=hammer');
         } catch (err) {
             setIsMigrating(false);
-            // Aquí iría un toast de error
         }
     };
 
-    // Protocolo de Gatillo Táctico (Latch-free)
     const startTrigger = useCallback(() => {
         if (isScreenLocked) return;
         setIsTriggerActive(true);
@@ -49,8 +65,11 @@ export const HammerPage: React.FC = () => {
     }, []);
 
     return (
-        <div className="fixed inset-0 z-[100] flex flex-col font-mono bg-black select-none overflow-hidden text-white">
-            
+        <div 
+            className="fixed inset-0 z-[100] flex flex-col font-mono bg-black select-none overflow-hidden text-white"
+            onPointerDown={handleInteraction}
+            onKeyDown={handleInteraction}
+        >
             <HammerHeader 
                 title={batchId}
                 isMigrating={isMigrating}
@@ -86,30 +105,28 @@ export const HammerPage: React.FC = () => {
                 onTriggerEnd={endTrigger}
             />
 
-            {/* Capa de Hardware (Cámara) */}
             {isTriggerActive && (
                 <div className="fixed inset-0 z-[200]">
                     <CameraScanner 
-                        onScan={(code) => actions.registerScan(code)} 
+                        onScan={(code) => { actions.registerScan(code); handleInteraction(); }} 
                         onClose={endTrigger} 
                         isTriggered={true} 
                     />
                 </div>
             )}
 
-            {/* Modales Auxiliares */}
             {showKeypad && (
                 <NumericKeypad 
                     isOpen={true} 
                     onClose={() => setShowKeypad(false)} 
                     title="INGRESO MANUAL" 
-                    onInput={(v) => actions.registerScan(v)} 
+                    onInput={(v) => { actions.registerScan(v); handleInteraction(); }} 
                     onDelete={() => {}} 
                     onConfirm={() => setShowKeypad(false)} 
                 />
             )}
 
-            <ScreenLockOverlay isLocked={isScreenLocked} onUnlock={() => setIsScreenLocked(false)} />
+            <ScreenLockOverlay isLocked={isScreenLocked} onUnlock={() => { setIsScreenLocked(false); resetAutoLockTimer(); }} />
         </div>
     );
 };
