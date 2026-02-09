@@ -34,13 +34,16 @@ export const VectorService = {
                 }
             });
 
-            const textResponse = response.text;
+            let textResponse = response.text;
             if (!textResponse) return null;
+
+            // Limpieza robusta de Markdown por si el modelo ignora responseMimeType
+            textResponse = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
 
             const vector = JSON.parse(textResponse);
             return Array.isArray(vector) && vector.length > 0 ? vector : null;
         } catch (e) {
-            console.error("[VectorService] Error en API Gemini:", text, e);
+            console.warn("[VectorService] Error en API Gemini para:", text, e);
             return null;
         }
     },
@@ -58,45 +61,32 @@ export const VectorService = {
         }
 
         const allProducts = await db.products.toArray();
-        console.log(`[VectorService] Total productos en local: ${allProducts.length}`);
-
-        // Diagnóstico de los primeros 3 productos
-        if (allProducts.length > 0) {
-            console.log("[VectorService] Diagnóstico (Primeros 3):", allProducts.slice(0, 3).map(p => ({
-                sku: p.barcode,
-                name: p.name,
-                hasEmbedding: !!p.embedding,
-                embeddingType: typeof p.embedding,
-                embeddingLength: Array.isArray(p.embedding) ? p.embedding.length : 'N/A'
-            })));
-        }
-
         const missing = allProducts.filter(p => VectorService.needsEmbedding(p));
         const total = missing.length;
 
-        console.log(`[VectorService] Resultado del filtro: ${total} productos pendientes.`);
+        console.log(`[VectorService] Pendientes de vectorización: ${total}`);
 
-        if (total === 0) {
-            console.warn("[VectorService] No hay nada que procesar. ¿Quizás ya tienen firmas?");
-            return 0;
-        }
+        if (total === 0) return 0;
 
         let processed = 0;
         let successCount = 0;
         let consecutiveErrors = 0;
         const MAX_CONSECUTIVE_ERRORS = 5;
+        let lastError: any = null;
 
         for (const product of missing) {
+            // Circuit Breaker
             if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
-                console.warn("[VectorService] Abortando por exceso de errores consecutivos.");
-                break;
+                const msg = `Vectorización abortada: Demasiados errores consecutivos. Último error: ${lastError?.message || 'Desconocido'}`;
+                console.error(msg);
+                throw new Error(msg); // Lanzamos error para que la UI lo muestre
             }
 
             try {
-                // Pausa para evitar Rate Limit (429)
-                if (processed > 0 && processed % 5 === 0) {
-                    await new Promise(r => setTimeout(r, 1200));
-                }
+                // Rate Limit Throttling: Pausa incremental
+                // Si hubo errores recientes, pausamos más tiempo (Backoff)
+                const delay = consecutiveErrors > 0 ? 2000 : (processed > 0 && processed % 5 === 0 ? 1200 : 100);
+                await new Promise(r => setTimeout(r, delay));
 
                 const vector = await VectorService.generateEmbedding(product.name);
                 
@@ -107,13 +97,16 @@ export const VectorService = {
                     });
                     successCount++;
                     consecutiveErrors = 0;
+                    lastError = null;
                 } else {
                     consecutiveErrors++;
-                    console.warn(`[VectorService] Gemini devolvió null para: ${product.name}`);
+                    lastError = new Error("Modelo retornó vector vacío o inválido");
+                    console.warn(`[VectorService] Fallo silencioso para: ${product.name}`);
                 }
-            } catch (e) {
+            } catch (e: any) {
                 consecutiveErrors++;
-                console.error(`[VectorService] Error procesando ${product.barcode}:`, e);
+                lastError = e;
+                console.error(`[VectorService] Excepción procesando ${product.barcode}:`, e);
             } finally {
                 processed++;
                 if (onProgress) onProgress(processed, total);
