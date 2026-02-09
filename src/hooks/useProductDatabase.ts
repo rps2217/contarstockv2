@@ -8,6 +8,7 @@ import { importProductsFromAppSheet } from '../services/syncManager';
 import { syncProductsToAppSheet } from '../services/appsheet';
 import { fuzzySearchProducts } from '../services/search';
 import { VectorService } from '../services/vectorService';
+import { localBrain } from '../services/localBrain';
 
 export const useProductDatabase = () => {
     const [searchQuery, setSearchQuery] = useState('');
@@ -17,8 +18,17 @@ export const useProductDatabase = () => {
     const [vectorProgress, setVectorProgress] = useState({ current: 0, total: 0 });
     const [storageUsage, setStorageUsage] = useState<{ used: number, quota: number } | null>(null);
     const [feedback, setFeedback] = useState<{ type: 'success' | 'error', msg: string } | null>(null);
+    
+    // Estado del Cerebro Local
+    const [brainStatus, setBrainStatus] = useState<{ status: string, progress: number }>({ status: 'idle', progress: 0 });
 
     useEffect(() => {
+        // Suscribirse al progreso de descarga del modelo
+        const unsubscribe = localBrain.subscribe((status, progress) => {
+            setBrainStatus({ status, progress });
+        });
+
+        // Chequeo de almacenamiento
         const checkStorage = async () => {
             if (navigator.storage && navigator.storage.estimate) {
                 const estimate = await navigator.storage.estimate();
@@ -28,6 +38,8 @@ export const useProductDatabase = () => {
             }
         };
         checkStorage();
+
+        return () => unsubscribe();
     }, []);
 
     const products = useLiveQuery(async () => {
@@ -38,11 +50,10 @@ export const useProductDatabase = () => {
 
     const pendingChangesCount = useLiveQuery(() => db.products.where('syncStatus').anyOf('add', 'edit').count(), [], 0);
     
-    // Conteo usando el helper unificado para evitar discrepancias
     const missingVectorsCount = useLiveQuery(async () => {
         const all = await db.products.toArray();
         return all.filter(p => VectorService.needsEmbedding(p)).length;
-    }, []);
+    }, [], 0);
 
     const showFeedback = useCallback((type: 'success' | 'error', msg: string) => {
         setFeedback({ type, msg });
@@ -50,11 +61,16 @@ export const useProductDatabase = () => {
     }, []);
 
     const handleVectorize = async () => {
-        if (!navigator.onLine) {
-            showFeedback('error', 'Se requiere internet');
-            return;
+        // Si el cerebro no está listo, intentamos inicializarlo, lo que disparará la descarga
+        if (brainStatus.status === 'idle' || brainStatus.status === 'error') {
+            try {
+                localBrain.init(); // Esto inicia la descarga y actualiza el estado via suscripción
+            } catch(e) {
+                showFeedback('error', 'Fallo al iniciar motor IA');
+                return;
+            }
         }
-        
+
         setIsVectorizing(true);
         setVectorProgress({ current: 0, total: 0 });
         
@@ -66,7 +82,7 @@ export const useProductDatabase = () => {
             if (count > 0) {
                 showFeedback('success', `${count} productos aprendidos`);
             } else {
-                showFeedback('error', 'Sin productos nuevos para aprender');
+                showFeedback('success', 'Catálogo ya optimizado');
             }
         } catch (e: any) {
             console.error("[UI] Fallo en vectorización:", e);
@@ -117,7 +133,19 @@ export const useProductDatabase = () => {
     }, [showFeedback]);
 
     return {
-        state: { products, pendingChangesCount, missingVectorsCount, isSyncing, isDownloading, isVectorizing, vectorProgress, storageUsage, feedback, searchQuery },
+        state: { 
+            products, 
+            pendingChangesCount, 
+            missingVectorsCount, 
+            isSyncing, 
+            isDownloading, 
+            isVectorizing, 
+            vectorProgress, 
+            storageUsage, 
+            feedback, 
+            searchQuery,
+            brainStatus 
+        },
         actions: { setSearchQuery, handleDelete, handleDeleteAll, handleSyncToCloud, handleDownloadFromCloud, handleVectorize, showFeedback }
     };
 };
