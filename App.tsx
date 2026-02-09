@@ -7,11 +7,12 @@ import { NetworkStatus } from './components/NetworkStatus';
 import { Sidebar } from './components/Sidebar';
 import { BottomDock } from './components/BottomDock';
 import { SystemStatus } from './components/SystemStatus';
-import { Box, Loader2, Database, ShieldCheck, WifiOff, Cpu } from 'lucide-react';
+import { Box, Loader2, Database, WifiOff, Cpu } from 'lucide-react';
 import { lazyWithRetry } from './services/lazyLoad';
 import { initPersistence } from './services/backupService';
 import { Login } from './components/Login';
 import { InitializationService, InitStep } from './services/initializationService';
+import { localBrain } from './services/localBrain';
 
 const Dashboard = lazyWithRetry(() => import('./components/Dashboard'));
 const Reports = lazyWithRetry(() => import('./components/Reports'));
@@ -25,7 +26,7 @@ const CountingView = lazyWithRetry(() => import('./components/CountingView'));
 const AppContent = () => {
   const location = useLocation();
   const { settings } = useAppStore();
-  const [bootState, setBootState] = useState<'testing' | 'initializing' | 'ready'>('testing');
+  const [bootState, setBootState] = useState<'initializing' | 'ready'>('initializing');
   const [initStep, setInitStep] = useState<InitStep>('idle');
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   
@@ -39,14 +40,17 @@ const AppContent = () => {
     setIsAuthenticated(authStatus);
     
     if (authStatus) {
-        setBootState('initializing');
         InitializationService.run((step) => {
             setInitStep(step);
-            if (step === 'ready') setBootState('ready');
+            if (step === 'ready') {
+                setBootState('ready');
+                // Inicializamos el cerebro IA 1.5 segundos después de que la app abra
+                // para asegurar fluidez total en el Dashboard inicial
+                setTimeout(() => localBrain.init(true), 1500);
+            }
         });
     } else {
-        const timer = setTimeout(() => setBootState('ready'), 800);
-        return () => clearTimeout(timer);
+        setBootState('ready');
     }
   }, [isAuthenticated]);
 
@@ -61,8 +65,7 @@ const AppContent = () => {
 
   const currentThemeClass = themeClasses[settings.theme] || themeClasses.dark;
 
-  // PANTALLA DE CARGA INDUSTRIAL
-  if (bootState === 'testing' || bootState === 'initializing' || isAuthenticated === null) {
+  if (bootState === 'initializing' && isAuthenticated !== false) {
     return (
       <div className="h-screen w-full bg-slate-950 flex flex-col items-center justify-center text-white p-8 font-mono">
           <div className="relative mb-10">
@@ -94,9 +97,6 @@ const AppContent = () => {
                     className={`h-full transition-all duration-500 ${initStep === 'offline' ? 'bg-rose-600 w-full' : 'bg-blue-600'} ${initStep === 'config' ? 'w-1/3' : initStep === 'database' ? 'w-2/3' : initStep === 'ready' ? 'w-full' : 'w-1/4'}`} 
                   />
               </div>
-              <p className="text-[7px] font-bold text-slate-600 uppercase tracking-[0.4em] mt-4 text-center">
-                v4.5.8_INDUSTRIAL_BUILD_STABLE
-              </p>
           </div>
       </div>
     );

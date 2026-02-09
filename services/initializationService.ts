@@ -3,63 +3,75 @@ import { logger } from './logger';
 import { fetchSystemConfig } from './gasService';
 import { importProductsFromAppSheet } from './syncManager';
 import { getSettings, saveSettings } from './settings';
+import { db } from '../db';
 
 export type InitStep = 'idle' | 'config' | 'database' | 'ready' | 'offline';
 
 export const InitializationService = {
-    /**
-     * Determina si es necesario realizar una sincronización de arranque
-     * basada en el umbral de 30 minutos.
-     */
     shouldSync: (): boolean => {
         const lastInit = localStorage.getItem('logicount_last_init_ts');
         if (!lastInit) return true;
-        
         const thirtyMinutes = 30 * 60 * 1000;
         return (Date.now() - parseInt(lastInit)) > thirtyMinutes;
     },
 
     /**
-     * Ejecuta el protocolo de inicialización en cascada.
+     * Ejecuta el arranque profesional:
+     * Si hay datos, libera la UI inmediatamente y sincroniza de fondo.
      */
     run: async (onStep: (step: InitStep) => void): Promise<void> => {
-        if (!navigator.onLine) {
-            onStep('offline');
-            return;
-        }
+        const hasLocalData = (await db.products.count()) > 0;
 
-        if (!InitializationService.shouldSync()) {
+        // Si tenemos datos, no bloqueamos al usuario
+        if (hasLocalData && !InitializationService.shouldSync()) {
             onStep('ready');
             return;
         }
 
+        // Si tenemos datos pero toca actualizar, avisamos pero no necesariamente bloqueamos
+        if (hasLocalData) {
+            onStep('ready'); // Liberamos la UI primero
+            InitializationService.backgroundSync(); // Sync silencioso
+            return;
+        }
+
+        // Si NO hay datos (primer inicio), sí es obligatorio bloquear y mostrar progreso
         try {
-            // FASE 1: Sincronizar Configuración Global
-            onStep('config');
-            const settings = getSettings();
-            if (settings.appSheetConfig?.gasWebAppUrl) {
-                const newConfig = await fetchSystemConfig();
-                const updatedSettings = { ...settings, appSheetConfig: { ...settings.appSheetConfig, ...newConfig } };
-                await saveSettings(updatedSettings);
-                logger.success('INIT', 'Configuración de sistema actualizada desde la nube.');
+            if (!navigator.onLine) {
+                onStep('offline');
+                return;
             }
-
-            // FASE 2: Sincronizar Catálogo de Productos (Smart Delta)
+            onStep('config');
+            await InitializationService.syncConfig();
             onStep('database');
-            const importedCount = await importProductsFromAppSheet();
-            logger.success('INIT', `Sincronización delta completada: ${importedCount} SKUs actualizados.`);
-
-            // Finalización exitosa
+            await importProductsFromAppSheet();
             localStorage.setItem('logicount_last_init_ts', Date.now().toString());
             onStep('ready');
-
         } catch (error: any) {
-            logger.error('INIT_FAILED', 'Fallo en inicialización automática. Usando caché local.', error.message);
-            // Resiliencia: si falla la red, permitimos entrar en modo offline
-            onStep('offline');
-            // Retraso pequeño para que el usuario vea el estado
-            await new Promise(r => setTimeout(r, 1000));
-            onStep('ready');
+            logger.error('INIT_CRITICAL', 'Fallo en carga inicial', error.message);
+            onStep('ready'); // Intentamos abrir con lo que haya
+        }
+    },
+
+    syncConfig: async () => {
+        const settings = getSettings();
+        if (settings.appSheetConfig?.gasWebAppUrl) {
+            const newConfig = await fetchSystemConfig();
+            const updatedSettings = { ...settings, appSheetConfig: { ...settings.appSheetConfig, ...newConfig } };
+            await saveSettings(updatedSettings);
+        }
+    },
+
+    backgroundSync: async () => {
+        if (!navigator.onLine) return;
+        try {
+            console.log("[Init] Ejecutando sincronización delta de fondo...");
+            await InitializationService.syncConfig();
+            await importProductsFromAppSheet();
+            localStorage.setItem('logicount_last_init_ts', Date.now().toString());
+            console.log("[Init] Sincronización de fondo completada.");
+        } catch (e) {
+            console.warn("[Init] Falló el refresco de fondo, se reintentará en la siguiente apertura.");
         }
     }
 };
