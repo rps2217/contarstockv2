@@ -15,8 +15,7 @@ export const VectorService = {
     },
 
     /**
-     * Genera una firma numérica (embedding) usando el motor local del dispositivo.
-     * NO consume API Key, NO consume datos (tras carga inicial), NO tiene Rate Limit.
+     * Genera una firma numérica (embedding) usando EXCLUSIVAMENTE el motor local.
      */
     generateEmbedding: async (text: string): Promise<number[] | null> => {
         return await localBrain.embed(text);
@@ -24,11 +23,10 @@ export const VectorService = {
 
     /**
      * Procesa productos que requieren entrenamiento.
-     * Ahora es mucho más rápido porque no hay latencia de red.
+     * Lógica optimizada para CPU (sin espera de red tras la carga inicial).
      */
     vectorizeMissingProducts: async (onProgress?: (count: number, total: number) => void) => {
-        // Inicializamos el cerebro primero para cargar el modelo en memoria
-        console.log("[VectorService] Calentando motores neurales...");
+        // Aseguramos que el cerebro esté cargado antes de empezar el bucle
         await localBrain.init();
 
         const allProducts = await db.products.toArray();
@@ -42,8 +40,8 @@ export const VectorService = {
         let processed = 0;
         let successCount = 0;
 
-        // Procesamiento en lotes para no congelar la UI
-        const BATCH_SIZE = 10;
+        // Procesamiento en lotes pequeños para no congelar la UI
+        const BATCH_SIZE = 5;
         
         for (let i = 0; i < missing.length; i += BATCH_SIZE) {
             const batch = missing.slice(i, i + BATCH_SIZE);
@@ -54,8 +52,7 @@ export const VectorService = {
                     if (vector) {
                         await db.products.update(product.barcode, { 
                             embedding: vector,
-                            // Marcamos como 'edit' para que el SyncManager suba este vector a la nube
-                            // y otros dispositivos puedan aprovechar este cálculo.
+                            // Marcamos como 'edit' para sincronizar este aprendizaje a la nube después
                             syncStatus: product.syncStatus === 'synced' ? 'edit' : product.syncStatus 
                         });
                         successCount++;
@@ -68,11 +65,10 @@ export const VectorService = {
             processed += batch.length;
             if (onProgress) onProgress(Math.min(processed, total), total);
             
-            // Pequeña pausa para dejar respirar al Event Loop de la UI
-            await new Promise(r => setTimeout(r, 10));
+            // Pausa técnica para liberar el hilo principal de JS y que la barra de progreso se pinte
+            await new Promise(r => setTimeout(r, 20));
         }
 
-        console.log(`[VectorService] PROCESO FINALIZADO. Exitosos: ${successCount}/${total}`);
         return successCount;
     }
 };

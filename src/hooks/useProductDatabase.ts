@@ -14,21 +14,23 @@ export const useProductDatabase = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [isSyncing, setIsSyncing] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
+    
+    // Estados separados para:
+    // 1. Descarga del Modelo (Red)
+    const [brainStatus, setBrainStatus] = useState<{ status: string, progress: number, details?: string }>({ status: 'idle', progress: 0 });
+    // 2. Procesamiento de Datos (CPU)
     const [isVectorizing, setIsVectorizing] = useState(false);
     const [vectorProgress, setVectorProgress] = useState({ current: 0, total: 0 });
+    
     const [storageUsage, setStorageUsage] = useState<{ used: number, quota: number } | null>(null);
     const [feedback, setFeedback] = useState<{ type: 'success' | 'error', msg: string } | null>(null);
-    
-    // Estado del Cerebro Local
-    const [brainStatus, setBrainStatus] = useState<{ status: string, progress: number }>({ status: 'idle', progress: 0 });
 
     useEffect(() => {
-        // Suscribirse al progreso de descarga del modelo
-        const unsubscribe = localBrain.subscribe((status, progress) => {
-            setBrainStatus({ status, progress });
+        // Suscripción al estado de descarga del modelo
+        const unsubscribe = localBrain.subscribe((status, progress, details) => {
+            setBrainStatus({ status, progress, details });
         });
 
-        // Chequeo de almacenamiento
         const checkStorage = async () => {
             if (navigator.storage && navigator.storage.estimate) {
                 const estimate = await navigator.storage.estimate();
@@ -61,16 +63,17 @@ export const useProductDatabase = () => {
     }, []);
 
     const handleVectorize = async () => {
-        // Si el cerebro no está listo, intentamos inicializarlo, lo que disparará la descarga
-        if (brainStatus.status === 'idle' || brainStatus.status === 'error') {
+        // Paso 1: Si el modelo no está listo, iniciamos la descarga (El Header mostrará la barra azul)
+        if (brainStatus.status !== 'ready') {
             try {
-                localBrain.init(); // Esto inicia la descarga y actualiza el estado via suscripción
+                await localBrain.init(); 
             } catch(e) {
-                showFeedback('error', 'Fallo al iniciar motor IA');
+                showFeedback('error', 'No se pudo descargar el modelo IA. Verifique conexión.');
                 return;
             }
         }
 
+        // Paso 2: Una vez descargado, iniciamos el procesamiento (El Header mostrará la barra ámbar)
         setIsVectorizing(true);
         setVectorProgress({ current: 0, total: 0 });
         
