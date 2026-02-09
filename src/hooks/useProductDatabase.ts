@@ -15,10 +15,8 @@ export const useProductDatabase = () => {
     const [isSyncing, setIsSyncing] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
     
-    // Estados separados para:
-    // 1. Descarga del Modelo (Red)
+    // Estados separados para IA
     const [brainStatus, setBrainStatus] = useState<{ status: string, progress: number, details?: string }>({ status: 'idle', progress: 0 });
-    // 2. Procesamiento de Datos (CPU)
     const [isVectorizing, setIsVectorizing] = useState(false);
     const [vectorProgress, setVectorProgress] = useState({ current: 0, total: 0 });
     
@@ -26,7 +24,7 @@ export const useProductDatabase = () => {
     const [feedback, setFeedback] = useState<{ type: 'success' | 'error', msg: string } | null>(null);
 
     useEffect(() => {
-        // Suscripción al estado de descarga del modelo
+        // Suscripción al estado del modelo
         const unsubscribe = localBrain.subscribe((status, progress, details) => {
             setBrainStatus({ status, progress, details });
         });
@@ -62,18 +60,22 @@ export const useProductDatabase = () => {
         setTimeout(() => setFeedback(null), 3000);
     }, []);
 
+    // ACCIÓN 1: DESCARGAR MOTOR (Botón Dedicado)
+    const handleInitializeBrain = async () => {
+        try {
+            await localBrain.init();
+        } catch (e: any) {
+            showFeedback('error', 'Error de red al descargar motor.');
+        }
+    };
+
+    // ACCIÓN 2: ENTRENAR PRODUCTOS (Solo disponible si está descargado)
     const handleVectorize = async () => {
-        // Paso 1: Si el modelo no está listo, iniciamos la descarga (El Header mostrará la barra azul)
         if (brainStatus.status !== 'ready') {
-            try {
-                await localBrain.init(); 
-            } catch(e) {
-                showFeedback('error', 'No se pudo descargar el modelo IA. Verifique conexión.');
-                return;
-            }
+            showFeedback('error', 'Primero debe instalar el Motor IA.');
+            return;
         }
 
-        // Paso 2: Una vez descargado, iniciamos el procesamiento (El Header mostrará la barra ámbar)
         setIsVectorizing(true);
         setVectorProgress({ current: 0, total: 0 });
         
@@ -149,6 +151,15 @@ export const useProductDatabase = () => {
             searchQuery,
             brainStatus 
         },
-        actions: { setSearchQuery, handleDelete, handleDeleteAll, handleSyncToCloud, handleDownloadFromCloud, handleVectorize, showFeedback }
+        actions: { 
+            setSearchQuery, 
+            handleDelete, 
+            handleDeleteAll, 
+            handleSyncToCloud, 
+            handleDownloadFromCloud, 
+            handleVectorize, 
+            handleInitializeBrain, // Nueva acción expuesta
+            showFeedback 
+        }
     };
 };

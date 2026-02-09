@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { ChevronLeft, HardDrive, Upload, Loader2, FileSpreadsheet, Plus, RefreshCw, BrainCircuit, Sparkles, Download, CheckCircle2, AlertTriangle, Wifi } from 'lucide-react';
+import { ChevronLeft, HardDrive, Upload, Loader2, FileSpreadsheet, Plus, RefreshCw, BrainCircuit, Sparkles, Download, CheckCircle2, AlertTriangle, Wifi, Cpu } from 'lucide-react';
 import { SearchBar } from '../SearchBar';
 import { useNavigate } from 'react-router-dom';
 
@@ -16,6 +16,8 @@ interface Props {
     onDownload: () => void;
     onSync: () => void;
     onVectorize?: () => void;
+    // Nueva prop para iniciar la descarga explícita
+    onInitializeBrain?: () => void; 
     onImport: () => void;
     onCreate: () => void;
     vectorProgress?: { current: number, total: number };
@@ -28,6 +30,7 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
     const isModelDownloading = props.brainStatus?.status === 'downloading';
     const isModelError = props.brainStatus?.status === 'error';
     const isModelReady = props.brainStatus?.status === 'ready';
+    const isModelMissing = props.brainStatus?.status === 'idle' || isModelError;
 
     return (
         <div className="shrink-0 z-30 bg-white dark:bg-slate-900 py-3 px-4 border-b border-slate-200 dark:border-white/5 shadow-md">
@@ -47,37 +50,35 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
                     </div>
                     
                     <div className="flex gap-2">
-                         {/* BOTÓN CEREBRO IA: Lógica visual prioritaria */}
-                         <button 
-                            onClick={props.onVectorize} 
-                            disabled={props.isVectorizing || isModelDownloading}
-                            className={`p-3 rounded-xl transition-all relative overflow-hidden group ${
-                                isModelDownloading ? 'bg-blue-100 border-blue-200 cursor-wait' :
-                                isModelError ? 'bg-red-100 border-red-200' :
-                                (props.missingVectorsCount ? 'bg-amber-100 text-amber-700 shadow-md active:scale-95' : 'bg-slate-100 dark:bg-white/5 text-slate-400 opacity-80')
-                            }`}
-                            title={isModelReady ? "Entrenar Nuevos Productos" : "Descargar Modelo IA"}
-                         >
-                            {isModelDownloading ? <Download className="w-5 h-5 text-blue-600 animate-bounce" /> :
-                             props.isVectorizing ? <RefreshCw className="w-5 h-5 animate-spin" /> : 
-                             isModelError ? <AlertTriangle className="w-5 h-5 text-red-600" /> :
-                             <BrainCircuit className={`w-5 h-5 ${isModelReady ? 'text-emerald-600' : ''}`} />}
-                            
-                            {/* Barra de progreso de descarga sutil en el botón */}
-                            {isModelDownloading && (
-                                <div 
-                                    className="absolute bottom-0 left-0 h-1 bg-blue-500 transition-all duration-300"
-                                    style={{ width: `${props.brainStatus?.progress || 0}%` }}
-                                />
-                            )}
+                         {/* BOTÓN DEDICADO 1: INSTALAR MOTOR (Si falta) */}
+                         {isModelMissing && (
+                             <button 
+                                onClick={props.onInitializeBrain}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 rounded-xl font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-blue-200 active:scale-95 flex items-center gap-2 animate-pulse"
+                             >
+                                <Download className="w-4 h-4" /> Instalar Motor IA
+                             </button>
+                         )}
 
-                            {/* Badge de Pendientes */}
-                            {!isModelDownloading && !props.isVectorizing && props.missingVectorsCount ? (
-                                <span className="absolute -top-2 -right-2 min-w-[1.25rem] h-5 px-1 bg-amber-500 text-[9px] font-black text-white flex items-center justify-center rounded-full border-2 border-white shadow-sm z-10 animate-in zoom-in">
-                                    {props.missingVectorsCount > 99 ? '99+' : props.missingVectorsCount}
-                                </span>
-                            ) : null}
-                        </button>
+                         {/* BOTÓN DEDICADO 2: ENTRENAR (Si ya está listo) */}
+                         {isModelReady && (
+                             <button 
+                                onClick={props.onVectorize} 
+                                disabled={props.isVectorizing || !props.missingVectorsCount}
+                                className={`p-3 rounded-xl transition-all relative overflow-hidden group ${
+                                    props.missingVectorsCount ? 'bg-amber-100 text-amber-700 shadow-md active:scale-95 border-2 border-amber-200' : 'bg-slate-100 dark:bg-white/5 text-slate-400 opacity-60'
+                                }`}
+                                title="Entrenar Nuevos Productos"
+                             >
+                                {props.isVectorizing ? <RefreshCw className="w-5 h-5 animate-spin" /> : <BrainCircuit className="w-5 h-5" />}
+                                
+                                {props.missingVectorsCount ? (
+                                    <span className="absolute -top-2 -right-2 min-w-[1.25rem] h-5 px-1 bg-amber-500 text-[9px] font-black text-white flex items-center justify-center rounded-full border-2 border-white shadow-sm z-10 animate-in zoom-in">
+                                        {props.missingVectorsCount > 99 ? '99+' : props.missingVectorsCount}
+                                    </span>
+                                ) : null}
+                            </button>
+                         )}
 
                          <button 
                             onClick={props.onSync} 
@@ -92,7 +93,7 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
                             )}
                         </button>
 
-                        <button onClick={props.onCreate} className="bg-blue-600 text-white p-3 rounded-xl shadow-lg active:scale-95 transition-all">
+                        <button onClick={props.onCreate} className="bg-slate-900 dark:bg-slate-800 text-white p-3 rounded-xl shadow-lg active:scale-95 transition-all">
                             <Plus className="w-5 h-5 stroke-[3px]" />
                         </button>
                     </div>
@@ -110,7 +111,7 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
                 {isModelDownloading && (
                     <div className="bg-blue-50 border-2 border-blue-100 p-3 rounded-xl flex flex-col gap-1 shadow-md animate-in slide-in-from-top-2">
                         <div className="flex justify-between items-center text-[9px] font-black text-blue-700 uppercase tracking-widest">
-                            <span className="flex items-center gap-2"><Wifi className="w-3 h-3 animate-pulse"/> Descargando Cerebro Local...</span>
+                            <span className="flex items-center gap-2"><Download className="w-3 h-3 animate-bounce"/> Descargando Cerebro Local...</span>
                             <span>{props.brainStatus?.progress}%</span>
                         </div>
                         <div className="h-2 w-full bg-blue-100 rounded-full overflow-hidden border border-blue-200">
@@ -122,12 +123,12 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
                     </div>
                 )}
 
-                {/* --- BARRA DE ESTADO 2: PROCESAMIENTO/ENTRENAMIENTO (AMBAR) --- */}
+                {/* --- BARRA DE ESTADO 2: ENTRENAMIENTO (AMBAR) --- */}
                 {/* Solo se muestra si NO se está descargando el modelo */}
                 {!isModelDownloading && props.isVectorizing && (
                     <div className="bg-amber-50 border border-amber-100 p-3 rounded-xl flex flex-col gap-1 shadow-sm animate-in slide-in-from-top-2">
                         <div className="flex justify-between items-center text-[9px] font-black text-amber-700 uppercase tracking-widest">
-                            <span className="flex items-center gap-2"><BrainCircuit className="w-3 h-3 animate-pulse"/> Asimilando Datos (CPU)...</span>
+                            <span className="flex items-center gap-2"><Cpu className="w-3 h-3 animate-pulse"/> Asimilando Datos (CPU)...</span>
                             <span>{Math.round(((props.vectorProgress?.current || 0) / (props.vectorProgress?.total || 1)) * 100)}%</span>
                         </div>
                         <div className="h-2 w-full bg-amber-100 rounded-full overflow-hidden">
