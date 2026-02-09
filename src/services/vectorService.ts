@@ -18,7 +18,18 @@ export const VectorService = {
      * Genera una firma numérica (embedding) para un nombre de producto.
      */
     generateEmbedding: async (text: string): Promise<number[] | null> => {
-        if (!navigator.onLine || !process.env.API_KEY || !text) return null;
+        if (!navigator.onLine) {
+            console.warn("[VectorService] Offline. Saltando vectorización.");
+            return null;
+        }
+        if (!process.env.API_KEY) {
+            console.error("[VectorService] API_KEY no configurada.");
+            return null;
+        }
+        if (!text || text.trim().length < 2) {
+            console.warn("[VectorService] Texto muy corto para vectorizar:", text);
+            return null;
+        }
 
         try {
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -35,15 +46,38 @@ export const VectorService = {
             });
 
             let textResponse = response.text;
-            if (!textResponse) return null;
+            if (!textResponse) {
+                console.warn("[VectorService] Respuesta vacía del modelo.");
+                return null;
+            }
 
-            // Limpieza robusta de Markdown por si el modelo ignora responseMimeType
+            // Limpieza robusta de Markdown
             textResponse = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
 
-            const vector = JSON.parse(textResponse);
-            return Array.isArray(vector) && vector.length > 0 ? vector : null;
-        } catch (e) {
-            console.warn("[VectorService] Error en API Gemini para:", text, e);
+            let vector;
+            try {
+                vector = JSON.parse(textResponse);
+            } catch (e) {
+                console.error("[VectorService] Error parseando JSON:", textResponse);
+                return null;
+            }
+
+            if (Array.isArray(vector) && vector.length > 0) {
+                return vector;
+            } else {
+                console.warn("[VectorService] Formato de vector inválido:", vector);
+                return null;
+            }
+        } catch (e: any) {
+            // Logging detallado del error de API para diagnóstico
+            const status = e.status || e.response?.status;
+            const msg = e.message || 'Error desconocido';
+            console.error(`[VectorService] API Error (${status}): ${msg} para producto "${text}"`);
+            
+            // Si es un error de cuota (429), lanzamos excepción para activar el backoff en el loop principal
+            if (status === 429 || msg.includes('429') || msg.includes('Quota') || msg.includes('Resource has been exhausted')) {
+                throw new Error("RATE_LIMIT");
+            }
             return null;
         }
     },
@@ -55,9 +89,12 @@ export const VectorService = {
         console.log("[VectorService] >>> INICIANDO ANÁLISIS DE BASE DE DATOS...");
         
         if (!navigator.onLine) throw new Error("Sin conexión a internet");
-        if (!process.env.API_KEY) {
-            console.error("[VectorService] CRÍTICO: No se detecta API_KEY de Gemini.");
-            throw new Error("API Key no configurada");
+        
+        // Verificación visual de la API Key (segura)
+        const key = process.env.API_KEY;
+        if (!key || key.includes('T') || key.length < 10) {
+            console.error("[VectorService] CRÍTICO: API Key corrupta o no válida.");
+            throw new Error("API Key inválida. Verifique configuración.");
         }
 
         const allProducts = await db.products.toArray();
@@ -71,21 +108,26 @@ export const VectorService = {
         let processed = 0;
         let successCount = 0;
         let consecutiveErrors = 0;
-        const MAX_CONSECUTIVE_ERRORS = 5;
+        const MAX_CONSECUTIVE_ERRORS = 10; // Aumentado para mayor tolerancia
         let lastError: any = null;
 
         for (const product of missing) {
-            // Circuit Breaker
             if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
-                const msg = `Vectorización abortada: Demasiados errores consecutivos. Último error: ${lastError?.message || 'Desconocido'}`;
+                const msg = `Vectorización abortada: ${consecutiveErrors} errores consecutivos. Revise la consola para detalles.`;
                 console.error(msg);
-                throw new Error(msg); // Lanzamos error para que la UI lo muestre
+                throw new Error(msg);
             }
 
             try {
-                // Rate Limit Throttling: Pausa incremental
-                // Si hubo errores recientes, pausamos más tiempo (Backoff)
-                const delay = consecutiveErrors > 0 ? 2000 : (processed > 0 && processed % 5 === 0 ? 1200 : 100);
+                // Backoff Exponencial ante errores
+                let delay = 100;
+                if (consecutiveErrors > 0) {
+                    delay = Math.min(1000 * Math.pow(2, consecutiveErrors), 15000); // Max 15s espera
+                    console.log(`[VectorService] Backoff activo: Esperando ${delay}ms...`);
+                } else if (processed > 0 && processed % 10 === 0) {
+                    delay = 1000; // Pausa de cortesía cada 10 items
+                }
+                
                 await new Promise(r => setTimeout(r, delay));
 
                 const vector = await VectorService.generateEmbedding(product.name);
@@ -100,20 +142,25 @@ export const VectorService = {
                     lastError = null;
                 } else {
                     consecutiveErrors++;
-                    lastError = new Error("Modelo retornó vector vacío o inválido");
-                    console.warn(`[VectorService] Fallo silencioso para: ${product.name}`);
+                    lastError = new Error("Vector nulo");
                 }
             } catch (e: any) {
                 consecutiveErrors++;
                 lastError = e;
-                console.error(`[VectorService] Excepción procesando ${product.barcode}:`, e);
+                if (e.message === "RATE_LIMIT") {
+                    console.warn("[VectorService] Rate Limit detectado. Aumentando backoff.");
+                    // Forzamos un delay extra si fue rate limit
+                    await new Promise(r => setTimeout(r, 5000));
+                } else {
+                    console.error(`[VectorService] Excepción procesando ${product.barcode}:`, e);
+                }
             } finally {
                 processed++;
                 if (onProgress) onProgress(processed, total);
             }
         }
 
-        console.log(`[VectorService] PROCESO FINALIZADO. Exitosos: ${successCount}`);
+        console.log(`[VectorService] PROCESO FINALIZADO. Exitosos: ${successCount}/${total}`);
         return successCount;
     }
 };
