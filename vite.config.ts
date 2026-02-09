@@ -10,6 +10,14 @@ export default defineConfig(({ mode }) => {
         port: 3000,
         host: '0.0.0.0',
       },
+      resolve: {
+        alias: {
+          buffer: 'buffer',
+        },
+      },
+      optimizeDeps: {
+        include: ['buffer', 'long'],
+      },
       plugins: [
         react(),
         VitePWA({

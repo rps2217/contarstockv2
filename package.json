@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@google/genai": "^1.30.0",
+    "@xenova/transformers": "^2.16.0",
+    "buffer": "^6.0.3",
     "date-fns": "^3.3.1",
     "dexie": "^3.2.4",
     "dexie-react-hooks": "^1.1.7",
@@ -17,6 +19,7 @@
     "jszip": "^3.10.1",
     "jspdf": "^2.5.1",
     "jspdf-autotable": "^3.8.2",
+    "long": "^5.2.3",
     "lucide-react": "0.344.0",
     "papaparse": "^5.4.1",
     "react": "18.3.1",

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Product } from '../types';
 import { CheckCircle2, AlertTriangle } from 'lucide-react';
@@ -30,10 +31,12 @@ export const Database: React.FC = () => {
         vectorProgress={state.vectorProgress}
         missingVectorsCount={state.missingVectorsCount}
         pendingChangesCount={state.pendingChangesCount}
+        brainStatus={state.brainStatus} // Pass brain status
         onSearch={actions.setSearchQuery}
         onDownload={actions.handleDownloadFromCloud}
         onSync={actions.handleSyncToCloud}
         onVectorize={actions.handleVectorize}
+        onInitializeBrain={actions.handleInitializeBrain} // New prop connected
         onImport={() => setIsImportOpen(true)}
         onCreate={handleOpenCreate}
       />
