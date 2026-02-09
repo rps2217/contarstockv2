@@ -1,13 +1,11 @@
 
+
 import { Product } from '../types';
 import { db } from '../db';
 import Papa from 'papaparse';
 import { sanitizeBarcode } from './utils';
 import { validateProduct } from './validator';
 
-/**
- * Repository Pattern: Centraliza el acceso a la tabla de productos
- */
 export const getProductByBarcode = async (barcode: string): Promise<Product | undefined> => {
     return await db.products.get(sanitizeBarcode(barcode));
 };
@@ -21,6 +19,9 @@ export const saveProduct = async (product: Product) => {
   const validatedData = validation.data!;
   const existing = await db.products.get(validatedData.barcode);
   
+  // Preservar embedding si el nuevo no trae nada (aprendizaje local)
+  const embedding = validatedData.embedding || existing?.embedding;
+  
   let syncStatus: 'add' | 'edit' | 'synced' = 'add';
   if (existing) {
       syncStatus = existing.syncStatus === 'add' ? 'add' : 'edit';
@@ -28,19 +29,35 @@ export const saveProduct = async (product: Product) => {
 
   await db.products.put({ 
       ...validatedData,
+      embedding,
       syncStatus
   });
 };
 
 export const saveProductBatch = async (products: Product[]) => {
-    const validBatch = products
+    const validInbound = products
         .map(p => validateProduct(p))
         .filter(v => v.valid)
         .map(v => v.data!);
 
-    if (validBatch.length > 0) {
-        await db.products.bulkPut(validBatch);
-    }
+    if (validInbound.length === 0) return;
+
+    // Lógica Anti-Sobrescritura de Aprendizaje IA
+    const barcodes = validInbound.map(p => p.barcode);
+    const existingProducts = await db.products.where('barcode').anyOf(barcodes).toArray();
+    // Explicitly typing existingMap as Map<string, Product> to prevent 'unknown' inference for .get() returns
+    const existingMap = new Map<string, Product>(existingProducts.map(p => [p.barcode, p]));
+
+    const mergedBatch = validInbound.map(inbound => {
+        const local = existingMap.get(inbound.barcode);
+        return {
+            ...inbound,
+            // Si el que viene de fuera no tiene firma IA pero el local sí, conservamos la local
+            embedding: inbound.embedding || local?.embedding
+        };
+    });
+
+    await db.products.bulkPut(mergedBatch);
 };
 
 export const deleteProduct = async (barcode: string) => {
@@ -64,7 +81,8 @@ export const createProductAlias = async (newBarcode: string, originalBarcode: st
         category: masterProduct?.category || 'ALIAS_DETECTADO',
         supplier: masterProduct?.supplier || '',
         supplierRut: masterProduct?.supplierRut || '',
-        syncStatus: 'add'
+        syncStatus: 'add',
+        embedding: masterProduct?.embedding
     };
     await saveProduct(newProduct);
 };

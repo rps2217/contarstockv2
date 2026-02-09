@@ -15,15 +15,17 @@ class LocalBrainService {
     private progress: number = 0;
     private details: string = '';
     private listeners: Set<StatusListener> = new Set();
+    private STORAGE_KEY = 'logicount_brain_installed';
 
     constructor() {
-        // Verificar si ya está cargado (por si hubo hot-reload)
-        if (this.pipe) this.updateStatus('ready', 100);
+        // Si el usuario ya lo instaló antes, intentamos activarlo silenciosamente
+        if (typeof window !== 'undefined' && localStorage.getItem(this.STORAGE_KEY) === 'true') {
+            this.init(true); 
+        }
     }
 
     public subscribe(listener: StatusListener) {
         this.listeners.add(listener);
-        // Emitir estado actual inmediatamente al suscribirse
         listener(this.status, this.progress, this.details);
         return () => this.listeners.delete(listener);
     }
@@ -36,39 +38,31 @@ class LocalBrainService {
     }
 
     /**
-     * Inicia la descarga del modelo.
-     * Prioriza el archivo .onnx para la barra de progreso principal.
+     * @param silent Si es true, no emite estados de carga pesados a menos que fallen
      */
-    async init() {
+    async init(silent = false) {
         if (this.pipe) return;
         if (this.status === 'downloading') return;
 
-        this.updateStatus('downloading', 0, 'Iniciando...');
+        if (!silent) this.updateStatus('downloading', 0, 'Iniciando Motor...');
         
         try {
-            console.log(`[LocalBrain] Iniciando descarga de ${this.modelName}...`);
-            
             this.pipe = await pipeline('feature-extraction', this.modelName, {
                 progress_callback: (data: any) => {
-                    if (data.status === 'progress') {
-                        // Solo actualizamos la barra con el archivo del modelo principal o el progreso general
+                    if (data.status === 'progress' && !silent) {
                         if (data.file.includes('onnx') || data.file.includes('model')) {
-                            this.updateStatus('downloading', Math.round(data.progress || 0), 'Descargando Motor Neural...');
+                            this.updateStatus('downloading', Math.round(data.progress || 0), 'Cargando Red Neuronal...');
                         }
-                    } else if (data.status === 'done') {
-                        // Archivo parcial completado
-                    } else if (data.status === 'initiate') {
-                        this.updateStatus('downloading', 0, `Conectando: ${data.file}`);
                     }
                 }
             });
             
-            console.log(`[LocalBrain] Motor listo.`);
+            localStorage.setItem(this.STORAGE_KEY, 'true');
             this.updateStatus('ready', 100, 'Motor Activo');
         } catch (e: any) {
-            console.error("[LocalBrain] Error fatal:", e);
-            this.updateStatus('error', 0, e.message);
-            throw e;
+            console.error("[LocalBrain] Error:", e);
+            if (!silent) this.updateStatus('error', 0, e.message);
+            else this.status = 'idle'; // Reset para permitir reintento manual
         }
     }
 
@@ -77,15 +71,10 @@ class LocalBrainService {
         
         try {
             if (!this.pipe) await this.init();
-            
-            // Generar embedding
             const output = await this.pipe(text, { pooling: 'mean', normalize: true });
             const vector = Array.from(output.data) as number[];
-            
-            // Reducir precisión a 4 decimales para optimizar almacenamiento DB
             return vector.map(n => Number(n.toFixed(4)));
         } catch (e) {
-            console.error(`[LocalBrain] Error procesando "${text}":`, e);
             return null;
         }
     }
