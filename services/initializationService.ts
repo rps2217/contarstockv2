@@ -4,11 +4,11 @@ import { fetchSystemConfig } from './gasService';
 import { importProductsFromAppSheet } from './syncManager';
 import { getSettings, saveSettings } from './settings';
 import { db } from '../db';
+import { localBrain } from './localBrain';
 
 export type InitStep = 'idle' | 'version_check' | 'config' | 'database' | 'ready' | 'offline';
 
-// --- CONFIGURACIÓN DE VERSIÓN ---
-const CURRENT_APP_VERSION = "4.5.8"; // Incrementa esto para forzar limpieza de UI en todos los clientes
+const CURRENT_APP_VERSION = "5.5.1";
 
 export const InitializationService = {
     shouldSync: (): boolean => {
@@ -19,27 +19,26 @@ export const InitializationService = {
     },
 
     /**
-     * Ejecuta el arranque profesional con mantenimiento preventivo.
+     * Protocolo de Arranque Senior:
+     * Si hay datos locales, libera la UI primero. El mantenimiento es transparente.
      */
     run: async (onStep: (step: InitStep) => void): Promise<void> => {
-        
-        // 1. Mantenimiento de Versión (Anti-Caché obsoleto)
         onStep('version_check');
         await InitializationService.maintenance();
 
         const hasLocalData = (await db.products.count()) > 0;
 
-        if (hasLocalData && !InitializationService.shouldSync()) {
-            onStep('ready');
-            return;
-        }
-
+        // ESTRATEGIA: UI Primero
         if (hasLocalData) {
-            onStep('ready');
-            InitializationService.backgroundSync();
+            onStep('ready'); // Liberamos al usuario inmediatamente
+            if (InitializationService.shouldSync() && navigator.onLine) {
+                // Sincronización silenciosa post-arranque
+                InitializationService.backgroundRefresh();
+            }
             return;
         }
 
+        // Si es el primer inicio y no hay datos, forzamos espera
         try {
             if (!navigator.onLine) {
                 onStep('offline');
@@ -52,40 +51,23 @@ export const InitializationService = {
             localStorage.setItem('logicount_last_init_ts', Date.now().toString());
             onStep('ready');
         } catch (error: any) {
-            logger.error('INIT_CRITICAL', 'Fallo en carga inicial', error.message);
-            onStep('ready');
+            logger.error('INIT_CRITICAL', 'Fallo en carga inicial forzada', error.message);
+            onStep('ready'); 
         }
     },
 
-    /**
-     * Limpieza selectiva para cargar nuevas características sin afectar datos vitales.
-     */
     maintenance: async () => {
         const storedVersion = localStorage.getItem('logicount_app_version');
-        
         if (storedVersion !== CURRENT_APP_VERSION) {
-            console.log(`[Maintenance] Actualizando de ${storedVersion} a ${CURRENT_APP_VERSION}`);
-            
-            // Lógica de Limpieza Segura (Mantenemos Auth y DB)
             const keysToKeep = ['logicount_auth', 'logicount_operator_id', 'logicount_settings', 'logicount_brain_installed'];
-            
-            // Limpiamos solo flags de UI y estados de error antiguos que podrían causar conflictos
             Object.keys(localStorage).forEach(key => {
-                if (key.startsWith('logicount_') && !keysToKeep.includes(key)) {
-                    localStorage.removeItem(key);
-                }
+                if (key.startsWith('logicount_') && !keysToKeep.includes(key)) localStorage.removeItem(key);
             });
-
-            // Forzar actualización del Service Worker si existe
             if ('serviceWorker' in navigator) {
-                const registrations = await navigator.serviceWorker.getRegistrations();
-                for (let registration of registrations) {
-                    await registration.update();
-                }
+                const regs = await navigator.serviceWorker.getRegistrations();
+                regs.forEach(r => r.update());
             }
-
             localStorage.setItem('logicount_app_version', CURRENT_APP_VERSION);
-            console.log("[Maintenance] Limpieza de UI completada.");
         }
     },
 
@@ -93,19 +75,19 @@ export const InitializationService = {
         const settings = getSettings();
         if (settings.appSheetConfig?.gasWebAppUrl) {
             const newConfig = await fetchSystemConfig();
-            const updatedSettings = { ...settings, appSheetConfig: { ...settings.appSheetConfig, ...newConfig } };
-            await saveSettings(updatedSettings);
+            const updated = { ...settings, appSheetConfig: { ...settings.appSheetConfig, ...newConfig } };
+            await saveSettings(updated);
         }
     },
 
-    backgroundSync: async () => {
-        if (!navigator.onLine) return;
+    backgroundRefresh: async () => {
         try {
             await InitializationService.syncConfig();
             await importProductsFromAppSheet();
             localStorage.setItem('logicount_last_init_ts', Date.now().toString());
+            console.log("[Init] Sincronización de fondo completada.");
         } catch (e) {
-            console.warn("[Init] Falló el refresco de fondo.");
+            console.warn("[Init] Refresco silencioso falló, se reintentará luego.");
         }
     }
 };

@@ -1,7 +1,6 @@
 
 import { pipeline, env } from '@xenova/transformers';
 
-// Configuración estricta para entorno Web/PWA
 env.allowLocalModels = false;
 env.useBrowserCache = true;
 
@@ -18,9 +17,15 @@ class LocalBrainService {
     private STORAGE_KEY = 'logicount_brain_installed';
 
     constructor() {
-        // Si el usuario ya lo instaló antes, intentamos activarlo silenciosamente
-        if (typeof window !== 'undefined' && localStorage.getItem(this.STORAGE_KEY) === 'true') {
-            this.init(true); 
+        // En lugar de init inmediato, esperamos a que el navegador esté libre
+        if (typeof window !== 'undefined') {
+            if (localStorage.getItem(this.STORAGE_KEY) === 'true') {
+                if ('requestIdleCallback' in window) {
+                    (window as any).requestIdleCallback(() => this.init(true));
+                } else {
+                    setTimeout(() => this.init(true), 3000);
+                }
+            }
         }
     }
 
@@ -37,40 +42,35 @@ class LocalBrainService {
         this.listeners.forEach(l => l(status, progress, details));
     }
 
-    /**
-     * @param silent Si es true, no emite estados de carga pesados a menos que fallen
-     */
     async init(silent = false) {
-        if (this.pipe) return;
-        if (this.status === 'downloading') return;
+        if (this.pipe || this.status === 'downloading') return;
 
-        if (!silent) this.updateStatus('downloading', 0, 'Iniciando Motor...');
+        if (!silent) this.updateStatus('downloading', 0, 'Iniciando IA...');
         
         try {
             this.pipe = await pipeline('feature-extraction', this.modelName, {
                 progress_callback: (data: any) => {
                     if (data.status === 'progress' && !silent) {
                         if (data.file.includes('onnx') || data.file.includes('model')) {
-                            this.updateStatus('downloading', Math.round(data.progress || 0), 'Cargando Red Neuronal...');
+                            this.updateStatus('downloading', Math.round(data.progress || 0), 'Optimizando Cerebro...');
                         }
                     }
                 }
             });
             
             localStorage.setItem(this.STORAGE_KEY, 'true');
-            this.updateStatus('ready', 100, 'Motor Activo');
+            this.updateStatus('ready', 100, 'IA Activa');
         } catch (e: any) {
-            console.error("[LocalBrain] Error:", e);
+            console.error("[LocalBrain] Falló inicialización:", e);
             if (!silent) this.updateStatus('error', 0, e.message);
-            else this.status = 'idle'; // Reset para permitir reintento manual
+            else this.status = 'idle';
         }
     }
 
     async embed(text: string): Promise<number[] | null> {
         if (!text || text.trim().length < 2) return null;
-        
         try {
-            if (!this.pipe) await this.init();
+            if (!this.pipe) await this.init(false);
             const output = await this.pipe(text, { pooling: 'mean', normalize: true });
             const vector = Array.from(output.data) as number[];
             return vector.map(n => Number(n.toFixed(4)));
