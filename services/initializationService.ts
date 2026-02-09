@@ -5,7 +5,10 @@ import { importProductsFromAppSheet } from './syncManager';
 import { getSettings, saveSettings } from './settings';
 import { db } from '../db';
 
-export type InitStep = 'idle' | 'config' | 'database' | 'ready' | 'offline';
+export type InitStep = 'idle' | 'version_check' | 'config' | 'database' | 'ready' | 'offline';
+
+// --- CONFIGURACIÓN DE VERSIÓN ---
+const CURRENT_APP_VERSION = "4.5.8"; // Incrementa esto para forzar limpieza de UI en todos los clientes
 
 export const InitializationService = {
     shouldSync: (): boolean => {
@@ -16,26 +19,27 @@ export const InitializationService = {
     },
 
     /**
-     * Ejecuta el arranque profesional:
-     * Si hay datos, libera la UI inmediatamente y sincroniza de fondo.
+     * Ejecuta el arranque profesional con mantenimiento preventivo.
      */
     run: async (onStep: (step: InitStep) => void): Promise<void> => {
+        
+        // 1. Mantenimiento de Versión (Anti-Caché obsoleto)
+        onStep('version_check');
+        await InitializationService.maintenance();
+
         const hasLocalData = (await db.products.count()) > 0;
 
-        // Si tenemos datos, no bloqueamos al usuario
         if (hasLocalData && !InitializationService.shouldSync()) {
             onStep('ready');
             return;
         }
 
-        // Si tenemos datos pero toca actualizar, avisamos pero no necesariamente bloqueamos
         if (hasLocalData) {
-            onStep('ready'); // Liberamos la UI primero
-            InitializationService.backgroundSync(); // Sync silencioso
+            onStep('ready');
+            InitializationService.backgroundSync();
             return;
         }
 
-        // Si NO hay datos (primer inicio), sí es obligatorio bloquear y mostrar progreso
         try {
             if (!navigator.onLine) {
                 onStep('offline');
@@ -49,7 +53,39 @@ export const InitializationService = {
             onStep('ready');
         } catch (error: any) {
             logger.error('INIT_CRITICAL', 'Fallo en carga inicial', error.message);
-            onStep('ready'); // Intentamos abrir con lo que haya
+            onStep('ready');
+        }
+    },
+
+    /**
+     * Limpieza selectiva para cargar nuevas características sin afectar datos vitales.
+     */
+    maintenance: async () => {
+        const storedVersion = localStorage.getItem('logicount_app_version');
+        
+        if (storedVersion !== CURRENT_APP_VERSION) {
+            console.log(`[Maintenance] Actualizando de ${storedVersion} a ${CURRENT_APP_VERSION}`);
+            
+            // Lógica de Limpieza Segura (Mantenemos Auth y DB)
+            const keysToKeep = ['logicount_auth', 'logicount_operator_id', 'logicount_settings', 'logicount_brain_installed'];
+            
+            // Limpiamos solo flags de UI y estados de error antiguos que podrían causar conflictos
+            Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('logicount_') && !keysToKeep.includes(key)) {
+                    localStorage.removeItem(key);
+                }
+            });
+
+            // Forzar actualización del Service Worker si existe
+            if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                for (let registration of registrations) {
+                    await registration.update();
+                }
+            }
+
+            localStorage.setItem('logicount_app_version', CURRENT_APP_VERSION);
+            console.log("[Maintenance] Limpieza de UI completada.");
         }
     },
 
@@ -65,13 +101,11 @@ export const InitializationService = {
     backgroundSync: async () => {
         if (!navigator.onLine) return;
         try {
-            console.log("[Init] Ejecutando sincronización delta de fondo...");
             await InitializationService.syncConfig();
             await importProductsFromAppSheet();
             localStorage.setItem('logicount_last_init_ts', Date.now().toString());
-            console.log("[Init] Sincronización de fondo completada.");
         } catch (e) {
-            console.warn("[Init] Falló el refresco de fondo, se reintentará en la siguiente apertura.");
+            console.warn("[Init] Falló el refresco de fondo.");
         }
     }
 };
