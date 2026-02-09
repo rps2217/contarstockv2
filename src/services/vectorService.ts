@@ -22,17 +22,20 @@ export const VectorService = {
             console.warn("[VectorService] Offline. Saltando vectorización.");
             return null;
         }
-        if (!process.env.API_KEY) {
-            console.error("[VectorService] API_KEY no configurada.");
-            return null;
+        
+        const key = process.env.API_KEY;
+        if (!key || key.length < 10) {
+             console.error("[VectorService] API_KEY no configurada o muy corta.");
+             return null;
         }
+
         if (!text || text.trim().length < 2) {
             console.warn("[VectorService] Texto muy corto para vectorizar:", text);
             return null;
         }
 
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const ai = new GoogleGenAI({ apiKey: key });
             const response = await ai.models.generateContent({
                 model: 'gemini-3-flash-preview',
                 contents: `Genera un vector JSON de 32 números que represente semánticamente este producto: "${text}". Responde solo el array de números.`,
@@ -74,6 +77,11 @@ export const VectorService = {
             const msg = e.message || 'Error desconocido';
             console.error(`[VectorService] API Error (${status}): ${msg} para producto "${text}"`);
             
+            // Errores fatales de configuración
+            if (status === 400 || status === 401 || status === 403 || msg.includes('API key')) {
+                throw new Error("FATAL_AUTH_ERROR");
+            }
+
             // Si es un error de cuota (429), lanzamos excepción para activar el backoff en el loop principal
             if (status === 429 || msg.includes('429') || msg.includes('Quota') || msg.includes('Resource has been exhausted')) {
                 throw new Error("RATE_LIMIT");
@@ -90,11 +98,13 @@ export const VectorService = {
         
         if (!navigator.onLine) throw new Error("Sin conexión a internet");
         
-        // Verificación visual de la API Key (segura)
+        // Verificación de integridad de la API Key
         const key = process.env.API_KEY;
-        if (!key || key.includes('T') || key.length < 10) {
+        // Detectar caracteres de control o binarios que indican corrupción en .env
+        // También verificar longitud mínima razonable
+        if (!key || key.length < 20 || /[\x00-\x1F\x7F]/.test(key)) {
             console.error("[VectorService] CRÍTICO: API Key corrupta o no válida.");
-            throw new Error("API Key inválida. Verifique configuración.");
+            throw new Error("API Key inválida (Archivo .env corrupto). Verifique configuración.");
         }
 
         const allProducts = await db.products.toArray();
@@ -108,7 +118,7 @@ export const VectorService = {
         let processed = 0;
         let successCount = 0;
         let consecutiveErrors = 0;
-        const MAX_CONSECUTIVE_ERRORS = 10; // Aumentado para mayor tolerancia
+        const MAX_CONSECUTIVE_ERRORS = 5; 
         let lastError: any = null;
 
         for (const product of missing) {
@@ -145,8 +155,14 @@ export const VectorService = {
                     lastError = new Error("Vector nulo");
                 }
             } catch (e: any) {
+                if (e.message === "FATAL_AUTH_ERROR") {
+                    console.error("[VectorService] Abortando proceso por error de autenticación.");
+                    throw new Error("Error de Autenticación con Google Gemini. Revise su API KEY.");
+                }
+
                 consecutiveErrors++;
                 lastError = e;
+                
                 if (e.message === "RATE_LIMIT") {
                     console.warn("[VectorService] Rate Limit detectado. Aumentando backoff.");
                     // Forzamos un delay extra si fue rate limit
