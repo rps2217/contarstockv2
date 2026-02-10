@@ -1,3 +1,4 @@
+
 import React, { memo } from 'react';
 import { ChevronLeft, Save, MoreVertical, Lock } from 'lucide-react';
 
@@ -25,7 +26,6 @@ export const MassiveHeader: React.FC<Props> = memo(({
                     <ChevronLeft className="w-6 h-6 text-white" />
                 </button>
                 
-                {/* BOTÓN DE BLOQUEO RÁPIDO (Badge Ámbar) */}
                 <button 
                     onClick={onLock}
                     className="flex items-center gap-2 px-4 py-2 bg-amber-500/10 border border-amber-500/30 rounded-xl active:bg-amber-500 active:text-black transition-all group"
@@ -49,7 +49,10 @@ export const MassiveHeader: React.FC<Props> = memo(({
                 </button>
 
                 <button 
-                    onClick={onOpenTools}
+                    onClick={(e) => {
+                        e.preventDefault();
+                        onOpenTools();
+                    }}
                     className="w-11 h-11 flex items-center justify-center bg-white/5 rounded-xl border border-white/10 active:bg-white/20 transition-all text-white"
                 >
                     <MoreVertical className="w-6 h-6" />

@@ -1,30 +1,52 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useHammerLogic } from './hooks/useHammerLogic';
-import { migrateMassiveToMaster } from '../../services/massiveSync'; // Asumiendo que moverás los servicios después
+import { migrateMassiveToMaster, importManifestFromCloud } from '../../services/massiveSync';
 import { HammerHUD } from './components/HammerHUD';
-import { HammerHeader } from './components/HammerHeader';
-import { HammerList } from './components/HammerList';
+import { MassiveHeader } from '../../components/massive/MassiveHeader';
+import { MassiveItemRow } from '../../components/massive/MassiveItemRow';
+import { MassiveToolsSheet } from '../../components/massive/MassiveToolsSheet';
+import { MassiveLabelModal } from '../../components/massive/MassiveLabelModal';
 import { ScannerFooter } from '../../shared/components/controls/ScannerFooter';
-import { CameraScanner } from '../../components/CameraScanner'; // Legacy path, mover a shared/components en el futuro
-import { ScreenLockOverlay } from '../../components/common/ScreenLockOverlay'; // Legacy path
-import { NumericKeypad } from '../../components/NumericKeypad'; // Legacy path
+import { CameraScanner } from '../../components/CameraScanner';
+import { ScreenLockOverlay } from '../../components/common/ScreenLockOverlay';
+import { NumericKeypad } from '../../components/NumericKeypad';
+import { VirtualList } from '../../components/common/VirtualList';
+import { SoundFX } from '../../services/audio';
 
 export const HammerPage: React.FC = () => {
     const navigate = useNavigate();
     const { batchId = 'CORE' } = useParams();
-    
-    // Separación de Lógica de Negocio (Custom Hook)
     const { state, actions } = useHammerLogic(batchId);
     
-    // Estado de UI Local (Presentational State)
     const [isTriggerActive, setIsTriggerActive] = useState(false);
     const [isScreenLocked, setIsScreenLocked] = useState(false);
+    const [isToolsOpen, setIsToolsOpen] = useState(false);
+    const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
     const [showKeypad, setShowKeypad] = useState(false);
     const [isMigrating, setIsMigrating] = useState(false);
 
-    // Manejador de Transición de Negocio
+    // --- LÓGICA DE AUTO-BLOQUEO (Inactividad Industrial) ---
+    const lockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const AUTO_LOCK_MS = 5000; 
+
+    const resetLockTimer = useCallback(() => {
+        if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
+        if (isScreenLocked) return;
+
+        lockTimerRef.current = setTimeout(() => {
+            setIsScreenLocked(true);
+        }, AUTO_LOCK_MS);
+    }, [isScreenLocked]);
+
+    useEffect(() => {
+        resetLockTimer();
+        return () => { if (lockTimerRef.current) clearTimeout(lockTimerRef.current); };
+    }, [state.items.length, state.lastScannedItem, resetLockTimer]);
+
+    const handleInteraction = () => resetLockTimer();
+
     const handleFinalize = async () => {
         if (!state.items.length || !confirm("¿Cerrar auditoría y consolidar datos?")) return;
         setIsMigrating(true);
@@ -33,11 +55,10 @@ export const HammerPage: React.FC = () => {
             navigate('/reports?type=hammer');
         } catch (err) {
             setIsMigrating(false);
-            // Aquí iría un toast de error
+            SoundFX.play('error');
         }
     };
 
-    // Protocolo de Gatillo Táctico (Latch-free)
     const startTrigger = useCallback(() => {
         if (isScreenLocked) return;
         setIsTriggerActive(true);
@@ -49,14 +70,17 @@ export const HammerPage: React.FC = () => {
     }, []);
 
     return (
-        <div className="fixed inset-0 z-[100] flex flex-col font-mono bg-black select-none overflow-hidden text-white">
-            
-            <HammerHeader 
-                title={batchId}
+        <div 
+            className="fixed inset-0 z-[100] flex flex-col font-mono bg-black select-none overflow-hidden text-white"
+            onPointerDown={handleInteraction}
+            onKeyDown={handleInteraction}
+        >
+            <MassiveHeader 
                 isMigrating={isMigrating}
                 hasItems={state.items.length > 0}
                 onBack={() => navigate('/dashboard')}
                 onFinalize={handleFinalize}
+                onOpenTools={() => setIsToolsOpen(true)}
                 onLock={() => setIsScreenLocked(true)}
             />
 
@@ -68,11 +92,12 @@ export const HammerPage: React.FC = () => {
             />
 
             <div className="flex-1 min-h-0 bg-black/90 relative">
-                <div className="absolute inset-0 bg-gradient-to-b from-black via-transparent to-transparent pointer-events-none z-10 h-6"/>
-                <HammerList 
+                <VirtualList 
                     items={state.items} 
-                    activeBarcode={state.lastScannedItem?.barcode}
-                    onSelect={actions.selectItem}
+                    itemHeight={82} 
+                    renderRow={MassiveItemRow} 
+                    rowData={{ onSelect: actions.selectItem, activeBarcode: state.lastScannedItem?.barcode }} 
+                    className="bg-black/20" 
                 />
             </div>
 
@@ -86,7 +111,7 @@ export const HammerPage: React.FC = () => {
                 onTriggerEnd={endTrigger}
             />
 
-            {/* Capa de Hardware (Cámara) */}
+            {/* Hardware Layer */}
             {isTriggerActive && (
                 <div className="fixed inset-0 z-[200]">
                     <CameraScanner 
@@ -97,14 +122,35 @@ export const HammerPage: React.FC = () => {
                 </div>
             )}
 
-            {/* Modales Auxiliares */}
+            {/* Utils Sheets */}
+            <MassiveToolsSheet 
+                isOpen={isToolsOpen}
+                onClose={() => setIsToolsOpen(false)}
+                hasActiveItem={!!state.lastScannedItem}
+                location={state.currentLocation}
+                onChangeLocation={() => {}} // Se implementará modal de loc
+                onShowLabel={() => setIsLabelModalOpen(true)}
+                onReset={() => { if(confirm("¿Vaciar todo el lote?")) actions.removeItem('ALL'); }}
+                onImport={async () => {
+                    try { await importManifestFromCloud(batchId); SoundFX.play('success'); }
+                    catch(e: any) { alert(e.message); }
+                }}
+                onPrintSummary={() => {}}
+            />
+
+            <MassiveLabelModal 
+                isOpen={isLabelModalOpen}
+                onClose={() => setIsLabelModalOpen(false)}
+                item={state.lastScannedItem || null}
+                isPrinting={false}
+                onPrintThermal={() => {}}
+                onPrintPDF={() => {}}
+            />
+
             {showKeypad && (
                 <NumericKeypad 
-                    isOpen={true} 
-                    onClose={() => setShowKeypad(false)} 
-                    title="INGRESO MANUAL" 
-                    onInput={(v) => actions.registerScan(v)} 
-                    onDelete={() => {}} 
+                    isOpen={true} onClose={() => setShowKeypad(false)} title="INGRESO MANUAL" 
+                    onInput={(v) => actions.registerScan(v)} onDelete={() => {}} 
                     onConfirm={() => setShowKeypad(false)} 
                 />
             )}

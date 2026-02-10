@@ -19,24 +19,19 @@ export interface HammerItem {
 export const useHammerLogic = (batchId: string) => {
     const { feedback, trigger } = useFeedbackSystem(150);
     
-    // Estado Operativo
     const [activeBarcode, setActiveBarcode] = useState<string | null>(null);
     const [activeProduct, setActiveProduct] = useState<Product | null>(null);
     const [optimisticQty, setOptimisticQty] = useState<number | null>(null);
     const [multiplier, setMultiplier] = useState(1);
     const [currentLocation, setCurrentLocation] = useState(() => localStorage.getItem('hammer_loc') || 'ZONA-A');
     
-    // Buffer de Escritura (Optimización de I/O)
     const writeQueue = useRef<{barcode: string, qty: number, loc: string, ts: number}[]>([]);
     const itemsCache = useRef<HammerItem[]>([]);
 
     useEffect(() => { localStorage.setItem('hammer_loc', currentLocation); }, [currentLocation]);
 
-    // Query Reactiva a la Base de Datos (Dexie)
     const dbItems = useLiveQuery(async () => {
         if (!batchId) return [];
-        
-        // Parallel Fetch
         const [rawScans, manifests] = await Promise.all([
             massiveDb.blindScans.where('batchId').equals(batchId).toArray(),
             massiveDb.blindManifests.where('batchId').equals(batchId).toArray()
@@ -48,7 +43,6 @@ export const useHammerLogic = (batchId: string) => {
         
         const aggregation = new Map<string, HammerItem>();
 
-        // 1. Hidratar con Manifiesto (Metas)
         manifests.forEach(m => {
             aggregation.set(m.barcode, {
                 barcode: m.barcode,
@@ -60,7 +54,6 @@ export const useHammerLogic = (batchId: string) => {
             });
         });
 
-        // 2. Aplicar Escaneos Reales
         rawScans.forEach(s => {
             const existing = aggregation.get(s.barcode);
             if (existing) {
@@ -79,15 +72,14 @@ export const useHammerLogic = (batchId: string) => {
         });
 
         const sorted = Array.from(aggregation.values()).sort((a, b) => {
-            if (a.barcode === activeBarcode) return -1; // Active item always on top
+            if (a.barcode === activeBarcode) return -1;
             return b.lastTimestamp - a.lastTimestamp;
         });
 
         itemsCache.current = sorted;
         return sorted;
-    }, [batchId, activeBarcode, feedback]); // Feedback dependency forces refresh on scan
+    }, [batchId, activeBarcode, feedback]);
 
-    // Flush Loop (Escritura en Bucle)
     useEffect(() => {
         const flush = async () => {
             if (writeQueue.current.length === 0) return;
@@ -98,26 +90,52 @@ export const useHammerLogic = (batchId: string) => {
                     batchId, barcode: b.barcode, quantity: b.qty, location: b.loc, timestamp: b.ts
                 })));
             } catch (e) {
-                console.error("Write failed, retrying", e);
-                writeQueue.current = [...batch, ...writeQueue.current]; // Re-queue on fail
+                writeQueue.current = [...batch, ...writeQueue.current];
             }
         };
-        const timer = setInterval(flush, 500); // 500ms debounce
+        const timer = setInterval(flush, 500);
         return () => { clearInterval(timer); flush(); };
     }, [batchId]);
 
-    // Acciones Públicas
+    const removeItem = useCallback(async (barcode: string) => {
+        if (barcode === 'ALL') {
+            await massiveDb.blindScans.where('batchId').equals(batchId).delete();
+            setActiveBarcode(null);
+        } else {
+            await massiveDb.blindScans.where({ batchId, barcode }).delete();
+            if (activeBarcode === barcode) setActiveBarcode(null);
+        }
+        trigger('undo');
+    }, [batchId, activeBarcode, trigger]);
+
     const registerScan = useCallback((code: string, qtyOverride?: number) => {
         const clean = sanitizeBarcode(code);
         if (!clean) return;
         
         const qtyToApply = qtyOverride ?? multiplier;
-        trigger(qtyToApply > 0 ? 'success' : 'undo');
         
+        // --- PROTECCIÓN DE NEGATIVOS ---
+        const existingItem = itemsCache.current.find(i => i.barcode === clean);
+        const currentQty = existingItem?.totalQuantity || 0;
+        
+        if (currentQty + qtyToApply < 0) {
+            trigger('error');
+            return;
+        }
+
+        if (currentQty + qtyToApply === 0 && currentQty > 0) {
+            if (confirm("¿Eliminar este SKU del conteo?")) {
+                removeItem(clean);
+                return;
+            } else {
+                return;
+            }
+        }
+
+        trigger(qtyToApply > 0 ? 'success' : 'undo');
         setActiveBarcode(clean);
         masterDb.products.get(clean).then(setActiveProduct);
         
-        // Optimistic UI Update
         setOptimisticQty(prev => {
             const baseReal = itemsCache.current.find(i => i.barcode === clean)?.totalQuantity ?? 0;
             const currentUI = clean === activeBarcode ? (prev ?? baseReal) : baseReal;
@@ -125,25 +143,14 @@ export const useHammerLogic = (batchId: string) => {
         });
 
         writeQueue.current.push({ barcode: clean, qty: qtyToApply, loc: currentLocation, ts: Date.now() });
-    }, [activeBarcode, trigger, multiplier, currentLocation]);
+    }, [activeBarcode, trigger, multiplier, currentLocation, removeItem]);
 
     const modifyQuantity = useCallback((barcode: string, delta: number) => {
-        const item = itemsCache.current.find(i => i.barcode === barcode);
-        if (item && item.totalQuantity + delta <= 0) {
-             // Remove logic handled externally or implies 0
-             // For hammer mode, we allow adding negative records to fix counts
-        }
         registerScan(barcode, delta);
     }, [registerScan]);
 
-    const removeItem = async (barcode: string) => {
-        await massiveDb.blindScans.where({ batchId, barcode }).delete();
-        if (activeBarcode === barcode) setActiveBarcode(null);
-        trigger('undo');
-    };
-
     const lastScannedItem = useMemo(() => {
-        if (!activeBarcode) return null;
+        if (!activeBarcode) return undefined;
         const real = dbItems?.find(i => i.barcode === activeBarcode);
         return real ? { ...real, totalQuantity: optimisticQty ?? real.totalQuantity } : undefined;
     }, [dbItems, activeBarcode, optimisticQty]);
