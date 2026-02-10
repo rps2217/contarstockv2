@@ -3,7 +3,7 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useHammerLogic } from './hooks/useHammerLogic';
 import { migrateMassiveToMaster, importManifestFromCloud } from '../../services/massiveSync';
-import { HammerHUD } from './components/HammerHUD';
+import { MassiveHUD } from '../../components/massive/MassiveHUD';
 import { MassiveHeader } from '../../components/massive/MassiveHeader';
 import { MassiveItemRow } from '../../components/massive/MassiveItemRow';
 import { MassiveToolsSheet } from '../../components/massive/MassiveToolsSheet';
@@ -27,9 +27,9 @@ export const HammerPage: React.FC = () => {
     const [showKeypad, setShowKeypad] = useState(false);
     const [isMigrating, setIsMigrating] = useState(false);
 
-    // --- LÓGICA DE AUTO-BLOQUEO (Inactividad Industrial) ---
+    // --- MOTOR DE BLOQUEO ROBUSTO (Listeners Globales) ---
     const lockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const AUTO_LOCK_MS = 5000; 
+    const AUTO_LOCK_MS = 6000; // 6 segundos de gracia
 
     const resetLockTimer = useCallback(() => {
         if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
@@ -37,21 +37,31 @@ export const HammerPage: React.FC = () => {
 
         lockTimerRef.current = setTimeout(() => {
             setIsScreenLocked(true);
+            if (navigator.vibrate) navigator.vibrate(10);
         }, AUTO_LOCK_MS);
     }, [isScreenLocked]);
 
     useEffect(() => {
+        // Escuchar actividad en toda la ventana (clave para PDAs)
+        const events = ['mousedown', 'keydown', 'touchstart', 'pointerdown'];
+        events.forEach(e => window.addEventListener(e, resetLockTimer));
+        
         resetLockTimer();
-        return () => { if (lockTimerRef.current) clearTimeout(lockTimerRef.current); };
-    }, [state.items.length, state.lastScannedItem, resetLockTimer]);
-
-    const handleInteraction = () => resetLockTimer();
+        
+        return () => {
+            if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
+            events.forEach(e => window.removeEventListener(e, resetLockTimer));
+        };
+    }, [resetLockTimer]);
 
     const handleFinalize = async () => {
-        if (!state.items.length || !confirm("¿Cerrar auditoría y consolidar datos?")) return;
+        if (!state.items.length) return;
+        if (!confirm("¿Cerrar auditoría y consolidar datos en el historial principal?")) return;
+        
         setIsMigrating(true);
         try {
             await migrateMassiveToMaster(batchId);
+            SoundFX.play('success');
             navigate('/reports?type=hammer');
         } catch (err) {
             setIsMigrating(false);
@@ -70,22 +80,21 @@ export const HammerPage: React.FC = () => {
     }, []);
 
     return (
-        <div 
-            className="fixed inset-0 z-[100] flex flex-col font-mono bg-black select-none overflow-hidden text-white"
-            onPointerDown={handleInteraction}
-            onKeyDown={handleInteraction}
-        >
+        <div className="fixed inset-0 z-[100] flex flex-col font-mono bg-black select-none overflow-hidden text-white">
             <MassiveHeader 
                 isMigrating={isMigrating}
                 hasItems={state.items.length > 0}
                 onBack={() => navigate('/dashboard')}
                 onFinalize={handleFinalize}
-                onOpenTools={() => setIsToolsOpen(true)}
+                onOpenTools={() => {
+                    console.log("Abriendo Herramientas..."); // Debug para traza
+                    setIsToolsOpen(true);
+                }}
                 onLock={() => setIsScreenLocked(true)}
             />
 
-            <HammerHUD 
-                item={state.lastScannedItem} 
+            <MassiveHUD 
+                item={state.lastScannedItem as any} 
                 feedback={state.feedback} 
                 onDecrement={(i) => actions.modifyQuantity(i.barcode, -1)} 
                 onIncrement={(code) => actions.registerScan(code)} 
@@ -115,24 +124,36 @@ export const HammerPage: React.FC = () => {
             {isTriggerActive && (
                 <div className="fixed inset-0 z-[200]">
                     <CameraScanner 
-                        onScan={(code) => actions.registerScan(code)} 
+                        onScan={(code) => {
+                            actions.registerScan(code);
+                            setIsTriggerActive(false);
+                        }} 
                         onClose={endTrigger} 
                         isTriggered={true} 
                     />
                 </div>
             )}
 
-            {/* Utils Sheets */}
+            {/* Menú de Acciones (3 puntos) */}
             <MassiveToolsSheet 
                 isOpen={isToolsOpen}
                 onClose={() => setIsToolsOpen(false)}
                 hasActiveItem={!!state.lastScannedItem}
                 location={state.currentLocation}
-                onChangeLocation={() => {}} // Se implementará modal de loc
+                onChangeLocation={() => {}} 
                 onShowLabel={() => setIsLabelModalOpen(true)}
-                onReset={() => { if(confirm("¿Vaciar todo el lote?")) actions.removeItem('ALL'); }}
+                onReset={() => { 
+                    if(confirm("¿Vaciar todo el lote actual? Esta acción no se puede deshacer.")) {
+                        actions.removeItem('ALL'); 
+                        setIsToolsOpen(false);
+                    }
+                }}
                 onImport={async () => {
-                    try { await importManifestFromCloud(batchId); SoundFX.play('success'); }
+                    try { 
+                        await importManifestFromCloud(batchId); 
+                        SoundFX.play('success');
+                        setIsToolsOpen(false);
+                    }
                     catch(e: any) { alert(e.message); }
                 }}
                 onPrintSummary={() => {}}
@@ -149,8 +170,11 @@ export const HammerPage: React.FC = () => {
 
             {showKeypad && (
                 <NumericKeypad 
-                    isOpen={true} onClose={() => setShowKeypad(false)} title="INGRESO MANUAL" 
-                    onInput={(v) => actions.registerScan(v)} onDelete={() => {}} 
+                    isOpen={true} 
+                    onClose={() => setShowKeypad(false)} 
+                    title="INGRESO MANUAL" 
+                    onInput={(v) => actions.registerScan(v)} 
+                    onDelete={() => {}} 
                     onConfirm={() => setShowKeypad(false)} 
                 />
             )}

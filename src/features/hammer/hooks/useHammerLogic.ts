@@ -6,6 +6,8 @@ import { db as masterDb } from '../../../db';
 import { sanitizeBarcode } from '../../../services/utils';
 import { useFeedbackSystem } from '../../../hooks/useFeedbackSystem';
 import { Product } from '../../../types';
+// Add missing SoundFX import
+import { SoundFX } from '../../../services/audio';
 
 export interface HammerItem {
     barcode: string;
@@ -101,9 +103,13 @@ export const useHammerLogic = (batchId: string) => {
         if (barcode === 'ALL') {
             await massiveDb.blindScans.where('batchId').equals(batchId).delete();
             setActiveBarcode(null);
+            setOptimisticQty(null);
         } else {
             await massiveDb.blindScans.where({ batchId, barcode }).delete();
-            if (activeBarcode === barcode) setActiveBarcode(null);
+            if (activeBarcode === barcode) {
+                setActiveBarcode(null);
+                setOptimisticQty(null);
+            }
         }
         trigger('undo');
     }, [batchId, activeBarcode, trigger]);
@@ -113,25 +119,30 @@ export const useHammerLogic = (batchId: string) => {
         if (!clean) return;
         
         const qtyToApply = qtyOverride ?? multiplier;
-        
-        // --- PROTECCIÓN DE NEGATIVOS ---
         const existingItem = itemsCache.current.find(i => i.barcode === clean);
         const currentQty = existingItem?.totalQuantity || 0;
         
-        if (currentQty + qtyToApply < 0) {
+        // --- PROTECCIÓN DEFINITIVA CONTRA NEGATIVOS ---
+        const targetQty = currentQty + qtyToApply;
+
+        if (targetQty < 0) {
+            // Fix: Added missing SoundFX import
+            SoundFX.play('error');
             trigger('error');
             return;
         }
 
-        if (currentQty + qtyToApply === 0 && currentQty > 0) {
-            if (confirm("¿Eliminar este SKU del conteo?")) {
+        // --- FLUJO DE ELIMINACIÓN POR CERO ---
+        if (targetQty === 0 && currentQty > 0) {
+            if (confirm(`¿Deseas eliminar el SKU ${clean} del conteo actual?`)) {
                 removeItem(clean);
                 return;
             } else {
-                return;
+                return; // Cancelar operación
             }
         }
 
+        // Ejecución normal
         trigger(qtyToApply > 0 ? 'success' : 'undo');
         setActiveBarcode(clean);
         masterDb.products.get(clean).then(setActiveProduct);
@@ -172,7 +183,8 @@ export const useHammerLogic = (batchId: string) => {
             removeItem,
             selectItem: (b: string) => { 
                 setActiveBarcode(b); 
-                setOptimisticQty(itemsCache.current.find(i => i.barcode === b)?.totalQuantity || 0); 
+                const item = itemsCache.current.find(i => i.barcode === b);
+                setOptimisticQty(item?.totalQuantity || 0); 
                 masterDb.products.get(b).then(setActiveProduct);
             }
         }
