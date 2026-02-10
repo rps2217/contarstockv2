@@ -22,7 +22,7 @@ export const HammerPage: React.FC = () => {
     const { batchId = 'CORE' } = useParams();
     const { state, actions } = useHammerLogic(batchId);
     
-    // --- ESTADOS DE MODALES Y CARGA ---
+    // --- ESTADOS DE MODALES ---
     const [isTriggerActive, setIsTriggerActive] = useState(false);
     const [isScreenLocked, setIsScreenLocked] = useState(false);
     const [isToolsOpen, setIsToolsOpen] = useState(false);
@@ -32,15 +32,15 @@ export const HammerPage: React.FC = () => {
     const [isMigrating, setIsMigrating] = useState(false);
     const [isCloudLoading, setIsCloudLoading] = useState(false);
 
-    // --- MANEJADORES DE ACCIONES DEL MENÚ ---
-    const handleImportTheoreticalStock = async () => {
+    // --- MANEJADORES DE ACCIONES ---
+    const handleImport теоретическийStock = async () => {
         setIsCloudLoading(true);
         try {
             const count = await importManifestFromCloud(batchId);
             SoundFX.play('success');
             alert(`Sincronización Exitosa: Se cargaron ${count} metas de stock desde la nube.`);
         } catch (e: any) {
-            alert(`Error Cloud: ${e.message}`);
+            alert(`Error de Conexión: ${e.message}`);
             SoundFX.play('error');
         } finally {
             setIsCloudLoading(false);
@@ -58,7 +58,7 @@ export const HammerPage: React.FC = () => {
 
     const handleFinalize = async () => {
         if (!state.items.length) return;
-        if (!confirm("¿Cerrar auditoría y consolidar datos en el historial principal?")) return;
+        if (!confirm("¿Cerrar auditoría y consolidar registros en el historial?")) return;
         
         setIsMigrating(true);
         try {
@@ -70,22 +70,6 @@ export const HammerPage: React.FC = () => {
             SoundFX.play('error');
         }
     };
-
-    // --- LÓGICA DE GATILLO ---
-    const startTrigger = useCallback(() => {
-        if (isScreenLocked) return;
-        setIsTriggerActive(true);
-        if (navigator.vibrate) navigator.vibrate(30);
-    }, [isScreenLocked]);
-
-    const endTrigger = useCallback(() => {
-        setIsTriggerActive(false);
-    }, []);
-
-    const rowData = React.useMemo(() => ({ 
-        onSelect: actions.selectItem, 
-        activeBarcode: state.lastScannedItem?.barcode 
-    }), [actions.selectItem, state.lastScannedItem?.barcode]);
 
     return (
         <div className="fixed inset-0 z-[100] flex flex-col font-mono bg-black select-none overflow-hidden text-white">
@@ -111,7 +95,7 @@ export const HammerPage: React.FC = () => {
                     items={state.items} 
                     itemHeight={82} 
                     renderRow={MassiveItemRow} 
-                    rowData={rowData} 
+                    rowData={{ onSelect: actions.selectItem, activeBarcode: state.lastScannedItem?.barcode }} 
                 />
             </div>
 
@@ -121,8 +105,8 @@ export const HammerPage: React.FC = () => {
                 isTriggerActive={isTriggerActive}
                 onMultiplierChange={actions.setMultiplier}
                 onOpenManual={() => setShowKeypad(true)}
-                onTriggerStart={startTrigger}
-                onTriggerEnd={endTrigger}
+                onTriggerStart={() => !isScreenLocked && setIsTriggerActive(true)}
+                onTriggerEnd={() => setIsTriggerActive(false)}
             />
 
             {/* --- CAPA DE MODALES DE ACCIÓN --- */}
@@ -135,7 +119,7 @@ export const HammerPage: React.FC = () => {
                 onChangeLocation={() => setIsLocModalOpen(true)}
                 onShowLabel={() => setIsLabelModalOpen(true)}
                 onReset={handleResetBatch}
-                onImport={handleImportTheoreticalStock}
+                onImport={handleImport теоретическийStock}
                 onPrintSummary={() => alert("Función de reporte PDF en desarrollo")}
             />
 
@@ -163,7 +147,7 @@ export const HammerPage: React.FC = () => {
                             actions.registerScan(code);
                             setIsTriggerActive(false);
                         }} 
-                        onClose={endTrigger} 
+                        onClose={() => setIsTriggerActive(false)} 
                         isTriggered={true} 
                     />
                 </div>
@@ -182,11 +166,11 @@ export const HammerPage: React.FC = () => {
 
             <ScreenLockOverlay isLocked={isScreenLocked} onUnlock={() => setIsScreenLocked(false)} />
 
-            {/* Indicador de carga cloud */}
+            {/* Loading Cloud Overlay */}
             {isCloudLoading && (
                 <div className="fixed inset-0 z-[500] bg-black/80 flex flex-col items-center justify-center">
                     <Loader2 className="w-12 h-12 text-blue-500 animate-spin mb-4" />
-                    <p className="text-[10px] font-black uppercase tracking-widest text-blue-400">Accediendo a Google Sheets...</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-blue-400">Accediendo a la Nube...</p>
                 </div>
             )}
         </div>
