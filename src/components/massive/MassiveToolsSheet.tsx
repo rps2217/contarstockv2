@@ -23,7 +23,6 @@ export const MassiveToolsSheet: React.FC<Props> = ({
         <button
             disabled={disabled}
             onClick={(e) => {
-                e.preventDefault();
                 e.stopPropagation();
                 onClick();
             }}

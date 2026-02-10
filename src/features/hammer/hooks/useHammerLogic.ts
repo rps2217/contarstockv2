@@ -118,26 +118,6 @@ export const useHammerLogic = (batchId: string) => {
         if (!clean) return;
         
         const qtyToApply = qtyOverride ?? multiplier;
-        const existingItem = itemsCache.current.find(i => i.barcode === clean);
-        const currentQty = existingItem?.totalQuantity || 0;
-        
-        const targetQty = currentQty + qtyToApply;
-
-        if (targetQty < 0) {
-            SoundFX.play('error');
-            trigger('error');
-            return;
-        }
-
-        if (targetQty === 0 && currentQty > 0) {
-            if (confirm(`¿Deseas eliminar el SKU ${clean} del conteo actual?`)) {
-                removeItem(clean);
-                return;
-            } else {
-                return;
-            }
-        }
-
         trigger(qtyToApply > 0 ? 'success' : 'undo');
         setActiveBarcode(clean);
         masterDb.products.get(clean).then(setActiveProduct);
@@ -149,7 +129,7 @@ export const useHammerLogic = (batchId: string) => {
         });
 
         writeQueue.current.push({ barcode: clean, qty: qtyToApply, loc: currentLocation, ts: Date.now() });
-    }, [activeBarcode, trigger, multiplier, currentLocation, removeItem]);
+    }, [activeBarcode, trigger, multiplier, currentLocation]);
 
     const modifyQuantity = useCallback((barcode: string, delta: number) => {
         registerScan(barcode, delta);

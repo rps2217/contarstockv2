@@ -1,7 +1,7 @@
+
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-// Add Loader2 import from lucide-react
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
 import { useHammerLogic } from './hooks/useHammerLogic';
 import { migrateMassiveToMaster, importManifestFromCloud } from '../../services/massiveSync';
 import { MassiveHUD } from '../../components/massive/MassiveHUD';
@@ -22,7 +22,7 @@ export const HammerPage: React.FC = () => {
     const { batchId = 'CORE' } = useParams();
     const { state, actions } = useHammerLogic(batchId);
     
-    // --- ESTADOS DE MODALES ---
+    // --- ESTADOS DE MODALES Y CARGA ---
     const [isTriggerActive, setIsTriggerActive] = useState(false);
     const [isScreenLocked, setIsScreenLocked] = useState(false);
     const [isToolsOpen, setIsToolsOpen] = useState(false);
@@ -32,38 +32,15 @@ export const HammerPage: React.FC = () => {
     const [isMigrating, setIsMigrating] = useState(false);
     const [isCloudLoading, setIsCloudLoading] = useState(false);
 
-    // --- MOTOR DE BLOQUEO ---
-    const lockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const resetLockTimer = useCallback(() => {
-        if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
-        if (isScreenLocked) return;
-        lockTimerRef.current = setTimeout(() => setIsScreenLocked(true), 10000); // 10s para martillo
-    }, [isScreenLocked]);
-
-    useEffect(() => {
-        const events = ['mousedown', 'keydown', 'touchstart'];
-        events.forEach(e => window.addEventListener(e, resetLockTimer));
-        resetLockTimer();
-        return () => events.forEach(e => window.removeEventListener(e, resetLockTimer));
-    }, [resetLockTimer]);
-
-    // --- ACCIONES DEL MENÚ ---
-    const handleResetBatch = async () => {
-        if (confirm("¿ELIMINAR TODO EL CONTENIDO DEL LOTE? Esta acción borrará todos los escaneos realizados hasta ahora en esta sesión.")) {
-            await actions.removeItem('ALL');
-            SoundFX.play('delete');
-            setIsToolsOpen(false);
-        }
-    };
-
-    const handleImportStock = async () => {
+    // --- MANEJADORES DE ACCIONES DEL MENÚ ---
+    const handleImportTheoreticalStock = async () => {
         setIsCloudLoading(true);
         try {
             const count = await importManifestFromCloud(batchId);
             SoundFX.play('success');
             alert(`Sincronización Exitosa: Se cargaron ${count} metas de stock desde la nube.`);
         } catch (e: any) {
-            alert(`Error de Red: ${e.message}`);
+            alert(`Error Cloud: ${e.message}`);
             SoundFX.play('error');
         } finally {
             setIsCloudLoading(false);
@@ -71,9 +48,17 @@ export const HammerPage: React.FC = () => {
         }
     };
 
+    const handleResetBatch = async () => {
+        if (confirm("¿ELIMINAR TODO EL CONTENIDO DEL LOTE? Esta acción es irreversible y borrará todos los escaneos de esta sesión.")) {
+            await actions.removeItem('ALL');
+            SoundFX.play('delete');
+            setIsToolsOpen(false);
+        }
+    };
+
     const handleFinalize = async () => {
         if (!state.items.length) return;
-        if (!confirm("¿Cerrar auditoría y mover registros al historial principal?")) return;
+        if (!confirm("¿Cerrar auditoría y consolidar datos en el historial principal?")) return;
         
         setIsMigrating(true);
         try {
@@ -86,8 +71,25 @@ export const HammerPage: React.FC = () => {
         }
     };
 
+    // --- LÓGICA DE GATILLO ---
+    const startTrigger = useCallback(() => {
+        if (isScreenLocked) return;
+        setIsTriggerActive(true);
+        if (navigator.vibrate) navigator.vibrate(30);
+    }, [isScreenLocked]);
+
+    const endTrigger = useCallback(() => {
+        setIsTriggerActive(false);
+    }, []);
+
+    const rowData = React.useMemo(() => ({ 
+        onSelect: actions.selectItem, 
+        activeBarcode: state.lastScannedItem?.barcode 
+    }), [actions.selectItem, state.lastScannedItem?.barcode]);
+
     return (
         <div className="fixed inset-0 z-[100] flex flex-col font-mono bg-black select-none overflow-hidden text-white">
+            
             <MassiveHeader 
                 isMigrating={isMigrating}
                 hasItems={state.items.length > 0}
@@ -109,7 +111,7 @@ export const HammerPage: React.FC = () => {
                     items={state.items} 
                     itemHeight={82} 
                     renderRow={MassiveItemRow} 
-                    rowData={{ onSelect: actions.selectItem, activeBarcode: state.lastScannedItem?.barcode }} 
+                    rowData={rowData} 
                 />
             </div>
 
@@ -119,8 +121,8 @@ export const HammerPage: React.FC = () => {
                 isTriggerActive={isTriggerActive}
                 onMultiplierChange={actions.setMultiplier}
                 onOpenManual={() => setShowKeypad(true)}
-                onTriggerStart={() => !isScreenLocked && setIsTriggerActive(true)}
-                onTriggerEnd={() => setIsTriggerActive(false)}
+                onTriggerStart={startTrigger}
+                onTriggerEnd={endTrigger}
             />
 
             {/* --- CAPA DE MODALES DE ACCIÓN --- */}
@@ -133,8 +135,8 @@ export const HammerPage: React.FC = () => {
                 onChangeLocation={() => setIsLocModalOpen(true)}
                 onShowLabel={() => setIsLabelModalOpen(true)}
                 onReset={handleResetBatch}
-                onImport={handleImportStock}
-                onPrintSummary={() => alert("Impresora no detectada")}
+                onImport={handleImportTheoreticalStock}
+                onPrintSummary={() => alert("Función de reporte PDF en desarrollo")}
             />
 
             <LocationSelectorModal 
@@ -161,7 +163,7 @@ export const HammerPage: React.FC = () => {
                             actions.registerScan(code);
                             setIsTriggerActive(false);
                         }} 
-                        onClose={() => setIsTriggerActive(false)} 
+                        onClose={endTrigger} 
                         isTriggered={true} 
                     />
                 </div>
@@ -180,11 +182,11 @@ export const HammerPage: React.FC = () => {
 
             <ScreenLockOverlay isLocked={isScreenLocked} onUnlock={() => setIsScreenLocked(false)} />
 
-            {/* Loading Cloud Overlay */}
+            {/* Indicador de carga cloud */}
             {isCloudLoading && (
                 <div className="fixed inset-0 z-[500] bg-black/80 flex flex-col items-center justify-center">
                     <Loader2 className="w-12 h-12 text-blue-500 animate-spin mb-4" />
-                    <p className="text-[10px] font-black uppercase tracking-widest text-blue-400">Descargando Manifiesto Cloud...</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-blue-400">Accediendo a Google Sheets...</p>
                 </div>
             )}
         </div>
