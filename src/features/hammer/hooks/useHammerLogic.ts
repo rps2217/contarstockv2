@@ -6,7 +6,6 @@ import { db as masterDb } from '../../../db';
 import { sanitizeBarcode } from '../../../services/utils';
 import { useFeedbackSystem } from '../../../hooks/useFeedbackSystem';
 import { Product } from '../../../types';
-// Add missing SoundFX import
 import { SoundFX } from '../../../services/audio';
 
 export interface HammerItem {
@@ -122,27 +121,23 @@ export const useHammerLogic = (batchId: string) => {
         const existingItem = itemsCache.current.find(i => i.barcode === clean);
         const currentQty = existingItem?.totalQuantity || 0;
         
-        // --- PROTECCIÓN DEFINITIVA CONTRA NEGATIVOS ---
         const targetQty = currentQty + qtyToApply;
 
         if (targetQty < 0) {
-            // Fix: Added missing SoundFX import
             SoundFX.play('error');
             trigger('error');
             return;
         }
 
-        // --- FLUJO DE ELIMINACIÓN POR CERO ---
         if (targetQty === 0 && currentQty > 0) {
             if (confirm(`¿Deseas eliminar el SKU ${clean} del conteo actual?`)) {
                 removeItem(clean);
                 return;
             } else {
-                return; // Cancelar operación
+                return;
             }
         }
 
-        // Ejecución normal
         trigger(qtyToApply > 0 ? 'success' : 'undo');
         setActiveBarcode(clean);
         masterDb.products.get(clean).then(setActiveProduct);
