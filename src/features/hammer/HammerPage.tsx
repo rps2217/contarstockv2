@@ -1,16 +1,17 @@
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Loader2, AlertCircle } from 'lucide-react';
 import { useHammerLogic } from './hooks/useHammerLogic';
-import { migrateMassiveToMaster, importManifestFromCloud } from '../../services/massiveSync';
+import { useLocationManager } from '../../shared/hooks/useLocationManager';
+import { migrateMassiveToMaster } from '../../services/massiveSync';
 import { MassiveHUD } from '../../components/massive/MassiveHUD';
 import { MassiveHeader } from '../../components/massive/MassiveHeader';
 import { MassiveItemRow } from '../../components/massive/MassiveItemRow';
 import { MassiveToolsSheet } from '../../components/massive/MassiveToolsSheet';
-import { MassiveLabelModal } from '../../components/massive/MassiveLabelModal';
+import { BarcodeLabelModal } from '../../shared/components/modals/BarcodeLabelModal';
 import { LocationSelectorModal } from '../../components/common/LocationSelectorModal';
 import { ScannerFooter } from '../../shared/components/controls/ScannerFooter';
+import { LocationTrigger } from '../../shared/components/controls/LocationTrigger';
 import { CameraScanner } from '../../components/CameraScanner';
 import { ScreenLockOverlay } from '../../components/common/ScreenLockOverlay';
 import { NumericKeypad } from '../../components/NumericKeypad';
@@ -20,45 +21,28 @@ import { SoundFX } from '../../services/audio';
 export const HammerPage: React.FC = () => {
     const navigate = useNavigate();
     const { batchId = 'CORE' } = useParams();
+    
+    // Lógica de Conteo
     const { state, actions } = useHammerLogic(batchId);
     
-    // --- ESTADOS DE MODALES ---
+    // Lógica de Ubicación Reutilizable
+    const locManager = useLocationManager(`hammer_loc_${batchId}`);
+
     const [isTriggerActive, setIsTriggerActive] = useState(false);
     const [isScreenLocked, setIsScreenLocked] = useState(false);
     const [isToolsOpen, setIsToolsOpen] = useState(false);
     const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
-    const [isLocModalOpen, setIsLocModalOpen] = useState(false);
     const [showKeypad, setShowKeypad] = useState(false);
     const [isMigrating, setIsMigrating] = useState(false);
-    const [isCloudLoading, setIsCloudLoading] = useState(false);
 
-    // --- MANEJADORES DE ACCIONES ---
-    const handleImport теоретическийStock = async () => {
-        setIsCloudLoading(true);
-        try {
-            const count = await importManifestFromCloud(batchId);
-            SoundFX.play('success');
-            alert(`Sincronización Exitosa: Se cargaron ${count} metas de stock desde la nube.`);
-        } catch (e: any) {
-            alert(`Error de Conexión: ${e.message}`);
-            SoundFX.play('error');
-        } finally {
-            setIsCloudLoading(false);
-            setIsToolsOpen(false);
-        }
-    };
-
-    const handleResetBatch = async () => {
-        if (confirm("¿ELIMINAR TODO EL CONTENIDO DEL LOTE? Esta acción es irreversible y borrará todos los escaneos de esta sesión.")) {
-            await actions.removeItem('ALL');
-            SoundFX.play('delete');
-            setIsToolsOpen(false);
-        }
-    };
+    // Actualizamos la ubicación en la lógica de negocio cuando cambia en el manager
+    React.useEffect(() => {
+        actions.setCurrentLocation(locManager.location);
+    }, [locManager.location, actions]);
 
     const handleFinalize = async () => {
         if (!state.items.length) return;
-        if (!confirm("¿Cerrar auditoría y consolidar registros en el historial?")) return;
+        if (!confirm("¿Cerrar auditoría y consolidar registros?")) return;
         
         setIsMigrating(true);
         try {
@@ -82,6 +66,14 @@ export const HammerPage: React.FC = () => {
                 onOpenTools={() => setIsToolsOpen(true)}
                 onLock={() => setIsScreenLocked(true)}
             />
+
+            {/* Selector de Ubicación Rápido - Integrado bajo el Header */}
+            <div className="px-4 py-2 bg-slate-900/50 border-b border-white/5">
+                <LocationTrigger 
+                    location={locManager.location} 
+                    onClick={locManager.openModal} 
+                />
+            </div>
 
             <MassiveHUD 
                 item={state.lastScannedItem as any} 
@@ -109,44 +101,39 @@ export const HammerPage: React.FC = () => {
                 onTriggerEnd={() => setIsTriggerActive(false)}
             />
 
-            {/* --- CAPA DE MODALES DE ACCIÓN --- */}
-            
             <MassiveToolsSheet 
                 isOpen={isToolsOpen}
                 onClose={() => setIsToolsOpen(false)}
+                batchId={batchId}
                 hasActiveItem={!!state.lastScannedItem}
-                location={state.currentLocation}
-                onChangeLocation={() => setIsLocModalOpen(true)}
+                location={locManager.location}
+                onChangeLocation={locManager.openModal}
                 onShowLabel={() => setIsLabelModalOpen(true)}
-                onReset={handleResetBatch}
-                onImport={handleImport теоретическийStock}
-                onPrintSummary={() => alert("Función de reporte PDF en desarrollo")}
+                onReset={() => actions.removeItem('ALL')}
+                onPrintSummary={() => {}}
             />
 
             <LocationSelectorModal 
-                isOpen={isLocModalOpen}
-                onClose={() => setIsLocModalOpen(false)}
-                currentLocation={state.currentLocation}
-                onSelect={actions.setCurrentLocation}
+                isOpen={locManager.isModalOpen}
+                onClose={locManager.closeModal}
+                currentLocation={locManager.location}
+                onSelect={locManager.setLocation}
             />
 
-            <MassiveLabelModal 
-                isOpen={isLabelModalOpen}
-                onClose={() => setIsLabelModalOpen(false)}
-                item={state.lastScannedItem || null}
-                isPrinting={false}
-                onPrintThermal={() => {}}
-                onPrintPDF={() => {}}
-            />
+            {state.lastScannedItem && (
+                <BarcodeLabelModal 
+                    isOpen={isLabelModalOpen}
+                    onClose={() => setIsLabelModalOpen(false)}
+                    barcode={state.lastScannedItem.barcode}
+                    productName={state.lastScannedItem.name}
+                    quantity={state.lastScannedItem.totalQuantity}
+                />
+            )}
 
-            {/* --- HARDWARE / OVERLAYS --- */}
             {isTriggerActive && (
                 <div className="fixed inset-0 z-[200]">
                     <CameraScanner 
-                        onScan={(code) => {
-                            actions.registerScan(code);
-                            setIsTriggerActive(false);
-                        }} 
+                        onScan={(code) => { actions.registerScan(code); setIsTriggerActive(false); }} 
                         onClose={() => setIsTriggerActive(false)} 
                         isTriggered={true} 
                     />
@@ -155,24 +142,13 @@ export const HammerPage: React.FC = () => {
 
             {showKeypad && (
                 <NumericKeypad 
-                    isOpen={true} 
-                    onClose={() => setShowKeypad(false)} 
-                    title="INGRESO MANUAL" 
-                    onInput={(v) => actions.registerScan(v)} 
-                    onDelete={() => {}} 
+                    isOpen={true} onClose={() => setShowKeypad(false)} title="SKU MANUAL" 
+                    onInput={(v) => actions.registerScan(v)} onDelete={() => {}} 
                     onConfirm={() => setShowKeypad(false)} 
                 />
             )}
 
             <ScreenLockOverlay isLocked={isScreenLocked} onUnlock={() => setIsScreenLocked(false)} />
-
-            {/* Loading Cloud Overlay */}
-            {isCloudLoading && (
-                <div className="fixed inset-0 z-[500] bg-black/80 flex flex-col items-center justify-center">
-                    <Loader2 className="w-12 h-12 text-blue-500 animate-spin mb-4" />
-                    <p className="text-[10px] font-black uppercase tracking-widest text-blue-400">Accediendo a la Nube...</p>
-                </div>
-            )}
         </div>
     );
 };

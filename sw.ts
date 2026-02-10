@@ -1,8 +1,9 @@
-
 /// <reference lib="webworker" />
 import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching';
 import { db } from './db';
 import { createInventoryPayload } from './services/cloud/mappers';
+// Add Product import to fix unknown type errors
+import { Product } from './types';
 
 declare let self: ServiceWorkerGlobalScope & { __WB_MANIFEST: any };
 
@@ -47,7 +48,8 @@ async function processBackgroundSync() {
             const products = await db.products.where('barcode').anyOf(uniqueSkus).toArray();
             
             // Mapeamos el producto completo para obtener el embedding
-            const productMap = new Map(products.map(p => [p.barcode, p]));
+            // Fix: Explicitly typing productMap as Map<string, Product> to fix 'unknown' type errors on line 58 and 64
+            const productMap = new Map<string, Product>(products.map(p => [p.barcode, p]));
 
             scansForSession.forEach(scan => {
                 const key = `${scan.barcode}_${scan.mm||0}_${scan.yyyy||0}_${scan.logisticsLabel || 'UNSET'}`;
@@ -55,12 +57,14 @@ async function processBackgroundSync() {
                     const p = productMap.get(scan.barcode);
                     aggregation[key] = {
                         barcode: scan.barcode,
+                        // Fix: p is now typed as Product | undefined, allowing access to .name
                         productName: p?.name || 'Pending Load...',
                         totalQuantity: 0,
                         mm: scan.mm, 
                         yyyy: scan.yyyy,
                         location: scan.logisticsLabel,
                         isIncident: scan.isIncident,
+                        // Fix: p is now typed as Product | undefined, allowing access to .embedding
                         embedding: p?.embedding, // TRASPASO DE CEREBRO IA
                         scans: 0 
                     };
