@@ -15,6 +15,7 @@ export interface HammerItem {
     totalQuantity: number;
     expectedQty?: number;
     lastTimestamp: number;
+    embedding?: number[]; // Añadido para trazabilidad IA
 }
 
 export const useHammerLogic = (batchId: string) => {
@@ -45,29 +46,34 @@ export const useHammerLogic = (batchId: string) => {
         const aggregation = new Map<string, HammerItem>();
 
         manifests.forEach(m => {
+            const pInfo = prodMap.get(m.barcode);
             aggregation.set(m.barcode, {
                 barcode: m.barcode,
-                name: m.name || prodMap.get(m.barcode)?.name || 'SIN DESCRIPCIÓN',
+                name: m.name || pInfo?.name || 'SIN DESCRIPCIÓN',
                 loc: m.loc,
                 totalQuantity: 0,
                 expectedQty: m.expectedQty,
-                lastTimestamp: 0
+                lastTimestamp: 0,
+                embedding: pInfo?.embedding // Preservamos firma IA
             });
         });
 
         rawScans.forEach(s => {
             const existing = aggregation.get(s.barcode);
+            const pInfo = prodMap.get(s.barcode);
             if (existing) {
                 existing.totalQuantity += s.quantity;
                 existing.lastTimestamp = Math.max(existing.lastTimestamp, s.timestamp);
                 if (s.location) existing.loc = s.location;
+                if (!existing.embedding) existing.embedding = pInfo?.embedding;
             } else {
                 aggregation.set(s.barcode, {
                     barcode: s.barcode,
-                    name: prodMap.get(s.barcode)?.name || 'SKU_DESCONOCIDO',
+                    name: pInfo?.name || 'SKU_DESCONOCIDO',
                     totalQuantity: s.quantity,
                     lastTimestamp: s.timestamp,
-                    loc: s.location
+                    loc: s.location,
+                    embedding: pInfo?.embedding // Preservamos firma IA
                 });
             }
         });

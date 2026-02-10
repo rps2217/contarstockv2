@@ -38,6 +38,8 @@ export const createInventoryPayload = (
             [SHEET_COLUMNS.INCIDENT]: item.isIncident ? "FRC" : "OK",
             [SHEET_COLUMNS.AUDIT_STATUS]: session.auditStatus?.toUpperCase() || "",
             [SHEET_COLUMNS.AUDIT_SCORE]: session.auditScore || "",
+            // CRÍTICO: Enviamos la firma de IA para que la nube "aprenda" del dispositivo
+            [SHEET_COLUMNS.IA_SIGNATURE]: item.embedding ? JSON.stringify(item.embedding) : "",
             "META_SOURCE": source
         };
     });
@@ -50,7 +52,7 @@ export const createProductsPayload = (products: Product[]) => {
         "CATEGORIA": p.category,
         "PROVEEDOR": p.supplier,
         "RUT": p.supplierRut,
-        // Serialización del cerebro para la nube
+        // Serialización del cerebro para la nube en el catálogo maestro
         [SHEET_COLUMNS.IA_SIGNATURE]: p.embedding ? JSON.stringify(p.embedding) : ""
     }));
 };

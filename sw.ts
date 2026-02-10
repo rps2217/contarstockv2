@@ -41,24 +41,27 @@ async function processBackgroundSync() {
             if (scansForSession.length === 0) continue;
 
             // --- CONSOLIDACIÓN CRÍTICA EN SEGUNDO PLANO ---
-            // Agrupamos por Barcode + MM + YYYY + logisticsLabel (Bulto)
             const aggregation: Record<string, any> = {};
             
             const uniqueSkus = Array.from(new Set(scansForSession.map(s => s.barcode)));
             const products = await db.products.where('barcode').anyOf(uniqueSkus).toArray();
-            const productMap = new Map(products.map(p => [p.barcode, p.name]));
+            
+            // Mapeamos el producto completo para obtener el embedding
+            const productMap = new Map(products.map(p => [p.barcode, p]));
 
             scansForSession.forEach(scan => {
                 const key = `${scan.barcode}_${scan.mm||0}_${scan.yyyy||0}_${scan.logisticsLabel || 'UNSET'}`;
                 if (!aggregation[key]) {
+                    const p = productMap.get(scan.barcode);
                     aggregation[key] = {
                         barcode: scan.barcode,
-                        productName: productMap.get(scan.barcode) || 'Pending Load...',
+                        productName: p?.name || 'Pending Load...',
                         totalQuantity: 0,
                         mm: scan.mm, 
                         yyyy: scan.yyyy,
-                        location: scan.logisticsLabel, // Mantenemos el bulto específico
+                        location: scan.logisticsLabel,
                         isIncident: scan.isIncident,
+                        embedding: p?.embedding, // TRASPASO DE CEREBRO IA
                         scans: 0 
                     };
                 }
@@ -93,7 +96,6 @@ async function processBackgroundSync() {
                 if (response.ok) {
                     const result = await response.json();
                     if (result.success) {
-                        // Marcamos como sincronizados los scans originales que componen este chunk
                         const chunkBarcodes = new Set(chunk.map((r: any) => r['CODIGO']));
                         const chunkLabels = new Set(chunk.map((r: any) => r['ETIQUETAS']));
                         
