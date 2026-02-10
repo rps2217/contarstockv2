@@ -6,9 +6,9 @@ import { getSettings, saveSettings } from './settings';
 import { db } from '../db';
 import { localBrain } from './localBrain';
 
-export type InitStep = 'idle' | 'version_check' | 'config' | 'database' | 'ready' | 'offline';
+export type InitStep = 'idle' | 'version_check' | 'config' | 'database' | 'ready' | 'offline' | 'purging';
 
-const CURRENT_APP_VERSION = "5.5.2";
+const CURRENT_APP_VERSION = "5.6.0"; // Bumping para forzar mantenimiento
 
 export const InitializationService = {
     shouldSync: (): boolean => {
@@ -23,23 +23,22 @@ export const InitializationService = {
      */
     run: async (onStep: (step: InitStep) => void): Promise<void> => {
         try {
-            // 1. Mantenimiento Preventivo (Cache y SW)
             onStep('version_check');
-            await InitializationService.maintenance();
+            const wasPurged = await InitializationService.maintenance(onStep);
 
-            // 2. Verificar datos mínimos locales
+            // Si se purgó, el navegador se recargará, así que cortamos ejecución
+            if (wasPurged) return;
+
             const hasLocalData = (await db.products.count()) > 0;
 
-            // ESTRATEGIA: UI Primero si ya tenemos datos
             if (hasLocalData) {
-                onStep('ready'); // Liberamos al usuario
+                onStep('ready'); 
                 if (InitializationService.shouldSync() && navigator.onLine) {
                     InitializationService.backgroundRefresh();
                 }
                 return;
             }
 
-            // 3. Carga Inicial Forzada (Solo primer inicio o base vacía)
             if (!navigator.onLine) {
                 onStep('offline');
                 setTimeout(() => onStep('ready'), 2000);
@@ -57,40 +56,67 @@ export const InitializationService = {
 
         } catch (error: any) {
             logger.error('INIT_CRITICAL', 'Fallo en flujo de arranque', error.message);
-            // FAIL-SAFE: Siempre permitir entrada al dashboard
             onStep('ready');
         }
     },
 
-    maintenance: async () => {
+    /**
+     * Protocolo de Purga Profunda (Deep Purge)
+     * Elimina CacheStorage, Service Workers y limpia localStorage obsoleto.
+     */
+    maintenance: async (onStep: (step: InitStep) => void): Promise<boolean> => {
         const storedVersion = localStorage.getItem('logicount_app_version');
+        
         if (storedVersion !== CURRENT_APP_VERSION) {
-            console.log(`[Kernel] Actualizando Kernel a v${CURRENT_APP_VERSION}`);
-            
-            // Limpieza selectiva para evitar conflictos de versiones
-            const keysToKeep = [
-                'logicount_auth', 
-                'logicount_operator_id', 
-                'logicount_settings', 
-                'logicount_brain_installed'
-            ];
-            
-            Object.keys(localStorage).forEach(key => {
-                if (key.startsWith('logicount_') && !keysToKeep.includes(key)) {
-                    localStorage.removeItem(key);
-                }
-            });
+            console.warn(`[Kernel] Mismatch de versión detectado: ${storedVersion} -> ${CURRENT_APP_VERSION}`);
+            onStep('purging');
 
-            // Forzar actualización de Service Worker
-            if ('serviceWorker' in navigator) {
-                const regs = await navigator.serviceWorker.getRegistrations();
-                for (let registration of regs) {
-                    await registration.update();
+            try {
+                // 1. Purga de Cache Storage (Archivos estáticos PWA)
+                if ('caches' in window) {
+                    const cacheNames = await caches.keys();
+                    await Promise.all(cacheNames.map(name => caches.delete(name)));
+                    console.log("[Kernel] Cache Storage eliminado.");
                 }
+
+                // 2. Desregistro forzado de Service Workers
+                if ('serviceWorker' in navigator) {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    for (const reg of registrations) {
+                        await reg.unregister();
+                    }
+                    console.log("[Kernel] Service Workers desregistrados.");
+                }
+
+                // 3. Limpieza selectiva de LocalStorage
+                const keysToKeep = [
+                    'logicount_auth', 
+                    'logicount_operator_id', 
+                    'logicount_settings',
+                    'logicount_brain_installed'
+                ];
+                
+                Object.keys(localStorage).forEach(key => {
+                    if (key.startsWith('logicount_') && !keysToKeep.includes(key)) {
+                        localStorage.removeItem(key);
+                    }
+                });
+
+                // Actualizar marcador de versión
+                localStorage.setItem('logicount_app_version', CURRENT_APP_VERSION);
+                
+                // 4. Hard Reload para cargar el nuevo bundle sin caché
+                console.log("[Kernel] Purga completada. Reiniciando entorno...");
+                window.location.reload();
+                return true;
+
+            } catch (e) {
+                console.error("[Kernel] Error durante la purga:", e);
+                localStorage.setItem('logicount_app_version', CURRENT_APP_VERSION);
+                return false;
             }
-
-            localStorage.setItem('logicount_app_version', CURRENT_APP_VERSION);
         }
+        return false;
     },
 
     syncConfig: async () => {

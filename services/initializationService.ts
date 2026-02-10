@@ -4,11 +4,10 @@ import { fetchSystemConfig } from './gasService';
 import { importProductsFromAppSheet } from './syncManager';
 import { getSettings, saveSettings } from './settings';
 import { db } from '../db';
-import { localBrain } from './localBrain';
 
-export type InitStep = 'idle' | 'version_check' | 'config' | 'database' | 'ready' | 'offline';
+export type InitStep = 'idle' | 'version_check' | 'config' | 'database' | 'ready' | 'offline' | 'purging';
 
-const CURRENT_APP_VERSION = "5.5.1";
+const CURRENT_APP_VERSION = "5.6.0"; 
 
 export const InitializationService = {
     shouldSync: (): boolean => {
@@ -18,32 +17,28 @@ export const InitializationService = {
         return (Date.now() - parseInt(lastInit)) > thirtyMinutes;
     },
 
-    /**
-     * Protocolo de Arranque Senior:
-     * Si hay datos locales, libera la UI primero. El mantenimiento es transparente.
-     */
     run: async (onStep: (step: InitStep) => void): Promise<void> => {
-        onStep('version_check');
-        await InitializationService.maintenance();
-
-        const hasLocalData = (await db.products.count()) > 0;
-
-        // ESTRATEGIA: UI Primero
-        if (hasLocalData) {
-            onStep('ready'); // Liberamos al usuario inmediatamente
-            if (InitializationService.shouldSync() && navigator.onLine) {
-                // Sincronización silenciosa post-arranque
-                InitializationService.backgroundRefresh();
-            }
-            return;
-        }
-
-        // Si es el primer inicio y no hay datos, forzamos espera
         try {
-            if (!navigator.onLine) {
-                onStep('offline');
+            onStep('version_check');
+            const wasPurged = await InitializationService.maintenance(onStep);
+            if (wasPurged) return;
+
+            const hasLocalData = (await db.products.count()) > 0;
+
+            if (hasLocalData) {
+                onStep('ready'); 
+                if (InitializationService.shouldSync() && navigator.onLine) {
+                    InitializationService.backgroundRefresh();
+                }
                 return;
             }
+
+            if (!navigator.onLine) {
+                onStep('offline');
+                setTimeout(() => onStep('ready'), 2000);
+                return;
+            }
+
             onStep('config');
             await InitializationService.syncConfig();
             onStep('database');
@@ -51,24 +46,34 @@ export const InitializationService = {
             localStorage.setItem('logicount_last_init_ts', Date.now().toString());
             onStep('ready');
         } catch (error: any) {
-            logger.error('INIT_CRITICAL', 'Fallo en carga inicial forzada', error.message);
-            onStep('ready'); 
+            logger.error('INIT_CRITICAL', 'Fallo en arranque', error.message);
+            onStep('ready');
         }
     },
 
-    maintenance: async () => {
+    maintenance: async (onStep: (step: InitStep) => void): Promise<boolean> => {
         const storedVersion = localStorage.getItem('logicount_app_version');
+        
         if (storedVersion !== CURRENT_APP_VERSION) {
-            const keysToKeep = ['logicount_auth', 'logicount_operator_id', 'logicount_settings', 'logicount_brain_installed'];
-            Object.keys(localStorage).forEach(key => {
-                if (key.startsWith('logicount_') && !keysToKeep.includes(key)) localStorage.removeItem(key);
-            });
-            if ('serviceWorker' in navigator) {
-                const regs = await navigator.serviceWorker.getRegistrations();
-                regs.forEach(r => r.update());
+            onStep('purging');
+            try {
+                if ('caches' in window) {
+                    const cacheNames = await caches.keys();
+                    await Promise.all(cacheNames.map(name => caches.delete(name)));
+                }
+                if ('serviceWorker' in navigator) {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    for (const reg of registrations) await reg.unregister();
+                }
+                localStorage.setItem('logicount_app_version', CURRENT_APP_VERSION);
+                window.location.reload();
+                return true;
+            } catch (e) {
+                localStorage.setItem('logicount_app_version', CURRENT_APP_VERSION);
+                return false;
             }
-            localStorage.setItem('logicount_app_version', CURRENT_APP_VERSION);
         }
+        return false;
     },
 
     syncConfig: async () => {
@@ -85,9 +90,6 @@ export const InitializationService = {
             await InitializationService.syncConfig();
             await importProductsFromAppSheet();
             localStorage.setItem('logicount_last_init_ts', Date.now().toString());
-            console.log("[Init] Sincronización de fondo completada.");
-        } catch (e) {
-            console.warn("[Init] Refresco silencioso falló, se reintentará luego.");
-        }
+        } catch (e) {}
     }
 };

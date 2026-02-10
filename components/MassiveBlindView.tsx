@@ -1,12 +1,16 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMassiveScanner } from '../hooks/useMassiveScanner';
+import { useLocationManager } from '../hooks/useLocationManager';
 import { CameraScanner } from './CameraScanner';
 import { migrateMassiveToMaster } from '../services/massiveSync';
 import { MassiveHUD } from './massive/MassiveHUD';
 import { MassiveHeader } from './massive/MassiveHeader';
 import { MassiveItemRow } from './massive/MassiveItemRow';
+import { MassiveToolsSheet } from './massive/MassiveToolsSheet';
+import { LocationTrigger } from './common/LocationTrigger';
+import { LocationSelectorModal } from './common/LocationSelectorModal';
 import { ScannerFooter } from './scanner/ScannerFooter';
 import { VirtualList } from './common/VirtualList';
 import { ScreenLockOverlay } from './common/ScreenLockOverlay';
@@ -16,11 +20,18 @@ export const MassiveBlindView: React.FC = () => {
     const navigate = useNavigate();
     const { batchId = 'CORE' } = useParams();
     const { state, actions } = useMassiveScanner(batchId);
+    const locManager = useLocationManager(`massive_loc_${batchId}`);
     
     const [isTriggerActive, setIsTriggerActive] = useState(false);
     const [isScreenLocked, setIsScreenLocked] = useState(false);
     const [showKeypad, setShowKeypad] = useState(false);
+    const [isToolsOpen, setIsToolsOpen] = useState(false);
     const [isMigrating, setIsMigrating] = useState(false);
+
+    // Sincronizar ubicación del manager con la lógica de escaneo
+    useEffect(() => {
+        actions.setCurrentLocation(locManager.location);
+    }, [locManager.location, actions]);
 
     const handleFinalize = async () => {
         if (!state.items.length || !confirm("¿Cerrar auditoría?")) return;
@@ -38,17 +49,6 @@ export const MassiveBlindView: React.FC = () => {
         activeBarcode: state.lastScannedItem?.barcode 
     }), [actions.selectItem, state.lastScannedItem?.barcode]);
 
-    // GATILLO TÁCTICO: Funciones de manejo
-    const startTrigger = useCallback(() => {
-        if (isScreenLocked) return;
-        setIsTriggerActive(true);
-        if (navigator.vibrate) navigator.vibrate(30);
-    }, [isScreenLocked]);
-
-    const endTrigger = useCallback(() => {
-        setIsTriggerActive(false);
-    }, []);
-
     return (
         <div className="fixed inset-0 z-[100] flex flex-col font-mono bg-black select-none overflow-hidden text-white">
             
@@ -57,9 +57,13 @@ export const MassiveBlindView: React.FC = () => {
                 hasItems={state.items.length > 0}
                 onBack={() => navigate('/dashboard')}
                 onFinalize={handleFinalize}
-                onOpenTools={() => {}}
+                onOpenTools={() => setIsToolsOpen(true)}
                 onLock={() => setIsScreenLocked(true)}
             />
+
+            <div className="px-4 py-2 bg-slate-900/50 border-b border-white/5">
+                <LocationTrigger location={locManager.location} onClick={locManager.openModal} />
+            </div>
 
             <MassiveHUD 
                 item={state.lastScannedItem as any} 
@@ -84,16 +88,35 @@ export const MassiveBlindView: React.FC = () => {
                 isTriggerActive={isTriggerActive}
                 onMultiplierChange={actions.setMultiplier}
                 onOpenManual={() => setShowKeypad(true)}
-                onTriggerStart={startTrigger}
-                onTriggerEnd={endTrigger}
+                onTriggerStart={() => !isScreenLocked && setIsTriggerActive(true)}
+                onTriggerEnd={() => setIsTriggerActive(false)}
             />
 
-            {/* El componente CameraScanner SOLO existe mientras isTriggerActive es true */}
+            <MassiveToolsSheet 
+                isOpen={isToolsOpen}
+                onClose={() => setIsToolsOpen(false)}
+                batchId={batchId}
+                hasActiveItem={!!state.lastScannedItem}
+                location={locManager.location}
+                onChangeLocation={locManager.openModal}
+                onShowLabel={() => {}}
+                onReset={() => actions.removeItem('ALL')}
+                onImport={() => {}}
+                onPrintSummary={() => {}}
+            />
+
+            <LocationSelectorModal 
+                isOpen={locManager.isModalOpen}
+                onClose={locManager.closeModal}
+                currentLocation={locManager.location}
+                onSelect={locManager.setLocation}
+            />
+
             {isTriggerActive && (
                 <div className="fixed inset-0 z-[200]">
                     <CameraScanner 
                         onScan={(code) => actions.registerScan(code)} 
-                        onClose={endTrigger} 
+                        onClose={() => setIsTriggerActive(false)} 
                         isTriggered={true} 
                     />
                 </div>
