@@ -12,17 +12,26 @@ export default defineConfig(({ mode }) => {
       },
       resolve: {
         alias: {
-          buffer: 'buffer',
+          // Using aliases to ensure Vite doesn't try to find these in a missing node_modules folder
+          'buffer': 'https://esm.sh/buffer@6.0.3',
+          'long': 'https://esm.sh/long@5.2.3'
         },
       },
       optimizeDeps: {
-        include: ['buffer', 'long'],
+        // Exclude modules that we want to resolve via importmap or external URLs
+        exclude: ['buffer', 'long'],
+      },
+      build: {
+        rollupOptions: {
+          // Mark these as external to prevent build failure when node_modules is incomplete
+          external: ['buffer', 'long'],
+        },
       },
       plugins: [
         react(),
         VitePWA({
           strategies: 'injectManifest',
-          srcDir: '.', // <--- CRÍTICO: Indica que sw.ts está en la raíz
+          srcDir: '.', 
           filename: 'sw.ts',
           registerType: 'autoUpdate',
           devOptions: {
@@ -58,7 +67,9 @@ export default defineConfig(({ mode }) => {
       ],
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
+        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+        // Polyfill global for libraries that expect a Node-like environment
+        'global': 'window',
       }
     };
 });
