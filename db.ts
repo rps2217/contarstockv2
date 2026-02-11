@@ -36,10 +36,11 @@ export class LogiCountDB extends Dexie {
   constructor() {
     super('LogiCountDB');
     // Added lastSyncTimestamp index to sessions for cleanSyncedSessions logic
+    // Added [sessionId+timestamp] to scans for efficient reversal (undo)
     (this as any).version(21).stores({
       products: '&barcode, name, syncStatus', 
       sessions: 'id, status, createdAt, erpOrder, logisticsLabel, sessionType, auditStatus, lastSyncTimestamp, [erpOrder+createdAt], [status+lastSyncTimestamp]', 
-      scans: 'id, sessionId, barcode, logisticsLabel, timestamp, synced, isIncident, [sessionId+synced], [sessionId+barcode], [sessionId+logisticsLabel]',
+      scans: 'id, sessionId, barcode, logisticsLabel, timestamp, synced, isIncident, [sessionId+synced], [sessionId+barcode], [sessionId+logisticsLabel], [sessionId+timestamp]',
       syncQueue: '++id, status, createdAt, retryCount',
       expectedOrders: 'id, internalId',
       logs: '++id, level, module, timestamp',

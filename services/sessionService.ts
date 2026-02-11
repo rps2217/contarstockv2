@@ -277,3 +277,36 @@ export const deleteSessionItem = async (sessionId: string, barcode: string) => {
     await db.scans.where('[sessionId+barcode]').equals([sessionId, barcode]).delete();
     await updateSessionMetadata(sessionId);
 };
+
+/**
+ * Revierte la última acción de escaneo para una sesión.
+ * Primero busca en el buffer de RAM y, si no lo encuentra, lo elimina de la base de datos.
+ */
+// Added export to fix: Property 'undoLastAction' does not exist on type 'typeof import("file:///services/sessionService")'
+export const undoLastAction = async (sessionId: string): Promise<string | null> => {
+    // 1. Revisar en el buffer de escritura pendiente (RAM)
+    const bufferIdx = writeBuffer.findIndex(item => item.record.sessionId === sessionId);
+    if (bufferIdx !== -1) {
+        for (let i = writeBuffer.length - 1; i >= 0; i--) {
+            if (writeBuffer[i].record.sessionId === sessionId) {
+                const [removed] = writeBuffer.splice(i, 1);
+                return removed.record.barcode;
+            }
+        }
+    }
+
+    // 2. Si no está en RAM, buscar el último registro persistido en la DB usando el índice compuesto
+    const lastPersisted = await db.scans
+        .where('[sessionId+timestamp]')
+        .between([sessionId, Dexie.minKey], [sessionId, Dexie.maxKey])
+        .reverse()
+        .first();
+
+    if (lastPersisted) {
+        await db.scans.delete(lastPersisted.id);
+        await updateSessionMetadata(sessionId);
+        return lastPersisted.barcode;
+    }
+
+    return null;
+};

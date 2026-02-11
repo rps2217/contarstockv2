@@ -36,16 +36,13 @@ export const useMassiveScanner = (batchId: string) => {
         
         const uniqueBarcodes = Array.from(new Set([...rawScans.map(s => s.barcode), ...manifests.map(m => m.barcode)]));
         const products = await masterDb.products.where('barcode').anyOf(uniqueBarcodes).toArray();
-        // Fix: Explicitly typing prodMap as Map<string, Product> prevents 'unknown' inference for .get() returns
         const prodMap = new Map<string, Product>(products.map(p => [p.barcode, p]));
         
         const aggregation = new Map<string, ConsolidatedBlindItem>();
 
-        // 1. Cargar metas del manifiesto
         manifests.forEach(m => {
             aggregation.set(m.barcode, {
                 barcode: m.barcode,
-                // Fix: Accessing name on a typed product retrieval
                 name: m.name || prodMap.get(m.barcode)?.name || 'SIN DESCRIPCIÓN',
                 loc: m.loc,
                 totalQuantity: 0,
@@ -54,7 +51,6 @@ export const useMassiveScanner = (batchId: string) => {
             });
         });
 
-        // 2. Sumar escaneos físicos
         rawScans.forEach(s => {
             const existing = aggregation.get(s.barcode);
             if (existing) {
@@ -64,7 +60,6 @@ export const useMassiveScanner = (batchId: string) => {
             } else {
                 aggregation.set(s.barcode, {
                     barcode: s.barcode,
-                    // Fix: Accessing name on a typed product retrieval
                     name: prodMap.get(s.barcode)?.name || 'SKU_DESCONOCIDO',
                     totalQuantity: s.quantity,
                     lastTimestamp: s.timestamp,
@@ -75,7 +70,6 @@ export const useMassiveScanner = (batchId: string) => {
 
         const sorted = Array.from(aggregation.values()).sort((a, b) => {
             if (a.barcode === activeBarcode) return -1;
-            if (b.barcode === activeBarcode) return 1;
             return b.lastTimestamp - a.lastTimestamp;
         });
 
@@ -124,6 +118,22 @@ export const useMassiveScanner = (batchId: string) => {
         writeQueue.current.push({ barcode: clean, qty: qtyToApply, loc: currentLocation, ts: Date.now() });
     }, [activeBarcode, trigger, multiplier, currentLocation]);
 
+    const removeItem = useCallback(async (barcode: string) => {
+        if (barcode === 'ALL') {
+            if (!confirm("¿Vaciar todos los registros de este lote?")) return;
+            await massiveDb.blindScans.where('batchId').equals(batchId).delete();
+            setActiveBarcode(null);
+            setOptimisticQty(null);
+        } else {
+            await massiveDb.blindScans.where({ batchId, barcode }).delete();
+            if (activeBarcode === barcode) {
+                setActiveBarcode(null);
+                setOptimisticQty(null);
+            }
+        }
+        trigger('undo');
+    }, [batchId, activeBarcode, trigger]);
+
     return { 
         state: { 
             items: dbItems || [], 
@@ -139,15 +149,11 @@ export const useMassiveScanner = (batchId: string) => {
             setMultiplier, 
             setCurrentLocation, 
             registerScan, 
+            removeItem,
             selectItem: (b: string) => { 
                 setActiveBarcode(b); 
                 setOptimisticQty(itemsRef.current.find(i => i.barcode === b)?.totalQuantity || 0); 
                 masterDb.products.get(b).then(setActiveProduct);
-            },
-            removeItem: async (barcode: string) => {
-                await massiveDb.blindScans.where({ batchId, barcode }).delete();
-                if (activeBarcode === barcode) setActiveBarcode(null);
-                trigger('undo');
             }
         }
     };
