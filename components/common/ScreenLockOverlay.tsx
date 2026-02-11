@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Lock, Unlock } from 'lucide-react';
+import { Lock, Unlock, ShieldAlert } from 'lucide-react';
 
 interface Props {
     isLocked: boolean;
@@ -12,8 +12,7 @@ export const ScreenLockOverlay: React.FC<Props> = ({ isLocked, onUnlock }) => {
     const [progress, setProgress] = useState(0);
     const intervalRef = useRef<any>(null);
     
-    // Duración requerida para desbloquear (ms) - Ajustado a 800ms para mayor velocidad
-    const UNLOCK_DURATION = 800; 
+    const UNLOCK_DURATION = 800; // ms de presión
     const UPDATE_INTERVAL = 20;
 
     useEffect(() => {
@@ -33,89 +32,66 @@ export const ScreenLockOverlay: React.FC<Props> = ({ isLocked, onUnlock }) => {
             if (intervalRef.current) clearInterval(intervalRef.current);
             setProgress(0);
         }
-
-        return () => {
-            if (intervalRef.current) clearInterval(intervalRef.current);
-        };
+        return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
     }, [isHolding]);
 
     const handleUnlockTrigger = () => {
         if (intervalRef.current) clearInterval(intervalRef.current);
-        if (navigator.vibrate) navigator.vibrate([50, 100, 50]);
+        if (navigator.vibrate) navigator.vibrate([40, 80]);
         setIsHolding(false);
         onUnlock();
-    };
-
-    const startHold = (e: React.PointerEvent | React.TouchEvent) => {
-        // Prevenir scroll o zoom accidental
-        e.preventDefault(); 
-        if (navigator.vibrate) navigator.vibrate(20);
-        setIsHolding(true);
-    };
-
-    const stopHold = () => {
-        setIsHolding(false);
     };
 
     if (!isLocked) return null;
 
     return (
         <div 
-            className="fixed inset-0 z-[150] bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-end pb-32 select-none touch-none animate-in fade-in duration-300"
-            onClick={(e) => e.stopPropagation()} // Capturar todos los clicks
+            className="fixed inset-0 z-[1000] bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center select-none touch-none animate-in fade-in duration-300"
+            onPointerDown={() => setIsHolding(true)}
+            onPointerUp={() => setIsHolding(false)}
+            onPointerLeave={() => setIsHolding(false)}
         >
-            <div 
-                className="relative"
-                onPointerDown={startHold}
-                onPointerUp={stopHold}
-                onPointerLeave={stopHold}
-                onTouchStart={startHold}
-                onTouchEnd={stopHold}
-            >
-                {/* Anillo de Progreso SVG */}
-                <svg className="w-40 h-40 transform -rotate-90 pointer-events-none">
+            <div className="relative mb-12">
+                {/* Anillo de Progreso */}
+                <svg className="w-56 h-56 transform -rotate-90">
+                    <circle cx="112" cy="112" r="100" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-slate-900" />
                     <circle
-                        cx="80"
-                        cy="80"
-                        r="74"
+                        cx="112"
+                        cy="112"
+                        r="100"
                         stroke="currentColor"
-                        strokeWidth="8"
+                        strokeWidth="12"
                         fill="transparent"
-                        className="text-slate-800"
-                    />
-                    <circle
-                        cx="80"
-                        cy="80"
-                        r="74"
-                        stroke="currentColor"
-                        strokeWidth="8"
-                        fill="transparent"
-                        className={`text-blue-500 transition-all duration-75 ${progress > 0 ? 'opacity-100' : 'opacity-0'}`}
-                        strokeDasharray={465}
-                        strokeDashoffset={465 - (465 * progress) / 100}
+                        className="text-blue-500 transition-all duration-75"
+                        strokeDasharray={628}
+                        strokeDashoffset={628 - (628 * progress) / 100}
                         strokeLinecap="round"
                     />
                 </svg>
 
                 {/* Icono Central */}
-                <div className={`absolute inset-0 flex items-center justify-center transition-transform duration-200 ${isHolding ? 'scale-90' : 'scale-100'}`}>
-                    <div className={`p-6 rounded-full bg-slate-900 border-4 border-slate-800 shadow-2xl transition-colors ${progress > 90 ? 'text-blue-400 border-blue-500' : 'text-white'}`}>
-                        {progress >= 100 ? <Unlock className="w-12 h-12" /> : <Lock className="w-12 h-12" />}
+                <div className="absolute inset-0 flex items-center justify-center">
+                    <div className={`p-10 rounded-full transition-all duration-300 ${isHolding ? 'bg-blue-600 scale-90 shadow-[0_0_50px_rgba(59,130,246,0.5)]' : 'bg-slate-900 shadow-2xl'}`}>
+                        {progress >= 100 ? <Unlock className="w-16 h-16 text-white" /> : <Lock className="w-16 h-16 text-white" />}
                     </div>
                 </div>
             </div>
 
-            <div className="mt-8 text-center space-y-1 pointer-events-none">
-                <h2 className="text-xl font-black text-white uppercase tracking-tight">Pantalla Bloqueada</h2>
-                <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] animate-pulse">
-                    Mantenga presionado para desbloquear
+            <div className="text-center px-8">
+                <div className="inline-flex items-center gap-2 bg-rose-500/10 border border-rose-500/20 px-4 py-2 rounded-full mb-4">
+                    <ShieldAlert className="w-4 h-4 text-rose-500" />
+                    <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest">Seguridad_Activa</span>
+                </div>
+                <h2 className="text-3xl font-black text-white uppercase tracking-tighter italic mb-2">Terminal Bloqueado</h2>
+                <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px] max-w-[200px] mx-auto leading-relaxed">
+                    Mantenga presionado el centro para reactivar el motor de escaneo
                 </p>
             </div>
 
-            {/* Indicador de estado "Seguro" - Movido al borde inferior */}
-            <div className="absolute bottom-12 flex items-center gap-2 text-emerald-500/30 pointer-events-none">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></div>
-                <span className="text-[8px] font-black uppercase tracking-[0.4em]">Engine_Safe_Lock</span>
+            {/* Decoración Industrial */}
+            <div className="absolute bottom-10 left-10 text-[10px] font-mono text-slate-800 font-black vertical-text">SECURED_OS_V4.5</div>
+            <div className="absolute top-10 right-10 flex gap-1">
+                {[1, 2, 3].map(i => <div key={i} className="w-1.5 h-6 bg-slate-900 rounded-full"></div>)}
             </div>
         </div>
     );

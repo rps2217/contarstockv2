@@ -13,22 +13,25 @@ import { ScreenLockOverlay } from '../../components/common/ScreenLockOverlay';
 import { ExpirationModal } from '../../components/ExpirationModal';
 import { BarcodeLabelModal } from '../../shared/components/modals/BarcodeLabelModal';
 import { Loader2, AlertCircle } from 'lucide-react';
+import { useAutoLock } from '../../hooks/useAutoLock';
 
 export const CountingPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { state, actions, sessionData } = useCountingLogic(id, () => navigate('/reports'));
+    
+    // Gestión de Autobloqueo (3 Segundos de inactividad)
+    const { isLocked, unlock, lock } = useAutoLock(3000);
 
     const [isTriggerActive, setIsTriggerActive] = useState(false);
-    const [isScreenLocked, setIsScreenLocked] = useState(false);
     const [isToolsOpen, setIsToolsOpen] = useState(false);
     const [isLabelOpen, setIsLabelOpen] = useState(false);
 
     const startTrigger = useCallback(() => {
-        if (isScreenLocked || state.status === 'expiring') return;
+        if (isLocked || state.status === 'expiring') return;
         setIsTriggerActive(true);
         if (navigator.vibrate) navigator.vibrate(30);
-    }, [isScreenLocked, state.status]);
+    }, [isLocked, state.status]);
 
     const endTrigger = useCallback(() => setIsTriggerActive(false), []);
 
@@ -62,7 +65,7 @@ export const CountingPage: React.FC = () => {
                 onLocationClick={() => {}} 
                 onPause={() => navigate('/reports')}
                 onUndo={actions.undoLastScan}
-                onLock={() => setIsScreenLocked(true)}
+                onLock={lock}
                 canUndo={true}
             />
 
@@ -95,15 +98,6 @@ export const CountingPage: React.FC = () => {
                 onTriggerStart={startTrigger}
                 onTriggerEnd={endTrigger}
             />
-
-            <button 
-                onClick={() => setIsToolsOpen(true)}
-                className="absolute right-4 top-[50%] -translate-y-1/2 w-14 h-14 bg-slate-900/80 backdrop-blur border border-white/10 rounded-full flex items-center justify-center shadow-2xl z-50 active:scale-90 transition-all"
-            >
-                <div className="w-1.5 h-1.5 bg-white rounded-full mx-0.5"></div>
-                <div className="w-1.5 h-1.5 bg-white rounded-full mx-0.5"></div>
-                <div className="w-1.5 h-1.5 bg-white rounded-full mx-0.5"></div>
-            </button>
 
             <ScannerToolsSheet 
                 isOpen={isToolsOpen}
@@ -156,9 +150,7 @@ export const CountingPage: React.FC = () => {
                 />
             )}
 
-            <ScreenLockOverlay isLocked={isScreenLocked} onUnlock={() => setIsScreenLocked(false)} />
+            <ScreenLockOverlay isLocked={isLocked} onUnlock={unlock} />
         </div>
     );
 };
-
-export default CountingPage;
