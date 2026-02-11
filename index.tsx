@@ -1,17 +1,17 @@
-
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
-import { Buffer } from 'buffer';
-// @ts-ignore - Long is used by protobufs in some GenAI/Transformer versions
-import Long from 'long';
 
 // Polyfill global Buffer, Long, and process for libraries that rely on it
+// Usamos import() dinámico o asumiendo que el importmap ya los cargó si es necesario, 
+// pero aquí los forzamos para las librerías que buscan en el scope global.
+import { Buffer } from 'buffer';
+import Long from 'long';
+
 if (typeof window !== 'undefined') {
     (window as any).Buffer = Buffer;
     (window as any).Long = Long;
     
-    // Some libraries look for 'global'
     if (typeof (window as any).global === 'undefined') {
         (window as any).global = window;
     }

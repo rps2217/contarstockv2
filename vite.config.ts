@@ -1,4 +1,3 @@
-
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -10,8 +9,7 @@ export default defineConfig(({ mode }) => {
         port: 3000,
         host: '0.0.0.0',
       },
-      // Eliminamos resolve.alias con URLs ya que Vite no los soporta nativamente y causan errores de resolución
-      // Eliminamos optimizeDeps.exclude y build.rollupOptions.external para que Vite empaquete buffer y long normalmente
+      // Permitimos que Vite resuelva todo desde node_modules (buffer, long, etc.) de forma estándar
       build: {
         chunkSizeWarningLimit: 2000,
         rollupOptions: {
@@ -62,9 +60,10 @@ export default defineConfig(({ mode }) => {
         })
       ],
       define: {
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY || env.VITE_GEMINI_API_KEY),
+        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY || env.VITE_GEMINI_API_KEY),
         'global': 'window',
+        'process.env.NODE_ENV': JSON.stringify(mode)
       }
     };
 });
