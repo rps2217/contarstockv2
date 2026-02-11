@@ -32,7 +32,6 @@ export const HammerPage: React.FC = () => {
     const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
     const [showKeypad, setShowKeypad] = useState(false);
     const [isMigrating, setIsMigrating] = useState(false);
-    const [manualBuffer, setManualBuffer] = useState('');
 
     useEffect(() => {
         actions.setCurrentLocation(locManager.location);
@@ -53,12 +52,9 @@ export const HammerPage: React.FC = () => {
         }
     };
 
-    const handleManualConfirm = () => {
-        if (manualBuffer.trim()) {
-            actions.registerScan(manualBuffer);
-            setManualBuffer('');
-            setShowKeypad(false);
-        }
+    const handleKeypadConfirm = (value: string) => {
+        actions.registerScan(value);
+        setShowKeypad(false);
     };
 
     return (
@@ -98,7 +94,7 @@ export const HammerPage: React.FC = () => {
                 unitsPerBox={state.activeProduct?.unitsPerBox}
                 isTriggerActive={isTriggerActive}
                 onMultiplierChange={actions.setMultiplier}
-                onOpenManual={() => { setManualBuffer(''); setShowKeypad(true); }}
+                onOpenManual={() => setShowKeypad(true)}
                 onTriggerStart={() => !isLocked && setIsTriggerActive(true)}
                 onTriggerEnd={() => setIsTriggerActive(false)}
             />
@@ -142,17 +138,12 @@ export const HammerPage: React.FC = () => {
                 </div>
             )}
 
-            {showKeypad && (
-                <NumericKeypad 
-                    isOpen={true} 
-                    onClose={() => setShowKeypad(false)} 
-                    title="SKU MANUAL" 
-                    value={manualBuffer}
-                    onInput={(v) => setManualBuffer(prev => prev + v)} 
-                    onDelete={() => setManualBuffer(prev => prev.slice(0, -1))} 
-                    onConfirm={handleManualConfirm} 
-                />
-            )}
+            <NumericKeypad 
+                isOpen={showKeypad}
+                title="SKU MANUAL"
+                onClose={() => setShowKeypad(false)}
+                onConfirm={handleKeypadConfirm}
+            />
 
             <ScreenLockOverlay isLocked={isLocked} onUnlock={unlock} />
         </div>

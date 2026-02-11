@@ -20,12 +20,12 @@ export const CountingPage: React.FC = () => {
     const navigate = useNavigate();
     const { state, actions, sessionData } = useCountingLogic(id, () => navigate('/reports'));
     
+    // Gestión de Autobloqueo Industrial
     const { isLocked, unlock, lock } = useAutoLock(3000);
 
     const [isTriggerActive, setIsTriggerActive] = useState(false);
     const [isToolsOpen, setIsToolsOpen] = useState(false);
     const [isLabelOpen, setIsLabelOpen] = useState(false);
-    const [manualBuffer, setManualBuffer] = useState('');
 
     const startTrigger = useCallback(() => {
         if (isLocked || state.status === 'expiring') return;
@@ -35,27 +35,18 @@ export const CountingPage: React.FC = () => {
 
     const endTrigger = useCallback(() => setIsTriggerActive(false), []);
 
-    const handleManualInput = (char: string) => {
-        setManualBuffer(prev => prev + char);
-    };
-
-    const handleManualDelete = () => {
-        setManualBuffer(prev => prev.slice(0, -1));
-    };
-
-    const handleManualConfirm = () => {
-        if (manualBuffer.trim()) {
-            actions.handleExternalScan(manualBuffer, state.multiplier);
-            setManualBuffer('');
-            actions.setStatus('idle');
-        }
+    const handleKeypadConfirm = (value: string) => {
+        actions.handleExternalScan(value, state.multiplier);
+        actions.setStatus('idle');
     };
 
     if (state.isLoading) {
         return (
             <div className="h-screen w-full flex flex-col items-center justify-center bg-black text-white">
-                <Loader2 className="w-12 h-12 text-blue-600 animate-spin mb-4" />
-                <p className="text-[10px] font-black uppercase tracking-widest">Iniciando Motor...</p>
+                <div className="p-10 border-4 border-blue-600 rounded-[3rem] animate-pulse">
+                    <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
+                </div>
+                <p className="mt-8 text-[10px] font-black uppercase tracking-[0.4em] text-blue-500">Iniciando_Motor_Conteo</p>
             </div>
         );
     }
@@ -110,7 +101,7 @@ export const CountingPage: React.FC = () => {
                 unitsPerBox={state.activeProduct?.unitsPerBox}
                 isTriggerActive={isTriggerActive}
                 onMultiplierChange={actions.setMultiplier}
-                onOpenManual={() => { setManualBuffer(''); actions.setStatus('manual'); }}
+                onOpenManual={() => actions.setStatus('manual')}
                 onTriggerStart={startTrigger}
                 onTriggerEnd={endTrigger}
             />
@@ -155,17 +146,12 @@ export const CountingPage: React.FC = () => {
                 />
             )}
 
-            {state.status === 'manual' && (
-                <NumericKeypad 
-                    isOpen={true} 
-                    title="EAN / SKU MANUAL" 
-                    value={manualBuffer}
-                    onClose={() => actions.setStatus('idle')} 
-                    onInput={handleManualInput} 
-                    onDelete={handleManualDelete} 
-                    onConfirm={handleManualConfirm} 
-                />
-            )}
+            <NumericKeypad 
+                isOpen={state.status === 'manual'}
+                title="EAN / SKU MANUAL"
+                onClose={() => actions.setStatus('idle')}
+                onConfirm={handleKeypadConfirm}
+            />
 
             <ScreenLockOverlay isLocked={isLocked} onUnlock={unlock} />
         </div>

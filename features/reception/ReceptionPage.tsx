@@ -54,7 +54,6 @@ export const ReceptionPage: React.FC = () => {
     const [isTriggerActive, setIsTriggerActive] = useState(false);
     const [showKeypad, setShowKeypad] = useState(false);
     const [showQueue, setShowQueue] = useState(false);
-    const [manualBuffer, setManualBuffer] = useState('');
 
     const startTrigger = useCallback(() => {
         if (isLocked) return;
@@ -68,12 +67,9 @@ export const ReceptionPage: React.FC = () => {
 
     const rowData = React.useMemo(() => ({ onDelete: actions.deleteDraft }), [actions.deleteDraft]);
 
-    const handleManualConfirm = () => {
-        if (manualBuffer.trim()) {
-            actions.handleManualInput(manualBuffer);
-            setManualBuffer('');
-            setShowKeypad(false);
-        }
+    const handleKeypadConfirm = (value: string) => {
+        actions.handleScan(value);
+        setShowKeypad(false);
     };
 
     const containerClass = state.flashActive 
@@ -123,7 +119,7 @@ export const ReceptionPage: React.FC = () => {
                 unitsPerBox={1}
                 isTriggerActive={isTriggerActive}
                 onMultiplierChange={() => {}}
-                onOpenManual={() => { setManualBuffer(''); setShowKeypad(true); }}
+                onOpenManual={() => setShowKeypad(true)}
                 onTriggerStart={startTrigger}
                 onTriggerEnd={endTrigger}
             />
@@ -138,17 +134,12 @@ export const ReceptionPage: React.FC = () => {
                 </div>
             )}
 
-            {showKeypad && (
-                <NumericKeypad 
-                    isOpen={true} 
-                    onClose={() => setShowKeypad(false)} 
-                    title="ETIQUETA MANUAL" 
-                    value={manualBuffer}
-                    onInput={(v) => setManualBuffer(prev => prev + v)} 
-                    onDelete={() => setManualBuffer(prev => prev.slice(0, -1))} 
-                    onConfirm={handleManualConfirm} 
-                />
-            )}
+            <NumericKeypad 
+                isOpen={showKeypad}
+                title="ETIQUETA MANUAL"
+                onClose={() => setShowKeypad(false)}
+                onConfirm={handleKeypadConfirm}
+            />
 
             <QueueManager 
                 isOpen={showQueue} 
