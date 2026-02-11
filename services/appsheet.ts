@@ -1,5 +1,5 @@
 
-import { CountingSession, Product, ScanRecord, ConsolidatedItem } from "../types";
+import { CountingSession, Product, ConsolidatedItem } from "../types";
 import { getSettings } from "./settings"; 
 import { markScansAsSynced } from "./sessionService"; 
 import { markProductsAsSynced } from "./productService";
@@ -7,7 +7,7 @@ import { db } from "../db";
 import { callGas } from "./gasService";
 import { cloudApi } from "./cloud/apiClient";
 import { aggregateScans } from "./aggregator";
-import { createInventoryPayload } from "./cloud/mappers";
+import { createInventoryPayload, createProductsPayload } from "./cloud/mappers";
 
 export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg: string) => void): Promise<void> => {
   const config = getSettings().appSheetConfig;
@@ -18,14 +18,12 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
 
   const consolidatedItems: ConsolidatedItem[] = await aggregateScans(unsynced);
   
-  // PRIORIDAD: Modo Martillo -> countsTableName (CONTEOS). Modo Estándar -> consolidatedTableName (CONSOLIDADOS)
   const targetTable = isHammerMode 
     ? (config?.countsTableName || "CONTEOS") 
     : (config?.consolidatedTableName || "CONSOLIDADOS");
 
   if (onProgress) onProgress(`Enviando a [${targetTable}]...`);
 
-  // Usamos el mappers.ts para garantizar que la estructura sea idéntica en toda la app
   const rows = createInventoryPayload(session, consolidatedItems, 'manual');
 
   const result = await cloudApi.appendRows(targetTable, rows);
@@ -41,25 +39,27 @@ export const syncToAppSheet = async (session: CountingSession, onProgress?: (msg
   }
 };
 
-export const fetchProductsFromCloud = async (): Promise<any[]> => {
-  const config = getSettings().appSheetConfig;
-  const res = await callGas('fetch_rows', { tableName: config?.productsTableName || "PRODUCTOS" });
-  return res.success ? res.rows : [];
-};
-
+/**
+ * SINCRONIZACIÓN DE INTELIGENCIA (UPSERT)
+ * Envía el catálogo local a la nube. Si el producto ya tiene firma IA local, 
+ * se actualizará en el Excel para que otros dispositivos la hereden.
+ */
 export const syncProductsToAppSheet = async (products: Product[]): Promise<void> => {
     const config = getSettings().appSheetConfig;
-    const rows = products.map(p => ({
-        "CODIGO": p.barcode,
-        "PRODUCTO": p.name,
-        "CATEGORIA": p.category,
-        "PROVEEDOR": p.supplier,
-        "RUT": p.supplierRut
-    }));
-    const result = await cloudApi.appendRows(config?.productsTableName || "PRODUCTOS", rows);
+    if (!products.length) return;
+
+    // Usamos el mapper que incluye FIRMA_IA
+    const rows = createProductsPayload(products);
+    
+    // Cambiamos 'append_rows' por 'upsert_products' (Nueva acción en GAS)
+    const result = await cloudApi.post('upsert_products', { 
+        tableName: config?.productsTableName || "PRODUCTOS",
+        rows 
+    }, true); // Forzamos compresión porque los vectores son pesados
+    
     if (result && result.success) {
         await markProductsAsSynced(products.map(p => p.barcode));
     } else {
-        throw new Error(result?.error || "Fallo al sincronizar productos");
+        throw new Error(result?.error || "Fallo al sincronizar inteligencia de productos");
     }
 };

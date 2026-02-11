@@ -1,12 +1,11 @@
 
-import { CountingSession, ConsolidatedItem } from '../../types';
+import { CountingSession, ConsolidatedItem, Product } from '../../types';
 import { SHEET_COLUMNS } from '../constants';
 import { generateUUID } from '../utils';
 
 /**
  * FACTORY DE PAYLOADS (DRY)
  * Define una única fuente de verdad para la estructura de datos que viaja a la nube.
- * Se ha ajustado para cumplir con el formato histórico de la pestaña CONSOLIDADOS.
  */
 
 export const createInventoryPayload = (
@@ -15,20 +14,14 @@ export const createInventoryPayload = (
     source: 'manual' | 'background' = 'manual'
 ) => {
     return items.map((item) => {
-        // Fecha actual en formato YYYY-MM-DD para la columna FECHA
         const now = new Date();
         const year = now.getFullYear();
         const month = String(now.getMonth() + 1).padStart(2, '0');
         const day = String(now.getDate()).padStart(2, '0');
         const dateStr = `${year}-${month}-${day}`;
         
-        // Etiqueta de vencimiento para la CLAVE_UNICA
         const expiryPart = item.mm && item.yyyy ? `${item.mm}-${item.yyyy}` : 'SIN_FECHA';
-        
-        // El label ahora proviene del item consolidado (trazabilidad por bulto)
         const activeLabel = item.location || session.logisticsLabel;
-        
-        // Formato solicitado: ERP_ETIQUETA_SKU_FECHAEXP
         const uniqueKey = `${session.erpOrder}_${activeLabel}_${item.barcode}_${expiryPart}`;
 
         return {
@@ -45,17 +38,19 @@ export const createInventoryPayload = (
             [SHEET_COLUMNS.INCIDENT]: item.isIncident ? "FRC" : "OK",
             [SHEET_COLUMNS.AUDIT_STATUS]: session.auditStatus?.toUpperCase() || "",
             [SHEET_COLUMNS.AUDIT_SCORE]: session.auditScore || "",
+            [SHEET_COLUMNS.IA_SIGNATURE]: item.embedding ? JSON.stringify(item.embedding) : "",
             "META_SOURCE": source
         };
     });
 };
 
-export const createProductsPayload = (products: any[]) => {
+export const createProductsPayload = (products: Product[]) => {
     return products.map(p => ({
-        [SHEET_COLUMNS.BARCODE]: p.barcode,
-        [SHEET_COLUMNS.PRODUCT_NAME]: p.name,
-        "CATEGORIA": p.category,
-        "PROVEEDOR": p.supplier,
-        "RUT": p.supplierRut
+        [SHEET_COLUMNS.BARCODE]: p.barcode, // Ahora envía 'COD PRODUCTO'
+        [SHEET_COLUMNS.PRODUCT_NAME]: p.name, // Ahora envía 'DESCRIPCION'
+        "MUNDO": p.category, // Cambiado de 'CATEGORIA' para coincidir con Col B
+        "PROVEEDOR": p.supplier, // Coincide con Col A
+        "RUT PROVEEDOR": p.supplierRut, // Cambiado de 'RUT' para coincidir con Col F
+        [SHEET_COLUMNS.IA_SIGNATURE]: p.embedding ? JSON.stringify(p.embedding) : ""
     }));
 };

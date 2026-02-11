@@ -10,19 +10,11 @@ export default defineConfig(({ mode }) => {
         port: 3000,
         host: '0.0.0.0',
       },
-      resolve: {
-        alias: {
-          'buffer': 'https://esm.sh/buffer@6.0.3',
-          'long': 'https://esm.sh/long@5.2.3'
-        },
-      },
-      optimizeDeps: {
-        exclude: ['buffer', 'long'],
-      },
+      // Eliminamos resolve.alias con URLs ya que Vite no los soporta nativamente y causan errores de resolución
+      // Eliminamos optimizeDeps.exclude y build.rollupOptions.external para que Vite empaquete buffer y long normalmente
       build: {
-        chunkSizeWarningLimit: 2000, // Aumentado a 2MB para evitar advertencias de librerías industriales
+        chunkSizeWarningLimit: 2000,
         rollupOptions: {
-          external: ['buffer', 'long'],
           output: {
             manualChunks: {
               'vendor-react': ['react', 'react-dom', 'react-router-dom'],

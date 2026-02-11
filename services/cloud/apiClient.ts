@@ -9,11 +9,12 @@ interface ApiResponse {
     rows?: any[];
     rows_written?: number;
     server_timestamp?: string;
+    updated?: number; // Para upserts
+    added?: number;   // Para upserts
 }
 
 /**
- * CLIENTE HTTP ROBUSTO V2 (Batch & Retry)
- * Gestiona la comunicación con Google Apps Script con tolerancia a fallos.
+ * CLIENTE HTTP ROBUSTO V2.1 (AI Optimized)
  */
 export const cloudApi = {
     
@@ -30,11 +31,11 @@ export const cloudApi = {
             metadata: { 
                 timestamp: Date.now(), 
                 compressed: compress,
-                version: 'v5.0-BatchOptimized' 
+                version: 'v7.1-AI-Ready' 
             }
         };
 
-        // Compresión condicional
+        // Compresión automática para IA (Vectores)
         if (compress && payload.rows) {
             try {
                 bodyToSend.rows = await compressData(payload.rows);
@@ -44,19 +45,17 @@ export const cloudApi = {
             }
         }
 
-        // LÓGICA DE REINTENTO (Exponential Backoff)
         const maxRetries = 3;
-        const baseTimeout = 20000; // 20s iniciales
+        const baseTimeout = 40000; // Aumentado a 40s para procesos de IA en GAS
 
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
             const controller = new AbortController();
-            const timeoutMs = baseTimeout + (attempt * 10000); // Aumenta 10s por intento
+            const timeoutMs = baseTimeout + (attempt * 15000); 
             const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
             try {
                 if (attempt > 0) {
-                    const delay = Math.pow(2, attempt) * 1000; // Espera: 2s, 4s, 8s
-                    console.log(`[CloudAPI] Reintentando ${action} (Intento ${attempt}/${maxRetries}) en ${delay}ms...`);
+                    const delay = Math.pow(2, attempt) * 2000; 
                     await new Promise(r => setTimeout(r, delay));
                 }
 
@@ -70,7 +69,7 @@ export const cloudApi = {
                 clearTimeout(timeoutId);
 
                 if (!response.ok) {
-                    throw new Error(`HTTP Error ${response.status}: El servidor rechazó la conexión.`);
+                    throw new Error(`HTTP Error ${response.status}`);
                 }
 
                 const text = await response.text();
@@ -79,38 +78,28 @@ export const cloudApi = {
                 try {
                     json = JSON.parse(text);
                 } catch (e) {
-                    throw new Error("Respuesta corrupta del servidor (HTML devuelto en lugar de JSON). Verifique despliegue GAS.");
+                    throw new Error("GAS devolvió HTML (Posible error de ejecución en el script)");
                 }
 
                 if (json.success === false) {
-                    // Si el servidor dice "bloqueado", es un error recuperable, forzamos reintento
-                    if (json.error?.includes("Bloqueo") || json.error?.includes("Lock")) {
+                    if (json.error?.includes("lock") || json.error?.includes("busy")) {
                         throw new Error("Server Busy"); 
                     }
-                    throw new Error(json.error || "Error desconocido en servidor.");
+                    throw new Error(json.error || "Error en servidor.");
                 }
 
                 return json;
 
             } catch (error: any) {
                 clearTimeout(timeoutId);
-                const isLastAttempt = attempt === maxRetries;
-                
-                // Errores fatales que no se deben reintentar
-                if (error.message.includes("URL de Google Script") || error.message.includes("corrupta")) {
-                    logger.error('CLOUD_FATAL', error.message);
-                    throw error;
+                if (attempt === maxRetries) {
+                    logger.error('CLOUD_Transport', `Fallo tras ${maxRetries} reintentos`, error.message);
+                    throw new Error(`Fallo de conexión: ${error.message}`);
                 }
-
-                if (isLastAttempt) {
-                    logger.error('CLOUD_Transport', `Fallo definitivo en [${action}] tras ${maxRetries} intentos`, error.message);
-                    throw new Error(`Error de Conexión: ${error.message}`);
-                }
-                // Si no es el último intento, el bucle continúa (reintento)
             }
         }
         
-        throw new Error("Error inesperado en ciclo de red.");
+        throw new Error("Error inesperado en red.");
     },
 
     async fetchTable(tableName: string, since?: string) {
@@ -118,6 +107,6 @@ export const cloudApi = {
     },
 
     async appendRows(tableName: string, rows: any[]) {
-        return this.post('append_rows', { tableName, rows }, rows.length > 50);
+        return this.post('append_rows', { tableName, rows }, rows.length > 30);
     }
 };

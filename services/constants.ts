@@ -1,10 +1,11 @@
+
 export const SHEET_COLUMNS = {
     ID: "ID_REGISTRO",
     UNIQUE_KEY: "CLAVE_UNICA",
     DATE: "FECHA",
     ERP_ORDER: "ERP",
-    BARCODE: "CODIGO",
-    PRODUCT_NAME: "PRODUCTO",
+    BARCODE: "COD PRODUCTO", // Ajustado de 'CODIGO'
+    PRODUCT_NAME: "DESCRIPCION", // Ajustado de 'PRODUCTO'
     QUANTITY: "CANTIDAD",
     EXPECTED: "STOCK_TEORICO",
     DIFF: "DIFERENCIA",
@@ -13,7 +14,9 @@ export const SHEET_COLUMNS = {
     YEAR: "YYYY",
     INCIDENT: "FRC",
     AUDIT_STATUS: "ESTADO_AUDITORIA",
-    AUDIT_SCORE: "PUNTAJE_AUDITORIA"
+    AUDIT_SCORE: "PUNTAJE_AUDITORIA",
+    // Nueva columna para Inteligencia Colectiva
+    IA_SIGNATURE: "FIRMA_IA"
 };
 
-export const SYNC_ENGINE_VERSION = "7.0.0-LEGACY-COMPAT";
+export const SYNC_ENGINE_VERSION = "7.1.1-AI-FIX";

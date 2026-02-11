@@ -1,10 +1,6 @@
 
 /**
- * LOGICOUNT PRO - CLOUD ENGINE V12 (AI SUPPORT)
- * Changelog: 
- * - Soporte para columna FIRMA_IA (vectores largos).
- * - Protección contra formato científico en IDs.
- * - Validación de tipos estricta en fetchOrder.
+ * LOGICOUNT PRO - CLOUD ENGINE V12 (AI & UPSERT SUPPORT)
  */
 
 const SPREADSHEET_ID = ""; 
@@ -14,9 +10,7 @@ function getSpreadsheet() {
     return SpreadsheetApp.openById(SPREADSHEET_ID);
   }
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  if (!ss) {
-    throw new Error("ERROR: Coloque el ID del Excel en SPREADSHEET_ID.");
-  }
+  if (!ss) throw new Error("ERROR: Falta ID del Excel.");
   return ss;
 }
 
@@ -25,19 +19,17 @@ function doPost(e) {
   try {
     lock.waitLock(30000); 
   } catch (e) {
-    return ContentService.createTextOutput(JSON.stringify({
-      success: false, 
-      error: "Servidor ocupado. Intente nuevamente."
-    })).setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput(JSON.stringify({success: false, error: "Servidor ocupado"})).setMimeType(ContentService.MimeType.JSON);
   }
 
-  let response = { success: false, error: "Error no identificado" };
+  let response = { success: false, error: "Error desconocido" };
   
   try {
     const requestData = JSON.parse(e.postData.contents);
     const action = requestData.action;
     let rows = requestData.rows;
 
+    // Descompresión si viene de la PWA
     if (requestData.metadata && requestData.metadata.compressed && typeof rows === 'string') {
       const decoded = Utilities.base64Decode(rows);
       const zipBlob = Utilities.newBlob(decoded, "application/zip");
@@ -51,15 +43,14 @@ function doPost(e) {
       case 'append_rows':
         response = appendRows(requestData.tableName, rows);
         break;
+      case 'upsert_products':
+        response = upsertProducts(requestData.tableName, rows);
+        break;
       case 'fetch_rows':
         response = fetchRows(requestData.tableName, requestData.since);
         break;
-      case 'fetch_order':
-        response = fetchOrder(requestData.erpOrder);
-        break;
       case 'ping':
-        const ssTest = getSpreadsheet();
-        response = { success: true, message: "Conectado a: " + ssTest.getName() };
+        response = { success: true, message: "Conectado OK" };
         break;
       default:
         throw new Error("Acción '" + action + "' no soportada.");
@@ -74,74 +65,67 @@ function doPost(e) {
   return ContentService.createTextOutput(JSON.stringify(response)).setMimeType(ContentService.MimeType.JSON);
 }
 
-function fetchOrder(erpId) {
-  if (!erpId) throw new Error("ID de pedido no proporcionado.");
+/**
+ * LÓGICA DE UPSERT: Actualiza productos existentes o añade nuevos.
+ * Crucial para distribuir el entrenamiento IA entre dispositivos.
+ */
+function upsertProducts(tableName, rows) {
   const ss = getSpreadsheet();
-  let sheet = ss.getSheetByName("PEDIDOS") || ss.getSheetByName("ORDENES") || ss.getSheets()[0];
-  
-  const values = sheet.getDataRange().getValues();
-  if (values.length < 2) return { success: true, rows: [] };
-  
-  const headers = values[0].map(h => String(h).trim().toUpperCase());
-  const erpColIdx = headers.findIndex(h => h.includes("ERP") || h.includes("ORDEN") || h.includes("DOC"));
-  
-  if (erpColIdx === -1) throw new Error("No se encontró columna ERP en la hoja de pedidos.");
-  
-  const cleanSearch = String(erpId).trim().toUpperCase();
-  const results = [];
-  
-  for (let i = 1; i < values.length; i++) {
-    const row = values[i];
-    if (String(row[erpColIdx]).trim().toUpperCase() === cleanSearch) {
-      const obj = {};
-      headers.forEach((h, idx) => { if (h) obj[h] = row[idx]; });
-      results.push(obj);
-    }
-  }
-  return { success: true, rows: results };
-}
+  let sheet = ss.getSheetByName(tableName || "PRODUCTOS");
+  if (!sheet) sheet = ss.insertSheet(tableName || "PRODUCTOS");
 
-function appendRows(tableName, rows) {
-  if (!rows || rows.length === 0) throw new Error("No hay filas para procesar.");
-  const ss = getSpreadsheet();
-  let sheet = ss.getSheetByName(tableName);
-  if (!sheet) sheet = ss.insertSheet(tableName);
-
-  let lastCol = sheet.getLastColumn();
-  let headers = [];
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0].map(h => String(h).trim().toUpperCase());
   
-  // Si la hoja es nueva, creamos las cabeceras
-  if (lastCol === 0) {
-    headers = Object.keys(rows[0]);
-    sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight("bold");
-  } else {
-    headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
-    
-    // Detección dinámica de nuevas columnas (ej: FIRMA_IA)
-    const newKeys = Object.keys(rows[0]).filter(k => 
-      !headers.map(h => String(h).trim().toUpperCase()).includes(k.trim().toUpperCase())
-    );
-    
-    if (newKeys.length > 0) {
-      const startCol = lastCol + 1;
-      sheet.getRange(1, startCol, 1, newKeys.length).setValues([newKeys]).setFontWeight("bold");
-      // Recargamos headers actualizados
-      lastCol = sheet.getLastColumn();
-      headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
-    }
+  // Identificar columna clave (SKU/CODIGO)
+  const skuIdx = headers.findIndex(h => h.includes("COD") || h.includes("SKU") || h.includes("BARRAS"));
+  if (skuIdx === -1) throw new Error("No se encontró columna de identidad (SKU) en " + tableName);
+
+  // Mapear SKUs existentes para acceso rápido O(1)
+  const skuMap = {};
+  for (let i = 1; i < data.length; i++) {
+    const sku = String(data[i][skuIdx]).trim().toUpperCase();
+    if (sku) skuMap[sku] = i + 1; // Guardamos el número de fila
   }
 
-  const dataToAppend = rows.map(row => {
-    return headers.map(h => {
+  let updated = 0;
+  let added = 0;
+
+  rows.forEach(row => {
+    const rowSku = String(row["CODIGO"] || row["COD PRODUCTO"] || row["SKU"]).trim().toUpperCase();
+    const existingRowNumber = skuMap[rowSku];
+
+    const rowData = headers.map(h => {
       const key = Object.keys(row).find(k => k.trim().toUpperCase() === String(h).trim().toUpperCase());
       return key ? row[key] : "";
     });
+
+    if (existingRowNumber) {
+      sheet.getRange(existingRowNumber, 1, 1, headers.length).setValues([rowData]);
+      updated++;
+    } else {
+      sheet.appendRow(rowData);
+      added++;
+    }
   });
+
+  return { success: true, updated, added, total: rows.length };
+}
+
+function appendRows(tableName, rows) {
+  const ss = getSpreadsheet();
+  let sheet = ss.getSheetByName(tableName);
+  if (!sheet) sheet = ss.insertSheet(tableName);
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn() || 1).getValues()[0];
+  
+  const dataToAppend = rows.map(row => headers.map(h => {
+    const key = Object.keys(row).find(k => k.trim().toUpperCase() === String(h).trim().toUpperCase());
+    return key ? row[key] : "";
+  }));
 
   if (dataToAppend.length > 0) {
     sheet.getRange(sheet.getLastRow() + 1, 1, dataToAppend.length, headers.length).setValues(dataToAppend);
   }
-  
   return { success: true, rows_written: dataToAppend.length };
 }
 
@@ -149,29 +133,13 @@ function fetchRows(tableName, sinceTimestamp) {
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(tableName);
   if (!sheet) return { success: false, error: "Pestaña no encontrada." };
-
-  const lastRow = sheet.getLastRow();
-  const lastCol = sheet.getLastColumn();
-  if (lastRow < 2) return { success: true, rows: [] };
-
-  const values = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+  const values = sheet.getDataRange().getValues();
+  if (values.length < 2) return { success: true, rows: [] };
   const headers = values[0];
-  const sinceTime = sinceTimestamp ? parseInt(sinceTimestamp) : 0;
-
-  const tsIdx = headers.findIndex(h => String(h).toUpperCase().includes("MODIFICADO") || String(h).toUpperCase().includes("TIMESTAMP"));
-
-  const results = [];
-  for (let i = 1; i < values.length; i++) {
-    const row = values[i];
-    if (tsIdx !== -1 && sinceTime > 0) {
-      const rowDate = new Date(row[tsIdx]).getTime();
-      if (rowDate <= sinceTime) continue; 
-    }
+  const results = values.slice(1).map(row => {
     const obj = {};
-    headers.forEach((h, idx) => {
-      if (h) obj[String(h).trim().toUpperCase()] = row[idx];
-    });
-    results.push(obj);
-  }
+    headers.forEach((h, idx) => { if (h) obj[String(h).trim().toUpperCase()] = row[idx]; });
+    return obj;
+  });
   return { success: true, rows: results, server_timestamp: new Date().getTime().toString() };
 }
