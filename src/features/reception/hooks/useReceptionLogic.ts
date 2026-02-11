@@ -48,6 +48,23 @@ export const useReceptionLogic = () => {
         }
     }, []);
 
+    // Fix: Added finalizeReception action which was missing in this version of the hook
+    const finalizeReception = useCallback(async () => {
+        if (!unsyncedDrafts?.length) return false;
+        setIsFinalizing(true);
+        try {
+            const ids = unsyncedDrafts.map(d => d.id);
+            await db.sessions.where('id').anyOf(ids).modify({ status: 'completed' });
+            SoundFX.play('success');
+            return true;
+        } catch (e) {
+            SoundFX.play('error');
+            return false;
+        } finally {
+            setIsFinalizing(false);
+        }
+    }, [unsyncedDrafts]);
+
     const deleteDraft = async (id: string) => {
         await db.sessions.delete(id);
         SoundFX.play('delete');
@@ -72,7 +89,8 @@ export const useReceptionLogic = () => {
             handleScan,
             handleManualInput: handleScan, // Alias directo por ahora
             deleteDraft,
-            discardAll
+            discardAll,
+            finalizeReception
         }
     };
 };

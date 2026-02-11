@@ -66,8 +66,16 @@ export const useReceptionLogic = () => {
         SoundFX.play('delete');
     };
 
+    // Fix: Added discardAll action to clear the entire reception queue as requested by ReceptionPage
+    const discardAll = useCallback(async () => {
+        if (confirm("¿Borrar toda la cola de recepción?")) {
+            await db.sessions.where('status').equals('draft').delete();
+            SoundFX.play('delete');
+        }
+    }, []);
+
     return {
         state: { lastAction, flashActive, draftCount, unsyncedDrafts, isFinalizing },
-        actions: { handleScan, handleManualInput: handleScan, deleteDraft, finalizeReception }
+        actions: { handleScan, handleManualInput: handleScan, deleteDraft, finalizeReception, discardAll }
     };
 };

@@ -32,6 +32,7 @@ export const HammerPage: React.FC = () => {
     const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
     const [showKeypad, setShowKeypad] = useState(false);
     const [isMigrating, setIsMigrating] = useState(false);
+    const [manualBuffer, setManualBuffer] = useState('');
 
     useEffect(() => {
         actions.setCurrentLocation(locManager.location);
@@ -49,6 +50,14 @@ export const HammerPage: React.FC = () => {
         } catch (err) {
             setIsMigrating(false);
             SoundFX.play('error');
+        }
+    };
+
+    const handleManualConfirm = () => {
+        if (manualBuffer.trim()) {
+            actions.registerScan(manualBuffer);
+            setManualBuffer('');
+            setShowKeypad(false);
         }
     };
 
@@ -89,7 +98,7 @@ export const HammerPage: React.FC = () => {
                 unitsPerBox={state.activeProduct?.unitsPerBox}
                 isTriggerActive={isTriggerActive}
                 onMultiplierChange={actions.setMultiplier}
-                onOpenManual={() => setShowKeypad(true)}
+                onOpenManual={() => { setManualBuffer(''); setShowKeypad(true); }}
                 onTriggerStart={() => !isLocked && setIsTriggerActive(true)}
                 onTriggerEnd={() => setIsTriggerActive(false)}
             />
@@ -102,7 +111,7 @@ export const HammerPage: React.FC = () => {
                 location={locManager.location}
                 onChangeLocation={locManager.openModal}
                 onShowLabel={() => setIsLabelModalOpen(true)}
-                onReset={() => actions.removeItem('ALL')}
+                onReset={actions.removeItem('ALL')}
                 onPrintSummary={() => {}}
             />
 
@@ -135,9 +144,13 @@ export const HammerPage: React.FC = () => {
 
             {showKeypad && (
                 <NumericKeypad 
-                    isOpen={true} onClose={() => setShowKeypad(false)} title="SKU MANUAL" 
-                    onInput={(v) => actions.registerScan(v)} onDelete={() => {}} 
-                    onConfirm={() => setShowKeypad(false)} 
+                    isOpen={true} 
+                    onClose={() => setShowKeypad(false)} 
+                    title="SKU MANUAL" 
+                    value={manualBuffer}
+                    onInput={(v) => setManualBuffer(prev => prev + v)} 
+                    onDelete={() => setManualBuffer(prev => prev.slice(0, -1))} 
+                    onConfirm={handleManualConfirm} 
                 />
             )}
 

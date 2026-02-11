@@ -20,7 +20,8 @@ export const useAutoLock = (delayMs: number = 3000) => {
     }, [isLocked, delayMs]);
 
     useEffect(() => {
-        const events = ['mousedown', 'mousemove', 'keypress', 'touchstart', 'scroll'];
+        // Lista extendida de eventos para detectar cualquier tipo de interacción
+        const events = ['mousedown', 'mousemove', 'keypress', 'keydown', 'touchstart', 'scroll', 'pointerdown'];
         
         const handler = () => resetTimer();
 

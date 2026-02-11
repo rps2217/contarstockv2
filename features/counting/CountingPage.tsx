@@ -20,12 +20,12 @@ export const CountingPage: React.FC = () => {
     const navigate = useNavigate();
     const { state, actions, sessionData } = useCountingLogic(id, () => navigate('/reports'));
     
-    // Gestión de Autobloqueo (3 Segundos de inactividad)
     const { isLocked, unlock, lock } = useAutoLock(3000);
 
     const [isTriggerActive, setIsTriggerActive] = useState(false);
     const [isToolsOpen, setIsToolsOpen] = useState(false);
     const [isLabelOpen, setIsLabelOpen] = useState(false);
+    const [manualBuffer, setManualBuffer] = useState('');
 
     const startTrigger = useCallback(() => {
         if (isLocked || state.status === 'expiring') return;
@@ -34,6 +34,22 @@ export const CountingPage: React.FC = () => {
     }, [isLocked, state.status]);
 
     const endTrigger = useCallback(() => setIsTriggerActive(false), []);
+
+    const handleManualInput = (char: string) => {
+        setManualBuffer(prev => prev + char);
+    };
+
+    const handleManualDelete = () => {
+        setManualBuffer(prev => prev.slice(0, -1));
+    };
+
+    const handleManualConfirm = () => {
+        if (manualBuffer.trim()) {
+            actions.handleExternalScan(manualBuffer, state.multiplier);
+            setManualBuffer('');
+            actions.setStatus('idle');
+        }
+    };
 
     if (state.isLoading) {
         return (
@@ -94,7 +110,7 @@ export const CountingPage: React.FC = () => {
                 unitsPerBox={state.activeProduct?.unitsPerBox}
                 isTriggerActive={isTriggerActive}
                 onMultiplierChange={actions.setMultiplier}
-                onOpenManual={() => actions.setStatus('manual')}
+                onOpenManual={() => { setManualBuffer(''); actions.setStatus('manual'); }}
                 onTriggerStart={startTrigger}
                 onTriggerEnd={endTrigger}
             />
@@ -143,10 +159,11 @@ export const CountingPage: React.FC = () => {
                 <NumericKeypad 
                     isOpen={true} 
                     title="EAN / SKU MANUAL" 
+                    value={manualBuffer}
                     onClose={() => actions.setStatus('idle')} 
-                    onInput={(c) => actions.handleExternalScan(c, state.multiplier)} 
-                    onDelete={() => {}} 
-                    onConfirm={() => actions.setStatus('idle')} 
+                    onInput={handleManualInput} 
+                    onDelete={handleManualDelete} 
+                    onConfirm={handleManualConfirm} 
                 />
             )}
 
