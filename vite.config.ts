@@ -12,19 +12,23 @@ export default defineConfig(({ mode }) => {
       },
       resolve: {
         alias: {
-          // Using aliases to ensure Vite doesn't try to find these in a missing node_modules folder
           'buffer': 'https://esm.sh/buffer@6.0.3',
           'long': 'https://esm.sh/long@5.2.3'
         },
       },
       optimizeDeps: {
-        // Exclude modules that we want to resolve via importmap or external URLs
         exclude: ['buffer', 'long'],
       },
       build: {
+        chunkSizeWarningLimit: 2000, // Aumentado a 2MB para evitar advertencias de librerías industriales
         rollupOptions: {
-          // Mark these as external to prevent build failure when node_modules is incomplete
           external: ['buffer', 'long'],
+          output: {
+            manualChunks: {
+              'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+              'vendor-utils': ['xlsx', 'jspdf', 'papaparse', 'date-fns']
+            }
+          }
         },
       },
       plugins: [
@@ -68,7 +72,6 @@ export default defineConfig(({ mode }) => {
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
         'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        // Polyfill global for libraries that expect a Node-like environment
         'global': 'window',
       }
     };
