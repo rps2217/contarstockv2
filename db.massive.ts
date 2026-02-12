@@ -24,8 +24,8 @@ export class MassiveBlindDB extends Dexie {
 
   constructor() {
     super('MassiveBlindDB');
-    // Incrementado a v6 para asegurar consistencia
-    (this as any).version(6).stores({
+    // Incrementado a v7 para asegurar consistencia
+    (this as any).version(7).stores({
       blindScans: '++id, batchId, barcode, location, timestamp',
       blindManifests: '++id, batchId, barcode, loc, [batchId+barcode]'
     });

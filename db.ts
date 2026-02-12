@@ -34,8 +34,8 @@ export class LogiCountDB extends Dexie {
 
   constructor() {
     super('LogiCountDB');
-    // Incrementado a v22 para forzar actualización de esquema y eliminar SchemaDiff
-    (this as any).version(22).stores({
+    // Incrementado a v23 para forzar actualización de esquema tras SchemaDiff detectado
+    (this as any).version(23).stores({
       products: '&barcode, name, syncStatus', 
       sessions: 'id, status, createdAt, erpOrder, logisticsLabel, sessionType, auditStatus, lastSyncTimestamp, [erpOrder+createdAt], [status+lastSyncTimestamp]', 
       scans: 'id, sessionId, barcode, logisticsLabel, timestamp, synced, isIncident, [sessionId+synced], [sessionId+barcode], [sessionId+logisticsLabel], [sessionId+timestamp]',

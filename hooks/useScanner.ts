@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback, useMemo, useReducer } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
@@ -18,7 +17,6 @@ export const useScanner = (session: CountingSession, onFinish: () => void) => {
     const { feedback, trigger } = useFeedbackSystem(200);
     const [machineState, dispatch] = useReducer(scannerReducer, 'IDLE');
     
-    // Persistencia básica de sesión de trabajo en memoria de componente
     const [multiplier, setMultiplier] = useState(1);
     const [currentLocation, setCurrentLocation] = useState(() => localStorage.getItem('last_loc') || 'BODEGA_GRAL'); 
     const [activeBarcode, setActiveBarcode] = useState<string | null>(null);
@@ -27,14 +25,12 @@ export const useScanner = (session: CountingSession, onFinish: () => void) => {
 
     const itemsRef = useRef<ConsolidatedItem[]>([]);
     
-    // Guardar ubicación favorita
     useEffect(() => { localStorage.setItem('last_loc', currentLocation); }, [currentLocation]);
 
     const consolidatedHistory = useLiveQuery(async () => {
         const scans = await db.scans.where('sessionId').equals(session.id).toArray();
         const physicalItems = await aggregateScans(scans);
         
-        // Unir con metas si existen
         const expectedItems = session.expectedItems || [];
         const expectedMap = new Map(expectedItems.map(ei => [normalizeSku(ei.barcode), ei.expectedQty]));
 
@@ -43,7 +39,6 @@ export const useScanner = (session: CountingSession, onFinish: () => void) => {
             expectedQuantity: expectedMap.get(normalizeSku(pi.barcode)) || 0
         }));
 
-        // Inyectar ítems de la guía que aún no se han tocado (Solo si es modo verificado)
         if (session.isVerifiedMode && expectedItems.length > 0) {
             const scannedBarcodes = new Set(physicalItems.map(pi => normalizeSku(pi.barcode)));
             expectedItems.forEach(exp => {
@@ -78,11 +73,9 @@ export const useScanner = (session: CountingSession, onFinish: () => void) => {
             const cleanBarcode = sanitizeBarcode(barcode);
             const normBarcode = normalizeSku(cleanBarcode);
             
-            // 1. Resolver Producto
             let product = await productService.getProductByBarcode(cleanBarcode);
             setActiveProduct(product || null);
 
-            // 2. Verificar Lotes (Si es necesario)
             const needsPharma = shouldPromptForBatch(cleanBarcode, consolidatedHistory || [], settings) && (mm === undefined);
             if (needsPharma) {
                 setActiveBarcode(normBarcode);
@@ -91,14 +84,12 @@ export const useScanner = (session: CountingSession, onFinish: () => void) => {
             }
             dispatch({ type: 'PRODUCT_RESOLVED', needsPharma: false });
 
-            // 3. Calcular Nueva Cantidad Optimista (Para UI sin lag)
             const existing = itemsRef.current.find(i => normalizeSku(i.barcode) === normBarcode);
             const newTotal = Math.max(0, (existing?.totalQuantity || 0) + qty);
             
             setOptimisticQty(newTotal);
             setActiveBarcode(normBarcode);
 
-            // 4. Persistir
             await sessionService.addScanEvent(session.id, cleanBarcode, qty, mm, yyyy, currentLocation, batch);
             
             dispatch({ type: 'COMMIT_COMPLETE' });
@@ -124,7 +115,6 @@ export const useScanner = (session: CountingSession, onFinish: () => void) => {
         },
         actions: { 
             handleExternalScan: finalizeScanPipeline,
-            // Move setters from state to actions to fix Scanner.tsx property access errors
             setMultiplier,
             setCurrentLocation,
             selectItem: (b: string) => { 
