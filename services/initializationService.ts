@@ -6,7 +6,7 @@ import { db } from '../db';
 
 export type InitStep = 'idle' | 'version_check' | 'config' | 'database' | 'ready' | 'offline' | 'purging';
 
-const CURRENT_APP_VERSION = "5.7.0"; // Bump version to force purge
+const CURRENT_APP_VERSION = "5.7.1"; // Incrementado para forzar limpieza de caché y alineación de esquema
 
 export const InitializationService = {
     runMaintenance: async (onStep: (step: InitStep) => void): Promise<boolean> => {
@@ -27,7 +27,7 @@ export const InitializationService = {
                     for (const reg of regs) await reg.unregister();
                 }
 
-                // 3. Limpieza selectiva de LocalStorage (Mantener Auth)
+                // 3. Limpieza selectiva de LocalStorage (Mantener Auth y Config Crítica)
                 const auth = localStorage.getItem('logicount_auth');
                 const opId = localStorage.getItem('logicount_operator_id');
                 const sets = localStorage.getItem('logicount_settings');

@@ -1,4 +1,3 @@
-
 import { Dexie, type Table } from 'dexie';
 
 export interface BlindScan {
@@ -6,7 +5,7 @@ export interface BlindScan {
   batchId: string;
   barcode: string;
   quantity: number;
-  location?: string; // NUEVO: Ubicación física
+  location?: string; 
   timestamp: number;
 }
 
@@ -25,7 +24,8 @@ export class MassiveBlindDB extends Dexie {
 
   constructor() {
     super('MassiveBlindDB');
-    (this as any).version(5).stores({ // Bump version to 5
+    // Incrementado a v6 para asegurar consistencia
+    (this as any).version(6).stores({
       blindScans: '++id, batchId, barcode, location, timestamp',
       blindManifests: '++id, batchId, barcode, loc, [batchId+barcode]'
     });
