@@ -1,16 +1,20 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 
-// 1. INYECCIÓN DE POLYFILLS USANDO EL IMPORTMAP
-// Esto resuelve los errores "module not found" al usar los alias definidos en index.html
-import { Buffer } from 'buffer';
-import Long from 'long';
+/**
+ * BLINDAJE DE GLOBALES v5.0
+ * Inyectamos Buffer y Long directamente desde la CDN para evitar
+ * fallos de resolución de módulos antes del arranque de React.
+ */
+import { Buffer } from 'https://esm.sh/buffer@6.0.3';
+import Long from 'https://esm.sh/long@5.2.3';
 
 if (typeof window !== 'undefined') {
     (window as any).Buffer = Buffer;
     (window as any).Long = Long;
     (window as any).global = window;
     (window as any).globalThis.Buffer = Buffer;
+    (window as any).globalThis.Long = Long;
     
     if (typeof (window as any).process === 'undefined') {
         (window as any).process = { 
@@ -23,7 +27,7 @@ if (typeof window !== 'undefined') {
     }
 }
 
-// 2. CARGA DE LA APLICACIÓN
+// Importar App DESPUÉS de establecer los polyfills
 import App from './App.tsx';
 
 const container = document.getElementById('root');
