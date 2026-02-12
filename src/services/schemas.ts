@@ -2,6 +2,18 @@
 import { z } from 'zod';
 import { SHEET_COLUMNS } from './constants';
 
+/**
+ * MOTOR DE NORMALIZACIÓN DE CABECERAS v2.0
+ * Elimina espacios, acentos y caracteres especiales para un mapeo robusto.
+ */
+const normalizeHeader = (h: string) => 
+    String(h)
+        .trim()
+        .toUpperCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") // Eliminar acentos
+        .replace(/\s+/g, ""); // Eliminar todos los espacios
+
 const cleanString = z.union([z.string(), z.number(), z.null(), z.undefined()])
     .transform((val) => {
         if (val === null || val === undefined) return '';
@@ -11,27 +23,24 @@ const cleanString = z.union([z.string(), z.number(), z.null(), z.undefined()])
 export const CloudProductSchema = z.record(z.any()).transform((raw) => {
     const normalized: Record<string, any> = {};
     Object.keys(raw).forEach(k => {
-        const key = k.trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        normalized[key] = raw[k];
+        normalized[normalizeHeader(k)] = raw[k];
     });
 
-    const barcode = normalized["COD PRODUCTO"] || normalized["CODIGO"] || normalized["SKU"] || normalized["BARCODE"] || normalized["EAN"] || "";
+    // Mapeo flexible
+    const barcode = normalized["CODPRODUCTO"] || normalized["CODIGO"] || normalized["SKU"] || normalized["BARCODE"] || normalized["EAN"] || "";
     const name = normalized["DESCRIPCION"] || normalized["PRODUCTO"] || normalized["NOMBRE"] || normalized["DESCRIP"] || normalized["ITEM"] || "Sin descripción";
     const category = normalized["MUNDO"] || normalized["CATEGORIA"] || normalized["CATEGORY"] || "GENERAL";
     const supplier = normalized["PROVEEDOR"] || normalized["SUPPLIER"] || "";
-    const supplierRut = normalized["RUT PROVEEDOR"] || normalized["RUT"] || "";
+    const supplierRut = normalized["RUTPROVEEDOR"] || normalized["RUT"] || "";
     
-    // Recuperación de Inteligencia Colectiva
-    const embeddingRaw = normalized["FIRMA_IA"] || normalized["EMBEDDING"] || normalized["VECTOR"] || normalized["IA_SIGNATURE"];
+    const embeddingRaw = normalized["FIRMAIA"] || normalized["EMBEDDING"] || normalized["VECTOR"] || normalized["IASIGNATURE"];
     let embedding: number[] | undefined;
     
     if (embeddingRaw) {
         try {
-            const parsed = JSON.parse(embeddingRaw);
+            const parsed = typeof embeddingRaw === 'string' ? JSON.parse(embeddingRaw) : embeddingRaw;
             if (Array.isArray(parsed)) embedding = parsed;
-        } catch (e) {
-            // Falla silenciosa si el JSON está corrupto en la celda
-        }
+        } catch (e) {}
     }
 
     return {
@@ -54,13 +63,12 @@ export const CloudProductSchema = z.record(z.any()).transform((raw) => {
 export const CloudStockSchema = z.record(z.any()).transform((raw) => {
     const normalized: Record<string, any> = {};
     Object.keys(raw).forEach(k => {
-        const key = k.trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
-        normalized[key] = raw[k];
+        normalized[normalizeHeader(k)] = raw[k];
     });
 
-    const barcode = normalized["CODIGO"] || normalized["SKU"] || normalized["EAN"] || normalized["ITEM"] || "";
+    const barcode = normalized["CODPRODUCTO"] || normalized["CODIGO"] || normalized["SKU"] || normalized["EAN"] || normalized["ITEM"] || "";
     const name = normalized["PRODUCTO"] || normalized["DESCRIPCION"] || normalized["NOMBRE"] || "Producto Desconocido";
-    const qty = normalized["STOCKFINAL"] || normalized["STOCK"] || normalized["CANTIDAD"] || normalized["QTY"] || normalized["SALDO"] || 0;
+    const qty = normalized["STOCKFINAL"] || normalized["STOCK"] || normalized["STOCKTEORICO"] || normalized["CANTIDAD"] || normalized["QTY"] || normalized["UNIDADES"] || normalized["SALDO"] || 0;
     const loc = normalized["LOC"] || normalized["UBICACION"] || normalized["POSICION"] || "";
 
     return {
@@ -79,12 +87,11 @@ export const CloudStockSchema = z.record(z.any()).transform((raw) => {
 export const CloudOrderRowSchema = z.record(z.any()).transform((raw) => {
     const normalized: Record<string, any> = {};
     Object.keys(raw).forEach(k => {
-        const key = k.trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
-        normalized[key] = raw[k];
+        normalized[normalizeHeader(k)] = raw[k];
     });
 
     const erp = normalized["ERP"] || normalized["ORDEN"] || normalized["DOCUMENTO"] || normalized["DOC"] || normalized["NROORDEN"] || normalized["NUMERO"] || "";
-    const barcode = normalized["CODIGO"] || normalized["SKU"] || normalized["EAN"] || normalized["BARRAS"] || normalized["ITEM"] || "";
+    const barcode = normalized["CODPRODUCTO"] || normalized["CODIGO"] || normalized["SKU"] || normalized["EAN"] || normalized["BARRAS"] || normalized["ITEM"] || "";
     const name = normalized["PRODUCTO"] || normalized["DESCRIPCION"] || normalized["NOMBRE"] || normalized["DESC"] || "Producto Desconocido";
     const qty = normalized["CANTIDAD"] || normalized["QTY"] || normalized["UNIDADES"] || normalized["UNID"] || normalized["CANT"] || 0;
 
