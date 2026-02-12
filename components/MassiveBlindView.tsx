@@ -28,7 +28,6 @@ export const MassiveBlindView: React.FC = () => {
     const [isToolsOpen, setIsToolsOpen] = useState(false);
     const [isMigrating, setIsMigrating] = useState(false);
 
-    // Sincronizar ubicación del manager con la lógica de escaneo
     useEffect(() => {
         actions.setCurrentLocation(locManager.location);
     }, [locManager.location, actions]);
@@ -42,6 +41,11 @@ export const MassiveBlindView: React.FC = () => {
         } catch (err) {
             setIsMigrating(false);
         }
+    };
+
+    const handleManualConfirm = (sku: string) => {
+        actions.registerScan(sku);
+        setShowKeypad(false);
     };
 
     const rowData = React.useMemo(() => ({ 
@@ -122,13 +126,12 @@ export const MassiveBlindView: React.FC = () => {
                 </div>
             )}
 
-            {showKeypad && (
-                <NumericKeypad 
-                    isOpen={true} onClose={() => setShowKeypad(false)} title="SKU MANUAL" 
-                    onInput={(v) => actions.registerScan(v)} onDelete={() => {}} 
-                    onConfirm={() => setShowKeypad(false)} 
-                />
-            )}
+            <NumericKeypad 
+                isOpen={showKeypad} 
+                onClose={() => setShowKeypad(false)} 
+                title="SKU MANUAL" 
+                onConfirm={handleManualConfirm} 
+            />
 
             <ScreenLockOverlay isLocked={isScreenLocked} onUnlock={() => setIsScreenLocked(false)} />
         </div>

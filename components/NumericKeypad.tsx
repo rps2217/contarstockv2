@@ -12,6 +12,10 @@ interface NumericKeypadProps {
   placeholder?: string;
 }
 
+/**
+ * NUMERIC KEYPAD INDUSTRIAL v5.0
+ * Maneja buffer interno para evitar registros parciales en el motor de escaneo.
+ */
 export const NumericKeypad: React.FC<NumericKeypadProps> = ({ 
   isOpen, onClose, onConfirm, title, value, placeholder = "ESPERANDO_INPUT..."
 }) => {
@@ -35,17 +39,17 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
   }, []);
 
   const handleConfirm = useCallback(() => {
-    if (internalBuffer.length > 0) {
-      onConfirm(internalBuffer);
-      setInternalBuffer("");
+    if (internalBuffer.trim().length > 0) {
+      onConfirm(internalBuffer.trim());
+      setInternalBuffer(""); // Limpiar tras confirmar
     }
   }, [internalBuffer, onConfirm]);
 
-  // Soporte para teclado físico cuando el modal está abierto
+  // Soporte para teclado físico (PDA con teclado numérico)
   useEffect(() => {
     if (!isOpen) return;
     const handleKey = (e: KeyboardEvent) => {
-      // Evitar que el escáner HID global procese estas teclas mientras el teclado está abierto
+      // Detener propagación para que useHIDScanner no intente procesar ráfagas
       if ((e.key >= '0' && e.key <= '9') || e.key === 'Backspace' || e.key === 'Enter') {
           e.stopPropagation();
       }
@@ -60,7 +64,6 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
           onClose();
       }
     };
-    // Capture phase para asegurar que capturamos antes que el useHIDScanner global
     window.addEventListener('keydown', handleKey, { capture: true });
     return () => window.removeEventListener('keydown', handleKey, { capture: true });
   }, [isOpen, handleChar, handleDelete, handleConfirm, onClose]);

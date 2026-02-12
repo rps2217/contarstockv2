@@ -18,16 +18,20 @@ export const Scanner: React.FC<{ session: CountingSession, onCloseSession: () =>
   const [isTriggerActive, setIsTriggerActive] = useState(false);
   const [isScreenLocked, setIsScreenLocked] = useState(false);
 
-  // Gatillo de Hardware (Solo activo si la pantalla no está bloqueada)
+  // Gatillo de Hardware
   useHIDScanner({ 
       isEnabled: !isScreenLocked && state.status !== 'expiring', 
       onScan: (barcode) => actions.handleExternalScan(barcode, state.multiplier) 
   });
 
+  const handleManualConfirm = (sku: string) => {
+      actions.handleExternalScan(sku, state.multiplier);
+      actions.setStatus('idle');
+  };
+
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-black text-white font-mono overflow-hidden">
       
-      {/* 1. Header: Contexto Operativo */}
       <header className="h-14 px-3 flex items-center justify-between border-b border-white/10 bg-slate-950 shrink-0 z-50">
           <button onClick={() => actions.setStatus('confirming')} className="p-2.5 bg-white/5 rounded-xl active:bg-blue-600 transition-all"><ChevronLeft className="w-6 h-6" /></button>
           <div className="text-center">
@@ -37,7 +41,6 @@ export const Scanner: React.FC<{ session: CountingSession, onCloseSession: () =>
           <button onClick={() => setIsScreenLocked(true)} className="p-2.5 bg-white/5 rounded-xl active:bg-amber-500"><Lock className="w-5 h-5" /></button>
       </header>
 
-      {/* 2. Hero: Feedback Visual Crítico */}
       <div className="h-[38vh] shrink-0 border-b-4 border-black">
           <ScannerHero 
                 lastScan={state.activeBarcode ? { barcode: state.activeBarcode } as any : undefined} 
@@ -51,7 +54,6 @@ export const Scanner: React.FC<{ session: CountingSession, onCloseSession: () =>
           />
       </div>
 
-      {/* 3. History: Lista de Trabajo */}
       <ScannerHistoryList 
             items={data.history} 
             activeBarcode={state.activeBarcode} 
@@ -59,7 +61,6 @@ export const Scanner: React.FC<{ session: CountingSession, onCloseSession: () =>
             onSelect={actions.selectItem} 
       />
 
-      {/* 4. Footer: Controles Táctiles Rápidos */}
       <ScannerFooter 
             multiplier={state.multiplier}
             unitsPerBox={state.activeProduct?.unitsPerBox}
@@ -68,7 +69,6 @@ export const Scanner: React.FC<{ session: CountingSession, onCloseSession: () =>
             onTriggerCamera={() => setIsTriggerActive(true)}
       />
 
-      {/* 5. Capa de Modales/Overlays (Fuera del flujo principal) */}
       {isTriggerActive && (
           <div className="fixed inset-0 z-[250]">
               <CameraScanner onScan={(c) => { actions.handleExternalScan(c, state.multiplier); setIsTriggerActive(false); }} onClose={() => setIsTriggerActive(false)} isTriggered={true} />
@@ -92,7 +92,12 @@ export const Scanner: React.FC<{ session: CountingSession, onCloseSession: () =>
       )}
       
       {state.status === 'manual' && (
-          <NumericKeypad isOpen={true} title="EAN / SKU MANUAL" onClose={() => actions.setStatus('idle')} onInput={(c) => actions.handleExternalScan(c, state.multiplier)} onDelete={() => {}} onConfirm={() => actions.setStatus('idle')} />
+          <NumericKeypad 
+            isOpen={true} 
+            title="EAN / SKU MANUAL" 
+            onClose={() => actions.setStatus('idle')} 
+            onConfirm={handleManualConfirm} 
+          />
       )}
     </div>
   );

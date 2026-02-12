@@ -17,8 +17,6 @@ import { ScreenLockOverlay } from '../../components/common/ScreenLockOverlay';
 import { NumericKeypad } from '../../components/NumericKeypad';
 import { VirtualList } from '../../components/common/VirtualList';
 import { SoundFX } from '../../services/audio';
-import { useAutoLock } from '../../hooks/useAutoLock';
-import { useHIDScanner } from '../../hooks/useHIDScanner';
 
 export const HammerPage: React.FC = () => {
     const navigate = useNavigate();
@@ -26,20 +24,13 @@ export const HammerPage: React.FC = () => {
     
     const { state, actions } = useHammerLogic(batchId);
     const locManager = useLocationManager(`hammer_loc_${batchId}`);
-    const { isLocked, unlock, lock } = useAutoLock(3000);
 
     const [isTriggerActive, setIsTriggerActive] = useState(false);
+    const [isScreenLocked, setIsScreenLocked] = useState(false);
     const [isToolsOpen, setIsToolsOpen] = useState(false);
     const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
     const [showKeypad, setShowKeypad] = useState(false);
     const [isMigrating, setIsMigrating] = useState(false);
-
-    // ESCUCHA INMEDIATA DE LÁSER (Hardware HID)
-    useHIDScanner({
-        onScan: (barcode) => actions.registerScan(barcode),
-        isEnabled: !isLocked && !isMigrating && !showKeypad && !isToolsOpen,
-        maxLatency: 50
-    });
 
     useEffect(() => {
         actions.setCurrentLocation(locManager.location);
@@ -60,8 +51,8 @@ export const HammerPage: React.FC = () => {
         }
     };
 
-    const handleKeypadConfirm = (value: string) => {
-        actions.registerScan(value);
+    const handleManualConfirm = (sku: string) => {
+        actions.registerScan(sku);
         setShowKeypad(false);
     };
 
@@ -74,7 +65,7 @@ export const HammerPage: React.FC = () => {
                 onBack={() => navigate('/dashboard')}
                 onFinalize={handleFinalize}
                 onOpenTools={() => setIsToolsOpen(true)}
-                onLock={lock}
+                onLock={() => setIsScreenLocked(true)}
             />
 
             <div className="px-4 py-2 bg-slate-900/50 border-b border-white/5">
@@ -103,7 +94,7 @@ export const HammerPage: React.FC = () => {
                 isTriggerActive={isTriggerActive}
                 onMultiplierChange={actions.setMultiplier}
                 onOpenManual={() => setShowKeypad(true)}
-                onTriggerStart={() => !isLocked && setIsTriggerActive(true)}
+                onTriggerStart={() => !isScreenLocked && setIsTriggerActive(true)}
                 onTriggerEnd={() => setIsTriggerActive(false)}
             />
 
@@ -147,13 +138,13 @@ export const HammerPage: React.FC = () => {
             )}
 
             <NumericKeypad 
-                isOpen={showKeypad}
-                title="SKU MANUAL"
-                onClose={() => setShowKeypad(false)}
-                onConfirm={handleKeypadConfirm}
+                isOpen={showKeypad} 
+                onClose={() => setShowKeypad(false)} 
+                title="SKU MANUAL" 
+                onConfirm={handleManualConfirm} 
             />
 
-            <ScreenLockOverlay isLocked={isLocked} onUnlock={unlock} />
+            <ScreenLockOverlay isLocked={isScreenLocked} onUnlock={() => setIsScreenLocked(false)} />
         </div>
     );
 };

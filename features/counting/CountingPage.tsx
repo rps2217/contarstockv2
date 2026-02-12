@@ -38,8 +38,12 @@ export const CountingPage: React.FC = () => {
         if (navigator.vibrate) navigator.vibrate(30);
     }, [isLocked, state.status]);
 
-    const handleManualConfirm = (val: string) => {
-        actions.handleExternalScan(val, state.multiplier);
+    const endTrigger = useCallback(() => {
+        setIsTriggerActive(false);
+    }, []);
+
+    const handleManualConfirm = (sku: string) => {
+        actions.handleExternalScan(sku, state.multiplier);
         setShowKeypad(false);
     };
 
@@ -102,7 +106,7 @@ export const CountingPage: React.FC = () => {
                 onMultiplierChange={actions.setMultiplier}
                 onOpenManual={() => setShowKeypad(true)}
                 onTriggerStart={startTrigger}
-                onTriggerEnd={() => setIsTriggerActive(false)}
+                onTriggerEnd={endTrigger}
             />
 
             <ScannerToolsSheet 

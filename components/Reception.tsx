@@ -49,10 +49,8 @@ export const Reception: React.FC = () => {
     const { state, actions } = useReception();
     
     const [isTriggerActive, setIsTriggerActive] = useState(false);
-    const [manualCode, setManualCode] = useState('');
     const [isScreenLocked, setIsScreenLocked] = useState(false);
 
-    // --- LÓGICA DE AUTO-BLOQUEO (4 Segundos) ---
     const autoLockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const AUTO_LOCK_DELAY = 4000;
 
@@ -73,11 +71,8 @@ export const Reception: React.FC = () => {
 
     const handleInteraction = () => resetAutoLockTimer();
 
-    const handleKeypadConfirm = () => {
-        if (manualCode.length > 0) {
-            actions.handleManualSubmit(manualCode);
-            setManualCode('');
-        }
+    const handleKeypadConfirm = (code: string) => {
+        actions.handleManualSubmit(code);
         state.setShowManualInput(false);
     };
 
@@ -104,7 +99,6 @@ export const Reception: React.FC = () => {
             onKeyDown={handleInteraction}
         >
             
-            {/* 1. HEADER INDUSTRIAL */}
             <div className="h-16 px-4 flex items-center justify-between border-b border-white/10 bg-slate-900 shadow-2xl shrink-0 z-50">
                 <div className="flex items-center gap-3">
                     <button onClick={() => navigate('/dashboard')} className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl active:bg-blue-600 transition-colors">
@@ -137,7 +131,6 @@ export const Reception: React.FC = () => {
                 </div>
             </div>
 
-            {/* 2. HUD DINÁMICO */}
             <ReceptionHero 
                 lastAction={state.lastAction}
                 draftCount={state.draftCount}
@@ -146,11 +139,10 @@ export const Reception: React.FC = () => {
                 onCameraClick={() => {}}
             />
 
-            {/* 3. ÁREA DE LISTA Y HERRAMIENTAS */}
             <div className="flex-1 min-h-0 bg-black flex flex-col relative">
                 <div className="shrink-0 p-3 bg-slate-900/50 border-b border-white/5 grid grid-cols-1 gap-2">
                     <button
-                        onClick={() => { setManualCode(''); state.setShowManualInput(true); }}
+                        onClick={() => { state.setShowManualInput(true); }}
                         className="h-11 rounded-xl font-black text-[10px] flex items-center justify-center gap-3 transition-all border-2 bg-slate-800 border-slate-700 text-white shadow-lg active:scale-95"
                     >
                         <Keyboard className="w-4 h-4 text-blue-400" />
@@ -165,18 +157,10 @@ export const Reception: React.FC = () => {
                         renderRow={ReceptionRow} 
                         rowData={rowData} 
                         className="bg-black/20" 
-                        emptyState={
-                            <div className="flex flex-col items-center opacity-20 mt-16">
-                                <Box className="w-20 h-20 mb-4" />
-                                <p className="text-[10px] font-black uppercase tracking-[0.5em]">Esperando_Input</p>
-                            </div>
-                        }
                     />
-                    <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-black to-transparent pointer-events-none"></div>
                 </div>
             </div>
 
-            {/* 4. GATILLO ÓPTICO */}
             <div className="h-24 md:h-28 shrink-0 bg-slate-900 border-t border-white/5 flex items-center px-4 z-40 pb-6">
                 <button 
                     onPointerDown={(e) => { e.preventDefault(); if(navigator.vibrate) navigator.vibrate(40); setIsTriggerActive(true); }} 
@@ -189,7 +173,6 @@ export const Reception: React.FC = () => {
                 </button>
             </div>
 
-            {/* MODALES Y OVERLAYS */}
             {(isTriggerActive || state.isCameraOpen) && (
                 <div className="fixed inset-0 z-[250]">
                      <CameraScanner 
@@ -204,9 +187,6 @@ export const Reception: React.FC = () => {
                 isOpen={state.showManualInput}
                 onClose={() => state.setShowManualInput(false)}
                 title="Escribir Etiqueta"
-                value={manualCode}
-                onInput={(v) => setManualCode(prev => prev + v)}
-                onDelete={() => setManualCode(prev => prev.slice(0, -1))}
                 onConfirm={handleKeypadConfirm}
             />
 
