@@ -1,13 +1,13 @@
 
 import React, { memo } from 'react';
 import { Minus, Plus, Target } from 'lucide-react';
-import { ConsolidatedBlindItem } from '../../hooks/useMassiveScanner';
+import { HammerItem } from '../../features/hammer/hooks/useHammerLogic';
 import { determineItemStatus, getStatusColorClasses } from '../../services/uiLogic';
 
 interface Props {
-    item: ConsolidatedBlindItem | null;
+    item: HammerItem | null;
     feedback: string;
-    onDecrement: (item: ConsolidatedBlindItem) => void;
+    onDecrement: (item: HammerItem) => void;
     onIncrement: (barcode: string) => void;
 }
 
@@ -44,10 +44,11 @@ export const MassiveHUD: React.FC<Props> = memo(({ item, feedback, onDecrement, 
                             </div>
                             
                             <div className="relative">
+                                {/* Piso de 0 para la renderización visual */}
                                 <div className="text-[10rem] md:text-[12rem] font-black tabular-nums leading-none tracking-tighter drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)] transform-gpu">
-                                    {item.totalQuantity}
+                                    {Math.max(0, item.totalQuantity)}
                                 </div>
-                                {item.expectedQty !== undefined && (
+                                {item.expectedQty !== undefined && item.expectedQty > 0 && (
                                     <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-black/40 backdrop-blur-md border border-white/20 px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.2em] whitespace-nowrap">
                                         Meta: {item.expectedQty}
                                     </div>

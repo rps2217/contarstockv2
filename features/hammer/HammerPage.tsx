@@ -1,7 +1,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useHammerLogic } from './hooks/useHammerLogic';
+import { useHammerLogic, HammerItem } from './hooks/useHammerLogic';
 import { useLocationManager } from '../../shared/hooks/useLocationManager';
 import { migrateMassiveToMaster } from '../../services/massiveSync';
 import { MassiveHUD } from '../../components/massive/MassiveHUD';
@@ -17,6 +17,8 @@ import { ScreenLockOverlay } from '../../components/common/ScreenLockOverlay';
 import { NumericKeypad } from '../../components/NumericKeypad';
 import { VirtualList } from '../../components/common/VirtualList';
 import { SoundFX } from '../../services/audio';
+import { useHIDScanner } from '../../hooks/useHIDScanner';
+import { useAutoLock } from '../../hooks/useAutoLock';
 
 export const HammerPage: React.FC = () => {
     const navigate = useNavigate();
@@ -24,13 +26,20 @@ export const HammerPage: React.FC = () => {
     
     const { state, actions } = useHammerLogic(batchId);
     const locManager = useLocationManager(`hammer_loc_${batchId}`);
+    const { isLocked, unlock, lock } = useAutoLock(3000);
 
     const [isTriggerActive, setIsTriggerActive] = useState(false);
-    const [isScreenLocked, setIsScreenLocked] = useState(false);
     const [isToolsOpen, setIsToolsOpen] = useState(false);
     const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
     const [showKeypad, setShowKeypad] = useState(false);
     const [isMigrating, setIsMigrating] = useState(false);
+
+    // ESCUCHA INMEDIATA DE HARDWARE (Láser Físico)
+    useHIDScanner({
+        onScan: (barcode) => actions.registerScan(barcode),
+        isEnabled: !isLocked && !isMigrating && !showKeypad && !isToolsOpen,
+        maxLatency: 50
+    });
 
     useEffect(() => {
         actions.setCurrentLocation(locManager.location);
@@ -51,9 +60,23 @@ export const HammerPage: React.FC = () => {
         }
     };
 
-    const handleManualConfirm = (sku: string) => {
-        actions.registerScan(sku);
+    const handleKeypadConfirm = (value: string) => {
+        actions.registerScan(value);
         setShowKeypad(false);
+    };
+
+    /**
+     * Protocolo de decremento industrial:
+     * Si la cantidad es 1, pregunta si desea eliminar el registro por completo.
+     */
+    const handleDecrement = (item: HammerItem) => {
+        if (item.totalQuantity <= 1) {
+            if (confirm(`¿Eliminar ítem ${item.barcode} del bulto?`)) {
+                actions.removeItem(item.barcode);
+            }
+        } else {
+            actions.modifyQuantity(item.barcode, -1);
+        }
     };
 
     return (
@@ -65,7 +88,7 @@ export const HammerPage: React.FC = () => {
                 onBack={() => navigate('/dashboard')}
                 onFinalize={handleFinalize}
                 onOpenTools={() => setIsToolsOpen(true)}
-                onLock={() => setIsScreenLocked(true)}
+                onLock={lock}
             />
 
             <div className="px-4 py-2 bg-slate-900/50 border-b border-white/5">
@@ -75,7 +98,7 @@ export const HammerPage: React.FC = () => {
             <MassiveHUD 
                 item={state.lastScannedItem as any} 
                 feedback={state.feedback} 
-                onDecrement={(i) => actions.modifyQuantity(i.barcode, -1)} 
+                onDecrement={handleDecrement} 
                 onIncrement={(code) => actions.registerScan(code)} 
             />
 
@@ -94,7 +117,7 @@ export const HammerPage: React.FC = () => {
                 isTriggerActive={isTriggerActive}
                 onMultiplierChange={actions.setMultiplier}
                 onOpenManual={() => setShowKeypad(true)}
-                onTriggerStart={() => !isScreenLocked && setIsTriggerActive(true)}
+                onTriggerStart={() => !isLocked && setIsTriggerActive(true)}
                 onTriggerEnd={() => setIsTriggerActive(false)}
             />
 
@@ -138,13 +161,13 @@ export const HammerPage: React.FC = () => {
             )}
 
             <NumericKeypad 
-                isOpen={showKeypad} 
-                onClose={() => setShowKeypad(false)} 
-                title="SKU MANUAL" 
-                onConfirm={handleManualConfirm} 
+                isOpen={showKeypad}
+                title="SKU MANUAL"
+                onClose={() => setShowKeypad(false)}
+                onConfirm={handleKeypadConfirm}
             />
 
-            <ScreenLockOverlay isLocked={isScreenLocked} onUnlock={() => setIsScreenLocked(false)} />
+            <ScreenLockOverlay isLocked={isLocked} onUnlock={unlock} />
         </div>
     );
 };
