@@ -18,6 +18,7 @@ import { NumericKeypad } from '../../components/NumericKeypad';
 import { VirtualList } from '../../components/common/VirtualList';
 import { SoundFX } from '../../services/audio';
 import { useAutoLock } from '../../hooks/useAutoLock';
+import { useHIDScanner } from '../../hooks/useHIDScanner';
 
 export const HammerPage: React.FC = () => {
     const navigate = useNavigate();
@@ -32,6 +33,13 @@ export const HammerPage: React.FC = () => {
     const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
     const [showKeypad, setShowKeypad] = useState(false);
     const [isMigrating, setIsMigrating] = useState(false);
+
+    // ESCUCHA INMEDIATA DE HARDWARE (Láser Físico)
+    useHIDScanner({
+        onScan: (barcode) => actions.registerScan(barcode),
+        isEnabled: !isLocked && !isMigrating && !showKeypad && !isToolsOpen,
+        maxLatency: 50
+    });
 
     useEffect(() => {
         actions.setCurrentLocation(locManager.location);
@@ -107,7 +115,7 @@ export const HammerPage: React.FC = () => {
                 location={locManager.location}
                 onChangeLocation={locManager.openModal}
                 onShowLabel={() => setIsLabelModalOpen(true)}
-                onReset={actions.removeItem('ALL')}
+                onReset={() => actions.removeItem('ALL')}
                 onPrintSummary={() => {}}
             />
 
@@ -149,3 +157,5 @@ export const HammerPage: React.FC = () => {
         </div>
     );
 };
+
+export default HammerPage;

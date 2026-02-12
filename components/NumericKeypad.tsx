@@ -1,5 +1,5 @@
 
-import React, { useEffect, useCallback, useState, useRef } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import { X, Check, Delete, Keyboard as KeyboardIcon, Zap } from 'lucide-react';
 import { SoundFX } from '../services/audio';
 
@@ -8,7 +8,7 @@ interface NumericKeypadProps {
   onClose: () => void;
   onConfirm: (finalValue: string) => void;
   title?: string;
-  value?: string; // Valor opcional del padre
+  value?: string; 
   placeholder?: string;
   onInput?: (char: string) => void;
   onDelete?: () => void;
@@ -19,12 +19,10 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
 }) => {
   const [internalBuffer, setInternalBuffer] = useState("");
   
-  // Sincronizar buffer interno solo si el padre no está controlando el valor
+  // Resetear buffer al abrir
   useEffect(() => {
-    if (isOpen && value !== undefined) {
-      setInternalBuffer(value);
-    } else if (isOpen) {
-      setInternalBuffer("");
+    if (isOpen) {
+      setInternalBuffer(value || "");
     }
   }, [isOpen, value]);
 
@@ -34,7 +32,7 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
     if (onInput) {
         onInput(char);
     } else {
-        setInternalBuffer(prev => (prev.length < 20 ? prev + char : prev));
+        setInternalBuffer(prev => (prev.length < 25 ? prev + char : prev));
     }
     SoundFX.play('increment');
   }, [onInput]);
@@ -56,14 +54,27 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
     }
   }, [value, internalBuffer, onConfirm]);
 
-  // Listener de Teclado Físico / Escáner
+  // Listener de Teclado Físico (Para cuando el modal está abierto)
   useEffect(() => {
     if (!isOpen) return;
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key >= '0' && e.key <= '9') handleChar(e.key);
-      else if (e.key === 'Backspace') handleDelete();
-      else if (e.key === 'Enter') handleConfirm();
-      else if (e.key === 'Escape') onClose();
+      // Evitar que el escáner global interfiera con la entrada manual
+      if (e.key >= '0' && e.key <= '9') {
+          e.stopPropagation();
+          handleChar(e.key);
+      }
+      else if (e.key === 'Backspace') {
+          e.stopPropagation();
+          handleDelete();
+      }
+      else if (e.key === 'Enter') {
+          e.stopPropagation();
+          handleConfirm();
+      }
+      else if (e.key === 'Escape') {
+          e.stopPropagation();
+          onClose();
+      }
     };
     window.addEventListener('keydown', handleKey, { capture: true });
     return () => window.removeEventListener('keydown', handleKey, { capture: true });
@@ -108,7 +119,7 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
             {/* LCD VISOR */}
             <div className="mb-8 bg-black rounded-3xl border-4 border-white/5 p-6 flex flex-col justify-center h-32 shadow-inner relative overflow-hidden">
                 <div className="flex justify-between items-center mb-2 px-2">
-                    <span className="text-[8px] font-black text-blue-500/40 uppercase tracking-widest">Buffer_Status: Ready</span>
+                    <span className="text-[8px] font-black text-blue-500/40 uppercase tracking-widest">Manual_Entry_Buffer</span>
                     <KeyboardIcon className="w-3 h-3 text-blue-500/20" />
                 </div>
                 <div className={`font-mono font-black tracking-[0.2em] break-all text-center transition-all duration-75 ${displayValue ? 'text-white text-4xl' : 'text-slate-800 text-2xl italic'}`}>

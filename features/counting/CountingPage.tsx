@@ -11,9 +11,9 @@ import { CameraScanner } from '../../components/CameraScanner';
 import { NumericKeypad } from '../../components/NumericKeypad';
 import { ScreenLockOverlay } from '../../components/common/ScreenLockOverlay';
 import { ExpirationModal } from '../../components/ExpirationModal';
-import { BarcodeLabelModal } from '../../shared/components/modals/BarcodeLabelModal';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { useAutoLock } from '../../hooks/useAutoLock';
+import { useHIDScanner } from '../../hooks/useHIDScanner';
 
 export const CountingPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -24,7 +24,13 @@ export const CountingPage: React.FC = () => {
     const [isTriggerActive, setIsTriggerActive] = useState(false);
     const [isToolsOpen, setIsToolsOpen] = useState(false);
     const [isLabelOpen, setIsLabelOpen] = useState(false);
-    const [manualBuffer, setManualBuffer] = useState('');
+    const [showKeypad, setShowKeypad] = useState(false);
+
+    // ESCUCHA DE HARDWARE
+    useHIDScanner({
+        onScan: (barcode) => actions.handleExternalScan(barcode, state.multiplier),
+        isEnabled: !isLocked && state.status !== 'expiring' && !showKeypad,
+    });
 
     const startTrigger = useCallback(() => {
         if (isLocked || state.status === 'expiring') return;
@@ -34,8 +40,7 @@ export const CountingPage: React.FC = () => {
 
     const handleManualConfirm = (val: string) => {
         actions.handleExternalScan(val, state.multiplier);
-        setManualBuffer('');
-        actions.setStatus('idle');
+        setShowKeypad(false);
     };
 
     if (state.isLoading) {
@@ -95,7 +100,7 @@ export const CountingPage: React.FC = () => {
                 unitsPerBox={state.activeProduct?.unitsPerBox}
                 isTriggerActive={isTriggerActive}
                 onMultiplierChange={actions.setMultiplier}
-                onOpenManual={() => { setManualBuffer(''); actions.setStatus('manual'); }}
+                onOpenManual={() => setShowKeypad(true)}
                 onTriggerStart={startTrigger}
                 onTriggerEnd={() => setIsTriggerActive(false)}
             />
@@ -113,13 +118,10 @@ export const CountingPage: React.FC = () => {
             />
 
             <NumericKeypad 
-                isOpen={state.status === 'manual'}
+                isOpen={showKeypad}
                 title="EAN / SKU MANUAL"
-                value={manualBuffer}
-                onInput={(c) => setManualBuffer(prev => prev + c)}
-                onDelete={() => setManualBuffer(prev => prev.slice(0, -1))}
                 onConfirm={handleManualConfirm}
-                onClose={() => actions.setStatus('idle')}
+                onClose={() => setShowKeypad(false)}
             />
 
             {state.status === 'expiring' && state.activeBarcode && (
@@ -130,3 +132,5 @@ export const CountingPage: React.FC = () => {
         </div>
     );
 };
+
+export default CountingPage;

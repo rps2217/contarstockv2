@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useReceptionLogic } from './hooks/useReceptionLogic';
 import { CameraScanner } from '../../components/CameraScanner';
@@ -11,6 +11,7 @@ import { ScreenLockOverlay } from '../../components/common/ScreenLockOverlay';
 import { NumericKeypad } from '../../components/NumericKeypad';
 import { ChevronLeft, Box, Trash2 } from 'lucide-react';
 import { useAutoLock } from '../../hooks/useAutoLock';
+import { useHIDScanner } from '../../hooks/useHIDScanner';
 
 const ReceptionRow = React.memo(({ index, data }: any) => {
     const item = data.items[index];
@@ -54,6 +55,13 @@ export const ReceptionPage: React.FC = () => {
     const [isTriggerActive, setIsTriggerActive] = useState(false);
     const [showKeypad, setShowKeypad] = useState(false);
     const [showQueue, setShowQueue] = useState(false);
+
+    // ESCUCHA DE HARDWARE
+    useHIDScanner({
+        onScan: (barcode) => actions.handleScan(barcode),
+        isEnabled: !isLocked && !showKeypad && !showQueue,
+        maxLatency: 50
+    });
 
     const startTrigger = useCallback(() => {
         if (isLocked) return;
