@@ -19,7 +19,7 @@ export interface HammerItem {
 }
 
 export const useHammerLogic = (batchId: string) => {
-    const { feedback, trigger } = useFeedbackSystem(150);
+    const { feedback, trigger } = useFeedbackSystem(120);
     
     const [activeBarcode, setActiveBarcode] = useState<string | null>(null);
     const [activeProduct, setActiveProduct] = useState<Product | null>(null);
@@ -32,7 +32,7 @@ export const useHammerLogic = (batchId: string) => {
 
     useEffect(() => { localStorage.setItem('hammer_loc', currentLocation); }, [currentLocation]);
 
-    // Live Query optimizado para resolución de identidad de producto
+    // Live Query optimizado para resolución de identidad de producto inmediata
     const dbItems = useLiveQuery(async () => {
         if (!batchId) return [];
         const [rawScans, manifests] = await Promise.all([
@@ -42,13 +42,13 @@ export const useHammerLogic = (batchId: string) => {
         
         const uniqueBarcodes = Array.from(new Set([...rawScans.map(s => s.barcode), ...manifests.map(m => m.barcode)]));
         
-        // Carga masiva de productos de la DB maestra para identificar nombres
+        // Búsqueda masiva en Catálogo Maestro para identificar productos reales
         const products = await masterDb.products.where('barcode').anyOf(uniqueBarcodes).toArray();
         const prodMap = new Map<string, Product>(products.map(p => [p.barcode, p]));
         
         const aggregation = new Map<string, HammerItem>();
 
-        // 1. Cargar ítems del manifiesto (metas)
+        // 1. Integrar metas del manifiesto
         manifests.forEach(m => {
             const pInfo = prodMap.get(m.barcode);
             aggregation.set(m.barcode, {
@@ -62,7 +62,7 @@ export const useHammerLogic = (batchId: string) => {
             });
         });
 
-        // 2. Sumar escaneos físicos
+        // 2. Sumar escaneos físicos con resolución de nombre dinámica
         rawScans.forEach(s => {
             const existing = aggregation.get(s.barcode);
             const pInfo = prodMap.get(s.barcode);
@@ -70,7 +70,7 @@ export const useHammerLogic = (batchId: string) => {
                 existing.totalQuantity += s.quantity;
                 existing.lastTimestamp = Math.max(existing.lastTimestamp, s.timestamp);
                 if (s.location) existing.loc = s.location;
-                // Si el manifiesto no tenía nombre pero el catálogo sí, actualizamos
+                // Si antes era desconocido y ahora lo encontramos en catálogo, actualizamos
                 if (existing.name === 'SKU_DESCONOCIDO' && pInfo) existing.name = pInfo.name;
             } else {
                 aggregation.set(s.barcode, {
@@ -93,6 +93,7 @@ export const useHammerLogic = (batchId: string) => {
         return sorted;
     }, [batchId, activeBarcode, feedback]);
 
+    // Motor de persistencia en ráfaga (0.5s)
     useEffect(() => {
         const flush = async () => {
             if (writeQueue.current.length === 0) return;
@@ -131,22 +132,26 @@ export const useHammerLogic = (batchId: string) => {
         
         const qtyToApply = qtyOverride ?? multiplier;
         
-        // Bloqueo de cantidades negativas en modo ráfaga
+        // PROTECCIÓN PDA: Impedir que la lógica optimista baje de cero
         const existingItem = itemsCache.current.find(i => i.barcode === clean);
-        const currentRealQty = existingItem?.totalQuantity || 0;
+        const currentQty = existingItem?.totalQuantity || 0;
         
-        if (currentRealQty + qtyToApply < 0) {
+        if (currentQty + qtyToApply < 0) {
             SoundFX.play('error');
             return;
         }
 
         trigger(qtyToApply > 0 ? 'success' : 'undo');
         setActiveBarcode(clean);
-        masterDb.products.get(clean).then(setActiveProduct);
+        
+        // Resolución rápida de producto para el HUD
+        masterDb.products.get(clean).then(p => {
+            if (p) setActiveProduct(p);
+        });
         
         setOptimisticQty(prev => {
-            const baseReal = currentRealQty;
-            const currentUI = clean === activeBarcode ? (prev ?? baseReal) : baseReal;
+            const base = currentQty;
+            const currentUI = clean === activeBarcode ? (prev ?? base) : base;
             return Math.max(0, currentUI + qtyToApply);
         });
 
@@ -160,7 +165,6 @@ export const useHammerLogic = (batchId: string) => {
     const lastScannedItem = useMemo(() => {
         if (!activeBarcode) return undefined;
         const real = dbItems?.find(i => i.barcode === activeBarcode);
-        // El display de la UI usa optimisticQty para latencia cero
         return real ? { ...real, totalQuantity: optimisticQty ?? real.totalQuantity } : undefined;
     }, [dbItems, activeBarcode, optimisticQty]);
 

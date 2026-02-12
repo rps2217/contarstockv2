@@ -26,6 +26,8 @@ export const HammerPage: React.FC = () => {
     
     const { state, actions } = useHammerLogic(batchId);
     const locManager = useLocationManager(`hammer_loc_${batchId}`);
+    
+    // Auto-bloqueo optimizado para PDA (3s inactividad)
     const { isLocked, unlock, lock } = useAutoLock(3000);
 
     const [isTriggerActive, setIsTriggerActive] = useState(false);
@@ -34,11 +36,11 @@ export const HammerPage: React.FC = () => {
     const [showKeypad, setShowKeypad] = useState(false);
     const [isMigrating, setIsMigrating] = useState(false);
 
-    // ESCUCHA INMEDIATA DE HARDWARE (Láser Físico)
+    // ESCUCHA DE HARDWARE (Escáner Láser de PDA)
     useHIDScanner({
         onScan: (barcode) => actions.registerScan(barcode),
         isEnabled: !isLocked && !isMigrating && !showKeypad && !isToolsOpen,
-        maxLatency: 50
+        maxLatency: 50 // Latencia ultra-baja para ráfagas industriales
     });
 
     useEffect(() => {
@@ -66,12 +68,12 @@ export const HammerPage: React.FC = () => {
     };
 
     /**
-     * Protocolo de decremento industrial:
-     * Si la cantidad es 1, pregunta si desea eliminar el registro por completo.
+     * PROTOCOLO CERO SEGURO:
+     * Si la cantidad es 1 y el operario resta, el sistema pregunta si desea eliminar.
      */
     const handleDecrement = (item: HammerItem) => {
         if (item.totalQuantity <= 1) {
-            if (confirm(`¿Eliminar ítem ${item.barcode} del bulto?`)) {
+            if (confirm(`¿Eliminar ítem ${item.barcode} del conteo actual?`)) {
                 actions.removeItem(item.barcode);
             }
         } else {
@@ -95,6 +97,7 @@ export const HammerPage: React.FC = () => {
                 <LocationTrigger location={locManager.location} onClick={locManager.openModal} />
             </div>
 
+            {/* HUD Centralizado con Protección Anti-Negativos */}
             <MassiveHUD 
                 item={state.lastScannedItem as any} 
                 feedback={state.feedback} 

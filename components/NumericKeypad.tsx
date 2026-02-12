@@ -13,15 +13,14 @@ interface NumericKeypadProps {
 }
 
 /**
- * NUMERIC KEYPAD INDUSTRIAL v5.0
- * Maneja buffer interno para evitar registros parciales en el motor de escaneo.
+ * NUMERIC KEYPAD INDUSTRIAL v5.1
+ * Especializado para PDAs con teclado físico o pantalla estrecha.
  */
 export const NumericKeypad: React.FC<NumericKeypadProps> = ({ 
   isOpen, onClose, onConfirm, title, value, placeholder = "ESPERANDO_INPUT..."
 }) => {
   const [internalBuffer, setInternalBuffer] = useState("");
   
-  // Sincronizar o resetear buffer al abrir
   useEffect(() => {
     if (isOpen) {
       setInternalBuffer(value || "");
@@ -41,15 +40,15 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
   const handleConfirm = useCallback(() => {
     if (internalBuffer.trim().length > 0) {
       onConfirm(internalBuffer.trim());
-      setInternalBuffer(""); // Limpiar tras confirmar
+      setInternalBuffer("");
     }
   }, [internalBuffer, onConfirm]);
 
-  // Soporte para teclado físico (PDA con teclado numérico)
+  // SOPORTE DE HARDWARE PDA: Captura eventos de botones físicos (Enter, Backspace, Números)
   useEffect(() => {
     if (!isOpen) return;
     const handleKey = (e: KeyboardEvent) => {
-      // Detener propagación para que useHIDScanner no intente procesar ráfagas
+      // Detener ráfagas del escáner mientras el teclado manual está abierto
       if ((e.key >= '0' && e.key <= '9') || e.key === 'Backspace' || e.key === 'Enter') {
           e.stopPropagation();
       }
@@ -73,7 +72,7 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
   const Key = ({ children, onClick, variant = "default" }: any) => {
     const styles: any = {
       default: "bg-slate-800 border-slate-950 text-white active:bg-blue-600",
-      confirm: "bg-blue-600 border-blue-900 text-white active:bg-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.3)]",
+      confirm: "bg-blue-600 border-blue-900 text-white active:bg-blue-500 shadow-[0_0_25px_rgba(59,130,246,0.3)]",
       delete: "bg-rose-900/40 border-rose-950 text-rose-500 active:bg-rose-600 active:text-white"
     };
     return (
@@ -97,7 +96,7 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
             <div className="flex justify-between items-center mb-6 px-2">
                 <div className="flex items-center gap-2">
                     <Zap className="w-4 h-4 text-blue-400 animate-pulse" />
-                    <span className="text-blue-400 text-[10px] font-black uppercase tracking-[0.4em] italic">{title || "Entrada_Manual"}</span>
+                    <span className="text-blue-400 text-[10px] font-black uppercase tracking-[0.4em] italic">{title || "Manual_Input"}</span>
                 </div>
                 <button onClick={onClose} className="p-3 bg-white/5 rounded-full text-white/40 active:bg-rose-600 active:text-white transition-colors">
                     <X className="w-5 h-5" />
@@ -107,7 +106,7 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
             {/* LCD VISOR */}
             <div className="mb-8 bg-black rounded-3xl border-4 border-white/5 p-6 flex flex-col justify-center h-32 shadow-inner relative overflow-hidden">
                 <div className="flex justify-between items-center mb-2 px-2">
-                    <span className="text-[8px] font-black text-blue-500/40 uppercase tracking-widest">Manual_Entry_Buffer</span>
+                    <span className="text-[8px] font-black text-blue-500/40 uppercase tracking-widest">Buffer_Entry</span>
                     <KeyboardIcon className="w-3 h-3 text-blue-500/20" />
                 </div>
                 <div className={`font-mono font-black tracking-[0.2em] break-all text-center transition-all duration-75 ${internalBuffer ? 'text-white text-4xl' : 'text-slate-800 text-2xl italic'}`}>
