@@ -17,8 +17,8 @@ import { ScreenLockOverlay } from '../../components/common/ScreenLockOverlay';
 import { NumericKeypad } from '../../components/NumericKeypad';
 import { VirtualList } from '../../components/common/VirtualList';
 import { SoundFX } from '../../services/audio';
-import { useHIDScanner } from '../../hooks/useHIDScanner';
 import { useAutoLock } from '../../hooks/useAutoLock';
+import { useHIDScanner } from '../../hooks/useHIDScanner';
 
 export const HammerPage: React.FC = () => {
     const navigate = useNavigate();
@@ -34,7 +34,7 @@ export const HammerPage: React.FC = () => {
     const [showKeypad, setShowKeypad] = useState(false);
     const [isMigrating, setIsMigrating] = useState(false);
 
-    // ESCUCHA INMEDIATA DE HARDWARE (Láser Físico)
+    // ESCUCHA INMEDIATA DE LÁSER (Hardware HID)
     useHIDScanner({
         onScan: (barcode) => actions.registerScan(barcode),
         isEnabled: !isLocked && !isMigrating && !showKeypad && !isToolsOpen,

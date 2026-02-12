@@ -132,5 +132,3 @@ export const CountingPage: React.FC = () => {
         </div>
     );
 };
-
-export default CountingPage;

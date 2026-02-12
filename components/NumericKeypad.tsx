@@ -10,13 +10,10 @@ interface NumericKeypadProps {
   title?: string;
   value?: string; 
   placeholder?: string;
-  // Estos props se mantienen por compatibilidad pero se desaconseja su uso para registro de SKUs
-  onInput?: (char: string) => void;
-  onDelete?: () => void;
 }
 
 export const NumericKeypad: React.FC<NumericKeypadProps> = ({ 
-  isOpen, onClose, onConfirm, title, value, placeholder = "ESPERANDO_INPUT...", onInput, onDelete
+  isOpen, onClose, onConfirm, title, value, placeholder = "ESPERANDO_INPUT..."
 }) => {
   const [internalBuffer, setInternalBuffer] = useState("");
   
@@ -27,52 +24,43 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
     }
   }, [isOpen, value]);
 
-  const displayValue = value !== undefined ? value : internalBuffer;
-
   const handleChar = useCallback((char: string) => {
-    if (onInput) {
-        onInput(char);
-    } else {
-        setInternalBuffer(prev => (prev.length < 25 ? prev + char : prev));
-    }
+    setInternalBuffer(prev => (prev.length < 25 ? prev + char : prev));
     SoundFX.play('increment');
-  }, [onInput]);
+  }, []);
 
   const handleDelete = useCallback(() => {
-    if (onDelete) {
-        onDelete();
-    } else {
-        setInternalBuffer(prev => prev.slice(0, -1));
-    }
+    setInternalBuffer(prev => prev.slice(0, -1));
     SoundFX.play('delete');
-  }, [onDelete]);
+  }, []);
 
   const handleConfirm = useCallback(() => {
-    const final = value !== undefined ? value : internalBuffer;
-    if (final.length > 0) {
-      onConfirm(final);
-      setInternalBuffer(""); // Limpiar tras confirmar
+    if (internalBuffer.length > 0) {
+      onConfirm(internalBuffer);
+      setInternalBuffer("");
     }
-  }, [value, internalBuffer, onConfirm]);
+  }, [internalBuffer, onConfirm]);
 
   // Soporte para teclado físico cuando el modal está abierto
   useEffect(() => {
     if (!isOpen) return;
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key >= '0' && e.key <= '9') {
+      // Evitar que el escáner HID global procese estas teclas mientras el teclado está abierto
+      if ((e.key >= '0' && e.key <= '9') || e.key === 'Backspace' || e.key === 'Enter') {
           e.stopPropagation();
+      }
+
+      if (e.key >= '0' && e.key <= '9') {
           handleChar(e.key);
       } else if (e.key === 'Backspace') {
-          e.stopPropagation();
           handleDelete();
       } else if (e.key === 'Enter') {
-          e.stopPropagation();
           handleConfirm();
       } else if (e.key === 'Escape') {
-          e.stopPropagation();
           onClose();
       }
     };
+    // Capture phase para asegurar que capturamos antes que el useHIDScanner global
     window.addEventListener('keydown', handleKey, { capture: true });
     return () => window.removeEventListener('keydown', handleKey, { capture: true });
   }, [isOpen, handleChar, handleDelete, handleConfirm, onClose]);
@@ -119,8 +107,8 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
                     <span className="text-[8px] font-black text-blue-500/40 uppercase tracking-widest">Manual_Entry_Buffer</span>
                     <KeyboardIcon className="w-3 h-3 text-blue-500/20" />
                 </div>
-                <div className={`font-mono font-black tracking-[0.2em] break-all text-center transition-all duration-75 ${displayValue ? 'text-white text-4xl' : 'text-slate-800 text-2xl italic'}`}>
-                    {displayValue || placeholder}
+                <div className={`font-mono font-black tracking-[0.2em] break-all text-center transition-all duration-75 ${internalBuffer ? 'text-white text-4xl' : 'text-slate-800 text-2xl italic'}`}>
+                    {internalBuffer || placeholder}
                     <span className="inline-block w-1.5 h-8 ml-3 bg-blue-500 animate-pulse align-middle"></span>
                 </div>
             </div>
