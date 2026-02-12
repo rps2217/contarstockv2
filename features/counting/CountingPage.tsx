@@ -19,13 +19,12 @@ export const CountingPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { state, actions, sessionData } = useCountingLogic(id, () => navigate('/reports'));
-    
-    // Gestión de Autobloqueo Industrial
     const { isLocked, unlock, lock } = useAutoLock(3000);
 
     const [isTriggerActive, setIsTriggerActive] = useState(false);
     const [isToolsOpen, setIsToolsOpen] = useState(false);
     const [isLabelOpen, setIsLabelOpen] = useState(false);
+    const [manualBuffer, setManualBuffer] = useState('');
 
     const startTrigger = useCallback(() => {
         if (isLocked || state.status === 'expiring') return;
@@ -33,20 +32,17 @@ export const CountingPage: React.FC = () => {
         if (navigator.vibrate) navigator.vibrate(30);
     }, [isLocked, state.status]);
 
-    const endTrigger = useCallback(() => setIsTriggerActive(false), []);
-
-    const handleKeypadConfirm = (value: string) => {
-        actions.handleExternalScan(value, state.multiplier);
+    const handleManualConfirm = (val: string) => {
+        actions.handleExternalScan(val, state.multiplier);
+        setManualBuffer('');
         actions.setStatus('idle');
     };
 
     if (state.isLoading) {
         return (
             <div className="h-screen w-full flex flex-col items-center justify-center bg-black text-white">
-                <div className="p-10 border-4 border-blue-600 rounded-[3rem] animate-pulse">
-                    <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
-                </div>
-                <p className="mt-8 text-[10px] font-black uppercase tracking-[0.4em] text-blue-500">Iniciando_Motor_Conteo</p>
+                <Loader2 className="w-12 h-12 text-blue-600 animate-spin mb-4" />
+                <p className="text-[10px] font-black uppercase tracking-widest text-blue-500">Iniciando Motor...</p>
             </div>
         );
     }
@@ -54,9 +50,7 @@ export const CountingPage: React.FC = () => {
     if (!sessionData.session) {
         return (
             <div className="h-screen w-full flex flex-col items-center justify-center bg-slate-950 p-8 text-center text-white">
-                <div className="bg-rose-900/20 p-6 rounded-full mb-6 border border-rose-500/30">
-                    <AlertCircle className="w-12 h-12 text-rose-500" />
-                </div>
+                <AlertCircle className="w-12 h-12 text-rose-500 mb-6" />
                 <h2 className="text-xl font-black mb-2 uppercase tracking-tight">Sesión Inválida</h2>
                 <button onClick={() => navigate('/reports')} className="bg-slate-800 px-8 py-4 rounded-2xl font-black uppercase text-xs">Salir</button>
             </div>
@@ -101,9 +95,9 @@ export const CountingPage: React.FC = () => {
                 unitsPerBox={state.activeProduct?.unitsPerBox}
                 isTriggerActive={isTriggerActive}
                 onMultiplierChange={actions.setMultiplier}
-                onOpenManual={() => actions.setStatus('manual')}
+                onOpenManual={() => { setManualBuffer(''); actions.setStatus('manual'); }}
                 onTriggerStart={startTrigger}
-                onTriggerEnd={endTrigger}
+                onTriggerEnd={() => setIsTriggerActive(false)}
             />
 
             <ScannerToolsSheet 
@@ -113,45 +107,24 @@ export const CountingPage: React.FC = () => {
                 location={state.currentLocation}
                 label={sessionData.session.logisticsLabel}
                 onChangeLocation={() => {}}
-                onChangeLabel={() => {}}
                 onShowLabel={() => setIsLabelOpen(true)}
                 onReset={actions.resetSession}
                 onPrintSummary={() => {}}
             />
 
-            {state.activeBarcode && (
-                <BarcodeLabelModal 
-                    isOpen={isLabelOpen}
-                    onClose={() => setIsLabelOpen(false)}
-                    barcode={state.activeBarcode}
-                    productName={state.activeProduct?.name}
-                    quantity={state.optimisticActiveQty}
-                />
-            )}
-
-            {isTriggerActive && (
-                <div className="fixed inset-0 z-[250]">
-                    <CameraScanner 
-                        onScan={(code) => { actions.handleExternalScan(code, state.multiplier); setIsTriggerActive(false); }} 
-                        onClose={endTrigger} 
-                        isTriggered={true} 
-                    />
-                </div>
-            )}
-            
-            {state.status === 'expiring' && state.activeBarcode && (
-                <ExpirationModal 
-                    productName={state.activeProduct?.name || state.activeBarcode} 
-                    onComplete={actions.handlePharmaComplete} 
-                />
-            )}
-
             <NumericKeypad 
                 isOpen={state.status === 'manual'}
                 title="EAN / SKU MANUAL"
+                value={manualBuffer}
+                onInput={(c) => setManualBuffer(prev => prev + c)}
+                onDelete={() => setManualBuffer(prev => prev.slice(0, -1))}
+                onConfirm={handleManualConfirm}
                 onClose={() => actions.setStatus('idle')}
-                onConfirm={handleKeypadConfirm}
             />
+
+            {state.status === 'expiring' && state.activeBarcode && (
+                <ExpirationModal productName={state.activeProduct?.name || state.activeBarcode} onComplete={actions.handlePharmaComplete} />
+            )}
 
             <ScreenLockOverlay isLocked={isLocked} onUnlock={unlock} />
         </div>

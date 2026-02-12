@@ -7,47 +7,44 @@ import { db } from '../db';
 
 export type InitStep = 'idle' | 'version_check' | 'config' | 'database' | 'ready' | 'offline' | 'purging';
 
-const CURRENT_APP_VERSION = "5.6.5"; // Actualizado para forzar limpieza
+const CURRENT_APP_VERSION = "5.6.8"; // Bump para forzar purga profunda
 
 export const InitializationService = {
-    /**
-     * Protocolo de Purga Profunda (Deep Purge)
-     * Elimina CacheStorage y Service Workers para asegurar código fresco.
-     */
     runMaintenance: async (onStep: (step: InitStep) => void): Promise<boolean> => {
         const storedVersion = localStorage.getItem('logicount_app_version');
         
-        // Si no hay versión o es distinta, realizamos purga total
-        if (!storedVersion || storedVersion !== CURRENT_APP_VERSION) {
+        if (storedVersion !== CURRENT_APP_VERSION) {
             onStep('purging');
-            logger.info('Kernel', 'Detectada nueva versión o cache corrupto. Iniciando purga...');
-
             try {
-                // 1. Limpiar todos los caches de la PWA
+                // 1. Limpiar caches de PWA
                 if ('caches' in window) {
                     const keys = await caches.keys();
                     await Promise.all(keys.map(key => caches.delete(key)));
                 }
 
-                // 2. Desregistrar Service Workers
+                // 2. Desregistrar Service Workers (Evitar "Waiting to activate")
                 if ('serviceWorker' in navigator) {
-                    const registrations = await navigator.serviceWorker.getRegistrations();
-                    for (const reg of registrations) {
-                        await reg.unregister();
-                    }
+                    const regs = await navigator.serviceWorker.getRegistrations();
+                    for (const reg of regs) await reg.unregister();
                 }
 
-                // 3. Limpiar almacenamiento de sesión
-                sessionStorage.clear();
+                // 3. Limpieza selectiva de LocalStorage (Mantener Auth)
+                const auth = localStorage.getItem('logicount_auth');
+                const opId = localStorage.getItem('logicount_operator_id');
+                const sets = localStorage.getItem('logicount_settings');
+                
+                localStorage.clear();
+                
+                if (auth) localStorage.setItem('logicount_auth', auth);
+                if (opId) localStorage.setItem('logicount_operator_id', opId);
+                if (sets) localStorage.setItem('logicount_settings', sets);
                 
                 localStorage.setItem('logicount_app_version', CURRENT_APP_VERSION);
                 
-                // Forzar recarga desde el servidor (rompiendo cache)
-                logger.success('Kernel', 'Purga completada. Reiniciando entorno...');
+                // Forzar recarga limpia
                 window.location.reload();
                 return true;
             } catch (e) {
-                console.error("Purge failed", e);
                 localStorage.setItem('logicount_app_version', CURRENT_APP_VERSION);
                 return false;
             }
@@ -58,35 +55,27 @@ export const InitializationService = {
     run: async (onStep: (step: InitStep) => void): Promise<void> => {
         try {
             onStep('version_check');
-            
-            // Ejecutar mantenimiento primero
             const wasPurged = await InitializationService.runMaintenance(onStep);
-            if (wasPurged) return; // Detener flujo, la página se está recargando
+            if (wasPurged) return;
 
             const hasLocalData = (await db.products.count()) > 0;
 
             if (hasLocalData) {
                 onStep('ready'); 
-                // Refresco silencioso en background si hay red
-                if (navigator.onLine) {
-                    InitializationService.backgroundRefresh();
-                }
+                if (navigator.onLine) InitializationService.backgroundRefresh();
                 return;
             }
 
-            // Si no hay datos locales y está offline, avisar
             if (!navigator.onLine) {
                 onStep('offline');
                 setTimeout(() => onStep('ready'), 3000);
                 return;
             }
 
-            // Carga inicial completa
             onStep('config');
             await InitializationService.syncConfig();
             onStep('database');
             await importProductsFromAppSheet();
-            localStorage.setItem('logicount_last_init_ts', Date.now().toString());
             onStep('ready');
 
         } catch (error: any) {
