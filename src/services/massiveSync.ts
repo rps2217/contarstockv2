@@ -64,32 +64,34 @@ export const migrateMassiveToMaster = async (batchId: string): Promise<string> =
 /**
  * DESCARGA DE MANIFIESTO DE STOCK
  * Sincroniza la pestaña "STOCK" de Google Sheets con la base de datos local de Martillo.
- * Optimizado para las cabeceras: CODIGO, PRODUCTO, LOC, STOCK FINAL.
  */
 export const importManifestFromCloud = async (batchId: string): Promise<number> => {
     try {
-        logger.info('CLOUD_MANIFEST', 'Iniciando descarga de pestaña STOCK...');
+        logger.info('CLOUD_MANIFEST', 'Solicitando registros a la nube (Pestaña STOCK)...');
+        
         const rawRows = await fetchFromGas('STOCK');
         
-        if (!rawRows || rawRows.length === 0) {
-            throw new Error("La pestaña 'STOCK' está vacía o no existe en el Excel.");
+        if (!rawRows) {
+            throw new Error("El servidor no devolvió respuesta. Verifique la conexión.");
+        }
+
+        if (rawRows.length === 0) {
+            throw new Error("La pestaña 'STOCK' está vacía o no existe en el Excel vinculado.");
         }
 
         let validCount = 0;
-        let totalProcessed = 0;
+        let processedCount = 0;
 
         const newManifestItems = rawRows
             .map((row, index) => {
-                totalProcessed++;
+                processedCount++;
                 const result = CloudStockSchema.safeParse(row);
                 if (result.success) {
                     validCount++;
                     return result.data;
                 }
-                // Loguear solo las primeras fallas para no saturar
-                if (index < 3) {
-                    console.warn(`[Manifest] Error en fila ${index + 2}:`, result.error.format());
-                }
+                // Loguear fallos de parsing solo en consola para debug
+                if (index < 5) console.warn(`[StockParse] Error fila ${index + 2}:`, result.error.format());
                 return null;
             })
             .filter((item): item is NonNullable<typeof item> => item !== null && item.expectedQty > 0)
@@ -102,23 +104,25 @@ export const importManifestFromCloud = async (batchId: string): Promise<number> 
             }));
 
         if (newManifestItems.length === 0) {
-            if (totalProcessed > 0 && validCount === 0) {
-                throw new Error("Se recibieron filas pero ninguna coincide con las cabeceras esperadas (CODIGO, PRODUCTO, STOCK FINAL).");
+            if (processedCount > 0 && validCount === 0) {
+                throw new Error("Se encontraron filas pero ninguna coincide con las cabeceras esperadas (CODIGO, PRODUCTO, STOCK FINAL).");
             }
-            throw new Error("No se encontraron registros con stock mayor a cero en la nube.");
+            throw new Error("No se encontraron registros con Stock mayor a 0 para descargar.");
         }
 
-        await (massiveDb as any).transaction('rw', massiveDb.blindManifests, async () => {
+        // Persistencia en DB Local de Martillo
+        await massiveDb.transaction('rw', massiveDb.blindManifests, async () => {
             await massiveDb.blindManifests.where('batchId').equals(batchId).delete();
             await massiveDb.blindManifests.bulkAdd(newManifestItems);
         });
 
-        logger.success('CLOUD_MANIFEST', `Descarga exitosa: ${newManifestItems.length} registros cargados en lote ${batchId}.`);
+        logger.success('CLOUD_MANIFEST', `Descarga exitosa: ${newManifestItems.length} registros cargados.`);
         return newManifestItems.length;
 
     } catch (e: any) {
-        const errorMsg = e.message.includes('vínculo') ? 'Error de conexión o permisos en Google Sheets' : e.message;
+        const errorMsg = e.message.includes('vínculo') ? 'Fallo de autenticación con Google' : e.message;
         logger.error('CLOUD_MANIFEST_FAIL', errorMsg);
+        // Lanzamos el error para que useCloudAction lo capture y lo muestre en el alert
         throw new Error(errorMsg);
     }
 };

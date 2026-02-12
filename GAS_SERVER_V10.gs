@@ -1,17 +1,21 @@
 
 /**
- * LOGICOUNT PRO - CLOUD ENGINE V12 (AI & UPSERT SUPPORT)
+ * LOGICOUNT PRO - CLOUD ENGINE V12.1 (DEBUG & ROBUSTNESS)
  */
 
-const SPREADSHEET_ID = ""; 
+const SPREADSHEET_ID = ""; // Dejar vacío para usar el Excel donde se despliega el script
 
 function getSpreadsheet() {
-  if (SPREADSHEET_ID && SPREADSHEET_ID !== "") {
-    return SpreadsheetApp.openById(SPREADSHEET_ID);
+  try {
+    if (SPREADSHEET_ID && SPREADSHEET_ID !== "") {
+      return SpreadsheetApp.openById(SPREADSHEET_ID);
+    }
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (!ss) throw new Error("No se pudo obtener el Spreadsheet activo. Verifique que el script esté vinculado a un Excel o proporcione un ID.");
+    return ss;
+  } catch (e) {
+    throw new Error("ERROR AL ABRIR EXCEL: " + e.toString());
   }
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  if (!ss) throw new Error("ERROR: Falta ID del Excel.");
-  return ss;
 }
 
 function doPost(e) {
@@ -19,13 +23,16 @@ function doPost(e) {
   try {
     lock.waitLock(30000); 
   } catch (e) {
-    return ContentService.createTextOutput(JSON.stringify({success: false, error: "Servidor ocupado"})).setMimeType(ContentService.MimeType.JSON);
+    return createJsonResponse({success: false, error: "Servidor ocupado. Intente en unos segundos."});
   }
 
   let response = { success: false, error: "Error desconocido" };
   
   try {
-    const requestData = JSON.parse(e.postData.contents);
+    const postContent = e.postData.contents;
+    if (!postContent) throw new Error("Cuerpo del POST vacío");
+    
+    const requestData = JSON.parse(postContent);
     const action = requestData.action;
     let rows = requestData.rows;
 
@@ -50,7 +57,7 @@ function doPost(e) {
         response = fetchRows(requestData.tableName, requestData.since);
         break;
       case 'ping':
-        response = { success: true, message: "Conectado OK" };
+        response = { success: true, message: "Conectado OK - v12.1" };
         break;
       default:
         throw new Error("Acción '" + action + "' no soportada.");
@@ -62,13 +69,48 @@ function doPost(e) {
     lock.releaseLock();
   }
   
-  return ContentService.createTextOutput(JSON.stringify(response)).setMimeType(ContentService.MimeType.JSON);
+  return createJsonResponse(response);
 }
 
-/**
- * LÓGICA DE UPSERT: Actualiza productos existentes o añade nuevos.
- * Crucial para distribuir el entrenamiento IA entre dispositivos.
- */
+function createJsonResponse(data) {
+  return ContentService.createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function fetchRows(tableName, sinceTimestamp) {
+  try {
+    const ss = getSpreadsheet();
+    const sheet = ss.getSheetByName(tableName);
+    if (!sheet) {
+      return { success: false, error: "La pestaña '" + tableName + "' no existe en el Excel." };
+    }
+
+    const dataRange = sheet.getDataRange();
+    if (dataRange.getNumRows() < 2) {
+      return { success: true, rows: [], message: "La hoja está vacía (solo cabeceras o nada)" };
+    }
+
+    const values = dataRange.getValues();
+    const headers = values[0];
+    
+    const results = values.slice(1).map(row => {
+      const obj = {};
+      headers.forEach((h, idx) => { 
+        if (h) obj[String(h).trim().toUpperCase()] = row[idx]; 
+      });
+      return obj;
+    });
+
+    return { 
+      success: true, 
+      rows: results, 
+      server_timestamp: new Date().getTime().toString() 
+    };
+  } catch (e) {
+    return { success: false, error: "Error en fetchRows: " + e.toString() };
+  }
+}
+
 function upsertProducts(tableName, rows) {
   const ss = getSpreadsheet();
   let sheet = ss.getSheetByName(tableName || "PRODUCTOS");
@@ -77,15 +119,13 @@ function upsertProducts(tableName, rows) {
   const data = sheet.getDataRange().getValues();
   const headers = data[0].map(h => String(h).trim().toUpperCase());
   
-  // Identificar columna clave (SKU/CODIGO)
   const skuIdx = headers.findIndex(h => h.includes("COD") || h.includes("SKU") || h.includes("BARRAS"));
   if (skuIdx === -1) throw new Error("No se encontró columna de identidad (SKU) en " + tableName);
 
-  // Mapear SKUs existentes para acceso rápido O(1)
   const skuMap = {};
   for (let i = 1; i < data.length; i++) {
     const sku = String(data[i][skuIdx]).trim().toUpperCase();
-    if (sku) skuMap[sku] = i + 1; // Guardamos el número de fila
+    if (sku) skuMap[sku] = i + 1; 
   }
 
   let updated = 0;
@@ -116,7 +156,7 @@ function appendRows(tableName, rows) {
   const ss = getSpreadsheet();
   let sheet = ss.getSheetByName(tableName);
   if (!sheet) sheet = ss.insertSheet(tableName);
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn() || 1).getValues()[0];
+  const headers = sheet.getRange(1, 1, 1, Math.max(1, sheet.getLastColumn())).getValues()[0];
   
   const dataToAppend = rows.map(row => headers.map(h => {
     const key = Object.keys(row).find(k => k.trim().toUpperCase() === String(h).trim().toUpperCase());
@@ -127,19 +167,4 @@ function appendRows(tableName, rows) {
     sheet.getRange(sheet.getLastRow() + 1, 1, dataToAppend.length, headers.length).setValues(dataToAppend);
   }
   return { success: true, rows_written: dataToAppend.length };
-}
-
-function fetchRows(tableName, sinceTimestamp) {
-  const ss = getSpreadsheet();
-  const sheet = ss.getSheetByName(tableName);
-  if (!sheet) return { success: false, error: "Pestaña no encontrada." };
-  const values = sheet.getDataRange().getValues();
-  if (values.length < 2) return { success: true, rows: [] };
-  const headers = values[0];
-  const results = values.slice(1).map(row => {
-    const obj = {};
-    headers.forEach((h, idx) => { if (h) obj[String(h).trim().toUpperCase()] = row[idx]; });
-    return obj;
-  });
-  return { success: true, rows: results, server_timestamp: new Date().getTime().toString() };
 }

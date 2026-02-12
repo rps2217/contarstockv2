@@ -3,12 +3,11 @@ import { z } from 'zod';
 import { SHEET_COLUMNS } from './constants';
 
 /**
- * MOTOR DE NORMALIZACIÓN DE CABECERAS v2.1
+ * MOTOR DE NORMALIZACIÓN DE CABECERAS v2.2
  * Elimina espacios, acentos y caracteres especiales para un mapeo robusto.
- * Crucial para que "STOCK FINAL" sea accesible como "STOCKFINAL".
  */
 const normalizeHeader = (h: string) => 
-    String(h)
+    String(h || "")
         .trim()
         .toUpperCase()
         .normalize("NFD")
@@ -27,7 +26,6 @@ export const CloudProductSchema = z.record(z.any()).transform((raw) => {
         normalized[normalizeHeader(k)] = raw[k];
     });
 
-    // Mapeo flexible - Nota: Los keys aquí ya NO tienen espacios
     const barcode = normalized["CODPRODUCTO"] || normalized["CODIGO"] || normalized["SKU"] || normalized["BARCODE"] || normalized["EAN"] || "";
     const name = normalized["DESCRIPCION"] || normalized["PRODUCTO"] || normalized["NOMBRE"] || normalized["DESCRIP"] || normalized["ITEM"] || "Sin descripción";
     const category = normalized["MUNDO"] || normalized["CATEGORIA"] || normalized["CATEGORY"] || "GENERAL";
@@ -67,11 +65,11 @@ export const CloudStockSchema = z.record(z.any()).transform((raw) => {
         normalized[normalizeHeader(k)] = raw[k];
     });
 
-    // Según imagen: CODIGO, PRODUCTO, LOC, STOCK FINAL
+    // Mapeo flexible basado en la imagen del usuario (CODIGO, PRODUCTO, LOC, STOCK FINAL)
     const barcode = normalized["CODIGO"] || normalized["SKU"] || normalized["CODPRODUCTO"] || normalized["EAN"] || normalized["ITEM"] || "";
-    const name = normalized["PRODUCTO"] || normalized["DESCRIPCION"] || normalized["NOMBRE"] || "Producto Desconocido";
+    const name = normalized["PRODUCTO"] || normalized["DESCRIPCION"] || normalized["NOMBRE"] || normalized["DESC"] || "Producto Desconocido";
     
-    // Prioridad a STOCKFINAL (que viene de "STOCK FINAL")
+    // Captura "STOCK FINAL" -> "STOCKFINAL" o cualquier variante
     const qtyRaw = normalized["STOCKFINAL"] !== undefined ? normalized["STOCKFINAL"] : 
                    (normalized["STOCK"] || normalized["STOCKTEORICO"] || normalized["CANTIDAD"] || normalized["QTY"] || 0);
     
