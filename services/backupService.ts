@@ -1,34 +1,34 @@
-
 import { db } from '../db';
 import { AppSettings } from '../types';
 import { getSettings } from './settings';
 
 /**
- * Requests the browser to treat this origin's storage as persistent.
- * This prevents the browser from automatically clearing data when disk space is low.
+ * Solicita persistencia de datos al navegador de forma silenciosa.
  */
 export const initPersistence = async () => {
   try {
     if (navigator.storage && navigator.storage.persist) {
-      const isPersisted = await navigator.storage.persist();
-      console.log(`[Storage] Persistent mode enabled: ${isPersisted}`);
+      // Intentar persistir sin loggear resultado si es exitoso
+      await navigator.storage.persist();
       
-      const estimate = await navigator.storage.estimate();
-      console.log(`[Storage] Usage: ${(estimate.usage || 0) / 1024 / 1024} MB of ${(estimate.quota || 0) / 1024 / 1024} MB`);
+      // La estimación se realiza solo internamente para verificar salud si fuera necesario,
+      // pero se eliminan los console.log para limpiar la terminal del usuario.
+      await navigator.storage.estimate();
     }
   } catch (e) {
-    console.warn("[Storage] Failed to request persistence", e);
+    // Solo loggear si hay un fallo real crítico
+    console.warn("[Storage] Persistence request failed:", e);
   }
 };
 
 /**
- * Generates a full JSON dump of the Dexie database.
+ * Genera un volcado JSON completo de la base de datos Dexie.
  */
 export const createFullBackup = async (): Promise<void> => {
   try {
     const backupData = {
       meta: {
-        version: '2.1.0',
+        version: '3.1.0',
         timestamp: Date.now(),
         settings: getSettings(),
       },
@@ -44,7 +44,6 @@ export const createFullBackup = async (): Promise<void> => {
     const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     
-    // Create hidden link to trigger download
     const a = document.createElement('a');
     a.href = url;
     const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -52,7 +51,6 @@ export const createFullBackup = async (): Promise<void> => {
     document.body.appendChild(a);
     a.click();
     
-    // Cleanup
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
@@ -63,8 +61,7 @@ export const createFullBackup = async (): Promise<void> => {
 };
 
 /**
- * Restores the database from a JSON file.
- * WARNING: This is a destructive operation that replaces current data.
+ * Restaura la base de datos desde un archivo JSON.
  */
 export const restoreFullBackup = async (file: File): Promise<number> => {
   return new Promise((resolve, reject) => {
@@ -75,22 +72,17 @@ export const restoreFullBackup = async (file: File): Promise<number> => {
         const text = e.target?.result as string;
         const json = JSON.parse(text);
 
-        // Basic validation
         if (!json.meta || !json.data || !Array.isArray(json.data.products)) {
-          throw new Error("Formato de archivo inválido. No es un respaldo de LogiCount.");
+          throw new Error("Formato de archivo inválido.");
         }
 
-        // Execute Restore in a Transaction
-        // Using as any for transaction call to ensure method recognition
         await (db as any).transaction('rw', db.products, db.sessions, db.scans, db.syncQueue, db.expectedOrders, async () => {
-          // 1. Clear existing
           await db.products.clear();
           await db.sessions.clear();
           await db.scans.clear();
           await db.syncQueue.clear();
           await db.expectedOrders.clear();
 
-          // 2. Insert new
           if (json.data.products.length) await db.products.bulkAdd(json.data.products);
           if (json.data.sessions.length) await db.sessions.bulkAdd(json.data.sessions);
           if (json.data.scans.length) await db.scans.bulkAdd(json.data.scans);
@@ -98,7 +90,7 @@ export const restoreFullBackup = async (file: File): Promise<number> => {
           if (json.data.expectedOrders.length) await db.expectedOrders.bulkAdd(json.data.expectedOrders);
         });
 
-        resolve(json.data.scans.length); // Return number of restored scans as metric
+        resolve(json.data.scans.length);
       } catch (err) {
         console.error("Restore failed:", err);
         reject(err);

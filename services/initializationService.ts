@@ -1,4 +1,3 @@
-
 import { logger } from './logger';
 import { fetchSystemConfig } from './gasService';
 import { importProductsFromAppSheet } from './syncManager';
@@ -7,7 +6,7 @@ import { db } from '../db';
 
 export type InitStep = 'idle' | 'version_check' | 'config' | 'database' | 'ready' | 'offline' | 'purging';
 
-const CURRENT_APP_VERSION = "5.6.8"; // Bump para forzar purga profunda
+const CURRENT_APP_VERSION = "5.7.0"; // Bump version to force purge
 
 export const InitializationService = {
     runMaintenance: async (onStep: (step: InitStep) => void): Promise<boolean> => {

@@ -1,20 +1,16 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import App from './App.tsx';
 
-// Polyfill global Buffer, Long, and process for libraries that rely on it
-// Usamos import() dinámico o asumiendo que el importmap ya los cargó si es necesario, 
-// pero aquí los forzamos para las librerías que buscan en el scope global.
-import { Buffer } from 'buffer';
-import Long from 'long';
+// 1. INYECCIÓN DE POLYFILLS EN CALIENTE
+// Usamos imports directos de la CDN para evitar cualquier retraso en el importmap
+import { Buffer } from 'https://esm.sh/buffer@6.0.3';
+import Long from 'https://esm.sh/long@5.2.3';
 
 if (typeof window !== 'undefined') {
     (window as any).Buffer = Buffer;
     (window as any).Long = Long;
-    
-    if (typeof (window as any).global === 'undefined') {
-        (window as any).global = window;
-    }
+    (window as any).global = window;
+    (window as any).globalThis.Buffer = Buffer;
     
     if (typeof (window as any).process === 'undefined') {
         (window as any).process = { 
@@ -26,6 +22,10 @@ if (typeof window !== 'undefined') {
         };
     }
 }
+
+// 2. CARGA DIFERIDA DE LA APP
+// Importamos App después de que los globals están establecidos
+import App from './App.tsx';
 
 const container = document.getElementById('root');
 if (!container) {

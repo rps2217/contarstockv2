@@ -1,8 +1,7 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 /**
- * HOOK: AUTO-BLOQUEO INDUSTRIAL v3
+ * HOOK: AUTO-BLOQUEO INDUSTRIAL v3.1
  * Monitorea la actividad y bloquea el terminal tras X ms de inactividad.
  */
 export const useAutoLock = (delayMs: number = 3000) => {
@@ -10,7 +9,6 @@ export const useAutoLock = (delayMs: number = 3000) => {
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const isLockedRef = useRef(false);
 
-    // Actualizar referencia para cierres de temporizador
     useEffect(() => {
         isLockedRef.current = isLocked;
     }, [isLocked]);
@@ -21,9 +19,12 @@ export const useAutoLock = (delayMs: number = 3000) => {
         if (navigator.vibrate) navigator.vibrate([10, 30, 10]);
     }, []);
 
-    const resetTimer = useCallback(() => {
+    const resetTimer = useCallback((forceState?: boolean) => {
         if (timerRef.current) clearTimeout(timerRef.current);
-        if (isLockedRef.current) return;
+        
+        // Use the forced state if provided, otherwise the ref
+        const currentLockState = forceState !== undefined ? forceState : isLockedRef.current;
+        if (currentLockState) return;
 
         timerRef.current = setTimeout(() => {
             lock();
@@ -31,7 +32,6 @@ export const useAutoLock = (delayMs: number = 3000) => {
     }, [delayMs, lock]);
 
     useEffect(() => {
-        // Eventos que reinician el contador
         const events = [
             'mousedown', 'mousemove', 'keypress', 
             'keydown', 'touchstart', 'scroll', 
@@ -39,8 +39,6 @@ export const useAutoLock = (delayMs: number = 3000) => {
         ];
         
         const handler = () => resetTimer();
-
-        // Usamos capture: true para interceptar eventos antes que los componentes
         events.forEach(event => window.addEventListener(event, handler, { capture: true, passive: true }));
         
         resetTimer();
@@ -56,7 +54,8 @@ export const useAutoLock = (delayMs: number = 3000) => {
         lock,
         unlock: () => {
             setIsLocked(false);
-            resetTimer();
+            // Re-activar el timer forzando el estado a 'false' para evitar race conditions
+            resetTimer(false);
         }
     };
 };

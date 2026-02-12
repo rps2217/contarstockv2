@@ -1,4 +1,3 @@
-
 import { AppSettings } from '../types';
 import { db } from '../db';
 
@@ -18,7 +17,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   lowPerformanceMode: false,
   predictiveHintsEnabled: false,
   continuousMode: true,        
-  batchTrackingEnabled: true, // FORZADO: Siempre activo por defecto para evitar fugas de datos Pharma
+  batchTrackingEnabled: true,
   appSheetConfig: {
       appId: '',
       accessKey: '',
@@ -28,7 +27,11 @@ const DEFAULT_SETTINGS: AppSettings = {
       receptionTableName: 'RECEPCION_BULTOS',
       ordersTableName: 'PEDIDOS'
   },
-  mobileNavConfig: ['dashboard', 'reports', 'sync', 'database'] 
+  mobileNavConfig: ['dashboard', 'reports', 'sync', 'database'],
+  thermalPrinter: {
+    enabled: false,
+    type: 'bluetooth'
+  }
 };
 
 export const getSettings = (): AppSettings => {
@@ -43,6 +46,10 @@ export const getSettings = (): AppSettings => {
         appSheetConfig: {
             ...DEFAULT_SETTINGS.appSheetConfig,
             ...(parsed.appSheetConfig || {})
+        },
+        thermalPrinter: {
+            ...DEFAULT_SETTINGS.thermalPrinter,
+            ...(parsed.thermalPrinter || {})
         }
     };
   } catch (e) {

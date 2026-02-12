@@ -128,6 +128,11 @@ export interface AppSettings {
   batchTrackingEnabled: boolean;
   appSheetConfig?: AppSheetConfig;
   mobileNavConfig?: ViewState[]; 
+  thermalPrinter?: {
+    enabled: boolean;
+    type: 'usb' | 'bluetooth';
+    deviceName?: string;
+  };
 }
 
 export interface AppSheetConfig {
