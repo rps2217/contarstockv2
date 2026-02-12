@@ -1,10 +1,10 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 
-// 1. INYECCIÓN DE POLYFILLS EN CALIENTE
-// Usamos imports directos de la CDN para evitar cualquier retraso en el importmap
-import { Buffer } from 'https://esm.sh/buffer@6.0.3';
-import Long from 'https://esm.sh/long@5.2.3';
+// 1. INYECCIÓN DE POLYFILLS USANDO EL IMPORTMAP
+// Esto resuelve los errores "module not found" al usar los alias definidos en index.html
+import { Buffer } from 'buffer';
+import Long from 'long';
 
 if (typeof window !== 'undefined') {
     (window as any).Buffer = Buffer;
@@ -23,8 +23,7 @@ if (typeof window !== 'undefined') {
     }
 }
 
-// 2. CARGA DIFERIDA DE LA APP
-// Importamos App después de que los globals están establecidos
+// 2. CARGA DE LA APLICACIÓN
 import App from './App.tsx';
 
 const container = document.getElementById('root');
