@@ -3,8 +3,9 @@ import { z } from 'zod';
 import { SHEET_COLUMNS } from './constants';
 
 /**
- * MOTOR DE NORMALIZACIÓN DE CABECERAS v2.0
+ * MOTOR DE NORMALIZACIÓN DE CABECERAS v2.1
  * Elimina espacios, acentos y caracteres especiales para un mapeo robusto.
+ * Crucial para que "STOCK FINAL" sea accesible como "STOCKFINAL".
  */
 const normalizeHeader = (h: string) => 
     String(h)
@@ -26,7 +27,7 @@ export const CloudProductSchema = z.record(z.any()).transform((raw) => {
         normalized[normalizeHeader(k)] = raw[k];
     });
 
-    // Mapeo flexible
+    // Mapeo flexible - Nota: Los keys aquí ya NO tienen espacios
     const barcode = normalized["CODPRODUCTO"] || normalized["CODIGO"] || normalized["SKU"] || normalized["BARCODE"] || normalized["EAN"] || "";
     const name = normalized["DESCRIPCION"] || normalized["PRODUCTO"] || normalized["NOMBRE"] || normalized["DESCRIP"] || normalized["ITEM"] || "Sin descripción";
     const category = normalized["MUNDO"] || normalized["CATEGORIA"] || normalized["CATEGORY"] || "GENERAL";
@@ -66,15 +67,20 @@ export const CloudStockSchema = z.record(z.any()).transform((raw) => {
         normalized[normalizeHeader(k)] = raw[k];
     });
 
-    const barcode = normalized["CODPRODUCTO"] || normalized["CODIGO"] || normalized["SKU"] || normalized["EAN"] || normalized["ITEM"] || "";
+    // Según imagen: CODIGO, PRODUCTO, LOC, STOCK FINAL
+    const barcode = normalized["CODIGO"] || normalized["SKU"] || normalized["CODPRODUCTO"] || normalized["EAN"] || normalized["ITEM"] || "";
     const name = normalized["PRODUCTO"] || normalized["DESCRIPCION"] || normalized["NOMBRE"] || "Producto Desconocido";
-    const qty = normalized["STOCKFINAL"] || normalized["STOCK"] || normalized["STOCKTEORICO"] || normalized["CANTIDAD"] || normalized["QTY"] || normalized["UNIDADES"] || normalized["SALDO"] || 0;
+    
+    // Prioridad a STOCKFINAL (que viene de "STOCK FINAL")
+    const qtyRaw = normalized["STOCKFINAL"] !== undefined ? normalized["STOCKFINAL"] : 
+                   (normalized["STOCK"] || normalized["STOCKTEORICO"] || normalized["CANTIDAD"] || normalized["QTY"] || 0);
+    
     const loc = normalized["LOC"] || normalized["UBICACION"] || normalized["POSICION"] || "";
 
     return {
         barcode: String(barcode).trim(),
         name: String(name).trim(),
-        expectedQty: Number(qty),
+        expectedQty: Number(qtyRaw),
         loc: String(loc).trim()
     };
 }).pipe(z.object({
