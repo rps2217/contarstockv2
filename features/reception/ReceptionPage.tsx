@@ -145,8 +145,8 @@ export const ReceptionPage: React.FC = () => {
             <NumericKeypad 
                 isOpen={showKeypad}
                 title="ETIQUETA MANUAL"
-                onClose={() => setShowKeypad(false)}
                 onConfirm={handleKeypadConfirm}
+                onClose={() => setShowKeypad(false)}
             />
 
             <QueueManager 

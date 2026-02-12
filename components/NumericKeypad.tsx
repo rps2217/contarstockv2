@@ -10,6 +10,7 @@ interface NumericKeypadProps {
   title?: string;
   value?: string; 
   placeholder?: string;
+  // Estos props se mantienen por compatibilidad pero se desaconseja su uso para registro de SKUs
   onInput?: (char: string) => void;
   onDelete?: () => void;
 }
@@ -19,7 +20,7 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
 }) => {
   const [internalBuffer, setInternalBuffer] = useState("");
   
-  // Resetear buffer al abrir
+  // Sincronizar o resetear buffer al abrir
   useEffect(() => {
     if (isOpen) {
       setInternalBuffer(value || "");
@@ -50,28 +51,24 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
     const final = value !== undefined ? value : internalBuffer;
     if (final.length > 0) {
       onConfirm(final);
-      setInternalBuffer("");
+      setInternalBuffer(""); // Limpiar tras confirmar
     }
   }, [value, internalBuffer, onConfirm]);
 
-  // Listener de Teclado Físico (Para cuando el modal está abierto)
+  // Soporte para teclado físico cuando el modal está abierto
   useEffect(() => {
     if (!isOpen) return;
     const handleKey = (e: KeyboardEvent) => {
-      // Evitar que el escáner global interfiera con la entrada manual
       if (e.key >= '0' && e.key <= '9') {
           e.stopPropagation();
           handleChar(e.key);
-      }
-      else if (e.key === 'Backspace') {
+      } else if (e.key === 'Backspace') {
           e.stopPropagation();
           handleDelete();
-      }
-      else if (e.key === 'Enter') {
+      } else if (e.key === 'Enter') {
           e.stopPropagation();
           handleConfirm();
-      }
-      else if (e.key === 'Escape') {
+      } else if (e.key === 'Escape') {
           e.stopPropagation();
           onClose();
       }

@@ -17,8 +17,8 @@ import { ScreenLockOverlay } from '../../components/common/ScreenLockOverlay';
 import { NumericKeypad } from '../../components/NumericKeypad';
 import { VirtualList } from '../../components/common/VirtualList';
 import { SoundFX } from '../../services/audio';
-import { useAutoLock } from '../../hooks/useAutoLock';
 import { useHIDScanner } from '../../hooks/useHIDScanner';
+import { useAutoLock } from '../../hooks/useAutoLock';
 
 export const HammerPage: React.FC = () => {
     const navigate = useNavigate();
