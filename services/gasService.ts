@@ -7,7 +7,6 @@ import { cloudApi } from './cloud/apiClient';
 
 /**
  * Descarga la configuración inicial usando el ID del Excel.
- * Optimizado para evitar errores de CORS y permisos.
  */
 export const bootstrapConfigById = async (spreadsheetId: string): Promise<AppSheetConfig> => {
     const idMatch = spreadsheetId.match(/\/d\/([a-zA-Z0-9-_]+)/);
@@ -15,24 +14,21 @@ export const bootstrapConfigById = async (spreadsheetId: string): Promise<AppShe
 
     if (!cleanId || cleanId.length < 10) throw new Error("ID de Excel no válido");
 
-    // Intentamos con el endpoint de exportación directa que es más permisivo que gviz
+    // Intentamos con el endpoint de exportación directa
     const url = `https://docs.google.com/spreadsheets/d/${cleanId}/export?format=csv&sheet=CONFIG_SISTEMA`;
 
     try {
         const response = await fetch(url);
         
         if (!response.ok) {
-            if (response.status === 404) {
-                throw new Error("No se encontró la pestaña 'CONFIG_SISTEMA'. Verifique el nombre en su Excel.");
-            }
-            throw new Error(`Error Google (${response.status}). Verifique que el Excel sea PÚBLICO (Cualquier persona con el enlace).`);
+            throw new Error(`Google denegó el acceso. El Excel debe ser PÚBLICO para este método. Si desea mantenerlo PRIVADO, pegue la URL del Script directamente en la sección segura.`);
         }
         
         const csvText = await response.text();
         
         // Si el texto devuelto es HTML, es porque Google redirigió al login (Excel Privado)
         if (csvText.includes("<!DOCTYPE html>") || csvText.includes("google-signin")) {
-            throw new Error("ACCESO DENEGADO: El Excel es PRIVADO. Cámbielo a 'Cualquier persona con el enlace'.");
+            throw new Error("ACCESO DENEGADO: El Excel es PRIVADO. Para este método de vínculo rápido, cámbielo a 'Cualquier persona con el enlace' o use el método por URL del Script.");
         }
 
         return new Promise((resolve, reject) => {
@@ -44,7 +40,7 @@ export const bootstrapConfigById = async (spreadsheetId: string): Promise<AppShe
                     
                     const master: any = results.data[0];
                     const findVal = (keys: string[]) => {
-                        const foundKey = Object.keys(master).find(k => keys.includes(k.trim().toUpperCase()));
+                        const foundKey = Object.keys(master).find(k => keys.includes(k.trim().toUpperCase().replace(/\s/g, "")));
                         return foundKey ? String(master[foundKey]).trim() : '';
                     };
 
@@ -67,9 +63,8 @@ export const bootstrapConfigById = async (spreadsheetId: string): Promise<AppShe
             });
         });
     } catch (err: any) {
-        // Captura del error genérico 'Failed to fetch' para dar contexto al usuario
         if (err.message === "Failed to fetch") {
-            throw new Error("ERROR DE RED: No hay conexión o Google Sheets bloqueó la petición (verifique permisos de compartir).");
+            throw new Error("ERROR DE RED: Google bloqueó la petición por privacidad. Comparta el Excel públicamente (Lector) o use el Vínculo Privado por URL.");
         }
         logger.error('BOOTSTRAP_FAIL', err.message);
         throw err;
@@ -85,7 +80,7 @@ export const fetchSystemConfig = async (): Promise<Partial<AppSheetConfig>> => {
 
     const master = res.rows[0];
     const findVal = (keys: string[]) => {
-        const foundKey = Object.keys(master).find(k => keys.includes(k.trim().toUpperCase()));
+        const foundKey = Object.keys(master).find(k => keys.includes(k.trim().toUpperCase().replace(/\s/g, "")));
         return foundKey ? String(master[foundKey]).trim() : '';
     };
 
