@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useMassiveScanner } from '../hooks/useMassiveScanner';
 import { useLocationManager } from '../hooks/useLocationManager';
 import { CameraScanner } from './CameraScanner';
-import { migrateMassiveToMaster } from '../services/massiveSync';
+import { migrateMassiveToMaster, importManifestFromCloud } from '../services/massiveSync';
 import { MassiveHUD } from './massive/MassiveHUD';
 import { MassiveHeader } from './massive/MassiveHeader';
 import { MassiveItemRow } from './massive/MassiveItemRow';
@@ -15,6 +15,7 @@ import { ScannerFooter } from './scanner/ScannerFooter';
 import { VirtualList } from './common/VirtualList';
 import { ScreenLockOverlay } from './common/ScreenLockOverlay';
 import { NumericKeypad } from './NumericKeypad';
+import { SoundFX } from '../services/audio';
 
 export const MassiveBlindView: React.FC = () => {
     const navigate = useNavigate();
@@ -27,6 +28,7 @@ export const MassiveBlindView: React.FC = () => {
     const [showKeypad, setShowKeypad] = useState(false);
     const [isToolsOpen, setIsToolsOpen] = useState(false);
     const [isMigrating, setIsMigrating] = useState(false);
+    const [isDownloading, setIsDownloading] = useState(false);
 
     useEffect(() => {
         actions.setCurrentLocation(locManager.location);
@@ -40,6 +42,21 @@ export const MassiveBlindView: React.FC = () => {
             navigate('/reports?type=hammer');
         } catch (err) {
             setIsMigrating(false);
+        }
+    };
+
+    const handleDownloadStock = async () => {
+        setIsDownloading(true);
+        try {
+            const count = await importManifestFromCloud(batchId);
+            SoundFX.play('success');
+            alert(`✅ Stock cargado: ${count} productos listos para auditoría.`);
+            setIsToolsOpen(false);
+        } catch (err: any) {
+            SoundFX.play('error');
+            alert(`Error: ${err.message}`);
+        } finally {
+            setIsDownloading(false);
         }
     };
 
@@ -105,7 +122,7 @@ export const MassiveBlindView: React.FC = () => {
                 onChangeLocation={locManager.openModal}
                 onShowLabel={() => {}}
                 onReset={() => actions.removeItem('ALL')}
-                onImport={() => {}}
+                onImport={handleDownloadStock}
                 onPrintSummary={() => {}}
             />
 

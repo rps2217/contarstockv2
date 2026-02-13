@@ -41,7 +41,7 @@ export const runStockEngineTest = async (): Promise<TestResult[]> => {
 
     // 3. Prueba de Lectura de Tabla STOCK
     try {
-        results.push({ step: 'DATA_STRUCTURE', status: 'warn', message: 'Analizando hoja "STOCK" en el Excel...' });
+        results.push({ step: 'DATA_STRUCTURE', status: 'ok', message: 'Analizando hoja "STOCK" en el Excel...' });
         const res = await cloudApi.post('fetch_rows', { tableName: 'STOCK' });
         
         if (!res.success) {
