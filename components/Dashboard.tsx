@@ -13,8 +13,12 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     const config = getSettings().appSheetConfig;
-    if (!config?.spreadsheetId || !config?.gasWebAppUrl) {
+    // CORRECCIÓN: Si ya hay URL de Script, el sistema es funcional. 
+    // No bloqueamos por falta de spreadsheetId si la comunicación ya existe.
+    if (!config?.gasWebAppUrl) {
         setHasConfigError(true);
+    } else {
+        setHasConfigError(false);
     }
     
     const calcIpm = async () => {
@@ -112,7 +116,7 @@ const Dashboard: React.FC = () => {
 
                 <button 
                     onClick={() => navigate('/database')}
-                    className="h-44 bg-slate-900 rounded-[2.5rem] border-b-[10px] border-black flex flex-col items-center justify-center gap-4 transition-all active:translate-y-2 active:border-b-[2px] border-2 border-white/5"
+                    className="h-44 bg-slate-900 rounded-[2.5rem] border-b-[10px] border-black flex flex-col items-center justify-center gap-4 transition-all active:scale-95 active:border-b-[2px] border-2 border-white/5"
                 >
                     <div className="bg-amber-500/10 p-5 rounded-3xl border-2 border-amber-500/20">
                         <Database className="w-10 h-10 text-amber-500" />
@@ -132,7 +136,6 @@ const Dashboard: React.FC = () => {
                 <span className="text-[9px] font-black uppercase tracking-widest text-white">Sincronizar</span>
             </button>
             
-            {/* BOTÓN DIAGNÓSTICO EN DASHBOARD */}
             <button 
                 onClick={() => navigate('/settings?tab=system')} 
                 className="h-28 bg-slate-900 border-4 border-white/5 rounded-[2rem] flex flex-col items-center justify-center gap-2 opacity-60 hover:opacity-100 transition-all group"

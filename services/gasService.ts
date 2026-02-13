@@ -19,25 +19,16 @@ export const bootstrapByUrl = async (url: string): Promise<AppSheetConfig> => {
     if (!url.startsWith('https://script.google.com')) {
         throw new Error("La URL debe comenzar con https://script.google.com...");
     }
-
-    // 1. Guardar temporalmente la URL para que el apiClient pueda usarla
-    const currentSettings = getSettings();
-    const tempSettings = {
-        ...currentSettings,
-        appSheetConfig: { ...currentSettings.appSheetConfig, gasWebAppUrl: url } as AppSheetConfig
-    };
-    // No persistimos aún, solo en memoria para la prueba
     
     try {
-        // 2. Pedirle al script que lea la configuración desde la pestaña CONFIG_SISTEMA
-        // Usamos una llamada cruda al fetch para no depender del estado global de la app aún
+        // Pedirle al script que lea la configuración desde la pestaña CONFIG_SISTEMA
         const response = await fetch(url, {
             method: 'POST',
             body: JSON.stringify({ action: 'fetch_rows', tableName: 'CONFIG_SISTEMA' }),
             headers: { 'Content-Type': 'text/plain;charset=utf-8' }
         });
 
-        if (!response.ok) throw new Error("El script no respondió. Revise la implementación.");
+        if (!response.ok) throw new Error("El script no respondió. Revise la implementación y que esté como 'Aplicación Web'.");
         
         const res = await response.json();
         if (!res.success || !res.rows || res.rows.length === 0) {
@@ -56,16 +47,19 @@ export const bootstrapByUrl = async (url: string): Promise<AppSheetConfig> => {
         // Construir config final
         const config: AppSheetConfig = {
             gasWebAppUrl: url,
-            appId: findVal(['APP_ID', 'APPLICATION_ID']),
-            accessKey: findVal(['ACCESS_KEY', 'KEY']),
+            spreadsheetId: findVal(['SPREADSHEET_ID', 'ID_EXCEL', 'EXCEL_ID', 'ID']) || 'AUTO_DETECTED',
+            appId: findVal(['APP_ID', 'APPLICATION_ID', 'APPID']),
+            accessKey: findVal(['ACCESS_KEY', 'KEY', 'ACCESSKEY']),
             countsTableName: findVal(['TABLE_LOGS', 'TABLA_CONTEOS', 'CONTEOS']) || 'CONTEOS',
-            consolidatedTableName: findVal(['TABLE_CONSOLIDADO', 'CONSOLIDADO']) || 'CONSOLIDADO',
+            consolidatedTableName: findVal(['TABLE_CONSOLIDADO', 'CONSOLIDADO', 'RESUMEN']) || 'CONSOLIDADO',
             productsTableName: findVal(['TABLE_PRODUCTOS', 'PRODUCTOS']) || 'PRODUCTOS',
             receptionTableName: findVal(['TABLE_RECEPCION', 'RECEPCION']) || 'RECEPCION_BULTOS',
             ordersTableName: findVal(['TABLE_PEDIDOS', 'PEDIDOS']) || 'PEDIDOS'
         };
 
-        if (!config.appId) throw new Error("No se encontró la columna APP_ID en el Excel.");
+        if (!config.appId) {
+            console.warn("APP_ID no encontrado en CONFIG_SISTEMA, la sincronización AppSheet podría fallar.");
+        }
 
         return config;
     } catch (err: any) {
@@ -114,6 +108,5 @@ export const fetchFromGas = async (tableName: string): Promise<any[]> => {
 };
 
 export const bootstrapConfigById = async (id: string): Promise<AppSheetConfig> => {
-    // Mantener por compatibilidad pero desalentar su uso
-    throw new Error("Método obsoleto. Use la URL del Script para mayor seguridad.");
+    throw new Error("Obsoleto. Use URL de Script.");
 };
