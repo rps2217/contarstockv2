@@ -33,24 +33,33 @@ export const CloudProductSchema = z.record(z.any()).transform((raw) => {
     supplierRut: z.string()
 }));
 
+/**
+ * ESQUEMA DE STOCK (TEÓRICO)
+ * Mapea columnas del Excel a la base de datos local de Martillo.
+ */
 export const CloudStockSchema = z.record(z.any()).transform((raw) => {
     const normalized: Record<string, any> = {};
     Object.keys(raw).forEach(k => {
         normalized[normalizeHeader(k)] = raw[k];
     });
 
-    const barcode = normalized["CODIGO"] || normalized["SKU"] || normalized["CODPRODUCTO"] || normalized["EAN"] || "";
-    const name = normalized["PRODUCTO"] || normalized["DESCRIPCION"] || "Producto Desconocido";
-    const qty = normalized["STOCKFINAL"] || normalized["STOCK"] || normalized["STOCKTEORICO"] || normalized["CANTIDAD"] || 0;
+    // Mapeo flexible de identidad
+    const barcode = normalized["CODIGO"] || normalized["SKU"] || normalized["CODPRODUCTO"] || normalized["EAN"] || normalized["ITEM"] || "";
+    
+    // Mapeo flexible de descripción
+    const name = normalized["PRODUCTO"] || normalized["DESCRIPCION"] || normalized["NOMBRE"] || normalized["DESC"] || "Producto Desconocido";
+    
+    // Mapeo flexible de cantidad (Metas)
+    const qty = normalized["STOCKFINAL"] || normalized["STOCK"] || normalized["STOCKTEORICO"] || normalized["CANTIDAD"] || normalized["QTY"] || normalized["TEORICO"] || 0;
     
     return {
         barcode: String(barcode).trim(),
         name: String(name).trim(),
         expectedQty: Number(qty),
-        loc: normalized["LOC"] || normalized["UBICACION"] || ""
+        loc: normalized["LOC"] || normalized["UBICACION"] || normalized["POSICION"] || ""
     };
 }).pipe(z.object({
-    barcode: z.string().min(1),
+    barcode: z.string().min(1, "SKU Requerido"),
     name: z.string(),
     expectedQty: z.number().min(0),
     loc: z.string().optional()

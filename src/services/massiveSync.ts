@@ -62,39 +62,30 @@ export const migrateMassiveToMaster = async (batchId: string): Promise<string> =
 };
 
 /**
- * DESCARGA DE MANIFIESTO DE STOCK
- * Sincroniza la pestaña "STOCK" de Google Sheets con la base de datos local de Martillo.
+ * DESCARGA DE MANIFIESTO DE STOCK (PRUEBA DE FUNCIONAMIENTO)
  */
 export const importManifestFromCloud = async (batchId: string): Promise<number> => {
     try {
-        logger.info('CLOUD_MANIFEST', 'Solicitando registros a la nube (Pestaña STOCK)...');
+        logger.info('CLOUD_MANIFEST', `Solicitando descarga de STOCK para lote: ${batchId}`);
         
+        // Llamada a la nube
         const rawRows = await fetchFromGas('STOCK');
         
-        if (!rawRows) {
-            throw new Error("El servidor no devolvió respuesta. Verifique la conexión o la URL de GAS.");
+        if (!rawRows || !Array.isArray(rawRows)) {
+            throw new Error("El servidor devolvió un formato inválido o vacío.");
         }
 
-        if (rawRows.length === 0) {
-            throw new Error("La pestaña 'STOCK' está vacía o no existe en el Excel vinculado.");
-        }
-
-        let validCount = 0;
-        let processedCount = 0;
-
-        const newManifestItems = rawRows
-            .map((row, index) => {
-                processedCount++;
-                const result = CloudStockSchema.safeParse(row);
-                if (result.success) {
-                    validCount++;
-                    return result.data;
+        const itemsToSave = rawRows
+            .map((row, idx) => {
+                const parsed = CloudStockSchema.safeParse(row);
+                if (!parsed.success) {
+                    // Log del primer error para diagnóstico
+                    if (idx === 0) console.warn("[StockParse] Error Fila 2:", parsed.error.format());
+                    return null;
                 }
-                // Loguear fallos de parsing en consola para diagnóstico
-                if (index < 3) console.warn(`[StockParse] Error fila ${index + 2}:`, result.error.format());
-                return null;
+                return parsed.data;
             })
-            .filter((item): item is NonNullable<typeof item> => item !== null && item.expectedQty > 0)
+            .filter((i): i is NonNullable<typeof i> => i !== null && i.expectedQty > 0)
             .map(item => ({
                 batchId,
                 barcode: sanitizeBarcode(item.barcode),
@@ -103,25 +94,21 @@ export const importManifestFromCloud = async (batchId: string): Promise<number> 
                 loc: item.loc
             }));
 
-        if (newManifestItems.length === 0) {
-            if (processedCount > 0 && validCount === 0) {
-                throw new Error("Se recibieron filas pero ninguna coincide con las cabeceras (CODIGO, PRODUCTO, STOCK FINAL).");
-            }
-            throw new Error("No se encontraron registros con Stock mayor a 0 para descargar.");
+        if (itemsToSave.length === 0) {
+            throw new Error("No se encontraron registros válidos. Verifique que las columnas existan: CODIGO, PRODUCTO, STOCK FINAL.");
         }
 
-        // Persistencia en DB Local de Martillo
+        // Transacción Atómica: Limpiar anterior y guardar nuevo
         await massiveDb.transaction('rw', massiveDb.blindManifests, async () => {
             await massiveDb.blindManifests.where('batchId').equals(batchId).delete();
-            await massiveDb.blindManifests.bulkAdd(newManifestItems);
+            await massiveDb.blindManifests.bulkAdd(itemsToSave);
         });
 
-        logger.success('CLOUD_MANIFEST', `Descarga exitosa: ${newManifestItems.length} registros cargados.`);
-        return newManifestItems.length;
+        logger.success('CLOUD_MANIFEST', `Descarga exitosa: ${itemsToSave.length} metas de stock instaladas.`);
+        return itemsToSave.length;
 
     } catch (e: any) {
-        const errorMsg = e.message.includes('vínculo') ? 'Fallo de autenticación con Google' : e.message;
-        logger.error('CLOUD_MANIFEST_FAIL', errorMsg);
-        throw new Error(errorMsg);
+        logger.error('CLOUD_MANIFEST_FAIL', e.message);
+        throw e;
     }
 };
