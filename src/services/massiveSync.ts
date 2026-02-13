@@ -72,7 +72,7 @@ export const importManifestFromCloud = async (batchId: string): Promise<number> 
         const rawRows = await fetchFromGas('STOCK');
         
         if (!rawRows) {
-            throw new Error("El servidor no devolvió respuesta. Verifique la conexión.");
+            throw new Error("El servidor no devolvió respuesta. Verifique la conexión o la URL de GAS.");
         }
 
         if (rawRows.length === 0) {
@@ -90,8 +90,8 @@ export const importManifestFromCloud = async (batchId: string): Promise<number> 
                     validCount++;
                     return result.data;
                 }
-                // Loguear fallos de parsing solo en consola para debug
-                if (index < 5) console.warn(`[StockParse] Error fila ${index + 2}:`, result.error.format());
+                // Loguear fallos de parsing en consola para diagnóstico
+                if (index < 3) console.warn(`[StockParse] Error fila ${index + 2}:`, result.error.format());
                 return null;
             })
             .filter((item): item is NonNullable<typeof item> => item !== null && item.expectedQty > 0)
@@ -105,7 +105,7 @@ export const importManifestFromCloud = async (batchId: string): Promise<number> 
 
         if (newManifestItems.length === 0) {
             if (processedCount > 0 && validCount === 0) {
-                throw new Error("Se encontraron filas pero ninguna coincide con las cabeceras esperadas (CODIGO, PRODUCTO, STOCK FINAL).");
+                throw new Error("Se recibieron filas pero ninguna coincide con las cabeceras (CODIGO, PRODUCTO, STOCK FINAL).");
             }
             throw new Error("No se encontraron registros con Stock mayor a 0 para descargar.");
         }
@@ -122,7 +122,6 @@ export const importManifestFromCloud = async (batchId: string): Promise<number> 
     } catch (e: any) {
         const errorMsg = e.message.includes('vínculo') ? 'Fallo de autenticación con Google' : e.message;
         logger.error('CLOUD_MANIFEST_FAIL', errorMsg);
-        // Lanzamos el error para que useCloudAction lo capture y lo muestre en el alert
         throw new Error(errorMsg);
     }
 };

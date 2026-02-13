@@ -1,13 +1,14 @@
+
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 
 /**
- * BLINDAJE DE GLOBALES v5.1
- * Inyectamos Buffer y Long desde el mapeo oficial del importmap
- * para mantener consistencia en el entorno ESM.
+ * BLINDAJE DE GLOBALES v5.2
+ * Inyectamos Buffer y Long desde esm.sh directamente para evitar errores 
+ * de resolución de módulos en el empaquetador (Vite/Rollup).
  */
-import { Buffer } from 'buffer';
-import Long from 'long';
+import { Buffer } from 'https://esm.sh/buffer@6.0.3';
+import Long from 'https://esm.sh/long@5.2.3';
 
 if (typeof window !== 'undefined') {
     (window as any).Buffer = Buffer;

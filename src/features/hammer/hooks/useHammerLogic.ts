@@ -4,7 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { massiveDb } from '../../../db.massive';
 import { db as masterDb } from '../../../db';
 import { sanitizeBarcode } from '../../../services/utils';
-import { useFeedbackSystem } from '../../../hooks/useFeedbackSystem';
+import { useScannerEngine } from '../../../shared/hooks/useScannerEngine';
 import { Product } from '../../../types';
 import { SoundFX } from '../../../services/audio';
 
@@ -15,16 +15,15 @@ export interface HammerItem {
     totalQuantity: number;
     expectedQty?: number;
     lastTimestamp: number;
-    embedding?: number[]; // Añadido para trazabilidad IA
+    embedding?: number[];
 }
 
+/**
+ * HOOK MARTILLO v6.0 (Modular)
+ */
 export const useHammerLogic = (batchId: string) => {
-    const { feedback, trigger } = useFeedbackSystem(150);
-    
-    const [activeBarcode, setActiveBarcode] = useState<string | null>(null);
-    const [activeProduct, setActiveProduct] = useState<Product | null>(null);
-    const [optimisticQty, setOptimisticQty] = useState<number | null>(null);
-    const [multiplier, setMultiplier] = useState(1);
+    // Usamos el motor unificado de escaneo
+    const engine = useScannerEngine(1);
     const [currentLocation, setCurrentLocation] = useState(() => localStorage.getItem('hammer_loc') || 'ZONA-A');
     
     const writeQueue = useRef<{barcode: string, qty: number, loc: string, ts: number}[]>([]);
@@ -39,8 +38,8 @@ export const useHammerLogic = (batchId: string) => {
             massiveDb.blindManifests.where('batchId').equals(batchId).toArray()
         ]);
         
-        const uniqueBarcodes = new Set([...rawScans.map(s => s.barcode), ...manifests.map(m => m.barcode)]);
-        const products = await masterDb.products.where('barcode').anyOf(Array.from(uniqueBarcodes)).toArray();
+        const uniqueBarcodes = Array.from(new Set([...rawScans.map(s => s.barcode), ...manifests.map(m => m.barcode)]));
+        const products = uniqueBarcodes.length > 0 ? await masterDb.products.where('barcode').anyOf(uniqueBarcodes).toArray() : [];
         const prodMap = new Map<string, Product>(products.map(p => [p.barcode, p]));
         
         const aggregation = new Map<string, HammerItem>();
@@ -49,12 +48,11 @@ export const useHammerLogic = (batchId: string) => {
             const pInfo = prodMap.get(m.barcode);
             aggregation.set(m.barcode, {
                 barcode: m.barcode,
-                name: m.name || pInfo?.name || 'SIN DESCRIPCIÓN',
+                name: m.name || pInfo?.name || 'SKU_DESCONOCIDO',
                 loc: m.loc,
                 totalQuantity: 0,
                 expectedQty: m.expectedQty,
-                lastTimestamp: 0,
-                embedding: pInfo?.embedding // Preservamos firma IA
+                lastTimestamp: 0
             });
         });
 
@@ -65,30 +63,30 @@ export const useHammerLogic = (batchId: string) => {
                 existing.totalQuantity += s.quantity;
                 existing.lastTimestamp = Math.max(existing.lastTimestamp, s.timestamp);
                 if (s.location) existing.loc = s.location;
-                if (!existing.embedding) existing.embedding = pInfo?.embedding;
+                if (existing.name === 'SKU_DESCONOCIDO' && pInfo) existing.name = pInfo.name;
             } else {
                 aggregation.set(s.barcode, {
                     barcode: s.barcode,
                     name: pInfo?.name || 'SKU_DESCONOCIDO',
                     totalQuantity: s.quantity,
                     lastTimestamp: s.timestamp,
-                    loc: s.location,
-                    embedding: pInfo?.embedding // Preservamos firma IA
+                    loc: s.location
                 });
             }
         });
 
         const sorted = Array.from(aggregation.values()).sort((a, b) => {
-            if (a.barcode === activeBarcode) return -1;
+            if (a.barcode === engine.activeBarcode) return -1;
             return b.lastTimestamp - a.lastTimestamp;
         });
 
         itemsCache.current = sorted;
         return sorted;
-    }, [batchId, activeBarcode, feedback]);
+    }, [batchId, engine.activeBarcode, engine.feedback]);
 
+    // Persistencia flush
     useEffect(() => {
-        const flush = async () => {
+        const timer = setInterval(async () => {
             if (writeQueue.current.length === 0) return;
             const batch = [...writeQueue.current];
             writeQueue.current = [];
@@ -99,74 +97,59 @@ export const useHammerLogic = (batchId: string) => {
             } catch (e) {
                 writeQueue.current = [...batch, ...writeQueue.current];
             }
-        };
-        const timer = setInterval(flush, 500);
-        return () => { clearInterval(timer); flush(); };
+        }, 500);
+        return () => clearInterval(timer);
     }, [batchId]);
+
+    const registerScan = useCallback(async (code: string, qtyOverride?: number) => {
+        const clean = sanitizeBarcode(code);
+        if (!clean) return;
+        
+        const delta = qtyOverride ?? engine.multiplier;
+        const existing = itemsCache.current.find(i => i.barcode === clean);
+        const currentBaseQty = existing?.totalQuantity || 0;
+        
+        if (currentBaseQty + delta < 0) {
+            SoundFX.play('error');
+            return;
+        }
+
+        const product = await masterDb.products.get(clean);
+        engine.actions.updateActiveItem(clean, product || null, currentBaseQty, delta);
+
+        writeQueue.current.push({ barcode: clean, qty: delta, loc: currentLocation, ts: Date.now() });
+    }, [engine, currentLocation]);
 
     const removeItem = useCallback(async (barcode: string) => {
         if (barcode === 'ALL') {
             await massiveDb.blindScans.where('batchId').equals(batchId).delete();
-            setActiveBarcode(null);
-            setOptimisticQty(null);
+            engine.actions.resetActive();
         } else {
             await massiveDb.blindScans.where({ batchId, barcode }).delete();
-            if (activeBarcode === barcode) {
-                setActiveBarcode(null);
-                setOptimisticQty(null);
-            }
+            if (engine.activeBarcode === barcode) engine.actions.resetActive();
         }
-        trigger('undo');
-    }, [batchId, activeBarcode, trigger]);
-
-    const registerScan = useCallback((code: string, qtyOverride?: number) => {
-        const clean = sanitizeBarcode(code);
-        if (!clean) return;
-        
-        const qtyToApply = qtyOverride ?? multiplier;
-        trigger(qtyToApply > 0 ? 'success' : 'undo');
-        setActiveBarcode(clean);
-        masterDb.products.get(clean).then(setActiveProduct);
-        
-        setOptimisticQty(prev => {
-            const baseReal = itemsCache.current.find(i => i.barcode === clean)?.totalQuantity ?? 0;
-            const currentUI = clean === activeBarcode ? (prev ?? baseReal) : baseReal;
-            return Math.max(0, currentUI + qtyToApply);
-        });
-
-        writeQueue.current.push({ barcode: clean, qty: qtyToApply, loc: currentLocation, ts: Date.now() });
-    }, [activeBarcode, trigger, multiplier, currentLocation]);
-
-    const modifyQuantity = useCallback((barcode: string, delta: number) => {
-        registerScan(barcode, delta);
-    }, [registerScan]);
-
-    const lastScannedItem = useMemo(() => {
-        if (!activeBarcode) return undefined;
-        const real = dbItems?.find(i => i.barcode === activeBarcode);
-        return real ? { ...real, totalQuantity: optimisticQty ?? real.totalQuantity } : undefined;
-    }, [dbItems, activeBarcode, optimisticQty]);
+        engine.actions.triggerFeedback('undo');
+    }, [batchId, engine]);
 
     return { 
         state: { 
             items: dbItems || [], 
-            lastScannedItem: lastScannedItem as HammerItem | undefined,
-            activeProduct,
-            feedback, 
-            multiplier, 
+            activeBarcode: engine.activeBarcode,
+            activeProduct: engine.activeProduct,
+            feedback: engine.feedback,
+            multiplier: engine.multiplier,
+            optimisticQty: engine.optimisticQty,
             currentLocation
         },
         actions: { 
-            setMultiplier, 
+            setMultiplier: engine.setMultiplier,
             setCurrentLocation, 
             registerScan, 
-            modifyQuantity,
             removeItem,
-            selectItem: (b: string) => { 
-                setActiveBarcode(b); 
+            selectItem: async (b: string) => {
                 const item = itemsCache.current.find(i => i.barcode === b);
-                setOptimisticQty(item?.totalQuantity || 0); 
-                masterDb.products.get(b).then(setActiveProduct);
+                const product = await masterDb.products.get(b);
+                engine.actions.updateActiveItem(b, product || null, item?.totalQuantity || 0, 0);
             }
         }
     };

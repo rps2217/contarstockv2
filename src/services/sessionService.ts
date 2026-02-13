@@ -1,7 +1,9 @@
+
 import { Dexie } from 'dexie';
 import { db } from '../db';
 import { ScanRecord, CountingSession } from '../types';
-import { generateUUID, normalizeKey } from './utils';
+// Changed normalizeKey to normalizeSku as it is the exported member in utils
+import { generateUUID, normalizeSku } from './utils';
 import { logger } from './logger';
 import { IntegrityGuard } from './integrityGuard';
 
@@ -96,7 +98,8 @@ export const addScanEvent = async (
 };
 
 export const checkLabelExists = async (label: string): Promise<boolean> => {
-    const count = await db.sessions.where('logisticsLabel').equals(normalizeKey(label)).count();
+    // Corrected to use normalizeSku as normalizeKey is not exported from utils
+    const count = await db.sessions.where('logisticsLabel').equals(normalizeSku(label)).count();
     return count > 0;
 };
 

@@ -1,10 +1,10 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useHammerLogic } from './hooks/useHammerLogic';
 import { useLocationManager } from '../../shared/hooks/useLocationManager';
 import { migrateMassiveToMaster } from '../../services/massiveSync';
-import { MassiveHUD } from '../../components/massive/MassiveHUD';
+import { IndustrialDisplay } from '../../shared/components/ui/IndustrialDisplay';
 import { MassiveHeader } from '../../components/massive/MassiveHeader';
 import { MassiveItemRow } from '../../components/massive/MassiveItemRow';
 import { MassiveToolsSheet } from '../../components/massive/MassiveToolsSheet';
@@ -16,78 +16,78 @@ import { CameraScanner } from '../../components/CameraScanner';
 import { ScreenLockOverlay } from '../../components/common/ScreenLockOverlay';
 import { NumericKeypad } from '../../components/NumericKeypad';
 import { VirtualList } from '../../components/common/VirtualList';
-import { SoundFX } from '../../services/audio';
+import { useHIDScanner } from '../../hooks/useHIDScanner';
+import { useAutoLock } from '../../hooks/useAutoLock';
 
 export const HammerPage: React.FC = () => {
     const navigate = useNavigate();
     const { batchId = 'CORE' } = useParams();
-    
-    // Lógica de Conteo
     const { state, actions } = useHammerLogic(batchId);
-    
-    // Lógica de Ubicación Reutilizable
     const locManager = useLocationManager(`hammer_loc_${batchId}`);
+    const { isLocked, unlock, lock } = useAutoLock(3000);
 
     const [isTriggerActive, setIsTriggerActive] = useState(false);
-    const [isScreenLocked, setIsScreenLocked] = useState(false);
     const [isToolsOpen, setIsToolsOpen] = useState(false);
     const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
     const [showKeypad, setShowKeypad] = useState(false);
     const [isMigrating, setIsMigrating] = useState(false);
 
-    // Actualizamos la ubicación en la lógica de negocio cuando cambia en el manager
-    React.useEffect(() => {
+    useHIDScanner({
+        onScan: (barcode) => actions.registerScan(barcode),
+        isEnabled: !isLocked && !isMigrating && !showKeypad && !isToolsOpen,
+    });
+
+    useEffect(() => {
         actions.setCurrentLocation(locManager.location);
     }, [locManager.location, actions]);
 
     const handleFinalize = async () => {
-        if (!state.items.length) return;
+        if (!state.items.length || isMigrating) return;
         if (!confirm("¿Cerrar auditoría y consolidar registros?")) return;
-        
         setIsMigrating(true);
         try {
             await migrateMassiveToMaster(batchId);
-            SoundFX.play('success');
             navigate('/reports?type=hammer');
         } catch (err) {
             setIsMigrating(false);
-            SoundFX.play('error');
         }
     };
 
+    const activeItem = state.items.find(i => i.barcode === state.activeBarcode);
+
     return (
         <div className="fixed inset-0 z-[100] flex flex-col font-mono bg-black select-none overflow-hidden text-white">
-            
             <MassiveHeader 
                 isMigrating={isMigrating}
                 hasItems={state.items.length > 0}
                 onBack={() => navigate('/dashboard')}
                 onFinalize={handleFinalize}
                 onOpenTools={() => setIsToolsOpen(true)}
-                onLock={() => setIsScreenLocked(true)}
+                onLock={lock}
             />
 
-            {/* Selector de Ubicación Rápido - Integrado bajo el Header */}
             <div className="px-4 py-2 bg-slate-900/50 border-b border-white/5">
-                <LocationTrigger 
-                    location={locManager.location} 
-                    onClick={locManager.openModal} 
-                />
+                <LocationTrigger location={locManager.location} onClick={locManager.openModal} />
             </div>
 
-            <MassiveHUD 
-                item={state.lastScannedItem as any} 
-                feedback={state.feedback} 
-                onDecrement={(i) => actions.modifyQuantity(i.barcode, -1)} 
-                onIncrement={(code) => actions.registerScan(code)} 
-            />
+            <div className="h-[35dvh] shrink-0">
+                <IndustrialDisplay 
+                    barcode={state.activeBarcode}
+                    name={state.activeProduct?.name || activeItem?.name || null}
+                    quantity={state.optimisticQty ?? 0}
+                    targetQuantity={activeItem?.expectedQty}
+                    feedback={state.feedback}
+                    onIncrement={() => actions.registerScan(state.activeBarcode!)}
+                    onDecrement={() => actions.registerScan(state.activeBarcode!, -1)}
+                />
+            </div>
 
             <div className="flex-1 min-h-0 bg-black/90 relative border-t border-white/5">
                 <VirtualList 
                     items={state.items} 
                     itemHeight={82} 
                     renderRow={MassiveItemRow} 
-                    rowData={{ onSelect: actions.selectItem, activeBarcode: state.lastScannedItem?.barcode }} 
+                    rowData={{ onSelect: actions.selectItem, activeBarcode: state.activeBarcode }} 
                 />
             </div>
 
@@ -97,58 +97,39 @@ export const HammerPage: React.FC = () => {
                 isTriggerActive={isTriggerActive}
                 onMultiplierChange={actions.setMultiplier}
                 onOpenManual={() => setShowKeypad(true)}
-                onTriggerStart={() => !isScreenLocked && setIsTriggerActive(true)}
+                onTriggerStart={() => !isLocked && setIsTriggerActive(true)}
                 onTriggerEnd={() => setIsTriggerActive(false)}
             />
 
             <MassiveToolsSheet 
-                isOpen={isToolsOpen}
-                onClose={() => setIsToolsOpen(false)}
-                batchId={batchId}
-                hasActiveItem={!!state.lastScannedItem}
-                location={locManager.location}
-                onChangeLocation={locManager.openModal}
-                onShowLabel={() => setIsLabelModalOpen(true)}
-                onReset={() => actions.removeItem('ALL')}
+                isOpen={isToolsOpen} onClose={() => setIsToolsOpen(false)}
+                batchId={batchId} hasActiveItem={!!state.activeBarcode}
+                location={locManager.location} onChangeLocation={locManager.openModal}
+                onShowLabel={() => setIsLabelModalOpen(true)} onReset={() => actions.removeItem('ALL')}
                 onPrintSummary={() => {}}
             />
 
             <LocationSelectorModal 
-                isOpen={locManager.isModalOpen}
-                onClose={locManager.closeModal}
-                currentLocation={locManager.location}
-                onSelect={locManager.setLocation}
+                isOpen={locManager.isModalOpen} onClose={locManager.closeModal}
+                currentLocation={locManager.location} onSelect={locManager.setLocation}
             />
 
-            {state.lastScannedItem && (
+            {state.activeBarcode && (
                 <BarcodeLabelModal 
-                    isOpen={isLabelModalOpen}
-                    onClose={() => setIsLabelModalOpen(false)}
-                    barcode={state.lastScannedItem.barcode}
-                    productName={state.lastScannedItem.name}
-                    quantity={state.lastScannedItem.totalQuantity}
+                    isOpen={isLabelModalOpen} onClose={() => setIsLabelModalOpen(false)}
+                    barcode={state.activeBarcode} productName={state.activeProduct?.name || activeItem?.name}
+                    quantity={state.optimisticQty ?? 0}
                 />
             )}
 
             {isTriggerActive && (
                 <div className="fixed inset-0 z-[200]">
-                    <CameraScanner 
-                        onScan={(code) => { actions.registerScan(code); setIsTriggerActive(false); }} 
-                        onClose={() => setIsTriggerActive(false)} 
-                        isTriggered={true} 
-                    />
+                    <CameraScanner onScan={(code) => { actions.registerScan(code); setIsTriggerActive(false); }} onClose={() => setIsTriggerActive(false)} isTriggered={true} />
                 </div>
             )}
 
-            {showKeypad && (
-                <NumericKeypad 
-                    isOpen={true} onClose={() => setShowKeypad(false)} title="SKU MANUAL" 
-                    onInput={(v) => actions.registerScan(v)} onDelete={() => {}} 
-                    onConfirm={() => setShowKeypad(false)} 
-                />
-            )}
-
-            <ScreenLockOverlay isLocked={isScreenLocked} onUnlock={() => setIsScreenLocked(false)} />
+            <NumericKeypad isOpen={showKeypad} title="SKU MANUAL" onClose={() => setShowKeypad(false)} onConfirm={(v) => { actions.registerScan(v); setShowKeypad(false); }} />
+            <ScreenLockOverlay isLocked={isLocked} onUnlock={unlock} />
         </div>
     );
 };

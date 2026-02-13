@@ -7,29 +7,21 @@ import * as productService from '../../../services/productService';
 import { sanitizeBarcode, normalizeSku } from '../../../services/utils';
 import { SoundFX } from '../../../services/audio';
 import { getSettings } from '../../../services/settings';
-import { useFeedbackSystem } from '../../../hooks/useFeedbackSystem';
+import { useScannerEngine } from '../../../shared/hooks/useScannerEngine';
 import { aggregateScans } from '../../../services/aggregator';
 import { shouldPromptForBatch } from '../../../services/uiLogic';
-import { scannerReducer, ScannerState } from '../../../services/scannerMachine';
+import { scannerReducer } from '../../../services/scannerMachine';
 import { Product, ConsolidatedItem } from '../../../types';
 
 export const useCountingLogic = (sessionId: string | undefined, onExit: () => void) => {
     const settings = getSettings();
-    const { feedback, trigger } = useFeedbackSystem(200);
+    const engine = useScannerEngine(1);
     const [machineState, dispatch] = useReducer(scannerReducer, 'IDLE');
-    
-    // Estado Persistente en RAM
-    const [multiplier, setMultiplier] = useState(1);
     const [currentLocation, setCurrentLocation] = useState(() => localStorage.getItem('last_loc') || 'BODEGA_GRAL'); 
-    const [activeBarcode, setActiveBarcode] = useState<string | null>(null);
-    const [activeProduct, setActiveProduct] = useState<Product | null>(null);
-    const [optimisticQty, setOptimisticQty] = useState<number | null>(null);
 
     const itemsRef = useRef<ConsolidatedItem[]>([]);
-    
     useEffect(() => { localStorage.setItem('last_loc', currentLocation); }, [currentLocation]);
 
-    // Data Fetching Reactivo
     const session = useLiveQuery(async () => {
         if (!sessionId) return null;
         return await db.sessions.get(sessionId);
@@ -40,7 +32,6 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
         const scans = await db.scans.where('sessionId').equals(sessionId).toArray();
         const physicalItems = await aggregateScans(scans);
         
-        // Match con Guía (Si existe)
         const expectedItems = session?.expectedItems || [];
         const expectedMap = new Map(expectedItems.map(ei => [normalizeSku(ei.barcode), ei.expectedQty]));
 
@@ -54,103 +45,82 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
             expectedItems.forEach(exp => {
                 if (!scannedBarcodes.has(normalizeSku(exp.barcode))) {
                     finalItems.push({
-                        barcode: exp.barcode,
-                        productName: exp.name,
-                        totalQuantity: 0,
-                        expectedQuantity: exp.expectedQty,
-                        scans: 0,
-                        location: 'GUÍA'
+                        barcode: exp.barcode, productName: exp.name, totalQuantity: 0,
+                        expectedQuantity: exp.expectedQty, scans: 0, location: 'GUÍA'
                     });
                 }
             });
         }
 
         const sorted = finalItems.sort((a, b) => {
-            if (normalizeSku(a.barcode) === activeBarcode) return -1;
-            if (normalizeSku(b.barcode) === activeBarcode) return 1;
+            if (normalizeSku(a.barcode) === engine.activeBarcode) return -1;
             return b.totalQuantity - a.totalQuantity;
         });
 
         itemsRef.current = sorted;
         return sorted;
-    }, [sessionId, session, activeBarcode, feedback]);
+    }, [sessionId, session, engine.activeBarcode, engine.feedback]);
 
-    // Pipeline de Escaneo
     const finalizeScanPipeline = useCallback(async (barcode: string, qty: number, mm?: number, yyyy?: number, batch?: string) => {
-        if (!sessionId) return;
-        
-        // Protección de Estado
-        if (machineState !== 'IDLE' && machineState !== 'LOOKING_UP' && machineState !== 'COMMITTING' && machineState !== 'MANUAL_ENTRY') return;
+        if (!sessionId || (machineState !== 'IDLE' && machineState !== 'LOOKING_UP' && machineState !== 'COMMITTING' && machineState !== 'MANUAL_ENTRY')) return;
 
         dispatch({ type: 'SCAN_INBOUND', barcode });
         try {
             const cleanBarcode = sanitizeBarcode(barcode);
             const normBarcode = normalizeSku(cleanBarcode);
-            
-            // 1. Resolver Producto
-            let product = await productService.getProductByBarcode(cleanBarcode);
-            setActiveProduct(product || null);
+            const product = await productService.getProductByBarcode(cleanBarcode);
 
-            // 2. Verificar Lotes (Pharma Check)
             const needsPharma = shouldPromptForBatch(cleanBarcode, consolidatedHistory || [], settings) && (mm === undefined);
             if (needsPharma) {
-                setActiveBarcode(normBarcode);
+                const existing = itemsRef.current.find(i => normalizeSku(i.barcode) === normBarcode);
+                engine.actions.updateActiveItem(cleanBarcode, product || null, existing?.totalQuantity || 0, 0);
                 dispatch({ type: 'PRODUCT_RESOLVED', needsPharma: true });
                 return;
             }
             dispatch({ type: 'PRODUCT_RESOLVED', needsPharma: false });
 
-            // 3. Update Optimista (Zero Latency UI)
             const existing = itemsRef.current.find(i => normalizeSku(i.barcode) === normBarcode);
-            const newTotal = Math.max(0, (existing?.totalQuantity || 0) + qty);
-            
-            setOptimisticQty(newTotal);
-            setActiveBarcode(normBarcode);
+            const newTotal = engine.actions.updateActiveItem(cleanBarcode, product || null, existing?.totalQuantity || 0, qty);
 
-            // 4. Persistencia (Async)
             await sessionService.addScanEvent(sessionId, cleanBarcode, qty, mm, yyyy, currentLocation);
             
             dispatch({ type: 'COMMIT_COMPLETE' });
-            trigger(qty > 0 ? 'success' : 'undo');
-            
             if (settings.ttsEnabled && qty > 0) SoundFX.speak(`${newTotal}`);
-
         } catch (err) {
             dispatch({ type: 'ERROR_OCCURRED' });
-            trigger('error');
+            engine.actions.triggerFeedback('error');
         }
-    }, [sessionId, settings, trigger, currentLocation, consolidatedHistory, machineState]);
+    }, [sessionId, settings, engine, currentLocation, consolidatedHistory, machineState]);
 
     return {
         state: { 
             isLoading: session === undefined,
             status: machineState.toLowerCase(),
-            feedback, multiplier, currentLocation,
-            activeBarcode, activeProduct,
-            optimisticActiveQty: optimisticQty || 0
+            feedback: engine.feedback,
+            multiplier: engine.multiplier,
+            currentLocation,
+            activeBarcode: engine.activeBarcode,
+            activeProduct: engine.activeProduct,
+            optimisticQty: engine.optimisticQty
         },
-        sessionData: {
-            session,
-            history: consolidatedHistory || []
-        },
+        sessionData: { session, history: consolidatedHistory || [] },
         actions: { 
-            setMultiplier, 
+            setMultiplier: engine.setMultiplier,
             setCurrentLocation, 
             handleExternalScan: finalizeScanPipeline,
-            selectItem: (b: string) => { 
+            selectItem: async (b: string) => { 
                 const norm = normalizeSku(b);
-                setActiveBarcode(norm); 
                 const existing = itemsRef.current.find(i => normalizeSku(i.barcode) === norm);
-                setOptimisticQty(existing?.totalQuantity || 0); 
-                productService.getProductByBarcode(b).then(setActiveProduct);
+                const product = await productService.getProductByBarcode(b);
+                engine.actions.updateActiveItem(b, product || null, existing?.totalQuantity || 0, 0);
             },
             handlePharmaComplete: (m?: number, y?: number, b?: string) => {
-                if (activeBarcode) finalizeScanPipeline(activeBarcode, multiplier, m, y, b);
+                if (engine.activeBarcode) finalizeScanPipeline(engine.activeBarcode, engine.multiplier, m, y, b);
             },
             undoLastScan: async () => {
                 if(sessionId) {
                     const undone = await sessionService.undoLastAction(sessionId);
-                    if(undone) trigger('undo');
+                    if(undone) engine.actions.triggerFeedback('undo');
                 }
             },
             setStatus: (s: 'manual' | 'idle') => {

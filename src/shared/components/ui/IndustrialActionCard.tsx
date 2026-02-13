@@ -13,10 +13,6 @@ interface IndustrialActionCardProps {
     variant?: 'default' | 'danger' | 'success' | 'warning';
 }
 
-/**
- * COMPONENTE DE ACCIÓN MAESTRO
- * Diseñado para ser el bloque constructivo de todos los menús de herramientas.
- */
 export const IndustrialActionCard: React.FC<IndustrialActionCardProps> = ({
     onClick,
     icon: Icon,
@@ -35,9 +31,7 @@ export const IndustrialActionCard: React.FC<IndustrialActionCardProps> = ({
         warning: "bg-amber-950/20 border-amber-500/40 text-amber-500 hover:bg-amber-950/40"
     };
 
-    const handlePress = (e: React.MouseEvent | React.PointerEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
+    const handlePress = (e: React.MouseEvent) => {
         if (!disabled && !isLoading) {
             if (navigator.vibrate) navigator.vibrate(10);
             onClick();
@@ -47,10 +41,10 @@ export const IndustrialActionCard: React.FC<IndustrialActionCardProps> = ({
     return (
         <button
             disabled={disabled || isLoading}
-            onPointerDown={handlePress}
+            onClick={handlePress}
             className={`
                 w-full flex items-center gap-5 p-6 rounded-[2rem] border-2 transition-all active:scale-[0.97] 
-                disabled:opacity-20 select-none touch-none
+                disabled:opacity-20 select-none
                 ${variantClasses[variant]}
             `}
         >

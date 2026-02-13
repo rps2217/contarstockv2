@@ -1,14 +1,20 @@
+
 /// <reference lib="webworker" />
 import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching';
 import { db } from './db';
-import { SHEET_COLUMNS } from './services/constants';
+import { createInventoryPayload } from './services/cloud/mappers';
+import { Product } from './types';
 
 declare let self: ServiceWorkerGlobalScope & { __WB_MANIFEST: any };
+
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
 
 cleanupOutdatedCaches();
 precacheAndRoute(self.__WB_MANIFEST);
 
-// --- MOTOR DE SINCRONIZACIÓN EN SEGUNDO PLANO ---
+// --- MOTOR DE SINCRONIZACIÓN DE FONDO UNIFICADO v6.0 ---
+const UPLOAD_BATCH_SIZE = 500;
 
 self.addEventListener('sync', (event: any) => {
     if (event.tag === 'sync-bultos') {
@@ -18,106 +24,72 @@ self.addEventListener('sync', (event: any) => {
 
 async function processBackgroundSync() {
     try {
-        // 1. Recuperar configuración (Credenciales) desde IndexedDB
         const configRecord = await db.settings.get('app_config');
-        if (!configRecord || !configRecord.value) {
-            console.warn('[SW] No hay configuración disponible para sync.');
-            return;
-        }
+        if (!configRecord || !configRecord.value) return;
+        
         const settings = configRecord.value;
         const appConfig = settings.appSheetConfig;
-
         if (!appConfig?.gasWebAppUrl) return;
 
-        // 2. Buscar items pendientes de sincronización
         const unsyncedScans = await db.scans.where('synced').equals(0).toArray();
         if (unsyncedScans.length === 0) return;
 
-        console.log(`[SW] Iniciando Background Sync de ${unsyncedScans.length} registros...`);
-
-        // 3. Agrupar por Sesión para consolidar
         const sessionIds = Array.from(new Set(unsyncedScans.map(s => s.sessionId)));
         
         for (const sessionId of sessionIds) {
             const session = await db.sessions.get(sessionId);
-            if (!session) continue; // Sesión huérfana o borrada
+            if (!session) continue;
 
             const scansForSession = unsyncedScans.filter(s => s.sessionId === sessionId);
-            if (scansForSession.length === 0) continue;
-
-            // 4. Agregación en memoria (Lógica simplificada para SW)
-            const aggregation: Record<string, any> = {};
-            // Precarga de nombres de productos para enriquecer el log
             const uniqueSkus = Array.from(new Set(scansForSession.map(s => s.barcode)));
             const products = await db.products.where('barcode').anyOf(uniqueSkus).toArray();
-            const productMap = new Map(products.map(p => [p.barcode, p.name]));
+            const productMap = new Map<string, Product>(products.map(p => [p.barcode, p]));
 
+            // Agregación Industrial
+            const aggregation: Record<string, any> = {};
             scansForSession.forEach(scan => {
-                const key = `${scan.barcode}_${scan.mm||0}_${scan.yyyy||0}`;
+                const key = `${scan.barcode}_${scan.mm||0}_${scan.yyyy||0}_${scan.logisticsLabel || 'UNSET'}`;
                 if (!aggregation[key]) {
+                    const p = productMap.get(scan.barcode);
                     aggregation[key] = {
                         barcode: scan.barcode,
-                        productName: productMap.get(scan.barcode) || 'Pending Load...',
-                        quantity: 0,
-                        scans: 0,
-                        mm: scan.mm, 
-                        yyyy: scan.yyyy,
-                        isIncident: scan.isIncident
+                        productName: p?.name || 'Pending Load...',
+                        totalQuantity: 0,
+                        mm: scan.mm, yyyy: scan.yyyy,
+                        location: scan.logisticsLabel,
+                        isIncident: scan.isIncident,
+                        embedding: p?.embedding,
+                        scans: 0 
                     };
                 }
-                aggregation[key].quantity += scan.quantity;
-                aggregation[key].scans++;
+                aggregation[key].totalQuantity += scan.quantity;
             });
 
-            // 5. Preparar Payload
+            // USAR MAPPER OFICIAL (DRY)
+            const fullPayload = createInventoryPayload(session, Object.values(aggregation) as any[], 'background');
             const targetTable = session.sessionType === 'hammer' ? appConfig.countsTableName : appConfig.consolidatedTableName;
             
-            const rows = Object.values(aggregation).map((item: any, idx) => ({
-                [SHEET_COLUMNS.ID]: `BG-${Date.now()}-${idx}`,
-                [SHEET_COLUMNS.UNIQUE_KEY]: `${session.erpOrder}_${session.logisticsLabel}_${item.barcode}_${Date.now()}`,
-                [SHEET_COLUMNS.DATE]: new Date().toLocaleString('es-CL'),
-                [SHEET_COLUMNS.ERP_ORDER]: session.erpOrder,
-                [SHEET_COLUMNS.BARCODE]: item.barcode,
-                [SHEET_COLUMNS.PRODUCT_NAME]: item.productName,
-                [SHEET_COLUMNS.QUANTITY]: item.quantity,
-                [SHEET_COLUMNS.LABEL]: session.logisticsLabel,
-                [SHEET_COLUMNS.INCIDENT]: item.isIncident ? "SI" : "NO"
-            }));
+            const totalBatches = Math.ceil(fullPayload.length / UPLOAD_BATCH_SIZE);
+            for (let i = 0; i < totalBatches; i++) {
+                const chunk = fullPayload.slice(i * UPLOAD_BATCH_SIZE, (i + 1) * UPLOAD_BATCH_SIZE);
+                const response = await fetch(appConfig.gasWebAppUrl, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'append_rows', tableName: targetTable, rows: chunk }),
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+                });
 
-            // 6. Enviar a GAS (Fetch directo sin dependencias externas)
-            const payload = {
-                action: 'append_rows',
-                tableName: targetTable,
-                rows: rows,
-                metadata: { timestamp: Date.now(), source: 'background-sw' }
-            };
-
-            const response = await fetch(appConfig.gasWebAppUrl, {
-                method: 'POST',
-                body: JSON.stringify(payload),
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-            });
-
-            if (response.ok) {
-                const result = await response.json();
-                if (result.success) {
-                    // 7. Marcar como sincronizados en DB Local
-                    const idsToUpdate = scansForSession.map(s => s.id);
-                    await db.scans.where('id').anyOf(idsToUpdate).modify({ synced: 1 });
-                    await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
-                    console.log(`[SW] Sincronización exitosa: Sesión ${session.erpOrder}`);
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success) {
+                        const chunkBarcodes = new Set(chunk.map((r: any) => r['CODIGO']));
+                        const idsToUpdate = scansForSession.filter(s => chunkBarcodes.has(s.barcode)).map(s => s.id);
+                        await db.scans.where('id').anyOf(idsToUpdate).modify({ synced: 1 });
+                    }
                 }
             }
+            await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
         }
-
     } catch (err) {
-        console.error('[SW] Fallo en Background Sync:', err);
-        throw err; // Relanzar para que el navegador reintente más tarde
+        console.error('[SW] Critical Sync Error:', err);
     }
 }
-
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
-});
