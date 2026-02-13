@@ -1,6 +1,10 @@
 
 import React from 'react';
-import { Zap, Volume2, Mic, Cpu, FastForward, Smartphone, ShieldCheck, CalendarRange } from 'lucide-react';
+import { 
+    Zap, Volume2, Mic, Cpu, FastForward, 
+    Smartphone, ShieldCheck, CalendarRange, 
+    BellRing, MousePointerClick
+} from 'lucide-react';
 import { AppSettings } from '../../types';
 import { SettingsSection, SettingsToggle } from './common/SettingsUI';
 
@@ -30,8 +34,8 @@ export const OperationalSection: React.FC<Props> = ({ settings, updateSetting })
             <SettingsToggle 
                 active={settings.batchTrackingEnabled} 
                 onClick={() => handleToggle('batchTrackingEnabled')}
-                label="Gestión de Lotes"
-                description="Habilitar lote y vencimiento"
+                label="Trazabilidad Pharma"
+                description="Control de lotes y vencimientos"
                 icon={CalendarRange}
             />
 
@@ -39,47 +43,47 @@ export const OperationalSection: React.FC<Props> = ({ settings, updateSetting })
                 active={settings.autoRegisterUnknown} 
                 onClick={() => handleToggle('autoRegisterUnknown')}
                 label="Auto-Registro"
-                description="Captura instantánea de SKUs nuevos"
+                description="Captura de SKUs no catalogados"
                 icon={Zap}
             />
 
             <SettingsToggle 
                 active={settings.ttsEnabled} 
                 onClick={() => handleToggle('ttsEnabled')}
-                label="Asistente de Voz IA"
-                description="Lectura audible de conteos"
+                label="Asistente de Voz"
+                description="Confirmación audible de conteo"
                 icon={Mic}
             />
 
             <SettingsToggle 
                 active={settings.soundEnabled} 
                 onClick={() => handleToggle('soundEnabled')}
-                label="Audio Feedback"
-                description="Beeps de confirmación industrial"
-                icon={Volume2}
+                label="Alertas de Audio"
+                description="Beeps de feedback industrial"
+                icon={BellRing}
             />
             
             <SettingsToggle 
                 active={settings.hapticsEnabled} 
                 onClick={() => handleToggle('hapticsEnabled')}
-                label="Respuesta Táctil"
-                description="Vibración al escanear"
+                label="Respuesta Háptica"
+                description="Vibración inteligente al scanear"
                 icon={Smartphone}
             />
 
             <SettingsToggle 
                 active={settings.confirmDelete} 
                 onClick={() => handleToggle('confirmDelete')}
-                label="Modo Seguro"
-                description="Confirmar borrado de registros"
+                label="Protocolo Seguro"
+                description="Validar antes de borrar picks"
                 icon={ShieldCheck}
             />
             
             <SettingsToggle 
                 active={settings.lowPerformanceMode} 
                 onClick={() => handleToggle('lowPerformanceMode')}
-                label="Ahorro de Batería"
-                description="Optimizar consumo en turnos largos"
+                label="Ecomodo PDA"
+                description="Ahorro energético para turnos largos"
                 icon={Cpu}
             />
         </SettingsSection>
