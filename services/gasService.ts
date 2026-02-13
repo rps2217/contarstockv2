@@ -1,92 +1,75 @@
 
 import { logger } from './logger';
-import { getSettings } from './settings';
+import { getSettings, saveSettings } from './settings';
 import { AppSheetConfig } from '../types';
-import Papa from 'papaparse';
 import { cloudApi } from './cloud/apiClient';
 
 /**
- * Normalización industrial de cabeceras.
- * Convierte "GAS_URL", "Gas Web App URL" o "gas-url" en "GASURL".
+ * Normalización de cabeceras ultra-flexible.
+ * Borra espacios, guiones y convierte a mayúsculas.
  */
 const superNormalize = (s: string) => 
-    String(s || "")
-        .trim()
-        .toUpperCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "") // Eliminar acentos
-        .replace(/[^A-Z0-9]/g, "");    // Eliminar TODO lo que no sea letra o número
+    String(s || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
 
 /**
- * Descarga la configuración inicial usando el ID del Excel.
- * Optimizado para ser inmune a variaciones de formato en el Excel.
+ * CONFIGURACIÓN AUTOMÁTICA POR URL (Recomendado)
+ * Usa el Script como puente para leer el Excel, eliminando problemas de privacidad.
  */
-export const bootstrapConfigById = async (spreadsheetId: string): Promise<AppSheetConfig> => {
-    const idMatch = spreadsheetId.match(/\/d\/([a-zA-Z0-9-_]+)/);
-    const cleanId = idMatch ? idMatch[1] : spreadsheetId.trim();
+export const bootstrapByUrl = async (url: string): Promise<AppSheetConfig> => {
+    if (!url.startsWith('https://script.google.com')) {
+        throw new Error("La URL debe comenzar con https://script.google.com...");
+    }
 
-    if (!cleanId || cleanId.length < 10) throw new Error("ID de Excel no válido");
-
-    // Endpoint de exportación directa: más robusto para leer cabeceras que gviz
-    const url = `https://docs.google.com/spreadsheets/d/${cleanId}/export?format=csv&sheet=CONFIG_SISTEMA`;
-
+    // 1. Guardar temporalmente la URL para que el apiClient pueda usarla
+    const currentSettings = getSettings();
+    const tempSettings = {
+        ...currentSettings,
+        appSheetConfig: { ...currentSettings.appSheetConfig, gasWebAppUrl: url } as AppSheetConfig
+    };
+    // No persistimos aún, solo en memoria para la prueba
+    
     try {
-        const response = await fetch(url);
-        
-        if (!response.ok) {
-            throw new Error(`Google denegó el acceso. Verifique que el Excel sea PÚBLICO (Cualquier persona con el enlace - Lector).`);
-        }
-        
-        const csvText = await response.text();
-        
-        // Detección de redirección por privacidad (Excel no compartido)
-        if (csvText.includes("<!DOCTYPE html>") || csvText.includes("google-signin")) {
-            throw new Error("ACCESO DENEGADO: El Excel es PRIVADO. Cámbielo a 'Cualquier persona con el enlace' o use el método de Vínculo Privado (URL del Script).");
-        }
-
-        return new Promise((resolve, reject) => {
-            Papa.parse(csvText, {
-                header: true,
-                skipEmptyLines: true,
-                complete: (results) => {
-                    if (results.data.length === 0) return reject(new Error("La pestaña CONFIG_SISTEMA está vacía."));
-                    
-                    const master: any = results.data[0];
-                    const masterKeys = Object.keys(master);
-
-                    // Función de búsqueda ultra-flexible
-                    const findVal = (searchKeys: string[]) => {
-                        const normalizedSearch = searchKeys.map(superNormalize);
-                        const foundKey = masterKeys.find(k => normalizedSearch.includes(superNormalize(k)));
-                        return foundKey ? String(master[foundKey]).trim() : '';
-                    };
-
-                    const config: AppSheetConfig = {
-                        spreadsheetId: cleanId,
-                        appId: findVal(['APP_ID', 'APPID', 'APPLICATION_ID']),
-                        accessKey: findVal(['ACCESS_KEY', 'ACCESSKEY', 'KEY']),
-                        countsTableName: findVal(['TABLE_LOGS', 'TABLA_CONTEOS', 'CONTEOS']) || 'CONTEOS',
-                        consolidatedTableName: findVal(['TABLE_CONSOLIDADO', 'TABLA_RESUMEN', 'CONSOLIDADO']) || 'CONSOLIDADO',
-                        productsTableName: findVal(['TABLE_PRODUCTOS', 'PRODUCTOS']) || 'PRODUCTOS',
-                        receptionTableName: findVal(['TABLE_RECEPCION', 'RECEPCION']) || 'RECEPCION_BULTOS',
-                        gasWebAppUrl: findVal(['GAS_URL', 'URL_GAS', 'SCRIPT_URL', 'URL_SCRIPT'])
-                    };
-
-                    if (!config.gasWebAppUrl) {
-                        console.error("Cabeceras detectadas:", masterKeys);
-                        return reject(new Error("No se encontró la columna 'GAS_URL'. Revise que el nombre en el Excel coincida exactamente."));
-                    }
-                    
-                    resolve(config);
-                },
-                error: (err) => reject(new Error("Fallo al procesar el archivo: " + err))
-            });
+        // 2. Pedirle al script que lea la configuración desde la pestaña CONFIG_SISTEMA
+        // Usamos una llamada cruda al fetch para no depender del estado global de la app aún
+        const response = await fetch(url, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'fetch_rows', tableName: 'CONFIG_SISTEMA' }),
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
         });
-    } catch (err: any) {
-        if (err.message === "Failed to fetch") {
-            throw new Error("ERROR DE RED: Google bloqueó la conexión. Verifique los permisos de compartir del Excel.");
+
+        if (!response.ok) throw new Error("El script no respondió. Revise la implementación.");
+        
+        const res = await response.json();
+        if (!res.success || !res.rows || res.rows.length === 0) {
+            throw new Error("No se pudo leer 'CONFIG_SISTEMA'. Revise que la pestaña exista en su Excel.");
         }
-        logger.error('BOOTSTRAP_FAIL', err.message);
+
+        const master = res.rows[0];
+        const masterKeys = Object.keys(master);
+
+        const findVal = (searchKeys: string[]) => {
+            const normalizedSearch = searchKeys.map(superNormalize);
+            const foundKey = masterKeys.find(k => normalizedSearch.includes(superNormalize(k)));
+            return foundKey ? String(master[foundKey]).trim() : '';
+        };
+
+        // Construir config final
+        const config: AppSheetConfig = {
+            gasWebAppUrl: url,
+            appId: findVal(['APP_ID', 'APPLICATION_ID']),
+            accessKey: findVal(['ACCESS_KEY', 'KEY']),
+            countsTableName: findVal(['TABLE_LOGS', 'TABLA_CONTEOS', 'CONTEOS']) || 'CONTEOS',
+            consolidatedTableName: findVal(['TABLE_CONSOLIDADO', 'CONSOLIDADO']) || 'CONSOLIDADO',
+            productsTableName: findVal(['TABLE_PRODUCTOS', 'PRODUCTOS']) || 'PRODUCTOS',
+            receptionTableName: findVal(['TABLE_RECEPCION', 'RECEPCION']) || 'RECEPCION_BULTOS',
+            ordersTableName: findVal(['TABLE_PEDIDOS', 'PEDIDOS']) || 'PEDIDOS'
+        };
+
+        if (!config.appId) throw new Error("No se encontró la columna APP_ID en el Excel.");
+
+        return config;
+    } catch (err: any) {
+        logger.error('BOOTSTRAP_URL_FAIL', err.message);
         throw err;
     }
 };
@@ -128,4 +111,9 @@ export const callGas = async (action: string, payload: any, compress: boolean = 
 export const fetchFromGas = async (tableName: string): Promise<any[]> => {
     const res = await cloudApi.fetchTable(tableName);
     return res.rows || [];
+};
+
+export const bootstrapConfigById = async (id: string): Promise<AppSheetConfig> => {
+    // Mantener por compatibilidad pero desalentar su uso
+    throw new Error("Método obsoleto. Use la URL del Script para mayor seguridad.");
 };

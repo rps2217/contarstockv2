@@ -1,11 +1,13 @@
+
 import React, { useState } from 'react';
-import { FileSpreadsheet, QrCode, Share2, Camera, DownloadCloud, Check, Wifi, AlertTriangle, Terminal, Link, ShieldCheck, Globe } from 'lucide-react';
+import { Link, ShieldCheck, Check, Wifi, Terminal, AlertCircle, Loader2, QrCode, Camera, Share2 } from 'lucide-react';
 import { AppSettings } from '../../types';
 import { useCloudConfig } from '../../hooks/useCloudConfig';
 import { SettingsSection, SettingsCard, SettingsButton, SettingsInput } from './common/SettingsUI';
-import { CameraScanner } from '../CameraScanner';
-import { Modal } from '../common/Modal';
+import { bootstrapByUrl } from '../../services/gasService';
 import { useNavigate } from 'react-router-dom';
+import { Modal } from '../common/Modal';
+import { CameraScanner } from '../CameraScanner';
 
 interface Props {
     settings: AppSettings;
@@ -15,132 +17,108 @@ interface Props {
 export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
     const navigate = useNavigate();
     const { state, actions } = useCloudConfig(settings, updateSetting);
-    const { config } = state;
-    const [connectMode, setConnectMode] = useState<'id' | 'url'>('id');
+    const [scriptUrl, setScriptUrl] = useState(settings.appSheetConfig?.gasWebAppUrl || '');
+    const [isConnecting, setIsConnecting] = useState(false);
+
+    const handleAutoConfig = async () => {
+        if (!scriptUrl.includes('/exec')) {
+            alert("URL Inválida. Debe terminar en /exec");
+            return;
+        }
+        setIsConnecting(true);
+        try {
+            const fullConfig = await bootstrapByUrl(scriptUrl);
+            updateSetting('appSheetConfig', fullConfig);
+            alert("¡Configuración Exitosa! La App ya está vinculada al Excel.");
+        } catch (e: any) {
+            alert("Error: " + e.message);
+        } finally {
+            setIsConnecting(false);
+        }
+    };
 
     return (
-        <>
-            <SettingsSection title="Sincronización">
+        <div className="space-y-6 animate-in fade-in duration-500">
+            <SettingsSection title="Vínculo con Google Sheets">
                 
-                {/* 1. MODO DE VINCULACIÓN */}
-                <div className="flex bg-slate-200 dark:bg-white/5 p-1 rounded-2xl mb-4">
-                    <button 
-                        onClick={() => setConnectMode('id')}
-                        className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2 ${connectMode === 'id' ? 'bg-white dark:bg-blue-600 shadow-md text-blue-600 dark:text-white' : 'text-slate-500'}`}
-                    >
-                        <FileSpreadsheet className="w-3.5 h-3.5" /> ID de Excel
-                    </button>
-                    <button 
-                        onClick={() => setConnectMode('url')}
-                        className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2 ${connectMode === 'url' ? 'bg-white dark:bg-blue-600 shadow-md text-blue-600 dark:text-white' : 'text-slate-500'}`}
-                    >
-                        <Link className="w-3.5 h-3.5" /> URL del Script
-                    </button>
-                </div>
-
-                {connectMode === 'id' ? (
-                    <SettingsCard className="bg-indigo-600 border-indigo-800 text-white relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-8 bg-white/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
-                        <div className="relative z-10 space-y-4">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <Globe className="w-6 h-6 text-indigo-200" />
-                                    <h3 className="text-xl font-black uppercase italic tracking-tighter">Vínculo Público</h3>
+                <SettingsCard className="bg-slate-900 border-indigo-500/30 text-white relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-8 bg-indigo-500/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
+                    <div className="relative z-10 space-y-5">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="p-3 bg-indigo-600 rounded-2xl">
+                                    <ShieldCheck className="w-6 h-6 text-white" />
                                 </div>
-                                <span className="text-[8px] bg-white/20 px-2 py-1 rounded-lg font-black uppercase">Fácil</span>
-                            </div>
-                            
-                            <p className="text-[10px] text-indigo-100 font-bold leading-tight">Requiere que el Excel esté compartido como <span className="underline italic">"Cualquier persona con el enlace"</span>.</p>
-
-                            <SettingsInput 
-                                value={state.ssIdInput}
-                                onChange={(e: any) => state.setSsIdInput(e.target.value)}
-                                placeholder="Pegar ID del Excel..."
-                                className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:bg-white/20 focus:border-white"
-                            />
-                            
-                            <SettingsButton 
-                                onClick={actions.handleBootstrap}
-                                isLoading={state.isBootstrapping}
-                                disabled={!state.ssIdInput}
-                                label="Sincronizar por ID"
-                                icon={DownloadCloud}
-                                variant="primary"
-                                className="bg-white text-indigo-600 hover:bg-indigo-50"
-                            />
-                        </div>
-                    </SettingsCard>
-                ) : (
-                    <SettingsCard className="bg-slate-900 border-black text-white relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-8 bg-emerald-500/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
-                        <div className="relative z-10 space-y-4">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <ShieldCheck className="w-6 h-6 text-emerald-400" />
-                                    <h3 className="text-xl font-black uppercase italic tracking-tighter">Vínculo Privado</h3>
+                                <div>
+                                    <h3 className="text-lg font-black uppercase italic tracking-tighter leading-none">Vínculo Seguro</h3>
+                                    <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">Conexión por Script (GAS)</p>
                                 </div>
-                                <span className="text-[8px] bg-emerald-600 px-2 py-1 rounded-lg font-black uppercase">Seguro</span>
                             </div>
-
-                            <p className="text-[10px] text-slate-400 font-bold leading-tight">Use este método si su Excel es <span className="text-emerald-400 italic">PRIVADO</span>. Pegue la URL de despliegue del Script GAS.</p>
-
-                            <SettingsInput 
-                                value={config.gasWebAppUrl || ''} 
-                                onChange={(e: any) => actions.handleUrlChange(e.target.value)} 
-                                placeholder="https://script.google.com/..."
-                                className="bg-white/5 border-white/10 text-white focus:bg-white/10"
-                            />
-                            
-                            <SettingsButton 
-                                onClick={actions.handleTestConnection}
-                                isLoading={state.testStatus === 'testing'}
-                                label={state.testStatus === 'ok' ? '¡Conexión Exitosa!' : 'Probar URL de Script'}
-                                icon={state.testStatus === 'ok' ? Check : Wifi}
-                                variant={state.testStatus === 'ok' ? 'primary' : (state.testStatus === 'fail' ? 'danger' : 'dark')}
-                                className={state.testStatus === 'ok' ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-slate-800 border-white/5'}
-                            />
+                            <span className="text-[8px] bg-emerald-500 px-2 py-1 rounded-lg font-black uppercase">Recomendado</span>
                         </div>
-                    </SettingsCard>
-                )}
+
+                        <p className="text-[10px] text-slate-400 font-bold leading-tight">
+                            Pegue la URL de implementación de su Script. Esto configurará automáticamente los IDs y nombres de tablas.
+                        </p>
+
+                        <SettingsInput 
+                            value={scriptUrl}
+                            onChange={(e: any) => setScriptUrl(e.target.value)}
+                            placeholder="https://script.google.com/macros/s/.../exec"
+                            className="bg-white/5 border-white/10 text-white focus:bg-white/10 placeholder:text-slate-600"
+                        />
+                        
+                        <SettingsButton 
+                            onClick={handleAutoConfig}
+                            isLoading={isConnecting}
+                            disabled={!scriptUrl}
+                            label={isConnecting ? "Conectando..." : "Auto-Configurar App"}
+                            icon={Wifi}
+                            variant="primary"
+                            className="bg-indigo-600 border-indigo-400"
+                        />
+                    </div>
+                </SettingsCard>
 
                 {/* ACCESO DIRECTO A DIAGNÓSTICO */}
                 <div className="px-2">
                     <button 
                         onClick={() => navigate('/settings?tab=system')}
-                        className="w-full p-4 bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-200 dark:border-amber-700/30 rounded-2xl flex items-center justify-between group active:scale-95 transition-all"
+                        className="w-full p-5 bg-amber-50 dark:bg-amber-900/10 border-2 border-amber-200 dark:border-amber-700/30 rounded-[2rem] flex items-center justify-between group active:scale-95 transition-all"
                     >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-4">
                             <Terminal className="w-5 h-5 text-amber-600" />
-                            <span className="text-[10px] font-black text-amber-800 dark:text-amber-400 uppercase tracking-widest">¿Sigue fallando la conexión?</span>
+                            <div className="text-left">
+                                <span className="text-[10px] font-black text-amber-800 dark:text-amber-400 uppercase tracking-widest block">¿Problemas de conexión?</span>
+                                <span className="text-[8px] font-bold text-amber-600/60 uppercase">Ejecutar pruebas de estrés</span>
+                            </div>
                         </div>
-                        <span className="text-[9px] font-black bg-amber-200 dark:bg-amber-700 px-2 py-1 rounded-lg text-amber-900 dark:text-amber-100 uppercase tracking-tighter">Correr Diagnóstico</span>
+                        <Check className="w-4 h-4 text-amber-400" />
                     </button>
                 </div>
 
-                {/* 2. CLONACIÓN QR */}
-                <SettingsCard className="bg-slate-950 border-white/5 text-white">
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                            <QrCode className="text-blue-400 w-6 h-6" />
-                            <h3 className="text-lg font-black uppercase italic tracking-tighter">Clonación QR</h3>
-                        </div>
+                {/* CLONACIÓN RÁPIDA QR */}
+                <SettingsCard className="bg-white dark:bg-slate-950 border-slate-100 dark:border-white/5">
+                    <div className="flex items-center gap-3 mb-6">
+                        <QrCode className="text-blue-500 w-6 h-6" />
+                        <h3 className="text-lg font-black uppercase italic tracking-tighter dark:text-white">Clonación QR</h3>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-3">
-                        <SettingsButton 
+                        <button 
                             onClick={() => state.setShowQRModal(true)}
-                            label="Mostrar QR"
-                            icon={Share2}
-                            variant="outline"
-                            className="bg-white/10 border-white/5 text-white hover:bg-white/20"
-                        />
-                        <SettingsButton 
+                            className="flex flex-col items-center justify-center p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border-2 border-transparent hover:border-blue-500 transition-all gap-2"
+                        >
+                            <Share2 className="w-5 h-5 text-slate-400" />
+                            <span className="text-[9px] font-black uppercase text-slate-500">Enviar Config</span>
+                        </button>
+                        <button 
                             onClick={() => state.setIsScanningQR(true)}
-                            label="Leer QR"
-                            icon={Camera}
-                            variant="outline"
-                            className="bg-white/10 border-white/5 text-emerald-400 hover:bg-white/20"
-                        />
+                            className="flex flex-col items-center justify-center p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border-2 border-transparent hover:border-emerald-500 transition-all gap-2"
+                        >
+                            <Camera className="w-5 h-5 text-slate-400" />
+                            <span className="text-[9px] font-black uppercase text-slate-500">Recibir Config</span>
+                        </button>
                     </div>
                 </SettingsCard>
 
@@ -152,15 +130,17 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
                     <div className="bg-white p-4 rounded-3xl shadow-inner border border-slate-100 mb-6">
                         <img src={actions.generateConfigQR()} alt="Config QR" className="w-64 h-64 mix-blend-multiply" />
                     </div>
-                    <p className="text-xs text-slate-500 font-bold mb-6 max-w-xs">Escanea esto con otro dispositivo LogiCount para copiar las llaves de acceso instantáneamente.</p>
+                    <p className="text-xs text-slate-500 font-bold mb-6 max-w-xs uppercase leading-tight">Escanea este código desde otro dispositivo para copiar toda la configuración al instante.</p>
                     <SettingsButton onClick={() => state.setShowQRModal(false)} label="Cerrar" variant="dark" />
                 </div>
             </Modal>
 
-            {/* FIX: Uso de state.isScanningQR para evitar error de variable no definida */}
             {state.isScanningQR && (
-                <CameraScanner isTriggered={true} onScan={actions.handleQRScanSuccess} onClose={() => state.setIsScanningQR(false)} />
+                <CameraScanner 
+                    onScan={actions.handleQRScanSuccess} 
+                    onClose={() => state.setIsScanningQR(false)} 
+                />
             )}
-        </>
+        </div>
     );
 };
