@@ -8,14 +8,14 @@ export interface Product {
   price?: number;
   syncStatus?: 'synced' | 'add' | 'edit';
   unitsPerBox?: number;
-  embedding?: number[]; // Almacena la firma semántica del nombre
+  embedding?: number[]; 
 }
 
 export interface ExpectedItem {
   barcode: string;
   name: string;
   expectedQty: number;
-  embedding?: number[]; // Firma semántica para bultos ciegos
+  embedding?: number[]; 
 }
 
 export interface ExpectedOrder {
@@ -41,13 +41,13 @@ export interface AliasSuggestion {
   expectedBarcode: string;
   expectedName: string;
   quantity: number;
-  confidence: number; // Porcentaje de similitud semántica
+  confidence: number; 
 }
 
 export interface MatchResult {
   expectedOrder: ExpectedOrder;
   matchScore: number;
-  semanticAffinities: number; // Cuántos items se unieron por significado
+  semanticAffinities: number; 
   status: 'exact' | 'partial' | 'mismatch';
   details: {
     barcode: string;
@@ -144,4 +144,5 @@ export interface AppSheetConfig {
   receptionTableName?: string;
   ordersTableName?: string; 
   gasWebAppUrl?: string; 
+  spreadsheetId?: string; // ID único del Excel para evitar el error de "Spreadsheet activo"
 }

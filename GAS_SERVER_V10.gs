@@ -1,20 +1,26 @@
 
 /**
- * LOGICOUNT PRO - CLOUD ENGINE V12.1 (DEBUG & ROBUSTNESS)
+ * LOGICOUNT PRO - CLOUD ENGINE V12.5 (HYBRID CONTEXT)
  */
 
-const SPREADSHEET_ID = ""; // Dejar vacío para usar el Excel donde se despliega el script
+const DEFAULT_SPREADSHEET_ID = ""; // Se puede dejar vacío si se envía desde la App
 
-function getSpreadsheet() {
+function getSpreadsheet(requestSpreadsheetId) {
   try {
-    if (SPREADSHEET_ID && SPREADSHEET_ID !== "") {
-      return SpreadsheetApp.openById(SPREADSHEET_ID);
+    // 1. Prioridad: ID enviado desde la App (Máxima flexibilidad)
+    if (requestSpreadsheetId && requestSpreadsheetId !== "") {
+      return SpreadsheetApp.openById(requestSpreadsheetId);
     }
+    // 2. Segunda prioridad: ID hardcodeado en el script (Configuración fija)
+    if (DEFAULT_SPREADSHEET_ID && DEFAULT_SPREADSHEET_ID !== "") {
+      return SpreadsheetApp.openById(DEFAULT_SPREADSHEET_ID);
+    }
+    // 3. Último recurso: Script vinculado (Container-bound)
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    if (!ss) throw new Error("No se pudo obtener el Spreadsheet activo. Verifique que el script esté vinculado a un Excel o proporcione un ID.");
+    if (!ss) throw new Error("No se detectó ID de Excel. Asegúrese de pasar spreadsheetId en el JSON o vincular el script a una hoja.");
     return ss;
   } catch (e) {
-    throw new Error("ERROR AL ABRIR EXCEL: " + e.toString());
+    throw new Error("FALLO CRÍTICO AL ABRIR EXCEL: " + e.toString());
   }
 }
 
@@ -26,14 +32,15 @@ function doPost(e) {
     return createJsonResponse({success: false, error: "Servidor ocupado. Intente en unos segundos."});
   }
 
-  let response = { success: false, error: "Error desconocido" };
+  let response = { success: false, error: "Error de ejecución" };
   
   try {
     const postContent = e.postData.contents;
-    if (!postContent) throw new Error("Cuerpo del POST vacío");
+    if (!postContent) throw new Error("Request body is empty");
     
     const requestData = JSON.parse(postContent);
     const action = requestData.action;
+    const spreadsheetId = requestData.spreadsheetId; // Capturamos el ID del contexto
     let rows = requestData.rows;
 
     // Descompresión si viene de la PWA
@@ -46,21 +53,23 @@ function doPost(e) {
       }
     }
 
+    const ss = getSpreadsheet(spreadsheetId);
+
     switch (action) {
       case 'append_rows':
-        response = appendRows(requestData.tableName, rows);
+        response = appendRows(ss, requestData.tableName, rows);
         break;
       case 'upsert_products':
-        response = upsertProducts(requestData.tableName, rows);
+        response = upsertProducts(ss, requestData.tableName, rows);
         break;
       case 'fetch_rows':
-        response = fetchRows(requestData.tableName, requestData.since);
+        response = fetchRows(ss, requestData.tableName, requestData.since);
         break;
       case 'ping':
-        response = { success: true, message: "Conectado OK - v12.1" };
+        response = { success: true, message: "Conectado a: " + ss.getName() + " (v12.5)" };
         break;
       default:
-        throw new Error("Acción '" + action + "' no soportada.");
+        throw new Error("Acción '" + action + "' no reconocida.");
     }
   } catch (err) {
     response.success = false;
@@ -77,17 +86,16 @@ function createJsonResponse(data) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-function fetchRows(tableName, sinceTimestamp) {
+function fetchRows(ss, tableName, sinceTimestamp) {
   try {
-    const ss = getSpreadsheet();
     const sheet = ss.getSheetByName(tableName);
     if (!sheet) {
-      return { success: false, error: "La pestaña '" + tableName + "' no existe en el Excel." };
+      return { success: false, error: "La pestaña '" + tableName + "' no existe en el archivo " + ss.getName() };
     }
 
     const dataRange = sheet.getDataRange();
     if (dataRange.getNumRows() < 2) {
-      return { success: true, rows: [], message: "La hoja está vacía (solo cabeceras o nada)" };
+      return { success: true, rows: [], message: "Hoja vacía" };
     }
 
     const values = dataRange.getValues();
@@ -111,8 +119,7 @@ function fetchRows(tableName, sinceTimestamp) {
   }
 }
 
-function upsertProducts(tableName, rows) {
-  const ss = getSpreadsheet();
+function upsertProducts(ss, tableName, rows) {
   let sheet = ss.getSheetByName(tableName || "PRODUCTOS");
   if (!sheet) sheet = ss.insertSheet(tableName || "PRODUCTOS");
 
@@ -120,7 +127,7 @@ function upsertProducts(tableName, rows) {
   const headers = data[0].map(h => String(h).trim().toUpperCase());
   
   const skuIdx = headers.findIndex(h => h.includes("COD") || h.includes("SKU") || h.includes("BARRAS"));
-  if (skuIdx === -1) throw new Error("No se encontró columna de identidad (SKU) en " + tableName);
+  if (skuIdx === -1) throw new Error("Falta columna SKU en " + tableName);
 
   const skuMap = {};
   for (let i = 1; i < data.length; i++) {
@@ -152,8 +159,7 @@ function upsertProducts(tableName, rows) {
   return { success: true, updated, added, total: rows.length };
 }
 
-function appendRows(tableName, rows) {
-  const ss = getSpreadsheet();
+function appendRows(ss, tableName, rows) {
   let sheet = ss.getSheetByName(tableName);
   if (!sheet) sheet = ss.insertSheet(tableName);
   const headers = sheet.getRange(1, 1, 1, Math.max(1, sheet.getLastColumn())).getValues()[0];
