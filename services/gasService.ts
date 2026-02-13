@@ -6,8 +6,8 @@ import Papa from 'papaparse';
 import { cloudApi } from './cloud/apiClient';
 
 /**
- * Descarga la configuración inicial usando solo el ID del Excel.
- * No requiere GAS_URL previa.
+ * Descarga la configuración inicial usando el ID del Excel.
+ * Optimizado para evitar errores de CORS y permisos.
  */
 export const bootstrapConfigById = async (spreadsheetId: string): Promise<AppSheetConfig> => {
     const idMatch = spreadsheetId.match(/\/d\/([a-zA-Z0-9-_]+)/);
@@ -15,14 +15,26 @@ export const bootstrapConfigById = async (spreadsheetId: string): Promise<AppShe
 
     if (!cleanId || cleanId.length < 10) throw new Error("ID de Excel no válido");
 
-    const url = `https://docs.google.com/spreadsheets/d/${cleanId}/gviz/tq?tqx=out:csv&sheet=CONFIG_SISTEMA`;
+    // Intentamos con el endpoint de exportación directa que es más permisivo que gviz
+    const url = `https://docs.google.com/spreadsheets/d/${cleanId}/export?format=csv&sheet=CONFIG_SISTEMA`;
 
     try {
         const response = await fetch(url);
-        if (!response.ok) throw new Error("No se pudo acceder al Excel. Verifique que 'Cualquier persona con el enlace' pueda leer.");
+        
+        if (!response.ok) {
+            if (response.status === 404) {
+                throw new Error("No se encontró la pestaña 'CONFIG_SISTEMA'. Verifique el nombre en su Excel.");
+            }
+            throw new Error(`Error Google (${response.status}). Verifique que el Excel sea PÚBLICO (Cualquier persona con el enlace).`);
+        }
         
         const csvText = await response.text();
         
+        // Si el texto devuelto es HTML, es porque Google redirigió al login (Excel Privado)
+        if (csvText.includes("<!DOCTYPE html>") || csvText.includes("google-signin")) {
+            throw new Error("ACCESO DENEGADO: El Excel es PRIVADO. Cámbielo a 'Cualquier persona con el enlace'.");
+        }
+
         return new Promise((resolve, reject) => {
             Papa.parse(csvText, {
                 header: true,
@@ -37,6 +49,7 @@ export const bootstrapConfigById = async (spreadsheetId: string): Promise<AppShe
                     };
 
                     const config: AppSheetConfig = {
+                        spreadsheetId: cleanId,
                         appId: findVal(['APP_ID', 'APPID', 'APPLICATION_ID']),
                         accessKey: findVal(['ACCESS_KEY', 'ACCESSKEY', 'KEY']),
                         countsTableName: findVal(['TABLE_LOGS', 'TABLA_CONTEOS', 'CONTEOS']) || 'CONTEOS',
@@ -46,22 +59,23 @@ export const bootstrapConfigById = async (spreadsheetId: string): Promise<AppShe
                         gasWebAppUrl: findVal(['GAS_URL', 'URL_GAS', 'SCRIPT_URL'])
                     };
 
-                    if (!config.gasWebAppUrl) return reject(new Error("No se encontró la URL de Google Script en el Excel."));
+                    if (!config.gasWebAppUrl) return reject(new Error("No se encontró la celda 'GAS_URL' en el Excel."));
                     
                     resolve(config);
                 },
-                error: (err) => reject(err)
+                error: (err) => reject(new Error("Fallo al procesar CSV: " + err))
             });
         });
     } catch (err: any) {
+        // Captura del error genérico 'Failed to fetch' para dar contexto al usuario
+        if (err.message === "Failed to fetch") {
+            throw new Error("ERROR DE RED: No hay conexión o Google Sheets bloqueó la petición (verifique permisos de compartir).");
+        }
         logger.error('BOOTSTRAP_FAIL', err.message);
         throw err;
     }
 };
 
-/**
- * FETCH CONFIG DESDE GAS (Para refresco automático)
- */
 export const fetchSystemConfig = async (): Promise<Partial<AppSheetConfig>> => {
     const config = getSettings().appSheetConfig;
     if (!config?.gasWebAppUrl) throw new Error("GAS URL no configurada");

@@ -52,7 +52,7 @@ export const Settings: React.FC = () => {
       { id: 'printer', label: 'Hardware', icon: Printer, color: 'text-blue-500' },
       { id: 'nav', label: 'Interfaz', icon: LayoutTemplate, color: 'text-indigo-500' },
       { id: 'cloud', label: 'Nube', icon: Cloud, color: 'text-sky-400' },
-      { id: 'system', label: 'Kernel', icon: ShieldCheck, color: 'text-emerald-500' },
+      { id: 'system', label: 'Soporte', icon: ShieldCheck, color: 'text-emerald-500' },
   ];
 
   return (
