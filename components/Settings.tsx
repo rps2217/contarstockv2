@@ -1,10 +1,10 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
     Settings as SettingsIcon, ArrowLeft, Share2, Palette, Cloud, 
     Zap, LayoutTemplate, ShieldCheck, Printer, Check, Info
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppStore } from '../store/useAppStore';
 
 // Módulos
@@ -19,9 +19,19 @@ type TabId = 'general' | 'theme' | 'printer' | 'cloud' | 'nav' | 'system';
 
 export const Settings: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { settings, updateSetting } = useAppStore(); 
   const [activeTab, setActiveTab] = useState<TabId>('general');
   const [copied, setCopied] = useState(false);
+
+  // Deep linking logic
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get('tab') as TabId;
+    if (tabParam && ['general', 'theme', 'printer', 'cloud', 'nav', 'system'].includes(tabParam)) {
+        setActiveTab(tabParam);
+    }
+  }, [location]);
 
   const handleShare = async () => {
       const data = { title: 'LogiCount Pro', url: window.location.href };
@@ -53,7 +63,7 @@ export const Settings: React.FC = () => {
         <div className="flex items-center justify-between mb-8 px-6">
             <div className="flex items-center gap-5">
                 <button 
-                    onClick={() => navigate(-1)} 
+                    onClick={() => navigate('/dashboard')} 
                     className="w-14 h-14 bg-slate-100 dark:bg-white/5 border-2 border-slate-200 dark:border-white/10 rounded-2xl text-black dark:text-white active:scale-90 transition-all flex items-center justify-center"
                 >
                     <ArrowLeft className="w-7 h-7 stroke-[3px]" />
@@ -74,13 +84,14 @@ export const Settings: React.FC = () => {
             </button>
         </div>
 
-        {/* NAVEGACIÓN TACTIL (CHIPS) */}
+        {/* NAVEGACIÓN TACTIL (CHIPS) - Deslizable horizontalmente */}
         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 px-6 mask-fade-right">
             {tabs.map(tab => {
                 const isActive = activeTab === tab.id;
                 return (
                     <button
                         key={tab.id}
+                        id={`tab-btn-${tab.id}`}
                         onClick={() => {
                             if (navigator.vibrate) navigator.vibrate(10);
                             setActiveTab(tab.id);

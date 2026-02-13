@@ -1,16 +1,22 @@
 
 import React, { useState, useEffect } from 'react';
-import { ScanLine, Radio, Zap, History, Database, Settings, UserCircle, Activity, Gauge } from 'lucide-react';
+import { ScanLine, Radio, Zap, History, Database, Settings, UserCircle, Activity, ShieldAlert, Terminal } from 'lucide-react';
 import { useDashboard } from '../hooks/useDashboard';
 import { IndustrialButton } from './common/IndustrialButton';
 import { db } from '../db';
+import { getSettings } from '../services/settings';
 
 const Dashboard: React.FC = () => {
   const { stats, operatorId, isSyncNeeded, handleEnterMartillo, navigate } = useDashboard();
   const [ipm, setIpm] = useState(0);
+  const [hasConfigError, setHasConfigError] = useState(false);
 
-  // Lógica de cálculo de IPM (Items Per Minute) en tiempo real
   useEffect(() => {
+    const config = getSettings().appSheetConfig;
+    if (!config?.spreadsheetId || !config?.gasWebAppUrl) {
+        setHasConfigError(true);
+    }
+    
     const calcIpm = async () => {
         const fiveMinsAgo = Date.now() - (5 * 60 * 1000);
         const recentScans = await db.scans.where('timestamp').above(fiveMinsAgo).toArray();
@@ -66,6 +72,20 @@ const Dashboard: React.FC = () => {
             </div>
         </div>
 
+        {/* ALERTA DE CONFIGURACIÓN */}
+        {hasConfigError && (
+            <button 
+                onClick={() => navigate('/settings?tab=cloud')}
+                className="w-full p-6 bg-rose-900/20 border-4 border-rose-500/30 rounded-[2rem] flex items-center gap-5 animate-pulse"
+            >
+                <ShieldAlert className="w-8 h-8 text-rose-500" />
+                <div className="text-left">
+                    <div className="text-xs font-black text-rose-500 uppercase tracking-widest">Sistema Incompleto</div>
+                    <p className="text-[10px] text-rose-400 font-bold uppercase">Falta configurar el vínculo con Google Sheets</p>
+                </div>
+            </button>
+        )}
+
         {/* ACCIONES PRINCIPALES */}
         <div className="grid grid-cols-1 gap-4">
             <button 
@@ -111,12 +131,14 @@ const Dashboard: React.FC = () => {
                 <Radio className="w-6 h-6 text-white" />
                 <span className="text-[9px] font-black uppercase tracking-widest text-white">Sincronizar</span>
             </button>
+            
+            {/* BOTÓN DIAGNÓSTICO EN DASHBOARD */}
             <button 
-                onClick={() => navigate('/reports')} 
-                className="h-28 bg-slate-900 border-4 border-white/5 rounded-[2rem] flex flex-col items-center justify-center gap-2 opacity-60 hover:opacity-100 transition-all"
+                onClick={() => navigate('/settings?tab=system')} 
+                className="h-28 bg-slate-900 border-4 border-white/5 rounded-[2rem] flex flex-col items-center justify-center gap-2 opacity-60 hover:opacity-100 transition-all group"
             >
-                <History className="w-6 h-6 text-white" />
-                <span className="text-[9px] font-black uppercase tracking-widest text-white">Historial</span>
+                <Terminal className="w-6 h-6 text-emerald-500 group-hover:scale-110 transition-transform" />
+                <span className="text-[9px] font-black uppercase tracking-widest text-white">Diagnóstico</span>
             </button>
         </div>
 

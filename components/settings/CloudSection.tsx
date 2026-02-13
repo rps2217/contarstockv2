@@ -1,11 +1,11 @@
-
 import React from 'react';
-import { FileSpreadsheet, QrCode, Share2, Camera, DownloadCloud, Check, Wifi, AlertTriangle } from 'lucide-react';
+import { FileSpreadsheet, QrCode, Share2, Camera, DownloadCloud, Check, Wifi, AlertTriangle, Terminal } from 'lucide-react';
 import { AppSettings } from '../../types';
 import { useCloudConfig } from '../../hooks/useCloudConfig';
 import { SettingsSection, SettingsCard, SettingsButton, SettingsInput } from './common/SettingsUI';
 import { CameraScanner } from '../CameraScanner';
 import { Modal } from '../common/Modal';
+import { useNavigate } from 'react-router-dom';
 
 interface Props {
     settings: AppSettings;
@@ -13,6 +13,7 @@ interface Props {
 }
 
 export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
+    const navigate = useNavigate();
     const { state, actions } = useCloudConfig(settings, updateSetting);
     const { config } = state;
 
@@ -48,6 +49,20 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
                     </div>
                 </SettingsCard>
 
+                {/* ACCESO DIRECTO A DIAGNÓSTICO */}
+                <div className="px-2">
+                    <button 
+                        onClick={() => navigate('/settings?tab=system')}
+                        className="w-full p-4 bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-200 dark:border-amber-700/30 rounded-2xl flex items-center justify-between group active:scale-95 transition-all"
+                    >
+                        <div className="flex items-center gap-3">
+                            <Terminal className="w-5 h-5 text-amber-600" />
+                            <span className="text-[10px] font-black text-amber-800 dark:text-amber-400 uppercase tracking-widest">¿Error al abrir Excel?</span>
+                        </div>
+                        <span className="text-[9px] font-black bg-amber-200 dark:bg-amber-700 px-2 py-1 rounded-lg text-amber-900 dark:text-amber-100 uppercase tracking-tighter">Abrir Diagnóstico</span>
+                    </button>
+                </div>
+
                 {/* 2. CLONACIÓN QR */}
                 <SettingsCard className="bg-slate-900 border-black text-white">
                     <div className="flex items-center justify-between mb-4">
@@ -76,7 +91,7 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
                     </div>
                 </SettingsCard>
 
-                {/* 3. DIAGNÓSTICO */}
+                {/* 3. DIAGNÓSTICO RÁPIDO URL */}
                 <SettingsCard>
                     <div className="flex justify-between items-center mb-6">
                         <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Endpoint API</h3>
@@ -114,6 +129,7 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
                 </div>
             </Modal>
 
+            {/* Fix: Access isScanningQR from the state object returned by the hook */}
             {state.isScanningQR && (
                 <CameraScanner isTriggered={true} onScan={actions.handleQRScanSuccess} onClose={() => state.setIsScanningQR(false)} />
             )}

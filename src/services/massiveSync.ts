@@ -62,25 +62,28 @@ export const migrateMassiveToMaster = async (batchId: string): Promise<string> =
 };
 
 /**
- * DESCARGA DE MANIFIESTO DE STOCK (PRUEBA DE FUNCIONAMIENTO)
+ * DESCARGA DE MANIFIESTO DE STOCK
  */
 export const importManifestFromCloud = async (batchId: string): Promise<number> => {
     try {
         logger.info('CLOUD_MANIFEST', `Solicitando descarga de STOCK para lote: ${batchId}`);
         
-        // Llamada a la nube
         const rawRows = await fetchFromGas('STOCK');
         
         if (!rawRows || !Array.isArray(rawRows)) {
-            throw new Error("El servidor devolvió un formato inválido o vacío.");
+            throw new Error("El servidor devolvió un formato inválido o la hoja STOCK está vacía.");
         }
 
         const itemsToSave = rawRows
             .map((row, idx) => {
                 const parsed = CloudStockSchema.safeParse(row);
                 if (!parsed.success) {
-                    // Log del primer error para diagnóstico
-                    if (idx === 0) console.warn("[StockParse] Error Fila 2:", parsed.error.format());
+                    // Si la fila 2 (la primera con datos) falla, es probable que las cabeceras estén mal.
+                    if (idx === 0) {
+                        const errorMsg = parsed.error.errors.map(e => e.path.join('.')).join(', ');
+                        console.error("[StockParse] Columnas detectadas:", Object.keys(row));
+                        throw new Error(`Columnas no coinciden en fila 2. Se esperaba: CODIGO, PRODUCTO, STOCK FINAL. Error en: ${errorMsg}`);
+                    }
                     return null;
                 }
                 return parsed.data;
@@ -95,16 +98,15 @@ export const importManifestFromCloud = async (batchId: string): Promise<number> 
             }));
 
         if (itemsToSave.length === 0) {
-            throw new Error("No se encontraron registros válidos. Verifique que las columnas existan: CODIGO, PRODUCTO, STOCK FINAL.");
+            throw new Error("No se encontraron registros con Stock mayor a 0 en el Excel.");
         }
 
-        // Transacción Atómica: Limpiar anterior y guardar nuevo
         await massiveDb.transaction('rw', massiveDb.blindManifests, async () => {
             await massiveDb.blindManifests.where('batchId').equals(batchId).delete();
             await massiveDb.blindManifests.bulkAdd(itemsToSave);
         });
 
-        logger.success('CLOUD_MANIFEST', `Descarga exitosa: ${itemsToSave.length} metas de stock instaladas.`);
+        logger.success('CLOUD_MANIFEST', `Descarga exitosa: ${itemsToSave.length} metas instaladas.`);
         return itemsToSave.length;
 
     } catch (e: any) {
