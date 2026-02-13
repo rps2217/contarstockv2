@@ -60,20 +60,34 @@ export const migrateMassiveToMaster = async (batchId: string): Promise<string> =
     }
 };
 
+/**
+ * DESCARGA DE MANIFIESTO DE STOCK
+ */
 export const importManifestFromCloud = async (batchId: string): Promise<number> => {
     try {
+        logger.info('CLOUD_MANIFEST', `Solicitando descarga de STOCK para lote: ${batchId}`);
+        
         const rawRows = await fetchFromGas('STOCK');
         
-        if (!rawRows || rawRows.length === 0) {
-            throw new Error("La hoja STOCK está vacía o no tiene registros válidos.");
+        if (!rawRows || !Array.isArray(rawRows)) {
+            throw new Error("El servidor devolvió un formato inválido o la hoja STOCK está vacía.");
         }
 
-        const newManifestItems = rawRows
-            .map(row => {
-                const result = CloudStockSchema.safeParse(row);
-                return result.success ? result.data : null;
+        const itemsToSave = rawRows
+            .map((row, idx) => {
+                const parsed = CloudStockSchema.safeParse(row);
+                if (!parsed.success) {
+                    // Si la fila 2 (la primera con datos) falla, es probable que las cabeceras estén mal.
+                    if (idx === 0) {
+                        const errorMsg = parsed.error.errors.map(e => e.path.join('.')).join(', ');
+                        console.error("[StockParse] Columnas detectadas:", Object.keys(row));
+                        throw new Error(`Columnas no coinciden en fila 2. Se esperaba: CODIGO, PRODUCTO, STOCK FINAL. Error en: ${errorMsg}`);
+                    }
+                    return null;
+                }
+                return parsed.data;
             })
-            .filter((item): item is NonNullable<typeof item> => item !== null && item.expectedQty > 0)
+            .filter((i): i is NonNullable<typeof i> => i !== null && i.expectedQty > 0)
             .map(item => ({
                 batchId,
                 barcode: sanitizeBarcode(item.barcode),
@@ -82,22 +96,21 @@ export const importManifestFromCloud = async (batchId: string): Promise<number> 
                 loc: item.loc
             }));
 
-        if (newManifestItems.length === 0) {
-            throw new Error("Las columnas del Excel no coinciden con: CODIGO, PRODUCTO, STOCK FINAL.");
+        if (itemsToSave.length === 0) {
+            throw new Error("No se encontraron registros con Stock mayor a 0 en el Excel.");
         }
 
+        // FIX: Cast massiveDb to any to bypass transaction type detection error
         await (massiveDb as any).transaction('rw', massiveDb.blindManifests, async () => {
             await massiveDb.blindManifests.where('batchId').equals(batchId).delete();
-            await massiveDb.blindManifests.bulkAdd(newManifestItems);
+            await massiveDb.blindManifests.bulkAdd(itemsToSave);
         });
 
-        logger.success('CLOUD_MANIFEST', `Descargados ${newManifestItems.length} items.`);
-        return newManifestItems.length;
+        logger.success('CLOUD_MANIFEST', `Descarga exitosa: ${itemsToSave.length} metas instaladas.`);
+        return itemsToSave.length;
 
     } catch (e: any) {
-        // Mostramos el error real que viene del servidor
-        const errorMsg = e.message.includes('vinculo') ? 'Error de vínculo con Google Sheets' : e.message;
-        logger.error('CLOUD_MANIFEST_FAIL', errorMsg);
-        throw new Error(errorMsg);
+        logger.error('CLOUD_MANIFEST_FAIL', e.message);
+        throw e;
     }
 };
