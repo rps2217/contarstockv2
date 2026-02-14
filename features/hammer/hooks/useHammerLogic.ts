@@ -32,7 +32,6 @@ export const useHammerLogic = (batchId: string) => {
 
     useEffect(() => { localStorage.setItem('hammer_loc', currentLocation); }, [currentLocation]);
 
-    // Live Query optimizado para resolución de identidad de producto inmediata
     const dbItems = useLiveQuery(async () => {
         if (!batchId) return [];
         const [rawScans, manifests] = await Promise.all([
@@ -41,14 +40,11 @@ export const useHammerLogic = (batchId: string) => {
         ]);
         
         const uniqueBarcodes = Array.from(new Set([...rawScans.map(s => s.barcode), ...manifests.map(m => m.barcode)]));
-        
-        // Búsqueda masiva en Catálogo Maestro para identificar productos reales
-        const products = await masterDb.products.where('barcode').anyOf(uniqueBarcodes).toArray();
+        const products = uniqueBarcodes.length > 0 ? await masterDb.products.where('barcode').anyOf(uniqueBarcodes).toArray() : [];
         const prodMap = new Map<string, Product>(products.map(p => [p.barcode, p]));
         
         const aggregation = new Map<string, HammerItem>();
 
-        // 1. Integrar metas del manifiesto
         manifests.forEach(m => {
             const pInfo = prodMap.get(m.barcode);
             aggregation.set(m.barcode, {
@@ -62,7 +58,6 @@ export const useHammerLogic = (batchId: string) => {
             });
         });
 
-        // 2. Sumar escaneos físicos con resolución de nombre dinámica
         rawScans.forEach(s => {
             const existing = aggregation.get(s.barcode);
             const pInfo = prodMap.get(s.barcode);
@@ -70,7 +65,6 @@ export const useHammerLogic = (batchId: string) => {
                 existing.totalQuantity += s.quantity;
                 existing.lastTimestamp = Math.max(existing.lastTimestamp, s.timestamp);
                 if (s.location) existing.loc = s.location;
-                // Si antes era desconocido y ahora lo encontramos en catálogo, actualizamos
                 if (existing.name === 'SKU_DESCONOCIDO' && pInfo) existing.name = pInfo.name;
             } else {
                 aggregation.set(s.barcode, {
@@ -93,7 +87,6 @@ export const useHammerLogic = (batchId: string) => {
         return sorted;
     }, [batchId, activeBarcode, feedback]);
 
-    // Motor de persistencia en ráfaga (0.5s)
     useEffect(() => {
         const flush = async () => {
             if (writeQueue.current.length === 0) return;
@@ -113,11 +106,17 @@ export const useHammerLogic = (batchId: string) => {
 
     const removeItem = useCallback(async (barcode: string) => {
         if (barcode === 'ALL') {
-            await massiveDb.blindScans.where('batchId').equals(batchId).delete();
+            // LIMPIEZA PROFUNDA: Borra picks y también el manifiesto bajado del Excel
+            await Promise.all([
+                massiveDb.blindScans.where('batchId').equals(batchId).delete(),
+                massiveDb.blindManifests.where('batchId').equals(batchId).delete()
+            ]);
             setActiveBarcode(null);
             setOptimisticQty(null);
+            SoundFX.play('delete');
         } else {
-            await massiveDb.blindScans.where({ batchId, barcode }).delete();
+            // Borrado por SKU usando el nuevo índice compuesto de la v8
+            await massiveDb.blindScans.where('[batchId+barcode]').equals([batchId, barcode]).delete();
             if (activeBarcode === barcode) {
                 setActiveBarcode(null);
                 setOptimisticQty(null);
@@ -131,8 +130,6 @@ export const useHammerLogic = (batchId: string) => {
         if (!clean) return;
         
         const qtyToApply = qtyOverride ?? multiplier;
-        
-        // PROTECCIÓN PDA: Impedir que la lógica optimista baje de cero
         const existingItem = itemsCache.current.find(i => i.barcode === clean);
         const currentQty = existingItem?.totalQuantity || 0;
         
@@ -144,7 +141,6 @@ export const useHammerLogic = (batchId: string) => {
         trigger(qtyToApply > 0 ? 'success' : 'undo');
         setActiveBarcode(clean);
         
-        // Resolución rápida de producto para el HUD
         masterDb.products.get(clean).then(p => {
             if (p) setActiveProduct(p);
         });

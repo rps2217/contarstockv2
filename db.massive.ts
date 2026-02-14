@@ -1,3 +1,4 @@
+
 import { Dexie, type Table } from 'dexie';
 
 export interface BlindScan {
@@ -24,9 +25,9 @@ export class MassiveBlindDB extends Dexie {
 
   constructor() {
     super('MassiveBlindDB');
-    // Incrementado a v7 para asegurar consistencia
-    (this as any).version(7).stores({
-      blindScans: '++id, batchId, barcode, location, timestamp',
+    // Version 8: Añadido índice compuesto [batchId+barcode] para blindScans
+    (this as any).version(8).stores({
+      blindScans: '++id, batchId, barcode, location, timestamp, [batchId+barcode]',
       blindManifests: '++id, batchId, barcode, loc, [batchId+barcode]'
     });
   }

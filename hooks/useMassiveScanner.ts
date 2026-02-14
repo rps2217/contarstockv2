@@ -6,6 +6,7 @@ import { sanitizeBarcode } from '../services/utils';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useFeedbackSystem } from './useFeedbackSystem';
 import { Product } from '../types';
+import { SoundFX } from '../services/audio';
 
 export interface ConsolidatedBlindItem {
     barcode: string;
@@ -31,11 +32,13 @@ export const useMassiveScanner = (batchId: string) => {
 
     const dbItems = useLiveQuery(async () => {
         if (!batchId) return [];
-        const rawScans = await massiveDb.blindScans.where('batchId').equals(batchId).toArray();
-        const manifests = await massiveDb.blindManifests.where('batchId').equals(batchId).toArray();
+        const [rawScans, manifests] = await Promise.all([
+            massiveDb.blindScans.where('batchId').equals(batchId).toArray(),
+            massiveDb.blindManifests.where('batchId').equals(batchId).toArray()
+        ]);
         
         const uniqueBarcodes = Array.from(new Set([...rawScans.map(s => s.barcode), ...manifests.map(m => m.barcode)]));
-        const products = await masterDb.products.where('barcode').anyOf(uniqueBarcodes).toArray();
+        const products = uniqueBarcodes.length > 0 ? await masterDb.products.where('barcode').anyOf(uniqueBarcodes).toArray() : [];
         const prodMap = new Map<string, Product>(products.map(p => [p.barcode, p]));
         
         const aggregation = new Map<string, ConsolidatedBlindItem>();
@@ -120,12 +123,17 @@ export const useMassiveScanner = (batchId: string) => {
 
     const removeItem = useCallback(async (barcode: string) => {
         if (barcode === 'ALL') {
-            if (!confirm("¿Vaciar todos los registros de este lote?")) return;
-            await massiveDb.blindScans.where('batchId').equals(batchId).delete();
+            if (!confirm("¿VACIAR TODO? Se borrarán los conteos físicos y las metas del Excel.")) return;
+            // Borrado profundo para dejar la lista vacía
+            await Promise.all([
+                massiveDb.blindScans.where('batchId').equals(batchId).delete(),
+                massiveDb.blindManifests.where('batchId').equals(batchId).delete()
+            ]);
             setActiveBarcode(null);
             setOptimisticQty(null);
+            SoundFX.play('delete');
         } else {
-            await massiveDb.blindScans.where({ batchId, barcode }).delete();
+            await massiveDb.blindScans.where('[batchId+barcode]').equals([batchId, barcode]).delete();
             if (activeBarcode === barcode) {
                 setActiveBarcode(null);
                 setOptimisticQty(null);
