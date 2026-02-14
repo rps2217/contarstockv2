@@ -21,12 +21,14 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose, i
     const requestRef = useRef<number | undefined>(undefined);
     
     const lastScanTime = useRef(0);
-    const triggerRef = useRef(isTriggered);
+    // Si no es inline (ej: modal QR), forzamos trigger true para que se vea la cámara
+    const effectiveTrigger = inline ? isTriggered : true;
+    const triggerRef = useRef(effectiveTrigger);
     const isComponentMounted = useRef(true);
 
     const SCANNER_DOM_ID = "v8-core-optical-engine";
 
-    useEffect(() => { triggerRef.current = isTriggered; }, [isTriggered]);
+    useEffect(() => { triggerRef.current = effectiveTrigger; }, [effectiveTrigger]);
 
     const startNativeEngine = async () => {
         try {
@@ -84,15 +86,13 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose, i
     const handleSuccessfulScan = (code: string) => {
         if (!isComponentMounted.current) return;
         const now = Date.now();
-        // Reducido a 800ms para ráfaga martillo
-        if (now - lastScanTime.current < 800) return;
+        if (now - lastScanTime.current < 1000) return;
         lastScanTime.current = now;
         
         setFeedbackStatus('success');
         if (navigator.vibrate) navigator.vibrate(40);
         onScan(code);
-        // Flash ultra rápido para no cegar al operario
-        setTimeout(() => { if (isComponentMounted.current) setFeedbackStatus(null); }, 200);
+        setTimeout(() => { if (isComponentMounted.current) setFeedbackStatus(null); }, 250);
     };
 
     useEffect(() => {
@@ -116,14 +116,14 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose, i
     return (
         <div className={`${inline ? 'w-full h-full relative' : 'fixed inset-0 z-[100]'} bg-black overflow-hidden`}>
             <div className="absolute inset-0 z-30 pointer-events-none flex items-center justify-center">
-                <div className={`w-64 h-64 border-2 transition-all duration-150 rounded-3xl flex items-center justify-center ${isTriggered ? 'border-blue-500/40 scale-100' : 'border-white/10 scale-90 opacity-20'}`}>
-                    <Target className={`w-12 h-12 transition-all duration-300 ${isTriggered ? 'text-blue-500 opacity-30 animate-pulse' : 'text-white'}`} />
+                <div className={`w-64 h-64 border-2 transition-all duration-150 rounded-3xl flex items-center justify-center ${effectiveTrigger ? 'border-blue-500/40 scale-100' : 'border-white/10 scale-90 opacity-20'}`}>
+                    <Target className={`w-12 h-12 transition-all duration-300 ${effectiveTrigger ? 'text-blue-500 opacity-30 animate-pulse' : 'text-white'}`} />
                     <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-blue-500 rounded-tl-xl"></div>
                     <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-blue-500 rounded-tr-xl"></div>
                     <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-blue-500 rounded-bl-xl"></div>
                     <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-blue-500 rounded-br-xl"></div>
                 </div>
-                {isTriggered && !feedbackStatus && <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-red-500 shadow-[0_0_10px_red] animate-[radar-pulse_1s_infinite] opacity-50"></div>}
+                {effectiveTrigger && !feedbackStatus && <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-red-500 shadow-[0_0_10px_red] animate-[radar-pulse_1s_infinite] opacity-50"></div>}
             </div>
             
             <div className="absolute top-4 left-4 z-50 pointer-events-auto">
@@ -142,8 +142,8 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose, i
             <div className="flex-1 relative bg-black flex flex-col justify-center h-full">
                 {feedbackStatus === 'success' && <div className="absolute inset-0 z-[60] bg-emerald-600/40 backdrop-blur-sm flex items-center justify-center animate-in fade-in duration-75"><CheckCircle2 className="w-20 h-20 text-white" /></div>}
                 {error && <div className="absolute inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center p-6 text-center"><AlertTriangle className="w-12 h-12 text-rose-500 mb-4" /><h3 className="text-white font-black uppercase text-[10px] tracking-widest">{error}</h3><button onClick={onClose} className="mt-8 bg-white text-black px-10 py-4 font-black uppercase text-[10px] border-b-8 border-slate-300">Volver</button></div>}
-                <video ref={videoRef} className={`w-full h-full object-cover transition-all duration-150 ${engineType === 'native' ? 'block' : 'hidden'} ${isTriggered ? 'opacity-100 scale-100' : 'opacity-10 scale-110 grayscale blur-sm'}`} playsInline muted />
-                <div id={SCANNER_DOM_ID} className={`w-full h-full transition-all duration-150 ${engineType === 'wasm' ? 'block' : 'hidden'} ${isTriggered ? 'opacity-100 scale-100' : 'opacity-10 scale-110 grayscale blur-sm'}`}></div>
+                <video ref={videoRef} className={`w-full h-full object-cover transition-all duration-150 ${engineType === 'native' ? 'block' : 'hidden'} ${effectiveTrigger ? 'opacity-100 scale-100' : 'opacity-10 scale-110 grayscale blur-sm'}`} playsInline muted />
+                <div id={SCANNER_DOM_ID} className={`w-full h-full transition-all duration-150 ${engineType === 'wasm' ? 'block' : 'hidden'} ${effectiveTrigger ? 'opacity-100 scale-100' : 'opacity-10 scale-110 grayscale blur-sm'}`}></div>
             </div>
             <style>{`
                 #${SCANNER_DOM_ID} video { width: 100% !important; height: 100% !important; object-fit: cover !important; }

@@ -138,7 +138,8 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
             {state.isScanningQR && (
                 <CameraScanner 
                     onScan={actions.handleQRScanSuccess} 
-                    onClose={() => state.setIsScanningQR(false)} 
+                    onClose={() => state.setIsScanningQR(false)}
+                    isTriggered={true} 
                 />
             )}
         </div>
