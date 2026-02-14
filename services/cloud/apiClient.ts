@@ -9,12 +9,12 @@ interface ApiResponse {
     rows?: any[];
     rows_written?: number;
     server_timestamp?: string;
-    updated?: number; // Para upserts
-    added?: number;   // Para upserts
+    updated?: number; 
+    added?: number;   
 }
 
 /**
- * CLIENTE HTTP ROBUSTO V2.1 (AI Optimized)
+ * CLIENTE HTTP LOGICOUNT v3.0 (Enterprise Core)
  */
 export const cloudApi = {
     
@@ -22,41 +22,41 @@ export const cloudApi = {
         const config = getSettings().appSheetConfig;
         const url = config?.gasWebAppUrl;
 
-        if (!url) throw new Error("URL de Google Script no configurada.");
+        if (!url) {
+            console.info("[CloudApi] Petición abortada: URL no definida.");
+            return { success: false, error: "URL_NOT_CONFIGURED" };
+        }
 
-        // Preparación del Payload
-        let bodyToSend = {
+        const bodyToSend: any = {
             action,
             ...payload,
+            spreadsheetId: config.spreadsheetId,
             metadata: { 
                 timestamp: Date.now(), 
                 compressed: compress,
-                version: 'v7.1-AI-Ready' 
+                client_version: 'v5.7.5-AI' 
             }
         };
 
-        // Compresión automática para IA (Vectores)
         if (compress && payload.rows) {
             try {
                 bodyToSend.rows = await compressData(payload.rows);
             } catch (e) {
-                console.warn("Fallo compresión, enviando plano", e);
                 bodyToSend.metadata.compressed = false;
             }
         }
 
-        const maxRetries = 3;
-        const baseTimeout = 40000; // Aumentado a 40s para procesos de IA en GAS
+        // Configuración de reintentos con Backoff exponencial
+        const maxRetries = 2;
+        const baseTimeout = action === 'upsert_products' ? 60000 : 40000; 
 
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
             const controller = new AbortController();
-            const timeoutMs = baseTimeout + (attempt * 15000); 
-            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+            const timeoutId = setTimeout(() => controller.abort(), baseTimeout);
 
             try {
                 if (attempt > 0) {
-                    const delay = Math.pow(2, attempt) * 2000; 
-                    await new Promise(r => setTimeout(r, delay));
+                    await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
                 }
 
                 const response = await fetch(url, {
@@ -68,9 +68,7 @@ export const cloudApi = {
 
                 clearTimeout(timeoutId);
 
-                if (!response.ok) {
-                    throw new Error(`HTTP Error ${response.status}`);
-                }
+                if (!response.ok) throw new Error(`HTTP_${response.status}`);
 
                 const text = await response.text();
                 let json: ApiResponse;
@@ -78,14 +76,15 @@ export const cloudApi = {
                 try {
                     json = JSON.parse(text);
                 } catch (e) {
-                    throw new Error("GAS devolvió HTML (Posible error de ejecución en el script)");
+                    throw new Error("SERVER_JSON_PARSE_ERROR");
                 }
 
                 if (json.success === false) {
-                    if (json.error?.includes("lock") || json.error?.includes("busy")) {
-                        throw new Error("Server Busy"); 
+                    // Manejo de bloqueos de Google Sheets
+                    if (json.error?.toLowerCase().includes("busy") || json.error?.toLowerCase().includes("lock")) {
+                        throw new Error("SHEET_LOCKED");
                     }
-                    throw new Error(json.error || "Error en servidor.");
+                    throw new Error(json.error || "UNKNOWN_SERVER_ERROR");
                 }
 
                 return json;
@@ -93,13 +92,14 @@ export const cloudApi = {
             } catch (error: any) {
                 clearTimeout(timeoutId);
                 if (attempt === maxRetries) {
-                    logger.error('CLOUD_Transport', `Fallo tras ${maxRetries} reintentos`, error.message);
-                    throw new Error(`Fallo de conexión: ${error.message}`);
+                    logger.error('CLOUD_API', `Fallo crítico tras ${attempt + 1} intentos`, error.message);
+                    throw error;
                 }
+                console.warn(`[CloudApi] Reintento ${attempt + 1}/${maxRetries} debido a: ${error.message}`);
             }
         }
         
-        throw new Error("Error inesperado en red.");
+        throw new Error("RETRY_LIMIT_EXCEEDED");
     },
 
     async fetchTable(tableName: string, since?: string) {
@@ -107,6 +107,7 @@ export const cloudApi = {
     },
 
     async appendRows(tableName: string, rows: any[]) {
-        return this.post('append_rows', { tableName, rows }, rows.length > 30);
+        // Solo comprimir si el lote es grande (>20 filas) para ahorrar CPU en móviles
+        return this.post('append_rows', { tableName, rows }, rows.length > 20);
     }
 };

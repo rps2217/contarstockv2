@@ -18,6 +18,10 @@ export interface HammerItem {
     embedding?: number[];
 }
 
+/**
+ * HOOK MARTILLO INDUSTRIAL v6.2
+ * Optimizado para PDAs de alto rendimiento.
+ */
 export const useHammerLogic = (batchId: string) => {
     const { feedback, trigger } = useFeedbackSystem(120);
     
@@ -32,6 +36,7 @@ export const useHammerLogic = (batchId: string) => {
 
     useEffect(() => { localStorage.setItem('hammer_loc', currentLocation); }, [currentLocation]);
 
+    // Query unificada de base de datos masiva
     const dbItems = useLiveQuery(async () => {
         if (!batchId) return [];
         const [rawScans, manifests] = await Promise.all([
@@ -45,6 +50,7 @@ export const useHammerLogic = (batchId: string) => {
         
         const aggregation = new Map<string, HammerItem>();
 
+        // 1. Cargar metas teóricas
         manifests.forEach(m => {
             const pInfo = prodMap.get(m.barcode);
             aggregation.set(m.barcode, {
@@ -53,11 +59,11 @@ export const useHammerLogic = (batchId: string) => {
                 loc: m.loc,
                 totalQuantity: 0,
                 expectedQty: m.expectedQty,
-                lastTimestamp: 0,
-                embedding: pInfo?.embedding
+                lastTimestamp: 0
             });
         });
 
+        // 2. Sumar picks físicos
         rawScans.forEach(s => {
             const existing = aggregation.get(s.barcode);
             const pInfo = prodMap.get(s.barcode);
@@ -65,15 +71,13 @@ export const useHammerLogic = (batchId: string) => {
                 existing.totalQuantity += s.quantity;
                 existing.lastTimestamp = Math.max(existing.lastTimestamp, s.timestamp);
                 if (s.location) existing.loc = s.location;
-                if (existing.name === 'SKU_DESCONOCIDO' && pInfo) existing.name = pInfo.name;
             } else {
                 aggregation.set(s.barcode, {
                     barcode: s.barcode,
                     name: pInfo?.name || 'SKU_DESCONOCIDO',
                     totalQuantity: s.quantity,
                     lastTimestamp: s.timestamp,
-                    loc: s.location,
-                    embedding: pInfo?.embedding
+                    loc: s.location
                 });
             }
         });
@@ -87,6 +91,7 @@ export const useHammerLogic = (batchId: string) => {
         return sorted;
     }, [batchId, activeBarcode, feedback]);
 
+    // Persistencia flush (Buffer de alta velocidad)
     useEffect(() => {
         const flush = async () => {
             if (writeQueue.current.length === 0) return;
@@ -97,33 +102,13 @@ export const useHammerLogic = (batchId: string) => {
                     batchId, barcode: b.barcode, quantity: b.qty, location: b.loc, timestamp: b.ts
                 })));
             } catch (e) {
+                // En caso de error, devolver al buffer
                 writeQueue.current = [...batch, ...writeQueue.current];
             }
         };
-        const timer = setInterval(flush, 500);
+        const timer = setInterval(flush, 600);
         return () => { clearInterval(timer); flush(); };
     }, [batchId]);
-
-    const removeItem = useCallback(async (barcode: string) => {
-        if (barcode === 'ALL') {
-            // LIMPIEZA PROFUNDA: Borra picks y también el manifiesto bajado del Excel
-            await Promise.all([
-                massiveDb.blindScans.where('batchId').equals(batchId).delete(),
-                massiveDb.blindManifests.where('batchId').equals(batchId).delete()
-            ]);
-            setActiveBarcode(null);
-            setOptimisticQty(null);
-            SoundFX.play('delete');
-        } else {
-            // Borrado por SKU usando el nuevo índice compuesto de la v8
-            await massiveDb.blindScans.where('[batchId+barcode]').equals([batchId, barcode]).delete();
-            if (activeBarcode === barcode) {
-                setActiveBarcode(null);
-                setOptimisticQty(null);
-            }
-        }
-        trigger('undo');
-    }, [batchId, activeBarcode, trigger]);
 
     const registerScan = useCallback((code: string, qtyOverride?: number) => {
         const clean = sanitizeBarcode(code);
@@ -154,30 +139,42 @@ export const useHammerLogic = (batchId: string) => {
         writeQueue.current.push({ barcode: clean, qty: qtyToApply, loc: currentLocation, ts: Date.now() });
     }, [activeBarcode, trigger, multiplier, currentLocation]);
 
-    const modifyQuantity = useCallback((barcode: string, delta: number) => {
-        registerScan(barcode, delta);
-    }, [registerScan]);
-
-    const lastScannedItem = useMemo(() => {
-        if (!activeBarcode) return undefined;
-        const real = dbItems?.find(i => i.barcode === activeBarcode);
-        return real ? { ...real, totalQuantity: optimisticQty ?? real.totalQuantity } : undefined;
-    }, [dbItems, activeBarcode, optimisticQty]);
+    const removeItem = useCallback(async (barcode: string) => {
+        if (barcode === 'ALL') {
+            await Promise.all([
+                massiveDb.blindScans.where('batchId').equals(batchId).delete(),
+                massiveDb.blindManifests.where('batchId').equals(batchId).delete()
+            ]);
+            setActiveBarcode(null);
+            setOptimisticQty(null);
+            SoundFX.play('delete');
+        } else {
+            // Uso del índice compuesto [batchId+barcode] definido en db.massive v8
+            await massiveDb.blindScans.where('[batchId+barcode]').equals([batchId, barcode]).delete();
+            if (activeBarcode === barcode) {
+                setActiveBarcode(null);
+                setOptimisticQty(null);
+            }
+        }
+        trigger('undo');
+    }, [batchId, activeBarcode, trigger]);
 
     return { 
         state: { 
             items: dbItems || [], 
-            lastScannedItem: lastScannedItem as HammerItem | undefined,
+            lastScannedItem: useMemo(() => {
+                if (!activeBarcode) return undefined;
+                const real = dbItems?.find(i => i.barcode === activeBarcode);
+                return real ? { ...real, totalQuantity: optimisticQty ?? real.totalQuantity } : undefined;
+            }, [dbItems, activeBarcode, optimisticQty]),
             activeProduct,
-            feedback, 
-            multiplier, 
-            currentLocation
+            feedback, multiplier, currentLocation
         },
         actions: { 
             setMultiplier, 
             setCurrentLocation, 
             registerScan, 
-            modifyQuantity,
+            modifyQuantity: (b: string, d: number) => registerScan(b, d),
             removeItem,
             selectItem: (b: string) => { 
                 setActiveBarcode(b); 

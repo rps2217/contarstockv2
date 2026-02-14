@@ -1,8 +1,8 @@
-
 import { Dexie } from 'dexie';
 import { db } from '../db';
 import { ScanRecord, CountingSession, ExpectedOrder } from '../types';
-import { generateUUID, normalizeKey, sanitizeBarcode } from './utils';
+// Fix: Changed normalizeKey to normalizeSku as it is the exported member in utils
+import { generateUUID, normalizeSku, sanitizeBarcode } from './utils';
 import { logger } from './logger';
 import { IntegrityGuard } from './integrityGuard';
 import { callGas } from './gasService';

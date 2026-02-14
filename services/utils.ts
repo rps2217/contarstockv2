@@ -1,24 +1,9 @@
 
 import JSZip from 'jszip';
 
-export const generateUUID = (): string => {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-};
-
-export const chunkSku = (sku: string): string => {
-    if (!sku) return "";
-    return sku.match(/.{1,4}/g)?.join('-') || sku;
-};
-
 /**
- * NORMALIZACIÓN CRÍTICA PARA COMPARACIÓN INDUSTRIAL
- * 1. Trim y UpperCase.
- * 2. Elimina ceros a la izquierda (evita fallos de match Excel vs Scanner).
- * 3. Elimina caracteres no imprimibles y espacios.
+ * MOTOR DE IDENTIDAD LOGÍSTICA (DRY)
+ * Única fuente de verdad para normalizar SKUs y Cabeceras en toda la app.
  */
 export const sanitizeBarcode = (code: string): string => {
     if (!code) return "";
@@ -32,10 +17,25 @@ export const sanitizeBarcode = (code: string): string => {
 
 export const normalizeSku = (val: string): string => sanitizeBarcode(val);
 
-export const formatLogDate = (timestamp: number): string => {
-    const d = new Date(timestamp);
-    const pad = (n: number) => n.toString().padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+/**
+ * NORMALIZACIÓN DE CABECERAS EXCEL (Protocolo Industrial)
+ * Elimina espacios, acentos, caracteres especiales y convierte a mayúsculas.
+ * Esto hace que "Cód. Producto" y "COD_PRODUCTO" sean lo mismo para el motor.
+ */
+export const normalizeHeader = (h: string): string => 
+    String(h || "")
+        .trim()
+        .toUpperCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") // Elimina acentos
+        .replace(/[^A-Z0-9]/g, "");    // Deja solo letras y números
+
+export const generateUUID = (): string => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
 };
 
 export const compressData = async (data: any): Promise<string> => {
@@ -49,8 +49,6 @@ export const compressData = async (data: any): Promise<string> => {
 };
 
 export const generateSessionSignature = (erp: string, label: string): string => {
-    const normalize = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z0-9-]/g, "");
-    return `${normalize(erp)}_${normalize(label || "GENERAL")}`;
+    const norm = (s: string) => s.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    return `${norm(erp)}_${norm(label || "GENERAL")}`;
 };
-
-export const normalizeKey = (val: string): string => sanitizeBarcode(val);
