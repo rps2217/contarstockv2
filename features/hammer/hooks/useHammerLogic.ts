@@ -19,8 +19,8 @@ export interface HammerItem {
 }
 
 /**
- * HOOK MARTILLO INDUSTRIAL v6.2
- * Optimizado para PDAs de alto rendimiento.
+ * HOOK MARTILLO INDUSTRIAL v6.5
+ * Optimizado para PDAs de alto rendimiento y ráfagas HID.
  */
 export const useHammerLogic = (batchId: string) => {
     const { feedback, trigger } = useFeedbackSystem(120);
@@ -50,7 +50,7 @@ export const useHammerLogic = (batchId: string) => {
         
         const aggregation = new Map<string, HammerItem>();
 
-        // 1. Cargar metas teóricas
+        // 1. Cargar metas teóricas (STOCK)
         manifests.forEach(m => {
             const pInfo = prodMap.get(m.barcode);
             aggregation.set(m.barcode, {
@@ -63,7 +63,7 @@ export const useHammerLogic = (batchId: string) => {
             });
         });
 
-        // 2. Sumar picks físicos
+        // 2. Sumar picks físicos registrados
         rawScans.forEach(s => {
             const existing = aggregation.get(s.barcode);
             const pInfo = prodMap.get(s.barcode);
@@ -91,22 +91,23 @@ export const useHammerLogic = (batchId: string) => {
         return sorted;
     }, [batchId, activeBarcode, feedback]);
 
-    // Persistencia flush (Buffer de alta velocidad)
+    // Persistencia flush ultra-rápida (PDA Burst Ready)
     useEffect(() => {
         const flush = async () => {
             if (writeQueue.current.length === 0) return;
             const batch = [...writeQueue.current];
             writeQueue.current = [];
             try {
+                // Escritura directa por lotes
                 await massiveDb.blindScans.bulkAdd(batch.map(b => ({
                     batchId, barcode: b.barcode, quantity: b.qty, location: b.loc, timestamp: b.ts
                 })));
             } catch (e) {
-                // En caso de error, devolver al buffer
+                // Fallback de reintento
                 writeQueue.current = [...batch, ...writeQueue.current];
             }
         };
-        const timer = setInterval(flush, 600);
+        const timer = setInterval(flush, 300); // Reducido de 600 a 300ms para mayor velocidad
         return () => { clearInterval(timer); flush(); };
     }, [batchId]);
 
@@ -118,8 +119,10 @@ export const useHammerLogic = (batchId: string) => {
         const existingItem = itemsCache.current.find(i => i.barcode === clean);
         const currentQty = existingItem?.totalQuantity || 0;
         
+        // Protección anti-negativos extrema
         if (currentQty + qtyToApply < 0) {
             SoundFX.play('error');
+            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
             return;
         }
 
@@ -130,6 +133,7 @@ export const useHammerLogic = (batchId: string) => {
             if (p) setActiveProduct(p);
         });
         
+        // UI OPTIMISTA: Actualización visual instantánea sin esperar a IndexedDB
         setOptimisticQty(prev => {
             const base = currentQty;
             const currentUI = clean === activeBarcode ? (prev ?? base) : base;
@@ -149,7 +153,6 @@ export const useHammerLogic = (batchId: string) => {
             setOptimisticQty(null);
             SoundFX.play('delete');
         } else {
-            // Uso del índice compuesto [batchId+barcode] definido en db.massive v8
             await massiveDb.blindScans.where('[batchId+barcode]').equals([batchId, barcode]).delete();
             if (activeBarcode === barcode) {
                 setActiveBarcode(null);

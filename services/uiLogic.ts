@@ -1,21 +1,28 @@
+
 import { ConsolidatedItem, AppSettings } from '../types';
 import { normalizeSku } from './utils';
 
 export type ItemStatus = 'success' | 'warning' | 'error' | 'neutral' | 'info' | 'mismatch' | 'semantic';
 
 /**
- * Determina el estado de un ítem basado en el progreso vs meta
+ * MOTOR DE VEREDICTO LOGÍSTICO v2.0
  */
 export const determineItemStatus = (current: number, target?: number): ItemStatus => {
-    if (target === undefined || target === 0) return 'neutral'; 
-    if (current === target) return 'success'; 
-    if (current > target) return 'error';     
-    if (current > 0 && current < target) return 'warning'; 
-    return 'neutral'; 
+    // Si no hay meta definida (Conteo ciego puro)
+    if (target === undefined || target === 0) {
+        return current > 0 ? 'info' : 'neutral';
+    }
+
+    if (current === 0) return 'neutral';
+    if (current === target) return 'success'; // VERDE: Calzado perfecto
+    if (current > target) return 'error';     // ROJO: Excedente
+    if (current < target) return 'warning';   // ÁMBAR: Faltante
+    
+    return 'neutral';
 };
 
 /**
- * Mapeo de colores industriales (Semáforo + Capa IA)
+ * Mapeo de colores industriales de alto contraste
  */
 export const getStatusColorClasses = (status: ItemStatus, variant: 'bg' | 'border' | 'text' = 'bg'): string => {
     const map = {
@@ -30,9 +37,22 @@ export const getStatusColorClasses = (status: ItemStatus, variant: 'bg' | 'borde
     return map[status][variant] || '';
 };
 
-/**
- * SoC: Decisión sobre captura de metadatos
- */
+export const getRowStyles = (current: number, target?: number, isActive?: boolean) => {
+    const status = determineItemStatus(current, target);
+    
+    let classes = "w-full h-full border-2 p-4 rounded-2xl flex items-center justify-between transition-all text-left active:scale-[0.98] ";
+    
+    // Si hay target pero el conteo es 0, usamos un estilo slate tenue
+    if (target && target > 0 && current === 0) {
+        classes += "bg-slate-900/40 border-white/5 opacity-80 ";
+    } else {
+        classes += `${getStatusColorClasses(status, 'bg')} ${getStatusColorClasses(status, 'border')} `;
+    }
+
+    if (isActive) classes += "ring-4 ring-white shadow-2xl scale-[1.02] z-10 ";
+    return classes;
+};
+
 export const shouldPromptForBatch = (
     barcode: string, 
     consolidatedItems: ConsolidatedItem[] | undefined, 
@@ -47,16 +67,4 @@ export const shouldPromptForBatch = (
         i.location !== 'GUÍA'
     );
     return !existingPhysical;
-};
-
-export const getRowStyles = (current: number, target?: number, isActive?: boolean) => {
-    const status = determineItemStatus(current, target);
-    const isMismatched = target === 0 && current > 0;
-    const finalStatus = isMismatched ? 'mismatch' : status;
-
-    let classes = "w-full h-full border-2 p-4 rounded-2xl flex items-center justify-between transition-all text-left active:scale-[0.98] ";
-    classes += `${getStatusColorClasses(finalStatus, 'bg')} ${getStatusColorClasses(finalStatus, 'border')} `;
-
-    if (isActive) classes += "ring-4 ring-white shadow-2xl scale-[1.02] z-10 ";
-    return classes;
 };

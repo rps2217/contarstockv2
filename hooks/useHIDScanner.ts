@@ -1,3 +1,4 @@
+
 import { useEffect, useRef } from 'react';
 import { sanitizeBarcode } from '../services/utils';
 
@@ -6,19 +7,17 @@ interface HIDScannerOptions {
     minChars?: number;
     maxLatency?: number;
     isEnabled?: boolean;
-    preventDefault?: boolean;
 }
 
 /**
- * Hook especializado para escáneres de hardware (Zebra, Honeywell, USB genéricos).
- * Detecta ráfagas de teclas rápidas (<50ms) y las agrupa como un escaneo.
+ * MOTOR DE CAPTURA HID v4.0 (PDA Optimized)
+ * Intercepta ráfagas de teclado físico incluso si el foco no está en un input.
  */
 export const useHIDScanner = ({
     onScan,
     minChars = 2,
-    maxLatency = 50,
-    isEnabled = true,
-    preventDefault = true
+    maxLatency = 45, // Latencia crítica para motores Zebra/Honeywell
+    isEnabled = true
 }: HIDScannerOptions) => {
     const buffer = useRef('');
     const lastKeyTime = useRef(0);
@@ -27,40 +26,40 @@ export const useHIDScanner = ({
         if (!isEnabled) return;
 
         const handleKeyDown = (e: KeyboardEvent) => {
-            // 1. Ignorar si el foco está en un input/textarea explícito
-            // Esto permite escribir manualmente sin disparar el escáner
+            // Evitar interferencia si el usuario está en un campo de texto manual explícito
             const target = e.target as HTMLElement;
-            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) && !target.getAttribute('data-scanner-input')) {
-                return;
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+                // Solo permitimos si es nuestro input de ráfaga
+                if (!target.hasAttribute('data-burst-mode')) return;
             }
 
             const now = Date.now();
             
-            // 2. Detección de ráfaga: Si pasa mucho tiempo entre teclas, es escritura manual, no escáner.
-            // Reseteamos el buffer si el tiempo excede la latencia máxima.
+            // Si el tiempo entre teclas es muy alto, asumimos escritura humana y limpiamos
             if (now - lastKeyTime.current > maxLatency) {
                 buffer.current = '';
             }
+            
             lastKeyTime.current = now;
 
-            // 3. Procesamiento de teclas
             if (e.key === 'Enter') {
                 if (buffer.current.length >= minChars) {
                     const cleanCode = sanitizeBarcode(buffer.current);
                     if (cleanCode) {
                         onScan(cleanCode);
                     }
+                    e.preventDefault();
+                    e.stopPropagation();
                 }
                 buffer.current = '';
-                if (preventDefault) e.preventDefault();
             } else if (e.key.length === 1) {
-                // Solo acumulamos caracteres imprimibles
+                // Acumular caracteres imprimibles
                 buffer.current += e.key;
             }
         };
 
-        // Usamos 'capture: true' para interceptar el evento antes que otros listeners si es necesario
+        // 'capture: true' asegura que el evento se tome antes que cualquier otro listener
         window.addEventListener('keydown', handleKeyDown, { capture: true });
         return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
-    }, [isEnabled, onScan, minChars, maxLatency, preventDefault]);
+    }, [isEnabled, onScan, minChars, maxLatency]);
 };
