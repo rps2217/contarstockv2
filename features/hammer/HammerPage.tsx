@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useHammerLogic } from './hooks/useHammerLogic';
 import { useLocationManager } from '../../shared/hooks/useLocationManager';
@@ -11,7 +11,7 @@ import { MassiveToolsSheet } from '../../components/massive/MassiveToolsSheet';
 import { BarcodeLabelModal } from '../../shared/components/modals/BarcodeLabelModal';
 import { LocationSelectorModal } from '../../components/common/LocationSelectorModal';
 import { ScannerFooter } from '../../shared/components/controls/ScannerFooter';
-import { LocationTrigger } from '../../components/common/LocationTrigger';
+import { LocationTrigger } from '../../shared/components/controls/LocationTrigger';
 import { CameraScanner } from '../../components/CameraScanner';
 import { ScreenLockOverlay } from '../../components/common/ScreenLockOverlay';
 import { NumericKeypad } from '../../components/NumericKeypad';
@@ -24,8 +24,6 @@ export const HammerPage: React.FC = () => {
     const { batchId = 'CORE' } = useParams();
     const { state, actions } = useHammerLogic(batchId);
     const locManager = useLocationManager(`hammer_loc_${batchId}`);
-    
-    // Auto-bloqueo industrial por inactividad
     const { isLocked, unlock, lock } = useAutoLock(4000);
 
     const [isTriggerActive, setIsTriggerActive] = useState(false);
@@ -34,13 +32,8 @@ export const HammerPage: React.FC = () => {
     const [showKeypad, setShowKeypad] = useState(false);
     const [isMigrating, setIsMigrating] = useState(false);
 
-    // --- INTEGRACIÓN ESCÁNER FÍSICO (PDA / LÁSER) ---
     useHIDScanner({
-        onScan: (barcode) => {
-            if (!isLocked && !isMigrating) {
-                actions.registerScan(barcode);
-            }
-        },
+        onScan: (barcode) => !isLocked && !isMigrating && actions.registerScan(barcode),
         isEnabled: !showKeypad && !isToolsOpen,
     });
 
@@ -62,16 +55,6 @@ export const HammerPage: React.FC = () => {
 
     const activeItem = state.items.find(i => i.barcode === state.activeBarcode);
 
-    const handleManualConfirm = (sku: string) => {
-        actions.registerScan(sku);
-        setShowKeypad(false);
-    };
-
-    const rowData = React.useMemo(() => ({ 
-        onSelect: actions.selectItem, 
-        activeBarcode: state.activeBarcode 
-    }), [actions.selectItem, state.activeBarcode]);
-
     return (
         <div className="fixed inset-0 z-[100] flex flex-col font-mono bg-black select-none overflow-hidden text-white">
             
@@ -84,11 +67,10 @@ export const HammerPage: React.FC = () => {
                 onLock={lock}
             />
 
-            <div className="px-4 py-2 bg-slate-900/50 border-b border-white/5">
+            <div className="px-4 py-2 bg-slate-900/50 border-b border-white/5 shrink-0">
                 <LocationTrigger location={locManager.location} onClick={locManager.openModal} />
             </div>
 
-            {/* HUD Central Unificado con Feedback de Correlación */}
             <div className="h-[35dvh] shrink-0">
                 <IndustrialDisplay 
                     barcode={state.activeBarcode}
@@ -106,7 +88,7 @@ export const HammerPage: React.FC = () => {
                     items={state.items} 
                     itemHeight={82} 
                     renderRow={MassiveItemRow} 
-                    rowData={rowData} 
+                    rowData={{ onSelect: actions.selectItem, activeBarcode: state.activeBarcode }} 
                 />
             </div>
 
@@ -121,30 +103,22 @@ export const HammerPage: React.FC = () => {
             />
 
             <MassiveToolsSheet 
-                isOpen={isToolsOpen}
-                onClose={() => setIsToolsOpen(false)}
-                batchId={batchId}
-                hasActiveItem={!!state.activeBarcode}
-                location={locManager.location}
-                onChangeLocation={locManager.openModal}
-                onShowLabel={() => setIsLabelModalOpen(true)}
-                onReset={() => actions.removeItem('ALL')}
+                isOpen={isToolsOpen} onClose={() => setIsToolsOpen(false)}
+                batchId={batchId} hasActiveItem={!!state.activeBarcode}
+                location={locManager.location} onChangeLocation={locManager.openModal}
+                onShowLabel={() => setIsLabelModalOpen(true)} onReset={() => actions.removeItem('ALL')}
                 onPrintSummary={() => {}}
             />
 
             <LocationSelectorModal 
-                isOpen={locManager.isModalOpen}
-                onClose={locManager.closeModal}
-                currentLocation={locManager.location}
-                onSelect={locManager.setLocation}
+                isOpen={locManager.isModalOpen} onClose={locManager.closeModal}
+                currentLocation={locManager.location} onSelect={locManager.setLocation}
             />
 
             {state.activeBarcode && (
                 <BarcodeLabelModal 
-                    isOpen={isLabelModalOpen}
-                    onClose={() => setIsLabelModalOpen(false)}
-                    barcode={state.activeBarcode}
-                    productName={state.activeProduct?.name || activeItem?.name}
+                    isOpen={isLabelModalOpen} onClose={() => setIsLabelModalOpen(false)}
+                    barcode={state.activeBarcode} productName={state.activeProduct?.name || activeItem?.name}
                     quantity={state.optimisticQty ?? 0}
                 />
             )}
@@ -159,13 +133,7 @@ export const HammerPage: React.FC = () => {
                 </div>
             )}
 
-            <NumericKeypad 
-                isOpen={showKeypad}
-                title="EAN / SKU MANUAL"
-                onClose={() => setShowKeypad(false)}
-                onConfirm={handleManualConfirm}
-            />
-
+            <NumericKeypad isOpen={showKeypad} title="EAN MANUAL" onClose={() => setShowKeypad(false)} onConfirm={(v) => { actions.registerScan(v); setShowKeypad(false); }} />
             <ScreenLockOverlay isLocked={isLocked} onUnlock={unlock} />
         </div>
     );
