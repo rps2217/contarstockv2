@@ -1,11 +1,10 @@
 
 import { logger } from './logger';
-import { getSettings } from './settings';
 import { AppSheetConfig } from '../types';
-// Fix: Added Papa import for bootstrapConfigById
-import Papa from 'papaparse';
-// Fix: Added cloudApi import for callGas and fetchFromGas
+// Added missing imports for the new functions
+import { getSettings } from './settings';
 import { cloudApi } from './cloud/apiClient';
+import Papa from 'papaparse';
 
 const superNormalize = (s: string) => 
     String(s || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -32,6 +31,7 @@ export const bootstrapByUrl = async (url: string, manualId?: string): Promise<Ap
         const res = await response.json();
         
         if (!res.success) {
+            // Error específico que indica que el script GAS no sabe a qué Excel conectar
             if (res.error?.includes("IDENTIDAD_EXCEL_NO_DETECTADA")) {
                 throw new Error("EXCEL_ID_REQUIRED");
             }
@@ -72,8 +72,9 @@ export const bootstrapByUrl = async (url: string, manualId?: string): Promise<Ap
     }
 };
 
+// Added missing bootstrapConfigById to resolve Error in hooks/useCloudConfig.ts
 /**
- * Fix: Added bootstrapConfigById exported member
+ * CONFIGURACIÓN MAESTRA POR ID
  */
 export const bootstrapConfigById = async (spreadsheetId: string): Promise<AppSheetConfig> => {
     const idMatch = spreadsheetId.match(/\/d\/([a-zA-Z0-9-_]+)/);
@@ -85,7 +86,7 @@ export const bootstrapConfigById = async (spreadsheetId: string): Promise<AppShe
 
     try {
         const response = await fetch(url);
-        if (!response.ok) throw new Error("No se pudo acceder al Excel. Verifique que 'Cualquier persona con el enlace' pueda leer.");
+        if (!response.ok) throw new Error("No se pudo acceder al Excel. Verifique permisos.");
         
         const csvText = await response.text();
         
@@ -94,34 +95,29 @@ export const bootstrapConfigById = async (spreadsheetId: string): Promise<AppShe
                 header: true,
                 skipEmptyLines: true,
                 complete: (results) => {
-                    if (results.data.length === 0) return reject(new Error("La pestaña CONFIG_SISTEMA está vacía."));
+                    if (results.data.length === 0) return reject(new Error("Pestaña vacía."));
                     
                     const master: any = results.data[0];
                     const findVal = (keys: string[]) => {
-                        const foundKey = Object.keys(master).find(k => keys.includes(k.trim().toUpperCase()));
+                        const foundKey = Object.keys(master).find(k => keys.includes(superNormalize(k)));
                         return foundKey ? String(master[foundKey]).trim() : '';
                     };
 
-                    const config: AppSheetConfig = {
+                    resolve({
                         spreadsheetId: cleanId,
-                        appId: findVal(['APP_ID', 'APPID', 'APPLICATION_ID']),
-                        accessKey: findVal(['ACCESS_KEY', 'ACCESSKEY', 'KEY']),
-                        countsTableName: findVal(['TABLE_LOGS', 'TABLA_CONTEOS', 'CONTEOS']) || 'CONTEOS',
-                        consolidatedTableName: findVal(['TABLE_CONSOLIDADO', 'TABLA_RESUMEN', 'CONSOLIDADO']) || 'CONSOLIDADO',
-                        productsTableName: findVal(['TABLE_PRODUCTOS', 'PRODUCTOS']) || 'PRODUCTOS',
-                        receptionTableName: findVal(['TABLE_RECEPCION', 'RECEPCION']) || 'RECEPCION_BULTOS',
-                        gasWebAppUrl: findVal(['GAS_URL', 'URL_GAS', 'SCRIPT_URL'])
-                    };
-
-                    if (!config.gasWebAppUrl) return reject(new Error("No se encontró la URL de Google Script en el Excel."));
-                    
-                    resolve(config);
+                        appId: findVal(['APP_ID', 'APPID']),
+                        accessKey: findVal(['ACCESS_KEY', 'KEY']),
+                        countsTableName: findVal(['CONTEOS']) || 'CONTEOS',
+                        consolidatedTableName: findVal(['CONSOLIDADO']) || 'CONSOLIDADO',
+                        productsTableName: findVal(['PRODUCTOS']) || 'PRODUCTOS',
+                        receptionTableName: findVal(['RECEPCION']) || 'RECEPCION_BULTOS',
+                        gasWebAppUrl: findVal(['GAS_URL', 'SCRIPT_URL'])
+                    } as AppSheetConfig);
                 },
                 error: (err) => reject(err)
             });
         });
     } catch (err: any) {
-        logger.error('BOOTSTRAP_FAIL', err.message);
         throw err;
     }
 };
@@ -131,38 +127,25 @@ export const bootstrapConfigById = async (spreadsheetId: string): Promise<AppShe
  */
 export const fetchSystemConfig = async (): Promise<Partial<AppSheetConfig>> => {
     try {
-        const settings = getSettings();
-        if (!settings.appSheetConfig?.gasWebAppUrl) return {};
+        const config = getSettings().appSheetConfig;
+        if (!config?.gasWebAppUrl) return {};
 
-        const res = await cloudApi.post('fetch_rows', { tableName: 'CONFIG_SISTEMA' });
-        if (!res.success || !res.rows || res.rows.length === 0) return {};
-
-        const master = res.rows[0];
-        const findVal = (keys: string[]) => {
-            const foundKey = Object.keys(master).find(k => keys.includes(k.trim().toUpperCase()));
-            return foundKey ? String(master[foundKey]).trim() : '';
-        };
-
-        return {
-            appId: findVal(['APP_ID', 'APPID', 'APPLICATION_ID']),
-            accessKey: findVal(['ACCESS_KEY', 'ACCESSKEY', 'KEY']),
-            countsTableName: findVal(['TABLE_LOGS', 'TABLA_CONTEOS', 'CONTEOS']) || 'CONTEOS',
-            consolidatedTableName: findVal(['TABLE_CONSOLIDADO', 'TABLA_RESUMEN', 'CONSOLIDADO']) || 'CONSOLIDADO',
-            productsTableName: findVal(['TABLE_PRODUCTOS', 'PRODUCTOS']) || 'PRODUCTOS',
-            receptionTableName: findVal(['TABLE_RECEPCION', 'RECEPCION']) || 'RECEPCION_BULTOS'
-        };
+        const res = await bootstrapByUrl(config.gasWebAppUrl, config.spreadsheetId);
+        return res;
     } catch (e) { return {}; }
 };
 
+// Added missing callGas to resolve Error in services/appsheet.ts and hooks/useCloudConfig.ts
 /**
- * Fix: Added callGas exported member
+ * Llama a una acción genérica en GAS
  */
 export const callGas = async (action: string, payload: any, compress: boolean = false): Promise<any> => {
     return cloudApi.post(action, payload, compress);
 };
 
+// Added missing fetchFromGas to resolve Error in services/massiveSync.ts
 /**
- * Fix: Added fetchFromGas exported member
+ * Obtiene filas de una tabla
  */
 export const fetchFromGas = async (tableName: string): Promise<any[]> => {
     const res = await cloudApi.fetchTable(tableName);

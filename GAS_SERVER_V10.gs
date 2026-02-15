@@ -1,19 +1,32 @@
 
 /**
- * LOGICOUNT PRO - CLOUD ENGINE V12.9 (RESILIENT EDITION)
- * Este script permite la autoconfiguración total desde la App.
+ * LOGICOUNT PRO - CLOUD ENGINE V12.9.1 (STABILITY FIX)
  */
+
+// Si tu script es "Independiente", pega el ID de tu Excel aquí entre las comillas.
+// Si es un script "Vinculado" (creado desde el Excel), puedes dejarlo vacío.
+const HARDCODED_SPREADSHEET_ID = ""; 
 
 function getSpreadsheet(requestSpreadsheetId) {
   try {
+    // 1. Prioridad: ID enviado por la App
     if (requestSpreadsheetId && requestSpreadsheetId !== "") {
       return SpreadsheetApp.openById(requestSpreadsheetId);
     }
+    
+    // 2. Segunda opción: ID configurado arriba en este script
+    if (HARDCODED_SPREADSHEET_ID !== "") {
+      return SpreadsheetApp.openById(HARDCODED_SPREADSHEET_ID);
+    }
+
+    // 3. Tercera opción: Autodetección (solo si el script está vinculado al Excel)
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    if (!ss) throw new Error("No se pudo detectar un Spreadsheet vinculado automáticamente.");
+    if (!ss) {
+       throw new Error("IDENTIDAD_EXCEL_NO_DETECTADA: El script no está vinculado a un Excel y no recibió un ID válido.");
+    }
     return ss;
   } catch (e) {
-    throw new Error("FALLO_CONEXION_EXCEL: " + e.toString());
+    throw new Error("FALLO_CRITICO_CONEXION_EXCEL: " + e.toString());
   }
 }
 
@@ -36,7 +49,6 @@ function doPost(e) {
     const spreadsheetId = requestData.spreadsheetId;
     let rows = requestData.rows;
 
-    // Manejo de compresión para firmas IA pesadas
     if (requestData.metadata && requestData.metadata.compressed && typeof rows === 'string') {
       const decoded = Utilities.base64Decode(rows);
       const zipBlob = Utilities.newBlob(decoded, "application/zip");
@@ -46,7 +58,7 @@ function doPost(e) {
       }
     }
 
-    // Obtener acceso al Excel
+    // Intentar obtener el acceso al Excel
     const ss = getSpreadsheet(spreadsheetId);
 
     switch (action) {
@@ -60,7 +72,6 @@ function doPost(e) {
         response = fetchRows(ss, requestData.tableName, requestData.since);
         break;
       case 'ping':
-        // PROTOCOLO DE AUTODESCRUBRIMIENTO
         response = { 
           success: true, 
           message: "Engine Online", 

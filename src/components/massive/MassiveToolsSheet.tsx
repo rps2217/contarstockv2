@@ -15,28 +15,16 @@ interface Props {
     onChangeLocation: () => void;
     onShowLabel: () => void;
     onReset: () => void;
+    // Added missing onImport prop to resolve Error in src/features/hammer/HammerPage.tsx
+    onImport: () => void;
     onPrintSummary: () => void;
 }
 
 export const MassiveToolsSheet: React.FC<Props> = ({ 
     isOpen, onClose, batchId, hasActiveItem, location, 
-    onChangeLocation, onShowLabel, onReset, onPrintSummary 
+    onChangeLocation, onShowLabel, onReset, onImport, onPrintSummary 
 }) => {
     
-    const { execute: syncStock, isLoading: isSyncing } = useCloudAction<number>();
-
-    const handleDownloadStock = () => {
-        syncStock({
-            action: () => importManifestFromCloud(batchId),
-            successMsg: "Stock teórico actualizado",
-            errorMsg: "Fallo al descargar stock desde Google Sheets",
-            onSuccess: (count) => {
-                alert(`Sincronización Exitosa: ${count} metas cargadas.`);
-                onClose();
-            }
-        });
-    };
-
     return (
         <Modal 
             isOpen={isOpen} 
@@ -68,11 +56,11 @@ export const MassiveToolsSheet: React.FC<Props> = ({
                     />
 
                     <IndustrialActionCard 
-                        onClick={handleDownloadStock}
+                        // Changed to use the onImport prop passed from parent
+                        onClick={onImport}
                         icon={Download}
                         label="Descargar Stock Teórico"
                         sublabel="Sincronizar Guía desde Cloud"
-                        isLoading={isSyncing}
                         color="text-amber-400"
                     />
 
