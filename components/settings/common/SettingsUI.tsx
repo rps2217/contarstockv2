@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Loader2, ChevronRight } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 export const SettingsSection = ({ children, title, className = "" }: any) => (
     <div className={`space-y-4 mb-10 animate-in slide-in-from-bottom-2 ${className}`}>
@@ -21,10 +21,21 @@ export const SettingsCard = ({ children, className = "" }: any) => (
     </div>
 );
 
-/**
- * TOGGLE INDUSTRIAL v5.0
- * Diseño de alta fidelidad táctil para PDAs y Tablets.
- */
+export const SettingsCardHeader = ({ icon: Icon, title, subtitle, color = "bg-blue-600", children }: any) => (
+    <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+            <div className={`p-3 rounded-2xl shadow-lg ${color} text-white`}>
+                <Icon className="w-6 h-6" />
+            </div>
+            <div>
+                <h3 className="text-lg font-black uppercase italic leading-none dark:text-white">{title}</h3>
+                <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-1">{subtitle}</p>
+            </div>
+        </div>
+        {children}
+    </div>
+);
+
 export const SettingsToggle = ({ active, label, description, icon: Icon, onClick }: any) => (
     <button 
         onClick={onClick}
@@ -49,7 +60,6 @@ export const SettingsToggle = ({ active, label, description, icon: Icon, onClick
             </div>
         </div>
 
-        {/* Switch Estilizado */}
         <div className={`w-14 h-7 rounded-full border-4 relative transition-all flex items-center px-1 shrink-0 ${active ? 'bg-white/10 border-white' : 'bg-slate-100 dark:bg-black border-slate-200 dark:border-white/10'}`}>
             <div className={`w-4 h-4 rounded-full transition-all transform duration-300 ${active ? 'translate-x-6 bg-white shadow-[0_0_15px_white]' : 'translate-x-0 bg-slate-400'}`} />
         </div>
