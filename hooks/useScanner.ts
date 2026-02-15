@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef, useCallback, useMemo, useReducer } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
@@ -10,8 +11,12 @@ import { CountingSession, ScannerStatus, ConsolidatedItem, Product } from '../ty
 import { useFeedbackSystem } from './useFeedbackSystem';
 import { aggregateScans } from '../services/aggregator';
 import { shouldPromptForBatch } from '../services/uiLogic';
-import { scannerReducer } from '../services/scannerMachine';
+import { scannerReducer, ScannerState } from '../services/scannerMachine';
 
+/**
+ * SCANNER ENGINE HOOK v8.5 (Robust Architecture)
+ * Centraliza la lógica de negocio y el control de flujo de la PDA.
+ */
 export const useScanner = (session: CountingSession, onFinish: () => void) => {
     const settings = useMemo(() => getSettings(), []);
     const { feedback, trigger } = useFeedbackSystem(200);
@@ -23,7 +28,8 @@ export const useScanner = (session: CountingSession, onFinish: () => void) => {
     const [activeProduct, setActiveProduct] = useState<Product | null>(null);
     const [optimisticQty, setOptimisticQty] = useState<number | null>(null);
 
-    const itemsRef = useRef<ConsolidatedItem[]>([]);
+    // Caché de items para cálculos síncronos entre renders
+    const itemsCache = useRef<ConsolidatedItem[]>([]);
     
     useEffect(() => { localStorage.setItem('last_loc', currentLocation); }, [currentLocation]);
 
@@ -57,26 +63,34 @@ export const useScanner = (session: CountingSession, onFinish: () => void) => {
 
         const sorted = finalItems.sort((a, b) => {
             if (normalizeSku(a.barcode) === activeBarcode) return -1;
-            if (normalizeSku(b.barcode) === activeBarcode) return 1;
             return b.totalQuantity - a.totalQuantity;
         });
 
-        itemsRef.current = sorted;
+        itemsCache.current = sorted;
         return sorted;
     }, [session.id, session.isVerifiedMode, session.expectedItems, activeBarcode, feedback]);
 
+    /**
+     * PIPELINE DE ESCANEO SEGURO
+     * Maneja la transición LOOKING_UP -> COMMITTING evitando colisiones.
+     */
     const finalizeScanPipeline = useCallback(async (barcode: string, qty: number, mm?: number, yyyy?: number, batch?: string) => {
-        if (machineState !== 'IDLE' && machineState !== 'LOOKING_UP' && machineState !== 'COMMITTING' && machineState !== 'MANUAL_ENTRY') return;
+        // PROTECCIÓN: Solo permitimos escaneo si la máquina está lista o en entrada manual
+        if (machineState !== 'IDLE' && machineState !== 'MANUAL_ENTRY' && machineState !== 'AWAITING_PHARMA') return;
 
-        dispatch({ type: 'SCAN_INBOUND', barcode });
+        const cleanBarcode = sanitizeBarcode(barcode);
+        const normBarcode = normalizeSku(cleanBarcode);
+        if (!cleanBarcode) return;
+
+        dispatch({ type: 'SCAN_INBOUND', barcode: cleanBarcode });
+        
         try {
-            const cleanBarcode = sanitizeBarcode(barcode);
-            const normBarcode = normalizeSku(cleanBarcode);
-            
+            // FASE 1: Resolución de Producto
             let product = await productService.getProductByBarcode(cleanBarcode);
             setActiveProduct(product || null);
 
-            const needsPharma = shouldPromptForBatch(cleanBarcode, consolidatedHistory || [], settings) && (mm === undefined);
+            // FASE 2: Verificación de Validación Pharma (Batch/Exp)
+            const needsPharma = shouldPromptForBatch(cleanBarcode, itemsCache.current, settings) && (mm === undefined);
             if (needsPharma) {
                 setActiveBarcode(normBarcode);
                 dispatch({ type: 'PRODUCT_RESOLVED', needsPharma: true });
@@ -84,7 +98,8 @@ export const useScanner = (session: CountingSession, onFinish: () => void) => {
             }
             dispatch({ type: 'PRODUCT_RESOLVED', needsPharma: false });
 
-            const existing = itemsRef.current.find(i => normalizeSku(i.barcode) === normBarcode);
+            // FASE 3: Persistencia y UI Optimista
+            const existing = itemsCache.current.find(i => normalizeSku(i.barcode) === normBarcode);
             const newTotal = Math.max(0, (existing?.totalQuantity || 0) + qty);
             
             setOptimisticQty(newTotal);
@@ -92,19 +107,46 @@ export const useScanner = (session: CountingSession, onFinish: () => void) => {
 
             await sessionService.addScanEvent(session.id, cleanBarcode, qty, mm, yyyy, currentLocation, batch);
             
+            // FASE 4: Feedback Final
             dispatch({ type: 'COMMIT_COMPLETE' });
             trigger(qty > 0 ? 'success' : 'undo');
-            if (settings.ttsEnabled && qty > 0) SoundFX.speak(`${newTotal}`);
+            
+            if (settings.ttsEnabled && qty > 0) {
+                SoundFX.speak(`${newTotal}`);
+            }
+
+            // AUTO-RESET para ráfaga continua
+            setTimeout(() => dispatch({ type: 'RESET' }), 1000);
+
         } catch (err) {
+            console.error("[Kernel] Scan Pipeline Failure:", err);
             dispatch({ type: 'ERROR_OCCURRED' });
             trigger('error');
+            setTimeout(() => dispatch({ type: 'RESET' }), 2000);
         }
-    }, [session.id, settings, trigger, currentLocation, consolidatedHistory, machineState]);
+    }, [session.id, settings, trigger, currentLocation, machineState]);
+
+    /**
+     * Mapeo de Estados de Kernel a Estados UI
+     */
+    const getUiStatus = (): ScannerStatus => {
+        switch(machineState) {
+            case 'IDLE': return 'idle';
+            case 'MANUAL_ENTRY': return 'manual';
+            case 'LOOKING_UP':
+            case 'COMMITTING': return 'busy';
+            case 'AWAITING_PHARMA': return 'expiring';
+            case 'CONFIRMING_CLOSE': return 'confirming';
+            case 'FEEDBACK_ERROR': return 'error';
+            case 'FEEDBACK_SUCCESS': return 'success';
+            default: return 'idle';
+        }
+    };
 
     return {
         state: { 
             machineState,
-            status: machineState.toLowerCase() as ScannerStatus,
+            status: getUiStatus(),
             feedback, multiplier,
             currentLocation,
             activeBarcode, activeProduct,
@@ -120,18 +162,21 @@ export const useScanner = (session: CountingSession, onFinish: () => void) => {
             selectItem: (b: string) => { 
                 const norm = normalizeSku(b);
                 setActiveBarcode(norm); 
-                const existing = itemsRef.current.find(i => normalizeSku(i.barcode) === norm);
+                const existing = itemsCache.current.find(i => normalizeSku(i.barcode) === norm);
                 setOptimisticQty(existing?.totalQuantity || 0); 
                 productService.getProductByBarcode(b).then(setActiveProduct);
             },
             handlePharmaComplete: (m?: number, y?: number, b?: string) => {
-                if (activeBarcode) finalizeScanPipeline(activeBarcode, multiplier, m, y, b);
+                if (activeBarcode) {
+                    dispatch({ type: 'PHARMA_COMPLETE', mm: m, yyyy: y, batch: b });
+                    finalizeScanPipeline(activeBarcode, multiplier, m, y, b);
+                }
             },
             cancelPharma: () => dispatch({ type: 'RESET' }),
             setStatus: (s: ScannerStatus) => {
                 if (s === 'manual') dispatch({ type: 'OPEN_MANUAL' });
                 else if (s === 'confirming') dispatch({ type: 'TRIGGER_CLOSE' });
-                else dispatch({ type: 'RESET' });
+                else if (s === 'idle') dispatch({ type: 'RESET' });
             }
         }
     };

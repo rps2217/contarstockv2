@@ -111,7 +111,8 @@ export interface ConsolidatedItem {
 
 export type ViewState = 'dashboard' | 'counting' | 'database' | 'reports' | 'settings' | 'reception' | 'sync' | 'massive';
 export type Theme = 'light' | 'dark' | 'contrast' | 'warm' | 'navy' | 'oled';
-export type ScannerStatus = 'idle' | 'manual' | 'camera' | 'expiring' | 'confirming' | 'error' | 'success' | 'product_form';
+// ScannerStatus mapeado a estados visuales UI
+export type ScannerStatus = 'idle' | 'manual' | 'busy' | 'expiring' | 'confirming' | 'error' | 'success';
 
 export interface AppSettings {
   theme: Theme;
@@ -144,5 +145,5 @@ export interface AppSheetConfig {
   receptionTableName?: string;
   ordersTableName?: string; 
   gasWebAppUrl?: string; 
-  spreadsheetId?: string; // ID único del Excel para evitar el error de "Spreadsheet activo"
+  spreadsheetId?: string;
 }

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { ChevronLeft, Lock, LayoutGrid } from 'lucide-react';
+import { ChevronLeft, Lock, Loader2, Sparkles } from 'lucide-react';
 import { CountingSession } from '../types';
 import { useScanner } from '../hooks/useScanner';
 import { useHIDScanner } from '../hooks/useHIDScanner';
@@ -13,6 +13,10 @@ import { CameraScanner } from './CameraScanner';
 import { ScreenLockOverlay } from './common/ScreenLockOverlay';
 import { ExpirationModal } from './ExpirationModal';
 
+/**
+ * COMPONENTE SCANNER v9.0 (Enterprise Grade)
+ * UI de alto rendimiento para terminales industriales.
+ */
 export const Scanner: React.FC<{ session: CountingSession, onCloseSession: () => void }> = ({ session, onCloseSession }) => {
   const { state, data, actions } = useScanner(session, onCloseSession);
   const [isTriggerActive, setIsTriggerActive] = useState(false);
@@ -20,27 +24,39 @@ export const Scanner: React.FC<{ session: CountingSession, onCloseSession: () =>
 
   // Gatillo de Hardware PDA
   useHIDScanner({ 
-      isEnabled: !isScreenLocked && state.status !== 'expiring', 
+      isEnabled: !isScreenLocked && state.status !== 'expiring' && state.status !== 'busy', 
       onScan: (barcode) => actions.handleExternalScan(barcode, state.multiplier) 
   });
 
   const handleManualConfirm = (sku: string) => {
       actions.handleExternalScan(sku, state.multiplier);
-      actions.setStatus('idle');
+      // El pipeline se encarga de resetear el estado tras el commit
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col bg-black text-white font-mono overflow-hidden">
+    <div className="fixed inset-0 z-[100] flex flex-col bg-black text-white font-mono overflow-hidden select-none">
       
       {/* HEADER COMPACTO PARA PDA */}
       <header className="h-14 px-3 flex items-center justify-between border-b border-white/5 bg-slate-950 shrink-0 z-50">
           <div className="flex items-center gap-2">
-            <button onClick={() => actions.setStatus('confirming')} className="p-3 bg-white/5 rounded-2xl active:bg-blue-600 transition-all border border-white/5">
+            <button 
+                onClick={() => actions.setStatus('confirming')} 
+                className="p-3 bg-white/5 rounded-2xl active:bg-blue-600 transition-all border border-white/5"
+            >
                 <ChevronLeft className="w-6 h-6" />
             </button>
             <div className="flex flex-col ml-1">
                 <span className="text-[10px] font-black text-white leading-none uppercase tracking-tight truncate max-w-[120px]">{session.erpOrder}</span>
-                <span className="text-[8px] font-bold text-blue-500/60 uppercase tracking-widest mt-1">Terminal_Active</span>
+                <div className="flex items-center gap-1.5 mt-1">
+                    {state.status === 'busy' ? (
+                        <span className="flex items-center gap-1">
+                            <Loader2 className="w-2.5 h-2.5 text-blue-500 animate-spin" />
+                            <span className="text-[7px] font-bold text-blue-500 uppercase tracking-widest">Calculando...</span>
+                        </span>
+                    ) : (
+                        <span className="text-[8px] font-bold text-emerald-500/60 uppercase tracking-widest">Motor_Online</span>
+                    )}
+                </div>
             </div>
           </div>
 
@@ -56,7 +72,16 @@ export const Scanner: React.FC<{ session: CountingSession, onCloseSession: () =>
       </header>
 
       {/* ÁREA DE DISPLAY INDUSTRIAL */}
-      <div className="h-[34vh] shrink-0 border-b-4 border-black">
+      <div className="h-[34vh] shrink-0 border-b-4 border-black relative">
+          {/* Overlay de procesamiento sutil */}
+          {state.status === 'busy' && (
+              <div className="absolute inset-0 z-20 bg-blue-600/5 backdrop-blur-[2px] flex flex-col items-center justify-center animate-in fade-in duration-300">
+                  <div className="bg-blue-600 p-4 rounded-full shadow-2xl shadow-blue-500/20">
+                      <Sparkles className="w-12 h-12 text-white animate-pulse" />
+                  </div>
+              </div>
+          )}
+
           <ScannerHero 
                 lastScan={state.activeBarcode ? { barcode: state.activeBarcode } as any : undefined} 
                 activeProduct={state.activeProduct || undefined} 
@@ -84,18 +109,28 @@ export const Scanner: React.FC<{ session: CountingSession, onCloseSession: () =>
             isTriggerActive={isTriggerActive}
             onMultiplierChange={actions.setMultiplier}
             onOpenManual={() => actions.setStatus('manual')}
-            onTriggerStart={() => !isScreenLocked && setIsTriggerActive(true)}
+            onTriggerStart={() => !isScreenLocked && state.status !== 'busy' && setIsTriggerActive(true)}
             onTriggerEnd={() => setIsTriggerActive(false)}
       />
 
       {isTriggerActive && (
           <div className="fixed inset-0 z-[250]">
-              <CameraScanner onScan={(c) => { actions.handleExternalScan(c, state.multiplier); setIsTriggerActive(false); }} onClose={() => setIsTriggerActive(false)} isTriggered={true} />
+              <CameraScanner 
+                onScan={(c) => { 
+                    actions.handleExternalScan(c, state.multiplier); 
+                    setIsTriggerActive(false); 
+                }} 
+                onClose={() => setIsTriggerActive(false)} 
+                isTriggered={true} 
+              />
           </div>
       )}
       
       {state.status === 'expiring' && state.activeBarcode && (
-          <ExpirationModal productName={state.activeProduct?.name || state.activeBarcode} onComplete={(m, y, b) => actions.handlePharmaComplete(m, y, b)} />
+          <ExpirationModal 
+            productName={state.activeProduct?.name || state.activeBarcode} 
+            onComplete={(m, y, b) => actions.handlePharmaComplete(m, y, b)} 
+          />
       )}
 
       <ScreenLockOverlay isLocked={isScreenLocked} onUnlock={() => setIsScreenLocked(false)} />
