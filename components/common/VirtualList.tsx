@@ -14,9 +14,8 @@ interface VirtualListProps<T> {
 }
 
 /**
- * MOTOR DE VIRTUALIZACIÓN INDUSTRIAL v2.1
- * Optimizado para CPUs ARM (PDA) mediante el uso de transform-gpu y 
- * reducción de recálculos de layout.
+ * MOTOR DE VIRTUALIZACIÓN INDUSTRIAL v2.5 (High Performance)
+ * Optimizado para CPUs de bajo consumo y pantallas táctiles de PDA.
  */
 export const VirtualList = <T,>({ 
     items, 
@@ -32,24 +31,26 @@ export const VirtualList = <T,>({
     const [scrollTop, setScrollTop] = useState(0);
     const [containerHeight, setContainerHeight] = useState(0);
 
-    // Ajuste de altura responsivo sin causar layouts pesados
+    // Ajuste de altura responsivo sin causar layouts pesados usando ResizeObserver
     useEffect(() => {
-        if (!containerRef.current) return;
+        const target = containerRef.current;
+        if (!target) return;
         
         const observer = new ResizeObserver(entries => {
             for (let entry of entries) {
+                // Usamos height directo para evitar re-layouts
                 setContainerHeight(entry.contentRect.height);
             }
         });
         
-        observer.observe(containerRef.current);
+        observer.observe(target);
         return () => observer.disconnect();
     }, []);
 
+    // Manejador de scroll optimizado con requestAnimationFrame
     const onScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
         const top = e.currentTarget.scrollTop;
         
-        // requestAnimationFrame para sincronizar el scroll con el refresco de pantalla
         window.requestAnimationFrame(() => {
             setScrollTop(top);
         });
@@ -63,18 +64,20 @@ export const VirtualList = <T,>({
         }
     }, [items.length, itemHeight, containerHeight, onEndReached, endReachedThreshold]);
 
-    const totalHeight = items.length * itemHeight;
-    const startIndex = Math.max(0, Math.floor(scrollTop / itemHeight) - 2); 
-    const visibleCount = Math.ceil(containerHeight / itemHeight) + 4; 
-    const endIndex = Math.min(items.length, startIndex + visibleCount);
-    
-    const visibleItems = useMemo(() => {
-        const result = [];
-        for (let i = startIndex; i < endIndex; i++) {
-            result.push(items[i]);
-        }
-        return result;
-    }, [items, startIndex, endIndex]);
+    // Cálculos de índices (Memoizados para evitar basura en el GC)
+    const { totalHeight, startIndex, endIndex, visibleItems } = useMemo(() => {
+        const total = items.length * itemHeight;
+        const start = Math.max(0, Math.floor(scrollTop / itemHeight) - 3); 
+        const visibleCount = Math.ceil(containerHeight / itemHeight) + 6; 
+        const end = Math.min(items.length, start + visibleCount);
+        
+        return {
+            totalHeight: total,
+            startIndex: start,
+            endIndex: end,
+            visibleItems: items.slice(start, end)
+        };
+    }, [items, scrollTop, itemHeight, containerHeight]);
 
     if (items.length === 0) {
         return (
@@ -94,12 +97,16 @@ export const VirtualList = <T,>({
             ref={containerRef} 
             onScroll={onScroll} 
             className={`h-full w-full overflow-y-auto no-scrollbar relative contain-strict ${className}`}
-            style={{ WebkitOverflowScrolling: 'touch' }}
+            style={{ 
+                WebkitOverflowScrolling: 'touch',
+                // Optimización crítica: Capa aislada para el scroll
+                willChange: 'scroll-position' 
+            }}
         >
-            {/* Espaciador para el scrollbar real */}
+            {/* Espaciador invisible para el scrollbar real */}
             <div style={{ height: totalHeight, width: '100%', pointerEvents: 'none' }} />
             
-            {/* Contenedor con aceleración por hardware */}
+            {/* Contenedor de items con aceleración GPU */}
             <div 
                 style={{ 
                     position: 'absolute',
@@ -107,7 +114,9 @@ export const VirtualList = <T,>({
                     left: 0,
                     width: '100%',
                     transform: `translate3d(0, ${startIndex * itemHeight}px, 0)`,
-                    willChange: 'transform'
+                    willChange: 'transform',
+                    // Evita cálculos de layout costosos dentro de los hijos
+                    contain: 'content'
                 }}
             >
                 {visibleItems.map((item, localIndex) => (

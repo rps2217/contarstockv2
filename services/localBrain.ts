@@ -1,6 +1,7 @@
 
 import { pipeline, env } from '@xenova/transformers';
 
+// Configuración de entorno para máximo rendimiento local
 env.allowLocalModels = false;
 env.useBrowserCache = true;
 
@@ -15,15 +16,20 @@ class LocalBrainService {
     private details: string = '';
     private listeners: Set<StatusListener> = new Set();
     private STORAGE_KEY = 'logicount_brain_installed';
+    private initPromise: Promise<void> | null = null;
 
     constructor() {
-        // En lugar de init inmediato, esperamos a que el navegador esté libre
         if (typeof window !== 'undefined') {
+            // Carga diferida agresiva: Esperamos a que la CPU esté libre
             if (localStorage.getItem(this.STORAGE_KEY) === 'true') {
+                const idleHandler = () => {
+                    this.init(true);
+                };
+                
                 if ('requestIdleCallback' in window) {
-                    (window as any).requestIdleCallback(() => this.init(true));
+                    (window as any).requestIdleCallback(idleHandler, { timeout: 10000 });
                 } else {
-                    setTimeout(() => this.init(true), 3000);
+                    setTimeout(idleHandler, 5000);
                 }
             }
         }
@@ -43,44 +49,53 @@ class LocalBrainService {
     }
 
     async init(silent = false) {
-        if (this.pipe || this.status === 'downloading') return;
+        if (this.pipe) return;
+        if (this.initPromise) return this.initPromise;
 
-        if (!silent) this.updateStatus('downloading', 0, 'Iniciando IA...');
-        
-        try {
-            this.pipe = await pipeline('feature-extraction', this.modelName, {
-                progress_callback: (data: any) => {
-                    if (data.status === 'progress' && !silent) {
-                        if (data.file.includes('onnx') || data.file.includes('model')) {
-                            this.updateStatus('downloading', Math.round(data.progress || 0), 'Optimizando Cerebro...');
+        this.initPromise = (async () => {
+            if (!silent) this.updateStatus('downloading', 0, 'Iniciando IA...');
+            
+            try {
+                this.pipe = await pipeline('feature-extraction', this.modelName, {
+                    progress_callback: (data: any) => {
+                        if (data.status === 'progress' && !silent) {
+                            if (data.file.includes('onnx') || data.file.includes('model')) {
+                                this.updateStatus('downloading', Math.round(data.progress || 0), 'Asimilando...');
+                            }
                         }
                     }
-                }
-            });
-            
-            localStorage.setItem(this.STORAGE_KEY, 'true');
-            this.updateStatus('ready', 100, 'IA Activa');
-        } catch (e: any) {
-            console.error("[LocalBrain] Falló inicialización:", e);
-            if (!silent) this.updateStatus('error', 0, e.message);
-            else this.status = 'idle';
-        }
+                });
+                
+                localStorage.setItem(this.STORAGE_KEY, 'true');
+                this.updateStatus('ready', 100, 'IA Activa');
+            } catch (e: any) {
+                console.error("[LocalBrain] Init Failed:", e);
+                this.initPromise = null;
+                if (!silent) this.updateStatus('error', 0, e.message);
+                else this.status = 'idle';
+            }
+        })();
+
+        return this.initPromise;
     }
 
+    /**
+     * Genera un embedding. Si el modelo no está cargado, lo inicia.
+     */
     async embed(text: string): Promise<number[] | null> {
         if (!text || text.trim().length < 2) return null;
         try {
             if (!this.pipe) await this.init(false);
+            
+            // Forzamos el uso de memoria reducida (Pooling Mean)
             const output = await this.pipe(text, { pooling: 'mean', normalize: true });
             const vector = Array.from(output.data) as number[];
+            
+            // Redondear dimensiones para ahorrar espacio en IndexedDB
             return vector.map(n => Number(n.toFixed(4)));
         } catch (e) {
             return null;
         }
-    }
-    
-    public getStatus() {
-        return { status: this.status, progress: this.progress };
     }
 }
 
