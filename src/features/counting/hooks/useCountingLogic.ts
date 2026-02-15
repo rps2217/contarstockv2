@@ -33,7 +33,8 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
         const physicalItems = await aggregateScans(scans);
         
         const expectedItems = session?.expectedItems || [];
-        const expectedMap = new Map(expectedItems.map(ei => [normalizeSku(ei.barcode), ei.expectedQty]));
+        // FIX: Explicitly typed Map to fix 'unknown' type assignment to expectedQuantity
+        const expectedMap = new Map<string, number>(expectedItems.map(ei => [normalizeSku(ei.barcode), ei.expectedQty]));
 
         const finalItems = physicalItems.map(pi => ({
             ...pi,

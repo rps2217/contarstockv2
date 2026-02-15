@@ -39,7 +39,8 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
         const physicalItems = await aggregateScans(scans);
         
         const expectedItems = session?.expectedItems || [];
-        const expectedMap = new Map(expectedItems.map(ei => [normalizeSku(ei.barcode), ei.expectedQty]));
+        // FIX: Explicitly typed Map to ensure number return type and fix 'unknown' assignment error
+        const expectedMap = new Map<string, number>(expectedItems.map(ei => [normalizeSku(ei.barcode), ei.expectedQty]));
 
         const finalItems = physicalItems.map(pi => ({
             ...pi,
@@ -123,7 +124,6 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
             status: machineState.toLowerCase(),
             feedback, multiplier, currentLocation,
             activeBarcode, activeProduct,
-            // Re-named optimisticActiveQty to optimisticQty to resolve property access errors in CountingPage.tsx
             optimisticQty: optimisticQty || 0
         },
         sessionData: { session, history: consolidatedHistory || [] },

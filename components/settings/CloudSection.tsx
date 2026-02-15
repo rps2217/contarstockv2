@@ -22,11 +22,19 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
             return;
         }
         
+        // Limpieza de ID: Extraer ID de una URL si el usuario pegó la URL completa
+        let cleanId = ssId.trim();
+        if (cleanId.includes("/d/")) {
+            const match = cleanId.match(/\/d\/([a-zA-Z0-9-_]+)/);
+            if (match) cleanId = match[1];
+        }
+
         setErrorMode(null);
         setIsConnecting(true);
         try {
-            const fullConfig = await bootstrapByUrl(scriptUrl, ssId);
+            const fullConfig = await bootstrapByUrl(scriptUrl, cleanId);
             updateSetting('appSheetConfig', fullConfig);
+            setSsId(cleanId); // Actualizar UI con el ID limpio
             alert("¡Conexión Exitosa! El sistema ahora está vinculado.");
         } catch (e: any) {
             if (e.message === 'EXCEL_ID_REQUIRED') {
@@ -70,12 +78,12 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
                             </div>
 
                             <div className="space-y-1.5">
-                                <label className="text-[9px] font-black text-indigo-400 uppercase tracking-widest ml-1">2. ID del Spreadsheet (Opcional si es vinculado)</label>
+                                <label className="text-[9px] font-black text-indigo-400 uppercase tracking-widest ml-1">2. ID del Spreadsheet (Requerido para scripts independientes)</label>
                                 <div className="relative">
                                     <SettingsInput 
                                         value={ssId}
                                         onChange={(e: any) => setSsId(e.target.value)}
-                                        placeholder="Pegue aquí el ID largo de su Excel"
+                                        placeholder="ID largo del Excel (entre /d/ y /edit)"
                                         className={`bg-white/5 border-white/10 text-white placeholder:text-slate-600 ${errorMode === 'ID_REQUIRED' ? 'border-rose-500 bg-rose-500/5' : ''}`}
                                     />
                                     <Database className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/10" />
@@ -84,7 +92,7 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
                                     <div className="flex items-center gap-2 mt-2 p-3 bg-rose-500/20 rounded-xl border border-rose-500/40">
                                         <AlertCircle className="w-4 h-4 text-rose-400" />
                                         <p className="text-[9px] text-rose-100 font-bold uppercase leading-tight">
-                                            Tu script es independiente. Debes pegar el ID del Excel para que pueda conectarse.
+                                            Se requiere un ID de Excel válido. Cópialo de la URL de tu hoja de cálculo.
                                         </p>
                                     </div>
                                 )}
@@ -94,7 +102,7 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
                         <SettingsButton 
                             onClick={handleAutoConfig}
                             isLoading={isConnecting}
-                            disabled={!scriptUrl}
+                            disabled={!scriptUrl || !ssId}
                             label={isConnecting ? "Validando..." : "Vincular Sistema"}
                             icon={Wifi}
                             variant="primary"
@@ -106,12 +114,11 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
                 <div className="bg-blue-900/10 border-2 border-blue-500/20 p-5 rounded-[2rem] flex gap-4">
                     <Info className="w-6 h-6 text-blue-400 shrink-0" />
                     <div className="space-y-1">
-                        <p className="text-[9px] text-blue-200 font-bold uppercase tracking-wider">¿Dónde obtengo el ID?</p>
+                        <p className="text-[9px] text-blue-200 font-bold uppercase tracking-wider">Instrucciones de Vínculo</p>
                         <p className="text-[9px] text-blue-400 leading-relaxed font-medium">
-                            Abre tu archivo Excel en el navegador. En la barra de direcciones verás algo como: <br/>
-                            <span className="text-white/40 italic">docs.google.com/spreadsheets/d/</span>
-                            <span className="text-amber-400 font-black">ESTE_ES_EL_ID</span>
-                            <span className="text-white/40 italic">/edit</span>
+                            1. Abre tu Excel. Copia el ID de la URL (ej: <span className="text-amber-400">1ABC...XYZ</span>).<br/>
+                            2. Asegúrate de que el Excel esté compartido con el email que creó el Script.<br/>
+                            3. Si el script es "Vinculado" (creado desde Extensiones), el ID se autodetectará.
                         </p>
                     </div>
                 </div>

@@ -1,35 +1,36 @@
 
 /**
- * LOGICOUNT PRO - CLOUD ENGINE V12.9 (RESILIENT EDITION)
+ * LOGICOUNT PRO - CLOUD ENGINE V12.9.1 (STABILITY FIX)
  */
 
-// OPCIONAL: Si el script es independiente, puedes pegar aquí el ID del Excel 
-// (Ej: "1abc123..."). Si lo dejas vacío, el sistema lo pedirá desde la App.
 const HARDCODED_SPREADSHEET_ID = ""; 
 
 function getSpreadsheet(requestSpreadsheetId) {
   try {
-    // 1. Prioridad: ID enviado desde la App móvil
-    if (requestSpreadsheetId && requestSpreadsheetId !== "") {
-      return SpreadsheetApp.openById(requestSpreadsheetId);
-    }
-    
-    // 2. Segunda opción: ID fijo en el servidor (Configurado arriba)
-    if (HARDCODED_SPREADSHEET_ID !== "") {
-      return SpreadsheetApp.openById(HARDCODED_SPREADSHEET_ID);
+    let finalId = "";
+
+    // 1. Determinar qué ID usar
+    if (requestSpreadsheetId && requestSpreadsheetId.length > 10) {
+      finalId = requestSpreadsheetId.trim();
+    } else if (HARDCODED_SPREADSHEET_ID !== "") {
+      finalId = HARDCODED_SPREADSHEET_ID;
+    } else {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      if (ss) return ss;
     }
 
-    // 3. Tercera opción: Script "Vinculado" (Creado desde Extensiones > Apps Script)
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    
-    if (!ss) {
-      throw new Error(
-        "IDENTIDAD_EXCEL_NO_DETECTADA. " +
-        "Solución: Copia el ID de tu Excel de la URL (entre /d/ y /edit) " +
-        "y pégalo en la configuración de la App LogiCount."
-      );
+    // 2. Validación de seguridad del ID para evitar el error "Unexpected error while getting property openById"
+    if (!finalId || finalId.includes("AUTO_DET") || finalId.length < 20) {
+      throw new Error("ID_DE_EXCEL_INVALIDO: El servidor recibió '" + finalId + "'. Verifica en Setup > Nube.");
     }
-    return ss;
+
+    // 3. Intento de apertura con manejo de errores de permiso
+    try {
+      return SpreadsheetApp.openById(finalId);
+    } catch (err) {
+      throw new Error("ACCESO_DENEGADO: El script no tiene permiso para abrir el archivo. Comparta el Excel con el dueño del script o verifique que el ID sea correcto.");
+    }
+
   } catch (e) {
     throw new Error("FALLO_CRITICO_CONEXION_EXCEL: " + e.toString());
   }
@@ -54,7 +55,6 @@ function doPost(e) {
     const spreadsheetId = requestData.spreadsheetId;
     let rows = requestData.rows;
 
-    // Manejo de compresión para firmas IA pesadas
     if (requestData.metadata && requestData.metadata.compressed && typeof rows === 'string') {
       const decoded = Utilities.base64Decode(rows);
       const zipBlob = Utilities.newBlob(decoded, "application/zip");
@@ -64,7 +64,6 @@ function doPost(e) {
       }
     }
 
-    // Obtener acceso al Excel
     const ss = getSpreadsheet(spreadsheetId);
 
     switch (action) {

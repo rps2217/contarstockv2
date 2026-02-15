@@ -39,7 +39,8 @@ export const useProductDatabase = () => {
         };
         checkStorage();
 
-        return () => unsubscribe();
+        // FIX: Wrapped unsubscribe to ensure the EffectCallback returns void
+        return () => { unsubscribe(); };
     }, []);
 
     const products = useLiveQuery(async () => {

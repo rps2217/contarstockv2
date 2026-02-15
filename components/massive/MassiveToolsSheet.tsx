@@ -6,6 +6,8 @@ import { Modal } from '../common/Modal';
 interface Props {
     isOpen: boolean;
     onClose: () => void;
+    // FIX: Added batchId to Props to satisfy requirements in MassiveBlindView and HammerPage
+    batchId: string;
     hasActiveItem: boolean;
     location: string;
     onChangeLocation: () => void;

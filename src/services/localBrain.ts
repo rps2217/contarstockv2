@@ -32,7 +32,8 @@ class LocalBrainService {
     public subscribe(listener: StatusListener) {
         this.listeners.add(listener);
         listener(this.status, this.progress, this.details);
-        return () => this.listeners.delete(listener);
+        // FIX: Changed to return a void function to satisfy useEffect destructor requirements
+        return () => { this.listeners.delete(listener); };
     }
 
     private updateStatus(status: BrainStatus, progress: number, details: string = '') {

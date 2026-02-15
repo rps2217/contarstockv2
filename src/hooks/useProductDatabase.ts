@@ -39,7 +39,8 @@ export const useProductDatabase = () => {
         };
         checkStorage();
 
-        return () => unsubscribe();
+        // FIX: Wrapped unsubscribe to ensure return is void, satisfying destructor type check
+        return () => { unsubscribe(); };
     }, []);
 
     const products = useLiveQuery(async () => {

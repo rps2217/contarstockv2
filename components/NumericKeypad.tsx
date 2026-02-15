@@ -5,11 +5,15 @@ import { SoundFX } from '../services/audio';
 
 interface NumericKeypadProps {
   isOpen: boolean;
-  onClose: () => void;
-  onConfirm: (finalValue: string) => void;
+  onClose?: () => void;
+  onConfirm?: (finalValue: string) => void;
   title?: string;
   value?: string; 
   placeholder?: string;
+  // FIX: Added embedded, onInput, and onDelete props to support usage in StartSessionModal.tsx
+  embedded?: boolean;
+  onInput?: (char: string) => void;
+  onDelete?: () => void;
 }
 
 /**
@@ -17,7 +21,8 @@ interface NumericKeypadProps {
  * Botones masivos para evitar errores de digitación en movimiento.
  */
 export const NumericKeypad: React.FC<NumericKeypadProps> = ({ 
-  isOpen, onClose, onConfirm, title, value, placeholder = "READY_FOR_INPUT"
+  isOpen, onClose, onConfirm, title, value, placeholder = "READY_FOR_INPUT",
+  embedded, onInput, onDelete
 }) => {
   const [internalBuffer, setInternalBuffer] = useState("");
   
@@ -27,17 +32,19 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
 
   const handleChar = useCallback((char: string) => {
     setInternalBuffer(prev => (prev.length < 25 ? prev + char : prev));
+    onInput?.(char);
     SoundFX.play('increment');
-  }, []);
+  }, [onInput]);
 
   const handleDelete = useCallback(() => {
     setInternalBuffer(prev => prev.slice(0, -1));
+    onDelete?.();
     SoundFX.play('delete');
-  }, []);
+  }, [onDelete]);
 
   const handleConfirm = useCallback(() => {
     if (internalBuffer.trim().length > 0) {
-      onConfirm(internalBuffer.trim());
+      onConfirm?.(internalBuffer.trim());
       setInternalBuffer("");
     }
   }, [internalBuffer, onConfirm]);
@@ -59,6 +66,20 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
       </button>
     );
   };
+
+  // FIX: Added embedded rendering mode for inline usage
+  if (embedded) {
+    return (
+        <div className="grid grid-cols-3 gap-4">
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                <Key key={num} onClick={() => handleChar(num.toString())}>{num}</Key>
+            ))}
+            <Key variant="delete" onClick={handleDelete}><Delete className="w-10 h-10" /></Key>
+            <Key onClick={() => handleChar("0")}>0</Key>
+            <Key variant="confirm" onClick={handleConfirm}><Check className="w-12 h-12 stroke-[5px]" /></Key>
+        </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-[2000] flex flex-col justify-end bg-slate-950/95 backdrop-blur-xl animate-in fade-in duration-300">

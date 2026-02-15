@@ -11,6 +11,8 @@ interface ApiResponse {
     server_timestamp?: string;
     updated?: number; 
     added?: number;   
+    // FIX: Added spreadsheet_name for consistency across client definitions
+    spreadsheet_name?: string;
 }
 
 export const cloudApi = {

@@ -17,7 +17,12 @@ import { ExpirationModal } from './ExpirationModal';
  * COMPONENTE SCANNER v9.0 (Enterprise Grade)
  * UI de alto rendimiento para terminales industriales.
  */
-export const Scanner: React.FC<{ session: CountingSession, onCloseSession: () => void }> = ({ session, onCloseSession }) => {
+// FIX: Added onDiscardSession to props to match usage in CountingView.tsx
+export const Scanner: React.FC<{ 
+  session: CountingSession, 
+  onCloseSession: () => void,
+  onDiscardSession?: () => void 
+}> = ({ session, onCloseSession, onDiscardSession }) => {
   const { state, data, actions } = useScanner(session, onCloseSession);
   const [isTriggerActive, setIsTriggerActive] = useState(false);
   const [isScreenLocked, setIsScreenLocked] = useState(false);

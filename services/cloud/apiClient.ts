@@ -11,6 +11,8 @@ interface ApiResponse {
     server_timestamp?: string;
     updated?: number; 
     added?: number;   
+    // FIX: Added spreadsheet_name to satisfy diagnostic tests in services/diagnostics.ts
+    spreadsheet_name?: string;
 }
 
 /**
