@@ -10,32 +10,48 @@ interface HIDScannerOptions {
 }
 
 /**
- * MOTOR DE CAPTURA HID v4.0 (PDA Optimized)
- * Intercepta ráfagas de teclado físico incluso si el foco no está en un input.
+ * MOTOR DE CAPTURA HID v6.0 (PDA Optimized)
+ * Captura ráfagas de hardware láser incluso sin foco en inputs.
  */
 export const useHIDScanner = ({
     onScan,
     minChars = 2,
-    maxLatency = 45, // Latencia crítica para motores Zebra/Honeywell
+    maxLatency = 70, 
     isEnabled = true
 }: HIDScannerOptions) => {
     const buffer = useRef('');
     const lastKeyTime = useRef(0);
+    const fallbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         if (!isEnabled) return;
 
+        const processBuffer = () => {
+            const currentContent = buffer.current.trim();
+            if (currentContent.length >= minChars) {
+                const cleanCode = sanitizeBarcode(currentContent);
+                if (cleanCode) {
+                    onScan(cleanCode);
+                }
+            }
+            buffer.current = '';
+            if (fallbackTimer.current) clearTimeout(fallbackTimer.current);
+        };
+
         const handleKeyDown = (e: KeyboardEvent) => {
-            // Evitar interferencia si el usuario está en un campo de texto manual explícito
+            // Ignorar teclas de sistema y navegación que envían algunas PDAs
+            if (e.key.length > 1 && e.key !== 'Enter' && e.key !== 'Backspace') return;
+            if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab'].includes(e.key)) return;
+
             const target = e.target as HTMLElement;
+            // No interferir si el usuario está en un campo de texto manual real (ajustes, etc)
             if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
-                // Solo permitimos si es nuestro input de ráfaga
-                if (!target.hasAttribute('data-burst-mode')) return;
+                if (!target.hasAttribute('data-burst-mode') && target.id !== 'v8-core-optical-engine') return;
             }
 
             const now = Date.now();
             
-            // Si el tiempo entre teclas es muy alto, asumimos escritura humana y limpiamos
+            // Si el tiempo entre teclas es muy alto (>70ms), asumimos escritura humana y reseteamos
             if (now - lastKeyTime.current > maxLatency) {
                 buffer.current = '';
             }
@@ -44,22 +60,28 @@ export const useHIDScanner = ({
 
             if (e.key === 'Enter') {
                 if (buffer.current.length >= minChars) {
-                    const cleanCode = sanitizeBarcode(buffer.current);
-                    if (cleanCode) {
-                        onScan(cleanCode);
-                    }
                     e.preventDefault();
-                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    processBuffer();
                 }
-                buffer.current = '';
             } else if (e.key.length === 1) {
-                // Acumular caracteres imprimibles
                 buffer.current += e.key;
+
+                // RED DE SEGURIDAD: Algunas PDAs no envían Enter al final. 
+                // Procesamos si hay silencio tras la ráfaga.
+                if (fallbackTimer.current) clearTimeout(fallbackTimer.current);
+                fallbackTimer.current = setTimeout(() => {
+                    if (buffer.current.length >= minChars) processBuffer();
+                }, 100);
             }
         };
 
-        // 'capture: true' asegura que el evento se tome antes que cualquier otro listener
+        // Escucha agresiva en fase de captura para ganar a otros listeners
         window.addEventListener('keydown', handleKeyDown, { capture: true });
-        return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
+        
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown, { capture: true });
+            if (fallbackTimer.current) clearTimeout(fallbackTimer.current);
+        };
     }, [isEnabled, onScan, minChars, maxLatency]);
 };

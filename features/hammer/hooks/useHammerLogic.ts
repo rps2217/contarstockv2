@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { massiveDb } from '../../../db.massive';
@@ -165,6 +164,10 @@ export const useHammerLogic = (batchId: string) => {
     return { 
         state: { 
             items: dbItems || [], 
+            // Fix: Expose activeBarcode to state to fix errors in HammerPage
+            activeBarcode,
+            // Fix: Expose optimisticQty to state to fix errors in HammerPage
+            optimisticQty,
             lastScannedItem: useMemo(() => {
                 if (!activeBarcode) return undefined;
                 const real = dbItems?.find(i => i.barcode === activeBarcode);

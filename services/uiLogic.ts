@@ -5,18 +5,20 @@ import { normalizeSku } from './utils';
 export type ItemStatus = 'success' | 'warning' | 'error' | 'neutral' | 'info' | 'mismatch' | 'semantic';
 
 /**
- * MOTOR DE VEREDICTO LOGÍSTICO v2.0
+ * MOTOR DE VEREDICTO LOGÍSTICO v3.0 (Correlation Engine)
  */
 export const determineItemStatus = (current: number, target?: number): ItemStatus => {
-    // Si no hay meta definida (Conteo ciego puro)
+    // Si no hay meta definida (Conteo ciego)
     if (target === undefined || target === 0) {
         return current > 0 ? 'info' : 'neutral';
     }
 
     if (current === 0) return 'neutral';
+    
+    // Correlación lógica
     if (current === target) return 'success'; // VERDE: Calzado perfecto
-    if (current > target) return 'error';     // ROJO: Excedente
-    if (current < target) return 'warning';   // ÁMBAR: Faltante
+    if (current > target) return 'error';     // ROJO: Excedente detectado
+    if (current < target) return 'warning';   // NARANJA: Faltante detectado
     
     return 'neutral';
 };
@@ -42,7 +44,6 @@ export const getRowStyles = (current: number, target?: number, isActive?: boolea
     
     let classes = "w-full h-full border-2 p-4 rounded-2xl flex items-center justify-between transition-all text-left active:scale-[0.98] ";
     
-    // Si hay target pero el conteo es 0, usamos un estilo slate tenue
     if (target && target > 0 && current === 0) {
         classes += "bg-slate-900/40 border-white/5 opacity-80 ";
     } else {

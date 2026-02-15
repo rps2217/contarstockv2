@@ -123,7 +123,8 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
             status: machineState.toLowerCase(),
             feedback, multiplier, currentLocation,
             activeBarcode, activeProduct,
-            optimisticActiveQty: optimisticQty || 0
+            // Re-named optimisticActiveQty to optimisticQty to resolve property access errors in CountingPage.tsx
+            optimisticQty: optimisticQty || 0
         },
         sessionData: { session, history: consolidatedHistory || [] },
         actions: { 
