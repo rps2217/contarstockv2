@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { ShieldCheck, Wifi, AlertCircle, Info, Database } from 'lucide-react';
+import { ShieldCheck, Wifi, AlertCircle, Info, Database, Link, RefreshCw } from 'lucide-react';
 import { AppSettings } from '../../types';
 import { SettingsSection, SettingsCard, SettingsButton, SettingsInput } from './common/SettingsUI';
 import { bootstrapByUrl } from '../../services/gasService';
@@ -11,37 +11,24 @@ interface Props {
 }
 
 export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
-    const [scriptUrl, setScriptUrl] = useState(settings.appSheetConfig?.gasWebAppUrl || '');
-    const [ssId, setSsId] = useState(settings.appSheetConfig?.spreadsheetId || '');
+    const [urlInput, setUrlInput] = useState(settings.appSheetConfig?.gasWebAppUrl || '');
     const [isConnecting, setIsConnecting] = useState(false);
-    const [errorMode, setErrorMode] = useState<null | 'ID_REQUIRED' | 'URL_INVALID'>(null);
+    const [error, setError] = useState<string | null>(null);
 
     const handleAutoConfig = async () => {
-        if (!scriptUrl.includes('/exec')) {
-            setErrorMode('URL_INVALID');
+        if (!urlInput.includes('/exec')) {
+            setError("La URL no parece válida. Debe terminar en /exec");
             return;
         }
-        
-        // Limpieza de ID: Extraer ID de una URL si el usuario pegó la URL completa
-        let cleanId = ssId.trim();
-        if (cleanId.includes("/d/")) {
-            const match = cleanId.match(/\/d\/([a-zA-Z0-9-_]+)/);
-            if (match) cleanId = match[1];
-        }
 
-        setErrorMode(null);
+        setError(null);
         setIsConnecting(true);
         try {
-            const fullConfig = await bootstrapByUrl(scriptUrl, cleanId);
+            const fullConfig = await bootstrapByUrl(urlInput);
             updateSetting('appSheetConfig', fullConfig);
-            setSsId(cleanId); // Actualizar UI con el ID limpio
-            alert("¡Conexión Exitosa! El sistema ahora está vinculado.");
+            alert(`¡Conexión Exitosa!\nVinculado a: ${fullConfig.spreadsheetId?.substring(0, 10)}...`);
         } catch (e: any) {
-            if (e.message === 'EXCEL_ID_REQUIRED') {
-                setErrorMode('ID_REQUIRED');
-            } else {
-                alert("Error: " + e.message);
-            }
+            setError(e.message);
         } finally {
             setIsConnecting(false);
         }
@@ -49,79 +36,71 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
-            <SettingsSection title="Conectividad Cloud">
+            <SettingsSection title="Conexión Inteligente">
                 
                 <SettingsCard className="bg-slate-900 border-indigo-500/30 text-white">
-                    <div className="space-y-5">
-                        <div className="flex items-center gap-3">
-                            <div className="p-3 bg-indigo-600 rounded-2xl">
-                                <ShieldCheck className="w-6 h-6 text-white" />
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-4">
+                            <div className="p-4 bg-indigo-600 rounded-[1.5rem] shadow-lg shadow-indigo-900/40">
+                                <Link className="w-8 h-8 text-white" />
                             </div>
                             <div>
-                                <h3 className="text-lg font-black uppercase italic tracking-tighter leading-none">Vínculo con Excel</h3>
-                                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">Google Apps Script API</p>
+                                <h3 className="text-xl font-black uppercase italic tracking-tighter leading-none">Vinculación Maestra</h3>
+                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">Un solo paso para configurar el sistema</p>
                             </div>
                         </div>
 
-                        <div className="space-y-4">
-                            <div className="space-y-1.5">
-                                <label className="text-[9px] font-black text-indigo-400 uppercase tracking-widest ml-1">1. URL del Script</label>
-                                <SettingsInput 
-                                    value={scriptUrl}
-                                    onChange={(e: any) => setScriptUrl(e.target.value)}
-                                    placeholder="https://script.google.com/macros/s/.../exec"
-                                    className="bg-white/5 border-white/10 text-white placeholder:text-slate-600"
-                                />
-                                {errorMode === 'URL_INVALID' && (
-                                    <p className="text-[9px] text-rose-400 font-bold ml-2">La URL debe terminar en /exec</p>
-                                )}
-                            </div>
-
-                            <div className="space-y-1.5">
-                                <label className="text-[9px] font-black text-indigo-400 uppercase tracking-widest ml-1">2. ID del Spreadsheet (Requerido para scripts independientes)</label>
-                                <div className="relative">
-                                    <SettingsInput 
-                                        value={ssId}
-                                        onChange={(e: any) => setSsId(e.target.value)}
-                                        placeholder="ID largo del Excel (entre /d/ y /edit)"
-                                        className={`bg-white/5 border-white/10 text-white placeholder:text-slate-600 ${errorMode === 'ID_REQUIRED' ? 'border-rose-500 bg-rose-500/5' : ''}`}
-                                    />
-                                    <Database className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/10" />
-                                </div>
-                                {errorMode === 'ID_REQUIRED' && (
-                                    <div className="flex items-center gap-2 mt-2 p-3 bg-rose-500/20 rounded-xl border border-rose-500/40">
-                                        <AlertCircle className="w-4 h-4 text-rose-400" />
-                                        <p className="text-[9px] text-rose-100 font-bold uppercase leading-tight">
-                                            Se requiere un ID de Excel válido. Cópialo de la URL de tu hoja de cálculo.
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] ml-1">URL de Implementación GAS</label>
+                            <SettingsInput 
+                                value={urlInput}
+                                onChange={(e: any) => setUrlInput(e.target.value)}
+                                placeholder="https://script.google.com/macros/s/.../exec"
+                                className="bg-white/5 border-white/10 text-white placeholder:text-slate-600 h-16 text-xs font-mono"
+                            />
                         </div>
-                        
+
+                        {error && (
+                            <div className="bg-rose-500/10 border-2 border-rose-500/30 p-4 rounded-2xl flex items-center gap-3 animate-in shake">
+                                <AlertCircle className="w-5 h-5 text-rose-500 shrink-0" />
+                                <p className="text-[10px] text-rose-100 font-bold uppercase leading-tight">{error}</p>
+                            </div>
+                        )}
+
                         <SettingsButton 
                             onClick={handleAutoConfig}
                             isLoading={isConnecting}
-                            disabled={!scriptUrl || !ssId}
-                            label={isConnecting ? "Validando..." : "Vincular Sistema"}
+                            disabled={!urlInput}
+                            label={isConnecting ? "Sincronizando..." : "Vincular Ahora"}
                             icon={Wifi}
                             variant="primary"
-                            className="bg-indigo-600 border-indigo-400"
+                            className="bg-indigo-600 border-indigo-400 h-16"
                         />
                     </div>
                 </SettingsCard>
 
-                <div className="bg-blue-900/10 border-2 border-blue-500/20 p-5 rounded-[2rem] flex gap-4">
-                    <Info className="w-6 h-6 text-blue-400 shrink-0" />
-                    <div className="space-y-1">
-                        <p className="text-[9px] text-blue-200 font-bold uppercase tracking-wider">Instrucciones de Vínculo</p>
-                        <p className="text-[9px] text-blue-400 leading-relaxed font-medium">
-                            1. Abre tu Excel. Copia el ID de la URL (ej: <span className="text-amber-400">1ABC...XYZ</span>).<br/>
-                            2. Asegúrate de que el Excel esté compartido con el email que creó el Script.<br/>
-                            3. Si el script es "Vinculado" (creado desde Extensiones), el ID se autodetectará.
+                <div className="bg-blue-900/10 border-2 border-blue-500/20 p-6 rounded-[2.5rem] flex gap-5">
+                    <Info className="w-8 h-8 text-blue-400 shrink-0" />
+                    <div className="space-y-2">
+                        <p className="text-[10px] text-blue-200 font-bold uppercase tracking-wider">¿Cómo funciona?</p>
+                        <p className="text-[9px] text-blue-400/80 leading-relaxed font-medium uppercase">
+                            1. Crea una pestaña llamada <span className="text-white font-black">CONFIG_SISTEMA</span> en tu Excel.<br/>
+                            2. Agrega cabeceras como <span className="text-white">APP_ID</span>, <span className="text-white">ACCESS_KEY</span>, etc.<br/>
+                            3. Pega la URL de tu script arriba y presiona vincular.<br/>
+                            <span className="text-indigo-400 italic">La App descargará todo automáticamente.</span>
                         </p>
                     </div>
                 </div>
+
+                {settings.appSheetConfig?.appId && (
+                    <div className="px-6 py-4 bg-emerald-500/5 border-2 border-emerald-500/10 rounded-2xl flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                            <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Sistema Vinculado: {settings.appSheetConfig.appId.substring(0, 8)}...</span>
+                        </div>
+                        <RefreshCw className="w-3 h-3 text-emerald-800" />
+                    </div>
+                )}
 
             </SettingsSection>
         </div>

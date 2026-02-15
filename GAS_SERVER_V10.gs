@@ -1,38 +1,19 @@
 
 /**
- * LOGICOUNT PRO - CLOUD ENGINE V12.9.1 (STABILITY FIX)
+ * LOGICOUNT PRO - CLOUD ENGINE V12.9 (RESILIENT EDITION)
+ * Este script permite la autoconfiguración total desde la App.
  */
-
-const HARDCODED_SPREADSHEET_ID = ""; 
 
 function getSpreadsheet(requestSpreadsheetId) {
   try {
-    let finalId = "";
-
-    // 1. Determinar qué ID usar
-    if (requestSpreadsheetId && requestSpreadsheetId.length > 10) {
-      finalId = requestSpreadsheetId.trim();
-    } else if (HARDCODED_SPREADSHEET_ID !== "") {
-      finalId = HARDCODED_SPREADSHEET_ID;
-    } else {
-      const ss = SpreadsheetApp.getActiveSpreadsheet();
-      if (ss) return ss;
+    if (requestSpreadsheetId && requestSpreadsheetId !== "") {
+      return SpreadsheetApp.openById(requestSpreadsheetId);
     }
-
-    // 2. Validación de seguridad del ID para evitar el error "Unexpected error while getting property openById"
-    if (!finalId || finalId.includes("AUTO_DET") || finalId.length < 20) {
-      throw new Error("ID_DE_EXCEL_INVALIDO: El servidor recibió '" + finalId + "'. Verifica en Setup > Nube.");
-    }
-
-    // 3. Intento de apertura con manejo de errores de permiso
-    try {
-      return SpreadsheetApp.openById(finalId);
-    } catch (err) {
-      throw new Error("ACCESO_DENEGADO: El script no tiene permiso para abrir el archivo. Comparta el Excel con el dueño del script o verifique que el ID sea correcto.");
-    }
-
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (!ss) throw new Error("No se pudo detectar un Spreadsheet vinculado automáticamente.");
+    return ss;
   } catch (e) {
-    throw new Error("FALLO_CRITICO_CONEXION_EXCEL: " + e.toString());
+    throw new Error("FALLO_CONEXION_EXCEL: " + e.toString());
   }
 }
 
@@ -55,6 +36,7 @@ function doPost(e) {
     const spreadsheetId = requestData.spreadsheetId;
     let rows = requestData.rows;
 
+    // Manejo de compresión para firmas IA pesadas
     if (requestData.metadata && requestData.metadata.compressed && typeof rows === 'string') {
       const decoded = Utilities.base64Decode(rows);
       const zipBlob = Utilities.newBlob(decoded, "application/zip");
@@ -64,6 +46,7 @@ function doPost(e) {
       }
     }
 
+    // Obtener acceso al Excel
     const ss = getSpreadsheet(spreadsheetId);
 
     switch (action) {
@@ -77,6 +60,7 @@ function doPost(e) {
         response = fetchRows(ss, requestData.tableName, requestData.since);
         break;
       case 'ping':
+        // PROTOCOLO DE AUTODESCRUBRIMIENTO
         response = { 
           success: true, 
           message: "Engine Online", 

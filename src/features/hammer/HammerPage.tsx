@@ -3,7 +3,8 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useHammerLogic } from './hooks/useHammerLogic';
 import { useLocationManager } from '../../shared/hooks/useLocationManager';
-import { migrateMassiveToMaster } from '../../services/massiveSync';
+// Fix: Added importManifestFromCloud import
+import { migrateMassiveToMaster, importManifestFromCloud } from '../../services/massiveSync';
 import { IndustrialDisplay } from '../../shared/components/ui/IndustrialDisplay';
 import { MassiveHeader } from '../../components/massive/MassiveHeader';
 import { MassiveItemRow } from '../../components/massive/MassiveItemRow';
@@ -18,6 +19,8 @@ import { NumericKeypad } from '../../components/NumericKeypad';
 import { VirtualList } from '../../components/common/VirtualList';
 import { useHIDScanner } from '../../hooks/useHIDScanner';
 import { useAutoLock } from '../../hooks/useAutoLock';
+// Fix: Added SoundFX import
+import { SoundFX } from '../../services/audio';
 
 export const HammerPage: React.FC = () => {
     const navigate = useNavigate();
@@ -31,6 +34,8 @@ export const HammerPage: React.FC = () => {
     const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
     const [showKeypad, setShowKeypad] = useState(false);
     const [isMigrating, setIsMigrating] = useState(false);
+    // Fix: Added isDownloading state
+    const [isDownloading, setIsDownloading] = useState(false);
 
     useHIDScanner({
         onScan: (barcode) => actions.registerScan(barcode),
@@ -50,6 +55,22 @@ export const HammerPage: React.FC = () => {
             navigate('/reports?type=hammer');
         } catch (err) {
             setIsMigrating(false);
+        }
+    };
+
+    // Fix: Implemented handleDownloadStock to resolve onImport prop error
+    const handleDownloadStock = async () => {
+        setIsDownloading(true);
+        try {
+            const count = await importManifestFromCloud(batchId);
+            SoundFX.play('success');
+            alert(`✅ Stock cargado: ${count} productos listos para auditoría.`);
+            setIsToolsOpen(false);
+        } catch (err: any) {
+            SoundFX.play('error');
+            alert(`Error: ${err.message}`);
+        } finally {
+            setIsDownloading(false);
         }
     };
 
@@ -106,6 +127,8 @@ export const HammerPage: React.FC = () => {
                 batchId={batchId} hasActiveItem={!!state.activeBarcode}
                 location={locManager.location} onChangeLocation={locManager.openModal}
                 onShowLabel={() => setIsLabelModalOpen(true)} onReset={() => actions.removeItem('ALL')}
+                // Fix: Added onImport prop
+                onImport={handleDownloadStock}
                 onPrintSummary={() => {}}
             />
 
