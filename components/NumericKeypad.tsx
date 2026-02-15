@@ -13,18 +13,16 @@ interface NumericKeypadProps {
 }
 
 /**
- * NUMERIC KEYPAD INDUSTRIAL v5.1
- * Especializado para PDAs con teclado físico o pantalla estrecha.
+ * NUMERIC KEYPAD PDA v5.5
+ * Botones masivos para evitar errores de digitación en movimiento.
  */
 export const NumericKeypad: React.FC<NumericKeypadProps> = ({ 
-  isOpen, onClose, onConfirm, title, value, placeholder = "ESPERANDO_INPUT..."
+  isOpen, onClose, onConfirm, title, value, placeholder = "READY_FOR_INPUT"
 }) => {
   const [internalBuffer, setInternalBuffer] = useState("");
   
   useEffect(() => {
-    if (isOpen) {
-      setInternalBuffer(value || "");
-    }
+    if (isOpen) setInternalBuffer(value || "");
   }, [isOpen, value]);
 
   const handleChar = useCallback((char: string) => {
@@ -44,41 +42,18 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
     }
   }, [internalBuffer, onConfirm]);
 
-  // SOPORTE DE HARDWARE PDA: Captura eventos de botones físicos (Enter, Backspace, Números)
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKey = (e: KeyboardEvent) => {
-      // Detener ráfagas del escáner mientras el teclado manual está abierto
-      if ((e.key >= '0' && e.key <= '9') || e.key === 'Backspace' || e.key === 'Enter') {
-          e.stopPropagation();
-      }
-
-      if (e.key >= '0' && e.key <= '9') {
-          handleChar(e.key);
-      } else if (e.key === 'Backspace') {
-          handleDelete();
-      } else if (e.key === 'Enter') {
-          handleConfirm();
-      } else if (e.key === 'Escape') {
-          onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKey, { capture: true });
-    return () => window.removeEventListener('keydown', handleKey, { capture: true });
-  }, [isOpen, handleChar, handleDelete, handleConfirm, onClose]);
-
   if (!isOpen) return null;
 
   const Key = ({ children, onClick, variant = "default" }: any) => {
     const styles: any = {
       default: "bg-slate-800 border-slate-950 text-white active:bg-blue-600",
-      confirm: "bg-blue-600 border-blue-900 text-white active:bg-blue-500 shadow-[0_0_25px_rgba(59,130,246,0.3)]",
+      confirm: "bg-blue-600 border-blue-900 text-white active:bg-blue-500 shadow-xl",
       delete: "bg-rose-900/40 border-rose-950 text-rose-500 active:bg-rose-600 active:text-white"
     };
     return (
       <button 
         onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); onClick(); }} 
-        className={`h-20 md:h-24 rounded-2xl text-3xl font-black transition-all active:scale-90 border-b-[6px] flex items-center justify-center select-none touch-none ${styles[variant]}`}
+        className={`h-20 md:h-24 rounded-3xl text-4xl font-black transition-all active:scale-90 border-b-[6px] flex items-center justify-center select-none touch-none ${styles[variant]}`}
       >
         {children}
       </button>
@@ -86,42 +61,42 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[2000] flex flex-col justify-end bg-slate-950/90 backdrop-blur-xl animate-in fade-in duration-300">
+    <div className="fixed inset-0 z-[2000] flex flex-col justify-end bg-slate-950/95 backdrop-blur-xl animate-in fade-in duration-300">
       <div className="absolute inset-0" onClick={onClose}></div>
       
-      <div className="bg-[#0f172a] border-t-8 border-blue-600 rounded-t-[3.5rem] shadow-[0_-25px_80px_rgba(0,0,0,0.9)] animate-in slide-in-from-bottom-full duration-500 relative z-10 pb-safe-area">
-        <div className="w-16 h-1.5 bg-slate-800 rounded-full mx-auto my-6"></div>
+      <div className="bg-[#0f172a] border-t-8 border-blue-600 rounded-t-[4rem] shadow-[0_-30px_100px_rgba(0,0,0,1)] animate-in slide-in-from-bottom-full duration-500 relative z-10 pb-safe-area">
+        <div className="w-20 h-2 bg-slate-800 rounded-full mx-auto my-6"></div>
         
-        <div className="px-6 pb-8 flex flex-col w-full max-w-md mx-auto">
-            <div className="flex justify-between items-center mb-6 px-2">
-                <div className="flex items-center gap-2">
-                    <Zap className="w-4 h-4 text-blue-400 animate-pulse" />
-                    <span className="text-blue-400 text-[10px] font-black uppercase tracking-[0.4em] italic">{title || "Manual_Input"}</span>
+        <div className="px-6 pb-10 flex flex-col w-full max-w-lg mx-auto">
+            <div className="flex justify-between items-center mb-6 px-4">
+                <div className="flex items-center gap-3">
+                    <Zap className="w-5 h-5 text-blue-400 animate-pulse" />
+                    <span className="text-blue-400 text-[11px] font-black uppercase tracking-[0.4em] italic">{title || "Manual_Entry"}</span>
                 </div>
-                <button onClick={onClose} className="p-3 bg-white/5 rounded-full text-white/40 active:bg-rose-600 active:text-white transition-colors">
-                    <X className="w-5 h-5" />
+                <button onClick={onClose} className="p-4 bg-white/5 rounded-2xl text-white/40 active:bg-rose-600 active:text-white transition-colors">
+                    <X className="w-6 h-6" />
                 </button>
             </div>
 
-            {/* LCD VISOR */}
-            <div className="mb-8 bg-black rounded-3xl border-4 border-white/5 p-6 flex flex-col justify-center h-32 shadow-inner relative overflow-hidden">
-                <div className="flex justify-between items-center mb-2 px-2">
-                    <span className="text-[8px] font-black text-blue-500/40 uppercase tracking-widest">Buffer_Entry</span>
-                    <KeyboardIcon className="w-3 h-3 text-blue-500/20" />
+            {/* LCD VISOR PDA */}
+            <div className="mb-8 bg-black rounded-[2.5rem] border-4 border-white/5 p-8 flex flex-col justify-center h-36 shadow-inner relative overflow-hidden">
+                <div className="flex justify-between items-center mb-3 px-2">
+                    <span className="text-[9px] font-black text-blue-500/40 uppercase tracking-widest">Input_Buffer</span>
+                    <KeyboardIcon className="w-4 h-4 text-blue-500/20" />
                 </div>
-                <div className={`font-mono font-black tracking-[0.2em] break-all text-center transition-all duration-75 ${internalBuffer ? 'text-white text-4xl' : 'text-slate-800 text-2xl italic'}`}>
+                <div className={`font-mono font-black tracking-[0.2em] break-all text-center transition-all duration-75 ${internalBuffer ? 'text-white text-5xl' : 'text-slate-800 text-2xl italic'}`}>
                     {internalBuffer || placeholder}
-                    <span className="inline-block w-1.5 h-8 ml-3 bg-blue-500 animate-pulse align-middle"></span>
+                    <span className="inline-block w-2 h-10 ml-4 bg-blue-500 animate-pulse align-middle"></span>
                 </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-4">
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
                     <Key key={num} onClick={() => handleChar(num.toString())}>{num}</Key>
                 ))}
-                <Key variant="delete" onClick={handleDelete}><Delete className="w-8 h-8" /></Key>
+                <Key variant="delete" onClick={handleDelete}><Delete className="w-10 h-10" /></Key>
                 <Key onClick={() => handleChar("0")}>0</Key>
-                <Key variant="confirm" onClick={handleConfirm}><Check className="w-10 h-10 stroke-[4px]" /></Key>
+                <Key variant="confirm" onClick={handleConfirm}><Check className="w-12 h-12 stroke-[5px]" /></Key>
             </div>
         </div>
       </div>
