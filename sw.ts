@@ -13,8 +13,12 @@ self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim(
 cleanupOutdatedCaches();
 precacheAndRoute(self.__WB_MANIFEST);
 
-// --- MOTOR DE SINCRONIZACIÓN DE FONDO UNIFICADO v7.0 ---
-const UPLOAD_BATCH_SIZE = 500;
+/**
+ * ENGINE SYNC BACKGROUND v8.0 (Enterprise)
+ * Gestión de ráfagas con protección contra bloqueos de Google Sheets.
+ */
+const MAX_SYNC_ATTEMPTS = 3;
+const BATCH_SIZE = 100;
 
 self.addEventListener('sync', (event: any) => {
     if (event.tag === 'sync-bultos') {
@@ -25,79 +29,85 @@ self.addEventListener('sync', (event: any) => {
 async function processBackgroundSync() {
     try {
         const configRecord = await db.settings.get('app_config');
-        if (!configRecord || !configRecord.value) return;
+        if (!configRecord?.value?.appSheetConfig?.gasWebAppUrl) return;
         
-        const settings = configRecord.value;
-        const appConfig = settings.appSheetConfig;
-        if (!appConfig?.gasWebAppUrl) return;
-
-        // 1. Obtener registros que fallaron o están pendientes
+        const appConfig = configRecord.value.appSheetConfig;
         const unsyncedScans = await db.scans.where('synced').equals(0).toArray();
         if (unsyncedScans.length === 0) return;
 
-        // 2. Agrupar por sesión para respetar la integridad de bultos
-        const sessionIds = Array.from(new Set(unsyncedScans.map(s => s.sessionId)));
+        // Agrupar por sesión para mantener integridad de bultos
+        const sessionsToSync = Array.from(new Set(unsyncedScans.map(s => s.sessionId)));
         
-        for (const sessionId of sessionIds) {
+        for (const sessionId of sessionsToSync) {
             const session = await db.sessions.get(sessionId);
             if (!session) continue;
 
-            const scansForSession = unsyncedScans.filter(s => s.sessionId === sessionId);
-            const uniqueSkus = Array.from(new Set(scansForSession.map(s => s.barcode)));
-            const products = await db.products.where('barcode').anyOf(uniqueSkus).toArray();
+            const sessionScans = unsyncedScans.filter(s => s.sessionId === sessionId);
+            const barcodes = Array.from(new Set(sessionScans.map(s => s.barcode)));
+            const products = await db.products.where('barcode').anyOf(barcodes).toArray();
             const productMap = new Map<string, Product>(products.map(p => [p.barcode, p]));
 
-            // 3. Agregación síncrona dentro del worker para evitar colisiones
+            // Agregación idéntica al main thread
             const aggregation: Record<string, any> = {};
-            scansForSession.forEach(scan => {
-                const key = `${scan.barcode}_${scan.mm||0}_${scan.yyyy||0}_${scan.logisticsLabel || 'UNSET'}`;
+            sessionScans.forEach(scan => {
+                const key = `${scan.barcode}_${scan.mm||0}_${scan.yyyy||0}_${scan.batch || 'NO_BATCH'}`;
                 if (!aggregation[key]) {
                     const p = productMap.get(scan.barcode);
                     aggregation[key] = {
                         barcode: scan.barcode,
-                        productName: p?.name || 'Item recuperado...',
+                        productName: p?.name || 'Recuperado...',
                         totalQuantity: 0,
-                        mm: scan.mm, 
-                        yyyy: scan.yyyy,
-                        location: scan.logisticsLabel,
+                        mm: scan.mm, yyyy: scan.yyyy, batch: scan.batch,
+                        location: scan.location,
                         isIncident: scan.isIncident,
                         embedding: p?.embedding,
-                        scans: 1 
+                        scans: 1
                     };
                 }
                 aggregation[key].totalQuantity += scan.quantity;
             });
 
-            // 4. Usar el Mapper oficial para garantizar consistencia con la subida manual
-            const fullPayload = createInventoryPayload(session, Object.values(aggregation) as any[], 'background');
-            const targetTable = session.sessionType === 'hammer' ? (appConfig.countsTableName || "CONTEOS") : (appConfig.consolidatedTableName || "CONSOLIDADO");
-            
-            // 5. Envío robusto por lotes
-            const totalBatches = Math.ceil(fullPayload.length / UPLOAD_BATCH_SIZE);
-            for (let i = 0; i < totalBatches; i++) {
-                const chunk = fullPayload.slice(i * UPLOAD_BATCH_SIZE, (i + 1) * UPLOAD_BATCH_SIZE);
-                try {
-                    const response = await fetch(appConfig.gasWebAppUrl, {
-                        method: 'POST',
-                        body: JSON.stringify({ action: 'append_rows', tableName: targetTable, rows: chunk }),
-                        headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-                    });
+            const payload = createInventoryPayload(session, Object.values(aggregation) as any[], 'background');
+            const targetTable = session.sessionType === 'hammer' ? appConfig.countsTableName : appConfig.consolidatedTableName;
 
-                    if (response.ok) {
+            // Envío por sub-lotes para evitar Timeouts de GAS
+            for (let i = 0; i < payload.length; i += BATCH_SIZE) {
+                const chunk = payload.slice(i, i + BATCH_SIZE);
+                let success = false;
+                let attempt = 0;
+
+                while (!success && attempt < MAX_SYNC_ATTEMPTS) {
+                    try {
+                        const response = await fetch(appConfig.gasWebAppUrl, {
+                            method: 'POST',
+                            body: JSON.stringify({ 
+                                action: 'append_rows', 
+                                tableName: targetTable, 
+                                rows: chunk,
+                                metadata: { source: 'SW_CORE_V8', attempt: attempt + 1 }
+                            }),
+                            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+                        });
+
                         const result = await response.json();
                         if (result.success) {
-                            const chunkBarcodes = new Set(chunk.map((r: any) => r['CODIGO']));
-                            const idsToUpdate = scansForSession.filter(s => chunkBarcodes.has(s.barcode)).map(s => s.id);
-                            await db.scans.where('id').anyOf(idsToUpdate).modify({ synced: 1 });
+                            success = true;
+                            const chunkBarcodes = new Set(chunk.map((r: any) => r['CODIGO'] || r['COD PRODUCTO']));
+                            const scanIds = sessionScans.filter(s => chunkBarcodes.has(s.barcode)).map(s => s.id);
+                            await db.scans.where('id').anyOf(scanIds).modify({ synced: 1 });
+                        } else if (result.error?.includes('lock') || result.error?.includes('busy')) {
+                            // Si Google está bloqueado, esperamos más tiempo
+                            await new Promise(r => setTimeout(r, 2000 * (attempt + 1)));
                         }
+                    } catch (e) {
+                        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
                     }
-                } catch (e) {
-                    console.error("[SW] Network Fail in batch", i);
+                    attempt++;
                 }
             }
             await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
         }
     } catch (err) {
-        console.error('[SW] Kernel Sync Error:', err);
+        console.error('[SW] Kernel Panic during Sync:', err);
     }
 }

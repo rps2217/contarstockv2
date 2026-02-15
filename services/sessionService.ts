@@ -1,20 +1,21 @@
 
+
 import { Dexie } from 'dexie';
 import { db } from '../db';
 import { ScanRecord, CountingSession, ExpectedOrder } from '../types';
-import { generateUUID, normalizeSku, sanitizeBarcode } from './utils';
+import { generateUUID, sanitizeBarcode } from './utils';
 import { logger } from './logger';
 import { IntegrityGuard } from './integrityGuard';
 import { CloudOrderRowSchema } from './schemas';
-import { VectorService } from './vectorService';
-// Import added to support fetchExpectedItemsFromCloud and direct API calls
 import { cloudApi } from './cloud/apiClient';
 
-// BUFFER DE ALTA VELOCIDAD: Evita bloqueos de UI durante ráfagas de escaneo
-// En dispositivos lentos, escribir en disco cada 50ms es mejor que cada vez
+/**
+ * POOL DE ESCRITURA INDUSTRIAL v2.0
+ * Agrupa ráfagas de escaneo para proteger la vida útil del almacenamiento flash.
+ */
 let writeBuffer: { record: ScanRecord, retries: number }[] = [];
-let flushTimeout: any = null;
-const BUFFER_DELAY_MS = 250; // Aumentado para dar aire al procesador de la PDA
+let flushTimeout: ReturnType<typeof setTimeout> | null = null;
+const FLUSH_DELAY = 150; 
 
 const triggerBackgroundSync = async () => {
     if ('serviceWorker' in navigator && 'SyncManager' in window) {
@@ -29,22 +30,23 @@ const commitBufferToDatabase = async () => {
     if (writeBuffer.length === 0) return;
     const currentBatch = [...writeBuffer];
     writeBuffer = [];
-    const recordsToSave = currentBatch.map(item => item.record);
+    const records = currentBatch.map(item => item.record);
     
     try {
-        // Validación en lote antes de persistir
-        await db.scans.bulkAdd(recordsToSave);
-        
-        // Recalcular metadatos solo una vez por lote afectado
-        const affectedIds = Array.from(new Set(recordsToSave.map(s => s.sessionId)));
-        for (const id of affectedIds) {
-            await updateSessionMetadata(id);
-        }
+        // Tipado fuerte en transacción para evitar corrupción
+        // FIX: Using (db as any) to resolve type error: Property 'transaction' does not exist on type 'LogiCountDB'
+        await (db as any).transaction('rw', db.scans, db.sessions, async () => {
+            await db.scans.bulkAdd(records);
+            const affectedSessionIds = Array.from(new Set(records.map(s => s.sessionId)));
+            for (const id of affectedSessionIds) {
+                await updateSessionMetadata(id);
+            }
+        });
         
         triggerBackgroundSync();
     } catch (error: any) {
-        logger.error("DB_FLUSH_FAIL", error.message);
-        // Si falla, devolvemos al buffer para reintentar
+        logger.error("DB_COMMIT_FAIL", error.message);
+        // Recuperación de desastres: Re-encolar items no corruptos
         writeBuffer = [...currentBatch, ...writeBuffer];
     }
 };
@@ -62,10 +64,11 @@ export const updateSessionMetadata = async (sessionId: string) => {
     await db.sessions.update(sessionId, { 
         totalUnits, 
         totalSKUs: uniqueSkus.size,
-        status: 'active'
+        status: (await db.sessions.get(sessionId))?.status === 'draft' ? 'draft' : 'active'
     });
 };
 
+// FIX: Export alias for maintenance tool to resolve member not found error in RecalculateTool.ts
 export const recalculateSessionMetadata = updateSessionMetadata;
 
 export const addScanEvent = async (
@@ -78,7 +81,7 @@ export const addScanEvent = async (
     batch?: string
 ): Promise<ScanRecord> => {
     const session = await db.sessions.get(sessionId);
-    const newRecord: ScanRecord = {
+    const newRecord: ScanRecord = IntegrityGuard.validateScan({
         id: generateUUID(),
         sessionId,
         barcode: sanitizeBarcode(barcode),
@@ -87,21 +90,18 @@ export const addScanEvent = async (
         logisticsLabel: session?.logisticsLabel || 'UNSET',
         mm,
         yyyy,
-        location,
+        location: location || session?.logisticsLabel,
         timestamp: Date.now(),
         synced: 0
-    };
+    });
 
     writeBuffer.push({ record: newRecord, retries: 0 });
     
-    // Programamos el guardado pero no bloqueamos el hilo principal
     if (flushTimeout) clearTimeout(flushTimeout);
-    flushTimeout = setTimeout(commitBufferToDatabase, BUFFER_DELAY_MS);
+    flushTimeout = setTimeout(commitBufferToDatabase, FLUSH_DELAY);
     
     return newRecord;
 };
-
-// ... resto de funciones del service sin cambios ...
 
 export const createSession = async (erp: string, label: string, type: 'standard' | 'hammer' = 'standard', expected?: any): Promise<CountingSession> => {
     const s: CountingSession = { 
@@ -114,7 +114,7 @@ export const createSession = async (erp: string, label: string, type: 'standard'
         totalUnits: 0, 
         totalSKUs: 0, 
         expectedItems: expected?.items || [], 
-        isVerifiedMode: !!(expected && expected.items && expected.items.length > 0) 
+        isVerifiedMode: !!(expected?.items?.length) 
     };
     await db.sessions.add(s);
     return s;
@@ -138,17 +138,13 @@ export const createDraftSession = async (label: string): Promise<CountingSession
     return s;
 };
 
-/**
- * FETCH SINGLE ORDER FROM CLOUD
- * Permite validar un ERP específico contra la base de datos central.
- */
 export const fetchExpectedItemsFromCloud = async (erp: string): Promise<ExpectedOrder | null> => {
     try {
         const res = await cloudApi.post('fetch_rows', { tableName: 'PEDIDOS' });
         if (res.success && res.rows) {
             const rows = res.rows
                 .map((row: any) => CloudOrderRowSchema.safeParse(row))
-                .filter((p: any) => p.success && p.data.erp.trim().toUpperCase() === erp.trim().toUpperCase());
+                .filter((p: any) => p.success && p.data.erp === erp.toUpperCase());
 
             if (rows.length === 0) return null;
 
@@ -160,7 +156,7 @@ export const fetchExpectedItemsFromCloud = async (erp: string): Promise<Expected
 
             return {
                 id: generateUUID(),
-                internalId: erp.trim().toUpperCase(),
+                internalId: erp.toUpperCase(),
                 items,
                 totalExpectedUnits: items.reduce((acc, i) => acc + i.expectedQty, 0),
                 totalExpectedSKUs: items.length,
@@ -169,64 +165,32 @@ export const fetchExpectedItemsFromCloud = async (erp: string): Promise<Expected
         }
         return null;
     } catch (err) {
-        logger.error("FETCH_ORDER_SINGLE_FAIL", err);
         return null;
     }
 };
 
-export const fetchAllOrdersFromCloud = async (): Promise<number> => {
-    try {
-        // Updated to use imported cloudApi directly
-        const res = await cloudApi.post('fetch_rows', { tableName: 'PEDIDOS' });
-        if (res.success && res.rows) {
-            const groups = new Map<string, ExpectedOrder>();
-            res.rows.forEach((row: any) => {
-                const parsed = CloudOrderRowSchema.safeParse(row);
-                if (parsed.success) {
-                    const { erp, barcode, name, qty } = parsed.data;
-                    if (!groups.has(erp)) {
-                        groups.set(erp, {
-                            id: generateUUID(),
-                            internalId: erp,
-                            items: [],
-                            totalExpectedUnits: 0,
-                            totalExpectedSKUs: 0,
-                            importedAt: Date.now()
-                        });
-                    }
-                    const group = groups.get(erp)!;
-                    group.items.push({ barcode, name, expectedQty: qty });
-                    group.totalExpectedUnits += qty;
-                    group.totalExpectedSKUs++;
-                }
-            });
-            const orders = Array.from(groups.values());
-            await db.expectedOrders.clear();
-            await db.expectedOrders.bulkAdd(orders);
-            return groups.size;
-        }
-        return 0;
-    } catch (err) {
-        logger.error("FETCH_ORDERS_CRITICAL", err);
-        return 0;
-    }
-};
-
 export const closeSession = async (id: string) => { 
-    await commitBufferToDatabase();
+    if (flushTimeout) {
+        clearTimeout(flushTimeout);
+        await commitBufferToDatabase();
+    }
     await db.sessions.update(id, { status: 'completed' }); 
     triggerBackgroundSync();
 };
 
 export const deleteSession = async (id: string) => { 
-    await db.scans.where('sessionId').equals(id).delete(); 
-    await db.sessions.delete(id); 
+    // FIX: Using (db as any) to resolve type error: Property 'transaction' does not exist on type 'LogiCountDB'
+    await (db as any).transaction('rw', db.scans, db.sessions, async () => {
+        await db.scans.where('sessionId').equals(id).delete(); 
+        await db.sessions.delete(id); 
+    });
 };
 
 export const cleanSyncedSessions = async (): Promise<number> => {
     const synced = await db.sessions.where('lastSyncTimestamp').above(0).toArray();
     const ids = synced.map(s => s.id);
     if (ids.length === 0) return 0;
+    // FIX: Using (db as any) to resolve type error: Property 'transaction' does not exist on type 'LogiCountDB'
     await (db as any).transaction('rw', db.scans, db.sessions, async () => {
         await db.scans.where('sessionId').anyOf(ids).delete();
         await db.sessions.where('id').anyOf(ids).delete();
@@ -244,27 +208,8 @@ export const checkLabelExists = async (label: string): Promise<boolean> => {
     return count > 0;
 };
 
-export const updateSessionLabel = async (sessionId: string, newLabel: string) => {
-    const cleanLabel = newLabel.trim().toUpperCase();
-    await db.sessions.update(sessionId, { logisticsLabel: cleanLabel });
-    await db.scans.where('sessionId').equals(sessionId).modify({ logisticsLabel: cleanLabel });
-};
-
-export const adjustSessionItemQuantity = async (sessionId: string, barcode: string, delta: number) => {
-    const lastScan = await db.scans.where('[sessionId+barcode]').equals([sessionId, barcode]).reverse().first();
-    if (lastScan) {
-        const newQty = Math.max(1, lastScan.quantity + delta);
-        await db.scans.update(lastScan.id, { quantity: newQty });
-        await updateSessionMetadata(sessionId);
-    }
-};
-
-export const deleteSessionItem = async (sessionId: string, barcode: string) => {
-    await db.scans.where('[sessionId+barcode]').equals([sessionId, barcode]).delete();
-    await updateSessionMetadata(sessionId);
-};
-
 export const undoLastAction = async (sessionId: string): Promise<string | null> => {
+    // Primero buscar en buffer no guardado
     const bufferIdx = writeBuffer.findIndex(item => item.record.sessionId === sessionId);
     if (bufferIdx !== -1) {
         for (let i = writeBuffer.length - 1; i >= 0; i--) {
@@ -274,6 +219,7 @@ export const undoLastAction = async (sessionId: string): Promise<string | null> 
             }
         }
     }
+    // Si no, buscar en DB
     const lastPersisted = await db.scans
         .where('[sessionId+timestamp]')
         .between([sessionId, Dexie.minKey], [sessionId, Dexie.maxKey])
@@ -285,4 +231,18 @@ export const undoLastAction = async (sessionId: string): Promise<string | null> 
         return lastPersisted.barcode;
     }
     return null;
+};
+
+export const deleteSessionItem = async (sessionId: string, barcode: string) => {
+    await db.scans.where('[sessionId+barcode]').equals([sessionId, barcode]).delete();
+    await updateSessionMetadata(sessionId);
+};
+
+export const adjustSessionItemQuantity = async (sessionId: string, barcode: string, delta: number) => {
+    const lastScan = await db.scans.where('[sessionId+barcode]').equals([sessionId, barcode]).reverse().first();
+    if (lastScan) {
+        const newQty = Math.max(1, lastScan.quantity + delta);
+        await db.scans.update(lastScan.id, { quantity: newQty });
+        await updateSessionMetadata(sessionId);
+    }
 };

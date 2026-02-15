@@ -5,6 +5,7 @@ import { SettingsSection, SettingsButton } from './common/SettingsUI';
 import { DiagnosticsCard } from './support/DiagnosticsCard';
 import { MaintenanceCard } from './support/MaintenanceCard';
 import { BackupCard } from './support/BackupCard';
+import { UnitTestsCard } from './support/UnitTestsCard';
 import { SoundFX } from '../../services/audio';
 
 export const SupportSection: React.FC = () => {
@@ -33,6 +34,8 @@ export const SupportSection: React.FC = () => {
         <SettingsSection title="Kernel & Soporte">
             
             <DiagnosticsCard />
+
+            <UnitTestsCard />
 
             <MaintenanceCard />
 
