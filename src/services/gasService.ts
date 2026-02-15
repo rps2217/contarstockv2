@@ -1,9 +1,74 @@
-
 import { logger } from './logger';
 import { getSettings } from './settings';
 import { AppSheetConfig } from '../types';
 import Papa from 'papaparse';
 import { cloudApi } from './cloud/apiClient';
+
+const superNormalize = (s: string) => 
+    String(s || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+/**
+ * CONFIGURACIÓN AUTOMÁTICA POR URL
+ */
+export const bootstrapByUrl = async (url: string, manualId?: string): Promise<AppSheetConfig> => {
+    if (!url.startsWith('https://script.google.com')) {
+        throw new Error("La URL debe comenzar con https://script.google.com...");
+    }
+    
+    try {
+        // Si el usuario provee un ID manual (desde el input), lo usamos para la primera petición
+        const payload: any = { action: 'fetch_rows', tableName: 'CONFIG_SISTEMA' };
+        if (manualId) payload.spreadsheetId = manualId;
+
+        const response = await fetch(url, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+        });
+
+        const res = await response.json();
+        
+        if (!res.success) {
+            if (res.error?.includes("IDENTIDAD_EXCEL_NO_DETECTADA")) {
+                throw new Error("EXCEL_ID_REQUIRED");
+            }
+            throw new Error(res.error || "Fallo en servidor GAS");
+        }
+
+        if (!res.rows || res.rows.length === 0) {
+            throw new Error("No se detectó la pestaña 'CONFIG_SISTEMA' o está vacía.");
+        }
+
+        const master = res.rows[0];
+        const masterKeys = Object.keys(master);
+
+        const findVal = (searchKeys: string[]) => {
+            const normalizedSearch = searchKeys.map(superNormalize);
+            const foundKey = masterKeys.find(k => normalizedSearch.includes(superNormalize(k)));
+            return foundKey ? String(master[foundKey]).trim() : '';
+        };
+
+        // Si no enviamos manualId, intentamos obtener el ID real que el script detectó (si es vinculado)
+        const finalId = manualId || res.spreadsheet_id || findVal(['SPREADSHEET_ID', 'ID_EXCEL', 'ID']);
+
+        const config: AppSheetConfig = {
+            gasWebAppUrl: url,
+            spreadsheetId: finalId,
+            appId: findVal(['APP_ID', 'APPLICATION_ID', 'APPID']),
+            accessKey: findVal(['ACCESS_KEY', 'KEY', 'ACCESSKEY']),
+            countsTableName: findVal(['TABLE_LOGS', 'TABLA_CONTEOS', 'CONTEOS']) || 'CONTEOS',
+            consolidatedTableName: findVal(['TABLE_CONSOLIDADO', 'CONSOLIDADO']) || 'CONSOLIDADO',
+            productsTableName: findVal(['TABLE_PRODUCTOS', 'PRODUCTOS']) || 'PRODUCTOS',
+            receptionTableName: findVal(['TABLE_RECEPCION', 'RECEPCION']) || 'RECEPCION_BULTOS',
+            ordersTableName: findVal(['TABLE_PEDIDOS', 'PEDIDOS']) || 'PEDIDOS'
+        };
+
+        return config;
+    } catch (err: any) {
+        logger.error('BOOTSTRAP_FAIL', err.message);
+        throw err;
+    }
+};
 
 export const bootstrapConfigById = async (spreadsheetId: string): Promise<AppSheetConfig> => {
     const idMatch = spreadsheetId.match(/\/d\/([a-zA-Z0-9-_]+)/);
