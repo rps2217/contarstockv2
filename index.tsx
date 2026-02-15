@@ -3,12 +3,11 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 
 /**
- * BLINDAJE DE GLOBALES v5.2
- * Inyectamos Buffer y Long desde esm.sh directamente para evitar errores 
- * de resolución de módulos en el empaquetador (Vite/Rollup).
+ * BLINDAJE DE GLOBALES v5.3
+ * Utilizamos las dependencias instaladas localmente y gestionadas por Vite.
  */
-import { Buffer } from 'https://esm.sh/buffer@6.0.3';
-import Long from 'https://esm.sh/long@5.2.3';
+import { Buffer } from 'buffer';
+import Long from 'long';
 
 if (typeof window !== 'undefined') {
     (window as any).Buffer = Buffer;
