@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { Product } from '../types';
@@ -15,8 +15,8 @@ export const useProductDatabase = () => {
     const [isSyncing, setIsSyncing] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
     
-    // Estados separados para IA
-    const [brainStatus, setBrainStatus] = useState<{ status: string, progress: number, details?: string }>({ status: 'idle', progress: 0 });
+    // Estados de Motor IA
+    const [brainStatus, setBrainStatus] = useState({ status: 'idle', progress: 0, details: '' });
     const [isVectorizing, setIsVectorizing] = useState(false);
     const [vectorProgress, setVectorProgress] = useState({ current: 0, total: 0 });
     
@@ -24,9 +24,8 @@ export const useProductDatabase = () => {
     const [feedback, setFeedback] = useState<{ type: 'success' | 'error', msg: string } | null>(null);
 
     useEffect(() => {
-        // Suscripción al estado del modelo
         const unsubscribe = localBrain.subscribe((status, progress, details) => {
-            setBrainStatus({ status, progress, details });
+            setBrainStatus({ status, progress, details: details || '' });
         });
 
         const checkStorage = async () => {
@@ -42,6 +41,22 @@ export const useProductDatabase = () => {
         return () => { unsubscribe(); };
     }, []);
 
+    // CONSULTAS DE INTEGRIDAD (Dashboard de Barras)
+    const stats = useLiveQuery(async () => {
+        const all = await db.products.toArray();
+        const total = all.length;
+        if (total === 0) return { trainedPercent: 0, backedUpPercent: 0, missingVectors: 0 };
+
+        const trained = all.filter(p => !VectorService.needsEmbedding(p)).length;
+        const backedUp = all.filter(p => !VectorService.needsEmbedding(p) && p.syncStatus === 'synced').length;
+
+        return {
+            trainedPercent: Math.round((trained / total) * 100),
+            backedUpPercent: Math.round((backedUp / trained || 1) * 100),
+            missingVectors: total - trained
+        };
+    }, []);
+
     const products = useLiveQuery(async () => {
         if (!searchQuery) return await db.products.limit(200).toArray();
         const allProducts = await db.products.toArray();
@@ -49,53 +64,63 @@ export const useProductDatabase = () => {
     }, [searchQuery], []);
 
     const pendingChangesCount = useLiveQuery(() => db.products.where('syncStatus').anyOf('add', 'edit').count(), [], 0);
-    
-    const missingVectorsCount = useLiveQuery(async () => {
-        const all = await db.products.toArray();
-        return all.filter(p => VectorService.needsEmbedding(p)).length;
-    }, [], 0);
 
     const showFeedback = useCallback((type: 'success' | 'error', msg: string) => {
         setFeedback({ type, msg });
         setTimeout(() => setFeedback(null), 3000);
     }, []);
 
-    // ACCIÓN 1: DESCARGAR MOTOR (Botón Dedicado)
     const handleInitializeBrain = async () => {
         try {
             await localBrain.init();
-        } catch (e: any) {
-            showFeedback('error', 'Error de red al descargar motor.');
+        } catch (e) {
+            showFeedback('error', 'Error al descargar motor IA');
         }
     };
 
-    // ACCIÓN 2: ENTRENAR PRODUCTOS (Solo disponible si está descargado)
     const handleVectorize = async () => {
         if (brainStatus.status !== 'ready') {
-            showFeedback('error', 'Primero debe instalar el Motor IA.');
+            showFeedback('error', 'Instale el motor IA primero');
             return;
         }
-
         setIsVectorizing(true);
-        setVectorProgress({ current: 0, total: 0 });
-        
         try {
-            const count = await VectorService.vectorizeMissingProducts((current, total) => {
+            await VectorService.vectorizeMissingProducts((current, total) => {
                 setVectorProgress({ current, total });
             });
-            
-            if (count > 0) {
-                showFeedback('success', `${count} productos aprendidos`);
-            } else {
-                showFeedback('success', 'Catálogo ya optimizado');
-            }
-        } catch (e: any) {
-            console.error("[UI] Fallo en vectorización:", e);
-            showFeedback('error', e.message || 'Error en motor IA');
+            showFeedback('success', 'Entrenamiento completo');
+        } catch (e) {
+            showFeedback('error', 'Fallo en motor neural');
         } finally {
             setIsVectorizing(false);
         }
     };
+
+    const handleSyncToCloud = useCallback(async () => {
+        const unsyncedProds = await db.products.where('syncStatus').anyOf('add', 'edit').toArray();
+        if (unsyncedProds.length === 0) return;
+        setIsSyncing(true);
+        try {
+            await syncProductsToAppSheet(unsyncedProds);
+            showFeedback('success', 'Catálogo sincronizado');
+        } catch (err: any) {
+            showFeedback('error', err.message);
+        } finally {
+            setIsSyncing(false);
+        }
+    }, [showFeedback]);
+
+    const handleDownloadFromCloud = useCallback(async () => {
+        setIsDownloading(true);
+        try {
+            const count = await importProductsFromAppSheet();
+            showFeedback('success', `${count} productos actualizados`);
+        } catch (err: any) {
+            showFeedback('error', 'Error en descarga Cloud');
+        } finally {
+            setIsDownloading(false);
+        }
+    }, [showFeedback]);
 
     const handleDelete = useCallback(async (barcode: string) => {
         if (confirm('¿Eliminar producto?')) {
@@ -111,37 +136,13 @@ export const useProductDatabase = () => {
         }
     }, [showFeedback]);
 
-    const handleSyncToCloud = useCallback(async () => {
-        const unsyncedProds = await db.products.where('syncStatus').anyOf('add', 'edit').toArray();
-        if (unsyncedProds.length === 0) return;
-        setIsSyncing(true);
-        try {
-            await syncProductsToAppSheet(unsyncedProds);
-            showFeedback('success', 'Catálogo sincronizado');
-        } catch (err: any) {
-            showFeedback('error', `Error: ${err.message}`);
-        } finally {
-            setIsSyncing(false);
-        }
-    }, [showFeedback]);
-
-    const handleDownloadFromCloud = useCallback(async () => {
-        setIsDownloading(true);
-        try {
-            const count = await importProductsFromAppSheet();
-            showFeedback('success', `${count} productos actualizados`);
-        } catch (err: any) {
-            showFeedback('error', 'Fallo en descarga');
-        } finally {
-            setIsDownloading(false);
-        }
-    }, [showFeedback]);
-
     return {
         state: { 
             products, 
             pendingChangesCount, 
-            missingVectorsCount, 
+            missingVectorsCount: stats?.missingVectors || 0,
+            trainedPercent: stats?.trainedPercent || 0,
+            backedUpPercent: stats?.backedUpPercent || 0,
             isSyncing, 
             isDownloading, 
             isVectorizing, 
@@ -158,7 +159,7 @@ export const useProductDatabase = () => {
             handleSyncToCloud, 
             handleDownloadFromCloud, 
             handleVectorize, 
-            handleInitializeBrain, // Nueva acción expuesta
+            handleInitializeBrain,
             showFeedback 
         }
     };

@@ -1,3 +1,5 @@
+
+
 import { logger } from './logger';
 import { fetchSystemConfig } from './gasService';
 import { importProductsFromAppSheet } from './syncManager';
@@ -6,28 +8,32 @@ import { db } from '../db';
 
 export type InitStep = 'idle' | 'version_check' | 'config' | 'database' | 'ready' | 'offline' | 'purging';
 
-const CURRENT_APP_VERSION = "5.7.2"; // Forzar mantenimiento tras corrección de SchemaDiff
+const CURRENT_APP_VERSION = "5.7.8"; // Incremento de versión para forzar limpieza estructural estable
 
 export const InitializationService = {
+    /**
+     * Gestión de ciclo de vida del Software. 
+     * Si la versión cambia, limpia bultos antiguos pero preserva el catálogo si es posible.
+     */
     runMaintenance: async (onStep: (step: InitStep) => void): Promise<boolean> => {
         const storedVersion = localStorage.getItem('logicount_app_version');
         
         if (storedVersion !== CURRENT_APP_VERSION) {
             onStep('purging');
             try {
-                // 1. Limpiar caches de PWA para asegurar nuevo bundle
+                // 1. Limpieza de Caché de Aplicación (PWA)
                 if ('caches' in window) {
                     const keys = await caches.keys();
                     await Promise.all(keys.map(key => caches.delete(key)));
                 }
 
-                // 2. Desregistrar Service Workers (Evitar versiones zombie)
+                // 2. Desregistrar SWs para asegurar que el nuevo Kernel tome el control
                 if ('serviceWorker' in navigator) {
                     const regs = await navigator.serviceWorker.getRegistrations();
                     for (const reg of regs) await reg.unregister();
                 }
 
-                // 3. Limpieza de LocalStorage manteniendo identidad corporativa
+                // 3. Reset de estado operativo (Preservando Identidad)
                 const auth = localStorage.getItem('logicount_auth');
                 const opId = localStorage.getItem('logicount_operator_id');
                 const sets = localStorage.getItem('logicount_settings');
@@ -40,7 +46,7 @@ export const InitializationService = {
                 
                 localStorage.setItem('logicount_app_version', CURRENT_APP_VERSION);
                 
-                // Recarga total para aplicar el nuevo esquema Dexie v23
+                // Forzar recarga limpia para aplicar esquema Dexie v23
                 window.location.reload();
                 return true;
             } catch (e) {
@@ -51,19 +57,30 @@ export const InitializationService = {
         return false;
     },
 
+    /**
+     * Secuencia de Arranque Maestra
+     */
     run: async (onStep: (step: InitStep) => void): Promise<void> => {
         try {
             onStep('version_check');
             const wasPurged = await InitializationService.runMaintenance(onStep);
             if (wasPurged) return;
 
-            // Manejo seguro del conteo inicial: si la DB está migrando, capturamos el error
-            let hasLocalData = false;
-            try {
-                hasLocalData = (await db.products.count()) > 0;
-            } catch (e) {
-                console.warn("[Init] IndexedDB ocupada o migrando, procediendo con cautela.");
+            // Semáforo de Base de Datos: Esperar a que IndexedDB esté disponible
+            let dbReady = false;
+            let attempts = 0;
+            while (!dbReady && attempts < 5) {
+                try {
+                    // FIX: Added cast to any to resolve property 'open' access on Dexie instance
+                    await (db as any).open();
+                    dbReady = true;
+                } catch (e) {
+                    attempts++;
+                    await new Promise(r => setTimeout(r, 500));
+                }
             }
+
+            const hasLocalData = (await db.products.count()) > 0;
 
             if (hasLocalData) {
                 onStep('ready'); 
@@ -73,7 +90,7 @@ export const InitializationService = {
 
             if (!navigator.onLine) {
                 onStep('offline');
-                setTimeout(() => onStep('ready'), 3000);
+                setTimeout(() => onStep('ready'), 2000);
                 return;
             }
 
@@ -84,8 +101,8 @@ export const InitializationService = {
             onStep('ready');
 
         } catch (error: any) {
-            logger.error('INIT_CRITICAL', 'Fallo en arranque operativo', error.message);
-            onStep('ready');
+            logger.error('INIT_CRITICAL', 'Fallo en secuencia de arranque', error.message);
+            onStep('ready'); // Fallback: permitir entrada a la app aunque falle el sync inicial
         }
     },
 
