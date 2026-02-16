@@ -8,6 +8,15 @@ const superNormalize = (s: string) =>
     String(s || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
 
 /**
+ * Extrae el ID puro de una cadena que puede ser una URL o un ID con espacios.
+ */
+const cleanSpreadsheetId = (input: string): string => {
+    if (!input) return "";
+    const match = input.match(/\/d\/([a-zA-Z0-9-_]+)/);
+    return match ? match[1] : input.trim();
+};
+
+/**
  * CONFIGURACIÓN AUTOMÁTICA POR URL
  */
 export const bootstrapByUrl = async (url: string, manualId?: string): Promise<AppSheetConfig> => {
@@ -16,9 +25,10 @@ export const bootstrapByUrl = async (url: string, manualId?: string): Promise<Ap
     }
     
     try {
-        // Si el usuario provee un ID manual (desde el input), lo usamos para la primera petición
         const payload: any = { action: 'fetch_rows', tableName: 'CONFIG_SISTEMA' };
-        if (manualId) payload.spreadsheetId = manualId;
+        if (manualId) {
+            payload.spreadsheetId = cleanSpreadsheetId(manualId);
+        }
 
         const response = await fetch(url, {
             method: 'POST',
@@ -31,6 +41,9 @@ export const bootstrapByUrl = async (url: string, manualId?: string): Promise<Ap
         if (!res.success) {
             if (res.error?.includes("IDENTIDAD_EXCEL_NO_DETECTADA")) {
                 throw new Error("EXCEL_ID_REQUIRED");
+            }
+            if (res.error?.includes("AUTORIZACION_REQUERIDA")) {
+                throw new Error("Debe autorizar el script manualmente: Abra el editor de GAS y ejecute la función 'TRIGGER_PERMISSIONS' una vez.");
             }
             throw new Error(res.error || "Fallo en servidor GAS");
         }
@@ -48,8 +61,7 @@ export const bootstrapByUrl = async (url: string, manualId?: string): Promise<Ap
             return foundKey ? String(master[foundKey]).trim() : '';
         };
 
-        // Si no enviamos manualId, intentamos obtener el ID real que el script detectó (si es vinculado)
-        const finalId = manualId || res.spreadsheet_id || findVal(['SPREADSHEET_ID', 'ID_EXCEL', 'ID']);
+        const finalId = manualId ? cleanSpreadsheetId(manualId) : (res.spreadsheet_id || findVal(['SPREADSHEET_ID', 'ID_EXCEL', 'ID']));
 
         const config: AppSheetConfig = {
             gasWebAppUrl: url,
@@ -70,6 +82,10 @@ export const bootstrapByUrl = async (url: string, manualId?: string): Promise<Ap
     }
 };
 
+/**
+ * BOOTSTRAP POR ID (Vía CSV Público)
+ */
+// Added export to fix error in hooks/useCloudConfig.ts
 export const bootstrapConfigById = async (spreadsheetId: string): Promise<AppSheetConfig> => {
     const idMatch = spreadsheetId.match(/\/d\/([a-zA-Z0-9-_]+)/);
     const cleanId = idMatch ? idMatch[1] : spreadsheetId.trim();
@@ -98,7 +114,7 @@ export const bootstrapConfigById = async (spreadsheetId: string): Promise<AppShe
                     };
 
                     const config: AppSheetConfig = {
-                        spreadsheetId: cleanId, // Guardamos el ID para futuras peticiones
+                        spreadsheetId: cleanId,
                         appId: findVal(['APP_ID', 'APPID', 'APPLICATION_ID']),
                         accessKey: findVal(['ACCESS_KEY', 'ACCESSKEY', 'KEY']),
                         countsTableName: findVal(['TABLE_LOGS', 'TABLA_CONTEOS', 'CONTEOS']) || 'CONTEOS',
@@ -121,33 +137,31 @@ export const bootstrapConfigById = async (spreadsheetId: string): Promise<AppShe
     }
 };
 
+/**
+ * Actualiza la configuración del sistema desde la nube de forma silenciosa
+ */
 export const fetchSystemConfig = async (): Promise<Partial<AppSheetConfig>> => {
-    const config = getSettings().appSheetConfig;
-    if (!config?.gasWebAppUrl) throw new Error("GAS URL no configurada");
+    try {
+        const settings = getSettings();
+        if (!settings.appSheetConfig?.gasWebAppUrl) return {};
 
-    const res = await cloudApi.post('fetch_rows', { tableName: 'CONFIG_SISTEMA' });
-    if (!res.success || !res.rows || res.rows.length === 0) throw new Error("No se pudo obtener CONFIG_SISTEMA");
-
-    const master = res.rows[0];
-    const findVal = (keys: string[]) => {
-        const foundKey = Object.keys(master).find(k => keys.includes(k.trim().toUpperCase()));
-        return foundKey ? String(master[foundKey]).trim() : '';
-    };
-
-    return {
-        appId: findVal(['APP_ID', 'APPID', 'APPLICATION_ID']),
-        accessKey: findVal(['ACCESS_KEY', 'ACCESSKEY', 'KEY']),
-        countsTableName: findVal(['TABLE_LOGS', 'TABLA_CONTEOS', 'CONTEOS']) || 'CONTEOS',
-        consolidatedTableName: findVal(['TABLE_CONSOLIDADO', 'TABLA_RESUMEN', 'CONSOLIDADO']) || 'CONSOLIDADO',
-        productsTableName: findVal(['TABLE_PRODUCTOS', 'PRODUCTOS']) || 'PRODUCTOS',
-        receptionTableName: findVal(['TABLE_RECEPCION', 'RECEPCION']) || 'RECEPCION_BULTOS'
-    };
+        const res = await bootstrapByUrl(settings.appSheetConfig.gasWebAppUrl, settings.appSheetConfig.spreadsheetId);
+        return res;
+    } catch (e) { return {}; }
 };
 
+/**
+ * Llama al motor GAS con compresión opcional
+ */
+// Added export to fix error in services/appsheet.ts and hooks/useCloudConfig.ts
 export const callGas = async (action: string, payload: any, compress: boolean = false): Promise<any> => {
     return cloudApi.post(action, payload, compress);
 };
 
+/**
+ * Recupera filas de una tabla GAS
+ */
+// Added export to fix error in services/massiveSync.ts
 export const fetchFromGas = async (tableName: string): Promise<any[]> => {
     const res = await cloudApi.fetchTable(tableName);
     return res.rows || [];

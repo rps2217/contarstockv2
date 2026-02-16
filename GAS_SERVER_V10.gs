@@ -1,32 +1,65 @@
 
 /**
- * LOGICOUNT PRO - CLOUD ENGINE V12.9.1 (STABILITY FIX)
+ * LOGICOUNT PRO - CLOUD ENGINE V12.9.2 (CRITICAL FIX)
+ * Este motor incluye auto-limpieza de IDs y gestión de permisos.
  */
 
-// Si tu script es "Independiente", pega el ID de tu Excel aquí entre las comillas.
-// Si es un script "Vinculado" (creado desde el Excel), puedes dejarlo vacío.
+// Si tu script es "Independiente", puedes pegar el ID aquí.
 const HARDCODED_SPREADSHEET_ID = ""; 
 
+/**
+ * FUNCIÓN DE AYUDA: Ejecuta esta función manualmente en el editor de GAS 
+ * (botón "Ejecutar") para forzar la ventana de permisos si ves errores 403 o "Unexpected Error".
+ */
+function TRIGGER_PERMISSIONS() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet() || SpreadsheetApp.openById("1");
+  Logger.log("Permisos validados");
+}
+
+/**
+ * Extrae el ID de una URL o limpia espacios en blanco.
+ */
+function extractId(input) {
+  if (!input) return "";
+  const cleanInput = input.toString().trim();
+  // Si es una URL completa, extraemos lo que hay entre /d/ y /edit
+  const match = cleanInput.match(/\/d\/([a-zA-Z0-9-_]+)/);
+  return match ? match[1] : cleanInput;
+}
+
 function getSpreadsheet(requestSpreadsheetId) {
+  let finalId = "";
   try {
     // 1. Prioridad: ID enviado por la App
     if (requestSpreadsheetId && requestSpreadsheetId !== "") {
-      return SpreadsheetApp.openById(requestSpreadsheetId);
+      finalId = extractId(requestSpreadsheetId);
+    } 
+    // 2. Segunda opción: ID configurado arriba en este script
+    else if (HARDCODED_SPREADSHEET_ID !== "") {
+      finalId = extractId(HARDCODED_SPREADSHEET_ID);
     }
     
-    // 2. Segunda opción: ID configurado arriba en este script
-    if (HARDCODED_SPREADSHEET_ID !== "") {
-      return SpreadsheetApp.openById(HARDCODED_SPREADSHEET_ID);
+    if (finalId !== "") {
+      try {
+        return SpreadsheetApp.openById(finalId);
+      } catch (e) {
+        throw new Error("ID_INVALIDO_O_SIN_ACCESO: Google no pudo abrir el archivo con el ID: " + finalId + ". Verifique que el script tenga permisos.");
+      }
     }
 
-    // 3. Tercera opción: Autodetección (solo si el script está vinculado al Excel)
+    // 3. Tercera opción: Autodetección (solo si el script está vinculado)
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     if (!ss) {
-       throw new Error("IDENTIDAD_EXCEL_NO_DETECTADA: El script no está vinculado a un Excel y no recibió un ID válido.");
+       throw new Error("IDENTIDAD_EXCEL_NO_DETECTADA: El script no está vinculado y no recibió un ID.");
     }
     return ss;
   } catch (e) {
-    throw new Error("FALLO_CRITICO_CONEXION_EXCEL: " + e.toString());
+    // Captura el error específico "Unexpected error" de Google
+    const errorStr = e.toString();
+    if (errorStr.includes("openById")) {
+      throw new Error("AUTORIZACION_REQUERIDA: Google bloqueó el acceso. Abra el script en el editor y ejecute la función TRIGGER_PERMISSIONS manualmente una vez.");
+    }
+    throw new Error("FALLO_CRITICO_CONEXION_EXCEL: " + errorStr);
   }
 }
 
