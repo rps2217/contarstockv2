@@ -1,9 +1,10 @@
 
 import React, { useState } from 'react';
-import { Wifi, AlertCircle, Info, Link, ExternalLink, ShieldAlert } from 'lucide-react';
+import { Wifi, AlertCircle, Info, Link, ShieldAlert, Database, QrCode } from 'lucide-react';
 import { AppSettings } from '../../types';
 import { SettingsSection, SettingsCard, SettingsButton, SettingsInput } from './common/SettingsUI';
 import { bootstrapByUrl } from '../../services/gasService';
+import { SoundFX } from '../../services/audio';
 
 interface Props {
     settings: AppSettings;
@@ -14,31 +15,33 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
     const [urlInput, setUrlInput] = useState(settings.appSheetConfig?.gasWebAppUrl || '');
     const [ssIdInput, setSsIdInput] = useState(settings.appSheetConfig?.spreadsheetId || '');
     const [isConnecting, setIsConnecting] = useState(false);
-    const [errorMode, setErrorMode] = useState<null | 'ID_REQUIRED' | 'OAUTH_STALL' | 'GENERAL'>(null);
+    const [errorMode, setErrorMode] = useState<null | 'OAUTH_STALL' | 'GENERAL'>(null);
     const [errorMessage, setErrorMessage] = useState('');
 
     const handleAutoConfig = async () => {
         if (!urlInput.includes('/exec')) {
             setErrorMessage("La URL debe terminar en /exec");
             setErrorMode('GENERAL');
+            SoundFX.play('error');
             return;
         }
 
         setErrorMode(null);
         setIsConnecting(true);
         try {
+            // Intentamos vincular usando la URL y el ID manual si existe
             const fullConfig = await bootstrapByUrl(urlInput, ssIdInput);
             updateSetting('appSheetConfig', fullConfig);
-            alert(`¡Conexión Exitosa!\nSistema vinculado a: ${fullConfig.spreadsheetId}`);
+            SoundFX.play('success');
+            alert(`¡CONEXIÓN EXITOSA!\nSistema vinculado al Excel: ${fullConfig.spreadsheetId}`);
         } catch (e: any) {
-            if (e.message === 'EXCEL_ID_REQUIRED') {
-                setErrorMode('ID_REQUIRED');
-            } else if (e.message.includes('GOOGLE_OAUTH_STALL')) {
+            if (e.message.includes('GOOGLE_OAUTH_STALL') || e.message.includes('ACCESO_DENEGADO')) {
                 setErrorMode('OAUTH_STALL');
             } else {
                 setErrorMessage(e.message);
                 setErrorMode('GENERAL');
             }
+            SoundFX.play('error');
         } finally {
             setIsConnecting(false);
         }
@@ -46,7 +49,7 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
-            <SettingsSection title="Conexión Inteligente">
+            <SettingsSection title="Vínculo con Google Sheets">
                 
                 <SettingsCard className="bg-slate-900 border-indigo-500/30 text-white">
                     <div className="space-y-6">
@@ -56,43 +59,54 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
                             </div>
                             <div>
                                 <h3 className="text-xl font-black uppercase italic tracking-tighter leading-none">Vínculo Maestro</h3>
-                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">Sincronización con Google Cloud</p>
+                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">Configuración Cloud V12</p>
                             </div>
                         </div>
 
-                        <div className="space-y-4">
+                        <div className="space-y-5">
+                            {/* CAMPO 1: URL DEL SCRIPT */}
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest ml-1">URL de Despliegue (Web App)</label>
+                                <div className="flex justify-between items-center px-1">
+                                    <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">URL de Implementación (GAS)</label>
+                                    <span className="text-[8px] font-bold text-slate-500 uppercase">Obligatorio</span>
+                                </div>
                                 <SettingsInput 
                                     value={urlInput}
                                     onChange={(e: any) => setUrlInput(e.target.value)}
                                     placeholder="https://script.google.com/macros/s/.../exec"
-                                    className="bg-white/5 border-white/10 text-white placeholder:text-slate-600"
+                                    className="bg-black/40 border-white/5 text-blue-400 font-mono text-xs"
                                 />
                             </div>
 
+                            {/* CAMPO 2: ID DEL SPREADSHEET (EL QUE FALTABA) */}
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-amber-400 uppercase tracking-widest ml-1">ID del Spreadsheet (Opcional si es vinculado)</label>
+                                <div className="flex justify-between items-center px-1">
+                                    <label className="text-[10px] font-black text-amber-400 uppercase tracking-widest">ID del Spreadsheet (Excel)</label>
+                                    <span className="text-[8px] font-bold text-slate-500 uppercase">Manual / Anti-Error</span>
+                                </div>
                                 <SettingsInput 
                                     value={ssIdInput}
                                     onChange={(e: any) => setSsIdInput(e.target.value)}
-                                    placeholder="ID de la URL de tu Excel"
-                                    className="bg-white/5 border-amber-500/30 text-white placeholder:text-slate-600"
+                                    placeholder="Pegue aquí el ID largo de la URL de su Excel"
+                                    className="bg-black/40 border-amber-500/20 text-amber-400 font-mono text-xs"
                                 />
+                                <p className="text-[8px] text-slate-500 px-1 italic">
+                                    Si su script es independiente, pegue el ID para evitar el error "AUTO_DETECTED".
+                                </p>
                             </div>
                         </div>
 
                         {errorMode === 'OAUTH_STALL' && (
-                            <div className="bg-amber-500/10 border-2 border-amber-500/40 p-5 rounded-[2rem] space-y-3">
+                            <div className="bg-amber-500/10 border-2 border-amber-500/40 p-5 rounded-[2rem] space-y-3 animate-in shake duration-500">
                                 <div className="flex items-center gap-3">
                                     <ShieldAlert className="w-6 h-6 text-amber-500 shrink-0" />
                                     <p className="text-[11px] text-amber-100 font-black uppercase">Acción Requerida en Google</p>
                                 </div>
                                 <p className="text-[10px] text-amber-200/70 leading-relaxed font-bold uppercase">
-                                    Google requiere que autorices el script manualmente.
-                                    1. Ve al editor de Google Apps Script.
-                                    2. Selecciona la función "TRIGGER_PERMISSIONS" arriba.
-                                    3. Presiona "Ejecutar" y acepta los permisos.
+                                    Google bloqueó el acceso. 
+                                    1. Abra su Script en Google.
+                                    2. Seleccione la función "TRIGGER_PERMISSIONS".
+                                    3. Presione "Ejecutar" y acepte los permisos.
                                 </p>
                             </div>
                         )}
@@ -108,10 +122,10 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
                             onClick={handleAutoConfig}
                             isLoading={isConnecting}
                             disabled={!urlInput}
-                            label={isConnecting ? "Validando..." : "Sincronizar Vínculo"}
+                            label={isConnecting ? "Sincronizando..." : "Auto-Configurar App"}
                             icon={Wifi}
                             variant="primary"
-                            className="bg-indigo-600 border-indigo-400"
+                            className="bg-indigo-600 border-indigo-400 h-20 text-sm"
                         />
                     </div>
                 </SettingsCard>
@@ -119,10 +133,10 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
                 <div className="bg-blue-900/10 border-2 border-blue-500/20 p-6 rounded-[2.5rem] flex gap-5">
                     <Info className="w-8 h-8 text-blue-400 shrink-0" />
                     <div className="space-y-2">
-                        <p className="text-[10px] text-blue-200 font-bold uppercase tracking-wider">¿Fallo de ID inesperado?</p>
+                        <p className="text-[10px] text-blue-200 font-bold uppercase tracking-wider">¿Dónde obtengo el ID del Excel?</p>
                         <p className="text-[9px] text-blue-400/80 leading-relaxed font-medium uppercase">
-                            Si ves errores de "openById" en consola, asegúrate de haber dado permisos al Script. 
-                            Ve a tu Excel -> Extensiones -> Apps Script -> Botón Ejecutar (Función TRIGGER_PERMISSIONS).
+                            Está en la URL de tu navegador cuando tienes el Excel abierto:<br/>
+                            docs.google.com/spreadsheets/d/<span className="text-white bg-blue-600 px-1 font-black">ESTE_ES_EL_ID</span>/edit
                         </p>
                     </div>
                 </div>

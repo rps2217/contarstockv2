@@ -39,7 +39,6 @@ export const useProductDatabase = () => {
         };
         checkStorage();
 
-        // FIX: Wrapped unsubscribe to ensure the EffectCallback returns void
         return () => { unsubscribe(); };
     }, []);
 

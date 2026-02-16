@@ -38,7 +38,6 @@ class LocalBrainService {
     public subscribe(listener: StatusListener) {
         this.listeners.add(listener);
         listener(this.status, this.progress, this.details);
-        // FIX: Changed to return a void function to avoid useEffect return type errors (Set.delete returns boolean)
         return () => { this.listeners.delete(listener); };
     }
 
