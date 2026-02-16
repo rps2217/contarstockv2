@@ -121,14 +121,15 @@ export const bootstrapConfigById = async (spreadsheetId: string): Promise<AppShe
                         consolidatedTableName: findVal(['TABLE_CONSOLIDADO', 'TABLA_RESUMEN', 'CONSOLIDADO']) || 'CONSOLIDADO',
                         productsTableName: findVal(['TABLE_PRODUCTOS', 'PRODUCTOS']) || 'PRODUCTOS',
                         receptionTableName: findVal(['TABLE_RECEPCION', 'RECEPCION']) || 'RECEPCION_BULTOS',
-                        gasWebAppUrl: findVal(['GAS_URL', 'URL_GAS', 'SCRIPT_URL'])
+                        gasWebAppUrl: findVal(['GAS_URL', 'URL_GAS', 'SCRIPT_URL']),
+                        ordersTableName: findVal(['TABLE_PEDIDOS', 'PEDIDOS']) || 'PEDIDOS'
                     };
 
                     if (!config.gasWebAppUrl) return reject(new Error("No se encontró la URL de Google Script en el Excel."));
                     
                     resolve(config);
                 },
-                error: (err) => reject(err)
+                error: (err: any) => reject(err)
             });
         });
     } catch (err: any) {
@@ -140,6 +141,7 @@ export const bootstrapConfigById = async (spreadsheetId: string): Promise<AppShe
 /**
  * Actualiza la configuración del sistema desde la nube de forma silenciosa
  */
+// Added export to fix error in services/initializationService.ts
 export const fetchSystemConfig = async (): Promise<Partial<AppSheetConfig>> => {
     try {
         const settings = getSettings();
@@ -153,7 +155,6 @@ export const fetchSystemConfig = async (): Promise<Partial<AppSheetConfig>> => {
 /**
  * Llama al motor GAS con compresión opcional
  */
-// Added export to fix error in services/appsheet.ts and hooks/useCloudConfig.ts
 export const callGas = async (action: string, payload: any, compress: boolean = false): Promise<any> => {
     return cloudApi.post(action, payload, compress);
 };
@@ -161,7 +162,6 @@ export const callGas = async (action: string, payload: any, compress: boolean = 
 /**
  * Recupera filas de una tabla GAS
  */
-// Added export to fix error in services/massiveSync.ts
 export const fetchFromGas = async (tableName: string): Promise<any[]> => {
     const res = await cloudApi.fetchTable(tableName);
     return res.rows || [];
