@@ -1,9 +1,10 @@
+
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { massiveDb } from '../../../db.massive';
 import { db as masterDb } from '../../../db';
 import { sanitizeBarcode } from '../../../services/utils';
-import { useFeedbackSystem } from '../../../hooks/useFeedbackSystem';
+import { useScannerEngine } from '../../../shared/hooks/useScannerEngine';
 import { Product } from '../../../types';
 import { SoundFX } from '../../../services/audio';
 
@@ -18,24 +19,28 @@ export interface HammerItem {
 }
 
 /**
- * HOOK MARTILLO INDUSTRIAL v6.5
- * Optimizado para PDAs de alto rendimiento y ráfagas HID.
+ * HOOK MARTILLO v7.0 (Ultra-Fast HID Stabilized)
  */
 export const useHammerLogic = (batchId: string) => {
-    const { feedback, trigger } = useFeedbackSystem(120);
-    
-    const [activeBarcode, setActiveBarcode] = useState<string | null>(null);
-    const [activeProduct, setActiveProduct] = useState<Product | null>(null);
-    const [optimisticQty, setOptimisticQty] = useState<number | null>(null);
-    const [multiplier, setMultiplier] = useState(1);
+    const engine = useScannerEngine(1);
     const [currentLocation, setCurrentLocation] = useState(() => localStorage.getItem('hammer_loc') || 'ZONA-A');
     
     const writeQueue = useRef<{barcode: string, qty: number, loc: string, ts: number}[]>([]);
     const itemsCache = useRef<HammerItem[]>([]);
+    
+    // REFS DE ESTABILIZACIÓN: Evitan que registerScan cambie su identidad en cada pick
+    const multiplierRef = useRef(1);
+    const locationRef = useRef(currentLocation);
 
-    useEffect(() => { localStorage.setItem('hammer_loc', currentLocation); }, [currentLocation]);
+    useEffect(() => { 
+        multiplierRef.current = engine.multiplier;
+    }, [engine.multiplier]);
 
-    // Query unificada de base de datos masiva
+    useEffect(() => { 
+        locationRef.current = currentLocation;
+        localStorage.setItem('hammer_loc', currentLocation); 
+    }, [currentLocation]);
+
     const dbItems = useLiveQuery(async () => {
         if (!batchId) return [];
         const [rawScans, manifests] = await Promise.all([
@@ -49,7 +54,6 @@ export const useHammerLogic = (batchId: string) => {
         
         const aggregation = new Map<string, HammerItem>();
 
-        // 1. Cargar metas teóricas (STOCK)
         manifests.forEach(m => {
             const pInfo = prodMap.get(m.barcode);
             aggregation.set(m.barcode, {
@@ -62,7 +66,6 @@ export const useHammerLogic = (batchId: string) => {
             });
         });
 
-        // 2. Sumar picks físicos registrados
         rawScans.forEach(s => {
             const existing = aggregation.get(s.barcode);
             const pInfo = prodMap.get(s.barcode);
@@ -70,6 +73,7 @@ export const useHammerLogic = (batchId: string) => {
                 existing.totalQuantity += s.quantity;
                 existing.lastTimestamp = Math.max(existing.lastTimestamp, s.timestamp);
                 if (s.location) existing.loc = s.location;
+                if (existing.name === 'SKU_DESCONOCIDO' && pInfo) existing.name = pInfo.name;
             } else {
                 aggregation.set(s.barcode, {
                     barcode: s.barcode,
@@ -82,111 +86,93 @@ export const useHammerLogic = (batchId: string) => {
         });
 
         const sorted = Array.from(aggregation.values()).sort((a, b) => {
-            if (a.barcode === activeBarcode) return -1;
+            if (a.barcode === engine.activeBarcode) return -1;
             return b.lastTimestamp - a.lastTimestamp;
         });
 
         itemsCache.current = sorted;
         return sorted;
-    }, [batchId, activeBarcode, feedback]);
+    }, [batchId, engine.activeBarcode, engine.feedback]);
 
-    // Persistencia flush ultra-rápida (PDA Burst Ready)
+    // Persistencia por lotes (Flush)
     useEffect(() => {
-        const flush = async () => {
+        const timer = setInterval(async () => {
             if (writeQueue.current.length === 0) return;
             const batch = [...writeQueue.current];
             writeQueue.current = [];
             try {
-                // Escritura directa por lotes
                 await massiveDb.blindScans.bulkAdd(batch.map(b => ({
                     batchId, barcode: b.barcode, quantity: b.qty, location: b.loc, timestamp: b.ts
                 })));
             } catch (e) {
-                // Fallback de reintento
                 writeQueue.current = [...batch, ...writeQueue.current];
             }
-        };
-        const timer = setInterval(flush, 300); // Reducido de 600 a 300ms para mayor velocidad
-        return () => { clearInterval(timer); flush(); };
+        }, 400);
+        return () => clearInterval(timer);
     }, [batchId]);
 
-    const registerScan = useCallback((code: string, qtyOverride?: number) => {
+    /**
+     * REGISTRO DE ALTA VELOCIDAD
+     * Esta función ya no depende de estados externos, permitiendo que useHIDScanner 
+     * mantenga el puerto de escucha abierto sin interrupciones.
+     */
+    const registerScan = useCallback(async (code: string, qtyOverride?: number) => {
         const clean = sanitizeBarcode(code);
         if (!clean) return;
         
-        const qtyToApply = qtyOverride ?? multiplier;
-        const existingItem = itemsCache.current.find(i => i.barcode === clean);
-        const currentQty = existingItem?.totalQuantity || 0;
+        const delta = qtyOverride ?? multiplierRef.current;
+        const existing = itemsCache.current.find(i => i.barcode === clean);
+        const currentBaseQty = existing?.totalQuantity || 0;
         
-        // Protección anti-negativos extrema
-        if (currentQty + qtyToApply < 0) {
+        if (currentBaseQty + delta < 0) {
             SoundFX.play('error');
-            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
             return;
         }
 
-        trigger(qtyToApply > 0 ? 'success' : 'undo');
-        setActiveBarcode(clean);
-        
-        masterDb.products.get(clean).then(p => {
-            if (p) setActiveProduct(p);
-        });
-        
-        // UI OPTIMISTA: Actualización visual instantánea sin esperar a IndexedDB
-        setOptimisticQty(prev => {
-            const base = currentQty;
-            const currentUI = clean === activeBarcode ? (prev ?? base) : base;
-            return Math.max(0, currentUI + qtyToApply);
+        // Búsqueda asíncrona pero sin bloquear el hilo
+        masterDb.products.get(clean).then(product => {
+            engine.actions.updateActiveItem(clean, product || null, currentBaseQty, delta);
         });
 
-        writeQueue.current.push({ barcode: clean, qty: qtyToApply, loc: currentLocation, ts: Date.now() });
-    }, [activeBarcode, trigger, multiplier, currentLocation]);
+        // Encolado instantáneo
+        writeQueue.current.push({ 
+            barcode: clean, 
+            qty: delta, 
+            loc: locationRef.current, 
+            ts: Date.now() 
+        });
+    }, [engine.actions]); // Única dependencia estable
 
     const removeItem = useCallback(async (barcode: string) => {
         if (barcode === 'ALL') {
-            await Promise.all([
-                massiveDb.blindScans.where('batchId').equals(batchId).delete(),
-                massiveDb.blindManifests.where('batchId').equals(batchId).delete()
-            ]);
-            setActiveBarcode(null);
-            setOptimisticQty(null);
-            SoundFX.play('delete');
+            await massiveDb.blindScans.where('batchId').equals(batchId).delete();
+            engine.actions.resetActive();
         } else {
-            await massiveDb.blindScans.where('[batchId+barcode]').equals([batchId, barcode]).delete();
-            if (activeBarcode === barcode) {
-                setActiveBarcode(null);
-                setOptimisticQty(null);
-            }
+            await massiveDb.blindScans.where({ batchId, barcode }).delete();
+            if (engine.activeBarcode === barcode) engine.actions.resetActive();
         }
-        trigger('undo');
-    }, [batchId, activeBarcode, trigger]);
+        engine.actions.triggerFeedback('undo');
+    }, [batchId, engine.actions, engine.activeBarcode]);
 
     return { 
         state: { 
             items: dbItems || [], 
-            // Fix: Expose activeBarcode to state to fix errors in HammerPage
-            activeBarcode,
-            // Fix: Expose optimisticQty to state to fix errors in HammerPage
-            optimisticQty,
-            lastScannedItem: useMemo(() => {
-                if (!activeBarcode) return undefined;
-                const real = dbItems?.find(i => i.barcode === activeBarcode);
-                return real ? { ...real, totalQuantity: optimisticQty ?? real.totalQuantity } : undefined;
-            }, [dbItems, activeBarcode, optimisticQty]),
-            activeProduct,
-            feedback, multiplier, currentLocation
+            activeBarcode: engine.activeBarcode,
+            activeProduct: engine.activeProduct,
+            feedback: engine.feedback,
+            multiplier: engine.multiplier,
+            optimisticQty: engine.optimisticQty,
+            currentLocation
         },
         actions: { 
-            setMultiplier, 
+            setMultiplier: engine.setMultiplier,
             setCurrentLocation, 
             registerScan, 
-            modifyQuantity: (b: string, d: number) => registerScan(b, d),
             removeItem,
-            selectItem: (b: string) => { 
-                setActiveBarcode(b); 
+            selectItem: async (b: string) => {
                 const item = itemsCache.current.find(i => i.barcode === b);
-                setOptimisticQty(item?.totalQuantity || 0); 
-                masterDb.products.get(b).then(setActiveProduct);
+                const product = await masterDb.products.get(b);
+                engine.actions.updateActiveItem(b, product || null, item?.totalQuantity || 0, 0);
             }
         }
     };
