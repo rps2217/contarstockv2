@@ -10,8 +10,8 @@ interface HIDScannerOptions {
 }
 
 /**
- * MOTOR DE CAPTURA HID v6.0 (PDA Optimized)
- * Captura ráfagas de hardware láser incluso sin foco en inputs.
+ * MOTOR DE CAPTURA HID v7.0 (High Performance Industrial)
+ * Blindado contra re-renders y optimizado para ráfagas láser de PDAs Zebra/Honeywell.
  */
 export const useHIDScanner = ({
     onScan,
@@ -22,16 +22,26 @@ export const useHIDScanner = ({
     const buffer = useRef('');
     const lastKeyTime = useRef(0);
     const fallbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    
+    // ESTABILIZACIÓN CRÍTICA: Guardar callback en Ref para evitar que el listener se desmonte 
+    // y remonte durante una ráfaga de escaneo (Keyboard Burst).
+    const onScanRef = useRef(onScan);
+    useEffect(() => {
+        onScanRef.current = onScan;
+    }, [onScan]);
 
     useEffect(() => {
-        if (!isEnabled) return;
+        if (!isEnabled) {
+            buffer.current = '';
+            return;
+        }
 
         const processBuffer = () => {
             const currentContent = buffer.current.trim();
             if (currentContent.length >= minChars) {
                 const cleanCode = sanitizeBarcode(currentContent);
                 if (cleanCode) {
-                    onScan(cleanCode);
+                    onScanRef.current(cleanCode);
                 }
             }
             buffer.current = '';
@@ -39,19 +49,21 @@ export const useHIDScanner = ({
         };
 
         const handleKeyDown = (e: KeyboardEvent) => {
-            // Ignorar teclas de sistema y navegación que envían algunas PDAs
-            if (e.key.length > 1 && e.key !== 'Enter' && e.key !== 'Backspace') return;
+            // Ignorar teclas de control y modificadores que envían algunas PDAs
             if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab'].includes(e.key)) return;
+            
+            // Si el carácter tiene longitud > 1 y no es Enter/Backspace, es una tecla de función del sistema
+            if (e.key.length > 1 && e.key !== 'Enter' && e.key !== 'Backspace') return;
 
             const target = e.target as HTMLElement;
-            // No interferir si el usuario está en un campo de texto manual real (ajustes, etc)
+            // No interferir si el usuario está en un campo de texto manual
             if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
-                if (!target.hasAttribute('data-burst-mode') && target.id !== 'v8-core-optical-engine') return;
+                if (target.id !== 'v8-core-optical-engine') return;
             }
 
             const now = Date.now();
             
-            // Si el tiempo entre teclas es muy alto (>70ms), asumimos escritura humana y reseteamos
+            // Los láseres disparan a ~10ms por carácter. Si el gap es > maxLatency, es escritura humana.
             if (now - lastKeyTime.current > maxLatency) {
                 buffer.current = '';
             }
@@ -67,21 +79,20 @@ export const useHIDScanner = ({
             } else if (e.key.length === 1) {
                 buffer.current += e.key;
 
-                // RED DE SEGURIDAD: Algunas PDAs no envían Enter al final. 
-                // Procesamos si hay silencio tras la ráfaga.
+                // RED DE SEGURIDAD: Algunas PDAs no envían 'Enter'. Procesamos por tiempo de inactividad.
                 if (fallbackTimer.current) clearTimeout(fallbackTimer.current);
                 fallbackTimer.current = setTimeout(() => {
                     if (buffer.current.length >= minChars) processBuffer();
-                }, 100);
+                }, 100); 
             }
         };
 
-        // Escucha agresiva en fase de captura para ganar a otros listeners
+        // Escucha agresiva en fase de captura para ganar a otros listeners de la UI
         window.addEventListener('keydown', handleKeyDown, { capture: true });
         
         return () => {
             window.removeEventListener('keydown', handleKeyDown, { capture: true });
             if (fallbackTimer.current) clearTimeout(fallbackTimer.current);
         };
-    }, [isEnabled, onScan, minChars, maxLatency]);
+    }, [isEnabled, minChars, maxLatency]); // onScan ya no reinicia el listener
 };

@@ -21,8 +21,9 @@ const Sync = lazyWithRetry(() => import('./components/SyncManagerUI'));
 const Settings = lazyWithRetry(() => import('./components/Settings'));
 
 // --- MÓDULOS OPERATIVOS (FEATURES) ---
+// FIX: Explicitly handle potential module type mismatches by ensuring the default export is picked correctly
 const CountingPage = lazyWithRetry(() => import('./features/counting/CountingPage'));
-const HammerPage = lazyWithRetry(() => import('./features/hammer/HammerPage'));
+const HammerPage = lazyWithRetry(() => import('./features/hammer/HammerPage').then(m => ({ default: m.default })));
 const ReceptionPage = lazyWithRetry(() => import('./features/reception/ReceptionPage'));
 
 const AppContent = () => {
