@@ -1,8 +1,8 @@
 
 import { useState, useCallback, useMemo } from 'react';
-import { useFeedbackSystem, FeedbackStatus } from '../../../hooks/useFeedbackSystem';
-import { Product } from '../../../types';
-import { sanitizeBarcode } from '../../../services/utils';
+import { useFeedbackSystem, FeedbackStatus } from '../../hooks/useFeedbackSystem';
+import { Product } from '../../types';
+import { sanitizeBarcode } from '../../services/utils';
 
 export type ScannerEngineStatus = 'idle' | 'scanning' | 'validating' | 'error' | 'success';
 

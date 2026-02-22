@@ -16,7 +16,7 @@ interface HIDScannerOptions {
 export const useHIDScanner = ({
     onScan,
     minChars = 2,
-    maxLatency = 70, 
+    maxLatency = 50, 
     isEnabled = true
 }: HIDScannerOptions) => {
     const buffer = useRef('');
@@ -79,7 +79,7 @@ export const useHIDScanner = ({
             } else if (e.key.length === 1) {
                 buffer.current += e.key;
 
-                // RED DE SEGURIDAD: Algunas PDAs no envían 'Enter'. Procesamos por tiempo de inactividad.
+                // RED DE SEGURIDAD: Procesamos por tiempo de inactividad si no hay Enter
                 if (fallbackTimer.current) clearTimeout(fallbackTimer.current);
                 fallbackTimer.current = setTimeout(() => {
                     if (buffer.current.length >= minChars) processBuffer();
@@ -87,12 +87,11 @@ export const useHIDScanner = ({
             }
         };
 
-        // Escucha agresiva en fase de captura para ganar a otros listeners de la UI
         window.addEventListener('keydown', handleKeyDown, { capture: true });
         
         return () => {
             window.removeEventListener('keydown', handleKeyDown, { capture: true });
             if (fallbackTimer.current) clearTimeout(fallbackTimer.current);
         };
-    }, [isEnabled, minChars, maxLatency]); // onScan ya no reinicia el listener
+    }, [isEnabled, minChars, maxLatency]);
 };

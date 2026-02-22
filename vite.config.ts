@@ -37,7 +37,7 @@ export default defineConfig(({ mode }) => {
           filename: 'sw.ts',
           registerType: 'autoUpdate',
           devOptions: {
-            enabled: true,
+            enabled: false,
             type: 'module',
           },
           includeAssets: ['favicon.ico', 'pwa-icon.svg'],

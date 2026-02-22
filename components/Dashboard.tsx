@@ -1,20 +1,20 @@
 
-import React, { useState, useEffect } from 'react';
-import { ScanLine, Radio, Zap, History, Database, Settings, UserCircle, Activity, ShieldAlert, Terminal } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { ScanLine, Radio, Zap, History, Database, Settings, UserCircle, Activity, ShieldAlert, Terminal, RefreshCw, Trash2 } from 'lucide-react';
 import { useDashboard } from '../hooks/useDashboard';
 import { IndustrialButton } from './common/IndustrialButton';
 import { db } from '../db';
 import { getSettings } from '../services/settings';
+import { SoundFX } from '../services/audio';
 
 const Dashboard: React.FC = () => {
   const { stats, operatorId, isSyncNeeded, handleEnterMartillo, navigate } = useDashboard();
   const [ipm, setIpm] = useState(0);
   const [hasConfigError, setHasConfigError] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     const config = getSettings().appSheetConfig;
-    // CORRECCIÓN: Si ya hay URL de Script, el sistema es funcional. 
-    // No bloqueamos por falta de spreadsheetId si la comunicación ya existe.
     if (!config?.gasWebAppUrl) {
         setHasConfigError(true);
     } else {
@@ -30,6 +30,38 @@ const Dashboard: React.FC = () => {
     calcIpm();
     const timer = setInterval(calcIpm, 30000);
     return () => clearInterval(timer);
+  }, []);
+
+  const handleHardRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    // Fix: Changed 'undo' to 'delete' because 'undo' is not a valid parameter for SoundFX.play
+    SoundFX.play('delete');
+    
+    try {
+        // 1. Limpiar caches del navegador (CacheStorage de PWA)
+        if ('caches' in window) {
+            const cacheNames = await caches.keys();
+            await Promise.all(cacheNames.map(name => caches.delete(name)));
+        }
+
+        // 2. Desregistrar Service Workers para forzar nueva versión
+        if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            for (const registration of registrations) {
+                await registration.unregister();
+            }
+        }
+
+        // 3. Limpiar Session Storage (evita loops de error)
+        sessionStorage.clear();
+
+        // 4. Feedback visual antes de morir
+        setTimeout(() => {
+            window.location.href = window.location.pathname + '?v=' + Date.now();
+        }, 500);
+    } catch (e) {
+        window.location.reload();
+    }
   }, []);
 
   return (
@@ -137,24 +169,31 @@ const Dashboard: React.FC = () => {
             </button>
             
             <button 
-                onClick={() => navigate('/settings?tab=system')} 
-                className="h-28 bg-slate-900 border-4 border-white/5 rounded-[2rem] flex flex-col items-center justify-center gap-2 opacity-60 hover:opacity-100 transition-all group"
+                onClick={handleHardRefresh}
+                disabled={isRefreshing}
+                className="h-28 bg-slate-900 border-4 border-emerald-500/20 rounded-[2rem] flex flex-col items-center justify-center gap-2 opacity-60 hover:opacity-100 transition-all group active:scale-95 active:bg-emerald-950"
             >
-                <Terminal className="w-6 h-6 text-emerald-500 group-hover:scale-110 transition-transform" />
-                <span className="text-[9px] font-black uppercase tracking-widest text-white">Diagnóstico</span>
+                <RefreshCw className={`w-6 h-6 text-emerald-500 ${isRefreshing ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
+                <span className="text-[9px] font-black uppercase tracking-widest text-white">Reiniciar_Kernel</span>
             </button>
         </div>
 
-        <div className="pt-4">
-            <IndustrialButton 
-                variant="black" 
-                onClick={() => navigate('/settings')} 
-                icon={Settings}
-                fullWidth
-                className="border-white/5 text-white/40 h-20 rounded-[2rem]"
+        <div className="pt-4 grid grid-cols-2 gap-4">
+            <button 
+                onClick={() => navigate('/settings?tab=system')} 
+                className="h-20 bg-slate-900/50 border-2 border-white/5 rounded-[2rem] flex items-center justify-center gap-3 opacity-40 hover:opacity-100 transition-all"
             >
-                SYSTEM_SETTINGS
-            </IndustrialButton>
+                <Terminal className="w-4 h-4 text-slate-400" />
+                <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white">Terminal_IO</span>
+            </button>
+
+            <button 
+                onClick={() => navigate('/settings')} 
+                className="h-20 bg-slate-900/50 border-2 border-white/5 rounded-[2rem] flex items-center justify-center gap-3 opacity-40 hover:opacity-100 transition-all"
+            >
+                <Settings className="w-4 h-4 text-slate-400" />
+                <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white">System_Setup</span>
+            </button>
         </div>
 
       </div>
