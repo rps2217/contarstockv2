@@ -30,13 +30,15 @@ export const Database: React.FC = () => {
         isVectorizing={state.isVectorizing}
         vectorProgress={state.vectorProgress}
         missingVectorsCount={state.missingVectorsCount}
+        trainedPercent={state.trainedPercent}
+        backedUpPercent={state.backedUpPercent}
         pendingChangesCount={state.pendingChangesCount}
-        brainStatus={state.brainStatus} // Pass brain status
+        brainStatus={state.brainStatus}
         onSearch={actions.setSearchQuery}
         onDownload={actions.handleDownloadFromCloud}
         onSync={actions.handleSyncToCloud}
         onVectorize={actions.handleVectorize}
-        onInitializeBrain={actions.handleInitializeBrain} // New prop connected
+        onInitializeBrain={actions.handleInitializeBrain}
         onImport={() => setIsImportOpen(true)}
         onCreate={handleOpenCreate}
       />
