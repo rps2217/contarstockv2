@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, Minus, Plus, Zap, Box, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Minus, Plus, Zap, Box, AlertTriangle, CheckCircle2, Volume2, VolumeX } from 'lucide-react';
 import { CameraScanner } from '../../../components/CameraScanner';
 import { HammerItem } from '../hooks/useHammerLogic';
 import { Product } from '../../../types';
@@ -25,6 +25,33 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
     items
 }) => {
     const [isFlashOn, setIsFlashOn] = useState(false);
+    const [isVoiceEnabled, setIsVoiceEnabled] = useState(() => localStorage.getItem('hammer_voice') === 'true');
+    const lastSpokenRef = useRef<string>('');
+
+    // Persistir preferencia de voz
+    useEffect(() => {
+        localStorage.setItem('hammer_voice', isVoiceEnabled.toString());
+    }, [isVoiceEnabled]);
+
+    // Lógica de Voz (TTS)
+    useEffect(() => {
+        if (!isVoiceEnabled || !activeBarcode) return;
+        
+        const textToSpeak = `${displayName}. ${displayQty} unidades.`;
+        
+        // Evitar repetir lo mismo si no ha cambiado nada relevante
+        if (lastSpokenRef.current === textToSpeak) return;
+        
+        lastSpokenRef.current = textToSpeak;
+        
+        // Cancelar cualquier habla previa
+        window.speechSynthesis.cancel();
+        
+        const utterance = new SpeechSynthesisUtterance(textToSpeak);
+        utterance.lang = 'es-ES';
+        utterance.rate = 1.1; // Un poco más rápido para flujo industrial
+        window.speechSynthesis.speak(utterance);
+    }, [activeBarcode, displayQty, displayName, isVoiceEnabled]);
 
     // Encuentra el item activo en la lista para obtener datos si no están en el estado optimista
     const activeItem = items.find(i => i.barcode === activeBarcode);
@@ -63,6 +90,13 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
                 </button>
                 
                 <div className="flex gap-2">
+                    <button 
+                        className={`w-12 h-12 rounded-full flex items-center justify-center border border-white/10 transition-all ${isVoiceEnabled ? 'bg-blue-500/20 text-blue-400' : 'bg-black/40 text-white/40'}`}
+                        onClick={() => setIsVoiceEnabled(!isVoiceEnabled)}
+                        title={isVoiceEnabled ? "Desactivar Voz" : "Activar Voz"}
+                    >
+                        {isVoiceEnabled ? <Volume2 className="w-6 h-6" /> : <VolumeX className="w-6 h-6" />}
+                    </button>
                     {/* Flash toggle placeholder - CameraScanner doesn't expose flash control yet, but UI needs it */}
                     <button 
                         className={`w-12 h-12 rounded-full flex items-center justify-center border border-white/10 transition-all ${isFlashOn ? 'bg-yellow-500/20 text-yellow-400' : 'bg-black/40 text-white/40'}`}
@@ -111,28 +145,43 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
             {/* PANEL DE CONTROL (40% Alto) */}
             <div className="flex-1 bg-slate-900 rounded-t-[2.5rem] -mt-8 relative z-10 flex flex-col px-6 pt-8 pb-6 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-white/5">
                 
-                {/* HISTORIAL RECIENTE */}
-                {recentHistory.length > 0 && (
-                    <div className="mb-4">
-                        <div className="text-[8px] font-black text-slate-600 uppercase tracking-[0.2em] mb-2 px-1">Historial Reciente</div>
-                        <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-                            {recentHistory.map((item) => (
+                {/* HISTORIAL RECIENTE (TIPO LISTA INDUSTRIAL) */}
+                <div className="mb-4 flex flex-col flex-1 min-h-0">
+                    <div className="flex justify-between items-center mb-2 px-1">
+                        <div className="text-[8px] font-black text-slate-600 uppercase tracking-[0.2em]">Historial de Escaneo</div>
+                        <div className="text-[8px] font-bold text-blue-500/50 uppercase tracking-widest">{recentHistory.length} registros</div>
+                    </div>
+                    <div className="space-y-1 overflow-y-auto no-scrollbar pr-1 flex-1">
+                        {recentHistory.length > 0 ? (
+                            recentHistory.map((item) => (
                                 <button 
                                     key={item.barcode}
                                     onClick={() => onScan(item.barcode, 0)}
-                                    className="flex-shrink-0 bg-slate-800/40 border border-white/5 px-3 py-2 rounded-xl flex flex-col min-w-[110px] active:bg-slate-700 transition-colors text-left"
+                                    className="w-full flex items-center bg-slate-800/20 border border-white/5 px-3 py-2.5 rounded-xl active:bg-slate-700 transition-all text-left group"
                                 >
-                                    <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest truncate">{item.barcode}</span>
-                                    <span className="text-[10px] font-bold text-slate-300 truncate w-24">{item.name}</span>
-                                    <div className="flex items-center justify-between mt-1">
-                                        <span className="text-[10px] font-black text-blue-400">{item.totalQuantity}</span>
-                                        <div className="w-1 h-1 rounded-full bg-slate-700"></div>
+                                    <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center mr-3 border border-white/5 group-active:bg-blue-600 transition-colors">
+                                        <Box className="w-4 h-4 text-slate-500 group-active:text-white" />
+                                    </div>
+                                    <div className="flex flex-col min-w-0 flex-1">
+                                        <span className="text-[11px] font-bold text-slate-200 truncate group-active:text-white leading-tight">{item.name}</span>
+                                        <span className="text-[9px] font-medium text-slate-500 font-mono tracking-tight">{item.barcode}</span>
+                                    </div>
+                                    <div className="flex items-center gap-3 ml-4">
+                                        <div className="flex flex-col items-end">
+                                            <span className="text-sm font-black text-blue-400 tabular-nums">{item.totalQuantity}</span>
+                                            <span className="text-[7px] font-black text-slate-600 uppercase tracking-tighter">Unidades</span>
+                                        </div>
                                     </div>
                                 </button>
-                            ))}
-                        </div>
+                            ))
+                        ) : (
+                            <div className="h-20 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-2xl opacity-20">
+                                <Box className="w-6 h-6 mb-1" />
+                                <span className="text-[8px] font-black uppercase tracking-widest">Sin registros recientes</span>
+                            </div>
+                        )}
                     </div>
-                )}
+                </div>
 
                 {/* INFO PRODUCTO */}
                 <div className="flex-1 flex flex-col items-center justify-center text-center space-y-2">
