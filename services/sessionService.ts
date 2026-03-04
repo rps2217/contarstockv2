@@ -93,7 +93,7 @@ export const addScanEvent = async (
         location: location || session?.logisticsLabel,
         timestamp: Date.now(),
         synced: 0
-    });
+    }) as ScanRecord;
 
     writeBuffer.push({ record: newRecord, retries: 0 });
     

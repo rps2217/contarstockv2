@@ -14,7 +14,7 @@ export const IntegrityGuard = {
     validateProduct: (data: any) => {
         const result = ProductSchema.safeParse(data);
         if (!result.success) {
-            const errorMsg = `Regresión de Datos (Producto): ${result.error.errors[0].message}`;
+            const errorMsg = `Regresión de Datos (Producto): ${(result as any).error.errors[0].message}`;
             logger.error('INTEGRITY_GUARD', errorMsg, data);
             throw new Error(errorMsg);
         }
@@ -27,7 +27,7 @@ export const IntegrityGuard = {
     validateScan: (data: any) => {
         const result = ScanRecordSchema.safeParse(data);
         if (!result.success) {
-            const errorMsg = `Regresión de Datos (Escaneo): ${result.error.errors[0].message}`;
+            const errorMsg = `Regresión de Datos (Escaneo): ${(result as any).error.errors[0].message}`;
             logger.error('INTEGRITY_GUARD', errorMsg, data);
             throw new Error(errorMsg);
         }

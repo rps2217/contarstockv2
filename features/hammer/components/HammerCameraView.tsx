@@ -33,6 +33,12 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
         localStorage.setItem('hammer_voice', isVoiceEnabled.toString());
     }, [isVoiceEnabled]);
 
+    // Encuentra el item activo en la lista para obtener datos si no están en el estado optimista
+    const activeItem = items.find(i => i.barcode === activeBarcode);
+    const displayQty = optimisticQty ?? activeItem?.totalQuantity ?? 0;
+    const displayName = activeProduct?.name || activeItem?.name || 'ESCANEA UN PRODUCTO';
+    const displayBarcode = activeBarcode || '---';
+
     // Lógica de Voz (TTS)
     useEffect(() => {
         if (!isVoiceEnabled || !activeBarcode) return;
@@ -53,16 +59,10 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
         window.speechSynthesis.speak(utterance);
     }, [activeBarcode, displayQty, displayName, isVoiceEnabled]);
 
-    // Encuentra el item activo en la lista para obtener datos si no están en el estado optimista
-    const activeItem = items.find(i => i.barcode === activeBarcode);
-    const displayQty = optimisticQty ?? activeItem?.totalQuantity ?? 0;
-    const displayName = activeProduct?.name || activeItem?.name || 'ESCANEA UN PRODUCTO';
-    const displayBarcode = activeBarcode || '---';
-
-    // Obtener los últimos 4 items escaneados (excluyendo el actual)
+    // Obtener los últimos 3 items escaneados (excluyendo el actual)
     const recentHistory = items
         .filter(item => item.barcode !== activeBarcode)
-        .slice(0, 4);
+        .slice(0, 3);
 
     const handleManualIncrement = () => {
         if (activeBarcode) onScan(activeBarcode);

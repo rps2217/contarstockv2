@@ -79,7 +79,7 @@ export const importManifestFromCloud = async (batchId: string): Promise<number> 
                 if (!parsed.success) {
                     // Si la fila 2 (la primera con datos) falla, es probable que las cabeceras estén mal.
                     if (idx === 0) {
-                        const errorMsg = parsed.error.errors.map(e => e.path.join('.')).join(', ');
+                        const errorMsg = (parsed as any).error.errors.map((e: any) => e.path.join('.')).join(', ');
                         console.error("[StockParse] Columnas detectadas:", Object.keys(row));
                         throw new Error(`Columnas no coinciden en fila 2. Se esperaba: CODIGO, PRODUCTO, STOCK FINAL. Error en: ${errorMsg}`);
                     }

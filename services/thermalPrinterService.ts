@@ -85,7 +85,7 @@ class ThermalPrinterService {
 
   async printRaw(data: Uint8Array) {
     if (this.usbDevice && this.endpointOut !== null) {
-      await this.usbDevice.transferOut(this.endpointOut, data);
+      await this.usbDevice.transferOut(this.endpointOut, data as any);
       return;
     }
 

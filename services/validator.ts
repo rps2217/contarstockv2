@@ -21,13 +21,15 @@ export const ProductSchema = z.object({
     category: z.string().default("GENERAL"),
     supplier: z.string().optional().default(""),
     supplierRut: z.string().optional().default(""),
-    syncStatus: z.enum(['synced', 'add', 'edit']).default('add')
+    syncStatus: z.enum(['synced', 'add', 'edit']).default('add'),
+    embedding: z.array(z.number()).optional()
 });
 
 /**
  * Esquema de Escaneo: Blindaje del flujo ráfaga
  */
 export const ScanRecordSchema = z.object({
+    id: z.string().uuid("ID de registro inválido"),
     sessionId: z.string().uuid("ID de sesión inválido"),
     barcode: BarcodeSchema,
     quantity: z.number().positive("La cantidad debe ser mayor a 0").max(10000, "Cantidad fuera de rango manual"),
@@ -39,18 +41,34 @@ export const ScanRecordSchema = z.object({
 
 export const validateProduct = (data: any) => {
     const result = ProductSchema.safeParse(data);
-    return {
-        valid: result.success,
-        error: !result.success ? result.error.errors[0].message : undefined,
-        data: result.success ? result.data : undefined
-    };
+    if (result.success) {
+        return {
+            valid: true,
+            error: undefined,
+            data: result.data as Product
+        };
+    } else {
+        return {
+            valid: false,
+            error: (result as any).error.errors[0].message,
+            data: undefined
+        };
+    }
 };
 
 export const validateScanRecord = (data: any) => {
     const result = ScanRecordSchema.safeParse(data);
-    return {
-        valid: result.success,
-        error: !result.success ? result.error.errors[0].message : undefined,
-        data: result.success ? result.data : undefined
-    };
+    if (result.success) {
+        return {
+            valid: true,
+            error: undefined,
+            data: result.data as ScanRecord
+        };
+    } else {
+        return {
+            valid: false,
+            error: (result as any).error.errors[0].message,
+            data: undefined
+        };
+    }
 };
