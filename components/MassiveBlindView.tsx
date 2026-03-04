@@ -124,6 +124,7 @@ export const MassiveBlindView: React.FC = () => {
                 onReset={() => actions.removeItem('ALL')}
                 onImport={handleDownloadStock}
                 onPrintSummary={() => {}}
+                onToggleCameraMode={() => {}}
             />
 
             <LocationSelectorModal 

@@ -20,6 +20,7 @@ import { useHIDScanner } from '../../hooks/useHIDScanner';
 import { useAutoLock } from '../../hooks/useAutoLock';
 import { SoundFX } from '../../services/audio';
 import { Cpu, Zap } from 'lucide-react';
+import { HammerCameraView } from './components/HammerCameraView';
 
 export const HammerPage: React.FC = () => {
     const navigate = useNavigate();
@@ -34,11 +35,12 @@ export const HammerPage: React.FC = () => {
     const [showKeypad, setShowKeypad] = useState(false);
     const [isMigrating, setIsMigrating] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
+    const [viewMode, setViewMode] = useState<'standard' | 'camera'>('standard');
 
     // ESCUCHA DE HARDWARE (HID LASER)
     useHIDScanner({
         onScan: actions.registerScan,
-        isEnabled: !isLocked && !isMigrating && !showKeypad && !isToolsOpen,
+        isEnabled: !isLocked && !isMigrating && !showKeypad && !isToolsOpen && viewMode === 'standard',
         maxLatency: 40 // Más estricto para ráfagas industriales
     });
 
@@ -73,6 +75,20 @@ export const HammerPage: React.FC = () => {
     };
 
     const activeItem = state.items.find(i => i.barcode === state.activeBarcode);
+
+    if (viewMode === 'camera') {
+        return (
+            <HammerCameraView 
+                onBack={() => setViewMode('standard')}
+                onScan={actions.registerScan}
+                activeBarcode={state.activeBarcode}
+                activeProduct={state.activeProduct}
+                optimisticQty={state.optimisticQty}
+                feedback={state.feedback}
+                items={state.items}
+            />
+        );
+    }
 
     return (
         <div className="fixed inset-0 z-[100] flex flex-col font-mono bg-black select-none overflow-hidden text-white">
@@ -131,6 +147,7 @@ export const HammerPage: React.FC = () => {
                 onShowLabel={() => setIsLabelModalOpen(true)} onReset={() => actions.removeItem('ALL')}
                 onImport={handleDownloadStock}
                 onPrintSummary={() => {}}
+                onToggleCameraMode={() => { setIsToolsOpen(false); setViewMode('camera'); }}
             />
 
             <LocationSelectorModal 

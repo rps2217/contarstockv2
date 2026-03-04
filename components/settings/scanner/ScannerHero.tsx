@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import { RotateCcw, AlertCircle, Package, CheckCircle } from 'lucide-react';
-import { ScanRecord, ExpectedItem } from '../../types';
+import { ScanRecord, ExpectedItem } from '../../../types';
 
 interface ScannerHeroProps {
     lastScan: ScanRecord | undefined;

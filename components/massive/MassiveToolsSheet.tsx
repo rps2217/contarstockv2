@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Barcode, RotateCcw, Download, X, MapPin, Printer } from 'lucide-react';
+import { Barcode, RotateCcw, Download, X, MapPin, Printer, Camera } from 'lucide-react';
 import { Modal } from '../common/Modal';
 
 interface Props {
@@ -15,10 +15,11 @@ interface Props {
     onReset: () => void;
     onImport: () => void;
     onPrintSummary: () => void;
+    onToggleCameraMode: () => void;
 }
 
 export const MassiveToolsSheet: React.FC<Props> = ({ 
-    isOpen, onClose, hasActiveItem, location, onChangeLocation, onShowLabel, onReset, onImport, onPrintSummary 
+    isOpen, onClose, hasActiveItem, location, onChangeLocation, onShowLabel, onReset, onImport, onPrintSummary, onToggleCameraMode 
 }) => {
     
     const ToolButton = ({ onClick, icon: Icon, label, color, disabled = false, sublabel }: any) => (
@@ -57,6 +58,12 @@ export const MassiveToolsSheet: React.FC<Props> = ({
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
+                    <ToolButton 
+                        onClick={onToggleCameraMode} 
+                        icon={Camera} 
+                        label="Modo Cámara" 
+                        color="text-cyan-400 border-cyan-500/20" 
+                    />
                     <ToolButton 
                         onClick={onPrintSummary} 
                         icon={Printer} 

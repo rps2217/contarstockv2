@@ -1,6 +1,6 @@
 import React, { memo, useMemo } from 'react';
 import { Gauge, Camera, Ban, Keyboard, PieChart } from 'lucide-react';
-import { CountingSession } from '../../types';
+import { CountingSession } from '../../../types';
 
 interface ScannerControlsProps {
     session: CountingSession;
