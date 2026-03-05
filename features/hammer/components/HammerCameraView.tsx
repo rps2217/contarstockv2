@@ -107,8 +107,8 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
                 </div>
             </div>
 
-            {/* VISOR DE CÁMARA (60% Alto) */}
-            <div className="h-[60%] relative bg-black">
+            {/* VISOR DE CÁMARA (40% Alto) */}
+            <div className="h-[40%] relative bg-black">
                 <CameraScanner 
                     onScan={onScan} 
                     onClose={() => {}} // No-op, we handle close externally
@@ -142,8 +142,8 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
                 )}
             </div>
 
-            {/* PANEL DE CONTROL (40% Alto) */}
-            <div className="flex-1 bg-slate-900 rounded-t-[2.5rem] -mt-8 relative z-10 flex flex-col px-6 pt-8 pb-6 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-white/5">
+            {/* PANEL DE CONTROL (60% Alto) */}
+            <div className="flex-1 bg-slate-900 rounded-t-[2.5rem] -mt-10 relative z-10 flex flex-col px-6 pt-10 pb-6 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-white/5">
                 
                 {/* HISTORIAL RECIENTE (TIPO LISTA INDUSTRIAL) */}
                 <div className="mb-4 flex flex-col flex-1 min-h-0">
