@@ -81,6 +81,7 @@ export const HammerPage: React.FC = () => {
             <HammerCameraView 
                 onBack={() => setViewMode('standard')}
                 onScan={actions.registerScan}
+                onRemove={actions.removeItem}
                 activeBarcode={state.activeBarcode}
                 activeProduct={state.activeProduct}
                 optimisticQty={state.optimisticQty}
@@ -126,7 +127,11 @@ export const HammerPage: React.FC = () => {
                     items={state.items} 
                     itemHeight={82} 
                     renderRow={MassiveItemRow} 
-                    rowData={{ onSelect: actions.selectItem, activeBarcode: state.activeBarcode }} 
+                    rowData={{ 
+                        onSelect: actions.selectItem, 
+                        onRemove: actions.removeItem,
+                        activeBarcode: state.activeBarcode 
+                    }} 
                 />
             </div>
 

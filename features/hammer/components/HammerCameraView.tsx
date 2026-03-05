@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Minus, Plus, Zap, Box, AlertTriangle, CheckCircle2, Volume2, VolumeX } from 'lucide-react';
+import { X, Minus, Plus, Zap, Box, AlertTriangle, CheckCircle2, Volume2, VolumeX, Trash2 } from 'lucide-react';
 import { CameraScanner } from '../../../components/CameraScanner';
 import { HammerItem } from '../hooks/useHammerLogic';
 import { Product } from '../../../types';
@@ -8,6 +8,7 @@ import { FeedbackStatus } from '../../../hooks/useFeedbackSystem';
 interface HammerCameraViewProps {
     onBack: () => void;
     onScan: (code: string, qtyOverride?: number) => void;
+    onRemove: (barcode: string) => void;
     activeBarcode: string | null;
     activeProduct: Product | null;
     optimisticQty: number | null;
@@ -18,6 +19,7 @@ interface HammerCameraViewProps {
 export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
     onBack,
     onScan,
+    onRemove,
     activeBarcode,
     activeProduct,
     optimisticQty,
@@ -154,25 +156,33 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
                     <div className="space-y-1 overflow-y-auto no-scrollbar pr-1 flex-1">
                         {recentHistory.length > 0 ? (
                             recentHistory.map((item) => (
-                                <button 
-                                    key={item.barcode}
-                                    onClick={() => onScan(item.barcode, 0)}
-                                    className="w-full flex items-center bg-slate-800/20 border border-white/5 px-3 py-2.5 rounded-xl active:bg-slate-700 transition-all text-left group"
-                                >
-                                    <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center mr-3 border border-white/5 group-active:bg-blue-600 transition-colors">
-                                        <Box className="w-4 h-4 text-slate-500 group-active:text-white" />
-                                    </div>
-                                    <div className="flex flex-col min-w-0 flex-1">
-                                        <span className="text-[11px] font-bold text-slate-200 truncate group-active:text-white leading-tight">{item.name}</span>
-                                        <span className="text-[9px] font-medium text-slate-500 font-mono tracking-tight">{item.barcode}</span>
-                                    </div>
-                                    <div className="flex items-center gap-3 ml-4">
-                                        <div className="flex flex-col items-end">
-                                            <span className="text-sm font-black text-blue-400 tabular-nums">{item.totalQuantity}</span>
-                                            <span className="text-[7px] font-black text-slate-600 uppercase tracking-tighter">Unidades</span>
+                                <div key={item.barcode} className="flex gap-2">
+                                    <button 
+                                        onClick={() => onScan(item.barcode, 0)}
+                                        className="flex-1 flex items-center bg-slate-800/20 border border-white/5 px-3 py-2.5 rounded-xl active:bg-slate-700 transition-all text-left group"
+                                    >
+                                        <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center mr-3 border border-white/5 group-active:bg-blue-600 transition-colors">
+                                            <Box className="w-4 h-4 text-slate-500 group-active:text-white" />
                                         </div>
-                                    </div>
-                                </button>
+                                        <div className="flex flex-col min-w-0 flex-1">
+                                            <span className="text-[11px] font-bold text-slate-200 truncate group-active:text-white leading-tight">{item.name}</span>
+                                            <span className="text-[9px] font-medium text-slate-500 font-mono tracking-tight">{item.barcode}</span>
+                                        </div>
+                                        <div className="flex items-center gap-3 ml-4">
+                                            <div className="flex flex-col items-end">
+                                                <span className="text-sm font-black text-blue-400 tabular-nums">{item.totalQuantity}</span>
+                                                <span className="text-[7px] font-black text-slate-600 uppercase tracking-tighter">Unidades</span>
+                                            </div>
+                                        </div>
+                                    </button>
+                                    
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); onRemove(item.barcode); }}
+                                        className="w-12 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-center justify-center text-rose-500 active:bg-rose-500 active:text-white transition-all"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
                             ))
                         ) : (
                             <div className="h-20 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-2xl opacity-20">
