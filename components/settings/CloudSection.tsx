@@ -231,6 +231,7 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
                             onScan={handleScanQR} 
                             onClose={() => setIsScanning(false)} 
                             inline={true}
+                            isTriggered={true}
                         />
                         <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
                             <div className="w-[70%] aspect-square border-2 border-white/20 rounded-3xl relative">
