@@ -18,231 +18,231 @@ let flushTimeout: ReturnType<typeof setTimeout> | null = null;
 const FLUSH_DELAY = 150; 
 
 const triggerBackgroundSync = async () => {
-    if ('serviceWorker' in navigator && 'SyncManager' in window) {
-        try {
-            const registration = await navigator.serviceWorker.ready;
-            await (registration as any).sync.register('sync-bultos');
-        } catch (e) {}
-    }
+ if ('serviceWorker' in navigator && 'SyncManager' in window) {
+ try {
+ const registration = await navigator.serviceWorker.ready;
+ await (registration as any).sync.register('sync-bultos');
+ } catch (e) {}
+ }
 };
 
 const commitBufferToDatabase = async () => {
-    if (writeBuffer.length === 0) return;
-    const currentBatch = [...writeBuffer];
-    writeBuffer = [];
-    const records = currentBatch.map(item => item.record);
-    
-    try {
-        // Tipado fuerte en transacción para evitar corrupción
-        // FIX: Using (db as any) to resolve type error: Property 'transaction' does not exist on type 'LogiCountDB'
-        await (db as any).transaction('rw', db.scans, db.sessions, async () => {
-            await db.scans.bulkAdd(records);
-            const affectedSessionIds = Array.from(new Set(records.map(s => s.sessionId)));
-            for (const id of affectedSessionIds) {
-                await updateSessionMetadata(id);
-            }
-        });
-        
-        triggerBackgroundSync();
-    } catch (error: any) {
-        logger.error("DB_COMMIT_FAIL", error.message);
-        // Recuperación de desastres: Re-encolar items no corruptos
-        writeBuffer = [...currentBatch, ...writeBuffer];
-    }
+ if (writeBuffer.length === 0) return;
+ const currentBatch = [...writeBuffer];
+ writeBuffer = [];
+ const records = currentBatch.map(item => item.record);
+ 
+ try {
+ // Tipado fuerte en transacción para evitar corrupción
+ // FIX: Using (db as any) to resolve type error: Property 'transaction' does not exist on type 'LogiCountDB'
+ await (db as any).transaction('rw', db.scans, db.sessions, async () => {
+ await db.scans.bulkAdd(records);
+ const affectedSessionIds = Array.from(new Set(records.map(s => s.sessionId)));
+ for (const id of affectedSessionIds) {
+ await updateSessionMetadata(id);
+ }
+ });
+ 
+ triggerBackgroundSync();
+ } catch (error: any) {
+ logger.error("DB_COMMIT_FAIL", error.message);
+ // Recuperación de desastres: Re-encolar items no corruptos
+ writeBuffer = [...currentBatch, ...writeBuffer];
+ }
 };
 
 export const updateSessionMetadata = async (sessionId: string) => {
-    const scans = await db.scans.where('sessionId').equals(sessionId).toArray();
-    let totalUnits = 0;
-    const uniqueSkus = new Set<string>();
-    
-    scans.forEach(s => {
-        totalUnits += s.quantity;
-        uniqueSkus.add(s.barcode);
-    });
-    
-    await db.sessions.update(sessionId, { 
-        totalUnits, 
-        totalSKUs: uniqueSkus.size,
-        status: (await db.sessions.get(sessionId))?.status === 'draft' ? 'draft' : 'active'
-    });
+ const scans = await db.scans.where('sessionId').equals(sessionId).toArray();
+ let totalUnits = 0;
+ const uniqueSkus = new Set<string>();
+ 
+ scans.forEach(s => {
+ totalUnits += s.quantity;
+ uniqueSkus.add(s.barcode);
+ });
+ 
+ await db.sessions.update(sessionId, { 
+ totalUnits, 
+ totalSKUs: uniqueSkus.size,
+ status: (await db.sessions.get(sessionId))?.status === 'draft' ? 'draft' : 'active'
+ });
 };
 
 // FIX: Export alias for maintenance tool to resolve member not found error in RecalculateTool.ts
 export const recalculateSessionMetadata = updateSessionMetadata;
 
 export const addScanEvent = async (
-    sessionId: string, 
-    barcode: string, 
-    quantity: number, 
-    mm?: number, 
-    yyyy?: number,
-    location?: string,
-    batch?: string
+ sessionId: string, 
+ barcode: string, 
+ quantity: number, 
+ mm?: number, 
+ yyyy?: number,
+ location?: string,
+ batch?: string
 ): Promise<ScanRecord> => {
-    const session = await db.sessions.get(sessionId);
-    const newRecord: ScanRecord = IntegrityGuard.validateScan({
-        id: generateUUID(),
-        sessionId,
-        barcode: sanitizeBarcode(barcode),
-        quantity,
-        batch,
-        logisticsLabel: session?.logisticsLabel || 'UNSET',
-        mm,
-        yyyy,
-        location: location || session?.logisticsLabel,
-        timestamp: Date.now(),
-        synced: 0
-    }) as ScanRecord;
+ const session = await db.sessions.get(sessionId);
+ const newRecord: ScanRecord = IntegrityGuard.validateScan({
+ id: generateUUID(),
+ sessionId,
+ barcode: sanitizeBarcode(barcode),
+ quantity,
+ batch,
+ logisticsLabel: session?.logisticsLabel || 'UNSET',
+ mm,
+ yyyy,
+ location: location || session?.logisticsLabel,
+ timestamp: Date.now(),
+ synced: 0
+ }) as ScanRecord;
 
-    writeBuffer.push({ record: newRecord, retries: 0 });
-    
-    if (flushTimeout) clearTimeout(flushTimeout);
-    flushTimeout = setTimeout(commitBufferToDatabase, FLUSH_DELAY);
-    
-    return newRecord;
+ writeBuffer.push({ record: newRecord, retries: 0 });
+ 
+ if (flushTimeout) clearTimeout(flushTimeout);
+ flushTimeout = setTimeout(commitBufferToDatabase, FLUSH_DELAY);
+ 
+ return newRecord;
 };
 
 export const createSession = async (erp: string, label: string, type: 'standard' | 'hammer' = 'standard', expected?: any): Promise<CountingSession> => {
-    const s: CountingSession = { 
-        id: generateUUID(), 
-        erpOrder: erp.trim().toUpperCase(), 
-        logisticsLabel: label.trim().toUpperCase(), 
-        createdAt: Date.now(), 
-        status: 'active', 
-        sessionType: type, 
-        totalUnits: 0, 
-        totalSKUs: 0, 
-        expectedItems: expected?.items || [], 
-        isVerifiedMode: !!(expected?.items?.length) 
-    };
-    await db.sessions.add(s);
-    return s;
+ const s: CountingSession = { 
+ id: generateUUID(), 
+ erpOrder: erp.trim().toUpperCase(), 
+ logisticsLabel: label.trim().toUpperCase(), 
+ createdAt: Date.now(), 
+ status: 'active', 
+ sessionType: type, 
+ totalUnits: 0, 
+ totalSKUs: 0, 
+ expectedItems: expected?.items || [], 
+ isVerifiedMode: !!(expected?.items?.length) 
+ };
+ await db.sessions.add(s);
+ return s;
 };
 
 export const createDraftSession = async (label: string): Promise<CountingSession> => {
-    const s: CountingSession = { 
-        id: generateUUID(), 
-        erpOrder: 'RECEPCION_BORRADOR', 
-        logisticsLabel: label.trim().toUpperCase(), 
-        createdAt: Date.now(), 
-        status: 'draft', 
-        sessionType: 'standard',
-        totalUnits: 0, 
-        totalSKUs: 0,
-        expectedItems: [],
-        isVerifiedMode: false
-    };
-    await db.sessions.add(s);
-    triggerBackgroundSync();
-    return s;
+ const s: CountingSession = { 
+ id: generateUUID(), 
+ erpOrder: 'RECEPCION_BORRADOR', 
+ logisticsLabel: label.trim().toUpperCase(), 
+ createdAt: Date.now(), 
+ status: 'draft', 
+ sessionType: 'standard',
+ totalUnits: 0, 
+ totalSKUs: 0,
+ expectedItems: [],
+ isVerifiedMode: false
+ };
+ await db.sessions.add(s);
+ triggerBackgroundSync();
+ return s;
 };
 
 export const fetchExpectedItemsFromCloud = async (erp: string): Promise<ExpectedOrder | null> => {
-    try {
-        const res = await cloudApi.post('fetch_rows', { tableName: 'PEDIDOS' });
-        if (res.success && res.rows) {
-            const rows = res.rows
-                .map((row: any) => CloudOrderRowSchema.safeParse(row))
-                .filter((p: any) => p.success && p.data.erp === erp.toUpperCase());
+ try {
+ const res = await cloudApi.post('fetch_rows', { tableName: 'PEDIDOS' });
+ if (res.success && res.rows) {
+ const rows = res.rows
+ .map((row: any) => CloudOrderRowSchema.safeParse(row))
+ .filter((p: any) => p.success && p.data.erp === erp.toUpperCase());
 
-            if (rows.length === 0) return null;
+ if (rows.length === 0) return null;
 
-            const items = rows.map((p: any) => ({
-                barcode: p.data.barcode,
-                name: p.data.name,
-                expectedQty: p.data.qty
-            }));
+ const items = rows.map((p: any) => ({
+ barcode: p.data.barcode,
+ name: p.data.name,
+ expectedQty: p.data.qty
+ }));
 
-            return {
-                id: generateUUID(),
-                internalId: erp.toUpperCase(),
-                items,
-                totalExpectedUnits: items.reduce((acc, i) => acc + i.expectedQty, 0),
-                totalExpectedSKUs: items.length,
-                importedAt: Date.now()
-            };
-        }
-        return null;
-    } catch (err) {
-        return null;
-    }
+ return {
+ id: generateUUID(),
+ internalId: erp.toUpperCase(),
+ items,
+ totalExpectedUnits: items.reduce((acc, i) => acc + i.expectedQty, 0),
+ totalExpectedSKUs: items.length,
+ importedAt: Date.now()
+ };
+ }
+ return null;
+ } catch (err) {
+ return null;
+ }
 };
 
 export const closeSession = async (id: string) => { 
-    if (flushTimeout) {
-        clearTimeout(flushTimeout);
-        await commitBufferToDatabase();
-    }
-    await db.sessions.update(id, { status: 'completed' }); 
-    triggerBackgroundSync();
+ if (flushTimeout) {
+ clearTimeout(flushTimeout);
+ await commitBufferToDatabase();
+ }
+ await db.sessions.update(id, { status: 'completed' }); 
+ triggerBackgroundSync();
 };
 
 export const deleteSession = async (id: string) => { 
-    // FIX: Using (db as any) to resolve type error: Property 'transaction' does not exist on type 'LogiCountDB'
-    await (db as any).transaction('rw', db.scans, db.sessions, async () => {
-        await db.scans.where('sessionId').equals(id).delete(); 
-        await db.sessions.delete(id); 
-    });
+ // FIX: Using (db as any) to resolve type error: Property 'transaction' does not exist on type 'LogiCountDB'
+ await (db as any).transaction('rw', db.scans, db.sessions, async () => {
+ await db.scans.where('sessionId').equals(id).delete(); 
+ await db.sessions.delete(id); 
+ });
 };
 
 export const cleanSyncedSessions = async (): Promise<number> => {
-    const synced = await db.sessions.where('lastSyncTimestamp').above(0).toArray();
-    const ids = synced.map(s => s.id);
-    if (ids.length === 0) return 0;
-    // FIX: Using (db as any) to resolve type error: Property 'transaction' does not exist on type 'LogiCountDB'
-    await (db as any).transaction('rw', db.scans, db.sessions, async () => {
-        await db.scans.where('sessionId').anyOf(ids).delete();
-        await db.sessions.where('id').anyOf(ids).delete();
-    });
-    return ids.length;
+ const synced = await db.sessions.where('lastSyncTimestamp').above(0).toArray();
+ const ids = synced.map(s => s.id);
+ if (ids.length === 0) return 0;
+ // FIX: Using (db as any) to resolve type error: Property 'transaction' does not exist on type 'LogiCountDB'
+ await (db as any).transaction('rw', db.scans, db.sessions, async () => {
+ await db.scans.where('sessionId').anyOf(ids).delete();
+ await db.sessions.where('id').anyOf(ids).delete();
+ });
+ return ids.length;
 };
 
 export const markScansAsSynced = async (ids: string[]) => {
-    if (ids.length === 0) return;
-    await db.scans.where('id').anyOf(ids).modify({ synced: 1 });
+ if (ids.length === 0) return;
+ await db.scans.where('id').anyOf(ids).modify({ synced: 1 });
 };
 
 export const checkLabelExists = async (label: string): Promise<boolean> => {
-    const count = await db.sessions.where('logisticsLabel').equals(label.trim().toUpperCase()).count();
-    return count > 0;
+ const count = await db.sessions.where('logisticsLabel').equals(label.trim().toUpperCase()).count();
+ return count > 0;
 };
 
 export const undoLastAction = async (sessionId: string): Promise<string | null> => {
-    // Primero buscar en buffer no guardado
-    const bufferIdx = writeBuffer.findIndex(item => item.record.sessionId === sessionId);
-    if (bufferIdx !== -1) {
-        for (let i = writeBuffer.length - 1; i >= 0; i--) {
-            if (writeBuffer[i].record.sessionId === sessionId) {
-                const [removed] = writeBuffer.splice(i, 1);
-                return removed.record.barcode;
-            }
-        }
-    }
-    // Si no, buscar en DB
-    const lastPersisted = await db.scans
-        .where('[sessionId+timestamp]')
-        .between([sessionId, Dexie.minKey], [sessionId, Dexie.maxKey])
-        .reverse()
-        .first();
-    if (lastPersisted) {
-        await db.scans.delete(lastPersisted.id);
-        await updateSessionMetadata(sessionId);
-        return lastPersisted.barcode;
-    }
-    return null;
+ // Primero buscar en buffer no guardado
+ const bufferIdx = writeBuffer.findIndex(item => item.record.sessionId === sessionId);
+ if (bufferIdx !== -1) {
+ for (let i = writeBuffer.length - 1; i >= 0; i--) {
+ if (writeBuffer[i].record.sessionId === sessionId) {
+ const [removed] = writeBuffer.splice(i, 1);
+ return removed.record.barcode;
+ }
+ }
+ }
+ // Si no, buscar en DB
+ const lastPersisted = await db.scans
+ .where('[sessionId+timestamp]')
+ .between([sessionId, Dexie.minKey], [sessionId, Dexie.maxKey])
+ .reverse()
+ .first();
+ if (lastPersisted) {
+ await db.scans.delete(lastPersisted.id);
+ await updateSessionMetadata(sessionId);
+ return lastPersisted.barcode;
+ }
+ return null;
 };
 
 export const deleteSessionItem = async (sessionId: string, barcode: string) => {
-    await db.scans.where('[sessionId+barcode]').equals([sessionId, barcode]).delete();
-    await updateSessionMetadata(sessionId);
+ await db.scans.where('[sessionId+barcode]').equals([sessionId, barcode]).delete();
+ await updateSessionMetadata(sessionId);
 };
 
 export const adjustSessionItemQuantity = async (sessionId: string, barcode: string, delta: number) => {
-    const lastScan = await db.scans.where('[sessionId+barcode]').equals([sessionId, barcode]).reverse().first();
-    if (lastScan) {
-        const newQty = Math.max(1, lastScan.quantity + delta);
-        await db.scans.update(lastScan.id, { quantity: newQty });
-        await updateSessionMetadata(sessionId);
-    }
+ const lastScan = await db.scans.where('[sessionId+barcode]').equals([sessionId, barcode]).reverse().first();
+ if (lastScan) {
+ const newQty = Math.max(1, lastScan.quantity + delta);
+ await db.scans.update(lastScan.id, { quantity: newQty });
+ await updateSessionMetadata(sessionId);
+ }
 };

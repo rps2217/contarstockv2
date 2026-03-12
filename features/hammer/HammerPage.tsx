@@ -23,161 +23,161 @@ import { Cpu, Zap } from 'lucide-react';
 import { HammerCameraView } from './components/HammerCameraView';
 
 export const HammerPage: React.FC = () => {
-    const navigate = useNavigate();
-    const { batchId = 'CORE' } = useParams();
-    const { state, actions } = useHammerLogic(batchId);
-    const locManager = useLocationManager(`hammer_loc_${batchId}`);
-    const { isLocked, unlock, lock } = useAutoLock(60000); // 1 minuto para evitar cortes en auditoría
+ const navigate = useNavigate();
+ const { batchId = 'CORE' } = useParams();
+ const { state, actions } = useHammerLogic(batchId);
+ const locManager = useLocationManager(`hammer_loc_${batchId}`);
+ const { isLocked, unlock, lock } = useAutoLock(60000); // 1 minuto para evitar cortes en auditoría
 
-    const [isTriggerActive, setIsTriggerActive] = useState(false);
-    const [isToolsOpen, setIsToolsOpen] = useState(false);
-    const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
-    const [showKeypad, setShowKeypad] = useState(false);
-    const [isMigrating, setIsMigrating] = useState(false);
-    const [isDownloading, setIsDownloading] = useState(false);
-    const [viewMode, setViewMode] = useState<'standard' | 'camera'>('standard');
+ const [isTriggerActive, setIsTriggerActive] = useState(false);
+ const [isToolsOpen, setIsToolsOpen] = useState(false);
+ const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
+ const [showKeypad, setShowKeypad] = useState(false);
+ const [isMigrating, setIsMigrating] = useState(false);
+ const [isDownloading, setIsDownloading] = useState(false);
+ const [viewMode, setViewMode] = useState<'standard' | 'camera'>('standard');
 
-    // ESCUCHA DE HARDWARE (HID LASER)
-    useHIDScanner({
-        onScan: actions.registerScan,
-        isEnabled: !isLocked && !isMigrating && !showKeypad && !isToolsOpen && viewMode === 'standard',
-        maxLatency: 40 // Más estricto para ráfagas industriales
-    });
+ // ESCUCHA DE HARDWARE (HID LASER)
+ useHIDScanner({
+ onScan: actions.registerScan,
+ isEnabled: !isLocked && !isMigrating && !showKeypad && !isToolsOpen && viewMode === 'standard',
+ maxLatency: 40 // Más estricto para ráfagas industriales
+ });
 
-    useEffect(() => {
-        actions.setCurrentLocation(locManager.location);
-    }, [locManager.location, actions]);
+ useEffect(() => {
+ actions.setCurrentLocation(locManager.location);
+ }, [locManager.location, actions]);
 
-    const handleFinalize = async () => {
-        if (!state.items.length || isMigrating) return;
-        if (!confirm("¿Cerrar auditoría y consolidar registros?")) return;
-        setIsMigrating(true);
-        try {
-            await migrateMassiveToMaster(batchId);
-            navigate('/reports?type=hammer');
-        } catch (err) {
-            setIsMigrating(false);
-        }
-    };
+ const handleFinalize = async () => {
+ if (!state.items.length || isMigrating) return;
+ if (!confirm("¿Cerrar auditoría y consolidar registros?")) return;
+ setIsMigrating(true);
+ try {
+ await migrateMassiveToMaster(batchId);
+ navigate('/reports?type=hammer');
+ } catch (err) {
+ setIsMigrating(false);
+ }
+ };
 
-    const handleDownloadStock = async () => {
-        setIsDownloading(true);
-        try {
-            await importManifestFromCloud(batchId);
-            SoundFX.play('success');
-            setIsToolsOpen(false);
-        } catch (err: any) {
-            SoundFX.play('error');
-            alert(`Error: ${err.message}`);
-        } finally {
-            setIsDownloading(false);
-        }
-    };
+ const handleDownloadStock = async () => {
+ setIsDownloading(true);
+ try {
+ await importManifestFromCloud(batchId);
+ SoundFX.play('success');
+ setIsToolsOpen(false);
+ } catch (err: any) {
+ SoundFX.play('error');
+ alert(`Error: ${err.message}`);
+ } finally {
+ setIsDownloading(false);
+ }
+ };
 
-    const activeItem = state.items.find(i => i.barcode === state.activeBarcode);
+ const activeItem = state.items.find(i => i.barcode === state.activeBarcode);
 
-    if (viewMode === 'camera') {
-        return (
-            <HammerCameraView 
-                onBack={() => setViewMode('standard')}
-                onScan={actions.registerScan}
-                onRemove={actions.removeItem}
-                activeBarcode={state.activeBarcode}
-                activeProduct={state.activeProduct}
-                optimisticQty={state.optimisticQty}
-                feedback={state.feedback}
-                items={state.items}
-            />
-        );
-    }
+ if (viewMode === 'camera') {
+ return (
+ <HammerCameraView 
+ onBack={() => setViewMode('standard')}
+ onScan={actions.registerScan}
+ onRemove={actions.removeItem}
+ activeBarcode={state.activeBarcode}
+ activeProduct={state.activeProduct}
+ optimisticQty={state.optimisticQty}
+ feedback={state.feedback}
+ items={state.items}
+ />
+ );
+ }
 
-    return (
-        <div className="fixed inset-0 z-[100] flex flex-col font-mono bg-black select-none overflow-hidden text-white">
-            <MassiveHeader 
-                isMigrating={isMigrating}
-                hasItems={state.items.length > 0}
-                onBack={() => navigate('/dashboard')}
-                onFinalize={handleFinalize}
-                onOpenTools={() => setIsToolsOpen(true)}
-                onLock={lock}
-            />
+ return (
+ <div className="fixed inset-0 z-[100] flex flex-col font-mono bg-black select-none overflow-hidden text-white">
+ <MassiveHeader 
+ isMigrating={isMigrating}
+ hasItems={state.items.length > 0}
+ onBack={() => navigate('/dashboard')}
+ onFinalize={handleFinalize}
+ onOpenTools={() => setIsToolsOpen(true)}
+ onLock={lock}
+ />
 
-            <div className="px-4 py-2 bg-slate-900/50 border-b border-white/5 flex items-center justify-between">
-                <LocationTrigger location={locManager.location} onClick={locManager.openModal} variant="compact" />
-                <div className="flex items-center gap-2">
-                    <Zap className={`w-3 h-3 ${state.feedback === 'success' ? 'text-blue-400 animate-ping' : 'text-slate-600'}`} />
-                    <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">HID_LASER_READY</span>
-                </div>
-            </div>
+ <div className="px-4 py-2 bg-slate-900/50 border-b border-white/5 flex items-center justify-between">
+ <LocationTrigger location={locManager.location} onClick={locManager.openModal} variant="compact" />
+ <div className="flex items-center gap-2">
+ <Zap className={`w-3 h-3 ${state.feedback === 'success' ? 'text-blue-400 animate-ping' : 'text-slate-600'}`} />
+ <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">HID_LASER_READY</span>
+ </div>
+ </div>
 
-            <div className="h-[35dvh] shrink-0">
-                <IndustrialDisplay 
-                    barcode={state.activeBarcode}
-                    name={state.activeProduct?.name || activeItem?.name || null}
-                    quantity={state.optimisticQty ?? 0}
-                    targetQuantity={activeItem?.expectedQty}
-                    feedback={state.feedback}
-                    onIncrement={() => actions.registerScan(state.activeBarcode!)}
-                    onDecrement={() => actions.registerScan(state.activeBarcode!, -1)}
-                />
-            </div>
+ <div className="h-[35dvh] shrink-0">
+ <IndustrialDisplay 
+ barcode={state.activeBarcode}
+ name={state.activeProduct?.name || activeItem?.name || null}
+ quantity={state.optimisticQty ?? 0}
+ targetQuantity={activeItem?.expectedQty}
+ feedback={state.feedback}
+ onIncrement={() => actions.registerScan(state.activeBarcode!)}
+ onDecrement={() => actions.registerScan(state.activeBarcode!, -1)}
+ />
+ </div>
 
-            <div className="flex-1 min-h-0 bg-black/90 relative border-t border-white/5">
-                <VirtualList 
-                    items={state.items} 
-                    itemHeight={82} 
-                    renderRow={MassiveItemRow} 
-                    rowData={{ 
-                        onSelect: actions.selectItem, 
-                        onRemove: actions.removeItem,
-                        activeBarcode: state.activeBarcode 
-                    }} 
-                />
-            </div>
+ <div className="flex-1 min-h-0 bg-black/90 relative border-t border-white/5">
+ <VirtualList 
+ items={state.items} 
+ itemHeight={82} 
+ renderRow={MassiveItemRow} 
+ rowData={{ 
+ onSelect: actions.selectItem, 
+ onRemove: actions.removeItem,
+ activeBarcode: state.activeBarcode 
+ }} 
+ />
+ </div>
 
-            <ScannerFooter 
-                multiplier={state.multiplier}
-                unitsPerBox={state.activeProduct?.unitsPerBox}
-                isTriggerActive={isTriggerActive}
-                onMultiplierChange={actions.setMultiplier}
-                onOpenManual={() => setShowKeypad(true)}
-                onTriggerStart={() => !isLocked && setIsTriggerActive(true)}
-                onTriggerEnd={() => setIsTriggerActive(false)}
-            />
+ <ScannerFooter 
+ multiplier={state.multiplier}
+ unitsPerBox={state.activeProduct?.unitsPerBox}
+ isTriggerActive={isTriggerActive}
+ onMultiplierChange={actions.setMultiplier}
+ onOpenManual={() => setShowKeypad(true)}
+ onTriggerStart={() => !isLocked && setIsTriggerActive(true)}
+ onTriggerEnd={() => setIsTriggerActive(false)}
+ />
 
-            <MassiveToolsSheet 
-                isOpen={isToolsOpen} onClose={() => setIsToolsOpen(false)}
-                batchId={batchId} hasActiveItem={!!state.activeBarcode}
-                location={locManager.location} onChangeLocation={locManager.openModal}
-                onShowLabel={() => setIsLabelModalOpen(true)} onReset={() => actions.removeItem('ALL')}
-                onImport={handleDownloadStock}
-                onPrintSummary={() => {}}
-                onToggleCameraMode={() => { setIsToolsOpen(false); setViewMode('camera'); }}
-            />
+ <MassiveToolsSheet 
+ isOpen={isToolsOpen} onClose={() => setIsToolsOpen(false)}
+ batchId={batchId} hasActiveItem={!!state.activeBarcode}
+ location={locManager.location} onChangeLocation={locManager.openModal}
+ onShowLabel={() => setIsLabelModalOpen(true)} onReset={() => actions.removeItem('ALL')}
+ onImport={handleDownloadStock}
+ onPrintSummary={() => {}}
+ onToggleCameraMode={() => { setIsToolsOpen(false); setViewMode('camera'); }}
+ />
 
-            <LocationSelectorModal 
-                isOpen={locManager.isModalOpen} onClose={locManager.closeModal}
-                currentLocation={locManager.location} onSelect={locManager.setLocation}
-            />
+ <LocationSelectorModal 
+ isOpen={locManager.isModalOpen} onClose={locManager.closeModal}
+ currentLocation={locManager.location} onSelect={locManager.setLocation}
+ />
 
-            {state.activeBarcode && (
-                <BarcodeLabelModal 
-                    isOpen={isLabelModalOpen} onClose={() => setIsLabelModalOpen(false)}
-                    barcode={state.activeBarcode} productName={state.activeProduct?.name || activeItem?.name}
-                    quantity={state.optimisticQty ?? 0}
-                />
-            )}
+ {state.activeBarcode && (
+ <BarcodeLabelModal 
+ isOpen={isLabelModalOpen} onClose={() => setIsLabelModalOpen(false)}
+ barcode={state.activeBarcode} productName={state.activeProduct?.name || activeItem?.name}
+ quantity={state.optimisticQty ?? 0}
+ />
+ )}
 
-            {isTriggerActive && (
-                <div className="fixed inset-0 z-[200]">
-                    <CameraScanner onScan={(code) => { actions.registerScan(code); setIsTriggerActive(false); }} onClose={() => setIsTriggerActive(false)} isTriggered={true} />
-                </div>
-            )}
+ {isTriggerActive && (
+ <div className="fixed inset-0 z-[200]">
+ <CameraScanner onScan={(code) => { actions.registerScan(code); setIsTriggerActive(false); }} onClose={() => setIsTriggerActive(false)} isTriggered={true} />
+ </div>
+ )}
 
-            <NumericKeypad isOpen={showKeypad} title="SKU MANUAL" onClose={() => setShowKeypad(false)} onConfirm={(v) => { actions.registerScan(v); setShowKeypad(false); }} />
-            <ScreenLockOverlay isLocked={isLocked} onUnlock={unlock} />
-        </div>
-    );
+ <NumericKeypad isOpen={showKeypad} title="SKU MANUAL" onClose={() => setShowKeypad(false)} onConfirm={(v) => { actions.registerScan(v); setShowKeypad(false); }} />
+ <ScreenLockOverlay isLocked={isLocked} onUnlock={unlock} />
+ </div>
+ );
 };
 
 export default HammerPage;

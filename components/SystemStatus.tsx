@@ -4,97 +4,97 @@ import { Wifi, WifiOff, Battery, BatteryWarning, HardDrive, Cloud, RefreshCw, Za
 import { useSyncStore } from '../store/useSyncStore';
 
 export const SystemStatus: React.FC = () => {
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [showBackOnline, setShowBackOnline] = useState(false);
-  const [batteryLevel, setBatteryLevel] = useState<number | null>(null);
-  const [isCharging, setIsCharging] = useState(false);
-  const [storageCritical, setStorageCritical] = useState(false);
-  
-  const { isSyncing } = useSyncStore();
+ const [isOnline, setIsOnline] = useState(navigator.onLine);
+ const [showBackOnline, setShowBackOnline] = useState(false);
+ const [batteryLevel, setBatteryLevel] = useState<number | null>(null);
+ const [isCharging, setIsCharging] = useState(false);
+ const [storageCritical, setStorageCritical] = useState(false);
+ 
+ const { isSyncing } = useSyncStore();
 
-  useEffect(() => {
-    const handleOnline = () => { setIsOnline(true); setShowBackOnline(true); setTimeout(() => setShowBackOnline(false), 3000); };
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
+ useEffect(() => {
+ const handleOnline = () => { setIsOnline(true); setShowBackOnline(true); setTimeout(() => setShowBackOnline(false), 3000); };
+ const handleOffline = () => setIsOnline(false);
+ window.addEventListener('online', handleOnline);
+ window.addEventListener('offline', handleOffline);
 
-    if ('getBattery' in navigator) {
-        (navigator as any).getBattery().then((b: any) => {
-            const update = () => { setBatteryLevel(b.level * 100); setIsCharging(b.charging); };
-            update();
-            b.addEventListener('levelchange', update);
-            b.addEventListener('chargingchange', update);
-        });
-    }
+ if ('getBattery' in navigator) {
+ (navigator as any).getBattery().then((b: any) => {
+ const update = () => { setBatteryLevel(b.level * 100); setIsCharging(b.charging); };
+ update();
+ b.addEventListener('levelchange', update);
+ b.addEventListener('chargingchange', update);
+ });
+ }
 
-    const checkStorage = async () => {
-        if (navigator.storage && navigator.storage.estimate) {
-            try {
-                const { usage, quota } = await navigator.storage.estimate();
-                if (usage && quota && (usage / quota) > 0.85) setStorageCritical(true);
-            } catch (e) {}
-        }
-    };
-    checkStorage();
-    const storageInterval = setInterval(checkStorage, 60000);
+ const checkStorage = async () => {
+ if (navigator.storage && navigator.storage.estimate) {
+ try {
+ const { usage, quota } = await navigator.storage.estimate();
+ if (usage && quota && (usage / quota) > 0.85) setStorageCritical(true);
+ } catch (e) {}
+ }
+ };
+ checkStorage();
+ const storageInterval = setInterval(checkStorage, 60000);
 
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-      clearInterval(storageInterval);
-    };
-  }, []);
+ return () => {
+ window.removeEventListener('online', handleOnline);
+ window.removeEventListener('offline', handleOffline);
+ clearInterval(storageInterval);
+ };
+ }, []);
 
-  const alerts = [];
+ const alerts = [];
 
-  if (isSyncing) {
-    alerts.push(
-        <div key="sync" className="bg-indigo-600 text-white px-4 py-1 text-[9px] font-black flex items-center justify-center gap-2 border-b border-indigo-700 shadow-lg">
-            <RefreshCw className="w-3 h-3 animate-spin" />
-            <span className="uppercase tracking-widest">Sincronizando con Nube...</span>
-        </div>
-    );
-  }
+ if (isSyncing) {
+ alerts.push(
+ <div key="sync" className="bg-indigo-600 text-white px-4 py-1 text-[9px] font-black flex items-center justify-center gap-2 border-b border-indigo-700 shadow-lg">
+ <RefreshCw className="w-3 h-3 animate-spin" />
+ <span className="uppercase tracking-widest">Sincronizando con Nube...</span>
+ </div>
+ );
+ }
 
-  if (!isOnline) {
-      alerts.push(
-          <div key="net" className="bg-rose-700 text-white px-4 py-1 text-[9px] font-black flex items-center justify-center gap-2 border-b border-rose-800">
-              <WifiOff className="w-3 h-3" />
-              <span className="uppercase tracking-widest">Modo Local - Sin Red</span>
-          </div>
-      );
-  } else if (showBackOnline) {
-      alerts.push(
-          <div key="net-back" className="bg-emerald-600 text-white px-4 py-1 text-[9px] font-black flex items-center justify-center gap-2 animate-in slide-in-from-top-full duration-500">
-              <Wifi className="w-3 h-3" />
-              <span className="uppercase tracking-widest">Conexión Restaurada</span>
-          </div>
-      );
-  }
+ if (!isOnline) {
+ alerts.push(
+ <div key="net" className="bg-rose-700 text-white px-4 py-1 text-[9px] font-black flex items-center justify-center gap-2 border-b border-rose-800">
+ <WifiOff className="w-3 h-3" />
+ <span className="uppercase tracking-widest">Modo Local - Sin Red</span>
+ </div>
+ );
+ } else if (showBackOnline) {
+ alerts.push(
+ <div key="net-back" className="bg-emerald-600 text-white px-4 py-1 text-[9px] font-black flex items-center justify-center gap-2 animate-in slide-in-from-top-full duration-500">
+ <Wifi className="w-3 h-3" />
+ <span className="uppercase tracking-widest">Conexión Restaurada</span>
+ </div>
+ );
+ }
 
-  if (batteryLevel !== null && batteryLevel < 20 && !isCharging) {
-      alerts.push(
-          <div key="batt" className="bg-amber-500 text-black px-4 py-1 text-[9px] font-black flex items-center justify-center gap-2 border-b border-amber-600">
-              <BatteryWarning className="w-3 h-3" />
-              <span className="uppercase tracking-widest">Batería al {batteryLevel.toFixed(0)}% - Conecte PDA</span>
-          </div>
-      );
-  }
+ if (batteryLevel !== null && batteryLevel < 20 && !isCharging) {
+ alerts.push(
+ <div key="batt" className="bg-amber-500 text-black px-4 py-1 text-[9px] font-black flex items-center justify-center gap-2 border-b border-amber-600">
+ <BatteryWarning className="w-3 h-3" />
+ <span className="uppercase tracking-widest">Batería al {batteryLevel.toFixed(0)}% - Conecte PDA</span>
+ </div>
+ );
+ }
 
-  if (storageCritical) {
-      alerts.push(
-          <div key="store" className="bg-rose-900 text-white px-4 py-1 text-[9px] font-black flex items-center justify-center gap-2 border-b border-black">
-              <HardDrive className="w-3 h-3" />
-              <span className="uppercase tracking-widest">Memoria Crítica - Vacíe Base Local</span>
-          </div>
-      );
-  }
+ if (storageCritical) {
+ alerts.push(
+ <div key="store" className="bg-rose-900 text-white px-4 py-1 text-[9px] font-black flex items-center justify-center gap-2 border-b border-black">
+ <HardDrive className="w-3 h-3" />
+ <span className="uppercase tracking-widest">Memoria Crítica - Vacíe Base Local</span>
+ </div>
+ );
+ }
 
-  if (alerts.length === 0) return null;
+ if (alerts.length === 0) return null;
 
-  return (
-      <div className="fixed top-0 left-0 right-0 z-[100] flex flex-col pointer-events-none select-none">
-          {alerts}
-      </div>
-  );
+ return (
+ <div className="fixed top-0 left-0 right-0 z-[100] flex flex-col pointer-events-none select-none">
+ {alerts}
+ </div>
+ );
 };

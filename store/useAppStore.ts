@@ -5,46 +5,46 @@ import { getSettings, saveSettings } from '../services/settings';
 
 // --- SLICE: SETTINGS ---
 interface SettingsSlice {
-  settings: AppSettings;
-  updateSetting: (key: keyof AppSettings, value: any) => void;
-  loadSettings: () => void;
+ settings: AppSettings;
+ updateSetting: (key: keyof AppSettings, value: any) => void;
+ loadSettings: () => void;
 }
 
 const createSettingsSlice = (set: any): SettingsSlice => ({
-  settings: getSettings(),
-  updateSetting: (key, value) => {
-    set((state: any) => {
-      const newSettings = { ...state.settings, [key]: value };
-      saveSettings(newSettings);
-      return { settings: newSettings };
-    });
-  },
-  loadSettings: () => {
-    set({ settings: getSettings() });
-  }
+ settings: getSettings(),
+ updateSetting: (key, value) => {
+ set((state: any) => {
+ const newSettings = { ...state.settings, [key]: value };
+ saveSettings(newSettings);
+ return { settings: newSettings };
+ });
+ },
+ loadSettings: () => {
+ set({ settings: getSettings() });
+ }
 });
 
 // --- SLICE: UI STATE ---
 interface UISlice {
-  isSidebarOpen: boolean;
-  activeView: ViewState;
-  globalSearchQuery: string;
-  setSidebarOpen: (open: boolean) => void;
-  setActiveView: (view: ViewState) => void;
-  setGlobalSearch: (q: string) => void;
+ isSidebarOpen: boolean;
+ activeView: ViewState;
+ globalSearchQuery: string;
+ setSidebarOpen: (open: boolean) => void;
+ setActiveView: (view: ViewState) => void;
+ setGlobalSearch: (q: string) => void;
 }
 
 const createUISlice = (set: any): UISlice => ({
-  isSidebarOpen: false,
-  activeView: 'dashboard',
-  globalSearchQuery: '',
-  setSidebarOpen: (open) => set({ isSidebarOpen: open }),
-  setActiveView: (view) => set({ activeView: view }),
-  setGlobalSearch: (q) => set({ globalSearchQuery: q }),
+ isSidebarOpen: false,
+ activeView: 'dashboard',
+ globalSearchQuery: '',
+ setSidebarOpen: (open) => set({ isSidebarOpen: open }),
+ setActiveView: (view) => set({ activeView: view }),
+ setGlobalSearch: (q) => set({ globalSearchQuery: q }),
 });
 
 // --- COMBINED STORE ---
 export const useAppStore = create<SettingsSlice & UISlice>((set) => ({
-  ...createSettingsSlice(set),
-  ...createUISlice(set),
+ ...createSettingsSlice(set),
+ ...createUISlice(set),
 }));
