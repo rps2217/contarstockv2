@@ -79,7 +79,6 @@ export const useHammerLogic = (batchId: string) => {
  });
 
  const sorted = Array.from(aggregation.values()).sort((a, b) => {
- if (a.barcode === engine.activeBarcode) return -1;
  return b.lastTimestamp - a.lastTimestamp;
  });
 
@@ -114,7 +113,11 @@ export const useHammerLogic = (batchId: string) => {
  if (!clean) return;
  
  const delta = qtyOverride ?? multiplierRef.current;
- const ts = Date.now();
+ const isManualEdit = qtyOverride !== undefined;
+ 
+ // Si es edición manual, mantenemos el timestamp original para que no salte al principio
+ const existingItem = optimisticItems.find(i => i.barcode === clean);
+ const ts = (isManualEdit && existingItem) ? existingItem.lastTimestamp : Date.now();
 
  // ACTUALIZACIÓN OPTIMISTA DE LA LISTA
  setOptimisticItems(prev => {
@@ -125,12 +128,8 @@ export const useHammerLogic = (batchId: string) => {
  item.totalQuantity = Math.max(0, item.totalQuantity + delta);
  item.lastTimestamp = ts;
  updated[existingIdx] = item;
- // Re-ordenar para que el activo suba (opcional, pero mejora UX)
- return updated.sort((a, b) => {
- if (a.barcode === clean) return -1;
- if (b.barcode === clean) return 1;
- return b.lastTimestamp - a.lastTimestamp;
- });
+ 
+ return updated.sort((a, b) => b.lastTimestamp - a.lastTimestamp);
  } else {
  // Nuevo item optimista
  const newItem: HammerItem = {
