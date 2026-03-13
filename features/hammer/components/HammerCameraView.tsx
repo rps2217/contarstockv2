@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Minus, Plus, Zap, Box, AlertTriangle, CheckCircle2, Volume2, VolumeX, Trash2, Keyboard, Camera, Save, MoreVertical, MapPin, Lock } from 'lucide-react';
+import { X, Minus, Plus, Zap, Box, AlertTriangle, CheckCircle2, Volume2, VolumeX, Trash2, Keyboard, Camera, Save, MoreVertical, MapPin, Lock, Search } from 'lucide-react';
 import { CameraScanner } from '../../../components/CameraScanner';
 import { HammerItem } from '../hooks/useHammerLogic';
 import { Product } from '../../../types';
@@ -45,12 +45,23 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
  const [manualInput, setManualInput] = useState('');
  const manualInputRef = useRef<HTMLInputElement>(null);
  const lastSpokenRef = useRef<string>('');
+ 
+ // Search state
+ const [searchQuery, setSearchQuery] = useState('');
+ const [isSearchActive, setIsSearchActive] = useState(false);
+ const searchInputRef = useRef<HTMLInputElement>(null);
 
  // Encuentra el item activo en la lista para obtener datos si no están en el estado optimista
  const activeItem = items.find(i => i.barcode === activeBarcode);
  const displayQty = activeItem?.totalQuantity ?? 0;
  const displayName = activeProduct?.name || activeItem?.name || 'ESCANEA UN PRODUCTO';
  const displayBarcode = activeBarcode || '---';
+
+ // Filtrar items
+ const filteredItems = items.filter(item => 
+ item.barcode.includes(searchQuery) || 
+ item.name?.toLowerCase().includes(searchQuery.toLowerCase())
+ );
 
  // Lógica de Voz (TTS)
  useEffect(() => {
@@ -179,8 +190,59 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
  {/* PANEL DE LISTA (Resto del espacio) */}
  <div className="flex-1 min-h-0 bg-slate-950 flex flex-col relative z-10 border-t-2 border-rose-500/50">
  
+ {/* BARRA DE BÚSQUEDA / SEPARADOR */}
+ <div className="h-12 bg-slate-900 border-b border-white/10 flex items-center px-3 shrink-0">
+ {isSearchActive ? (
+ <div className="flex-1 flex items-center bg-black rounded-lg border border-white/20 px-2 h-8">
+ <Search className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
+ <input 
+ ref={searchInputRef}
+ autoFocus
+ value={searchQuery}
+ onChange={(e) => setSearchQuery(e.target.value)}
+ placeholder="Buscar SKU o nombre..."
+ className="flex-1 bg-transparent text-white text-xs outline-none min-w-0"
+ />
+ {searchQuery && (
+ <button onClick={() => setSearchQuery('')} className="p-1 text-slate-400 hover:text-white shrink-0">
+ <X className="w-3 h-3" />
+ </button>
+ )}
+ <button 
+ onClick={() => { setIsSearchActive(false); setSearchQuery(''); }} 
+ className="ml-2 pl-2 border-l border-white/20 text-slate-400 hover:text-white shrink-0"
+ >
+ <X className="w-4 h-4" />
+ </button>
+ </div>
+ ) : (
+ <div className="flex-1 flex items-center justify-between">
+ <div className="flex items-center gap-2">
+ <div className="w-6 h-6 rounded-full bg-rose-500/20 flex items-center justify-center">
+ <Box className="w-3 h-3 text-rose-500" />
+ </div>
+ <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Registros: {items.length}</span>
+ </div>
+ <div className="flex items-center gap-2">
+ <span className="text-sm font-bold text-rose-500 mr-2">
+ Total : {items.reduce((acc, item) => acc + item.totalQuantity, 0)}
+ </span>
+ <button 
+ onClick={() => {
+ setIsSearchActive(true);
+ setTimeout(() => searchInputRef.current?.focus(), 100);
+ }}
+ className="w-8 h-8 rounded-full flex items-center justify-center bg-white/5 text-white/70 active:bg-white/10 transition-colors"
+ >
+ <Search className="w-4 h-4" />
+ </button>
+ </div>
+ </div>
+ )}
+ </div>
+
  {isManualMode && (
- <div className="p-6 bg-slate-900 border-b border-white/10 flex flex-col items-center justify-center pt-28">
+ <div className="p-6 bg-slate-900 border-b border-white/10 flex flex-col items-center justify-center pt-12">
  <form 
  onSubmit={(e) => {
  e.preventDefault();
@@ -222,26 +284,10 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
  </div>
  )}
 
- {/* TOOLBAR ESTILO REFERENCIA */}
- <div className="flex justify-between items-center px-4 py-3 bg-slate-900 border-b border-white/5 shadow-md z-20">
- <div className="flex items-center gap-2">
- <div className="w-6 h-6 rounded-full bg-rose-500/20 flex items-center justify-center">
- <Box className="w-3 h-3 text-rose-500" />
- </div>
- <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Registros: {items.length}</span>
- </div>
- <div className="flex items-center gap-2">
- <div className="w-4 h-4 rounded-full bg-rose-500 text-white flex items-center justify-center text-[10px] font-black">?</div>
- <span className="text-sm font-bold text-rose-500">
- Total : {items.length} ({items.reduce((acc, item) => acc + item.totalQuantity, 0)})
- </span>
- </div>
- </div>
-
  {/* LISTA DE ITEMS */}
  <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar bg-slate-950 pb-20">
- {items.length > 0 ? (
- items.map((item, index) => {
+ {filteredItems.length > 0 ? (
+ filteredItems.map((item, index) => {
  const isActive = item.barcode === activeBarcode;
  
  return (
@@ -283,7 +329,9 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
  ) : (
  <div className="h-full flex flex-col items-center justify-center opacity-30">
  <Box className="w-16 h-16 mb-4 text-slate-500" />
- <span className="text-sm font-black uppercase tracking-widest text-slate-400">Escanea para comenzar</span>
+ <span className="text-sm font-black uppercase tracking-widest text-slate-400">
+ {searchQuery ? 'No hay resultados' : 'Escanea para comenzar'}
+ </span>
  </div>
  )}
  </div>
