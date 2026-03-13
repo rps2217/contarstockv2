@@ -86,7 +86,7 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
  };
 
  return (
- <div className="flex-1 flex flex-col bg-black relative z-10">
+ <div className="flex-1 min-h-0 flex flex-col bg-black relative z-10">
  {/* SOLID HEADER (approx 10%) */}
  <div className="h-16 bg-slate-900 border-b border-white/10 flex items-center justify-between px-2 shrink-0 z-50">
  <div className="flex items-center gap-1">
@@ -141,8 +141,8 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
  </div>
  </div>
 
- {/* VISOR DE CÁMARA (35% Alto) */}
- <div className={`${isManualMode ? 'hidden' : 'h-[35%]'} relative bg-black shrink-0`}>
+ {/* VISOR DE CÁMARA (25% Alto) */}
+ <div className={`${isManualMode ? 'hidden' : 'h-[25%]'} relative bg-black shrink-0`}>
  <CameraScanner 
  onScan={onScan} 
  onClose={() => {}} // No-op, we handle close externally
@@ -152,7 +152,7 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
  
  {/* TARGET OVERLAY PERSONALIZADO */}
  <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
- <div className="w-[70%] aspect-square border-2 border-white/20 rounded-3xl relative">
+ <div className="h-[80%] aspect-square max-w-[90%] border-2 border-white/20 rounded-3xl relative">
  <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-blue-500 rounded-tl-xl -mt-1 -ml-1"></div>
  <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-blue-500 rounded-tr-xl -mt-1 -mr-1"></div>
  <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-blue-500 rounded-bl-xl -mb-1 -ml-1"></div>
@@ -176,7 +176,7 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
  )}
  </div>
 
- {/* PANEL DE LISTA (55% Alto) */}
+ {/* PANEL DE LISTA (Resto del espacio) */}
  <div className="flex-1 min-h-0 bg-slate-950 flex flex-col relative z-10 border-t-2 border-rose-500/50">
  
  {isManualMode && (
