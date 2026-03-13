@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Minus, Plus, Zap, Box, AlertTriangle, CheckCircle2, Volume2, VolumeX, Trash2, Keyboard, Camera } from 'lucide-react';
+import { X, Minus, Plus, Zap, Box, AlertTriangle, CheckCircle2, Volume2, VolumeX, Trash2, Keyboard, Camera, Save, MoreVertical, MapPin } from 'lucide-react';
 import { CameraScanner } from '../../../components/CameraScanner';
 import { HammerItem } from '../hooks/useHammerLogic';
 import { Product } from '../../../types';
@@ -9,6 +9,10 @@ interface HammerCameraViewProps {
  onBack: () => void;
  onScan: (code: string, qtyOverride?: number) => void;
  onRemove: (barcode: string) => void;
+ onFinalize: () => void;
+ onOpenTools: () => void;
+ location: string;
+ onChangeLocation: () => void;
  activeBarcode: string | null;
  activeProduct: Product | null;
  optimisticQty: number | null;
@@ -20,6 +24,10 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
  onBack,
  onScan,
  onRemove,
+ onFinalize,
+ onOpenTools,
+ location,
+ onChangeLocation,
  activeBarcode,
  activeProduct,
  optimisticQty,
@@ -66,11 +74,6 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
  window.speechSynthesis.speak(utterance);
  }, [activeBarcode, displayQty, displayName, isVoiceEnabled]);
 
- // Obtener los últimos 3 items escaneados (excluyendo el actual)
- const recentHistory = items
- .filter(item => item.barcode !== activeBarcode)
- .slice(0, 3);
-
  const handleManualIncrement = () => {
  if (activeBarcode) onScan(activeBarcode);
  };
@@ -83,22 +86,28 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
  };
 
  return (
- <div className="fixed inset-0 z-[200] bg-black flex flex-col">
- {/* HEADER FLOTANTE */}
- <div className="absolute top-0 left-0 right-0 z-50 p-4 flex justify-between items-start bg-gradient-to-b from-black/80 to-transparent h-24">
+ <div className="flex-1 flex flex-col bg-black relative z-10">
+ {/* SOLID HEADER (approx 10%) */}
+ <div className="h-16 bg-slate-900 border-b border-white/10 flex items-center justify-between px-2 shrink-0 z-50">
+ <div className="flex items-center gap-1">
  <button 
  onClick={onBack}
- className="flex items-center gap-2 bg-black/40 pl-2 pr-4 py-2 rounded-full text-white border border-white/10 active:scale-95 transition-transform"
+ className="w-10 h-10 rounded-full flex items-center justify-center text-white/70 active:bg-white/10 transition-colors"
  >
- <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center">
- <X className="w-5 h-5" />
- </div>
- <span className="text-[10px] font-black tracking-[0.2em] uppercase">Cerrar</span>
+ <X className="w-6 h-6" />
  </button>
- 
- <div className="flex gap-2">
  <button 
- className="w-12 h-12 rounded-full flex items-center justify-center border border-white/10 transition-all bg-black/40 text-white/80 active:bg-white/20"
+ onClick={onChangeLocation}
+ className="flex items-center gap-1.5 bg-blue-500/20 text-blue-400 px-3 py-1.5 rounded-lg active:bg-blue-500/30 transition-colors border border-blue-500/30"
+ >
+ <MapPin className="w-4 h-4" />
+ <span className="text-xs font-bold tracking-wider truncate max-w-[80px]">{location}</span>
+ </button>
+ </div>
+ 
+ <div className="flex items-center gap-1">
+ <button 
+ className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${isManualMode ? 'bg-white/20 text-white' : 'text-white/70 active:bg-white/10'}`}
  onClick={() => {
  setIsManualMode(!isManualMode);
  if (!isManualMode) {
@@ -107,27 +116,33 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
  }}
  title={isManualMode ? "Modo Cámara" : "Entrada Manual"}
  >
- {isManualMode ? <Camera className="w-6 h-6" /> : <Keyboard className="w-6 h-6" />}
+ {isManualMode ? <Camera className="w-5 h-5" /> : <Keyboard className="w-5 h-5" />}
  </button>
  <button 
- className={`w-12 h-12 rounded-full flex items-center justify-center border border-white/10 transition-all ${isVoiceEnabled ? 'bg-blue-500/20 text-blue-400' : 'bg-black/40 text-white/40'}`}
+ className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${isVoiceEnabled ? 'text-blue-400' : 'text-white/40 active:bg-white/10'}`}
  onClick={() => setIsVoiceEnabled(!isVoiceEnabled)}
  title={isVoiceEnabled ? "Desactivar Voz" : "Activar Voz"}
  >
- {isVoiceEnabled ? <Volume2 className="w-6 h-6" /> : <VolumeX className="w-6 h-6" />}
+ {isVoiceEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
  </button>
- {/* Flash toggle placeholder - CameraScanner doesn't expose flash control yet, but UI needs it */}
  <button 
- className={`w-12 h-12 rounded-full flex items-center justify-center border border-white/10 transition-all ${isFlashOn ? 'bg-yellow-500/20 text-yellow-400' : 'bg-black/40 text-white/40'}`}
- onClick={() => setIsFlashOn(!isFlashOn)}
+ onClick={onFinalize}
+ className="w-10 h-10 rounded-full flex items-center justify-center text-emerald-400 active:bg-white/10 transition-colors"
+ title="Guardar y Finalizar"
  >
- <Zap className={`w-6 h-6 ${isFlashOn ? 'fill-current' : ''}`} />
+ <Save className="w-5 h-5" />
+ </button>
+ <button 
+ onClick={onOpenTools}
+ className="w-10 h-10 rounded-full flex items-center justify-center text-white/70 active:bg-white/10 transition-colors"
+ >
+ <MoreVertical className="w-5 h-5" />
  </button>
  </div>
  </div>
 
- {/* VISOR DE CÁMARA */}
- <div className={`${isManualMode ? 'hidden' : 'h-[40%]'} relative bg-black shrink-0`}>
+ {/* VISOR DE CÁMARA (35% Alto) */}
+ <div className={`${isManualMode ? 'hidden' : 'h-[35%]'} relative bg-black shrink-0`}>
  <CameraScanner 
  onScan={onScan} 
  onClose={() => {}} // No-op, we handle close externally
@@ -135,7 +150,7 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
  isTriggered={true} // Siempre activa
  />
  
- {/* TARGET OVERLAY PERSONALIZADO (Opcional, si queremos sobreescribir el de CameraScanner) */}
+ {/* TARGET OVERLAY PERSONALIZADO */}
  <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
  <div className="w-[70%] aspect-square border-2 border-white/20 rounded-3xl relative">
  <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-blue-500 rounded-tl-xl -mt-1 -ml-1"></div>
@@ -161,7 +176,7 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
  )}
  </div>
 
- {/* PANEL DE LISTA */}
+ {/* PANEL DE LISTA (55% Alto) */}
  <div className="flex-1 min-h-0 bg-slate-950 flex flex-col relative z-10 border-t-2 border-rose-500/50">
  
  {isManualMode && (

@@ -76,23 +76,25 @@ export const HammerPage: React.FC = () => {
 
  const activeItem = state.items.find(i => i.barcode === state.activeBarcode);
 
- if (viewMode === 'camera') {
  return (
+ <div className="fixed inset-0 z-[100] flex flex-col font-mono bg-black select-none overflow-hidden text-white">
+ {viewMode === 'camera' ? (
  <HammerCameraView 
  onBack={() => setViewMode('standard')}
  onScan={actions.registerScan}
  onRemove={actions.removeItem}
+ onFinalize={handleFinalize}
+ onOpenTools={() => setIsToolsOpen(true)}
+ location={locManager.location}
+ onChangeLocation={locManager.openModal}
  activeBarcode={state.activeBarcode}
  activeProduct={state.activeProduct}
  optimisticQty={state.optimisticQty}
  feedback={state.feedback}
  items={state.items}
  />
- );
- }
-
- return (
- <div className="fixed inset-0 z-[100] flex flex-col font-mono bg-black select-none overflow-hidden text-white">
+ ) : (
+ <>
  <MassiveHeader 
  isMigrating={isMigrating}
  hasItems={state.items.length > 0}
@@ -144,6 +146,8 @@ export const HammerPage: React.FC = () => {
  onTriggerStart={() => !isLocked && setIsTriggerActive(true)}
  onTriggerEnd={() => setIsTriggerActive(false)}
  />
+ </>
+ )}
 
  <MassiveToolsSheet 
  isOpen={isToolsOpen} onClose={() => setIsToolsOpen(false)}
