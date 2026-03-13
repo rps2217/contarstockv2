@@ -4,22 +4,13 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useHammerLogic } from './hooks/useHammerLogic';
 import { useLocationManager } from '../../shared/hooks/useLocationManager';
 import { migrateMassiveToMaster, importManifestFromCloud } from '../../services/massiveSync';
-import { IndustrialDisplay } from '../../shared/components/ui/IndustrialDisplay';
-import { MassiveHeader } from '../../components/massive/MassiveHeader';
-import { MassiveItemRow } from '../../components/massive/MassiveItemRow';
 import { MassiveToolsSheet } from '../../components/massive/MassiveToolsSheet';
 import { BarcodeLabelModal } from '../../components/common/BarcodeLabelModal';
 import { LocationSelectorModal } from '../../components/common/LocationSelectorModal';
-import { ScannerFooter } from '../../shared/components/controls/ScannerFooter';
-import { LocationTrigger } from '../../components/common/LocationTrigger';
-import { CameraScanner } from '../../components/CameraScanner';
 import { ScreenLockOverlay } from '../../components/common/ScreenLockOverlay';
-import { NumericKeypad } from '../../components/NumericKeypad';
-import { VirtualList } from '../../components/common/VirtualList';
 import { useHIDScanner } from '../../hooks/useHIDScanner';
 import { useAutoLock } from '../../hooks/useAutoLock';
 import { SoundFX } from '../../services/audio';
-import { Cpu, Zap } from 'lucide-react';
 import { HammerCameraView } from './components/HammerCameraView';
 
 export const HammerPage: React.FC = () => {
@@ -29,18 +20,15 @@ export const HammerPage: React.FC = () => {
  const locManager = useLocationManager(`hammer_loc_${batchId}`);
  const { isLocked, unlock, lock } = useAutoLock(60000); // 1 minuto para evitar cortes en auditoría
 
- const [isTriggerActive, setIsTriggerActive] = useState(false);
  const [isToolsOpen, setIsToolsOpen] = useState(false);
  const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
- const [showKeypad, setShowKeypad] = useState(false);
  const [isMigrating, setIsMigrating] = useState(false);
  const [isDownloading, setIsDownloading] = useState(false);
- const [viewMode, setViewMode] = useState<'standard' | 'camera'>('standard');
 
  // ESCUCHA DE HARDWARE (HID LASER)
  useHIDScanner({
  onScan: actions.registerScan,
- isEnabled: !isLocked && !isMigrating && !showKeypad && !isToolsOpen && viewMode === 'standard',
+ isEnabled: !isLocked && !isMigrating && !isToolsOpen,
  maxLatency: 40 // Más estricto para ráfagas industriales
  });
 
@@ -78,13 +66,13 @@ export const HammerPage: React.FC = () => {
 
  return (
  <div className="fixed inset-0 z-[100] flex flex-col font-mono bg-black select-none overflow-hidden text-white">
- {viewMode === 'camera' ? (
  <HammerCameraView 
- onBack={() => setViewMode('standard')}
+ onBack={() => navigate('/dashboard')}
  onScan={actions.registerScan}
  onRemove={actions.removeItem}
  onFinalize={handleFinalize}
  onOpenTools={() => setIsToolsOpen(true)}
+ onLock={lock}
  location={locManager.location}
  onChangeLocation={locManager.openModal}
  activeBarcode={state.activeBarcode}
@@ -93,61 +81,6 @@ export const HammerPage: React.FC = () => {
  feedback={state.feedback}
  items={state.items}
  />
- ) : (
- <>
- <MassiveHeader 
- isMigrating={isMigrating}
- hasItems={state.items.length > 0}
- onBack={() => navigate('/dashboard')}
- onFinalize={handleFinalize}
- onOpenTools={() => setIsToolsOpen(true)}
- onLock={lock}
- />
-
- <div className="px-4 py-2 bg-slate-900/50 border-b border-white/5 flex items-center justify-between">
- <LocationTrigger location={locManager.location} onClick={locManager.openModal} variant="compact" />
- <div className="flex items-center gap-2">
- <Zap className={`w-3 h-3 ${state.feedback === 'success' ? 'text-blue-400 animate-ping' : 'text-slate-600'}`} />
- <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">HID_LASER_READY</span>
- </div>
- </div>
-
- <div className="h-[35dvh] shrink-0">
- <IndustrialDisplay 
- barcode={state.activeBarcode}
- name={state.activeProduct?.name || activeItem?.name || null}
- quantity={state.optimisticQty ?? 0}
- targetQuantity={activeItem?.expectedQty}
- feedback={state.feedback}
- onIncrement={() => actions.registerScan(state.activeBarcode!)}
- onDecrement={() => actions.registerScan(state.activeBarcode!, -1)}
- />
- </div>
-
- <div className="flex-1 min-h-0 bg-black/90 relative border-t border-white/5">
- <VirtualList 
- items={state.items} 
- itemHeight={82} 
- renderRow={MassiveItemRow} 
- rowData={{ 
- onSelect: actions.selectItem, 
- onRemove: actions.removeItem,
- activeBarcode: state.activeBarcode 
- }} 
- />
- </div>
-
- <ScannerFooter 
- multiplier={state.multiplier}
- unitsPerBox={state.activeProduct?.unitsPerBox}
- isTriggerActive={isTriggerActive}
- onMultiplierChange={actions.setMultiplier}
- onOpenManual={() => setShowKeypad(true)}
- onTriggerStart={() => !isLocked && setIsTriggerActive(true)}
- onTriggerEnd={() => setIsTriggerActive(false)}
- />
- </>
- )}
 
  <MassiveToolsSheet 
  isOpen={isToolsOpen} onClose={() => setIsToolsOpen(false)}
@@ -156,7 +89,6 @@ export const HammerPage: React.FC = () => {
  onShowLabel={() => setIsLabelModalOpen(true)} onReset={() => actions.removeItem('ALL')}
  onImport={handleDownloadStock}
  onPrintSummary={() => {}}
- onToggleCameraMode={() => { setIsToolsOpen(false); setViewMode('camera'); }}
  />
 
  <LocationSelectorModal 
@@ -172,13 +104,6 @@ export const HammerPage: React.FC = () => {
  />
  )}
 
- {isTriggerActive && (
- <div className="fixed inset-0 z-[200]">
- <CameraScanner onScan={(code) => { actions.registerScan(code); setIsTriggerActive(false); }} onClose={() => setIsTriggerActive(false)} isTriggered={true} />
- </div>
- )}
-
- <NumericKeypad isOpen={showKeypad} title="SKU MANUAL" onClose={() => setShowKeypad(false)} onConfirm={(v) => { actions.registerScan(v); setShowKeypad(false); }} />
  <ScreenLockOverlay isLocked={isLocked} onUnlock={unlock} />
  </div>
  );

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Minus, Plus, Zap, Box, AlertTriangle, CheckCircle2, Volume2, VolumeX, Trash2, Keyboard, Camera, Save, MoreVertical, MapPin } from 'lucide-react';
+import { X, Minus, Plus, Zap, Box, AlertTriangle, CheckCircle2, Volume2, VolumeX, Trash2, Keyboard, Camera, Save, MoreVertical, MapPin, Lock } from 'lucide-react';
 import { CameraScanner } from '../../../components/CameraScanner';
 import { HammerItem } from '../hooks/useHammerLogic';
 import { Product } from '../../../types';
@@ -11,6 +11,7 @@ interface HammerCameraViewProps {
  onRemove: (barcode: string) => void;
  onFinalize: () => void;
  onOpenTools: () => void;
+ onLock?: () => void;
  location: string;
  onChangeLocation: () => void;
  activeBarcode: string | null;
@@ -26,6 +27,7 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
  onRemove,
  onFinalize,
  onOpenTools,
+ onLock,
  location,
  onChangeLocation,
  activeBarcode,
@@ -132,6 +134,15 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
  >
  <Save className="w-5 h-5" />
  </button>
+ {onLock && (
+ <button 
+ onClick={onLock}
+ className="w-10 h-10 rounded-full flex items-center justify-center text-white/70 active:bg-white/10 transition-colors"
+ title="Bloquear Pantalla"
+ >
+ <Lock className="w-5 h-5" />
+ </button>
+ )}
  <button 
  onClick={onOpenTools}
  className="w-10 h-10 rounded-full flex items-center justify-center text-white/70 active:bg-white/10 transition-colors"

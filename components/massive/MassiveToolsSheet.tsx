@@ -15,7 +15,7 @@ interface Props {
  onReset: () => void;
  onImport: () => void;
  onPrintSummary: () => void;
- onToggleCameraMode: () => void;
+ onToggleCameraMode?: () => void;
 }
 
 export const MassiveToolsSheet: React.FC<Props> = ({ 
@@ -58,12 +58,14 @@ export const MassiveToolsSheet: React.FC<Props> = ({
  </div>
 
  <div className="grid grid-cols-2 gap-4">
+ {onToggleCameraMode && (
  <ToolButton 
  onClick={onToggleCameraMode} 
  icon={Camera} 
  label="Modo Cámara" 
  color="text-cyan-400 border-cyan-500/20" 
  />
+ )}
  <ToolButton 
  onClick={onPrintSummary} 
  icon={Printer} 
