@@ -88,7 +88,7 @@ export const useHammerLogic = (batchId: string) => {
 
  // Sincronizar items optimistas con DB
  useEffect(() => {
- if (dbItems) {
+ if (dbItems && writeQueue.current.length === 0) {
  setOptimisticItems(dbItems);
  }
  }, [dbItems]);

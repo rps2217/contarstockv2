@@ -37,7 +37,7 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
 
  // Encuentra el item activo en la lista para obtener datos si no están en el estado optimista
  const activeItem = items.find(i => i.barcode === activeBarcode);
- const displayQty = optimisticQty ?? activeItem?.totalQuantity ?? 0;
+ const displayQty = activeItem?.totalQuantity ?? 0;
  const displayName = activeProduct?.name || activeItem?.name || 'ESCANEA UN PRODUCTO';
  const displayBarcode = activeBarcode || '---';
 
@@ -166,13 +166,12 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
  <div className="flex-1 overflow-y-auto no-scrollbar bg-slate-950">
  {items.length > 0 ? (
  items.map((item, index) => {
- const isOptimistic = item.barcode === activeBarcode && optimisticQty !== null;
- const currentQty = isOptimistic ? optimisticQty : item.totalQuantity;
+ const isActive = item.barcode === activeBarcode;
  
  return (
  <div 
  key={item.barcode}
- className={`px-4 py-4 flex justify-between items-center ${index % 2 === 0 ? 'bg-slate-900/40' : 'bg-transparent'} ${isOptimistic ? 'bg-blue-900/20' : ''}`}
+ className={`px-4 py-4 flex justify-between items-center ${index % 2 === 0 ? 'bg-slate-900/40' : 'bg-transparent'} ${isActive ? 'bg-blue-900/20' : ''}`}
  >
  <div className="flex flex-col min-w-0 flex-1 pr-4">
  <span className="text-xl font-mono text-white leading-none mb-1.5">{item.barcode}</span>
@@ -186,7 +185,7 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
  >
  <Minus className="w-4 h-4" />
  </button>
- <span className="text-xl font-mono text-white w-10 text-center border-b border-slate-600 pb-0.5">{currentQty}</span>
+ <span className="text-xl font-mono text-white w-10 text-center border-b border-slate-600 pb-0.5">{item.totalQuantity}</span>
  <button 
  onClick={() => onScan(item.barcode, 1)}
  className="w-8 h-8 rounded-full border-2 border-rose-500 flex items-center justify-center text-rose-500 active:bg-rose-500 active:text-white transition-colors"
