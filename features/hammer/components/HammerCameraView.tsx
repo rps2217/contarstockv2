@@ -145,7 +145,7 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
  </div>
 
  {/* PANEL DE LISTA (60% Alto) */}
- <div className="flex-1 bg-slate-950 flex flex-col relative z-10 border-t-2 border-rose-500/50">
+ <div className="flex-1 min-h-0 bg-slate-950 flex flex-col relative z-10 border-t-2 border-rose-500/50">
  {/* TOOLBAR ESTILO REFERENCIA */}
  <div className="flex justify-between items-center px-4 py-3 bg-slate-900 border-b border-white/5 shadow-md z-20">
  <div className="flex items-center gap-2">
@@ -163,7 +163,7 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
  </div>
 
  {/* LISTA DE ITEMS */}
- <div className="flex-1 overflow-y-auto no-scrollbar bg-slate-950">
+ <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar bg-slate-950 pb-20">
  {items.length > 0 ? (
  items.map((item, index) => {
  const isActive = item.barcode === activeBarcode;
