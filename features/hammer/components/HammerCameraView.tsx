@@ -225,7 +225,10 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
  </div>
  <div className="flex items-center gap-2">
  <span className="text-sm font-bold text-rose-500 mr-2">
- Total : {items.reduce((acc, item) => acc + item.totalQuantity, 0)}
+ {items.some(i => i.expectedQty !== undefined) 
+ ? `Total: ${items.reduce((acc, item) => acc + item.totalQuantity, 0)} / ${items.reduce((acc, item) => acc + (item.expectedQty || 0), 0)}`
+ : `Total: ${items.reduce((acc, item) => acc + item.totalQuantity, 0)}`
+ }
  </span>
  <button 
  onClick={() => {
@@ -300,7 +303,17 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
  <span className="text-[11px] font-bold text-slate-400 uppercase leading-tight line-clamp-2">{item.name}</span>
  </div>
  <div className="flex items-center gap-3 shrink-0">
- <span className="text-xs text-slate-600 font-mono w-4 text-right">0</span>
+ {item.expectedQty !== undefined && (
+ <div className="flex flex-col items-end justify-center mr-1">
+ <span className="text-[8px] text-slate-500 font-bold tracking-widest leading-none mb-0.5">TEÓRICO</span>
+ <span className={`text-sm font-mono font-black leading-none ${
+ item.totalQuantity === item.expectedQty ? 'text-emerald-400' : 
+ item.totalQuantity > item.expectedQty ? 'text-blue-400' : 'text-amber-400'
+ }`}>
+ {item.expectedQty}
+ </span>
+ </div>
+ )}
  <button 
  onClick={() => onScan(item.barcode, -1)}
  className="w-8 h-8 rounded-full border-2 border-rose-500 flex items-center justify-center text-rose-500 active:bg-rose-500 active:text-white transition-colors"
