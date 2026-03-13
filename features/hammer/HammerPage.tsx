@@ -24,6 +24,12 @@ export const HammerPage: React.FC = () => {
  const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
  const [isMigrating, setIsMigrating] = useState(false);
  const [isDownloading, setIsDownloading] = useState(false);
+ const [isVoiceEnabled, setIsVoiceEnabled] = useState(() => localStorage.getItem('hammer_voice') === 'true');
+
+ // Persistir preferencia de voz
+ useEffect(() => {
+ localStorage.setItem('hammer_voice', isVoiceEnabled.toString());
+ }, [isVoiceEnabled]);
 
  // ESCUCHA DE HARDWARE (HID LASER)
  useHIDScanner({
@@ -80,6 +86,7 @@ export const HammerPage: React.FC = () => {
  optimisticQty={state.optimisticQty}
  feedback={state.feedback}
  items={state.items}
+ isVoiceEnabled={isVoiceEnabled}
  />
 
  <MassiveToolsSheet 
@@ -89,6 +96,8 @@ export const HammerPage: React.FC = () => {
  onShowLabel={() => setIsLabelModalOpen(true)} onReset={() => actions.removeItem('ALL')}
  onImport={handleDownloadStock}
  onPrintSummary={() => {}}
+ isVoiceEnabled={isVoiceEnabled}
+ onToggleVoice={() => setIsVoiceEnabled(!isVoiceEnabled)}
  />
 
  <LocationSelectorModal 

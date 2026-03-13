@@ -19,6 +19,7 @@ interface HammerCameraViewProps {
  optimisticQty: number | null;
  feedback: FeedbackStatus;
  items: HammerItem[];
+ isVoiceEnabled?: boolean;
 }
 
 export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
@@ -34,21 +35,16 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
  activeProduct,
  optimisticQty,
  feedback,
- items
+ items,
+ isVoiceEnabled = false
 }) => {
  const [isFlashOn, setIsFlashOn] = useState(false);
- const [isVoiceEnabled, setIsVoiceEnabled] = useState(() => localStorage.getItem('hammer_voice') === 'true');
  const [editingItem, setEditingItem] = useState<HammerItem | null>(null);
  const [editQty, setEditQty] = useState<number>(0);
  const [isManualMode, setIsManualMode] = useState(false);
  const [manualInput, setManualInput] = useState('');
  const manualInputRef = useRef<HTMLInputElement>(null);
  const lastSpokenRef = useRef<string>('');
-
- // Persistir preferencia de voz
- useEffect(() => {
- localStorage.setItem('hammer_voice', isVoiceEnabled.toString());
- }, [isVoiceEnabled]);
 
  // Encuentra el item activo en la lista para obtener datos si no están en el estado optimista
  const activeItem = items.find(i => i.barcode === activeBarcode);
@@ -119,13 +115,6 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
  title={isManualMode ? "Modo Cámara" : "Entrada Manual"}
  >
  {isManualMode ? <Camera className="w-5 h-5" /> : <Keyboard className="w-5 h-5" />}
- </button>
- <button 
- className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${isVoiceEnabled ? 'text-blue-400' : 'text-white/40 active:bg-white/10'}`}
- onClick={() => setIsVoiceEnabled(!isVoiceEnabled)}
- title={isVoiceEnabled ? "Desactivar Voz" : "Activar Voz"}
- >
- {isVoiceEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
  </button>
  <button 
  onClick={onFinalize}

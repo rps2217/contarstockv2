@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Barcode, RotateCcw, Download, X, MapPin, Printer, Camera } from 'lucide-react';
+import { Barcode, RotateCcw, Download, X, MapPin, Printer, Camera, Volume2, VolumeX } from 'lucide-react';
 import { Modal } from '../common/Modal';
 
 interface Props {
@@ -16,10 +16,12 @@ interface Props {
  onImport: () => void;
  onPrintSummary: () => void;
  onToggleCameraMode?: () => void;
+ isVoiceEnabled?: boolean;
+ onToggleVoice?: () => void;
 }
 
 export const MassiveToolsSheet: React.FC<Props> = ({ 
- isOpen, onClose, hasActiveItem, location, onChangeLocation, onShowLabel, onReset, onImport, onPrintSummary, onToggleCameraMode 
+ isOpen, onClose, hasActiveItem, location, onChangeLocation, onShowLabel, onReset, onImport, onPrintSummary, onToggleCameraMode, isVoiceEnabled, onToggleVoice 
 }) => {
  
  const ToolButton = ({ onClick, icon: Icon, label, color, disabled = false, sublabel }: any) => (
@@ -64,6 +66,14 @@ export const MassiveToolsSheet: React.FC<Props> = ({
  icon={Camera} 
  label="Modo Cámara" 
  color="text-cyan-400 border-cyan-500/20" 
+ />
+ )}
+ {onToggleVoice && (
+ <ToolButton 
+ onClick={onToggleVoice} 
+ icon={isVoiceEnabled ? Volume2 : VolumeX} 
+ label={isVoiceEnabled ? "Voz Activada" : "Voz Desactivada"} 
+ color={isVoiceEnabled ? "text-blue-400 border-blue-500/20" : "text-slate-400 border-slate-500/20"} 
  />
  )}
  <ToolButton 
