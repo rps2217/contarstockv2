@@ -144,83 +144,65 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
  )}
  </div>
 
- {/* PANEL DE CONTROL (60% Alto) */}
- <div className="flex-1 bg-slate-900 rounded-t-[2.5rem] -mt-10 relative z-10 flex flex-col px-6 pt-10 pb-6 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-white/5">
+ {/* PANEL DE LISTA (60% Alto) */}
+ <div className="flex-1 bg-slate-950 flex flex-col relative z-10 border-t-2 border-rose-500/50">
+ {/* TOOLBAR ESTILO REFERENCIA */}
+ <div className="flex justify-between items-center px-4 py-3 bg-slate-900 border-b border-white/5 shadow-md z-20">
+ <div className="flex items-center gap-2">
+ <div className="w-6 h-6 rounded-full bg-rose-500/20 flex items-center justify-center">
+ <Box className="w-3 h-3 text-rose-500" />
+ </div>
+ <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Registros: {items.length}</span>
+ </div>
+ <div className="flex items-center gap-2">
+ <div className="w-4 h-4 rounded-full bg-rose-500 text-white flex items-center justify-center text-[10px] font-black">?</div>
+ <span className="text-sm font-bold text-rose-500">
+ Total : {items.length} ({items.reduce((acc, item) => acc + item.totalQuantity, 0)})
+ </span>
+ </div>
+ </div>
+
+ {/* LISTA DE ITEMS */}
+ <div className="flex-1 overflow-y-auto no-scrollbar bg-slate-950">
+ {items.length > 0 ? (
+ items.map((item, index) => {
+ const isOptimistic = item.barcode === activeBarcode && optimisticQty !== null;
+ const currentQty = isOptimistic ? optimisticQty : item.totalQuantity;
  
- {/* HISTORIAL RECIENTE (TIPO LISTA INDUSTRIAL) */}
- <div className="mb-4 flex flex-col flex-1 min-h-0">
- <div className="flex justify-between items-center mb-2 px-1">
- <div className="text-[8px] font-black text-slate-600 uppercase tracking-[0.2em]">Historial de Escaneo</div>
- <div className="text-[8px] font-bold text-blue-500/50 uppercase tracking-widest">{recentHistory.length} registros</div>
- </div>
- <div className="space-y-1 overflow-y-auto no-scrollbar pr-1 flex-1">
- {recentHistory.length > 0 ? (
- recentHistory.map((item) => (
- <button 
+ return (
+ <div 
  key={item.barcode}
- onClick={() => onScan(item.barcode, 0)}
- className="w-full flex items-center bg-slate-800/20 border border-white/5 px-3 py-2.5 rounded-xl active:bg-slate-700 transition-all text-left group"
+ className={`px-4 py-4 flex justify-between items-center ${index % 2 === 0 ? 'bg-slate-900/40' : 'bg-transparent'} ${isOptimistic ? 'bg-blue-900/20' : ''}`}
  >
- <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center mr-3 border border-white/5 group-active:bg-blue-600 transition-colors">
- <Box className="w-4 h-4 text-slate-500 group-active:text-white" />
+ <div className="flex flex-col min-w-0 flex-1 pr-4">
+ <span className="text-xl font-mono text-white leading-none mb-1.5">{item.barcode}</span>
+ <span className="text-[11px] font-bold text-slate-400 uppercase leading-tight line-clamp-2">{item.name}</span>
  </div>
- <div className="flex flex-col min-w-0 flex-1">
- <span className="text-[11px] font-bold text-slate-200 truncate group-active:text-white leading-tight">{item.name}</span>
- <span className="text-[9px] font-medium text-slate-500 font-mono tracking-tight">{item.barcode}</span>
- </div>
- <div className="flex items-center gap-3 ml-4">
- <div className="flex flex-col items-end">
- <span className="text-sm font-black text-blue-400 tabular-nums">{item.totalQuantity}</span>
- <span className="text-[7px] font-black text-slate-600 uppercase tracking-tighter">Unidades</span>
- </div>
- </div>
+ <div className="flex items-center gap-3 shrink-0">
+ <span className="text-xs text-slate-600 font-mono w-4 text-right">0</span>
+ <button 
+ onClick={() => onScan(item.barcode, -1)}
+ className="w-8 h-8 rounded-full border-2 border-rose-500 flex items-center justify-center text-rose-500 active:bg-rose-500 active:text-white transition-colors"
+ >
+ <Minus className="w-4 h-4" />
  </button>
- ))
+ <span className="text-xl font-mono text-white w-10 text-center border-b border-slate-600 pb-0.5">{currentQty}</span>
+ <button 
+ onClick={() => onScan(item.barcode, 1)}
+ className="w-8 h-8 rounded-full border-2 border-rose-500 flex items-center justify-center text-rose-500 active:bg-rose-500 active:text-white transition-colors"
+ >
+ <Plus className="w-4 h-4" />
+ </button>
+ </div>
+ </div>
+ );
+ })
  ) : (
- <div className="h-20 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-2xl opacity-20">
- <Box className="w-6 h-6 mb-1" />
- <span className="text-[8px] font-black uppercase tracking-widest">Sin registros recientes</span>
+ <div className="h-full flex flex-col items-center justify-center opacity-30">
+ <Box className="w-16 h-16 mb-4 text-slate-500" />
+ <span className="text-sm font-black uppercase tracking-widest text-slate-400">Escanea para comenzar</span>
  </div>
  )}
- </div>
- </div>
-
- {/* INFO PRODUCTO */}
- <div className="flex-1 flex flex-col items-center justify-center text-center space-y-2">
- <div className="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">{displayBarcode}</div>
- <h2 className="text-xl md:text-2xl font-bold text-white leading-tight line-clamp-2 px-4">
- {displayName}
- </h2>
- {activeItem?.loc && (
- <div className="inline-flex items-center gap-1 px-3 py-1 bg-slate-800 rounded-full border border-white/5 mt-2">
- <Box className="w-3 h-3 text-blue-400" />
- <span className="text-[10px] font-black text-slate-300 tracking-widest">{activeItem.loc}</span>
- </div>
- )}
- </div>
-
- {/* CONTROLES DE CANTIDAD */}
- <div className="h-24 flex items-center justify-between gap-4 mt-4">
- <button 
- onClick={() => onScan(activeBarcode || '', -1)} // Necesitamos pasar quantity override
- disabled={!activeBarcode}
- className="w-20 h-20 rounded-2xl bg-slate-800 border border-white/5 flex items-center justify-center text-slate-400 active:bg-slate-700 active:scale-95 transition-all disabled:opacity-30"
- >
- <Minus className="w-8 h-8" />
- </button>
-
- <div className="flex-1 h-20 bg-black/40 rounded-2xl border border-white/5 flex flex-col items-center justify-center relative overflow-hidden">
- <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest absolute top-2">CANTIDAD</span>
- <span className="text-4xl font-black text-white tracking-tighter font-mono">{displayQty}</span>
- </div>
-
- <button 
- onClick={() => onScan(activeBarcode || '', 1)}
- disabled={!activeBarcode}
- className="w-20 h-20 rounded-2xl bg-blue-600 border border-blue-500 flex items-center justify-center text-white shadow-[0_0_20px_rgba(37,99,235,0.3)] active:bg-blue-700 active:scale-95 transition-all disabled:opacity-30 disabled:shadow-none disabled:bg-slate-800"
- >
- <Plus className="w-8 h-8" />
- </button>
  </div>
  </div>
  <style>{`
