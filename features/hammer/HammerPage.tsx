@@ -7,9 +7,7 @@ import { migrateMassiveToMaster, importManifestFromCloud } from '../../services/
 import { MassiveToolsSheet } from '../../components/massive/MassiveToolsSheet';
 import { BarcodeLabelModal } from '../../components/common/BarcodeLabelModal';
 import { LocationSelectorModal } from '../../components/common/LocationSelectorModal';
-import { ScreenLockOverlay } from '../../components/common/ScreenLockOverlay';
 import { useHIDScanner } from '../../hooks/useHIDScanner';
-import { useAutoLock } from '../../hooks/useAutoLock';
 import { SoundFX } from '../../services/audio';
 import { HammerCameraView } from './components/HammerCameraView';
 
@@ -18,7 +16,6 @@ export const HammerPage: React.FC = () => {
  const { batchId = 'CORE' } = useParams();
  const { state, actions } = useHammerLogic(batchId);
  const locManager = useLocationManager(`hammer_loc_${batchId}`);
- const { isLocked, unlock, lock } = useAutoLock(60000); // 1 minuto para evitar cortes en auditoría
 
  const [isToolsOpen, setIsToolsOpen] = useState(false);
  const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
@@ -34,7 +31,7 @@ export const HammerPage: React.FC = () => {
  // ESCUCHA DE HARDWARE (HID LASER)
  useHIDScanner({
  onScan: actions.registerScan,
- isEnabled: !isLocked && !isMigrating && !isToolsOpen,
+ isEnabled: !isMigrating && !isToolsOpen,
  maxLatency: 40 // Más estricto para ráfagas industriales
  });
 
@@ -78,7 +75,6 @@ export const HammerPage: React.FC = () => {
  onRemove={actions.removeItem}
  onFinalize={handleFinalize}
  onOpenTools={() => setIsToolsOpen(true)}
- onLock={lock}
  location={locManager.location}
  onChangeLocation={locManager.openModal}
  activeBarcode={state.activeBarcode}
@@ -112,8 +108,6 @@ export const HammerPage: React.FC = () => {
  quantity={state.optimisticQty ?? 0}
  />
  )}
-
- <ScreenLockOverlay isLocked={isLocked} onUnlock={unlock} />
  </div>
  );
 };
