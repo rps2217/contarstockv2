@@ -5,10 +5,25 @@ import { GoogleGenAI, Type } from "@google/genai";
  * Utiliza IA para extraer datos de PDFs (Guías) y Fotos (Etiquetas ERP).
  */
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+let aiClient: GoogleGenAI | null = null;
+
+const getAI = () => {
+  if (!aiClient) {
+    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
+    if (!apiKey) {
+      console.warn("GEMINI_API_KEY no está configurada.");
+      return null;
+    }
+    aiClient = new GoogleGenAI({ apiKey });
+  }
+  return aiClient;
+};
 
 export const parseGuidePDF = async (fileBase64: string): Promise<any> => {
   try {
+    const ai = getAI();
+    if (!ai) throw new Error("API de IA no configurada");
+    
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: {
@@ -53,6 +68,9 @@ export const parseGuidePDF = async (fileBase64: string): Promise<any> => {
 
 export const extractERPFromPhoto = async (imageBase64: string): Promise<string | null> => {
   try {
+    const ai = getAI();
+    if (!ai) throw new Error("API de IA no configurada");
+
     const response = await ai.models.generateContent({
       model: "gemini-3.1-flash-preview",
       contents: {

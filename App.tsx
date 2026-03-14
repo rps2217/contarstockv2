@@ -14,6 +14,7 @@ import { Login } from './components/Login';
 import { InitializationService, InitStep } from './services/initializationService';
 import { ToastContainer } from './components/common/ToastContainer';
 import { useAutoSync } from './hooks/useAutoSync';
+import ReceptionPage from './features/reception/ReceptionPage';
 
 // --- VISTAS MAESTRAS ---
 const Dashboard = lazyWithRetry(() => import('./components/Dashboard'));
@@ -25,7 +26,6 @@ const Settings = lazyWithRetry(() => import('./components/Settings'));
 // --- MÓDULOS OPERATIVOS (FEATURES) ---
 const CountingPage = lazyWithRetry(() => import('./features/counting/CountingPage'));
 const HammerPage = lazyWithRetry(() => import('./features/hammer/HammerPage'));
-const ReceptionPage = lazyWithRetry(() => import('./features/reception/ReceptionPage'));
 const DocumentReceptionPage = lazyWithRetry(() => import('./features/documents/DocumentReceptionPage'));
 
 const AppContent = () => {

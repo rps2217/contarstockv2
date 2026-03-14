@@ -126,6 +126,11 @@ export const ReceptionPage: React.FC = () => {
  return (
  <div className={`h-screen w-full flex flex-col font-mono select-none overflow-hidden text-white transition-colors duration-200 ${containerClass}`}>
  
+ {/* DEBUG ELEMENT */}
+ <div className="absolute top-0 left-0 bg-red-500 text-white p-2 z-[9999] font-bold">
+   RECEPTION PAGE RENDERED
+ </div>
+
  <div className="h-16 px-4 flex items-center justify-between border-b border-white/10 bg-slate-900 shadow-2xl shrink-0 z-50">
  <button onClick={() => navigate('/dashboard')} className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl active:bg-blue-600 transition-colors">
  <ChevronLeft className="w-6 h-6 text-white" />
