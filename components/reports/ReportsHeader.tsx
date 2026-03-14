@@ -6,8 +6,6 @@ import { useNavigate } from 'react-router-dom';
 interface Props {
  isCleaning: boolean;
  onClean: () => void;
- // FIX: Added onOpenConsolidated prop to satisfy requirements in Reports.tsx
- onOpenConsolidated?: () => void;
  onStartNew: () => void;
 }
 

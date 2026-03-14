@@ -60,7 +60,6 @@ export const Reports: React.FC = () => {
  <ReportsHeader 
  isCleaning={state.isCleaning} 
  onClean={actions.handleCleanSynced} 
- onOpenConsolidated={() => navigate('/consolidated')} 
  onStartNew={() => actions.setIsStartModalOpen(true)} 
  />
  
