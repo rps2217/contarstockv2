@@ -111,7 +111,8 @@ export const ReceptionPage: React.FC = () => {
  setIsTriggerActive(false);
  }, []);
 
- const rowData = React.useMemo(() => ({ onDelete: actions.deleteDraft, items: state.unsyncedDrafts }), [actions.deleteDraft, state.unsyncedDrafts]);
+ const drafts = state.unsyncedDrafts || [];
+ const rowData = React.useMemo(() => ({ onDelete: actions.deleteDraft, items: drafts }), [actions.deleteDraft, drafts]);
 
  const handleKeypadConfirm = (value: string) => {
  actions.handleScan(value, state.currentErp);
@@ -174,7 +175,7 @@ export const ReceptionPage: React.FC = () => {
 
  <div className="flex-1 min-h-0 relative bg-black">
  <VirtualList 
- items={state.unsyncedDrafts} 
+ items={drafts} 
  itemHeight={80} 
  renderRow={ReceptionRow} 
  rowData={rowData} 
@@ -212,7 +213,7 @@ export const ReceptionPage: React.FC = () => {
  <QueueManager 
  isOpen={showQueue} 
  onClose={() => setShowQueue(false)} 
- drafts={state.unsyncedDrafts} 
+ drafts={drafts} 
  onDelete={actions.deleteDraft} 
  onDiscardAll={actions.discardAll} 
  onFinalize={() => {
