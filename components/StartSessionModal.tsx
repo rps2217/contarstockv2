@@ -65,9 +65,16 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
  setIsCloudLoading(true);
  setError("");
  try {
+ const localOrder = await db.expectedOrders.get(erpOrder.toUpperCase());
+ if (localOrder) {
+ setCloudOrder(localOrder);
+ SoundFX.play('success');
+ return;
+ }
+
  const order = await sessionService.fetchExpectedItemsFromCloud(erpOrder);
  if (!order || order.items.length === 0) {
- setError("Documento no encontrado en nube");
+ setError("Documento no encontrado en nube ni localmente");
  setCloudOrder(null);
  SoundFX.play('error');
  } else {
@@ -181,7 +188,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
  className="w-full h-12 bg-emerald-600/20 border border-emerald-500/30 rounded-xl flex items-center justify-center gap-3 text-emerald-400 active:scale-[0.98] transition-all"
  >
  {isCloudLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <DownloadCloud className="w-4 h-4" />}
- <span className="text-[10px] font-black uppercase tracking-widest">Validar ERP en Nube</span>
+ <span className="text-[10px] font-black uppercase tracking-widest">Validar ERP</span>
  </button>
  )}
 

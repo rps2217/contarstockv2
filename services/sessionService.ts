@@ -10,97 +10,130 @@ import { CloudOrderRowSchema } from './schemas';
 import { cloudApi } from './cloud/apiClient';
 
 /**
- * POOL DE ESCRITURA INDUSTRIAL v2.0
- * Agrupa ráfagas de escaneo para proteger la vida útil del almacenamiento flash.
+ * POOL DE ESCRITURA INDUSTRIAL v3.0 (Atomic Buffer)
+ * Agrupa ráfagas de escaneo para proteger la vida útil del almacenamiento flash
+ * y reducir la fragmentación de la base de datos.
  */
 let writeBuffer: { record: ScanRecord, retries: number }[] = [];
 let flushTimeout: ReturnType<typeof setTimeout> | null = null;
-const FLUSH_DELAY = 150; 
+const FLUSH_DELAY = 400; // Optimizado para ráfagas de clicks manuales
 
 const triggerBackgroundSync = async () => {
- if ('serviceWorker' in navigator && 'SyncManager' in window) {
- try {
- const registration = await navigator.serviceWorker.ready;
- await (registration as any).sync.register('sync-bultos');
- } catch (e) {}
- }
+  if ('serviceWorker' in navigator && 'SyncManager' in window) {
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      await (registration as any).sync.register('sync-bultos');
+    } catch (e) {}
+  }
 };
 
 const commitBufferToDatabase = async () => {
- if (writeBuffer.length === 0) return;
- const currentBatch = [...writeBuffer];
- writeBuffer = [];
- const records = currentBatch.map(item => item.record);
- 
- try {
- // Tipado fuerte en transacción para evitar corrupción
- // FIX: Using (db as any) to resolve type error: Property 'transaction' does not exist on type 'LogiCountDB'
- await (db as any).transaction('rw', db.scans, db.sessions, async () => {
- await db.scans.bulkAdd(records);
- const affectedSessionIds = Array.from(new Set(records.map(s => s.sessionId)));
- for (const id of affectedSessionIds) {
- await updateSessionMetadata(id);
- }
- });
- 
- triggerBackgroundSync();
- } catch (error: any) {
- logger.error("DB_COMMIT_FAIL", error.message);
- // Recuperación de desastres: Re-encolar items no corruptos
- writeBuffer = [...currentBatch, ...writeBuffer];
- }
+  if (writeBuffer.length === 0) return;
+  const currentBatch = [...writeBuffer];
+  writeBuffer = [];
+  const records = currentBatch.map(item => item.record);
+  
+  try {
+    await (db as any).transaction('rw', db.scans, db.sessions, async () => {
+      await db.scans.bulkAdd(records);
+      const affectedSessionIds = Array.from(new Set(records.map(s => s.sessionId)));
+      for (const id of affectedSessionIds) {
+        await updateSessionMetadata(id);
+      }
+    });
+    
+    triggerBackgroundSync();
+  } catch (error: any) {
+    logger.error("DB_COMMIT_FAIL", error.message);
+    // Recuperación: Re-encolar si no es un error de integridad
+    writeBuffer = [...currentBatch, ...writeBuffer];
+  }
 };
 
 export const updateSessionMetadata = async (sessionId: string) => {
- const scans = await db.scans.where('sessionId').equals(sessionId).toArray();
- let totalUnits = 0;
- const uniqueSkus = new Set<string>();
- 
- scans.forEach(s => {
- totalUnits += s.quantity;
- uniqueSkus.add(s.barcode);
- });
- 
- await db.sessions.update(sessionId, { 
- totalUnits, 
- totalSKUs: uniqueSkus.size,
- status: (await db.sessions.get(sessionId))?.status === 'draft' ? 'draft' : 'active'
- });
+  const scans = await db.scans.where('sessionId').equals(sessionId).toArray();
+  let totalUnits = 0;
+  const uniqueSkus = new Set<string>();
+  
+  scans.forEach(s => {
+    totalUnits += s.quantity;
+    uniqueSkus.add(s.barcode);
+  });
+  
+  await db.sessions.update(sessionId, { 
+    totalUnits, 
+    totalSKUs: uniqueSkus.size,
+    status: (await db.sessions.get(sessionId))?.status === 'draft' ? 'draft' : 'active'
+  });
 };
 
-// FIX: Export alias for maintenance tool to resolve member not found error in RecalculateTool.ts
 export const recalculateSessionMetadata = updateSessionMetadata;
 
-export const addScanEvent = async (
- sessionId: string, 
- barcode: string, 
- quantity: number, 
- mm?: number, 
- yyyy?: number,
- location?: string,
- batch?: string
-): Promise<ScanRecord> => {
- const session = await db.sessions.get(sessionId);
- const newRecord: ScanRecord = IntegrityGuard.validateScan({
- id: generateUUID(),
- sessionId,
- barcode: sanitizeBarcode(barcode),
- quantity,
- batch,
- logisticsLabel: session?.logisticsLabel || 'UNSET',
- mm,
- yyyy,
- location: location || session?.logisticsLabel,
- timestamp: Date.now(),
- synced: 0
- }) as ScanRecord;
+/**
+ * Retorna los registros que aún no han sido persistidos en disco.
+ * Útil para mantener la consistencia de la UI durante el delay del buffer.
+ */
+export const getPendingBuffer = () => writeBuffer.map(item => item.record);
 
- writeBuffer.push({ record: newRecord, retries: 0 });
- 
- if (flushTimeout) clearTimeout(flushTimeout);
- flushTimeout = setTimeout(commitBufferToDatabase, FLUSH_DELAY);
- 
- return newRecord;
+export const addScanEvent = async (
+  sessionId: string, 
+  barcode: string, 
+  quantity: number, 
+  mm?: number, 
+  yyyy?: number,
+  location?: string,
+  batch?: string
+): Promise<ScanRecord> => {
+  const session = await db.sessions.get(sessionId);
+  const cleanBarcode = sanitizeBarcode(barcode);
+  const finalLocation = location || session?.logisticsLabel || 'UNSET';
+
+  // LÓGICA DE AGREGACIÓN EN BUFFER (Evita múltiples filas para el mismo item en ráfaga)
+  const existingIdx = writeBuffer.findIndex(item => 
+    item.record.sessionId === sessionId &&
+    item.record.barcode === cleanBarcode &&
+    item.record.location === finalLocation &&
+    item.record.mm === mm &&
+    item.record.yyyy === yyyy &&
+    item.record.batch === batch
+  );
+
+  if (existingIdx !== -1) {
+    // Actualizamos registro existente en el buffer
+    writeBuffer[existingIdx].record.quantity += quantity;
+    writeBuffer[existingIdx].record.timestamp = Date.now();
+    
+    // Si la cantidad llega a 0 o menos por un decremento, eliminamos del buffer
+    if (writeBuffer[existingIdx].record.quantity <= 0) {
+      writeBuffer.splice(existingIdx, 1);
+    }
+    
+    if (flushTimeout) clearTimeout(flushTimeout);
+    flushTimeout = setTimeout(commitBufferToDatabase, FLUSH_DELAY);
+    return writeBuffer[existingIdx]?.record || ({} as ScanRecord);
+  }
+
+  // Si no existe o es un nuevo item, validamos y encolamos
+  const newRecord: ScanRecord = IntegrityGuard.validateScan({
+    id: generateUUID(),
+    sessionId,
+    barcode: cleanBarcode,
+    quantity,
+    batch,
+    logisticsLabel: session?.logisticsLabel || 'UNSET',
+    mm,
+    yyyy,
+    location: finalLocation,
+    timestamp: Date.now(),
+    synced: 0
+  }) as ScanRecord;
+
+  writeBuffer.push({ record: newRecord, retries: 0 });
+  
+  if (flushTimeout) clearTimeout(flushTimeout);
+  flushTimeout = setTimeout(commitBufferToDatabase, FLUSH_DELAY);
+  
+  return newRecord;
 };
 
 export const createSession = async (erp: string, label: string, type: 'standard' | 'hammer' = 'standard', expected?: any): Promise<CountingSession> => {
@@ -120,10 +153,10 @@ export const createSession = async (erp: string, label: string, type: 'standard'
  return s;
 };
 
-export const createDraftSession = async (label: string): Promise<CountingSession> => {
+export const createDraftSession = async (label: string, erpOrder?: string): Promise<CountingSession> => {
  const s: CountingSession = { 
  id: generateUUID(), 
- erpOrder: 'RECEPCION_BORRADOR', 
+ erpOrder: erpOrder ? erpOrder.trim().toUpperCase() : 'RECEPCION_BORRADOR', 
  logisticsLabel: label.trim().toUpperCase(), 
  createdAt: Date.now(), 
  status: 'draft', 

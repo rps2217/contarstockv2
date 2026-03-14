@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Home, Database, History, Container, Cloud, Box, Settings, Zap } from 'lucide-react';
+import { Home, Database, History, Container, Cloud, Box, Settings, Zap, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AppSettings } from '../types';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -59,6 +59,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ view }) => {
  <div className="text-[9px] font-black text-slate-600 uppercase tracking-[0.4em] px-5 mb-6 mt-10">Advanced_Tools</div>
  <NavItem path="/massive/BURST-MODE" activeKey="massive" label="Modo_Martillo" icon={Zap} />
  <NavItem path="/reception" activeKey="reception" label="Reception" icon={Container} />
+ <NavItem path="/documents" activeKey="documents" label="Doc_Scanner" icon={FileText} />
  <NavItem path="/sync" activeKey="sync" label="Cloud_Sync" icon={Cloud} badge={pendingCount} />
  </nav>
 

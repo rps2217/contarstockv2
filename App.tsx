@@ -26,6 +26,7 @@ const Settings = lazyWithRetry(() => import('./components/Settings'));
 const CountingPage = lazyWithRetry(() => import('./features/counting/CountingPage'));
 const HammerPage = lazyWithRetry(() => import('./features/hammer/HammerPage'));
 const ReceptionPage = lazyWithRetry(() => import('./features/reception/ReceptionPage'));
+const DocumentReceptionPage = lazyWithRetry(() => import('./features/documents/DocumentReceptionPage'));
 
 const AppContent = () => {
   const location = useLocation();
@@ -128,6 +129,7 @@ const AppContent = () => {
                 
                 {/* RUTAS MODULARES DE FEATURES */}
                 <Route path="/reception" element={<ReceptionPage />} />
+                <Route path="/documents" element={<DocumentReceptionPage />} />
                 <Route path="/counting/:id" element={<CountingPage />} />
                 <Route path="/massive/:batchId" element={<HammerPage />} />
                 

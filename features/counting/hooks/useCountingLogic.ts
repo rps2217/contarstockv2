@@ -36,10 +36,12 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
  const consolidatedHistory = useLiveQuery(async () => {
  if (!sessionId) return [];
  const scans = await db.scans.where('sessionId').equals(sessionId).toArray();
- const physicalItems = await aggregateScans(scans);
+ // INTEGRACIÓN DEL BUFFER DE PERSISTENCIA:
+ // Incluimos los registros pendientes en el buffer para que la UI sea 100% consistente en tiempo real
+ const pending = sessionService.getPendingBuffer().filter(s => s.sessionId === sessionId);
+ const physicalItems = await aggregateScans([...scans, ...pending]);
  
  const expectedItems = session?.expectedItems || [];
- // FIX: Explicitly typed Map to ensure number return type and fix 'unknown' assignment error
  const expectedMap = new Map<string, number>(expectedItems.map(ei => [normalizeSku(ei.barcode), ei.expectedQty]));
 
  const finalItems = physicalItems.map(pi => ({
@@ -70,7 +72,7 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
 
  itemsRef.current = sorted;
  return sorted;
- }, [sessionId, session, activeBarcode, feedback]);
+ }, [sessionId, session, activeBarcode, feedback, optimisticQty]);
 
  const finalizeScanPipeline = useCallback(async (barcode: string, qty: number, mm?: number, yyyy?: number, batch?: string) => {
  if (!sessionId) return;
@@ -98,7 +100,7 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
  setOptimisticQty(newTotal);
  setActiveBarcode(normBarcode);
 
- await sessionService.addScanEvent(sessionId, cleanBarcode, qty, mm, yyyy, currentLocation);
+ await sessionService.addScanEvent(sessionId, cleanBarcode, qty, mm, yyyy, currentLocation, batch);
  
  dispatch({ type: 'COMMIT_COMPLETE' });
  trigger(qty > 0 ? 'success' : 'undo');

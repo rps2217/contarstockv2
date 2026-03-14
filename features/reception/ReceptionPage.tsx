@@ -9,9 +9,11 @@ import { ScannerFooter } from '../../shared/components/controls/ScannerFooter';
 import { VirtualList } from '../../components/common/VirtualList';
 import { ScreenLockOverlay } from '../../components/common/ScreenLockOverlay';
 import { NumericKeypad } from '../../components/NumericKeypad';
-import { ChevronLeft, Box, Trash2 } from 'lucide-react';
+import { ChevronLeft, Box, Trash2, Camera, Loader2 } from 'lucide-react';
 import { useAutoLock } from '../../hooks/useAutoLock';
 import { useHIDScanner } from '../../hooks/useHIDScanner';
+import * as documentProcessor from '../../services/documentProcessor';
+import { SoundFX } from '../../services/audio';
 
 const ReceptionRow = React.memo(({ index, data }: any) => {
  const item = data.items[index];
@@ -31,8 +33,17 @@ const ReceptionRow = React.memo(({ index, data }: any) => {
  </div>
  <div className="text-[9px] font-bold text-slate-500 uppercase mt-1 flex items-center gap-2">
  <span>{new Date(item.createdAt).toLocaleTimeString()}</span>
+ {item.erpOrder && item.erpOrder !== 'RECEPCION_BORRADOR' ? (
+ <>
+ <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
+ <span className="text-emerald-500 font-black tracking-tighter">ERP: {item.erpOrder}</span>
+ </>
+ ) : (
+ <>
  <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
  <span className="text-blue-500 font-black tracking-tighter">BORRADOR</span>
+ </>
+ )}
  </div>
  </div>
  </div>
@@ -55,13 +66,40 @@ export const ReceptionPage: React.FC = () => {
  const [isTriggerActive, setIsTriggerActive] = useState(false);
  const [showKeypad, setShowKeypad] = useState(false);
  const [showQueue, setShowQueue] = useState(false);
+ const [isOcrLoading, setIsOcrLoading] = useState(false);
 
  // ESCUCHA DE HARDWARE
  useHIDScanner({
- onScan: (barcode) => actions.handleScan(barcode),
- isEnabled: !isLocked && !showKeypad && !showQueue,
+ onScan: (barcode) => actions.handleScan(barcode, state.currentErp),
+ isEnabled: !isLocked && !showKeypad && !showQueue && !isOcrLoading,
  maxLatency: 50
  });
+
+ const handleOcrCapture = async (event: React.ChangeEvent<HTMLInputElement>) => {
+ const file = event.target.files?.[0];
+ if (!file) return;
+
+ setIsOcrLoading(true);
+ const reader = new FileReader();
+ reader.onload = async (e) => {
+ const base64 = (e.target?.result as string).split(',')[1];
+ try {
+ const erp = await documentProcessor.extractERPFromPhoto(base64);
+ if (erp) {
+ actions.setCurrentErp(erp);
+ SoundFX.play('success');
+ } else {
+ SoundFX.play('error');
+ alert("No se encontró un número de ERP válido en la imagen.");
+ }
+ } catch (err) {
+ SoundFX.play('error');
+ } finally {
+ setIsOcrLoading(false);
+ }
+ };
+ reader.readAsDataURL(file);
+ };
 
  const startTrigger = useCallback(() => {
  if (isLocked) return;
@@ -73,10 +111,10 @@ export const ReceptionPage: React.FC = () => {
  setIsTriggerActive(false);
  }, []);
 
- const rowData = React.useMemo(() => ({ onDelete: actions.deleteDraft }), [actions.deleteDraft]);
+ const rowData = React.useMemo(() => ({ onDelete: actions.deleteDraft, items: state.unsyncedDrafts }), [actions.deleteDraft, state.unsyncedDrafts]);
 
  const handleKeypadConfirm = (value: string) => {
- actions.handleScan(value);
+ actions.handleScan(value, state.currentErp);
  setShowKeypad(false);
  };
 
@@ -95,6 +133,7 @@ export const ReceptionPage: React.FC = () => {
  <span className="text-[8px] font-black uppercase tracking-[0.3em] text-white/40 leading-none mb-1">RECEPCIÓN</span>
  <span className="text-xs font-black uppercase tracking-widest text-white italic">Blind_Entry</span>
  </div>
+ <div className="flex items-center gap-2">
  <button 
  onClick={() => setShowQueue(true)}
  className="h-10 px-4 bg-white/5 border border-white/10 rounded-xl active:scale-95 flex items-center justify-center gap-2"
@@ -102,6 +141,27 @@ export const ReceptionPage: React.FC = () => {
  <span className="text-[10px] font-black text-white uppercase tracking-widest">{state.draftCount}</span>
  <Box className="w-4 h-4 text-slate-400" />
  </button>
+ </div>
+ </div>
+
+ <div className="p-4 bg-slate-950 border-b border-white/5 shrink-0">
+ <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">ERP / Orden (Para siguientes bultos)</label>
+ <div className="flex gap-2">
+ <input 
+ type="text" 
+ value={state.currentErp}
+ onChange={(e) => actions.setCurrentErp(e.target.value)}
+ placeholder="Ej. ERP-12345 (Opcional)"
+ className="flex-1 bg-black border border-white/10 rounded-xl px-4 font-mono text-white focus:border-blue-500 outline-none"
+ />
+ <button 
+ onClick={() => document.getElementById('ocr-capture')?.click()}
+ className="w-12 h-12 shrink-0 bg-blue-600/20 text-blue-400 rounded-xl flex items-center justify-center border border-blue-500/30 active:bg-blue-600 active:text-white transition-colors"
+ >
+ {isOcrLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Camera className="w-5 h-5" />}
+ </button>
+ <input type="file" accept="image/*" capture="environment" className="hidden" id="ocr-capture" onChange={handleOcrCapture} />
+ </div>
  </div>
 
  <ReceptionHero 
@@ -135,7 +195,7 @@ export const ReceptionPage: React.FC = () => {
  {isTriggerActive && (
  <div className="fixed inset-0 z-[200]">
  <CameraScanner 
- onScan={(code) => { actions.handleScan(code); setIsTriggerActive(false); }} 
+ onScan={(code) => { actions.handleScan(code, state.currentErp); setIsTriggerActive(false); }} 
  onClose={endTrigger} 
  isTriggered={true} 
  />
@@ -155,6 +215,10 @@ export const ReceptionPage: React.FC = () => {
  drafts={state.unsyncedDrafts} 
  onDelete={actions.deleteDraft} 
  onDiscardAll={actions.discardAll} 
+ onFinalize={() => {
+   actions.finalizeReception();
+   setShowQueue(false);
+ }}
  />
 
  <ScreenLockOverlay isLocked={isLocked} onUnlock={unlock} />

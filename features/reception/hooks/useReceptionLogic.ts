@@ -10,6 +10,7 @@ export const useReceptionLogic = () => {
  const [lastAction, setLastAction] = useState<{type: 'success' | 'duplicate', label: string} | null>(null);
  const [flashActive, setFlashActive] = useState(false);
  const [isFinalizing, setIsFinalizing] = useState(false);
+ const [currentErp, setCurrentErp] = useState('');
 
  const unsyncedDrafts = useLiveQuery(() => 
  db.sessions.where('status').equals('draft').reverse().toArray()
@@ -17,7 +18,7 @@ export const useReceptionLogic = () => {
 
  const draftCount = unsyncedDrafts?.length || 0;
 
- const handleScan = useCallback(async (code: string) => {
+ const handleScan = useCallback(async (code: string, erpToUse?: string) => {
  const cleanCode = sanitizeBarcode(code);
  if (!cleanCode || cleanCode.length < 3) return;
 
@@ -32,7 +33,7 @@ export const useReceptionLogic = () => {
  }
 
  try {
- await sessionService.createDraftSession(cleanCode);
+ await sessionService.createDraftSession(cleanCode, erpToUse || currentErp);
  setLastAction({ type: 'success', label: cleanCode });
  setFlashActive(true);
  SoundFX.play('success');
@@ -43,7 +44,7 @@ export const useReceptionLogic = () => {
  } catch (err) { 
  SoundFX.play('error'); 
  }
- }, []);
+ }, [currentErp]);
 
  const finalizeReception = useCallback(async () => {
  if (!unsyncedDrafts?.length) return false;
@@ -75,7 +76,7 @@ export const useReceptionLogic = () => {
  }, []);
 
  return {
- state: { lastAction, flashActive, draftCount, unsyncedDrafts, isFinalizing },
- actions: { handleScan, handleManualInput: handleScan, deleteDraft, finalizeReception, discardAll }
+ state: { lastAction, flashActive, draftCount, unsyncedDrafts, isFinalizing, currentErp },
+ actions: { handleScan, handleManualInput: handleScan, deleteDraft, finalizeReception, discardAll, setCurrentErp }
  };
 };
