@@ -4,7 +4,7 @@ import { Product } from '../../../types';
 import { Pencil, Plus, Save, Box, ScanLine } from 'lucide-react';
 import { useProductForm } from '../hooks/useProductForm';
 import { Modal } from '../../../shared/components/ui/Modal';
-import { SettingsButton, SettingsInput } from '../../settings/components/common/SettingsUI';
+import { SettingsButton, SettingsInput } from '../../settings/components/common/SettingsUIComponent';
 
 interface ProductFormProps {
  isOpen: boolean;

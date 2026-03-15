@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { RefreshCw, LogOut, Trash2 } from 'lucide-react';
-import { SettingsSection, SettingsButton } from './common/SettingsUI';
+import { SettingsSection, SettingsButton } from './common/SettingsUIComponent';
 import { DiagnosticsCard } from './support/DiagnosticsCard';
 import { MaintenanceCard } from './support/MaintenanceCard';
 import { BackupCard } from './support/BackupCard';

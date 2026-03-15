@@ -1,7 +1,7 @@
 
 import React, { useRef, useState } from 'react';
 import { Database, Download, Upload } from 'lucide-react';
-import { SettingsCard, SettingsCardHeader, SettingsButton } from '../common/SettingsUI';
+import { SettingsCard, SettingsCardHeader, SettingsButton } from '../common/SettingsUIComponent';
 import { createFullBackup, restoreFullBackup } from '../../../../services/backupService';
 import { SoundFX } from '../../../../services/audio';
 
