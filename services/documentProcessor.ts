@@ -25,24 +25,16 @@ export const parseGuidePDF = async (fileBase64: string, mimeType: string = "appl
     if (!ai) throw new Error("API de IA no configurada");
     
     const response = await ai.models.generateContent({
-      model: "gemini-3.1-flash-lite-preview",
+      model: "gemini-3.1-flash-preview",
       contents: {
         parts: [
           { inlineData: { data: fileBase64, mimeType } },
           { text: `INSTRUCCIONES CRÍTICAS PARA PROCESAMIENTO LOGÍSTICO:
-            Analiza esta imagen o PDF de un documento de transporte (Guía de Despacho, Factura o Packing List).
+            Analiza esta imagen (que puede estar procesada en alto contraste para mejorar legibilidad) o PDF de un documento de transporte.
             
-            1. IDENTIFICACIÓN DE ORDEN: Busca el número de folio, número de guía o pedido ERP. Suele estar en la parte superior derecha o precedido por "N°" o "Folio".
-            2. EXTRACCIÓN DE TABLA: Ignora logotipos, direcciones de empresa, términos legales y totales finales. 
-            3. FILTRADO DE DATOS: Solo extrae la tabla de productos. 
-               - 'barcode': Debe ser el código SKU, EAN o Código de Producto.
-               - 'name': Descripción breve del producto.
-               - 'expectedQty': Cantidad numérica exacta.
-            
-            REGLAS DE SEGURIDAD:
-            - Si un campo no es legible, usa "N/A".
-            - No inventes datos.
-            - Devuelve exclusivamente el JSON.` }
+            1. IDENTIFICACIÓN DE ORDEN: Busca el número de folio, número de guía o pedido ERP.
+            2. EXTRACCIÓN DE TABLA: Extrae SKU/Barcode, Descripción y Cantidad.
+            3. FILTRADO: Ignora logotipos y datos de empresa.` }
         ]
       },
       config: {

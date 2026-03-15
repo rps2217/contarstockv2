@@ -41,6 +41,7 @@ const AppContent = () => {
   // Detectar si estamos en un modo de escaneo inmersivo
   const isScanningMode = location.pathname.startsWith('/counting/') || 
     location.pathname === '/reception' || 
+    location.pathname === '/documents' ||
     location.pathname.startsWith('/massive/');
 
   useEffect(() => {
