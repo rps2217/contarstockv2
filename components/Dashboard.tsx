@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, memo } from 'react';
-import { ScanLine, Radio, Zap, Database, Settings, UserCircle, ShieldAlert, Terminal, RefreshCw } from 'lucide-react';
+import { ScanLine, Radio, Zap, Database, Settings, UserCircle, ShieldAlert, Terminal, RefreshCw, FileText } from 'lucide-react';
 import { useDashboard } from '../hooks/useDashboard';
 import { Button, Card } from './ui';
 import { PulseWidget } from './dashboard/PulseWidget';
@@ -115,6 +115,17 @@ const Dashboard: React.FC = () => {
           <div className="grid grid-cols-2 gap-4">
             <Card 
               hoverable
+              onClick={() => navigate('/documents')}
+              className="h-44 flex flex-col items-center justify-center gap-4 bg-emerald-900/10 border-emerald-500/20"
+            >
+              <div className="bg-emerald-500/10 p-5 rounded-3xl border-2 border-emerald-500/20">
+                <FileText className="w-10 h-10 text-emerald-500" />
+              </div>
+              <span className="text-[10px] font-black text-white uppercase tracking-[0.3em]">Doc_Scanner</span>
+            </Card>
+
+            <Card 
+              hoverable
               onClick={() => { handleEnterMartillo(); }}
               className="h-44 flex flex-col items-center justify-center gap-4"
             >
@@ -123,22 +134,20 @@ const Dashboard: React.FC = () => {
               </div>
               <span className="text-[10px] font-black text-white uppercase tracking-[0.3em]">Modo_Martillo</span>
             </Card>
-
-            <Card 
-              hoverable
-              onClick={() => navigate('/database')}
-              className="h-44 flex flex-col items-center justify-center gap-4"
-            >
-              <div className="bg-amber-500/10 p-5 rounded-3xl border-2 border-amber-500/20">
-                <Database className="w-10 h-10 text-amber-500" />
-              </div>
-              <span className="text-[10px] font-black text-white uppercase tracking-[0.3em]">Catálogo_SKU</span>
-            </Card>
           </div>
         </div>
 
         {/* HERRAMIENTAS DE SOPORTE */}
         <div className="grid grid-cols-2 gap-4">
+          <Card 
+            hoverable
+            onClick={() => navigate('/database')}
+            className="h-28 flex flex-col items-center justify-center gap-2 opacity-80"
+          >
+            <Database className="w-6 h-6 text-amber-500" />
+            <span className="text-[8px] font-black text-white uppercase tracking-[0.3em]">Catálogo_SKU</span>
+          </Card>
+
           <Button 
             variant={isSyncNeeded ? 'primary' : 'secondary'}
             size="lg"
@@ -148,29 +157,20 @@ const Dashboard: React.FC = () => {
           >
             <span className="text-[9px]">Sincronizar</span>
           </Button>
-          
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
           <Button 
             variant="secondary"
             size="lg"
-            className="h-28 border-emerald-500/20 opacity-60 hover:opacity-100"
+            className="h-20 border-emerald-500/20 opacity-60 hover:opacity-100"
             onClick={() => { handleHardRefresh(); }}
             isLoading={isRefreshing}
             leftIcon={<RefreshCw className={`w-6 h-6 text-emerald-500 ${isRefreshing ? 'animate-spin' : ''}`} />}
           >
             <span className="text-[9px]">Reiniciar_Kernel</span>
           </Button>
-        </div>
-
-        <div className="pt-4 grid grid-cols-2 gap-4">
-          <Button 
-            variant="ghost"
-            className="h-20 border-2 border-white/5 rounded-[2rem] opacity-40 hover:opacity-100"
-            onClick={() => navigate('/settings?tab=system')}
-            leftIcon={<Terminal className="w-4 h-4" />}
-          >
-            <span className="text-[8px]">Terminal_IO</span>
-          </Button>
-
+          
           <Button 
             variant="ghost"
             className="h-20 border-2 border-white/5 rounded-[2rem] opacity-40 hover:opacity-100"

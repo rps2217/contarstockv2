@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Upload, FileText, CheckCircle, Loader2, Save, X, ChevronLeft, AlertCircle } from 'lucide-react';
+import { Upload, FileText, CheckCircle, Loader2, Save, X, ChevronLeft, AlertCircle, Camera, RefreshCw, Zap } from 'lucide-react';
 import * as documentProcessor from '../../services/documentProcessor';
 import { SoundFX } from '../../services/audio';
 import { db } from '../../db';
@@ -10,33 +10,162 @@ export const DocumentReceptionPage: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [mode, setMode] = useState<'idle' | 'camera' | 'upload'>('idle');
+  
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+
+  const [isStable, setIsStable] = useState(false);
+  const stabilityTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [countdown, setCountdown] = useState<number | null>(null);
+
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+    if (stabilityTimerRef.current) clearTimeout(stabilityTimerRef.current);
+    setCountdown(null);
+    setMode('idle');
+  };
+
+  const startCamera = async () => {
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } } 
+      });
+      setStream(mediaStream);
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+      }
+      setMode('camera');
+      setError(null);
+      
+      // Start auto-shoot logic
+      startStabilityCheck();
+    } catch (err) {
+      console.error("Error accessing camera:", err);
+      setError("No se pudo acceder a la cámara. Verifique los permisos.");
+      setMode('upload');
+    }
+  };
+
+  const startStabilityCheck = () => {
+    setCountdown(3);
+    let count = 3;
+    
+    const tick = () => {
+      count--;
+      setCountdown(count);
+      if (count > 0) {
+        stabilityTimerRef.current = setTimeout(tick, 1000);
+      } else {
+        capturePhoto();
+        setCountdown(null);
+      }
+    };
+    
+    stabilityTimerRef.current = setTimeout(tick, 1000);
+  };
+
+  const capturePhoto = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+    
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      // 1. Capture raw frame
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      // 2. Apply "Document Mode" Enhancement (High Contrast / Grayscale)
+      // This mimics the Google Drive "Document" filter
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        
+        // Grayscale
+        const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+        
+        // High Contrast (Threshold-like)
+        const contrast = 1.5; // Factor
+        const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+        const final = factor * (gray - 128) + 128;
+        
+        data[i] = data[i+1] = data[i+2] = final;
+      }
+      ctx.putImageData(imageData, 0, 0);
+
+      // 3. Visual Flash Effect
+      const flash = document.createElement('div');
+      flash.className = 'fixed inset-0 bg-white z-[100] animate-flash-out pointer-events-none';
+      document.body.appendChild(flash);
+      setTimeout(() => flash.remove(), 500);
+
+      const base64 = canvas.toDataURL('image/jpeg', 0.9).split(',')[1];
+      processDocument(base64, 'image/jpeg');
+      stopCamera();
+    }
+  };
+
+  const processDocument = async (base64: string, mimeType: string) => {
+    setIsProcessing(true);
+    setError(null);
+    try {
+      const data = await documentProcessor.parseGuidePDF(base64, mimeType);
+      if (data && data.erpOrder && data.items) {
+        setResult((prev: any) => {
+          if (!prev) return data;
+          
+          // Merge items logic:
+          // We keep the original ERP order if it was already set
+          // and append new items that aren't already in the list (by barcode)
+          const existingBarcodes = new Set(prev.items.map((i: any) => i.barcode));
+          const uniqueNewItems = data.items.filter((i: any) => !existingBarcodes.has(i.barcode));
+          
+          return {
+            ...prev,
+            items: [...prev.items, ...uniqueNewItems]
+          };
+        });
+        SoundFX.play('success');
+      } else {
+        throw new Error("La IA no pudo detectar una tabla de productos clara. Intente con una foto más cercana.");
+      }
+    } catch (err: any) {
+      setError(err.message || "Error procesando documento");
+      SoundFX.play('error');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    setIsProcessing(true);
-    setError(null);
     const reader = new FileReader();
     reader.onload = async (e) => {
-      const base64 = (e.target?.result as string).split(',')[1];
-      try {
-        const data = await documentProcessor.parseGuidePDF(base64);
-        if (data && data.erpOrder && data.items) {
-          setResult(data);
-          SoundFX.play('success');
-        } else {
-          throw new Error("Formato de documento no reconocido");
-        }
-      } catch (err: any) {
-        setError(err.message || "Error procesando PDF");
-        SoundFX.play('error');
-      } finally {
-        setIsProcessing(false);
-      }
+      const res = e.target?.result as string;
+      const mimeType = res.split(';')[0].split(':')[1];
+      const base64 = res.split(',')[1];
+      processDocument(base64, mimeType);
     };
     reader.readAsDataURL(file);
   };
+
+  useEffect(() => {
+    return () => {
+      if (stream) stream.getTracks().forEach(track => track.stop());
+    };
+  }, [stream]);
 
   const handleSave = async () => {
     if (!result) return;
@@ -93,17 +222,108 @@ export const DocumentReceptionPage: React.FC = () => {
           </div>
         )}
 
-        {!result ? (
-          <div className="space-y-4">
-            <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-slate-700 rounded-3xl cursor-pointer hover:border-blue-500 hover:bg-blue-900/10 transition-all">
-              <Upload className="w-12 h-12 text-slate-500 mb-4" />
-              <span className="text-sm font-black text-white uppercase tracking-widest">Subir Guía PDF / Imagen</span>
-              <span className="text-[10px] font-bold text-slate-500 mt-2 uppercase">La IA extraerá los datos automáticamente</span>
+        {!result && mode === 'idle' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <button 
+              onClick={startCamera}
+              className="group relative h-64 bg-slate-900 border-2 border-slate-800 rounded-[2rem] flex flex-col items-center justify-center gap-4 hover:border-blue-500 transition-all overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-blue-600/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-900/40 group-active:scale-90 transition-transform">
+                <Camera className="w-8 h-8 text-white" />
+              </div>
+              <div className="text-center">
+                <span className="block text-sm font-black uppercase tracking-widest text-white">Escáner en Vivo</span>
+                <span className="text-[9px] text-slate-500 uppercase font-bold mt-1 block">Uso recomendado para fotos</span>
+              </div>
+            </button>
+
+            <label className="group relative h-64 bg-slate-900 border-2 border-slate-800 rounded-[2rem] flex flex-col items-center justify-center gap-4 hover:border-emerald-500 transition-all cursor-pointer overflow-hidden">
+              <div className="absolute inset-0 bg-emerald-600/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="w-16 h-16 bg-emerald-600 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-900/40 group-active:scale-90 transition-transform">
+                <Upload className="w-8 h-8 text-white" />
+              </div>
+              <div className="text-center">
+                <span className="block text-sm font-black uppercase tracking-widest text-white">Subir Archivo</span>
+                <span className="text-[9px] text-slate-500 uppercase font-bold mt-1 block">PDF o Imágenes guardadas</span>
+              </div>
               <input type="file" accept="application/pdf,image/*" className="hidden" onChange={handleFileUpload} />
             </label>
           </div>
-        ) : (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+        )}
+
+        {mode === 'camera' && (
+          <div className="relative w-full aspect-[3/4] bg-black rounded-[2rem] overflow-hidden border-4 border-slate-800 shadow-2xl">
+            <video 
+              ref={videoRef} 
+              autoPlay 
+              playsInline 
+              className="w-full h-full object-cover"
+            />
+            
+            {/* FRAMING GUIDE OVERLAY */}
+            <div className="absolute inset-0 pointer-events-none">
+              {/* Darkened edges */}
+              <div className="absolute inset-0 border-[40px] border-black/40" />
+              
+              {/* Scanner Corners */}
+              <div className="absolute top-10 left-10 w-12 h-12 border-t-4 border-l-4 border-blue-500 rounded-tl-lg" />
+              <div className="absolute top-10 right-10 w-12 h-12 border-t-4 border-r-4 border-blue-500 rounded-tr-lg" />
+              <div className="absolute bottom-10 left-10 w-12 h-12 border-b-4 border-l-4 border-blue-500 rounded-bl-lg" />
+              <div className="absolute bottom-10 right-10 w-12 h-12 border-b-4 border-r-4 border-blue-500 rounded-br-lg" />
+              
+              {/* Scan Line Animation */}
+              <div className="absolute top-1/2 left-10 right-10 h-0.5 bg-blue-400/50 shadow-[0_0_15px_rgba(59,130,246,0.8)] animate-scan-line" />
+              
+              <div className="absolute bottom-16 left-0 right-0 text-center flex flex-col items-center gap-3">
+                {countdown !== null && (
+                  <div className="bg-blue-600 text-white w-12 h-12 rounded-full flex items-center justify-center text-xl font-black shadow-2xl animate-bounce">
+                    {countdown}
+                  </div>
+                )}
+                <span className="bg-black/60 backdrop-blur-md px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 border border-blue-500/30">
+                  {countdown !== null ? 'Mantenga estable para auto-disparo' : 'Alinee el documento con el marco'}
+                </span>
+              </div>
+            </div>
+
+            {/* CAMERA CONTROLS */}
+            <div className="absolute bottom-6 left-0 right-0 flex justify-center items-center gap-8 px-6">
+              <button 
+                onClick={stopCamera}
+                className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center text-white"
+              >
+                <X className="w-6 h-6" />
+              </button>
+              
+              <button 
+                onClick={() => {
+                  if (stabilityTimerRef.current) clearTimeout(stabilityTimerRef.current);
+                  capturePhoto();
+                }}
+                className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-2xl active:scale-90 transition-transform"
+              >
+                <div className="w-16 h-16 border-4 border-black rounded-full" />
+              </button>
+
+              <button 
+                onClick={() => {
+                  if (stabilityTimerRef.current) clearTimeout(stabilityTimerRef.current);
+                  startStabilityCheck();
+                }}
+                className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center text-white"
+                title="Reiniciar Auto-disparo"
+              >
+                <RefreshCw className="w-6 h-6" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        <canvas ref={canvasRef} className="hidden" />
+
+        {result && (
+          <>
             <div className="bg-slate-900 p-6 rounded-3xl border border-emerald-500/30">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2 text-emerald-400">
@@ -131,6 +351,13 @@ export const DocumentReceptionPage: React.FC = () => {
             <div className="bg-slate-900 rounded-3xl border border-white/10 overflow-hidden">
               <div className="p-4 border-b border-white/10 bg-black/50 flex justify-between items-center">
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ítems Extraídos ({result.items.length})</span>
+                <button 
+                  onClick={() => startCamera()}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 rounded-lg border border-blue-500/30 transition-colors"
+                >
+                  <Camera className="w-4 h-4" />
+                  <span className="text-[9px] font-black uppercase">Escanear Otra Guía</span>
+                </button>
               </div>
               <div className="divide-y divide-white/5">
                 {result.items.map((item: any, idx: number) => (
@@ -180,7 +407,7 @@ export const DocumentReceptionPage: React.FC = () => {
               <Save className="w-6 h-6" />
               Confirmar y Guardar Orden
             </button>
-          </div>
+          </>
         )}
 
         {isProcessing && (

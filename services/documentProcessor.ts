@@ -19,20 +19,30 @@ const getAI = () => {
   return aiClient;
 };
 
-export const parseGuidePDF = async (fileBase64: string): Promise<any> => {
+export const parseGuidePDF = async (fileBase64: string, mimeType: string = "application/pdf"): Promise<any> => {
   try {
     const ai = getAI();
     if (!ai) throw new Error("API de IA no configurada");
     
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-3.1-flash-lite-preview",
       contents: {
         parts: [
-          { inlineData: { data: fileBase64, mimeType: "application/pdf" } },
-          { text: `Analiza esta guía de despacho/recepción. Extrae:
-            1. Número de Orden ERP o Documento.
-            2. Lista de productos (SKU/Código, Nombre, Cantidad esperada).
-            Devuelve un JSON estructurado.` }
+          { inlineData: { data: fileBase64, mimeType } },
+          { text: `INSTRUCCIONES CRÍTICAS PARA PROCESAMIENTO LOGÍSTICO:
+            Analiza esta imagen o PDF de un documento de transporte (Guía de Despacho, Factura o Packing List).
+            
+            1. IDENTIFICACIÓN DE ORDEN: Busca el número de folio, número de guía o pedido ERP. Suele estar en la parte superior derecha o precedido por "N°" o "Folio".
+            2. EXTRACCIÓN DE TABLA: Ignora logotipos, direcciones de empresa, términos legales y totales finales. 
+            3. FILTRADO DE DATOS: Solo extrae la tabla de productos. 
+               - 'barcode': Debe ser el código SKU, EAN o Código de Producto.
+               - 'name': Descripción breve del producto.
+               - 'expectedQty': Cantidad numérica exacta.
+            
+            REGLAS DE SEGURIDAD:
+            - Si un campo no es legible, usa "N/A".
+            - No inventes datos.
+            - Devuelve exclusivamente el JSON.` }
         ]
       },
       config: {
@@ -59,10 +69,12 @@ export const parseGuidePDF = async (fileBase64: string): Promise<any> => {
       }
     });
 
-    return response.text ? JSON.parse(response.text) : null;
-  } catch (error) {
+    const cleanJson = response.text ? response.text.replace(/```json\n?|```/g, "").trim() : null;
+    return cleanJson ? JSON.parse(cleanJson) : null;
+  } catch (error: any) {
     console.error("PDF Parsing Error:", error);
-    throw new Error("No se pudo procesar el PDF.");
+    const errorMessage = error.message || "Error desconocido";
+    throw new Error(`Error de IA: ${errorMessage}`);
   }
 };
 

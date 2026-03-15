@@ -44,6 +44,32 @@
 
       #root { height: 100dvh; width: 100vw; display: flex; flex-direction: column; overflow: hidden; }
       .no-scrollbar::-webkit-scrollbar { display: none; }
+
+      @keyframes scan-line {
+        0% { transform: translateY(-150px); opacity: 0; }
+        50% { opacity: 1; }
+        100% { transform: translateY(150px); opacity: 0; }
+      }
+      .animate-scan-line {
+        animation: scan-line 2s ease-in-out infinite;
+      }
+
+      @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-5px); }
+        75% { transform: translateX(5px); }
+      }
+      .animate-in.shake {
+        animation: shake 0.2s ease-in-out 3;
+      }
+
+      @keyframes flash-out {
+        0% { opacity: 1; }
+        100% { opacity: 0; }
+      }
+      .animate-flash-out {
+        animation: flash-out 0.5s ease-out forwards;
+      }
     </style>
 <script type="importmap">
 {
