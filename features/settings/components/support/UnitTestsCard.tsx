@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Beaker, CheckCircle2, XCircle, Play, ShieldCheck } from 'lucide-react';
-import { SettingsCard, SettingsCardHeader, SettingsButton } from '../common/SettingsUIComponent';
+import { SettingsCard, SettingsCardHeader, SettingsButton } from '../common/settings-ui';
 import { runUiLogicTests } from '../../../../services/tests/uiLogic.test';
 import { runScannerMachineTests } from '../../../../services/tests/scannerMachine.test';
 import { runAggregatorTests } from '../../../../services/tests/aggregator.test';

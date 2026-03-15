@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Terminal, RefreshCw, ShieldCheck, Activity, AlertCircle } from 'lucide-react';
-import { SettingsCard, SettingsCardHeader } from '../common/SettingsUIComponent';
+import { SettingsCard, SettingsCardHeader } from '../common/settings-ui';
 import { runStockEngineTest, TestResult } from '../../../../services/diagnostics';
 import { SoundFX } from '../../../../services/audio';
 
