@@ -7,7 +7,7 @@ import { sanitizeBarcode } from '../services/utils';
 import { NumericKeypad } from './NumericKeypad';
 import { SoundFX } from '../services/audio';
 import { useHIDScanner } from '../hooks/useHIDScanner';
-import { Modal } from './common/Modal';
+import { Modal } from '../shared/components/ui/Modal';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { CameraScanner } from './CameraScanner';

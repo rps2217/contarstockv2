@@ -12,16 +12,16 @@ import { lazyWithRetry } from './services/lazyLoad';
 import { initPersistence } from './services/backupService';
 import { Login } from './components/Login';
 import { InitializationService, InitStep } from './services/initializationService';
-import { ToastContainer } from './components/common/ToastContainer';
+import { ToastContainer } from './shared/components/ui/ToastContainer';
 import { useAutoSync } from './hooks/useAutoSync';
 import ReceptionPage from './features/reception/ReceptionPage';
 
 // --- VISTAS MAESTRAS ---
-const Dashboard = lazyWithRetry(() => import('./components/Dashboard'));
-const Reports = lazyWithRetry(() => import('./components/Reports'));
-const DatabaseView = lazyWithRetry(() => import('./components/Database'));
-const Sync = lazyWithRetry(() => import('./components/SyncManagerUI'));
-const Settings = lazyWithRetry(() => import('./components/Settings'));
+const Dashboard = lazyWithRetry(() => import('./features/dashboard/DashboardPage'));
+const Reports = lazyWithRetry(() => import('./features/reports/ReportsPage'));
+const DatabaseView = lazyWithRetry(() => import('./features/inventory/InventoryPage'));
+const Sync = lazyWithRetry(() => import('./features/sync/SyncPage'));
+const Settings = lazyWithRetry(() => import('./features/settings/SettingsPage'));
 
 // --- MÓDULOS OPERATIVOS (FEATURES) ---
 const CountingPage = lazyWithRetry(() => import('./features/counting/CountingPage'));
