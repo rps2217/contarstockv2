@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Wifi, AlertCircle, Info, Link, ShieldAlert, Database, QrCode, Camera, X } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { AppSettings } from '../../../types';
-import { SettingsSection, SettingsCard, SettingsButton, SettingsInput } from './common/settings-ui';
+import { SettingsSection, SettingsCard, SettingsButton, SettingsInput } from './common/SettingsElements';
 import { bootstrapByUrl } from '../../../services/gasService';
 import { SoundFX } from '../../../services/audio';
 import { CameraScanner } from '../../../components/CameraScanner';

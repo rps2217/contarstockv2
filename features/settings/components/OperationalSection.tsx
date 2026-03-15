@@ -6,7 +6,7 @@ import {
  BellRing, MousePointerClick
 } from 'lucide-react';
 import { AppSettings } from '../../../types';
-import { SettingsSection, SettingsToggle } from './common/settings-ui';
+import { SettingsSection, SettingsToggle } from './common/SettingsElements';
 
 interface Props {
  settings: AppSettings;

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Activity, Bug } from 'lucide-react';
-import { SettingsCard, SettingsCardHeader, SettingsButton } from '../common/settings-ui';
+import { SettingsCard, SettingsCardHeader, SettingsButton } from '../common/SettingsElements';
 import { checkSystemHealth, repairSystem, HealthReport } from '../../../../services/maintenance';
 
 export const MaintenanceCard: React.FC = () => {
