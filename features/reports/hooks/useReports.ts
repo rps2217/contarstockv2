@@ -1,9 +1,10 @@
 
 import React, { useState, useCallback, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../../../db';
 import * as sessionService from '../../../services/sessionService';
 import { useLocation } from 'react-router-dom';
+import { SessionRepository } from '../../../repositories/SessionRepository';
+import { ScanRepository } from '../../../repositories/ScanRepository';
 
 export const useReports = () => {
  const location = useLocation();
@@ -18,11 +19,11 @@ export const useReports = () => {
 
  const [limit, setLimit] = useState(50);
 
- const pendingSyncCount = useLiveQuery(() => db.scans.where('synced').equals(0).count(), [], 0);
+ const pendingSyncCount = useLiveQuery(() => ScanRepository.getPendingSyncCount(), [], 0);
 
  // Mapa de ERPs para identificar multi-bulto
  const erpCounts = useLiveQuery(async () => {
- const allSessions = await db.sessions.toArray();
+ const allSessions = await SessionRepository.getAll();
  const counts: Record<string, number> = {};
  allSessions.forEach(s => {
  if (s.erpOrder) {
@@ -34,21 +35,7 @@ export const useReports = () => {
 
  const sessions = useLiveQuery(async () => {
  const q = searchQuery.trim().toLowerCase();
- 
- let collection = db.sessions.where('sessionType').equals(filterType);
-
- if (q) {
- return await collection
- .filter(s => 
- (s.erpOrder?.toLowerCase() || '').includes(q) || 
- (s.logisticsLabel?.toLowerCase() || '').includes(q)
- )
- .reverse()
- .limit(limit)
- .toArray();
- }
-
- return await collection.reverse().limit(limit).toArray();
+ return await SessionRepository.getSessionsByType(filterType, q, limit);
  }, [searchQuery, limit, filterType], []);
 
  const loadMore = useCallback(() => {

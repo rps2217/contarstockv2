@@ -100,13 +100,13 @@ const Dashboard: React.FC = () => {
           <div className="grid grid-cols-2 gap-4">
             <Card 
               hoverable
-              onClick={() => navigate('/documents')}
+              onClick={() => navigate('/reception')}
               className="h-40 flex flex-col items-center justify-center gap-3 bg-emerald-900/10 border-emerald-500/20 rounded-[2rem]"
             >
               <div className="bg-emerald-500/10 p-4 rounded-2xl border-2 border-emerald-500/20">
                 <FileText className="w-8 h-8 text-emerald-500" />
               </div>
-              <span className="text-[9px] font-black text-white uppercase tracking-[0.3em]">Doc_Scanner</span>
+              <span className="text-[9px] font-black text-white uppercase tracking-[0.3em]">Recepción</span>
             </Card>
 
             <Card 

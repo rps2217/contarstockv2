@@ -3,19 +3,20 @@ import React, { useState } from 'react';
 import { ChevronLeft, Trash2, Minus, Plus, Cloud, Printer, Loader2, FileSpreadsheet, FileText } from 'lucide-react';
 import * as sessionService from '../../../services/sessionService';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../../../db';
 import { exportToExcel, exportToPDF } from '../../../services/export';
 import { thermalPrinter } from '../../../services/thermalPrinterService';
 import { normalizeSku } from '../../../services/utils';
 import { determineItemStatus, getStatusColorClasses } from '../../../services/uiLogic';
 import { aggregateScans } from '../../../services/aggregator';
+import { SessionRepository } from '../../../repositories/SessionRepository';
+import { ScanRepository } from '../../../repositories/ScanRepository';
 
 export const ReportDetail: React.FC<{ sessionId: string; onBack: () => void }> = ({ sessionId, onBack }) => {
  const [isPrinting, setIsPrinting] = useState(false);
- const session = useLiveQuery(() => db.sessions.get(sessionId), [sessionId]);
+ const session = useLiveQuery(() => SessionRepository.getById(sessionId), [sessionId]);
 
  const consolidation = useLiveQuery(async () => {
- const scans = await db.scans.where('sessionId').equals(sessionId).toArray();
+ const scans = await ScanRepository.getBySessionId(sessionId);
  const physicalItems = await aggregateScans(scans);
  
  const expectedMap = new Map(session?.expectedItems?.map(i => [normalizeSku(i.barcode), i.expectedQty]));

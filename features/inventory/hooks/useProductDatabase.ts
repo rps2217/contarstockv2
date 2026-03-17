@@ -1,7 +1,6 @@
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../../../db';
 import { Product } from '../../../types';
 import * as productService from '../../../services/productService';
 import { importProductsFromAppSheet } from '../../../services/syncManager';
@@ -9,6 +8,7 @@ import { syncProductsToAppSheet } from '../../../services/appsheet';
 import { fuzzySearchProducts } from '../../../services/search';
 import { VectorService } from '../../../services/vectorService';
 import { localBrain } from '../../../services/localBrain';
+import { productRepository } from '../../../repositories/DexieProductRepository';
 
 export const useProductDatabase = () => {
  const [searchQuery, setSearchQuery] = useState('');
@@ -43,7 +43,7 @@ export const useProductDatabase = () => {
 
  // CONSULTAS DE INTEGRIDAD (Dashboard de Barras)
  const stats = useLiveQuery(async () => {
- const all = await db.products.toArray();
+ const all = await productRepository.getAll();
  const total = all.length;
  if (total === 0) return { trainedPercent: 0, backedUpPercent: 0, missingVectors: 0 };
 
@@ -58,12 +58,12 @@ export const useProductDatabase = () => {
  }, []);
 
  const products = useLiveQuery(async () => {
- if (!searchQuery) return await db.products.limit(200).toArray();
- const allProducts = await db.products.toArray();
+ if (!searchQuery) return await productRepository.getLimited(200);
+ const allProducts = await productRepository.getAll();
  return await fuzzySearchProducts(allProducts, searchQuery, 50);
  }, [searchQuery], []);
 
- const pendingChangesCount = useLiveQuery(() => db.products.where('syncStatus').anyOf('add', 'edit').count(), [], 0);
+ const pendingChangesCount = useLiveQuery(() => productRepository.getPendingSyncCount(), [], 0);
 
  const showFeedback = useCallback((type: 'success' | 'error', msg: string) => {
  setFeedback({ type, msg });
@@ -97,7 +97,7 @@ export const useProductDatabase = () => {
  };
 
  const handleSyncToCloud = useCallback(async () => {
- const unsyncedProds = await db.products.where('syncStatus').anyOf('add', 'edit').toArray();
+ const unsyncedProds = await productRepository.getPendingSync();
  if (unsyncedProds.length === 0) return;
  setIsSyncing(true);
  try {

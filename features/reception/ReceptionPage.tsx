@@ -58,7 +58,7 @@ const ReceptionRow = React.memo(({ index, data }: any) => {
  );
 });
 
-export const ReceptionPage: React.FC = () => {
+export const ReceptionPage: React.FC<{ isEmbedded?: boolean }> = ({ isEmbedded = false }) => {
  const navigate = useNavigate();
  const { state, actions } = useReceptionLogic();
  const { isLocked, unlock, lock } = useAutoLock(3000);
@@ -124,13 +124,9 @@ export const ReceptionPage: React.FC = () => {
  : (state.lastAction?.type === 'duplicate' ? 'bg-rose-950' : 'bg-black');
 
  return (
- <div className={`h-screen w-full flex flex-col font-mono select-none overflow-hidden text-white transition-colors duration-200 ${containerClass}`}>
+ <div className={`h-full w-full flex flex-col font-mono select-none overflow-hidden text-white transition-colors duration-200 ${containerClass}`}>
  
- {/* DEBUG ELEMENT */}
- <div className="absolute top-0 left-0 bg-red-500 text-white p-2 z-[9999] font-bold">
-   RECEPTION PAGE RENDERED
- </div>
-
+ {!isEmbedded && (
  <div className="h-16 px-4 flex items-center justify-between border-b border-white/10 bg-slate-900 shadow-2xl shrink-0 z-50">
  <button onClick={() => navigate('/dashboard')} className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl active:bg-blue-600 transition-colors">
  <ChevronLeft className="w-6 h-6 text-white" />
@@ -149,6 +145,23 @@ export const ReceptionPage: React.FC = () => {
  </button>
  </div>
  </div>
+ )}
+
+ {isEmbedded && (
+ <div className="h-12 px-4 flex items-center justify-between border-b border-white/10 bg-slate-900 shrink-0 z-50">
+ <div className="flex flex-col">
+ <span className="text-[8px] font-black uppercase tracking-[0.3em] text-white/40 leading-none mb-1">MODO</span>
+ <span className="text-xs font-black uppercase tracking-widest text-white italic">Recepción Ciega</span>
+ </div>
+ <button 
+ onClick={() => setShowQueue(true)}
+ className="h-8 px-3 bg-white/5 border border-white/10 rounded-lg active:scale-95 flex items-center justify-center gap-2"
+ >
+ <span className="text-[10px] font-black text-white uppercase tracking-widest">{state.draftCount}</span>
+ <Box className="w-4 h-4 text-slate-400" />
+ </button>
+ </div>
+ )}
 
  <div className="p-4 bg-slate-950 border-b border-white/5 shrink-0">
  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">ERP / Orden (Para siguientes bultos)</label>

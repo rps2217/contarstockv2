@@ -5,6 +5,7 @@ import { db } from '../../../db';
 import * as sessionService from '../../../services/sessionService';
 import { sanitizeBarcode } from '../../../services/utils';
 import { SoundFX } from '../../../services/audio';
+import { SessionRepository } from '../../../repositories/SessionRepository';
 
 export const useReceptionLogic = () => {
  const [lastAction, setLastAction] = useState<{type: 'success' | 'duplicate', label: string} | null>(null);
@@ -13,7 +14,7 @@ export const useReceptionLogic = () => {
  const [currentErp, setCurrentErp] = useState('');
 
  const unsyncedDrafts = useLiveQuery(() => 
- db.sessions.where('status').equals('draft').reverse().toArray()
+ SessionRepository.getDraftSessions()
  , [], []);
 
  const draftCount = unsyncedDrafts?.length || 0;
@@ -51,7 +52,7 @@ export const useReceptionLogic = () => {
  setIsFinalizing(true);
  try {
  const ids = unsyncedDrafts.map(d => d.id);
- await db.sessions.where('id').anyOf(ids).modify({ status: 'completed' });
+ await SessionRepository.markAsCompleted(ids);
  SoundFX.play('success');
  return true;
  } catch (e) {
@@ -63,14 +64,14 @@ export const useReceptionLogic = () => {
  }, [unsyncedDrafts]);
 
  const deleteDraft = async (id: string) => {
- await db.sessions.delete(id);
+ await SessionRepository.delete(id);
  SoundFX.play('delete');
  };
 
  // Fix: Added discardAll action to clear the entire reception queue as requested by ReceptionPage
  const discardAll = useCallback(async () => {
  if (confirm("¿Borrar toda la cola de recepción?")) {
- await db.sessions.where('status').equals('draft').delete();
+ await SessionRepository.deleteDrafts();
  SoundFX.play('delete');
  }
  }, []);

@@ -4,7 +4,7 @@ import { Home, Database, History, Container, Cloud, Box, Settings, Zap, FileText
 import { useNavigate } from 'react-router-dom';
 import { AppSettings } from '../types';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../db';
+import { ScanRepository } from '../repositories/ScanRepository';
 
 interface SidebarProps {
  view: string;
@@ -13,7 +13,7 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ view }) => {
  const navigate = useNavigate();
- const pendingCount = useLiveQuery(() => db.scans.where('synced').equals(0).count(), [], 0);
+ const pendingCount = useLiveQuery(() => ScanRepository.getPendingSyncCount(), [], 0);
  
  const NavItem = ({ path, label, icon: Icon, badge, activeKey }: { path: string, label: string, icon: any, badge?: number, activeKey: string }) => {
  const isActive = view === activeKey;
@@ -59,7 +59,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ view }) => {
  <div className="text-[9px] font-black text-slate-600 uppercase tracking-[0.4em] px-5 mb-6 mt-10">Advanced_Tools</div>
  <NavItem path="/massive/BURST-MODE" activeKey="massive" label="Modo_Martillo" icon={Zap} />
  <NavItem path="/reception" activeKey="reception" label="Reception" icon={Container} />
- <NavItem path="/documents" activeKey="documents" label="Doc_Scanner" icon={FileText} />
  <NavItem path="/sync" activeKey="sync" label="Cloud_Sync" icon={Cloud} badge={pendingCount} />
  </nav>
 

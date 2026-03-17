@@ -8,5 +8,8 @@ export interface IProductRepository {
   delete(barcode: string): Promise<void>;
   deleteAll(): Promise<void>;
   getAll(): Promise<Product[]>;
+  getLimited(limit: number): Promise<Product[]>;
+  getPendingSyncCount(): Promise<number>;
+  getPendingSync(): Promise<Product[]>;
   markAsSynced(barcodes: string[]): Promise<void>;
 }

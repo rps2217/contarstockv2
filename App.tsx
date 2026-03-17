@@ -14,7 +14,7 @@ import { Login } from './components/Login';
 import { InitializationService, InitStep } from './services/initializationService';
 import { ToastContainer } from './shared/components/ui/ToastContainer';
 import { useAutoSync } from './hooks/useAutoSync';
-import ReceptionPage from './features/reception/ReceptionPage';
+import ReceptionHub from './features/reception/ReceptionHub';
 
 // --- VISTAS MAESTRAS ---
 const Dashboard = lazyWithRetry(() => import('./features/dashboard/DashboardPage'));
@@ -129,7 +129,7 @@ const AppContent = () => {
                 <Route path="/settings" element={<Settings />} />
                 
                 {/* RUTAS MODULARES DE FEATURES */}
-                <Route path="/reception" element={<ReceptionPage />} />
+                <Route path="/reception" element={<ReceptionHub />} />
                 <Route path="/documents" element={<DocumentReceptionPage />} />
                 <Route path="/counting/:id" element={<CountingPage />} />
                 <Route path="/massive/:batchId" element={<HammerPage />} />

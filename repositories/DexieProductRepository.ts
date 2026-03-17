@@ -28,6 +28,18 @@ export class DexieProductRepository implements IProductRepository {
     return await db.products.toArray();
   }
 
+  async getLimited(limit: number): Promise<Product[]> {
+    return await db.products.limit(limit).toArray();
+  }
+
+  async getPendingSyncCount(): Promise<number> {
+    return await db.products.where('syncStatus').equals('pending').count();
+  }
+
+  async getPendingSync(): Promise<Product[]> {
+    return await db.products.where('syncStatus').equals('pending').toArray();
+  }
+
   async markAsSynced(barcodes: string[]): Promise<void> {
     if (barcodes.length === 0) return;
     await db.products.where('barcode').anyOf(barcodes).modify({ syncStatus: 'synced' });

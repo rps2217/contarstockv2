@@ -7,7 +7,7 @@ import { ScannerOverlay } from './components/ScannerOverlay';
 import { ScannerControls } from './components/ScannerControls';
 import { DocumentResults } from './components/DocumentResults';
 
-export const DocumentReceptionPage: React.FC = () => {
+export const DocumentReceptionPage: React.FC<{ isEmbedded?: boolean }> = ({ isEmbedded = false }) => {
   const navigate = useNavigate();
   const [mode, setMode] = useState<'idle' | 'camera' | 'upload'>('idle');
   const [autoShootEnabled, setAutoShootEnabled] = useState(true);
@@ -69,17 +69,28 @@ export const DocumentReceptionPage: React.FC = () => {
   return (
     <div className="h-full w-full bg-black overflow-y-auto no-scrollbar pb-32 font-mono text-white">
       {/* HEADER */}
-      <header className="px-6 py-6 border-b-4 border-white/5 bg-slate-900/20 sticky top-0 z-50 flex items-center gap-4">
-        <button onClick={() => navigate('/dashboard')} className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl active:bg-blue-600 transition-colors">
-          <ChevronLeft className="w-6 h-6 text-white" />
-        </button>
-        <div>
-          <h1 className="text-2xl font-black text-white italic tracking-tighter uppercase leading-none">
-            DOC<span className="text-blue-500">RECEPTION</span>
-          </h1>
-          <span className="text-[9px] font-black text-slate-500 tracking-[0.3em] uppercase">Procesamiento de Guías</span>
+      {!isEmbedded && (
+        <header className="px-6 py-6 border-b-4 border-white/5 bg-slate-900/20 sticky top-0 z-50 flex items-center gap-4">
+          <button onClick={() => navigate('/dashboard')} className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl active:bg-blue-600 transition-colors">
+            <ChevronLeft className="w-6 h-6 text-white" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-black text-white italic tracking-tighter uppercase leading-none">
+              DOC<span className="text-blue-500">RECEPTION</span>
+            </h1>
+            <span className="text-[9px] font-black text-slate-500 tracking-[0.3em] uppercase">Procesamiento de Guías</span>
+          </div>
+        </header>
+      )}
+
+      {isEmbedded && (
+        <div className="h-12 px-4 flex items-center justify-between border-b border-white/10 bg-slate-900 shrink-0 z-50">
+          <div className="flex flex-col">
+            <span className="text-[8px] font-black uppercase tracking-[0.3em] text-white/40 leading-none mb-1">MODO</span>
+            <span className="text-xs font-black uppercase tracking-widest text-white italic">Recepción con Guía</span>
+          </div>
         </div>
-      </header>
+      )}
 
       <div className="p-6 max-w-4xl mx-auto space-y-6">
         

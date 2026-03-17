@@ -1,7 +1,7 @@
 
-import React, { useEffect, useRef, useState } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
-import { Lock, AlertTriangle, CheckCircle2, Target, Zap, Activity } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { AlertTriangle, CheckCircle2, Target, Zap, Activity } from 'lucide-react';
+import { useOpticalEngine } from '../hooks/useOpticalEngine';
 
 interface CameraScannerProps {
  onScan: (code: string) => void;
@@ -11,113 +11,22 @@ interface CameraScannerProps {
 }
 
 export const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose, inline = true, isTriggered = false }) => {
- const [error, setError] = useState<string | null>(null);
  const [feedbackStatus, setFeedbackStatus] = useState<'success' | null>(null);
- const [engineType, setEngineType] = useState<'native' | 'wasm' | 'init'>('init');
  
- const videoRef = useRef<HTMLVideoElement>(null);
- const scannerRef = useRef<Html5Qrcode | null>(null);
- const streamRef = useRef<MediaStream | null>(null);
- const requestRef = useRef<number | undefined>(undefined);
- 
- const lastScanTime = useRef(0);
- // Si no es inline (ej: modal QR), forzamos trigger true para que se vea la cámara
  const effectiveTrigger = inline ? isTriggered : true;
- const triggerRef = useRef(effectiveTrigger);
- const isComponentMounted = useRef(true);
-
  const SCANNER_DOM_ID = "v8-core-optical-engine";
 
- useEffect(() => { triggerRef.current = effectiveTrigger; }, [effectiveTrigger]);
-
- const startNativeEngine = async () => {
- try {
- const stream = await navigator.mediaDevices.getUserMedia({ 
- video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } 
- });
- streamRef.current = stream;
- if (videoRef.current) { videoRef.current.srcObject = stream; await videoRef.current.play(); }
-
- const formats = ['qr_code', 'ean_13', 'code_128', 'code_39', 'ean_8', 'upc_a', 'itf'];
- let detector: any;
- try {
- // @ts-ignore
- detector = new window.BarcodeDetector({ formats });
- setEngineType('native');
- } catch (e) {
- startLegacyEngine();
- return;
- }
-
- let lastDetectTime = 0;
- const detectLoop = async (timestamp: number) => {
- if (!videoRef.current || !isComponentMounted.current) return;
- 
- // Throttle to ~10fps (100ms) to save CPU on low-end PDAs
- if (timestamp - lastDetectTime >= 100) {
- try {
- if (triggerRef.current && videoRef.current.readyState === 4) {
- const barcodes = await detector.detect(videoRef.current);
- if (barcodes.length > 0) handleSuccessfulScan(barcodes[0].rawValue);
- }
- } catch (e) {}
- lastDetectTime = timestamp;
- }
- requestRef.current = requestAnimationFrame(detectLoop);
- };
- requestRef.current = requestAnimationFrame(detectLoop);
- } catch (err) {
- startLegacyEngine();
- }
- };
-
- const startLegacyEngine = async () => {
- try {
- const oldScanner = document.getElementById(SCANNER_DOM_ID);
- if (oldScanner) oldScanner.innerHTML = "";
- const scannerInstance = new Html5Qrcode(SCANNER_DOM_ID);
- scannerRef.current = scannerInstance;
- setEngineType('wasm');
- await scannerInstance.start(
- { facingMode: "environment" }, 
- { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
- (decodedText) => { if (triggerRef.current) handleSuccessfulScan(decodedText); },
- () => {}
- );
- } catch (err: any) {
- if (isComponentMounted.current) setError("OPTICAL_ENGINE_FAILURE");
- }
- };
-
- const handleSuccessfulScan = (code: string) => {
- if (!isComponentMounted.current) return;
- const now = Date.now();
- if (now - lastScanTime.current < 1000) return;
- lastScanTime.current = now;
- 
+ const handleScan = (code: string) => {
  setFeedbackStatus('success');
- if (navigator.vibrate) navigator.vibrate(40);
  onScan(code);
- setTimeout(() => { if (isComponentMounted.current) setFeedbackStatus(null); }, 250);
+ setTimeout(() => setFeedbackStatus(null), 250);
  };
 
- useEffect(() => {
- isComponentMounted.current = true;
- // @ts-ignore
- if ('BarcodeDetector' in window && typeof window.BarcodeDetector === 'function') {
- startNativeEngine();
- } else {
- startLegacyEngine();
- }
- return () => {
- isComponentMounted.current = false;
- if (requestRef.current) cancelAnimationFrame(requestRef.current);
- if (streamRef.current) streamRef.current.getTracks().forEach(track => track.stop());
- if (scannerRef.current && scannerRef.current.isScanning) {
- scannerRef.current.stop().catch(() => {}).finally(() => { scannerRef.current = null; });
- }
- };
- }, []);
+ const { videoRef, error, engineType } = useOpticalEngine({
+ onScan: handleScan,
+ isTriggered: effectiveTrigger,
+ scannerDomId: SCANNER_DOM_ID
+ });
 
  return (
  <div className={`${inline ? 'w-full h-full relative' : 'fixed inset-0 z-[100]'} bg-black overflow-hidden`}>

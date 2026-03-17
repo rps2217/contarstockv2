@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Home, Database, History, Cloud, Container, Settings, Zap, FileText } from 'lucide-react';
 import { AppSettings, ViewState } from '../types';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../db';
+import { ScanRepository } from '../repositories/ScanRepository';
 
 interface Props {
  currentView: string;
@@ -13,19 +13,18 @@ interface Props {
 
 export const BottomDock: React.FC<Props> = ({ currentView, settings }) => {
  const navigate = useNavigate();
- const pendingSync = useLiveQuery(() => db.scans.where('synced').equals(0).count(), [], 0);
+ const pendingSync = useLiveQuery(() => ScanRepository.getPendingSyncCount(), [], 0);
 
  const iconMap: Partial<Record<ViewState, { label: string, icon: any, path: string }>> = {
  'dashboard': { label: 'HOME', icon: Home, path: '/dashboard' },
  'reports': { label: 'LOGS', icon: History, path: '/reports' },
  'database': { label: 'DB', icon: Database, path: '/database' },
  'reception': { label: 'INBOUND', icon: Container, path: '/reception' },
- 'documents': { label: 'DOCS', icon: FileText, path: '/documents' },
  'sync': { label: 'SYNC', icon: Cloud, path: '/sync' },
  'settings': { label: 'SETUP', icon: Settings, path: '/settings' }
  };
 
- const activeNavKeys = settings.mobileNavConfig?.filter(k => k !== 'massive') || ['dashboard', 'reports', 'sync'];
+ const activeNavKeys = settings.mobileNavConfig?.filter(k => k !== 'massive' && k !== 'documents') || ['dashboard', 'reports', 'sync'];
  
  return (
  <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[100] bg-slate-950/95 border-t-2 border-white/10 px-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-3 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">

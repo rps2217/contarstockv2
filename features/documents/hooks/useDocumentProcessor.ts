@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import * as documentProcessor from '../../../services/documentProcessor';
 import { SoundFX } from '../../../services/audio';
-import { db } from '../../../db';
+import { ExpectedOrderRepository } from '../../../repositories/ExpectedOrderRepository';
 
 export const useDocumentProcessor = () => {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -38,7 +38,7 @@ export const useDocumentProcessor = () => {
   const handleSave = useCallback(async () => {
     if (!result) return;
     try {
-      await db.expectedOrders.put({
+      await ExpectedOrderRepository.save({
         id: result.erpOrder,
         internalId: result.erpOrder,
         items: result.items,
