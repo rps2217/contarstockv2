@@ -43,9 +43,11 @@ const mapStatusToSound = (status: FeedbackStatus) => {
 
 const mapStatusToVibration = (status: FeedbackStatus) => {
  switch (status) {
- case 'success': return 40;
- case 'error': return [100, 50, 100];
- case 'undo': return 30;
- default: return 10;
+ case 'success': return [50, 30, 50]; // Double tap for success
+ case 'error': return [100, 50, 100, 50, 200]; // Long aggressive buzz for error
+ case 'undo': return [30, 100, 30]; // Reverse pattern
+ case 'warning': return [150, 50, 150];
+ case 'unknown': return [60, 40, 60];
+ default: return 20;
  }
 };

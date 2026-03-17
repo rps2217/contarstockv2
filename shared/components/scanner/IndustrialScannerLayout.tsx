@@ -109,6 +109,12 @@ export const IndustrialScannerLayout: React.FC<IndustrialScannerLayoutProps> = (
 
   return (
     <div className="flex-1 min-h-0 flex flex-col bg-black relative z-10">
+      {/* FULL SCREEN FLASH OVERLAY (TACTICAL EVOLUTION) */}
+      {feedback === 'success' && <div className="fixed inset-0 bg-emerald-500/40 z-[200] pointer-events-none animate-in fade-in duration-100" />}
+      {feedback === 'error' && <div className="fixed inset-0 bg-rose-600/60 z-[200] pointer-events-none animate-in fade-in duration-100" />}
+      {feedback === 'unknown' && <div className="fixed inset-0 bg-amber-500/40 z-[200] pointer-events-none animate-in fade-in duration-100" />}
+      {feedback === 'undo' && <div className="fixed inset-0 bg-blue-500/40 z-[200] pointer-events-none animate-in fade-in duration-100" />}
+
       <ScannerHeader 
         onBack={onBack}
         location={location}
