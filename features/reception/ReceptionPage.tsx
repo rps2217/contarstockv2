@@ -145,19 +145,37 @@ export const ReceptionPage: React.FC<{
       
       {/* STATUS BAR - TRAY PROGRESS */}
       <div className="p-6 bg-slate-900 border-b border-white/10 shrink-0">
-        <div className="flex justify-between items-end mb-4">
-          <div>
-            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">PROGRESO DE ARRIBO</span>
-            <div className="flex items-baseline gap-2">
-              <span className="text-5xl font-black italic tracking-tighter">{state.draftCount}</span>
-              <span className="text-xl font-bold text-slate-600">/ {expectedCount}</span>
+        <div className="flex justify-between items-start mb-4">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => navigate('/dashboard')}
+              className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-slate-400 active:bg-white/10"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+            <div>
+              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">PROGRESO DE ARRIBO</span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-5xl font-black italic tracking-tighter">{state.draftCount}</span>
+                <span className="text-xl font-bold text-slate-600">/ {expectedCount}</span>
+              </div>
             </div>
           </div>
-          <div className="text-right">
-            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">ESTADO</span>
-            <span className={`text-xs font-black uppercase tracking-widest ${isComplete ? 'text-emerald-500' : 'text-blue-500'}`}>
-              {isComplete ? 'COMPLETO' : 'PENDIENTE'}
-            </span>
+          <div className="flex flex-col items-end gap-2">
+            <div className="text-right">
+              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">ESTADO</span>
+              <span className={`text-xs font-black uppercase tracking-widest ${isComplete ? 'text-emerald-500' : 'text-blue-500'}`}>
+                {isComplete ? 'COMPLETO' : 'PENDIENTE'}
+              </span>
+            </div>
+            {state.draftCount > 0 && (
+              <button 
+                onClick={() => setShowQueue(true)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-900/40 active:scale-95 transition-all"
+              >
+                FINALIZAR
+              </button>
+            )}
           </div>
         </div>
         
@@ -192,6 +210,7 @@ export const ReceptionPage: React.FC<{
         onOpenManual={() => setShowKeypad(true)}
         onTriggerStart={startTrigger}
         onTriggerEnd={endTrigger}
+        onOpenMenu={() => setShowQueue(true)}
       />
 
       {isTriggerActive && (

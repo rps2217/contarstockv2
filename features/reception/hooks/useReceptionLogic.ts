@@ -6,6 +6,8 @@ import * as sessionService from '../../../services/sessionService';
 import { sanitizeBarcode } from '../../../services/utils';
 import { SoundFX } from '../../../services/audio';
 import { SessionRepository } from '../../../repositories/SessionRepository';
+import * as syncManager from '../../../services/syncManager';
+import { useToastStore } from '../../../store/useToastStore';
 
 export const useReceptionLogic = () => {
   const [lastAction, setLastAction] = useState<{type: 'success' | 'duplicate', label: string} | null>(null);
@@ -14,6 +16,8 @@ export const useReceptionLogic = () => {
   const [currentErp, setCurrentErp] = useState('');
   const [isExpiryMode, setIsExpiryMode] = useState(false);
   const [pendingExpiryScan, setPendingExpiryScan] = useState<{code: string, erp?: string} | null>(null);
+
+  const { addToast } = useToastStore();
 
   const unsyncedDrafts = useLiveQuery(() => 
     SessionRepository.getDraftSessions()
@@ -74,20 +78,41 @@ export const useReceptionLogic = () => {
   }, [pendingExpiryScan]);
 
   const finalizeReception = useCallback(async () => {
- if (!unsyncedDrafts?.length) return false;
- setIsFinalizing(true);
- try {
- const ids = unsyncedDrafts.map(d => d.id);
- await SessionRepository.markAsCompleted(ids);
- SoundFX.play('success');
- return true;
- } catch (e) {
- SoundFX.play('error');
- return false;
- } finally {
- setIsFinalizing(false);
- }
- }, [unsyncedDrafts]);
+    if (!unsyncedDrafts?.length) return false;
+    setIsFinalizing(true);
+    try {
+      const ids = unsyncedDrafts.map(d => d.id);
+      await SessionRepository.markAsCompleted(ids);
+      SoundFX.play('success');
+      
+      // Automatic cloud synchronization
+      if (navigator.onLine) {
+        addToast('Sincronizando recepción con la nube...', 'info');
+        const groups = await syncManager.getPendingUploadGroups();
+        const receptionGroup = groups.find(g => g.type === 'reception');
+        
+        if (receptionGroup) {
+          try {
+            await syncManager.performBatchUpload(receptionGroup);
+            addToast('Recepción sincronizada correctamente', 'success');
+          } catch (syncError) {
+            console.error('Sync error:', syncError);
+            addToast('Error al sincronizar. Se reintentará automáticamente.', 'warning');
+          }
+        }
+      } else {
+        addToast('Recepción guardada localmente. Se sincronizará al conectar.', 'info');
+      }
+      
+      return true;
+    } catch (e) {
+      SoundFX.play('error');
+      addToast('Error al finalizar la recepción', 'error');
+      return false;
+    } finally {
+      setIsFinalizing(false);
+    }
+  }, [unsyncedDrafts, addToast]);
 
  const deleteDraft = async (id: string) => {
  await SessionRepository.delete(id);

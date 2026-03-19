@@ -10,6 +10,7 @@ interface ScannerFooterProps {
  onOpenManual: () => void;
  onTriggerStart: () => void;
  onTriggerEnd: () => void;
+ onOpenMenu?: () => void;
 }
 
 /**
@@ -17,7 +18,7 @@ interface ScannerFooterProps {
  * Optimizado para PDAs con arco de pulgar ergonómico.
  */
 export const ScannerFooter: React.FC<ScannerFooterProps> = ({ 
- multiplier, unitsPerBox, isTriggerActive, onMultiplierChange, onOpenManual, onTriggerStart, onTriggerEnd 
+ multiplier, unitsPerBox, isTriggerActive, onMultiplierChange, onOpenManual, onTriggerStart, onTriggerEnd, onOpenMenu 
 }) => {
  return (
  <div className="h-28 shrink-0 bg-slate-950 border-t-2 border-white/5 flex items-center px-4 gap-3 pb-safe-area shadow-[0_-20px_50px_rgba(0,0,0,0.8)] z-50 relative">
@@ -77,7 +78,8 @@ export const ScannerFooter: React.FC<ScannerFooterProps> = ({
  )}
  
  <button 
- className="h-12 w-14 bg-slate-900 border border-white/10 rounded-2xl flex items-center justify-center text-slate-500 active:bg-slate-800"
+ onClick={onOpenMenu}
+ className={`h-12 w-14 bg-slate-900 border border-white/10 rounded-2xl flex items-center justify-center active:bg-slate-800 transition-all ${onOpenMenu ? 'text-blue-500' : 'text-slate-500'}`}
  >
  <MoreHorizontal className="w-5 h-5" />
  </button>
