@@ -20,24 +20,26 @@ export const ScreenLockOverlay: React.FC<Props> = ({ isLocked, onUnlock }) => {
  const UPDATE_INTERVAL = 16;
 
  useEffect(() => {
- if (isHolding) {
- const step = 100 / (UNLOCK_DURATION / UPDATE_INTERVAL);
- intervalRef.current = setInterval(() => {
- setProgress(prev => {
- const next = prev + step;
- if (next >= 100) {
- handleUnlockTrigger();
- return 100;
- }
- return next;
- });
- }, UPDATE_INTERVAL);
- } else {
- if (intervalRef.current) clearInterval(intervalRef.current);
- setProgress(0);
- }
- return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
- }, [isHolding]);
+  if (isHolding) {
+  const step = 100 / (UNLOCK_DURATION / UPDATE_INTERVAL);
+  intervalRef.current = setInterval(() => {
+  setProgress(prev => {
+  const next = prev + step;
+  return next >= 100 ? 100 : next;
+  });
+  }, UPDATE_INTERVAL);
+  } else {
+  if (intervalRef.current) clearInterval(intervalRef.current);
+  setProgress(0);
+  }
+  return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [isHolding]);
+
+  useEffect(() => {
+  if (progress >= 100) {
+  handleUnlockTrigger();
+  }
+  }, [progress]);
 
  const handleUnlockTrigger = () => {
  if (intervalRef.current) clearInterval(intervalRef.current);

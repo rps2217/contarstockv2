@@ -3,9 +3,10 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { sanitizeBarcode } from '../../../services/utils';
 import { useScanPipeline } from '../../../shared/hooks/useScanPipeline';
 import { Product } from '../../../types';
-import { SoundFX } from '../../../services/audio';
 import { MassiveDbRepository } from '../../../repositories/MassiveDbRepository';
 import { productRepository } from '../../../repositories/DexieProductRepository';
+import { pushScansToCloud } from '../../../services/massiveSync';
+import { logger } from '../../../services/logger';
 
 export interface HammerItem {
   barcode: string;
@@ -14,17 +15,16 @@ export interface HammerItem {
   totalQuantity: number;
   expectedQty?: number;
   lastTimestamp: number;
-  embedding?: number[];
 }
 
 export const useHammerLogic = (batchId: string) => {
   const { engine, processScan } = useScanPipeline(1);
   const [currentLocation, setCurrentLocation] = useState(() => localStorage.getItem('hammer_loc') || 'ZONA-A');
+  const [isSyncing, setIsSyncing] = useState(false);
   
   const [optimisticItems, setOptimisticItems] = useState<HammerItem[]>([]);
   const writeQueue = useRef<{barcode: string, qty: number, loc: string, ts: number}[]>([]);
   
-  // REFS DE ESTABILIZACIÓN: Imprescindibles para que el escáner HID no se resetee
   const multiplierRef = useRef(1);
   const locationRef = useRef(currentLocation);
 
@@ -36,6 +36,7 @@ export const useHammerLogic = (batchId: string) => {
 
   const dbItems = useLiveQuery(async () => {
     if (!batchId) return [];
+    
     const [rawScans, manifests] = await Promise.all([
       MassiveDbRepository.getBlindScansByBatch(batchId),
       MassiveDbRepository.getBlindManifestsByBatch(batchId)
@@ -43,8 +44,7 @@ export const useHammerLogic = (batchId: string) => {
     
     const uniqueBarcodes = Array.from(new Set([...rawScans.map(s => s.barcode), ...manifests.map(m => m.barcode)]));
     const products = uniqueBarcodes.length > 0 ? await Promise.all(uniqueBarcodes.map(b => productRepository.getById(b))) : [];
-    const validProducts = products.filter(p => p !== undefined) as Product[];
-    const prodMap = new Map<string, Product>(validProducts.map(p => [p.barcode, p]));
+    const prodMap = new Map<string, Product>(products.filter(p => !!p).map(p => [p!.barcode, p!]));
     
     const aggregation = new Map<string, HammerItem>();
 
@@ -78,14 +78,9 @@ export const useHammerLogic = (batchId: string) => {
       }
     });
 
-    const sorted = Array.from(aggregation.values()).sort((a, b) => {
-      return b.lastTimestamp - a.lastTimestamp;
-    });
-
-    return sorted;
+    return Array.from(aggregation.values()).sort((a, b) => b.lastTimestamp - a.lastTimestamp);
   }, [batchId, engine.activeBarcode, engine.feedback]);
 
-  // Sincronizar items optimistas con DB
   useEffect(() => {
     if (dbItems && writeQueue.current.length === 0) {
       setOptimisticItems(dbItems);
@@ -102,6 +97,7 @@ export const useHammerLogic = (batchId: string) => {
           batchId, barcode: b.barcode, quantity: b.qty, location: b.loc, timestamp: b.ts
         })));
       } catch (e) {
+        console.error('[HammerLogic] Write failed, returning to queue', e);
         writeQueue.current = [...batch, ...writeQueue.current];
       }
     }, 400);
@@ -116,35 +112,44 @@ export const useHammerLogic = (batchId: string) => {
     const isManualEdit = qtyOverride !== undefined;
     
     const existingItem = optimisticItems.find(i => i.barcode === clean);
-    const ts = (isManualEdit && existingItem) ? existingItem.lastTimestamp : Date.now();
+    const ts = Date.now();
     const currentQty = existingItem?.totalQuantity || 0;
+
+    // Si es edición manual, usamos una transacción atómica en el repositorio
+    if (isManualEdit) {
+      try {
+        await MassiveDbRepository.updateScanQuantity(batchId, clean, delta, locationRef.current);
+        engine.actions.triggerFeedback('success');
+      } catch (e) {
+        engine.actions.triggerFeedback('error');
+        logger.error('HAMMER_EDIT_FAIL', `Error editando ${clean}`);
+      }
+      return;
+    }
 
     processScan(
       clean,
       delta,
       currentQty,
       (cleanBarcode, newQty) => {
-        // ACTUALIZACIÓN OPTIMISTA DE LA LISTA
         setOptimisticItems(prev => {
           const existingIdx = prev.findIndex(i => i.barcode === cleanBarcode);
           if (existingIdx !== -1) {
             const updated = [...prev];
-            const item = { ...updated[existingIdx] };
-            item.totalQuantity = newQty;
-            item.lastTimestamp = ts;
-            updated[existingIdx] = item;
-            
+            updated[existingIdx] = { 
+              ...updated[existingIdx], 
+              totalQuantity: newQty, 
+              lastTimestamp: ts 
+            };
             return updated.sort((a, b) => b.lastTimestamp - a.lastTimestamp);
           } else {
-            // Nuevo item optimista
-            const newItem: HammerItem = {
+            return [{
               barcode: cleanBarcode,
               name: 'Cargando...',
               totalQuantity: newQty,
               lastTimestamp: ts,
               loc: locationRef.current
-            };
-            return [newItem, ...prev];
+            }, ...prev];
           }
         });
       },
@@ -159,7 +164,20 @@ export const useHammerLogic = (batchId: string) => {
         });
       }
     );
-  }, [processScan, optimisticItems]);
+  }, [processScan, optimisticItems, batchId]);
+
+  const syncToCloud = async () => {
+    if (isSyncing) return;
+    setIsSyncing(true);
+    try {
+      await pushScansToCloud(batchId);
+      engine.actions.triggerFeedback('success');
+    } catch (e) {
+      engine.actions.triggerFeedback('error');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   return { 
     state: { 
@@ -169,19 +187,19 @@ export const useHammerLogic = (batchId: string) => {
       feedback: engine.feedback,
       multiplier: engine.multiplier,
       optimisticQty: engine.optimisticQty,
-      currentLocation
+      currentLocation,
+      isSyncing
     },
     actions: { 
       setMultiplier: engine.setMultiplier,
       setCurrentLocation, 
       registerScan, 
+      syncToCloud,
       removeItem: async (barcode: string) => {
         if (barcode === 'ALL') {
-          if (!confirm("¿Eliminar todos los registros de este bulto?")) return;
           await MassiveDbRepository.deleteBlindScansByBatch(batchId);
           setOptimisticItems([]);
         } else {
-          if (!confirm(`¿Eliminar registros de ${barcode}?`)) return;
           await MassiveDbRepository.deleteBlindScan(batchId, barcode);
           setOptimisticItems(prev => prev.filter(i => i.barcode !== barcode));
         }

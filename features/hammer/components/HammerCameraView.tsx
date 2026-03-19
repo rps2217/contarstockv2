@@ -19,6 +19,8 @@ interface HammerCameraViewProps {
  feedback: FeedbackStatus;
  items: HammerItem[];
  isVoiceEnabled?: boolean;
+ onSync?: () => void;
+ isSyncing?: boolean;
 }
 
 export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
@@ -35,7 +37,9 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
  optimisticQty,
  feedback,
  items,
- isVoiceEnabled = false
+ isVoiceEnabled = false,
+ onSync,
+ isSyncing = false
 }) => {
  const activeItemName = activeProduct?.name || items.find(i => i.barcode === activeBarcode)?.name;
 
@@ -55,6 +59,8 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
  items={items}
  isVoiceEnabled={isVoiceEnabled}
  allowEditQuantity={true}
+ onSync={onSync}
+ isSyncing={isSyncing}
  />
  );
 };

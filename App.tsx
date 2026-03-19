@@ -27,6 +27,8 @@ const Settings = lazyWithRetry(() => import('./features/settings/SettingsPage'))
 const CountingPage = lazyWithRetry(() => import('./features/counting/CountingPage'));
 const HammerPage = lazyWithRetry(() => import('./features/hammer/HammerPage'));
 const DocumentReceptionPage = lazyWithRetry(() => import('./features/documents/DocumentReceptionPage'));
+const VisualPicking = lazyWithRetry(() => import('./features/visualPicking/VisualPickingPage'));
+const ExpiryManagement = lazyWithRetry(() => import('./features/expiry/ExpiryManagementPage'));
 
 const AppContent = () => {
   const location = useLocation();
@@ -42,6 +44,8 @@ const AppContent = () => {
   const isScanningMode = location.pathname.startsWith('/counting/') || 
     location.pathname === '/reception' || 
     location.pathname === '/documents' ||
+    location.pathname === '/visual-picking' ||
+    location.pathname === '/expiry' ||
     location.pathname.startsWith('/massive/');
 
   useEffect(() => {
@@ -131,6 +135,8 @@ const AppContent = () => {
                 {/* RUTAS MODULARES DE FEATURES */}
                 <Route path="/reception" element={<ReceptionHub />} />
                 <Route path="/documents" element={<DocumentReceptionPage />} />
+                <Route path="/visual-picking" element={<VisualPicking />} />
+                <Route path="/expiry" element={<ExpiryManagement />} />
                 <Route path="/counting/:id" element={<CountingPage />} />
                 <Route path="/massive/:batchId" element={<HammerPage />} />
                 

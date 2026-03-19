@@ -9,7 +9,8 @@ import { ScannerFooter } from '../../shared/components/controls/ScannerFooter';
 import { VirtualList } from '../../shared/components/ui/VirtualList';
 import { ScreenLockOverlay } from '../../shared/components/ui/ScreenLockOverlay';
 import { NumericKeypad } from '../../components/NumericKeypad';
-import { ChevronLeft, Box, Trash2, Camera, Loader2 } from 'lucide-react';
+import { ExpirationModal } from '../expiry/components/ExpirationModal';
+import { ChevronLeft, Box, Trash2, Camera, Loader2, Calendar } from 'lucide-react';
 import { useAutoLock } from '../../hooks/useAutoLock';
 import { useHIDScanner } from '../../hooks/useHIDScanner';
 import * as documentProcessor from '../../services/documentProcessor';
@@ -58,191 +59,174 @@ const ReceptionRow = React.memo(({ index, data }: any) => {
  );
 });
 
-export const ReceptionPage: React.FC<{ isEmbedded?: boolean }> = ({ isEmbedded = false }) => {
- const navigate = useNavigate();
- const { state, actions } = useReceptionLogic();
- const { isLocked, unlock, lock } = useAutoLock(3000);
- 
- const [isTriggerActive, setIsTriggerActive] = useState(false);
- const [showKeypad, setShowKeypad] = useState(false);
- const [showQueue, setShowQueue] = useState(false);
- const [isOcrLoading, setIsOcrLoading] = useState(false);
+export const ReceptionPage: React.FC<{ 
+  isEmbedded?: boolean;
+  initialExpectedCount?: number;
+  initialErp?: string;
+}> = ({ isEmbedded = false, initialExpectedCount, initialErp }) => {
+  const navigate = useNavigate();
+  const { state, actions } = useReceptionLogic();
+  const { isLocked, unlock, lock } = useAutoLock(3000);
+  
+  const [isTriggerActive, setIsTriggerActive] = useState(false);
+  const [showKeypad, setShowKeypad] = useState(false);
+  const [showQueue, setShowQueue] = useState(false);
+  const [expectedCount, setExpectedCount] = useState<number>(initialExpectedCount || 0);
+  const [isSettingExpected, setIsSettingExpected] = useState(!initialExpectedCount);
 
- // ESCUCHA DE HARDWARE
- useHIDScanner({
- onScan: (barcode) => actions.handleScan(barcode, state.currentErp),
- isEnabled: !isLocked && !showKeypad && !showQueue && !isOcrLoading,
- maxLatency: 50
- });
+  // Initialize ERP if provided
+  React.useEffect(() => {
+    if (initialErp) {
+      actions.setCurrentErp(initialErp);
+    }
+  }, [initialErp, actions.setCurrentErp]);
 
- const handleOcrCapture = async (event: React.ChangeEvent<HTMLInputElement>) => {
- const file = event.target.files?.[0];
- if (!file) return;
+  // ESCUCHA DE HARDWARE
+  useHIDScanner({
+    onScan: (barcode) => actions.handleScan(barcode, state.currentErp),
+    isEnabled: !isLocked && !showKeypad && !showQueue && !isSettingExpected,
+    maxLatency: 50
+  });
 
- setIsOcrLoading(true);
- const reader = new FileReader();
- reader.onload = async (e) => {
- const base64 = (e.target?.result as string).split(',')[1];
- try {
- const erp = await documentProcessor.extractERPFromPhoto(base64);
- if (erp) {
- actions.setCurrentErp(erp);
- SoundFX.play('success');
- } else {
- SoundFX.play('error');
- alert("No se encontró un número de ERP válido en la imagen.");
- }
- } catch (err) {
- SoundFX.play('error');
- } finally {
- setIsOcrLoading(false);
- }
- };
- reader.readAsDataURL(file);
- };
+  const startTrigger = useCallback(() => {
+    if (isLocked) return;
+    setIsTriggerActive(true);
+    if (navigator.vibrate) navigator.vibrate(30);
+  }, [isLocked]);
 
- const startTrigger = useCallback(() => {
- if (isLocked) return;
- setIsTriggerActive(true);
- if (navigator.vibrate) navigator.vibrate(30);
- }, [isLocked]);
+  const endTrigger = useCallback(() => {
+    setIsTriggerActive(false);
+  }, []);
 
- const endTrigger = useCallback(() => {
- setIsTriggerActive(false);
- }, []);
+  const drafts = state.unsyncedDrafts || [];
+  const rowData = React.useMemo(() => ({ onDelete: actions.deleteDraft, items: drafts }), [actions.deleteDraft, drafts]);
 
- const drafts = state.unsyncedDrafts || [];
- const rowData = React.useMemo(() => ({ onDelete: actions.deleteDraft, items: drafts }), [actions.deleteDraft, drafts]);
+  const handleKeypadConfirm = (value: string) => {
+    actions.handleScan(value, state.currentErp);
+    setShowKeypad(false);
+  };
 
- const handleKeypadConfirm = (value: string) => {
- actions.handleScan(value, state.currentErp);
- setShowKeypad(false);
- };
+  const handleSetExpected = (val: string) => {
+    const num = parseInt(val);
+    if (!isNaN(num)) {
+      setExpectedCount(num);
+      setIsSettingExpected(false);
+    }
+  };
 
- const containerClass = state.flashActive 
- ? 'bg-blue-600' 
- : (state.lastAction?.type === 'duplicate' ? 'bg-rose-950' : 'bg-black');
+  const progress = expectedCount > 0 ? (state.draftCount / expectedCount) * 100 : 0;
+  const isComplete = expectedCount > 0 && state.draftCount >= expectedCount;
 
- return (
- <div className={`h-full w-full flex flex-col font-mono select-none overflow-hidden text-white transition-colors duration-200 ${containerClass}`}>
- 
- {!isEmbedded && (
- <div className="h-16 px-4 flex items-center justify-between border-b border-white/10 bg-slate-900 shadow-2xl shrink-0 z-50">
- <button onClick={() => navigate('/dashboard')} className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl active:bg-blue-600 transition-colors">
- <ChevronLeft className="w-6 h-6 text-white" />
- </button>
- <div className="flex flex-col items-center">
- <span className="text-[8px] font-black uppercase tracking-[0.3em] text-white/40 leading-none mb-1">RECEPCIÓN</span>
- <span className="text-xs font-black uppercase tracking-widest text-white italic">Blind_Entry</span>
- </div>
- <div className="flex items-center gap-2">
- <button 
- onClick={() => setShowQueue(true)}
- className="h-10 px-4 bg-white/5 border border-white/10 rounded-xl active:scale-95 flex items-center justify-center gap-2"
- >
- <span className="text-[10px] font-black text-white uppercase tracking-widest">{state.draftCount}</span>
- <Box className="w-4 h-4 text-slate-400" />
- </button>
- </div>
- </div>
- )}
+  if (isSettingExpected) {
+    return (
+      <div className="h-full w-full bg-black flex flex-col items-center justify-center p-8 text-center">
+        <div className="w-20 h-20 bg-blue-600/20 rounded-3xl flex items-center justify-center mb-6 border border-blue-500/30">
+          <Box className="w-10 h-10 text-blue-500" />
+        </div>
+        <h2 className="text-2xl font-black uppercase tracking-tighter italic mb-2">Control de Arribo</h2>
+        <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-8 max-w-xs">
+          ¿Cuántas bandejas o bultos esperas recibir según el manifiesto?
+        </p>
+        <div className="w-full max-w-xs">
+          <NumericKeypad 
+            isOpen={true}
+            title="CANTIDAD ESPERADA"
+            onConfirm={handleSetExpected}
+            onClose={() => navigate('/dashboard')}
+            embedded
+          />
+        </div>
+      </div>
+    );
+  }
 
- {isEmbedded && (
- <div className="h-12 px-4 flex items-center justify-between border-b border-white/10 bg-slate-900 shrink-0 z-50">
- <div className="flex flex-col">
- <span className="text-[8px] font-black uppercase tracking-[0.3em] text-white/40 leading-none mb-1">MODO</span>
- <span className="text-xs font-black uppercase tracking-widest text-white italic">Recepción Ciega</span>
- </div>
- <button 
- onClick={() => setShowQueue(true)}
- className="h-8 px-3 bg-white/5 border border-white/10 rounded-lg active:scale-95 flex items-center justify-center gap-2"
- >
- <span className="text-[10px] font-black text-white uppercase tracking-widest">{state.draftCount}</span>
- <Box className="w-4 h-4 text-slate-400" />
- </button>
- </div>
- )}
+  return (
+    <div className={`h-full w-full flex flex-col font-mono select-none overflow-hidden text-white transition-colors duration-200 ${isComplete ? 'bg-emerald-950/20' : 'bg-black'}`}>
+      
+      {/* STATUS BAR - TRAY PROGRESS */}
+      <div className="p-6 bg-slate-900 border-b border-white/10 shrink-0">
+        <div className="flex justify-between items-end mb-4">
+          <div>
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">PROGRESO DE ARRIBO</span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-5xl font-black italic tracking-tighter">{state.draftCount}</span>
+              <span className="text-xl font-bold text-slate-600">/ {expectedCount}</span>
+            </div>
+          </div>
+          <div className="text-right">
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">ESTADO</span>
+            <span className={`text-xs font-black uppercase tracking-widest ${isComplete ? 'text-emerald-500' : 'text-blue-500'}`}>
+              {isComplete ? 'COMPLETO' : 'PENDIENTE'}
+            </span>
+          </div>
+        </div>
+        
+        <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden border border-white/10">
+          <div 
+            className={`h-full transition-all duration-500 ${isComplete ? 'bg-emerald-500' : 'bg-blue-600'}`}
+            style={{ width: `${Math.min(progress, 100)}%` }}
+          />
+        </div>
+      </div>
 
- <div className="p-4 bg-slate-950 border-b border-white/5 shrink-0">
- <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">ERP / Orden (Para siguientes bultos)</label>
- <div className="flex gap-2">
- <input 
- type="text" 
- value={state.currentErp}
- onChange={(e) => actions.setCurrentErp(e.target.value)}
- placeholder="Ej. ERP-12345 (Opcional)"
- className="flex-1 bg-black border border-white/10 rounded-xl px-4 font-mono text-white focus:border-blue-500 outline-none"
- />
- <button 
- onClick={() => document.getElementById('ocr-capture')?.click()}
- className="w-12 h-12 shrink-0 bg-blue-600/20 text-blue-400 rounded-xl flex items-center justify-center border border-blue-500/30 active:bg-blue-600 active:text-white transition-colors"
- >
- {isOcrLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Camera className="w-5 h-5" />}
- </button>
- <input type="file" accept="image/*" capture="environment" className="hidden" id="ocr-capture" onChange={handleOcrCapture} />
- </div>
- </div>
+      <div className="flex-1 min-h-0 relative bg-black">
+        <div className="absolute top-4 left-4 z-10">
+          <span className="px-3 py-1 bg-slate-800/80 backdrop-blur-md border border-white/10 rounded-full text-[9px] font-black uppercase tracking-widest text-slate-400">
+            Bandejas Escaneadas
+          </span>
+        </div>
+        <VirtualList 
+          items={drafts} 
+          itemHeight={80} 
+          renderRow={ReceptionRow} 
+          rowData={rowData} 
+          className="bg-black/20" 
+        />
+      </div>
 
- <ReceptionHero 
- lastAction={state.lastAction}
- draftCount={state.draftCount}
- isEcoMode={false}
- onToggleManual={() => {}}
- onCameraClick={() => {}}
- />
+      <ScannerFooter 
+        multiplier={1}
+        unitsPerBox={1}
+        isTriggerActive={isTriggerActive}
+        onMultiplierChange={() => {}}
+        onOpenManual={() => setShowKeypad(true)}
+        onTriggerStart={startTrigger}
+        onTriggerEnd={endTrigger}
+      />
 
- <div className="flex-1 min-h-0 relative bg-black">
- <VirtualList 
- items={drafts} 
- itemHeight={80} 
- renderRow={ReceptionRow} 
- rowData={rowData} 
- className="bg-black/20" 
- />
- </div>
+      {isTriggerActive && (
+        <div className="fixed inset-0 z-[200]">
+          <CameraScanner 
+            onScan={(code) => { actions.handleScan(code, state.currentErp); setIsTriggerActive(false); }} 
+            onClose={endTrigger} 
+            isTriggered={true} 
+          />
+        </div>
+      )}
 
- <ScannerFooter 
- multiplier={1}
- unitsPerBox={1}
- isTriggerActive={isTriggerActive}
- onMultiplierChange={() => {}}
- onOpenManual={() => setShowKeypad(true)}
- onTriggerStart={startTrigger}
- onTriggerEnd={endTrigger}
- />
+      <NumericKeypad 
+        isOpen={showKeypad}
+        title="ETIQUETA MANUAL"
+        onConfirm={handleKeypadConfirm}
+        onClose={() => setShowKeypad(false)}
+      />
 
- {isTriggerActive && (
- <div className="fixed inset-0 z-[200]">
- <CameraScanner 
- onScan={(code) => { actions.handleScan(code, state.currentErp); setIsTriggerActive(false); }} 
- onClose={endTrigger} 
- isTriggered={true} 
- />
- </div>
- )}
+      <QueueManager 
+        isOpen={showQueue} 
+        onClose={() => setShowQueue(false)} 
+        drafts={drafts} 
+        onDelete={actions.deleteDraft} 
+        onDiscardAll={actions.discardAll} 
+        onFinalize={() => {
+          actions.finalizeReception();
+          setShowQueue(false);
+          setIsSettingExpected(true);
+        }}
+      />
 
- <NumericKeypad 
- isOpen={showKeypad}
- title="ETIQUETA MANUAL"
- onConfirm={handleKeypadConfirm}
- onClose={() => setShowKeypad(false)}
- />
-
- <QueueManager 
- isOpen={showQueue} 
- onClose={() => setShowQueue(false)} 
- drafts={drafts} 
- onDelete={actions.deleteDraft} 
- onDiscardAll={actions.discardAll} 
- onFinalize={() => {
-   actions.finalizeReception();
-   setShowQueue(false);
- }}
- />
-
- <ScreenLockOverlay isLocked={isLocked} onUnlock={unlock} />
- </div>
- );
+      <ScreenLockOverlay isLocked={isLocked} onUnlock={unlock} />
+    </div>
+  );
 };
 
 export default ReceptionPage;

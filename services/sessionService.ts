@@ -153,7 +153,7 @@ export const createSession = async (erp: string, label: string, type: 'standard'
  return s;
 };
 
-export const createDraftSession = async (label: string, erpOrder?: string): Promise<CountingSession> => {
+export const createDraftSession = async (label: string, erpOrder?: string, mm?: number, yyyy?: number, batch?: string): Promise<CountingSession> => {
  const s: CountingSession = { 
  id: generateUUID(), 
  erpOrder: erpOrder ? erpOrder.trim().toUpperCase() : 'RECEPCION_BORRADOR', 
@@ -164,7 +164,10 @@ export const createDraftSession = async (label: string, erpOrder?: string): Prom
  totalUnits: 0, 
  totalSKUs: 0,
  expectedItems: [],
- isVerifiedMode: false
+ isVerifiedMode: false,
+ mm,
+ yyyy,
+ batch
  };
  await db.sessions.add(s);
  triggerBackgroundSync();

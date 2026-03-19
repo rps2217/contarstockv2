@@ -75,6 +75,9 @@ export interface CountingSession {
  auditStatus?: 'verified' | 'warning' | 'failed' | 'pending';
  auditScore?: number;
  auditTimestamp?: number;
+ mm?: number;
+ yyyy?: number;
+ batch?: string;
 }
 
 export interface ScanRecord {
@@ -82,6 +85,7 @@ export interface ScanRecord {
  sessionId: string;
  barcode: string;
  batch?: string; 
+ expiryDate?: string; 
  timestamp: number;
  quantity: number;
  logisticsLabel?: string;
@@ -98,6 +102,7 @@ export interface ConsolidatedItem {
  barcode: string;
  productName: string;
  batch?: string; 
+ expiryDate?: string; 
  totalQuantity: number;
  expectedQuantity?: number;
  difference?: number;
@@ -109,10 +114,52 @@ export interface ConsolidatedItem {
  embedding?: number[];
 }
 
-export type ViewState = 'dashboard' | 'counting' | 'database' | 'reports' | 'settings' | 'reception' | 'sync' | 'massive' | 'documents';
+export type ViewState = 'dashboard' | 'counting' | 'database' | 'reports' | 'settings' | 'reception' | 'sync' | 'massive' | 'documents' | 'visual-picking' | 'expiry';
 export type Theme = 'light' | 'dark' | 'contrast' | 'warm' | 'navy' | 'oled';
+
+export interface VisualGuideItem {
+  barcode: string;
+  name: string;
+  expectedQty: number;
+  pickedQty: number;
+  status: 'pending' | 'partial' | 'completed' | 'error';
+}
+
+export interface VisualGuide {
+  id: string;
+  guideNumber: string;
+  erpOrderId: string;
+  photoUrl?: string;
+  items: VisualGuideItem[];
+  createdAt: number;
+  completedAt?: number;
+  status: 'draft' | 'active' | 'completed';
+  operatorId?: string;
+}
+
+export interface ErpOrderSession {
+  id: string;
+  erpOrderId: string;
+  guides: VisualGuide[];
+  status: 'active' | 'completed';
+  createdAt: number;
+}
 // ScannerStatus mapeado a estados visuales UI
 export type ScannerStatus = 'idle' | 'manual' | 'busy' | 'expiring' | 'confirming' | 'error' | 'success';
+
+export type TelemetryEventType = 'SCAN' | 'SYNC' | 'ERROR' | 'PERFORMANCE' | 'HARDWARE' | 'SESSION';
+
+export interface TelemetryEvent {
+  id: string;
+  timestamp: number;
+  type: TelemetryEventType;
+  action: string;
+  duration?: number;
+  metadata?: Record<string, any>;
+  operatorId?: string;
+  batchId?: string;
+  deviceInfo?: string;
+}
 
 export interface AppSettings {
  theme: Theme;

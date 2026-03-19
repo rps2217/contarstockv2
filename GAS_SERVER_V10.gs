@@ -105,13 +105,25 @@ function fetchRows(ss, tableName) {
 }
 
 function appendRows(ss, tableName, rows) {
+  if (!rows || rows.length === 0) return { success: true, rows_written: 0 };
+  
   let sheet = ss.getSheetByName(tableName);
-  if (!sheet) sheet = ss.insertSheet(tableName);
+  if (!sheet) {
+    sheet = ss.insertSheet(tableName);
+    // Si es nueva, usamos las llaves del primer objeto como cabeceras
+    const firstRow = rows[0];
+    const headers = Object.keys(firstRow).map(k => k.trim().toUpperCase());
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  }
+
   const headers = sheet.getRange(1, 1, 1, Math.max(1, sheet.getLastColumn())).getValues()[0];
   const data = rows.map(row => headers.map(h => {
     const key = Object.keys(row).find(k => k.trim().toUpperCase() === String(h).trim().toUpperCase());
     return key ? row[key] : "";
   }));
-  if (data.length > 0) sheet.getRange(sheet.getLastRow() + 1, 1, data.length, headers.length).setValues(data);
+  
+  if (data.length > 0) {
+    sheet.getRange(sheet.getLastRow() + 1, 1, data.length, headers.length).setValues(data);
+  }
   return { success: true, rows_written: data.length };
 }

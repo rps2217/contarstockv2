@@ -83,6 +83,8 @@ export const HammerPage: React.FC = () => {
  feedback={state.feedback}
  items={state.items}
  isVoiceEnabled={isVoiceEnabled}
+ onSync={actions.syncToCloud}
+ isSyncing={state.isSyncing}
  />
 
  <MassiveToolsSheet 
@@ -91,6 +93,8 @@ export const HammerPage: React.FC = () => {
  location={locManager.location} onChangeLocation={locManager.openModal}
  onShowLabel={() => setIsLabelModalOpen(true)} onReset={() => actions.removeItem('ALL')}
  onImport={handleDownloadStock}
+ onSync={actions.syncToCloud}
+ isSyncing={state.isSyncing}
  onPrintSummary={() => {}}
  isVoiceEnabled={isVoiceEnabled}
  onToggleVoice={() => setIsVoiceEnabled(!isVoiceEnabled)}

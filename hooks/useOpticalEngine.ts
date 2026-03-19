@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
+import { telemetry } from '../services/telemetryService';
 
 export type EngineType = 'native' | 'wasm' | 'init';
 
@@ -32,11 +33,13 @@ export const useOpticalEngine = ({ onScan, isTriggered, scannerDomId }: UseOptic
     if (now - lastScanTime.current < 1000) return;
     lastScanTime.current = now;
     
+    telemetry.track('HARDWARE', 'CAMERA_SCAN', { engine: engineType });
     if (navigator.vibrate) navigator.vibrate(40);
     onScan(code);
   };
 
   const startNativeEngine = async () => {
+    telemetry.track('HARDWARE', 'ENGINE_START', { type: 'native' });
     try {
       let stream: MediaStream;
       try {
@@ -91,6 +94,7 @@ export const useOpticalEngine = ({ onScan, isTriggered, scannerDomId }: UseOptic
   };
 
   const startLegacyEngine = async () => {
+    telemetry.track('HARDWARE', 'ENGINE_START', { type: 'wasm' });
     try {
       const oldScanner = document.getElementById(scannerDomId);
       if (oldScanner) oldScanner.innerHTML = "";

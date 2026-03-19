@@ -8,46 +8,72 @@ import { SoundFX } from '../../../services/audio';
 import { SessionRepository } from '../../../repositories/SessionRepository';
 
 export const useReceptionLogic = () => {
- const [lastAction, setLastAction] = useState<{type: 'success' | 'duplicate', label: string} | null>(null);
- const [flashActive, setFlashActive] = useState(false);
- const [isFinalizing, setIsFinalizing] = useState(false);
- const [currentErp, setCurrentErp] = useState('');
+  const [lastAction, setLastAction] = useState<{type: 'success' | 'duplicate', label: string} | null>(null);
+  const [flashActive, setFlashActive] = useState(false);
+  const [isFinalizing, setIsFinalizing] = useState(false);
+  const [currentErp, setCurrentErp] = useState('');
+  const [isExpiryMode, setIsExpiryMode] = useState(false);
+  const [pendingExpiryScan, setPendingExpiryScan] = useState<{code: string, erp?: string} | null>(null);
 
- const unsyncedDrafts = useLiveQuery(() => 
- SessionRepository.getDraftSessions()
- , [], []);
+  const unsyncedDrafts = useLiveQuery(() => 
+    SessionRepository.getDraftSessions()
+  , [], []);
 
- const draftCount = unsyncedDrafts?.length || 0;
+  const draftCount = unsyncedDrafts?.length || 0;
 
- const handleScan = useCallback(async (code: string, erpToUse?: string) => {
- const cleanCode = sanitizeBarcode(code);
- if (!cleanCode || cleanCode.length < 3) return;
+  const handleScan = useCallback(async (code: string, erpToUse?: string) => {
+    const cleanCode = sanitizeBarcode(code);
+    if (!cleanCode || cleanCode.length < 3) return;
 
- // Comprobación de integridad: Evitar bultos duplicados en el mismo turno
- const alreadyExists = await sessionService.checkLabelExists(cleanCode);
- 
- if (alreadyExists) {
- setLastAction({ type: 'duplicate', label: cleanCode });
- SoundFX.play('error');
- setTimeout(() => setLastAction(prev => prev?.label === cleanCode ? null : prev), 3000);
- return;
- }
+    // Comprobación de integridad: Evitar bultos duplicados en el mismo turno
+    const alreadyExists = await sessionService.checkLabelExists(cleanCode);
+    
+    if (alreadyExists) {
+      setLastAction({ type: 'duplicate', label: cleanCode });
+      SoundFX.play('error');
+      setTimeout(() => setLastAction(prev => prev?.label === cleanCode ? null : prev), 3000);
+      return;
+    }
 
- try {
- await sessionService.createDraftSession(cleanCode, erpToUse || currentErp);
- setLastAction({ type: 'success', label: cleanCode });
- setFlashActive(true);
- SoundFX.play('success');
- if (navigator.vibrate) navigator.vibrate(40);
- 
- setTimeout(() => setFlashActive(false), 150);
- setTimeout(() => setLastAction(prev => prev?.label === cleanCode && prev.type === 'success' ? null : prev), 1500);
- } catch (err) { 
- SoundFX.play('error'); 
- }
- }, [currentErp]);
+    if (isExpiryMode) {
+      setPendingExpiryScan({ code: cleanCode, erp: erpToUse || currentErp });
+      return;
+    }
 
- const finalizeReception = useCallback(async () => {
+    try {
+      await sessionService.createDraftSession(cleanCode, erpToUse || currentErp);
+      setLastAction({ type: 'success', label: cleanCode });
+      setFlashActive(true);
+      SoundFX.play('success');
+      if (navigator.vibrate) navigator.vibrate(40);
+      
+      setTimeout(() => setFlashActive(false), 150);
+      setTimeout(() => setLastAction(prev => prev?.label === cleanCode && prev.type === 'success' ? null : prev), 1500);
+    } catch (err) { 
+      SoundFX.play('error'); 
+    }
+  }, [currentErp, isExpiryMode]);
+
+  const completeExpiryScan = useCallback(async (mm?: number, yyyy?: number, batch?: string) => {
+    if (!pendingExpiryScan) return;
+    
+    try {
+      await sessionService.createDraftSession(pendingExpiryScan.code, pendingExpiryScan.erp, mm, yyyy, batch);
+      setLastAction({ type: 'success', label: pendingExpiryScan.code });
+      setFlashActive(true);
+      SoundFX.play('success');
+      if (navigator.vibrate) navigator.vibrate(40);
+      
+      setTimeout(() => setFlashActive(false), 150);
+      setTimeout(() => setLastAction(prev => prev?.label === pendingExpiryScan.code && prev.type === 'success' ? null : prev), 1500);
+    } catch (err) {
+      SoundFX.play('error');
+    } finally {
+      setPendingExpiryScan(null);
+    }
+  }, [pendingExpiryScan]);
+
+  const finalizeReception = useCallback(async () => {
  if (!unsyncedDrafts?.length) return false;
  setIsFinalizing(true);
  try {
@@ -77,7 +103,7 @@ export const useReceptionLogic = () => {
  }, []);
 
  return {
- state: { lastAction, flashActive, draftCount, unsyncedDrafts, isFinalizing, currentErp },
- actions: { handleScan, handleManualInput: handleScan, deleteDraft, finalizeReception, discardAll, setCurrentErp }
+ state: { lastAction, flashActive, draftCount, unsyncedDrafts, isFinalizing, currentErp, isExpiryMode, pendingExpiryScan },
+ actions: { handleScan, handleManualInput: handleScan, deleteDraft, finalizeReception, discardAll, setCurrentErp, setIsExpiryMode, completeExpiryScan }
  };
 };

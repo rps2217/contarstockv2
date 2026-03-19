@@ -1,6 +1,6 @@
 import { Dexie } from 'dexie';
 import type { Table } from 'dexie';
-import { Product, CountingSession, ScanRecord, SyncJob, ExpectedOrder } from './types';
+import { Product, CountingSession, ScanRecord, SyncJob, ExpectedOrder, VisualGuide, ErpOrderSession } from './types';
 
 export interface SystemLog {
  id?: number;
@@ -31,19 +31,22 @@ export class LogiCountDB extends Dexie {
  logs!: Table<SystemLog>;
  settings!: Table<KVSettings>;
  locations!: Table<LocationEntry>;
+ visualGuides!: Table<VisualGuide>;
+ erpSessions!: Table<ErpOrderSession>;
 
  constructor() {
  super('LogiCountDB');
- // Incrementado a v23 para forzar actualización de esquema tras SchemaDiff detectado
- (this as any).version(23).stores({
+ (this as any).version(26).stores({
  products: '&barcode, name, syncStatus', 
- sessions: 'id, status, createdAt, erpOrder, logisticsLabel, sessionType, auditStatus, lastSyncTimestamp, [erpOrder+createdAt], [status+lastSyncTimestamp]', 
- scans: 'id, sessionId, barcode, logisticsLabel, timestamp, synced, isIncident, [sessionId+synced], [sessionId+barcode], [sessionId+logisticsLabel], [sessionId+timestamp]',
+ sessions: 'id, status, createdAt, erpOrder, logisticsLabel, sessionType, auditStatus, lastSyncTimestamp, mm, yyyy, batch, [erpOrder+createdAt], [status+lastSyncTimestamp]', 
+ scans: 'id, sessionId, barcode, logisticsLabel, timestamp, synced, isIncident, expiryDate, mm, yyyy, batch, [sessionId+synced], [sessionId+barcode], [sessionId+logisticsLabel], [sessionId+timestamp]',
  syncQueue: '++id, status, createdAt, retryCount',
  expectedOrders: 'id, internalId',
  logs: '++id, level, module, timestamp',
  settings: '&key',
- locations: '++id, &name, lastUsed'
+ locations: '++id, &name, lastUsed',
+ visualGuides: 'id, guideNumber, erpOrderId, status, createdAt',
+ erpSessions: 'id, erpOrderId, status, createdAt'
  });
  }
 }

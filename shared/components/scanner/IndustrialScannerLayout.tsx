@@ -24,6 +24,8 @@ interface IndustrialScannerLayoutProps {
   items: ScannedItemProps[];
   isVoiceEnabled?: boolean;
   allowEditQuantity?: boolean;
+  onSync?: () => void;
+  isSyncing?: boolean;
   bottomContent?: React.ReactNode; // For multiplier or other specific footers
 }
 
@@ -42,6 +44,8 @@ export const IndustrialScannerLayout: React.FC<IndustrialScannerLayoutProps> = (
   items,
   isVoiceEnabled = false,
   allowEditQuantity = false,
+  onSync,
+  isSyncing = false,
   bottomContent
 }) => {
   const [isManualMode, setIsManualMode] = useState(false);
@@ -124,10 +128,12 @@ export const IndustrialScannerLayout: React.FC<IndustrialScannerLayoutProps> = (
         onFinalize={onFinalize}
         onLock={onLock}
         onOpenTools={onOpenTools}
+        onSync={onSync}
+        isSyncing={isSyncing}
       />
 
-      {/* VISOR DE CÁMARA (25% Alto) */}
-      <div className={`${isManualMode ? 'hidden' : 'h-[25%]'} relative bg-black shrink-0`}>
+      {/* VISOR DE CÁMARA (20% Alto) */}
+      <div className={`${isManualMode ? 'hidden' : 'h-[20%]'} relative bg-black shrink-0`}>
         <CameraScanner 
           onScan={onScan} 
           onClose={() => {}} 
@@ -138,7 +144,7 @@ export const IndustrialScannerLayout: React.FC<IndustrialScannerLayoutProps> = (
       </div>
 
       {/* PANEL DE LISTA (Resto del espacio) */}
-      <div className="flex-1 min-h-0 bg-slate-950 flex flex-col relative z-10 border-t-2 border-rose-500/50">
+      <div className="flex-1 min-h-0 bg-slate-950 flex flex-col relative z-10 border-t border-rose-500/30">
         <ScannerSearchBar 
           isSearchActive={isSearchActive}
           searchQuery={searchQuery}

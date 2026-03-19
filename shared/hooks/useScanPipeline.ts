@@ -4,15 +4,10 @@ import { sanitizeBarcode } from '../../services/utils';
 import { getProductByBarcode } from '../../services/productService';
 import { SoundFX } from '../../services/audio';
 import { getSettings } from '../../services/settings';
+import { telemetry } from '../../services/telemetryService';
 
 /**
  * PIPELINE CENTRAL DE ESCANEO
- * Centraliza el flujo estándar de procesamiento de códigos de barras:
- * 1. Limpieza del código
- * 2. Actualización optimista del motor (UI instantánea)
- * 3. Búsqueda asíncrona del producto
- * 4. Feedback de audio (TTS)
- * 5. Delegación de persistencia a los módulos específicos
  */
 export const useScanPipeline = (defaultMultiplier = 1) => {
   const engine = useScannerEngine(defaultMultiplier);
@@ -25,19 +20,31 @@ export const useScanPipeline = (defaultMultiplier = 1) => {
     onPersist?: (cleanBarcode: string, product: any, newQty: number) => void,
     onError?: (error: any) => void
   ) => {
+    const startTime = performance.now();
     try {
       const cleanBarcode = sanitizeBarcode(rawBarcode);
-      if (!cleanBarcode) return null;
+      if (!cleanBarcode) {
+        telemetry.track('SCAN', 'INVALID_BARCODE', { raw: rawBarcode });
+        return null;
+      }
 
       const newQty = Math.max(0, currentQty + delta);
 
-      // 1. Actualización optimista inmediata (delegada al módulo)
+      // 1. Actualización optimista inmediata
       if (onOptimisticUpdate) {
         onOptimisticUpdate(cleanBarcode, newQty);
       }
 
       // 2. Búsqueda asíncrona y actualización del motor
       getProductByBarcode(cleanBarcode).then(product => {
+        const duration = performance.now() - startTime;
+        telemetry.track('SCAN', 'SUCCESS', { 
+          barcode: cleanBarcode, 
+          productFound: !!product,
+          qty: newQty,
+          delta
+        }, duration);
+
         engine.actions.updateActiveItem(cleanBarcode, product || null, currentQty, delta);
         
         // 3. Feedback de audio (TTS)
@@ -51,12 +58,15 @@ export const useScanPipeline = (defaultMultiplier = 1) => {
           onPersist(cleanBarcode, product, newQty);
         }
       }).catch(err => {
+        const duration = performance.now() - startTime;
+        telemetry.track('SCAN', 'ERROR', { barcode: cleanBarcode, error: err.message }, duration);
         engine.actions.triggerFeedback('error');
         if (onError) onError(err);
       });
 
       return { cleanBarcode, newQty };
-    } catch (error) {
+    } catch (error: any) {
+      telemetry.track('SCAN', 'CRITICAL_ERROR', { error: error.message });
       engine.actions.triggerFeedback('error');
       if (onError) onError(error);
       return null;

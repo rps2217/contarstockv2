@@ -1,12 +1,11 @@
 
 import React from 'react';
-import { Barcode, RotateCcw, Download, X, MapPin, Printer, Camera, Volume2, VolumeX } from 'lucide-react';
+import { Barcode, RotateCcw, Download, X, MapPin, Printer, Camera, Volume2, VolumeX, Cloud } from 'lucide-react';
 import { Modal } from '../../../shared/components/ui/Modal';
 
-interface Props {
+ interface Props {
  isOpen: boolean;
  onClose: () => void;
- // FIX: Added batchId to Props to satisfy requirements in MassiveBlindView and HammerPage
  batchId: string;
  hasActiveItem: boolean;
  location: string;
@@ -14,6 +13,8 @@ interface Props {
  onShowLabel: () => void;
  onReset: () => void;
  onImport: () => void;
+ onSync?: () => void;
+ isSyncing?: boolean;
  onPrintSummary: () => void;
  onToggleCameraMode?: () => void;
  isVoiceEnabled?: boolean;
@@ -21,17 +22,17 @@ interface Props {
 }
 
 export const MassiveToolsSheet: React.FC<Props> = ({ 
- isOpen, onClose, hasActiveItem, location, onChangeLocation, onShowLabel, onReset, onImport, onPrintSummary, onToggleCameraMode, isVoiceEnabled, onToggleVoice 
+ isOpen, onClose, hasActiveItem, location, onChangeLocation, onShowLabel, onReset, onImport, onSync, isSyncing, onPrintSummary, onToggleCameraMode, isVoiceEnabled, onToggleVoice 
 }) => {
  
- const ToolButton = ({ onClick, icon: Icon, label, color, disabled = false, sublabel }: any) => (
+ const ToolButton = ({ onClick, icon: Icon, label, color, disabled = false, sublabel, loading = false }: any) => (
  <button
- disabled={disabled}
- onClick={() => { onClick(); onClose(); }}
- className={`flex flex-col items-center justify-center p-6 bg-slate-900 rounded-[2rem] border-2 border-white/5 active:scale-95 transition-all disabled:opacity-20 ${color}`}
+ disabled={disabled || loading}
+ onClick={() => { onClick(); if(!loading) onClose(); }}
+ className={`flex flex-col items-center justify-center p-4 bg-slate-900 rounded-2xl border border-white/5 active:scale-95 transition-all disabled:opacity-20 ${color}`}
  >
- <Icon className="w-8 h-8 mb-3" />
- <span className="text-[10px] font-black uppercase tracking-widest text-center leading-tight">{label}</span>
+ <Icon className={`w-6 h-6 mb-2 ${loading ? 'animate-spin' : ''}`} />
+ <span className="text-[9px] font-black uppercase tracking-widest text-center leading-tight">{loading ? 'Sincronizando...' : label}</span>
  {sublabel && (
  <span className="text-[8px] font-bold opacity-60 mt-1 uppercase tracking-tight truncate w-full px-2 text-center">
  {sublabel}
@@ -45,17 +46,17 @@ export const MassiveToolsSheet: React.FC<Props> = ({
  isOpen={isOpen} 
  onClose={onClose} 
  variant="bottom-sheet" 
- className="bg-black border-t-4 border-slate-800"
+ className="bg-black border-t-2 border-slate-800"
  showCloseButton={false}
  >
- <div className="p-8 pb-12 bg-black text-white">
- <div className="flex justify-between items-center mb-8">
+ <div className="p-6 pb-8 bg-black text-white">
+ <div className="flex justify-between items-center mb-6">
  <div>
- <h2 className="text-xl font-black uppercase italic tracking-tight text-white">Acciones de Auditoría</h2>
- <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">Modo Martillo v4.5</p>
+ <h2 className="text-lg font-black uppercase italic tracking-tight text-white">Acciones de Auditoría</h2>
+ <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-1">Modo Martillo v4.5</p>
  </div>
- <button onClick={onClose} className="p-3 bg-white/5 rounded-full text-slate-400">
- <X className="w-6 h-6" />
+ <button onClick={onClose} className="p-2 bg-white/5 rounded-full text-slate-400">
+ <X className="w-5 h-5" />
  </button>
  </div>
 
@@ -74,6 +75,15 @@ export const MassiveToolsSheet: React.FC<Props> = ({
  icon={isVoiceEnabled ? Volume2 : VolumeX} 
  label={isVoiceEnabled ? "Voz Activada" : "Voz Desactivada"} 
  color={isVoiceEnabled ? "text-blue-400 border-blue-500/20" : "text-slate-400 border-slate-500/20"} 
+ />
+ )}
+ {onSync && (
+ <ToolButton 
+ onClick={onSync} 
+ icon={Cloud} 
+ label="Sincronizar Nube" 
+ color="text-blue-400 border-blue-500/20" 
+ loading={isSyncing}
  />
  )}
  <ToolButton 

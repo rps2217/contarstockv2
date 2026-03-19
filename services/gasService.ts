@@ -166,3 +166,10 @@ export const fetchFromGas = async (tableName: string): Promise<any[]> => {
  const res = await cloudApi.fetchTable(tableName);
  return res.rows || [];
 };
+
+/**
+ * Envía filas a una tabla GAS
+ */
+export const sendToGas = async (tableName: string, rows: any[]): Promise<any> => {
+ return cloudApi.appendRows(tableName, rows);
+};
