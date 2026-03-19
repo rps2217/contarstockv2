@@ -15,6 +15,9 @@ export interface ExpectedItem {
  barcode: string;
  name: string;
  expectedQty: number;
+ quantity?: number;
+ batch?: string;
+ expiry?: string;
  embedding?: number[]; 
 }
 
@@ -25,6 +28,13 @@ export interface ExpectedOrder {
  totalExpectedUnits: number;
  totalExpectedSKUs: number;
  importedAt: number;
+ metadata?: {
+   documentType?: string;
+   date?: string;
+   purchaseOrder?: string;
+   orderNote?: string;
+   internalGuide?: string;
+ };
 }
 
 export interface SyncJob {

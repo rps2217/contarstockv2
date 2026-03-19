@@ -12,8 +12,8 @@ export const useDocumentProcessor = () => {
     setIsProcessing(true);
     setError(null);
     try {
-      const data = await documentProcessor.parseGuidePDF(base64, mimeType);
-      if (data && data.erpOrder && data.items) {
+      const data = await documentProcessor.processLogisticsDocument(base64, mimeType);
+      if (data && data.documentNumber && data.items) {
         setResult((prev: any) => {
           if (!prev) return data;
           const existingBarcodes = new Set(prev.items.map((i: any) => i.barcode));
@@ -39,12 +39,22 @@ export const useDocumentProcessor = () => {
     if (!result) return;
     try {
       await ExpectedOrderRepository.save({
-        id: result.erpOrder,
-        internalId: result.erpOrder,
-        items: result.items,
-        totalExpectedUnits: result.items.reduce((acc: number, item: any) => acc + item.expectedQty, 0),
+        id: result.documentNumber,
+        internalId: result.documentNumber,
+        items: result.items.map((item: any) => ({
+          ...item,
+          expectedQty: item.quantity // Map quantity to expectedQty for compatibility
+        })),
+        totalExpectedUnits: result.items.reduce((acc: number, item: any) => acc + (item.quantity || 0), 0),
         totalExpectedSKUs: result.items.length,
-        importedAt: Date.now()
+        importedAt: Date.now(),
+        metadata: {
+          documentType: result.documentType,
+          date: result.date,
+          purchaseOrder: result.purchaseOrder,
+          orderNote: result.orderNote,
+          internalGuide: result.internalGuide
+        }
       });
       SoundFX.play('success');
       setResult(null);
@@ -81,7 +91,7 @@ export const useDocumentProcessor = () => {
   }, []);
 
   const setErpOrder = useCallback((val: string) => {
-    setResult((prev: any) => prev ? ({ ...prev, erpOrder: val }) : null);
+    setResult((prev: any) => prev ? ({ ...prev, documentNumber: val }) : null);
   }, []);
 
   return {
