@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, memo } from 'react';
-import { ScanLine, Radio, Zap, Database, Settings, UserCircle, ShieldAlert, Terminal, RefreshCw, FileText, Box } from 'lucide-react';
+import { ScanLine, Radio, Database, Settings, UserCircle, ShieldAlert, RefreshCw, FileText, Box } from 'lucide-react';
 import { useDashboard } from './hooks/useDashboard';
 import { Button, Card } from '../../shared/components/ui';
 import { db } from '../../db';
@@ -132,43 +132,33 @@ const Dashboard: React.FC = () => {
         <div className="grid grid-cols-2 gap-4">
           <Card 
             hoverable
-            onClick={() => navigate('/database')}
+            onClick={() => navigate('/reports')}
             className="h-24 flex flex-col items-center justify-center gap-2 bg-white/5 border-white/5 rounded-[1.5rem] opacity-80"
           >
-            <Database className="w-5 h-5 text-amber-500" />
-            <span className="text-[8px] font-black text-white uppercase tracking-[0.3em]">Catálogo_SKU</span>
+            <FileText className="w-5 h-5 text-blue-500" />
+            <span className="text-[8px] font-black text-white uppercase tracking-[0.3em]">Historial_Reportes</span>
           </Card>
 
-          <Button 
-            variant={isSyncNeeded ? 'primary' : 'secondary'}
-            size="lg"
-            className={`h-24 rounded-[1.5rem] ${isSyncNeeded ? 'bg-orange-600 border-orange-800 animate-pulse' : 'bg-white/5 border-white/5 opacity-60'}`}
-            onClick={() => navigate('/sync')}
-            leftIcon={<Radio className="w-5 h-5" />}
+          <Card 
+            hoverable
+            onClick={() => navigate('/settings')}
+            className="h-24 flex flex-col items-center justify-center gap-2 bg-white/5 border-white/5 rounded-[1.5rem] opacity-80"
           >
-            <span className="text-[9px] font-black uppercase tracking-widest">Sincronizar</span>
-          </Button>
+            <Settings className="w-5 h-5 text-slate-400" />
+            <span className="text-[8px] font-black text-white uppercase tracking-[0.3em]">System_Setup</span>
+          </Card>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4">
           <Button 
             variant="secondary"
             size="lg"
-            className="h-20 bg-white/5 border-emerald-500/10 rounded-[1.5rem] opacity-60 hover:opacity-100"
+            className="h-16 bg-white/5 border-emerald-500/10 rounded-[1.5rem] opacity-60 hover:opacity-100"
             onClick={() => { handleHardRefresh(); }}
             isLoading={isRefreshing}
-            leftIcon={<RefreshCw className={`w-5 h-5 text-emerald-500 ${isRefreshing ? 'animate-spin' : ''}`} />}
+            leftIcon={<RefreshCw className={`w-4 h-4 text-emerald-500 ${isRefreshing ? 'animate-spin' : ''}`} />}
           >
-            <span className="text-[8px] font-black uppercase tracking-widest">Reiniciar_Kernel</span>
-          </Button>
-          
-          <Button 
-            variant="ghost"
-            className="h-20 border-2 border-white/5 rounded-[1.5rem] opacity-40 hover:opacity-100"
-            onClick={() => navigate('/settings')}
-            leftIcon={<Settings className="w-4 h-4" />}
-          >
-            <span className="text-[8px] font-black uppercase tracking-widest">System_Setup</span>
+            <span className="text-[8px] font-black uppercase tracking-widest">Reiniciar_Kernel_Sistema</span>
           </Button>
         </div>
 
