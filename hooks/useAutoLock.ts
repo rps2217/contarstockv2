@@ -4,58 +4,66 @@ import { useState, useEffect, useCallback, useRef } from 'react';
  * HOOK: AUTO-BLOQUEO INDUSTRIAL v3.1
  * Monitorea la actividad y bloquea el terminal tras X ms de inactividad.
  */
-export const useAutoLock = (delayMs: number = 3000) => {
- const [isLocked, setIsLocked] = useState(false);
- const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
- const isLockedRef = useRef(false);
+export const useAutoLock = (delayMs: number = 3000, enabled: boolean = true) => {
+  const [isLocked, setIsLocked] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isLockedRef = useRef(false);
 
- useEffect(() => {
- isLockedRef.current = isLocked;
- }, [isLocked]);
+  useEffect(() => {
+    isLockedRef.current = isLocked;
+  }, [isLocked]);
 
- const lock = useCallback(() => {
- if (isLockedRef.current) return;
- setIsLocked(true);
- if (navigator.vibrate) navigator.vibrate([10, 30, 10]);
- }, []);
+  const lock = useCallback(() => {
+    if (isLockedRef.current || !enabled) return;
+    setIsLocked(true);
+    if (navigator.vibrate) navigator.vibrate([10, 30, 10]);
+  }, [enabled]);
 
- const resetTimer = useCallback((forceState?: boolean) => {
- if (timerRef.current) clearTimeout(timerRef.current);
- 
- // Use the forced state if provided, otherwise the ref
- const currentLockState = forceState !== undefined ? forceState : isLockedRef.current;
- if (currentLockState) return;
+  const resetTimer = useCallback((forceState?: boolean) => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    
+    if (!enabled) return;
 
- timerRef.current = setTimeout(() => {
- lock();
- }, delayMs);
- }, [delayMs, lock]);
+    // Use the forced state if provided, otherwise the ref
+    const currentLockState = forceState !== undefined ? forceState : isLockedRef.current;
+    if (currentLockState) return;
 
- useEffect(() => {
- const events = [
- 'mousedown', 'mousemove', 'keypress', 
- 'keydown', 'touchstart', 'scroll', 
- 'pointerdown', 'click'
- ];
- 
- const handler = () => resetTimer();
- events.forEach(event => window.addEventListener(event, handler, { capture: true, passive: true }));
- 
- resetTimer();
+    timerRef.current = setTimeout(() => {
+      lock();
+    }, delayMs);
+  }, [delayMs, lock, enabled]);
 
- return () => {
- events.forEach(event => window.removeEventListener(event, handler, { capture: true }));
- if (timerRef.current) clearTimeout(timerRef.current);
- };
- }, [resetTimer]);
+  useEffect(() => {
+    if (!enabled) {
+      setIsLocked(false);
+      if (timerRef.current) clearTimeout(timerRef.current);
+      return;
+    }
 
- return {
- isLocked,
- lock,
- unlock: () => {
- setIsLocked(false);
- // Re-activar el timer forzando el estado a 'false' para evitar race conditions
- resetTimer(false);
- }
- };
+    const events = [
+      'mousedown', 'mousemove', 'keypress', 
+      'keydown', 'touchstart', 'scroll', 
+      'pointerdown', 'click'
+    ];
+    
+    const handler = () => resetTimer();
+    events.forEach(event => window.addEventListener(event, handler, { capture: true, passive: true }));
+    
+    resetTimer();
+
+    return () => {
+      events.forEach(event => window.removeEventListener(event, handler, { capture: true }));
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [resetTimer, enabled]);
+
+  return {
+    isLocked,
+    lock,
+    unlock: () => {
+      setIsLocked(false);
+      // Re-activar el timer forzando el estado a 'false' para evitar race conditions
+      resetTimer(false);
+    }
+  };
 };

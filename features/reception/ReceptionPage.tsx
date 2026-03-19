@@ -5,12 +5,13 @@ import { useReceptionLogic } from './hooks/useReceptionLogic';
 import { CameraScanner } from '../../components/CameraScanner';
 import { ReceptionHero } from './components/ReceptionHero'; 
 import { QueueManager } from './components/QueueManager'; 
+import { ReceptionToolsSheet } from './components/ReceptionToolsSheet';
 import { ScannerFooter } from '../../shared/components/controls/ScannerFooter';
 import { VirtualList } from '../../shared/components/ui/VirtualList';
 import { ScreenLockOverlay } from '../../shared/components/ui/ScreenLockOverlay';
 import { NumericKeypad } from '../../components/NumericKeypad';
 import { ExpirationModal } from '../expiry/components/ExpirationModal';
-import { ChevronLeft, Box, Trash2, Camera, Loader2, Calendar } from 'lucide-react';
+import { ChevronLeft, Box, Trash2, Camera, Loader2, Calendar, Settings } from 'lucide-react';
 import { useAutoLock } from '../../hooks/useAutoLock';
 import { useHIDScanner } from '../../hooks/useHIDScanner';
 import * as documentProcessor from '../../services/documentProcessor';
@@ -66,13 +67,21 @@ export const ReceptionPage: React.FC<{
 }> = ({ isEmbedded = false, initialExpectedCount, initialErp }) => {
   const navigate = useNavigate();
   const { state, actions } = useReceptionLogic();
-  const { isLocked, unlock, lock } = useAutoLock(3000);
+  
+  const [isAutoLockEnabled, setIsAutoLockEnabled] = useState(() => localStorage.getItem('reception_autolock') !== 'false');
+  const { isLocked, unlock, lock } = useAutoLock(3000, isAutoLockEnabled);
   
   const [isTriggerActive, setIsTriggerActive] = useState(false);
   const [showKeypad, setShowKeypad] = useState(false);
   const [showQueue, setShowQueue] = useState(false);
+  const [showTools, setShowTools] = useState(false);
   const [expectedCount, setExpectedCount] = useState<number>(initialExpectedCount || 0);
   const [isSettingExpected, setIsSettingExpected] = useState(!initialExpectedCount);
+
+  // Persistir preferencia de auto-bloqueo
+  React.useEffect(() => {
+    localStorage.setItem('reception_autolock', isAutoLockEnabled.toString());
+  }, [isAutoLockEnabled]);
 
   // Initialize ERP if provided
   React.useEffect(() => {
@@ -169,11 +178,29 @@ export const ReceptionPage: React.FC<{
               </span>
             </div>
             {state.draftCount > 0 && (
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setShowTools(true)}
+                  className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-slate-400 active:bg-white/10"
+                  title="Herramientas"
+                >
+                  <Settings className="w-5 h-5" />
+                </button>
+                <button 
+                  onClick={() => setShowQueue(true)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-900/40 active:scale-95 transition-all"
+                >
+                  FINALIZAR
+                </button>
+              </div>
+            )}
+            {state.draftCount === 0 && (
               <button 
-                onClick={() => setShowQueue(true)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-900/40 active:scale-95 transition-all"
+                onClick={() => setShowTools(true)}
+                className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-slate-400 active:bg-white/10"
+                title="Herramientas"
               >
-                FINALIZAR
+                <Settings className="w-5 h-5" />
               </button>
             )}
           </div>
@@ -241,6 +268,16 @@ export const ReceptionPage: React.FC<{
           setShowQueue(false);
           setIsSettingExpected(true);
         }}
+      />
+
+      <ReceptionToolsSheet 
+        isOpen={showTools}
+        onClose={() => setShowTools(false)}
+        isAutoLockEnabled={isAutoLockEnabled}
+        onToggleAutoLock={() => setIsAutoLockEnabled(!isAutoLockEnabled)}
+        onDiscardAll={actions.discardAll}
+        onSync={actions.syncToCloud}
+        isSyncing={state.isSyncing}
       />
 
       <ScreenLockOverlay isLocked={isLocked} onUnlock={unlock} />

@@ -13,6 +13,7 @@ export const useReceptionLogic = () => {
   const [lastAction, setLastAction] = useState<{type: 'success' | 'duplicate', label: string} | null>(null);
   const [flashActive, setFlashActive] = useState(false);
   const [isFinalizing, setIsFinalizing] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [currentErp, setCurrentErp] = useState('');
   const [isExpiryMode, setIsExpiryMode] = useState(false);
   const [pendingExpiryScan, setPendingExpiryScan] = useState<{code: string, erp?: string} | null>(null);
@@ -114,21 +115,43 @@ export const useReceptionLogic = () => {
     }
   }, [unsyncedDrafts, addToast]);
 
- const deleteDraft = async (id: string) => {
- await SessionRepository.delete(id);
- SoundFX.play('delete');
- };
+  const deleteDraft = async (id: string) => {
+    await SessionRepository.delete(id);
+    SoundFX.play('delete');
+  };
 
- // Fix: Added discardAll action to clear the entire reception queue as requested by ReceptionPage
- const discardAll = useCallback(async () => {
- if (confirm("¿Borrar toda la cola de recepción?")) {
- await SessionRepository.deleteDrafts();
- SoundFX.play('delete');
- }
- }, []);
+  const discardAll = useCallback(async () => {
+    if (confirm("¿Borrar toda la cola de recepción?")) {
+      await SessionRepository.deleteDrafts();
+      SoundFX.play('delete');
+    }
+  }, []);
 
- return {
- state: { lastAction, flashActive, draftCount, unsyncedDrafts, isFinalizing, currentErp, isExpiryMode, pendingExpiryScan },
- actions: { handleScan, handleManualInput: handleScan, deleteDraft, finalizeReception, discardAll, setCurrentErp, setIsExpiryMode, completeExpiryScan }
- };
+  const syncToCloud = useCallback(async () => {
+    if (isSyncing) return;
+    setIsSyncing(true);
+    try {
+      const groups = await syncManager.getPendingUploadGroups();
+      const receptionGroup = groups.find(g => g.type === 'reception');
+      
+      if (receptionGroup) {
+        await syncManager.performBatchUpload(receptionGroup);
+        addToast('Recepción sincronizada correctamente', 'success');
+        SoundFX.play('success');
+      } else {
+        addToast('No hay datos pendientes de sincronizar', 'info');
+      }
+    } catch (err) {
+      console.error('Manual sync error:', err);
+      addToast('Error al sincronizar con la nube', 'error');
+      SoundFX.play('error');
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [isSyncing, addToast]);
+
+  return {
+    state: { lastAction, flashActive, draftCount, unsyncedDrafts, isFinalizing, isSyncing, currentErp, isExpiryMode, pendingExpiryScan },
+    actions: { handleScan, handleManualInput: handleScan, deleteDraft, finalizeReception, discardAll, syncToCloud, setCurrentErp, setIsExpiryMode, completeExpiryScan }
+  };
 };
