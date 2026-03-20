@@ -5,14 +5,15 @@ import * as sessionService from '../../../services/sessionService';
 import { useLocation } from 'react-router-dom';
 import { SessionRepository } from '../../../repositories/SessionRepository';
 import { ScanRepository } from '../../../repositories/ScanRepository';
+import { useAppStore } from '../../../store/useAppStore';
 
 export const useReports = () => {
- const location = useLocation();
- const [searchQuery, setSearchQuery] = useState('');
- const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
- const [isCleaning, setIsCleaning] = useState(false);
- const [isStartModalOpen, setIsStartModalOpen] = useState(false);
- const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const location = useLocation();
+  const { isStartSessionModalOpen, setStartSessionModalOpen } = useAppStore();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [isCleaning, setIsCleaning] = useState(false);
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
  
  const searchParams = new URLSearchParams(location.search);
  const filterType = searchParams.get('type') || 'standard';
@@ -67,26 +68,26 @@ export const useReports = () => {
  }, []);
 
  return {
- state: {
- sessions,
- erpCounts: erpCounts || {},
- pendingSyncCount,
- searchQuery,
- selectedSessionId,
- isCleaning,
- isStartModalOpen,
- activeMenuId,
- filterType,
- hasMore: sessions?.length === limit
- },
- actions: {
- setSearchQuery,
- setSelectedSessionId,
- setIsStartModalOpen,
- handleCleanSynced,
- handleDeleteSession,
- handleMenuToggle,
- loadMore
- }
+  state: {
+  sessions,
+  erpCounts: erpCounts || {},
+  pendingSyncCount,
+  searchQuery,
+  selectedSessionId,
+  isCleaning,
+  isStartModalOpen: isStartSessionModalOpen,
+  activeMenuId,
+  filterType,
+  hasMore: sessions?.length === limit
+  },
+  actions: {
+  setSearchQuery,
+  setSelectedSessionId,
+  setIsStartModalOpen: setStartSessionModalOpen,
+  handleCleanSynced,
+  handleDeleteSession,
+  handleMenuToggle,
+  loadMore
+  }
  };
 };

@@ -7,7 +7,7 @@ import { NetworkStatus } from './components/NetworkStatus';
 import { Sidebar } from './components/Sidebar';
 import { BottomDock } from './components/BottomDock';
 import { SystemStatus } from './components/SystemStatus';
-import { Box, Loader2, Database, WifiOff, Cpu, RefreshCw } from 'lucide-react';
+import { Box, Loader2, Database, WifiOff, Cpu, RefreshCw, Plus } from 'lucide-react';
 import { lazyWithRetry } from './services/lazyLoad';
 import { initPersistence } from './services/backupService';
 import { Login } from './components/Login';
@@ -15,6 +15,8 @@ import { InitializationService, InitStep } from './services/initializationServic
 import { ToastContainer } from './shared/components/ui/ToastContainer';
 import { useAutoSync } from './hooks/useAutoSync';
 import ReceptionHub from './features/reception/ReceptionHub';
+import { StartSessionModal } from './components/StartSessionModal';
+import { useNavigate } from 'react-router-dom';
 
 // --- VISTAS MAESTRAS ---
 const Dashboard = lazyWithRetry(() => import('./features/dashboard/DashboardPage'));
@@ -32,10 +34,11 @@ const ExpiryManagement = lazyWithRetry(() => import('./features/expiry/ExpiryMan
 
 const AppContent = () => {
   const location = useLocation();
-  const { settings } = useAppStore();
+  const { settings, isStartSessionModalOpen, setStartSessionModalOpen } = useAppStore();
   const [bootState, setBootState] = useState<'initializing' | 'ready'>('initializing');
   const [initStep, setInitStep] = useState<InitStep>('idle');
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const navigate = useNavigate();
   
   // Activar sincronización automática inteligente
   useAutoSync();
@@ -147,7 +150,25 @@ const AppContent = () => {
         </main>
       </div>
       
-      {!isScanningMode && <BottomDock currentView={location.pathname.split('/')[1] || 'dashboard'} settings={settings} />}
+      {!isScanningMode && (
+        <>
+          <BottomDock currentView={location.pathname.split('/')[1] || 'dashboard'} settings={settings} />
+          
+          {/* BOTÓN FLOTANTE DE ACCESO RÁPIDO (MÓVIL) */}
+          <button 
+            onClick={() => setStartSessionModalOpen(true)}
+            className="md:hidden fixed bottom-20 right-6 z-[110] w-14 h-14 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-900/40 flex items-center justify-center active:scale-95 transition-all border-b-4 border-blue-800"
+          >
+            <Plus className="w-8 h-8" />
+          </button>
+        </>
+      )}
+
+      <StartSessionModal 
+        isOpen={isStartSessionModalOpen}
+        onClose={() => setStartSessionModalOpen(false)}
+        onSessionStart={(session) => navigate(`/counting/${session.id}`)}
+      />
     </div>
   );
 };

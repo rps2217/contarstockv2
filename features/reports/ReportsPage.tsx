@@ -102,11 +102,6 @@ export const Reports: React.FC = () => {
  </div>
  </div>
  
- <StartSessionModal 
- isOpen={state.isStartModalOpen} 
- onClose={() => actions.setIsStartModalOpen(false)} 
- onSessionStart={(s) => navigate(`/counting/${s.id}`)} 
- />
  </div>
  );
 };

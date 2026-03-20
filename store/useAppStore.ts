@@ -26,21 +26,25 @@ const createSettingsSlice = (set: any): SettingsSlice => ({
 
 // --- SLICE: UI STATE ---
 interface UISlice {
- isSidebarOpen: boolean;
- activeView: ViewState;
- globalSearchQuery: string;
- setSidebarOpen: (open: boolean) => void;
- setActiveView: (view: ViewState) => void;
- setGlobalSearch: (q: string) => void;
+  isSidebarOpen: boolean;
+  activeView: ViewState;
+  globalSearchQuery: string;
+  isStartSessionModalOpen: boolean;
+  setSidebarOpen: (open: boolean) => void;
+  setActiveView: (view: ViewState) => void;
+  setGlobalSearch: (q: string) => void;
+  setStartSessionModalOpen: (open: boolean) => void;
 }
 
 const createUISlice = (set: any): UISlice => ({
- isSidebarOpen: false,
- activeView: 'dashboard',
- globalSearchQuery: '',
- setSidebarOpen: (open) => set({ isSidebarOpen: open }),
- setActiveView: (view) => set({ activeView: view }),
- setGlobalSearch: (q) => set({ globalSearchQuery: q }),
+  isSidebarOpen: false,
+  activeView: 'dashboard',
+  globalSearchQuery: '',
+  isStartSessionModalOpen: false,
+  setSidebarOpen: (open) => set({ isSidebarOpen: open }),
+  setActiveView: (view) => set({ activeView: view }),
+  setGlobalSearch: (q) => set({ globalSearchQuery: q }),
+  setStartSessionModalOpen: (open) => set({ isStartSessionModalOpen: open }),
 });
 
 // --- COMBINED STORE ---

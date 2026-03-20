@@ -1,14 +1,16 @@
 
 import React, { useState, useEffect, useCallback, memo } from 'react';
-import { ScanLine, Radio, Database, Settings, UserCircle, ShieldAlert, RefreshCw, FileText, Box } from 'lucide-react';
+import { ScanLine, Radio, Database, Settings, UserCircle, ShieldAlert, RefreshCw, FileText, Box, Plus } from 'lucide-react';
 import { useDashboard } from './hooks/useDashboard';
 import { Button, Card } from '../../shared/components/ui';
 import { db } from '../../db';
 import { getSettings } from '../../services/settings';
 import { SoundFX } from '../../services/audio';
+import { useAppStore } from '../../store/useAppStore';
 
 const Dashboard: React.FC = () => {
   const { operatorId, isSyncNeeded, navigate } = useDashboard();
+  const { setStartSessionModalOpen } = useAppStore();
   const [hasConfigError, setHasConfigError] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -87,20 +89,36 @@ const Dashboard: React.FC = () => {
         {/* ACCIONES PRINCIPALES */}
         <div className="grid grid-cols-1 gap-4">
           <button 
-            onClick={() => navigate('/reception')}
-            className="group h-64 bg-slate-900 rounded-[2.5rem] border-b-[12px] border-slate-800 flex flex-col justify-center px-10 relative overflow-hidden active:translate-y-2 active:border-b-[4px] transition-all hover:border-blue-500/50"
+            onClick={() => setStartSessionModalOpen(true)}
+            className="group h-48 bg-blue-600 rounded-[2.5rem] border-b-[12px] border-blue-800 flex flex-col justify-center px-10 relative overflow-hidden active:translate-y-2 active:border-b-[4px] transition-all"
           >
-            <div className="absolute -right-8 -bottom-8 opacity-10 group-hover:scale-110 transition-transform">
-              <Box className="w-64 h-64 text-white" />
+            <div className="absolute -right-8 -bottom-8 opacity-20 group-hover:scale-110 transition-transform">
+              <ScanLine className="w-48 h-48 text-white" />
             </div>
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-900/40">
-                <ScanLine className="w-6 h-6 text-white" />
+              <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
+                <Plus className="w-6 h-6 text-white" />
               </div>
-              <span className="text-[10px] font-black text-blue-400 uppercase tracking-[0.4em]">Protocolo de Entrada</span>
+              <span className="text-[10px] font-black text-blue-100 uppercase tracking-[0.4em]">Operación Rápida</span>
             </div>
-            <h2 className="text-5xl font-black text-white uppercase italic tracking-tighter mb-1">INBOUND_HUB</h2>
-            <p className="text-slate-500 text-[11px] font-black uppercase tracking-[0.2em]">Acceso a Recepción, OCR y Conteo</p>
+            <h2 className="text-5xl font-black text-white uppercase italic tracking-tighter mb-1">NUEVA_CARGA</h2>
+            <p className="text-blue-100/60 text-[11px] font-black uppercase tracking-[0.2em]">Escanear Bulto e Iniciar Conteo</p>
+          </button>
+
+          <button 
+            onClick={() => navigate('/reception')}
+            className="group h-32 bg-slate-900 rounded-[2.5rem] border-b-[12px] border-slate-800 flex flex-col justify-center px-10 relative overflow-hidden active:translate-y-2 active:border-b-[4px] transition-all hover:border-blue-500/50"
+          >
+            <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform">
+              <Box className="w-32 h-32 text-white" />
+            </div>
+            <div className="flex items-center gap-3 mb-1">
+              <div className="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center">
+                <ScanLine className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-[9px] font-black text-blue-400 uppercase tracking-[0.4em]">Recepción</span>
+            </div>
+            <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter">INBOUND_HUB</h2>
           </button>
 
           <div className="grid grid-cols-2 gap-4">
