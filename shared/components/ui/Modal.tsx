@@ -48,7 +48,7 @@ export const Modal: React.FC<ModalProps> = ({
 
  const contentClasses = {
  'center': 'rounded-[2.5rem] animate-in zoom-in-95 duration-200',
- 'bottom-sheet': 'w-full rounded-t-[2.5rem] md:rounded-[2.5rem] animate-in slide-in-from-bottom-8 md:zoom-in-95 duration-300',
+ 'bottom-sheet': 'w-full max-w-full rounded-t-[2.5rem] md:rounded-[2.5rem] animate-in slide-in-from-bottom-8 md:zoom-in-95 duration-300',
  'fullscreen': 'w-full h-full rounded-none animate-in fade-in duration-200'
  };
 
@@ -80,7 +80,7 @@ export const Modal: React.FC<ModalProps> = ({
  </div>
  )}
 
- <div className="flex-1 overflow-y-auto no-scrollbar relative transform-gpu">
+ <div className="flex-1 overflow-y-auto no-scrollbar relative">
  {children}
  </div>
  </div>

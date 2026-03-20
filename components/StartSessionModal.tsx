@@ -202,33 +202,34 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
 
   const renderWizard = () => {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-3">
-            <button onClick={() => setStep('select')} className="p-2 bg-white/5 rounded-full text-slate-400 active:bg-white/10">
-              <X className="w-5 h-5" />
-            </button>
-            <div>
-              <h3 className="text-lg font-black uppercase italic tracking-tight text-white">
-                {mode === 'guided' ? 'Con Orden ERP' : 'Conteo Ciego'}
-              </h3>
-              <div className="flex gap-1 mt-1">
-                {[1, 2, 3, 4].map((s) => {
-                  const currentStepIdx = ['scan_label', 'take_photo', 'enter_erp', 'confirm'].indexOf(step) + 1;
-                  const isCompleted = ['scan_label', 'take_photo', 'enter_erp', 'confirm'].indexOf(step) + 1 > s;
-                  const isActive = ['scan_label', 'take_photo', 'enter_erp', 'confirm'].indexOf(step) + 1 === s;
-                  
-                  // Skip step 3 for blind mode
-                  if (mode === 'blind' && s === 3) return null;
+      <div className="space-y-6 md:space-y-8">
+        <div className="flex items-center gap-4 mb-2">
+          <button 
+            onClick={() => setStep('select')} 
+            className="p-2.5 bg-white/5 rounded-xl text-slate-400 active:bg-white/10 active:scale-90 transition-all shrink-0"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-lg md:text-xl font-black uppercase italic tracking-tight text-white truncate">
+              {mode === 'guided' ? 'Con Orden ERP' : 'Conteo Ciego'}
+            </h3>
+            <div className="flex gap-1.5 mt-1.5">
+              {[1, 2, 3, 4].map((s) => {
+                const currentStepIdx = ['scan_label', 'take_photo', 'enter_erp', 'confirm'].indexOf(step) + 1;
+                const isCompleted = ['scan_label', 'take_photo', 'enter_erp', 'confirm'].indexOf(step) + 1 > s;
+                const isActive = ['scan_label', 'take_photo', 'enter_erp', 'confirm'].indexOf(step) + 1 === s;
+                
+                // Skip step 3 for blind mode
+                if (mode === 'blind' && s === 3) return null;
 
-                  return (
-                    <div 
-                      key={s} 
-                      className={`h-1 rounded-full transition-all ${isCompleted ? 'bg-emerald-500 w-6' : isActive ? 'bg-blue-500 w-8' : 'bg-white/10 w-4'}`} 
-                    />
-                  );
-                })}
-              </div>
+                return (
+                  <div 
+                    key={s} 
+                    className={`h-1.5 rounded-full transition-all duration-500 ${isCompleted ? 'bg-emerald-500 w-6' : isActive ? 'bg-blue-500 w-10' : 'bg-white/10 w-4'}`} 
+                  />
+                );
+              })}
             </div>
           </div>
         </div>
@@ -251,20 +252,22 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
               <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Escanea el código de barras del bulto</p>
             </div>
             
-            <div className="flex gap-2">
-              <input 
-                type="text"
-                value={labelId}
-                onChange={(e) => setLabelId(e.target.value)}
-                autoFocus
-                placeholder="ID_Bulto_SSCC"
-                className="flex-1 h-16 bg-slate-900 rounded-2xl px-4 font-mono font-black text-xl border-2 border-blue-500 text-white outline-none shadow-[0_0_15px_rgba(59,130,246,0.2)]"
-              />
+            <div className="flex gap-3">
+              <div className="flex-1 relative">
+                <input 
+                  type="text"
+                  value={labelId}
+                  onChange={(e) => setLabelId(e.target.value)}
+                  autoFocus
+                  placeholder="ID_Bulto_SSCC"
+                  className="w-full h-16 bg-slate-900 rounded-2xl px-5 font-mono font-black text-lg md:text-xl border-2 border-blue-500 text-white outline-none shadow-[0_0_20px_rgba(59,130,246,0.15)] focus:border-blue-400 transition-all"
+                />
+              </div>
               <button 
                 onClick={() => setIsCameraOpen(true)}
-                className="w-16 h-16 bg-blue-500/10 border-2 border-blue-500/30 rounded-2xl flex items-center justify-center text-blue-400 active:bg-blue-600 active:text-white transition-all shrink-0"
+                className="w-16 h-16 bg-blue-500/10 border-2 border-blue-500/30 rounded-2xl flex items-center justify-center text-blue-400 active:scale-95 active:bg-blue-600 active:text-white transition-all shrink-0"
               >
-                <Camera className="w-6 h-6" />
+                <Camera className="w-7 h-7" />
               </button>
             </div>
 
@@ -338,20 +341,22 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
               <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Ingresa el número de orden para descargar datos</p>
             </div>
 
-            <div className="flex gap-2">
-              <input 
-                type="text"
-                value={erpOrder}
-                onChange={(e) => { setErpOrder(e.target.value); setCloudOrder(null); }}
-                autoFocus
-                placeholder="Número de Orden / ERP"
-                className="flex-1 h-16 bg-slate-900 rounded-2xl px-4 font-mono font-black text-xl border-2 border-emerald-500 text-white outline-none shadow-[0_0_15px_rgba(16,185,129,0.2)]"
-              />
+            <div className="flex gap-3">
+              <div className="flex-1 relative">
+                <input 
+                  type="text"
+                  value={erpOrder}
+                  onChange={(e) => { setErpOrder(e.target.value); setCloudOrder(null); }}
+                  autoFocus
+                  placeholder="Número de Orden / ERP"
+                  className="w-full h-16 bg-slate-900 rounded-2xl px-5 font-mono font-black text-lg md:text-xl border-2 border-emerald-500 text-white outline-none shadow-[0_0_20px_rgba(16,185,129,0.15)] focus:border-emerald-400 transition-all"
+                />
+              </div>
               <button 
                 onClick={() => setIsCameraOpen(true)}
-                className="w-16 h-16 bg-emerald-500/10 border-2 border-emerald-500/30 rounded-2xl flex items-center justify-center text-emerald-400 active:bg-emerald-600 active:text-white transition-all shrink-0"
+                className="w-16 h-16 bg-emerald-500/10 border-2 border-emerald-500/30 rounded-2xl flex items-center justify-center text-emerald-400 active:scale-95 active:bg-emerald-600 active:text-white transition-all shrink-0"
               >
-                <Camera className="w-6 h-6" />
+                <Camera className="w-7 h-7" />
               </button>
             </div>
 
@@ -434,7 +439,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
       className="md:max-w-md bg-slate-950 text-white border-t-4 border-slate-800"
       showCloseButton={step === 'select'}
     >
-      <div className="px-6 pt-8 pb-8">
+      <div className="p-5 md:p-8 pb-10 md:pb-12">
         {step === 'select' ? renderSelectMode() : renderWizard()}
       </div>
 
