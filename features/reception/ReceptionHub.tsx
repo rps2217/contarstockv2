@@ -65,6 +65,7 @@ export const ReceptionHub: React.FC = () => {
             isEmbedded 
             initialExpectedCount={downloadedManifest?.expectedTrays}
             initialErp={downloadedManifest?.id}
+            initialItems={downloadedManifest?.items}
           />
         </div>
       </div>

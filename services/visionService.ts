@@ -7,9 +7,9 @@ let aiInstance: GoogleGenAI | null = null;
 
 const getAI = () => {
   if (!aiInstance) {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
     if (!apiKey) {
-      throw new Error("GEMINI_API_KEY no configurada.");
+      throw new Error("API de IA no configurada. Por favor, agrega GEMINI_API_KEY en los Secrets.");
     }
     aiInstance = new GoogleGenAI({ apiKey });
   }

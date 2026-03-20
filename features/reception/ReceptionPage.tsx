@@ -60,11 +60,39 @@ const ReceptionRow = React.memo(({ index, data }: any) => {
  );
 });
 
+const ManifestRow = React.memo(({ index, data }: any) => {
+  const item = data.items[index];
+  if (!item) return null;
+
+  return (
+    <div className="px-3 py-1 h-full">
+      <div className="w-full h-full border-2 border-white/5 bg-slate-900/40 p-4 rounded-2xl flex items-center justify-between">
+        <div className="flex items-center gap-4 overflow-hidden">
+          <div className="w-10 h-10 rounded-xl bg-amber-900/20 text-amber-500 border border-amber-500/20 flex items-center justify-center shrink-0">
+            <Box className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <div className="font-mono font-black text-white truncate text-sm uppercase tracking-wider">
+              {item.name}
+            </div>
+            <div className="text-[9px] font-bold text-slate-500 uppercase mt-1 flex items-center gap-2">
+              <span>SKU: {item.barcode}</span>
+              <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
+              <span className="text-amber-500 font-black tracking-tighter">CANT: {item.qty}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
 export const ReceptionPage: React.FC<{ 
   isEmbedded?: boolean;
   initialExpectedCount?: number;
   initialErp?: string;
-}> = ({ isEmbedded = false, initialExpectedCount, initialErp }) => {
+  initialItems?: any[];
+}> = ({ isEmbedded = false, initialExpectedCount, initialErp, initialItems }) => {
   const navigate = useNavigate();
   const { state, actions } = useReceptionLogic();
   
@@ -77,6 +105,8 @@ export const ReceptionPage: React.FC<{
   const [showTools, setShowTools] = useState(false);
   const [expectedCount, setExpectedCount] = useState<number>(initialExpectedCount || 0);
   const [isSettingExpected, setIsSettingExpected] = useState(!initialExpectedCount);
+  const [viewMode, setViewMode] = useState<'scanned' | 'expected'>(initialItems ? 'expected' : 'scanned');
+  const [expectedItems] = useState<any[]>(initialItems || []);
 
   // Persistir preferencia de auto-bloqueo
   React.useEffect(() => {
@@ -214,19 +244,49 @@ export const ReceptionPage: React.FC<{
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 relative bg-black">
-        <div className="absolute top-4 left-4 z-10">
+      <div className="flex-1 min-h-0 relative bg-black flex flex-col">
+        <div className="p-4 flex items-center justify-between z-10">
           <span className="px-3 py-1 bg-slate-800/80 backdrop-blur-md border border-white/10 rounded-full text-[9px] font-black uppercase tracking-widest text-slate-400">
-            Bandejas Escaneadas
+            {viewMode === 'scanned' ? 'Bandejas Escaneadas' : 'Listado Esperado (Nube)'}
           </span>
+          
+          {expectedItems.length > 0 && (
+            <div className="flex bg-slate-900 p-1 rounded-xl border border-white/5">
+              <button 
+                onClick={() => setViewMode('scanned')}
+                className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all ${viewMode === 'scanned' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500'}`}
+              >
+                Escaneados
+              </button>
+              <button 
+                onClick={() => setViewMode('expected')}
+                className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all ${viewMode === 'expected' ? 'bg-amber-600 text-white shadow-lg' : 'text-slate-500'}`}
+              >
+                Esperados
+              </button>
+            </div>
+          )}
         </div>
-        <VirtualList 
-          items={drafts} 
-          itemHeight={80} 
-          renderRow={ReceptionRow} 
-          rowData={rowData} 
-          className="bg-black/20" 
-        />
+        
+        <div className="flex-1 min-h-0">
+          {viewMode === 'scanned' ? (
+            <VirtualList 
+              items={drafts} 
+              itemHeight={80} 
+              renderRow={ReceptionRow} 
+              rowData={rowData} 
+              className="bg-black/20" 
+            />
+          ) : (
+            <VirtualList 
+              items={expectedItems} 
+              itemHeight={80} 
+              renderRow={ManifestRow} 
+              rowData={{ items: expectedItems }} 
+              className="bg-black/20" 
+            />
+          )}
+        </div>
       </div>
 
       <ScannerFooter 
