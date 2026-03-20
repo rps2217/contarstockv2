@@ -27,6 +27,7 @@ interface IndustrialScannerLayoutProps {
   onSync?: () => void;
   isSyncing?: boolean;
   bottomContent?: React.ReactNode; // For multiplier or other specific footers
+  labelPhoto?: string;
 }
 
 export const IndustrialScannerLayout: React.FC<IndustrialScannerLayoutProps> = ({
@@ -46,9 +47,11 @@ export const IndustrialScannerLayout: React.FC<IndustrialScannerLayoutProps> = (
   allowEditQuantity = false,
   onSync,
   isSyncing = false,
-  bottomContent
+  bottomContent,
+  labelPhoto
 }) => {
   const [isManualMode, setIsManualMode] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [manualInput, setManualInput] = useState('');
   const manualInputRef = useRef<HTMLInputElement>(null);
   const lastSpokenRef = useRef<string>('');
@@ -141,7 +144,41 @@ export const IndustrialScannerLayout: React.FC<IndustrialScannerLayoutProps> = (
           isTriggered={true}
         />
         <ScannerTargetOverlay feedback={feedback} />
+        
+        {labelPhoto && (
+          <button 
+            onClick={() => setIsPreviewOpen(true)}
+            className="absolute bottom-2 right-2 z-40 w-10 h-10 bg-black/60 border border-white/20 rounded-xl flex items-center justify-center text-white active:scale-95 transition-all"
+          >
+            <Box className="w-5 h-5" />
+          </button>
+        )}
       </div>
+
+      {/* MODAL DE PREVIEW DE ETIQUETA */}
+      {isPreviewOpen && labelPhoto && (
+        <div className="fixed inset-0 z-[300] bg-black/90 flex flex-col items-center justify-center p-6 animate-in fade-in">
+          <div className="w-full max-w-lg bg-slate-900 rounded-3xl overflow-hidden border border-white/10 shadow-2xl">
+            <div className="p-4 border-b border-white/10 flex justify-between items-center bg-slate-800">
+              <h3 className="text-xs font-black uppercase tracking-widest text-white">Etiqueta Física</h3>
+              <button onClick={() => setIsPreviewOpen(false)} className="p-2 bg-white/5 rounded-full text-slate-400">
+                <Box className="w-5 h-5 rotate-45" />
+              </button>
+            </div>
+            <div className="aspect-video bg-black">
+              <img src={labelPhoto} alt="Label" className="w-full h-full object-contain" />
+            </div>
+            <div className="p-4 bg-slate-800 text-center">
+              <button 
+                onClick={() => setIsPreviewOpen(false)}
+                className="w-full py-3 bg-white text-black font-black uppercase text-[10px] rounded-xl"
+              >
+                Cerrar Vista
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* PANEL DE LISTA (Resto del espacio) */}
       <div className="flex-1 min-h-0 bg-slate-950 flex flex-col relative z-10 border-t border-rose-500/30">

@@ -88,6 +88,7 @@ export interface CountingSession {
  mm?: number;
  yyyy?: number;
  batch?: string;
+ labelPhoto?: string;
 }
 
 export interface ScanRecord {

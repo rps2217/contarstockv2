@@ -136,21 +136,28 @@ export const addScanEvent = async (
   return newRecord;
 };
 
-export const createSession = async (erp: string, label: string, type: 'standard' | 'hammer' = 'standard', expected?: any): Promise<CountingSession> => {
- const s: CountingSession = { 
- id: generateUUID(), 
- erpOrder: erp.trim().toUpperCase(), 
- logisticsLabel: label.trim().toUpperCase(), 
- createdAt: Date.now(), 
- status: 'active', 
- sessionType: type, 
- totalUnits: 0, 
- totalSKUs: 0, 
- expectedItems: expected?.items || [], 
- isVerifiedMode: !!(expected?.items?.length) 
- };
- await db.sessions.add(s);
- return s;
+export const createSession = async (
+  erp: string, 
+  label: string, 
+  type: 'standard' | 'hammer' = 'standard', 
+  expected?: any,
+  labelPhoto?: string
+): Promise<CountingSession> => {
+  const s: CountingSession = { 
+    id: generateUUID(), 
+    erpOrder: erp.trim().toUpperCase(), 
+    logisticsLabel: label.trim().toUpperCase(), 
+    createdAt: Date.now(), 
+    status: 'active', 
+    sessionType: type, 
+    totalUnits: 0, 
+    totalSKUs: 0, 
+    expectedItems: expected?.items || [], 
+    isVerifiedMode: !!(expected?.items?.length),
+    labelPhoto
+  };
+  await db.sessions.add(s);
+  return s;
 };
 
 export const createDraftSession = async (label: string, erpOrder?: string, mm?: number, yyyy?: number, batch?: string): Promise<CountingSession> => {

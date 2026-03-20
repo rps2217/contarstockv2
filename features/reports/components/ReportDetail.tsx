@@ -61,6 +61,14 @@ export const ReportDetail: React.FC<{ sessionId: string; onBack: () => void }> =
 
  <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-24">
  <div className="max-w-4xl mx-auto space-y-4">
+ {session?.labelPhoto && (
+ <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm overflow-hidden mb-4">
+ <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Evidencia de Etiqueta</h3>
+ <div className="aspect-video rounded-2xl overflow-hidden bg-black">
+ <img src={session.labelPhoto} alt="Label" className="w-full h-full object-contain" />
+ </div>
+ </div>
+ )}
  {consolidation?.map((item) => {
  const status = determineItemStatus(item.totalQuantity, item.expectedQuantity);
  return (

@@ -52,6 +52,7 @@ export const CountingPage: React.FC = () => {
  items={sessionData.history}
  multiplier={state.multiplier}
  onMultiplierChange={actions.setMultiplier}
+ labelPhoto={sessionData.session.labelPhoto}
  />
 
  <ScannerToolsSheet 
