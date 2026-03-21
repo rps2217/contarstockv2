@@ -1,6 +1,6 @@
 
 import React, { useState, useCallback } from 'react';
-import { DownloadCloud, Loader2, AlertCircle, FileSearch, Sparkles, Database, Ghost, Camera, X, Box, FileText, ArrowRight, ScanLine } from 'lucide-react';
+import { DownloadCloud, Loader2, AlertCircle, FileSearch, Sparkles, Database, Ghost, Camera, X, Box, FileText, ArrowRight, ScanLine, Lock, Unlock } from 'lucide-react';
 import { CountingSession, ExpectedOrder } from '../types';
 import * as sessionService from '../services/sessionService'; 
 import { sanitizeBarcode } from '../services/utils';
@@ -27,6 +27,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
   const [erpOrder, setErpOrder] = useState('');
   const [labelId, setLabelId] = useState('');
   const [labelPhoto, setLabelPhoto] = useState<string | null>(null);
+  const [isAutoLockEnabled, setIsAutoLockEnabled] = useState(true);
   const [error, setError] = useState('');
   const [activeField, setActiveField] = useState<'label' | 'erp'>('label');
   
@@ -124,7 +125,8 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
         labelId, 
         'standard', 
         cloudOrder || undefined,
-        labelPhoto || undefined
+        labelPhoto || undefined,
+        isAutoLockEnabled
       );
       onSessionStart(session);
       onClose();
@@ -409,6 +411,32 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
                 <div className="aspect-video rounded-xl overflow-hidden bg-black/20">
                   <img src={labelPhoto || ''} alt="Label" className="w-full h-full object-cover" />
                 </div>
+              </div>
+
+              <div className="pt-2 border-t border-white/5">
+                <button
+                  onClick={() => setIsAutoLockEnabled(!isAutoLockEnabled)}
+                  className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all ${
+                    isAutoLockEnabled 
+                      ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' 
+                      : 'bg-slate-800/50 border-white/5 text-slate-400'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg ${isAutoLockEnabled ? 'bg-blue-500/20' : 'bg-slate-700/50'}`}>
+                      {isAutoLockEnabled ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+                    </div>
+                    <div className="text-left">
+                      <div className="text-[10px] font-black uppercase tracking-wider">Auto-Bloqueo</div>
+                      <div className="text-[8px] font-bold opacity-60 uppercase">
+                        {isAutoLockEnabled ? 'Activado (Seguridad)' : 'Desactivado (Continuo)'}
+                      </div>
+                    </div>
+                  </div>
+                  <div className={`w-10 h-5 rounded-full relative transition-colors ${isAutoLockEnabled ? 'bg-blue-500' : 'bg-slate-700'}`}>
+                    <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${isAutoLockEnabled ? 'right-1' : 'left-1'}`} />
+                  </div>
+                </button>
               </div>
             </div>
 

@@ -22,6 +22,9 @@ export const erpService = {
       const res = await cloudApi.post('fetch_rows', { tableName: 'PEDIDOS' });
       
       if (!res.success || !res.rows) {
+        if (res.error === 'URL_NOT_CONFIGURED') {
+          throw new Error('URL_NOT_CONFIGURED');
+        }
         throw new Error(res.error || 'Error al conectar con la nube');
       }
 
@@ -71,6 +74,76 @@ export const erpService = {
       };
     } catch (error: any) {
       console.error("ERP Download Error:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Downloads all manifests from the cloud (Google Sheets) and groups them by ERP.
+   * Useful for background syncing so the Detective AI has data to work with.
+   */
+  async downloadAllPendingManifests(): Promise<ErpManifest[]> {
+    try {
+      const res = await cloudApi.post('fetch_rows', { tableName: 'PEDIDOS' });
+      
+      if (!res.success || !res.rows) {
+        if (res.error === 'URL_NOT_CONFIGURED') {
+          throw new Error('URL_NOT_CONFIGURED');
+        }
+        throw new Error(res.error || 'Error al conectar con la nube');
+      }
+
+      // Group rows by ERP
+      const erpGroups = new Map<string, any[]>();
+      
+      res.rows.forEach((row: any) => {
+        try {
+          const parsed = CloudOrderRowSchema.parse(row);
+          const erpId = parsed.erp.toUpperCase().trim();
+          if (!erpGroups.has(erpId)) {
+            erpGroups.set(erpId, []);
+          }
+          erpGroups.get(erpId)!.push(parsed);
+        } catch (e) {
+          // Ignore invalid rows
+        }
+      });
+
+      const manifests: ErpManifest[] = [];
+
+      erpGroups.forEach((rows, erpId) => {
+        // Find raw match for expected trays
+        let expectedTrays = 0;
+        const rawMatch = res.rows.find((r: any) => {
+          const normalized: any = {};
+          Object.keys(r).forEach(k => normalized[k.trim().toUpperCase()] = r[k]);
+          return normalized["ERP"] === erpId || normalized["ORDEN"] === erpId;
+        });
+
+        if (rawMatch) {
+          const normalized: any = {};
+          Object.keys(rawMatch).forEach(k => normalized[k.trim().toUpperCase()] = rawMatch[k]);
+          expectedTrays = Number(normalized["BANDEJAS"] || normalized["BULTOS"] || normalized["EXPECTED_TRAYS"] || 0);
+        }
+
+        if (expectedTrays === 0) {
+          expectedTrays = rows.length;
+        }
+
+        manifests.push({
+          id: erpId,
+          expectedTrays,
+          description: `Pedido ERP: ${erpId} (${rows.length} items)`,
+          status: 'pending',
+          items: rows
+        });
+      });
+
+      return manifests;
+    } catch (error: any) {
+      if (error.message !== 'URL_NOT_CONFIGURED') {
+        console.error("ERP Download All Error:", error);
+      }
       throw error;
     }
   }

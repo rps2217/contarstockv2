@@ -14,6 +14,7 @@ import { Login } from './components/Login';
 import { InitializationService, InitStep } from './services/initializationService';
 import { ToastContainer } from './shared/components/ui/ToastContainer';
 import { useAutoSync } from './hooks/useAutoSync';
+import { useAutoSession } from './hooks/useAutoSession';
 import ReceptionHub from './features/reception/ReceptionHub';
 import { StartSessionModal } from './components/StartSessionModal';
 import { useNavigate } from 'react-router-dom';
@@ -42,6 +43,9 @@ const AppContent = () => {
   
   // Activar sincronización automática inteligente
   useAutoSync();
+  
+  // Activar detección de escaneo espontáneo (Zero-Click)
+  useAutoSession();
 
   // Detectar si estamos en un modo de escaneo inmersivo
   const isScanningMode = location.pathname.startsWith('/counting/') || 

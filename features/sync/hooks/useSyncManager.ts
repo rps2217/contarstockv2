@@ -1,6 +1,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import * as syncManager from '../../../services/syncManager';
+import { erpService } from '../../../services/erpService';
+import { ExpectedOrderRepository } from '../../../repositories/ExpectedOrderRepository';
 
 export const useSyncManager = () => {
  const [uiGroups, setUiGroups] = useState<any[]>([]);
@@ -38,6 +40,54 @@ export const useSyncManager = () => {
  refreshGroups();
  };
 
+ const handleDownloadOrders = async () => {
+   if (!navigator.onLine) {
+     addLog("Error: Sin conexión a Internet detectada.", 'error');
+     return;
+   }
+
+   setIsProcessing(true);
+   addLog(">>> INICIANDO DESCARGA DE ÓRDENES...", 'info');
+
+   try {
+     const manifests = await erpService.downloadAllPendingManifests();
+     if (manifests.length > 0) {
+       let newOrdersCount = 0;
+       for (const manifest of manifests) {
+         const existing = await ExpectedOrderRepository.getById(manifest.id);
+         if (!existing) {
+           const items = manifest.items?.map((p: any) => ({
+             barcode: p.barcode,
+             name: p.name,
+             expectedQty: p.qty
+           })) || [];
+
+           await ExpectedOrderRepository.save({
+             id: manifest.id,
+             internalId: manifest.id,
+             items,
+             totalExpectedUnits: items.reduce((acc, i) => acc + i.expectedQty, 0),
+             totalExpectedSKUs: items.length,
+             importedAt: Date.now()
+           });
+           newOrdersCount++;
+         }
+       }
+       addLog(`✓ Se descargaron ${newOrdersCount} nuevas órdenes para el Detective IA`, 'success');
+     } else {
+       addLog("No se encontraron órdenes pendientes en la nube.", 'info');
+     }
+   } catch (error: any) {
+     if (error.message === 'URL_NOT_CONFIGURED') {
+       addLog("⚠️ URL de AppSheet no configurada. Configure la URL en Ajustes.", 'error');
+     } else {
+       addLog(`✗ Error al descargar órdenes: ${error.message}`, 'error');
+     }
+   } finally {
+     setIsProcessing(false);
+   }
+ };
+
  const handleSyncAll = async () => {
  if (!navigator.onLine) {
  addLog("Error: Sin conexión a Internet detectada.", 'error');
@@ -47,6 +97,7 @@ export const useSyncManager = () => {
  const pending = uiGroups.filter(g => g.uiStatus !== 'success');
  if (!pending.length) {
  addLog("No hay datos pendientes para subir.", 'info');
+ handleDownloadOrders(); // Si no hay subidas, intentamos descargar órdenes
  return;
  }
 
@@ -72,10 +123,13 @@ export const useSyncManager = () => {
  setIsProcessing(false);
  addLog(">>> Operación finalizada.", 'info');
  refreshGroups();
+ 
+ // Después de subir, intentamos descargar órdenes
+ handleDownloadOrders();
  };
 
  return {
  state: { uiGroups, isProcessing, logs },
- actions: { handleSyncAll, refreshGroups, handleForceReset }
+ actions: { handleSyncAll, refreshGroups, handleForceReset, handleDownloadOrders }
  };
 };

@@ -16,7 +16,8 @@ export const SHEET_COLUMNS = {
  AUDIT_STATUS: "ESTADO_AUDITORIA",
  AUDIT_SCORE: "PUNTAJE_AUDITORIA",
  // Nueva columna para Inteligencia Colectiva
- IA_SIGNATURE: "FIRMA_IA"
+ IA_SIGNATURE: "FIRMA_IA",
+ PHOTO_URL: "FOTO_DRIVE"
 };
 
 export const SYNC_ENGINE_VERSION = "7.1.1-AI-FIX";

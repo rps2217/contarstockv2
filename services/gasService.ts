@@ -173,3 +173,23 @@ export const fetchFromGas = async (tableName: string): Promise<any[]> => {
 export const sendToGas = async (tableName: string, rows: any[]): Promise<any> => {
  return cloudApi.appendRows(tableName, rows);
 };
+
+/**
+ * Respalda una foto en Google Drive vía GAS
+ */
+export const uploadPhotoToDrive = async (base64: string, erpOrder: string, label: string): Promise<{ success: boolean; fileUrl?: string }> => {
+  try {
+    const res = await cloudApi.post('upload_photo', {
+      base64,
+      erpOrder,
+      label,
+      mimeType: 'image/jpeg'
+    });
+    return {
+      success: res.success,
+      fileUrl: res.fileUrl
+    };
+  } catch (e) {
+    return { success: false };
+  }
+};

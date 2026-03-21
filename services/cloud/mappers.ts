@@ -39,6 +39,7 @@ export const createInventoryPayload = (
  [SHEET_COLUMNS.AUDIT_STATUS]: session.auditStatus?.toUpperCase() || "",
  [SHEET_COLUMNS.AUDIT_SCORE]: session.auditScore || "",
  [SHEET_COLUMNS.IA_SIGNATURE]: item.embedding ? JSON.stringify(item.embedding) : "",
+ [SHEET_COLUMNS.PHOTO_URL]: session.photoUrl || "",
  "META_SOURCE": source
  };
  });

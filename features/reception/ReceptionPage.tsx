@@ -1,6 +1,6 @@
 
-import React, { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useCallback, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useReceptionLogic } from './hooks/useReceptionLogic';
 import { CameraScanner } from '../../components/CameraScanner';
 import { ReceptionHero } from './components/ReceptionHero'; 
@@ -94,6 +94,7 @@ export const ReceptionPage: React.FC<{
   initialItems?: any[];
 }> = ({ isEmbedded = false, initialExpectedCount, initialErp, initialItems }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { state, actions } = useReceptionLogic();
   
   const [isAutoLockEnabled, setIsAutoLockEnabled] = useState(() => localStorage.getItem('reception_autolock') !== 'false');
@@ -107,6 +108,22 @@ export const ReceptionPage: React.FC<{
   const [isSettingExpected, setIsSettingExpected] = useState(!initialExpectedCount);
   const [viewMode, setViewMode] = useState<'scanned' | 'expected'>(initialItems ? 'expected' : 'scanned');
   const [expectedItems] = useState<any[]>(initialItems || []);
+
+  // Handle initial scan from dashboard
+  useEffect(() => {
+    const initialScan = (location.state as any)?.initialScan;
+    if (initialScan) {
+      // Bypass the expected count screen for blind receptions
+      setIsSettingExpected(false);
+      
+      // Small delay to ensure DB is ready
+      setTimeout(() => {
+        actions.handleScan(initialScan, state.currentErp);
+      }, 100);
+      // Clear the state so it doesn't re-trigger on navigation
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, location.pathname, actions, state.currentErp, navigate]);
 
   // Persistir preferencia de auto-bloqueo
   React.useEffect(() => {

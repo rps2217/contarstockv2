@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Cloud, ChevronLeft, Loader2, ArrowUpCircle, Info } from 'lucide-react';
+import { Cloud, ChevronLeft, Loader2, ArrowUpCircle, Info, DownloadCloud } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSyncManager } from './hooks/useSyncManager';
 import { SyncGroupCard } from './components/SyncGroupCard';
@@ -41,6 +41,7 @@ export const SyncManagerUI: React.FC = () => {
  <div className="h-full flex flex-col items-center justify-center text-center opacity-40">
  <Cloud className="w-24 h-24 mb-4 text-slate-300" />
  <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Todo Sincronizado</h3>
+ <p className="text-sm mt-2 font-medium">No hay conteos pendientes de subir.</p>
  </div>
  ) : (
  state.uiGroups.map(g => (
@@ -50,7 +51,15 @@ export const SyncManagerUI: React.FC = () => {
  </div>
  </div>
 
- <div className="p-6 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-white/5 shrink-0 z-30 pb-safe">
+ <div className="p-6 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-white/5 shrink-0 z-30 pb-safe flex flex-col gap-3">
+ <button 
+ onClick={actions.handleDownloadOrders}
+ disabled={state.isProcessing}
+ className="w-full bg-slate-100 hover:bg-slate-200 disabled:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 dark:disabled:bg-slate-900 disabled:text-slate-400 text-slate-700 dark:text-slate-300 font-black py-4 rounded-2xl shadow-sm flex items-center justify-center gap-3 transition-all active:scale-95 uppercase tracking-[0.1em] text-xs"
+ >
+ {state.isProcessing ? <Loader2 className="animate-spin w-5 h-5"/> : <DownloadCloud className="w-5 h-5" />}
+ Descargar Órdenes Pendientes
+ </button>
  <button 
  onClick={actions.handleSyncAll}
  disabled={state.isProcessing || state.uiGroups.length === 0}

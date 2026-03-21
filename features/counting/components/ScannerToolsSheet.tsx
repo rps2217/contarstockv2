@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Barcode, Trash2, Box, X, MapPin, Printer } from 'lucide-react';
+import { Barcode, Trash2, Box, X, MapPin, Printer, Lock, Unlock } from 'lucide-react';
 import { Modal } from '../../../shared/components/ui/Modal';
 
 interface Props {
@@ -9,6 +9,8 @@ interface Props {
  hasActiveItem: boolean;
  location: string;
  label: string;
+ isAutoLockEnabled: boolean;
+ onToggleAutoLock: () => void;
  onChangeLocation: () => void;
  onChangeLabel: () => void;
  onShowLabel: () => void;
@@ -18,6 +20,7 @@ interface Props {
 
 export const ScannerToolsSheet: React.FC<Props> = ({ 
  isOpen, onClose, hasActiveItem, location, label, 
+ isAutoLockEnabled, onToggleAutoLock,
  onChangeLocation, onChangeLabel, onShowLabel, onReset, onPrintSummary
 }) => {
  
@@ -57,6 +60,13 @@ export const ScannerToolsSheet: React.FC<Props> = ({
  </div>
 
  <div className="grid grid-cols-2 gap-4">
+ <ToolButton 
+ onClick={onToggleAutoLock} 
+ icon={isAutoLockEnabled ? Lock : Unlock} 
+ label={isAutoLockEnabled ? "Auto-Bloqueo ON" : "Auto-Bloqueo OFF"} 
+ sublabel={isAutoLockEnabled ? "Seguridad Activa" : "Modo Continuo"}
+ color={isAutoLockEnabled ? "text-blue-400 border-blue-500/20" : "text-slate-400 border-slate-500/20"} 
+ />
  <ToolButton 
  onClick={onChangeLocation} 
  icon={MapPin} 

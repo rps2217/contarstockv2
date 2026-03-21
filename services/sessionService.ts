@@ -141,7 +141,8 @@ export const createSession = async (
   label: string, 
   type: 'standard' | 'hammer' = 'standard', 
   expected?: any,
-  labelPhoto?: string
+  labelPhoto?: string,
+  isAutoLockEnabled: boolean = true
 ): Promise<CountingSession> => {
   const s: CountingSession = { 
     id: generateUUID(), 
@@ -154,7 +155,8 @@ export const createSession = async (
     totalSKUs: 0, 
     expectedItems: expected?.items || [], 
     isVerifiedMode: !!(expected?.items?.length),
-    labelPhoto
+    labelPhoto,
+    isAutoLockEnabled
   };
   await db.sessions.add(s);
   return s;
@@ -198,7 +200,7 @@ export const fetchExpectedItemsFromCloud = async (erp: string): Promise<Expected
  }));
 
  return {
- id: generateUUID(),
+ id: erp.toUpperCase(),
  internalId: erp.toUpperCase(),
  items,
  totalExpectedUnits: items.reduce((acc, i) => acc + i.expectedQty, 0),
@@ -213,12 +215,19 @@ export const fetchExpectedItemsFromCloud = async (erp: string): Promise<Expected
 };
 
 export const closeSession = async (id: string) => { 
- if (flushTimeout) {
- clearTimeout(flushTimeout);
- await commitBufferToDatabase();
- }
- await db.sessions.update(id, { status: 'completed' }); 
- triggerBackgroundSync();
+  if (flushTimeout) {
+    clearTimeout(flushTimeout);
+    await commitBufferToDatabase();
+  }
+  await db.sessions.update(id, { status: 'completed' }); 
+  
+  // Remove from pending orders queue
+  const session = await db.sessions.get(id);
+  if (session && session.erpOrder && session.erpOrder !== 'RECEPCION_BORRADOR') {
+    await db.expectedOrders.delete(session.erpOrder);
+  }
+  
+  triggerBackgroundSync();
 };
 
 export const deleteSession = async (id: string) => { 

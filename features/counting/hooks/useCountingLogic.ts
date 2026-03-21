@@ -7,10 +7,12 @@ import { getSettings } from '../../../services/settings';
 import { aggregateScans } from '../../../services/aggregator';
 import { shouldPromptForBatch } from '../../../services/uiLogic';
 import { scannerReducer } from '../../../services/scannerMachine';
-import { ConsolidatedItem } from '../../../types';
+import { ConsolidatedItem, MatchResult } from '../../../types';
 import { useScanPipeline } from '../../../shared/hooks/useScanPipeline';
 import { SessionRepository } from '../../../repositories/SessionRepository';
 import { ScanRepository } from '../../../repositories/ScanRepository';
+import { DetectiveService } from '../../../services/detectiveService';
+import { SoundFX } from '../../../services/audio';
 
 export const useCountingLogic = (sessionId: string | undefined, onExit: () => void) => {
   const settings = getSettings();
@@ -18,6 +20,7 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
   const [machineState, dispatch] = useReducer(scannerReducer, 'IDLE');
   
   const [currentLocation, setCurrentLocation] = useState(() => localStorage.getItem('last_loc') || 'BODEGA_GRAL'); 
+  const [potentialMatch, setPotentialMatch] = useState<MatchResult | null>(null);
   const itemsRef = useRef<ConsolidatedItem[]>([]);
   
   useEffect(() => { localStorage.setItem('last_loc', currentLocation); }, [currentLocation]);
@@ -66,6 +69,33 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
     itemsRef.current = sorted;
     return sorted;
   }, [sessionId, session, engine.activeBarcode, engine.feedback, engine.optimisticQty]);
+
+  // LÓGICA DE INFERENCIA EN SEGUNDO PLANO (Inteligencia Proactiva)
+  useEffect(() => {
+    if (!session || session.isVerifiedMode || !consolidatedHistory?.length) return;
+    
+    // Solo ejecutar si tenemos al menos 3 items diferentes para tener confianza
+    if (consolidatedHistory.length < 3) return;
+
+    const runInference = async () => {
+      try {
+        const matches = await DetectiveService.findMatchingOrders(consolidatedHistory);
+        if (matches.length > 0 && matches[0].matchScore > 60) {
+          // Si encontramos un match de alta confianza que no teníamos antes
+          if (!potentialMatch || potentialMatch.expectedOrder.id !== matches[0].expectedOrder.id) {
+            setPotentialMatch(matches[0]);
+            // Feedback sutil para el operario
+            SoundFX.play('success'); 
+          }
+        }
+      } catch (e) {
+        console.error("Inference Error:", e);
+      }
+    };
+
+    const timer = setTimeout(runInference, 2000);
+    return () => clearTimeout(timer);
+  }, [consolidatedHistory, session, potentialMatch]);
 
   const finalizeScanPipeline = useCallback(async (barcode: string, qty: number, mm?: number, yyyy?: number, batch?: string) => {
     if (!sessionId) return;
@@ -116,7 +146,8 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
       currentLocation,
       activeBarcode: engine.activeBarcode, 
       activeProduct: engine.activeProduct,
-      optimisticQty: engine.optimisticQty || 0
+      optimisticQty: engine.optimisticQty || 0,
+      potentialMatch
     },
     sessionData: { session, history: consolidatedHistory || [] },
     actions: { 
@@ -134,16 +165,37 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
       handlePharmaComplete: (m?: number, y?: number, b?: string) => {
         if (engine.activeBarcode) finalizeScanPipeline(engine.activeBarcode, engine.multiplier, m, y, b);
       },
+      cancelPharma: () => {
+        dispatch({ type: 'RESET' });
+      },
       undoLastScan: async () => {
         if(sessionId) {
           const undone = await sessionService.undoLastAction(sessionId);
           if(undone) engine.actions.triggerFeedback('undo');
         }
       },
+      toggleAutoLock: async () => {
+        if (sessionId && session) {
+          const newState = !session.isAutoLockEnabled;
+          await SessionRepository.update(sessionId, { isAutoLockEnabled: newState });
+          engine.actions.triggerFeedback(newState ? 'success' : 'undo');
+        }
+      },
       setStatus: (s: 'manual' | 'idle') => {
         if (s === 'manual') dispatch({ type: 'OPEN_MANUAL' });
         else dispatch({ type: 'RESET' });
-      }
+      },
+      applyPotentialMatch: async () => {
+        if (!potentialMatch || !sessionId) return;
+        await SessionRepository.update(sessionId, {
+          erpOrder: potentialMatch.expectedOrder.internalId,
+          expectedItems: potentialMatch.expectedOrder.items,
+          isVerifiedMode: true
+        });
+        setPotentialMatch(null);
+        engine.actions.triggerFeedback('success');
+      },
+      dismissPotentialMatch: () => setPotentialMatch(null)
     }
   };
 };

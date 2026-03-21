@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { useParams, useNavigate, Navigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate, Navigate, useLocation } from 'react-router-dom';
 import { useCountingLogic } from './hooks/useCountingLogic';
 import { CountingCameraView } from './components/CountingCameraView';
 import { ScannerToolsSheet } from './components/ScannerToolsSheet';
@@ -10,22 +10,41 @@ import { Loader2 } from 'lucide-react';
 import { useAutoLock } from '../../hooks/useAutoLock';
 import { useHIDScanner } from '../../hooks/useHIDScanner';
 import { LocationSelectorModal } from '../../shared/components/ui/LocationSelectorModal';
+import * as sessionService from '../../services/sessionService';
 
 export const CountingPage: React.FC = () => {
- const { id } = useParams<{ id: string }>();
- const navigate = useNavigate();
- const { state, actions, sessionData } = useCountingLogic(id, () => navigate('/reports'));
- const { isLocked, unlock, lock } = useAutoLock(4000);
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { state, actions, sessionData } = useCountingLogic(id, () => navigate('/reports'));
+  const { isLocked, unlock, lock } = useAutoLock(4000, sessionData.session?.isAutoLockEnabled ?? true);
 
- const [isToolsOpen, setIsToolsOpen] = useState(false);
- const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [isToolsOpen, setIsToolsOpen] = useState(false);
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
 
- useHIDScanner({
- onScan: (barcode) => !isLocked && state.status !== 'expiring' && actions.handleExternalScan(barcode, state.multiplier),
- isEnabled: !isToolsOpen,
- });
+  // Procesar escaneo inicial si viene de una redirección automática
+  useEffect(() => {
+    const initialScan = (location.state as any)?.initialScan;
+    if (initialScan && !state.isLoading && sessionData.session) {
+      actions.handleExternalScan(initialScan, state.multiplier);
+      // Limpiar el estado para no re-procesar en re-renders
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, state.isLoading, sessionData.session, actions, navigate, location.pathname, state.multiplier]);
 
- if (state.isLoading) {
+  useHIDScanner({
+    onScan: (barcode) => !isLocked && state.status !== 'awaiting_pharma' && actions.handleExternalScan(barcode, state.multiplier),
+    isEnabled: !isToolsOpen,
+  });
+
+  const handleFinalize = async () => {
+    if (sessionData.session) {
+      await sessionService.closeSession(sessionData.session.id);
+      navigate('/', { state: { message: '¡Orden completada y enviada!' } });
+    }
+  };
+
+  if (state.isLoading) {
  return (
  <div className="h-screen w-full flex flex-col items-center justify-center bg-black text-white">
  <Loader2 className="w-12 h-12 text-blue-600 animate-spin mb-4" />
@@ -41,6 +60,7 @@ export const CountingPage: React.FC = () => {
  <CountingCameraView 
  onBack={() => navigate('/reports')}
  onScan={(code, qty) => actions.handleExternalScan(code, qty ?? state.multiplier)}
+ onFinalize={handleFinalize}
  onOpenTools={() => setIsToolsOpen(true)}
  onLock={lock}
  location={state.currentLocation}
@@ -53,12 +73,17 @@ export const CountingPage: React.FC = () => {
  multiplier={state.multiplier}
  onMultiplierChange={actions.setMultiplier}
  labelPhoto={sessionData.session.labelPhoto}
+ potentialMatch={state.potentialMatch}
+ onApplyMatch={actions.applyPotentialMatch}
+ onDismissMatch={actions.dismissPotentialMatch}
  />
 
  <ScannerToolsSheet 
  isOpen={isToolsOpen} onClose={() => setIsToolsOpen(false)}
  hasActiveItem={!!state.activeBarcode} location={state.currentLocation}
  label={sessionData.session.logisticsLabel} onChangeLocation={() => setIsLocationModalOpen(true)}
+ isAutoLockEnabled={sessionData.session.isAutoLockEnabled ?? true}
+ onToggleAutoLock={actions.toggleAutoLock}
  onChangeLabel={() => {}} onShowLabel={() => {}}
  onReset={async () => { if(confirm("¿Vaciar bulto?")) actions.undoLastScan(); }} onPrintSummary={() => {}}
  />
@@ -68,10 +93,11 @@ export const CountingPage: React.FC = () => {
  currentLocation={state.currentLocation} onSelect={(loc) => { actions.setCurrentLocation(loc); setIsLocationModalOpen(false); }}
  />
 
- {state.status === 'expiring' && state.activeBarcode && (
+ {state.status === 'awaiting_pharma' && state.activeBarcode && (
  <ExpirationModal 
  productName={state.activeProduct?.name || state.activeBarcode} 
  onComplete={actions.handlePharmaComplete} 
+ onCancel={actions.cancelPharma}
  />
  )}
  

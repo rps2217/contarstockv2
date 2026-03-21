@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, FileText, Box, DownloadCloud, Camera, CheckCircle2, AlertCircle, Loader2, Zap, ScanLine } from 'lucide-react';
 import ReceptionPage from './ReceptionPage';
 import DocumentReceptionPage from '../documents/DocumentReceptionPage';
@@ -11,11 +11,18 @@ type ReceptionMode = 'menu' | 'trays' | 'documents' | 'cloud';
 
 export const ReceptionHub: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [mode, setMode] = useState<ReceptionMode>('menu');
   const [manifestId, setManifestId] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [downloadedManifest, setDownloadedManifest] = useState<ErpManifest | null>(null);
+
+  useEffect(() => {
+    if ((location.state as any)?.initialScan) {
+      setMode('trays');
+    }
+  }, [location.state]);
 
   const handleDownload = async () => {
     if (!manifestId.trim()) return;

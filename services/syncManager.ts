@@ -132,6 +132,26 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
  for (const sessionId of group.sessionIds) {
  const session = await db.sessions.get(sessionId);
  if (!session) continue;
+
+ // RESPALDO DE FOTO EN DRIVE (Si existe y no se ha subido)
+ if (session.labelPhoto && !session.photoUrl) {
+ if (onProgress) onProgress(`Respaldando foto en Drive [${session.logisticsLabel}]...`);
+ try {
+ const photoResult = await cloudApi.post('upload_photo', {
+ base64: session.labelPhoto,
+ erpOrder: session.erpOrder,
+ label: session.logisticsLabel,
+ mimeType: 'image/jpeg'
+ });
+ if (photoResult.success && photoResult.fileUrl) {
+ await db.sessions.update(sessionId, { photoUrl: photoResult.fileUrl });
+ if (onProgress) onProgress(`✓ Foto respaldada en Drive.`);
+ }
+ } catch (photoError) {
+ console.warn("Fallo al subir foto a Drive:", photoError);
+ }
+ }
+
  if (onProgress) onProgress(`Preparando bulto ${session.logisticsLabel}...`);
  const unsyncedScans = await db.scans.where('sessionId').equals(session.id).filter(s => s.synced === 0).toArray();
  if (unsyncedScans.length === 0) {

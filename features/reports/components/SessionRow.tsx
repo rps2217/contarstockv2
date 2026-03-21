@@ -1,6 +1,6 @@
 
 import React, { memo } from 'react';
-import { Truck, Cloud, MoreVertical, Trash2, Layers, Zap, Package, ShieldCheck, AlertCircle } from 'lucide-react';
+import { Truck, Cloud, MoreVertical, Trash2, Layers, Zap, Package, ShieldCheck, AlertCircle, Camera } from 'lucide-react';
 
 export const SessionRow = memo(({ index, style, data }: any) => {
  const session = data.items[index];
@@ -47,7 +47,10 @@ export const SessionRow = memo(({ index, style, data }: any) => {
  </div>
  )}
 
- {session.lastSyncTimestamp && <Cloud className="w-4 h-4 text-blue-500 ml-1" />}
+ <div className="flex items-center gap-1.5 ml-1">
+ {session.lastSyncTimestamp && <Cloud className="w-4 h-4 text-blue-500" />}
+ {session.photoUrl && <Camera className="w-4 h-4 text-emerald-500" />}
+ </div>
  </div>
  
  <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase truncate tracking-tighter leading-none mb-1">

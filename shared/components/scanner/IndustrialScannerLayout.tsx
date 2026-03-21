@@ -203,7 +203,7 @@ export const IndustrialScannerLayout: React.FC<IndustrialScannerLayoutProps> = (
         )}
 
         {/* LISTA DE ITEMS */}
-        <div className={`flex-1 min-h-0 overflow-y-auto no-scrollbar bg-slate-950 ${bottomContent ? 'pb-24' : 'pb-20'}`}>
+        <div className={`flex-1 min-h-0 overflow-y-auto no-scrollbar bg-slate-950 ${bottomContent ? 'pb-36' : 'pb-20'}`}>
           {filteredItems.length > 0 ? (
             filteredItems.map((item, index) => (
               <ScannedItemRow 

@@ -89,6 +89,8 @@ export interface CountingSession {
  yyyy?: number;
  batch?: string;
  labelPhoto?: string;
+ photoUrl?: string;
+ isAutoLockEnabled?: boolean;
 }
 
 export interface ScanRecord {
@@ -156,7 +158,7 @@ export interface ErpOrderSession {
   createdAt: number;
 }
 // ScannerStatus mapeado a estados visuales UI
-export type ScannerStatus = 'idle' | 'manual' | 'busy' | 'expiring' | 'confirming' | 'error' | 'success';
+export type ScannerStatus = 'idle' | 'manual' | 'busy' | 'awaiting_pharma' | 'confirming' | 'error' | 'success';
 
 export type TelemetryEventType = 'SCAN' | 'SYNC' | 'ERROR' | 'PERFORMANCE' | 'HARDWARE' | 'SESSION';
 

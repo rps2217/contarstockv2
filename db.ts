@@ -36,9 +36,9 @@ export class LogiCountDB extends Dexie {
 
  constructor() {
  super('LogiCountDB');
- (this as any).version(26).stores({
+ (this as any).version(27).stores({
  products: '&barcode, name, syncStatus', 
- sessions: 'id, status, createdAt, erpOrder, logisticsLabel, sessionType, auditStatus, lastSyncTimestamp, mm, yyyy, batch, [erpOrder+createdAt], [status+lastSyncTimestamp]', 
+ sessions: 'id, status, createdAt, erpOrder, logisticsLabel, sessionType, auditStatus, lastSyncTimestamp, mm, yyyy, batch, photoUrl, [erpOrder+createdAt], [status+lastSyncTimestamp]', 
  scans: 'id, sessionId, barcode, logisticsLabel, timestamp, synced, isIncident, expiryDate, mm, yyyy, batch, [sessionId+synced], [sessionId+barcode], [sessionId+logisticsLabel], [sessionId+timestamp]',
  syncQueue: '++id, status, createdAt, retryCount',
  expectedOrders: 'id, internalId',

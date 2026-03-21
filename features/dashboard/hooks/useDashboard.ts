@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ScanRepository } from '../../../repositories/ScanRepository';
+import { ExpectedOrderRepository } from '../../../repositories/ExpectedOrderRepository';
+import { db } from '../../../db';
 
 export const useDashboard = () => {
   const navigate = useNavigate();
@@ -12,6 +14,8 @@ export const useDashboard = () => {
     return { scansToday, pendingSync };
   }, [], { scansToday: 0, pendingSync: 0 });
 
+  const pendingOrders = useLiveQuery(() => db.expectedOrders.toArray(), [], []);
+
   const operatorId = localStorage.getItem('logicount_operator_id') || 'SIN_IDENTIFICAR';
   const isSyncNeeded = (stats?.pendingSync || 0) > 0;
 
@@ -19,6 +23,7 @@ export const useDashboard = () => {
     stats,
     operatorId,
     isSyncNeeded,
+    pendingOrders,
     navigate
   };
 };
