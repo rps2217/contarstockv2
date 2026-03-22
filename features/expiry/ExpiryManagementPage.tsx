@@ -303,12 +303,14 @@ const ExpiryManagementPage: React.FC = () => {
       if (!expiry) return 'safe';
       if (isPast(expiry)) return 'expired';
       
+      // Prioritize Critical (Urgent) over Withdrawal policy
+      if (isBefore(expiry, criticalThreshold)) return 'critical';
+
       // If there's a withdrawal date and it's past or in current month
       if (withdrawalDate && (isPast(withdrawalDate) || isWithinInterval(withdrawalDate, { start: currentMonthStart, end: currentMonthEnd }))) {
         return 'withdrawal';
       }
 
-      if (isBefore(expiry, criticalThreshold)) return 'critical';
       if (isWithinInterval(expiry, { start: startOfNextMonth, end: endOfFourMonths })) {
         return 'next_expiry';
       }
@@ -523,77 +525,79 @@ const ExpiryManagementPage: React.FC = () => {
             </div>
             <button
               onClick={handleClearFilters}
-              className="bg-slate-800 border border-white/10 px-6 rounded-2xl flex items-center gap-2 hover:bg-slate-700 transition-all group"
+              className="bg-slate-800 border border-white/10 px-6 rounded-2xl flex items-center gap-2 hover:bg-slate-700 transition-all group shrink-0"
             >
               <X className="w-4 h-4 text-slate-400 group-hover:rotate-90 transition-transform" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">Limpiar Filtros</span>
+              <span className="hidden sm:inline text-[10px] font-black uppercase tracking-widest text-slate-300">Limpiar Filtros</span>
             </button>
           </div>
 
-          {/* STATUS FILTERS - PROMINENT */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 px-1">
-              <Filter className="w-3 h-3 text-slate-500" />
-              <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Filtrar por Estado</span>
+          <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+            {/* STATUS FILTERS - PROMINENT */}
+            <div className="space-y-3 lg:w-[400px] shrink-0 min-w-0">
+              <div className="flex items-center gap-2 px-1">
+                <Filter className="w-3 h-3 text-slate-500" />
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Filtrar por Estado</span>
+              </div>
+              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                {(['expired', 'critical', 'withdrawal', 'next_expiry', 'safe'] as const).map(s => (
+                  <button
+                    key={s}
+                    onClick={() => {
+                      setSelectedStatuses(prev => 
+                        prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]
+                      );
+                    }}
+                    className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border flex items-center gap-2 shadow-lg ${
+                      selectedStatuses.includes(s)
+                        ? s === 'expired' ? 'bg-rose-600 border-rose-400 text-white scale-105' :
+                          s === 'critical' ? 'bg-amber-600 border-amber-400 text-white scale-105' :
+                          s === 'withdrawal' ? 'bg-indigo-600 border-indigo-400 text-white scale-105' :
+                          s === 'next_expiry' ? 'bg-blue-600 border-blue-400 text-white scale-105' :
+                          'bg-emerald-600 border-emerald-400 text-white scale-105'
+                        : 'bg-white/5 border-white/5 text-slate-500 hover:text-white hover:bg-white/10'
+                    }`}
+                  >
+                    {s === 'expired' && <AlertTriangle className="w-3 h-3" />}
+                    {s === 'critical' && <ShieldAlert className="w-3 h-3" />}
+                    {s === 'withdrawal' && <Download className="w-3 h-3" />}
+                    {s === 'next_expiry' && <Clock className="w-3 h-3" />}
+                    {s === 'safe' && <CheckCircle2 className="w-3 h-3" />}
+                    
+                    {s === 'expired' ? 'Vencidos' : 
+                     s === 'critical' ? 'Críticos' : 
+                     s === 'withdrawal' ? 'Retiros' :
+                     s === 'next_expiry' ? 'Próximos' : 'Vigentes'}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-              {(['expired', 'critical', 'withdrawal', 'next_expiry', 'safe'] as const).map(s => (
-                <button
-                  key={s}
-                  onClick={() => {
-                    setSelectedStatuses(prev => 
-                      prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]
-                    );
-                  }}
-                  className={`px-6 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest whitespace-nowrap transition-all border flex items-center gap-3 shadow-lg ${
-                    selectedStatuses.includes(s)
-                      ? s === 'expired' ? 'bg-rose-600 border-rose-400 text-white scale-105' :
-                        s === 'critical' ? 'bg-amber-600 border-amber-400 text-white scale-105' :
-                        s === 'withdrawal' ? 'bg-indigo-600 border-indigo-400 text-white scale-105' :
-                        s === 'next_expiry' ? 'bg-blue-600 border-blue-400 text-white scale-105' :
-                        'bg-emerald-600 border-emerald-400 text-white scale-105'
-                      : 'bg-white/5 border-white/5 text-slate-500 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  {s === 'expired' && <AlertTriangle className="w-4 h-4" />}
-                  {s === 'critical' && <ShieldAlert className="w-4 h-4" />}
-                  {s === 'withdrawal' && <Download className="w-4 h-4" />}
-                  {s === 'next_expiry' && <Clock className="w-4 h-4" />}
-                  {s === 'safe' && <CheckCircle2 className="w-4 h-4" />}
-                  
-                  {s === 'expired' ? 'Vencidos' : 
-                   s === 'critical' ? 'Críticos' : 
-                   s === 'withdrawal' ? 'Retiros' :
-                   s === 'next_expiry' ? 'Próximos' : 'Vigentes'}
-                </button>
-              ))}
-            </div>
-          </div>
 
-          {/* MUNDOS FILTER - PROMINENT */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 px-1">
-              <Package className="w-3 h-3 text-slate-500" />
-              <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Filtrar por Mundo / Categoría</span>
-            </div>
-            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-              {categories.map(cat => (
-                <button
-                  key={cat}
-                  onClick={() => {
-                    setSelectedCategories(prev => 
-                      prev.includes(cat) ? prev.filter(x => x !== cat) : [...prev, cat]
-                    );
-                  }}
-                  className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border shadow-md ${
-                    selectedCategories.includes(cat)
-                      ? 'bg-amber-500 border-amber-400 text-black scale-105'
-                      : 'bg-white/5 border-white/5 text-slate-500 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
+            {/* MUNDOS FILTER - PROMINENT */}
+            <div className="space-y-3 lg:flex-1 min-w-0">
+              <div className="flex items-center gap-2 px-1">
+                <Package className="w-3 h-3 text-slate-500" />
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Filtrar por Mundo / Categoría</span>
+              </div>
+              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                {categories.map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => {
+                      setSelectedCategories(prev => 
+                        prev.includes(cat) ? prev.filter(x => x !== cat) : [...prev, cat]
+                      );
+                    }}
+                    className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border shadow-md ${
+                      selectedCategories.includes(cat)
+                        ? 'bg-amber-500 border-amber-400 text-black scale-105'
+                        : 'bg-white/5 border-white/5 text-slate-500 hover:text-white hover:bg-white/10'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -724,7 +728,7 @@ const ExpiryManagementPage: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95 }}
               onClick={() => selectedIds.size > 0 && toggleSelect(item.id)}
-              className={`bg-white/5 border rounded-2xl p-4 flex items-center justify-between group cursor-pointer transition-all ${
+              className={`bg-white/5 border rounded-2xl p-3 flex items-center justify-between group cursor-pointer transition-all ${
                 selectedIds.has(item.id) ? 'border-indigo-500 bg-indigo-500/10' :
                 verifiedIds.has(item.id) ? 'border-emerald-500/50 bg-emerald-500/10 opacity-60' :
                 item.status === 'expired' ? 'border-rose-500/30 bg-rose-500/5' : 
@@ -734,14 +738,14 @@ const ExpiryManagementPage: React.FC = () => {
                 'border-white/5'
               }`}
             >
-              <div className="flex items-center gap-6 flex-1 min-w-0">
-                <div className="flex flex-col gap-2 shrink-0">
+              <div className="flex items-center gap-4 flex-1 min-w-0">
+                <div className="flex flex-col gap-1.5 shrink-0">
                   <div 
                     onClick={(e) => {
                       e.stopPropagation();
                       toggleSelect(item.id);
                     }}
-                    className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center transition-all shadow-lg ${
+                    className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-lg ${
                       selectedIds.has(item.id) ? 'bg-indigo-500 text-white' :
                       item.status === 'expired' ? 'bg-rose-500/20 text-rose-500 border border-rose-500/30' : 
                       item.status === 'critical' ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30' :
@@ -750,12 +754,12 @@ const ExpiryManagementPage: React.FC = () => {
                       'bg-emerald-500/20 text-emerald-500 border border-emerald-500/30'
                     }`}
                   >
-                    {selectedIds.has(item.id) ? <CheckSquare className="w-8 h-8" /> :
-                     item.status === 'expired' ? <AlertTriangle className="w-8 h-8" /> : 
-                     item.status === 'critical' ? <ShieldAlert className="w-8 h-8" /> :
-                     item.status === 'withdrawal' ? <Download className="w-8 h-8" /> :
-                     item.status === 'next_expiry' ? <Clock className="w-8 h-8" /> :
-                     <CheckCircle2 className="w-8 h-8" />}
+                    {selectedIds.has(item.id) ? <CheckSquare className="w-6 h-6" /> :
+                     item.status === 'expired' ? <AlertTriangle className="w-6 h-6" /> : 
+                     item.status === 'critical' ? <ShieldAlert className="w-6 h-6" /> :
+                     item.status === 'withdrawal' ? <Download className="w-6 h-6" /> :
+                     item.status === 'next_expiry' ? <Clock className="w-6 h-6" /> :
+                     <CheckCircle2 className="w-6 h-6" />}
                   </div>
                   
                   <button
@@ -763,25 +767,25 @@ const ExpiryManagementPage: React.FC = () => {
                       e.stopPropagation();
                       toggleVerified(item.id);
                     }}
-                    className={`w-16 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all border ${
+                    className={`w-12 py-0.5 rounded-lg text-[7px] font-black uppercase tracking-widest transition-all border ${
                       verifiedIds.has(item.id)
                         ? 'bg-emerald-500 border-emerald-400 text-white'
                         : 'bg-white/5 border-white/10 text-slate-500 hover:border-emerald-500/50'
                     }`}
                   >
-                    {verifiedIds.has(item.id) ? 'Verificado' : 'Verificar'}
+                    {verifiedIds.has(item.id) ? 'OK' : 'VERIF'}
                   </button>
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="text-sm font-black bg-slate-800 text-slate-200 px-3 py-1 rounded-lg uppercase tracking-[0.15em] border border-white/10 shadow-inner">
-                      SKU: {item.barcode}
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] font-black bg-slate-800 text-slate-200 px-2 py-0.5 rounded-md uppercase tracking-widest border border-white/10">
+                      {item.barcode}
                     </span>
-                    <span className="text-[10px] font-black bg-slate-800/50 text-slate-400 px-2 py-1 rounded uppercase tracking-widest border border-white/5">
+                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest truncate max-w-[120px]">
                       {item.providerName}
                     </span>
-                    <span className={`text-[10px] font-black px-2 py-1 rounded uppercase tracking-widest ${
+                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-widest ${
                       item.type === 'Individual' ? 'bg-blue-500/20 text-blue-400' : 
                       item.type === 'Bulto/Caja' ? 'bg-purple-500/20 text-purple-400' :
                       'bg-emerald-500/20 text-emerald-400'
@@ -789,18 +793,43 @@ const ExpiryManagementPage: React.FC = () => {
                       {item.type}
                     </span>
                     {item.location && item.location !== 'N/A' && (
-                      <span className="text-[10px] font-black bg-indigo-500/20 px-2 py-1 rounded text-indigo-400 uppercase tracking-widest border border-indigo-500/20">
+                      <span className="text-[9px] font-black bg-indigo-500/20 px-1.5 py-0.5 rounded text-indigo-400 uppercase tracking-widest border border-indigo-500/20">
                         {item.location}
+                      </span>
+                    )}
+                    {item.batch && item.batch !== 'N/A' && (
+                      <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-auto">
+                        LOTE: {item.batch}
                       </span>
                     )}
                   </div>
                   
-                  <h3 className="font-black text-2xl tracking-tighter uppercase italic leading-none mb-3 truncate text-white group-hover:text-amber-400 transition-colors">
-                    {item.productName}
-                  </h3>
+                  <div className="flex items-center justify-between gap-4 mb-1.5">
+                    <h3 className="font-black text-xl tracking-tighter uppercase italic leading-none truncate text-white group-hover:text-amber-400 transition-colors flex-1">
+                      {item.productName}
+                    </h3>
+                    
+                    <div className="flex items-center gap-3 shrink-0">
+                      <div className="flex items-center gap-1.5 bg-white/5 px-2 py-1 rounded-lg border border-white/5">
+                        <CalendarDays className="w-3.5 h-3.5 text-amber-500" />
+                        <span className="text-sm font-black text-white uppercase tracking-tighter">
+                          VENCE: {item.expiryDateObj ? format(item.expiryDateObj, "dd MMM yyyy", { locale: es }) : 'Sin fecha'}
+                        </span>
+                      </div>
+
+                      {item.withdrawalDate && (
+                        <div className="flex items-center gap-1.5 bg-indigo-500/10 px-2 py-1 rounded-lg border border-indigo-500/20">
+                          <Download className="w-3 h-3 text-indigo-500" />
+                          <span className="text-[10px] font-black text-indigo-400 uppercase tracking-tighter">
+                            RETIRO: {format(item.withdrawalDate, "dd MMM yyyy", { locale: es })}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                   
                   {/* Progress Bar */}
-                  <div className="w-full h-1 bg-white/5 rounded-full mb-4 overflow-hidden">
+                  <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
                     <motion.div 
                       initial={{ width: 0 }}
                       animate={{ width: `${item.lifePercent}%` }}
@@ -812,40 +841,12 @@ const ExpiryManagementPage: React.FC = () => {
                       }`}
                     />
                   </div>
-                  
-                  <div className="flex flex-wrap items-center gap-6">
-                    <div className="flex items-center gap-2.5 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5">
-                      <CalendarDays className="w-5 h-5 text-amber-500" />
-                      <span className="text-lg font-black text-white uppercase tracking-tighter">
-                        VENCE: {item.expiryDateObj ? format(item.expiryDateObj, "dd MMM yyyy", { locale: es }) : 'Sin fecha'}
-                      </span>
-                    </div>
-
-                    {item.withdrawalDate && (
-                      <div className="flex items-center gap-2.5 bg-indigo-500/10 px-3 py-1.5 rounded-xl border border-indigo-500/20">
-                        <Download className="w-4 h-4 text-indigo-500" />
-                        <div className="flex flex-col">
-                          <span className="text-[8px] font-black text-indigo-500/70 uppercase leading-none mb-0.5">Política: {item.withdrawalDays} días</span>
-                          <span className="text-xs font-black text-indigo-400 uppercase tracking-tighter">
-                            RETIRO: {format(item.withdrawalDate, "dd MMM yyyy", { locale: es })}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {item.batch && item.batch !== 'N/A' && (
-                      <div className="flex items-center gap-2.5">
-                        <FileText className="w-4 h-4 text-slate-500" />
-                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">LOTE: {item.batch}</span>
-                      </div>
-                    )}
-                  </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 ml-6 shrink-0">
+              <div className="flex items-center gap-4 ml-4 shrink-0">
                 <div className="text-right">
-                  <div className={`text-4xl font-black uppercase tracking-tighter leading-none mb-1 italic ${
+                  <div className={`text-3xl font-black uppercase tracking-tighter leading-none mb-0.5 italic ${
                     item.status === 'expired' ? 'text-rose-500 drop-shadow-[0_0_10px_rgba(244,63,94,0.3)]' : 
                     item.status === 'critical' ? 'text-amber-500 drop-shadow-[0_0_10px_rgba(245,158,11,0.3)]' :
                     item.status === 'withdrawal' ? 'text-indigo-500 drop-shadow-[0_0_10px_rgba(99,102,241,0.3)]' :
@@ -858,10 +859,10 @@ const ExpiryManagementPage: React.FC = () => {
                      item.status === 'next_expiry' ? 'PRÓX' :
                      'OK'}
                   </div>
-                  <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
+                  <div className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em]">
                     {item.status === 'next_expiry' ? 'PRÓXIMO VENC' : 
                      item.status === 'withdrawal' ? 'RETIRO POR CANJE' :
-                     'ESTADO CRÍTICO'}
+                     item.status === 'critical' ? 'ESTADO CRÍTICO' : 'VIGENTE'}
                   </div>
                 </div>
 
@@ -870,10 +871,10 @@ const ExpiryManagementPage: React.FC = () => {
                     e.stopPropagation();
                     handleRemoveItem(item);
                   }}
-                  className="w-12 h-12 bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white rounded-2xl flex items-center justify-center transition-all border border-rose-500/20 group-hover:scale-110"
+                  className="w-10 h-10 bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white rounded-xl flex items-center justify-center transition-all border border-rose-500/20 group-hover:scale-110"
                   title="Retirar Producto"
                 >
-                  <Trash2 className="w-5 h-5" />
+                  <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             </motion.div>
