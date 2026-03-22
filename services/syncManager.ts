@@ -261,6 +261,7 @@ export const importExpirationsFromCloud = async (): Promise<number> => {
           event: String(row['EVENTO'] || ''),
           quantity: parseFloat(row['CANTIDAD'] || row['QUANTITY']) || 0,
           location: String(row['BOD.'] || row['ETIQUETAS'] || ''),
+          fechaIngreso: String(row['FECHA_INGRESO'] || row['FECHA DE INGRESO'] || ''),
           timestamp: Date.now(),
           claveUnica
         };
