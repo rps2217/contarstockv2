@@ -304,22 +304,58 @@ export const importProvidersFromCloud = async (): Promise<number> => {
 
     const providers: Provider[] = rawRows
       .map((row: any) => {
-        const rut = normalizeSku(String(row['ID_RUT'] || row['RUT'] || ''));
-        const name = String(row['NOMBRE PROVEEDOR'] || row['PROVEEDOR'] || '');
-        const policy = String(row['CANJE SÓLO POR VENCIMIENTO (DÍAS)'] || row['POLITICA'] || '');
-        const withdrawalRaw = String(row['RETIRO (DÍAS)'] || row['DIAS_RETIRO'] || '0');
+        // Fallbacks para RUT (Columna A)
+        const rut = normalizeSku(
+          String(
+            row['ID_RUT'] || 
+            row['RUT'] || 
+            row['ID'] || 
+            row['RUT PROVEEDOR'] || 
+            row['RUT_PROVEEDOR'] ||
+            ''
+          )
+        );
+        
+        // Fallbacks para Nombre (Columna B/C)
+        const name = String(
+          row['NOMBRE PROVEEDOR'] || 
+          row['PROVEEDOR'] || 
+          row['NOMBRE'] || 
+          row['PROV'] ||
+          ''
+        );
+        
+        // Fallbacks para Política de Canje (Columna F)
+        const policy = String(
+          row['CANJE SÓLO POR VENCIMIENTO (DÍAS)'] || 
+          row['POLITICA'] || 
+          row['CANJE'] || 
+          row['POLITICA DE CANJE'] || 
+          row['POLITICA_CANJE'] ||
+          ''
+        );
+        
+        // Fallbacks para Días de Retiro (Columna H)
+        const withdrawalRaw = String(
+          row['RETIRO (DÍAS)'] || 
+          row['DIAS_RETIRO'] || 
+          row['RETIRO'] || 
+          row['DIAS RETIRO'] ||
+          '0'
+        );
         
         // Determinar si tiene canje basado en el texto de la columna F
         // Si dice "sin canje", no tiene canje.
+        // Si dice cualquier otra cosa (incluyendo números), tiene canje.
         const hasExchange = !policy.toLowerCase().includes('sin canje');
 
-        let withdrawalDays = 0;
+        let withdrawalDays: number | undefined = undefined;
         const normalizedWithdrawal = withdrawalRaw.toUpperCase().trim();
         if (normalizedWithdrawal === 'AL VENCE' || normalizedWithdrawal === 'AL VENCIMIENTO') {
           withdrawalDays = 0;
         } else {
           const match = normalizedWithdrawal.match(/\d+/);
-          withdrawalDays = match ? parseInt(match[0], 10) : 0;
+          withdrawalDays = match ? parseInt(match[0], 10) : undefined;
         }
 
         return {

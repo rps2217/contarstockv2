@@ -124,8 +124,9 @@ export const useExpiryDatabase = () => {
       const hasCanje = provider ? !!provider.hasExchange : false;
       
       if (expiry) {
-        // Si tiene canje usamos los días del proveedor, si no tiene canje usamos 30 días por defecto
-        const days = hasCanje ? (provider?.withdrawalDays || 0) : 30;
+        // Siempre usamos los días del proveedor si existen, independientemente de si tiene canje o no.
+        // Si no hay proveedor o no hay días definidos, usamos 30 como valor por defecto.
+        const days = provider ? (provider.withdrawalDays ?? 30) : 30;
         withdrawalDate = addDays(expiry, -days);
       }
 
