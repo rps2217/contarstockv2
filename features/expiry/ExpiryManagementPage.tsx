@@ -93,6 +93,13 @@ const ExpiryManagementPage: React.FC = () => {
     }
   };
 
+  const handleClearFilters = () => {
+    setSearchQuery('');
+    setSelectedStatuses([]);
+    setSelectedCategories([]);
+    toast.info('Filtros restablecidos');
+  };
+
   const toggleSelect = (id: string) => {
     const newSelected = new Set(selectedIds);
     if (newSelected.has(id)) {
@@ -444,162 +451,150 @@ const ExpiryManagementPage: React.FC = () => {
     <div className="h-full bg-slate-950 text-white font-mono flex flex-col overflow-hidden">
       {/* HEADER */}
       <div className="p-6 bg-slate-900/50 backdrop-blur-md border-b border-white/5 shrink-0">
-        <div className="flex justify-between items-end mb-6">
+        <div className="flex justify-between items-start mb-6">
           <div>
-            <h1 className="text-3xl font-black uppercase tracking-tighter italic">
+            <h1 className="text-3xl font-black uppercase tracking-tighter italic leading-none">
               CONTROL <span className="text-amber-500">VENCIMIENTOS</span>
             </h1>
-            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Gestión de Vida Útil de Productos</p>
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Gestión de Vida Útil de Productos</p>
           </div>
           <div className="flex gap-2">
             <button
               onClick={handlePrint}
-              className="bg-slate-800 border border-white/10 px-3 py-1 rounded-lg flex items-center gap-2 hover:bg-slate-700 transition-colors"
+              className="bg-slate-800 border border-white/10 px-3 py-2 rounded-xl flex items-center gap-2 hover:bg-slate-700 transition-colors"
               title="Imprimir Reporte"
             >
-              <Printer className="w-3 h-3 text-slate-400" />
+              <Printer className="w-4 h-4 text-slate-400" />
             </button>
             <button
               onClick={handleExportCSV}
-              className="bg-slate-800 border border-white/10 px-3 py-1 rounded-lg flex items-center gap-2 hover:bg-slate-700 transition-colors"
+              className="bg-slate-800 border border-white/10 px-3 py-2 rounded-xl flex items-center gap-2 hover:bg-slate-700 transition-colors"
               title="Exportar CSV"
             >
-              <Download className="w-3 h-3 text-slate-400" />
+              <Download className="w-4 h-4 text-slate-400" />
             </button>
             <button
               onClick={handleSyncExpirations}
               disabled={isSyncing}
-              className="bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-lg flex items-center gap-2 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+              className="bg-emerald-500/10 border border-emerald-500/20 px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
             >
-              <Package className={`w-3 h-3 text-emerald-500 ${isSyncing ? 'animate-spin' : ''}`} />
-              <span className="text-[10px] font-black text-emerald-500 uppercase">Sync</span>
+              <Package className={`w-4 h-4 text-emerald-500 ${isSyncing ? 'animate-spin' : ''}`} />
+              <span className="text-xs font-black text-emerald-500 uppercase">Sync</span>
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
-          <div className="bg-rose-500/10 border border-rose-500/20 p-3 rounded-2xl">
-            <div className="flex items-center gap-2 mb-1">
-              <AlertTriangle className="w-3 h-3 text-rose-500" />
-              <span className="text-[8px] font-black text-rose-500 uppercase tracking-widest">Vencidos</span>
-            </div>
-            <div className="text-2xl font-black text-rose-500 leading-none">{stats.expired}</div>
+        {/* COMPACT STATS PILLS */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          <div className="bg-rose-500/10 border border-rose-500/20 px-3 py-1 rounded-full flex items-center gap-2">
+            <AlertTriangle className="w-3 h-3 text-rose-500" />
+            <span className="text-[10px] font-black text-rose-500 uppercase tracking-tighter">{stats.expired} Vencidos</span>
           </div>
-          <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-2xl">
-            <div className="flex items-center gap-2 mb-1">
-              <ShieldAlert className="w-3 h-3 text-amber-500" />
-              <span className="text-[8px] font-black text-amber-500 uppercase tracking-widest">Críticos</span>
-            </div>
-            <div className="text-2xl font-black text-amber-500 leading-none">{stats.critical}</div>
+          <div className="bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full flex items-center gap-2">
+            <ShieldAlert className="w-3 h-3 text-amber-500" />
+            <span className="text-[10px] font-black text-amber-500 uppercase tracking-tighter">{stats.critical} Críticos</span>
           </div>
-          <div className="bg-indigo-500/10 border border-indigo-500/20 p-3 rounded-2xl">
-            <div className="flex items-center gap-2 mb-1">
-              <Download className="w-3 h-3 text-indigo-500" />
-              <span className="text-[8px] font-black text-indigo-500 uppercase tracking-widest">Retiros</span>
-            </div>
-            <div className="text-2xl font-black text-indigo-500 leading-none">{stats.withdrawal}</div>
+          <div className="bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 rounded-full flex items-center gap-2">
+            <Download className="w-3 h-3 text-indigo-500" />
+            <span className="text-[10px] font-black text-indigo-500 uppercase tracking-tighter">{stats.withdrawal} Retiros</span>
           </div>
-          <div className="bg-blue-500/10 border border-blue-500/20 p-3 rounded-2xl">
-            <div className="flex items-center gap-2 mb-1">
-              <Clock className="w-3 h-3 text-blue-500" />
-              <span className="text-[8px] font-black text-blue-500 uppercase tracking-widest">Próx. Venc</span>
-            </div>
-            <div className="text-2xl font-black text-blue-500 leading-none">{stats.next_expiry}</div>
+          <div className="bg-blue-500/10 border border-blue-500/20 px-3 py-1 rounded-full flex items-center gap-2">
+            <Clock className="w-3 h-3 text-blue-500" />
+            <span className="text-[10px] font-black text-blue-500 uppercase tracking-tighter">{stats.next_expiry} Próx</span>
           </div>
-          <div className="bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-2xl">
-            <div className="flex items-center gap-2 mb-1">
-              <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-              <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest">Vigentes</span>
-            </div>
-            <div className="text-2xl font-black text-emerald-500 leading-none">{stats.total - stats.expired - stats.critical - stats.next_expiry - stats.withdrawal}</div>
+          <div className="bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full flex items-center gap-2">
+            <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+            <span className="text-[10px] font-black text-emerald-500 uppercase tracking-tighter">{stats.total - stats.expired - stats.critical - stats.next_expiry - stats.withdrawal} Vigentes</span>
           </div>
         </div>
 
-        <div className="flex flex-col gap-4">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-            <input 
-              type="text"
-              placeholder="BUSCAR POR NOMBRE, SKU O LOTE..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-black border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-xs font-bold focus:outline-none focus:border-amber-500 transition-colors"
-            />
+        <div className="flex flex-col gap-6">
+          {/* SEARCH & CLEAR */}
+          <div className="flex gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+              <input 
+                type="text"
+                placeholder="BUSCAR POR NOMBRE, SKU O LOTE..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-black border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-sm font-bold focus:outline-none focus:border-amber-500 transition-colors shadow-2xl"
+              />
+            </div>
+            <button
+              onClick={handleClearFilters}
+              className="bg-slate-800 border border-white/10 px-6 rounded-2xl flex items-center gap-2 hover:bg-slate-700 transition-all group"
+            >
+              <X className="w-4 h-4 text-slate-400 group-hover:rotate-90 transition-transform" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">Limpiar Filtros</span>
+            </button>
           </div>
 
-          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-            <button
-              onClick={() => setSelectedStatuses([])}
-              className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all border flex items-center gap-2 ${
-                selectedStatuses.length === 0
-                  ? 'bg-slate-100 border-white text-slate-950'
-                  : 'bg-white/5 border-white/5 text-slate-500 hover:text-white'
-              }`}
-            >
-              <Filter className="w-3 h-3" />
-              Todos
-            </button>
-            {(['expired', 'critical', 'withdrawal', 'next_expiry', 'safe'] as const).map(s => (
-              <button
-                key={s}
-                onClick={() => {
-                  setSelectedStatuses(prev => 
-                    prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]
-                  );
-                }}
-                className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all border flex items-center gap-2 ${
-                  selectedStatuses.includes(s)
-                    ? s === 'expired' ? 'bg-rose-600 border-rose-400 text-white' :
-                      s === 'critical' ? 'bg-amber-600 border-amber-400 text-white' :
-                      s === 'withdrawal' ? 'bg-indigo-600 border-indigo-400 text-white' :
-                      s === 'next_expiry' ? 'bg-blue-600 border-blue-400 text-white' :
-                      'bg-emerald-600 border-emerald-400 text-white'
-                    : 'bg-white/5 border-white/5 text-slate-500 hover:text-white'
-                }`}
-              >
-                {s === 'expired' && <AlertTriangle className="w-3 h-3" />}
-                {s === 'critical' && <ShieldAlert className="w-3 h-3" />}
-                {s === 'withdrawal' && <Download className="w-3 h-3" />}
-                {s === 'next_expiry' && <Clock className="w-3 h-3" />}
-                {s === 'safe' && <CheckCircle2 className="w-3 h-3" />}
-                
-                {s === 'expired' ? 'Vencidos' : 
-                 s === 'critical' ? 'Críticos' : 
-                 s === 'withdrawal' ? 'Retiros del Mes' :
-                 s === 'next_expiry' ? 'Próx. Vencimiento' : 'Vigentes'}
-              </button>
-            ))}
+          {/* STATUS FILTERS - PROMINENT */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 px-1">
+              <Filter className="w-3 h-3 text-slate-500" />
+              <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Filtrar por Estado</span>
+            </div>
+            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+              {(['expired', 'critical', 'withdrawal', 'next_expiry', 'safe'] as const).map(s => (
+                <button
+                  key={s}
+                  onClick={() => {
+                    setSelectedStatuses(prev => 
+                      prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]
+                    );
+                  }}
+                  className={`px-6 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest whitespace-nowrap transition-all border flex items-center gap-3 shadow-lg ${
+                    selectedStatuses.includes(s)
+                      ? s === 'expired' ? 'bg-rose-600 border-rose-400 text-white scale-105' :
+                        s === 'critical' ? 'bg-amber-600 border-amber-400 text-white scale-105' :
+                        s === 'withdrawal' ? 'bg-indigo-600 border-indigo-400 text-white scale-105' :
+                        s === 'next_expiry' ? 'bg-blue-600 border-blue-400 text-white scale-105' :
+                        'bg-emerald-600 border-emerald-400 text-white scale-105'
+                      : 'bg-white/5 border-white/5 text-slate-500 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  {s === 'expired' && <AlertTriangle className="w-4 h-4" />}
+                  {s === 'critical' && <ShieldAlert className="w-4 h-4" />}
+                  {s === 'withdrawal' && <Download className="w-4 h-4" />}
+                  {s === 'next_expiry' && <Clock className="w-4 h-4" />}
+                  {s === 'safe' && <CheckCircle2 className="w-4 h-4" />}
+                  
+                  {s === 'expired' ? 'Vencidos' : 
+                   s === 'critical' ? 'Críticos' : 
+                   s === 'withdrawal' ? 'Retiros' :
+                   s === 'next_expiry' ? 'Próximos' : 'Vigentes'}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* MUNDOS FILTER */}
-          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-            <button
-              onClick={() => setSelectedCategories([])}
-              className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-tighter whitespace-nowrap transition-all border ${
-                selectedCategories.length === 0
-                  ? 'bg-slate-100 border-white text-slate-950'
-                  : 'bg-white/5 border-white/5 text-slate-500 hover:text-white'
-              }`}
-            >
-              Todos los Mundos
-            </button>
-            {categories.map(cat => (
-              <button
-                key={cat}
-                onClick={() => {
-                  setSelectedCategories(prev => 
-                    prev.includes(cat) ? prev.filter(x => x !== cat) : [...prev, cat]
-                  );
-                }}
-                className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-tighter whitespace-nowrap transition-all border ${
-                  selectedCategories.includes(cat)
-                    ? 'bg-slate-100 border-white text-slate-950'
-                    : 'bg-white/5 border-white/5 text-slate-500 hover:text-white'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
+          {/* MUNDOS FILTER - PROMINENT */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 px-1">
+              <Package className="w-3 h-3 text-slate-500" />
+              <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Filtrar por Mundo / Categoría</span>
+            </div>
+            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+              {categories.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => {
+                    setSelectedCategories(prev => 
+                      prev.includes(cat) ? prev.filter(x => x !== cat) : [...prev, cat]
+                    );
+                  }}
+                  className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border shadow-md ${
+                    selectedCategories.includes(cat)
+                      ? 'bg-amber-500 border-amber-400 text-black scale-105'
+                      : 'bg-white/5 border-white/5 text-slate-500 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
