@@ -168,7 +168,8 @@ export const useExpiryDatabase = () => {
       type: 'Nube',
       timestamp: exp.timestamp,
       quantity: exp.quantity || 0,
-      location: exp.location || 'N/A'
+      location: exp.location || 'N/A',
+      claveUnica: exp.claveUnica
     }));
 
     return [...individualItems, ...sessionItems, ...cloudItems];
