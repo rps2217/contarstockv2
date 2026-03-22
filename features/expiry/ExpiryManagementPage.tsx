@@ -36,8 +36,8 @@ type ExpiryStatus = 'expired' | 'critical' | 'next_expiry' | 'safe' | 'withdrawa
 const ExpiryManagementPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'all' | ExpiryStatus>('all');
-  const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [selectedStatuses, setSelectedStatuses] = useState<ExpiryStatus[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [displayLimit, setDisplayLimit] = useState(50);
   const [isChangingLocation, setIsChangingLocation] = useState(false);
   const [newLocationInput, setNewLocationInput] = useState('');
@@ -57,7 +57,7 @@ const ExpiryManagementPage: React.FC = () => {
   // Reset limit on filter change
   useEffect(() => {
     setDisplayLimit(50);
-  }, [filterStatus, filterCategory]);
+  }, [selectedStatuses, selectedCategories]);
 
   const handleRemoveItem = async (item: any) => {
     const confirm = window.confirm(`¿RETIRAR ${item.productName}? ESTA ACCIÓN ES IRREVERSIBLE.`);
@@ -378,7 +378,7 @@ const ExpiryManagementPage: React.FC = () => {
     baseProcessedData.forEach(item => {
       if (item.category) cats.add(item.category);
     });
-    return ['all', ...Array.from(cats).sort()];
+    return Array.from(cats).sort();
   }, [baseProcessedData]);
 
   const processedScans = useMemo(() => {
@@ -391,12 +391,12 @@ const ExpiryManagementPage: React.FC = () => {
         (item.batch && item.batch.toLowerCase().includes(query));
       
       const matchesFilter = 
-        filterStatus === 'all' || 
-        item.status === filterStatus;
+        selectedStatuses.length === 0 || 
+        selectedStatuses.includes(item.status);
 
       const matchesCategory = 
-        filterCategory === 'all' || 
-        item.category === filterCategory;
+        selectedCategories.length === 0 || 
+        selectedCategories.includes(item.category);
 
       return matchesSearch && matchesFilter && matchesCategory;
     }).sort((a, b) => {
@@ -413,7 +413,7 @@ const ExpiryManagementPage: React.FC = () => {
       const percent = Math.max(0, Math.min(100, (item.daysLeft / maxLifeDays) * 100));
       return { ...item, lifePercent: percent };
     });
-  }, [baseProcessedData, debouncedSearch, filterStatus, productMap]);
+  }, [baseProcessedData, debouncedSearch, selectedStatuses, selectedCategories, productMap]);
 
   const filteredAndSortedScans = useMemo(() => {
     return processedScans.slice(0, displayLimit);
@@ -423,7 +423,7 @@ const ExpiryManagementPage: React.FC = () => {
     if (!baseProcessedData) return { expired: 0, critical: 0, next_expiry: 0, withdrawal: 0, total: 0 };
     
     const filteredByCat = baseProcessedData.filter(item => 
-      filterCategory === 'all' || item.category === filterCategory
+      selectedCategories.length === 0 || selectedCategories.includes(item.category)
     );
 
     const expiredCount = filteredByCat.filter(s => s.status === 'expired').length;
@@ -438,7 +438,7 @@ const ExpiryManagementPage: React.FC = () => {
       withdrawal: withdrawalCount,
       total: filteredByCat.length
     };
-  }, [baseProcessedData, filterCategory]);
+  }, [baseProcessedData, selectedCategories]);
 
   return (
     <div className="h-full bg-slate-950 text-white font-mono flex flex-col overflow-hidden">
@@ -528,12 +528,27 @@ const ExpiryManagementPage: React.FC = () => {
           </div>
 
           <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-            {(['all', 'expired', 'critical', 'withdrawal', 'next_expiry', 'safe'] as const).map(s => (
+            <button
+              onClick={() => setSelectedStatuses([])}
+              className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all border flex items-center gap-2 ${
+                selectedStatuses.length === 0
+                  ? 'bg-slate-100 border-white text-slate-950'
+                  : 'bg-white/5 border-white/5 text-slate-500 hover:text-white'
+              }`}
+            >
+              <Filter className="w-3 h-3" />
+              Todos
+            </button>
+            {(['expired', 'critical', 'withdrawal', 'next_expiry', 'safe'] as const).map(s => (
               <button
                 key={s}
-                onClick={() => setFilterStatus(s)}
+                onClick={() => {
+                  setSelectedStatuses(prev => 
+                    prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]
+                  );
+                }}
                 className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all border flex items-center gap-2 ${
-                  filterStatus === s 
+                  selectedStatuses.includes(s)
                     ? s === 'expired' ? 'bg-rose-600 border-rose-400 text-white' :
                       s === 'critical' ? 'bg-amber-600 border-amber-400 text-white' :
                       s === 'withdrawal' ? 'bg-indigo-600 border-indigo-400 text-white' :
@@ -542,15 +557,13 @@ const ExpiryManagementPage: React.FC = () => {
                     : 'bg-white/5 border-white/5 text-slate-500 hover:text-white'
                 }`}
               >
-                {s === 'all' && <Filter className="w-3 h-3" />}
                 {s === 'expired' && <AlertTriangle className="w-3 h-3" />}
                 {s === 'critical' && <ShieldAlert className="w-3 h-3" />}
                 {s === 'withdrawal' && <Download className="w-3 h-3" />}
                 {s === 'next_expiry' && <Clock className="w-3 h-3" />}
                 {s === 'safe' && <CheckCircle2 className="w-3 h-3" />}
                 
-                {s === 'all' ? 'Todos' : 
-                 s === 'expired' ? 'Vencidos' : 
+                {s === 'expired' ? 'Vencidos' : 
                  s === 'critical' ? 'Críticos' : 
                  s === 'withdrawal' ? 'Retiros del Mes' :
                  s === 'next_expiry' ? 'Próx. Vencimiento' : 'Vigentes'}
@@ -560,17 +573,31 @@ const ExpiryManagementPage: React.FC = () => {
 
           {/* MUNDOS FILTER */}
           <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+            <button
+              onClick={() => setSelectedCategories([])}
+              className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-tighter whitespace-nowrap transition-all border ${
+                selectedCategories.length === 0
+                  ? 'bg-slate-100 border-white text-slate-950'
+                  : 'bg-white/5 border-white/5 text-slate-500 hover:text-white'
+              }`}
+            >
+              Todos los Mundos
+            </button>
             {categories.map(cat => (
               <button
                 key={cat}
-                onClick={() => setFilterCategory(cat)}
+                onClick={() => {
+                  setSelectedCategories(prev => 
+                    prev.includes(cat) ? prev.filter(x => x !== cat) : [...prev, cat]
+                  );
+                }}
                 className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-tighter whitespace-nowrap transition-all border ${
-                  filterCategory === cat
+                  selectedCategories.includes(cat)
                     ? 'bg-slate-100 border-white text-slate-950'
                     : 'bg-white/5 border-white/5 text-slate-500 hover:text-white'
                 }`}
               >
-                {cat === 'all' ? 'Todos los Mundos' : cat}
+                {cat}
               </button>
             ))}
           </div>
