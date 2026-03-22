@@ -316,24 +316,49 @@ export const useExpiryDatabase = () => {
   }) => {
     try {
       setIsSyncing(true);
+      
+      // Generar clave única localmente para validación previa
+      const mmPadded = String(data.mm).padStart(2, '0');
+      const lastDay = new Date(data.yyyy, data.mm, 0).getDate();
+      const ddPadded = String(lastDay).padStart(2, '0');
+      const claveUnica = `${data.barcode}${data.yyyy}${mmPadded}${ddPadded}`;
+
+      // 0. Validar duplicado localmente antes de ir a la nube
+      const existingLocal = await db.cloudExpirations.where('claveUnica').equals(claveUnica).first();
+      if (existingLocal) {
+        toast.error('Este producto ya está registrado para el mes y año seleccionados.');
+        return;
+      }
+
       // 1. Guardar en la nube (GAS validará duplicados)
       const result = await addExpirationToCloud(data);
       
       // 2. Guardar localmente en cloudExpirations para reflejo inmediato
       if (result.success) {
-        await db.cloudExpirations.add({
-          id: result.id || crypto.randomUUID(),
-          barcode: data.barcode,
-          productName: data.productName,
-          mm: data.mm,
-          yyyy: data.yyyy,
-          event: 'VENCIMIENTOS',
-          quantity: data.quantity,
-          location: 'MANUAL',
-          timestamp: Date.now(),
-          claveUnica: result.clave
-        });
-        toast.success('Producto registrado en la nube y localmente');
+        if (result.message === "Ya existe") {
+          toast.info('El producto ya existía en la nube. Se ha actualizado la vista local.');
+        } else {
+          toast.success('Producto registrado exitosamente');
+        }
+
+        // Intentar agregar localmente (el índice único &claveUnica protegerá si hay carreras)
+        try {
+          await db.cloudExpirations.add({
+            id: result.id || crypto.randomUUID(),
+            barcode: data.barcode,
+            productName: data.productName,
+            mm: data.mm,
+            yyyy: data.yyyy,
+            event: 'VENCIMIENTOS',
+            quantity: data.quantity,
+            location: 'MANUAL',
+            timestamp: Date.now(),
+            claveUnica: result.clave || claveUnica
+          });
+        } catch (dbError: any) {
+          // Si falla por duplicado aquí, simplemente ignoramos ya que ya informamos al usuario
+          if (dbError.name !== 'ConstraintError') throw dbError;
+        }
       }
     } catch (error: any) {
       toast.error(`Error al agregar: ${error.message}`);

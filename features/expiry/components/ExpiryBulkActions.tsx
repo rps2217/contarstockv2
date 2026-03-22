@@ -8,6 +8,7 @@ interface ExpiryBulkActionsProps {
   onClearSelection: () => void;
   onBulkRemove: () => void;
   onPrintSelected: () => void;
+  onPrintLabels: () => void;
   theme?: 'dark' | 'light';
 }
 
@@ -16,6 +17,7 @@ export const ExpiryBulkActions: React.FC<ExpiryBulkActionsProps> = ({
   onClearSelection,
   onBulkRemove,
   onPrintSelected,
+  onPrintLabels,
   theme = 'dark'
 }) => {
   return (
@@ -73,6 +75,18 @@ export const ExpiryBulkActions: React.FC<ExpiryBulkActionsProps> = ({
                   >
                     <Printer className="w-4 h-4 text-indigo-500" />
                     Imprimir Seleccionados
+                  </button>
+
+                  <button
+                    onClick={onPrintLabels}
+                    className={`w-full px-4 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 transition-all border ${
+                      theme === 'dark' 
+                        ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border-amber-500/20' 
+                        : 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200 shadow-sm'
+                    }`}
+                  >
+                    <Printer className="w-4 h-4 text-amber-500" />
+                    Imprimir Etiquetas
                   </button>
 
                   <button

@@ -4,19 +4,20 @@ import { compressData } from '../utils';
 import { logger } from '../logger';
 
 interface ApiResponse {
- success: boolean;
- error?: string;
- rows?: any[];
- rows_written?: number;
- server_timestamp?: string;
- updated?: number; 
- added?: number; 
- fileUrl?: string;
- fileId?: string;
- id?: string;
- clave?: string;
- // FIX: Added spreadsheet_name to satisfy diagnostic tests in services/diagnostics.ts
- spreadsheet_name?: string;
+  success: boolean;
+  error?: string;
+  rows?: any[];
+  rows_written?: number;
+  server_timestamp?: string;
+  updated?: number; 
+  added?: number; 
+  fileUrl?: string;
+  fileId?: string;
+  id?: string;
+  clave?: string;
+  message?: string;
+  // FIX: Added spreadsheet_name to satisfy diagnostic tests in services/diagnostics.ts
+  spreadsheet_name?: string;
 }
 
 /**

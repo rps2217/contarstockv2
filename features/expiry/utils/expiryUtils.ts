@@ -2,6 +2,9 @@
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
+/**
+ * Genera un reporte tipo ticket de los productos seleccionados
+ */
 export const handlePrintExpirations = (processedScans: any[]) => {
   const printWindow = window.open('', '_blank');
   if (!printWindow) return;
@@ -69,6 +72,124 @@ export const handlePrintExpirations = (processedScans: any[]) => {
         </div>
         <button class="no-print" onclick="window.print()" style="width:100%; margin-top:20px; padding:15px; font-weight:bold; cursor:pointer;">🖨️ IMPRIMIR TICKET</button>
       </body>
+    </html>
+  `;
+
+  printWindow.document.write(html);
+  printWindow.document.close();
+};
+
+/**
+ * Genera etiquetas de código de barras para los productos seleccionados
+ */
+export const handlePrintLabels = (processedScans: any[]) => {
+  const printWindow = window.open('', '_blank', 'width=400,height=600');
+  if (!printWindow) return;
+
+  const labelsHtml = processedScans.map((item, index) => `
+    <div class="etiqueta-container">
+        <div class="descripcion">${item.productName || 'Sin Descripción'}</div>
+        <svg id="barcode_${index}"></svg>
+    </div>
+  `).join('');
+
+  const html = `
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Impresión de Etiquetas</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                margin: 0;
+                padding: 0;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                background-color: white;
+            }
+
+            .etiqueta-container {
+                background-color: white;
+                width: 260px; 
+                padding: 10px 5px;
+                text-align: center;
+                border-bottom: 1px dashed #ccc;
+                page-break-inside: avoid;
+            }
+
+            .descripcion {
+                font-size: 14px;
+                font-weight: bold;
+                margin-bottom: 5px;
+                line-height: 1.1;
+                max-height: 3em;
+                overflow: hidden;
+                color: black;
+            }
+
+            svg {
+                max-width: 100%;
+                height: auto;
+            }
+
+            @media print {
+                @page {
+                    size: auto;
+                    margin: 0mm;
+                }
+
+                body {
+                    background-color: white;
+                    display: block;
+                }
+
+                .etiqueta-container {
+                    border-bottom: none;
+                    margin: 0;
+                    width: 100%;
+                    page-break-after: always;
+                }
+                
+                .etiqueta-container:last-child {
+                    page-break-after: auto;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        ${labelsHtml}
+
+        <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+        <script>
+            window.onload = function() {
+                const items = ${JSON.stringify(processedScans.map(i => ({ barcode: i.barcode })))};
+                
+                items.forEach((item, index) => {
+                    try {
+                        JsBarcode("#barcode_" + index, item.barcode, {
+                            format: "CODE128",
+                            lineColor: "#000",
+                            width: 2,
+                            height: 50,
+                            displayValue: true,
+                            fontSize: 14,
+                            margin: 5
+                        });
+                    } catch (e) {
+                        console.error("Error generating barcode for " + item.barcode, e);
+                    }
+                });
+
+                setTimeout(function() {
+                    window.print();
+                    window.close();
+                }, 800);
+            };
+        </script>
+    </body>
     </html>
   `;
 

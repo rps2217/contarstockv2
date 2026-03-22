@@ -28,7 +28,7 @@ import { ExpiryItemCard } from './components/ExpiryItemCard';
 import { ExpiryBulkActions } from './components/ExpiryBulkActions';
 
 // Utils
-import { handlePrintExpirations, handleExportExpirationsCSV } from './utils/expiryUtils';
+import { handlePrintExpirations, handlePrintLabels, handleExportExpirationsCSV } from './utils/expiryUtils';
 
 const ExpiryManagementPage: React.FC = () => {
   const { state, actions } = useExpiryDatabase();
@@ -83,6 +83,15 @@ const ExpiryManagementPage: React.FC = () => {
       handlePrintExpirations(selectedItems);
     } else {
       toast.error('No hay ítems seleccionados para imprimir');
+    }
+  };
+
+  const handlePrintLabelsBulk = () => {
+    const selectedItems = state.processedScans.filter(item => state.selectedIds.has(item.id));
+    if (selectedItems.length > 0) {
+      handlePrintLabels(selectedItems);
+    } else {
+      toast.error('No hay ítems seleccionados para imprimir etiquetas');
     }
   };
 
@@ -288,6 +297,7 @@ const ExpiryManagementPage: React.FC = () => {
         onClearSelection={() => actions.setSelectedIds(new Set())}
         onBulkRemove={confirmBulkRemove}
         onPrintSelected={handlePrintSelected}
+        onPrintLabels={handlePrintLabelsBulk}
         theme={theme}
       />
 
