@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Package, Calendar, Hash, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { toast } from 'sonner';
 import { db } from '../../../db';
 import { normalizeSku } from '../../../services/utils';
 
@@ -20,10 +21,14 @@ interface ExpiryAddModalProps {
 export const ExpiryAddModal: React.FC<ExpiryAddModalProps> = ({ isOpen, onClose, onAdd, theme }) => {
   const [barcode, setBarcode] = useState('');
   const [productName, setProductName] = useState('');
-  const [mm, setMm] = useState<string>('');
-  const [yyyy, setYyyy] = useState<string>('');
+  const [mm, setMm] = useState<number | null>(null);
+  const [yyyy, setYyyy] = useState<number | null>(null);
   const [quantity, setQuantity] = useState<number>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const months = Array.from({ length: 12 }, (_, i) => i + 1);
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 5 }, (_, i) => currentYear + i);
 
   // Buscar producto al cambiar el código
   useEffect(() => {
@@ -40,23 +45,26 @@ export const ExpiryAddModal: React.FC<ExpiryAddModalProps> = ({ isOpen, onClose,
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!barcode || !productName || !mm || !yyyy) return;
+    if (!barcode || !productName || mm === null || yyyy === null) {
+      toast.error('Por favor complete todos los campos obligatorios (Código, Nombre, Mes y Año)');
+      return;
+    }
 
     try {
       setIsSubmitting(true);
       await onAdd({
         barcode: normalizeSku(barcode),
         productName,
-        mm: parseInt(mm, 10),
-        yyyy: parseInt(yyyy, 10),
+        mm,
+        yyyy,
         quantity
       });
       onClose();
       // Reset form
       setBarcode('');
       setProductName('');
-      setMm('');
-      setYyyy('');
+      setMm(null);
+      setYyyy(null);
       setQuantity(1);
     } catch (error) {
       // Error handled in hook
@@ -82,7 +90,7 @@ export const ExpiryAddModal: React.FC<ExpiryAddModalProps> = ({ isOpen, onClose,
           initial={{ scale: 0.9, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.9, opacity: 0, y: 20 }}
-          className={`relative w-full max-w-md rounded-3xl shadow-2xl overflow-hidden border ${
+          className={`relative w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden border ${
             theme === 'dark' ? 'bg-slate-900 border-white/10' : 'bg-white border-slate-200'
           }`}
         >
@@ -107,10 +115,10 @@ export const ExpiryAddModal: React.FC<ExpiryAddModalProps> = ({ isOpen, onClose,
           </div>
 
           {/* FORM */}
-          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <form onSubmit={handleSubmit} className="p-6 space-y-6">
             {/* BARCODE */}
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Código de Barras</label>
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Código de Barras *</label>
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input 
@@ -131,7 +139,7 @@ export const ExpiryAddModal: React.FC<ExpiryAddModalProps> = ({ isOpen, onClose,
 
             {/* PRODUCT NAME */}
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Descripción del Producto</label>
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Descripción del Producto *</label>
               <input 
                 required
                 type="text"
@@ -146,41 +154,55 @@ export const ExpiryAddModal: React.FC<ExpiryAddModalProps> = ({ isOpen, onClose,
               />
             </div>
 
-            {/* EXPIRY DATE (MM / YYYY) */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Mes (MM)</label>
-                <input 
-                  required
-                  type="number"
-                  min="1"
-                  max="12"
-                  value={mm}
-                  onChange={(e) => setMm(e.target.value)}
-                  placeholder="01"
-                  className={`w-full px-4 py-3 rounded-2xl text-sm font-bold border transition-all outline-none ${
-                    theme === 'dark' 
-                      ? 'bg-white/5 border-white/10 text-white focus:border-amber-500/50 focus:bg-white/10' 
-                      : 'bg-slate-100 border-slate-200 text-slate-900 focus:border-amber-500/50 focus:bg-white'
-                  }`}
-                />
+            {/* MONTH SELECTION (MM) */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1 flex items-center gap-2">
+                Mes (MM) *
+                {mm === null && <span className="text-rose-500 animate-pulse text-[8px]">(Obligatorio)</span>}
+              </label>
+              <div className="grid grid-cols-6 gap-2">
+                {months.map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setMm(m)}
+                    className={`h-12 rounded-xl text-sm font-black transition-all border ${
+                      mm === m
+                        ? 'bg-amber-500 border-amber-500 text-black shadow-lg shadow-amber-500/20 scale-105'
+                        : theme === 'dark'
+                        ? 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10 hover:border-white/20'
+                        : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {m}
+                  </button>
+                ))}
               </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Año (YYYY)</label>
-                <input 
-                  required
-                  type="number"
-                  min="2024"
-                  max="2040"
-                  value={yyyy}
-                  onChange={(e) => setYyyy(e.target.value)}
-                  placeholder="2025"
-                  className={`w-full px-4 py-3 rounded-2xl text-sm font-bold border transition-all outline-none ${
-                    theme === 'dark' 
-                      ? 'bg-white/5 border-white/10 text-white focus:border-amber-500/50 focus:bg-white/10' 
-                      : 'bg-slate-100 border-slate-200 text-slate-900 focus:border-amber-500/50 focus:bg-white'
-                  }`}
-                />
+            </div>
+
+            {/* YEAR SELECTION (YYYY) */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1 flex items-center gap-2">
+                Año (YYYY) *
+                {yyyy === null && <span className="text-rose-500 animate-pulse text-[8px]">(Obligatorio)</span>}
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {years.map((y) => (
+                  <button
+                    key={y}
+                    type="button"
+                    onClick={() => setYyyy(y)}
+                    className={`flex-1 min-w-[80px] h-12 rounded-xl text-sm font-black transition-all border ${
+                      yyyy === y
+                        ? 'bg-amber-500 border-amber-500 text-black shadow-lg shadow-amber-500/20 scale-105'
+                        : theme === 'dark'
+                        ? 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10 hover:border-white/20'
+                        : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {y}
+                  </button>
+                ))}
               </div>
             </div>
 
