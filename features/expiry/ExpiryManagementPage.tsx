@@ -37,6 +37,7 @@ const ExpiryManagementPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | ExpiryStatus>('all');
+  const [filterCategory, setFilterCategory] = useState<string>('all');
   const [displayLimit, setDisplayLimit] = useState(50);
   const [isChangingLocation, setIsChangingLocation] = useState(false);
   const [newLocationInput, setNewLocationInput] = useState('');
@@ -56,7 +57,7 @@ const ExpiryManagementPage: React.FC = () => {
   // Reset limit on filter change
   useEffect(() => {
     setDisplayLimit(50);
-  }, [filterStatus]);
+  }, [filterStatus, filterCategory]);
 
   const handleRemoveItem = async (item: any) => {
     const confirm = window.confirm(`¿RETIRAR ${item.productName}? ESTA ACCIÓN ES IRREVERSIBLE.`);
@@ -206,7 +207,6 @@ const ExpiryManagementPage: React.FC = () => {
                 <th>Vencimiento</th>
                 <th>Días</th>
                 <th>Estado</th>
-                <th>Cant.</th>
                 <th>Ubicación</th>
               </tr>
             </thead>
@@ -222,7 +222,6 @@ const ExpiryManagementPage: React.FC = () => {
                     item.status === 'critical' ? 'CRÍTICO' : 
                     item.status === 'next_expiry' ? 'PRÓX. VENC' : 'VIGENTE'
                   }</td>
-                  <td>${item.quantity}</td>
                   <td>${item.location || 'N/A'}</td>
                 </tr>
               `).join('')}
@@ -238,13 +237,12 @@ const ExpiryManagementPage: React.FC = () => {
   };
 
   const handleExportCSV = () => {
-    const headers = ["SKU", "Producto", "Vencimiento", "Estado", "Cantidad", "Ubicacion"];
+    const headers = ["SKU", "Producto", "Vencimiento", "Estado", "Ubicacion"];
     const rows = processedScans.map(item => [
       item.barcode,
       item.productName,
       item.expiryDateObj ? format(item.expiryDateObj, 'yyyy-MM-dd') : '',
       item.status.toUpperCase(),
-      item.quantity,
       item.location || ''
     ]);
 
@@ -337,6 +335,7 @@ const ExpiryManagementPage: React.FC = () => {
         ...item,
         productName,
         providerName: provider?.name || product?.supplier || 'N/A',
+        category: product?.category || 'GENERAL',
         withdrawalDays: provider?.withdrawalDays || 0,
         status,
         daysLeft,
@@ -374,6 +373,14 @@ const ExpiryManagementPage: React.FC = () => {
     return [...individualItems, ...sessionItems, ...cloudItems];
   }, [scans, sessions, cloudExpirations, productMap, providerMap]);
 
+  const categories = useMemo(() => {
+    const cats = new Set<string>();
+    baseProcessedData.forEach(item => {
+      if (item.category) cats.add(item.category);
+    });
+    return ['all', ...Array.from(cats).sort()];
+  }, [baseProcessedData]);
+
   const processedScans = useMemo(() => {
     const query = debouncedSearch.toLowerCase();
     
@@ -387,7 +394,11 @@ const ExpiryManagementPage: React.FC = () => {
         filterStatus === 'all' || 
         item.status === filterStatus;
 
-      return matchesSearch && matchesFilter;
+      const matchesCategory = 
+        filterCategory === 'all' || 
+        item.category === filterCategory;
+
+      return matchesSearch && matchesFilter && matchesCategory;
     }).sort((a, b) => {
       // Default sort: expired first, then by date
       if (a.status === 'expired' && b.status !== 'expired') return -1;
@@ -411,19 +422,23 @@ const ExpiryManagementPage: React.FC = () => {
   const stats = useMemo(() => {
     if (!baseProcessedData) return { expired: 0, critical: 0, next_expiry: 0, withdrawal: 0, total: 0 };
     
-    const expiredCount = baseProcessedData.filter(s => s.status === 'expired').length;
-    const criticalCount = baseProcessedData.filter(s => s.status === 'critical').length;
-    const nextExpiryCount = baseProcessedData.filter(s => s.status === 'next_expiry').length;
-    const withdrawalCount = baseProcessedData.filter(s => s.status === 'withdrawal').length;
+    const filteredByCat = baseProcessedData.filter(item => 
+      filterCategory === 'all' || item.category === filterCategory
+    );
+
+    const expiredCount = filteredByCat.filter(s => s.status === 'expired').length;
+    const criticalCount = filteredByCat.filter(s => s.status === 'critical').length;
+    const nextExpiryCount = filteredByCat.filter(s => s.status === 'next_expiry').length;
+    const withdrawalCount = filteredByCat.filter(s => s.status === 'withdrawal').length;
     
     return {
       expired: expiredCount,
       critical: criticalCount,
       next_expiry: nextExpiryCount,
       withdrawal: withdrawalCount,
-      total: baseProcessedData.length
+      total: filteredByCat.length
     };
-  }, [baseProcessedData]);
+  }, [baseProcessedData, filterCategory]);
 
   return (
     <div className="h-full bg-slate-950 text-white font-mono flex flex-col overflow-hidden">
@@ -539,6 +554,23 @@ const ExpiryManagementPage: React.FC = () => {
                  s === 'critical' ? 'Críticos' : 
                  s === 'withdrawal' ? 'Retiros del Mes' :
                  s === 'next_expiry' ? 'Próx. Vencimiento' : 'Vigentes'}
+              </button>
+            ))}
+          </div>
+
+          {/* MUNDOS FILTER */}
+          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+            {categories.map(cat => (
+              <button
+                key={cat}
+                onClick={() => setFilterCategory(cat)}
+                className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-tighter whitespace-nowrap transition-all border ${
+                  filterCategory === cat
+                    ? 'bg-slate-100 border-white text-slate-950'
+                    : 'bg-white/5 border-white/5 text-slate-500 hover:text-white'
+                }`}
+              >
+                {cat === 'all' ? 'Todos los Mundos' : cat}
               </button>
             ))}
           </div>
@@ -779,11 +811,6 @@ const ExpiryManagementPage: React.FC = () => {
                       </div>
                     )}
                     
-                    <div className="flex items-center gap-2.5">
-                      <Package className="w-5 h-5 text-slate-500" />
-                      <span className="text-lg font-black text-slate-300 tracking-tighter">{item.quantity} UNIDADES</span>
-                    </div>
-
                     {item.batch && item.batch !== 'N/A' && (
                       <div className="flex items-center gap-2.5">
                         <FileText className="w-4 h-4 text-slate-500" />
