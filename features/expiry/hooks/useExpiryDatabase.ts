@@ -5,6 +5,7 @@ import { db } from '../../../db';
 import { Product, Provider } from '../../../types';
 import { format, differenceInDays, isPast, isBefore, addDays, parseISO, startOfMonth, addMonths, endOfMonth, isWithinInterval } from 'date-fns';
 import { importExpirationsFromCloud, importProvidersFromCloud } from '../../../services/syncManager';
+import { addExpirationToCloud, removeExpirationFromCloud } from '../../../services/expirySync';
 import { normalizeSku } from '../../../services/utils';
 import { toast } from 'sonner';
 
@@ -255,6 +256,12 @@ export const useExpiryDatabase = () => {
 
   const handleRemoveItem = useCallback(async (item: any) => {
     try {
+      // 1. Si es un ítem de la nube, intentar borrarlo allá primero
+      if (item.type === 'Nube' && item.claveUnica) {
+        await removeExpirationFromCloud(item.claveUnica);
+      }
+
+      // 2. Borrado local
       if (item.type === 'Individual') {
         await db.scans.delete(item.id);
       } else if (item.type === 'Bulto/Caja') {
@@ -264,8 +271,8 @@ export const useExpiryDatabase = () => {
         await db.cloudExpirations.delete(item.id);
       }
       toast.success('Ítem retirado correctamente');
-    } catch (error) {
-      toast.error('Error al retirar el ítem');
+    } catch (error: any) {
+      toast.error(`Error al retirar el ítem: ${error.message}`);
     }
   }, []);
 
@@ -273,6 +280,16 @@ export const useExpiryDatabase = () => {
     try {
       const selectedItems = processedScans.filter(s => ids.has(s.id));
       for (const item of selectedItems) {
+        // Borrado en nube si aplica
+        if (item.type === 'Nube' && item.claveUnica) {
+          try {
+            await removeExpirationFromCloud(item.claveUnica);
+          } catch (e) {
+            console.warn(`Fallo al borrar ${item.claveUnica} en nube, continuando con local...`);
+          }
+        }
+
+        // Borrado local
         if (item.type === 'Individual') {
           await db.scans.delete(item.id);
         } else if (item.type === 'Bulto/Caja') {
@@ -288,6 +305,42 @@ export const useExpiryDatabase = () => {
       toast.error('Error al retirar los ítems');
     }
   }, [processedScans]);
+
+  const handleAddItem = useCallback(async (data: {
+    barcode: string;
+    productName: string;
+    mm: number;
+    yyyy: number;
+    quantity: number;
+  }) => {
+    try {
+      setIsSyncing(true);
+      // 1. Guardar en la nube (GAS validará duplicados)
+      const result = await addExpirationToCloud(data);
+      
+      // 2. Guardar localmente en cloudExpirations para reflejo inmediato
+      if (result.success) {
+        await db.cloudExpirations.add({
+          id: result.id || crypto.randomUUID(),
+          barcode: data.barcode,
+          productName: data.productName,
+          mm: data.mm,
+          yyyy: data.yyyy,
+          event: 'VENCIMIENTOS',
+          quantity: data.quantity,
+          location: 'MANUAL',
+          timestamp: Date.now(),
+          claveUnica: result.clave
+        });
+        toast.success('Producto registrado en la nube y localmente');
+      }
+    } catch (error: any) {
+      toast.error(`Error al agregar: ${error.message}`);
+      throw error;
+    } finally {
+      setIsSyncing(false);
+    }
+  }, []);
 
   const handleUpdatePreferences = useCallback((newPrefs: Partial<ExpiryPreferences>) => {
     setPreferences(prev => {
@@ -323,6 +376,7 @@ export const useExpiryDatabase = () => {
       handleSyncExpirations,
       handleRemoveItem,
       handleBulkRemove,
+      handleAddItem,
       handleUpdatePreferences
     }
   };

@@ -3,68 +3,69 @@ import type { Table } from 'dexie';
 import { Product, CountingSession, ScanRecord, SyncJob, ExpectedOrder, VisualGuide, ErpOrderSession, Provider } from './types';
 
 export interface SystemLog {
- id?: number;
- level: 'info' | 'warn' | 'error' | 'success';
- module: string;
- message: string;
- details?: any;
- timestamp: number;
+  id?: number;
+  level: 'info' | 'warn' | 'error' | 'success';
+  module: string;
+  message: string;
+  details?: any;
+  timestamp: number;
 }
 
 export interface KVSettings {
- key: string;
- value: any;
+  key: string;
+  value: any;
 }
 
 export interface LocationEntry {
- id?: number;
- name: string;
- lastUsed: number;
+  id?: number;
+  name: string;
+  lastUsed: number;
 }
 
- export interface CloudExpiration {
- id: string;
- barcode: string;
- productName: string;
- mm: number;
- yyyy: number;
- event: string;
- quantity: number;
- location: string;
- timestamp: number;
+export interface CloudExpiration {
+  id: string;
+  barcode: string;
+  productName: string;
+  mm: number;
+  yyyy: number;
+  event: string;
+  quantity: number;
+  location: string;
+  timestamp: number;
+  claveUnica?: string;
 }
 
 export class LogiCountDB extends Dexie {
- products!: Table<Product>;
- sessions!: Table<CountingSession>;
- scans!: Table<ScanRecord>;
- syncQueue!: Table<SyncJob>;
- expectedOrders!: Table<ExpectedOrder>;
- logs!: Table<SystemLog>;
- settings!: Table<KVSettings>;
- locations!: Table<LocationEntry>;
- visualGuides!: Table<VisualGuide>;
- erpSessions!: Table<ErpOrderSession>;
- cloudExpirations!: Table<CloudExpiration>;
- providers!: Table<Provider>;
+  products!: Table<Product>;
+  sessions!: Table<CountingSession>;
+  scans!: Table<ScanRecord>;
+  syncQueue!: Table<SyncJob>;
+  expectedOrders!: Table<ExpectedOrder>;
+  logs!: Table<SystemLog>;
+  settings!: Table<KVSettings>;
+  locations!: Table<LocationEntry>;
+  visualGuides!: Table<VisualGuide>;
+  erpSessions!: Table<ErpOrderSession>;
+  cloudExpirations!: Table<CloudExpiration>;
+  providers!: Table<Provider>;
 
- constructor() {
- super('LogiCountDB');
- (this as any).version(29).stores({
- products: '&barcode, name, syncStatus', 
- sessions: 'id, status, createdAt, erpOrder, logisticsLabel, sessionType, auditStatus, lastSyncTimestamp, mm, yyyy, batch, photoUrl, [erpOrder+createdAt], [status+lastSyncTimestamp]', 
- scans: 'id, sessionId, barcode, logisticsLabel, timestamp, synced, isIncident, expiryDate, mm, yyyy, batch, [sessionId+synced], [sessionId+barcode], [sessionId+logisticsLabel], [sessionId+timestamp]',
- syncQueue: '++id, status, createdAt, retryCount',
- expectedOrders: 'id, internalId',
- logs: '++id, level, module, timestamp',
- settings: '&key',
- locations: '++id, &name, lastUsed',
- visualGuides: 'id, guideNumber, erpOrderId, status, createdAt',
- erpSessions: 'id, erpOrderId, status, createdAt',
- cloudExpirations: 'id, barcode, [mm+yyyy]',
- providers: '&rut, name'
- });
- }
+  constructor() {
+    super('LogiCountDB');
+    this.version(29).stores({
+      products: '&barcode, name, syncStatus', 
+      sessions: 'id, status, createdAt, erpOrder, logisticsLabel, sessionType, auditStatus, lastSyncTimestamp, mm, yyyy, batch, photoUrl, [erpOrder+createdAt], [status+lastSyncTimestamp]', 
+      scans: 'id, sessionId, barcode, logisticsLabel, timestamp, synced, isIncident, expiryDate, mm, yyyy, batch, [sessionId+synced], [sessionId+barcode], [sessionId+logisticsLabel], [sessionId+timestamp]',
+      syncQueue: '++id, status, createdAt, retryCount',
+      expectedOrders: 'id, internalId',
+      logs: '++id, level, module, timestamp',
+      settings: '&key',
+      locations: '++id, &name, lastUsed',
+      visualGuides: 'id, guideNumber, erpOrderId, status, createdAt',
+      erpSessions: 'id, erpOrderId, status, createdAt',
+      cloudExpirations: 'id, barcode, [mm+yyyy]',
+      providers: '&rut, name'
+    });
+  }
 }
 
 export const db = new LogiCountDB();

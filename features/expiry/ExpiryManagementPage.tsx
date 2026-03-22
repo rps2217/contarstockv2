@@ -8,7 +8,8 @@ import {
   RefreshCw,
   Sun,
   Moon,
-  Settings2
+  Settings2,
+  Plus
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -21,6 +22,7 @@ import { useExpiryDatabase } from './hooks/useExpiryDatabase';
 import { ExpiryStats } from './components/ExpiryStats';
 import { ExpiryFilterDrawer } from './components/ExpiryFilterDrawer';
 import { ExpirySettingsDrawer } from './components/ExpirySettingsDrawer';
+import { ExpiryAddModal } from './components/ExpiryAddModal';
 import { ExpirySearchBar } from './components/ExpirySearchBar';
 import { ExpiryItemCard } from './components/ExpiryItemCard';
 import { ExpiryBulkActions } from './components/ExpiryBulkActions';
@@ -32,6 +34,7 @@ const ExpiryManagementPage: React.FC = () => {
   const { state, actions } = useExpiryDatabase();
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isSettingsDrawerOpen, setIsSettingsDrawerOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
   const activeFiltersCount = 
@@ -175,10 +178,20 @@ const ExpiryManagementPage: React.FC = () => {
             </button>
 
             <button 
-              onClick={() => handleExportExpirationsCSV(state.processedScans)}
+              onClick={() => setIsAddModalOpen(true)}
               className="bg-amber-500 hover:bg-amber-400 text-black px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg shadow-amber-500/20"
             >
-              <FileText className="w-3.5 h-3.5" />
+              <Plus className="w-3.5 h-3.5" />
+              Nuevo
+            </button>
+
+            <button 
+              onClick={() => handleExportExpirationsCSV(state.processedScans)}
+              className={`border px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${
+                theme === 'dark' ? 'bg-white/5 hover:bg-white/10 border-white/10' : 'bg-slate-100 hover:bg-slate-200 border-slate-200'
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5 text-slate-400" />
               Exportar CSV
             </button>
           </div>
@@ -283,6 +296,13 @@ const ExpiryManagementPage: React.FC = () => {
         onClose={() => setIsSettingsDrawerOpen(false)}
         preferences={state.preferences}
         onUpdatePreferences={actions.handleUpdatePreferences}
+        theme={theme}
+      />
+
+      <ExpiryAddModal 
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onAdd={actions.handleAddItem}
         theme={theme}
       />
     </div>

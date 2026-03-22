@@ -13,6 +13,8 @@ interface ApiResponse {
  added?: number; 
  fileUrl?: string;
  fileId?: string;
+ id?: string;
+ clave?: string;
  // FIX: Added spreadsheet_name to satisfy diagnostic tests in services/diagnostics.ts
  spreadsheet_name?: string;
 }
