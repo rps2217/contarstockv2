@@ -28,8 +28,8 @@ export const ExpirySearchBar: React.FC<ExpirySearchBarProps> = ({
           placeholder="BUSCAR POR NOMBRE, SKU O LOTE..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className={`w-full border rounded-2xl py-4 pl-12 pr-4 text-sm font-bold focus:outline-none focus:border-amber-500 transition-all shadow-2xl ${
-            theme === 'dark' ? 'bg-black border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900 shadow-slate-200/50'
+          className={`w-full border rounded-2xl py-4 pl-12 pr-4 text-sm font-bold focus:outline-none transition-all shadow-2xl ${
+            theme === 'dark' ? 'bg-black border-amber-500/50 text-white' : 'bg-white border-amber-500/50 text-slate-900 shadow-slate-200/50'
           }`}
         />
       </div>

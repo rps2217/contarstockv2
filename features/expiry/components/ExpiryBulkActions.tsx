@@ -21,56 +21,102 @@ export const ExpiryBulkActions: React.FC<ExpiryBulkActionsProps> = ({
   return (
     <AnimatePresence>
       {selectedCount > 0 && (
-        <motion.div
-          initial={{ y: 100, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 100, opacity: 0 }}
-          className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 w-full max-w-2xl px-4"
-        >
-          <div className={`border rounded-3xl p-4 shadow-2xl flex items-center justify-between gap-4 backdrop-blur-xl transition-colors ${
-            theme === 'dark' ? 'bg-slate-900 border-indigo-500/50 shadow-indigo-500/20' : 'bg-white border-indigo-200 shadow-indigo-500/10'
-          }`}>
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-indigo-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/40">
-                <CheckSquare className="w-6 h-6" />
+        <>
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClearSelection}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60]"
+          />
+
+          {/* Side Menu */}
+          <motion.div
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className={`fixed top-0 right-0 h-full w-80 z-[70] shadow-2xl border-l flex flex-col ${
+              theme === 'dark' ? 'bg-slate-900 border-white/10' : 'bg-white border-slate-200'
+            }`}
+          >
+            <div className="p-6 flex items-center justify-between border-bottom border-white/5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/40">
+                  <CheckSquare className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className={`text-sm font-black uppercase tracking-tighter italic leading-none ${
+                    theme === 'dark' ? 'text-white' : 'text-slate-900'
+                  }`}>Acciones</h4>
+                  <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest mt-1">{selectedCount} Seleccionados</p>
+                </div>
               </div>
-              <div>
-                <h4 className={`text-sm font-black uppercase tracking-tighter italic leading-none ${
-                  theme === 'dark' ? 'text-white' : 'text-slate-900'
-                }`}>Acciones Masivas</h4>
-                <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest mt-1">{selectedCount} Ítems seleccionados</p>
+              <button
+                onClick={onClearSelection}
+                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
+                  theme === 'dark' ? 'hover:bg-white/10 text-slate-400' : 'hover:bg-slate-100 text-slate-500'
+                }`}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex-1 p-6 space-y-4">
+              <div className={`p-4 rounded-2xl border ${
+                theme === 'dark' ? 'bg-white/5 border-white/5' : 'bg-slate-50 border-slate-100'
+              }`}>
+                <p className={`text-[10px] font-bold uppercase tracking-widest mb-4 ${
+                  theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
+                }`}>Operaciones Disponibles</p>
+                
+                <div className="space-y-2">
+                  <button
+                    onClick={onPrintSelected}
+                    className={`w-full px-4 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 transition-all border ${
+                      theme === 'dark' 
+                        ? 'bg-slate-800 hover:bg-slate-700 text-white border-white/5' 
+                        : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 shadow-sm'
+                    }`}
+                  >
+                    <Printer className="w-4 h-4 text-indigo-500" />
+                    Imprimir Seleccionados
+                  </button>
+
+                  <button
+                    onClick={onBulkRemove}
+                    className="w-full bg-rose-500 hover:bg-rose-400 text-white px-4 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 transition-all shadow-lg shadow-rose-500/20"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Retirar Seleccionados
+                  </button>
+                </div>
+              </div>
+
+              <div className={`p-4 rounded-2xl border border-dashed ${
+                theme === 'dark' ? 'border-white/10' : 'border-slate-200'
+              }`}>
+                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest text-center italic">
+                  Próximamente más acciones masivas aquí...
+                </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                onClick={onPrintSelected}
-                className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all border ${
-                  theme === 'dark' ? 'bg-slate-800 hover:bg-slate-700 text-white border-white/5' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
-                }`}
-              >
-                <Printer className="w-3.5 h-3.5" />
-                Imprimir Seleccionados
-              </button>
-              <button
-                onClick={onBulkRemove}
-                className="bg-rose-500 hover:bg-rose-400 text-white px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg shadow-rose-500/20"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                Retirar Todo
-              </button>
-              <div className={`w-px h-8 mx-2 ${theme === 'dark' ? 'bg-white/10' : 'bg-slate-200'}`} />
+            <div className="p-6 border-t border-white/5">
               <button
                 onClick={onClearSelection}
-                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
-                  theme === 'dark' ? 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900'
+                className={`w-full py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
+                  theme === 'dark' 
+                    ? 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10' 
+                    : 'bg-slate-100 border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-200'
                 }`}
               >
-                <X className="w-5 h-5" />
+                Cancelar Selección
               </button>
             </div>
-          </div>
-        </motion.div>
+          </motion.div>
+        </>
       )}
     </AnimatePresence>
   );
