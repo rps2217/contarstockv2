@@ -23,7 +23,6 @@ export const ExpiryAddModal: React.FC<ExpiryAddModalProps> = ({ isOpen, onClose,
   const [productName, setProductName] = useState('');
   const [mm, setMm] = useState<number | null>(null);
   const [yyyy, setYyyy] = useState<number | null>(null);
-  const [quantity, setQuantity] = useState<number>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
@@ -57,7 +56,7 @@ export const ExpiryAddModal: React.FC<ExpiryAddModalProps> = ({ isOpen, onClose,
         productName,
         mm,
         yyyy,
-        quantity
+        quantity: 1 // Enviamos 1 por defecto internamente
       });
       onClose();
       // Reset form
@@ -65,7 +64,6 @@ export const ExpiryAddModal: React.FC<ExpiryAddModalProps> = ({ isOpen, onClose,
       setProductName('');
       setMm(null);
       setYyyy(null);
-      setQuantity(1);
     } catch (error) {
       // Error handled in hook
     } finally {
@@ -203,26 +201,6 @@ export const ExpiryAddModal: React.FC<ExpiryAddModalProps> = ({ isOpen, onClose,
                     {y}
                   </button>
                 ))}
-              </div>
-            </div>
-
-            {/* QUANTITY */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Cantidad</label>
-              <div className="relative">
-                <Hash className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                <input 
-                  required
-                  type="number"
-                  min="1"
-                  value={quantity}
-                  onChange={(e) => setQuantity(parseInt(e.target.value, 10))}
-                  className={`w-full pl-11 pr-4 py-3 rounded-2xl text-sm font-bold border transition-all outline-none ${
-                    theme === 'dark' 
-                      ? 'bg-white/5 border-white/10 text-white focus:border-amber-500/50 focus:bg-white/10' 
-                      : 'bg-slate-100 border-slate-200 text-slate-900 focus:border-amber-500/50 focus:bg-white'
-                  }`}
-                />
               </div>
             </div>
 
