@@ -28,10 +28,23 @@ export const ExpirySearchBar: React.FC<ExpirySearchBarProps> = ({
           placeholder="BUSCAR POR NOMBRE, SKU O LOTE..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className={`w-full border rounded-2xl py-4 pl-12 pr-4 text-sm font-bold focus:outline-none transition-all shadow-2xl ${
+          className={`w-full border rounded-2xl py-4 pl-12 pr-28 text-sm font-bold focus:outline-none transition-all shadow-2xl ${
             theme === 'dark' ? 'bg-black border-amber-500/50 text-white' : 'bg-white border-amber-500/50 text-slate-900 shadow-slate-200/50'
           }`}
         />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            className={`absolute right-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all ${
+              theme === 'dark' 
+                ? 'bg-white/10 hover:bg-white/20 text-slate-300' 
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+            }`}
+          >
+            <X className="w-3.5 h-3.5" />
+            Limpiar
+          </button>
+        )}
       </div>
       
       <button
