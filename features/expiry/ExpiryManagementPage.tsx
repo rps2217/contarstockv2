@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
 import { ScanRecord, Product } from '../../types';
@@ -34,13 +34,27 @@ type ExpiryStatus = 'expired' | 'critical' | 'next_expiry' | 'safe';
 
 const ExpiryManagementPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | ExpiryStatus>('all');
-  const [sortBy, setSortBy] = useState<'date_asc' | 'date_desc' | 'qty_desc' | 'name_asc' | 'value_desc'>('date_asc');
-  const [filterLocation, setFilterLocation] = useState<string>('all');
+  const [displayLimit, setDisplayLimit] = useState(50);
   const [isChangingLocation, setIsChangingLocation] = useState(false);
   const [newLocationInput, setNewLocationInput] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setDisplayLimit(50); // Reset limit on search
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Reset limit on filter change
+  useEffect(() => {
+    setDisplayLimit(50);
+  }, [filterStatus]);
 
   const handleSyncExpirations = async () => {
     try {
@@ -229,28 +243,21 @@ const ExpiryManagementPage: React.FC = () => {
     return map;
   }, [products]);
 
-  const processedScans = useMemo(() => {
+  const baseProcessedData = useMemo(() => {
     if (!scans) return [];
 
     const now = new Date();
     const criticalThreshold = addDays(now, 30);
-    
-    // Rango "Próximo Vencimiento" (4 meses posteriores al mes en curso)
     const startOfNextMonth = startOfMonth(addMonths(now, 1));
     const endOfFourMonths = endOfMonth(addMonths(now, 4));
 
     const getStatus = (expiry: Date | null): ExpiryStatus => {
       if (!expiry) return 'safe';
-      
-      const daysLeft = differenceInDays(expiry, now);
-      
       if (isPast(expiry)) return 'expired';
       if (isBefore(expiry, criticalThreshold)) return 'critical';
-      
       if (isWithinInterval(expiry, { start: startOfNextMonth, end: endOfFourMonths })) {
         return 'next_expiry';
       }
-      
       return 'safe';
     };
 
@@ -326,98 +333,61 @@ const ExpiryManagementPage: React.FC = () => {
       };
     });
 
-    const allItems = [...individualItems, ...sessionItems, ...cloudItems];
+    return [...individualItems, ...sessionItems, ...cloudItems];
+  }, [scans, sessions, cloudExpirations, productMap]);
 
-    return allItems.filter(item => {
+  const processedScans = useMemo(() => {
+    const query = debouncedSearch.toLowerCase();
+    
+    return baseProcessedData.filter(item => {
       const matchesSearch = 
-        item.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.barcode.includes(searchQuery) ||
-        (item.batch && item.batch.toLowerCase().includes(searchQuery.toLowerCase()));
+        item.productName.toLowerCase().includes(query) ||
+        item.barcode.includes(query) ||
+        (item.batch && item.batch.toLowerCase().includes(query));
       
       const matchesFilter = 
         filterStatus === 'all' || 
         item.status === filterStatus;
 
-      const matchesLocation = 
-        filterLocation === 'all' || 
-        item.location === filterLocation;
-
-      return matchesSearch && matchesFilter && matchesLocation;
+      return matchesSearch && matchesFilter;
     }).sort((a, b) => {
-      switch (sortBy) {
-        case 'date_asc':
-          if (!a.expiryDateObj) return 1;
-          if (!b.expiryDateObj) return -1;
-          return a.expiryDateObj.getTime() - b.expiryDateObj.getTime();
-        case 'date_desc':
-          if (!a.expiryDateObj) return -1;
-          if (!b.expiryDateObj) return 1;
-          return b.expiryDateObj.getTime() - a.expiryDateObj.getTime();
-        case 'qty_desc':
-          return (b.quantity || 0) - (a.quantity || 0);
-        case 'name_asc':
-          return a.productName.localeCompare(b.productName);
-        case 'value_desc':
-          const valA = (a.quantity || 0) * (productMap.get(a.barcode)?.price || 0);
-          const valB = (b.quantity || 0) * (productMap.get(b.barcode)?.price || 0);
-          return valB - valA;
-        default:
-          return 0;
-      }
+      // Default sort: expired first, then by date
+      if (a.status === 'expired' && b.status !== 'expired') return -1;
+      if (a.status !== 'expired' && b.status === 'expired') return 1;
+      
+      if (!a.expiryDateObj) return 1;
+      if (!b.expiryDateObj) return -1;
+      return a.expiryDateObj.getTime() - b.expiryDateObj.getTime();
     });
-  }, [scans, sessions, cloudExpirations, productMap, searchQuery, filterStatus, filterLocation, sortBy]);
-
-  const locations = useMemo(() => {
-    if (!processedScans) return [];
-    const locs = new Set(processedScans.map(s => s.location).filter(Boolean));
-    return Array.from(locs).sort();
-  }, [processedScans]);
+  }, [baseProcessedData, debouncedSearch, filterStatus]);
 
   const filteredAndSortedScans = useMemo(() => {
-    if (!processedScans) return [];
-    
-    let result = [...processedScans];
-
-    if (filterLocation !== 'all') {
-      result = result.filter(s => s.location === filterLocation);
-    }
-
-    // Sort
-    result.sort((a, b) => {
-      if (sortBy === 'date_asc') return a.expiryDateObj.getTime() - b.expiryDateObj.getTime();
-      if (sortBy === 'date_desc') return b.expiryDateObj.getTime() - a.expiryDateObj.getTime();
-      if (sortBy === 'qty_desc') return b.quantity - a.quantity;
-      if (sortBy === 'name_asc') return a.productName.localeCompare(b.productName);
-      if (sortBy === 'value_desc') {
-        const valA = (productMap.get(a.barcode)?.price || 0) * a.quantity;
-        const valB = (productMap.get(b.barcode)?.price || 0) * b.quantity;
-        return valB - valA;
-      }
-      return 0;
-    });
-
-    return result;
-  }, [processedScans, sortBy, filterLocation, productMap]);
+    return processedScans.slice(0, displayLimit);
+  }, [processedScans, displayLimit]);
 
   const stats = useMemo(() => {
-    if (!filteredAndSortedScans) return { expired: 0, critical: 0, next_expiry: 0, total: 0, valueAtRisk: 0 };
+    if (!processedScans) return { expired: 0, critical: 0, next_expiry: 0, total: 0, valueAtRisk: 0 };
     
-    const expired = filteredAndSortedScans.filter(s => s.status === 'expired');
-    const critical = filteredAndSortedScans.filter(s => s.status === 'critical');
+    const expiredCount = processedScans.filter(s => s.status === 'expired').length;
+    const criticalCount = processedScans.filter(s => s.status === 'critical').length;
+    const nextExpiryCount = processedScans.filter(s => s.status === 'next_expiry').length;
     
-    const valueAtRisk = [...expired, ...critical].reduce((acc, item) => {
-      const price = productMap.get(item.barcode)?.price || 0;
-      return acc + (price * item.quantity);
+    const valueAtRisk = processedScans.reduce((acc, item) => {
+      if (item.status === 'expired' || item.status === 'critical') {
+        const price = productMap.get(item.barcode)?.price || 0;
+        return acc + (price * item.quantity);
+      }
+      return acc;
     }, 0);
 
     return {
-      expired: expired.length,
-      critical: critical.length,
-      next_expiry: filteredAndSortedScans.filter(s => s.status === 'next_expiry').length,
-      total: filteredAndSortedScans.length,
+      expired: expiredCount,
+      critical: criticalCount,
+      next_expiry: nextExpiryCount,
+      total: processedScans.length,
       valueAtRisk
     };
-  }, [filteredAndSortedScans, productMap]);
+  }, [processedScans, productMap]);
 
   return (
     <div className="h-full bg-slate-950 text-white font-mono flex flex-col overflow-hidden">
@@ -497,42 +467,15 @@ const ExpiryManagementPage: React.FC = () => {
         </div>
 
         <div className="flex flex-col gap-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-              <input 
-                type="text"
-                placeholder="BUSCAR POR NOMBRE, SKU O LOTE..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-black border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-xs font-bold focus:outline-none focus:border-amber-500 transition-colors"
-              />
-            </div>
-
-            <div className="flex gap-2">
-              <select
-                value={filterLocation}
-                onChange={(e) => setFilterLocation(e.target.value)}
-                className="bg-slate-800 border border-white/10 rounded-xl px-4 py-2 text-[10px] font-black text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 uppercase tracking-widest"
-              >
-                <option value="all">TODAS LAS UBICACIONES</option>
-                {locations.map(loc => (
-                  <option key={loc} value={loc}>{loc.toUpperCase()}</option>
-                ))}
-              </select>
-
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                className="bg-slate-800 border border-white/10 rounded-xl px-4 py-2 text-[10px] font-black text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 uppercase tracking-widest"
-              >
-                <option value="date_asc">PRÓXIMOS A VENCER</option>
-                <option value="date_desc">VENCIMIENTOS LEJANOS</option>
-                <option value="qty_desc">MAYOR CANTIDAD</option>
-                <option value="name_asc">NOMBRE (A-Z)</option>
-                <option value="value_desc">MAYOR VALOR EN RIESGO</option>
-              </select>
-            </div>
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+            <input 
+              type="text"
+              placeholder="BUSCAR POR NOMBRE, SKU O LOTE..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-black border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-xs font-bold focus:outline-none focus:border-amber-500 transition-colors"
+            />
           </div>
 
           <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
@@ -576,10 +519,10 @@ const ExpiryManagementPage: React.FC = () => {
           >
             <div className="flex items-center gap-4 border-r border-white/10 pr-8">
               <button 
-                onClick={() => toggleSelectAll(filteredAndSortedScans)}
+                onClick={() => toggleSelectAll(processedScans)}
                 className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400 hover:bg-indigo-500 hover:text-white transition-all"
               >
-                {selectedIds.size === filteredAndSortedScans.length ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
+                {selectedIds.size === processedScans.length ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
               </button>
               <div>
                 <div className="text-xl font-black text-white leading-none">{selectedIds.size}</div>
@@ -784,6 +727,19 @@ const ExpiryManagementPage: React.FC = () => {
             </motion.div>
           ))}
         </AnimatePresence>
+
+        {processedScans.length > displayLimit && (
+          <div className="flex justify-center py-8">
+            <button
+              onClick={() => setDisplayLimit(prev => prev + 50)}
+              className="bg-white/5 hover:bg-white/10 border border-white/10 px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-3 group"
+            >
+              <ChevronRight className="w-4 h-4 text-amber-500 group-hover:translate-x-1 transition-transform rotate-90" />
+              Cargar más productos
+              <span className="text-slate-500">({processedScans.length - displayLimit} restantes)</span>
+            </button>
+          </div>
+        )}
 
         {processedScans.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 text-center">
