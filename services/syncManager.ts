@@ -1,7 +1,7 @@
 
 import { db } from '../db';
 import { SHEET_COLUMNS } from './constants';
-import { CountingSession, Product } from '../types';
+import { CountingSession, Product, Provider } from '../types';
 import { logger } from './logger';
 import { useSyncStore } from '../store/useSyncStore';
 import { saveProductBatch } from './productService';
@@ -277,6 +277,55 @@ export const importExpirationsFromCloud = async (): Promise<number> => {
  return expirations.length;
  } catch (e: any) {
  logger.error("FETCH_EXPIRATIONS_FAIL", `Error descargando vencimientos: ${e.message}`);
+ throw e;
+ }
+};
+
+/**
+ * MOTOR DE DESCARGA DE PROVEEDORES (IMPORTACIÓN)
+ * Descarga los registros de proveedores y sus políticas de canje.
+ */
+export const importProvidersFromCloud = async (): Promise<number> => {
+ try {
+ const config = getSettings().appSheetConfig;
+ const tableName = config?.providersTableName || "PROVEEDORES";
+ 
+ const response = await cloudApi.fetchTable(tableName);
+ const rawRows = response.rows || [];
+ 
+ if (rawRows.length === 0) return 0;
+
+ const providers: Provider[] = rawRows
+ .map((row: any) => {
+ const rut = String(row['ID_RUT'] || row['RUT'] || '');
+ const name = String(row['NOMBRE PROVEEDOR'] || row['PROVEEDOR'] || '');
+ const policy = String(row['CANJE SÓLO POR VENCIMIENTO (DÍAS)'] || row['POLITICA'] || '');
+ const withdrawalRaw = String(row['RETIRO (DÍAS)'] || row['DIAS_RETIRO'] || '0');
+ 
+ let withdrawalDays = 0;
+ if (withdrawalRaw.toUpperCase() === 'AL VENCE') {
+ withdrawalDays = 0;
+ } else {
+ withdrawalDays = parseInt(withdrawalRaw, 10) || 0;
+ }
+
+ return {
+ rut,
+ name,
+ exchangePolicy: policy,
+ withdrawalDays
+ };
+ })
+ .filter((p: Provider) => p.rut && p.name);
+
+ if (providers.length > 0) {
+ await db.providers.clear();
+ await db.providers.bulkPut(providers);
+ }
+
+ return providers.length;
+ } catch (e: any) {
+ logger.error("FETCH_PROVIDERS_FAIL", `Error descargando proveedores: ${e.message}`);
  throw e;
  }
 };

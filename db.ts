@@ -1,6 +1,6 @@
 import { Dexie } from 'dexie';
 import type { Table } from 'dexie';
-import { Product, CountingSession, ScanRecord, SyncJob, ExpectedOrder, VisualGuide, ErpOrderSession } from './types';
+import { Product, CountingSession, ScanRecord, SyncJob, ExpectedOrder, VisualGuide, ErpOrderSession, Provider } from './types';
 
 export interface SystemLog {
  id?: number;
@@ -46,10 +46,11 @@ export class LogiCountDB extends Dexie {
  visualGuides!: Table<VisualGuide>;
  erpSessions!: Table<ErpOrderSession>;
  cloudExpirations!: Table<CloudExpiration>;
+ providers!: Table<Provider>;
 
  constructor() {
  super('LogiCountDB');
- (this as any).version(28).stores({
+ (this as any).version(29).stores({
  products: '&barcode, name, syncStatus', 
  sessions: 'id, status, createdAt, erpOrder, logisticsLabel, sessionType, auditStatus, lastSyncTimestamp, mm, yyyy, batch, photoUrl, [erpOrder+createdAt], [status+lastSyncTimestamp]', 
  scans: 'id, sessionId, barcode, logisticsLabel, timestamp, synced, isIncident, expiryDate, mm, yyyy, batch, [sessionId+synced], [sessionId+barcode], [sessionId+logisticsLabel], [sessionId+timestamp]',
@@ -60,7 +61,8 @@ export class LogiCountDB extends Dexie {
  locations: '++id, &name, lastUsed',
  visualGuides: 'id, guideNumber, erpOrderId, status, createdAt',
  erpSessions: 'id, erpOrderId, status, createdAt',
- cloudExpirations: 'id, barcode, [mm+yyyy]'
+ cloudExpirations: 'id, barcode, [mm+yyyy]',
+ providers: '&rut, name'
  });
  }
 }

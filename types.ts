@@ -1,4 +1,11 @@
 
+export interface Provider {
+ rut: string;
+ name: string;
+ exchangePolicy?: string;
+ withdrawalDays?: number;
+}
+
 export interface Product {
  barcode: string;
  name: string;
@@ -205,6 +212,7 @@ export interface AppSheetConfig {
   productsTableName: string;
   receptionTableName?: string;
   ordersTableName?: string; 
+  providersTableName?: string;
   gasWebAppUrl?: string; 
   spreadsheetId?: string;
 }

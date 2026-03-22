@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
-import { ScanRecord, Product } from '../../types';
+import { ScanRecord, Product, Provider } from '../../types';
 import { 
   Calendar, 
   Search, 
@@ -27,10 +27,10 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, differenceInDays, isPast, isBefore, addDays, parseISO, startOfMonth, addMonths, endOfMonth, isWithinInterval } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { importExpirationsFromCloud } from '../../services/syncManager';
+import { importExpirationsFromCloud, importProvidersFromCloud } from '../../services/syncManager';
 import { toast } from 'sonner';
 
-type ExpiryStatus = 'expired' | 'critical' | 'next_expiry' | 'safe';
+type ExpiryStatus = 'expired' | 'critical' | 'next_expiry' | 'safe' | 'withdrawal';
 
 const ExpiryManagementPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -79,8 +79,11 @@ const ExpiryManagementPage: React.FC = () => {
   const handleSyncExpirations = async () => {
     try {
       setIsSyncing(true);
-      const count = await importExpirationsFromCloud();
-      toast.success(`Se sincronizaron ${count} vencimientos de la nube.`);
+      const [expCount, provCount] = await Promise.all([
+        importExpirationsFromCloud(),
+        importProvidersFromCloud()
+      ]);
+      toast.success(`Sincronización completa: ${expCount} vencimientos y ${provCount} proveedores.`);
     } catch (error: any) {
       toast.error(`Error al sincronizar: ${error.message}`);
     } finally {
@@ -266,12 +269,19 @@ const ExpiryManagementPage: React.FC = () => {
     db.cloudExpirations.toArray()
   );
   const products = useLiveQuery(() => db.products.toArray());
+  const providers = useLiveQuery(() => db.providers.toArray());
 
   const productMap = useMemo(() => {
     const map = new Map<string, Product>();
     products?.forEach(p => map.set(p.barcode, p));
     return map;
   }, [products]);
+
+  const providerMap = useMemo(() => {
+    const map = new Map<string, Provider>();
+    providers?.forEach(p => map.set(p.rut, p));
+    return map;
+  }, [providers]);
 
   const baseProcessedData = useMemo(() => {
     if (!scans) return [];
@@ -280,10 +290,18 @@ const ExpiryManagementPage: React.FC = () => {
     const criticalThreshold = addDays(now, 30);
     const startOfNextMonth = startOfMonth(addMonths(now, 1));
     const endOfFourMonths = endOfMonth(addMonths(now, 4));
+    const currentMonthStart = startOfMonth(now);
+    const currentMonthEnd = endOfMonth(now);
 
-    const getStatus = (expiry: Date | null): ExpiryStatus => {
+    const getStatus = (expiry: Date | null, withdrawalDate: Date | null): ExpiryStatus => {
       if (!expiry) return 'safe';
       if (isPast(expiry)) return 'expired';
+      
+      // If there's a withdrawal date and it's past or in current month
+      if (withdrawalDate && (isPast(withdrawalDate) || isWithinInterval(withdrawalDate, { start: currentMonthStart, end: currentMonthEnd }))) {
+        return 'withdrawal';
+      }
+
       if (isBefore(expiry, criticalThreshold)) return 'critical';
       if (isWithinInterval(expiry, { start: startOfNextMonth, end: endOfFourMonths })) {
         return 'next_expiry';
@@ -291,80 +309,68 @@ const ExpiryManagementPage: React.FC = () => {
       return 'safe';
     };
 
-    const individualItems = scans.map(scan => {
+    const processItem = (item: any) => {
       let expiry: Date | null = null;
-      if (scan.expiryDate) {
-        expiry = parseISO(scan.expiryDate);
-      } else if (scan.mm && scan.yyyy) {
-        expiry = new Date(scan.yyyy, scan.mm, 0);
+      if (item.expiryDate) {
+        expiry = parseISO(item.expiryDate);
+      } else if (item.mm && item.yyyy) {
+        expiry = new Date(item.yyyy, item.mm, 0);
+      } else if (item.expiryDateObj) {
+        expiry = item.expiryDateObj;
       }
 
-      const productName = productMap.get(scan.barcode)?.name || 'Producto Desconocido';
-      const status = getStatus(expiry);
+      const product = productMap.get(item.barcode);
+      const productName = product?.name || item.productName || 'Producto Desconocido';
+      const supplierRut = product?.supplierRut;
+      const provider = supplierRut ? providerMap.get(supplierRut) : null;
+      
+      let withdrawalDate: Date | null = null;
+      if (expiry && provider?.withdrawalDays && provider.withdrawalDays > 0) {
+        withdrawalDate = addDays(expiry, -provider.withdrawalDays);
+      }
+
+      const status = getStatus(expiry, withdrawalDate);
       const daysLeft = expiry ? differenceInDays(expiry, now) : 0;
 
       return {
-        ...scan,
+        ...item,
         productName,
+        providerName: provider?.name || product?.supplier || 'N/A',
         status,
         daysLeft,
         expiryDateObj: expiry,
-        type: 'Individual',
-        location: scan.location || 'N/A'
+        withdrawalDate,
+        location: item.location || 'N/A'
       };
-    });
+    };
 
-    const sessionItems = (sessions || []).map(session => {
-      let expiry: Date | null = null;
-      if (session.mm && session.yyyy) {
-        expiry = new Date(session.yyyy, session.mm, 0);
-      }
-
-      const productName = productMap.get(session.logisticsLabel)?.name || `Bulto: ${session.logisticsLabel}`;
-      const status = getStatus(expiry);
-      const daysLeft = expiry ? differenceInDays(expiry, now) : 0;
-
-      return {
-        id: session.id,
-        barcode: session.logisticsLabel,
-        productName,
-        status,
-        daysLeft,
-        expiryDateObj: expiry,
-        batch: session.batch || 'N/A',
-        type: 'Bulto/Caja',
-        timestamp: session.createdAt,
-        quantity: session.totalUnits || 0,
-        location: session.logisticsLabel || 'N/A'
-      };
-    });
-
-    const cloudItems = (cloudExpirations || []).map(exp => {
-      let expiry: Date | null = null;
-      if (exp.mm && exp.yyyy) {
-        expiry = new Date(exp.yyyy, exp.mm, 0);
-      }
-
-      const status = getStatus(expiry);
-      const daysLeft = expiry ? differenceInDays(expiry, now) : 0;
-
-      return {
-        id: exp.id,
-        barcode: exp.barcode,
-        productName: exp.productName,
-        status,
-        daysLeft,
-        expiryDateObj: expiry,
-        batch: 'N/A',
-        type: 'Nube',
-        timestamp: exp.timestamp,
-        quantity: exp.quantity || 0,
-        location: exp.location || 'N/A'
-      };
-    });
+    const individualItems = scans.map(scan => processItem({ ...scan, type: 'Individual' }));
+    const sessionItems = (sessions || []).map(session => processItem({
+      id: session.id,
+      barcode: session.logisticsLabel,
+      mm: session.mm,
+      yyyy: session.yyyy,
+      batch: session.batch || 'N/A',
+      type: 'Bulto/Caja',
+      timestamp: session.createdAt,
+      quantity: session.totalUnits || 0,
+      location: session.logisticsLabel || 'N/A'
+    }));
+    const cloudItems = (cloudExpirations || []).map(exp => processItem({
+      id: exp.id,
+      barcode: exp.barcode,
+      productName: exp.productName,
+      mm: exp.mm,
+      yyyy: exp.yyyy,
+      batch: 'N/A',
+      type: 'Nube',
+      timestamp: exp.timestamp,
+      quantity: exp.quantity || 0,
+      location: exp.location || 'N/A'
+    }));
 
     return [...individualItems, ...sessionItems, ...cloudItems];
-  }, [scans, sessions, cloudExpirations, productMap]);
+  }, [scans, sessions, cloudExpirations, productMap, providerMap]);
 
   const processedScans = useMemo(() => {
     const query = debouncedSearch.toLowerCase();
@@ -401,16 +407,18 @@ const ExpiryManagementPage: React.FC = () => {
   }, [processedScans, displayLimit]);
 
   const stats = useMemo(() => {
-    if (!processedScans) return { expired: 0, critical: 0, next_expiry: 0, total: 0 };
+    if (!processedScans) return { expired: 0, critical: 0, next_expiry: 0, withdrawal: 0, total: 0 };
     
     const expiredCount = processedScans.filter(s => s.status === 'expired').length;
     const criticalCount = processedScans.filter(s => s.status === 'critical').length;
     const nextExpiryCount = processedScans.filter(s => s.status === 'next_expiry').length;
+    const withdrawalCount = processedScans.filter(s => s.status === 'withdrawal').length;
     
     return {
       expired: expiredCount,
       critical: criticalCount,
       next_expiry: nextExpiryCount,
+      withdrawal: withdrawalCount,
       total: processedScans.length
     };
   }, [processedScans]);
@@ -452,7 +460,7 @@ const ExpiryManagementPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
           <div className="bg-rose-500/10 border border-rose-500/20 p-3 rounded-2xl">
             <div className="flex items-center gap-2 mb-1">
               <AlertTriangle className="w-3 h-3 text-rose-500" />
@@ -467,6 +475,13 @@ const ExpiryManagementPage: React.FC = () => {
             </div>
             <div className="text-2xl font-black text-amber-500 leading-none">{stats.critical}</div>
           </div>
+          <div className="bg-indigo-500/10 border border-indigo-500/20 p-3 rounded-2xl">
+            <div className="flex items-center gap-2 mb-1">
+              <Download className="w-3 h-3 text-indigo-500" />
+              <span className="text-[8px] font-black text-indigo-500 uppercase tracking-widest">Retiros</span>
+            </div>
+            <div className="text-2xl font-black text-indigo-500 leading-none">{stats.withdrawal}</div>
+          </div>
           <div className="bg-blue-500/10 border border-blue-500/20 p-3 rounded-2xl">
             <div className="flex items-center gap-2 mb-1">
               <Clock className="w-3 h-3 text-blue-500" />
@@ -479,7 +494,7 @@ const ExpiryManagementPage: React.FC = () => {
               <CheckCircle2 className="w-3 h-3 text-emerald-500" />
               <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest">Vigentes</span>
             </div>
-            <div className="text-2xl font-black text-emerald-500 leading-none">{stats.total - stats.expired - stats.critical - stats.next_expiry}</div>
+            <div className="text-2xl font-black text-emerald-500 leading-none">{stats.total - stats.expired - stats.critical - stats.next_expiry - stats.withdrawal}</div>
           </div>
         </div>
 
@@ -496,7 +511,7 @@ const ExpiryManagementPage: React.FC = () => {
           </div>
 
           <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-            {(['all', 'expired', 'critical', 'next_expiry', 'safe'] as const).map(s => (
+            {(['all', 'expired', 'critical', 'withdrawal', 'next_expiry', 'safe'] as const).map(s => (
               <button
                 key={s}
                 onClick={() => setFilterStatus(s)}
@@ -504,6 +519,7 @@ const ExpiryManagementPage: React.FC = () => {
                   filterStatus === s 
                     ? s === 'expired' ? 'bg-rose-600 border-rose-400 text-white' :
                       s === 'critical' ? 'bg-amber-600 border-amber-400 text-white' :
+                      s === 'withdrawal' ? 'bg-indigo-600 border-indigo-400 text-white' :
                       s === 'next_expiry' ? 'bg-blue-600 border-blue-400 text-white' :
                       'bg-emerald-600 border-emerald-400 text-white'
                     : 'bg-white/5 border-white/5 text-slate-500 hover:text-white'
@@ -512,12 +528,14 @@ const ExpiryManagementPage: React.FC = () => {
                 {s === 'all' && <Filter className="w-3 h-3" />}
                 {s === 'expired' && <AlertTriangle className="w-3 h-3" />}
                 {s === 'critical' && <ShieldAlert className="w-3 h-3" />}
+                {s === 'withdrawal' && <Download className="w-3 h-3" />}
                 {s === 'next_expiry' && <Clock className="w-3 h-3" />}
                 {s === 'safe' && <CheckCircle2 className="w-3 h-3" />}
                 
                 {s === 'all' ? 'Todos' : 
                  s === 'expired' ? 'Vencidos' : 
                  s === 'critical' ? 'Críticos' : 
+                 s === 'withdrawal' ? 'Retiros del Mes' :
                  s === 'next_expiry' ? 'Próx. Vencimiento' : 'Vigentes'}
               </button>
             ))}
@@ -655,6 +673,7 @@ const ExpiryManagementPage: React.FC = () => {
                 verifiedIds.has(item.id) ? 'border-emerald-500/50 bg-emerald-500/10 opacity-60' :
                 item.status === 'expired' ? 'border-rose-500/30 bg-rose-500/5' : 
                 item.status === 'critical' ? 'border-amber-500/30 bg-amber-500/5' :
+                item.status === 'withdrawal' ? 'border-indigo-500/30 bg-indigo-500/5' :
                 item.status === 'next_expiry' ? 'border-blue-500/30 bg-blue-500/5' :
                 'border-white/5'
               }`}
@@ -670,6 +689,7 @@ const ExpiryManagementPage: React.FC = () => {
                       selectedIds.has(item.id) ? 'bg-indigo-500 text-white' :
                       item.status === 'expired' ? 'bg-rose-500/20 text-rose-500 border border-rose-500/30' : 
                       item.status === 'critical' ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30' :
+                      item.status === 'withdrawal' ? 'bg-indigo-500/20 text-indigo-500 border border-indigo-500/30' :
                       item.status === 'next_expiry' ? 'bg-blue-500/20 text-blue-500 border border-blue-500/30' :
                       'bg-emerald-500/20 text-emerald-500 border border-emerald-500/30'
                     }`}
@@ -677,6 +697,7 @@ const ExpiryManagementPage: React.FC = () => {
                     {selectedIds.has(item.id) ? <CheckSquare className="w-8 h-8" /> :
                      item.status === 'expired' ? <AlertTriangle className="w-8 h-8" /> : 
                      item.status === 'critical' ? <ShieldAlert className="w-8 h-8" /> :
+                     item.status === 'withdrawal' ? <Download className="w-8 h-8" /> :
                      item.status === 'next_expiry' ? <Clock className="w-8 h-8" /> :
                      <CheckCircle2 className="w-8 h-8" />}
                   </div>
@@ -700,6 +721,9 @@ const ExpiryManagementPage: React.FC = () => {
                   <div className="flex items-center gap-3 mb-2">
                     <span className="text-sm font-black bg-slate-800 text-slate-200 px-3 py-1 rounded-lg uppercase tracking-[0.15em] border border-white/10 shadow-inner">
                       SKU: {item.barcode}
+                    </span>
+                    <span className="text-[10px] font-black bg-slate-800/50 text-slate-400 px-2 py-1 rounded uppercase tracking-widest border border-white/5">
+                      {item.providerName}
                     </span>
                     <span className={`text-[10px] font-black px-2 py-1 rounded uppercase tracking-widest ${
                       item.type === 'Individual' ? 'bg-blue-500/20 text-blue-400' : 
@@ -737,9 +761,18 @@ const ExpiryManagementPage: React.FC = () => {
                     <div className="flex items-center gap-2.5 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5">
                       <CalendarDays className="w-5 h-5 text-amber-500" />
                       <span className="text-lg font-black text-white uppercase tracking-tighter">
-                        {item.expiryDateObj ? format(item.expiryDateObj, "dd MMM yyyy", { locale: es }) : 'Sin fecha'}
+                        VENCE: {item.expiryDateObj ? format(item.expiryDateObj, "dd MMM yyyy", { locale: es }) : 'Sin fecha'}
                       </span>
                     </div>
+
+                    {item.withdrawalDate && (
+                      <div className="flex items-center gap-2.5 bg-indigo-500/10 px-3 py-1.5 rounded-xl border border-indigo-500/20">
+                        <Download className="w-4 h-4 text-indigo-500" />
+                        <span className="text-xs font-black text-indigo-400 uppercase tracking-tighter">
+                          RETIRO: {format(item.withdrawalDate, "dd MMM yyyy", { locale: es })}
+                        </span>
+                      </div>
+                    )}
                     
                     <div className="flex items-center gap-2.5">
                       <Package className="w-5 h-5 text-slate-500" />
@@ -761,16 +794,20 @@ const ExpiryManagementPage: React.FC = () => {
                   <div className={`text-4xl font-black uppercase tracking-tighter leading-none mb-1 italic ${
                     item.status === 'expired' ? 'text-rose-500 drop-shadow-[0_0_10px_rgba(244,63,94,0.3)]' : 
                     item.status === 'critical' ? 'text-amber-500 drop-shadow-[0_0_10px_rgba(245,158,11,0.3)]' :
+                    item.status === 'withdrawal' ? 'text-indigo-500 drop-shadow-[0_0_10px_rgba(99,102,241,0.3)]' :
                     item.status === 'next_expiry' ? 'text-blue-500' :
                     'text-emerald-500'
                   }`}>
                     {item.status === 'expired' ? 'VENCIDO' : 
                      item.status === 'critical' ? `${item.daysLeft}D` :
+                     item.status === 'withdrawal' ? 'RETIRO' :
                      item.status === 'next_expiry' ? 'PRÓX' :
                      'OK'}
                   </div>
                   <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
-                    {item.status === 'next_expiry' ? 'PRÓXIMO VENC' : 'ESTADO CRÍTICO'}
+                    {item.status === 'next_expiry' ? 'PRÓXIMO VENC' : 
+                     item.status === 'withdrawal' ? 'RETIRO POR CANJE' :
+                     'ESTADO CRÍTICO'}
                   </div>
                 </div>
 

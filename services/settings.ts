@@ -26,7 +26,8 @@ const DEFAULT_SETTINGS: AppSettings = {
  inventoryRegistryTableName: 'REGISTRO_INV',
  productsTableName: 'PRODUCTOS',
  receptionTableName: 'RECEPCION_BULTOS',
- ordersTableName: 'PEDIDOS'
+ ordersTableName: 'PEDIDOS',
+ providersTableName: 'PROVEEDORES'
  },
  mobileNavConfig: ['dashboard', 'reports', 'sync', 'database'],
  thermalPrinter: {
