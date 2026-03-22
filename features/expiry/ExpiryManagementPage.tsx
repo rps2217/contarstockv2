@@ -488,75 +488,87 @@ const ExpiryManagementPage: React.FC = () => {
                 'border-white/5'
               }`}
             >
-              <div className="flex items-center gap-4 flex-1 min-w-0">
+              <div className="flex items-center gap-6 flex-1 min-w-0">
                 <div 
                   onClick={(e) => {
                     e.stopPropagation();
                     toggleSelect(item.id);
                   }}
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all ${
+                  className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center shrink-0 transition-all shadow-lg ${
                     selectedIds.has(item.id) ? 'bg-indigo-500 text-white' :
-                    item.status === 'expired' ? 'bg-rose-500/20 text-rose-500' : 
-                    item.status === 'critical' ? 'bg-amber-500/20 text-amber-500' :
-                    item.status === 'next_expiry' ? 'bg-blue-500/20 text-blue-500' :
-                    'bg-emerald-500/20 text-emerald-500'
+                    item.status === 'expired' ? 'bg-rose-500/20 text-rose-500 border border-rose-500/30' : 
+                    item.status === 'critical' ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30' :
+                    item.status === 'next_expiry' ? 'bg-blue-500/20 text-blue-500 border border-blue-500/30' :
+                    'bg-emerald-500/20 text-emerald-500 border border-emerald-500/30'
                   }`}
                 >
-                  {selectedIds.has(item.id) ? <CheckSquare className="w-5 h-5" /> :
-                   item.status === 'expired' ? <AlertTriangle className="w-5 h-5" /> : 
-                   item.status === 'critical' ? <ShieldAlert className="w-5 h-5" /> :
-                   item.status === 'next_expiry' ? <Clock className="w-5 h-5" /> :
-                   <CheckCircle2 className="w-5 h-5" />}
+                  {selectedIds.has(item.id) ? <CheckSquare className="w-8 h-8" /> :
+                   item.status === 'expired' ? <AlertTriangle className="w-8 h-8" /> : 
+                   item.status === 'critical' ? <ShieldAlert className="w-8 h-8" /> :
+                   item.status === 'next_expiry' ? <Clock className="w-8 h-8" /> :
+                   <CheckCircle2 className="w-8 h-8" />}
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">{item.barcode}</span>
-                    <span className={`text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-widest ${
-                      item.type === 'Individual' ? 'bg-blue-500/10 text-blue-500' : 
-                      item.type === 'Bulto/Caja' ? 'bg-purple-500/10 text-purple-500' :
-                      'bg-emerald-500/10 text-emerald-500'
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-sm font-black bg-slate-800 text-slate-200 px-3 py-1 rounded-lg uppercase tracking-[0.15em] border border-white/10 shadow-inner">
+                      SKU: {item.barcode}
+                    </span>
+                    <span className={`text-[10px] font-black px-2 py-1 rounded uppercase tracking-widest ${
+                      item.type === 'Individual' ? 'bg-blue-500/20 text-blue-400' : 
+                      item.type === 'Bulto/Caja' ? 'bg-purple-500/20 text-purple-400' :
+                      'bg-emerald-500/20 text-emerald-400'
                     }`}>
                       {item.type}
                     </span>
-                    {item.batch && item.batch !== 'N/A' && (
-                      <span className="text-[8px] font-black bg-white/10 px-1.5 py-0.5 rounded text-slate-400 uppercase tracking-widest">Lote: {item.batch}</span>
-                    )}
-                    {item.location && (
-                      <span className="text-[8px] font-black bg-indigo-500/10 px-1.5 py-0.5 rounded text-indigo-400 uppercase tracking-widest">{item.location}</span>
+                    {item.location && item.location !== 'N/A' && (
+                      <span className="text-[10px] font-black bg-indigo-500/20 px-2 py-1 rounded text-indigo-400 uppercase tracking-widest border border-indigo-500/20">
+                        {item.location}
+                      </span>
                     )}
                   </div>
-                  <h3 className="font-black text-sm tracking-tight truncate mb-2">{item.productName}</h3>
                   
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-1.5">
-                      <CalendarDays className="w-3 h-3 text-slate-500" />
-                      <span className="text-[10px] font-bold text-slate-300">
+                  <h3 className="font-black text-2xl tracking-tighter uppercase italic leading-none mb-3 truncate text-white group-hover:text-amber-400 transition-colors">
+                    {item.productName}
+                  </h3>
+                  
+                  <div className="flex flex-wrap items-center gap-6">
+                    <div className="flex items-center gap-2.5 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5">
+                      <CalendarDays className="w-5 h-5 text-amber-500" />
+                      <span className="text-lg font-black text-white uppercase tracking-tighter">
                         {item.expiryDateObj ? format(item.expiryDateObj, "dd MMM yyyy", { locale: es }) : 'Sin fecha'}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <Package className="w-3 h-3 text-slate-500" />
-                      <span className="text-[10px] font-bold text-slate-300">{item.quantity} un.</span>
+                    
+                    <div className="flex items-center gap-2.5">
+                      <Package className="w-5 h-5 text-slate-500" />
+                      <span className="text-lg font-black text-slate-300 tracking-tighter">{item.quantity} UNIDADES</span>
                     </div>
+
+                    {item.batch && item.batch !== 'N/A' && (
+                      <div className="flex items-center gap-2.5">
+                        <FileText className="w-4 h-4 text-slate-500" />
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">LOTE: {item.batch}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
 
-              <div className="text-right ml-4">
-                <div className={`text-[10px] font-black uppercase tracking-widest mb-1 ${
-                  item.status === 'expired' ? 'text-rose-500' : 
-                  item.status === 'critical' ? 'text-amber-500' :
+              <div className="text-right ml-6 shrink-0">
+                <div className={`text-4xl font-black uppercase tracking-tighter leading-none mb-1 italic ${
+                  item.status === 'expired' ? 'text-rose-500 drop-shadow-[0_0_10px_rgba(244,63,94,0.3)]' : 
+                  item.status === 'critical' ? 'text-amber-500 drop-shadow-[0_0_10px_rgba(245,158,11,0.3)]' :
                   item.status === 'next_expiry' ? 'text-blue-500' :
                   'text-emerald-500'
                 }`}>
-                  {item.status === 'expired' ? 'Vencido' : 
-                   item.status === 'critical' ? `Crítico: ${item.daysLeft}d` :
-                   item.status === 'next_expiry' ? 'Próx. Venc' :
-                   'Vigente'}
+                  {item.status === 'expired' ? 'VENCIDO' : 
+                   item.status === 'critical' ? `${item.daysLeft}D` :
+                   item.status === 'next_expiry' ? 'PRÓX' :
+                   'OK'}
                 </div>
-                <div className="text-[7px] font-bold text-slate-600 uppercase tracking-widest">
-                  {item.status === 'next_expiry' ? '4 Meses' : 'Estado'}
+                <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
+                  {item.status === 'next_expiry' ? 'PRÓXIMO VENC' : 'ESTADO CRÍTICO'}
                 </div>
               </div>
             </motion.div>
