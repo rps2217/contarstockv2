@@ -20,7 +20,9 @@ import {
   CheckSquare,
   Square,
   FileText,
-  ShieldAlert
+  ShieldAlert,
+  MapPin,
+  X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, differenceInDays, isPast, isBefore, addDays, parseISO, startOfMonth, addMonths, endOfMonth, isWithinInterval } from 'date-fns';
@@ -33,7 +35,10 @@ type ExpiryStatus = 'expired' | 'critical' | 'next_expiry' | 'safe';
 const ExpiryManagementPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | ExpiryStatus>('all');
-  const [sortBy, setSortBy] = useState<'date' | 'name'>('date');
+  const [sortBy, setSortBy] = useState<'date_asc' | 'date_desc' | 'qty_desc' | 'name_asc' | 'value_desc'>('date_asc');
+  const [filterLocation, setFilterLocation] = useState<string>('all');
+  const [isChangingLocation, setIsChangingLocation] = useState(false);
+  const [newLocationInput, setNewLocationInput] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -64,6 +69,60 @@ const ExpiryManagementPage: React.FC = () => {
       setSelectedIds(new Set());
     } else {
       setSelectedIds(new Set(items.map(i => i.id)));
+    }
+  };
+
+  const handleBulkRemove = async () => {
+    if (selectedIds.size === 0) return;
+    
+    const confirm = window.confirm(`¿EstÁS SEGURO DE RETIRAR ${selectedIds.size} ÍTEMS SELECCIONADOS? ESTA ACCIÓN NO SE PUEDE DESHACER.`);
+    if (!confirm) return;
+
+    try {
+      const selectedItems = processedScans.filter(s => selectedIds.has(s.id));
+
+      for (const item of selectedItems) {
+        if (item.type === 'Individual') {
+          await db.scans.delete(item.id);
+        } else if (item.type === 'Bulto/Caja') {
+          await db.sessions.delete(item.id);
+          await db.scans.where('sessionId').equals(item.id).delete();
+        } else if (item.type === 'Nube') {
+          await db.cloudExpirations.delete(item.id);
+        }
+      }
+
+      setSelectedIds(new Set());
+      toast.success(`${selectedItems.length} ítems retirados correctamente`);
+    } catch (error) {
+      console.error('Error in bulk remove:', error);
+      toast.error('Error al retirar los ítems');
+    }
+  };
+
+  const handleBulkChangeLocation = async () => {
+    if (!newLocationInput.trim()) return;
+    
+    try {
+      const selectedItems = processedScans.filter(s => selectedIds.has(s.id));
+      
+      for (const item of selectedItems) {
+        if (item.type === 'Individual') {
+          await db.scans.update(item.id, { location: newLocationInput });
+        } else if (item.type === 'Bulto/Caja') {
+          await db.sessions.update(item.id, { logisticsLabel: newLocationInput });
+        } else if (item.type === 'Nube') {
+          await db.cloudExpirations.update(item.id, { location: newLocationInput });
+        }
+      }
+
+      setSelectedIds(new Set());
+      setIsChangingLocation(false);
+      setNewLocationInput('');
+      toast.success(`Ubicación actualizada para ${selectedItems.length} ítems`);
+    } catch (error) {
+      console.error('Error changing location:', error);
+      toast.error('Error al cambiar la ubicación');
     }
   };
 
@@ -272,28 +331,79 @@ const ExpiryManagementPage: React.FC = () => {
     return allItems.filter(item => {
       const matchesSearch = 
         item.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.barcode.includes(searchQuery);
+        item.barcode.includes(searchQuery) ||
+        (item.batch && item.batch.toLowerCase().includes(searchQuery.toLowerCase()));
       
       const matchesFilter = 
         filterStatus === 'all' || 
         item.status === filterStatus;
 
-      return matchesSearch && matchesFilter;
+      const matchesLocation = 
+        filterLocation === 'all' || 
+        item.location === filterLocation;
+
+      return matchesSearch && matchesFilter && matchesLocation;
     }).sort((a, b) => {
-      if (sortBy === 'date') {
-        if (!a.expiryDateObj) return 1;
-        if (!b.expiryDateObj) return -1;
-        return a.expiryDateObj.getTime() - b.expiryDateObj.getTime();
+      switch (sortBy) {
+        case 'date_asc':
+          if (!a.expiryDateObj) return 1;
+          if (!b.expiryDateObj) return -1;
+          return a.expiryDateObj.getTime() - b.expiryDateObj.getTime();
+        case 'date_desc':
+          if (!a.expiryDateObj) return -1;
+          if (!b.expiryDateObj) return 1;
+          return b.expiryDateObj.getTime() - a.expiryDateObj.getTime();
+        case 'qty_desc':
+          return (b.quantity || 0) - (a.quantity || 0);
+        case 'name_asc':
+          return a.productName.localeCompare(b.productName);
+        case 'value_desc':
+          const valA = (a.quantity || 0) * (productMap.get(a.barcode)?.price || 0);
+          const valB = (b.quantity || 0) * (productMap.get(b.barcode)?.price || 0);
+          return valB - valA;
+        default:
+          return 0;
       }
-      return a.productName.localeCompare(b.productName);
     });
-  }, [scans, sessions, cloudExpirations, productMap, searchQuery, filterStatus, sortBy]);
+  }, [scans, sessions, cloudExpirations, productMap, searchQuery, filterStatus, filterLocation, sortBy]);
+
+  const locations = useMemo(() => {
+    if (!processedScans) return [];
+    const locs = new Set(processedScans.map(s => s.location).filter(Boolean));
+    return Array.from(locs).sort();
+  }, [processedScans]);
+
+  const filteredAndSortedScans = useMemo(() => {
+    if (!processedScans) return [];
+    
+    let result = [...processedScans];
+
+    if (filterLocation !== 'all') {
+      result = result.filter(s => s.location === filterLocation);
+    }
+
+    // Sort
+    result.sort((a, b) => {
+      if (sortBy === 'date_asc') return a.expiryDateObj.getTime() - b.expiryDateObj.getTime();
+      if (sortBy === 'date_desc') return b.expiryDateObj.getTime() - a.expiryDateObj.getTime();
+      if (sortBy === 'qty_desc') return b.quantity - a.quantity;
+      if (sortBy === 'name_asc') return a.productName.localeCompare(b.productName);
+      if (sortBy === 'value_desc') {
+        const valA = (productMap.get(a.barcode)?.price || 0) * a.quantity;
+        const valB = (productMap.get(b.barcode)?.price || 0) * b.quantity;
+        return valB - valA;
+      }
+      return 0;
+    });
+
+    return result;
+  }, [processedScans, sortBy, filterLocation, productMap]);
 
   const stats = useMemo(() => {
-    if (!processedScans) return { expired: 0, critical: 0, next_expiry: 0, total: 0, valueAtRisk: 0 };
+    if (!filteredAndSortedScans) return { expired: 0, critical: 0, next_expiry: 0, total: 0, valueAtRisk: 0 };
     
-    const expired = processedScans.filter(s => s.status === 'expired');
-    const critical = processedScans.filter(s => s.status === 'critical');
+    const expired = filteredAndSortedScans.filter(s => s.status === 'expired');
+    const critical = filteredAndSortedScans.filter(s => s.status === 'critical');
     
     const valueAtRisk = [...expired, ...critical].reduce((acc, item) => {
       const price = productMap.get(item.barcode)?.price || 0;
@@ -303,11 +413,11 @@ const ExpiryManagementPage: React.FC = () => {
     return {
       expired: expired.length,
       critical: critical.length,
-      next_expiry: processedScans.filter(s => s.status === 'next_expiry').length,
-      total: processedScans.length,
+      next_expiry: filteredAndSortedScans.filter(s => s.status === 'next_expiry').length,
+      total: filteredAndSortedScans.length,
       valueAtRisk
     };
-  }, [processedScans, productMap]);
+  }, [filteredAndSortedScans, productMap]);
 
   return (
     <div className="h-full bg-slate-950 text-white font-mono flex flex-col overflow-hidden">
@@ -387,15 +497,42 @@ const ExpiryManagementPage: React.FC = () => {
         </div>
 
         <div className="flex flex-col gap-4">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-            <input 
-              type="text"
-              placeholder="BUSCAR POR NOMBRE O SKU..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-black border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-xs font-bold focus:outline-none focus:border-amber-500 transition-colors"
-            />
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+              <input 
+                type="text"
+                placeholder="BUSCAR POR NOMBRE, SKU O LOTE..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-black border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-xs font-bold focus:outline-none focus:border-amber-500 transition-colors"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <select
+                value={filterLocation}
+                onChange={(e) => setFilterLocation(e.target.value)}
+                className="bg-slate-800 border border-white/10 rounded-xl px-4 py-2 text-[10px] font-black text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 uppercase tracking-widest"
+              >
+                <option value="all">TODAS LAS UBICACIONES</option>
+                {locations.map(loc => (
+                  <option key={loc} value={loc}>{loc.toUpperCase()}</option>
+                ))}
+              </select>
+
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="bg-slate-800 border border-white/10 rounded-xl px-4 py-2 text-[10px] font-black text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 uppercase tracking-widest"
+              >
+                <option value="date_asc">PRÓXIMOS A VENCER</option>
+                <option value="date_desc">VENCIMIENTOS LEJANOS</option>
+                <option value="qty_desc">MAYOR CANTIDAD</option>
+                <option value="name_asc">NOMBRE (A-Z)</option>
+                <option value="value_desc">MAYOR VALOR EN RIESGO</option>
+              </select>
+            </div>
           </div>
 
           <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
@@ -432,39 +569,112 @@ const ExpiryManagementPage: React.FC = () => {
       <AnimatePresence>
         {selectedIds.size > 0 && (
           <motion.div
-            initial={{ y: -50, opacity: 0 }}
+            initial={{ y: 50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            exit={{ y: -50, opacity: 0 }}
-            className="bg-indigo-600 px-6 py-3 flex justify-between items-center shrink-0 z-20"
+            exit={{ y: 50, opacity: 0 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 border border-white/10 px-6 py-4 rounded-[2rem] flex items-center gap-8 shadow-2xl z-50 backdrop-blur-xl"
           >
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 border-r border-white/10 pr-8">
               <button 
-                onClick={() => toggleSelectAll(processedScans)}
-                className="text-white/80 hover:text-white transition-colors"
+                onClick={() => toggleSelectAll(filteredAndSortedScans)}
+                className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400 hover:bg-indigo-500 hover:text-white transition-all"
               >
-                {selectedIds.size === processedScans.length ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
+                {selectedIds.size === filteredAndSortedScans.length ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
               </button>
-              <span className="text-xs font-black uppercase tracking-widest text-white">
-                {selectedIds.size} Seleccionados
-              </span>
+              <div>
+                <div className="text-xl font-black text-white leading-none">{selectedIds.size}</div>
+                <div className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Seleccionados</div>
+              </div>
             </div>
-            <div className="flex gap-3">
+
+            <div className="flex items-center gap-3">
               <button 
-                onClick={() => {
-                  toast.info(`Acción masiva: ${selectedIds.size} items procesados`);
-                  setSelectedIds(new Set());
-                }}
-                className="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest text-white border border-white/20 transition-all"
+                onClick={() => setIsChangingLocation(true)}
+                className="bg-white/5 hover:bg-white/10 px-4 py-2 rounded-xl flex items-center gap-2 transition-all group"
               >
-                Marcar Retirado
+                <MapPin className="w-4 h-4 text-indigo-400 group-hover:scale-110 transition-transform" />
+                <span className="text-[10px] font-black uppercase tracking-widest">Ubicación</span>
               </button>
+              
+              <button 
+                onClick={handleBulkRemove}
+                className="bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white px-4 py-2 rounded-xl flex items-center gap-2 transition-all border border-rose-500/20 group"
+              >
+                <Trash2 className="w-4 h-4 group-hover:rotate-12 transition-transform" />
+                <span className="text-[10px] font-black uppercase tracking-widest">Retirar</span>
+              </button>
+
+              <div className="w-px h-8 bg-white/10 mx-2" />
+
               <button 
                 onClick={() => setSelectedIds(new Set())}
-                className="text-white/60 hover:text-white text-[10px] font-black uppercase tracking-widest"
+                className="text-slate-500 hover:text-white transition-colors"
               >
-                Cancelar
+                <X className="w-5 h-5" />
               </button>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL CAMBIO UBICACIÓN */}
+      <AnimatePresence>
+        {isChangingLocation && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-slate-900 border border-white/10 rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl"
+            >
+              <div className="flex items-center gap-4 mb-8">
+                <div className="w-14 h-14 bg-indigo-500/20 rounded-2xl flex items-center justify-center">
+                  <MapPin className="w-7 h-7 text-indigo-400" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black uppercase italic tracking-tighter">Cambiar Ubicación</h3>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                    Actualizando {selectedIds.size} ítems seleccionados
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 block">
+                    Nueva Ubicación (Ej: Bodega A, Estante 4)
+                  </label>
+                  <input
+                    autoFocus
+                    type="text"
+                    value={newLocationInput}
+                    onChange={(e) => setNewLocationInput(e.target.value)}
+                    placeholder="INGRESE UBICACIÓN..."
+                    className="w-full bg-black border border-white/10 rounded-2xl px-5 py-4 text-white font-black text-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 uppercase italic tracking-tighter"
+                  />
+                </div>
+
+                <div className="flex gap-4 pt-4">
+                  <button
+                    onClick={() => setIsChangingLocation(false)}
+                    className="flex-1 bg-white/5 hover:bg-white/10 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleBulkChangeLocation}
+                    className="flex-1 bg-indigo-500 hover:bg-indigo-600 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-colors shadow-lg shadow-indigo-500/20"
+                  >
+                    Confirmar
+                  </button>
+                </div>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -472,7 +682,7 @@ const ExpiryManagementPage: React.FC = () => {
       {/* LISTA */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         <AnimatePresence mode="popLayout">
-          {processedScans.map((item) => (
+          {filteredAndSortedScans.map((item) => (
             <motion.div
               key={item.id}
               layout
@@ -594,13 +804,10 @@ const ExpiryManagementPage: React.FC = () => {
           <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Total Monitoreado</span>
           <span className="text-sm font-black">{stats.total} SKUs</span>
         </div>
-        <button 
-          onClick={() => setSortBy(sortBy === 'date' ? 'name' : 'date')}
-          className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-xl border border-white/10 active:scale-95 transition-all"
-        >
-          <ArrowUpDown className="w-3 h-3 text-amber-500" />
-          <span className="text-[9px] font-black uppercase tracking-widest">Ordenar por {sortBy === 'date' ? 'Nombre' : 'Fecha'}</span>
-        </button>
+        <div className="flex flex-col items-end">
+          <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Última Sincronización</span>
+          <span className="text-sm font-black uppercase italic tracking-tighter">{format(new Date(), 'HH:mm:ss')}</span>
+        </div>
       </div>
     </div>
   );
