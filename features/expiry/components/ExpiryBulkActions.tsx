@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { CheckSquare, Trash2, Printer, X } from 'lucide-react';
+import { CheckSquare, Trash2, Printer, X, Mail } from 'lucide-react';
 
 interface ExpiryBulkActionsProps {
   selectedCount: number;
@@ -9,6 +9,7 @@ interface ExpiryBulkActionsProps {
   onBulkRemove: () => void;
   onPrintSelected: () => void;
   onPrintLabels: () => void;
+  onSendEmail: () => void;
   theme?: 'dark' | 'light';
 }
 
@@ -18,6 +19,7 @@ export const ExpiryBulkActions: React.FC<ExpiryBulkActionsProps> = ({
   onBulkRemove,
   onPrintSelected,
   onPrintLabels,
+  onSendEmail,
   theme = 'dark'
 }) => {
   return (
@@ -87,6 +89,18 @@ export const ExpiryBulkActions: React.FC<ExpiryBulkActionsProps> = ({
                   >
                     <Printer className="w-4 h-4 text-amber-500" />
                     Imprimir Etiquetas
+                  </button>
+
+                  <button
+                    onClick={onSendEmail}
+                    className={`w-full px-4 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 transition-all border ${
+                      theme === 'dark' 
+                        ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 border-emerald-500/20' 
+                        : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200 shadow-sm'
+                    }`}
+                  >
+                    <Mail className="w-4 h-4 text-emerald-500" />
+                    Enviar por Correo
                   </button>
 
                   <button

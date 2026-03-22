@@ -218,3 +218,49 @@ export const handleExportExpirationsCSV = (processedScans: any[]) => {
   link.click();
   document.body.removeChild(link);
 };
+
+/**
+ * Genera un texto formateado como tabla y abre un borrador de Gmail
+ */
+export const handleSendEmail = (items: any[]) => {
+  const subject = encodeURIComponent("Reporte de Vencimientos - LogiCount");
+  
+  let body = "Adjunto el detalle de los productos seleccionados:\n\n";
+  
+  // Encontrar la longitud máxima para alinear columnas (mínimo 8 para "PRODUCTO")
+  const maxNameLen = Math.max(...items.map(i => (i.productName || '').length), 8);
+  
+  // Cabecera de la tabla
+  body += `CANT | ${"PRODUCTO".padEnd(maxNameLen)} | VENCIMIENTO | ESTADO\n`;
+  body += "-".repeat(maxNameLen + 35) + "\n";
+  
+  // Filas
+  items.forEach(item => {
+    const qty = String(item.quantity || 1).padStart(4);
+    const name = (item.productName || 'N/A').padEnd(maxNameLen);
+    const expiry = item.mm && item.yyyy ? `${String(item.mm).padStart(2, '0')}/${item.yyyy}` : 'N/A';
+    const expPad = expiry.padEnd(11);
+    
+    // Traducir estado a español para el correo
+    const statusMap: Record<string, string> = {
+      'expired': 'VENCIDO',
+      'critical': 'CRÍTICO',
+      'next_expiry': 'PRÓXIMO',
+      'withdrawal': 'RETIRO',
+      'safe': 'SEGURO'
+    };
+    const status = (statusMap[item.status] || item.status).toUpperCase();
+    
+    body += `${qty} | ${name} | ${expPad} | ${status}\n`;
+  });
+  
+  body += `\nTotal de productos: ${items.length}\n`;
+  body += `Generado el: ${format(new Date(), 'dd/MM/yyyy HH:mm')}\n`;
+  
+  const encodedBody = encodeURIComponent(body);
+  
+  // URL para abrir el compositor de Gmail en una nueva pestaña
+  const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${encodedBody}`;
+  
+  window.open(gmailUrl, '_blank');
+};
