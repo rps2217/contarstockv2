@@ -1,9 +1,10 @@
 
 export interface Provider {
- rut: string;
- name: string;
- exchangePolicy?: string;
- withdrawalDays?: number;
+  rut: string;
+  name: string;
+  exchangePolicy?: string;
+  withdrawalDays?: number;
+  hasExchange?: boolean;
 }
 
 export interface Product {

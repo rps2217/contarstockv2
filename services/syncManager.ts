@@ -309,6 +309,10 @@ export const importProvidersFromCloud = async (): Promise<number> => {
         const policy = String(row['CANJE SÓLO POR VENCIMIENTO (DÍAS)'] || row['POLITICA'] || '');
         const withdrawalRaw = String(row['RETIRO (DÍAS)'] || row['DIAS_RETIRO'] || '0');
         
+        // Determinar si tiene canje basado en el texto de la columna F
+        // Si dice "sin canje", no tiene canje.
+        const hasExchange = !policy.toLowerCase().includes('sin canje');
+
         let withdrawalDays = 0;
         const normalizedWithdrawal = withdrawalRaw.toUpperCase().trim();
         if (normalizedWithdrawal === 'AL VENCE' || normalizedWithdrawal === 'AL VENCIMIENTO') {
@@ -322,7 +326,8 @@ export const importProvidersFromCloud = async (): Promise<number> => {
           rut,
           name,
           exchangePolicy: policy,
-          withdrawalDays
+          withdrawalDays,
+          hasExchange
         };
       })
       .filter((p: Provider) => p.rut && p.name);
