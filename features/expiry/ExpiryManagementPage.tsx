@@ -532,7 +532,7 @@ const ExpiryManagementPage: React.FC = () => {
             </button>
           </div>
 
-          <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+          <div className="flex flex-col lg:flex-row justify-between items-start gap-6 lg:gap-8">
             {/* STATUS FILTERS - PROMINENT */}
             <div className="space-y-3 lg:w-[400px] shrink-0 min-w-0">
               <div className="flex items-center gap-2 px-1">
@@ -574,12 +574,12 @@ const ExpiryManagementPage: React.FC = () => {
             </div>
 
             {/* MUNDOS FILTER - PROMINENT */}
-            <div className="space-y-3 lg:flex-1 min-w-0">
-              <div className="flex items-center gap-2 px-1">
+            <div className="space-y-3 lg:text-right min-w-0 lg:ml-auto">
+              <div className="flex items-center lg:justify-end gap-2 px-1">
                 <Package className="w-3 h-3 text-slate-500" />
                 <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Filtrar por Mundo / Categoría</span>
               </div>
-              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+              <div className="flex gap-2 overflow-x-auto lg:justify-end no-scrollbar pb-1">
                 {categories.map(cat => (
                   <button
                     key={cat}
@@ -810,17 +810,17 @@ const ExpiryManagementPage: React.FC = () => {
                     </h3>
                     
                     <div className="flex items-center gap-3 shrink-0">
-                      <div className="flex items-center gap-1.5 bg-white/5 px-2 py-1 rounded-lg border border-white/5">
-                        <CalendarDays className="w-3.5 h-3.5 text-amber-500" />
-                        <span className="text-sm font-black text-white uppercase tracking-tighter">
+                      <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5">
+                        <CalendarDays className="w-4 h-4 text-amber-500" />
+                        <span className="text-base font-black text-white uppercase tracking-tighter">
                           VENCE: {item.expiryDateObj ? format(item.expiryDateObj, "dd MMM yyyy", { locale: es }) : 'Sin fecha'}
                         </span>
                       </div>
 
                       {item.withdrawalDate && (
-                        <div className="flex items-center gap-1.5 bg-indigo-500/10 px-2 py-1 rounded-lg border border-indigo-500/20">
-                          <Download className="w-3 h-3 text-indigo-500" />
-                          <span className="text-[10px] font-black text-indigo-400 uppercase tracking-tighter">
+                        <div className="flex items-center gap-2 bg-indigo-500/10 px-3 py-1.5 rounded-xl border border-indigo-500/20">
+                          <Download className="w-3.5 h-3.5 text-indigo-400" />
+                          <span className="text-sm font-black text-indigo-300 uppercase tracking-tighter">
                             RETIRO: {format(item.withdrawalDate, "dd MMM yyyy", { locale: es })}
                           </span>
                         </div>
