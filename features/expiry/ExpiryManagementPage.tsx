@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   ChevronRight, 
   Printer,
@@ -14,6 +14,7 @@ import {
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { motion } from 'motion/react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 
 // Hooks
 import { useExpiryDatabase } from './hooks/useExpiryDatabase';
@@ -115,6 +116,16 @@ const ExpiryManagementPage: React.FC = () => {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
     toast.info(`Modo ${theme === 'dark' ? 'Claro' : 'Oscuro'} activado`);
   };
+
+  const parentRef = useRef<HTMLDivElement>(null);
+  const visibleItems = state.processedScans.slice(0, state.displayLimit);
+  
+  const rowVirtualizer = useVirtualizer({
+    count: visibleItems.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => state.preferences.compactView ? 80 : 120,
+    overscan: 5,
+  });
 
   return (
     <div className={`h-full flex flex-col overflow-hidden font-sans selection:bg-amber-500/30 transition-colors duration-500 ${
@@ -236,21 +247,45 @@ const ExpiryManagementPage: React.FC = () => {
       </div>
 
       {/* MAIN LIST */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-3 no-scrollbar pb-32">
-        {state.processedScans.slice(0, state.displayLimit).map((item) => (
-          <ExpiryItemCard 
-            key={item.id}
-            item={item}
-            isSelected={state.selectedIds.has(item.id)}
-            isVerified={state.verifiedIds.has(item.id)}
-            onToggleSelect={handleToggleSelect}
-            onToggleVerified={handleToggleVerified}
-            onRemove={confirmRemoveItem}
-            onFilterProvider={(provider) => actions.setSearchQuery(provider)}
-            theme={theme}
-            isCompact={state.preferences.compactView}
-          />
-        ))}
+      <div ref={parentRef} className="flex-1 overflow-y-auto p-4 md:p-6 no-scrollbar pb-32">
+        <div
+          style={{
+            height: `${rowVirtualizer.getTotalSize()}px`,
+            width: '100%',
+            position: 'relative',
+          }}
+        >
+          {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+            const item = visibleItems[virtualRow.index];
+            return (
+              <div
+                key={item.id}
+                ref={rowVirtualizer.measureElement}
+                data-index={virtualRow.index}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  transform: `translateY(${virtualRow.start}px)`,
+                  paddingBottom: '12px', // space-y-3 equivalent
+                }}
+              >
+                <ExpiryItemCard 
+                  item={item}
+                  isSelected={state.selectedIds.has(item.id)}
+                  isVerified={state.verifiedIds.has(item.id)}
+                  onToggleSelect={handleToggleSelect}
+                  onToggleVerified={handleToggleVerified}
+                  onRemove={confirmRemoveItem}
+                  onFilterProvider={(provider) => actions.setSearchQuery(provider)}
+                  theme={theme}
+                  isCompact={state.preferences.compactView}
+                />
+              </div>
+            );
+          })}
+        </div>
 
         {state.processedScans.length > state.displayLimit && (
           <div className="flex justify-center py-8">

@@ -17,7 +17,7 @@ interface ExpiryItemCardProps {
   isCompact?: boolean;
 }
 
-export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = ({
+export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
   item,
   isSelected,
   isVerified,
@@ -287,4 +287,4 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = ({
       </div>
     </motion.div>
   );
-};
+});

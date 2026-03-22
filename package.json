@@ -5,6 +5,7 @@
   "type": "module",
   "dependencies": {
     "@google/genai": "1.30.0",
+    "@tanstack/react-virtual": "^3.13.23",
     "@vitejs/plugin-react": "^4.2.1",
     "@xenova/transformers": "2.16.0",
     "buffer": "6.0.3",
