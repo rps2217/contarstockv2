@@ -258,8 +258,9 @@ export const importExpirationsFromCloud = async (): Promise<number> => {
           }
         }
 
-        const ajustadoStr = String(row['AJUSTADOS'] || row['Ajustados'] || row['AJUSTADO'] || '').toLowerCase().trim();
-        const isAdjusted = ajustadoStr === 'sí' || ajustadoStr === 'si' || ajustadoStr === 'yes' || ajustadoStr === 'true' || ajustadoStr === '1';
+        const ajustadoKey = Object.keys(row).find(key => key.toUpperCase() === 'AJUSTADO');
+        const ajustadoStr = ajustadoKey ? String(row[ajustadoKey] || '').toLowerCase().trim() : '';
+        const isAdjusted = ['sí', 'si', 'yes', 'true', '1'].includes(ajustadoStr);
 
         const rawTimestamp = row['TIMESTAMP'] || row['FECHA_INGRESO'] || row['FECHA DE INGRESO'] || row['FECHA'] || row['FECHA CREACION'] || row['CREATED_AT'];
         let parsedTimestamp = Date.now();
