@@ -22,7 +22,6 @@ import { ExpiryFilterDrawer } from './components/ExpiryFilterDrawer';
 import { ExpirySearchBar } from './components/ExpirySearchBar';
 import { ExpiryItemCard } from './components/ExpiryItemCard';
 import { ExpiryBulkActions } from './components/ExpiryBulkActions';
-import { LocationChangeModal } from './components/LocationChangeModal';
 
 // Utils
 import { handlePrintExpirations, handleExportExpirationsCSV } from './utils/expiryUtils';
@@ -30,8 +29,6 @@ import { handlePrintExpirations, handleExportExpirationsCSV } from './utils/expi
 const ExpiryManagementPage: React.FC = () => {
   const { state, actions } = useExpiryDatabase();
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
-  const [isChangingLocation, setIsChangingLocation] = useState(false);
-  const [newLocationInput, setNewLocationInput] = useState('');
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
   const activeFiltersCount = 
@@ -74,17 +71,20 @@ const ExpiryManagementPage: React.FC = () => {
     }
   };
 
+  const handlePrintSelected = () => {
+    const selectedItems = state.processedScans.filter(item => state.selectedIds.has(item.id));
+    if (selectedItems.length > 0) {
+      handlePrintExpirations(selectedItems);
+    } else {
+      toast.error('No hay ítems seleccionados para imprimir');
+    }
+  };
+
   const confirmRemoveItem = (item: any) => {
     const confirm = window.confirm(`¿RETIRAR ${item.productName}? ESTA ACCIÓN ES IRREVERSIBLE.`);
     if (confirm) {
       actions.handleRemoveItem(item);
     }
-  };
-
-  const handleConfirmLocationChange = () => {
-    actions.handleBulkChangeLocation(state.selectedIds, newLocationInput);
-    setIsChangingLocation(false);
-    setNewLocationInput('');
   };
 
   const toggleTheme = () => {
@@ -258,17 +258,7 @@ const ExpiryManagementPage: React.FC = () => {
         selectedCount={state.selectedIds.size}
         onClearSelection={() => actions.setSelectedIds(new Set())}
         onBulkRemove={confirmBulkRemove}
-        onBulkChangeLocation={() => setIsChangingLocation(true)}
-        theme={theme}
-      />
-
-      <LocationChangeModal 
-        isOpen={isChangingLocation}
-        onClose={() => setIsChangingLocation(false)}
-        onConfirm={handleConfirmLocationChange}
-        locationInput={newLocationInput}
-        setLocationInput={setNewLocationInput}
-        selectedCount={state.selectedIds.size}
+        onPrintSelected={handlePrintSelected}
         theme={theme}
       />
     </div>

@@ -257,25 +257,6 @@ export const useExpiryDatabase = () => {
     }
   }, [processedScans]);
 
-  const handleBulkChangeLocation = useCallback(async (ids: Set<string>, newLocation: string) => {
-    try {
-      const selectedItems = processedScans.filter(s => ids.has(s.id));
-      for (const item of selectedItems) {
-        if (item.type === 'Individual') {
-          await db.scans.update(item.id, { location: newLocation });
-        } else if (item.type === 'Bulto/Caja') {
-          await db.sessions.update(item.id, { logisticsLabel: newLocation });
-        } else if (item.type === 'Nube') {
-          await db.cloudExpirations.update(item.id, { location: newLocation });
-        }
-      }
-      setSelectedIds(new Set());
-      toast.success(`Ubicación actualizada para ${selectedItems.length} ítems`);
-    } catch (error) {
-      toast.error('Error al cambiar la ubicación');
-    }
-  }, [processedScans]);
-
   return {
     state: {
       searchQuery,
@@ -300,8 +281,7 @@ export const useExpiryDatabase = () => {
       setVerifiedIds,
       handleSyncExpirations,
       handleRemoveItem,
-      handleBulkRemove,
-      handleBulkChangeLocation
+      handleBulkRemove
     }
   };
 };
