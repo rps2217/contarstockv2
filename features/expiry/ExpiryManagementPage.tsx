@@ -22,7 +22,8 @@ import {
   FileText,
   ShieldAlert,
   MapPin,
-  X
+  X,
+  RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, differenceInDays, isPast, isBefore, addDays, parseISO, startOfMonth, addMonths, endOfMonth, isWithinInterval } from 'date-fns';
@@ -38,6 +39,7 @@ const ExpiryManagementPage: React.FC = () => {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedStatuses, setSelectedStatuses] = useState<ExpiryStatus[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedCanje, setSelectedCanje] = useState<'all' | 'canje' | 'markdown'>('all');
   const [displayLimit, setDisplayLimit] = useState(50);
   const [isChangingLocation, setIsChangingLocation] = useState(false);
   const [newLocationInput, setNewLocationInput] = useState('');
@@ -97,6 +99,7 @@ const ExpiryManagementPage: React.FC = () => {
     setSearchQuery('');
     setSelectedStatuses([]);
     setSelectedCategories([]);
+    setSelectedCanje('all');
     toast.info('Filtros restablecidos');
   };
 
@@ -333,8 +336,12 @@ const ExpiryManagementPage: React.FC = () => {
       const provider = supplierRut ? providerMap.get(supplierRut) : null;
       
       let withdrawalDate: Date | null = null;
-      if (expiry && provider?.withdrawalDays && provider.withdrawalDays > 0) {
-        withdrawalDate = addDays(expiry, -provider.withdrawalDays);
+      const hasCanje = !!(provider?.withdrawalDays && provider.withdrawalDays > 0);
+      
+      if (expiry) {
+        // If it has canje, use provider days. If not, use 30 days as default for markdown
+        const days = hasCanje ? provider.withdrawalDays : 30;
+        withdrawalDate = addDays(expiry, -days);
       }
 
       const status = getStatus(expiry, withdrawalDate);
@@ -346,6 +353,7 @@ const ExpiryManagementPage: React.FC = () => {
         providerName: provider?.name || product?.supplier || 'N/A',
         category: product?.category || 'GENERAL',
         withdrawalDays: provider?.withdrawalDays || 0,
+        hasCanje,
         status,
         daysLeft,
         expiryDateObj: expiry,
@@ -407,7 +415,12 @@ const ExpiryManagementPage: React.FC = () => {
         selectedCategories.length === 0 || 
         selectedCategories.includes(item.category);
 
-      return matchesSearch && matchesFilter && matchesCategory;
+      const matchesCanje = 
+        selectedCanje === 'all' || 
+        (selectedCanje === 'canje' && item.hasCanje) ||
+        (selectedCanje === 'markdown' && !item.hasCanje);
+
+      return matchesSearch && matchesFilter && matchesCategory && matchesCanje;
     }).sort((a, b) => {
       // Default sort: expired first, then by date
       if (a.status === 'expired' && b.status !== 'expired') return -1;
@@ -422,7 +435,7 @@ const ExpiryManagementPage: React.FC = () => {
       const percent = Math.max(0, Math.min(100, (item.daysLeft / maxLifeDays) * 100));
       return { ...item, lifePercent: percent };
     });
-  }, [baseProcessedData, debouncedSearch, selectedStatuses, selectedCategories, productMap]);
+  }, [baseProcessedData, debouncedSearch, selectedStatuses, selectedCategories, selectedCanje, productMap]);
 
   const filteredAndSortedScans = useMemo(() => {
     return processedScans.slice(0, displayLimit);
@@ -431,23 +444,27 @@ const ExpiryManagementPage: React.FC = () => {
   const stats = useMemo(() => {
     if (!baseProcessedData) return { expired: 0, critical: 0, next_expiry: 0, withdrawal: 0, total: 0 };
     
-    const filteredByCat = baseProcessedData.filter(item => 
-      selectedCategories.length === 0 || selectedCategories.includes(item.category)
-    );
+    const filteredByFilters = baseProcessedData.filter(item => {
+      const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(item.category);
+      const matchesCanje = selectedCanje === 'all' || 
+        (selectedCanje === 'canje' && item.hasCanje) ||
+        (selectedCanje === 'markdown' && !item.hasCanje);
+      return matchesCategory && matchesCanje;
+    });
 
-    const expiredCount = filteredByCat.filter(s => s.status === 'expired').length;
-    const criticalCount = filteredByCat.filter(s => s.status === 'critical').length;
-    const nextExpiryCount = filteredByCat.filter(s => s.status === 'next_expiry').length;
-    const withdrawalCount = filteredByCat.filter(s => s.status === 'withdrawal').length;
+    const expiredCount = filteredByFilters.filter(s => s.status === 'expired').length;
+    const criticalCount = filteredByFilters.filter(s => s.status === 'critical').length;
+    const nextExpiryCount = filteredByFilters.filter(s => s.status === 'next_expiry').length;
+    const withdrawalCount = filteredByFilters.filter(s => s.status === 'withdrawal').length;
     
     return {
       expired: expiredCount,
       critical: criticalCount,
       next_expiry: nextExpiryCount,
       withdrawal: withdrawalCount,
-      total: filteredByCat.length
+      total: filteredByFilters.length
     };
-  }, [baseProcessedData, selectedCategories]);
+  }, [baseProcessedData, selectedCategories, selectedCanje]);
 
   return (
     <div className="h-full bg-slate-950 text-white font-mono flex flex-col overflow-hidden">
@@ -568,6 +585,29 @@ const ExpiryManagementPage: React.FC = () => {
                      s === 'critical' ? 'Críticos' : 
                      s === 'withdrawal' ? 'Retiros' :
                      s === 'next_expiry' ? 'Próximos' : 'Vigentes'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* CANJE FILTER */}
+            <div className="space-y-3 min-w-0">
+              <div className="flex items-center gap-2 px-1">
+                <RefreshCw className="w-3 h-3 text-slate-500" />
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Tipo de Retiro</span>
+              </div>
+              <div className="flex gap-2">
+                {(['all', 'canje', 'markdown'] as const).map(type => (
+                  <button
+                    key={type}
+                    onClick={() => setSelectedCanje(type)}
+                    className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border shadow-md ${
+                      selectedCanje === type
+                        ? 'bg-indigo-500 border-indigo-400 text-white scale-105'
+                        : 'bg-white/5 border-white/5 text-slate-500 hover:text-white hover:bg-white/10'
+                    }`}
+                  >
+                    {type === 'all' ? 'Todos' : type === 'canje' ? 'Con Canje' : 'Sin Canje (Markdown)'}
                   </button>
                 ))}
               </div>
@@ -791,6 +831,11 @@ const ExpiryManagementPage: React.FC = () => {
                       'bg-emerald-500/20 text-emerald-400'
                     }`}>
                       {item.type}
+                    </span>
+                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-widest ${
+                      item.hasCanje ? 'bg-indigo-500/20 text-indigo-400' : 'bg-amber-500/20 text-amber-400'
+                    }`}>
+                      {item.hasCanje ? 'CON CANJE' : 'SIN CANJE (MARKDOWN)'}
                     </span>
                     {item.location && item.location !== 'N/A' && (
                       <span className="text-[9px] font-black bg-indigo-500/20 px-1.5 py-0.5 rounded text-indigo-400 uppercase tracking-widest border border-indigo-500/20">
