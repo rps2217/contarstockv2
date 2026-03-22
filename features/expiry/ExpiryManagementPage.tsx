@@ -7,7 +7,8 @@ import {
   Calendar,
   RefreshCw,
   Sun,
-  Moon
+  Moon,
+  Settings2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -19,6 +20,7 @@ import { useExpiryDatabase } from './hooks/useExpiryDatabase';
 // Components
 import { ExpiryStats } from './components/ExpiryStats';
 import { ExpiryFilterDrawer } from './components/ExpiryFilterDrawer';
+import { ExpirySettingsDrawer } from './components/ExpirySettingsDrawer';
 import { ExpirySearchBar } from './components/ExpirySearchBar';
 import { ExpiryItemCard } from './components/ExpiryItemCard';
 import { ExpiryBulkActions } from './components/ExpiryBulkActions';
@@ -29,6 +31,7 @@ import { handlePrintExpirations, handleExportExpirationsCSV } from './utils/expi
 const ExpiryManagementPage: React.FC = () => {
   const { state, actions } = useExpiryDatabase();
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [isSettingsDrawerOpen, setIsSettingsDrawerOpen] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
   const activeFiltersCount = 
@@ -160,6 +163,18 @@ const ExpiryManagementPage: React.FC = () => {
             </button>
 
             <button 
+              onClick={() => setIsSettingsDrawerOpen(true)}
+              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all border ${
+                theme === 'dark' 
+                  ? 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10' 
+                  : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200 shadow-sm'
+              }`}
+              title="Preferencias de Vista"
+            >
+              <Settings2 className="w-5 h-5" />
+            </button>
+
+            <button 
               onClick={() => handleExportExpirationsCSV(state.processedScans)}
               className="bg-amber-500 hover:bg-amber-400 text-black px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg shadow-amber-500/20"
             >
@@ -193,6 +208,7 @@ const ExpiryManagementPage: React.FC = () => {
             onToggleVerified={handleToggleVerified}
             onRemove={confirmRemoveItem}
             theme={theme}
+            isCompact={state.preferences.compactView}
           />
         ))}
 
@@ -259,6 +275,14 @@ const ExpiryManagementPage: React.FC = () => {
         onClearSelection={() => actions.setSelectedIds(new Set())}
         onBulkRemove={confirmBulkRemove}
         onPrintSelected={handlePrintSelected}
+        theme={theme}
+      />
+
+      <ExpirySettingsDrawer 
+        isOpen={isSettingsDrawerOpen}
+        onClose={() => setIsSettingsDrawerOpen(false)}
+        preferences={state.preferences}
+        onUpdatePreferences={actions.handleUpdatePreferences}
         theme={theme}
       />
     </div>

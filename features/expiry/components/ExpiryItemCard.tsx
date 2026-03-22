@@ -12,6 +12,7 @@ interface ExpiryItemCardProps {
   onToggleVerified: (id: string) => void;
   onRemove: (item: any) => void;
   theme?: 'dark' | 'light';
+  isCompact?: boolean;
 }
 
 export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = ({
@@ -21,7 +22,8 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = ({
   onToggleSelect,
   onToggleVerified,
   onRemove,
-  theme = 'dark'
+  theme = 'dark',
+  isCompact = false
 }) => {
   return (
     <motion.div
@@ -30,7 +32,9 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = ({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
       onClick={() => onToggleSelect(item.id)}
-      className={`border rounded-2xl p-4 grid grid-cols-[80px_150px_1.5fr_1fr_1fr_1.2fr] items-center gap-6 group cursor-pointer transition-all ${
+      className={`border rounded-2xl grid grid-cols-[80px_150px_1.5fr_1fr_1fr_1.2fr] items-center gap-6 group cursor-pointer transition-all ${
+        isCompact ? 'p-2' : 'p-4'
+      } ${
         theme === 'dark' ? 'bg-white/5' : 'bg-white shadow-sm'
       } ${
         isSelected ? 'border-indigo-500 bg-indigo-500/10' :

@@ -10,10 +10,32 @@ import { toast } from 'sonner';
 
 export type ExpiryStatus = 'expired' | 'critical' | 'next_expiry' | 'safe' | 'withdrawal';
 
+export interface ExpiryPreferences {
+  hideExpiredByDefault: boolean;
+  defaultSort: 'expiry' | 'withdrawal';
+  compactView: boolean;
+}
+
+const DEFAULT_PREFERENCES: ExpiryPreferences = {
+  hideExpiredByDefault: false,
+  defaultSort: 'withdrawal',
+  compactView: false
+};
+
 export const useExpiryDatabase = () => {
+  const [preferences, setPreferences] = useState<ExpiryPreferences>(() => {
+    const saved = localStorage.getItem('expiry_preferences');
+    return saved ? JSON.parse(saved) : DEFAULT_PREFERENCES;
+  });
+
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [selectedStatuses, setSelectedStatuses] = useState<ExpiryStatus[]>([]);
+  const [selectedStatuses, setSelectedStatuses] = useState<ExpiryStatus[]>(() => {
+    if (preferences.hideExpiredByDefault) {
+      return ['critical', 'next_expiry', 'safe', 'withdrawal'];
+    }
+    return [];
+  });
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedCanje, setSelectedCanje] = useState<'all' | 'canje' | 'markdown'>('all');
   const [displayLimit, setDisplayLimit] = useState(50);
@@ -176,8 +198,18 @@ export const useExpiryDatabase = () => {
 
       return matchesSearch && matchesFilter && matchesCategory && matchesCanje;
     }).sort((a, b) => {
+      // Priority 1: Expired items (if not filtered out)
       if (a.status === 'expired' && b.status !== 'expired') return -1;
       if (a.status !== 'expired' && b.status === 'expired') return 1;
+
+      // Priority 2: User preference sort
+      if (preferences.defaultSort === 'withdrawal') {
+        if (!a.withdrawalDate) return 1;
+        if (!b.withdrawalDate) return -1;
+        return a.withdrawalDate.getTime() - b.withdrawalDate.getTime();
+      }
+
+      // Default: Expiry date sort
       if (!a.expiryDateObj) return 1;
       if (!b.expiryDateObj) return -1;
       return a.expiryDateObj.getTime() - b.expiryDateObj.getTime();
@@ -257,6 +289,14 @@ export const useExpiryDatabase = () => {
     }
   }, [processedScans]);
 
+  const handleUpdatePreferences = useCallback((newPrefs: Partial<ExpiryPreferences>) => {
+    setPreferences(prev => {
+      const updated = { ...prev, ...newPrefs };
+      localStorage.setItem('expiry_preferences', JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
   return {
     state: {
       searchQuery,
@@ -269,7 +309,8 @@ export const useExpiryDatabase = () => {
       verifiedIds,
       processedScans,
       categories,
-      stats
+      stats,
+      preferences
     },
     actions: {
       setSearchQuery,
@@ -281,7 +322,8 @@ export const useExpiryDatabase = () => {
       setVerifiedIds,
       handleSyncExpirations,
       handleRemoveItem,
-      handleBulkRemove
+      handleBulkRemove,
+      handleUpdatePreferences
     }
   };
 };
