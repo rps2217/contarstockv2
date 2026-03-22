@@ -22,22 +22,13 @@ export const ExpiryBulkActions: React.FC<ExpiryBulkActionsProps> = ({
     <AnimatePresence>
       {selectedCount > 0 && (
         <>
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClearSelection}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60]"
-          />
-
-          {/* Side Menu */}
+          {/* Side Menu (Non-blocking) */}
           <motion.div
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className={`fixed top-0 right-0 h-full w-80 z-[70] shadow-2xl border-l flex flex-col ${
+            className={`fixed top-0 right-0 h-full w-80 z-[70] shadow-2xl border-l flex flex-col pointer-events-auto ${
               theme === 'dark' ? 'bg-slate-900 border-white/10' : 'bg-white border-slate-200'
             }`}
           >

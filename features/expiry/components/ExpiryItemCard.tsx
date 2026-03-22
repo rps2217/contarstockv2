@@ -30,7 +30,7 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = ({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
       onClick={() => onToggleSelect(item.id)}
-      className={`border rounded-2xl p-4 grid grid-cols-[70px_140px_2fr_1fr_1fr_180px] items-center gap-6 group cursor-pointer transition-all ${
+      className={`border rounded-2xl p-4 grid grid-cols-[80px_150px_1.5fr_1fr_1fr_1.2fr] items-center gap-6 group cursor-pointer transition-all ${
         theme === 'dark' ? 'bg-white/5' : 'bg-white shadow-sm'
       } ${
         isSelected ? 'border-indigo-500 bg-indigo-500/10' :
