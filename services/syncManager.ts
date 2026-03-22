@@ -325,16 +325,6 @@ export const importProvidersFromCloud = async (): Promise<number> => {
           ''
         );
         
-        // Fallbacks para Política de Canje (Columna F)
-        const policy = String(
-          row['CANJE SÓLO POR VENCIMIENTO (DÍAS)'] || 
-          row['POLITICA'] || 
-          row['CANJE'] || 
-          row['POLITICA DE CANJE'] || 
-          row['POLITICA_CANJE'] ||
-          ''
-        );
-        
         // Fallbacks para Días de Retiro (Columna H)
         const withdrawalRaw = String(
           row['RETIRO (DÍAS)'] || 
@@ -344,24 +334,23 @@ export const importProvidersFromCloud = async (): Promise<number> => {
           '0'
         );
         
-        // Determinar si tiene canje basado en el texto de la columna F
-        // Si dice "sin canje", no tiene canje.
-        // Si dice cualquier otra cosa (incluyendo números), tiene canje.
-        const hasExchange = !policy.toLowerCase().includes('sin canje');
-
-        let withdrawalDays: number | undefined = undefined;
+        let withdrawalDays = 0;
         const normalizedWithdrawal = withdrawalRaw.toUpperCase().trim();
         if (normalizedWithdrawal === 'AL VENCE' || normalizedWithdrawal === 'AL VENCIMIENTO') {
           withdrawalDays = 0;
         } else {
           const match = normalizedWithdrawal.match(/\d+/);
-          withdrawalDays = match ? parseInt(match[0], 10) : undefined;
+          withdrawalDays = match ? parseInt(match[0], 10) : 0;
         }
+
+        // NUEVO ENFOQUE SIMPLIFICADO:
+        // Si Column H es 0 -> SIN CANJE.
+        // Si Column H es > 0 -> CON CANJE.
+        const hasExchange = withdrawalDays > 0;
 
         return {
           rut,
           name,
-          exchangePolicy: policy,
           withdrawalDays,
           hasExchange
         };

@@ -121,12 +121,14 @@ export const useExpiryDatabase = () => {
       const provider = supplierRut ? providerMap.get(supplierRut) : null;
       
       let withdrawalDate: Date | null = null;
-      const hasCanje = provider ? !!provider.hasExchange : false;
+      // NUEVO ENFOQUE: 0 días en H -> SIN CANJE, > 0 días -> CON CANJE
+      const hasCanje = provider ? (provider.withdrawalDays ?? 0) > 0 : false;
       
       if (expiry) {
-        // Siempre usamos los días del proveedor si existen, independientemente de si tiene canje o no.
-        // Si no hay proveedor o no hay días definidos, usamos 30 como valor por defecto.
-        const days = provider ? (provider.withdrawalDays ?? 30) : 30;
+        // Si el valor es 0, usamos 30 días de anticipación.
+        // Si no hay proveedor o no hay días definidos, usamos 30 por defecto.
+        const rawDays = provider?.withdrawalDays ?? 30;
+        const days = rawDays === 0 ? 30 : rawDays;
         withdrawalDate = addDays(expiry, -days);
       }
 
