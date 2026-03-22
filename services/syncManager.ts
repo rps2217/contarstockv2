@@ -268,8 +268,21 @@ export const importExpirationsFromCloud = async (): Promise<number> => {
       .filter((exp: any) => exp.barcode && exp.mm > 0 && exp.yyyy > 0);
 
     if (expirations.length > 0) {
+      // Deduplicar por claveUnica para evitar ConstraintError si el ID es distinto pero la clave es igual
+      const uniqueExpirationsMap = new Map();
+      expirations.forEach(exp => {
+        if (exp.claveUnica) {
+          // Si ya existe, preferimos el que tenga ID (si uno no tiene) o simplemente el último
+          uniqueExpirationsMap.set(exp.claveUnica, exp);
+        } else {
+          // Si no tiene clave única (raro), lo agregamos por ID
+          uniqueExpirationsMap.set(exp.id, exp);
+        }
+      });
+      const uniqueExpirations = Array.from(uniqueExpirationsMap.values());
+
       await db.cloudExpirations.clear();
-      await db.cloudExpirations.bulkPut(expirations);
+      await db.cloudExpirations.bulkPut(uniqueExpirations);
     }
 
     return expirations.length;

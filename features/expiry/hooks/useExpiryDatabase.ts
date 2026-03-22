@@ -357,7 +357,14 @@ export const useExpiryDatabase = () => {
           });
         } catch (dbError: any) {
           // Si falla por duplicado aquí, simplemente ignoramos ya que ya informamos al usuario
-          if (dbError.name !== 'ConstraintError') throw dbError;
+          // Dexie puede envolver ConstraintError en AbortError
+          const isConstraintError = 
+            dbError.name === 'ConstraintError' || 
+            (dbError.name === 'AbortError' && dbError.inner?.name === 'ConstraintError') ||
+            dbError.message?.includes('ConstraintError') ||
+            dbError.message?.includes('uniqueness requirements');
+            
+          if (!isConstraintError) throw dbError;
         }
       }
     } catch (error: any) {
