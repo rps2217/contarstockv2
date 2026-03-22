@@ -246,6 +246,7 @@ const ExpiryManagementPage: React.FC = () => {
             onToggleSelect={handleToggleSelect}
             onToggleVerified={handleToggleVerified}
             onRemove={confirmRemoveItem}
+            onFilterProvider={(provider) => actions.setSearchQuery(provider)}
             theme={theme}
             isCompact={state.preferences.compactView}
           />

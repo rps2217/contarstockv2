@@ -195,7 +195,8 @@ export const useExpiryDatabase = () => {
       const matchesSearch = 
         item.productName.toLowerCase().includes(query) ||
         item.barcode.includes(query) ||
-        (item.batch && item.batch.toLowerCase().includes(query));
+        (item.batch && item.batch.toLowerCase().includes(query)) ||
+        (item.providerName && item.providerName.toLowerCase().includes(query));
       
       const matchesFilter = selectedStatuses.length === 0 || selectedStatuses.includes(item.status);
       const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(item.category);

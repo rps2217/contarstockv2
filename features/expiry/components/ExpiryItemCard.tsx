@@ -3,6 +3,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { AlertTriangle, ShieldAlert, Download, Clock, CheckCircle2, CheckSquare, MapPin, Trash2, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 
 interface ExpiryItemCardProps {
   item: any;
@@ -11,6 +12,7 @@ interface ExpiryItemCardProps {
   onToggleSelect: (id: string) => void;
   onToggleVerified: (id: string) => void;
   onRemove: (item: any) => void;
+  onFilterProvider?: (provider: string) => void;
   theme?: 'dark' | 'light';
   isCompact?: boolean;
 }
@@ -22,6 +24,7 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = ({
   onToggleSelect,
   onToggleVerified,
   onRemove,
+  onFilterProvider,
   theme = 'dark',
   isCompact = false
 }) => {
@@ -31,8 +34,7 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      onClick={() => onToggleSelect(item.id)}
-      className={`border rounded-2xl grid grid-cols-[80px_150px_1.5fr_1fr_1fr_1.2fr] items-center gap-6 group cursor-pointer transition-all ${
+      className={`border rounded-2xl grid grid-cols-[80px_150px_1.5fr_1fr_1fr_1.2fr] items-center gap-6 group transition-all ${
         isCompact ? 'p-2' : 'p-4'
       } ${
         theme === 'dark' ? 'bg-white/5' : 'bg-white shadow-sm'
@@ -53,7 +55,7 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = ({
             e.stopPropagation();
             onToggleSelect(item.id);
           }}
-          className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-lg ${
+          className={`w-12 h-12 rounded-2xl flex items-center justify-center cursor-pointer transition-all shadow-lg hover:scale-105 ${
             isSelected ? 'bg-indigo-500 text-white' :
             item.status === 'expired' ? 'bg-rose-500/20 text-rose-500 border border-rose-500/30' : 
             item.status === 'critical' ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30' :
@@ -89,9 +91,17 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = ({
 
       {/* COLUMN 2: BARCODE & TYPE */}
       <div className="flex flex-col gap-1.5">
-        <span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase tracking-widest border w-fit ${
-          theme === 'dark' ? 'bg-slate-800 text-slate-200 border-white/10' : 'bg-slate-100 text-slate-700 border-slate-200'
-        }`}>
+        <span 
+          onClick={(e) => {
+            e.stopPropagation();
+            navigator.clipboard.writeText(item.barcode);
+            toast.success(`SKU ${item.barcode} copiado al portapapeles`);
+          }}
+          className={`text-[10px] font-black px-2 py-1 rounded-md uppercase tracking-widest border w-fit cursor-pointer transition-colors ${
+          theme === 'dark' ? 'bg-slate-800 text-slate-200 border-white/10 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+        }`}
+          title="Copiar SKU"
+        >
           {item.barcode}
         </span>
         <span className={`text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-widest w-fit ${
@@ -111,9 +121,19 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = ({
           {item.productName}
         </h3>
         <div className="flex items-center gap-2 flex-wrap">
-          <span className={`text-[9px] font-black uppercase tracking-widest truncate max-w-[180px] ${
-            theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
-          }`}>
+          <span 
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onFilterProvider) {
+                onFilterProvider(item.providerName);
+                toast.info(`Filtrando por proveedor: ${item.providerName}`);
+              }
+            }}
+            className={`text-[9px] font-black uppercase tracking-widest truncate max-w-[180px] cursor-pointer transition-colors ${
+            theme === 'dark' ? 'text-slate-500 hover:text-indigo-400' : 'text-slate-400 hover:text-indigo-600'
+          }`}
+            title="Filtrar por este proveedor"
+          >
             {item.providerName}
           </span>
           <span className={`text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-widest ${
