@@ -237,7 +237,8 @@ export const importExpirationsFromCloud = async (): Promise<number> => {
         const evento = String(row['EVENTO'] || '').toUpperCase();
         const mm = row[SHEET_COLUMNS.MONTH] || row['MES'] || row['MONTH'];
         const yyyy = row[SHEET_COLUMNS.YEAR] || row['AÑO'] || row['YEAR'];
-        return evento === 'VENCIMIENTOS' || (mm && yyyy);
+        // Ahora permitimos cualquier evento, o si no tiene evento pero tiene mm y yyyy
+        return evento || (mm && yyyy);
       })
       .map((row: any) => {
         const mm = row[SHEET_COLUMNS.MONTH] || row['MES'] || row['MONTH'];
@@ -245,11 +246,16 @@ export const importExpirationsFromCloud = async (): Promise<number> => {
         const barcode = normalizeSku(String(row['SKU'] || row['COD_BARRAS'] || row['COD PRODUCTO'] || ''));
         
         let claveUnica = row['CLAVE_UNICA'] || row['CLAVE'];
-        if (!claveUnica && barcode && mm && yyyy) {
-          const lastDay = new Date(parseInt(yyyy, 10), parseInt(mm, 10), 0).getDate();
-          const mmPadded = ("0" + mm).slice(-2);
-          const ddPadded = ("0" + lastDay).slice(-2);
-          claveUnica = barcode + yyyy + mmPadded + ddPadded;
+        if (!claveUnica && barcode) {
+          // Generar clave única basada en barcode y timestamp si no hay mm/yyyy
+          if (mm && yyyy) {
+            const lastDay = new Date(parseInt(yyyy, 10), parseInt(mm, 10), 0).getDate();
+            const mmPadded = ("0" + mm).slice(-2);
+            const ddPadded = ("0" + lastDay).slice(-2);
+            claveUnica = barcode + yyyy + mmPadded + ddPadded;
+          } else {
+            claveUnica = barcode + '_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+          }
         }
 
         return {
@@ -266,7 +272,7 @@ export const importExpirationsFromCloud = async (): Promise<number> => {
           claveUnica
         };
       })
-      .filter((exp: any) => exp.barcode && exp.mm > 0 && exp.yyyy > 0);
+      .filter((exp: any) => exp.barcode);
 
     if (expirations.length > 0) {
       // Deduplicar por claveUnica para evitar ConstraintError si el ID es distinto pero la clave es igual

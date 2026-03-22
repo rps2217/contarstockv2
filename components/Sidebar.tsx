@@ -61,6 +61,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ view }) => {
  <NavItem path="/reception" activeKey="reception" label="Reception" icon={Container} />
  <NavItem path="/visual-picking" activeKey="visual-picking" label="Visual_Picking" icon={Camera} />
  <NavItem path="/expiry" activeKey="expiry" label="Expiry_Control" icon={Calendar} />
+ <NavItem path="/events" activeKey="events" label="Event_Control" icon={FileText} />
  <NavItem path="/sync" activeKey="sync" label="Cloud_Sync" icon={Cloud} badge={pendingCount} />
  </nav>
 

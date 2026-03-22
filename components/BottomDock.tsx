@@ -23,6 +23,7 @@ export const BottomDock: React.FC<Props> = ({ currentView, settings }) => {
  'sync': { label: 'SYNC', icon: Cloud, path: '/sync' },
  'visual-picking': { label: 'VISUAL', icon: Camera, path: '/visual-picking' },
  'expiry': { label: 'EXPIRY', icon: Calendar, path: '/expiry' },
+ 'events': { label: 'EVENTS', icon: FileText, path: '/events' },
  'settings': { label: 'SETUP', icon: Settings, path: '/settings' }
  };
 

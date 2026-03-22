@@ -163,7 +163,9 @@ export const useExpiryDatabase = () => {
       quantity: session.totalUnits || 0,
       location: session.logisticsLabel || 'N/A'
     }));
-    const cloudItems = (cloudExpirations || []).map(exp => processItem({
+    const cloudItems = (cloudExpirations || [])
+      .filter(exp => !exp.event || exp.event.toUpperCase() === 'VENCIMIENTOS' || exp.event.toUpperCase() === 'VENCIMIENTO')
+      .map(exp => processItem({
       id: exp.id,
       barcode: exp.barcode,
       productName: exp.productName,
