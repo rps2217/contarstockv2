@@ -28,6 +28,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { format, differenceInDays, isPast, isBefore, addDays, parseISO, startOfMonth, addMonths, endOfMonth, isWithinInterval } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { importExpirationsFromCloud, importProvidersFromCloud } from '../../services/syncManager';
+import { normalizeSku } from '../../services/utils';
 import { toast } from 'sonner';
 
 type ExpiryStatus = 'expired' | 'critical' | 'next_expiry' | 'safe' | 'withdrawal';
@@ -273,13 +274,13 @@ const ExpiryManagementPage: React.FC = () => {
 
   const productMap = useMemo(() => {
     const map = new Map<string, Product>();
-    products?.forEach(p => map.set(p.barcode, p));
+    products?.forEach(p => map.set(normalizeSku(p.barcode), p));
     return map;
   }, [products]);
 
   const providerMap = useMemo(() => {
     const map = new Map<string, Provider>();
-    providers?.forEach(p => map.set(p.rut, p));
+    providers?.forEach(p => map.set(normalizeSku(p.rut), p));
     return map;
   }, [providers]);
 
@@ -319,9 +320,9 @@ const ExpiryManagementPage: React.FC = () => {
         expiry = item.expiryDateObj;
       }
 
-      const product = productMap.get(item.barcode);
+      const product = productMap.get(normalizeSku(item.barcode));
       const productName = product?.name || item.productName || 'Producto Desconocido';
-      const supplierRut = product?.supplierRut;
+      const supplierRut = product?.supplierRut ? normalizeSku(product.supplierRut) : null;
       const provider = supplierRut ? providerMap.get(supplierRut) : null;
       
       let withdrawalDate: Date | null = null;
@@ -336,6 +337,7 @@ const ExpiryManagementPage: React.FC = () => {
         ...item,
         productName,
         providerName: provider?.name || product?.supplier || 'N/A',
+        withdrawalDays: provider?.withdrawalDays || 0,
         status,
         daysLeft,
         expiryDateObj: expiry,
@@ -407,21 +409,21 @@ const ExpiryManagementPage: React.FC = () => {
   }, [processedScans, displayLimit]);
 
   const stats = useMemo(() => {
-    if (!processedScans) return { expired: 0, critical: 0, next_expiry: 0, withdrawal: 0, total: 0 };
+    if (!baseProcessedData) return { expired: 0, critical: 0, next_expiry: 0, withdrawal: 0, total: 0 };
     
-    const expiredCount = processedScans.filter(s => s.status === 'expired').length;
-    const criticalCount = processedScans.filter(s => s.status === 'critical').length;
-    const nextExpiryCount = processedScans.filter(s => s.status === 'next_expiry').length;
-    const withdrawalCount = processedScans.filter(s => s.status === 'withdrawal').length;
+    const expiredCount = baseProcessedData.filter(s => s.status === 'expired').length;
+    const criticalCount = baseProcessedData.filter(s => s.status === 'critical').length;
+    const nextExpiryCount = baseProcessedData.filter(s => s.status === 'next_expiry').length;
+    const withdrawalCount = baseProcessedData.filter(s => s.status === 'withdrawal').length;
     
     return {
       expired: expiredCount,
       critical: criticalCount,
       next_expiry: nextExpiryCount,
       withdrawal: withdrawalCount,
-      total: processedScans.length
+      total: baseProcessedData.length
     };
-  }, [processedScans]);
+  }, [baseProcessedData]);
 
   return (
     <div className="h-full bg-slate-950 text-white font-mono flex flex-col overflow-hidden">
@@ -768,9 +770,12 @@ const ExpiryManagementPage: React.FC = () => {
                     {item.withdrawalDate && (
                       <div className="flex items-center gap-2.5 bg-indigo-500/10 px-3 py-1.5 rounded-xl border border-indigo-500/20">
                         <Download className="w-4 h-4 text-indigo-500" />
-                        <span className="text-xs font-black text-indigo-400 uppercase tracking-tighter">
-                          RETIRO: {format(item.withdrawalDate, "dd MMM yyyy", { locale: es })}
-                        </span>
+                        <div className="flex flex-col">
+                          <span className="text-[8px] font-black text-indigo-500/70 uppercase leading-none mb-0.5">Política: {item.withdrawalDays} días</span>
+                          <span className="text-xs font-black text-indigo-400 uppercase tracking-tighter">
+                            RETIRO: {format(item.withdrawalDate, "dd MMM yyyy", { locale: es })}
+                          </span>
+                        </div>
                       </div>
                     )}
                     

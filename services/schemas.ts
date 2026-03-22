@@ -1,6 +1,7 @@
 
 import { z } from 'zod';
 import { SHEET_COLUMNS } from './constants';
+import { normalizeSku } from './utils';
 
 const cleanString = z.union([z.string(), z.number(), z.null(), z.undefined()])
  .transform((val) => {
@@ -22,11 +23,11 @@ export const CloudProductSchema = z.record(z.any()).transform((raw) => {
  const supplierRut = normalized["RUT PROVEEDOR"] || normalized["RUT"] || "";
 
  return {
- barcode: String(barcode).trim(),
+ barcode: normalizeSku(String(barcode)),
  name: String(name).trim(),
  category: String(category).trim(),
  supplier: String(supplier).trim(),
- supplierRut: String(supplierRut).trim()
+ supplierRut: normalizeSku(String(supplierRut))
  };
 }).pipe(z.object({
  barcode: z.string().min(1, "El código es obligatorio"),

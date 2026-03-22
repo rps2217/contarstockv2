@@ -6,6 +6,7 @@ import { logger } from './logger';
 import { useSyncStore } from '../store/useSyncStore';
 import { saveProductBatch } from './productService';
 import { CloudProductSchema } from './schemas';
+import { normalizeSku } from './utils';
 import { getSettings } from './settings';
 import { markScansAsSynced } from './sessionService';
 import { aggregateScans } from './aggregator';
@@ -257,7 +258,7 @@ export const importExpirationsFromCloud = async (): Promise<number> => {
  .map((row: any) => {
  return {
  id: row['ID_REGISTRO'] || row['ID'] || crypto.randomUUID(),
- barcode: String(row['SKU'] || row['COD_BARRAS'] || row['COD PRODUCTO'] || ''),
+ barcode: normalizeSku(String(row['SKU'] || row['COD_BARRAS'] || row['COD PRODUCTO'] || '')),
  productName: String(row['DESCRIPTOR'] || row['DESCRIPCION_PROD'] || row['DESCRIPCION'] || ''),
  mm: parseInt(row[SHEET_COLUMNS.MONTH] || row['MES'] || row['MONTH'], 10) || 0,
  yyyy: parseInt(row[SHEET_COLUMNS.YEAR] || row['AÑO'] || row['YEAR'], 10) || 0,
@@ -297,16 +298,19 @@ export const importProvidersFromCloud = async (): Promise<number> => {
 
  const providers: Provider[] = rawRows
  .map((row: any) => {
- const rut = String(row['ID_RUT'] || row['RUT'] || '');
+ const rut = normalizeSku(String(row['ID_RUT'] || row['RUT'] || ''));
  const name = String(row['NOMBRE PROVEEDOR'] || row['PROVEEDOR'] || '');
  const policy = String(row['CANJE SÓLO POR VENCIMIENTO (DÍAS)'] || row['POLITICA'] || '');
  const withdrawalRaw = String(row['RETIRO (DÍAS)'] || row['DIAS_RETIRO'] || '0');
  
  let withdrawalDays = 0;
- if (withdrawalRaw.toUpperCase() === 'AL VENCE') {
+ const normalizedWithdrawal = withdrawalRaw.toUpperCase().trim();
+ if (normalizedWithdrawal === 'AL VENCE' || normalizedWithdrawal === 'AL VENCIMIENTO') {
  withdrawalDays = 0;
  } else {
- withdrawalDays = parseInt(withdrawalRaw, 10) || 0;
+ // Extraer solo los números por si dice "30 días"
+ const match = normalizedWithdrawal.match(/\d+/);
+ withdrawalDays = match ? parseInt(match[0], 10) : 0;
  }
 
  return {
