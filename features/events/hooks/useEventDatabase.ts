@@ -18,6 +18,7 @@ export const useEventDatabase = () => {
     return saved ? JSON.parse(saved) : DEFAULT_PREFERENCES;
   });
 
+  const [activeTab, setActiveTab] = useState<'pending' | 'adjusted'>('pending');
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
@@ -36,7 +37,7 @@ export const useEventDatabase = () => {
   // Reset limit on filter change
   useEffect(() => {
     setDisplayLimit(50);
-  }, [selectedEvents]);
+  }, [selectedEvents, activeTab]);
 
   const cloudExpirations = useLiveQuery(() => db.cloudExpirations.toArray());
   const products = useLiveQuery(() => db.products.toArray());
@@ -68,7 +69,8 @@ export const useEventDatabase = () => {
           location: exp.location || 'N/A',
           timestamp: exp.timestamp,
           claveUnica: exp.claveUnica,
-          category: product?.category || 'GENERAL'
+          category: product?.category || 'GENERAL',
+          isAdjusted: exp.isAdjusted || false
         };
       });
 
@@ -93,10 +95,11 @@ export const useEventDatabase = () => {
         item.event.toLowerCase().includes(query);
       
       const matchesEvent = selectedEvents.length === 0 || selectedEvents.includes(item.event.toUpperCase());
+      const matchesTab = activeTab === 'adjusted' ? item.isAdjusted : !item.isAdjusted;
 
-      return matchesSearch && matchesEvent;
+      return matchesSearch && matchesEvent && matchesTab;
     });
-  }, [baseProcessedData, debouncedSearch, selectedEvents]);
+  }, [baseProcessedData, debouncedSearch, selectedEvents, activeTab]);
 
   const togglePreference = (key: keyof EventPreferences) => {
     setPreferences(prev => {
@@ -126,6 +129,7 @@ export const useEventDatabase = () => {
   return {
     state: {
       preferences,
+      activeTab,
       searchQuery,
       selectedEvents,
       displayLimit,
@@ -133,9 +137,12 @@ export const useEventDatabase = () => {
       processedEvents,
       eventTypes,
       totalCount: baseProcessedData.length,
-      filteredCount: processedEvents.length
+      filteredCount: processedEvents.length,
+      pendingCount: baseProcessedData.filter(i => !i.isAdjusted).length,
+      adjustedCount: baseProcessedData.filter(i => i.isAdjusted).length
     },
     actions: {
+      setActiveTab,
       setSearchQuery,
       setSelectedEvents,
       setDisplayLimit,

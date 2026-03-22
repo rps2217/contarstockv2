@@ -33,6 +33,7 @@ export interface CloudExpiration {
   location: string;
   timestamp: number;
   claveUnica?: string;
+  isAdjusted?: boolean;
 }
 
 export class LogiCountDB extends Dexie {

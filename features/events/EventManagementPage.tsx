@@ -183,6 +183,49 @@ const EventManagementPage: React.FC = () => {
           activeFiltersCount={activeFiltersCount}
           theme={theme}
         />
+
+        {/* TABS */}
+        <div className="flex gap-2 mt-6 overflow-x-auto no-scrollbar pb-1">
+          <button
+            onClick={() => actions.setActiveTab('pending')}
+            className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap flex items-center gap-2 ${
+              state.activeTab === 'pending'
+                ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20'
+                : theme === 'dark'
+                  ? 'bg-white/5 text-slate-400 hover:bg-white/10'
+                  : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+            }`}
+          >
+            Pendientes de Ajuste
+            <span className={`px-2 py-0.5 rounded-md text-[10px] ${
+              state.activeTab === 'pending'
+                ? 'bg-white/20 text-white'
+                : theme === 'dark' ? 'bg-white/10 text-slate-300' : 'bg-white text-slate-600'
+            }`}>
+              {state.pendingCount}
+            </span>
+          </button>
+          
+          <button
+            onClick={() => actions.setActiveTab('adjusted')}
+            className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap flex items-center gap-2 ${
+              state.activeTab === 'adjusted'
+                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+                : theme === 'dark'
+                  ? 'bg-white/5 text-slate-400 hover:bg-white/10'
+                  : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+            }`}
+          >
+            Ajustados
+            <span className={`px-2 py-0.5 rounded-md text-[10px] ${
+              state.activeTab === 'adjusted'
+                ? 'bg-white/20 text-white'
+                : theme === 'dark' ? 'bg-white/10 text-slate-300' : 'bg-white text-slate-600'
+            }`}>
+              {state.adjustedCount}
+            </span>
+          </button>
+        </div>
       </div>
 
       {/* MAIN LIST */}

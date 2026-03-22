@@ -258,6 +258,16 @@ export const importExpirationsFromCloud = async (): Promise<number> => {
           }
         }
 
+        const ajustadoStr = String(row['AJUSTADOS'] || row['Ajustados'] || row['AJUSTADO'] || '').toLowerCase().trim();
+        const isAdjusted = ajustadoStr === 'sí' || ajustadoStr === 'si' || ajustadoStr === 'yes' || ajustadoStr === 'true' || ajustadoStr === '1';
+
+        const rawTimestamp = row['TIMESTAMP'] || row['FECHA_INGRESO'] || row['FECHA DE INGRESO'] || row['FECHA'] || row['FECHA CREACION'] || row['CREATED_AT'];
+        let parsedTimestamp = Date.now();
+        if (rawTimestamp) {
+          const parsed = new Date(rawTimestamp).getTime();
+          if (!isNaN(parsed)) parsedTimestamp = parsed;
+        }
+
         return {
           id: row['ID_REGISTRO'] || row['ID'] || crypto.randomUUID(),
           barcode,
@@ -268,8 +278,9 @@ export const importExpirationsFromCloud = async (): Promise<number> => {
           quantity: parseFloat(row['CANTIDAD'] || row['QUANTITY']) || 0,
           location: String(row['BOD.'] || row['ETIQUETAS'] || ''),
           fechaIngreso: String(row['FECHA_INGRESO'] || row['FECHA DE INGRESO'] || ''),
-          timestamp: Date.now(),
-          claveUnica
+          timestamp: parsedTimestamp,
+          claveUnica,
+          isAdjusted
         };
       })
       .filter((exp: any) => exp.barcode);

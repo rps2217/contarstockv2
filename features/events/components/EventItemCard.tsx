@@ -73,11 +73,20 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
         <span className={`text-[10px] font-bold uppercase tracking-widest ${
           theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
         }`}>Evento</span>
-        <span className={`px-3 py-1 rounded-lg text-xs font-black uppercase tracking-widest border inline-flex w-fit ${
-          theme === 'dark' ? 'bg-blue-500/10 border-blue-500/20 text-blue-500' : 'bg-blue-50 border-blue-200 text-blue-600'
-        }`}>
-          {item.event}
-        </span>
+        <div className="flex flex-col gap-1">
+          <span className={`px-3 py-1 rounded-lg text-xs font-black uppercase tracking-widest border inline-flex w-fit ${
+            theme === 'dark' ? 'bg-blue-500/10 border-blue-500/20 text-blue-500' : 'bg-blue-50 border-blue-200 text-blue-600'
+          }`}>
+            {item.event}
+          </span>
+          <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md w-fit border ${
+            item.isAdjusted 
+              ? theme === 'dark' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-emerald-50 text-emerald-600 border-emerald-200'
+              : theme === 'dark' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-amber-50 text-amber-600 border-amber-200'
+          }`}>
+            {item.isAdjusted ? 'Ajustado' : 'Pendiente'}
+          </span>
+        </div>
       </div>
 
       {/* DESKTOP COLUMN 3: PRODUCT (Desktop View) */}
@@ -120,6 +129,13 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
             theme === 'dark' ? 'bg-blue-500/10 border-blue-500/20 text-blue-500' : 'bg-blue-50 border-blue-200 text-blue-600'
           }`}>
             {item.event}
+          </span>
+          <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest border ${
+            item.isAdjusted 
+              ? theme === 'dark' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-emerald-50 text-emerald-600 border-emerald-200'
+              : theme === 'dark' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-amber-50 text-amber-600 border-amber-200'
+          }`}>
+            {item.isAdjusted ? 'Ajustado' : 'Pendiente'}
           </span>
         </div>
         <div className="flex flex-col items-end">
