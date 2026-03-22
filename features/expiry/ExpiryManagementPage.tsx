@@ -41,6 +41,7 @@ const ExpiryManagementPage: React.FC = () => {
   const [newLocationInput, setNewLocationInput] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [verifiedIds, setVerifiedIds] = useState<Set<string>>(new Set());
 
   // Debounce search query
   useEffect(() => {
@@ -55,6 +56,25 @@ const ExpiryManagementPage: React.FC = () => {
   useEffect(() => {
     setDisplayLimit(50);
   }, [filterStatus]);
+
+  const handleRemoveItem = async (item: any) => {
+    const confirm = window.confirm(`¿RETIRAR ${item.productName}? ESTA ACCIÓN ES IRREVERSIBLE.`);
+    if (!confirm) return;
+
+    try {
+      if (item.type === 'Individual') {
+        await db.scans.delete(item.id);
+      } else if (item.type === 'Bulto/Caja') {
+        await db.sessions.delete(item.id);
+        await db.scans.where('sessionId').equals(item.id).delete();
+      } else if (item.type === 'Nube') {
+        await db.cloudExpirations.delete(item.id);
+      }
+      toast.success('Ítem retirado correctamente');
+    } catch (error) {
+      toast.error('Error al retirar el ítem');
+    }
+  };
 
   const handleSyncExpirations = async () => {
     try {
@@ -76,6 +96,16 @@ const ExpiryManagementPage: React.FC = () => {
       newSelected.add(id);
     }
     setSelectedIds(newSelected);
+  };
+
+  const toggleVerified = (id: string) => {
+    const newVerified = new Set(verifiedIds);
+    if (newVerified.has(id)) {
+      newVerified.delete(id);
+    } else {
+      newVerified.add(id);
+    }
+    setVerifiedIds(newVerified);
   };
 
   const toggleSelectAll = (items: any[]) => {
@@ -358,36 +388,32 @@ const ExpiryManagementPage: React.FC = () => {
       if (!a.expiryDateObj) return 1;
       if (!b.expiryDateObj) return -1;
       return a.expiryDateObj.getTime() - b.expiryDateObj.getTime();
+    }).map(item => {
+      // Calculate life cycle percentage (assuming 2 years max life for visualization)
+      const maxLifeDays = 730; 
+      const percent = Math.max(0, Math.min(100, (item.daysLeft / maxLifeDays) * 100));
+      return { ...item, lifePercent: percent };
     });
-  }, [baseProcessedData, debouncedSearch, filterStatus]);
+  }, [baseProcessedData, debouncedSearch, filterStatus, productMap]);
 
   const filteredAndSortedScans = useMemo(() => {
     return processedScans.slice(0, displayLimit);
   }, [processedScans, displayLimit]);
 
   const stats = useMemo(() => {
-    if (!processedScans) return { expired: 0, critical: 0, next_expiry: 0, total: 0, valueAtRisk: 0 };
+    if (!processedScans) return { expired: 0, critical: 0, next_expiry: 0, total: 0 };
     
     const expiredCount = processedScans.filter(s => s.status === 'expired').length;
     const criticalCount = processedScans.filter(s => s.status === 'critical').length;
     const nextExpiryCount = processedScans.filter(s => s.status === 'next_expiry').length;
     
-    const valueAtRisk = processedScans.reduce((acc, item) => {
-      if (item.status === 'expired' || item.status === 'critical') {
-        const price = productMap.get(item.barcode)?.price || 0;
-        return acc + (price * item.quantity);
-      }
-      return acc;
-    }, 0);
-
     return {
       expired: expiredCount,
       critical: criticalCount,
       next_expiry: nextExpiryCount,
-      total: processedScans.length,
-      valueAtRisk
+      total: processedScans.length
     };
-  }, [processedScans, productMap]);
+  }, [processedScans]);
 
   return (
     <div className="h-full bg-slate-950 text-white font-mono flex flex-col overflow-hidden">
@@ -426,7 +452,7 @@ const ExpiryManagementPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           <div className="bg-rose-500/10 border border-rose-500/20 p-3 rounded-2xl">
             <div className="flex items-center gap-2 mb-1">
               <AlertTriangle className="w-3 h-3 text-rose-500" />
@@ -454,15 +480,6 @@ const ExpiryManagementPage: React.FC = () => {
               <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest">Vigentes</span>
             </div>
             <div className="text-2xl font-black text-emerald-500 leading-none">{stats.total - stats.expired - stats.critical - stats.next_expiry}</div>
-          </div>
-          <div className="bg-indigo-500/10 border border-indigo-500/20 p-3 rounded-2xl col-span-2 sm:col-span-1">
-            <div className="flex items-center gap-2 mb-1">
-              <FileText className="w-3 h-3 text-indigo-400" />
-              <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest">Valor en Riesgo</span>
-            </div>
-            <div className="text-xl font-black text-indigo-400 leading-none">
-              ${stats.valueAtRisk.toLocaleString('es-CL')}
-            </div>
           </div>
         </div>
 
@@ -635,6 +652,7 @@ const ExpiryManagementPage: React.FC = () => {
               onClick={() => selectedIds.size > 0 && toggleSelect(item.id)}
               className={`bg-white/5 border rounded-2xl p-4 flex items-center justify-between group cursor-pointer transition-all ${
                 selectedIds.has(item.id) ? 'border-indigo-500 bg-indigo-500/10' :
+                verifiedIds.has(item.id) ? 'border-emerald-500/50 bg-emerald-500/10 opacity-60' :
                 item.status === 'expired' ? 'border-rose-500/30 bg-rose-500/5' : 
                 item.status === 'critical' ? 'border-amber-500/30 bg-amber-500/5' :
                 item.status === 'next_expiry' ? 'border-blue-500/30 bg-blue-500/5' :
@@ -642,24 +660,40 @@ const ExpiryManagementPage: React.FC = () => {
               }`}
             >
               <div className="flex items-center gap-6 flex-1 min-w-0">
-                <div 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleSelect(item.id);
-                  }}
-                  className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center shrink-0 transition-all shadow-lg ${
-                    selectedIds.has(item.id) ? 'bg-indigo-500 text-white' :
-                    item.status === 'expired' ? 'bg-rose-500/20 text-rose-500 border border-rose-500/30' : 
-                    item.status === 'critical' ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30' :
-                    item.status === 'next_expiry' ? 'bg-blue-500/20 text-blue-500 border border-blue-500/30' :
-                    'bg-emerald-500/20 text-emerald-500 border border-emerald-500/30'
-                  }`}
-                >
-                  {selectedIds.has(item.id) ? <CheckSquare className="w-8 h-8" /> :
-                   item.status === 'expired' ? <AlertTriangle className="w-8 h-8" /> : 
-                   item.status === 'critical' ? <ShieldAlert className="w-8 h-8" /> :
-                   item.status === 'next_expiry' ? <Clock className="w-8 h-8" /> :
-                   <CheckCircle2 className="w-8 h-8" />}
+                <div className="flex flex-col gap-2 shrink-0">
+                  <div 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleSelect(item.id);
+                    }}
+                    className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center transition-all shadow-lg ${
+                      selectedIds.has(item.id) ? 'bg-indigo-500 text-white' :
+                      item.status === 'expired' ? 'bg-rose-500/20 text-rose-500 border border-rose-500/30' : 
+                      item.status === 'critical' ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30' :
+                      item.status === 'next_expiry' ? 'bg-blue-500/20 text-blue-500 border border-blue-500/30' :
+                      'bg-emerald-500/20 text-emerald-500 border border-emerald-500/30'
+                    }`}
+                  >
+                    {selectedIds.has(item.id) ? <CheckSquare className="w-8 h-8" /> :
+                     item.status === 'expired' ? <AlertTriangle className="w-8 h-8" /> : 
+                     item.status === 'critical' ? <ShieldAlert className="w-8 h-8" /> :
+                     item.status === 'next_expiry' ? <Clock className="w-8 h-8" /> :
+                     <CheckCircle2 className="w-8 h-8" />}
+                  </div>
+                  
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleVerified(item.id);
+                    }}
+                    className={`w-16 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all border ${
+                      verifiedIds.has(item.id)
+                        ? 'bg-emerald-500 border-emerald-400 text-white'
+                        : 'bg-white/5 border-white/10 text-slate-500 hover:border-emerald-500/50'
+                    }`}
+                  >
+                    {verifiedIds.has(item.id) ? 'Verificado' : 'Verificar'}
+                  </button>
                 </div>
 
                 <div className="min-w-0 flex-1">
@@ -685,6 +719,20 @@ const ExpiryManagementPage: React.FC = () => {
                     {item.productName}
                   </h3>
                   
+                  {/* Progress Bar */}
+                  <div className="w-full h-1 bg-white/5 rounded-full mb-4 overflow-hidden">
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: `${item.lifePercent}%` }}
+                      className={`h-full rounded-full ${
+                        item.status === 'expired' ? 'bg-rose-500' :
+                        item.status === 'critical' ? 'bg-amber-500' :
+                        item.status === 'next_expiry' ? 'bg-blue-500' :
+                        'bg-emerald-500'
+                      }`}
+                    />
+                  </div>
+                  
                   <div className="flex flex-wrap items-center gap-6">
                     <div className="flex items-center gap-2.5 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5">
                       <CalendarDays className="w-5 h-5 text-amber-500" />
@@ -708,21 +756,34 @@ const ExpiryManagementPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="text-right ml-6 shrink-0">
-                <div className={`text-4xl font-black uppercase tracking-tighter leading-none mb-1 italic ${
-                  item.status === 'expired' ? 'text-rose-500 drop-shadow-[0_0_10px_rgba(244,63,94,0.3)]' : 
-                  item.status === 'critical' ? 'text-amber-500 drop-shadow-[0_0_10px_rgba(245,158,11,0.3)]' :
-                  item.status === 'next_expiry' ? 'text-blue-500' :
-                  'text-emerald-500'
-                }`}>
-                  {item.status === 'expired' ? 'VENCIDO' : 
-                   item.status === 'critical' ? `${item.daysLeft}D` :
-                   item.status === 'next_expiry' ? 'PRÓX' :
-                   'OK'}
+              <div className="flex items-center gap-4 ml-6 shrink-0">
+                <div className="text-right">
+                  <div className={`text-4xl font-black uppercase tracking-tighter leading-none mb-1 italic ${
+                    item.status === 'expired' ? 'text-rose-500 drop-shadow-[0_0_10px_rgba(244,63,94,0.3)]' : 
+                    item.status === 'critical' ? 'text-amber-500 drop-shadow-[0_0_10px_rgba(245,158,11,0.3)]' :
+                    item.status === 'next_expiry' ? 'text-blue-500' :
+                    'text-emerald-500'
+                  }`}>
+                    {item.status === 'expired' ? 'VENCIDO' : 
+                     item.status === 'critical' ? `${item.daysLeft}D` :
+                     item.status === 'next_expiry' ? 'PRÓX' :
+                     'OK'}
+                  </div>
+                  <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
+                    {item.status === 'next_expiry' ? 'PRÓXIMO VENC' : 'ESTADO CRÍTICO'}
+                  </div>
                 </div>
-                <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
-                  {item.status === 'next_expiry' ? 'PRÓXIMO VENC' : 'ESTADO CRÍTICO'}
-                </div>
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveItem(item);
+                  }}
+                  className="w-12 h-12 bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white rounded-2xl flex items-center justify-center transition-all border border-rose-500/20 group-hover:scale-110"
+                  title="Retirar Producto"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
               </div>
             </motion.div>
           ))}
