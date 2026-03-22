@@ -46,6 +46,7 @@ const ExpiryManagementPage: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [verifiedIds, setVerifiedIds] = useState<Set<string>>(new Set());
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
 
   // Debounce search query
   useEffect(() => {
@@ -528,7 +529,7 @@ const ExpiryManagementPage: React.FC = () => {
         </div>
 
         <div className="flex flex-col gap-6">
-          {/* SEARCH & CLEAR */}
+          {/* SEARCH & FILTERS TRIGGER */}
           <div className="flex gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
@@ -540,108 +541,211 @@ const ExpiryManagementPage: React.FC = () => {
                 className="w-full bg-black border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-sm font-bold focus:outline-none focus:border-amber-500 transition-colors shadow-2xl"
               />
             </div>
+            
+            <button
+              onClick={() => setIsFilterDrawerOpen(true)}
+              className={`px-6 rounded-2xl flex items-center gap-3 transition-all border shadow-lg group ${
+                selectedStatuses.length > 0 || selectedCategories.length > 0 || selectedCanje !== 'all'
+                  ? 'bg-amber-500 border-amber-400 text-black'
+                  : 'bg-slate-800 border-white/10 text-white hover:bg-slate-700'
+              }`}
+            >
+              <Filter className={`w-5 h-5 ${selectedStatuses.length > 0 || selectedCategories.length > 0 || selectedCanje !== 'all' ? 'text-black' : 'text-slate-400'}`} />
+              <span className="text-xs font-black uppercase tracking-widest">Filtros</span>
+              {(selectedStatuses.length + selectedCategories.length + (selectedCanje !== 'all' ? 1 : 0)) > 0 && (
+                <span className="bg-black text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center">
+                  {selectedStatuses.length + selectedCategories.length + (selectedCanje !== 'all' ? 1 : 0)}
+                </span>
+              )}
+            </button>
+
             <button
               onClick={handleClearFilters}
-              className="bg-slate-800 border border-white/10 px-6 rounded-2xl flex items-center gap-2 hover:bg-slate-700 transition-all group shrink-0"
+              className="bg-slate-800 border border-white/10 px-4 rounded-2xl flex items-center justify-center hover:bg-slate-700 transition-all group shrink-0"
+              title="Limpiar Filtros"
             >
-              <X className="w-4 h-4 text-slate-400 group-hover:rotate-90 transition-transform" />
-              <span className="hidden sm:inline text-[10px] font-black uppercase tracking-widest text-slate-300">Limpiar Filtros</span>
+              <X className="w-5 h-5 text-slate-400 group-hover:rotate-90 transition-transform" />
             </button>
-          </div>
-
-          <div className="flex flex-col lg:flex-row justify-between items-start gap-6 lg:gap-8">
-            {/* STATUS FILTERS - PROMINENT */}
-            <div className="space-y-3 lg:w-[400px] shrink-0 min-w-0">
-              <div className="flex items-center gap-2 px-1">
-                <Filter className="w-3 h-3 text-slate-500" />
-                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Filtrar por Estado</span>
-              </div>
-              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                {(['expired', 'critical', 'withdrawal', 'next_expiry', 'safe'] as const).map(s => (
-                  <button
-                    key={s}
-                    onClick={() => {
-                      setSelectedStatuses(prev => 
-                        prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]
-                      );
-                    }}
-                    className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border flex items-center gap-2 shadow-lg ${
-                      selectedStatuses.includes(s)
-                        ? s === 'expired' ? 'bg-rose-600 border-rose-400 text-white scale-105' :
-                          s === 'critical' ? 'bg-amber-600 border-amber-400 text-white scale-105' :
-                          s === 'withdrawal' ? 'bg-indigo-600 border-indigo-400 text-white scale-105' :
-                          s === 'next_expiry' ? 'bg-blue-600 border-blue-400 text-white scale-105' :
-                          'bg-emerald-600 border-emerald-400 text-white scale-105'
-                        : 'bg-white/5 border-white/5 text-slate-500 hover:text-white hover:bg-white/10'
-                    }`}
-                  >
-                    {s === 'expired' && <AlertTriangle className="w-3 h-3" />}
-                    {s === 'critical' && <ShieldAlert className="w-3 h-3" />}
-                    {s === 'withdrawal' && <Download className="w-3 h-3" />}
-                    {s === 'next_expiry' && <Clock className="w-3 h-3" />}
-                    {s === 'safe' && <CheckCircle2 className="w-3 h-3" />}
-                    
-                    {s === 'expired' ? 'Vencidos' : 
-                     s === 'critical' ? 'Críticos' : 
-                     s === 'withdrawal' ? 'Retiros' :
-                     s === 'next_expiry' ? 'Próximos' : 'Vigentes'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* CANJE FILTER */}
-            <div className="space-y-3 min-w-0">
-              <div className="flex items-center gap-2 px-1">
-                <RefreshCw className="w-3 h-3 text-slate-500" />
-                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Tipo de Retiro</span>
-              </div>
-              <div className="flex gap-2">
-                {(['all', 'canje', 'markdown'] as const).map(type => (
-                  <button
-                    key={type}
-                    onClick={() => setSelectedCanje(type)}
-                    className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border shadow-md ${
-                      selectedCanje === type
-                        ? 'bg-indigo-500 border-indigo-400 text-white scale-105'
-                        : 'bg-white/5 border-white/5 text-slate-500 hover:text-white hover:bg-white/10'
-                    }`}
-                  >
-                    {type === 'all' ? 'Todos' : type === 'canje' ? 'Con Canje' : 'Sin Canje (Markdown)'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* MUNDOS FILTER - PROMINENT */}
-            <div className="space-y-3 lg:text-right min-w-0 lg:ml-auto">
-              <div className="flex items-center lg:justify-end gap-2 px-1">
-                <Package className="w-3 h-3 text-slate-500" />
-                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Filtrar por Mundo / Categoría</span>
-              </div>
-              <div className="flex gap-2 overflow-x-auto lg:justify-end no-scrollbar pb-1">
-                {categories.map(cat => (
-                  <button
-                    key={cat}
-                    onClick={() => {
-                      setSelectedCategories(prev => 
-                        prev.includes(cat) ? prev.filter(x => x !== cat) : [...prev, cat]
-                      );
-                    }}
-                    className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border shadow-md ${
-                      selectedCategories.includes(cat)
-                        ? 'bg-amber-500 border-amber-400 text-black scale-105'
-                        : 'bg-white/5 border-white/5 text-slate-500 hover:text-white hover:bg-white/10'
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
         </div>
       </div>
+
+      {/* FILTER DRAWER */}
+      <AnimatePresence>
+        {isFilterDrawerOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsFilterDrawerOpen(false)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60]"
+            />
+            
+            {/* Drawer */}
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed top-0 right-0 bottom-0 w-full max-w-md bg-slate-900 border-l border-white/10 shadow-2xl z-[70] flex flex-col"
+            >
+              <div className="p-6 border-b border-white/10 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                    <Filter className="w-5 h-5 text-amber-500" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black uppercase tracking-tighter italic leading-none">Filtros Avanzados</h2>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Personaliza tu vista</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setIsFilterDrawerOpen(false)}
+                  className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-slate-400 hover:bg-white/10 hover:text-white transition-all"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-8 no-scrollbar">
+                {/* STATUS FILTERS */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-slate-500" />
+                      <span className="text-xs font-black text-slate-300 uppercase tracking-widest">Estados Críticos</span>
+                    </div>
+                    {selectedStatuses.length > 0 && (
+                      <button 
+                        onClick={() => setSelectedStatuses([])}
+                        className="text-[10px] font-black text-amber-500 uppercase hover:underline"
+                      >
+                        Limpiar
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 gap-2">
+                    {(['expired', 'critical', 'withdrawal', 'next_expiry', 'safe'] as const).map(s => (
+                      <button
+                        key={s}
+                        onClick={() => {
+                          setSelectedStatuses(prev => 
+                            prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]
+                          );
+                        }}
+                        className={`px-4 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all border flex items-center justify-between group ${
+                          selectedStatuses.includes(s)
+                            ? s === 'expired' ? 'bg-rose-600 border-rose-400 text-white shadow-[0_0_20px_rgba(225,29,72,0.3)]' :
+                              s === 'critical' ? 'bg-amber-600 border-amber-400 text-white shadow-[0_0_20px_rgba(217,119,6,0.3)]' :
+                              s === 'withdrawal' ? 'bg-indigo-600 border-indigo-400 text-white shadow-[0_0_20px_rgba(79,70,229,0.3)]' :
+                              s === 'next_expiry' ? 'bg-blue-600 border-blue-400 text-white shadow-[0_0_20px_rgba(37,99,235,0.3)]' :
+                              'bg-emerald-600 border-emerald-400 text-white shadow-[0_0_20px_rgba(5,150,105,0.3)]'
+                            : 'bg-white/5 border-white/5 text-slate-500 hover:text-white hover:bg-white/10'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          {s === 'expired' && <AlertTriangle className="w-4 h-4" />}
+                          {s === 'critical' && <ShieldAlert className="w-4 h-4" />}
+                          {s === 'withdrawal' && <Download className="w-4 h-4" />}
+                          {s === 'next_expiry' && <Clock className="w-4 h-4" />}
+                          {s === 'safe' && <CheckCircle2 className="w-4 h-4" />}
+                          <span>
+                            {s === 'expired' ? 'Vencidos' : 
+                             s === 'critical' ? 'Críticos' : 
+                             s === 'withdrawal' ? 'Retiros' :
+                             s === 'next_expiry' ? 'Próximos' : 'Vigentes'}
+                          </span>
+                        </div>
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                          selectedStatuses.includes(s) ? 'bg-white border-white' : 'border-white/10'
+                        }`}>
+                          {selectedStatuses.includes(s) && <CheckSquare className="w-3 h-3 text-black" />}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* CANJE FILTER */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <RefreshCw className="w-4 h-4 text-slate-500" />
+                    <span className="text-xs font-black text-slate-300 uppercase tracking-widest">Tipo de Retiro</span>
+                  </div>
+                  <div className="grid grid-cols-1 gap-2">
+                    {(['all', 'canje', 'markdown'] as const).map(type => (
+                      <button
+                        key={type}
+                        onClick={() => setSelectedCanje(type)}
+                        className={`px-4 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all border flex items-center justify-between ${
+                          selectedCanje === type
+                            ? 'bg-indigo-600 border-indigo-400 text-white shadow-[0_0_20px_rgba(79,70,229,0.3)]'
+                            : 'bg-white/5 border-white/5 text-slate-500 hover:text-white hover:bg-white/10'
+                        }`}
+                      >
+                        <span>{type === 'all' ? 'Todos los tipos' : type === 'canje' ? 'Con Canje' : 'Sin Canje (Markdown)'}</span>
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                          selectedCanje === type ? 'bg-white border-white' : 'border-white/10'
+                        }`}>
+                          {selectedCanje === type && <CheckSquare className="w-3 h-3 text-black" />}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* MUNDOS FILTER */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Package className="w-4 h-4 text-slate-500" />
+                      <span className="text-xs font-black text-slate-300 uppercase tracking-widest">Mundos / Categorías</span>
+                    </div>
+                    {selectedCategories.length > 0 && (
+                      <button 
+                        onClick={() => setSelectedCategories([])}
+                        className="text-[10px] font-black text-amber-500 uppercase hover:underline"
+                      >
+                        Limpiar
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {categories.map(cat => (
+                      <button
+                        key={cat}
+                        onClick={() => {
+                          setSelectedCategories(prev => 
+                            prev.includes(cat) ? prev.filter(x => x !== cat) : [...prev, cat]
+                          );
+                        }}
+                        className={`px-3 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border text-center ${
+                          selectedCategories.includes(cat)
+                            ? 'bg-amber-500 border-amber-400 text-black shadow-[0_0_15px_rgba(245,158,11,0.3)]'
+                            : 'bg-white/5 border-white/5 text-slate-500 hover:text-white hover:bg-white/10'
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-white/10 bg-black/20">
+                <button
+                  onClick={() => setIsFilterDrawerOpen(false)}
+                  className="w-full bg-amber-500 hover:bg-amber-400 text-black font-black py-4 rounded-2xl uppercase tracking-widest transition-all shadow-xl shadow-amber-500/20 active:scale-95"
+                >
+                  Aplicar Filtros
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* BULK ACTIONS BAR */}
       <AnimatePresence>
