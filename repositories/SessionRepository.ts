@@ -18,6 +18,12 @@ export class SessionRepository {
     return await db.sessions.where('status').equals('draft').reverse().toArray();
   }
 
+  static async getDraftReceptionSessions(): Promise<CountingSession[]> {
+    return await db.sessions.where('status').equals('draft')
+      .and(s => s.erpOrder === 'RECEPCION_BORRADOR')
+      .reverse().toArray();
+  }
+
   static async getSessionsByType(type: string, query: string, limit: number): Promise<CountingSession[]> {
     let collection = db.sessions.where('sessionType').equals(type);
     
@@ -53,5 +59,11 @@ export class SessionRepository {
 
   static async deleteDrafts(): Promise<void> {
     await db.sessions.where('status').equals('draft').delete();
+  }
+
+  static async deleteDraftReceptionSessions(): Promise<void> {
+    await db.sessions.where('status').equals('draft')
+      .and(s => s.erpOrder === 'RECEPCION_BORRADOR')
+      .delete();
   }
 }

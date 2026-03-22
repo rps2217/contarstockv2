@@ -110,11 +110,15 @@ export const useOpticalEngine = ({ onScan, isTriggered, scannerDomId }: UseOptic
         await scannerInstance.start({ facingMode: "environment" }, config, onSuccess, onError);
       } catch (e: any) {
         console.warn("Legacy engine environment camera failed, trying any camera", e);
-        const devices = await Html5Qrcode.getCameras();
-        if (devices && devices.length > 0) {
-          await scannerInstance.start(devices[0].id, config, onSuccess, onError);
-        } else {
-          throw new Error("No cameras found or permission denied");
+        try {
+          const devices = await Html5Qrcode.getCameras();
+          if (devices && devices.length > 0) {
+            await scannerInstance.start(devices[0].id, config, onSuccess, onError);
+          } else {
+            throw new Error("No cameras found or permission denied");
+          }
+        } catch (innerErr: any) {
+          throw new Error(`Camera access denied or unavailable: ${innerErr.message || innerErr}`);
         }
       }
     } catch (err: any) {

@@ -48,6 +48,16 @@ export const SyncManagerUI: React.FC = () => {
  <SyncGroupCard key={g.erpOrder} group={g} uiStatus={g.uiStatus} />
  ))
  )}
+ {state.logs.length > 0 && (
+ <div className="mt-6 bg-slate-900 rounded-xl p-4 font-mono text-[10px] text-slate-300 space-y-1.5 h-48 overflow-y-auto">
+ {state.logs.map((log, i) => (
+ <div key={i} className={`flex gap-2 ${log.type === 'error' ? 'text-rose-400' : log.type === 'success' ? 'text-emerald-400' : ''}`}>
+ <span className="opacity-50 shrink-0">[{log.time}]</span>
+ <span>{log.msg}</span>
+ </div>
+ ))}
+ </div>
+ )}
  </div>
  </div>
 

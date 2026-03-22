@@ -21,7 +21,7 @@ export const useReceptionLogic = () => {
   const { addToast } = useToastStore();
 
   const unsyncedDrafts = useLiveQuery(() => 
-    SessionRepository.getDraftSessions()
+    SessionRepository.getDraftReceptionSessions()
   , [], []);
 
   const draftCount = unsyncedDrafts?.length || 0;
@@ -122,7 +122,7 @@ export const useReceptionLogic = () => {
 
   const discardAll = useCallback(async () => {
     if (confirm("¿Borrar toda la cola de recepción?")) {
-      await SessionRepository.deleteDrafts();
+      await SessionRepository.deleteDraftReceptionSessions();
       SoundFX.play('delete');
     }
   }, []);
@@ -131,6 +131,12 @@ export const useReceptionLogic = () => {
     if (isSyncing) return;
     setIsSyncing(true);
     try {
+      // Primero, intentar finalizar cualquier borrador pendiente
+      if (unsyncedDrafts && unsyncedDrafts.length > 0) {
+        const ids = unsyncedDrafts.map(d => d.id);
+        await SessionRepository.markAsCompleted(ids);
+      }
+
       const groups = await syncManager.getPendingUploadGroups();
       const receptionGroup = groups.find(g => g.type === 'reception');
       
@@ -148,7 +154,7 @@ export const useReceptionLogic = () => {
     } finally {
       setIsSyncing(false);
     }
-  }, [isSyncing, addToast]);
+  }, [isSyncing, unsyncedDrafts, addToast]);
 
   return {
     state: { lastAction, flashActive, draftCount, unsyncedDrafts, isFinalizing, isSyncing, currentErp, isExpiryMode, pendingExpiryScan },
