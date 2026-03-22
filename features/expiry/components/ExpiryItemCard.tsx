@@ -30,7 +30,7 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = ({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
       onClick={() => onToggleSelect(item.id)}
-      className={`border rounded-2xl p-3 grid grid-cols-[auto_120px_1fr_100px_100px_140px] items-center gap-4 group cursor-pointer transition-all ${
+      className={`border rounded-2xl p-4 grid grid-cols-[70px_140px_2fr_1fr_1fr_180px] items-center gap-6 group cursor-pointer transition-all ${
         theme === 'dark' ? 'bg-white/5' : 'bg-white shadow-sm'
       } ${
         isSelected ? 'border-indigo-500 bg-indigo-500/10' :
@@ -43,7 +43,7 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = ({
       }`}
     >
       {/* COLUMN 1: ICON & VERIF */}
-      <div className="flex flex-col gap-1.5 shrink-0">
+      <div className="flex flex-col items-center gap-2 shrink-0">
         <div 
           onClick={(e) => {
             e.stopPropagation();
@@ -71,7 +71,7 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = ({
             e.stopPropagation();
             onToggleVerified(item.id);
           }}
-          className={`w-12 py-0.5 rounded-lg text-[7px] font-black uppercase tracking-widest transition-all border ${
+          className={`w-full py-0.5 rounded-lg text-[7px] font-black uppercase tracking-widest transition-all border ${
             isVerified
               ? 'bg-emerald-500 border-emerald-400 text-white'
               : theme === 'dark' 
@@ -84,13 +84,13 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = ({
       </div>
 
       {/* COLUMN 2: BARCODE & TYPE */}
-      <div className="flex flex-col gap-1">
-        <span className={`text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-widest border w-fit ${
+      <div className="flex flex-col gap-1.5">
+        <span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase tracking-widest border w-fit ${
           theme === 'dark' ? 'bg-slate-800 text-slate-200 border-white/10' : 'bg-slate-100 text-slate-700 border-slate-200'
         }`}>
           {item.barcode}
         </span>
-        <span className={`text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-widest w-fit ${
+        <span className={`text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-widest w-fit ${
           item.type === 'Individual' ? 'bg-blue-500/20 text-blue-400' : 
           item.type === 'Bulto/Caja' ? 'bg-purple-500/20 text-purple-400' :
           'bg-emerald-500/20 text-emerald-400'
@@ -99,26 +99,26 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = ({
         </span>
       </div>
 
-      {/* COLUMN 3: PRODUCT & PROVIDER */}
-      <div className="min-w-0 flex flex-col gap-1">
-        <h3 className={`text-sm font-black uppercase tracking-tighter italic truncate ${
+      {/* COLUMN 3: PRODUCT & PROVIDER (LARGER) */}
+      <div className="min-w-0 flex flex-col gap-1.5 pr-4">
+        <h3 className={`text-base font-black uppercase tracking-tighter italic truncate ${
           theme === 'dark' ? 'text-white' : 'text-slate-900'
         }`}>
           {item.productName}
         </h3>
         <div className="flex items-center gap-2 flex-wrap">
-          <span className={`text-[9px] font-black uppercase tracking-widest truncate max-w-[150px] ${
+          <span className={`text-[9px] font-black uppercase tracking-widest truncate max-w-[180px] ${
             theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
           }`}>
             {item.providerName}
           </span>
-          <span className={`text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-widest ${
+          <span className={`text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-widest ${
             item.hasCanje ? 'bg-indigo-500/20 text-indigo-400' : 'bg-amber-500/20 text-amber-400'
           }`}>
             {item.hasCanje ? 'CON CANJE' : 'SIN CANJE'}
           </span>
           {item.location && item.location !== 'N/A' && (
-            <span className="text-[8px] font-black bg-indigo-500/20 px-1.5 py-0.5 rounded text-indigo-400 uppercase tracking-widest border border-indigo-500/20">
+            <span className="text-[8px] font-black bg-indigo-500/20 px-2 py-0.5 rounded text-indigo-400 uppercase tracking-widest border border-indigo-500/20">
               {item.location}
             </span>
           )}
@@ -126,17 +126,17 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = ({
       </div>
 
       {/* COLUMN 4: EXPIRY DATE */}
-      <div className="flex flex-col">
-        <span className="text-[7px] font-black text-slate-500 uppercase tracking-widest">Vencimiento</span>
-        <span className={`text-xs font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+      <div className="flex flex-col gap-1">
+        <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Vencimiento</span>
+        <span className={`text-sm font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
           {item.expiryDateObj ? format(item.expiryDateObj, 'dd/MM/yyyy') : 'N/A'}
         </span>
       </div>
 
       {/* COLUMN 5: WITHDRAWAL DATE */}
-      <div className="flex flex-col">
-        <span className="text-[7px] font-black text-slate-500 uppercase tracking-widest">Retiro</span>
-        <span className={`text-xs font-black ${
+      <div className="flex flex-col gap-1">
+        <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Retiro</span>
+        <span className={`text-sm font-black ${
           item.status === 'withdrawal' ? 'text-indigo-400' : 'text-slate-400'
         }`}>
           {item.withdrawalDate ? format(item.withdrawalDate, 'dd/MM/yyyy') : 'N/A'}
@@ -144,11 +144,11 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = ({
       </div>
 
       {/* COLUMN 6: STATUS & ACTION */}
-      <div className={`flex items-center gap-4 pl-4 border-l ${
+      <div className={`flex items-center gap-6 pl-6 border-l ${
         theme === 'dark' ? 'border-white/5' : 'border-slate-100'
       }`}>
-        <div className="text-right flex-1">
-          <div className={`text-lg font-black leading-none ${
+        <div className="text-right flex-1 min-w-[80px]">
+          <div className={`text-xl font-black leading-none ${
             item.status === 'expired' ? 'text-rose-500 drop-shadow-[0_0_10px_rgba(244,63,94,0.3)]' : 
             item.status === 'critical' ? 'text-amber-500 drop-shadow-[0_0_10px_rgba(245,158,11,0.3)]' :
             item.status === 'withdrawal' ? 'text-indigo-500 drop-shadow-[0_0_10px_rgba(99,102,241,0.3)]' :
@@ -161,7 +161,7 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = ({
              item.status === 'next_expiry' ? 'PRÓX' :
              'OK'}
           </div>
-          <div className="text-[7px] font-black text-slate-500 uppercase tracking-widest mt-1">
+          <div className="text-[8px] font-black text-slate-500 uppercase tracking-widest mt-1.5">
             {item.status === 'next_expiry' ? 'PRÓXIMO' : 
              item.status === 'withdrawal' ? 'CANJE' :
              item.status === 'critical' ? 'CRÍTICO' : 'VIGENTE'}
@@ -173,10 +173,10 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = ({
             e.stopPropagation();
             onRemove(item);
           }}
-          className="w-9 h-9 bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white rounded-xl flex items-center justify-center transition-all border border-rose-500/20 group-hover:scale-110 shrink-0"
+          className="w-11 h-11 bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white rounded-xl flex items-center justify-center transition-all border border-rose-500/20 group-hover:scale-110 shrink-0 shadow-lg hover:shadow-rose-500/20"
           title="Retirar Producto"
         >
-          <Trash2 className="w-4 h-4" />
+          <Trash2 className="w-5 h-5" />
         </button>
       </div>
     </motion.div>
