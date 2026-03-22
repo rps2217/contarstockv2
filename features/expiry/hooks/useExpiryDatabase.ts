@@ -41,6 +41,7 @@ export const useExpiryDatabase = () => {
   const [selectedCanje, setSelectedCanje] = useState<'all' | 'canje' | 'markdown'>('all');
   const [displayLimit, setDisplayLimit] = useState(50);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [pendingOperations, setPendingOperations] = useState(0);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [verifiedIds, setVerifiedIds] = useState<Set<string>>(new Set());
 
@@ -261,12 +262,7 @@ export const useExpiryDatabase = () => {
 
   const handleRemoveItem = useCallback(async (item: any) => {
     try {
-      // 1. Si es un ítem de la nube, intentar borrarlo allá primero
-      if (item.type === 'Nube' && item.claveUnica) {
-        await removeExpirationFromCloud(item.claveUnica);
-      }
-
-      // 2. Borrado local
+      // 1. Borrado local inmediato (Optimistic UI)
       if (item.type === 'Individual') {
         await db.scans.delete(item.id);
       } else if (item.type === 'Bulto/Caja') {
@@ -276,6 +272,20 @@ export const useExpiryDatabase = () => {
         await db.cloudExpirations.delete(item.id);
       }
       toast.success('Ítem retirado correctamente');
+
+      // 2. Si es un ítem de la nube, borrarlo allá en segundo plano
+      if (item.type === 'Nube' && item.claveUnica) {
+        setPendingOperations(p => p + 1);
+        removeExpirationFromCloud(item.claveUnica)
+          .catch(e => {
+            console.error('Error en borrado en segundo plano:', e);
+            toast.error(`Error de sincronización al borrar: ${item.productName}`);
+            // Opcional: Podríamos reinsertar el ítem aquí si falla
+          })
+          .finally(() => {
+            setPendingOperations(p => Math.max(0, p - 1));
+          });
+      }
     } catch (error: any) {
       toast.error(`Error al retirar el ítem: ${error.message}`);
     }
@@ -284,17 +294,9 @@ export const useExpiryDatabase = () => {
   const handleBulkRemove = useCallback(async (ids: Set<string>) => {
     try {
       const selectedItems = processedScans.filter(s => ids.has(s.id));
+      
+      // 1. Borrado local inmediato
       for (const item of selectedItems) {
-        // Borrado en nube si aplica
-        if (item.type === 'Nube' && item.claveUnica) {
-          try {
-            await removeExpirationFromCloud(item.claveUnica);
-          } catch (e) {
-            console.warn(`Fallo al borrar ${item.claveUnica} en nube, continuando con local...`);
-          }
-        }
-
-        // Borrado local
         if (item.type === 'Individual') {
           await db.scans.delete(item.id);
         } else if (item.type === 'Bulto/Caja') {
@@ -306,8 +308,28 @@ export const useExpiryDatabase = () => {
       }
       setSelectedIds(new Set());
       toast.success(`${selectedItems.length} ítems retirados correctamente`);
+
+      // 2. Borrado en nube en segundo plano
+      const cloudItems = selectedItems.filter(i => i.type === 'Nube' && i.claveUnica);
+      if (cloudItems.length > 0) {
+        setPendingOperations(p => p + cloudItems.length);
+        
+        // Procesar en paralelo sin bloquear la UI
+        Promise.allSettled(
+          cloudItems.map(item => 
+            removeExpirationFromCloud(item.claveUnica).finally(() => {
+              setPendingOperations(p => Math.max(0, p - 1));
+            })
+          )
+        ).then(results => {
+          const failed = results.filter(r => r.status === 'rejected');
+          if (failed.length > 0) {
+            toast.error(`Hubo errores al sincronizar ${failed.length} retiros en la nube.`);
+          }
+        });
+      }
     } catch (error) {
-      toast.error('Error al retirar los ítems');
+      toast.error('Error al retirar los ítems localmente');
     }
   }, [processedScans]);
 
@@ -319,8 +341,6 @@ export const useExpiryDatabase = () => {
     quantity: number;
   }) => {
     try {
-      setIsSyncing(true);
-      
       // Generar clave única localmente para validación previa
       const mmPadded = String(data.mm).padStart(2, '0');
       const lastDay = new Date(data.yyyy, data.mm, 0).getDate();
@@ -334,48 +354,62 @@ export const useExpiryDatabase = () => {
         return;
       }
 
-      // 1. Guardar en la nube (GAS validará duplicados)
-      const result = await addExpirationToCloud(data);
-      
-      // 2. Guardar localmente en cloudExpirations para reflejo inmediato
-      if (result.success) {
-        if (result.message === "Ya existe") {
-          toast.info('El producto ya existía en la nube. Se ha actualizado la vista local.');
-        } else {
-          toast.success('Producto registrado exitosamente');
+      // 1. Guardar localmente de inmediato (Optimistic UI)
+      const localId = crypto.randomUUID();
+      try {
+        await db.cloudExpirations.add({
+          id: localId,
+          barcode: data.barcode,
+          productName: data.productName,
+          mm: data.mm,
+          yyyy: data.yyyy,
+          event: 'VENCIMIENTOS',
+          quantity: data.quantity,
+          location: 'MANUAL',
+          timestamp: Date.now(),
+          claveUnica: claveUnica
+        });
+        toast.success('Producto registrado exitosamente');
+      } catch (dbError: any) {
+        const isConstraintError = 
+          dbError.name === 'ConstraintError' || 
+          (dbError.name === 'AbortError' && dbError.inner?.name === 'ConstraintError') ||
+          dbError.message?.includes('ConstraintError') ||
+          dbError.message?.includes('uniqueness requirements');
+          
+        if (isConstraintError) {
+           toast.error('Este producto ya está registrado para el mes y año seleccionados.');
+           return;
         }
-
-        // Intentar agregar localmente (el índice único &claveUnica protegerá si hay carreras)
-        try {
-          await db.cloudExpirations.add({
-            id: result.id || crypto.randomUUID(),
-            barcode: data.barcode,
-            productName: data.productName,
-            mm: data.mm,
-            yyyy: data.yyyy,
-            event: 'VENCIMIENTOS',
-            quantity: data.quantity,
-            location: 'MANUAL',
-            timestamp: Date.now(),
-            claveUnica: result.clave || claveUnica
-          });
-        } catch (dbError: any) {
-          // Si falla por duplicado aquí, simplemente ignoramos ya que ya informamos al usuario
-          // Dexie puede envolver ConstraintError en AbortError
-          const isConstraintError = 
-            dbError.name === 'ConstraintError' || 
-            (dbError.name === 'AbortError' && dbError.inner?.name === 'ConstraintError') ||
-            dbError.message?.includes('ConstraintError') ||
-            dbError.message?.includes('uniqueness requirements');
-            
-          if (!isConstraintError) throw dbError;
-        }
+        throw dbError;
       }
+
+      // 2. Guardar en la nube en segundo plano
+      setPendingOperations(p => p + 1);
+      addExpirationToCloud(data)
+        .then(async (result) => {
+          if (result.success) {
+            if (result.message === "Ya existe") {
+              toast.info('El producto ya existía en la nube.');
+            }
+            // Actualizar el ID/clave si la nube devolvió algo diferente
+            if (result.id && result.id !== localId) {
+               await db.cloudExpirations.update(localId, { id: result.id, claveUnica: result.clave || claveUnica });
+            }
+          }
+        })
+        .catch(async (error) => {
+          console.error('Error al guardar en la nube:', error);
+          toast.error(`Error de sincronización al guardar: ${data.productName}`);
+          // Opcional: Revertir el cambio local si falla la nube
+          // await db.cloudExpirations.delete(localId);
+        })
+        .finally(() => {
+          setPendingOperations(p => Math.max(0, p - 1));
+        });
+
     } catch (error: any) {
-      toast.error(`Error al agregar: ${error.message}`);
-      throw error;
-    } finally {
-      setIsSyncing(false);
+      toast.error(`Error al agregar localmente: ${error.message}`);
     }
   }, []);
 
@@ -395,6 +429,7 @@ export const useExpiryDatabase = () => {
       selectedCanje,
       displayLimit,
       isSyncing,
+      pendingOperations,
       selectedIds,
       verifiedIds,
       processedScans,
