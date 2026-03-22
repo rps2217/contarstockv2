@@ -16,6 +16,7 @@ interface Props {
 export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
  const [urlInput, setUrlInput] = useState(settings.appSheetConfig?.gasWebAppUrl || '');
  const [ssIdInput, setSsIdInput] = useState(settings.appSheetConfig?.spreadsheetId || '');
+ const [inventoryTableInput, setInventoryTableInput] = useState(settings.appSheetConfig?.inventoryRegistryTableName || 'REGISTRO_INV');
  const [isConnecting, setIsConnecting] = useState(false);
  const [errorMode, setErrorMode] = useState<null | 'OAUTH_STALL' | 'GENERAL'>(null);
  const [errorMessage, setErrorMessage] = useState('');
@@ -23,22 +24,29 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
  const [isScanning, setIsScanning] = useState(false);
 
  const handleAutoConfig = async () => {
- if (!urlInput.includes('/exec')) {
- setErrorMessage("La URL debe terminar en /exec");
- setErrorMode('GENERAL');
- SoundFX.play('error');
- return;
- }
+  if (!urlInput.includes('/exec')) {
+  setErrorMessage("La URL debe terminar en /exec");
+  setErrorMode('GENERAL');
+  SoundFX.play('error');
+  return;
+  }
 
- setErrorMode(null);
- setIsConnecting(true);
- try {
- // Intentamos vincular usando la URL y el ID manual si existe
- const fullConfig = await bootstrapByUrl(urlInput, ssIdInput);
- updateSetting('appSheetConfig', fullConfig);
- SoundFX.play('success');
- alert(`¡CONEXIÓN EXITOSA!\nSistema vinculado al Excel: ${fullConfig.spreadsheetId}`);
- } catch (e: any) {
+  setErrorMode(null);
+  setIsConnecting(true);
+  try {
+  // Intentamos vincular usando la URL y el ID manual si existe
+  const fullConfig = await bootstrapByUrl(urlInput, ssIdInput);
+  
+  // Sobrescribimos la tabla de inventario si el usuario la cambió manualmente
+  const finalConfig = {
+  ...fullConfig,
+  inventoryRegistryTableName: inventoryTableInput || fullConfig.inventoryRegistryTableName
+  };
+
+  updateSetting('appSheetConfig', finalConfig);
+  SoundFX.play('success');
+  alert(`¡CONEXIÓN EXITOSA!\nSistema vinculado al Excel: ${finalConfig.spreadsheetId}`);
+  } catch (e: any) {
  if (e.message.includes('GOOGLE_OAUTH_STALL') || e.message.includes('ACCESO_DENEGADO')) {
  setErrorMode('OAUTH_STALL');
  } else {
@@ -57,6 +65,7 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
  if (data.gasUrl) {
  setUrlInput(data.gasUrl);
  if (data.ssId) setSsIdInput(data.ssId);
+ if (data.invTable) setInventoryTableInput(data.invTable);
  setIsScanning(false);
  SoundFX.play('success');
  } else {
@@ -70,7 +79,7 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
  }
  };
 
- const qrData = JSON.stringify({ gasUrl: urlInput, ssId: ssIdInput });
+ const qrData = JSON.stringify({ gasUrl: urlInput, ssId: ssIdInput, invTable: inventoryTableInput });
 
  return (
  <div className="space-y-6 animate-in fade-in duration-500">
@@ -117,6 +126,23 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
  />
  <p className="text-[8px] text-slate-500 px-1 italic">
  Si su script es independiente, pegue el ID para evitar el error "AUTO_DETECTED".
+ </p>
+ </div>
+
+ {/* CAMPO 3: TABLA DE REGISTRO DE INVENTARIO (VENCIMIENTOS) */}
+ <div className="space-y-1.5">
+ <div className="flex justify-between items-center px-1">
+ <label className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Tabla Registro Inventario (Vencimientos)</label>
+ <span className="text-[8px] font-bold text-slate-500 uppercase">Configurable</span>
+ </div>
+ <SettingsInput 
+ value={inventoryTableInput}
+ onChange={(e: any) => setInventoryTableInput(e.target.value)}
+ placeholder="REGISTRO_INV"
+ className="bg-black/40 border-emerald-500/20 text-emerald-400 font-mono text-xs"
+ />
+ <p className="text-[8px] text-slate-500 px-1 italic">
+ Pestaña donde se guardan los productos con fecha de vencimiento.
  </p>
  </div>
  </div>

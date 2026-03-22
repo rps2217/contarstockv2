@@ -1,5 +1,6 @@
 
 import { db } from '../db';
+import { SHEET_COLUMNS } from './constants';
 import { CountingSession, Product } from '../types';
 import { logger } from './logger';
 import { useSyncStore } from '../store/useSyncStore';
@@ -100,7 +101,9 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
 };
 
 export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: string) => void): Promise<void> => {
- if (isSyncingInProgress) return;
+ if (isSyncingInProgress) {
+   throw new Error("Sincronización en progreso, por favor intente nuevamente en unos segundos.");
+ }
  isSyncingInProgress = true;
  useSyncStore.getState().setSyncing(true);
 
@@ -226,6 +229,54 @@ export const importProductsFromAppSheet = async (): Promise<number> => {
  return products.length;
  } catch (e: any) {
  logger.error("FETCH_PRODUCTS_FAIL", `Error en Smart Sync: ${e.message}`);
+ throw e;
+ }
+};
+
+/**
+ * MOTOR DE DESCARGA DE VENCIMIENTOS (IMPORTACIÓN)
+ * Descarga los registros de vencimientos desde la tabla consolidada en la nube.
+ */
+export const importExpirationsFromCloud = async (): Promise<number> => {
+ try {
+ const config = getSettings().appSheetConfig;
+ const tableName = config?.inventoryRegistryTableName || "REGISTRO_INV";
+ 
+ const response = await cloudApi.fetchTable(tableName);
+ const rawRows = response.rows || [];
+ 
+ if (rawRows.length === 0) return 0;
+
+ const expirations = rawRows
+ .filter((row: any) => {
+ const evento = String(row['EVENTO'] || '').toUpperCase();
+ const mm = row[SHEET_COLUMNS.MONTH] || row['MES'] || row['MONTH'];
+ const yyyy = row[SHEET_COLUMNS.YEAR] || row['AÑO'] || row['YEAR'];
+ return evento === 'VENCIMIENTOS' || (mm && yyyy);
+ })
+ .map((row: any) => {
+ return {
+ id: row['ID_REGISTRO'] || row['ID'] || crypto.randomUUID(),
+ barcode: String(row['SKU'] || row['COD_BARRAS'] || row['COD PRODUCTO'] || ''),
+ productName: String(row['DESCRIPTOR'] || row['DESCRIPCION_PROD'] || row['DESCRIPCION'] || ''),
+ mm: parseInt(row[SHEET_COLUMNS.MONTH] || row['MES'] || row['MONTH'], 10) || 0,
+ yyyy: parseInt(row[SHEET_COLUMNS.YEAR] || row['AÑO'] || row['YEAR'], 10) || 0,
+ event: String(row['EVENTO'] || ''),
+ quantity: parseFloat(row['CANTIDAD'] || row['QUANTITY']) || 0,
+ location: String(row['BOD.'] || row['ETIQUETAS'] || ''),
+ timestamp: Date.now()
+ };
+ })
+ .filter((exp: any) => exp.barcode && exp.mm > 0 && exp.yyyy > 0);
+
+ if (expirations.length > 0) {
+ await db.cloudExpirations.clear();
+ await db.cloudExpirations.bulkPut(expirations);
+ }
+
+ return expirations.length;
+ } catch (e: any) {
+ logger.error("FETCH_EXPIRATIONS_FAIL", `Error descargando vencimientos: ${e.message}`);
  throw e;
  }
 };

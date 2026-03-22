@@ -197,13 +197,14 @@ export interface AppSettings {
 }
 
 export interface AppSheetConfig {
- appId: string;
- accessKey: string;
- countsTableName: string;
- consolidatedTableName: string;
- productsTableName: string;
- receptionTableName?: string;
- ordersTableName?: string; 
- gasWebAppUrl?: string; 
- spreadsheetId?: string;
+  appId: string;
+  accessKey: string;
+  countsTableName: string;
+  consolidatedTableName: string;
+  inventoryRegistryTableName?: string;
+  productsTableName: string;
+  receptionTableName?: string;
+  ordersTableName?: string; 
+  gasWebAppUrl?: string; 
+  spreadsheetId?: string;
 }

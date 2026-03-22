@@ -18,17 +18,35 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, differenceInDays, isPast, isBefore, addDays, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { importExpirationsFromCloud } from '../../services/syncManager';
+import { toast } from 'sonner';
 
 const ExpiryManagementPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'expired' | 'soon' | 'safe'>('all');
   const [sortBy, setSortBy] = useState<'date' | 'name'>('date');
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSyncExpirations = async () => {
+    try {
+      setIsSyncing(true);
+      const count = await importExpirationsFromCloud();
+      toast.success(`Se sincronizaron ${count} vencimientos de la nube.`);
+    } catch (error: any) {
+      toast.error(`Error al sincronizar: ${error.message}`);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const scans = useLiveQuery(() => 
     db.scans.filter(s => !!s.expiryDate || (!!s.mm && !!s.yyyy)).toArray()
   );
   const sessions = useLiveQuery(() =>
     db.sessions.filter(s => !!s.mm && !!s.yyyy).toArray()
+  );
+  const cloudExpirations = useLiveQuery(() =>
+    db.cloudExpirations.toArray()
   );
   const products = useLiveQuery(() => db.products.toArray());
 
@@ -110,7 +128,40 @@ const ExpiryManagementPage: React.FC = () => {
       };
     });
 
-    const allItems = [...individualItems, ...sessionItems];
+    const cloudItems = (cloudExpirations || []).map(exp => {
+      let expiry: Date | null = null;
+      if (exp.mm && exp.yyyy) {
+        expiry = new Date(exp.yyyy, exp.mm, 0);
+      }
+
+      let status: 'expired' | 'soon' | 'safe' = 'safe';
+      let daysLeft = 0;
+
+      if (expiry) {
+        daysLeft = differenceInDays(expiry, now);
+        if (isPast(expiry)) {
+          status = 'expired';
+        } else if (isBefore(expiry, soonThreshold)) {
+          status = 'soon';
+        }
+      }
+
+      return {
+        id: exp.id,
+        barcode: exp.barcode,
+        productName: exp.productName,
+        status,
+        daysLeft,
+        expiryDateObj: expiry,
+        batch: 'N/A',
+        type: 'Nube',
+        timestamp: exp.timestamp,
+        quantity: exp.quantity || 0,
+        location: exp.location
+      };
+    });
+
+    const allItems = [...individualItems, ...sessionItems, ...cloudItems];
 
     return allItems.filter(item => {
       const matchesSearch = 
@@ -130,7 +181,7 @@ const ExpiryManagementPage: React.FC = () => {
       }
       return a.productName.localeCompare(b.productName);
     });
-  }, [scans, sessions, productMap, searchQuery, filterStatus, sortBy]);
+  }, [scans, sessions, cloudExpirations, productMap, searchQuery, filterStatus, sortBy]);
 
   const stats = useMemo(() => {
     if (!processedScans) return { expired: 0, soon: 0, total: 0 };
@@ -153,6 +204,14 @@ const ExpiryManagementPage: React.FC = () => {
             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Gestión de Vida Útil de Productos</p>
           </div>
           <div className="flex gap-2">
+            <button
+              onClick={handleSyncExpirations}
+              disabled={isSyncing}
+              className="bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-lg flex items-center gap-2 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+            >
+              <Package className={`w-3 h-3 text-emerald-500 ${isSyncing ? 'animate-spin' : ''}`} />
+              <span className="text-[10px] font-black text-emerald-500">SYNC</span>
+            </button>
             <div className="bg-rose-500/10 border border-rose-500/20 px-3 py-1 rounded-lg flex items-center gap-2">
               <AlertTriangle className="w-3 h-3 text-rose-500" />
               <span className="text-[10px] font-black text-rose-500">{stats.expired}</span>

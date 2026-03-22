@@ -23,6 +23,7 @@ const DEFAULT_SETTINGS: AppSettings = {
  accessKey: '',
  countsTableName: 'CONTEOS', 
  consolidatedTableName: 'CONSOLIDADOS', 
+ inventoryRegistryTableName: 'REGISTRO_INV',
  productsTableName: 'PRODUCTOS',
  receptionTableName: 'RECEPCION_BULTOS',
  ordersTableName: 'PEDIDOS'

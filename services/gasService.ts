@@ -70,6 +70,7 @@ export const bootstrapByUrl = async (url: string, manualId?: string): Promise<Ap
  accessKey: findVal(['ACCESS_KEY', 'KEY', 'ACCESSKEY']),
  countsTableName: findVal(['TABLE_LOGS', 'TABLA_CONTEOS', 'CONTEOS']) || 'CONTEOS',
  consolidatedTableName: findVal(['TABLE_CONSOLIDADO', 'CONSOLIDADO']) || 'CONSOLIDADO',
+ inventoryRegistryTableName: findVal(['TABLE_REGISTRO_INV', 'REGISTRO_INV']) || 'REGISTRO_INV',
  productsTableName: findVal(['TABLE_PRODUCTOS', 'PRODUCTOS']) || 'PRODUCTOS',
  receptionTableName: findVal(['TABLE_RECEPCION', 'RECEPCION']) || 'RECEPCION_BULTOS',
  ordersTableName: findVal(['TABLE_PEDIDOS', 'PEDIDOS']) || 'PEDIDOS'
@@ -119,6 +120,7 @@ export const bootstrapConfigById = async (spreadsheetId: string): Promise<AppShe
  accessKey: findVal(['ACCESS_KEY', 'ACCESSKEY', 'KEY']),
  countsTableName: findVal(['TABLE_LOGS', 'TABLA_CONTEOS', 'CONTEOS']) || 'CONTEOS',
  consolidatedTableName: findVal(['TABLE_CONSOLIDADO', 'TABLA_RESUMEN', 'CONSOLIDADO']) || 'CONSOLIDADO',
+ inventoryRegistryTableName: findVal(['TABLE_REGISTRO_INV', 'REGISTRO_INV']) || 'REGISTRO_INV',
  productsTableName: findVal(['TABLE_PRODUCTOS', 'PRODUCTOS']) || 'PRODUCTOS',
  receptionTableName: findVal(['TABLE_RECEPCION', 'RECEPCION']) || 'RECEPCION_BULTOS',
  gasWebAppUrl: findVal(['GAS_URL', 'URL_GAS', 'SCRIPT_URL']),
