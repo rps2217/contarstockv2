@@ -129,11 +129,11 @@ const ExpiryManagementPage: React.FC = () => {
 
   return (
     <div className={`h-full flex flex-col overflow-hidden font-sans selection:bg-amber-500/30 transition-colors duration-500 ${
-      theme === 'dark' ? 'bg-black text-white' : 'bg-slate-50 text-slate-900'
+      theme === 'dark' ? 'bg-black text-white' : 'bg-stone-50 text-stone-900'
     }`}>
       {/* HEADER */}
       <div className={`p-4 md:p-6 pb-4 backdrop-blur-xl border-b shrink-0 transition-colors ${
-        theme === 'dark' ? 'bg-slate-900/50 border-white/5' : 'bg-white/80 border-slate-200 shadow-sm'
+        theme === 'dark' ? 'bg-slate-900/50 border-white/5' : 'bg-stone-50/80 border-stone-200 shadow-sm'
       }`}>
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-4">
