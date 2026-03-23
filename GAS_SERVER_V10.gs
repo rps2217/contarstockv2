@@ -3,6 +3,10 @@
  * Sincronización Bidireccional de Vencimientos y Gestión de Inventario
  */
 
+function normalizeHeader(h) {
+  return String(h).toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
 function doPost(e) {
   var data = JSON.parse(e.postData.contents);
   var action = data.action;
@@ -45,7 +49,8 @@ function addExpiration(data) {
     var lastRow = sheet.getLastRow();
     if (lastRow >= 2) {
       var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-      var claveColIdx = headers.indexOf("CLAVE_UNICA");
+      var normalizedHeaders = headers.map(normalizeHeader);
+      var claveColIdx = normalizedHeaders.indexOf("CLAVEUNICA");
       if (claveColIdx !== -1) {
         var existingClaves = sheet.getRange(2, claveColIdx + 1, lastRow - 1, 1).getValues().flat().map(String);
         if (existingClaves.indexOf(claveUnica) !== -1) {
@@ -58,26 +63,27 @@ function addExpiration(data) {
     var now = new Date();
     var fechaIngreso = Utilities.formatDate(now, "GMT-3", "dd/MM/yyyy");
 
-    // Obtener encabezados para mapeo dinámico (Evita desfases si el usuario mueve columnas)
+    // Obtener y normalizar encabezados para mapeo dinámico
     var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    var normalizedHeaders = headers.map(normalizeHeader);
     
-    // Mapeo de datos a encabezados
+    // Mapeo de datos a normalizar
     var rowData = {
-      "ID_REGISTRO": data.id || Utilities.getUuid(),
-      "CLAVE_UNICA": claveUnica,
-      "FECHA_INGRESO": fechaIngreso,
-      "COD PRODUCTO": barcode,
+      "IDREGISTRO": data.id || Utilities.getUuid(),
+      "CLAVEUNICA": claveUnica,
+      "FECHAINGRESO": fechaIngreso,
+      "CODPRODUCTO": barcode,
       "DESCRIPCION": data.productName,
       "MM": data.mm,
       "YYYY": data.yyyy,
       "EVENTO": "VENCIMIENTOS",
       "CANTIDAD": data.quantity || 1,
       "ETIQUETAS": "MANUAL",
-      "FECHA": fechaIngreso // También llenamos FECHA por compatibilidad
+      "FECHA": fechaIngreso
     };
 
-    var newRow = headers.map(function(h) { 
-      return rowData[h] !== undefined ? rowData[h] : ""; 
+    var newRow = normalizedHeaders.map(function(normH) {
+      return rowData[normH] !== undefined ? rowData[normH] : "";
     });
 
     sheet.appendRow(newRow);
@@ -98,7 +104,8 @@ function removeExpiration(data) {
     if (lastRow < 2) return { success: true }; // Nada que borrar
 
     var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-    var claveColIdx = headers.indexOf("CLAVE_UNICA");
+    var normalizedHeaders = headers.map(normalizeHeader);
+    var claveColIdx = normalizedHeaders.indexOf("CLAVEUNICA");
     
     if (claveColIdx === -1) {
       // Si no hay columna CLAVE_UNICA, intentamos buscar en la columna 2 (B) por defecto
@@ -157,10 +164,19 @@ function appendRows(data) {
     if (!sheet) return { success: false, error: "Hoja no encontrada" };
     
     var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    var normalizedHeaders = headers.map(normalizeHeader);
     var rows = data.rows;
     
     for (var i = 0; i < rows.length; i++) {
-      var newRow = headers.map(function(h) { return rows[i][h] || ""; });
+      var rowData = rows[i];
+      var normalizedRowData = {};
+      for (var key in rowData) {
+        normalizedRowData[normalizeHeader(key)] = rowData[key];
+      }
+      
+      var newRow = normalizedHeaders.map(function(normH) {
+        return normalizedRowData[normH] !== undefined ? normalizedRowData[normH] : "";
+      });
       sheet.appendRow(newRow);
     }
     
@@ -178,7 +194,8 @@ function upsertProducts(data) {
     
     var values = sheet.getDataRange().getValues();
     var headers = values[0];
-    var skuIdx = headers.indexOf("barcode");
+    var normalizedHeaders = headers.map(normalizeHeader);
+    var skuIdx = normalizedHeaders.indexOf("BARCODE");
     if (skuIdx === -1) return { success: false, error: "Columna 'barcode' no encontrada" };
     
     var products = data.rows;
