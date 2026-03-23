@@ -16,9 +16,9 @@ export const createInventoryPayload = (
  return items.map((item) => {
  const now = new Date();
  const year = now.getFullYear();
- const month = String(now.getMonth() + 1).padStart(2, '0');
- const day = String(now.getDate()).padStart(2, '0');
- const dateStr = `${year}-${month}-${day}`;
+ const month = now.getMonth() + 1;
+ const day = now.getDate();
+ const dateStr = `${day}/${month}/${year}`;
  
  const expiryPart = item.mm && item.yyyy ? `${item.mm}-${item.yyyy}` : 'SIN_FECHA';
  const activeLabel = item.location || session.logisticsLabel;
@@ -27,14 +27,15 @@ export const createInventoryPayload = (
  return {
  [SHEET_COLUMNS.ID]: generateUUID(),
  [SHEET_COLUMNS.UNIQUE_KEY]: uniqueKey,
- [SHEET_COLUMNS.DATE]: dateStr,
- [SHEET_COLUMNS.ERP_ORDER]: session.erpOrder,
- [SHEET_COLUMNS.BARCODE]: item.barcode,
- [SHEET_COLUMNS.PRODUCT_NAME]: item.productName || 'Cargando...',
- [SHEET_COLUMNS.QUANTITY]: item.totalQuantity,
- [SHEET_COLUMNS.LABEL]: activeLabel,
- [SHEET_COLUMNS.MONTH]: item.mm || "",
- [SHEET_COLUMNS.YEAR]: item.yyyy || "",
+ [SHEET_COLUMNS.ENTRY_DATE]: dateStr, // Col C: FECHA_INGRESO
+ [SHEET_COLUMNS.BARCODE]: item.barcode, // Col D: COD PRODUCTO
+ [SHEET_COLUMNS.PRODUCT_NAME]: item.productName || 'Cargando...', // Col E: DESCRIPCION
+ [SHEET_COLUMNS.LABEL]: activeLabel, // Col F: ETIQUETAS
+ [SHEET_COLUMNS.QUANTITY]: item.totalQuantity, // Col G: CANTIDAD
+ [SHEET_COLUMNS.YEAR]: item.yyyy || "", // Col H: YYYY
+ [SHEET_COLUMNS.ERP_ORDER]: session.erpOrder, // Col I: ERP
+ [SHEET_COLUMNS.MONTH]: item.mm || "", // Col J: MM
+ [SHEET_COLUMNS.DATE]: dateStr, // Col K: FECHA (Mantenemos por compatibilidad)
  [SHEET_COLUMNS.INCIDENT]: item.isIncident ? "FRC" : "OK",
  [SHEET_COLUMNS.AUDIT_STATUS]: session.auditStatus?.toUpperCase() || "",
  [SHEET_COLUMNS.AUDIT_SCORE]: session.auditScore || "",
