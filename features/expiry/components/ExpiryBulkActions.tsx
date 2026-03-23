@@ -11,6 +11,7 @@ interface ExpiryBulkActionsProps {
   onPrintSelected: () => void;
   onPrintLabels: () => void;
   onSendEmail: () => void;
+  onSelectAllVisible: () => void;
   theme?: 'dark' | 'light';
 }
 
@@ -21,6 +22,7 @@ export const ExpiryBulkActions: React.FC<ExpiryBulkActionsProps> = ({
   onPrintSelected,
   onPrintLabels,
   onSendEmail,
+  onSelectAllVisible,
   theme = 'dark'
 }) => {
   return (
@@ -68,6 +70,18 @@ export const ExpiryBulkActions: React.FC<ExpiryBulkActionsProps> = ({
                 }`}>Operaciones Disponibles</p>
                 
                 <div className="space-y-2">
+                  <button
+                    onClick={onSelectAllVisible}
+                    className={`w-full px-4 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 transition-all border ${
+                      theme === 'dark' 
+                        ? 'bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-500 border-indigo-500/20' 
+                        : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200 shadow-sm'
+                    }`}
+                  >
+                    <CheckSquare className="w-4 h-4 text-indigo-500" />
+                    Seleccionar Todos los Visibles
+                  </button>
+
                   <button
                     onClick={onPrintSelected}
                     className={`w-full px-4 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 transition-all border ${

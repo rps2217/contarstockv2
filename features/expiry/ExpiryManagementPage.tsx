@@ -127,6 +127,12 @@ const ExpiryManagementPage: React.FC = () => {
     overscan: 5,
   });
 
+  const handleSelectAllVisible = () => {
+    const newSelected = new Set(state.selectedIds);
+    visibleItems.forEach(item => newSelected.add(item.id));
+    actions.setSelectedIds(newSelected);
+  };
+
   return (
     <div className={`h-full flex flex-col overflow-hidden font-sans selection:bg-amber-500/30 transition-colors duration-500 ${
       theme === 'dark' ? 'bg-black text-white' : 'bg-stone-50 text-stone-900'
@@ -356,6 +362,7 @@ const ExpiryManagementPage: React.FC = () => {
         onPrintSelected={handlePrintSelected}
         onPrintLabels={handlePrintLabelsBulk}
         onSendEmail={handleSendEmailBulk}
+        onSelectAllVisible={handleSelectAllVisible}
         theme={theme}
       />
 
