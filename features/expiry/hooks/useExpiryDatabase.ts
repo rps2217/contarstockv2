@@ -40,6 +40,7 @@ export const useExpiryDatabase = () => {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedCanje, setSelectedCanje] = useState<'all' | 'canje' | 'markdown'>('all');
   const [dateRange, setDateRange] = useState<{ start: Date | null, end: Date | null }>({ start: null, end: null });
+  const [withdrawalDateRange, setWithdrawalDateRange] = useState<{ start: Date | null, end: Date | null }>({ start: null, end: null });
   const [displayLimit, setDisplayLimit] = useState(50);
   const [isSyncing, setIsSyncing] = useState(false);
   const [pendingOperations, setPendingOperations] = useState(0);
@@ -58,7 +59,7 @@ export const useExpiryDatabase = () => {
   // Reset limit on filter change
   useEffect(() => {
     setDisplayLimit(50);
-  }, [selectedStatuses, selectedCategories, selectedCanje, dateRange]);
+  }, [selectedStatuses, selectedCategories, selectedCanje, dateRange, withdrawalDateRange]);
 
   const scans = useLiveQuery(() => 
     db.scans.filter(s => !!s.expiryDate || (!!s.mm && !!s.yyyy)).toArray()
@@ -208,8 +209,10 @@ export const useExpiryDatabase = () => {
         (selectedCanje === 'markdown' && !item.hasCanje);
       const matchesDateRange = (!dateRange.start || !dateRange.end) ||
         (item.expiryDateObj && isWithinInterval(item.expiryDateObj, { start: dateRange.start, end: dateRange.end }));
+      const matchesWithdrawalRange = (!withdrawalDateRange.start || !withdrawalDateRange.end) ||
+        (item.withdrawalDate && isWithinInterval(item.withdrawalDate, { start: withdrawalDateRange.start, end: withdrawalDateRange.end }));
 
-      return matchesSearch && matchesFilter && matchesCategory && matchesCanje && matchesDateRange;
+      return matchesSearch && matchesFilter && matchesCategory && matchesCanje && matchesDateRange && matchesWithdrawalRange;
     }).sort((a, b) => {
       // Priority 1: Expired items (if not filtered out)
       if (a.status === 'expired' && b.status !== 'expired') return -1;
@@ -231,7 +234,7 @@ export const useExpiryDatabase = () => {
       const percent = Math.max(0, Math.min(100, (item.daysLeft / maxLifeDays) * 100));
       return { ...item, lifePercent: percent };
     });
-  }, [baseProcessedData, debouncedSearch, selectedStatuses, selectedCategories, selectedCanje, dateRange]);
+  }, [baseProcessedData, debouncedSearch, selectedStatuses, selectedCategories, selectedCanje, dateRange, withdrawalDateRange]);
 
   const stats = useMemo(() => {
     const filteredByFilters = baseProcessedData.filter(item => {
@@ -241,7 +244,9 @@ export const useExpiryDatabase = () => {
         (selectedCanje === 'markdown' && !item.hasCanje);
       const matchesDateRange = (!dateRange.start || !dateRange.end) ||
         (item.expiryDateObj && isWithinInterval(item.expiryDateObj, { start: dateRange.start, end: dateRange.end }));
-      return matchesCategory && matchesCanje && matchesDateRange;
+      const matchesWithdrawalRange = (!withdrawalDateRange.start || !withdrawalDateRange.end) ||
+        (item.withdrawalDate && isWithinInterval(item.withdrawalDate, { start: withdrawalDateRange.start, end: withdrawalDateRange.end }));
+      return matchesCategory && matchesCanje && matchesDateRange && matchesWithdrawalRange;
     });
 
     return {
@@ -251,7 +256,7 @@ export const useExpiryDatabase = () => {
       withdrawal: filteredByFilters.filter(s => s.status === 'withdrawal').length,
       total: filteredByFilters.length
     };
-  }, [baseProcessedData, selectedCategories, selectedCanje, dateRange]);
+  }, [baseProcessedData, selectedCategories, selectedCanje, dateRange, withdrawalDateRange]);
 
   const handleSyncExpirations = useCallback(async () => {
     try {
@@ -442,6 +447,7 @@ export const useExpiryDatabase = () => {
       selectedCategories,
       selectedCanje,
       dateRange,
+      withdrawalDateRange,
       displayLimit,
       isSyncing,
       pendingOperations,
@@ -458,6 +464,7 @@ export const useExpiryDatabase = () => {
       setSelectedCategories,
       setSelectedCanje,
       setDateRange,
+      setWithdrawalDateRange,
       setDisplayLimit,
       setSelectedIds,
       setVerifiedIds,

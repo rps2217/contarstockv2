@@ -2,7 +2,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Filter, X, AlertTriangle, ShieldAlert, Download, Clock, CheckCircle2, RefreshCw, Package, CheckSquare, Calendar } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, addMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { ExpiryStatus } from '../hooks/useExpiryDatabase';
 
 interface ExpiryFilterDrawerProps {
@@ -17,6 +17,8 @@ interface ExpiryFilterDrawerProps {
   setSelectedCategories: React.Dispatch<React.SetStateAction<string[]>>;
   dateRange: { start: Date | null, end: Date | null };
   setDateRange: (range: { start: Date | null, end: Date | null }) => void;
+  withdrawalDateRange: { start: Date | null, end: Date | null };
+  setWithdrawalDateRange: (range: { start: Date | null, end: Date | null }) => void;
   theme?: 'dark' | 'light';
 }
 
@@ -32,6 +34,8 @@ export const ExpiryFilterDrawer: React.FC<ExpiryFilterDrawerProps> = ({
   setSelectedCategories,
   dateRange,
   setDateRange,
+  withdrawalDateRange,
+  setWithdrawalDateRange,
   theme = 'dark'
 }) => {
   return (
@@ -120,6 +124,103 @@ export const ExpiryFilterDrawer: React.FC<ExpiryFilterDrawerProps> = ({
                         : 'bg-slate-50 border-slate-200 text-slate-900'
                     }`}
                   />
+                </div>
+                
+                {/* Quick Month Picker */}
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {[0, 1, 2, 3].map(offset => {
+                    const date = addMonths(new Date(), offset);
+                    const start = startOfMonth(date);
+                    const end = endOfMonth(date);
+                    const isActive = dateRange.start?.getTime() === start.getTime() && 
+                                   dateRange.end?.getTime() === end.getTime();
+                    
+                    return (
+                      <button
+                        key={offset}
+                        onClick={() => setDateRange({ start, end })}
+                        className={`px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border ${
+                          isActive
+                            ? 'bg-amber-500 border-amber-400 text-black shadow-lg shadow-amber-500/20'
+                            : theme === 'dark'
+                              ? 'bg-white/5 border-white/5 text-slate-400 hover:text-white hover:bg-white/10'
+                              : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                        }`}
+                      >
+                        {format(date, 'MMMM yyyy', { locale: undefined }).toUpperCase()}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Download className="w-4 h-4 text-slate-500" />
+                    <span className={`text-xs font-black uppercase tracking-widest ${
+                      theme === 'dark' ? 'text-slate-300' : 'text-slate-600'
+                    }`}>Rango de Retiro</span>
+                  </div>
+                  {(withdrawalDateRange.start || withdrawalDateRange.end) && (
+                    <button 
+                      onClick={() => setWithdrawalDateRange({ start: null, end: null })}
+                      className="text-[10px] font-black text-amber-500 uppercase hover:underline"
+                    >
+                      Limpiar
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="date"
+                    value={withdrawalDateRange.start ? format(withdrawalDateRange.start, 'yyyy-MM-dd') : ''}
+                    onChange={(e) => setWithdrawalDateRange({ ...withdrawalDateRange, start: e.target.value ? parseISO(e.target.value) : null })}
+                    className={`px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${
+                      theme === 'dark' 
+                        ? 'bg-white/5 border-white/5 text-white' 
+                        : 'bg-slate-50 border-slate-200 text-slate-900'
+                    }`}
+                  />
+                  <input
+                    type="date"
+                    value={withdrawalDateRange.end ? format(withdrawalDateRange.end, 'yyyy-MM-dd') : ''}
+                    onChange={(e) => setWithdrawalDateRange({ ...withdrawalDateRange, end: e.target.value ? parseISO(e.target.value) : null })}
+                    className={`px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${
+                      theme === 'dark' 
+                        ? 'bg-white/5 border-white/5 text-white' 
+                        : 'bg-slate-50 border-slate-200 text-slate-900'
+                    }`}
+                  />
+                </div>
+                
+                {/* Quick Month Picker */}
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {[0, 1, 2, 3].map(offset => {
+                    const date = addMonths(new Date(), offset);
+                    const monthName = format(date, 'MMM', { locale: undefined }); // Simplified for now
+                    const year = format(date, 'yyyy');
+                    const start = startOfMonth(date);
+                    const end = endOfMonth(date);
+                    const isActive = withdrawalDateRange.start?.getTime() === start.getTime() && 
+                                   withdrawalDateRange.end?.getTime() === end.getTime();
+                    
+                    return (
+                      <button
+                        key={offset}
+                        onClick={() => setWithdrawalDateRange({ start, end })}
+                        className={`px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border ${
+                          isActive
+                            ? 'bg-amber-500 border-amber-400 text-black shadow-lg shadow-amber-500/20'
+                            : theme === 'dark'
+                              ? 'bg-white/5 border-white/5 text-slate-400 hover:text-white hover:bg-white/10'
+                              : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                        }`}
+                      >
+                        {format(date, 'MMMM yyyy', { locale: undefined }).toUpperCase()}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
