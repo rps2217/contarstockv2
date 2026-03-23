@@ -1,12 +1,12 @@
-
 import React, { useState } from 'react';
-import { Search, Filter, X, Camera } from 'lucide-react';
+import { Search, Filter, X, Camera, Plus } from 'lucide-react';
 import { BarcodeScannerModal } from './BarcodeScannerModal';
 
 interface ExpirySearchBarProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   onOpenFilters: () => void;
+  onOpenAdd: () => void;
   onClearFilters: () => void;
   activeFiltersCount: number;
   theme?: 'dark' | 'light';
@@ -16,6 +16,7 @@ export const ExpirySearchBar: React.FC<ExpirySearchBarProps> = ({
   searchQuery,
   setSearchQuery,
   onOpenFilters,
+  onOpenAdd,
   onClearFilters,
   activeFiltersCount,
   theme = 'dark'
@@ -65,6 +66,18 @@ export const ExpirySearchBar: React.FC<ExpirySearchBarProps> = ({
       
       <div className="flex gap-3">
         <button
+          onClick={onOpenAdd}
+          className={`flex-1 md:flex-none px-6 py-4 md:py-0 rounded-2xl flex items-center justify-center gap-3 transition-all border shadow-lg group ${
+            theme === 'dark' 
+              ? 'bg-amber-500 border-amber-400 text-black hover:bg-amber-400' 
+              : 'bg-amber-500 border-amber-400 text-black hover:bg-amber-400 shadow-sm'
+          }`}
+        >
+          <Plus className="w-5 h-5" />
+          <span className="text-xs font-black uppercase tracking-widest">Nuevo</span>
+        </button>
+
+        <button
           onClick={onOpenFilters}
           className={`flex-1 md:flex-none px-6 py-4 md:py-0 rounded-2xl flex items-center justify-center gap-3 transition-all border shadow-lg group ${
             activeFiltersCount > 0
@@ -95,7 +108,7 @@ export const ExpirySearchBar: React.FC<ExpirySearchBarProps> = ({
           <X className="w-5 h-5 text-slate-400 group-hover:rotate-90 transition-transform" />
         </button>
       </div>
-
+      
       <BarcodeScannerModal 
         isOpen={isScannerOpen}
         onClose={() => setIsScannerOpen(false)}

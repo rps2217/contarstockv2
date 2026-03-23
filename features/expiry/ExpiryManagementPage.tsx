@@ -17,7 +17,7 @@ import { motion } from 'motion/react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 
 // Hooks
-import { useExpiryDatabase } from './hooks/useExpiryDatabase';
+import { useExpiryDatabase, ExpiryStatus } from './hooks/useExpiryDatabase';
 
 // Components
 import { ExpiryStats } from './components/ExpiryStats';
@@ -226,26 +226,29 @@ const ExpiryManagementPage: React.FC = () => {
           </div>
         </div>
 
-        <ExpiryStats stats={state.stats} />
+        <ExpiryStats 
+          stats={state.stats} 
+          selectedStatuses={state.selectedStatuses} 
+          onStatusClick={(status) => {
+            const expiryStatus = status as ExpiryStatus;
+            const newStatuses = state.selectedStatuses.includes(expiryStatus)
+              ? state.selectedStatuses.filter(s => s !== expiryStatus)
+              : [...state.selectedStatuses, expiryStatus];
+            actions.setSelectedStatuses(newStatuses);
+          }}
+          theme={theme}
+        />
         
         <ExpirySearchBar 
           searchQuery={state.searchQuery}
           setSearchQuery={actions.setSearchQuery}
           onOpenFilters={() => setIsFilterDrawerOpen(true)}
+          onOpenAdd={() => setIsAddModalOpen(true)}
           onClearFilters={handleClearFilters}
           activeFiltersCount={activeFiltersCount}
           theme={theme}
         />
       </div>
-
-      {/* FAB */}
-      <button 
-        onClick={() => setIsAddModalOpen(true)}
-        className="fixed bottom-24 right-6 w-14 h-14 bg-amber-500 hover:bg-amber-400 text-black rounded-full flex items-center justify-center transition-all shadow-2xl shadow-amber-500/30 z-50 hover:scale-105"
-        title="Nuevo Registro"
-      >
-        <Plus className="w-7 h-7" />
-      </button>
 
       {/* MAIN LIST */}
       <div ref={parentRef} className="flex-1 overflow-y-auto p-4 md:p-6 no-scrollbar pb-32">

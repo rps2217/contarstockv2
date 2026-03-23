@@ -10,31 +10,48 @@ interface ExpiryStatsProps {
     next_expiry: number;
     total: number;
   };
+  selectedStatuses: string[];
+  onStatusClick: (status: string) => void;
+  theme?: 'dark' | 'light';
 }
 
-export const ExpiryStats: React.FC<ExpiryStatsProps> = ({ stats }) => {
+export const ExpiryStats: React.FC<ExpiryStatsProps> = ({ stats, selectedStatuses, onStatusClick, theme = 'dark' }) => {
+  const statItems = [
+    { id: 'expired', label: 'Vencidos', count: stats.expired, icon: AlertTriangle, color: 'rose' },
+    { id: 'critical', label: 'Críticos', count: stats.critical, icon: ShieldAlert, color: 'amber' },
+    { id: 'withdrawal', label: 'Retiros', count: stats.withdrawal, icon: Download, color: 'indigo' },
+    { id: 'next_expiry', label: 'Próx', count: stats.next_expiry, icon: Clock, color: 'blue' },
+    { id: 'vigente', label: 'Vigentes', count: stats.total - stats.expired - stats.critical - stats.next_expiry - stats.withdrawal, icon: CheckCircle2, color: 'emerald' },
+  ];
+
   return (
-    <div className="flex flex-wrap gap-2 mb-6">
-      <div className="bg-rose-500/10 border border-rose-500/20 px-3 py-1 rounded-full flex items-center gap-2">
-        <AlertTriangle className="w-3 h-3 text-rose-500" />
-        <span className="text-[10px] font-black text-rose-500 uppercase tracking-tighter">{stats.expired} Vencidos</span>
-      </div>
-      <div className="bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full flex items-center gap-2">
-        <ShieldAlert className="w-3 h-3 text-amber-500" />
-        <span className="text-[10px] font-black text-amber-500 uppercase tracking-tighter">{stats.critical} Críticos</span>
-      </div>
-      <div className="bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 rounded-full flex items-center gap-2">
-        <Download className="w-3 h-3 text-indigo-500" />
-        <span className="text-[10px] font-black text-indigo-500 uppercase tracking-tighter">{stats.withdrawal} Retiros</span>
-      </div>
-      <div className="bg-blue-500/10 border border-blue-500/20 px-3 py-1 rounded-full flex items-center gap-2">
-        <Clock className="w-3 h-3 text-blue-500" />
-        <span className="text-[10px] font-black text-blue-500 uppercase tracking-tighter">{stats.next_expiry} Próx</span>
-      </div>
-      <div className="bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full flex items-center gap-2">
-        <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-        <span className="text-[10px] font-black text-emerald-500 uppercase tracking-tighter">{stats.total - stats.expired - stats.critical - stats.next_expiry - stats.withdrawal} Vigentes</span>
-      </div>
+    <div className="flex flex-wrap gap-3 mb-6">
+      {statItems.map((item) => {
+        const Icon = item.icon;
+        const isSelected = selectedStatuses.includes(item.id);
+        return (
+          <button
+            key={item.id}
+            onClick={() => onStatusClick(item.id)}
+            className={`px-5 py-3 rounded-2xl flex items-center gap-3 transition-all border ${
+              isSelected
+                ? item.color === 'rose' ? 'bg-rose-500 border-rose-400 text-white shadow-lg' :
+                  item.color === 'amber' ? 'bg-amber-500 border-amber-400 text-white shadow-lg' :
+                  item.color === 'indigo' ? 'bg-indigo-500 border-indigo-400 text-white shadow-lg' :
+                  item.color === 'blue' ? 'bg-blue-500 border-blue-400 text-white shadow-lg' :
+                  'bg-emerald-500 border-emerald-400 text-white shadow-lg'
+                : theme === 'dark'
+                  ? `bg-white/5 border-white/10 text-${item.color}-500 hover:bg-white/10`
+                  : `bg-white border-stone-200 text-${item.color}-600 hover:bg-stone-50 shadow-sm`
+            }`}
+          >
+            <Icon className={`w-5 h-5 ${isSelected ? 'text-white' : `text-${item.color}-500`}`} />
+            <span className="text-sm font-black uppercase tracking-tighter">
+              {item.count} {item.label}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 };
