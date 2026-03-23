@@ -34,7 +34,7 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className={`border rounded-2xl flex flex-col md:grid md:grid-cols-[80px_150px_1.5fr_1fr_1fr_1.2fr] items-start md:items-center gap-4 md:gap-6 group transition-all ${
+      className={`border rounded-2xl flex flex-col md:grid md:grid-cols-[80px_150px_1.5fr_1fr_1fr_1fr_1.2fr] items-start md:items-center gap-4 md:gap-6 group transition-all ${
         isCompact ? 'p-3 md:p-2' : 'p-4'
       } ${
         theme === 'dark' ? 'bg-white/5' : 'bg-white shadow-sm'
@@ -224,8 +224,8 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
         </div>
       </div>
 
-      {/* COLUMN 4 & 5: DATES (Mobile Grid / Desktop Contents) */}
-      <div className="grid grid-cols-2 gap-4 w-full md:contents">
+      {/* COLUMN 4, 5 & 6: DATES & POLICY (Mobile Grid / Desktop Contents) */}
+      <div className="grid grid-cols-3 gap-4 w-full md:contents">
         {/* COLUMN 4: EXPIRY DATE */}
         <div className={`flex flex-col gap-1 p-2 md:p-0 rounded-lg md:bg-transparent ${
           theme === 'dark' ? 'bg-white/5' : 'bg-slate-50'
@@ -247,9 +247,19 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
             {item.withdrawalDate ? format(item.withdrawalDate, 'dd/MM/yyyy') : 'N/A'}
           </span>
         </div>
+
+        {/* COLUMN 6: WITHDRAWAL POLICY */}
+        <div className={`flex flex-col gap-1 p-2 md:p-0 rounded-lg md:bg-transparent ${
+          theme === 'dark' ? 'bg-white/5' : 'bg-slate-50'
+        }`}>
+          <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Días Retiro</span>
+          <span className={`text-sm font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+            {item.withdrawalDays} Días
+          </span>
+        </div>
       </div>
 
-      {/* COLUMN 6: STATUS & ACTION (Desktop View) */}
+      {/* COLUMN 7: STATUS & ACTION (Desktop View) */}
       <div className={`hidden md:flex items-center gap-6 pl-6 border-l ${
         theme === 'dark' ? 'border-white/5' : 'border-slate-100'
       }`}>
