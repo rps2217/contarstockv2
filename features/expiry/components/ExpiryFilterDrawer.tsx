@@ -1,7 +1,8 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Filter, X, AlertTriangle, ShieldAlert, Download, Clock, CheckCircle2, RefreshCw, Package, CheckSquare } from 'lucide-react';
+import { Filter, X, AlertTriangle, ShieldAlert, Download, Clock, CheckCircle2, RefreshCw, Package, CheckSquare, Calendar } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
 import { ExpiryStatus } from '../hooks/useExpiryDatabase';
 
 interface ExpiryFilterDrawerProps {
@@ -14,6 +15,8 @@ interface ExpiryFilterDrawerProps {
   categories: string[];
   selectedCategories: string[];
   setSelectedCategories: React.Dispatch<React.SetStateAction<string[]>>;
+  dateRange: { start: Date | null, end: Date | null };
+  setDateRange: (range: { start: Date | null, end: Date | null }) => void;
   theme?: 'dark' | 'light';
 }
 
@@ -27,6 +30,8 @@ export const ExpiryFilterDrawer: React.FC<ExpiryFilterDrawerProps> = ({
   categories,
   selectedCategories,
   setSelectedCategories,
+  dateRange,
+  setDateRange,
   theme = 'dark'
 }) => {
   return (
@@ -77,6 +82,47 @@ export const ExpiryFilterDrawer: React.FC<ExpiryFilterDrawerProps> = ({
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-8 no-scrollbar">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-slate-500" />
+                    <span className={`text-xs font-black uppercase tracking-widest ${
+                      theme === 'dark' ? 'text-slate-300' : 'text-slate-600'
+                    }`}>Rango de Vencimiento</span>
+                  </div>
+                  {(dateRange.start || dateRange.end) && (
+                    <button 
+                      onClick={() => setDateRange({ start: null, end: null })}
+                      className="text-[10px] font-black text-amber-500 uppercase hover:underline"
+                    >
+                      Limpiar
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="date"
+                    value={dateRange.start ? format(dateRange.start, 'yyyy-MM-dd') : ''}
+                    onChange={(e) => setDateRange({ ...dateRange, start: e.target.value ? parseISO(e.target.value) : null })}
+                    className={`px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${
+                      theme === 'dark' 
+                        ? 'bg-white/5 border-white/5 text-white' 
+                        : 'bg-slate-50 border-slate-200 text-slate-900'
+                    }`}
+                  />
+                  <input
+                    type="date"
+                    value={dateRange.end ? format(dateRange.end, 'yyyy-MM-dd') : ''}
+                    onChange={(e) => setDateRange({ ...dateRange, end: e.target.value ? parseISO(e.target.value) : null })}
+                    className={`px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${
+                      theme === 'dark' 
+                        ? 'bg-white/5 border-white/5 text-white' 
+                        : 'bg-slate-50 border-slate-200 text-slate-900'
+                    }`}
+                  />
+                </div>
+              </div>
+
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">

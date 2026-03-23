@@ -39,6 +39,7 @@ export const useExpiryDatabase = () => {
   });
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedCanje, setSelectedCanje] = useState<'all' | 'canje' | 'markdown'>('all');
+  const [dateRange, setDateRange] = useState<{ start: Date | null, end: Date | null }>({ start: null, end: null });
   const [displayLimit, setDisplayLimit] = useState(50);
   const [isSyncing, setIsSyncing] = useState(false);
   const [pendingOperations, setPendingOperations] = useState(0);
@@ -57,7 +58,7 @@ export const useExpiryDatabase = () => {
   // Reset limit on filter change
   useEffect(() => {
     setDisplayLimit(50);
-  }, [selectedStatuses, selectedCategories, selectedCanje]);
+  }, [selectedStatuses, selectedCategories, selectedCanje, dateRange]);
 
   const scans = useLiveQuery(() => 
     db.scans.filter(s => !!s.expiryDate || (!!s.mm && !!s.yyyy)).toArray()
@@ -205,8 +206,10 @@ export const useExpiryDatabase = () => {
       const matchesCanje = selectedCanje === 'all' || 
         (selectedCanje === 'canje' && item.hasCanje) ||
         (selectedCanje === 'markdown' && !item.hasCanje);
+      const matchesDateRange = (!dateRange.start || !dateRange.end) ||
+        (item.expiryDateObj && isWithinInterval(item.expiryDateObj, { start: dateRange.start, end: dateRange.end }));
 
-      return matchesSearch && matchesFilter && matchesCategory && matchesCanje;
+      return matchesSearch && matchesFilter && matchesCategory && matchesCanje && matchesDateRange;
     }).sort((a, b) => {
       // Priority 1: Expired items (if not filtered out)
       if (a.status === 'expired' && b.status !== 'expired') return -1;
@@ -228,7 +231,7 @@ export const useExpiryDatabase = () => {
       const percent = Math.max(0, Math.min(100, (item.daysLeft / maxLifeDays) * 100));
       return { ...item, lifePercent: percent };
     });
-  }, [baseProcessedData, debouncedSearch, selectedStatuses, selectedCategories, selectedCanje]);
+  }, [baseProcessedData, debouncedSearch, selectedStatuses, selectedCategories, selectedCanje, dateRange]);
 
   const stats = useMemo(() => {
     const filteredByFilters = baseProcessedData.filter(item => {
@@ -236,7 +239,9 @@ export const useExpiryDatabase = () => {
       const matchesCanje = selectedCanje === 'all' || 
         (selectedCanje === 'canje' && item.hasCanje) ||
         (selectedCanje === 'markdown' && !item.hasCanje);
-      return matchesCategory && matchesCanje;
+      const matchesDateRange = (!dateRange.start || !dateRange.end) ||
+        (item.expiryDateObj && isWithinInterval(item.expiryDateObj, { start: dateRange.start, end: dateRange.end }));
+      return matchesCategory && matchesCanje && matchesDateRange;
     });
 
     return {
@@ -246,7 +251,7 @@ export const useExpiryDatabase = () => {
       withdrawal: filteredByFilters.filter(s => s.status === 'withdrawal').length,
       total: filteredByFilters.length
     };
-  }, [baseProcessedData, selectedCategories, selectedCanje]);
+  }, [baseProcessedData, selectedCategories, selectedCanje, dateRange]);
 
   const handleSyncExpirations = useCallback(async () => {
     try {
@@ -436,6 +441,7 @@ export const useExpiryDatabase = () => {
       selectedStatuses,
       selectedCategories,
       selectedCanje,
+      dateRange,
       displayLimit,
       isSyncing,
       pendingOperations,
@@ -451,6 +457,7 @@ export const useExpiryDatabase = () => {
       setSelectedStatuses,
       setSelectedCategories,
       setSelectedCanje,
+      setDateRange,
       setDisplayLimit,
       setSelectedIds,
       setVerifiedIds,
