@@ -85,9 +85,9 @@ function addExpiration(data) {
       "YYYY": data.yyyy,
       "ANO": data.yyyy,
       "EVENTO": "VENCIMIENTOS",
-      "CANTIDAD": data.quantity || 1,
+      "CANTIDAD": "",
       "ETIQUETAS": "MANUAL",
-      "BOD": "MANUAL"
+      "BOD": ""
     };
 
     var newRow = normalizedHeaders.map(function(normH) {
