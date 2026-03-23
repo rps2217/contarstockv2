@@ -58,20 +58,29 @@ function addExpiration(data) {
     var now = new Date();
     var fechaIngreso = Utilities.formatDate(now, "GMT-3", "dd/MM/yyyy");
 
-    // Insertar registro con estructura corregida
-    // Estructura solicitada: ID, CLAVE_UNICA, FECHA_INGRESO, SKU, DESCRIPTOR, MES, AÑO, EVENTO, CANTIDAD, UBICACION
-    sheet.appendRow([
-      data.id || Utilities.getUuid(),
-      claveUnica,
-      fechaIngreso,   // Columna C
-      barcode,        // Columna D
-      data.productName,
-      data.mm,
-      data.yyyy,
-      "VENCIMIENTOS",
-      data.quantity || 1,
-      "MANUAL"
-    ]);
+    // Obtener encabezados para mapeo dinámico (Evita desfases si el usuario mueve columnas)
+    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    
+    // Mapeo de datos a encabezados
+    var rowData = {
+      "ID_REGISTRO": data.id || Utilities.getUuid(),
+      "CLAVE_UNICA": claveUnica,
+      "FECHA_INGRESO": fechaIngreso,
+      "COD PRODUCTO": barcode,
+      "DESCRIPCION": data.productName,
+      "MM": data.mm,
+      "YYYY": data.yyyy,
+      "EVENTO": "VENCIMIENTOS",
+      "CANTIDAD": data.quantity || 1,
+      "ETIQUETAS": "MANUAL",
+      "FECHA": fechaIngreso // También llenamos FECHA por compatibilidad
+    };
+
+    var newRow = headers.map(function(h) { 
+      return rowData[h] !== undefined ? rowData[h] : ""; 
+    });
+
+    sheet.appendRow(newRow);
 
     return { success: true, id: data.id, clave: claveUnica };
   } catch (e) {

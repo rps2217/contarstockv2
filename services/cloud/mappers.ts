@@ -14,35 +14,35 @@ export const createInventoryPayload = (
  source: 'manual' | 'background' = 'manual'
 ) => {
  return items.map((item) => {
- const now = new Date();
- const year = now.getFullYear();
- const month = now.getMonth() + 1;
- const day = now.getDate();
- const dateStr = `${day}/${month}/${year}`;
- 
- const expiryPart = item.mm && item.yyyy ? `${item.mm}-${item.yyyy}` : 'SIN_FECHA';
- const activeLabel = item.location || session.logisticsLabel;
- const uniqueKey = `${session.erpOrder}_${activeLabel}_${item.barcode}_${expiryPart}`;
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const dateStr = `${day}/${month}/${year}`;
+  
+  const expiryPart = item.mm && item.yyyy ? `${item.mm}-${item.yyyy}` : 'SIN_FECHA';
+  const activeLabel = item.location || session.logisticsLabel;
+  const uniqueKey = `${session.erpOrder}_${activeLabel}_${item.barcode}_${expiryPart}`;
 
- return {
- [SHEET_COLUMNS.ID]: generateUUID(),
- [SHEET_COLUMNS.UNIQUE_KEY]: uniqueKey,
- [SHEET_COLUMNS.ENTRY_DATE]: dateStr, // Col C: FECHA_INGRESO
- [SHEET_COLUMNS.BARCODE]: item.barcode, // Col D: COD PRODUCTO
- [SHEET_COLUMNS.PRODUCT_NAME]: item.productName || 'Cargando...', // Col E: DESCRIPCION
- [SHEET_COLUMNS.LABEL]: activeLabel, // Col F: ETIQUETAS
- [SHEET_COLUMNS.QUANTITY]: item.totalQuantity, // Col G: CANTIDAD
- [SHEET_COLUMNS.YEAR]: item.yyyy || "", // Col H: YYYY
- [SHEET_COLUMNS.ERP_ORDER]: session.erpOrder, // Col I: ERP
- [SHEET_COLUMNS.MONTH]: item.mm || "", // Col J: MM
- [SHEET_COLUMNS.DATE]: dateStr, // Col K: FECHA (Mantenemos por compatibilidad)
- [SHEET_COLUMNS.INCIDENT]: item.isIncident ? "FRC" : "OK",
- [SHEET_COLUMNS.AUDIT_STATUS]: session.auditStatus?.toUpperCase() || "",
- [SHEET_COLUMNS.AUDIT_SCORE]: session.auditScore || "",
- [SHEET_COLUMNS.IA_SIGNATURE]: item.embedding ? JSON.stringify(item.embedding) : "",
- [SHEET_COLUMNS.PHOTO_URL]: session.photoUrl || "",
- "META_SOURCE": source
- };
+  return {
+  [SHEET_COLUMNS.ID]: generateUUID(), // Col A
+  [SHEET_COLUMNS.UNIQUE_KEY]: uniqueKey, // Col B
+  [SHEET_COLUMNS.ENTRY_DATE]: dateStr, // Col C: FECHA_INGRESO (DD/MM/YYYY)
+  [SHEET_COLUMNS.BARCODE]: item.barcode, // Col D: COD PRODUCTO
+  [SHEET_COLUMNS.PRODUCT_NAME]: item.productName || 'Cargando...', // Col E: DESCRIPCION
+  [SHEET_COLUMNS.LABEL]: activeLabel, // Col F: ETIQUETAS
+  [SHEET_COLUMNS.QUANTITY]: item.totalQuantity, // Col G: CANTIDAD
+  [SHEET_COLUMNS.YEAR]: item.yyyy || "", // Col H: YYYY
+  [SHEET_COLUMNS.ERP_ORDER]: session.erpOrder, // Col I: ERP
+  [SHEET_COLUMNS.DATE]: dateStr, // Col J: FECHA (DD/MM/YYYY)
+  [SHEET_COLUMNS.MONTH]: item.mm || "", // Col K: MM
+  [SHEET_COLUMNS.INCIDENT]: item.isIncident ? "FRC" : "OK",
+  [SHEET_COLUMNS.AUDIT_STATUS]: session.auditStatus?.toUpperCase() || "",
+  [SHEET_COLUMNS.AUDIT_SCORE]: session.auditScore || "",
+  [SHEET_COLUMNS.IA_SIGNATURE]: item.embedding ? JSON.stringify(item.embedding) : "",
+  [SHEET_COLUMNS.PHOTO_URL]: session.photoUrl || "",
+  "META_SOURCE": source
+  };
  });
 };
 
