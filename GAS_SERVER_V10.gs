@@ -4,7 +4,7 @@
  */
 
 function normalizeHeader(h) {
-  return String(h).toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return String(h).toUpperCase().replace(/[^A-Z0-9_]/g, "");
 }
 
 function doPost(e) {
@@ -67,19 +67,27 @@ function addExpiration(data) {
     var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
     var normalizedHeaders = headers.map(normalizeHeader);
     
-    // Mapeo de datos a normalizar
+    // Mapeo exacto de datos a normalizar (usando los nombres exactos de tus columnas)
     var rowData = {
-      "IDREGISTRO": data.id || Utilities.getUuid(),
-      "CLAVEUNICA": claveUnica,
-      "FECHAINGRESO": fechaIngreso,
+      "ID_REGISTRO": data.id || Utilities.getUuid(),
+      "ID": data.id || Utilities.getUuid(),
+      "CLAVE_UNICA": claveUnica,
+      "CLAVE": claveUnica,
+      "FECHA_INGRESO": fechaIngreso,
+      "FECHA": fechaIngreso,
+      "COD_BARRAS": barcode,
       "CODPRODUCTO": barcode,
+      "SKU": barcode,
+      "DESCRIPCION_PROD": data.productName,
       "DESCRIPCION": data.productName,
       "MM": data.mm,
+      "MES": data.mm,
       "YYYY": data.yyyy,
+      "ANO": data.yyyy,
       "EVENTO": "VENCIMIENTOS",
       "CANTIDAD": data.quantity || 1,
       "ETIQUETAS": "MANUAL",
-      "FECHA": fechaIngreso
+      "BOD": "MANUAL"
     };
 
     var newRow = normalizedHeaders.map(function(normH) {
@@ -105,8 +113,7 @@ function removeExpiration(data) {
 
     var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
     var normalizedHeaders = headers.map(normalizeHeader);
-    var claveColIdx = normalizedHeaders.indexOf("CLAVEUNICA");
-    
+    var claveColIdx = normalizedHeaders.indexOf("CLAVE_UNICA");
     if (claveColIdx === -1) {
       // Si no hay columna CLAVE_UNICA, intentamos buscar en la columna 2 (B) por defecto
       claveColIdx = 1;
@@ -195,7 +202,7 @@ function upsertProducts(data) {
     var values = sheet.getDataRange().getValues();
     var headers = values[0];
     var normalizedHeaders = headers.map(normalizeHeader);
-    var skuIdx = normalizedHeaders.indexOf("BARCODE");
+    var skuIdx = normalizedHeaders.indexOf("COD_BARRAS");
     if (skuIdx === -1) return { success: false, error: "Columna 'barcode' no encontrada" };
     
     var products = data.rows;
