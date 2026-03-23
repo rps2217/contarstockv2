@@ -393,7 +393,8 @@ export const useExpiryDatabase = () => {
         .then(async (result) => {
           if (result.success) {
             if (result.message === "Ya existe") {
-              toast.info('El producto ya existía en la nube.');
+              toast.error('Este producto ya está registrado en la nube.');
+              await db.cloudExpirations.delete(localId);
             }
             // Actualizar el ID/clave si la nube devolvió algo diferente
             if (result.id && result.id !== localId) {
@@ -403,7 +404,12 @@ export const useExpiryDatabase = () => {
         })
         .catch(async (error) => {
           console.error('Error al guardar en la nube:', error);
-          toast.error(`Error de sincronización al guardar: ${data.productName}`);
+          if (error.message.includes('Ya existe')) {
+            toast.error('Este producto ya está registrado en la nube.');
+            await db.cloudExpirations.delete(localId);
+          } else {
+            toast.error(`Error de sincronización al guardar: ${data.productName}`);
+          }
           // Opcional: Revertir el cambio local si falla la nube
           // await db.cloudExpirations.delete(localId);
         })
