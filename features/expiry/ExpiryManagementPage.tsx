@@ -124,10 +124,10 @@ const ExpiryManagementPage: React.FC = () => {
   };
 
   const parentRef = useRef<HTMLDivElement>(null);
-  const visibleItems = state.processedScans.slice(0, state.displayLimit);
+  const allItems = state.processedScans;
   
   const rowVirtualizer = useVirtualizer({
-    count: visibleItems.length,
+    count: allItems.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => state.preferences.compactView ? 80 : 120,
     overscan: 5,
@@ -135,7 +135,7 @@ const ExpiryManagementPage: React.FC = () => {
 
   const handleSelectAllVisible = () => {
     const newSelected = new Set(state.selectedIds);
-    visibleItems.forEach(item => newSelected.add(item.id));
+    allItems.forEach(item => newSelected.add(item.id));
     actions.setSelectedIds(newSelected);
   };
 
@@ -272,7 +272,7 @@ const ExpiryManagementPage: React.FC = () => {
           }}
         >
           {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-            const item = visibleItems[virtualRow.index];
+            const item = allItems[virtualRow.index];
             return (
               <div
                 key={item.id}
@@ -303,21 +303,6 @@ const ExpiryManagementPage: React.FC = () => {
             );
           })}
         </div>
-
-        {state.processedScans.length > state.displayLimit && (
-          <div className="flex justify-center py-8">
-            <button
-              onClick={() => actions.setDisplayLimit(prev => prev + 50)}
-              className={`border px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-3 group ${
-                theme === 'dark' ? 'bg-white/5 hover:bg-white/10 border-white/10' : 'bg-white hover:bg-slate-50 border-slate-200 shadow-sm'
-              }`}
-            >
-              <ChevronRight className="w-4 h-4 text-amber-500 group-hover:translate-x-1 transition-transform rotate-90" />
-              Cargar más productos
-              <span className="text-slate-500">({state.processedScans.length - state.displayLimit} restantes)</span>
-            </button>
-          </div>
-        )}
 
         {state.processedScans.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 text-center">

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { motion } from 'motion/react';
-import { AlertTriangle, ShieldAlert, Download, Clock, CheckCircle2, CheckSquare, MapPin, Trash2, Calendar } from 'lucide-react';
+import { AlertTriangle, ShieldAlert, Download, Clock, CheckCircle2, CheckSquare, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -18,6 +18,68 @@ interface ExpiryItemCardProps {
   isCompact?: boolean;
 }
 
+const STATUS_CONFIG: Record<string, {
+  icon: React.ElementType;
+  label: (daysLeft: number) => string;
+  colorClass: string;
+  bgClass: string;
+  borderClass: string;
+  shadowClass: string;
+  cardBorder: string;
+  cardBg: string;
+}> = {
+  expired: {
+    icon: AlertTriangle,
+    label: () => 'VENCIDO',
+    colorClass: 'text-rose-500',
+    bgClass: 'bg-rose-500/20',
+    borderClass: 'border-rose-500/30',
+    shadowClass: 'drop-shadow-[0_0_10px_rgba(244,63,94,0.3)]',
+    cardBorder: 'border-rose-500/30',
+    cardBg: 'bg-rose-500/5'
+  },
+  critical: {
+    icon: ShieldAlert,
+    label: (days) => `${days}D`,
+    colorClass: 'text-amber-500',
+    bgClass: 'bg-amber-500/20',
+    borderClass: 'border-amber-500/30',
+    shadowClass: 'drop-shadow-[0_0_10px_rgba(245,158,11,0.3)]',
+    cardBorder: 'border-amber-500/30',
+    cardBg: 'bg-amber-500/5'
+  },
+  withdrawal: {
+    icon: Download,
+    label: () => 'RETIRO',
+    colorClass: 'text-indigo-500',
+    bgClass: 'bg-indigo-500/20',
+    borderClass: 'border-indigo-500/30',
+    shadowClass: 'drop-shadow-[0_0_10px_rgba(99,102,241,0.3)]',
+    cardBorder: 'border-indigo-500/30',
+    cardBg: 'bg-indigo-500/5'
+  },
+  next_expiry: {
+    icon: Clock,
+    label: () => 'PRÓX',
+    colorClass: 'text-blue-500',
+    bgClass: 'bg-blue-500/20',
+    borderClass: 'border-blue-500/30',
+    shadowClass: '',
+    cardBorder: 'border-blue-500/30',
+    cardBg: 'bg-blue-500/5'
+  },
+  safe: {
+    icon: CheckCircle2,
+    label: () => 'OK',
+    colorClass: 'text-emerald-500',
+    bgClass: 'bg-emerald-500/20',
+    borderClass: 'border-emerald-500/30',
+    shadowClass: '',
+    cardBorder: '',
+    cardBg: ''
+  }
+};
+
 export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
   item,
   isSelected,
@@ -30,25 +92,30 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
   theme = 'dark',
   isCompact = false
 }) => {
+  const statusConfig = STATUS_CONFIG[item.status] || STATUS_CONFIG.safe;
+  const StatusIcon = isSelected ? CheckSquare : statusConfig.icon;
+
+  const getCardStyles = () => {
+    let base = isCompact ? 'p-3 md:p-2' : 'p-4';
+    let themeBase = theme === 'dark' ? 'bg-white/5 border-white/5' : 'bg-stone-50 shadow-sm border-stone-200';
+    
+    if (isSelected) {
+      return `${base} border-indigo-500 bg-indigo-500/10`;
+    }
+    if (isVerified) {
+      return `${base} border-emerald-500/50 bg-emerald-500/10 opacity-60`;
+    }
+    
+    return `${base} ${themeBase} ${statusConfig.cardBorder} ${statusConfig.cardBg}`;
+  };
+
   return (
     <motion.div
       layout
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className={`border rounded-2xl flex flex-col md:grid md:grid-cols-[80px_2fr_1fr_1fr_1.5fr_80px] items-start md:items-center gap-4 md:gap-6 group transition-all ${
-        isCompact ? 'p-3 md:p-2' : 'p-4'
-      } ${
-        theme === 'dark' ? 'bg-white/5' : 'bg-stone-50 shadow-sm'
-      } ${
-        isSelected ? 'border-indigo-500 bg-indigo-500/10' :
-        isVerified ? 'border-emerald-500/50 bg-emerald-500/10 opacity-60' :
-        item.status === 'expired' ? 'border-rose-500/30 bg-rose-500/5' : 
-        item.status === 'critical' ? 'border-amber-500/30 bg-amber-500/5' :
-        item.status === 'withdrawal' ? 'border-indigo-500/30 bg-indigo-500/5' :
-        item.status === 'next_expiry' ? 'border-blue-500/30 bg-blue-500/5' :
-        theme === 'dark' ? 'border-white/5' : 'border-stone-200'
-      }`}
+      className={`border rounded-2xl flex flex-col md:grid md:grid-cols-[80px_2fr_1fr_1fr_1.5fr_80px] items-start md:items-center gap-4 md:gap-6 group transition-all ${getCardStyles()}`}
     >
       {/* COLUMN 1: ICON & VERIF */}
       <div className="flex flex-col items-center gap-2 shrink-0">
@@ -58,20 +125,12 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
             onToggleSelect(item.id);
           }}
           className={`w-12 h-12 rounded-2xl flex items-center justify-center cursor-pointer transition-all shadow-lg hover:scale-105 ${
-            isSelected ? 'bg-indigo-500 text-white' :
-            item.status === 'expired' ? 'bg-rose-500/20 text-rose-500 border border-rose-500/30' : 
-            item.status === 'critical' ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30' :
-            item.status === 'withdrawal' ? 'bg-indigo-500/20 text-indigo-500 border border-indigo-500/30' :
-            item.status === 'next_expiry' ? 'bg-blue-500/20 text-blue-500 border border-blue-500/30' :
-            'bg-emerald-500/20 text-emerald-500 border border-emerald-500/30'
+            isSelected 
+              ? 'bg-indigo-500 text-white' 
+              : `${statusConfig.bgClass} ${statusConfig.colorClass} border ${statusConfig.borderClass}`
           }`}
         >
-          {isSelected ? <CheckSquare className="w-6 h-6" /> :
-           item.status === 'expired' ? <AlertTriangle className="w-6 h-6" /> : 
-           item.status === 'critical' ? <ShieldAlert className="w-6 h-6" /> :
-           item.status === 'withdrawal' ? <Download className="w-6 h-6" /> :
-           item.status === 'next_expiry' ? <Clock className="w-6 h-6" /> :
-           <CheckCircle2 className="w-6 h-6" />}
+          <StatusIcon className="w-6 h-6" />
         </div>
         
         <button
@@ -150,18 +209,8 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
 
       {/* COLUMN 4: STATUS */}
       <div className="flex items-center">
-        <div className={`text-lg font-black leading-none ${
-          item.status === 'expired' ? 'text-rose-500 drop-shadow-[0_0_10px_rgba(244,63,94,0.3)]' : 
-          item.status === 'critical' ? 'text-amber-500 drop-shadow-[0_0_10px_rgba(245,158,11,0.3)]' :
-          item.status === 'withdrawal' ? 'text-indigo-500 drop-shadow-[0_0_10px_rgba(99,102,241,0.3)]' :
-          item.status === 'next_expiry' ? 'text-blue-500' :
-          'text-emerald-500'
-        }`}>
-          {item.status === 'expired' ? 'VENCIDO' : 
-           item.status === 'critical' ? `${item.daysLeft}D` :
-           item.status === 'withdrawal' ? 'RETIRO' :
-           item.status === 'next_expiry' ? 'PRÓX' :
-           'OK'}
+        <div className={`text-lg font-black leading-none ${statusConfig.colorClass} ${statusConfig.shadowClass}`}>
+          {statusConfig.label(item.daysLeft)}
         </div>
       </div>
 

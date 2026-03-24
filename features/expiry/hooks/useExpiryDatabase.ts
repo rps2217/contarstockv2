@@ -43,7 +43,6 @@ export const useExpiryDatabase = () => {
   const [selectedEstado, setSelectedEstado] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<{ start: Date | null, end: Date | null }>({ start: null, end: null });
   const [withdrawalDateRange, setWithdrawalDateRange] = useState<{ start: Date | null, end: Date | null }>({ start: null, end: null });
-  const [displayLimit, setDisplayLimit] = useState(50);
   const [isSyncing, setIsSyncing] = useState(false);
   const [pendingOperations, setPendingOperations] = useState(0);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -53,15 +52,16 @@ export const useExpiryDatabase = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery);
-      setDisplayLimit(50);
     }, 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Reset limit on filter change
+  // Clear statuses when a specific estado is selected to ensure visibility
   useEffect(() => {
-    setDisplayLimit(50);
-  }, [selectedStatuses, selectedCategories, selectedCanje, dateRange, withdrawalDateRange]);
+    if (selectedEstado !== null) {
+      setSelectedStatuses([]);
+    }
+  }, [selectedEstado]);
 
   const scans = useLiveQuery(() => 
     db.scans.filter(s => !!s.expiryDate || (!!s.mm && !!s.yyyy)).toArray()
@@ -200,17 +200,8 @@ export const useExpiryDatabase = () => {
     return Array.from(cats).sort();
   }, [baseProcessedData]);
 
-  const processedScans = useMemo(() => {
-    const query = debouncedSearch.toLowerCase();
-    
+  const baseFilteredData = useMemo(() => {
     return baseProcessedData.filter(item => {
-      const matchesSearch = 
-        item.productName.toLowerCase().includes(query) ||
-        item.barcode.includes(query) ||
-        (item.batch && item.batch.toLowerCase().includes(query)) ||
-        (item.providerName && item.providerName.toLowerCase().includes(query));
-      
-      const matchesFilter = selectedStatuses.length === 0 || selectedStatuses.includes(item.status);
       const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(item.category);
       const matchesCanje = selectedCanje === 'all' || 
         (selectedCanje === 'canje' && item.hasCanje) ||
@@ -220,8 +211,24 @@ export const useExpiryDatabase = () => {
         (item.expiryDateObj && isWithinInterval(item.expiryDateObj, { start: dateRange.start, end: dateRange.end }));
       const matchesWithdrawalRange = (!withdrawalDateRange.start || !withdrawalDateRange.end) ||
         (item.withdrawalDate && isWithinInterval(item.withdrawalDate, { start: withdrawalDateRange.start, end: withdrawalDateRange.end }));
+      
+      return matchesCategory && matchesCanje && matchesEstado && matchesDateRange && matchesWithdrawalRange;
+    });
+  }, [baseProcessedData, selectedCategories, selectedCanje, selectedEstado, dateRange, withdrawalDateRange]);
 
-      return matchesSearch && matchesFilter && matchesCategory && matchesCanje && matchesEstado && matchesDateRange && matchesWithdrawalRange;
+  const processedScans = useMemo(() => {
+    const query = debouncedSearch.toLowerCase();
+    
+    return baseFilteredData.filter(item => {
+      const matchesSearch = !query ||
+        item.productName.toLowerCase().includes(query) ||
+        item.barcode.includes(query) ||
+        (item.batch && item.batch.toLowerCase().includes(query)) ||
+        (item.providerName && item.providerName.toLowerCase().includes(query));
+      
+      const matchesFilter = selectedStatuses.length === 0 || selectedStatuses.includes(item.status);
+
+      return matchesSearch && matchesFilter;
     }).sort((a, b) => {
       // Priority 1: Expired items (if not filtered out)
       if (a.status === 'expired' && b.status !== 'expired') return -1;
@@ -243,29 +250,17 @@ export const useExpiryDatabase = () => {
       const percent = Math.max(0, Math.min(100, (item.daysLeft / maxLifeDays) * 100));
       return { ...item, lifePercent: percent };
     });
-  }, [baseProcessedData, debouncedSearch, selectedStatuses, selectedCategories, selectedCanje, dateRange, withdrawalDateRange]);
+  }, [baseFilteredData, debouncedSearch, selectedStatuses, preferences.defaultSort]);
 
   const stats = useMemo(() => {
-    const filteredByFilters = baseProcessedData.filter(item => {
-      const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(item.category);
-      const matchesCanje = selectedCanje === 'all' || 
-        (selectedCanje === 'canje' && item.hasCanje) ||
-        (selectedCanje === 'markdown' && !item.hasCanje);
-      const matchesDateRange = (!dateRange.start || !dateRange.end) ||
-        (item.expiryDateObj && isWithinInterval(item.expiryDateObj, { start: dateRange.start, end: dateRange.end }));
-      const matchesWithdrawalRange = (!withdrawalDateRange.start || !withdrawalDateRange.end) ||
-        (item.withdrawalDate && isWithinInterval(item.withdrawalDate, { start: withdrawalDateRange.start, end: withdrawalDateRange.end }));
-      return matchesCategory && matchesCanje && matchesDateRange && matchesWithdrawalRange;
-    });
-
     return {
-      expired: filteredByFilters.filter(s => s.status === 'expired').length,
-      critical: filteredByFilters.filter(s => s.status === 'critical').length,
-      next_expiry: filteredByFilters.filter(s => s.status === 'next_expiry').length,
-      withdrawal: filteredByFilters.filter(s => s.status === 'withdrawal').length,
-      total: filteredByFilters.length
+      expired: baseFilteredData.filter(s => s.status === 'expired').length,
+      critical: baseFilteredData.filter(s => s.status === 'critical').length,
+      next_expiry: baseFilteredData.filter(s => s.status === 'next_expiry').length,
+      withdrawal: baseFilteredData.filter(s => s.status === 'withdrawal').length,
+      total: baseFilteredData.length
     };
-  }, [baseProcessedData, selectedCategories, selectedCanje, dateRange, withdrawalDateRange]);
+  }, [baseFilteredData]);
 
   const handleSyncExpirations = useCallback(async () => {
     try {
@@ -460,7 +455,6 @@ export const useExpiryDatabase = () => {
       selectedEstado,
       dateRange,
       withdrawalDateRange,
-      displayLimit,
       isSyncing,
       pendingOperations,
       selectedIds,
@@ -478,7 +472,6 @@ export const useExpiryDatabase = () => {
       setSelectedEstado,
       setDateRange,
       setWithdrawalDateRange,
-      setDisplayLimit,
       setSelectedIds,
       setVerifiedIds,
       handleSyncExpirations,
