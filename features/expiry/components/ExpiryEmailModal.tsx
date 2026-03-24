@@ -272,7 +272,7 @@ export const ExpiryEmailModal: React.FC<ExpiryEmailModalProps> = ({
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.95, opacity: 0, y: 20 }}
           onClick={e => e.stopPropagation()}
-          className={`w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] ${
+          className={`w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] ${
             theme === 'dark' ? 'bg-slate-900 border border-white/10' : 'bg-white border border-slate-200'
           }`}
         >
@@ -280,43 +280,43 @@ export const ExpiryEmailModal: React.FC<ExpiryEmailModalProps> = ({
           <div className={`p-6 border-b flex items-center justify-between shrink-0 ${
             theme === 'dark' ? 'border-white/10' : 'border-slate-200'
           }`}>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center">
-                <Mail className="w-5 h-5 text-indigo-500" />
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center">
+                <Mail className="w-6 h-6 text-indigo-500" />
               </div>
               <div>
-                <h2 className={`text-xl font-black uppercase tracking-tighter italic leading-none ${
+                <h2 className={`text-2xl font-black uppercase tracking-tighter italic leading-none ${
                   theme === 'dark' ? 'text-white' : 'text-slate-900'
                 }`}>Redactar Solicitud</h2>
-                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">
+                <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">
                   {selectedItems.length} ítems seleccionados
                 </p>
               </div>
             </div>
             <button 
               onClick={onClose}
-              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
                 theme === 'dark' ? 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900'
               }`}
             >
-              <X className="w-5 h-5" />
+              <X className="w-6 h-6" />
             </button>
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="flex-1 overflow-y-auto p-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
             
             {/* Left Column: Editor */}
-            <div className="space-y-4 flex flex-col">
+            <div className="space-y-6 flex flex-col">
               <div>
-                <label className={`block text-[10px] font-black uppercase tracking-widest mb-2 ${
+                <label className={`block text-xs font-black uppercase tracking-widest mb-3 ${
                   theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
                 }`}>Plantilla</label>
-                <div className="flex gap-2">
+                <div className="flex gap-3">
                   <select
                     value={selectedTemplateId}
                     onChange={(e) => setSelectedTemplateId(e.target.value)}
-                    className={`flex-1 px-4 py-3 rounded-xl text-sm font-bold border outline-none transition-all ${
+                    className={`flex-1 px-5 py-4 rounded-2xl text-sm font-bold border outline-none transition-all ${
                       theme === 'dark' 
                         ? 'bg-black/20 border-white/10 text-white focus:border-indigo-500' 
                         : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500'
@@ -329,17 +329,17 @@ export const ExpiryEmailModal: React.FC<ExpiryEmailModalProps> = ({
                   {!selectedTemplateId.startsWith('default-') && (
                     <button
                       onClick={handleDeleteTemplate}
-                      className="w-12 h-12 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center hover:bg-rose-500/20 transition-colors"
+                      className="w-14 h-14 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center hover:bg-rose-500/20 transition-colors"
                       title="Eliminar plantilla"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-5 h-5" />
                     </button>
                   )}
                 </div>
               </div>
 
               <div>
-                <label className={`block text-[10px] font-black uppercase tracking-widest mb-2 ${
+                <label className={`block text-xs font-black uppercase tracking-widest mb-3 ${
                   theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
                 }`}>Para (Destinatario)</label>
                 <input
@@ -347,7 +347,7 @@ export const ExpiryEmailModal: React.FC<ExpiryEmailModalProps> = ({
                   value={to}
                   onChange={(e) => setTo(e.target.value)}
                   placeholder="ej. pm@empresa.com"
-                  className={`w-full px-4 py-3 rounded-xl text-sm font-medium border outline-none transition-all ${
+                  className={`w-full px-5 py-4 rounded-2xl text-sm font-medium border outline-none transition-all ${
                     theme === 'dark' 
                       ? 'bg-black/20 border-white/10 text-white focus:border-indigo-500' 
                       : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500'
@@ -356,14 +356,14 @@ export const ExpiryEmailModal: React.FC<ExpiryEmailModalProps> = ({
               </div>
 
               <div>
-                <label className={`block text-[10px] font-black uppercase tracking-widest mb-2 ${
+                <label className={`block text-xs font-black uppercase tracking-widest mb-3 ${
                   theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
                 }`}>Asunto</label>
                 <input
                   type="text"
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
-                  className={`w-full px-4 py-3 rounded-xl text-sm font-medium border outline-none transition-all ${
+                  className={`w-full px-5 py-4 rounded-2xl text-sm font-medium border outline-none transition-all ${
                     theme === 'dark' 
                       ? 'bg-black/20 border-white/10 text-white focus:border-indigo-500' 
                       : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500'
@@ -371,17 +371,17 @@ export const ExpiryEmailModal: React.FC<ExpiryEmailModalProps> = ({
                 />
               </div>
 
-              <div className="flex-1 flex flex-col min-h-[200px]">
-                <div className="flex items-center justify-between mb-2">
-                  <label className={`block text-[10px] font-black uppercase tracking-widest ${
+              <div className="flex-1 flex flex-col min-h-[250px]">
+                <div className="flex items-center justify-between mb-3">
+                  <label className={`block text-xs font-black uppercase tracking-widest ${
                     theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
                   }`}>Mensaje</label>
-                  <span className="text-[9px] text-indigo-500 font-bold">Usa [TABLA_PRODUCTOS] para insertar la tabla</span>
+                  <span className="text-[10px] text-indigo-500 font-bold bg-indigo-500/10 px-3 py-1 rounded-full">Usa [TABLA_PRODUCTOS] para insertar la tabla</span>
                 </div>
                 <textarea
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
-                  className={`flex-1 w-full px-4 py-3 rounded-xl text-sm font-medium border outline-none transition-all resize-none ${
+                  className={`flex-1 w-full px-5 py-4 rounded-2xl text-sm font-medium border outline-none transition-all resize-none ${
                     theme === 'dark' 
                       ? 'bg-black/20 border-white/10 text-white focus:border-indigo-500' 
                       : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-500'
@@ -390,49 +390,49 @@ export const ExpiryEmailModal: React.FC<ExpiryEmailModalProps> = ({
               </div>
 
               {/* Template Save Controls */}
-              <div className={`p-4 rounded-xl border ${
+              <div className={`p-5 rounded-2xl border ${
                 theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-200'
               }`}>
                 {!isEditingTemplate ? (
-                  <div className="flex gap-2">
+                  <div className="flex gap-3">
                     {!selectedTemplateId.startsWith('default-') && (
                       <button
                         onClick={handleUpdateTemplate}
-                        className="flex-1 py-2 rounded-lg bg-indigo-500/10 text-indigo-500 font-bold text-xs uppercase tracking-wider hover:bg-indigo-500/20 transition-colors flex items-center justify-center gap-2"
+                        className="flex-1 py-3 rounded-xl bg-indigo-500/10 text-indigo-500 font-bold text-xs uppercase tracking-wider hover:bg-indigo-500/20 transition-colors flex items-center justify-center gap-2"
                       >
-                        <Save className="w-3 h-3" /> Actualizar Actual
+                        <Save className="w-4 h-4" /> Actualizar Actual
                       </button>
                     )}
                     <button
                       onClick={() => setIsEditingTemplate(true)}
-                      className="flex-1 py-2 rounded-lg bg-emerald-500/10 text-emerald-500 font-bold text-xs uppercase tracking-wider hover:bg-emerald-500/20 transition-colors flex items-center justify-center gap-2"
+                      className="flex-1 py-3 rounded-xl bg-emerald-500/10 text-emerald-500 font-bold text-xs uppercase tracking-wider hover:bg-emerald-500/20 transition-colors flex items-center justify-center gap-2"
                     >
-                      <Plus className="w-3 h-3" /> Guardar como Nueva
+                      <Plus className="w-4 h-4" /> Guardar como Nueva
                     </button>
                   </div>
                 ) : (
-                  <div className="flex gap-2 items-center">
+                  <div className="flex gap-3 items-center">
                     <input
                       type="text"
                       value={newTemplateName}
                       onChange={(e) => setNewTemplateName(e.target.value)}
                       placeholder="Nombre de la nueva plantilla..."
-                      className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium border outline-none ${
+                      className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium border outline-none ${
                         theme === 'dark' ? 'bg-black/40 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
                       }`}
                       autoFocus
                     />
                     <button
                       onClick={handleSaveAsNewTemplate}
-                      className="px-4 py-2 rounded-lg bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-emerald-400 transition-colors"
+                      className="px-5 py-3 rounded-xl bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider hover:bg-emerald-400 transition-colors"
                     >
                       Guardar
                     </button>
                     <button
                       onClick={() => setIsEditingTemplate(false)}
-                      className="px-3 py-2 rounded-lg bg-slate-500/20 text-slate-400 hover:text-slate-300 transition-colors"
+                      className="px-4 py-3 rounded-xl bg-slate-500/20 text-slate-400 hover:text-slate-300 transition-colors"
                     >
-                      <X className="w-4 h-4" />
+                      <X className="w-5 h-5" />
                     </button>
                   </div>
                 )}
@@ -441,19 +441,19 @@ export const ExpiryEmailModal: React.FC<ExpiryEmailModalProps> = ({
 
             {/* Right Column: Preview */}
             <div className="flex flex-col h-full">
-              <label className={`block text-[10px] font-black uppercase tracking-widest mb-2 ${
+              <label className={`block text-xs font-black uppercase tracking-widest mb-3 ${
                 theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
               }`}>Vista Previa del Correo</label>
               
-              <div className={`flex-1 rounded-xl border overflow-hidden flex flex-col ${
+              <div className={`flex-1 rounded-3xl border overflow-hidden flex flex-col shadow-inner ${
                 theme === 'dark' ? 'bg-white border-white/10' : 'bg-white border-slate-200'
               }`}>
-                <div className="bg-slate-100 border-b border-slate-200 p-3 text-sm text-slate-600 font-medium shrink-0">
-                  <div><span className="text-slate-400 w-12 inline-block">Para:</span> {to || '(Sin destinatario)'}</div>
-                  <div className="mt-1"><span className="text-slate-400 w-12 inline-block">Asunto:</span> <span className="font-bold text-slate-800">{processText(subject) || '(Sin asunto)'}</span></div>
+                <div className="bg-slate-100 border-b border-slate-200 p-5 text-sm text-slate-600 font-medium shrink-0">
+                  <div className="flex items-center"><span className="text-slate-400 w-16 inline-block">Para:</span> {to || '(Sin destinatario)'}</div>
+                  <div className="mt-2 flex items-start"><span className="text-slate-400 w-16 inline-block shrink-0">Asunto:</span> <span className="font-bold text-slate-800">{processText(subject) || '(Sin asunto)'}</span></div>
                 </div>
                 <div 
-                  className="p-4 overflow-y-auto text-sm text-slate-800"
+                  className="p-6 overflow-y-auto text-sm text-slate-800"
                   dangerouslySetInnerHTML={{ __html: generateFullHtml() }}
                 />
               </div>
@@ -462,21 +462,14 @@ export const ExpiryEmailModal: React.FC<ExpiryEmailModalProps> = ({
           </div>
 
           {/* Footer Actions */}
-          <div className={`p-6 border-t flex gap-3 shrink-0 ${
+          <div className={`p-6 border-t flex justify-end shrink-0 ${
             theme === 'dark' ? 'border-white/10 bg-black/20' : 'border-slate-200 bg-slate-50'
           }`}>
             <button
-              onClick={handleCopyAndOpen}
-              className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 active:scale-95 flex items-center justify-center gap-2"
-            >
-              <Copy className="w-5 h-5" />
-              Copiar y Abrir Correo (App)
-            </button>
-            <button
               onClick={handleOpenGmail}
-              className="flex-1 bg-rose-600 hover:bg-rose-500 text-white font-black py-4 rounded-2xl uppercase tracking-widest transition-all shadow-xl shadow-rose-500/20 active:scale-95 flex items-center justify-center gap-2"
+              className="w-full md:w-auto px-10 bg-rose-600 hover:bg-rose-500 text-white font-black py-4 rounded-2xl uppercase tracking-widest transition-all shadow-xl shadow-rose-500/20 active:scale-95 flex items-center justify-center gap-3"
             >
-              <Mail className="w-5 h-5" />
+              <Mail className="w-6 h-6" />
               Copiar y Abrir en Gmail
             </button>
           </div>
