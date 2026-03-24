@@ -27,15 +27,17 @@ import { ExpiryAddModal } from './components/ExpiryAddModal';
 import { ExpirySearchBar } from './components/ExpirySearchBar';
 import { ExpiryItemCard } from './components/ExpiryItemCard';
 import { ExpiryBulkActions } from './components/ExpiryBulkActions';
+import { ExpiryEmailModal } from './components/ExpiryEmailModal';
 
 // Utils
-import { handlePrintExpirations, handlePrintLabels, handleExportExpirationsCSV, handleSendEmail } from './utils/expiryUtils';
+import { handlePrintExpirations, handlePrintLabels, handleExportExpirationsCSV } from './utils/expiryUtils';
 
 const ExpiryManagementPage: React.FC = () => {
   const { state, actions } = useExpiryDatabase();
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isSettingsDrawerOpen, setIsSettingsDrawerOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
   const activeFiltersCount = 
@@ -105,7 +107,7 @@ const ExpiryManagementPage: React.FC = () => {
   const handleSendEmailBulk = () => {
     const selectedItems = state.allItems.filter(item => state.selectedIds.has(item.id));
     if (selectedItems.length > 0) {
-      handleSendEmail(selectedItems);
+      setIsEmailModalOpen(true);
     } else {
       toast.error('No hay ítems seleccionados para enviar por correo');
     }
@@ -374,6 +376,13 @@ const ExpiryManagementPage: React.FC = () => {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onAdd={actions.handleAddItem}
+        theme={theme}
+      />
+
+      <ExpiryEmailModal
+        isOpen={isEmailModalOpen}
+        onClose={() => setIsEmailModalOpen(false)}
+        selectedItems={state.allItems.filter(item => state.selectedIds.has(item.id))}
         theme={theme}
       />
     </div>
