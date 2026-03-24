@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Settings2, Layout, SortAsc, EyeOff, Check } from 'lucide-react';
+import { X, Settings2, Layout, SortAsc, EyeOff, Check, RefreshCw } from 'lucide-react';
 import { ExpiryPreferences } from '../hooks/useExpiryDatabase';
 
 interface ExpirySettingsDrawerProps {
@@ -175,6 +175,32 @@ export const ExpirySettingsDrawer: React.FC<ExpirySettingsDrawerProps> = ({
                     />
                   </div>
                 </div>
+              </section>
+
+              {/* SECCIÓN: SISTEMA */}
+              <section className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <RefreshCw className="w-4 h-4 text-rose-500" />
+                  <h5 className={`text-[10px] font-black uppercase tracking-widest ${
+                    theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                  }`}>Sistema</h5>
+                </div>
+                <button
+                  onClick={() => window.location.reload()}
+                  className={`w-full p-4 rounded-xl border flex items-center gap-4 transition-all ${
+                    theme === 'dark' ? 'border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/10' : 'border-rose-200 bg-rose-50 hover:bg-rose-100'
+                  }`}
+                >
+                  <div className="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center">
+                    <RefreshCw className="w-5 h-5 text-rose-500" />
+                  </div>
+                  <div className="text-left">
+                    <p className={`text-xs font-black uppercase tracking-tight ${
+                      theme === 'dark' ? 'text-white' : 'text-slate-900'
+                    }`}>Reiniciar Kernel</p>
+                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Recargar nuevas características</p>
+                  </div>
+                </button>
               </section>
             </div>
 
