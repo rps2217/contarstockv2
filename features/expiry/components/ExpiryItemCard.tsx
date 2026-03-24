@@ -13,6 +13,7 @@ interface ExpiryItemCardProps {
   onToggleVerified: (id: string) => void;
   onRemove: (item: any) => void;
   onFilterProvider?: (provider: string) => void;
+  onFilterEstado?: (estado: string) => void;
   theme?: 'dark' | 'light';
   isCompact?: boolean;
 }
@@ -25,6 +26,7 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
   onToggleVerified,
   onRemove,
   onFilterProvider,
+  onFilterEstado,
   theme = 'dark',
   isCompact = false
 }) => {
@@ -125,7 +127,16 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
               </span>
             )}
             {item.estado && (
-              <span className="text-[8px] font-black bg-amber-500/10 px-2 py-0.5 rounded text-amber-600 uppercase tracking-widest border border-amber-500/20">
+              <span 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onFilterEstado) {
+                    onFilterEstado(item.estado);
+                    toast.info(`Filtrando por estado: ${item.estado}`);
+                  }
+                }}
+                className="text-[8px] font-black bg-amber-500/10 px-2 py-0.5 rounded text-amber-600 uppercase tracking-widest border border-amber-500/20 cursor-pointer hover:bg-amber-500/20 transition-colors"
+              >
                 {item.estado}
               </span>
             )}
@@ -227,7 +238,16 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
             </span>
           )}
           {item.estado && (
-            <span className="text-[8px] font-black bg-amber-500/10 px-2 py-0.5 rounded text-amber-600 uppercase tracking-widest border border-amber-500/20">
+            <span 
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onFilterEstado) {
+                  onFilterEstado(item.estado);
+                  toast.info(`Filtrando por estado: ${item.estado}`);
+                }
+              }}
+              className="text-[8px] font-black bg-amber-500/10 px-2 py-0.5 rounded text-amber-600 uppercase tracking-widest border border-amber-500/20 cursor-pointer hover:bg-amber-500/20 transition-colors"
+            >
               {item.estado}
             </span>
           )}

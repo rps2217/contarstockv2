@@ -42,6 +42,7 @@ const ExpiryManagementPage: React.FC = () => {
     state.selectedStatuses.length + 
     state.selectedCategories.length + 
     (state.selectedCanje !== 'all' ? 1 : 0) +
+    (state.selectedEstado ? 1 : 0) +
     (state.dateRange.start || state.dateRange.end ? 1 : 0) +
     (state.withdrawalDateRange.start || state.withdrawalDateRange.end ? 1 : 0);
 
@@ -70,6 +71,7 @@ const ExpiryManagementPage: React.FC = () => {
     actions.setSelectedStatuses([]);
     actions.setSelectedCategories([]);
     actions.setSelectedCanje('all');
+    actions.setSelectedEstado(null);
     actions.setDateRange({ start: null, end: null });
     actions.setWithdrawalDateRange({ start: null, end: null });
     toast.info('Filtros restablecidos');
@@ -293,6 +295,7 @@ const ExpiryManagementPage: React.FC = () => {
                   onToggleVerified={handleToggleVerified}
                   onRemove={confirmRemoveItem}
                   onFilterProvider={(provider) => actions.setSearchQuery(provider)}
+                  onFilterEstado={(estado) => actions.setSelectedEstado(estado)}
                   theme={theme}
                   isCompact={state.preferences.compactView}
                 />

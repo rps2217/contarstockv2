@@ -40,6 +40,7 @@ export const useExpiryDatabase = () => {
   });
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedCanje, setSelectedCanje] = useState<'all' | 'canje' | 'markdown'>('all');
+  const [selectedEstado, setSelectedEstado] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<{ start: Date | null, end: Date | null }>({ start: null, end: null });
   const [withdrawalDateRange, setWithdrawalDateRange] = useState<{ start: Date | null, end: Date | null }>({ start: null, end: null });
   const [displayLimit, setDisplayLimit] = useState(50);
@@ -214,12 +215,13 @@ export const useExpiryDatabase = () => {
       const matchesCanje = selectedCanje === 'all' || 
         (selectedCanje === 'canje' && item.hasCanje) ||
         (selectedCanje === 'markdown' && !item.hasCanje);
+      const matchesEstado = !selectedEstado || item.estado === selectedEstado;
       const matchesDateRange = (!dateRange.start || !dateRange.end) ||
         (item.expiryDateObj && isWithinInterval(item.expiryDateObj, { start: dateRange.start, end: dateRange.end }));
       const matchesWithdrawalRange = (!withdrawalDateRange.start || !withdrawalDateRange.end) ||
         (item.withdrawalDate && isWithinInterval(item.withdrawalDate, { start: withdrawalDateRange.start, end: withdrawalDateRange.end }));
 
-      return matchesSearch && matchesFilter && matchesCategory && matchesCanje && matchesDateRange && matchesWithdrawalRange;
+      return matchesSearch && matchesFilter && matchesCategory && matchesCanje && matchesEstado && matchesDateRange && matchesWithdrawalRange;
     }).sort((a, b) => {
       // Priority 1: Expired items (if not filtered out)
       if (a.status === 'expired' && b.status !== 'expired') return -1;
@@ -455,6 +457,7 @@ export const useExpiryDatabase = () => {
       selectedStatuses,
       selectedCategories,
       selectedCanje,
+      selectedEstado,
       dateRange,
       withdrawalDateRange,
       displayLimit,
@@ -472,6 +475,7 @@ export const useExpiryDatabase = () => {
       setSelectedStatuses,
       setSelectedCategories,
       setSelectedCanje,
+      setSelectedEstado,
       setDateRange,
       setWithdrawalDateRange,
       setDisplayLimit,
