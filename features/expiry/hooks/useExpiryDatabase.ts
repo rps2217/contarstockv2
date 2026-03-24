@@ -136,6 +136,24 @@ export const useExpiryDatabase = () => {
         ? "" 
         : `${hasCanje ? "Canje" : "Merma"} ${format(withdrawalDate, 'MMM yyyy', { locale: es })}`;
 
+      // CALCULAR RISK SCORE (0-100)
+      let riskScore = 0;
+      if (expiry) {
+        // Factor Tiempo (60%): 0 días = 60 pts, 180+ días = 0 pts
+        const timeScore = Math.max(0, 60 - (daysLeft / 3)); 
+        
+        // Factor Comercial (25%): Merma = 25 pts, Canje = 10 pts
+        const commercialScore = hasCanje ? 10 : 25;
+        
+        // Factor Volumen (15%): 1 unidad = 1 pt, 50+ unidades = 15 pts
+        const volumeScore = Math.min(15, (item.quantity || 1) * 0.3);
+        
+        riskScore = Math.round(timeScore + commercialScore + volumeScore);
+        
+        // Penalización por ya vencido
+        if (isPast(expiry)) riskScore = 100;
+      }
+
       return {
         ...item,
         productName,
@@ -149,7 +167,9 @@ export const useExpiryDatabase = () => {
         withdrawalDate,
         location: item.location || 'N/A',
         estado,
-        quantity: item.quantity || 1
+        quantity: item.quantity || 1,
+        riskScore,
+        price: product?.price || 0
       };
     };
 
@@ -255,12 +275,43 @@ export const useExpiryDatabase = () => {
   }, [searchFilteredData, selectedStatuses, selectedCategories, selectedCanje, selectedEstado, dateRange, withdrawalDateRange, preferences.defaultSort]);
 
   const stats = useMemo(() => {
+    const expiredCount = searchFilteredData.filter(s => s.status === 'expired').length;
+    const criticalCount = searchFilteredData.filter(s => s.status === 'critical').length;
+    const nextExpiryCount = searchFilteredData.filter(s => s.status === 'next_expiry').length;
+    const withdrawalCount = searchFilteredData.filter(s => s.status === 'withdrawal').length;
+    
+    // Priority Items (Top 5 by risk score)
+    const priorityItems = [...searchFilteredData]
+      .filter(item => item.status !== 'safe')
+      .sort((a, b) => (b.riskScore || 0) - (a.riskScore || 0))
+      .slice(0, 5);
+
+    // Volume Alerts (Categories with most items)
+    const categoryCounts: Record<string, number> = {};
+    searchFilteredData.forEach(item => {
+      if (item.status !== 'safe') {
+        categoryCounts[item.category] = (categoryCounts[item.category] || 0) + 1;
+      }
+    });
+    const volumeAlerts = Object.entries(categoryCounts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3);
+
+    // Potential Savings
+    const potentialSavings = searchFilteredData.reduce((acc, item) => {
+      return acc + ((item as any).price || 0) * item.quantity;
+    }, 0);
+
     return {
-      expired: searchFilteredData.filter(s => s.status === 'expired').length,
-      critical: searchFilteredData.filter(s => s.status === 'critical').length,
-      next_expiry: searchFilteredData.filter(s => s.status === 'next_expiry').length,
-      withdrawal: searchFilteredData.filter(s => s.status === 'withdrawal').length,
-      total: searchFilteredData.length
+      expired: expiredCount,
+      critical: criticalCount,
+      next_expiry: nextExpiryCount,
+      withdrawal: withdrawalCount,
+      total: searchFilteredData.length,
+      priorityItems,
+      volumeAlerts,
+      potentialSavings
     };
   }, [searchFilteredData]);
 

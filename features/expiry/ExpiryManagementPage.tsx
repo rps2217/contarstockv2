@@ -28,6 +28,7 @@ import { ExpirySearchBar } from './components/ExpirySearchBar';
 import { ExpiryItemCard } from './components/ExpiryItemCard';
 import { ExpiryBulkActions } from './components/ExpiryBulkActions';
 import { ExpiryEmailModal } from './components/ExpiryEmailModal';
+import { ExpiryPriorityPanel } from './components/ExpiryPriorityPanel';
 
 // Utils
 import { handlePrintExpirations, handlePrintLabels, handleExportExpirationsCSV } from './utils/expiryUtils';
@@ -67,6 +68,22 @@ const ExpiryManagementPage: React.FC = () => {
       newVerified.add(id);
     }
     actions.setVerifiedIds(newVerified);
+  };
+
+  const handleSelectItemFromPriority = (id: string) => {
+    actions.setSearchQuery('');
+    handleClearFilters();
+    // Small delay to allow filters to clear
+    setTimeout(() => {
+      const element = document.getElementById(`expiry-item-${id}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        element.classList.add('ring-2', 'ring-amber-500', 'ring-offset-2', 'ring-offset-slate-900');
+        setTimeout(() => {
+          element.classList.remove('ring-2', 'ring-amber-500', 'ring-offset-2', 'ring-offset-slate-900');
+        }, 3000);
+      }
+    }, 100);
   };
 
   const handleClearFilters = () => {
@@ -253,6 +270,16 @@ const ExpiryManagementPage: React.FC = () => {
           }}
           theme={theme}
         />
+
+        {state.preferences.showPriorityAssistant && (
+          <div className="mt-6">
+            <ExpiryPriorityPanel 
+              stats={state.stats} 
+              theme={theme} 
+              onSelectItem={handleSelectItemFromPriority}
+            />
+          </div>
+        )}
         
         <ExpirySearchBar 
           searchQuery={state.searchQuery}

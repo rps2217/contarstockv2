@@ -8,6 +8,7 @@ export interface ExpiryPreferences {
   hideExpiredByDefault: boolean;
   defaultSort: 'expiry' | 'withdrawal';
   compactView: boolean;
+  showPriorityAssistant: boolean;
 }
 
 export interface ExpiryItem {
@@ -31,6 +32,7 @@ export interface ExpiryItem {
   hasCanje: boolean;
   withdrawalDays: number;
   lifePercent?: number;
+  riskScore?: number;
   claveUnica?: string;
   timestamp?: string;
 }
@@ -78,7 +80,8 @@ interface ExpiryState {
 const DEFAULT_PREFERENCES: ExpiryPreferences = {
   hideExpiredByDefault: false,
   defaultSort: 'withdrawal',
-  compactView: false
+  compactView: false,
+  showPriorityAssistant: true
 };
 
 export const useExpiryStore = create<ExpiryState>()(

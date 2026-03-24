@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Settings2, Layout, SortAsc, EyeOff, Check, RefreshCw } from 'lucide-react';
+import { X, Settings2, Layout, SortAsc, EyeOff, Check, RefreshCw, Zap } from 'lucide-react';
 import { ExpiryPreferences } from '../hooks/useExpiryDatabase';
 
 interface ExpirySettingsDrawerProps {
@@ -171,6 +171,39 @@ export const ExpirySettingsDrawer: React.FC<ExpirySettingsDrawerProps> = ({
                   }`}>
                     <motion.div 
                       animate={{ x: preferences.compactView ? 20 : 2 }}
+                      className="absolute top-1 left-0 w-3 h-3 bg-white rounded-full shadow-sm"
+                    />
+                  </div>
+                </div>
+              </section>
+
+              {/* SECCIÓN: ASISTENTE */}
+              <section className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-amber-500" />
+                  <h5 className={`text-[10px] font-black uppercase tracking-widest ${
+                    theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                  }`}>Asistente Inteligente</h5>
+                </div>
+                <div 
+                  onClick={() => onUpdatePreferences({ showPriorityAssistant: !preferences.showPriorityAssistant })}
+                  className={`p-4 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
+                    preferences.showPriorityAssistant
+                      ? 'border-amber-500 bg-amber-500/10'
+                      : theme === 'dark' ? 'border-white/5 bg-white/5 hover:bg-white/10' : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
+                  }`}
+                >
+                  <div>
+                    <p className={`text-xs font-black uppercase tracking-tight ${
+                      theme === 'dark' ? 'text-white' : 'text-slate-900'
+                    }`}>Panel de Prioridad</p>
+                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Mostrar tarjetas de riesgo crítico</p>
+                  </div>
+                  <div className={`w-10 h-5 rounded-full relative transition-all ${
+                    preferences.showPriorityAssistant ? 'bg-amber-500' : 'bg-slate-700'
+                  }`}>
+                    <motion.div 
+                      animate={{ x: preferences.showPriorityAssistant ? 20 : 2 }}
                       className="absolute top-1 left-0 w-3 h-3 bg-white rounded-full shadow-sm"
                     />
                   </div>

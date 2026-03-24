@@ -116,6 +116,7 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
+      id={`expiry-item-${item.id}`}
       className={`border rounded-2xl flex flex-col md:grid md:grid-cols-[80px_2fr_1fr_1fr_1.5fr_80px] items-start md:items-center gap-4 md:gap-6 group transition-all ${getCardStyles()}`}
     >
       {/* COLUMN 1: ICON & VERIF */}
@@ -125,13 +126,18 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
             e.stopPropagation();
             onToggleSelect(item.id);
           }}
-          className={`w-12 h-12 rounded-2xl flex items-center justify-center cursor-pointer transition-all shadow-lg hover:scale-105 ${
+          className={`w-12 h-12 rounded-2xl flex items-center justify-center cursor-pointer transition-all shadow-lg hover:scale-105 relative ${
             isSelected 
               ? 'bg-indigo-500 text-white' 
               : `${statusConfig.bgClass} ${statusConfig.colorClass} border ${statusConfig.borderClass}`
           }`}
         >
           <StatusIcon className="w-6 h-6" />
+          {item.riskScore && item.riskScore > 70 && !isSelected && (
+            <div className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-slate-900 shadow-lg">
+              {item.riskScore}
+            </div>
+          )}
         </div>
         
         <button
