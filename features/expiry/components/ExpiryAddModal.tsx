@@ -32,6 +32,8 @@ export const ExpiryAddModal: React.FC<ExpiryAddModalProps> = ({ isOpen, onClose,
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 5 }, (_, i) => currentYear + i);
 
+  const [foundProduct, setFoundProduct] = useState<boolean>(false);
+
   // Buscar producto al cambiar el código
   useEffect(() => {
     const searchProduct = async () => {
@@ -39,7 +41,13 @@ export const ExpiryAddModal: React.FC<ExpiryAddModalProps> = ({ isOpen, onClose,
         const product = await db.products.get(normalizeSku(barcode));
         if (product) {
           setProductName(product.name);
+          setFoundProduct(true);
+        } else {
+          setFoundProduct(false);
         }
+      } else {
+        setFoundProduct(false);
+        if (barcode.length === 0) setProductName('');
       }
     };
     searchProduct();
@@ -142,7 +150,14 @@ export const ExpiryAddModal: React.FC<ExpiryAddModalProps> = ({ isOpen, onClose,
 
             {/* PRODUCT NAME */}
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Descripción del Producto *</label>
+              <div className="flex items-center justify-between ml-1">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Descripción del Producto *</label>
+                {foundProduct && (
+                  <span className="text-[8px] font-black uppercase tracking-widest text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 animate-in fade-in zoom-in">
+                    Producto Encontrado
+                  </span>
+                )}
+              </div>
               <input 
                 required
                 type="text"

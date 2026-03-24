@@ -1,5 +1,5 @@
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useMemo, useEffect, useCallback, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../../db';
 import { Product, Provider } from '../../../types';
@@ -9,46 +9,35 @@ import { importExpirationsFromCloud, importProvidersFromCloud } from '../../../s
 import { addExpirationToCloud, removeExpirationFromCloud } from '../../../services/expirySync';
 import { normalizeSku } from '../../../services/utils';
 import { useToastStore } from '../../../store/useToastStore';
+import { useExpiryStore, ExpiryItem, ExpiryStatus, ExpiryPreferences } from '../../../store/useExpiryStore';
+import { SyncQueueService } from '../../../services/syncQueueService';
 
-export type ExpiryStatus = 'expired' | 'critical' | 'next_expiry' | 'safe' | 'withdrawal';
-
-export interface ExpiryPreferences {
-  hideExpiredByDefault: boolean;
-  defaultSort: 'expiry' | 'withdrawal';
-  compactView: boolean;
-}
-
-const DEFAULT_PREFERENCES: ExpiryPreferences = {
-  hideExpiredByDefault: false,
-  defaultSort: 'withdrawal',
-  compactView: false
-};
+export type { ExpiryStatus, ExpiryPreferences };
 
 export const useExpiryDatabase = () => {
   const { addToast } = useToastStore.getState();
+  
+  // Procesar cola de sincronización al iniciar
+  useEffect(() => {
+    SyncQueueService.processQueue();
+  }, []);
 
-  const [preferences, setPreferences] = useState<ExpiryPreferences>(() => {
-    const saved = localStorage.getItem('expiry_preferences');
-    return saved ? JSON.parse(saved) : DEFAULT_PREFERENCES;
-  });
+  const {
+    preferences, setPreferences,
+    searchQuery, setSearchQuery,
+    selectedStatuses, setSelectedStatuses,
+    selectedCategories, setSelectedCategories,
+    selectedCanje, setSelectedCanje,
+    selectedEstado, setSelectedEstado,
+    dateRange, setDateRange,
+    withdrawalDateRange, setWithdrawalDateRange,
+    selectedIds, setSelectedIds,
+    verifiedIds, setVerifiedIds
+  } = useExpiryStore();
 
-  const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [selectedStatuses, setSelectedStatuses] = useState<ExpiryStatus[]>(() => {
-    if (preferences.hideExpiredByDefault) {
-      return ['critical', 'next_expiry', 'safe', 'withdrawal'];
-    }
-    return [];
-  });
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [selectedCanje, setSelectedCanje] = useState<'all' | 'canje' | 'markdown'>('all');
-  const [selectedEstado, setSelectedEstado] = useState<string | null>(null);
-  const [dateRange, setDateRange] = useState<{ start: Date | null, end: Date | null }>({ start: null, end: null });
-  const [withdrawalDateRange, setWithdrawalDateRange] = useState<{ start: Date | null, end: Date | null }>({ start: null, end: null });
   const [isSyncing, setIsSyncing] = useState(false);
   const [pendingOperations, setPendingOperations] = useState(0);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [verifiedIds, setVerifiedIds] = useState<Set<string>>(new Set());
 
   // Debounce search query
   useEffect(() => {
@@ -112,7 +101,7 @@ export const useExpiryDatabase = () => {
       return 'safe';
     };
 
-    const processItem = (item: any) => {
+    const processItem = (item: any): ExpiryItem => {
       let expiry: Date | null = null;
       if (item.expiryDate) {
         expiry = parseISO(item.expiryDate);
@@ -159,7 +148,8 @@ export const useExpiryDatabase = () => {
         expiryDateObj: expiry,
         withdrawalDate,
         location: item.location || 'N/A',
-        estado
+        estado,
+        quantity: item.quantity || 1
       };
     };
 
@@ -229,23 +219,31 @@ export const useExpiryDatabase = () => {
     });
   }, [baseFilteredData, debouncedSearch]);
 
-  const processedScans = useMemo(() => {
-    return searchFilteredData.filter(item => {
-      const matchesFilter = selectedStatuses.length === 0 || selectedStatuses.includes(item.status);
-      return matchesFilter;
-    }).sort((a, b) => {
-      // Priority 1: Expired items (if not filtered out)
-      if (a.status === 'expired' && b.status !== 'expired') return -1;
-      if (a.status !== 'expired' && b.status === 'expired') return 1;
+  const processedData = useMemo((): ExpiryItem[] => {
+    const filtered = searchFilteredData.filter(item => {
+      if (selectedStatuses.length > 0 && !selectedStatuses.includes(item.status)) return false;
+      if (selectedCategories.length > 0 && !selectedCategories.includes(item.category)) return false;
+      if (selectedCanje === 'canje' && !item.hasCanje) return false;
+      if (selectedCanje === 'markdown' && item.hasCanje) return false;
+      if (selectedEstado && item.estado !== selectedEstado) return false;
+      
+      if (dateRange.start && dateRange.end && item.expiryDateObj) {
+        if (item.expiryDateObj < dateRange.start || item.expiryDateObj > dateRange.end) return false;
+      }
+      
+      if (withdrawalDateRange.start && withdrawalDateRange.end && item.withdrawalDate) {
+        if (item.withdrawalDate < withdrawalDateRange.start || item.withdrawalDate > withdrawalDateRange.end) return false;
+      }
+      
+      return true;
+    });
 
-      // Priority 2: User preference sort
+    return filtered.sort((a, b) => {
       if (preferences.defaultSort === 'withdrawal') {
         if (!a.withdrawalDate) return 1;
         if (!b.withdrawalDate) return -1;
         return a.withdrawalDate.getTime() - b.withdrawalDate.getTime();
       }
-
-      // Default: Expiry date sort
       if (!a.expiryDateObj) return 1;
       if (!b.expiryDateObj) return -1;
       return a.expiryDateObj.getTime() - b.expiryDateObj.getTime();
@@ -254,7 +252,7 @@ export const useExpiryDatabase = () => {
       const percent = Math.max(0, Math.min(100, (item.daysLeft / maxLifeDays) * 100));
       return { ...item, lifePercent: percent };
     });
-  }, [searchFilteredData, selectedStatuses, preferences.defaultSort]);
+  }, [searchFilteredData, selectedStatuses, selectedCategories, selectedCanje, selectedEstado, dateRange, withdrawalDateRange, preferences.defaultSort]);
 
   const stats = useMemo(() => {
     return {
@@ -421,8 +419,12 @@ export const useExpiryDatabase = () => {
         ...data,
         barcode: sanitizedBarcode
       })
-        .then(async (result) => {
+        .then(async (result: any) => {
           if (result.success) {
+            if (result.queued) {
+              addToast('Producto guardado localmente (pendiente de sincronización)', 'info');
+              return;
+            }
             if (result.message === "Ya existe") {
               addToast('Este producto ya está registrado en la nube.', 'error');
               await db.cloudExpirations.delete(localId);
@@ -454,12 +456,8 @@ export const useExpiryDatabase = () => {
   }, []);
 
   const handleUpdatePreferences = useCallback((newPrefs: Partial<ExpiryPreferences>) => {
-    setPreferences(prev => {
-      const updated = { ...prev, ...newPrefs };
-      localStorage.setItem('expiry_preferences', JSON.stringify(updated));
-      return updated;
-    });
-  }, []);
+    setPreferences(newPrefs);
+  }, [setPreferences]);
 
   return {
     state: {
@@ -475,7 +473,7 @@ export const useExpiryDatabase = () => {
       selectedIds,
       verifiedIds,
       allItems: baseProcessedData,
-      processedScans,
+      processedScans: processedData,
       categories,
       stats,
       preferences
