@@ -135,7 +135,7 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
                     toast.info(`Filtrando por estado: ${item.estado}`);
                   }
                 }}
-                className="text-[8px] font-black bg-amber-500/10 px-2 py-0.5 rounded text-amber-600 uppercase tracking-widest border border-amber-500/20 cursor-pointer hover:bg-amber-500/20 transition-colors"
+                className="text-[10px] font-black bg-amber-500/10 px-3 py-1 rounded text-amber-600 uppercase tracking-widest border border-amber-500/20 cursor-pointer hover:bg-amber-500/20 transition-colors"
               >
                 {item.estado}
               </span>
@@ -246,7 +246,7 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
                   toast.info(`Filtrando por estado: ${item.estado}`);
                 }
               }}
-              className="text-[8px] font-black bg-amber-500/10 px-2 py-0.5 rounded text-amber-600 uppercase tracking-widest border border-amber-500/20 cursor-pointer hover:bg-amber-500/20 transition-colors"
+              className="text-[10px] font-black bg-amber-500/10 px-3 py-1 rounded text-amber-600 uppercase tracking-widest border border-amber-500/20 cursor-pointer hover:bg-amber-500/20 transition-colors"
             >
               {item.estado}
             </span>
