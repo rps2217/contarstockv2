@@ -21,7 +21,7 @@ export const ExpiryStats: React.FC<ExpiryStatsProps> = ({ stats, selectedStatuse
     { id: 'critical', label: 'Críticos', count: stats.critical, icon: ShieldAlert, color: 'amber' },
     { id: 'withdrawal', label: 'Retiros', count: stats.withdrawal, icon: Download, color: 'indigo' },
     { id: 'next_expiry', label: 'Próx', count: stats.next_expiry, icon: Clock, color: 'blue' },
-    { id: 'vigente', label: 'Vigentes', count: stats.total - stats.expired - stats.critical - stats.next_expiry - stats.withdrawal, icon: CheckCircle2, color: 'emerald' },
+    { id: 'safe', label: 'Vigentes', count: stats.total - stats.expired - stats.critical - stats.next_expiry - stats.withdrawal, icon: CheckCircle2, color: 'emerald' },
   ];
 
   return (

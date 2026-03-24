@@ -50,7 +50,9 @@ function addExpiration(data) {
     if (lastRow >= 2) {
       var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
       var normalizedHeaders = headers.map(normalizeHeader);
-      var claveColIdx = normalizedHeaders.indexOf("CLAVEUNICA");
+      var claveColIdx = normalizedHeaders.indexOf("CLAVE_UNICA");
+      if (claveColIdx === -1) claveColIdx = normalizedHeaders.indexOf("CLAVEUNICA");
+      if (claveColIdx === -1) claveColIdx = normalizedHeaders.indexOf("CLAVE");
       if (claveColIdx !== -1) {
         var existingClaves = sheet.getRange(2, claveColIdx + 1, lastRow - 1, 1).getValues().flat().map(String);
         if (existingClaves.indexOf(claveUnica) !== -1) {
@@ -114,6 +116,8 @@ function removeExpiration(data) {
     var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
     var normalizedHeaders = headers.map(normalizeHeader);
     var claveColIdx = normalizedHeaders.indexOf("CLAVE_UNICA");
+    if (claveColIdx === -1) claveColIdx = normalizedHeaders.indexOf("CLAVEUNICA");
+    if (claveColIdx === -1) claveColIdx = normalizedHeaders.indexOf("CLAVE");
     if (claveColIdx === -1) {
       // Si no hay columna CLAVE_UNICA, intentamos buscar en la columna 2 (B) por defecto
       claveColIdx = 1;

@@ -216,19 +216,21 @@ export const useExpiryDatabase = () => {
     });
   }, [baseProcessedData, selectedCategories, selectedCanje, selectedEstado, dateRange, withdrawalDateRange]);
 
-  const processedScans = useMemo(() => {
+  const searchFilteredData = useMemo(() => {
     const query = debouncedSearch.toLowerCase();
-    
     return baseFilteredData.filter(item => {
-      const matchesSearch = !query ||
+      return !query ||
         item.productName.toLowerCase().includes(query) ||
         item.barcode.includes(query) ||
         (item.batch && item.batch.toLowerCase().includes(query)) ||
         (item.providerName && item.providerName.toLowerCase().includes(query));
-      
-      const matchesFilter = selectedStatuses.length === 0 || selectedStatuses.includes(item.status);
+    });
+  }, [baseFilteredData, debouncedSearch]);
 
-      return matchesSearch && matchesFilter;
+  const processedScans = useMemo(() => {
+    return searchFilteredData.filter(item => {
+      const matchesFilter = selectedStatuses.length === 0 || selectedStatuses.includes(item.status);
+      return matchesFilter;
     }).sort((a, b) => {
       // Priority 1: Expired items (if not filtered out)
       if (a.status === 'expired' && b.status !== 'expired') return -1;
@@ -250,17 +252,17 @@ export const useExpiryDatabase = () => {
       const percent = Math.max(0, Math.min(100, (item.daysLeft / maxLifeDays) * 100));
       return { ...item, lifePercent: percent };
     });
-  }, [baseFilteredData, debouncedSearch, selectedStatuses, preferences.defaultSort]);
+  }, [searchFilteredData, selectedStatuses, preferences.defaultSort]);
 
   const stats = useMemo(() => {
     return {
-      expired: baseFilteredData.filter(s => s.status === 'expired').length,
-      critical: baseFilteredData.filter(s => s.status === 'critical').length,
-      next_expiry: baseFilteredData.filter(s => s.status === 'next_expiry').length,
-      withdrawal: baseFilteredData.filter(s => s.status === 'withdrawal').length,
-      total: baseFilteredData.length
+      expired: searchFilteredData.filter(s => s.status === 'expired').length,
+      critical: searchFilteredData.filter(s => s.status === 'critical').length,
+      next_expiry: searchFilteredData.filter(s => s.status === 'next_expiry').length,
+      withdrawal: searchFilteredData.filter(s => s.status === 'withdrawal').length,
+      total: searchFilteredData.length
     };
-  }, [baseFilteredData]);
+  }, [searchFilteredData]);
 
   const handleSyncExpirations = useCallback(async () => {
     try {
