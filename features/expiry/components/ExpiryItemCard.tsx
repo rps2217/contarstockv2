@@ -124,6 +124,11 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
                 {item.location}
               </span>
             )}
+            {item.estado && (
+              <span className="text-[8px] font-black bg-amber-500/10 px-2 py-0.5 rounded text-amber-600 uppercase tracking-widest border border-amber-500/20">
+                {item.estado}
+              </span>
+            )}
           </div>
         </div>
 
@@ -219,6 +224,11 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
           {item.location && item.location !== 'N/A' && (
             <span className="text-[8px] font-black bg-indigo-500/20 px-2 py-0.5 rounded text-indigo-400 uppercase tracking-widest border border-indigo-500/20">
               {item.location}
+            </span>
+          )}
+          {item.estado && (
+            <span className="text-[8px] font-black bg-amber-500/10 px-2 py-0.5 rounded text-amber-600 uppercase tracking-widest border border-amber-500/20">
+              {item.estado}
             </span>
           )}
         </div>

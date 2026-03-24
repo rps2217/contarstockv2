@@ -14,6 +14,7 @@ interface ExpiryAddModalProps {
     mm: number;
     yyyy: number;
     quantity: number;
+    fechaCC?: string;
   }) => Promise<void>;
   theme: 'dark' | 'light';
 }
@@ -23,6 +24,7 @@ export const ExpiryAddModal: React.FC<ExpiryAddModalProps> = ({ isOpen, onClose,
   const [productName, setProductName] = useState('');
   const [mm, setMm] = useState<number | null>(null);
   const [yyyy, setYyyy] = useState<number | null>(null);
+  const [fechaCC, setFechaCC] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
@@ -56,7 +58,8 @@ export const ExpiryAddModal: React.FC<ExpiryAddModalProps> = ({ isOpen, onClose,
         productName,
         mm,
         yyyy,
-        quantity: 1 // Enviamos 1 por defecto internamente
+        quantity: 1, // Enviamos 1 por defecto internamente
+        fechaCC: fechaCC || undefined
       });
       onClose();
       // Reset form
@@ -64,6 +67,7 @@ export const ExpiryAddModal: React.FC<ExpiryAddModalProps> = ({ isOpen, onClose,
       setProductName('');
       setMm(null);
       setYyyy(null);
+      setFechaCC('');
     } catch (error) {
       // Error handled in hook
     } finally {
@@ -202,6 +206,21 @@ export const ExpiryAddModal: React.FC<ExpiryAddModalProps> = ({ isOpen, onClose,
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* FECHA CC */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Fecha Carta Compromiso (CC) (Opcional)</label>
+              <input 
+                type="date"
+                value={fechaCC}
+                onChange={(e) => setFechaCC(e.target.value)}
+                className={`w-full px-4 py-3 rounded-2xl text-sm font-bold border transition-all outline-none ${
+                  theme === 'dark' 
+                    ? 'bg-white/5 border-white/10 text-white focus:border-amber-500/50 focus:bg-white/10' 
+                    : 'bg-slate-100 border-slate-200 text-slate-900 focus:border-amber-500/50 focus:bg-white'
+                }`}
+              />
             </div>
 
             {/* SUBMIT */}

@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../../db';
 import { Product, Provider } from '../../../types';
 import { format, differenceInDays, isPast, isBefore, addDays, parseISO, startOfMonth, addMonths, endOfMonth, isWithinInterval } from 'date-fns';
+import { es } from 'date-fns/locale/es';
 import { importExpirationsFromCloud, importProvidersFromCloud } from '../../../services/syncManager';
 import { addExpirationToCloud, removeExpirationFromCloud } from '../../../services/expirySync';
 import { normalizeSku } from '../../../services/utils';
@@ -127,7 +128,9 @@ export const useExpiryDatabase = () => {
       // NUEVO ENFOQUE: 0 días en H -> SIN CANJE, > 0 días -> CON CANJE
       const hasCanje = provider ? (provider.withdrawalDays ?? 0) > 0 : false;
       
-      if (expiry) {
+      if (item.fechaCC) {
+        withdrawalDate = parseISO(item.fechaCC);
+      } else if (expiry) {
         // Si el valor es 0, usamos 30 días de anticipación.
         // Si no hay proveedor o no hay días definidos, usamos 30 por defecto.
         const rawDays = provider?.withdrawalDays ?? 30;
@@ -137,6 +140,9 @@ export const useExpiryDatabase = () => {
 
       const status = getStatus(expiry, withdrawalDate);
       const daysLeft = expiry ? differenceInDays(expiry, now) : 0;
+      const estado = !withdrawalDate 
+        ? "" 
+        : `${hasCanje ? "Canje" : "Merma"} ${format(withdrawalDate, 'MMM yyyy', { locale: es })}`;
 
       return {
         ...item,
@@ -149,7 +155,8 @@ export const useExpiryDatabase = () => {
         daysLeft,
         expiryDateObj: expiry,
         withdrawalDate,
-        location: item.location || 'N/A'
+        location: item.location || 'N/A',
+        estado
       };
     };
 
@@ -352,6 +359,7 @@ export const useExpiryDatabase = () => {
     mm: number;
     yyyy: number;
     quantity: number;
+    fechaCC?: string;
   }) => {
     try {
       // Generar clave única localmente para validación previa
@@ -380,7 +388,8 @@ export const useExpiryDatabase = () => {
           quantity: data.quantity,
           location: 'MANUAL',
           timestamp: Date.now(),
-          claveUnica: claveUnica
+          claveUnica: claveUnica,
+          fechaCC: data.fechaCC
         });
         toast.success('Producto registrado exitosamente');
       } catch (dbError: any) {

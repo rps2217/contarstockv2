@@ -11,6 +11,7 @@ export const addExpirationToCloud = async (item: {
   mm: number;
   yyyy: number;
   quantity: number;
+  fechaCC?: string;
 }) => {
   try {
     const result = await cloudApi.post('add_expiration', item);
