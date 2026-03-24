@@ -12,7 +12,7 @@ import {
   Plus
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { toast } from 'sonner';
+import { useToastStore } from '../../store/useToastStore';
 import { motion } from 'motion/react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 
@@ -33,6 +33,7 @@ import { ExpiryEmailModal } from './components/ExpiryEmailModal';
 import { handlePrintExpirations, handlePrintLabels, handleExportExpirationsCSV } from './utils/expiryUtils';
 
 const ExpiryManagementPage: React.FC = () => {
+  const { addToast } = useToastStore.getState();
   const { state, actions } = useExpiryDatabase();
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isSettingsDrawerOpen, setIsSettingsDrawerOpen] = useState(false);
@@ -76,7 +77,7 @@ const ExpiryManagementPage: React.FC = () => {
     actions.setSelectedEstado(null);
     actions.setDateRange({ start: null, end: null });
     actions.setWithdrawalDateRange({ start: null, end: null });
-    toast.info('Filtros restablecidos');
+    addToast('Filtros restablecidos', 'info');
   };
 
   const confirmBulkRemove = () => {
@@ -91,7 +92,7 @@ const ExpiryManagementPage: React.FC = () => {
     if (selectedItems.length > 0) {
       handlePrintExpirations(selectedItems);
     } else {
-      toast.error('No hay ítems seleccionados para imprimir');
+      addToast('No hay ítems seleccionados para imprimir', 'error');
     }
   };
 
@@ -100,7 +101,7 @@ const ExpiryManagementPage: React.FC = () => {
     if (selectedItems.length > 0) {
       handlePrintLabels(selectedItems);
     } else {
-      toast.error('No hay ítems seleccionados para imprimir etiquetas');
+      addToast('No hay ítems seleccionados para imprimir etiquetas', 'error');
     }
   };
 
@@ -109,7 +110,7 @@ const ExpiryManagementPage: React.FC = () => {
     if (selectedItems.length > 0) {
       setIsEmailModalOpen(true);
     } else {
-      toast.error('No hay ítems seleccionados para enviar por correo');
+      addToast('No hay ítems seleccionados para enviar por correo', 'error');
     }
   };
 
@@ -122,7 +123,7 @@ const ExpiryManagementPage: React.FC = () => {
 
   const toggleTheme = () => {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
-    toast.info(`Modo ${theme === 'dark' ? 'Claro' : 'Oscuro'} activado`);
+    addToast(`Modo ${theme === 'dark' ? 'Claro' : 'Oscuro'} activado`, 'info');
   };
 
   const parentRef = useRef<HTMLDivElement>(null);

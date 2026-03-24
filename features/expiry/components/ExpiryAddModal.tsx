@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Package, Calendar, Hash, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { toast } from 'sonner';
+import { useToastStore } from '../../../store/useToastStore';
 import { db } from '../../../db';
 import { normalizeSku } from '../../../services/utils';
 
@@ -20,6 +20,7 @@ interface ExpiryAddModalProps {
 }
 
 export const ExpiryAddModal: React.FC<ExpiryAddModalProps> = ({ isOpen, onClose, onAdd, theme }) => {
+  const { addToast } = useToastStore.getState();
   const [barcode, setBarcode] = useState('');
   const [productName, setProductName] = useState('');
   const [mm, setMm] = useState<number | null>(null);
@@ -47,7 +48,7 @@ export const ExpiryAddModal: React.FC<ExpiryAddModalProps> = ({ isOpen, onClose,
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!barcode || !productName || mm === null || yyyy === null) {
-      toast.error('Por favor complete todos los campos obligatorios (Código, Nombre, Mes y Año)');
+      addToast('Por favor complete todos los campos obligatorios (Código, Nombre, Mes y Año)', 'error');
       return;
     }
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Mail, Copy, ExternalLink, Save, Trash2, Edit2, Plus } from 'lucide-react';
 import { format } from 'date-fns';
-import { toast } from 'sonner';
+import { useToastStore } from '../../../store/useToastStore';
 
 interface EmailTemplate {
   id: string;
@@ -49,6 +49,7 @@ export const ExpiryEmailModal: React.FC<ExpiryEmailModalProps> = ({
   selectedItems,
   theme = 'dark'
 }) => {
+  const { addToast } = useToastStore.getState();
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('default-1');
   
@@ -96,7 +97,7 @@ export const ExpiryEmailModal: React.FC<ExpiryEmailModalProps> = ({
 
   const handleSaveAsNewTemplate = () => {
     if (!newTemplateName.trim()) {
-      toast.error('Ingresa un nombre para la plantilla');
+      addToast('Ingresa un nombre para la plantilla', 'error');
       return;
     }
     const newTemplate: EmailTemplate = {
@@ -110,26 +111,26 @@ export const ExpiryEmailModal: React.FC<ExpiryEmailModalProps> = ({
     setSelectedTemplateId(newTemplate.id);
     setIsEditingTemplate(false);
     setNewTemplateName('');
-    toast.success('Plantilla guardada exitosamente');
+    addToast('Plantilla guardada exitosamente', 'success');
   };
 
   const handleUpdateTemplate = () => {
     const isDefault = selectedTemplateId.startsWith('default-');
     if (isDefault) {
-      toast.error('No puedes sobrescribir una plantilla por defecto. Guárdala como nueva.');
+      addToast('No puedes sobrescribir una plantilla por defecto. Guárdala como nueva.', 'error');
       return;
     }
     const updated = templates.map(t => 
       t.id === selectedTemplateId ? { ...t, to, subject, body } : t
     );
     saveTemplates(updated);
-    toast.success('Plantilla actualizada');
+    addToast('Plantilla actualizada', 'success');
   };
 
   const handleDeleteTemplate = () => {
     const isDefault = selectedTemplateId.startsWith('default-');
     if (isDefault) {
-      toast.error('No puedes eliminar una plantilla por defecto');
+      addToast('No puedes eliminar una plantilla por defecto', 'error');
       return;
     }
     const confirm = window.confirm('¿Eliminar esta plantilla?');
@@ -137,7 +138,7 @@ export const ExpiryEmailModal: React.FC<ExpiryEmailModalProps> = ({
       const updated = templates.filter(t => t.id !== selectedTemplateId);
       saveTemplates(updated);
       setSelectedTemplateId(updated[0]?.id || '');
-      toast.success('Plantilla eliminada');
+      addToast('Plantilla eliminada', 'success');
     }
   };
 
@@ -212,7 +213,7 @@ export const ExpiryEmailModal: React.FC<ExpiryEmailModalProps> = ({
       });
       
       await navigator.clipboard.write([clipboardItem]);
-      toast.success('¡Contenido copiado al portapapeles!');
+      addToast('¡Contenido copiado al portapapeles!', 'success');
       
       // Open default email client
       const mailtoLink = `mailto:${to}?subject=${encodeURIComponent(finalSubject)}&body=${encodeURIComponent('Por favor, pega (Ctrl+V) el contenido aquí.')}`;
@@ -221,7 +222,7 @@ export const ExpiryEmailModal: React.FC<ExpiryEmailModalProps> = ({
       setTimeout(onClose, 1000);
     } catch (err) {
       console.error('Error copying to clipboard', err);
-      toast.error('Error al copiar. Tu navegador podría no soportar esta función.');
+      addToast('Error al copiar. Tu navegador podría no soportar esta función.', 'error');
       
       // Fallback: just open mailto
       const mailtoLink = `mailto:${to}?subject=${encodeURIComponent(finalSubject)}`;
@@ -243,7 +244,7 @@ export const ExpiryEmailModal: React.FC<ExpiryEmailModalProps> = ({
       });
       
       await navigator.clipboard.write([clipboardItem]);
-      toast.success('¡Contenido copiado al portapapeles!');
+      addToast('¡Contenido copiado al portapapeles!', 'success');
       
       // Open Gmail in new tab
       const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent(finalSubject)}&body=${encodeURIComponent('Por favor, pega (Ctrl+V) el contenido aquí.')}`;
@@ -252,7 +253,7 @@ export const ExpiryEmailModal: React.FC<ExpiryEmailModalProps> = ({
       setTimeout(onClose, 1000);
     } catch (err) {
       console.error('Error copying to clipboard', err);
-      toast.error('Error al copiar. Tu navegador podría no soportar esta función.');
+      addToast('Error al copiar. Tu navegador podría no soportar esta función.', 'error');
     }
   };
 

@@ -3,7 +3,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { AlertTriangle, ShieldAlert, Download, Clock, CheckCircle2, CheckSquare, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { toast } from 'sonner';
+import { useToastStore } from '../../../store/useToastStore';
 
 interface ExpiryItemCardProps {
   item: any;
@@ -92,6 +92,7 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
   theme = 'dark',
   isCompact = false
 }) => {
+  const { addToast } = useToastStore.getState();
   const statusConfig = STATUS_CONFIG[item.status] || STATUS_CONFIG.safe;
   const StatusIcon = isSelected ? CheckSquare : statusConfig.icon;
 
@@ -162,7 +163,7 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
             onClick={(e) => {
               e.stopPropagation();
               navigator.clipboard.writeText(item.barcode);
-              toast.success(`SKU ${item.barcode} copiado al portapapeles`);
+              addToast(`SKU ${item.barcode} copiado al portapapeles`, 'success');
             }}
             className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-widest border cursor-pointer transition-colors ${
             theme === 'dark' ? 'bg-slate-800 text-slate-200 border-white/10 hover:bg-slate-700' : 'bg-stone-100 text-stone-700 border-stone-200 hover:bg-stone-200'
@@ -176,7 +177,7 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
               e.stopPropagation();
               if (onFilterProvider) {
                 onFilterProvider(item.providerName);
-                toast.info(`Filtrando por proveedor: ${item.providerName}`);
+                addToast(`Filtrando por proveedor: ${item.providerName}`, 'info');
               }
             }}
             className={`text-[9px] font-black uppercase tracking-widest truncate cursor-pointer transition-colors ${
@@ -197,7 +198,7 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
               e.stopPropagation();
               if (onFilterEstado) {
                 onFilterEstado(item.estado);
-                toast.info(`Filtrando por estado: ${item.estado}`);
+                addToast(`Filtrando por estado: ${item.estado}`, 'info');
               }
             }}
             className="text-[10px] font-black bg-amber-500/10 px-3 py-1 rounded text-amber-600 uppercase tracking-widest border border-amber-500/20 cursor-pointer hover:bg-amber-500/20 transition-colors"

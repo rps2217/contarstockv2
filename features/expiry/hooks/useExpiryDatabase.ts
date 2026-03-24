@@ -8,7 +8,7 @@ import { es } from 'date-fns/locale/es';
 import { importExpirationsFromCloud, importProvidersFromCloud } from '../../../services/syncManager';
 import { addExpirationToCloud, removeExpirationFromCloud } from '../../../services/expirySync';
 import { normalizeSku } from '../../../services/utils';
-import { toast } from 'sonner';
+import { useToastStore } from '../../../store/useToastStore';
 
 export type ExpiryStatus = 'expired' | 'critical' | 'next_expiry' | 'safe' | 'withdrawal';
 
@@ -25,6 +25,8 @@ const DEFAULT_PREFERENCES: ExpiryPreferences = {
 };
 
 export const useExpiryDatabase = () => {
+  const { addToast } = useToastStore.getState();
+
   const [preferences, setPreferences] = useState<ExpiryPreferences>(() => {
     const saved = localStorage.getItem('expiry_preferences');
     return saved ? JSON.parse(saved) : DEFAULT_PREFERENCES;
@@ -271,9 +273,9 @@ export const useExpiryDatabase = () => {
         importExpirationsFromCloud(),
         importProvidersFromCloud()
       ]);
-      toast.success(`Sincronización completa: ${expCount} vencimientos y ${provCount} proveedores.`);
+      addToast(`Sincronización completa: ${expCount} vencimientos y ${provCount} proveedores.`, 'success');
     } catch (error: any) {
-      toast.error(`Error al sincronizar: ${error.message}`);
+      addToast(`Error al sincronizar: ${error.message}`, 'error');
     } finally {
       setIsSyncing(false);
     }
@@ -290,7 +292,7 @@ export const useExpiryDatabase = () => {
       } else if (item.type === 'Nube') {
         await db.cloudExpirations.delete(item.id);
       }
-      toast.success('Ítem retirado correctamente');
+      addToast('Ítem retirado correctamente', 'success');
 
       // 2. Si es un ítem de la nube, borrarlo allá en segundo plano
       if (item.type === 'Nube' && item.claveUnica) {
@@ -298,7 +300,7 @@ export const useExpiryDatabase = () => {
         removeExpirationFromCloud(item.claveUnica)
           .catch(e => {
             console.error('Error en borrado en segundo plano:', e);
-            toast.error(`Error de sincronización al borrar: ${item.productName}`);
+            addToast(`Error de sincronización al borrar: ${item.productName}`, 'error');
             // Opcional: Podríamos reinsertar el ítem aquí si falla
           })
           .finally(() => {
@@ -306,7 +308,7 @@ export const useExpiryDatabase = () => {
           });
       }
     } catch (error: any) {
-      toast.error(`Error al retirar el ítem: ${error.message}`);
+      addToast(`Error al retirar el ítem: ${error.message}`, 'error');
     }
   }, []);
 
@@ -326,7 +328,7 @@ export const useExpiryDatabase = () => {
         }
       }
       setSelectedIds(new Set());
-      toast.success(`${selectedItems.length} ítems retirados correctamente`);
+      addToast(`${selectedItems.length} ítems retirados correctamente`, 'success');
 
       // 2. Borrado en nube en segundo plano
       const cloudItems = selectedItems.filter(i => i.type === 'Nube' && i.claveUnica);
@@ -343,12 +345,12 @@ export const useExpiryDatabase = () => {
         ).then(results => {
           const failed = results.filter(r => r.status === 'rejected');
           if (failed.length > 0) {
-            toast.error(`Hubo errores al sincronizar ${failed.length} retiros en la nube.`);
+            addToast(`Hubo errores al sincronizar ${failed.length} retiros en la nube.`, 'error');
           }
         });
       }
     } catch (error) {
-      toast.error('Error al retirar los ítems localmente');
+      addToast('Error al retirar los ítems localmente', 'error');
     }
   }, [baseProcessedData]);
 
@@ -361,25 +363,33 @@ export const useExpiryDatabase = () => {
     fechaCC?: string;
   }) => {
     try {
+      // 0. Sanitizar y validar datos básicos
+      const sanitizedBarcode = normalizeSku(data.barcode);
+      
+      if (!sanitizedBarcode) {
+        addToast('El código de barras es obligatorio', 'error');
+        return;
+      }
+
       // Generar clave única localmente para validación previa
       const mmPadded = String(data.mm).padStart(2, '0');
       const lastDay = new Date(data.yyyy, data.mm, 0).getDate();
       const ddPadded = String(lastDay).padStart(2, '0');
-      const claveUnica = `${data.barcode}${data.yyyy}${mmPadded}${ddPadded}`;
+      const claveUnica = `${sanitizedBarcode}${data.yyyy}${mmPadded}${ddPadded}`;
 
-      // 0. Validar duplicado localmente antes de ir a la nube
+      // 1. Validar duplicado localmente antes de ir a la nube
       const existingLocal = await db.cloudExpirations.where('claveUnica').equals(claveUnica).first();
       if (existingLocal) {
-        toast.error('Este producto ya está registrado para el mes y año seleccionados.');
+        addToast('Este producto ya está registrado para el mes y año seleccionados.', 'error');
         return;
       }
 
-      // 1. Guardar localmente de inmediato (Optimistic UI)
+      // 2. Guardar localmente de inmediato (Optimistic UI)
       const localId = crypto.randomUUID();
       try {
         await db.cloudExpirations.add({
           id: localId,
-          barcode: data.barcode,
+          barcode: sanitizedBarcode,
           productName: data.productName,
           mm: data.mm,
           yyyy: data.yyyy,
@@ -390,7 +400,7 @@ export const useExpiryDatabase = () => {
           claveUnica: claveUnica,
           fechaCC: data.fechaCC
         });
-        toast.success('Producto registrado exitosamente');
+        addToast('Producto registrado exitosamente', 'success');
       } catch (dbError: any) {
         const isConstraintError = 
           dbError.name === 'ConstraintError' || 
@@ -399,19 +409,22 @@ export const useExpiryDatabase = () => {
           dbError.message?.includes('uniqueness requirements');
           
         if (isConstraintError) {
-           toast.error('Este producto ya está registrado para el mes y año seleccionados.');
+           addToast('Este producto ya está registrado para el mes y año seleccionados.', 'error');
            return;
         }
         throw dbError;
       }
 
-      // 2. Guardar en la nube en segundo plano
+      // 3. Guardar en la nube en segundo plano
       setPendingOperations(p => p + 1);
-      addExpirationToCloud(data)
+      addExpirationToCloud({
+        ...data,
+        barcode: sanitizedBarcode
+      })
         .then(async (result) => {
           if (result.success) {
             if (result.message === "Ya existe") {
-              toast.error('Este producto ya está registrado en la nube.');
+              addToast('Este producto ya está registrado en la nube.', 'error');
               await db.cloudExpirations.delete(localId);
             }
             // Actualizar el ID/clave si la nube devolvió algo diferente
@@ -423,10 +436,10 @@ export const useExpiryDatabase = () => {
         .catch(async (error) => {
           console.error('Error al guardar en la nube:', error);
           if (error.message.includes('Ya existe')) {
-            toast.error('Este producto ya está registrado en la nube.');
+            addToast('Este producto ya está registrado en la nube.', 'error');
             await db.cloudExpirations.delete(localId);
           } else {
-            toast.error(`Error de sincronización al guardar: ${data.productName}`);
+            addToast(`Error de sincronización al guardar: ${data.productName}`, 'error');
           }
           // Opcional: Revertir el cambio local si falla la nube
           // await db.cloudExpirations.delete(localId);
@@ -436,7 +449,7 @@ export const useExpiryDatabase = () => {
         });
 
     } catch (error: any) {
-      toast.error(`Error al agregar localmente: ${error.message}`);
+      addToast(`Error al agregar localmente: ${error.message}`, 'error');
     }
   }, []);
 
