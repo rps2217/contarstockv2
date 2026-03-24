@@ -85,7 +85,7 @@ const ExpiryManagementPage: React.FC = () => {
   };
 
   const handlePrintSelected = () => {
-    const selectedItems = state.processedScans.filter(item => state.selectedIds.has(item.id));
+    const selectedItems = state.allItems.filter(item => state.selectedIds.has(item.id));
     if (selectedItems.length > 0) {
       handlePrintExpirations(selectedItems);
     } else {
@@ -94,7 +94,7 @@ const ExpiryManagementPage: React.FC = () => {
   };
 
   const handlePrintLabelsBulk = () => {
-    const selectedItems = state.processedScans.filter(item => state.selectedIds.has(item.id));
+    const selectedItems = state.allItems.filter(item => state.selectedIds.has(item.id));
     if (selectedItems.length > 0) {
       handlePrintLabels(selectedItems);
     } else {
@@ -103,7 +103,7 @@ const ExpiryManagementPage: React.FC = () => {
   };
 
   const handleSendEmailBulk = () => {
-    const selectedItems = state.processedScans.filter(item => state.selectedIds.has(item.id));
+    const selectedItems = state.allItems.filter(item => state.selectedIds.has(item.id));
     if (selectedItems.length > 0) {
       handleSendEmail(selectedItems);
     } else {

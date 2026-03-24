@@ -312,7 +312,7 @@ export const useExpiryDatabase = () => {
 
   const handleBulkRemove = useCallback(async (ids: Set<string>) => {
     try {
-      const selectedItems = processedScans.filter(s => ids.has(s.id));
+      const selectedItems = baseProcessedData.filter(s => ids.has(s.id));
       
       // 1. Borrado local inmediato
       for (const item of selectedItems) {
@@ -350,7 +350,7 @@ export const useExpiryDatabase = () => {
     } catch (error) {
       toast.error('Error al retirar los ítems localmente');
     }
-  }, [processedScans]);
+  }, [baseProcessedData]);
 
   const handleAddItem = useCallback(async (data: {
     barcode: string;
@@ -461,6 +461,7 @@ export const useExpiryDatabase = () => {
       pendingOperations,
       selectedIds,
       verifiedIds,
+      allItems: baseProcessedData,
       processedScans,
       categories,
       stats,
