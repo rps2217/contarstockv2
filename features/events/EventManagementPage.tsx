@@ -6,7 +6,9 @@ import {
   Sun,
   Moon,
   Settings2,
-  Plus
+  Plus,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'motion/react';
@@ -31,6 +33,8 @@ const EventManagementPage: React.FC = () => {
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  
+  const [expandedPanel, setExpandedPanel] = useState<'pending' | 'adjusted' | 'dual'>('dual');
   
   const { state, actions } = useEventDatabase();
 
@@ -129,12 +133,19 @@ const EventManagementPage: React.FC = () => {
     toast.info(`Filtrando por FRC: ${frc}`);
   };
 
-  const parentRef = useRef<HTMLDivElement>(null);
-  const visibleItems = state.processedEvents.slice(0, state.displayLimit);
+  const pendingRef = useRef<HTMLDivElement>(null);
+  const adjustedRef = useRef<HTMLDivElement>(null);
   
-  const rowVirtualizer = useVirtualizer({
-    count: visibleItems.length,
-    getScrollElement: () => parentRef.current,
+  const pendingVirtualizer = useVirtualizer({
+    count: state.pendingEvents.length,
+    getScrollElement: () => pendingRef.current,
+    estimateSize: () => state.preferences.compactView ? 80 : 120,
+    overscan: 5,
+  });
+
+  const adjustedVirtualizer = useVirtualizer({
+    count: state.adjustedEvents.length,
+    getScrollElement: () => adjustedRef.current,
     estimateSize: () => state.preferences.compactView ? 80 : 120,
     overscan: 5,
   });
@@ -212,138 +223,158 @@ const EventManagementPage: React.FC = () => {
           activeFiltersCount={activeFiltersCount}
           theme={theme}
         />
-
-        {/* TABS */}
-        <div className="flex gap-2 mt-6 overflow-x-auto no-scrollbar pb-1">
-          <button
-            onClick={() => actions.setActiveTab('pending')}
-            className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap flex items-center gap-2 ${
-              state.activeTab === 'pending'
-                ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20'
-                : theme === 'dark'
-                  ? 'bg-white/5 text-slate-400 hover:bg-white/10'
-                  : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-            }`}
-          >
-            Pendientes de Ajuste
-            <span className={`px-2 py-0.5 rounded-md text-[10px] ${
-              state.activeTab === 'pending'
-                ? 'bg-white/20 text-white'
-                : theme === 'dark' ? 'bg-white/10 text-slate-300' : 'bg-white text-slate-600'
-            }`}>
-              {state.pendingCount}
-            </span>
-          </button>
-          
-          <button
-            onClick={() => actions.setActiveTab('adjusted')}
-            className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap flex items-center gap-2 ${
-              state.activeTab === 'adjusted'
-                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
-                : theme === 'dark'
-                  ? 'bg-white/5 text-slate-400 hover:bg-white/10'
-                  : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-            }`}
-          >
-            Ajustados
-            <span className={`px-2 py-0.5 rounded-md text-[10px] ${
-              state.activeTab === 'adjusted'
-                ? 'bg-white/20 text-white'
-                : theme === 'dark' ? 'bg-white/10 text-slate-300' : 'bg-white text-slate-600'
-            }`}>
-              {state.adjustedCount}
-            </span>
-          </button>
-        </div>
       </div>
 
-      {/* MAIN LIST */}
-      <div ref={parentRef} className="flex-1 overflow-y-auto p-4 md:p-6 no-scrollbar pb-32">
-        <div
-          style={{
-            height: `${rowVirtualizer.getTotalSize()}px`,
-            width: '100%',
-            position: 'relative',
-          }}
-        >
-          {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-            const item = visibleItems[virtualRow.index];
-            return (
+      {/* DUAL PANELS */}
+      <div className={`flex-1 flex flex-col md:flex-row overflow-hidden gap-4 p-4 md:p-6 ${
+        theme === 'dark' ? 'bg-black' : 'bg-slate-50'
+      }`}>
+        {/* PENDING PANEL */}
+        {(expandedPanel === 'dual' || expandedPanel === 'pending') && (
+          <motion.div 
+            layout
+            className={`flex-1 flex flex-col overflow-hidden rounded-[2.5rem] border-4 border-black transition-all relative ${
+              theme === 'dark' ? 'bg-slate-900/50' : 'bg-white'
+            }`}
+          >
+            <div className="bg-blue-600 p-4 flex items-center justify-between border-b-4 border-black">
+              <div className="flex items-center gap-3">
+                <div className="bg-white/20 p-2 rounded-xl">
+                  <AlertCircle className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-white uppercase tracking-tighter italic leading-none">Pendientes</h3>
+                  <p className="text-[8px] font-bold text-blue-200 uppercase tracking-widest mt-1">{state.pendingCount} Registros</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setExpandedPanel(expandedPanel === 'pending' ? 'dual' : 'pending')}
+                className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
+              >
+                {expandedPanel === 'pending' ? <Minimize2 className="w-4 h-4 text-white" /> : <Maximize2 className="w-4 h-4 text-white" />}
+              </button>
+            </div>
+
+            <div ref={pendingRef} className="flex-1 overflow-y-auto p-4 no-scrollbar">
               <div
-                key={item.id}
-                ref={rowVirtualizer.measureElement}
-                data-index={virtualRow.index}
                 style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
+                  height: `${pendingVirtualizer.getTotalSize()}px`,
                   width: '100%',
-                  transform: `translateY(${virtualRow.start}px)`,
-                  paddingBottom: '12px', // space-y-3 equivalent
+                  position: 'relative',
                 }}
               >
-                <EventItemCard 
-                  item={item}
-                  isSelected={state.selectedIds.has(item.id)}
-                  onToggleSelect={actions.handleToggleSelect}
-                  onUpdateStatus={handleUpdateStatus}
-                  onRemove={confirmRemoveItem}
-                  onFrcClick={handleFrcClick}
-                  theme={theme}
-                  isCompact={state.preferences.compactView}
-                />
+                {pendingVirtualizer.getVirtualItems().map((virtualRow) => {
+                  const item = state.pendingEvents[virtualRow.index];
+                  return (
+                    <div
+                      key={item.id}
+                      ref={pendingVirtualizer.measureElement}
+                      data-index={virtualRow.index}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        transform: `translateY(${virtualRow.start}px)`,
+                        paddingBottom: '12px',
+                      }}
+                    >
+                      <EventItemCard 
+                        item={item}
+                        isSelected={state.selectedIds.has(item.id)}
+                        onToggleSelect={actions.handleToggleSelect}
+                        onUpdateStatus={handleUpdateStatus}
+                        onRemove={confirmRemoveItem}
+                        onFrcClick={handleFrcClick}
+                        theme={theme}
+                        isCompact={state.preferences.compactView}
+                      />
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
-        </div>
-
-        {state.processedEvents.length > state.displayLimit && (
-          <div className="flex justify-center py-8">
-            <button
-              onClick={() => actions.setDisplayLimit(prev => prev + 50)}
-              className={`border px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-3 group ${
-                theme === 'dark' ? 'bg-white/5 hover:bg-white/10 border-white/10' : 'bg-white hover:bg-slate-50 border-slate-200 shadow-sm'
-              }`}
-            >
-              <ChevronRight className="w-4 h-4 text-blue-500 group-hover:translate-x-1 transition-transform rotate-90" />
-              Cargar más registros
-              <span className="text-slate-500">({state.processedEvents.length - state.displayLimit} restantes)</span>
-            </button>
-          </div>
+              {state.pendingEvents.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-20 text-center opacity-50">
+                  <AlertCircle className="w-10 h-10 mb-4" />
+                  <p className="text-xs font-black uppercase tracking-widest">Sin pendientes</p>
+                </div>
+              )}
+            </div>
+          </motion.div>
         )}
 
-        {state.processedEvents.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-20 text-center px-4">
-            <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-6 border ${
-              theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-slate-100 border-slate-200'
-            }`}>
-              <AlertCircle className={`w-10 h-10 ${theme === 'dark' ? 'text-slate-600' : 'text-slate-400'}`} />
-            </div>
-            <h3 className={`text-xl font-black uppercase tracking-tighter italic mb-2 ${
-              theme === 'dark' ? 'text-white' : 'text-slate-900'
-            }`}>
-              No hay eventos
-            </h3>
-            <p className={`text-sm font-bold max-w-md ${
-              theme === 'dark' ? 'text-slate-500' : 'text-slate-500'
-            }`}>
-              {state.searchQuery || activeFiltersCount > 0 
-                ? 'No se encontraron registros que coincidan con los filtros actuales.'
-                : 'No hay registros de eventos en la base de datos local. Intenta sincronizar con la nube.'}
-            </p>
-            {(state.searchQuery || activeFiltersCount > 0) && (
-              <button
-                onClick={handleClearFilters}
-                className={`mt-6 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
-                  theme === 'dark' 
-                    ? 'bg-white/5 hover:bg-white/10 border-white/10 text-white' 
-                    : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-900 shadow-sm'
-                }`}
+        {/* ADJUSTED PANEL */}
+        {(expandedPanel === 'dual' || expandedPanel === 'adjusted') && (
+          <motion.div 
+            layout
+            className={`flex-1 flex flex-col overflow-hidden rounded-[2.5rem] border-4 border-black transition-all relative ${
+              theme === 'dark' ? 'bg-emerald-900/20' : 'bg-white'
+            }`}
+          >
+            <div className="bg-emerald-600 p-4 flex items-center justify-between border-b-4 border-black">
+              <div className="flex items-center gap-3">
+                <div className="bg-white/20 p-2 rounded-xl">
+                  <RefreshCw className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-white uppercase tracking-tighter italic leading-none">Ajustados</h3>
+                  <p className="text-[8px] font-bold text-emerald-200 uppercase tracking-widest mt-1">{state.adjustedCount} Registros</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setExpandedPanel(expandedPanel === 'adjusted' ? 'dual' : 'adjusted')}
+                className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
               >
-                Limpiar Filtros
+                {expandedPanel === 'adjusted' ? <Minimize2 className="w-4 h-4 text-white" /> : <Maximize2 className="w-4 h-4 text-white" />}
               </button>
-            )}
-          </div>
+            </div>
+
+            <div ref={adjustedRef} className="flex-1 overflow-y-auto p-4 no-scrollbar">
+              <div
+                style={{
+                  height: `${adjustedVirtualizer.getTotalSize()}px`,
+                  width: '100%',
+                  position: 'relative',
+                }}
+              >
+                {adjustedVirtualizer.getVirtualItems().map((virtualRow) => {
+                  const item = state.adjustedEvents[virtualRow.index];
+                  return (
+                    <div
+                      key={item.id}
+                      ref={adjustedVirtualizer.measureElement}
+                      data-index={virtualRow.index}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        transform: `translateY(${virtualRow.start}px)`,
+                        paddingBottom: '12px',
+                      }}
+                    >
+                      <EventItemCard 
+                        item={item}
+                        isSelected={state.selectedIds.has(item.id)}
+                        onToggleSelect={actions.handleToggleSelect}
+                        onUpdateStatus={handleUpdateStatus}
+                        onRemove={confirmRemoveItem}
+                        onFrcClick={handleFrcClick}
+                        theme={theme}
+                        isCompact={state.preferences.compactView}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+              {state.adjustedEvents.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-20 text-center opacity-50">
+                  <RefreshCw className="w-10 h-10 mb-4" />
+                  <p className="text-xs font-black uppercase tracking-widest">Sin ajustados</p>
+                </div>
+              )}
+            </div>
+          </motion.div>
         )}
       </div>
 

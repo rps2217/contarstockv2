@@ -19,26 +19,18 @@ export const useEventDatabase = () => {
     return saved ? JSON.parse(saved) : DEFAULT_PREFERENCES;
   });
 
-  const [activeTab, setActiveTab] = useState<'pending' | 'adjusted'>('pending');
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
-  const [displayLimit, setDisplayLimit] = useState(50);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Debounce search query
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery);
-      setDisplayLimit(50);
     }, 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
-
-  // Reset limit on filter change
-  useEffect(() => {
-    setDisplayLimit(50);
-  }, [selectedEvents, activeTab]);
 
   const cloudExpirations = useLiveQuery(() => db.cloudExpirations.toArray());
   const products = useLiveQuery(() => db.products.toArray());
@@ -101,11 +93,20 @@ export const useEventDatabase = () => {
         (item.erp && item.erp.toLowerCase().includes(query));
       
       const matchesEvent = selectedEvents.length === 0 || selectedEvents.includes(item.event.toUpperCase());
-      const matchesTab = activeTab === 'adjusted' ? item.isAdjusted : !item.isAdjusted;
 
-      return matchesSearch && matchesEvent && matchesTab;
+      return matchesSearch && matchesEvent;
     });
-  }, [baseProcessedData, debouncedSearch, selectedEvents, activeTab]);
+  }, [baseProcessedData, debouncedSearch, selectedEvents]);
+
+  const pendingEvents = useMemo(() => 
+    processedEvents.filter(e => !e.isAdjusted),
+    [processedEvents]
+  );
+
+  const adjustedEvents = useMemo(() => 
+    processedEvents.filter(e => e.isAdjusted),
+    [processedEvents]
+  );
 
   const togglePreference = (key: keyof EventPreferences) => {
     setPreferences(prev => {
@@ -125,10 +126,11 @@ export const useEventDatabase = () => {
   };
 
   const handleSelectAll = () => {
-    if (selectedIds.size === processedEvents.slice(0, displayLimit).length) {
+    const allIds = processedEvents.map(i => i.id);
+    if (selectedIds.size === allIds.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(processedEvents.slice(0, displayLimit).map(i => i.id)));
+      setSelectedIds(new Set(allIds));
     }
   };
 
@@ -197,12 +199,12 @@ export const useEventDatabase = () => {
   return {
     state: {
       preferences,
-      activeTab,
       searchQuery,
       selectedEvents,
-      displayLimit,
       selectedIds,
       processedEvents,
+      pendingEvents,
+      adjustedEvents,
       eventTypes,
       totalCount: baseProcessedData.length,
       filteredCount: processedEvents.length,
@@ -211,10 +213,8 @@ export const useEventDatabase = () => {
       priorityStats
     },
     actions: {
-      setActiveTab,
       setSearchQuery,
       setSelectedEvents,
-      setDisplayLimit,
       togglePreference,
       handleToggleSelect,
       handleSelectAll,
