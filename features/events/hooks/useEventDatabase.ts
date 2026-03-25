@@ -4,7 +4,7 @@ import { db } from '../../../db';
 import { Product } from '../../../types';
 import { normalizeSku } from '../../../services/utils';
 import { useAppStore } from '../../../store/useAppStore';
-import { addExpirationToCloud } from '../../../services/expirySync';
+import { addExpirationToCloud, removeExpirationFromCloud } from '../../../services/expirySync';
 
 export interface EventPreferences {
   compactView: boolean;
@@ -231,6 +231,62 @@ export const useEventDatabase = () => {
       },
       updateEventDestino: async (id: string, destino: string) => {
         await db.cloudExpirations.update(id, { destino });
+      },
+      updateEvent: async (id: string, data: {
+        barcode: string;
+        productName: string;
+        event: string;
+        quantity: number;
+        frc: string;
+        nguia: string;
+        destino?: string;
+      }) => {
+        const oldEvent = await db.cloudExpirations.get(id);
+        if (!oldEvent) throw new Error('Evento no encontrado');
+
+        const claveUnica = `${normalizeSku(data.barcode)}${data.frc}`;
+        const updatedEvent = {
+          ...oldEvent,
+          barcode: normalizeSku(data.barcode),
+          productName: data.productName,
+          event: data.event,
+          quantity: data.quantity,
+          frc: data.frc,
+          nguia: data.nguia,
+          destino: data.destino || settings.selectedDestino,
+          claveUnica,
+          timestamp: Date.now(), // Actualizamos timestamp para que suba en la lista
+        };
+
+        await db.cloudExpirations.put(updatedEvent);
+
+        // Si la clave única cambió, debemos eliminar la anterior en la nube
+        if (oldEvent.claveUnica && oldEvent.claveUnica !== claveUnica) {
+          setPendingOperations(p => p + 1);
+          removeExpirationFromCloud(oldEvent.claveUnica).finally(() => {
+            setPendingOperations(p => Math.max(0, p - 1));
+          });
+        }
+
+        // Sincronizar el nuevo estado a la nube
+        setPendingOperations(p => p + 1);
+        addExpirationToCloud({
+          barcode: updatedEvent.barcode,
+          productName: updatedEvent.productName,
+          mm: updatedEvent.mm,
+          yyyy: updatedEvent.yyyy,
+          quantity: updatedEvent.quantity,
+          event: updatedEvent.event,
+          frc: updatedEvent.frc,
+          nguia: updatedEvent.nguia,
+          claveUnica: updatedEvent.claveUnica,
+          destino: updatedEvent.destino
+        })
+        .finally(() => {
+          setPendingOperations(p => Math.max(0, p - 1));
+        });
+
+        return updatedEvent;
       },
       createEvent: async (data: {
         barcode: string;

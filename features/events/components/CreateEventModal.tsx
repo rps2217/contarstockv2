@@ -29,6 +29,7 @@ interface Props {
     destino?: string;
   }) => Promise<void>;
   theme: 'dark' | 'light';
+  editingItem?: any;
 }
 
 const EVENT_TYPES = [
@@ -48,7 +49,7 @@ const DESTINOS = [
   'BOD. 121'
 ];
 
-export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, theme }) => {
+export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, theme, editingItem }) => {
   const [sku, setSku] = useState('');
   const [product, setProduct] = useState<Product | null>(null);
   const [eventType, setEventType] = useState('DIF. PED.');
@@ -60,7 +61,40 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (sku.length >= 3) {
+    if (editingItem) {
+      setSku(editingItem.barcode);
+      setEventType(editingItem.event);
+      setDestino(editingItem.destino || 'BOD. 37');
+      setQuantity(editingItem.quantity);
+      setFrc(editingItem.frc || '');
+      setNguia(editingItem.nguia || '');
+      
+      // Pre-load product info
+      const loadProduct = async () => {
+        const found = await db.products.get(normalizeSku(editingItem.barcode));
+        if (found) setProduct(found);
+        else {
+          setProduct({
+            barcode: editingItem.barcode,
+            name: editingItem.productName,
+            category: 'GENERAL'
+          } as Product);
+        }
+      };
+      loadProduct();
+    } else {
+      setSku('');
+      setProduct(null);
+      setEventType('DIF. PED.');
+      setDestino('BOD. 37');
+      setQuantity(1);
+      setFrc('');
+      setNguia('');
+    }
+  }, [editingItem, isOpen]);
+
+  useEffect(() => {
+    if (!editingItem && sku.length >= 3) {
       const timer = setTimeout(async () => {
         setIsSearching(true);
         try {
@@ -104,16 +138,10 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
         nguia,
         destino
       });
-      toast.success('Evento creado correctamente');
+      toast.success(editingItem ? 'Evento actualizado correctamente' : 'Evento creado correctamente');
       onClose();
-      // Reset form
-      setSku('');
-      setProduct(null);
-      setQuantity(1);
-      setFrc('');
-      setNguia('');
     } catch (error: any) {
-      toast.error(error.message || 'Error al crear el evento');
+      toast.error(error.message || `Error al ${editingItem ? 'actualizar' : 'crear'} el evento`);
     } finally {
       setIsSubmitting(false);
     }
@@ -144,10 +172,12 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
           <div className="bg-black p-6 flex items-center justify-between border-b-4 border-black">
             <div className="flex items-center gap-4">
               <div className="bg-blue-600 p-3 rounded-2xl shadow-lg shadow-blue-500/20">
-                <Plus className="w-6 h-6 text-white" />
+                {editingItem ? <FileText className="w-6 h-6 text-white" /> : <Plus className="w-6 h-6 text-white" />}
               </div>
               <div>
-                <h2 className="text-xl font-black text-white uppercase tracking-tighter italic leading-none">Nuevo Registro</h2>
+                <h2 className="text-xl font-black text-white uppercase tracking-tighter italic leading-none">
+                  {editingItem ? 'Editar Registro' : 'Nuevo Registro'}
+                </h2>
                 <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mt-1">Gestión de Eventos Críticos</p>
               </div>
             </div>
@@ -343,8 +373,8 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
                 <>
-                  <Plus className="w-5 h-5" />
-                  Crear Registro de Evento
+                  {editingItem ? <FileText className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+                  {editingItem ? 'Guardar Cambios' : 'Crear Registro de Evento'}
                 </>
               )}
             </button>

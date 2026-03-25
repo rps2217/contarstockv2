@@ -40,6 +40,7 @@ const EventManagementPage: React.FC = () => {
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<any>(null);
   
   const [expandedPanel, setExpandedPanel] = useState<'pending' | 'adjusted' | 'dual'>('dual');
   
@@ -58,6 +59,14 @@ const EventManagementPage: React.FC = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [navigate]);
+
+  const handleCreateOrUpdate = async (data: any) => {
+    if (editingItem) {
+      await actions.updateEvent(editingItem.id, data);
+    } else {
+      await actions.createEvent(data);
+    }
+  };
 
   const handleSync = async () => {
     try {
@@ -272,28 +281,6 @@ const EventManagementPage: React.FC = () => {
           </div>
 
             <div className="flex items-center gap-2 w-full md:w-auto">
-              {/* DESTINO SELECTOR */}
-              <div className="relative group flex-1 md:flex-none">
-                <div className={`absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none transition-colors ${
-                  theme === 'dark' ? 'text-emerald-500' : 'text-emerald-600'
-                }`}>
-                  <Truck className="w-4 h-4" />
-                </div>
-                <select
-                  value={settings.selectedDestino}
-                  onChange={(e) => updateSetting('selectedDestino', e.target.value)}
-                  className={`w-full md:w-40 pl-11 pr-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border appearance-none cursor-pointer ${
-                    theme === 'dark' 
-                      ? 'bg-white/5 hover:bg-white/10 border-white/10 text-emerald-500' 
-                      : 'bg-white hover:bg-slate-50 border-slate-200 text-emerald-600 shadow-sm'
-                  }`}
-                >
-                  {['BOD. 37', 'BOD. 80', 'BOD. 95', 'BOD. 98', 'BOD. 106', 'BOD. 121'].map(d => (
-                    <option key={d} value={d}>{d}</option>
-                  ))}
-                </select>
-              </div>
-
               {state.pendingOperations > 0 && (
               <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest animate-pulse ${
                 theme === 'dark' ? 'bg-amber-500/10 border-amber-500/20 text-amber-500' : 'bg-amber-50 border-amber-200 text-amber-600'
@@ -303,7 +290,10 @@ const EventManagementPage: React.FC = () => {
               </div>
             )}
             <button
-              onClick={() => setIsCreateModalOpen(true)}
+              onClick={() => {
+                setEditingItem(null);
+                setIsCreateModalOpen(true);
+              }}
               className={`flex-1 md:flex-none px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-3 transition-all border shadow-lg active:scale-95 ${
                 theme === 'dark' 
                   ? 'bg-blue-600 border-blue-500 text-white shadow-blue-500/20' 
@@ -452,6 +442,10 @@ const EventManagementPage: React.FC = () => {
                         onToggleSelect={actions.handleToggleSelect}
                         onUpdateStatus={handleUpdateStatus}
                         onRemove={confirmRemoveItem}
+                        onEdit={(item) => {
+                          setEditingItem(item);
+                          setIsCreateModalOpen(true);
+                        }}
                         onFrcClick={handleFrcClick}
                         onEventClick={handleEventClick}
                         theme={theme}
@@ -556,6 +550,10 @@ const EventManagementPage: React.FC = () => {
                         onToggleSelect={actions.handleToggleSelect}
                         onUpdateStatus={handleUpdateStatus}
                         onRemove={confirmRemoveItem}
+                        onEdit={(item) => {
+                          setEditingItem(item);
+                          setIsCreateModalOpen(true);
+                        }}
                         onFrcClick={handleFrcClick}
                         onEventClick={handleEventClick}
                         theme={theme}
@@ -599,10 +597,12 @@ const EventManagementPage: React.FC = () => {
 
       <CreateEventModal 
         isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onSubmit={async (data) => {
-          await actions.createEvent(data);
+        onClose={() => {
+          setIsCreateModalOpen(false);
+          setEditingItem(null);
         }}
+        onSubmit={handleCreateOrUpdate}
+        editingItem={editingItem}
         theme={theme}
       />
     </div>

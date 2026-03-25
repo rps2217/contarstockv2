@@ -22,6 +22,7 @@ interface EventItemCardProps {
   onToggleSelect: (id: string) => void;
   onUpdateStatus?: (id: string, isAdjusted: boolean) => void;
   onRemove?: (item: any) => void;
+  onEdit?: (item: any) => void;
   onFrcClick?: (frc: string) => void;
   onEventClick?: (event: string) => void;
   theme?: 'dark' | 'light';
@@ -34,6 +35,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
   onToggleSelect,
   onUpdateStatus,
   onRemove,
+  onEdit,
   onFrcClick,
   onEventClick,
   theme = 'dark',
@@ -206,6 +208,60 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
             {item.location}
           </span>
         </div>
+      </div>
+
+      {/* ACTIONS COLUMN */}
+      <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+        {onEdit && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(item);
+            }}
+            className={`p-2 rounded-xl transition-all border ${
+              theme === 'dark' 
+                ? 'bg-blue-500/10 border-blue-500/20 text-blue-500 hover:bg-blue-500/20' 
+                : 'bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100'
+            }`}
+            title="Editar Registro"
+          >
+            <MoreVertical className="w-4 h-4" />
+          </button>
+        )}
+        
+        {onUpdateStatus && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onUpdateStatus(item.id, !item.isAdjusted);
+            }}
+            className={`p-2 rounded-xl transition-all border ${
+              item.isAdjusted
+                ? (theme === 'dark' ? 'bg-amber-500/10 border-amber-500/20 text-amber-500 hover:bg-amber-500/20' : 'bg-amber-50 border-amber-200 text-amber-600 hover:bg-amber-100')
+                : (theme === 'dark' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/20' : 'bg-emerald-50 border-emerald-200 text-emerald-600 hover:bg-emerald-100')
+            }`}
+            title={item.isAdjusted ? "Revertir a Pendiente" : "Marcar como Ajustado"}
+          >
+            {item.isAdjusted ? <Undo2 className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+          </button>
+        )}
+
+        {onRemove && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove(item);
+            }}
+            className={`p-2 rounded-xl transition-all border ${
+              theme === 'dark' 
+                ? 'bg-red-500/10 border-red-500/20 text-red-500 hover:bg-red-500/20' 
+                : 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'
+            }`}
+            title="Eliminar Registro"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        )}
       </div>
     </motion.div>
   );
