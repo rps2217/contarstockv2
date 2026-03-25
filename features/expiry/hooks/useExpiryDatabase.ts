@@ -316,7 +316,8 @@ export const useExpiryDatabase = () => {
       setPendingOperations(p => p + 1);
       addExpirationToCloud({
         ...data,
-        barcode: sanitizedBarcode
+        barcode: sanitizedBarcode,
+        event: 'VENCIMIENTOS'
       })
         .then(async (result: any) => {
           if (result.success) {

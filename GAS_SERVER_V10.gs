@@ -42,8 +42,8 @@ function addExpiration(data) {
     var mmPadded = ("0" + data.mm).slice(-2);
     var ddPadded = ("0" + lastDay).slice(-2);
     
-    // Generación de CLAVE_UNICA (SKU + YYYY + MM + DD_FIN_MES)
-    var claveUnica = barcode + data.yyyy + mmPadded + ddPadded;
+    // Generación de CLAVE_UNICA (SKU + YYYY + MM + DD_FIN_MES) o usar la enviada por el cliente
+    var claveUnica = data.claveUnica || (barcode + data.yyyy + mmPadded + ddPadded);
 
     // Validación de duplicados en la nube
     var lastRow = sheet.getLastRow();
@@ -86,8 +86,8 @@ function addExpiration(data) {
       "MES": data.mm,
       "YYYY": data.yyyy,
       "ANO": data.yyyy,
-      "EVENTO": "VENCIMIENTOS",
-      "CANTIDAD": "",
+      "EVENTO": data.event || "VENCIMIENTOS",
+      "CANTIDAD": data.quantity || "",
       "ETIQUETAS": "MANUAL",
       "BOD": ""
     };
