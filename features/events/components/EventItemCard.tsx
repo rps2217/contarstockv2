@@ -10,9 +10,11 @@ import {
   Undo2,
   Trash2,
   ExternalLink,
-  Info
+  Info,
+  Copy
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 
 interface EventItemCardProps {
   item: any;
@@ -21,6 +23,7 @@ interface EventItemCardProps {
   onUpdateStatus?: (id: string, isAdjusted: boolean) => void;
   onRemove?: (item: any) => void;
   onFrcClick?: (frc: string) => void;
+  onEventClick?: (event: string) => void;
   theme?: 'dark' | 'light';
   isCompact?: boolean;
 }
@@ -32,9 +35,18 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
   onUpdateStatus,
   onRemove,
   onFrcClick,
+  onEventClick,
   theme = 'dark',
   isCompact = false
 }) => {
+  const handleCopyBarcode = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(item.barcode);
+    toast.success(`Copiado: ${item.barcode}`, {
+      icon: <Copy className="w-4 h-4 text-blue-500" />
+    });
+  };
+
   return (
     <motion.div
       layout
@@ -76,11 +88,16 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
             {item.productName}
           </h3>
           <div className="flex items-center gap-2">
-            <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border ${
-              theme === 'dark' ? 'bg-white/5 border-white/10 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'
-            }`}>
+            <button
+              onClick={handleCopyBarcode}
+              className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border transition-all active:scale-95 flex items-center gap-1 group/copy ${
+                theme === 'dark' ? 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10 hover:text-white' : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+              }`}
+              title="Copiar SKU"
+            >
               {item.barcode}
-            </span>
+              <Copy className="w-2.5 h-2.5 opacity-0 group-hover/copy:opacity-100 transition-opacity" />
+            </button>
             {item.frc && (
               <button
                 onClick={(e) => {
@@ -112,11 +129,17 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
           theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
         }`}>Evento</span>
         <div className="flex flex-col gap-1">
-          <span className={`px-3 py-1 rounded-lg text-xs font-black uppercase tracking-widest border inline-flex w-fit ${
-            theme === 'dark' ? 'bg-blue-500/10 border-blue-500/20 text-blue-500' : 'bg-blue-50 border-blue-200 text-blue-600'
-          }`}>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onEventClick?.(item.event);
+            }}
+            className={`px-3 py-1 rounded-lg text-xs font-black uppercase tracking-widest border inline-flex w-fit transition-all hover:scale-105 active:scale-95 ${
+              theme === 'dark' ? 'bg-blue-500/10 border-blue-500/20 text-blue-500 hover:bg-blue-500/20' : 'bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100'
+            }`}
+          >
             {item.event}
-          </span>
+          </button>
         </div>
       </div>
 
@@ -130,11 +153,16 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
         }`}>
           {item.productName}
         </h3>
-        <span className={`text-[10px] font-bold uppercase tracking-widest ${
-          theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
-        }`}>
+        <button
+          onClick={handleCopyBarcode}
+          className={`text-[10px] font-bold uppercase tracking-widest transition-all hover:text-blue-500 active:scale-95 text-left flex items-center gap-1 group/copy-desk ${
+            theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+          }`}
+          title="Copiar SKU"
+        >
           {item.barcode}
-        </span>
+          <Copy className="w-2.5 h-2.5 opacity-0 group-hover/copy-desk:opacity-100 transition-opacity" />
+        </button>
       </div>
 
       {/* DESKTOP COLUMN 4: FRC (Priority Column) */}

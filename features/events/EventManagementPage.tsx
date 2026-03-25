@@ -172,6 +172,14 @@ const EventManagementPage: React.FC = () => {
     toast.info(`Filtrando por FRC: ${frc}`);
   };
 
+  const handleEventClick = (event: string) => {
+    // Si ya está seleccionado, no hacemos nada o podríamos limpiar otros.
+    // El usuario quiere que "se filtre", así que lo pondremos como el único filtro activo
+    // para que sea una acción directa y clara.
+    actions.setSelectedEvents([event]);
+    toast.info(`Filtrando por evento: ${event}`);
+  };
+
   // Grouping Logic
   const getGroupedItems = (events: any[]) => {
     const groups: { [key: string]: any[] } = {};
@@ -405,6 +413,7 @@ const EventManagementPage: React.FC = () => {
                         onUpdateStatus={handleUpdateStatus}
                         onRemove={confirmRemoveItem}
                         onFrcClick={handleFrcClick}
+                        onEventClick={handleEventClick}
                         theme={theme}
                         isCompact={state.preferences.compactView}
                       />
@@ -508,6 +517,7 @@ const EventManagementPage: React.FC = () => {
                         onUpdateStatus={handleUpdateStatus}
                         onRemove={confirmRemoveItem}
                         onFrcClick={handleFrcClick}
+                        onEventClick={handleEventClick}
                         theme={theme}
                         isCompact={state.preferences.compactView}
                       />
