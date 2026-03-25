@@ -38,6 +38,7 @@ export interface CloudExpiration {
   frc?: string;
   erp?: string;
   nguia?: string;
+  destino?: string;
 }
 
 export class LogiCountDB extends Dexie {

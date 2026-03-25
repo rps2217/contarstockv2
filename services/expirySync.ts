@@ -18,6 +18,7 @@ export const addExpirationToCloud = async (item: {
   frc?: string;
   nguia?: string;
   claveUnica?: string;
+  destino?: string;
 }) => {
   try {
     // Intentar envío directo primero

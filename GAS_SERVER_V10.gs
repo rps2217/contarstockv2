@@ -88,8 +88,11 @@ function addExpiration(data) {
       "ANO": data.yyyy,
       "EVENTO": data.event || "VENCIMIENTOS",
       "CANTIDAD": data.quantity || "",
+      "FRC": data.frc || "",
+      "NGUIA": data.nguia || "",
+      "GUIA": data.nguia || "",
       "ETIQUETAS": "MANUAL",
-      "BOD": ""
+      "BOD": data.location || ""
     };
 
     var newRow = normalizedHeaders.map(function(normH) {

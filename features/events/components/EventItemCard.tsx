@@ -119,6 +119,11 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
                 {item.nguia}
               </span>
             )}
+            {item.destino && (
+              <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[8px] font-black uppercase tracking-widest">
+                {item.destino}
+              </span>
+            )}
           </div>
         </div>
       </div>

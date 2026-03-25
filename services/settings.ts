@@ -18,6 +18,7 @@ const DEFAULT_SETTINGS: AppSettings = {
  predictiveHintsEnabled: false,
  continuousMode: true, 
  batchTrackingEnabled: true,
+ selectedDestino: 'BOD. 37',
  appSheetConfig: {
  appId: '',
  accessKey: '',

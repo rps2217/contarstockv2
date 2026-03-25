@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useAppStore } from '../../store/useAppStore';
 import { 
   ChevronRight, 
   AlertCircle,
@@ -9,7 +10,8 @@ import {
   Plus,
   Maximize2,
   Minimize2,
-  Calendar
+  Calendar,
+  Truck
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'motion/react';
@@ -33,6 +35,7 @@ import { importExpirationsFromCloud } from '../../services/syncManager';
 import { removeExpirationFromCloud } from '../../services/expirySync';
 
 const EventManagementPage: React.FC = () => {
+  const { settings, updateSetting } = useAppStore();
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -154,6 +157,21 @@ const EventManagementPage: React.FC = () => {
       toast.error('Error al actualizar registros masivamente');
     }
   };
+  
+  const handleBulkUpdateDestino = async (destino: string) => {
+    const selectedIds = Array.from(state.selectedIds);
+    if (selectedIds.length === 0) return;
+
+    try {
+      for (const id of selectedIds) {
+        await actions.updateEventDestino(id, destino);
+      }
+      toast.success(`${selectedIds.length} registros actualizados a ${destino}`);
+      actions.clearSelection();
+    } catch (error) {
+      toast.error('Error al actualizar destino masivamente');
+    }
+  };
 
   const confirmRemoveItem = (item: any) => {
     const confirm = window.confirm(`¿RETIRAR ${item.productName}? ESTA ACCIÓN ES IRREVERSIBLE.`);
@@ -253,8 +271,30 @@ const EventManagementPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 w-full md:w-auto">
-            {state.pendingOperations > 0 && (
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              {/* DESTINO SELECTOR */}
+              <div className="relative group flex-1 md:flex-none">
+                <div className={`absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none transition-colors ${
+                  theme === 'dark' ? 'text-emerald-500' : 'text-emerald-600'
+                }`}>
+                  <Truck className="w-4 h-4" />
+                </div>
+                <select
+                  value={settings.selectedDestino}
+                  onChange={(e) => updateSetting('selectedDestino', e.target.value)}
+                  className={`w-full md:w-40 pl-11 pr-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border appearance-none cursor-pointer ${
+                    theme === 'dark' 
+                      ? 'bg-white/5 hover:bg-white/10 border-white/10 text-emerald-500' 
+                      : 'bg-white hover:bg-slate-50 border-slate-200 text-emerald-600 shadow-sm'
+                  }`}
+                >
+                  {['BOD. 37', 'BOD. 80', 'BOD. 95', 'BOD. 98', 'BOD. 106', 'BOD. 121'].map(d => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+              </div>
+
+              {state.pendingOperations > 0 && (
               <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest animate-pulse ${
                 theme === 'dark' ? 'bg-amber-500/10 border-amber-500/20 text-amber-500' : 'bg-amber-50 border-amber-200 text-amber-600'
               }`}>
@@ -553,6 +593,7 @@ const EventManagementPage: React.FC = () => {
         onClearSelection={actions.clearSelection}
         onBulkRemove={handleBulkRemove}
         onBulkUpdateStatus={handleBulkUpdateStatus}
+        onBulkUpdateDestino={handleBulkUpdateDestino}
         theme={theme}
       />
 

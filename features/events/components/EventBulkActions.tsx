@@ -1,12 +1,13 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { CheckSquare, Trash2, X, CheckCircle2, Undo2 } from 'lucide-react';
+import { CheckSquare, Trash2, X, CheckCircle2, Undo2, Truck } from 'lucide-react';
 
 interface EventBulkActionsProps {
   selectedCount: number;
   onClearSelection: () => void;
   onBulkRemove: () => void;
   onBulkUpdateStatus: (isAdjusted: boolean) => void;
+  onBulkUpdateDestino: (destino: string) => void;
   theme?: 'dark' | 'light';
 }
 
@@ -15,8 +16,17 @@ export const EventBulkActions: React.FC<EventBulkActionsProps> = ({
   onClearSelection,
   onBulkRemove,
   onBulkUpdateStatus,
+  onBulkUpdateDestino,
   theme = 'dark'
 }) => {
+  const DESTINOS = [
+    'BOD. 37',
+    'BOD. 80',
+    'BOD. 95',
+    'BOD. 98',
+    'BOD. 106',
+    'BOD. 121'
+  ];
   return (
     <AnimatePresence>
       {selectedCount > 0 && (
@@ -87,6 +97,31 @@ export const EventBulkActions: React.FC<EventBulkActionsProps> = ({
                     <Trash2 className="w-4 h-4" />
                     Retirar Seleccionados
                   </button>
+
+                  <div className={`h-px my-4 ${theme === 'dark' ? 'bg-white/5' : 'bg-slate-100'}`} />
+
+                  <div className="space-y-2">
+                    <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 ${
+                      theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
+                    }`}>
+                      <Truck className="w-3 h-3" /> Cambiar Destino
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {DESTINOS.map(d => (
+                        <button
+                          key={d}
+                          onClick={() => onBulkUpdateDestino(d)}
+                          className={`px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border ${
+                            theme === 'dark'
+                              ? 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10 hover:text-white'
+                              : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                          }`}
+                        >
+                          {d}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
 

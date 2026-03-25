@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../../db';
 import { Product } from '../../../types';
 import { normalizeSku } from '../../../services/utils';
+import { useAppStore } from '../../../store/useAppStore';
 import { addExpirationToCloud } from '../../../services/expirySync';
 
 export interface EventPreferences {
@@ -14,6 +15,8 @@ const DEFAULT_PREFERENCES: EventPreferences = {
 };
 
 export const useEventDatabase = () => {
+  const { settings } = useAppStore();
+
   const [preferences, setPreferences] = useState<EventPreferences>(() => {
     const saved = localStorage.getItem('event_preferences');
     return saved ? JSON.parse(saved) : DEFAULT_PREFERENCES;
@@ -67,7 +70,8 @@ export const useEventDatabase = () => {
           isAdjusted: exp.isAdjusted || false,
           frc: exp.frc,
           erp: exp.erp,
-          nguia: exp.nguia
+          nguia: exp.nguia,
+          destino: exp.destino
         };
       });
 
@@ -225,6 +229,9 @@ export const useEventDatabase = () => {
       updateEventStatus: async (id: string, isAdjusted: boolean) => {
         await db.cloudExpirations.update(id, { isAdjusted });
       },
+      updateEventDestino: async (id: string, destino: string) => {
+        await db.cloudExpirations.update(id, { destino });
+      },
       createEvent: async (data: {
         barcode: string;
         productName: string;
@@ -232,6 +239,7 @@ export const useEventDatabase = () => {
         quantity: number;
         frc: string;
         nguia: string;
+        destino?: string;
       }) => {
         const claveUnica = `${normalizeSku(data.barcode)}${data.frc}`;
         const newEvent = {
@@ -242,6 +250,7 @@ export const useEventDatabase = () => {
           quantity: data.quantity,
           frc: data.frc,
           nguia: data.nguia,
+          destino: data.destino || settings.selectedDestino,
           claveUnica,
           timestamp: Date.now(),
           isAdjusted: false,
@@ -263,7 +272,8 @@ export const useEventDatabase = () => {
           event: newEvent.event,
           frc: newEvent.frc,
           nguia: newEvent.nguia,
-          claveUnica: newEvent.claveUnica
+          claveUnica: newEvent.claveUnica,
+          destino: newEvent.destino
         })
         .finally(() => {
           setPendingOperations(p => Math.max(0, p - 1));
