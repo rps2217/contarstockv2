@@ -111,6 +111,14 @@ const ExpiryManagementPage: React.FC = () => {
       actions.setSelectedCanje('canje');
       actions.setSelectedStatuses(['critical', 'expired']);
       addToast('Filtrando por Canje (Crítico/Vencido)', 'info');
+    } else if (type === 'drenaje') {
+      actions.setSelectedCanje('markdown');
+      actions.setSelectedStatuses(['next_expiry']);
+      addToast('Plan de Drenaje: Próximos 4 meses sin canje', 'info');
+    } else if (type === 'impulso') {
+      actions.setSelectedCanje('canje');
+      actions.setSelectedStatuses(['next_expiry']);
+      addToast('Impulso de Ventas: Próximos 4 meses con canje', 'info');
     } else if (type === 'monitor') {
       actions.setSelectedStatuses(['next_expiry']);
       addToast('Filtrando por Próximos a Vencer', 'info');

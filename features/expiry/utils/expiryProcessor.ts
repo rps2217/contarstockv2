@@ -184,7 +184,7 @@ export const calculateExpiryStats = (items: ExpiryItem[]) => {
   if (mermaItems.length > 0) {
     suggestedActions.push({
       title: 'Solicitudes de precios especiales',
-      description: `Gestionar rebajas para ${mermaItems.length} ítems sin opción a canje.`,
+      description: `Gestionar rebajas para ${mermaItems.length} ítems críticos/vencidos sin opción a canje.`,
       count: mermaItems.length,
       type: 'merma'
     });
@@ -194,19 +194,29 @@ export const calculateExpiryStats = (items: ExpiryItem[]) => {
   if (canjeItems.length > 0) {
     suggestedActions.push({
       title: 'Gestión de Canjes',
-      description: `Coordinar devolución con proveedores para ${canjeItems.length} ítems.`,
+      description: `Coordinar devolución con proveedores para ${canjeItems.length} ítems críticos/vencidos.`,
       count: canjeItems.length,
       type: 'canje'
     });
   }
 
-  const nextExpiryItems = items.filter(item => item.status === 'next_expiry');
-  if (nextExpiryItems.length > 0) {
+  const drenajeItems = items.filter(item => !item.hasCanje && item.status === 'next_expiry');
+  if (drenajeItems.length > 0) {
     suggestedActions.push({
-      title: 'Monitorización cercana',
-      description: `Vigilar rotación de ${nextExpiryItems.length} ítems próximos a vencer.`,
-      count: nextExpiryItems.length,
-      type: 'monitor'
+      title: 'Plan de Drenaje (Próximos)',
+      description: `Solicitar ofertas para ${drenajeItems.length} ítems (4 meses) sin canje para evitar pérdidas.`,
+      count: drenajeItems.length,
+      type: 'drenaje'
+    });
+  }
+
+  const impulsoItems = items.filter(item => item.hasCanje && item.status === 'next_expiry');
+  if (impulsoItems.length > 0) {
+    suggestedActions.push({
+      title: 'Impulso de Ventas (Próximos)',
+      description: `Promocionar ${impulsoItems.length} ítems (4 meses) con canje para minimizar devoluciones.`,
+      count: impulsoItems.length,
+      type: 'impulso'
     });
   }
 
