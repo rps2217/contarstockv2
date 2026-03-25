@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../../db';
 import { Product } from '../../../types';
 import { normalizeSku } from '../../../services/utils';
+import { addExpirationToCloud } from '../../../services/expirySync';
 
 export interface EventPreferences {
   compactView: boolean;
@@ -72,7 +73,8 @@ export const useEventDatabase = () => {
           category: product?.category || 'GENERAL',
           isAdjusted: exp.isAdjusted || false,
           frc: exp.frc,
-          erp: exp.erp
+          erp: exp.erp,
+          nguia: exp.nguia
         };
       });
 
@@ -219,6 +221,48 @@ export const useEventDatabase = () => {
       clearSelection: () => setSelectedIds(new Set()),
       updateEventStatus: async (id: string, isAdjusted: boolean) => {
         await db.cloudExpirations.update(id, { isAdjusted });
+      },
+      createEvent: async (data: {
+        barcode: string;
+        productName: string;
+        event: string;
+        quantity: number;
+        frc: string;
+        nguia: string;
+      }) => {
+        const claveUnica = `${normalizeSku(data.barcode)}${data.frc}`;
+        const newEvent = {
+          id: crypto.randomUUID(),
+          barcode: normalizeSku(data.barcode),
+          productName: data.productName,
+          event: data.event,
+          quantity: data.quantity,
+          frc: data.frc,
+          nguia: data.nguia,
+          claveUnica,
+          timestamp: Date.now(),
+          isAdjusted: false,
+          mm: new Date().getMonth() + 1,
+          yyyy: new Date().getFullYear(),
+          location: 'GENERAL'
+        };
+
+        await db.cloudExpirations.add(newEvent);
+        
+        // Sync to cloud
+        await addExpirationToCloud({
+          barcode: newEvent.barcode,
+          productName: newEvent.productName,
+          mm: newEvent.mm,
+          yyyy: newEvent.yyyy,
+          quantity: newEvent.quantity,
+          event: newEvent.event,
+          frc: newEvent.frc,
+          nguia: newEvent.nguia,
+          claveUnica: newEvent.claveUnica
+        });
+
+        return newEvent;
       }
     }
   };

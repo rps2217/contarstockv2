@@ -1,0 +1,323 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  X, 
+  Search, 
+  Package, 
+  Hash, 
+  FileText, 
+  Truck, 
+  Plus,
+  Loader2,
+  AlertCircle
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { db } from '../../../db';
+import { Product } from '../../../types';
+import { normalizeSku } from '../../../services/utils';
+import { toast } from 'sonner';
+
+interface Props {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (data: {
+    barcode: string;
+    productName: string;
+    event: string;
+    quantity: number;
+    frc: string;
+    nguia: string;
+  }) => Promise<void>;
+  theme: 'dark' | 'light';
+}
+
+const EVENT_TYPES = [
+  'MERMA',
+  'CANJE',
+  'DIFERENCIA DE INVENTARIO',
+  'VENCIMIENTO CERCANO',
+  'PRODUCTO DAÑADO',
+  'ERROR DE RECEPCION',
+  'OTRO'
+];
+
+export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, theme }) => {
+  const [sku, setSku] = useState('');
+  const [product, setProduct] = useState<Product | null>(null);
+  const [eventType, setEventType] = useState('MERMA');
+  const [quantity, setQuantity] = useState<number>(1);
+  const [frc, setFrc] = useState('');
+  const [nguia, setNguia] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (sku.length >= 3) {
+      const timer = setTimeout(async () => {
+        setIsSearching(true);
+        try {
+          const found = await db.products.get(normalizeSku(sku));
+          setProduct(found || null);
+        } catch (error) {
+          console.error('Error searching product:', error);
+        } finally {
+          setIsSearching(false);
+        }
+      }, 300);
+      return () => clearTimeout(timer);
+    } else {
+      setProduct(null);
+    }
+  }, [sku]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!product) {
+      toast.error('Debes seleccionar un producto válido');
+      return;
+    }
+    if (!frc.trim()) {
+      toast.error('El número FRC es obligatorio');
+      return;
+    }
+    if (!nguia.trim()) {
+      toast.error('El número de guía es obligatorio');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await onSubmit({
+        barcode: product.barcode,
+        productName: product.name,
+        event: eventType,
+        quantity,
+        frc,
+        nguia
+      });
+      toast.success('Evento creado correctamente');
+      onClose();
+      // Reset form
+      setSku('');
+      setProduct(null);
+      setQuantity(1);
+      setFrc('');
+      setNguia('');
+    } catch (error: any) {
+      toast.error(error.message || 'Error al crear el evento');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onClose}
+          className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        />
+        
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          className={`relative w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden border-4 border-black ${
+            theme === 'dark' ? 'bg-slate-900' : 'bg-white'
+          }`}
+        >
+          {/* HEADER */}
+          <div className="bg-black p-6 flex items-center justify-between border-b-4 border-black">
+            <div className="flex items-center gap-4">
+              <div className="bg-blue-600 p-3 rounded-2xl shadow-lg shadow-blue-500/20">
+                <Plus className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-black text-white uppercase tracking-tighter italic leading-none">Nuevo Registro</h2>
+                <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mt-1">Gestión de Eventos Críticos</p>
+              </div>
+            </div>
+            <button 
+              onClick={onClose}
+              className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
+            >
+              <X className="w-5 h-5 text-white" />
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="p-8 space-y-6">
+            {/* PRODUCT SEARCH */}
+            <div className="space-y-2">
+              <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
+                theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+              }`}>
+                <Package className="w-3 h-3" /> Producto (SKU / EAN)
+              </label>
+              <div className="relative">
+                <input
+                  autoFocus
+                  type="text"
+                  value={sku}
+                  onChange={(e) => setSku(e.target.value)}
+                  placeholder="Escanea o escribe el código..."
+                  className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none ${
+                    theme === 'dark'
+                      ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
+                      : 'bg-slate-50 border-slate-200 focus:border-blue-500 text-slate-900'
+                  }`}
+                />
+                <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                  {isSearching ? (
+                    <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
+                  ) : (
+                    <Search className={`w-5 h-5 ${theme === 'dark' ? 'text-slate-600' : 'text-slate-400'}`} />
+                  )}
+                </div>
+              </div>
+
+              {product && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`p-4 rounded-2xl border-2 flex items-center gap-4 ${
+                    theme === 'dark' ? 'bg-blue-500/5 border-blue-500/20' : 'bg-blue-50 border-blue-200'
+                  }`}
+                >
+                  <div className="w-12 h-12 rounded-xl bg-blue-500 flex items-center justify-center shrink-0">
+                    <Package className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className={`text-xs font-black uppercase truncate ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                      {product.name}
+                    </p>
+                    <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest">
+                      {product.barcode}
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+              
+              {sku.length >= 3 && !product && !isSearching && (
+                <div className="flex items-center gap-2 text-amber-500 p-2">
+                  <AlertCircle className="w-4 h-4" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Producto no encontrado</span>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              {/* EVENT TYPE */}
+              <div className="space-y-2">
+                <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
+                  theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                }`}>
+                  <FileText className="w-3 h-3" /> Tipo de Evento
+                </label>
+                <select
+                  value={eventType}
+                  onChange={(e) => setEventType(e.target.value)}
+                  className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none appearance-none ${
+                    theme === 'dark'
+                      ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
+                      : 'bg-slate-50 border-slate-200 focus:border-blue-500 text-slate-900'
+                  }`}
+                >
+                  {EVENT_TYPES.map(type => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* QUANTITY */}
+              <div className="space-y-2">
+                <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
+                  theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                }`}>
+                  <Hash className="w-3 h-3" /> Cantidad
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={quantity}
+                  onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                  className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none ${
+                    theme === 'dark'
+                      ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
+                      : 'bg-slate-50 border-slate-200 focus:border-blue-500 text-slate-900'
+                  }`}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              {/* FRC */}
+              <div className="space-y-2">
+                <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
+                  theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                }`}>
+                  <FileText className="w-3 h-3" /> Folio FRC
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={frc}
+                  onChange={(e) => setFrc(e.target.value.toUpperCase())}
+                  placeholder="Obligatorio"
+                  className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none ${
+                    theme === 'dark'
+                      ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
+                      : 'bg-slate-50 border-slate-200 focus:border-blue-500 text-slate-900'
+                  }`}
+                />
+              </div>
+
+              {/* GUIA */}
+              <div className="space-y-2">
+                <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
+                  theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                }`}>
+                  <Truck className="w-3 h-3" /> Número de Guía
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={nguia}
+                  onChange={(e) => setNguia(e.target.value.toUpperCase())}
+                  placeholder="Obligatorio"
+                  className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none ${
+                    theme === 'dark'
+                      ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
+                      : 'bg-slate-50 border-slate-200 focus:border-blue-500 text-slate-900'
+                  }`}
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isSubmitting || !product || !frc || !nguia}
+              className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 transition-all shadow-xl active:scale-95 ${
+                isSubmitting || !product || !frc || !nguia
+                  ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20'
+              }`}
+            >
+              {isSubmitting ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <>
+                  <Plus className="w-5 h-5" />
+                  Crear Registro de Evento
+                </>
+              )}
+            </button>
+          </form>
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  );
+};

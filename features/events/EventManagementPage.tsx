@@ -5,7 +5,8 @@ import {
   RefreshCw,
   Sun,
   Moon,
-  Settings2
+  Settings2,
+  Plus
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'motion/react';
@@ -19,7 +20,7 @@ import { EventSearchBar } from './components/EventSearchBar';
 import { EventItemCard } from './components/EventItemCard';
 import { EventBulkActions } from './components/EventBulkActions';
 import { EventFilterDrawer } from './components/EventFilterDrawer';
-import { EventPriorityPanel } from './components/EventPriorityPanel';
+import { CreateEventModal } from './components/CreateEventModal';
 
 // Services
 import { importExpirationsFromCloud } from '../../services/syncManager';
@@ -29,6 +30,7 @@ const EventManagementPage: React.FC = () => {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   
   const { state, actions } = useEventDatabase();
 
@@ -117,31 +119,6 @@ const EventManagementPage: React.FC = () => {
     }
   };
 
-  const handlePrioritySelectItem = (id: string) => {
-    actions.setSearchQuery(id);
-    const element = document.getElementById(`event-item-${id}`);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  };
-
-  const handlePriorityActionClick = (type: string) => {
-    switch (type) {
-      case 'inventory_diff':
-        actions.setSelectedEvents(['DIFERENCIA DE INVENTARIO']);
-        break;
-      case 'merma':
-        actions.setSelectedEvents(['MERMA']);
-        break;
-      case 'canje':
-        actions.setSelectedEvents(['CANJE']);
-        break;
-      default:
-        break;
-    }
-    toast.info(`Filtrando por: ${type}`);
-  };
-
   const toggleTheme = () => {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
     toast.info(`Modo ${theme === 'dark' ? 'Claro' : 'Oscuro'} activado`);
@@ -184,6 +161,18 @@ const EventManagementPage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2 w-full md:w-auto">
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className={`flex-1 md:flex-none px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-3 transition-all border shadow-lg active:scale-95 ${
+                theme === 'dark' 
+                  ? 'bg-blue-600 border-blue-500 text-white shadow-blue-500/20' 
+                  : 'bg-blue-600 border-blue-500 text-white shadow-blue-500/20'
+              }`}
+            >
+              <Plus className="w-4 h-4" />
+              Nuevo Evento
+            </button>
+
             <button
               onClick={handleSync}
               disabled={isSyncing}
@@ -265,14 +254,6 @@ const EventManagementPage: React.FC = () => {
 
       {/* MAIN LIST */}
       <div ref={parentRef} className="flex-1 overflow-y-auto p-4 md:p-6 no-scrollbar pb-32">
-        {/* PRIORITY PANEL */}
-        <EventPriorityPanel 
-          stats={state.priorityStats}
-          theme={theme}
-          onSelectItem={handlePrioritySelectItem}
-          onActionClick={handlePriorityActionClick}
-        />
-
         <div
           style={{
             height: `${rowVirtualizer.getTotalSize()}px`,
@@ -302,7 +283,6 @@ const EventManagementPage: React.FC = () => {
                   onToggleSelect={actions.handleToggleSelect}
                   onUpdateStatus={handleUpdateStatus}
                   onRemove={confirmRemoveItem}
-                  onFilterFrc={(frc) => actions.setSearchQuery(frc)}
                   theme={theme}
                   isCompact={state.preferences.compactView}
                 />
@@ -377,6 +357,15 @@ const EventManagementPage: React.FC = () => {
         selectedCount={state.selectedIds.size}
         onClearSelection={actions.clearSelection}
         onBulkRemove={handleBulkRemove}
+        theme={theme}
+      />
+
+      <CreateEventModal 
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSubmit={async (data) => {
+          await actions.createEvent(data);
+        }}
         theme={theme}
       />
     </div>

@@ -97,6 +97,11 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
                 {item.erp}
               </span>
             )}
+            {item.nguia && (
+              <span className="px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-500 border border-purple-500/20 text-[8px] font-black uppercase tracking-widest">
+                {item.nguia}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -146,6 +151,11 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
           {item.erp && (
             <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 border border-blue-500/20 text-[8px] font-black uppercase tracking-widest">
               ERP: {item.erp}
+            </span>
+          )}
+          {item.nguia && (
+            <span className="px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-500 border border-purple-500/20 text-[8px] font-black uppercase tracking-widest">
+              GUIA: {item.nguia}
             </span>
           )}
         </div>
