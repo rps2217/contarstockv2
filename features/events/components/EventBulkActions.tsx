@@ -1,11 +1,12 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { CheckSquare, Trash2, X } from 'lucide-react';
+import { CheckSquare, Trash2, X, CheckCircle2, Undo2 } from 'lucide-react';
 
 interface EventBulkActionsProps {
   selectedCount: number;
   onClearSelection: () => void;
   onBulkRemove: () => void;
+  onBulkUpdateStatus: (isAdjusted: boolean) => void;
   theme?: 'dark' | 'light';
 }
 
@@ -13,6 +14,7 @@ export const EventBulkActions: React.FC<EventBulkActionsProps> = ({
   selectedCount,
   onClearSelection,
   onBulkRemove,
+  onBulkUpdateStatus,
   theme = 'dark'
 }) => {
   return (
@@ -60,6 +62,24 @@ export const EventBulkActions: React.FC<EventBulkActionsProps> = ({
                 }`}>Operaciones Disponibles</p>
                 
                 <div className="space-y-2">
+                  <button
+                    onClick={() => onBulkUpdateStatus(true)}
+                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 transition-all shadow-lg shadow-emerald-500/20"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    Marcar como Ajustados
+                  </button>
+
+                  <button
+                    onClick={() => onBulkUpdateStatus(false)}
+                    className="w-full bg-amber-600 hover:bg-amber-500 text-white px-4 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 transition-all shadow-lg shadow-amber-500/20"
+                  >
+                    <Undo2 className="w-4 h-4" />
+                    Revertir a Pendientes
+                  </button>
+
+                  <div className={`h-px my-4 ${theme === 'dark' ? 'bg-white/5' : 'bg-slate-100'}`} />
+
                   <button
                     onClick={onBulkRemove}
                     className="w-full bg-rose-500 hover:bg-rose-400 text-white px-4 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 transition-all shadow-lg shadow-rose-500/20"

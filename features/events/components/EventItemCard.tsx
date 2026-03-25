@@ -35,21 +35,13 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
   theme = 'dark',
   isCompact = false
 }) => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  const handleAction = (e: React.MouseEvent, action: () => void) => {
-    e.stopPropagation();
-    action();
-    setIsMenuOpen(false);
-  };
-
   return (
     <motion.div
       layout
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className={`border rounded-2xl flex flex-col md:grid md:grid-cols-[80px_120px_1.2fr_120px_1fr_1fr_60px] items-start md:items-center gap-4 md:gap-6 group transition-all relative ${
+      className={`border rounded-2xl flex flex-col md:grid md:grid-cols-[80px_120px_1.5fr_1fr_1fr] items-start md:items-center gap-4 md:gap-6 group transition-all relative ${
         isCompact ? 'p-3 md:p-2' : 'p-4'
       } ${
         theme === 'dark' ? 'bg-white/5' : 'bg-white shadow-sm'
@@ -125,13 +117,6 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
           }`}>
             {item.event}
           </span>
-          <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md w-fit border ${
-            item.isAdjusted 
-              ? theme === 'dark' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-emerald-50 text-emerald-600 border-emerald-200'
-              : theme === 'dark' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-amber-50 text-amber-600 border-amber-200'
-          }`}>
-            {item.isAdjusted ? 'Ajustado' : 'Pendiente'}
-          </span>
         </div>
       </div>
 
@@ -187,113 +172,6 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
           <span className={`text-xs font-bold ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>
             {item.location}
           </span>
-        </div>
-      </div>
-
-      {/* COLUMN 6: DATE */}
-      <div className="flex items-center justify-between w-full md:w-auto md:flex-col md:items-end gap-2 md:gap-1">
-        <div className="flex items-center gap-2 md:hidden">
-          <span className={`px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-widest border ${
-            theme === 'dark' ? 'bg-blue-500/10 border-blue-500/20 text-blue-500' : 'bg-blue-50 border-blue-200 text-blue-600'
-          }`}>
-            {item.event}
-          </span>
-          <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest border ${
-            item.isAdjusted 
-              ? theme === 'dark' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-emerald-50 text-emerald-600 border-emerald-200'
-              : theme === 'dark' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-amber-50 text-amber-600 border-amber-200'
-          }`}>
-            {item.isAdjusted ? 'Ajustado' : 'Pendiente'}
-          </span>
-        </div>
-        <div className="flex flex-col items-end">
-          <span className={`text-[10px] font-bold uppercase tracking-widest ${
-            theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
-          }`}>Fecha de Registro</span>
-          <span className={`text-xs font-black ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>
-            {format(item.timestamp, 'dd/MM/yyyy HH:mm')}
-          </span>
-        </div>
-      </div>
-
-      {/* COLUMN 7: ACTION MENU */}
-      <div className="flex items-center justify-end w-full md:w-auto">
-        <div className="relative">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsMenuOpen(!isMenuOpen);
-            }}
-            className={`p-2 rounded-xl transition-all border ${
-              theme === 'dark' 
-                ? 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10' 
-                : 'bg-slate-100 border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-200'
-            }`}
-          >
-            <MoreVertical className="w-5 h-5" />
-          </button>
-
-          <AnimatePresence>
-            {isMenuOpen && (
-              <>
-                <div 
-                  className="fixed inset-0 z-40" 
-                  onClick={() => setIsMenuOpen(false)} 
-                />
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                  className={`absolute right-0 bottom-full md:bottom-auto md:top-full mt-2 w-48 rounded-2xl border shadow-2xl z-50 overflow-hidden ${
-                    theme === 'dark' ? 'bg-slate-900 border-white/10' : 'bg-white border-slate-200'
-                  }`}
-                >
-                  <div className="p-2 space-y-1">
-                    {!item.isAdjusted ? (
-                      <button
-                        onClick={(e) => handleAction(e, () => onUpdateStatus?.(item.id, true))}
-                        className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-emerald-500 hover:bg-emerald-500/10 transition-colors"
-                      >
-                        <CheckCircle2 className="w-4 h-4" />
-                        Marcar Ajustado
-                      </button>
-                    ) : (
-                      <button
-                        onClick={(e) => handleAction(e, () => onUpdateStatus?.(item.id, false))}
-                        className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-amber-500 hover:bg-amber-500/10 transition-colors"
-                      >
-                        <Undo2 className="w-4 h-4" />
-                        Revertir Ajuste
-                      </button>
-                    )}
-                    
-                    <button
-                      onClick={(e) => handleAction(e, () => {
-                        // Placeholder for details
-                        alert(`Detalles de ${item.productName}\nEvento: ${item.event}\nCantidad: ${item.quantity}`);
-                      })}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors ${
-                        theme === 'dark' ? 'text-slate-300 hover:bg-white/5' : 'text-slate-600 hover:bg-slate-50'
-                      }`}
-                    >
-                      <Info className="w-4 h-4" />
-                      Ver Detalles
-                    </button>
-
-                    <div className={`h-px my-1 ${theme === 'dark' ? 'bg-white/5' : 'bg-slate-100'}`} />
-
-                    <button
-                      onClick={(e) => handleAction(e, () => onRemove?.(item))}
-                      className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-rose-500 hover:bg-rose-500/10 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Eliminar
-                    </button>
-                  </div>
-                </motion.div>
-              </>
-            )}
-          </AnimatePresence>
         </div>
       </div>
     </motion.div>

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'motion/react';
+import { format } from 'date-fns';
 import { useVirtualizer } from '@tanstack/react-virtual';
 
 // Hooks
@@ -116,6 +117,21 @@ const EventManagementPage: React.FC = () => {
     actions.clearSelection();
   };
 
+  const handleBulkUpdateStatus = async (isAdjusted: boolean) => {
+    const selectedIds = Array.from(state.selectedIds);
+    if (selectedIds.length === 0) return;
+
+    try {
+      for (const id of selectedIds) {
+        await actions.updateEventStatus(id, isAdjusted);
+      }
+      toast.success(`${selectedIds.length} registros actualizados`);
+      actions.clearSelection();
+    } catch (error) {
+      toast.error('Error al actualizar registros masivamente');
+    }
+  };
+
   const confirmRemoveItem = (item: any) => {
     const confirm = window.confirm(`¿RETIRAR ${item.productName}? ESTA ACCIÓN ES IRREVERSIBLE.`);
     if (confirm) {
@@ -133,20 +149,50 @@ const EventManagementPage: React.FC = () => {
     toast.info(`Filtrando por FRC: ${frc}`);
   };
 
+  // Grouping Logic
+  const getGroupedItems = (events: any[]) => {
+    const groups: { [key: string]: any[] } = {};
+    events.forEach(event => {
+      const date = format(event.timestamp, 'dd/MM/yyyy');
+      if (!groups[date]) groups[date] = [];
+      groups[date].push(event);
+    });
+
+    const flattened: any[] = [];
+    const sortedDates = Object.keys(groups).sort((a, b) => {
+      const [dayA, monthA, yearA] = a.split('/').map(Number);
+      const [dayB, monthB, yearB] = b.split('/').map(Number);
+      const dateA = new Date(yearA, monthA - 1, dayA).getTime();
+      const dateB = new Date(yearB, monthB - 1, dayB).getTime();
+      return dateB - dateA;
+    });
+
+    sortedDates.forEach(date => {
+      flattened.push({ type: 'header', date });
+      groups[date].forEach(item => {
+        flattened.push({ type: 'item', data: item });
+      });
+    });
+    return flattened;
+  };
+
+  const pendingGrouped = getGroupedItems(state.pendingEvents);
+  const adjustedGrouped = getGroupedItems(state.adjustedEvents);
+
   const pendingRef = useRef<HTMLDivElement>(null);
   const adjustedRef = useRef<HTMLDivElement>(null);
   
   const pendingVirtualizer = useVirtualizer({
-    count: state.pendingEvents.length,
+    count: pendingGrouped.length,
     getScrollElement: () => pendingRef.current,
-    estimateSize: () => state.preferences.compactView ? 80 : 120,
+    estimateSize: (index) => pendingGrouped[index].type === 'header' ? 40 : (state.preferences.compactView ? 80 : 120),
     overscan: 5,
   });
 
   const adjustedVirtualizer = useVirtualizer({
-    count: state.adjustedEvents.length,
+    count: adjustedGrouped.length,
     getScrollElement: () => adjustedRef.current,
-    estimateSize: () => state.preferences.compactView ? 80 : 120,
+    estimateSize: (index) => adjustedGrouped[index].type === 'header' ? 40 : (state.preferences.compactView ? 80 : 120),
     overscan: 5,
   });
 
@@ -264,7 +310,34 @@ const EventManagementPage: React.FC = () => {
                 }}
               >
                 {pendingVirtualizer.getVirtualItems().map((virtualRow) => {
-                  const item = state.pendingEvents[virtualRow.index];
+                  const entry = pendingGrouped[virtualRow.index];
+                  
+                  if (entry.type === 'header') {
+                    return (
+                      <div
+                        key={`header-${entry.date}`}
+                        ref={pendingVirtualizer.measureElement}
+                        data-index={virtualRow.index}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          transform: `translateY(${virtualRow.start}px)`,
+                          padding: '8px 0',
+                        }}
+                      >
+                        <div className={`flex items-center gap-3 px-4 py-1 rounded-lg border ${
+                          theme === 'dark' ? 'bg-white/5 border-white/10 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-500'
+                        }`}>
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                          <span className="text-[10px] font-black uppercase tracking-[0.2em]">{entry.date}</span>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  const item = entry.data;
                   return (
                     <div
                       key={item.id}
@@ -338,7 +411,34 @@ const EventManagementPage: React.FC = () => {
                 }}
               >
                 {adjustedVirtualizer.getVirtualItems().map((virtualRow) => {
-                  const item = state.adjustedEvents[virtualRow.index];
+                  const entry = adjustedGrouped[virtualRow.index];
+
+                  if (entry.type === 'header') {
+                    return (
+                      <div
+                        key={`header-adj-${entry.date}`}
+                        ref={adjustedVirtualizer.measureElement}
+                        data-index={virtualRow.index}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          transform: `translateY(${virtualRow.start}px)`,
+                          padding: '8px 0',
+                        }}
+                      >
+                        <div className={`flex items-center gap-3 px-4 py-1 rounded-lg border ${
+                          theme === 'dark' ? 'bg-white/5 border-white/10 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-500'
+                        }`}>
+                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                          <span className="text-[10px] font-black uppercase tracking-[0.2em]">{entry.date}</span>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  const item = entry.data;
                   return (
                     <div
                       key={item.id}
@@ -394,6 +494,7 @@ const EventManagementPage: React.FC = () => {
         selectedCount={state.selectedIds.size}
         onClearSelection={actions.clearSelection}
         onBulkRemove={handleBulkRemove}
+        onBulkUpdateStatus={handleBulkUpdateStatus}
         theme={theme}
       />
 
