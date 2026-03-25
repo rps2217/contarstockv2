@@ -22,9 +22,10 @@ interface ExpiryPriorityPanelProps {
   };
   theme: 'dark' | 'light';
   onSelectItem: (id: string) => void;
+  onActionClick?: (type: string) => void;
 }
 
-export const ExpiryPriorityPanel: React.FC<ExpiryPriorityPanelProps> = ({ stats, theme, onSelectItem }) => {
+export const ExpiryPriorityPanel: React.FC<ExpiryPriorityPanelProps> = ({ stats, theme, onSelectItem, onActionClick }) => {
   const { priorityItems, volumeAlerts, suggestedActions = [] } = stats;
 
   if (priorityItems.length === 0) return null;
@@ -128,15 +129,21 @@ export const ExpiryPriorityPanel: React.FC<ExpiryPriorityPanelProps> = ({ stats,
             </div>
           </div>
           
-          <div className="space-y-3">
+          <div className="space-y-2">
             {suggestedActions.length > 0 ? (
               suggestedActions.map((action, idx) => (
-                <div key={idx} className="flex items-start gap-2">
+                <button 
+                  key={idx} 
+                  onClick={() => onActionClick && onActionClick(action.type)}
+                  className={`w-full flex items-start gap-2 p-2 rounded-xl transition-colors text-left ${
+                    theme === 'dark' ? 'hover:bg-white/5' : 'hover:bg-indigo-100/50'
+                  }`}
+                >
                   <CheckCircle2 className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${
                     action.type === 'merma' ? 'text-rose-500' : 
                     action.type === 'canje' ? 'text-emerald-500' : 'text-amber-500'
                   }`} />
-                  <div>
+                  <div className="flex-1">
                     <h4 className={`text-[10px] font-black uppercase ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`}>
                       {action.title}
                     </h4>
@@ -144,10 +151,11 @@ export const ExpiryPriorityPanel: React.FC<ExpiryPriorityPanelProps> = ({ stats,
                       {action.description}
                     </p>
                   </div>
-                </div>
+                  <ChevronRight className={`w-3 h-3 mt-1 ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`} />
+                </button>
               ))
             ) : (
-              <div className={`text-[10px] font-medium italic ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
+              <div className={`text-[10px] font-medium italic px-2 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
                 No hay acciones prioritarias en este momento.
               </div>
             )}

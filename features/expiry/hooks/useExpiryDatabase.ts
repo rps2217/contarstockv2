@@ -3,14 +3,13 @@ import { useMemo, useEffect, useCallback, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../../db';
 import { Product, Provider } from '../../../types';
-import { format, differenceInDays, isPast, isBefore, addDays, parseISO, startOfMonth, addMonths, endOfMonth, isWithinInterval } from 'date-fns';
-import { es } from 'date-fns/locale/es';
 import { importExpirationsFromCloud, importProvidersFromCloud } from '../../../services/syncManager';
 import { addExpirationToCloud, removeExpirationFromCloud } from '../../../services/expirySync';
 import { normalizeSku } from '../../../services/utils';
 import { useToastStore } from '../../../store/useToastStore';
 import { useExpiryStore, ExpiryItem, ExpiryStatus, ExpiryPreferences } from '../../../store/useExpiryStore';
 import { SyncQueueService } from '../../../services/syncQueueService';
+import { processExpiryItem, filterExpiryItems, calculateExpiryStats } from '../utils/expiryProcessor';
 
 export type { ExpiryStatus, ExpiryPreferences };
 
@@ -82,99 +81,9 @@ export const useExpiryDatabase = () => {
     if (!scans) return [];
 
     const now = new Date();
-    const criticalThreshold = addDays(now, 30);
-    const startOfNextMonth = startOfMonth(addMonths(now, 1));
-    const endOfFourMonths = endOfMonth(addMonths(now, 4));
-    const currentMonthStart = startOfMonth(now);
-    const currentMonthEnd = endOfMonth(now);
 
-    const getStatus = (expiry: Date | null, withdrawalDate: Date | null): ExpiryStatus => {
-      if (!expiry) return 'safe';
-      if (isPast(expiry)) return 'expired';
-      if (isBefore(expiry, criticalThreshold)) return 'critical';
-      if (withdrawalDate && (isPast(withdrawalDate) || isWithinInterval(withdrawalDate, { start: currentMonthStart, end: currentMonthEnd }))) {
-        return 'withdrawal';
-      }
-      if (isWithinInterval(expiry, { start: startOfNextMonth, end: endOfFourMonths })) {
-        return 'next_expiry';
-      }
-      return 'safe';
-    };
-
-    const processItem = (item: any): ExpiryItem => {
-      let expiry: Date | null = null;
-      if (item.expiryDate) {
-        expiry = parseISO(item.expiryDate);
-      } else if (item.mm && item.yyyy) {
-        expiry = new Date(item.yyyy, item.mm, 0);
-      } else if (item.expiryDateObj) {
-        expiry = item.expiryDateObj;
-      }
-
-      const product = productMap.get(normalizeSku(item.barcode));
-      const productName = product?.name || item.productName || 'Producto Desconocido';
-      const supplierRut = product?.supplierRut ? normalizeSku(product.supplierRut) : null;
-      const provider = supplierRut ? providerMap.get(supplierRut) : null;
-      
-      let withdrawalDate: Date | null = null;
-      // NUEVO ENFOQUE: 0 días en H -> SIN CANJE, > 0 días -> CON CANJE
-      const hasCanje = provider ? (provider.withdrawalDays ?? 0) > 0 : false;
-      
-      if (item.fechaCC) {
-        withdrawalDate = parseISO(item.fechaCC);
-      } else if (expiry) {
-        // Si el valor es 0, usamos 30 días de anticipación.
-        // Si no hay proveedor o no hay días definidos, usamos 30 por defecto.
-        const rawDays = provider?.withdrawalDays ?? 30;
-        const days = rawDays === 0 ? 30 : rawDays;
-        withdrawalDate = addDays(expiry, -days);
-      }
-
-      const status = getStatus(expiry, withdrawalDate);
-      const daysLeft = expiry ? differenceInDays(expiry, now) : 0;
-      const estado = !withdrawalDate 
-        ? "" 
-        : `${hasCanje ? "Canje" : "Merma"} ${format(withdrawalDate, 'MMM yyyy', { locale: es })}`;
-
-      // CALCULAR RISK SCORE (0-100)
-      let riskScore = 0;
-      if (expiry) {
-        // Factor Tiempo (60%): 0 días = 60 pts, 180+ días = 0 pts
-        const timeScore = Math.max(0, 60 - (daysLeft / 3)); 
-        
-        // Factor Comercial (25%): Merma = 25 pts, Canje = 10 pts
-        const commercialScore = hasCanje ? 10 : 25;
-        
-        // Factor Volumen (15%): 1 unidad = 1 pt, 50+ unidades = 15 pts
-        const volumeScore = Math.min(15, (item.quantity || 1) * 0.3);
-        
-        riskScore = Math.round(timeScore + commercialScore + volumeScore);
-        
-        // Penalización por ya vencido
-        if (isPast(expiry)) riskScore = 100;
-      }
-
-      return {
-        ...item,
-        productName,
-        providerName: provider?.name || product?.supplier || 'N/A',
-        category: product?.category || 'GENERAL',
-        withdrawalDays: provider?.withdrawalDays || 0,
-        hasCanje,
-        status,
-        daysLeft,
-        expiryDateObj: expiry,
-        withdrawalDate,
-        location: item.location || 'N/A',
-        estado,
-        quantity: item.quantity || 1,
-        riskScore,
-        price: product?.price || 0
-      };
-    };
-
-    const individualItems = scans.map(scan => processItem({ ...scan, type: 'Individual' }));
-    const sessionItems = (sessions || []).map(session => processItem({
+    const individualItems = scans.map(scan => processExpiryItem({ ...scan, type: 'Individual' }, productMap, providerMap, now));
+    const sessionItems = (sessions || []).map(session => processExpiryItem({
       id: session.id,
       barcode: session.logisticsLabel,
       mm: session.mm,
@@ -184,22 +93,23 @@ export const useExpiryDatabase = () => {
       timestamp: session.createdAt,
       quantity: session.totalUnits || 0,
       location: session.logisticsLabel || 'N/A'
-    }));
+    }, productMap, providerMap, now));
+    
     const cloudItems = (cloudExpirations || [])
       .filter(exp => !exp.event || exp.event.toUpperCase() === 'VENCIMIENTOS' || exp.event.toUpperCase() === 'VENCIMIENTO')
-      .map(exp => processItem({
-      id: exp.id,
-      barcode: exp.barcode,
-      productName: exp.productName,
-      mm: exp.mm,
-      yyyy: exp.yyyy,
-      batch: 'N/A',
-      type: 'Nube',
-      timestamp: exp.timestamp,
-      quantity: exp.quantity || 0,
-      location: exp.location || 'N/A',
-      claveUnica: exp.claveUnica
-    }));
+      .map(exp => processExpiryItem({
+        id: exp.id,
+        barcode: exp.barcode,
+        productName: exp.productName,
+        mm: exp.mm,
+        yyyy: exp.yyyy,
+        batch: 'N/A',
+        type: 'Nube',
+        timestamp: exp.timestamp,
+        quantity: exp.quantity || 0,
+        location: exp.location || 'N/A',
+        claveUnica: exp.claveUnica
+      }, productMap, providerMap, now));
 
     return [...individualItems, ...sessionItems, ...cloudItems];
   }, [scans, sessions, cloudExpirations, productMap, providerMap]);
@@ -213,62 +123,13 @@ export const useExpiryDatabase = () => {
   }, [baseProcessedData]);
 
   const contextFilteredData = useMemo(() => {
-    const query = debouncedSearch.toLowerCase();
-    
-    return baseProcessedData.filter(item => {
-      // 1. Search Query
-      if (query) {
-        const matchesSearch = 
-          item.productName.toLowerCase().includes(query) ||
-          item.barcode.includes(query) ||
-          (item.batch && item.batch.toLowerCase().includes(query)) ||
-          (item.providerName && item.providerName.toLowerCase().includes(query));
-        if (!matchesSearch) return false;
-      }
-
-      // 2. Categories
-      if (selectedCategories.length > 0 && !selectedCategories.includes(item.category)) {
-        return false;
-      }
-
-      // 3. Canje
-      if (selectedCanje === 'canje' && !item.hasCanje) return false;
-      if (selectedCanje === 'markdown' && item.hasCanje) return false;
-
-      // 4. Estado
-      if (selectedEstado && item.estado !== selectedEstado) return false;
-
-      // 5. Date Range (Expiry)
-      if (dateRange.start || dateRange.end) {
-        if (!item.expiryDateObj) return false;
-        const itemDate = item.expiryDateObj.getTime();
-        
-        if (dateRange.start) {
-          const start = new Date(dateRange.start).setHours(0, 0, 0, 0);
-          if (itemDate < start) return false;
-        }
-        if (dateRange.end) {
-          const end = new Date(dateRange.end).setHours(23, 59, 59, 999);
-          if (itemDate > end) return false;
-        }
-      }
-
-      // 6. Withdrawal Date Range
-      if (withdrawalDateRange.start || withdrawalDateRange.end) {
-        if (!item.withdrawalDate) return false;
-        const itemDate = item.withdrawalDate.getTime();
-        
-        if (withdrawalDateRange.start) {
-          const start = new Date(withdrawalDateRange.start).setHours(0, 0, 0, 0);
-          if (itemDate < start) return false;
-        }
-        if (withdrawalDateRange.end) {
-          const end = new Date(withdrawalDateRange.end).setHours(23, 59, 59, 999);
-          if (itemDate > end) return false;
-        }
-      }
-
-      return true;
+    return filterExpiryItems(baseProcessedData, {
+      query: debouncedSearch.toLowerCase(),
+      selectedCategories,
+      selectedCanje,
+      selectedEstado,
+      dateRange,
+      withdrawalDateRange
     });
   }, [baseProcessedData, debouncedSearch, selectedCategories, selectedCanje, selectedEstado, dateRange, withdrawalDateRange]);
 
@@ -300,74 +161,7 @@ export const useExpiryDatabase = () => {
     });
   }, [contextFilteredData, selectedStatuses, preferences.hideExpiredByDefault, preferences.defaultSort]);
 
-  const stats = useMemo(() => {
-    const expiredCount = contextFilteredData.filter(s => s.status === 'expired').length;
-    const criticalCount = contextFilteredData.filter(s => s.status === 'critical').length;
-    const nextExpiryCount = contextFilteredData.filter(s => s.status === 'next_expiry').length;
-    const withdrawalCount = contextFilteredData.filter(s => s.status === 'withdrawal').length;
-    
-    // Priority Items (Top 5 by risk score)
-    const priorityItems = [...contextFilteredData]
-      .filter(item => item.status !== 'safe')
-      .sort((a, b) => (b.riskScore || 0) - (a.riskScore || 0))
-      .slice(0, 5);
-
-    // Volume Alerts (Categories with most items)
-    const categoryCounts: Record<string, number> = {};
-    contextFilteredData.forEach(item => {
-      if (item.status !== 'safe') {
-        categoryCounts[item.category] = (categoryCounts[item.category] || 0) + 1;
-      }
-    });
-    const volumeAlerts = Object.entries(categoryCounts)
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 3);
-
-    // Suggested Actions
-    const suggestedActions = [];
-    
-    const mermaItems = contextFilteredData.filter(item => !item.hasCanje && (item.status === 'critical' || item.status === 'expired'));
-    if (mermaItems.length > 0) {
-      suggestedActions.push({
-        title: 'Solicitudes de precios especiales',
-        description: `Gestionar rebajas para ${mermaItems.length} ítems sin opción a canje.`,
-        count: mermaItems.length,
-        type: 'merma'
-      });
-    }
-
-    const canjeItems = contextFilteredData.filter(item => item.hasCanje && (item.status === 'critical' || item.status === 'expired'));
-    if (canjeItems.length > 0) {
-      suggestedActions.push({
-        title: 'Gestión de Canjes',
-        description: `Coordinar devolución con proveedores para ${canjeItems.length} ítems.`,
-        count: canjeItems.length,
-        type: 'canje'
-      });
-    }
-
-    const nextExpiryItems = contextFilteredData.filter(item => item.status === 'next_expiry');
-    if (nextExpiryItems.length > 0) {
-      suggestedActions.push({
-        title: 'Monitorización cercana',
-        description: `Vigilar rotación de ${nextExpiryItems.length} ítems próximos a vencer.`,
-        count: nextExpiryItems.length,
-        type: 'monitor'
-      });
-    }
-
-    return {
-      expired: expiredCount,
-      critical: criticalCount,
-      next_expiry: nextExpiryCount,
-      withdrawal: withdrawalCount,
-      total: contextFilteredData.length,
-      priorityItems,
-      volumeAlerts,
-      suggestedActions
-    };
-  }, [contextFilteredData]);
+  const stats = useMemo(() => calculateExpiryStats(contextFilteredData), [contextFilteredData]);
 
   const handleSyncExpirations = useCallback(async () => {
     try {

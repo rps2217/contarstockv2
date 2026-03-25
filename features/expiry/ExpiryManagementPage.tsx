@@ -101,6 +101,27 @@ const ExpiryManagementPage: React.FC = () => {
     addToast('Filtros restablecidos', 'info');
   };
 
+  const handleActionClick = (type: string) => {
+    handleClearFilters();
+    if (type === 'merma') {
+      actions.setSelectedCanje('markdown');
+      actions.setSelectedStatuses(['critical', 'expired']);
+      addToast('Filtrando por Merma (Crítico/Vencido)', 'info');
+    } else if (type === 'canje') {
+      actions.setSelectedCanje('canje');
+      actions.setSelectedStatuses(['critical', 'expired']);
+      addToast('Filtrando por Canje (Crítico/Vencido)', 'info');
+    } else if (type === 'monitor') {
+      actions.setSelectedStatuses(['next_expiry']);
+      addToast('Filtrando por Próximos a Vencer', 'info');
+    }
+    
+    // Scroll to list
+    setTimeout(() => {
+      parentRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
+
   const confirmBulkRemove = () => {
     const confirm = window.confirm(`¿ESTÁS SEGURO DE RETIRAR ${state.selectedIds.size} ÍTEMS SELECCIONADOS? ESTA ACCIÓN NO SE PUEDE DESHACER.`);
     if (confirm) {
@@ -322,13 +343,10 @@ const ExpiryManagementPage: React.FC = () => {
                 >
                   <div className="pt-4">
                     <ExpiryPriorityPanel 
-                      stats={{
-                        priorityItems: state.stats.priorityItems,
-                        volumeAlerts: state.stats.volumeAlerts,
-                        actionGroups: state.stats.actionGroups
-                      }} 
+                      stats={state.stats} 
                       theme={theme} 
                       onSelectItem={handleSelectItemFromPriority}
+                      onActionClick={handleActionClick}
                     />
                   </div>
                 </motion.div>
@@ -374,7 +392,7 @@ const ExpiryManagementPage: React.FC = () => {
                 }}
               >
                 <ExpiryItemCard 
-                  item={{...item, index: virtualRow.index + 1}}
+                  item={item}
                   isSelected={state.selectedIds.has(item.id)}
                   isVerified={state.verifiedIds.has(item.id)}
                   onToggleSelect={handleToggleSelect}
