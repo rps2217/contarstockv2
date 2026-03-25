@@ -1,12 +1,21 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { CheckSquare, Trash2, X, CheckCircle2, Undo2, Truck } from 'lucide-react';
+import { 
+  CheckSquare, 
+  Trash2, 
+  X, 
+  Truck, 
+  Printer, 
+  Mail, 
+  ChevronDown 
+} from 'lucide-react';
 
 interface EventBulkActionsProps {
   selectedCount: number;
   onClearSelection: () => void;
   onBulkRemove: () => void;
-  onBulkUpdateStatus: (isAdjusted: boolean) => void;
+  onBulkPrintLabels: () => void;
+  onBulkSendEmail: () => void;
   onBulkUpdateDestino: (destino: string) => void;
   theme?: 'dark' | 'light';
 }
@@ -15,10 +24,13 @@ export const EventBulkActions: React.FC<EventBulkActionsProps> = ({
   selectedCount,
   onClearSelection,
   onBulkRemove,
-  onBulkUpdateStatus,
+  onBulkPrintLabels,
+  onBulkSendEmail,
   onBulkUpdateDestino,
   theme = 'dark'
 }) => {
+  const [isDestinoOpen, setIsDestinoOpen] = useState(false);
+
   const DESTINOS = [
     'BOD. 37',
     'BOD. 80',
@@ -27,6 +39,7 @@ export const EventBulkActions: React.FC<EventBulkActionsProps> = ({
     'BOD. 106',
     'BOD. 121'
   ];
+
   return (
     <AnimatePresence>
       {selectedCount > 0 && (
@@ -41,7 +54,7 @@ export const EventBulkActions: React.FC<EventBulkActionsProps> = ({
               theme === 'dark' ? 'bg-slate-900 border-white/10' : 'bg-white border-slate-200'
             }`}
           >
-            <div className="p-6 flex items-center justify-between border-bottom border-white/5">
+            <div className="p-6 flex items-center justify-between border-b border-white/5">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/40">
                   <CheckSquare className="w-5 h-5" />
@@ -49,7 +62,7 @@ export const EventBulkActions: React.FC<EventBulkActionsProps> = ({
                 <div>
                   <h4 className={`text-sm font-black uppercase tracking-tighter italic leading-none ${
                     theme === 'dark' ? 'text-white' : 'text-slate-900'
-                  }`}>Acciones</h4>
+                  }`}>Acciones Masivas</h4>
                   <p className="text-[10px] text-blue-400 font-bold uppercase tracking-widest mt-1">{selectedCount} Seleccionados</p>
                 </div>
               </div>
@@ -63,74 +76,100 @@ export const EventBulkActions: React.FC<EventBulkActionsProps> = ({
               </button>
             </div>
 
-            <div className="flex-1 p-6 space-y-4">
-              <div className={`p-4 rounded-2xl border ${
-                theme === 'dark' ? 'bg-white/5 border-white/5' : 'bg-slate-50 border-slate-100'
-              }`}>
-                <p className={`text-[10px] font-bold uppercase tracking-widest mb-4 ${
+            <div className="flex-1 p-6 space-y-6 overflow-y-auto no-scrollbar">
+              <div className="space-y-4">
+                <p className={`text-[10px] font-bold uppercase tracking-widest ${
                   theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
-                }`}>Operaciones Disponibles</p>
+                }`}>Gestión de Documentos</p>
                 
-                <div className="space-y-2">
+                <div className="grid grid-cols-1 gap-3">
                   <button
-                    onClick={() => onBulkUpdateStatus(true)}
-                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 transition-all shadow-lg shadow-emerald-500/20"
+                    onClick={onBulkPrintLabels}
+                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 transition-all shadow-lg shadow-indigo-500/20"
                   >
-                    <CheckCircle2 className="w-4 h-4" />
-                    Marcar como Ajustados
+                    <Printer className="w-4 h-4" />
+                    Imprimir Etiquetas
                   </button>
 
                   <button
-                    onClick={() => onBulkUpdateStatus(false)}
-                    className="w-full bg-amber-600 hover:bg-amber-500 text-white px-4 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 transition-all shadow-lg shadow-amber-500/20"
+                    onClick={onBulkSendEmail}
+                    className="w-full bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 transition-all shadow-lg shadow-cyan-500/20"
                   >
-                    <Undo2 className="w-4 h-4" />
-                    Revertir a Pendientes
+                    <Mail className="w-4 h-4" />
+                    Enviar por Correo
                   </button>
-
-                  <div className={`h-px my-4 ${theme === 'dark' ? 'bg-white/5' : 'bg-slate-100'}`} />
-
-                  <button
-                    onClick={onBulkRemove}
-                    className="w-full bg-rose-500 hover:bg-rose-400 text-white px-4 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 transition-all shadow-lg shadow-rose-500/20"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    Retirar Seleccionados
-                  </button>
-
-                  <div className={`h-px my-4 ${theme === 'dark' ? 'bg-white/5' : 'bg-slate-100'}`} />
-
-                  <div className="space-y-2">
-                    <p className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 ${
-                      theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
-                    }`}>
-                      <Truck className="w-3 h-3" /> Cambiar Destino
-                    </p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {DESTINOS.map(d => (
-                        <button
-                          key={d}
-                          onClick={() => onBulkUpdateDestino(d)}
-                          className={`px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border ${
-                            theme === 'dark'
-                              ? 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10 hover:text-white'
-                              : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                          }`}
-                        >
-                          {d}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
                 </div>
               </div>
 
-              <div className={`p-4 rounded-2xl border border-dashed ${
-                theme === 'dark' ? 'border-white/10' : 'border-slate-200'
-              }`}>
-                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest text-center italic">
-                  Próximamente más acciones masivas aquí...
-                </p>
+              <div className={`h-px ${theme === 'dark' ? 'bg-white/5' : 'bg-slate-100'}`} />
+
+              <div className="space-y-4">
+                <p className={`text-[10px] font-bold uppercase tracking-widest ${
+                  theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
+                }`}>Logística</p>
+                
+                <div className="relative">
+                  <button
+                    onClick={() => setIsDestinoOpen(!isDestinoOpen)}
+                    className={`w-full px-4 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-between transition-all border ${
+                      theme === 'dark'
+                        ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
+                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Truck className="w-4 h-4 text-blue-500" />
+                      Asignar Destino
+                    </div>
+                    <ChevronDown className={`w-4 h-4 transition-transform ${isDestinoOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  <AnimatePresence>
+                    {isDestinoOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className={`absolute top-full left-0 right-0 mt-2 rounded-xl border shadow-2xl z-10 overflow-hidden ${
+                          theme === 'dark' ? 'bg-slate-800 border-white/10' : 'bg-white border-slate-200'
+                        }`}
+                      >
+                        {DESTINOS.map(d => (
+                          <button
+                            key={d}
+                            onClick={() => {
+                              onBulkUpdateDestino(d);
+                              setIsDestinoOpen(false);
+                            }}
+                            className={`w-full px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest transition-colors ${
+                              theme === 'dark'
+                                ? 'hover:bg-white/5 text-slate-300 hover:text-white'
+                                : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'
+                            }`}
+                          >
+                            {d}
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+
+              <div className={`h-px ${theme === 'dark' ? 'bg-white/5' : 'bg-slate-100'}`} />
+
+              <div className="space-y-4">
+                <p className={`text-[10px] font-bold uppercase tracking-widest ${
+                  theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
+                }`}>Peligro</p>
+                
+                <button
+                  onClick={onBulkRemove}
+                  className="w-full bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white border border-rose-500/20 px-4 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 transition-all"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Eliminar Registros
+                </button>
               </div>
             </div>
 

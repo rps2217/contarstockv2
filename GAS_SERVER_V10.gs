@@ -45,30 +45,10 @@ function addExpiration(data) {
     // Generación de CLAVE_UNICA (SKU + YYYY + MM + DD_FIN_MES) o usar la enviada por el cliente
     var claveUnica = data.claveUnica || (barcode + data.yyyy + mmPadded + ddPadded);
 
-    // Validación de duplicados en la nube
-    var lastRow = sheet.getLastRow();
-    if (lastRow >= 2) {
-      var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-      var normalizedHeaders = headers.map(normalizeHeader);
-      var claveColIdx = normalizedHeaders.indexOf("CLAVE_UNICA");
-      if (claveColIdx === -1) claveColIdx = normalizedHeaders.indexOf("CLAVEUNICA");
-      if (claveColIdx === -1) claveColIdx = normalizedHeaders.indexOf("CLAVE");
-      if (claveColIdx !== -1) {
-        var existingClaves = sheet.getRange(2, claveColIdx + 1, lastRow - 1, 1).getValues().flat().map(String);
-        if (existingClaves.indexOf(claveUnica) !== -1) {
-          return { success: true, message: "Ya existe", clave: claveUnica };
-        }
-      }
-    }
-
     // Fecha de ingreso formateada dd/MM/yyyy para que Sheets la reconozca como fecha
     var now = new Date();
     var fechaIngreso = Utilities.formatDate(now, "GMT-3", "dd/MM/yyyy");
 
-    // Obtener y normalizar encabezados para mapeo dinámico
-    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-    var normalizedHeaders = headers.map(normalizeHeader);
-    
     // Mapeo exacto de datos a normalizar (usando los nombres exactos de tus columnas)
     var rowData = {
       "ID_REGISTRO": data.id || Utilities.getUuid(),
@@ -92,9 +72,44 @@ function addExpiration(data) {
       "NGUIA": data.nguia || "",
       "GUIA": data.nguia || "",
       "ETIQUETAS": "MANUAL",
-      "BOD": data.location || ""
+      "BOD": data.location || "",
+      "DESTINO": data.destino || ""
     };
 
+    // Validación de duplicados en la nube - SI EXISTE, ACTUALIZAMOS
+    var lastRow = sheet.getLastRow();
+    if (lastRow >= 2) {
+      var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+      var normalizedHeaders = headers.map(normalizeHeader);
+      var claveColIdx = normalizedHeaders.indexOf("CLAVE_UNICA");
+      if (claveColIdx === -1) claveColIdx = normalizedHeaders.indexOf("CLAVEUNICA");
+      if (claveColIdx === -1) claveColIdx = normalizedHeaders.indexOf("CLAVE");
+      
+      if (claveColIdx !== -1) {
+        var existingClaves = sheet.getRange(2, claveColIdx + 1, lastRow - 1, 1).getValues().flat().map(String);
+        var rowIndex = existingClaves.indexOf(claveUnica);
+        
+        if (rowIndex !== -1) {
+          // ACTUALIZAR FILA EXISTENTE
+          var rowNumber = rowIndex + 2;
+          var currentRowValues = sheet.getRange(rowNumber, 1, 1, headers.length).getValues()[0];
+          
+          var updatedRow = normalizedHeaders.map(function(normH, idx) {
+            // Solo actualizamos si el nuevo dato no es nulo/indefinido
+            if (rowData[normH] !== undefined && rowData[normH] !== "") return rowData[normH];
+            return currentRowValues[idx];
+          });
+          
+          sheet.getRange(rowNumber, 1, 1, headers.length).setValues([updatedRow]);
+          return { success: true, message: "Actualizado", id: data.id, clave: claveUnica };
+        }
+      }
+    }
+
+    // SI NO EXISTE, AGREGAMOS NUEVA FILA
+    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    var normalizedHeaders = headers.map(normalizeHeader);
+    
     var newRow = normalizedHeaders.map(function(normH) {
       return rowData[normH] !== undefined ? rowData[normH] : "";
     });

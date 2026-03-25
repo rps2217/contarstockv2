@@ -230,7 +230,25 @@ export const useEventDatabase = () => {
         await db.cloudExpirations.update(id, { isAdjusted });
       },
       updateEventDestino: async (id: string, destino: string) => {
-        await db.cloudExpirations.update(id, { destino });
+        const item = await db.cloudExpirations.get(id);
+        if (!item) return;
+        
+        const updated = { ...item, destino };
+        await db.cloudExpirations.put(updated);
+        
+        // Sincronizar a la nube
+        await addExpirationToCloud({
+          barcode: updated.barcode,
+          productName: updated.productName,
+          mm: updated.mm,
+          yyyy: updated.yyyy,
+          quantity: updated.quantity,
+          event: updated.event,
+          frc: updated.frc,
+          nguia: updated.nguia,
+          claveUnica: updated.claveUnica,
+          destino: updated.destino
+        });
       },
       updateEvent: async (id: string, data: {
         barcode: string;

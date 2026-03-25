@@ -172,6 +172,7 @@ const EventManagementPage: React.FC = () => {
     if (selectedIds.length === 0) return;
 
     try {
+      actions.setPendingOperations(p => p + selectedIds.length);
       for (const id of selectedIds) {
         await actions.updateEventDestino(id, destino);
       }
@@ -179,7 +180,29 @@ const EventManagementPage: React.FC = () => {
       actions.clearSelection();
     } catch (error) {
       toast.error('Error al actualizar destino masivamente');
+    } finally {
+      actions.setPendingOperations(p => Math.max(0, p - selectedIds.length));
     }
+  };
+
+  const handleBulkPrintLabels = () => {
+    const selectedItems = state.processedEvents.filter(item => state.selectedIds.has(item.id));
+    if (selectedItems.length === 0) return;
+    
+    import('../expiry/utils/expiryUtils').then(utils => {
+      utils.handlePrintLabels(selectedItems);
+      toast.success(`Generando etiquetas para ${selectedItems.length} productos`);
+    });
+  };
+
+  const handleBulkSendEmail = () => {
+    const selectedItems = state.processedEvents.filter(item => state.selectedIds.has(item.id));
+    if (selectedItems.length === 0) return;
+    
+    import('../expiry/utils/expiryUtils').then(utils => {
+      utils.handleSendEmail(selectedItems);
+      toast.success(`Generando reporte de correo para ${selectedItems.length} productos`);
+    });
   };
 
   const confirmRemoveItem = (item: any) => {
@@ -590,7 +613,8 @@ const EventManagementPage: React.FC = () => {
         selectedCount={state.selectedIds.size}
         onClearSelection={actions.clearSelection}
         onBulkRemove={handleBulkRemove}
-        onBulkUpdateStatus={handleBulkUpdateStatus}
+        onBulkPrintLabels={handleBulkPrintLabels}
+        onBulkSendEmail={handleBulkSendEmail}
         onBulkUpdateDestino={handleBulkUpdateDestino}
         theme={theme}
       />
