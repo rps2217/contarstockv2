@@ -8,12 +8,15 @@ import {
   Settings2,
   Plus,
   Maximize2,
-  Minimize2
+  Minimize2,
+  Calendar
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'motion/react';
 import { format } from 'date-fns';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 
 // Hooks
 import { useEventDatabase } from './hooks/useEventDatabase';
@@ -38,6 +41,20 @@ const EventManagementPage: React.FC = () => {
   const [expandedPanel, setExpandedPanel] = useState<'pending' | 'adjusted' | 'dual'>('dual');
   
   const { state, actions } = useEventDatabase();
+  const navigate = useNavigate();
+
+  // Atajo de teclado Alt+V para ir a Vencimientos
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.altKey && e.key.toLowerCase() === 'v') {
+        e.preventDefault();
+        navigate('/expiry');
+        toast.info('Navegando a Control de Vencimientos');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [navigate]);
 
   const handleSync = async () => {
     try {
@@ -263,6 +280,19 @@ const EventManagementPage: React.FC = () => {
             </button>
 
             <button
+              onClick={() => navigate('/expiry')}
+              className={`flex-1 md:flex-none px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all border ${
+                theme === 'dark' 
+                  ? 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/20 text-amber-500' 
+                  : 'bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-600 shadow-sm'
+              }`}
+              title="Ir a Control de Vencimientos (Alt+V)"
+            >
+              <Calendar className="w-4 h-4" />
+              Vencimientos
+            </button>
+
+            <button
               onClick={toggleTheme}
               className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all border shrink-0 ${
                 theme === 'dark' 
@@ -341,11 +371,13 @@ const EventManagementPage: React.FC = () => {
                           padding: '8px 0',
                         }}
                       >
-                        <div className={`flex items-center gap-3 px-4 py-1 rounded-lg border ${
-                          theme === 'dark' ? 'bg-white/5 border-white/10 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-500'
+                        <div className={`flex items-center gap-3 px-4 py-2 rounded-xl border shadow-lg ${
+                          theme === 'dark' 
+                            ? 'bg-blue-600 border-blue-500 text-white' 
+                            : 'bg-blue-600 border-blue-500 text-white'
                         }`}>
-                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                          <span className="text-[10px] font-black uppercase tracking-[0.2em]">{entry.date}</span>
+                          <Calendar className="w-3.5 h-3.5" />
+                          <span className="text-xs font-black uppercase tracking-[0.2em] italic">{entry.date}</span>
                         </div>
                       </div>
                     );
@@ -442,11 +474,13 @@ const EventManagementPage: React.FC = () => {
                           padding: '8px 0',
                         }}
                       >
-                        <div className={`flex items-center gap-3 px-4 py-1 rounded-lg border ${
-                          theme === 'dark' ? 'bg-white/5 border-white/10 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-500'
+                        <div className={`flex items-center gap-3 px-4 py-2 rounded-xl border shadow-lg ${
+                          theme === 'dark' 
+                            ? 'bg-emerald-600 border-emerald-500 text-white' 
+                            : 'bg-emerald-600 border-emerald-500 text-white'
                         }`}>
-                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                          <span className="text-[10px] font-black uppercase tracking-[0.2em]">{entry.date}</span>
+                          <Calendar className="w-3.5 h-3.5" />
+                          <span className="text-xs font-black uppercase tracking-[0.2em] italic">{entry.date}</span>
                         </div>
                       </div>
                     );

@@ -12,12 +12,16 @@ import {
   Plus,
   ChevronDown,
   ChevronUp,
-  Zap
+  Zap,
+  AlertCircle
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToastStore } from '../../store/useToastStore';
 import { motion, AnimatePresence } from 'motion/react';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { toast as sonnerToast } from 'sonner';
 
 // Hooks
 import { useExpiryDatabase, ExpiryStatus } from './hooks/useExpiryDatabase';
@@ -45,6 +49,20 @@ const ExpiryManagementPage: React.FC = () => {
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isPriorityPanelOpen, setIsPriorityPanelOpen] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const navigate = useNavigate();
+
+  // Atajo de teclado Alt+E para ir a Eventos
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.altKey && e.key.toLowerCase() === 'e') {
+        e.preventDefault();
+        navigate('/events');
+        sonnerToast.info('Navegando a Control de Eventos');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [navigate]);
 
   const activeFiltersCount = 
     state.selectedStatuses.length + 
@@ -227,6 +245,19 @@ const ExpiryManagementPage: React.FC = () => {
                 Guardando ({state.pendingOperations})
               </div>
             )}
+            <button 
+              onClick={() => navigate('/events')}
+              className={`border px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${
+                theme === 'dark' 
+                  ? 'bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/20 text-blue-500' 
+                  : 'bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-600 shadow-sm'
+              }`}
+              title="Ir a Control de Eventos (Alt+E)"
+            >
+              <AlertCircle className="w-3.5 h-3.5" />
+              Eventos
+            </button>
+
             <button 
               onClick={actions.handleSyncExpirations}
               disabled={state.isSyncing}
