@@ -14,6 +14,7 @@ interface ExpiryItemCardProps {
   onRemove: (item: any) => void;
   onFilterProvider?: (provider: string) => void;
   onFilterEstado?: (estado: string) => void;
+  onFilterFrc?: (frc: string) => void;
   theme?: 'dark' | 'light';
   isCompact?: boolean;
 }
@@ -89,6 +90,7 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
   onRemove,
   onFilterProvider,
   onFilterEstado,
+  onFilterFrc,
   theme = 'dark',
   isCompact = false
 }) => {
@@ -117,153 +119,76 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
       id={`expiry-item-${item.id}`}
-      className={`border rounded-2xl flex flex-col md:grid md:grid-cols-[40px_80px_2fr_1fr_1fr_1.5fr_80px] items-start md:items-center gap-4 md:gap-6 group transition-all ${getCardStyles()}`}
+      className={`border rounded-2xl flex flex-col md:grid md:grid-cols-[80px_2fr_1fr_1fr_1.5fr_80px] items-start md:items-center gap-4 md:gap-6 group transition-all ${getCardStyles()}`}
     >
-      {/* COLUMN 0: ITEM NUMBER */}
-      <div className="hidden md:flex items-center justify-center shrink-0">
-        <span className={`text-xs font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-600' : 'text-slate-400'}`}>
-          #{item.index}
-        </span>
+      {/* COLUMN 1: ICON & VERIF */}
+      <div className="flex flex-col items-center gap-2 shrink-0">
+        <div 
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleSelect(item.id);
+          }}
+          className={`w-12 h-12 rounded-2xl flex items-center justify-center cursor-pointer transition-all shadow-lg hover:scale-105 relative ${
+            isSelected 
+              ? 'bg-indigo-500 text-white' 
+              : `${statusConfig.bgClass} ${statusConfig.colorClass} border ${statusConfig.borderClass}`
+          }`}
+        >
+          <StatusIcon className="w-6 h-6" />
+          {item.riskScore && item.riskScore > 40 && !isSelected && (
+            <div className={`absolute -top-1 -right-1 w-5 h-5 text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-slate-900 shadow-lg ${
+              item.riskScore > 80 ? 'bg-rose-500' : 'bg-amber-500'
+            }`}>
+              {item.riskScore}
+            </div>
+          )}
+        </div>
+        
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleVerified(item.id);
+          }}
+          className={`w-full py-0.5 rounded-lg text-[7px] font-black uppercase tracking-widest transition-all border ${
+            isVerified
+              ? 'bg-emerald-500 border-emerald-400 text-white'
+              : theme === 'dark' 
+                ? 'bg-white/5 border-white/10 text-slate-500 hover:border-emerald-500/50'
+                : 'bg-stone-100 border-stone-200 text-stone-400 hover:border-emerald-500/50'
+          }`}
+        >
+          {isVerified ? 'OK' : 'VERIF'}
+        </button>
       </div>
 
-      {/* COLUMN 1: ICON & VERIF */}
-      <div className="flex items-start gap-4 w-full md:w-auto">
-        <div className="flex flex-col items-center gap-2 shrink-0">
-          <div 
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleSelect(item.id);
-            }}
-            className={`w-12 h-12 rounded-2xl flex items-center justify-center cursor-pointer transition-all shadow-lg hover:scale-105 relative ${
-              isSelected 
-                ? 'bg-indigo-500 text-white' 
-                : `${statusConfig.bgClass} ${statusConfig.colorClass} border ${statusConfig.borderClass}`
-            }`}
-          >
-            <StatusIcon className="w-6 h-6" />
-            {item.riskScore && item.riskScore > 40 && !isSelected && (
-              <div className={`absolute -top-1 -right-1 w-5 h-5 text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-slate-900 shadow-lg ${
-                item.riskScore > 80 ? 'bg-rose-500' : 'bg-amber-500'
-              }`}>
-                {item.riskScore}
-              </div>
-            )}
-          </div>
-          
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleVerified(item.id);
-            }}
-            className={`w-full py-0.5 rounded-lg text-[7px] font-black uppercase tracking-widest transition-all border ${
-              isVerified
-                ? 'bg-emerald-500 border-emerald-400 text-white'
-                : theme === 'dark' 
-                  ? 'bg-white/5 border-white/10 text-slate-500 hover:border-emerald-500/50'
-                  : 'bg-stone-100 border-stone-200 text-stone-400 hover:border-emerald-500/50'
-            }`}
-          >
-            {isVerified ? 'OK' : 'VERIF'}
-          </button>
-        </div>
-
-        {/* COLUMN 2: PRODUCT & PROVIDER (MOBILE ONLY) */}
-        <div className="flex-1 min-w-0 flex flex-col gap-1.5 md:hidden">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className={`text-[10px] font-black uppercase tracking-widest shrink-0 ${theme === 'dark' ? 'text-slate-600' : 'text-slate-400'}`}>
-                #{item.index}
-              </span>
-              <h3 className={`text-sm font-black uppercase tracking-tighter italic truncate ${
-                theme === 'dark' ? 'text-white' : 'text-stone-900'
-              }`}>
-                {item.productName}
-              </h3>
-            </div>
-            
-            <div className="flex items-center shrink-0">
-              <div className={`text-sm font-black leading-none ${statusConfig.colorClass} ${statusConfig.shadowClass}`}>
-                {statusConfig.label(item.daysLeft)}
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2 mt-1">
+      {/* COLUMN 2: PRODUCT & PROVIDER */}
+      <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+        <div className="flex items-center justify-between">
+          <h3 className={`text-base font-black uppercase tracking-tighter italic truncate ${
+            theme === 'dark' ? 'text-white' : 'text-stone-900'
+          }`}>
+            {item.productName}
+          </h3>
+          {item.frc && (
             <span 
               onClick={(e) => {
                 e.stopPropagation();
-                navigator.clipboard.writeText(item.barcode);
-                addToast(`SKU ${item.barcode} copiado al portapapeles`, 'success');
-              }}
-              className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-widest border cursor-pointer transition-colors shrink-0 ${
-              theme === 'dark' ? 'bg-slate-800 text-slate-200 border-white/10 hover:bg-slate-700' : 'bg-stone-100 text-stone-700 border-stone-200 hover:bg-stone-200'
-            }`}
-              title="Copiar SKU"
-            >
-              {item.barcode}
-            </span>
-            <span 
-              onClick={(e) => {
-                e.stopPropagation();
-                if (onFilterProvider) {
-                  onFilterProvider(item.providerName);
-                  addToast(`Filtrando por proveedor: ${item.providerName}`, 'info');
+                if (onFilterFrc) {
+                  onFilterFrc(item.frc);
+                  addToast(`Filtrando por FRC: ${item.frc}`, 'info');
                 }
               }}
-              className={`text-[9px] font-black uppercase tracking-widest truncate cursor-pointer transition-colors ${
-              theme === 'dark' ? 'text-slate-500 hover:text-indigo-400' : 'text-stone-400 hover:text-indigo-600'
-            }`}
-              title="Filtrar por este proveedor"
+              className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest border cursor-pointer transition-all hover:scale-105 ${
+                theme === 'dark' 
+                  ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30 hover:bg-indigo-500/30' 
+                  : 'bg-indigo-50 text-indigo-600 border-indigo-200 hover:bg-indigo-100'
+              }`}
+              title="Filtrar por este FRC"
             >
-              {item.providerName}
+              FRC: {item.frc}
             </span>
-          </div>
-
-          <div className="flex items-center justify-between mt-2">
-            <div className="flex flex-col gap-0.5">
-              <span className="text-[8px] font-black text-stone-500 uppercase tracking-widest">Vencimiento</span>
-              <span className={`text-xs font-black ${theme === 'dark' ? 'text-white' : 'text-stone-900'}`}>
-                {item.expiryDateObj ? format(item.expiryDateObj, 'dd/MM/yyyy') : 'N/A'}
-              </span>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              {item.estado && (
-                <span 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (onFilterEstado) {
-                      onFilterEstado(item.estado);
-                      addToast(`Filtrando por estado: ${item.estado}`, 'info');
-                    }
-                  }}
-                  className="text-[9px] font-black bg-amber-500/10 px-2 py-0.5 rounded text-amber-600 uppercase tracking-widest border border-amber-500/20 cursor-pointer hover:bg-amber-500/20 transition-colors"
-                >
-                  {item.estado}
-                </span>
-              )}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRemove(item);
-                }}
-                className="w-8 h-8 bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white rounded-lg flex items-center justify-center transition-all border border-rose-500/20 shrink-0"
-                title="Retirar Producto"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
+          )}
         </div>
-      </div>
-
-      {/* COLUMN 2: PRODUCT & PROVIDER (DESKTOP ONLY) */}
-      <div className="hidden md:flex flex-1 min-w-0 flex-col gap-1.5">
-        <h3 className={`text-base font-black uppercase tracking-tighter italic truncate ${
-          theme === 'dark' ? 'text-white' : 'text-stone-900'
-        }`}>
-          {item.productName}
-        </h3>
         <div className="flex items-center gap-2">
           <span 
             onClick={(e) => {
@@ -297,7 +222,7 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
       </div>
 
       {/* COLUMN 3: ESTADO */}
-      <div className="hidden md:flex items-center">
+      <div className="flex items-center">
         {item.estado && (
           <span 
             onClick={(e) => {
@@ -315,14 +240,14 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
       </div>
 
       {/* COLUMN 4: STATUS */}
-      <div className="hidden md:flex items-center">
+      <div className="flex items-center">
         <div className={`text-lg font-black leading-none ${statusConfig.colorClass} ${statusConfig.shadowClass}`}>
           {statusConfig.label(item.daysLeft)}
         </div>
       </div>
 
       {/* COLUMN 5: DATES */}
-      <div className="hidden md:flex flex-col gap-1">
+      <div className="flex flex-col gap-1">
         <span className="text-[8px] font-black text-stone-500 uppercase tracking-widest">Vencimiento</span>
         <span className={`text-sm font-black ${theme === 'dark' ? 'text-white' : 'text-stone-900'}`}>
           {item.expiryDateObj ? format(item.expiryDateObj, 'dd/MM/yyyy') : 'N/A'}
@@ -330,7 +255,7 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
       </div>
 
       {/* COLUMN 6: ACTIONS */}
-      <div className="hidden md:flex items-center justify-end">
+      <div className="flex items-center justify-end">
         <button
           onClick={(e) => {
             e.stopPropagation();

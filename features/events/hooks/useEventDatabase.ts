@@ -70,7 +70,9 @@ export const useEventDatabase = () => {
           timestamp: exp.timestamp,
           claveUnica: exp.claveUnica,
           category: product?.category || 'GENERAL',
-          isAdjusted: exp.isAdjusted || false
+          isAdjusted: exp.isAdjusted || false,
+          frc: exp.frc,
+          erp: exp.erp
         };
       });
 
@@ -92,7 +94,9 @@ export const useEventDatabase = () => {
       const matchesSearch = 
         item.productName.toLowerCase().includes(query) ||
         item.barcode.includes(query) ||
-        item.event.toLowerCase().includes(query);
+        item.event.toLowerCase().includes(query) ||
+        (item.frc && item.frc.toLowerCase().includes(query)) ||
+        (item.erp && item.erp.toLowerCase().includes(query));
       
       const matchesEvent = selectedEvents.length === 0 || selectedEvents.includes(item.event.toUpperCase());
       const matchesTab = activeTab === 'adjusted' ? item.isAdjusted : !item.isAdjusted;
@@ -126,6 +130,68 @@ export const useEventDatabase = () => {
     }
   };
 
+  const priorityStats = useMemo(() => {
+    if (!baseProcessedData) return { priorityItems: [], eventAlerts: [], suggestedActions: [] };
+
+    const pendingItems = baseProcessedData.filter(i => !i.isAdjusted);
+    
+    // Priority items: highest quantity pending items
+    const priorityItems = [...pendingItems]
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 5);
+
+    // Event alerts: count per event type for pending items
+    const eventCounts: Record<string, number> = {};
+    pendingItems.forEach(item => {
+      const type = item.event.toUpperCase();
+      eventCounts[type] = (eventCounts[type] || 0) + 1;
+    });
+
+    const eventAlerts = Object.entries(eventCounts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3);
+
+    // Suggested actions based on event types
+    const suggestedActions = [];
+    
+    const diffInv = pendingItems.filter(i => i.event.toUpperCase().includes('DIFERENCIA'));
+    if (diffInv.length > 0) {
+      suggestedActions.push({
+        title: 'Conciliación de Inventario',
+        description: `Hay ${diffInv.length} diferencias críticas que requieren ajuste inmediato.`,
+        count: diffInv.length,
+        type: 'inventory_diff'
+      });
+    }
+
+    const mermas = pendingItems.filter(i => i.event.toUpperCase().includes('MERMA'));
+    if (mermas.length > 0) {
+      suggestedActions.push({
+        title: 'Procesar Mermas',
+        description: `Se detectaron ${mermas.length} registros de merma pendientes de validación.`,
+        count: mermas.length,
+        type: 'merma'
+      });
+    }
+
+    const canjes = pendingItems.filter(i => i.event.toUpperCase().includes('CANJE'));
+    if (canjes.length > 0) {
+      suggestedActions.push({
+        title: 'Gestionar Canjes',
+        description: `Existen ${canjes.length} solicitudes de canje por procesar con proveedores.`,
+        count: canjes.length,
+        type: 'canje'
+      });
+    }
+
+    return {
+      priorityItems,
+      eventAlerts,
+      suggestedActions
+    };
+  }, [baseProcessedData]);
+
   return {
     state: {
       preferences,
@@ -139,7 +205,8 @@ export const useEventDatabase = () => {
       totalCount: baseProcessedData.length,
       filteredCount: processedEvents.length,
       pendingCount: baseProcessedData.filter(i => !i.isAdjusted).length,
-      adjustedCount: baseProcessedData.filter(i => i.isAdjusted).length
+      adjustedCount: baseProcessedData.filter(i => i.isAdjusted).length,
+      priorityStats
     },
     actions: {
       setActiveTab,
@@ -149,7 +216,10 @@ export const useEventDatabase = () => {
       togglePreference,
       handleToggleSelect,
       handleSelectAll,
-      clearSelection: () => setSelectedIds(new Set())
+      clearSelection: () => setSelectedIds(new Set()),
+      updateEventStatus: async (id: string, isAdjusted: boolean) => {
+        await db.cloudExpirations.update(id, { isAdjusted });
+      }
     }
   };
 };

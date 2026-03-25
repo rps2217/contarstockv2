@@ -28,7 +28,7 @@ export const EventSearchBar: React.FC<EventSearchBarProps> = ({
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
           <input 
             type="text"
-            placeholder="BUSCAR POR NOMBRE, SKU O EVENTO..."
+            placeholder="BUSCAR POR NOMBRE, SKU, EVENTO, FRC O ERP..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className={`w-full border rounded-2xl py-4 pl-12 pr-28 text-sm font-bold focus:outline-none transition-all shadow-2xl ${

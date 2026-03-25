@@ -117,6 +117,7 @@ export interface ScanRecord {
  yyyy?: number;
  synced?: number;
  isIncident?: boolean;
+ frc?: string;
 }
 
 export interface ConsolidatedItem {
@@ -132,6 +133,7 @@ export interface ConsolidatedItem {
  mm?: number;
  yyyy?: number;
  isIncident?: boolean;
+ frc?: string;
  embedding?: number[];
 }
 

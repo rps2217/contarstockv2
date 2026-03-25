@@ -35,6 +35,7 @@ export interface ExpiryItem {
   riskScore?: number;
   claveUnica?: string;
   timestamp?: string;
+  frc?: string;
 }
 
 interface ExpiryState {

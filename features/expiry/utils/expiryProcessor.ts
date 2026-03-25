@@ -88,7 +88,8 @@ export const processExpiryItem = (
     estado,
     quantity: item.quantity || 1,
     riskScore,
-    price: product?.price || 0
+    price: product?.price || 0,
+    frc: item.frc || ''
   };
 };
 
@@ -111,7 +112,8 @@ export const filterExpiryItems = (
         item.productName.toLowerCase().includes(query) ||
         item.barcode.includes(query) ||
         (item.batch && item.batch.toLowerCase().includes(query)) ||
-        (item.providerName && item.providerName.toLowerCase().includes(query));
+        (item.providerName && item.providerName.toLowerCase().includes(query)) ||
+        (item.frc && item.frc.toLowerCase().includes(query));
       if (!matchesSearch) return false;
     }
 

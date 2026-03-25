@@ -408,6 +408,7 @@ const ExpiryManagementPage: React.FC = () => {
                   onRemove={confirmRemoveItem}
                   onFilterProvider={(provider) => actions.setSearchQuery(provider)}
                   onFilterEstado={(estado) => actions.setSelectedEstado(estado)}
+                  onFilterFrc={(frc) => actions.setSearchQuery(frc)}
                   theme={theme}
                   isCompact={state.preferences.compactView}
                 />

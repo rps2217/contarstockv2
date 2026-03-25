@@ -35,6 +35,8 @@ export interface CloudExpiration {
   claveUnica?: string;
   isAdjusted?: boolean;
   fechaCC?: string;
+  frc?: string;
+  erp?: string;
 }
 
 export class LogiCountDB extends Dexie {
@@ -53,7 +55,7 @@ export class LogiCountDB extends Dexie {
 
   constructor() {
     super('LogiCountDB');
-    this.version(30).stores({
+    this.version(31).stores({
       products: '&barcode, name, syncStatus', 
       sessions: 'id, status, createdAt, erpOrder, logisticsLabel, sessionType, auditStatus, lastSyncTimestamp, mm, yyyy, batch, photoUrl, [erpOrder+createdAt], [status+lastSyncTimestamp]', 
       scans: 'id, sessionId, barcode, logisticsLabel, timestamp, synced, isIncident, expiryDate, mm, yyyy, batch, [sessionId+synced], [sessionId+barcode], [sessionId+logisticsLabel], [sessionId+timestamp]',
@@ -64,7 +66,7 @@ export class LogiCountDB extends Dexie {
       locations: '++id, &name, lastUsed',
       visualGuides: 'id, guideNumber, erpOrderId, status, createdAt',
       erpSessions: 'id, erpOrderId, status, createdAt',
-      cloudExpirations: 'id, barcode, &claveUnica, [mm+yyyy]',
+      cloudExpirations: 'id, barcode, frc, erp, &claveUnica, [mm+yyyy]',
       providers: '&rut, name'
     });
   }

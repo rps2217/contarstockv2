@@ -269,6 +269,9 @@ export const importExpirationsFromCloud = async (): Promise<number> => {
           if (!isNaN(parsed)) parsedTimestamp = parsed;
         }
 
+        const frc = String(row['FRC'] || row['INCIDENT'] || row['RFC'] || row['FOLIO'] || row['INCIDENCIA'] || '');
+        const erp = String(row['ERP'] || row['PEDIDO'] || row['ORDEN'] || row['ORDEN_ERP'] || '');
+
         return {
           id: row['ID_REGISTRO'] || row['ID'] || crypto.randomUUID(),
           barcode,
@@ -281,7 +284,9 @@ export const importExpirationsFromCloud = async (): Promise<number> => {
           fechaIngreso: String(row['FECHA_INGRESO'] || row['FECHA DE INGRESO'] || ''),
           timestamp: parsedTimestamp,
           claveUnica,
-          isAdjusted
+          isAdjusted,
+          frc,
+          erp
         };
       })
       .filter((exp: any) => exp.barcode);

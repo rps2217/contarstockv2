@@ -19,6 +19,7 @@ import { EventSearchBar } from './components/EventSearchBar';
 import { EventItemCard } from './components/EventItemCard';
 import { EventBulkActions } from './components/EventBulkActions';
 import { EventFilterDrawer } from './components/EventFilterDrawer';
+import { EventPriorityPanel } from './components/EventPriorityPanel';
 
 // Services
 import { importExpirationsFromCloud } from '../../services/syncManager';
@@ -71,6 +72,15 @@ const EventManagementPage: React.FC = () => {
     }
   };
 
+  const handleUpdateStatus = async (id: string, isAdjusted: boolean) => {
+    try {
+      await actions.updateEventStatus(id, isAdjusted);
+      toast.success(isAdjusted ? 'Evento marcado como ajustado' : 'Evento revertido a pendiente');
+    } catch (error: any) {
+      toast.error('Error al actualizar estado');
+    }
+  };
+
   const handleBulkRemove = async () => {
     const selectedItems = state.processedEvents.filter(item => state.selectedIds.has(item.id));
     if (selectedItems.length === 0) return;
@@ -105,6 +115,31 @@ const EventManagementPage: React.FC = () => {
     if (confirm) {
       handleRemoveItem(item);
     }
+  };
+
+  const handlePrioritySelectItem = (id: string) => {
+    actions.setSearchQuery(id);
+    const element = document.getElementById(`event-item-${id}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
+
+  const handlePriorityActionClick = (type: string) => {
+    switch (type) {
+      case 'inventory_diff':
+        actions.setSelectedEvents(['DIFERENCIA DE INVENTARIO']);
+        break;
+      case 'merma':
+        actions.setSelectedEvents(['MERMA']);
+        break;
+      case 'canje':
+        actions.setSelectedEvents(['CANJE']);
+        break;
+      default:
+        break;
+    }
+    toast.info(`Filtrando por: ${type}`);
   };
 
   const toggleTheme = () => {
@@ -230,6 +265,14 @@ const EventManagementPage: React.FC = () => {
 
       {/* MAIN LIST */}
       <div ref={parentRef} className="flex-1 overflow-y-auto p-4 md:p-6 no-scrollbar pb-32">
+        {/* PRIORITY PANEL */}
+        <EventPriorityPanel 
+          stats={state.priorityStats}
+          theme={theme}
+          onSelectItem={handlePrioritySelectItem}
+          onActionClick={handlePriorityActionClick}
+        />
+
         <div
           style={{
             height: `${rowVirtualizer.getTotalSize()}px`,
@@ -257,6 +300,9 @@ const EventManagementPage: React.FC = () => {
                   item={item}
                   isSelected={state.selectedIds.has(item.id)}
                   onToggleSelect={actions.handleToggleSelect}
+                  onUpdateStatus={handleUpdateStatus}
+                  onRemove={confirmRemoveItem}
+                  onFilterFrc={(frc) => actions.setSearchQuery(frc)}
                   theme={theme}
                   isCompact={state.preferences.compactView}
                 />
