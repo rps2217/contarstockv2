@@ -20,6 +20,7 @@ interface EventItemCardProps {
   onToggleSelect: (id: string) => void;
   onUpdateStatus?: (id: string, isAdjusted: boolean) => void;
   onRemove?: (item: any) => void;
+  onFrcClick?: (frc: string) => void;
   theme?: 'dark' | 'light';
   isCompact?: boolean;
 }
@@ -30,6 +31,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
   onToggleSelect,
   onUpdateStatus,
   onRemove,
+  onFrcClick,
   theme = 'dark',
   isCompact = false
 }) => {
@@ -47,7 +49,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className={`border rounded-2xl flex flex-col md:grid md:grid-cols-[80px_150px_1.5fr_1fr_1fr_60px] items-start md:items-center gap-4 md:gap-6 group transition-all relative ${
+      className={`border rounded-2xl flex flex-col md:grid md:grid-cols-[80px_120px_1.2fr_120px_1fr_1fr_60px] items-start md:items-center gap-4 md:gap-6 group transition-all relative ${
         isCompact ? 'p-3 md:p-2' : 'p-4'
       } ${
         theme === 'dark' ? 'bg-white/5' : 'bg-white shadow-sm'
@@ -88,9 +90,15 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
               {item.barcode}
             </span>
             {item.frc && (
-              <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20 text-[8px] font-black uppercase tracking-widest">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onFrcClick?.(item.frc);
+                }}
+                className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20 text-[8px] font-black uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-colors"
+              >
                 {item.frc}
-              </span>
+              </button>
             )}
             {item.erp && (
               <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 border border-blue-500/20 text-[8px] font-black uppercase tracking-widest">
@@ -142,26 +150,31 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
         }`}>
           {item.barcode}
         </span>
-        <div className="flex flex-wrap gap-1 mt-1">
-          {item.frc && (
-            <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20 text-[8px] font-black uppercase tracking-widest">
-              FRC: {item.frc}
-            </span>
-          )}
-          {item.erp && (
-            <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 border border-blue-500/20 text-[8px] font-black uppercase tracking-widest">
-              ERP: {item.erp}
-            </span>
-          )}
-          {item.nguia && (
-            <span className="px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-500 border border-purple-500/20 text-[8px] font-black uppercase tracking-widest">
-              GUIA: {item.nguia}
-            </span>
-          )}
-        </div>
       </div>
 
-      {/* COLUMN 4: QUANTITY & LOCATION */}
+      {/* DESKTOP COLUMN 4: FRC (Priority Column) */}
+      <div className="hidden md:flex flex-col gap-1">
+        <span className={`text-[10px] font-bold uppercase tracking-widest ${
+          theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
+        }`}>Folio FRC</span>
+        {item.frc ? (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onFrcClick?.(item.frc);
+            }}
+            className={`text-lg font-black tracking-tighter italic transition-all hover:scale-110 active:scale-95 text-left ${
+              theme === 'dark' ? 'text-amber-500 hover:text-amber-400' : 'text-amber-600 hover:text-amber-700'
+            }`}
+          >
+            {item.frc}
+          </button>
+        ) : (
+          <span className="text-xs text-slate-500 italic">N/A</span>
+        )}
+      </div>
+
+      {/* COLUMN 5: QUANTITY & LOCATION */}
       <div className="flex items-center justify-between w-full md:w-auto md:flex-col md:items-start gap-2 md:gap-1">
         <div className="flex items-center gap-2">
           <Package className={`w-4 h-4 ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`} />
@@ -177,7 +190,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
         </div>
       </div>
 
-      {/* COLUMN 5: DATE */}
+      {/* COLUMN 6: DATE */}
       <div className="flex items-center justify-between w-full md:w-auto md:flex-col md:items-end gap-2 md:gap-1">
         <div className="flex items-center gap-2 md:hidden">
           <span className={`px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-widest border ${
@@ -203,7 +216,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
         </div>
       </div>
 
-      {/* COLUMN 6: ACTION MENU */}
+      {/* COLUMN 7: ACTION MENU */}
       <div className="flex items-center justify-end w-full md:w-auto">
         <div className="relative">
           <button

@@ -241,9 +241,8 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
                 </label>
                 <input
                   type="number"
-                  min="1"
                   value={quantity}
-                  onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                  onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
                   className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none ${
                     theme === 'dark'
                       ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'

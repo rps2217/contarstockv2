@@ -124,6 +124,11 @@ const EventManagementPage: React.FC = () => {
     toast.info(`Modo ${theme === 'dark' ? 'Claro' : 'Oscuro'} activado`);
   };
 
+  const handleFrcClick = (frc: string) => {
+    actions.setSearchQuery(frc);
+    toast.info(`Filtrando por FRC: ${frc}`);
+  };
+
   const parentRef = useRef<HTMLDivElement>(null);
   const visibleItems = state.processedEvents.slice(0, state.displayLimit);
   
@@ -283,6 +288,7 @@ const EventManagementPage: React.FC = () => {
                   onToggleSelect={actions.handleToggleSelect}
                   onUpdateStatus={handleUpdateStatus}
                   onRemove={confirmRemoveItem}
+                  onFrcClick={handleFrcClick}
                   theme={theme}
                   isCompact={state.preferences.compactView}
                 />
