@@ -113,9 +113,9 @@ export const useEventDatabase = () => {
     [processedEvents]
   );
 
-  const togglePreference = (key: keyof EventPreferences) => {
+  const togglePreference = (prefs: Partial<EventPreferences>) => {
     setPreferences(prev => {
-      const next = { ...prev, [key]: !prev[key] };
+      const next = { ...prev, ...prefs };
       localStorage.setItem('event_preferences', JSON.stringify(next));
       return next;
     });

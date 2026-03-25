@@ -12,7 +12,9 @@ import {
 
 interface EventBulkActionsProps {
   selectedCount: number;
+  totalVisibleCount: number;
   onClearSelection: () => void;
+  onSelectAllVisible: () => void;
   onBulkRemove: () => void;
   onBulkPrintLabels: () => void;
   onBulkSendEmail: () => void;
@@ -22,7 +24,9 @@ interface EventBulkActionsProps {
 
 export const EventBulkActions: React.FC<EventBulkActionsProps> = ({
   selectedCount,
+  totalVisibleCount,
   onClearSelection,
+  onSelectAllVisible,
   onBulkRemove,
   onBulkPrintLabels,
   onBulkSendEmail,
@@ -42,7 +46,7 @@ export const EventBulkActions: React.FC<EventBulkActionsProps> = ({
 
   return (
     <AnimatePresence>
-      {selectedCount > 0 && (
+      {selectedCount >= 0 && (
         <>
           {/* Side Menu (Non-blocking) */}
           <motion.div
@@ -77,6 +81,26 @@ export const EventBulkActions: React.FC<EventBulkActionsProps> = ({
             </div>
 
             <div className="flex-1 p-6 space-y-6 overflow-y-auto no-scrollbar">
+              <div className="space-y-4">
+                <p className={`text-[10px] font-bold uppercase tracking-widest ${
+                  theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
+                }`}>Selección</p>
+                
+                <button
+                  onClick={onSelectAllVisible}
+                  className={`w-full px-4 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 transition-all border ${
+                    theme === 'dark'
+                      ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
+                      : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <CheckSquare className="w-4 h-4" />
+                  Seleccionar Todos ({totalVisibleCount})
+                </button>
+              </div>
+
+              <div className={`h-px ${theme === 'dark' ? 'bg-white/5' : 'bg-slate-100'}`} />
+
               <div className="space-y-4">
                 <p className={`text-[10px] font-bold uppercase tracking-widest ${
                   theme === 'dark' ? 'text-slate-500' : 'text-slate-400'

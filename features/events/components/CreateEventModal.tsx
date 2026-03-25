@@ -26,7 +26,6 @@ interface Props {
     quantity: number;
     frc: string;
     nguia: string;
-    destino?: string;
   }) => Promise<void>;
   theme: 'dark' | 'light';
   editingItem?: any;
@@ -40,20 +39,10 @@ const EVENT_TYPES = [
   'DET. CALIDAD EXT.'
 ];
 
-const DESTINOS = [
-  'BOD. 37',
-  'BOD. 80',
-  'BOD. 95',
-  'BOD. 98',
-  'BOD. 106',
-  'BOD. 121'
-];
-
 export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, theme, editingItem }) => {
   const [sku, setSku] = useState('');
   const [product, setProduct] = useState<Product | null>(null);
   const [eventType, setEventType] = useState('DIF. PED.');
-  const [destino, setDestino] = useState('BOD. 37');
   const [quantity, setQuantity] = useState<number>(1);
   const [frc, setFrc] = useState('');
   const [nguia, setNguia] = useState('');
@@ -64,7 +53,6 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
     if (editingItem) {
       setSku(editingItem.barcode);
       setEventType(editingItem.event);
-      setDestino(editingItem.destino || 'BOD. 37');
       setQuantity(editingItem.quantity);
       setFrc(editingItem.frc || '');
       setNguia(editingItem.nguia || '');
@@ -86,7 +74,6 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
       setSku('');
       setProduct(null);
       setEventType('DIF. PED.');
-      setDestino('BOD. 37');
       setQuantity(1);
       setFrc('');
       setNguia('');
@@ -135,8 +122,7 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
         event: eventType,
         quantity,
         frc,
-        nguia,
-        destino
+        nguia
       });
       toast.success(editingItem ? 'Evento actualizado correctamente' : 'Evento creado correctamente');
       onClose();
@@ -249,29 +235,7 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              {/* DESTINO */}
-              <div className="space-y-2">
-                <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
-                  theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
-                }`}>
-                  <Truck className="w-3 h-3" /> Destino
-                </label>
-                <select
-                  value={destino}
-                  onChange={(e) => setDestino(e.target.value)}
-                  className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none appearance-none ${
-                    theme === 'dark'
-                      ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
-                      : 'bg-slate-50 border-slate-200 focus:border-blue-500 text-slate-900'
-                  }`}
-                >
-                  {DESTINOS.map(d => (
-                    <option key={d} value={d}>{d}</option>
-                  ))}
-                </select>
-              </div>
-
+            <div className="grid grid-cols-1 gap-4">
               {/* EVENT TYPE */}
               <div className="space-y-2">
                 <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${

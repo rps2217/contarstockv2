@@ -29,6 +29,7 @@ import { EventItemCard } from './components/EventItemCard';
 import { EventBulkActions } from './components/EventBulkActions';
 import { EventFilterDrawer } from './components/EventFilterDrawer';
 import { CreateEventModal } from './components/CreateEventModal';
+import { EventSettingsDrawer } from './components/EventSettingsDrawer';
 
 // Services
 import { importExpirationsFromCloud } from '../../services/syncManager';
@@ -38,6 +39,7 @@ const EventManagementPage: React.FC = () => {
   const { settings, updateSetting } = useAppStore();
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [isSettingsDrawerOpen, setIsSettingsDrawerOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -363,7 +365,38 @@ const EventManagementPage: React.FC = () => {
             >
               {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
+
+            <button
+              onClick={() => setIsSettingsDrawerOpen(true)}
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all border shrink-0 ${
+                theme === 'dark' 
+                  ? 'bg-white/5 hover:bg-white/10 border-white/10 text-indigo-400' 
+                  : 'bg-white hover:bg-slate-50 border-slate-200 text-indigo-500 shadow-sm'
+              }`}
+              title="Preferencias de Vista"
+            >
+              <Settings2 className="w-5 h-5" />
+            </button>
           </div>
+        </div>
+
+        {/* EVENT TYPES DISPLAY */}
+        <div className="flex flex-wrap gap-2">
+          {state.eventTypes.map(type => (
+            <button
+              key={type}
+              onClick={() => handleToggleEvent(type)}
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border transition-all ${
+                state.selectedEvents.includes(type)
+                  ? 'bg-blue-600 border-blue-500 text-white'
+                  : theme === 'dark'
+                    ? 'bg-slate-800 border-white/10 text-slate-400 hover:bg-slate-700'
+                    : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+              }`}
+            >
+              {type}
+            </button>
+          ))}
         </div>
 
         <EventSearchBar 
@@ -611,11 +644,21 @@ const EventManagementPage: React.FC = () => {
 
       <EventBulkActions 
         selectedCount={state.selectedIds.size}
+        totalVisibleCount={state.filteredCount}
         onClearSelection={actions.clearSelection}
+        onSelectAllVisible={actions.handleSelectAll}
         onBulkRemove={handleBulkRemove}
         onBulkPrintLabels={handleBulkPrintLabels}
         onBulkSendEmail={handleBulkSendEmail}
         onBulkUpdateDestino={handleBulkUpdateDestino}
+        theme={theme}
+      />
+
+      <EventSettingsDrawer 
+        isOpen={isSettingsDrawerOpen}
+        onClose={() => setIsSettingsDrawerOpen(false)}
+        preferences={state.preferences}
+        onUpdatePreferences={actions.togglePreference}
         theme={theme}
       />
 
