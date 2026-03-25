@@ -23,6 +23,7 @@ export const useEventDatabase = () => {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [pendingOperations, setPendingOperations] = useState(0);
 
   // Debounce search query
   useEffect(() => {
@@ -210,7 +211,8 @@ export const useEventDatabase = () => {
       filteredCount: processedEvents.length,
       pendingCount: baseProcessedData.filter(i => !i.isAdjusted).length,
       adjustedCount: baseProcessedData.filter(i => i.isAdjusted).length,
-      priorityStats
+      priorityStats,
+      pendingOperations
     },
     actions: {
       setSearchQuery,
@@ -219,6 +221,7 @@ export const useEventDatabase = () => {
       handleToggleSelect,
       handleSelectAll,
       clearSelection: () => setSelectedIds(new Set()),
+      setPendingOperations,
       updateEventStatus: async (id: string, isAdjusted: boolean) => {
         await db.cloudExpirations.update(id, { isAdjusted });
       },
@@ -250,7 +253,8 @@ export const useEventDatabase = () => {
         await db.cloudExpirations.add(newEvent);
         
         // Sync to cloud
-        await addExpirationToCloud({
+        setPendingOperations(p => p + 1);
+        addExpirationToCloud({
           barcode: newEvent.barcode,
           productName: newEvent.productName,
           mm: newEvent.mm,
@@ -260,6 +264,9 @@ export const useEventDatabase = () => {
           frc: newEvent.frc,
           nguia: newEvent.nguia,
           claveUnica: newEvent.claveUnica
+        })
+        .finally(() => {
+          setPendingOperations(p => Math.max(0, p - 1));
         });
 
         return newEvent;
