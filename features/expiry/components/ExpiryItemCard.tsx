@@ -133,8 +133,10 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
           }`}
         >
           <StatusIcon className="w-6 h-6" />
-          {item.riskScore && item.riskScore > 70 && !isSelected && (
-            <div className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-slate-900 shadow-lg">
+          {item.riskScore && item.riskScore > 40 && !isSelected && (
+            <div className={`absolute -top-1 -right-1 w-5 h-5 text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-slate-900 shadow-lg ${
+              item.riskScore > 80 ? 'bg-rose-500' : 'bg-amber-500'
+            }`}>
               {item.riskScore}
             </div>
           )}

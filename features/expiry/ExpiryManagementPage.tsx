@@ -9,7 +9,10 @@ import {
   Sun,
   Moon,
   Settings2,
-  Plus
+  Plus,
+  ChevronDown,
+  ChevronUp,
+  Zap
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToastStore } from '../../store/useToastStore';
@@ -40,6 +43,7 @@ const ExpiryManagementPage: React.FC = () => {
   const [isSettingsDrawerOpen, setIsSettingsDrawerOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [isPriorityPanelOpen, setIsPriorityPanelOpen] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
   const activeFiltersCount = 
@@ -271,13 +275,61 @@ const ExpiryManagementPage: React.FC = () => {
           theme={theme}
         />
 
-        {state.preferences.showPriorityAssistant && (
-          <div className="mt-6">
-            <ExpiryPriorityPanel 
-              stats={state.stats} 
-              theme={theme} 
-              onSelectItem={handleSelectItemFromPriority}
-            />
+        {/* PRIORITY ASSISTANT (BENTO PANEL) - HIDDEN BEHIND TOGGLE */}
+        {(state.preferences.showPriorityAssistant ?? true) && (
+          <div className="mt-6 mb-6">
+            <button
+              onClick={() => setIsPriorityPanelOpen(!isPriorityPanelOpen)}
+              className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${
+                theme === 'dark' 
+                  ? 'bg-slate-900/50 border-white/10 hover:bg-white/5' 
+                  : 'bg-white border-slate-200 shadow-sm hover:bg-slate-50'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                  theme === 'dark' ? 'bg-amber-500/10 text-amber-500' : 'bg-amber-100 text-amber-600'
+                }`}>
+                  <Zap className="w-4 h-4" />
+                </div>
+                <div className="text-left">
+                  <h3 className={`text-sm font-black uppercase tracking-tighter italic leading-none ${
+                    theme === 'dark' ? 'text-white' : 'text-slate-900'
+                  }`}>
+                    Asistente de Priorización
+                  </h3>
+                  <p className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${
+                    theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
+                  }`}>
+                    Análisis de riesgo y alertas de volumen
+                  </p>
+                </div>
+              </div>
+              {isPriorityPanelOpen ? (
+                <ChevronUp className={`w-5 h-5 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`} />
+              ) : (
+                <ChevronDown className={`w-5 h-5 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`} />
+              )}
+            </button>
+
+            <AnimatePresence>
+              {isPriorityPanelOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="pt-4">
+                    <ExpiryPriorityPanel 
+                      stats={state.stats} 
+                      theme={theme} 
+                      onSelectItem={handleSelectItemFromPriority}
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
         
