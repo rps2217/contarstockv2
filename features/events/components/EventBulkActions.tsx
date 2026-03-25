@@ -46,7 +46,7 @@ export const EventBulkActions: React.FC<EventBulkActionsProps> = ({
 
   return (
     <AnimatePresence>
-      {selectedCount >= 0 && (
+      {selectedCount > 0 && (
         <>
           {/* Side Menu (Non-blocking) */}
           <motion.div

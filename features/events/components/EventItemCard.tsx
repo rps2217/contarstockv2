@@ -131,25 +131,8 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
         </div>
       </div>
 
-      {/* DESKTOP COLUMN 2: EVENT TYPE */}
-      <div className="hidden md:flex flex-col gap-1">
-        <span className={`text-[10px] font-bold uppercase tracking-widest ${
-          theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
-        }`}>Evento</span>
-        <div className="flex flex-col gap-1">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onEventClick?.(item.event);
-            }}
-            className={`px-3 py-1 rounded-lg text-xs font-black uppercase tracking-widest border inline-flex w-fit transition-all hover:scale-105 active:scale-95 ${
-              theme === 'dark' ? 'bg-blue-500/10 border-blue-500/20 text-blue-500 hover:bg-blue-500/20' : 'bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100'
-            }`}
-          >
-            {item.event}
-          </button>
-        </div>
-      </div>
+      {/* DESKTOP COLUMN 2: EMPTY SPACE TO ALIGN */}
+      <div className="hidden md:block"></div>
 
       {/* DESKTOP COLUMN 3: PRODUCT (Desktop View) */}
       <div className="hidden md:flex flex-col gap-1 min-w-0">
@@ -230,23 +213,6 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
           </button>
         )}
         
-        {onUpdateStatus && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onUpdateStatus(item.id, !item.isAdjusted);
-            }}
-            className={`w-9 h-9 rounded-xl transition-all border flex items-center justify-center ${
-              item.isAdjusted
-                ? (theme === 'dark' ? 'bg-amber-500/10 border-amber-500/20 text-amber-500 hover:bg-amber-500 hover:text-white' : 'bg-amber-50 border-amber-200 text-amber-600 hover:bg-amber-600 hover:text-white')
-                : (theme === 'dark' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500 hover:text-white' : 'bg-emerald-50 border-emerald-200 text-emerald-600 hover:bg-emerald-600 hover:text-white')
-            }`}
-            title={item.isAdjusted ? "Revertir a Pendiente" : "Marcar como Ajustado"}
-          >
-            {item.isAdjusted ? <Undo2 className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
-          </button>
-        )}
-
         {onRemove && (
           <button
             onClick={(e) => {

@@ -381,7 +381,7 @@ const EventManagementPage: React.FC = () => {
         </div>
 
         {/* EVENT TYPES DISPLAY */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 mb-6">
           {state.eventTypes.map(type => (
             <button
               key={type}
