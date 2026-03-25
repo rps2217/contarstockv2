@@ -324,10 +324,38 @@ export const useExpiryDatabase = () => {
       .sort((a, b) => b.count - a.count)
       .slice(0, 3);
 
-    // Potential Savings
-    const potentialSavings = contextFilteredData.reduce((acc, item) => {
-      return acc + ((item as any).price || 0) * item.quantity;
-    }, 0);
+    // Suggested Actions
+    const suggestedActions = [];
+    
+    const mermaItems = contextFilteredData.filter(item => !item.hasCanje && (item.status === 'critical' || item.status === 'expired'));
+    if (mermaItems.length > 0) {
+      suggestedActions.push({
+        title: 'Solicitudes de precios especiales',
+        description: `Gestionar rebajas para ${mermaItems.length} ítems sin opción a canje.`,
+        count: mermaItems.length,
+        type: 'merma'
+      });
+    }
+
+    const canjeItems = contextFilteredData.filter(item => item.hasCanje && (item.status === 'critical' || item.status === 'expired'));
+    if (canjeItems.length > 0) {
+      suggestedActions.push({
+        title: 'Gestión de Canjes',
+        description: `Coordinar devolución con proveedores para ${canjeItems.length} ítems.`,
+        count: canjeItems.length,
+        type: 'canje'
+      });
+    }
+
+    const nextExpiryItems = contextFilteredData.filter(item => item.status === 'next_expiry');
+    if (nextExpiryItems.length > 0) {
+      suggestedActions.push({
+        title: 'Monitorización cercana',
+        description: `Vigilar rotación de ${nextExpiryItems.length} ítems próximos a vencer.`,
+        count: nextExpiryItems.length,
+        type: 'monitor'
+      });
+    }
 
     return {
       expired: expiredCount,
@@ -337,7 +365,7 @@ export const useExpiryDatabase = () => {
       total: contextFilteredData.length,
       priorityItems,
       volumeAlerts,
-      potentialSavings
+      suggestedActions
     };
   }, [contextFilteredData]);
 

@@ -322,7 +322,11 @@ const ExpiryManagementPage: React.FC = () => {
                 >
                   <div className="pt-4">
                     <ExpiryPriorityPanel 
-                      stats={state.stats} 
+                      stats={{
+                        priorityItems: state.stats.priorityItems,
+                        volumeAlerts: state.stats.volumeAlerts,
+                        actionGroups: state.stats.actionGroups
+                      }} 
                       theme={theme} 
                       onSelectItem={handleSelectItemFromPriority}
                     />
@@ -370,7 +374,7 @@ const ExpiryManagementPage: React.FC = () => {
                 }}
               >
                 <ExpiryItemCard 
-                  item={item}
+                  item={{...item, index: virtualRow.index + 1}}
                   isSelected={state.selectedIds.has(item.id)}
                   isVerified={state.verifiedIds.has(item.id)}
                   onToggleSelect={handleToggleSelect}

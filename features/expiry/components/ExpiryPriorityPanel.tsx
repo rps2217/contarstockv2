@@ -4,12 +4,13 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   AlertTriangle, 
   TrendingUp, 
-  DollarSign, 
   ArrowRight, 
   Package, 
   Clock,
   ChevronRight,
-  Zap
+  Zap,
+  CheckCircle2,
+  ListTodo
 } from 'lucide-react';
 import { ExpiryItem } from '../../../store/useExpiryStore';
 
@@ -17,14 +18,14 @@ interface ExpiryPriorityPanelProps {
   stats: {
     priorityItems: ExpiryItem[];
     volumeAlerts: { name: string; count: number }[];
-    potentialSavings: number;
+    suggestedActions?: { title: string; description: string; count: number; type: string }[];
   };
   theme: 'dark' | 'light';
   onSelectItem: (id: string) => void;
 }
 
 export const ExpiryPriorityPanel: React.FC<ExpiryPriorityPanelProps> = ({ stats, theme, onSelectItem }) => {
-  const { priorityItems, volumeAlerts, potentialSavings } = stats;
+  const { priorityItems, volumeAlerts, suggestedActions = [] } = stats;
 
   if (priorityItems.length === 0) return null;
 
@@ -109,25 +110,47 @@ export const ExpiryPriorityPanel: React.FC<ExpiryPriorityPanelProps> = ({ stats,
 
       {/* COLUMNA DERECHA: INSIGHTS */}
       <div className="space-y-4">
-        {/* CARD 2: AHORRO POTENCIAL */}
+        {/* CARD 2: ACCIONES SUGERIDAS */}
         <div className={`p-5 rounded-3xl border ${
-          theme === 'dark' ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-emerald-50 border-emerald-200'
+          theme === 'dark' ? 'bg-indigo-500/10 border-indigo-500/20' : 'bg-indigo-50 border-indigo-200'
         }`}>
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center">
-              <DollarSign className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center">
+              <ListTodo className="w-4 h-4 text-white" />
             </div>
             <div>
-              <h3 className={`text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-700'}`}>
-                Valor en Riesgo
+              <h3 className={`text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-700'}`}>
+                Acciones Sugeridas
               </h3>
-              <p className={`text-lg font-black italic tracking-tighter ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
-                ${potentialSavings.toLocaleString()}
+              <p className={`text-xs font-bold ${theme === 'dark' ? 'text-indigo-300' : 'text-indigo-600'}`}>
+                Gestiones recomendadas
               </p>
             </div>
           </div>
-          <div className={`text-[9px] font-bold uppercase tracking-widest ${theme === 'dark' ? 'text-emerald-400/60' : 'text-emerald-600/60'}`}>
-            Acción proactiva sugerida
+          
+          <div className="space-y-3">
+            {suggestedActions.length > 0 ? (
+              suggestedActions.map((action, idx) => (
+                <div key={idx} className="flex items-start gap-2">
+                  <CheckCircle2 className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${
+                    action.type === 'merma' ? 'text-rose-500' : 
+                    action.type === 'canje' ? 'text-emerald-500' : 'text-amber-500'
+                  }`} />
+                  <div>
+                    <h4 className={`text-[10px] font-black uppercase ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`}>
+                      {action.title}
+                    </h4>
+                    <p className={`text-[9px] font-medium leading-tight mt-0.5 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
+                      {action.description}
+                    </p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className={`text-[10px] font-medium italic ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
+                No hay acciones prioritarias en este momento.
+              </div>
+            )}
           </div>
         </div>
 
