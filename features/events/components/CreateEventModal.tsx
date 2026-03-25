@@ -31,19 +31,17 @@ interface Props {
 }
 
 const EVENT_TYPES = [
-  'MERMA',
-  'CANJE',
-  'DIFERENCIA DE INVENTARIO',
-  'VENCIMIENTO CERCANO',
-  'PRODUCTO DAÑADO',
-  'ERROR DE RECEPCION',
-  'OTRO'
+  'DIF. PED.',
+  'DET. PED.',
+  'VENCE CERC.',
+  'DET. CALIDAD INT.',
+  'DET. CALIDAD EXT.'
 ];
 
 export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, theme }) => {
   const [sku, setSku] = useState('');
   const [product, setProduct] = useState<Product | null>(null);
-  const [eventType, setEventType] = useState('MERMA');
+  const [eventType, setEventType] = useState('DIF. PED.');
   const [quantity, setQuantity] = useState<number>(1);
   const [frc, setFrc] = useState('');
   const [nguia, setNguia] = useState('');

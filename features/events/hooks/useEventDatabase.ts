@@ -160,33 +160,33 @@ export const useEventDatabase = () => {
     // Suggested actions based on event types
     const suggestedActions = [];
     
-    const diffInv = pendingItems.filter(i => i.event.toUpperCase().includes('DIFERENCIA'));
+    const diffInv = pendingItems.filter(i => i.event.toUpperCase().includes('DIF.'));
     if (diffInv.length > 0) {
       suggestedActions.push({
         title: 'Conciliación de Inventario',
-        description: `Hay ${diffInv.length} diferencias críticas que requieren ajuste inmediato.`,
+        description: `Hay ${diffInv.length} diferencias en pedidos que requieren ajuste.`,
         count: diffInv.length,
         type: 'inventory_diff'
       });
     }
 
-    const mermas = pendingItems.filter(i => i.event.toUpperCase().includes('MERMA'));
-    if (mermas.length > 0) {
+    const calidad = pendingItems.filter(i => i.event.toUpperCase().includes('CALIDAD'));
+    if (calidad.length > 0) {
       suggestedActions.push({
-        title: 'Procesar Mermas',
-        description: `Se detectaron ${mermas.length} registros de merma pendientes de validación.`,
-        count: mermas.length,
-        type: 'merma'
+        title: 'Control de Calidad',
+        description: `Se detectaron ${calidad.length} registros de deterioro de calidad pendientes.`,
+        count: calidad.length,
+        type: 'quality'
       });
     }
 
-    const canjes = pendingItems.filter(i => i.event.toUpperCase().includes('CANJE'));
-    if (canjes.length > 0) {
+    const vence = pendingItems.filter(i => i.event.toUpperCase().includes('VENCE'));
+    if (vence.length > 0) {
       suggestedActions.push({
-        title: 'Gestionar Canjes',
-        description: `Existen ${canjes.length} solicitudes de canje por procesar con proveedores.`,
-        count: canjes.length,
-        type: 'canje'
+        title: 'Vencimientos Cercanos',
+        description: `Existen ${vence.length} productos con vencimiento cercano para gestionar.`,
+        count: vence.length,
+        type: 'expiry'
       });
     }
 
