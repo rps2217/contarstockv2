@@ -9,12 +9,12 @@ interface ExpiryFilterDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   selectedStatuses: ExpiryStatus[];
-  setSelectedStatuses: React.Dispatch<React.SetStateAction<ExpiryStatus[]>>;
+  setSelectedStatuses: (statuses: ExpiryStatus[]) => void;
   selectedCanje: 'all' | 'canje' | 'markdown';
   setSelectedCanje: (type: 'all' | 'canje' | 'markdown') => void;
   categories: string[];
   selectedCategories: string[];
-  setSelectedCategories: React.Dispatch<React.SetStateAction<string[]>>;
+  setSelectedCategories: (categories: string[]) => void;
   dateRange: { start: Date | null, end: Date | null };
   setDateRange: (range: { start: Date | null, end: Date | null }) => void;
   withdrawalDateRange: { start: Date | null, end: Date | null };
@@ -246,9 +246,10 @@ export const ExpiryFilterDrawer: React.FC<ExpiryFilterDrawerProps> = ({
                     <button
                       key={s}
                       onClick={() => {
-                        setSelectedStatuses(prev => 
-                          prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]
-                        );
+                        const newStatuses = selectedStatuses.includes(s)
+                          ? selectedStatuses.filter(x => x !== s)
+                          : [...selectedStatuses, s];
+                        setSelectedStatuses(newStatuses);
                       }}
                       className={`px-4 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all border flex items-center justify-between group ${
                         selectedStatuses.includes(s)
@@ -338,9 +339,10 @@ export const ExpiryFilterDrawer: React.FC<ExpiryFilterDrawerProps> = ({
                     <button
                       key={cat}
                       onClick={() => {
-                        setSelectedCategories(prev => 
-                          prev.includes(cat) ? prev.filter(x => x !== cat) : [...prev, cat]
-                        );
+                        const newCategories = selectedCategories.includes(cat)
+                          ? selectedCategories.filter(x => x !== cat)
+                          : [...selectedCategories, cat];
+                        setSelectedCategories(newCategories);
                       }}
                       className={`px-3 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border text-center ${
                         selectedCategories.includes(cat)
