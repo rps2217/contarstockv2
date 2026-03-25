@@ -11,7 +11,8 @@ import {
   Trash2,
   ExternalLink,
   Info,
-  Copy
+  Copy,
+  Truck
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -55,12 +56,12 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className={`border rounded-2xl flex flex-col md:grid md:grid-cols-[80px_120px_1.5fr_1fr_1fr] items-start md:items-center gap-4 md:gap-6 group transition-all relative ${
+      className={`border rounded-2xl flex flex-col md:grid md:grid-cols-[60px_120px_1.5fr_1fr_1fr_140px] items-start md:items-center gap-4 md:gap-6 group transition-all relative ${
         isCompact ? 'p-3 md:p-2' : 'p-4'
       } ${
-        theme === 'dark' ? 'bg-white/5' : 'bg-white shadow-sm'
+        theme === 'dark' ? 'bg-slate-900/40 hover:bg-slate-900/60' : 'bg-white shadow-sm hover:shadow-md'
       } ${
-        isSelected ? 'border-indigo-500 bg-indigo-500/10' :
+        isSelected ? 'border-blue-500 bg-blue-500/5' :
         theme === 'dark' ? 'border-white/5' : 'border-slate-200'
       }`}
     >
@@ -73,12 +74,12 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
               e.stopPropagation();
               onToggleSelect(item.id);
             }}
-            className={`w-12 h-12 rounded-2xl flex items-center justify-center cursor-pointer transition-all shadow-lg hover:scale-105 ${
-              isSelected ? 'bg-indigo-500 text-white' :
-              'bg-blue-500/20 text-blue-500 border border-blue-500/30'
+            className={`w-10 h-10 rounded-xl flex items-center justify-center cursor-pointer transition-all shadow-lg hover:scale-105 ${
+              isSelected ? 'bg-blue-600 text-white' :
+              'bg-blue-500/10 text-blue-500 border border-blue-500/20'
             }`}
           >
-            {isSelected ? <CheckSquare className="w-6 h-6" /> : <AlertCircle className="w-6 h-6" />}
+            {isSelected ? <CheckSquare className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
           </div>
         </div>
 
@@ -194,34 +195,34 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
         )}
       </div>
 
-      {/* COLUMN 5: QUANTITY & LOCATION */}
+      {/* COLUMN 5: QUANTITY & DESTINO */}
       <div className="flex items-center justify-between w-full md:w-auto md:flex-col md:items-start gap-2 md:gap-1">
         <div className="flex items-center gap-2">
           <Package className={`w-4 h-4 ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`} />
           <span className={`text-sm font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
-            {item.quantity} <span className="text-[10px] text-slate-500">UN</span>
+            {item.quantity} <span className="text-[10px] text-slate-500 italic">UN</span>
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <MapPin className={`w-4 h-4 ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`} />
-          <span className={`text-xs font-bold ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>
-            {item.location}
+          <Truck className={`w-3.5 h-3.5 ${theme === 'dark' ? 'text-emerald-500/80' : 'text-emerald-600/80'}`} />
+          <span className={`text-[11px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>
+            {item.destino || item.location || 'N/A'}
           </span>
         </div>
       </div>
 
       {/* ACTIONS COLUMN */}
-      <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+      <div className="flex items-center gap-1.5 w-full md:w-auto justify-end md:justify-center">
         {onEdit && (
           <button
             onClick={(e) => {
               e.stopPropagation();
               onEdit(item);
             }}
-            className={`p-2 rounded-xl transition-all border ${
+            className={`w-9 h-9 rounded-xl transition-all border flex items-center justify-center ${
               theme === 'dark' 
-                ? 'bg-blue-500/10 border-blue-500/20 text-blue-500 hover:bg-blue-500/20' 
-                : 'bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100'
+                ? 'bg-blue-500/10 border-blue-500/20 text-blue-500 hover:bg-blue-500 hover:text-white' 
+                : 'bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-600 hover:text-white'
             }`}
             title="Editar Registro"
           >
@@ -235,10 +236,10 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
               e.stopPropagation();
               onUpdateStatus(item.id, !item.isAdjusted);
             }}
-            className={`p-2 rounded-xl transition-all border ${
+            className={`w-9 h-9 rounded-xl transition-all border flex items-center justify-center ${
               item.isAdjusted
-                ? (theme === 'dark' ? 'bg-amber-500/10 border-amber-500/20 text-amber-500 hover:bg-amber-500/20' : 'bg-amber-50 border-amber-200 text-amber-600 hover:bg-amber-100')
-                : (theme === 'dark' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/20' : 'bg-emerald-50 border-emerald-200 text-emerald-600 hover:bg-emerald-100')
+                ? (theme === 'dark' ? 'bg-amber-500/10 border-amber-500/20 text-amber-500 hover:bg-amber-500 hover:text-white' : 'bg-amber-50 border-amber-200 text-amber-600 hover:bg-amber-600 hover:text-white')
+                : (theme === 'dark' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500 hover:text-white' : 'bg-emerald-50 border-emerald-200 text-emerald-600 hover:bg-emerald-600 hover:text-white')
             }`}
             title={item.isAdjusted ? "Revertir a Pendiente" : "Marcar como Ajustado"}
           >
@@ -252,10 +253,10 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
               e.stopPropagation();
               onRemove(item);
             }}
-            className={`p-2 rounded-xl transition-all border ${
+            className={`w-9 h-9 rounded-xl transition-all border flex items-center justify-center ${
               theme === 'dark' 
-                ? 'bg-red-500/10 border-red-500/20 text-red-500 hover:bg-red-500/20' 
-                : 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'
+                ? 'bg-red-500/10 border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white' 
+                : 'bg-red-50 border-red-200 text-red-600 hover:bg-red-600 hover:text-white'
             }`}
             title="Eliminar Registro"
           >
