@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToastStore } from '../../store/useToastStore';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 
 // Hooks

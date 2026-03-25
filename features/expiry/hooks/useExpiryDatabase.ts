@@ -212,49 +212,75 @@ export const useExpiryDatabase = () => {
     return Array.from(cats).sort();
   }, [baseProcessedData]);
 
-  const baseFilteredData = useMemo(() => {
-    return baseProcessedData.filter(item => {
-      const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(item.category);
-      const matchesCanje = selectedCanje === 'all' || 
-        (selectedCanje === 'canje' && item.hasCanje) ||
-        (selectedCanje === 'markdown' && !item.hasCanje);
-      const matchesEstado = !selectedEstado || item.estado === selectedEstado;
-      const matchesDateRange = (!dateRange.start || !dateRange.end) ||
-        (item.expiryDateObj && isWithinInterval(item.expiryDateObj, { start: dateRange.start, end: dateRange.end }));
-      const matchesWithdrawalRange = (!withdrawalDateRange.start || !withdrawalDateRange.end) ||
-        (item.withdrawalDate && isWithinInterval(item.withdrawalDate, { start: withdrawalDateRange.start, end: withdrawalDateRange.end }));
-      
-      return matchesCategory && matchesCanje && matchesEstado && matchesDateRange && matchesWithdrawalRange;
-    });
-  }, [baseProcessedData, selectedCategories, selectedCanje, selectedEstado, dateRange, withdrawalDateRange]);
-
-  const searchFilteredData = useMemo(() => {
+  const contextFilteredData = useMemo(() => {
     const query = debouncedSearch.toLowerCase();
-    return baseFilteredData.filter(item => {
-      return !query ||
-        item.productName.toLowerCase().includes(query) ||
-        item.barcode.includes(query) ||
-        (item.batch && item.batch.toLowerCase().includes(query)) ||
-        (item.providerName && item.providerName.toLowerCase().includes(query));
-    });
-  }, [baseFilteredData, debouncedSearch]);
+    
+    return baseProcessedData.filter(item => {
+      // 1. Search Query
+      if (query) {
+        const matchesSearch = 
+          item.productName.toLowerCase().includes(query) ||
+          item.barcode.includes(query) ||
+          (item.batch && item.batch.toLowerCase().includes(query)) ||
+          (item.providerName && item.providerName.toLowerCase().includes(query));
+        if (!matchesSearch) return false;
+      }
 
-  const processedData = useMemo((): ExpiryItem[] => {
-    const filtered = searchFilteredData.filter(item => {
-      if (selectedStatuses.length > 0 && !selectedStatuses.includes(item.status)) return false;
-      if (selectedCategories.length > 0 && !selectedCategories.includes(item.category)) return false;
+      // 2. Categories
+      if (selectedCategories.length > 0 && !selectedCategories.includes(item.category)) {
+        return false;
+      }
+
+      // 3. Canje
       if (selectedCanje === 'canje' && !item.hasCanje) return false;
       if (selectedCanje === 'markdown' && item.hasCanje) return false;
+
+      // 4. Estado
       if (selectedEstado && item.estado !== selectedEstado) return false;
-      
-      if (dateRange.start && dateRange.end && item.expiryDateObj) {
-        if (item.expiryDateObj < dateRange.start || item.expiryDateObj > dateRange.end) return false;
+
+      // 5. Date Range (Expiry)
+      if (dateRange.start || dateRange.end) {
+        if (!item.expiryDateObj) return false;
+        const itemDate = item.expiryDateObj.getTime();
+        
+        if (dateRange.start) {
+          const start = new Date(dateRange.start).setHours(0, 0, 0, 0);
+          if (itemDate < start) return false;
+        }
+        if (dateRange.end) {
+          const end = new Date(dateRange.end).setHours(23, 59, 59, 999);
+          if (itemDate > end) return false;
+        }
       }
-      
-      if (withdrawalDateRange.start && withdrawalDateRange.end && item.withdrawalDate) {
-        if (item.withdrawalDate < withdrawalDateRange.start || item.withdrawalDate > withdrawalDateRange.end) return false;
+
+      // 6. Withdrawal Date Range
+      if (withdrawalDateRange.start || withdrawalDateRange.end) {
+        if (!item.withdrawalDate) return false;
+        const itemDate = item.withdrawalDate.getTime();
+        
+        if (withdrawalDateRange.start) {
+          const start = new Date(withdrawalDateRange.start).setHours(0, 0, 0, 0);
+          if (itemDate < start) return false;
+        }
+        if (withdrawalDateRange.end) {
+          const end = new Date(withdrawalDateRange.end).setHours(23, 59, 59, 999);
+          if (itemDate > end) return false;
+        }
       }
-      
+
+      return true;
+    });
+  }, [baseProcessedData, debouncedSearch, selectedCategories, selectedCanje, selectedEstado, dateRange, withdrawalDateRange]);
+
+  const processedData = useMemo((): ExpiryItem[] => {
+    const filtered = contextFilteredData.filter(item => {
+      // Status filter
+      if (selectedStatuses.length > 0) {
+        if (!selectedStatuses.includes(item.status)) return false;
+      } else {
+        // If no status is selected, apply hideExpiredByDefault
+        if (preferences.hideExpiredByDefault && item.status === 'expired') return false;
+      }
       return true;
     });
 
@@ -272,23 +298,23 @@ export const useExpiryDatabase = () => {
       const percent = Math.max(0, Math.min(100, (item.daysLeft / maxLifeDays) * 100));
       return { ...item, lifePercent: percent };
     });
-  }, [searchFilteredData, selectedStatuses, selectedCategories, selectedCanje, selectedEstado, dateRange, withdrawalDateRange, preferences.defaultSort]);
+  }, [contextFilteredData, selectedStatuses, preferences.hideExpiredByDefault, preferences.defaultSort]);
 
   const stats = useMemo(() => {
-    const expiredCount = searchFilteredData.filter(s => s.status === 'expired').length;
-    const criticalCount = searchFilteredData.filter(s => s.status === 'critical').length;
-    const nextExpiryCount = searchFilteredData.filter(s => s.status === 'next_expiry').length;
-    const withdrawalCount = searchFilteredData.filter(s => s.status === 'withdrawal').length;
+    const expiredCount = contextFilteredData.filter(s => s.status === 'expired').length;
+    const criticalCount = contextFilteredData.filter(s => s.status === 'critical').length;
+    const nextExpiryCount = contextFilteredData.filter(s => s.status === 'next_expiry').length;
+    const withdrawalCount = contextFilteredData.filter(s => s.status === 'withdrawal').length;
     
     // Priority Items (Top 5 by risk score)
-    const priorityItems = [...searchFilteredData]
+    const priorityItems = [...contextFilteredData]
       .filter(item => item.status !== 'safe')
       .sort((a, b) => (b.riskScore || 0) - (a.riskScore || 0))
       .slice(0, 5);
 
     // Volume Alerts (Categories with most items)
     const categoryCounts: Record<string, number> = {};
-    searchFilteredData.forEach(item => {
+    contextFilteredData.forEach(item => {
       if (item.status !== 'safe') {
         categoryCounts[item.category] = (categoryCounts[item.category] || 0) + 1;
       }
@@ -299,7 +325,7 @@ export const useExpiryDatabase = () => {
       .slice(0, 3);
 
     // Potential Savings
-    const potentialSavings = searchFilteredData.reduce((acc, item) => {
+    const potentialSavings = contextFilteredData.reduce((acc, item) => {
       return acc + ((item as any).price || 0) * item.quantity;
     }, 0);
 
@@ -308,12 +334,12 @@ export const useExpiryDatabase = () => {
       critical: criticalCount,
       next_expiry: nextExpiryCount,
       withdrawal: withdrawalCount,
-      total: searchFilteredData.length,
+      total: contextFilteredData.length,
       priorityItems,
       volumeAlerts,
       potentialSavings
     };
-  }, [searchFilteredData]);
+  }, [contextFilteredData]);
 
   const handleSyncExpirations = useCallback(async () => {
     try {
