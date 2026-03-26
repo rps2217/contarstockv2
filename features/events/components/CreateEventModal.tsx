@@ -128,8 +128,8 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
       toast.error('Selecciona un producto válido');
       return;
     }
-    if (quantity <= 0) {
-      toast.error('La cantidad debe ser mayor a 0');
+    if (quantity === 0) {
+      toast.error('La cantidad no puede ser 0');
       return;
     }
 
@@ -172,6 +172,11 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
 
     if (finalItems.length === 0) {
       toast.error('Debes agregar al menos un producto');
+      return;
+    }
+
+    if (finalItems.some(item => item.quantity === 0)) {
+      toast.error('La cantidad no puede ser 0');
       return;
     }
 
