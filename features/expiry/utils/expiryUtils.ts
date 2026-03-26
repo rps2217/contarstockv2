@@ -198,20 +198,29 @@ export const handlePrintLabels = (processedScans: any[]) => {
 };
 
 /**
- * Genera un reporte de impresión para eventos seleccionados con campos específicos
+ * Genera un reporte de impresión para eventos seleccionados optimizado para ticket térmico
  */
 export const handlePrintSelectedEvents = (items: any[]) => {
-  const printWindow = window.open('', '_blank', 'width=800,height=600');
+  const printWindow = window.open('', '_blank', 'width=400,height=600');
   if (!printWindow) return;
 
-  const rowsHtml = items.map(item => `
-    <tr>
-      <td>${item.barcode || 'N/A'}</td>
-      <td>${item.productName || 'N/A'}</td>
-      <td>${item.quantity || 0}</td>
-      <td>${item.destino || 'N/A'}</td>
-      <td>${item.frc || 'N/A'}</td>
-    </tr>
+  const now = new Date();
+  const fechaGeneracion = format(now, "dd/MM/yyyy HH:mm");
+
+  const itemsHtml = items.map(item => `
+    <div class="ticket-item">
+      <div class="item-row">
+        <span class="item-name">${(item.productName || 'N/A').toUpperCase()}</span>
+      </div>
+      <div class="item-row secondary">
+        <span>SKU: <strong>${item.barcode || 'N/A'}</strong></span>
+        <span class="qty">CANT: <strong>${item.quantity || 0}</strong></span>
+      </div>
+      <div class="item-row tertiary">
+        <span>FRC: ${item.frc || 'N/A'}</span>
+        <span>DST: ${item.destino || 'N/A'}</span>
+      </div>
+    </div>
   `).join('');
 
   const html = `
@@ -219,33 +228,140 @@ export const handlePrintSelectedEvents = (items: any[]) => {
     <html lang="es">
     <head>
       <meta charset="UTF-8">
-      <title>Impresión de Eventos</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Ticket de Eventos</title>
       <style>
-        body { font-family: Arial, sans-serif; padding: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #000; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        @media print { .no-print { display: none; } }
+        * { box-sizing: border-box; }
+        body { 
+          font-family: 'Courier New', Courier, monospace; 
+          width: 72mm; 
+          margin: 0 auto; 
+          padding: 4mm; 
+          color: #000;
+          background: #fff;
+        }
+        
+        .header { 
+          text-align: center; 
+          border-bottom: 2px dashed #000; 
+          padding-bottom: 10px; 
+          margin-bottom: 10px; 
+        }
+        
+        .title { 
+          font-size: 16px; 
+          font-weight: 900; 
+          display: block;
+          margin-bottom: 4px;
+        }
+        
+        .subtitle {
+          font-size: 12px;
+          font-weight: bold;
+        }
+
+        .ticket-item {
+          border-bottom: 1px dashed #888;
+          padding: 8px 0;
+          page-break-inside: avoid;
+        }
+
+        .item-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          width: 100%;
+          line-height: 1.2;
+        }
+
+        .item-name {
+          font-size: 13px;
+          font-weight: 900;
+          word-break: break-word;
+          display: block;
+          width: 100%;
+          margin-bottom: 2px;
+        }
+
+        .secondary {
+          font-size: 12px;
+          margin-top: 2px;
+        }
+
+        .tertiary {
+          font-size: 10px;
+          color: #333;
+          margin-top: 2px;
+          text-transform: uppercase;
+        }
+
+        .qty {
+          background: #000;
+          color: #fff;
+          padding: 0 4px;
+          border-radius: 2px;
+        }
+
+        .footer {
+          margin-top: 15px;
+          text-align: center;
+          border-top: 2px dashed #000;
+          padding-top: 10px;
+          font-size: 11px;
+        }
+
+        .summary {
+          font-weight: 900;
+          font-size: 14px;
+          margin-bottom: 5px;
+        }
+
+        @media print {
+          .no-print { display: none; }
+          body { width: 100%; padding: 0; }
+          @page { margin: 0; }
+        }
+
+        .btn-print {
+          width: 100%;
+          padding: 15px;
+          background: #000;
+          color: #fff;
+          border: none;
+          font-weight: 900;
+          font-size: 14px;
+          cursor: pointer;
+          margin-top: 20px;
+          border-radius: 8px;
+        }
       </style>
     </head>
     <body>
-      <h2>Reporte de Eventos Seleccionados</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>SKU</th>
-            <th>Descriptor</th>
-            <th>Cantidad</th>
-            <th>Destino</th>
-            <th>Número de FRC</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rowsHtml}
-        </tbody>
-      </table>
-      <button class="no-print" onclick="window.print()">Imprimir</button>
-      <script>window.onload = () => window.print();</script>
+      <div class="header">
+        <span class="title">LOGICOUNT PRO</span>
+        <span class="subtitle">CONTROL DE EVENTOS</span>
+      </div>
+
+      <div class="content">
+        ${itemsHtml}
+      </div>
+
+      <div class="footer">
+        <div class="summary">TOTAL ITEMS: ${items.length}</div>
+        <div>FECHA: ${fechaGeneracion}</div>
+        <div style="margin-top: 10px; font-style: italic;">*** FIN DE REPORTE ***</div>
+      </div>
+
+      <button class="no-print btn-print" onclick="window.print()">🖨️ IMPRIMIR TICKET</button>
+      
+      <script>
+        window.onload = () => {
+          // Pequeño delay para asegurar renderizado
+          setTimeout(() => {
+            // window.print();
+          }, 500);
+        };
+      </script>
     </body>
     </html>
   `;
