@@ -19,7 +19,7 @@ import { toast } from 'sonner';
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: {
+  onSubmit: (data: Array<{
     barcode: string;
     productName: string;
     event: string;
@@ -29,7 +29,7 @@ interface Props {
     destino: string;
     traspaso: string;
     observaciones: string;
-  }) => Promise<void>;
+  }>) => Promise<void>;
   theme: 'dark' | 'light';
   editingItem?: any;
 }
@@ -64,6 +64,7 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
   const [showAdditional, setShowAdditional] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [items, setItems] = useState<Array<{ barcode: string; productName: string; quantity: number }>>([]);
 
   useEffect(() => {
     if (editingItem) {
@@ -75,6 +76,7 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
       setDestino(editingItem.destino || '');
       setTraspaso(editingItem.traspaso || '');
       setObservaciones(editingItem.observaciones || '');
+      setItems([]); // Clear items when editing
       
       // Pre-load product info
       const loadProduct = async () => {
@@ -121,12 +123,58 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
     }
   }, [sku]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const addItem = () => {
     if (!product) {
-      toast.error('Debes seleccionar un producto válido');
+      toast.error('Selecciona un producto válido');
       return;
     }
+    if (quantity <= 0) {
+      toast.error('La cantidad debe ser mayor a 0');
+      return;
+    }
+
+    // Evitar duplicados en la lista local
+    if (items.some(item => item.barcode === product.barcode)) {
+      toast.error('Este producto ya está en la lista');
+      return;
+    }
+
+    setItems(prev => [...prev, {
+      barcode: product.barcode,
+      productName: product.name,
+      quantity
+    }]);
+
+    // Limpiar campos de producto para el siguiente
+    setSku('');
+    setProduct(null);
+    setQuantity(1);
+    toast.success('Producto añadido a la lista');
+  };
+
+  const removeItem = (barcode: string) => {
+    setItems(prev => prev.filter(item => item.barcode !== barcode));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const finalItems = [...items];
+    
+    // Si hay un producto seleccionado actualmente que no se ha añadido a la lista, lo incluimos
+    if (product && !items.some(item => item.barcode === product.barcode)) {
+      finalItems.push({
+        barcode: product.barcode,
+        productName: product.name,
+        quantity
+      });
+    }
+
+    if (finalItems.length === 0) {
+      toast.error('Debes agregar al menos un producto');
+      return;
+    }
+
     if (!frc.trim()) {
       toast.error('El número FRC es obligatorio');
       return;
@@ -138,18 +186,18 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
 
     setIsSubmitting(true);
     try {
-      await onSubmit({
-        barcode: product.barcode,
-        productName: product.name,
+      const payload = finalItems.map(item => ({
+        ...item,
         event: eventType,
-        quantity,
         frc,
         nguia,
         destino,
         traspaso,
         observaciones
-      });
-      toast.success(editingItem ? 'Evento actualizado correctamente' : 'Evento creado correctamente');
+      }));
+
+      await onSubmit(payload);
+      toast.success(editingItem ? 'Evento actualizado correctamente' : `${finalItems.length} registros creados correctamente`);
       onClose();
     } catch (error: any) {
       toast.error(error.message || `Error al ${editingItem ? 'actualizar' : 'crear'} el evento`);
@@ -200,114 +248,12 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
             </button>
           </div>
 
-          <div className="flex flex-col md:flex-row overflow-hidden min-h-[400px] max-h-[70vh]">
+          <div className="flex flex-col md:flex-row overflow-hidden min-h-[500px] max-h-[85vh]">
             {/* LEFT PANEL - MAIN INFO */}
             <div className={`flex-1 overflow-y-auto no-scrollbar p-6 md:p-8 ${showAdditional ? 'md:border-r-4 border-black' : ''}`}>
-              <form id="event-form" onSubmit={handleSubmit} className="space-y-6">
-                {/* PRODUCT SEARCH */}
-                <div className="space-y-2">
-                  <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
-                    theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
-                  }`}>
-                    <Package className="w-3 h-3" /> Producto (SKU / EAN)
-                  </label>
-                  <div className="relative">
-                    <input
-                      autoFocus
-                      type="text"
-                      value={sku}
-                      onChange={(e) => setSku(e.target.value)}
-                      placeholder="Escanea o escribe el código..."
-                      className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none ${
-                        theme === 'dark'
-                          ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
-                          : 'bg-slate-50 border-slate-200 focus:border-blue-500 text-slate-900'
-                      }`}
-                    />
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                      {isSearching ? (
-                        <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
-                      ) : (
-                        <Search className={`w-5 h-5 ${theme === 'dark' ? 'text-slate-600' : 'text-slate-400'}`} />
-                      )}
-                    </div>
-                  </div>
-
-                  {product && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className={`p-4 rounded-2xl border-2 flex items-center gap-4 ${
-                        theme === 'dark' ? 'bg-blue-500/5 border-blue-500/20' : 'bg-blue-50 border-blue-200'
-                      }`}
-                    >
-                      <div className="w-12 h-12 rounded-xl bg-blue-500 flex items-center justify-center shrink-0">
-                        <Package className="w-6 h-6 text-white" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className={`text-xs font-black uppercase truncate ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
-                          {product.name}
-                        </p>
-                        <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest">
-                          {product.barcode}
-                        </p>
-                      </div>
-                    </motion.div>
-                  )}
-                  
-                  {sku.length >= 3 && !product && !isSearching && (
-                    <div className="flex items-center gap-2 text-amber-500 p-2">
-                      <AlertCircle className="w-4 h-4" />
-                      <span className="text-[10px] font-bold uppercase tracking-widest">Producto no encontrado</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 gap-4">
-                  {/* EVENT TYPE */}
-                  <div className="space-y-2">
-                    <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
-                      theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
-                    }`}>
-                      <FileText className="w-3 h-3" /> Tipo de Evento
-                    </label>
-                    <select
-                      value={eventType}
-                      onChange={(e) => setEventType(e.target.value)}
-                      className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none appearance-none ${
-                        theme === 'dark'
-                          ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
-                          : 'bg-slate-50 border-slate-200 focus:border-blue-500 text-slate-900'
-                      }`}
-                    >
-                      {EVENT_TYPES.map(type => (
-                        <option key={type} value={type}>{type}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  {/* QUANTITY */}
-                  <div className="space-y-2">
-                    <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
-                      theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
-                    }`}>
-                      <Hash className="w-3 h-3" /> Cantidad
-                    </label>
-                    <input
-                      type="number"
-                      value={quantity}
-                      onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
-                      className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none ${
-                        theme === 'dark'
-                          ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
-                          : 'bg-slate-50 border-slate-200 focus:border-blue-500 text-slate-900'
-                      }`}
-                    />
-                  </div>
-
-                  {/* FRC */}
+              <div className="space-y-6">
+                {/* SHARED HEADER INFO */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-3xl bg-black/5 border-2 border-black/10">
                   <div className="space-y-2">
                     <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
                       theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
@@ -320,22 +266,18 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
                       value={frc}
                       onChange={(e) => setFrc(e.target.value.toUpperCase())}
                       placeholder="Obligatorio"
-                      className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none ${
+                      className={`w-full px-4 py-3 rounded-xl text-sm font-bold border-2 transition-all outline-none ${
                         theme === 'dark'
                           ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
-                          : 'bg-slate-50 border-slate-200 focus:border-blue-500 text-slate-900'
+                          : 'bg-white border-slate-200 focus:border-blue-500 text-slate-900'
                       }`}
                     />
                   </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-4">
-                  {/* GUIA */}
                   <div className="space-y-2">
                     <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
                       theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
                     }`}>
-                      <Truck className="w-3 h-3" /> Número de Guía
+                      <Truck className="w-3 h-3" /> Guía
                     </label>
                     <input
                       type="text"
@@ -343,83 +285,218 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
                       value={nguia}
                       onChange={(e) => setNguia(e.target.value.toUpperCase())}
                       placeholder="Obligatorio"
-                      className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none ${
+                      className={`w-full px-4 py-3 rounded-xl text-sm font-bold border-2 transition-all outline-none ${
                         theme === 'dark'
                           ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
-                          : 'bg-slate-50 border-slate-200 focus:border-blue-500 text-slate-900'
+                          : 'bg-white border-slate-200 focus:border-blue-500 text-slate-900'
                       }`}
                     />
                   </div>
+                  <div className="space-y-2">
+                    <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
+                      theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                    }`}>
+                      <FileText className="w-3 h-3" /> Evento
+                    </label>
+                    <select
+                      value={eventType}
+                      onChange={(e) => setEventType(e.target.value)}
+                      className={`w-full px-4 py-3 rounded-xl text-sm font-bold border-2 transition-all outline-none appearance-none ${
+                        theme === 'dark'
+                          ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
+                          : 'bg-white border-slate-200 focus:border-blue-500 text-slate-900'
+                      }`}
+                    >
+                      {EVENT_TYPES.map(type => (
+                        <option key={type} value={type}>{type}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
-                {/* MOBILE ADDITIONAL DETAILS */}
-                <AnimatePresence>
-                  {showAdditional && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="space-y-6 overflow-hidden md:hidden pt-2"
-                    >
-                      <div className="space-y-2">
-                        <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
-                          theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
-                        }`}>
-                          <Truck className="w-3 h-3" /> Destino
-                        </label>
-                        <select
-                          value={destino}
-                          onChange={(e) => setDestino(e.target.value)}
-                          className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none appearance-none ${
+                {/* ITEM BUILDER */}
+                {!editingItem && (
+                  <div className={`p-6 rounded-[2rem] border-4 border-black space-y-4 ${
+                    theme === 'dark' ? 'bg-blue-500/5' : 'bg-blue-50'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <h3 className={`text-xs font-black uppercase tracking-widest ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`}>
+                        Agregar Productos
+                      </h3>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                        {items.length} en lista
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                      <div className="md:col-span-7 space-y-2">
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={sku}
+                            onChange={(e) => setSku(e.target.value)}
+                            placeholder="SKU / EAN..."
+                            className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none ${
+                              theme === 'dark'
+                                ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
+                                : 'bg-white border-slate-200 focus:border-blue-500 text-slate-900'
+                            }`}
+                          />
+                          <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                            {isSearching ? (
+                              <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
+                            ) : (
+                              <Search className={`w-5 h-5 ${theme === 'dark' ? 'text-slate-600' : 'text-slate-400'}`} />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="md:col-span-3 space-y-2">
+                        <input
+                          type="number"
+                          value={quantity}
+                          onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
+                          className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none ${
                             theme === 'dark'
                               ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
-                              : 'bg-slate-50 border-slate-200 focus:border-blue-500 text-slate-900'
+                              : 'bg-white border-slate-200 focus:border-blue-500 text-slate-900'
+                          }`}
+                        />
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <button
+                          type="button"
+                          onClick={addItem}
+                          disabled={!product}
+                          className={`w-full h-full flex items-center justify-center rounded-2xl transition-all ${
+                            !product 
+                              ? 'bg-slate-300 text-slate-500 cursor-not-allowed' 
+                              : 'bg-black text-white hover:bg-slate-800 active:scale-95'
                           }`}
                         >
-                          <option value="">Seleccionar destino...</option>
-                          {DESTINOS.map(d => (
-                            <option key={d} value={d}>{d}</option>
-                          ))}
-                        </select>
+                          <Plus className="w-6 h-6" />
+                        </button>
                       </div>
-                      <div className="space-y-2">
-                        <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
-                          theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
-                        }`}>
-                          <Hash className="w-3 h-3" /> Número de Traspaso
-                        </label>
-                        <input
-                          type="text"
-                          value={traspaso}
-                          onChange={(e) => setTraspaso(e.target.value.toUpperCase())}
-                          className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none ${
-                            theme === 'dark'
-                              ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
-                              : 'bg-slate-50 border-slate-200 focus:border-blue-500 text-slate-900'
+                    </div>
+
+                    {product && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className={`p-3 rounded-xl border-2 flex items-center gap-3 ${
+                          theme === 'dark' ? 'bg-black/40 border-blue-500/30' : 'bg-white border-blue-200 shadow-sm'
+                        }`}
+                      >
+                        <div className="w-10 h-10 rounded-lg bg-blue-500 flex items-center justify-center shrink-0">
+                          <Package className="w-5 h-5 text-white" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className={`text-[11px] font-black uppercase truncate ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                            {product.name}
+                          </p>
+                          <p className="text-[9px] font-bold text-blue-500 uppercase tracking-widest">
+                            {product.barcode}
+                          </p>
+                        </div>
+                      </motion.div>
+                    )}
+                  </div>
+                )}
+
+                {/* ITEMS LIST */}
+                {items.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className={`text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
+                      Productos en este registro
+                    </h3>
+                    <div className="grid grid-cols-1 gap-2">
+                      {items.map((item) => (
+                        <motion.div
+                          layout
+                          key={item.barcode}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          className={`group flex items-center justify-between p-3 rounded-2xl border-2 transition-all ${
+                            theme === 'dark' ? 'bg-slate-800/50 border-white/5' : 'bg-slate-50 border-slate-200'
                           }`}
-                        />
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-8 h-8 rounded-lg bg-slate-500/10 flex items-center justify-center shrink-0">
+                              <Package className="w-4 h-4 text-slate-500" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className={`text-[10px] font-black uppercase truncate ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                                {item.productName}
+                              </p>
+                              <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">
+                                {item.barcode} • <span className="text-blue-500">{item.quantity} UNID</span>
+                              </p>
+                            </div>
+                          </div>
+                          {!editingItem && (
+                            <button
+                              type="button"
+                              onClick={() => removeItem(item.barcode)}
+                              className="w-8 h-8 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-500 hover:bg-rose-500 hover:text-white transition-all opacity-0 group-hover:opacity-100"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          )}
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* EDIT MODE SINGLE ITEM */}
+                {editingItem && (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
+                        theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                      }`}>
+                        <Package className="w-3 h-3" /> Producto
+                      </label>
+                      <div className={`p-4 rounded-2xl border-2 flex items-center gap-4 ${
+                        theme === 'dark' ? 'bg-blue-500/5 border-blue-500/20' : 'bg-blue-50 border-blue-200'
+                      }`}>
+                        <div className="w-12 h-12 rounded-xl bg-blue-500 flex items-center justify-center shrink-0">
+                          <Package className="w-6 h-6 text-white" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className={`text-xs font-black uppercase truncate ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                            {editingItem.productName}
+                          </p>
+                          <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest">
+                            {editingItem.barcode}
+                          </p>
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
-                          theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
-                        }`}>
-                          <FileText className="w-3 h-3" /> Observaciones
-                        </label>
-                        <textarea
-                          value={observaciones}
-                          onChange={(e) => setObservaciones(e.target.value)}
-                          className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none ${
-                            theme === 'dark'
-                              ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
-                              : 'bg-slate-50 border-slate-200 focus:border-blue-500 text-slate-900'
-                          }`}
-                          rows={3}
-                        />
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </form>
+                    </div>
+                    <div className="space-y-2">
+                      <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
+                        theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                      }`}>
+                        <Hash className="w-3 h-3" /> Cantidad
+                      </label>
+                      <input
+                        type="number"
+                        value={quantity}
+                        onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
+                        className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none ${
+                          theme === 'dark'
+                            ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
+                            : 'bg-slate-50 border-slate-200 focus:border-blue-500 text-slate-900'
+                        }`}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <form id="event-form" onSubmit={handleSubmit} className="hidden" />
+              </div>
             </div>
 
             {/* DESKTOP RIGHT PANEL - ADDITIONAL INFO */}
@@ -521,9 +598,9 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
             <button
               type="submit"
               form="event-form"
-              disabled={isSubmitting || !product || !frc || !nguia}
+              disabled={isSubmitting || (!product && items.length === 0) || !frc || !nguia}
               className={`w-full md:w-auto px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 transition-all shadow-xl active:scale-95 ${
-                isSubmitting || !product || !frc || !nguia
+                isSubmitting || (!product && items.length === 0) || !frc || !nguia
                   ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
                   : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20'
               }`}
@@ -533,7 +610,7 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
               ) : (
                 <>
                   {editingItem ? <FileText className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
-                  {editingItem ? 'Guardar Cambios' : 'Crear Registro de Evento'}
+                  {editingItem ? 'Guardar Cambios' : `Registrar ${items.length + (product ? 1 : 0)} Productos`}
                 </>
               )}
             </button>

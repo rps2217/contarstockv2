@@ -137,18 +137,23 @@ const EventManagementPage: React.FC = () => {
     }, 100);
   };
 
-  const handleCreateOrUpdate = async (data: any) => {
+  const handleCreateOrUpdate = async (data: any | any[]) => {
+    const items = Array.isArray(data) ? data : [data];
+    
     if (editingItem) {
-      await actions.updateEvent(editingItem.id, data);
+      await actions.updateEvent(editingItem.id, items[0]);
     } else {
-      // Check for duplicates
-      const isDuplicate = state.processedEvents.some(
-        (event) => event.barcode === data.barcode && event.frc === data.frc
-      );
-      if (isDuplicate) {
-        throw new Error('Ya existe un evento para este producto con el mismo FRC');
+      for (const item of items) {
+        // Check for duplicates
+        const isDuplicate = state.processedEvents.some(
+          (event) => event.barcode === item.barcode && event.frc === item.frc
+        );
+        if (isDuplicate) {
+          toast.error(`Ya existe un evento para ${item.productName} con el mismo FRC`);
+          continue;
+        }
+        await actions.createEvent(item);
       }
-      await actions.createEvent(data);
     }
   };
 
