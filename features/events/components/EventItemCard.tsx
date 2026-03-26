@@ -141,6 +141,19 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
         }`}>
           {item.productName}
         </h3>
+        {item.isAdjusted && (
+          <span className={`text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md inline-block w-fit ${
+            theme === 'dark' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-700'
+          }`}>
+            Ajustado por: {item.traspaso ? 'Traspaso' : item.observaciones ? 'Observaciones' : 'Manual'}
+          </span>
+        )}
+        {item.syncError && (
+          <div className="flex items-center gap-1 text-rose-500 text-[9px] font-black uppercase tracking-widest mt-1">
+            <AlertCircle className="w-3 h-3" />
+            Error de sincronización
+          </div>
+        )}
         <button
           onClick={handleCopyBarcode}
           className={`text-[10px] font-bold uppercase tracking-widest transition-all hover:text-blue-500 active:scale-95 text-left flex items-center gap-1 group/copy-desk ${
