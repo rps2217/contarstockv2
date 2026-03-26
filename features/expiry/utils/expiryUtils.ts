@@ -197,6 +197,63 @@ export const handlePrintLabels = (processedScans: any[]) => {
   printWindow.document.close();
 };
 
+/**
+ * Genera un reporte de impresión para eventos seleccionados con campos específicos
+ */
+export const handlePrintSelectedEvents = (items: any[]) => {
+  const printWindow = window.open('', '_blank', 'width=800,height=600');
+  if (!printWindow) return;
+
+  const rowsHtml = items.map(item => `
+    <tr>
+      <td>${item.barcode || 'N/A'}</td>
+      <td>${item.productName || 'N/A'}</td>
+      <td>${item.quantity || 0}</td>
+      <td>${item.destino || 'N/A'}</td>
+      <td>${item.frc || 'N/A'}</td>
+    </tr>
+  `).join('');
+
+  const html = `
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8">
+      <title>Impresión de Eventos</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #000; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        @media print { .no-print { display: none; } }
+      </style>
+    </head>
+    <body>
+      <h2>Reporte de Eventos Seleccionados</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Descriptor</th>
+            <th>Cantidad</th>
+            <th>Destino</th>
+            <th>Número de FRC</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+        </tbody>
+      </table>
+      <button class="no-print" onclick="window.print()">Imprimir</button>
+      <script>window.onload = () => window.print();</script>
+    </body>
+    </html>
+  `;
+
+  printWindow.document.write(html);
+  printWindow.document.close();
+};
+
 export const handleExportExpirationsCSV = (processedScans: any[]) => {
   const headers = ["SKU", "Producto", "Vencimiento", "Estado", "Ubicacion"];
   const rows = processedScans.map(item => [

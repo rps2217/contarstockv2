@@ -243,6 +243,16 @@ const EventManagementPage: React.FC = () => {
     });
   };
 
+  const handleBulkPrintSelected = () => {
+    const selectedItems = state.processedEvents.filter(item => state.selectedIds.has(item.id));
+    if (selectedItems.length === 0) return;
+    
+    import('../expiry/utils/expiryUtils').then(utils => {
+      utils.handlePrintSelectedEvents(selectedItems);
+      toast.success(`Generando reporte para ${selectedItems.length} productos`);
+    });
+  };
+
   const handleBulkSendEmail = () => {
     const selectedItems = state.processedEvents.filter(item => state.selectedIds.has(item.id));
     if (selectedItems.length === 0) return;
@@ -711,6 +721,7 @@ const EventManagementPage: React.FC = () => {
         onSelectAllVisible={actions.handleSelectAll}
         onBulkRemove={handleBulkRemove}
         onBulkPrintLabels={handleBulkPrintLabels}
+        onBulkPrintSelected={handleBulkPrintSelected}
         onBulkSendEmail={handleBulkSendEmail}
         onBulkSearchDocument={handleBulkSearchDocument}
         onOpenBulkEdit={() => setIsBulkEditModalOpen(true)}

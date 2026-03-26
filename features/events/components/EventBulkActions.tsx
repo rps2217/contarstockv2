@@ -17,6 +17,7 @@ interface EventBulkActionsProps {
   onSelectAllVisible: () => void;
   onBulkRemove: () => void;
   onBulkPrintLabels: () => void;
+  onBulkPrintSelected: () => void;
   onBulkSendEmail: () => void;
   onOpenBulkEdit: () => void;
   onBulkSearchDocument: () => void;
@@ -30,6 +31,7 @@ export const EventBulkActions: React.FC<EventBulkActionsProps> = ({
   onSelectAllVisible,
   onBulkRemove,
   onBulkPrintLabels,
+  onBulkPrintSelected,
   onBulkSendEmail,
   onOpenBulkEdit,
   onBulkSearchDocument,
@@ -104,6 +106,14 @@ export const EventBulkActions: React.FC<EventBulkActionsProps> = ({
                   >
                     <Printer className="w-4 h-4" />
                     Imprimir Etiquetas
+                  </button>
+
+                  <button
+                    onClick={onBulkPrintSelected}
+                    className="w-full bg-indigo-800 hover:bg-indigo-700 text-white px-4 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 transition-all shadow-lg shadow-indigo-800/20"
+                  >
+                    <Printer className="w-4 h-4" />
+                    Imprimir Seleccionados
                   </button>
 
                   <button
