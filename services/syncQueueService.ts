@@ -66,7 +66,11 @@ export class SyncQueueService {
       let result;
 
       if (type === 'ADD_EXPIRY') {
-        result = await cloudApi.post('add_expiration', data);
+        const { id: localId, ...payload } = data;
+        result = await cloudApi.post('add_expiration', payload);
+        if (result?.success && localId) {
+          await db.cloudExpirations.update(localId, { syncStatus: 'synced', syncError: undefined });
+        }
       } else if (type === 'REMOVE_EXPIRY') {
         result = await cloudApi.post('remove_expiration', data);
       }
@@ -81,10 +85,16 @@ export class SyncQueueService {
       const retryCount = (job.retryCount || 0) + 1;
       const status = retryCount >= 5 ? 'failed' : 'pending';
       
+      // Si falló definitivamente, marcar el registro local con error
+      const { type, id: localId } = job.data;
+      if (status === 'failed' && type === 'ADD_EXPIRY' && localId) {
+        await db.cloudExpirations.update(localId, { syncStatus: 'error', syncError: error.message });
+      }
+
       await db.syncQueue.update(job.id, { 
         status, 
         retryCount,
-        createdAt: Date.now() // Actualizar timestamp para reintentos exponenciales si se desea
+        createdAt: Date.now()
       });
 
       logger.warn("SYNC_QUEUE_RETRY", `Tarea fallida (Intento ${retryCount}): ${job.data.type} - ${error.message}`);

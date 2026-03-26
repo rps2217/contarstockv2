@@ -13,7 +13,10 @@ import {
   Info,
   Copy,
   Truck,
-  ShoppingCart
+  ShoppingCart,
+  Cloud,
+  CloudOff,
+  RefreshCw
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -53,6 +56,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
 
   return (
     <motion.div
+      id={`event-item-${item.id}`}
       layout
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -86,11 +90,18 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
 
         {/* COLUMN 2: PRODUCT (Mobile View) */}
         <div className="flex-1 min-w-0 flex flex-col gap-1.5 md:hidden">
-          <h3 className={`text-base font-black uppercase tracking-tighter italic truncate ${
-            theme === 'dark' ? 'text-white' : 'text-slate-900'
-          }`}>
-            {item.productName}
-          </h3>
+          <div className="flex items-center justify-between gap-2">
+            <h3 className={`text-base font-black uppercase tracking-tighter italic truncate ${
+              theme === 'dark' ? 'text-white' : 'text-slate-900'
+            }`}>
+              {item.productName}
+            </h3>
+            <div className="shrink-0">
+              {item.syncStatus === 'synced' && <span title="Sincronizado"><Cloud className="w-4 h-4 text-emerald-500" /></span>}
+              {item.syncStatus === 'pending' && <span title="Pendiente"><RefreshCw className="w-4 h-4 text-amber-500 animate-spin" /></span>}
+              {item.syncStatus === 'error' && <span title={item.syncError || 'Error de sincronización'}><CloudOff className="w-4 h-4 text-rose-500" /></span>}
+            </div>
+          </div>
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={handleCopyBarcode}
@@ -134,9 +145,14 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
 
       {/* DESKTOP COLUMN 2: PRODUCT (Desktop View) */}
       <div className="hidden md:flex flex-col gap-1 min-w-0">
-        <span className={`text-[10px] font-bold uppercase tracking-widest ${
-          theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
-        }`}>Producto</span>
+        <div className="flex items-center gap-2">
+          <span className={`text-[10px] font-bold uppercase tracking-widest ${
+            theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
+          }`}>Producto</span>
+          {item.syncStatus === 'synced' && <span title="Sincronizado"><Cloud className="w-3 h-3 text-emerald-500/70" /></span>}
+          {item.syncStatus === 'pending' && <span title="Pendiente"><RefreshCw className="w-3 h-3 text-amber-500/70 animate-spin" /></span>}
+          {item.syncStatus === 'error' && <span title={item.syncError || 'Error de sincronización'}><CloudOff className="w-3 h-3 text-rose-500/70" /></span>}
+        </div>
         <h3 className={`text-sm font-black uppercase tracking-tighter italic truncate ${
           theme === 'dark' ? 'text-white' : 'text-slate-900'
         }`}>

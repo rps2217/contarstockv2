@@ -32,6 +32,9 @@ import { CreateEventModal } from './components/CreateEventModal';
 import { BulkEditModal } from './components/BulkEditModal';
 import { EventSettingsDrawer } from './components/EventSettingsDrawer';
 import { EventSearchBar } from './components/EventSearchBar';
+import { EventPriorityPanel } from './components/EventPriorityPanel';
+import { AnimatePresence } from 'motion/react';
+import { Zap, ChevronUp, ChevronDown } from 'lucide-react';
 
 // Services
 import { importExpirationsFromCloud } from '../../services/syncManager';
@@ -46,6 +49,7 @@ const EventManagementPage: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [isPriorityPanelOpen, setIsPriorityPanelOpen] = useState(false);
   
   const [expandedPanel, setExpandedPanel] = useState<'pending' | 'adjusted' | 'dual'>('dual');
   
@@ -58,7 +62,9 @@ const EventManagementPage: React.FC = () => {
 
     try {
       actions.setPendingOperations(p => p + selectedIds.length);
-      for (const id of selectedIds) {
+      
+      // Realizar actualizaciones en paralelo para mejorar el rendimiento
+      await Promise.all(selectedIds.map(async (id) => {
         const updates: any = {};
         if (data.destino) updates.destino = data.destino;
         if (data.traspaso) updates.traspaso = data.traspaso;
@@ -67,7 +73,8 @@ const EventManagementPage: React.FC = () => {
         if (Object.keys(updates).length > 0) {
           await actions.updateEventBulkFields(id, updates);
         }
-      }
+      }));
+
       toast.success(`${selectedIds.length} registros actualizados`);
       actions.clearSelection();
     } catch (error) {
@@ -113,6 +120,22 @@ const EventManagementPage: React.FC = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [navigate]);
+
+  const handleSelectItemFromPriority = (id: string) => {
+    actions.setSearchQuery('');
+    handleClearFilters();
+    // Small delay to allow filters to clear
+    setTimeout(() => {
+      const element = document.getElementById(`event-item-${id}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        element.classList.add('ring-2', 'ring-blue-500', 'ring-offset-2', 'ring-offset-slate-900');
+        setTimeout(() => {
+          element.classList.remove('ring-2', 'ring-blue-500', 'ring-offset-2', 'ring-offset-slate-900');
+        }, 3000);
+      }
+    }, 100);
+  };
 
   const handleCreateOrUpdate = async (data: any) => {
     if (editingItem) {
@@ -191,21 +214,22 @@ const EventManagementPage: React.FC = () => {
     let successCount = 0;
     const failedItems: string[] = [];
 
-    for (const item of selectedItems) {
+    actions.setPendingOperations(p => p + selectedItems.length);
+    
+    await Promise.all(selectedItems.map(async (item) => {
       if (!item.claveUnica) {
         failedItems.push(item.barcode || 'Desconocido');
-        continue;
+        return;
       }
       try {
-        actions.setPendingOperations(p => p + 1);
         await removeExpirationFromCloud(item.claveUnica);
         successCount++;
       } catch (e) {
         failedItems.push(item.barcode || 'Desconocido');
-      } finally {
-        actions.setPendingOperations(p => Math.max(0, p - 1));
       }
-    }
+    }));
+
+    actions.setPendingOperations(p => Math.max(0, p - selectedItems.length));
 
     if (successCount > 0) toast.success(`${successCount} registros eliminados`);
     if (failedItems.length > 0) toast.error(`Error al eliminar: ${failedItems.join(', ')}`);
@@ -218,9 +242,7 @@ const EventManagementPage: React.FC = () => {
     if (selectedIds.length === 0) return;
 
     try {
-      for (const id of selectedIds) {
-        await actions.updateEventStatus(id, isAdjusted);
-      }
+      await Promise.all(selectedIds.map(id => actions.updateEventStatus(id, isAdjusted)));
       toast.success(`${selectedIds.length} registros actualizados`);
       actions.clearSelection();
     } catch (error) {
@@ -234,9 +256,7 @@ const EventManagementPage: React.FC = () => {
 
     try {
       actions.setPendingOperations(p => p + selectedIds.length);
-      for (const id of selectedIds) {
-        await actions.updateEventDestino(id, destino);
-      }
+      await Promise.all(selectedIds.map(id => actions.updateEventDestino(id, destino)));
       toast.success(`${selectedIds.length} registros actualizados a ${destino}`);
       actions.clearSelection();
     } catch (error) {
@@ -376,6 +396,67 @@ const EventManagementPage: React.FC = () => {
           theme={theme}
         />
       </EventHeader>
+
+      {/* PRIORITY ASSISTANT (BENTO PANEL) */}
+      <div className="px-4 md:px-6 mt-4">
+        {(state.preferences.showPriorityAssistant ?? true) && (
+          <div className="mb-2">
+            <button
+              onClick={() => setIsPriorityPanelOpen(!isPriorityPanelOpen)}
+              className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${
+                theme === 'dark' 
+                  ? 'bg-slate-900/50 border-white/10 hover:bg-white/5' 
+                  : 'bg-white border-slate-200 shadow-sm hover:bg-slate-50'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                  theme === 'dark' ? 'bg-blue-500/10 text-blue-500' : 'bg-blue-100 text-blue-600'
+                }`}>
+                  <Zap className="w-4 h-4" />
+                </div>
+                <div className="text-left">
+                  <h3 className={`text-sm font-black uppercase tracking-tighter italic leading-none ${
+                    theme === 'dark' ? 'text-white' : 'text-slate-900'
+                  }`}>
+                    Asistente de Priorización
+                  </h3>
+                  <p className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${
+                    theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
+                  }`}>
+                    Análisis de volumen y alertas de gestión
+                  </p>
+                </div>
+              </div>
+              {isPriorityPanelOpen ? (
+                <ChevronUp className={`w-5 h-5 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`} />
+              ) : (
+                <ChevronDown className={`w-5 h-5 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`} />
+              )}
+            </button>
+
+            <AnimatePresence>
+              {isPriorityPanelOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="pt-4">
+                    <EventPriorityPanel 
+                      stats={state.priorityStats} 
+                      theme={theme} 
+                      onSelectItem={handleSelectItemFromPriority}
+                      onActionClick={(event) => actions.setSelectedEvents([event])}
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+      </div>
 
       {/* DUAL PANELS */}
       <div className={`flex-1 flex flex-col md:flex-row overflow-hidden gap-4 p-4 md:p-6 ${

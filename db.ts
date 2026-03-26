@@ -41,6 +41,7 @@ export interface CloudExpiration {
   destino?: string;
   traspaso?: string;
   observaciones?: string;
+  syncStatus?: 'synced' | 'pending' | 'error';
   syncError?: string;
 }
 

@@ -286,7 +286,8 @@ export const importExpirationsFromCloud = async (): Promise<number> => {
           claveUnica,
           isAdjusted,
           frc,
-          erp
+          erp,
+          syncStatus: 'synced'
         };
       })
       .filter((exp: any) => exp.barcode);

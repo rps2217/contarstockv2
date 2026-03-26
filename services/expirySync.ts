@@ -8,6 +8,7 @@ import { SyncQueueService } from './syncQueueService';
  * Soporta Offline-First mediante cola de sincronización.
  */
 export const addExpirationToCloud = async (item: {
+  id?: string;
   barcode: string;
   productName: string;
   mm: number;
@@ -24,7 +25,8 @@ export const addExpirationToCloud = async (item: {
 }) => {
   try {
     // Intentar envío directo primero
-    const result = await cloudApi.post('add_expiration', item);
+    const { id, ...payload } = item;
+    const result = await cloudApi.post('add_expiration', payload);
     if (!result.success) {
       throw new Error(result.error || 'Error desconocido al guardar en la nube');
     }
