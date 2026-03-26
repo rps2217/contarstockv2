@@ -67,7 +67,7 @@ function addExpiration(data) {
       "YYYY": data.yyyy,
       "ANO": data.yyyy,
       "EVENTO": data.event || "VENCIMIENTOS",
-      "CANTIDAD": data.quantity || "",
+      "CANTIDAD": data.quantity !== undefined ? data.quantity : "",
       "FRC": data.frc || "",
       "NGUIA": data.nguia || "",
       "GUIA": data.nguia || "",
@@ -75,7 +75,12 @@ function addExpiration(data) {
       "BOD": data.location || "",
       "DESTINO": data.destino || "",
       "DOCTRASINTER": data.traspaso || "",
-      "OBS": data.observaciones || ""
+      "TRASPASO": data.traspaso || "",
+      "OBS": data.observaciones || "",
+      "OBSERVACIONES": data.observaciones || "",
+      "FECHACC": data.fechaCC || "",
+      "FECHA_CC": data.fechaCC || "",
+      "CANT": data.quantity !== undefined ? data.quantity : ""
     };
 
     // Validación de duplicados en la nube - SI EXISTE, ACTUALIZAMOS
@@ -100,7 +105,11 @@ function addExpiration(data) {
             // Permitir borrar explícitamente DESTINO, DOCTRASINTER y OBS
             if (normH === "DESTINO" && data.destino !== undefined) return data.destino;
             if (normH === "DOCTRASINTER" && data.traspaso !== undefined) return data.traspaso;
+            if (normH === "TRASPASO" && data.traspaso !== undefined) return data.traspaso;
             if (normH === "OBS" && data.observaciones !== undefined) return data.observaciones;
+            if (normH === "OBSERVACIONES" && data.observaciones !== undefined) return data.observaciones;
+            if (normH === "FECHACC" && data.fechaCC !== undefined) return data.fechaCC;
+            if (normH === "FECHA_CC" && data.fechaCC !== undefined) return data.fechaCC;
             
             // Solo actualizamos si el nuevo dato no es nulo/indefinido
             if (rowData[normH] !== undefined && rowData[normH] !== "") return rowData[normH];
