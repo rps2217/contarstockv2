@@ -352,6 +352,8 @@ const EventManagementPage: React.FC = () => {
         pendingOperations={state.pendingOperations}
         isSyncing={isSyncing}
         theme={theme}
+        searchQuery={state.searchQuery}
+        onSearchChange={actions.setSearchQuery}
         onNewEvent={() => {
           setEditingItem(null);
           setIsCreateModalOpen(true);
@@ -361,22 +363,6 @@ const EventManagementPage: React.FC = () => {
         onToggleTheme={toggleTheme}
         onOpenSettings={() => setIsSettingsDrawerOpen(true)}
       />
-
-      {/* SUMMARY PANEL */}
-      <div className="px-4 md:px-6 pt-4 grid grid-cols-3 gap-4">
-        <div className={`p-4 rounded-2xl border ${theme === 'dark' ? 'bg-slate-900/50 border-white/5' : 'bg-white border-slate-200'}`}>
-          <p className={`text-[10px] font-bold uppercase tracking-widest ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>Total</p>
-          <p className="text-2xl font-black">{state.totalCount}</p>
-        </div>
-        <div className={`p-4 rounded-2xl border ${theme === 'dark' ? 'bg-blue-900/20 border-blue-500/20' : 'bg-blue-50 border-blue-200'}`}>
-          <p className={`text-[10px] font-bold uppercase tracking-widest ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`}>Pendientes</p>
-          <p className="text-2xl font-black">{state.pendingCount}</p>
-        </div>
-        <div className={`p-4 rounded-2xl border ${theme === 'dark' ? 'bg-emerald-900/20 border-emerald-500/20' : 'bg-emerald-50 border-emerald-200'}`}>
-          <p className={`text-[10px] font-bold uppercase tracking-widest ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>Ajustados</p>
-          <p className="text-2xl font-black">{state.adjustedCount}</p>
-        </div>
-      </div>
 
       {/* DUAL PANELS */}
       <div className={`flex-1 flex flex-col md:flex-row overflow-hidden gap-4 p-4 md:p-6 ${

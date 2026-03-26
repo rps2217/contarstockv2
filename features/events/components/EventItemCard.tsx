@@ -12,7 +12,8 @@ import {
   ExternalLink,
   Info,
   Copy,
-  Truck
+  Truck,
+  ShoppingCart
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -197,9 +198,9 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <Truck className={`w-3.5 h-3.5 ${theme === 'dark' ? 'text-emerald-500/80' : 'text-emerald-600/80'}`} />
+          <ShoppingCart className={`w-3.5 h-3.5 ${theme === 'dark' ? 'text-emerald-500/80' : 'text-emerald-600/80'}`} />
           <span className={`text-[11px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>
-            {item.destino || item.location || 'N/A'}
+            {item.destino || 'SIN DESTINO'}
           </span>
         </div>
       </div>
