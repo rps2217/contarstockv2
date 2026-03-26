@@ -214,7 +214,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <ShoppingCart className={`w-3.5 h-3.5 ${theme === 'dark' ? 'text-emerald-500/80' : 'text-emerald-600/80'}`} />
+          <Truck className={`w-3.5 h-3.5 ${theme === 'dark' ? 'text-emerald-500/80' : 'text-emerald-600/80'}`} />
           <span className={`text-[11px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>
             {item.destino || 'SIN DESTINO'}
           </span>

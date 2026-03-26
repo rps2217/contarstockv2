@@ -326,7 +326,7 @@ export const useEventDatabase = () => {
         quantity: data.quantity,
         frc: data.frc,
         nguia: data.nguia,
-        destino: data.destino || settings.selectedDestino,
+        destino: data.destino || '',
         traspaso: data.traspaso,
         observaciones: data.observaciones,
         isAdjusted: (data.traspaso && data.traspaso.trim() !== '') ? true : oldEvent.isAdjusted,
@@ -336,20 +336,25 @@ export const useEventDatabase = () => {
 
       await db.cloudExpirations.put(updatedEvent);
 
-      // Si la clave única cambió, debemos eliminar la anterior en la nube
-      if (oldEvent.claveUnica && oldEvent.claveUnica !== claveUnica) {
+      // Siempre intentamos eliminar la versión anterior en la nube si es una actualización
+      // para evitar duplicados si el script de GAS solo hace append.
+      if (oldEvent.claveUnica) {
         setPendingOperations(p => p + 1);
         removeExpirationFromCloud(oldEvent.claveUnica).finally(() => {
+          // Después de eliminar (o intentar eliminar), enviamos la nueva versión
+          syncToCloud(id, getSyncPayload(updatedEvent))
+          .finally(() => {
+            setPendingOperations(p => Math.max(0, p - 1));
+          });
+        });
+      } else {
+        // Si no tenía clave única previa, solo sincronizamos
+        setPendingOperations(p => p + 1);
+        syncToCloud(id, getSyncPayload(updatedEvent))
+        .finally(() => {
           setPendingOperations(p => Math.max(0, p - 1));
         });
       }
-
-      // Sincronizar el nuevo estado a la nube
-      setPendingOperations(p => p + 1);
-      syncToCloud(id, getSyncPayload(updatedEvent))
-      .finally(() => {
-        setPendingOperations(p => Math.max(0, p - 1));
-      });
 
       return updatedEvent;
     },
@@ -373,7 +378,7 @@ export const useEventDatabase = () => {
         quantity: data.quantity,
         frc: data.frc,
         nguia: data.nguia,
-        destino: data.destino || settings.selectedDestino,
+        destino: data.destino || '',
         traspaso: data.traspaso,
         observaciones: data.observaciones,
         isAdjusted: (data.traspaso && data.traspaso.trim() !== ''),

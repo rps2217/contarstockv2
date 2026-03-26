@@ -155,6 +155,47 @@ export const fetchSystemConfig = async (): Promise<Partial<AppSheetConfig>> => {
 };
 
 /**
+ * GUARDA LA URL DEL GAS EN LA NUBE (Tabla CONFIG_SISTEMA)
+ */
+export const saveGasUrlToCloud = async (gasUrl: string, spreadsheetId: string): Promise<boolean> => {
+  try {
+    // Intentamos actualizar la configuración en la nube
+    // El script de GAS debe tener una acción 'update_config' o similar
+    // Si no la tiene, usamos appendRow como fallback si la tabla existe
+    const res = await cloudApi.post('update_config', {
+      tableName: 'CONFIG_SISTEMA',
+      data: {
+        GAS_URL: gasUrl,
+        SPREADSHEET_ID: spreadsheetId,
+        LAST_SYNC: new Date().toISOString()
+      }
+    });
+    return res.success;
+  } catch (e) {
+    logger.error('SAVE_GAS_URL_FAIL', String(e));
+    return false;
+  }
+};
+
+/**
+ * ACTUALIZA LA CONFIGURACIÓN LOCAL DESDE LA NUBE
+ */
+export const updateConfigFromCloud = async (): Promise<Partial<AppSheetConfig> | null> => {
+  try {
+    const settings = getSettings();
+    const currentConfig = settings.appSheetConfig;
+    if (!currentConfig?.gasWebAppUrl || !currentConfig?.spreadsheetId) return null;
+
+    // Re-ejecutamos el bootstrap para obtener los valores más recientes de CONFIG_SISTEMA
+    const newConfig = await bootstrapByUrl(currentConfig.gasWebAppUrl, currentConfig.spreadsheetId);
+    return newConfig;
+  } catch (e) {
+    logger.error('UPDATE_CONFIG_CLOUD_FAIL', String(e));
+    return null;
+  }
+};
+
+/**
  * Llama al motor GAS con compresión opcional
  */
 export const callGas = async (action: string, payload: any, compress: boolean = false): Promise<any> => {

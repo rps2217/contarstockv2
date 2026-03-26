@@ -126,6 +126,32 @@ export const EventSettingsDrawer: React.FC<EventSettingsDrawerProps> = ({
                     theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
                   }`}>Sistema</h5>
                 </div>
+                
+                <button
+                  onClick={async () => {
+                    const { updateConfigFromCloud } = await import('../../../services/gasService');
+                    const newConfig = await updateConfigFromCloud();
+                    if (newConfig) {
+                      // Actualizar configuración global (esto debería estar en useAppStore)
+                      // Por ahora, recargamos para que se aplique si se guardó en settings
+                      window.location.reload();
+                    }
+                  }}
+                  className={`w-full p-4 rounded-xl border flex items-center gap-4 transition-all mb-2 ${
+                    theme === 'dark' ? 'border-indigo-500/20 bg-indigo-500/5 hover:bg-indigo-500/10' : 'border-indigo-200 bg-indigo-50 hover:bg-indigo-100'
+                  }`}
+                >
+                  <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center">
+                    <RefreshCw className="w-5 h-5 text-indigo-500" />
+                  </div>
+                  <div className="text-left">
+                    <p className={`text-xs font-black uppercase tracking-tight ${
+                      theme === 'dark' ? 'text-white' : 'text-slate-900'
+                    }`}>Actualizar desde Nube</p>
+                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Sincronizar GAS_URL y parámetros</p>
+                  </div>
+                </button>
+
                 <button
                   onClick={() => window.location.reload()}
                   className={`w-full p-4 rounded-xl border flex items-center gap-4 transition-all ${

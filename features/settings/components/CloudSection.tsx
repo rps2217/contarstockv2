@@ -45,6 +45,15 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
 
   updateSetting('appSheetConfig', finalConfig);
   SoundFX.play('success');
+  
+  // Intentar guardar la URL en la nube (Tabla CONFIG_SISTEMA)
+  try {
+    const { saveGasUrlToCloud } = await import('../../../services/gasService');
+    await saveGasUrlToCloud(urlInput, finalConfig.spreadsheetId);
+  } catch (e) {
+    console.warn("No se pudo sincronizar la URL en la nube:", e);
+  }
+
   alert(`¡CONEXIÓN EXITOSA!\nSistema vinculado al Excel: ${finalConfig.spreadsheetId}`);
   } catch (e: any) {
  if (e.message.includes('GOOGLE_OAUTH_STALL') || e.message.includes('ACCESO_DENEGADO')) {
