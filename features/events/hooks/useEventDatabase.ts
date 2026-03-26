@@ -247,8 +247,20 @@ export const useEventDatabase = () => {
           frc: updated.frc,
           nguia: updated.nguia,
           claveUnica: updated.claveUnica,
-          destino: updated.destino
+          destino: updated.destino,
+          traspaso: updated.traspaso,
+          observaciones: updated.observaciones
         });
+      },
+      updateEventTraspaso: async (id: string, traspaso: string) => {
+        const item = await db.cloudExpirations.get(id);
+        if (!item) return;
+        await db.cloudExpirations.update(id, { traspaso });
+      },
+      updateEventObservaciones: async (id: string, observaciones: string) => {
+        const item = await db.cloudExpirations.get(id);
+        if (!item) return;
+        await db.cloudExpirations.update(id, { observaciones });
       },
       updateEvent: async (id: string, data: {
         barcode: string;
@@ -258,6 +270,8 @@ export const useEventDatabase = () => {
         frc: string;
         nguia: string;
         destino?: string;
+        traspaso?: string;
+        observaciones?: string;
       }) => {
         const oldEvent = await db.cloudExpirations.get(id);
         if (!oldEvent) throw new Error('Evento no encontrado');
@@ -272,6 +286,8 @@ export const useEventDatabase = () => {
           frc: data.frc,
           nguia: data.nguia,
           destino: data.destino || settings.selectedDestino,
+          traspaso: data.traspaso,
+          observaciones: data.observaciones,
           claveUnica,
           timestamp: Date.now(), // Actualizamos timestamp para que suba en la lista
         };
@@ -298,7 +314,9 @@ export const useEventDatabase = () => {
           frc: updatedEvent.frc,
           nguia: updatedEvent.nguia,
           claveUnica: updatedEvent.claveUnica,
-          destino: updatedEvent.destino
+          destino: updatedEvent.destino,
+          traspaso: updatedEvent.traspaso,
+          observaciones: updatedEvent.observaciones
         })
         .finally(() => {
           setPendingOperations(p => Math.max(0, p - 1));
@@ -314,6 +332,8 @@ export const useEventDatabase = () => {
         frc: string;
         nguia: string;
         destino?: string;
+        traspaso?: string;
+        observaciones?: string;
       }) => {
         const claveUnica = `${normalizeSku(data.barcode)}${data.frc}`;
         const newEvent = {
@@ -325,6 +345,8 @@ export const useEventDatabase = () => {
           frc: data.frc,
           nguia: data.nguia,
           destino: data.destino || settings.selectedDestino,
+          traspaso: data.traspaso,
+          observaciones: data.observaciones,
           claveUnica,
           timestamp: Date.now(),
           isAdjusted: false,
@@ -347,7 +369,9 @@ export const useEventDatabase = () => {
           frc: newEvent.frc,
           nguia: newEvent.nguia,
           claveUnica: newEvent.claveUnica,
-          destino: newEvent.destino
+          destino: newEvent.destino,
+          traspaso: newEvent.traspaso,
+          observaciones: newEvent.observaciones
         })
         .finally(() => {
           setPendingOperations(p => Math.max(0, p - 1));

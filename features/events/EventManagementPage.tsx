@@ -29,6 +29,7 @@ import { EventItemCard } from './components/EventItemCard';
 import { EventBulkActions } from './components/EventBulkActions';
 import { EventFilterDrawer } from './components/EventFilterDrawer';
 import { CreateEventModal } from './components/CreateEventModal';
+import { BulkEditModal } from './components/BulkEditModal';
 import { EventSettingsDrawer } from './components/EventSettingsDrawer';
 
 // Services
@@ -42,12 +43,33 @@ const EventManagementPage: React.FC = () => {
   const [isSettingsDrawerOpen, setIsSettingsDrawerOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   
   const [expandedPanel, setExpandedPanel] = useState<'pending' | 'adjusted' | 'dual'>('dual');
   
   const { state, actions } = useEventDatabase();
   const navigate = useNavigate();
+
+  const handleBulkEdit = async (data: { destino: string; traspaso: string; observaciones: string }) => {
+    const selectedIds = Array.from(state.selectedIds);
+    if (selectedIds.length === 0) return;
+
+    try {
+      actions.setPendingOperations(p => p + selectedIds.length);
+      for (const id of selectedIds) {
+        if (data.destino) await actions.updateEventDestino(id, data.destino);
+        if (data.traspaso) await actions.updateEventTraspaso(id, data.traspaso);
+        if (data.observaciones) await actions.updateEventObservaciones(id, data.observaciones);
+      }
+      toast.success(`${selectedIds.length} registros actualizados`);
+      actions.clearSelection();
+    } catch (error) {
+      toast.error('Error al actualizar registros masivamente');
+    } finally {
+      actions.setPendingOperations(p => Math.max(0, p - selectedIds.length));
+    }
+  };
 
   // Atajo de teclado Alt+V para ir a Vencimientos
   useEffect(() => {
@@ -650,8 +672,16 @@ const EventManagementPage: React.FC = () => {
         onBulkRemove={handleBulkRemove}
         onBulkPrintLabels={handleBulkPrintLabels}
         onBulkSendEmail={handleBulkSendEmail}
-        onBulkUpdateDestino={handleBulkUpdateDestino}
+        onOpenBulkEdit={() => setIsBulkEditModalOpen(true)}
         theme={theme}
+      />
+
+      <BulkEditModal
+        isOpen={isBulkEditModalOpen}
+        onClose={() => setIsBulkEditModalOpen(false)}
+        onApply={handleBulkEdit}
+        theme={theme}
+        selectedCount={state.selectedIds.size}
       />
 
       <EventSettingsDrawer 

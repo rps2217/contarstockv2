@@ -4,10 +4,9 @@ import {
   CheckSquare, 
   Trash2, 
   X, 
-  Truck, 
   Printer, 
   Mail, 
-  ChevronDown 
+  Truck
 } from 'lucide-react';
 
 interface EventBulkActionsProps {
@@ -18,7 +17,7 @@ interface EventBulkActionsProps {
   onBulkRemove: () => void;
   onBulkPrintLabels: () => void;
   onBulkSendEmail: () => void;
-  onBulkUpdateDestino: (destino: string) => void;
+  onOpenBulkEdit: () => void;
   theme?: 'dark' | 'light';
 }
 
@@ -30,20 +29,9 @@ export const EventBulkActions: React.FC<EventBulkActionsProps> = ({
   onBulkRemove,
   onBulkPrintLabels,
   onBulkSendEmail,
-  onBulkUpdateDestino,
+  onOpenBulkEdit,
   theme = 'dark'
 }) => {
-  const [isDestinoOpen, setIsDestinoOpen] = useState(false);
-
-  const DESTINOS = [
-    'BOD. 37',
-    'BOD. 80',
-    'BOD. 95',
-    'BOD. 98',
-    'BOD. 106',
-    'BOD. 121'
-  ];
-
   return (
     <AnimatePresence>
       {selectedCount > 0 && (
@@ -130,54 +118,19 @@ export const EventBulkActions: React.FC<EventBulkActionsProps> = ({
               <div className="space-y-4">
                 <p className={`text-[10px] font-bold uppercase tracking-widest ${
                   theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
-                }`}>Logística</p>
+                }`}>Edición</p>
                 
-                <div className="relative">
-                  <button
-                    onClick={() => setIsDestinoOpen(!isDestinoOpen)}
-                    className={`w-full px-4 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-between transition-all border ${
-                      theme === 'dark'
-                        ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
-                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Truck className="w-4 h-4 text-blue-500" />
-                      Asignar Destino
-                    </div>
-                    <ChevronDown className={`w-4 h-4 transition-transform ${isDestinoOpen ? 'rotate-180' : ''}`} />
-                  </button>
-
-                  <AnimatePresence>
-                    {isDestinoOpen && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className={`absolute top-full left-0 right-0 mt-2 rounded-xl border shadow-2xl z-10 overflow-hidden ${
-                          theme === 'dark' ? 'bg-slate-800 border-white/10' : 'bg-white border-slate-200'
-                        }`}
-                      >
-                        {DESTINOS.map(d => (
-                          <button
-                            key={d}
-                            onClick={() => {
-                              onBulkUpdateDestino(d);
-                              setIsDestinoOpen(false);
-                            }}
-                            className={`w-full px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest transition-colors ${
-                              theme === 'dark'
-                                ? 'hover:bg-white/5 text-slate-300 hover:text-white'
-                                : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'
-                            }`}
-                          >
-                            {d}
-                          </button>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
+                <button
+                  onClick={onOpenBulkEdit}
+                  className={`w-full px-4 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 transition-all border ${
+                    theme === 'dark'
+                      ? 'bg-blue-500/10 border-blue-500/20 text-blue-400 hover:bg-blue-500/20'
+                      : 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100'
+                  }`}
+                >
+                  <Truck className="w-4 h-4" />
+                  Editar Detalles Masivos
+                </button>
               </div>
 
               <div className={`h-px ${theme === 'dark' ? 'bg-white/5' : 'bg-slate-100'}`} />

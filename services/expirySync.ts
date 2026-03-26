@@ -19,6 +19,8 @@ export const addExpirationToCloud = async (item: {
   nguia?: string;
   claveUnica?: string;
   destino?: string;
+  traspaso?: string;
+  observaciones?: string;
 }) => {
   try {
     // Intentar envío directo primero

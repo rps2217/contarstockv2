@@ -26,6 +26,8 @@ interface Props {
     quantity: number;
     frc: string;
     nguia: string;
+    traspaso: string;
+    observaciones: string;
   }) => Promise<void>;
   theme: 'dark' | 'light';
   editingItem?: any;
@@ -46,6 +48,9 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
   const [quantity, setQuantity] = useState<number>(1);
   const [frc, setFrc] = useState('');
   const [nguia, setNguia] = useState('');
+  const [traspaso, setTraspaso] = useState('');
+  const [observaciones, setObservaciones] = useState('');
+  const [showAdditional, setShowAdditional] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -56,6 +61,8 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
       setQuantity(editingItem.quantity);
       setFrc(editingItem.frc || '');
       setNguia(editingItem.nguia || '');
+      setTraspaso(editingItem.traspaso || '');
+      setObservaciones(editingItem.observaciones || '');
       
       // Pre-load product info
       const loadProduct = async () => {
@@ -77,6 +84,8 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
       setQuantity(1);
       setFrc('');
       setNguia('');
+      setTraspaso('');
+      setObservaciones('');
     }
   }, [editingItem, isOpen]);
 
@@ -122,7 +131,9 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
         event: eventType,
         quantity,
         frc,
-        nguia
+        nguia,
+        traspaso,
+        observaciones
       });
       toast.success(editingItem ? 'Evento actualizado correctamente' : 'Evento creado correctamente');
       onClose();
@@ -323,6 +334,63 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
                 />
               </div>
             </div>
+
+            {/* ADDITIONAL DETAILS TOGGLE */}
+            <button
+              type="button"
+              onClick={() => setShowAdditional(!showAdditional)}
+              className={`w-full text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 py-2 transition-colors ${
+                theme === 'dark' ? 'text-slate-500 hover:text-blue-400' : 'text-slate-400 hover:text-blue-600'
+              }`}
+            >
+              {showAdditional ? 'Ocultar detalles adicionales' : 'Mostrar detalles adicionales'}
+            </button>
+
+            <AnimatePresence>
+              {showAdditional && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="space-y-4 overflow-hidden"
+                >
+                  <div className="space-y-2">
+                    <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
+                      theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                    }`}>
+                      <Hash className="w-3 h-3" /> Número de Traspaso
+                    </label>
+                    <input
+                      type="text"
+                      value={traspaso}
+                      onChange={(e) => setTraspaso(e.target.value.toUpperCase())}
+                      className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none ${
+                        theme === 'dark'
+                          ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
+                          : 'bg-slate-50 border-slate-200 focus:border-blue-500 text-slate-900'
+                      }`}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
+                      theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                    }`}>
+                      <FileText className="w-3 h-3" /> Observaciones
+                    </label>
+                    <textarea
+                      value={observaciones}
+                      onChange={(e) => setObservaciones(e.target.value)}
+                      className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none ${
+                        theme === 'dark'
+                          ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
+                          : 'bg-slate-50 border-slate-200 focus:border-blue-500 text-slate-900'
+                      }`}
+                      rows={3}
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             <button
               type="submit"
