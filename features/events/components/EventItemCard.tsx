@@ -66,7 +66,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
         theme === 'dark' ? 'border-white/5' : 'border-slate-200'
       }`}
     >
-      {/* MOBILE TOP ROW & DESKTOP COLUMN 1 & 2 */}
+      {/* MOBILE TOP ROW & DESKTOP COLUMN 1 */}
       <div className="flex items-start gap-3 w-full md:contents">
         {/* COLUMN 1: ICON */}
         <div className="flex flex-col items-center gap-2 shrink-0">
@@ -91,7 +91,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
           }`}>
             {item.productName}
           </h3>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={handleCopyBarcode}
               className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border transition-all active:scale-95 flex items-center gap-1 group/copy ${
@@ -167,7 +167,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
         </button>
       </div>
 
-      {/* DESKTOP COLUMN 4: FRC (Priority Column) */}
+      {/* DESKTOP COLUMN 3: FRC (Priority Column) */}
       <div className="hidden md:flex flex-col gap-1">
         <span className={`text-[10px] font-bold uppercase tracking-widest ${
           theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
@@ -189,7 +189,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
         )}
       </div>
 
-      {/* COLUMN 5: QUANTITY & DESTINO */}
+      {/* COLUMN 4: QUANTITY & DESTINO */}
       <div className="flex items-center justify-between w-full md:w-auto md:flex-col md:items-start gap-2 md:gap-1">
         <div className="flex items-center gap-2">
           <Package className={`w-4 h-4 ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`} />
@@ -205,7 +205,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
         </div>
       </div>
 
-      {/* ACTIONS COLUMN */}
+      {/* COLUMN 5: ACTIONS */}
       <div className="flex items-center gap-1.5 w-full md:w-auto justify-end md:justify-center">
         {onEdit && (
           <button

@@ -175,33 +175,35 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className={`relative w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden border-4 border-black ${
+          className={`relative w-full max-w-4xl rounded-[2.5rem] shadow-2xl overflow-hidden border-4 border-black flex flex-col md:flex-row ${
             theme === 'dark' ? 'bg-slate-900' : 'bg-white'
           }`}
         >
-          {/* HEADER */}
-          <div className="bg-black p-6 flex items-center justify-between border-b-4 border-black">
-            <div className="flex items-center gap-4">
-              <div className="bg-blue-600 p-3 rounded-2xl shadow-lg shadow-blue-500/20">
-                {editingItem ? <FileText className="w-6 h-6 text-white" /> : <Plus className="w-6 h-6 text-white" />}
+          {/* LEFT PANEL - MAIN INFO */}
+          <div className={`flex-1 flex flex-col ${showAdditional ? 'md:border-r-4 border-black' : ''}`}>
+            {/* HEADER */}
+            <div className="bg-black p-6 flex items-center justify-between border-b-4 border-black">
+              <div className="flex items-center gap-4">
+                <div className="bg-blue-600 p-3 rounded-2xl shadow-lg shadow-blue-500/20">
+                  {editingItem ? <FileText className="w-6 h-6 text-white" /> : <Plus className="w-6 h-6 text-white" />}
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-white uppercase tracking-tighter italic leading-none">
+                    {editingItem ? 'Editar Registro' : 'Nuevo Registro'}
+                  </h2>
+                  <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mt-1">Gestión de Eventos Críticos</p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-xl font-black text-white uppercase tracking-tighter italic leading-none">
-                  {editingItem ? 'Editar Registro' : 'Nuevo Registro'}
-                </h2>
-                <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mt-1">Gestión de Eventos Críticos</p>
-              </div>
+              <button 
+                onClick={onClose}
+                className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors md:hidden"
+              >
+                <X className="w-5 h-5 text-white" />
+              </button>
             </div>
-            <button 
-              onClick={onClose}
-              className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
-            >
-              <X className="w-5 h-5 text-white" />
-            </button>
-          </div>
 
-          <form onSubmit={handleSubmit} className="p-8 space-y-6">
-            {/* PRODUCT SEARCH */}
+            <form id="event-form" onSubmit={handleSubmit} className="p-8 space-y-6 flex-1 overflow-y-auto no-scrollbar">
+              {/* PRODUCT SEARCH */}
             <div className="space-y-2">
               <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
                 theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
@@ -349,25 +351,129 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
               </div>
             </div>
 
-            {/* ADDITIONAL DETAILS TOGGLE */}
-            <button
-              type="button"
-              onClick={() => setShowAdditional(!showAdditional)}
-              className={`w-full text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 py-2 transition-colors ${
-                theme === 'dark' ? 'text-slate-500 hover:text-blue-400' : 'text-slate-400 hover:text-blue-600'
-              }`}
-            >
-              {showAdditional ? 'Ocultar detalles adicionales' : 'Mostrar detalles adicionales'}
-            </button>
+              {/* ADDITIONAL DETAILS TOGGLE */}
+              <button
+                type="button"
+                onClick={() => setShowAdditional(!showAdditional)}
+                className={`w-full text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 py-2 transition-colors md:hidden ${
+                  theme === 'dark' ? 'text-slate-500 hover:text-blue-400' : 'text-slate-400 hover:text-blue-600'
+                }`}
+              >
+                {showAdditional ? 'Ocultar detalles adicionales' : 'Mostrar detalles adicionales'}
+              </button>
 
-            <AnimatePresence>
-              {showAdditional && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="space-y-4 overflow-hidden"
-                >
+              {/* MOBILE ADDITIONAL DETAILS */}
+              <AnimatePresence>
+                {showAdditional && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="space-y-4 overflow-hidden md:hidden"
+                  >
+                    <div className="space-y-2">
+                      <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
+                        theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                      }`}>
+                        <Truck className="w-3 h-3" /> Destino
+                      </label>
+                      <select
+                        value={destino}
+                        onChange={(e) => setDestino(e.target.value)}
+                        className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none appearance-none ${
+                          theme === 'dark'
+                            ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
+                            : 'bg-slate-50 border-slate-200 focus:border-blue-500 text-slate-900'
+                        }`}
+                      >
+                        <option value="">Seleccionar destino...</option>
+                        {DESTINOS.map(d => (
+                          <option key={d} value={d}>{d}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
+                        theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                      }`}>
+                        <Hash className="w-3 h-3" /> Número de Traspaso
+                      </label>
+                      <input
+                        type="text"
+                        value={traspaso}
+                        onChange={(e) => setTraspaso(e.target.value.toUpperCase())}
+                        className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none ${
+                          theme === 'dark'
+                            ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
+                            : 'bg-slate-50 border-slate-200 focus:border-blue-500 text-slate-900'
+                        }`}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
+                        theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                      }`}>
+                        <FileText className="w-3 h-3" /> Observaciones
+                      </label>
+                      <textarea
+                        value={observaciones}
+                        onChange={(e) => setObservaciones(e.target.value)}
+                        className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none ${
+                          theme === 'dark'
+                            ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
+                            : 'bg-slate-50 border-slate-200 focus:border-blue-500 text-slate-900'
+                        }`}
+                        rows={3}
+                      />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <button
+                type="submit"
+                form="event-form"
+                disabled={isSubmitting || !product || !frc || !nguia}
+                className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 transition-all shadow-xl active:scale-95 md:hidden ${
+                  isSubmitting || !product || !frc || !nguia
+                    ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20'
+                }`}
+              >
+                {isSubmitting ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <>
+                    {editingItem ? <FileText className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+                    {editingItem ? 'Guardar Cambios' : 'Crear Registro de Evento'}
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+
+          {/* DESKTOP RIGHT PANEL - ADDITIONAL INFO */}
+          <AnimatePresence>
+            {showAdditional && (
+              <motion.div
+                initial={{ width: 0, opacity: 0 }}
+                animate={{ width: 'auto', opacity: 1 }}
+                exit={{ width: 0, opacity: 0 }}
+                className="hidden md:flex flex-col w-96 bg-black/5"
+              >
+                <div className="bg-black p-6 flex items-center justify-between border-b-4 border-black">
+                  <h3 className="text-lg font-black text-white uppercase tracking-tighter italic leading-none">
+                    Detalles Adicionales
+                  </h3>
+                  <button 
+                    onClick={onClose}
+                    className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
+                  >
+                    <X className="w-5 h-5 text-white" />
+                  </button>
+                </div>
+
+                <div className="p-8 space-y-6 flex-1 overflow-y-auto no-scrollbar">
                   <div className="space-y-2">
                     <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
                       theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
@@ -420,32 +526,72 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
                           ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
                           : 'bg-slate-50 border-slate-200 focus:border-blue-500 text-slate-900'
                       }`}
-                      rows={3}
+                      rows={5}
                     />
                   </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-            <button
-              type="submit"
-              disabled={isSubmitting || !product || !frc || !nguia}
-              className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 transition-all shadow-xl active:scale-95 ${
-                isSubmitting || !product || !frc || !nguia
-                  ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20'
-              }`}
-            >
-              {isSubmitting ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <>
-                  {editingItem ? <FileText className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
-                  {editingItem ? 'Guardar Cambios' : 'Crear Registro de Evento'}
-                </>
-              )}
-            </button>
-          </form>
+          {/* DESKTOP FOOTER ACTIONS (when additional details are hidden) */}
+          {!showAdditional && (
+            <div className="hidden md:block absolute bottom-8 left-8 right-8">
+              <button
+                type="button"
+                onClick={() => setShowAdditional(true)}
+                className={`w-full text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 py-2 mb-4 transition-colors ${
+                  theme === 'dark' ? 'text-slate-500 hover:text-blue-400' : 'text-slate-400 hover:text-blue-600'
+                }`}
+              >
+                Mostrar detalles adicionales
+              </button>
+              <button
+                type="submit"
+                form="event-form"
+                disabled={isSubmitting || !product || !frc || !nguia}
+                className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 transition-all shadow-xl active:scale-95 ${
+                  isSubmitting || !product || !frc || !nguia
+                    ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20'
+                }`}
+              >
+                {isSubmitting ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <>
+                    {editingItem ? <FileText className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+                    {editingItem ? 'Guardar Cambios' : 'Crear Registro de Evento'}
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* DESKTOP FOOTER ACTIONS (when additional details are shown) */}
+          {showAdditional && (
+            <div className="hidden md:block absolute bottom-8 right-8 w-80">
+              <button
+                type="submit"
+                form="event-form"
+                disabled={isSubmitting || !product || !frc || !nguia}
+                className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 transition-all shadow-xl active:scale-95 ${
+                  isSubmitting || !product || !frc || !nguia
+                    ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20'
+                }`}
+              >
+                {isSubmitting ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <>
+                    {editingItem ? <FileText className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+                    {editingItem ? 'Guardar Cambios' : 'Crear Registro de Evento'}
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </motion.div>
       </div>
     </AnimatePresence>

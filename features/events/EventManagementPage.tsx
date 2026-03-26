@@ -332,14 +332,14 @@ const EventManagementPage: React.FC = () => {
   const pendingVirtualizer = useVirtualizer({
     count: pendingGrouped.length,
     getScrollElement: () => pendingRef.current,
-    estimateSize: (index) => pendingGrouped[index].type === 'header' ? 40 : (state.preferences.compactView ? 80 : 120),
+    estimateSize: (index) => pendingGrouped[index].type === 'header' ? 60 : (state.preferences.compactView ? 100 : 160),
     overscan: 5,
   });
 
   const adjustedVirtualizer = useVirtualizer({
     count: adjustedGrouped.length,
     getScrollElement: () => adjustedRef.current,
-    estimateSize: (index) => adjustedGrouped[index].type === 'header' ? 40 : (state.preferences.compactView ? 80 : 120),
+    estimateSize: (index) => adjustedGrouped[index].type === 'header' ? 60 : (state.preferences.compactView ? 100 : 160),
     overscan: 5,
   });
 
