@@ -6,7 +6,8 @@ import {
   X, 
   Printer, 
   Mail, 
-  Truck
+  Truck,
+  Search
 } from 'lucide-react';
 
 interface EventBulkActionsProps {
@@ -18,6 +19,7 @@ interface EventBulkActionsProps {
   onBulkPrintLabels: () => void;
   onBulkSendEmail: () => void;
   onOpenBulkEdit: () => void;
+  onBulkSearchDocument: () => void;
   theme?: 'dark' | 'light';
 }
 
@@ -30,6 +32,7 @@ export const EventBulkActions: React.FC<EventBulkActionsProps> = ({
   onBulkPrintLabels,
   onBulkSendEmail,
   onOpenBulkEdit,
+  onBulkSearchDocument,
   theme = 'dark'
 }) => {
   return (
@@ -101,6 +104,14 @@ export const EventBulkActions: React.FC<EventBulkActionsProps> = ({
                   >
                     <Printer className="w-4 h-4" />
                     Imprimir Etiquetas
+                  </button>
+
+                  <button
+                    onClick={onBulkSearchDocument}
+                    className="w-full bg-blue-600 hover:bg-blue-500 text-white px-4 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 transition-all shadow-lg shadow-blue-500/20"
+                  >
+                    <Search className="w-4 h-4" />
+                    Buscar Documento
                   </button>
 
                   <button

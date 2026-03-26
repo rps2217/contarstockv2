@@ -255,7 +255,12 @@ export const useEventDatabase = () => {
       updateEventTraspaso: async (id: string, traspaso: string) => {
         const item = await db.cloudExpirations.get(id);
         if (!item) return;
-        await db.cloudExpirations.update(id, { traspaso });
+        
+        const updates: any = { traspaso };
+        if (traspaso && traspaso.trim() !== '') {
+          updates.isAdjusted = true;
+        }
+        await db.cloudExpirations.update(id, updates);
       },
       updateEventObservaciones: async (id: string, observaciones: string) => {
         const item = await db.cloudExpirations.get(id);
@@ -288,6 +293,7 @@ export const useEventDatabase = () => {
           destino: data.destino || settings.selectedDestino,
           traspaso: data.traspaso,
           observaciones: data.observaciones,
+          isAdjusted: (data.traspaso && data.traspaso.trim() !== '') ? true : oldEvent.isAdjusted,
           claveUnica,
           timestamp: Date.now(), // Actualizamos timestamp para que suba en la lista
         };
@@ -347,9 +353,9 @@ export const useEventDatabase = () => {
           destino: data.destino || settings.selectedDestino,
           traspaso: data.traspaso,
           observaciones: data.observaciones,
+          isAdjusted: (data.traspaso && data.traspaso.trim() !== ''),
           claveUnica,
           timestamp: Date.now(),
-          isAdjusted: false,
           mm: new Date().getMonth() + 1,
           yyyy: new Date().getFullYear(),
           location: 'GENERAL'

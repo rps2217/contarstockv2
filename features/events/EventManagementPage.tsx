@@ -71,6 +71,20 @@ const EventManagementPage: React.FC = () => {
     }
   };
 
+  const handleBulkSearchDocument = () => {
+    const selectedIds = Array.from(state.selectedIds);
+    if (selectedIds.length === 0) return;
+
+    // Use the first selected item for the search
+    const item = state.processedEvents.find(e => e.id === selectedIds[0]);
+    if (item && item.barcode && item.nguia) {
+      const query = `${item.barcode} ${item.nguia}`;
+      window.open(`https://mail.google.com/mail/u/0/#search/${encodeURIComponent(query)}`, '_blank');
+    } else {
+      toast.error('No se pudo obtener SKU o Guía para la búsqueda');
+    }
+  };
+
   // Atajo de teclado Alt+V para ir a Vencimientos
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -672,6 +686,7 @@ const EventManagementPage: React.FC = () => {
         onBulkRemove={handleBulkRemove}
         onBulkPrintLabels={handleBulkPrintLabels}
         onBulkSendEmail={handleBulkSendEmail}
+        onBulkSearchDocument={handleBulkSearchDocument}
         onOpenBulkEdit={() => setIsBulkEditModalOpen(true)}
         theme={theme}
       />
