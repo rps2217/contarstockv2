@@ -56,7 +56,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className={`border rounded-2xl flex flex-col md:grid md:grid-cols-[60px_120px_1.5fr_1fr_1fr_140px] items-start md:items-center gap-4 md:gap-6 group transition-all relative ${
+      className={`border rounded-2xl flex flex-col md:grid md:grid-cols-[60px_2fr_1fr_1fr_140px] items-start md:items-center gap-4 md:gap-6 group transition-all relative ${
         isCompact ? 'p-3 md:p-2' : 'p-4'
       } ${
         theme === 'dark' ? 'bg-slate-900/40 hover:bg-slate-900/60' : 'bg-white shadow-sm hover:shadow-md'
@@ -65,7 +65,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
         theme === 'dark' ? 'border-white/5' : 'border-slate-200'
       }`}
     >
-      {/* MOBILE TOP ROW & DESKTOP COLUMN 1 & 3 */}
+      {/* MOBILE TOP ROW & DESKTOP COLUMN 1 & 2 */}
       <div className="flex items-start gap-3 w-full md:contents">
         {/* COLUMN 1: ICON */}
         <div className="flex flex-col items-center gap-2 shrink-0">
@@ -83,7 +83,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
           </div>
         </div>
 
-        {/* COLUMN 3: PRODUCT (Mobile View) */}
+        {/* COLUMN 2: PRODUCT (Mobile View) */}
         <div className="flex-1 min-w-0 flex flex-col gap-1.5 md:hidden">
           <h3 className={`text-base font-black uppercase tracking-tighter italic truncate ${
             theme === 'dark' ? 'text-white' : 'text-slate-900'
@@ -131,10 +131,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
         </div>
       </div>
 
-      {/* DESKTOP COLUMN 2: EMPTY SPACE TO ALIGN */}
-      <div className="hidden md:block"></div>
-
-      {/* DESKTOP COLUMN 3: PRODUCT (Desktop View) */}
+      {/* DESKTOP COLUMN 2: PRODUCT (Desktop View) */}
       <div className="hidden md:flex flex-col gap-1 min-w-0">
         <span className={`text-[10px] font-bold uppercase tracking-widest ${
           theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
