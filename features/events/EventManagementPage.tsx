@@ -401,6 +401,7 @@ const EventManagementPage: React.FC = () => {
             onToggleSelect={actions.handleToggleSelect}
             emptyIcon={<AlertCircle className="w-10 h-10 mb-4" />}
             emptyText="Sin pendientes"
+            scrollRef={pendingRef}
           />
         )}
 
@@ -429,6 +430,7 @@ const EventManagementPage: React.FC = () => {
             onToggleSelect={actions.handleToggleSelect}
             emptyIcon={<RefreshCw className="w-10 h-10 mb-4" />}
             emptyText="Sin ajustados"
+            scrollRef={adjustedRef}
           />
         )}
       </div>

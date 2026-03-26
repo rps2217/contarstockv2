@@ -23,6 +23,7 @@ interface EventListPanelProps {
   onToggleSelect: (id: string) => void;
   emptyIcon: React.ReactNode;
   emptyText: string;
+  scrollRef: React.RefObject<HTMLDivElement>;
 }
 
 export const EventListPanel: React.FC<EventListPanelProps> = ({
@@ -45,6 +46,7 @@ export const EventListPanel: React.FC<EventListPanelProps> = ({
   onToggleSelect,
   emptyIcon,
   emptyText,
+  scrollRef,
 }) => {
   return (
     <motion.div 
@@ -71,7 +73,7 @@ export const EventListPanel: React.FC<EventListPanelProps> = ({
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 no-scrollbar">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 no-scrollbar">
         <div
           style={{
             height: `${virtualizer.getTotalSize()}px`,
