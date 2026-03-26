@@ -24,8 +24,8 @@ import { useEffect } from 'react';
 import { useEventDatabase } from './hooks/useEventDatabase';
 
 // Components
-import { EventSearchBar } from './components/EventSearchBar';
-import { EventItemCard } from './components/EventItemCard';
+import { EventHeader } from './components/EventHeader';
+import { EventListPanel } from './components/EventListPanel';
 import { EventBulkActions } from './components/EventBulkActions';
 import { EventFilterDrawer } from './components/EventFilterDrawer';
 import { CreateEventModal } from './components/CreateEventModal';
@@ -112,6 +112,13 @@ const EventManagementPage: React.FC = () => {
     if (editingItem) {
       await actions.updateEvent(editingItem.id, data);
     } else {
+      // Check for duplicates
+      const isDuplicate = state.processedEvents.some(
+        (event) => event.barcode === data.barcode && event.frc === data.frc
+      );
+      if (isDuplicate) {
+        throw new Error('Ya existe un evento para este producto con el mismo FRC');
+      }
       await actions.createEvent(data);
     }
   };
@@ -176,11 +183,11 @@ const EventManagementPage: React.FC = () => {
     if (!confirm) return;
 
     let successCount = 0;
-    let errorCount = 0;
+    const failedItems: string[] = [];
 
     for (const item of selectedItems) {
       if (!item.claveUnica) {
-        errorCount++;
+        failedItems.push(item.barcode || 'Desconocido');
         continue;
       }
       try {
@@ -188,14 +195,14 @@ const EventManagementPage: React.FC = () => {
         await removeExpirationFromCloud(item.claveUnica);
         successCount++;
       } catch (e) {
-        errorCount++;
+        failedItems.push(item.barcode || 'Desconocido');
       } finally {
         actions.setPendingOperations(p => Math.max(0, p - 1));
       }
     }
 
     if (successCount > 0) toast.success(`${successCount} registros eliminados`);
-    if (errorCount > 0) toast.error(`${errorCount} errores al eliminar`);
+    if (failedItems.length > 0) toast.error(`Error al eliminar: ${failedItems.join(', ')}`);
     
     actions.clearSelection();
   };
@@ -340,130 +347,20 @@ const EventManagementPage: React.FC = () => {
       theme === 'dark' ? 'bg-black text-white' : 'bg-slate-50 text-slate-900'
     }`}>
       {/* HEADER */}
-      <div className={`p-4 md:p-6 pb-4 backdrop-blur-xl border-b shrink-0 transition-colors ${
-        theme === 'dark' ? 'bg-slate-900/50 border-white/5' : 'bg-white/80 border-slate-200 shadow-sm'
-      }`}>
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
-          <div className="flex items-center gap-4">
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border shadow-lg transition-colors shrink-0 ${
-              theme === 'dark' ? 'bg-blue-500/10 border-blue-500/20 shadow-blue-500/5' : 'bg-blue-50 border-blue-200 shadow-blue-500/10'
-            }`}>
-              <AlertCircle className="w-6 h-6 text-blue-500" />
-            </div>
-            <div>
-              <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tighter italic leading-none">Control de Eventos</h1>
-              <p className={`text-[10px] font-bold uppercase tracking-widest mt-1.5 flex items-center gap-2 ${
-                theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
-              }`}>
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                {state.totalCount} Registros Totales
-              </p>
-            </div>
-          </div>
-
-            <div className="flex items-center gap-2 w-full md:w-auto">
-              {state.pendingOperations > 0 && (
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest animate-pulse ${
-                theme === 'dark' ? 'bg-amber-500/10 border-amber-500/20 text-amber-500' : 'bg-amber-50 border-amber-200 text-amber-600'
-              }`}>
-                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                Guardando ({state.pendingOperations})
-              </div>
-            )}
-            <button
-              onClick={() => {
-                setEditingItem(null);
-                setIsCreateModalOpen(true);
-              }}
-              className={`flex-1 md:flex-none px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-3 transition-all border shadow-lg active:scale-95 ${
-                theme === 'dark' 
-                  ? 'bg-blue-600 border-blue-500 text-white shadow-blue-500/20' 
-                  : 'bg-blue-600 border-blue-500 text-white shadow-blue-500/20'
-              }`}
-            >
-              <Plus className="w-4 h-4" />
-              Nuevo Evento
-            </button>
-
-            <button
-              onClick={handleSync}
-              disabled={isSyncing}
-              className={`flex-1 md:flex-none px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all border ${
-                theme === 'dark' 
-                  ? 'bg-white/5 hover:bg-white/10 border-white/10 text-slate-300' 
-                  : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-600 shadow-sm'
-              } disabled:opacity-50`}
-            >
-              <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-blue-500' : ''}`} />
-              {isSyncing ? 'Sincronizando...' : 'Sincronizar'}
-            </button>
-
-            <button
-              onClick={() => navigate('/expiry')}
-              className={`flex-1 md:flex-none px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all border ${
-                theme === 'dark' 
-                  ? 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/20 text-amber-500' 
-                  : 'bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-600 shadow-sm'
-              }`}
-              title="Ir a Control de Vencimientos (Alt+V)"
-            >
-              <Calendar className="w-4 h-4" />
-              Vencimientos
-            </button>
-
-            <button
-              onClick={toggleTheme}
-              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all border shrink-0 ${
-                theme === 'dark' 
-                  ? 'bg-white/5 hover:bg-white/10 border-white/10 text-amber-500' 
-                  : 'bg-white hover:bg-slate-50 border-slate-200 text-indigo-500 shadow-sm'
-              }`}
-            >
-              {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            </button>
-
-            <button
-              onClick={() => setIsSettingsDrawerOpen(true)}
-              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all border shrink-0 ${
-                theme === 'dark' 
-                  ? 'bg-white/5 hover:bg-white/10 border-white/10 text-indigo-400' 
-                  : 'bg-white hover:bg-slate-50 border-slate-200 text-indigo-500 shadow-sm'
-              }`}
-              title="Preferencias de Vista"
-            >
-              <Settings2 className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-
-        {/* EVENT TYPES DISPLAY */}
-        <div className="flex flex-wrap gap-2 mb-6">
-          {state.eventTypes.map(type => (
-            <button
-              key={type}
-              onClick={() => handleToggleEvent(type)}
-              className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border transition-all ${
-                state.selectedEvents.includes(type)
-                  ? 'bg-blue-600 border-blue-500 text-white'
-                  : theme === 'dark'
-                    ? 'bg-slate-800 border-white/10 text-slate-400 hover:bg-slate-700'
-                    : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
-              }`}
-            >
-              {type}
-            </button>
-          ))}
-        </div>
-
-        <EventSearchBar 
-          searchQuery={state.searchQuery}
-          setSearchQuery={actions.setSearchQuery}
-          onOpenFilters={() => setIsFilterDrawerOpen(true)}
-          onClearFilters={handleClearFilters}
-          activeFiltersCount={activeFiltersCount}
-          theme={theme}
-        />
-      </div>
+      <EventHeader 
+        totalCount={state.totalCount}
+        pendingOperations={state.pendingOperations}
+        isSyncing={isSyncing}
+        theme={theme}
+        onNewEvent={() => {
+          setEditingItem(null);
+          setIsCreateModalOpen(true);
+        }}
+        onSync={handleSync}
+        onNavigateExpiry={() => navigate('/expiry')}
+        onToggleTheme={toggleTheme}
+        onOpenSettings={() => setIsSettingsDrawerOpen(true)}
+      />
 
       {/* SUMMARY PANEL */}
       <div className="px-4 md:px-6 pt-4 grid grid-cols-3 gap-4">
@@ -487,218 +384,58 @@ const EventManagementPage: React.FC = () => {
       }`}>
         {/* PENDING PANEL */}
         {(expandedPanel === 'dual' || expandedPanel === 'pending') && (
-          <motion.div 
-            layout
-            className={`flex-1 flex flex-col overflow-hidden rounded-[2.5rem] border-4 border-black transition-all relative ${
-              theme === 'dark' ? 'bg-slate-900/50' : 'bg-white'
-            }`}
-          >
-            <div className="bg-blue-600 p-4 flex items-center justify-between border-b-4 border-black">
-              <div className="flex items-center gap-3">
-                <div className="bg-white/20 p-2 rounded-xl">
-                  <AlertCircle className="w-4 h-4 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-black text-white uppercase tracking-tighter italic leading-none">Pendientes</h3>
-                  <p className="text-[8px] font-bold text-blue-200 uppercase tracking-widest mt-1">{state.pendingCount} Registros</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setExpandedPanel(expandedPanel === 'pending' ? 'dual' : 'pending')}
-                className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
-              >
-                {expandedPanel === 'pending' ? <Minimize2 className="w-4 h-4 text-white" /> : <Maximize2 className="w-4 h-4 text-white" />}
-              </button>
-            </div>
-
-            <div ref={pendingRef} className="flex-1 overflow-y-auto p-4 no-scrollbar">
-              <div
-                style={{
-                  height: `${pendingVirtualizer.getTotalSize()}px`,
-                  width: '100%',
-                  position: 'relative',
-                }}
-              >
-                {pendingVirtualizer.getVirtualItems().map((virtualRow) => {
-                  const entry = pendingGrouped[virtualRow.index];
-                  
-                  if (entry.type === 'header') {
-                    return (
-                      <div
-                        key={`header-${entry.date}`}
-                        ref={pendingVirtualizer.measureElement}
-                        data-index={virtualRow.index}
-                        style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          transform: `translateY(${virtualRow.start}px)`,
-                          padding: '8px 0',
-                        }}
-                      >
-                        <div className={`flex items-center gap-3 px-4 py-2 rounded-xl border shadow-lg ${
-                          theme === 'dark' 
-                            ? 'bg-blue-600 border-blue-500 text-white' 
-                            : 'bg-blue-600 border-blue-500 text-white'
-                        }`}>
-                          <Calendar className="w-3.5 h-3.5" />
-                          <span className="text-xs font-black uppercase tracking-[0.2em] italic">{entry.date}</span>
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  const item = entry.data;
-                  return (
-                    <div
-                      key={item.id}
-                      ref={pendingVirtualizer.measureElement}
-                      data-index={virtualRow.index}
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        transform: `translateY(${virtualRow.start}px)`,
-                        paddingBottom: '12px',
-                      }}
-                    >
-                      <EventItemCard 
-                        item={item}
-                        isSelected={state.selectedIds.has(item.id)}
-                        onToggleSelect={actions.handleToggleSelect}
-                        onUpdateStatus={handleUpdateStatus}
-                        onRemove={confirmRemoveItem}
-                        onEdit={(item) => {
-                          setEditingItem(item);
-                          setIsCreateModalOpen(true);
-                        }}
-                        onFrcClick={handleFrcClick}
-                        onEventClick={handleEventClick}
-                        theme={theme}
-                        isCompact={state.preferences.compactView}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-              {state.pendingEvents.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-20 text-center opacity-50">
-                  <AlertCircle className="w-10 h-10 mb-4" />
-                  <p className="text-xs font-black uppercase tracking-widest">Sin pendientes</p>
-                </div>
-              )}
-            </div>
-          </motion.div>
+          <EventListPanel
+            title="Pendientes"
+            count={state.pendingCount}
+            theme={theme}
+            virtualizer={pendingVirtualizer}
+            groupedItems={pendingGrouped}
+            onTogglePanel={() => setExpandedPanel(expandedPanel === 'pending' ? 'dual' : 'pending')}
+            isExpanded={expandedPanel === 'pending'}
+            icon={<AlertCircle className="w-4 h-4 text-white" />}
+            headerColor="bg-blue-600"
+            onUpdateStatus={handleUpdateStatus}
+            onRemove={confirmRemoveItem}
+            onEdit={(item) => {
+              setEditingItem(item);
+              setIsCreateModalOpen(true);
+            }}
+            onFrcClick={handleFrcClick}
+            onEventClick={handleEventClick}
+            isCompact={state.preferences.compactView}
+            selectedIds={state.selectedIds}
+            onToggleSelect={actions.handleToggleSelect}
+            emptyIcon={<AlertCircle className="w-10 h-10 mb-4" />}
+            emptyText="Sin pendientes"
+          />
         )}
 
         {/* ADJUSTED PANEL */}
         {(expandedPanel === 'dual' || expandedPanel === 'adjusted') && (
-          <motion.div 
-            layout
-            className={`flex-1 flex flex-col overflow-hidden rounded-[2.5rem] border-4 border-black transition-all relative ${
-              theme === 'dark' ? 'bg-emerald-900/20' : 'bg-white'
-            }`}
-          >
-            <div className="bg-emerald-600 p-4 flex items-center justify-between border-b-4 border-black">
-              <div className="flex items-center gap-3">
-                <div className="bg-white/20 p-2 rounded-xl">
-                  <RefreshCw className="w-4 h-4 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-black text-white uppercase tracking-tighter italic leading-none">Ajustados</h3>
-                  <p className="text-[8px] font-bold text-emerald-200 uppercase tracking-widest mt-1">{state.adjustedCount} Registros</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setExpandedPanel(expandedPanel === 'adjusted' ? 'dual' : 'adjusted')}
-                className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
-              >
-                {expandedPanel === 'adjusted' ? <Minimize2 className="w-4 h-4 text-white" /> : <Maximize2 className="w-4 h-4 text-white" />}
-              </button>
-            </div>
-
-            <div ref={adjustedRef} className="flex-1 overflow-y-auto p-4 no-scrollbar">
-              <div
-                style={{
-                  height: `${adjustedVirtualizer.getTotalSize()}px`,
-                  width: '100%',
-                  position: 'relative',
-                }}
-              >
-                {adjustedVirtualizer.getVirtualItems().map((virtualRow) => {
-                  const entry = adjustedGrouped[virtualRow.index];
-
-                  if (entry.type === 'header') {
-                    return (
-                      <div
-                        key={`header-adj-${entry.date}`}
-                        ref={adjustedVirtualizer.measureElement}
-                        data-index={virtualRow.index}
-                        style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          transform: `translateY(${virtualRow.start}px)`,
-                          padding: '8px 0',
-                        }}
-                      >
-                        <div className={`flex items-center gap-3 px-4 py-2 rounded-xl border shadow-lg ${
-                          theme === 'dark' 
-                            ? 'bg-emerald-600 border-emerald-500 text-white' 
-                            : 'bg-emerald-600 border-emerald-500 text-white'
-                        }`}>
-                          <Calendar className="w-3.5 h-3.5" />
-                          <span className="text-xs font-black uppercase tracking-[0.2em] italic">{entry.date}</span>
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  const item = entry.data;
-                  return (
-                    <div
-                      key={item.id}
-                      ref={adjustedVirtualizer.measureElement}
-                      data-index={virtualRow.index}
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        transform: `translateY(${virtualRow.start}px)`,
-                        paddingBottom: '12px',
-                      }}
-                    >
-                      <EventItemCard 
-                        item={item}
-                        isSelected={state.selectedIds.has(item.id)}
-                        onToggleSelect={actions.handleToggleSelect}
-                        onUpdateStatus={handleUpdateStatus}
-                        onRemove={confirmRemoveItem}
-                        onEdit={(item) => {
-                          setEditingItem(item);
-                          setIsCreateModalOpen(true);
-                        }}
-                        onFrcClick={handleFrcClick}
-                        onEventClick={handleEventClick}
-                        theme={theme}
-                        isCompact={state.preferences.compactView}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-              {state.adjustedEvents.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-20 text-center opacity-50">
-                  <RefreshCw className="w-10 h-10 mb-4" />
-                  <p className="text-xs font-black uppercase tracking-widest">Sin ajustados</p>
-                </div>
-              )}
-            </div>
-          </motion.div>
+          <EventListPanel
+            title="Ajustados"
+            count={state.adjustedCount}
+            theme={theme}
+            virtualizer={adjustedVirtualizer}
+            groupedItems={adjustedGrouped}
+            onTogglePanel={() => setExpandedPanel(expandedPanel === 'adjusted' ? 'dual' : 'adjusted')}
+            isExpanded={expandedPanel === 'adjusted'}
+            icon={<RefreshCw className="w-4 h-4 text-white" />}
+            headerColor="bg-emerald-600"
+            onUpdateStatus={handleUpdateStatus}
+            onRemove={confirmRemoveItem}
+            onEdit={(item) => {
+              setEditingItem(item);
+              setIsCreateModalOpen(true);
+            }}
+            onFrcClick={handleFrcClick}
+            onEventClick={handleEventClick}
+            isCompact={state.preferences.compactView}
+            selectedIds={state.selectedIds}
+            onToggleSelect={actions.handleToggleSelect}
+            emptyIcon={<RefreshCw className="w-10 h-10 mb-4" />}
+            emptyText="Sin ajustados"
+          />
         )}
       </div>
 

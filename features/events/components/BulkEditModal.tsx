@@ -82,6 +82,10 @@ export const BulkEditModal: React.FC<Props> = ({ isOpen, onClose, onApply, theme
           </div>
 
           <form onSubmit={handleSubmit} className="p-8 space-y-6">
+            <div className={`p-4 rounded-2xl border ${theme === 'dark' ? 'bg-blue-900/20 border-blue-500/20' : 'bg-blue-50 border-blue-200'}`}>
+              <p className={`text-[10px] font-bold uppercase tracking-widest ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`}>Resumen de cambios</p>
+              <p className="text-sm font-bold mt-1">Se aplicarán cambios a <span className="text-blue-500">{selectedCount}</span> registros seleccionados.</p>
+            </div>
             <div className="space-y-2">
               <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
                 theme === 'dark' ? 'text-slate-400' : 'text-slate-500'

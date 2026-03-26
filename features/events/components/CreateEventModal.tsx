@@ -42,6 +42,15 @@ const EVENT_TYPES = [
   'DET. CALIDAD EXT.'
 ];
 
+const DESTINOS = [
+  'BOD. 37',
+  'BOD. 80',
+  'BOD. 95',
+  'BOD. 98',
+  'BOD. 106',
+  'BOD. 121'
+];
+
 export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, theme, editingItem }) => {
   const [sku, setSku] = useState('');
   const [product, setProduct] = useState<Product | null>(null);
@@ -365,16 +374,20 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
                     }`}>
                       <Truck className="w-3 h-3" /> Destino
                     </label>
-                    <input
-                      type="text"
+                    <select
                       value={destino}
-                      onChange={(e) => setDestino(e.target.value.toUpperCase())}
-                      className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none ${
+                      onChange={(e) => setDestino(e.target.value)}
+                      className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none appearance-none ${
                         theme === 'dark'
                           ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
                           : 'bg-slate-50 border-slate-200 focus:border-blue-500 text-slate-900'
                       }`}
-                    />
+                    >
+                      <option value="">Seleccionar destino...</option>
+                      {DESTINOS.map(d => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                    </select>
                   </div>
                   <div className="space-y-2">
                     <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
