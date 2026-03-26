@@ -59,9 +59,14 @@ const EventManagementPage: React.FC = () => {
     try {
       actions.setPendingOperations(p => p + selectedIds.length);
       for (const id of selectedIds) {
-        if (data.destino) await actions.updateEventDestino(id, data.destino);
-        if (data.traspaso) await actions.updateEventTraspaso(id, data.traspaso);
-        if (data.observaciones) await actions.updateEventObservaciones(id, data.observaciones);
+        const updates: any = {};
+        if (data.destino) updates.destino = data.destino;
+        if (data.traspaso) updates.traspaso = data.traspaso;
+        if (data.observaciones) updates.observaciones = data.observaciones;
+        
+        if (Object.keys(updates).length > 0) {
+          await actions.updateEventBulkFields(id, updates);
+        }
       }
       toast.success(`${selectedIds.length} registros actualizados`);
       actions.clearSelection();

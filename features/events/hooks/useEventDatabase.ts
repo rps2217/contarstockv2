@@ -229,6 +229,36 @@ export const useEventDatabase = () => {
       updateEventStatus: async (id: string, isAdjusted: boolean) => {
         await db.cloudExpirations.update(id, { isAdjusted });
       },
+      updateEventBulkFields: async (id: string, updates: { destino?: string; traspaso?: string; observaciones?: string }) => {
+        const item = await db.cloudExpirations.get(id);
+        if (!item) return;
+        
+        const newUpdates: any = { ...updates };
+        if (updates.traspaso && updates.traspaso.trim() !== '') {
+          newUpdates.isAdjusted = true;
+        }
+        
+        await db.cloudExpirations.update(id, newUpdates);
+        
+        // Sincronizar a la nube
+        const updated = await db.cloudExpirations.get(id);
+        if (updated) {
+          await addExpirationToCloud({
+            barcode: updated.barcode,
+            productName: updated.productName,
+            mm: updated.mm,
+            yyyy: updated.yyyy,
+            quantity: updated.quantity,
+            event: updated.event,
+            frc: updated.frc,
+            nguia: updated.nguia,
+            claveUnica: updated.claveUnica,
+            destino: updated.destino,
+            traspaso: updated.traspaso,
+            observaciones: updated.observaciones
+          });
+        }
+      },
       updateEventDestino: async (id: string, destino: string) => {
         const item = await db.cloudExpirations.get(id);
         if (!item) return;
@@ -261,11 +291,49 @@ export const useEventDatabase = () => {
           updates.isAdjusted = true;
         }
         await db.cloudExpirations.update(id, updates);
+        
+        // Sincronizar a la nube
+        const updated = await db.cloudExpirations.get(id);
+        if (updated) {
+          await addExpirationToCloud({
+            barcode: updated.barcode,
+            productName: updated.productName,
+            mm: updated.mm,
+            yyyy: updated.yyyy,
+            quantity: updated.quantity,
+            event: updated.event,
+            frc: updated.frc,
+            nguia: updated.nguia,
+            claveUnica: updated.claveUnica,
+            destino: updated.destino,
+            traspaso: updated.traspaso,
+            observaciones: updated.observaciones
+          });
+        }
       },
       updateEventObservaciones: async (id: string, observaciones: string) => {
         const item = await db.cloudExpirations.get(id);
         if (!item) return;
         await db.cloudExpirations.update(id, { observaciones });
+        
+        // Sincronizar a la nube
+        const updated = await db.cloudExpirations.get(id);
+        if (updated) {
+          await addExpirationToCloud({
+            barcode: updated.barcode,
+            productName: updated.productName,
+            mm: updated.mm,
+            yyyy: updated.yyyy,
+            quantity: updated.quantity,
+            event: updated.event,
+            frc: updated.frc,
+            nguia: updated.nguia,
+            claveUnica: updated.claveUnica,
+            destino: updated.destino,
+            traspaso: updated.traspaso,
+            observaciones: updated.observaciones
+          });
+        }
       },
       updateEvent: async (id: string, data: {
         barcode: string;

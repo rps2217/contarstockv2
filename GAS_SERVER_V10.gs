@@ -73,7 +73,9 @@ function addExpiration(data) {
       "GUIA": data.nguia || "",
       "ETIQUETAS": "MANUAL",
       "BOD": data.location || "",
-      "DESTINO": data.destino || ""
+      "DESTINO": data.destino || "",
+      "DOCTRASINTER": data.traspaso || "",
+      "OBS": data.observaciones || ""
     };
 
     // Validación de duplicados en la nube - SI EXISTE, ACTUALIZAMOS
@@ -95,6 +97,11 @@ function addExpiration(data) {
           var currentRowValues = sheet.getRange(rowNumber, 1, 1, headers.length).getValues()[0];
           
           var updatedRow = normalizedHeaders.map(function(normH, idx) {
+            // Permitir borrar explícitamente DESTINO, DOCTRASINTER y OBS
+            if (normH === "DESTINO" && data.destino !== undefined) return data.destino;
+            if (normH === "DOCTRASINTER" && data.traspaso !== undefined) return data.traspaso;
+            if (normH === "OBS" && data.observaciones !== undefined) return data.observaciones;
+            
             // Solo actualizamos si el nuevo dato no es nulo/indefinido
             if (rowData[normH] !== undefined && rowData[normH] !== "") return rowData[normH];
             return currentRowValues[idx];
