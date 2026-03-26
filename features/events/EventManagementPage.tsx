@@ -31,6 +31,7 @@ import { EventFilterDrawer } from './components/EventFilterDrawer';
 import { CreateEventModal } from './components/CreateEventModal';
 import { BulkEditModal } from './components/BulkEditModal';
 import { EventSettingsDrawer } from './components/EventSettingsDrawer';
+import { EventSearchBar } from './components/EventSearchBar';
 
 // Services
 import { importExpirationsFromCloud } from '../../services/syncManager';
@@ -352,17 +353,24 @@ const EventManagementPage: React.FC = () => {
         pendingOperations={state.pendingOperations}
         isSyncing={isSyncing}
         theme={theme}
-        searchQuery={state.searchQuery}
-        onSearchChange={actions.setSearchQuery}
-        onNewEvent={() => {
-          setEditingItem(null);
-          setIsCreateModalOpen(true);
-        }}
         onSync={handleSync}
         onNavigateExpiry={() => navigate('/expiry')}
         onToggleTheme={toggleTheme}
         onOpenSettings={() => setIsSettingsDrawerOpen(true)}
-      />
+      >
+        <EventSearchBar 
+          searchQuery={state.searchQuery}
+          setSearchQuery={actions.setSearchQuery}
+          onOpenFilters={() => setIsFilterDrawerOpen(true)}
+          onOpenAdd={() => {
+            setEditingItem(null);
+            setIsCreateModalOpen(true);
+          }}
+          onClearFilters={handleClearFilters}
+          activeFiltersCount={activeFiltersCount}
+          theme={theme}
+        />
+      </EventHeader>
 
       {/* DUAL PANELS */}
       <div className={`flex-1 flex flex-col md:flex-row overflow-hidden gap-4 p-4 md:p-6 ${

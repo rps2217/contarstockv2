@@ -1,18 +1,16 @@
 import React from 'react';
-import { AlertCircle, Plus, RefreshCw, Calendar, Sun, Moon, Settings2, Search } from 'lucide-react';
+import { AlertCircle, RefreshCw, Calendar, Sun, Moon, Settings2 } from 'lucide-react';
 
 interface EventHeaderProps {
   totalCount: number;
   pendingOperations: number;
   isSyncing: boolean;
   theme: 'dark' | 'light';
-  searchQuery: string;
-  onSearchChange: (query: string) => void;
-  onNewEvent: () => void;
   onSync: () => void;
   onNavigateExpiry: () => void;
   onToggleTheme: () => void;
   onOpenSettings: () => void;
+  children?: React.ReactNode;
 }
 
 export const EventHeader: React.FC<EventHeaderProps> = ({
@@ -20,13 +18,11 @@ export const EventHeader: React.FC<EventHeaderProps> = ({
   pendingOperations,
   isSyncing,
   theme,
-  searchQuery,
-  onSearchChange,
-  onNewEvent,
   onSync,
   onNavigateExpiry,
   onToggleTheme,
   onOpenSettings,
+  children
 }) => {
   return (
     <div className={`p-4 md:p-6 pb-4 backdrop-blur-xl border-b shrink-0 transition-colors ${
@@ -50,21 +46,7 @@ export const EventHeader: React.FC<EventHeaderProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <div className="relative flex-1 md:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Buscar..."
-              className={`w-full pl-10 pr-4 py-3 rounded-2xl text-xs font-bold border transition-all outline-none ${
-                theme === 'dark'
-                  ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
-                  : 'bg-slate-50 border-slate-200 focus:border-blue-500 text-slate-900'
-              }`}
-            />
-          </div>
+        <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 no-scrollbar">
           {pendingOperations > 0 && (
             <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest animate-pulse ${
               theme === 'dark' ? 'bg-amber-500/10 border-amber-500/20 text-amber-500' : 'bg-amber-50 border-amber-200 text-amber-600'
@@ -73,18 +55,6 @@ export const EventHeader: React.FC<EventHeaderProps> = ({
               Guardando ({pendingOperations})
             </div>
           )}
-          <button
-            onClick={onNewEvent}
-            className={`flex-1 md:flex-none px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-3 transition-all border shadow-lg active:scale-95 ${
-              theme === 'dark' 
-                ? 'bg-blue-600 border-blue-500 text-white shadow-blue-500/20' 
-                : 'bg-blue-600 border-blue-500 text-white shadow-blue-500/20'
-            }`}
-          >
-            <Plus className="w-4 h-4" />
-            Nuevo Evento
-          </button>
-
           <button
             onClick={onSync}
             disabled={isSyncing}
@@ -135,6 +105,7 @@ export const EventHeader: React.FC<EventHeaderProps> = ({
           </button>
         </div>
       </div>
+      {children}
     </div>
   );
 };

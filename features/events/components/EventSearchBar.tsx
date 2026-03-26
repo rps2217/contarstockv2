@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Search, Filter, X, Camera } from 'lucide-react';
+import { Search, Filter, X, Camera, Plus } from 'lucide-react';
 import { BarcodeScannerModal } from '../../expiry/components/BarcodeScannerModal';
 
 interface EventSearchBarProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   onOpenFilters: () => void;
+  onOpenAdd: () => void;
   onClearFilters: () => void;
   activeFiltersCount: number;
   theme?: 'dark' | 'light';
@@ -15,6 +16,7 @@ export const EventSearchBar: React.FC<EventSearchBarProps> = ({
   searchQuery,
   setSearchQuery,
   onOpenFilters,
+  onOpenAdd,
   onClearFilters,
   activeFiltersCount,
   theme = 'dark'
@@ -63,6 +65,18 @@ export const EventSearchBar: React.FC<EventSearchBarProps> = ({
       </div>
       
       <div className="flex gap-3">
+        <button
+          onClick={onOpenAdd}
+          className={`flex-1 md:flex-none px-6 py-4 md:py-0 rounded-2xl flex items-center justify-center gap-3 transition-all border shadow-lg group ${
+            theme === 'dark' 
+              ? 'bg-blue-600 border-blue-500 text-white hover:bg-blue-500' 
+              : 'bg-blue-600 border-blue-500 text-white hover:bg-blue-500 shadow-sm'
+          }`}
+        >
+          <Plus className="w-5 h-5" />
+          <span className="text-xs font-black uppercase tracking-widest">Nuevo</span>
+        </button>
+
         <button
           onClick={onOpenFilters}
           className={`flex-1 md:flex-none px-6 py-4 md:py-0 rounded-2xl flex items-center justify-center gap-3 transition-all border shadow-lg group ${
