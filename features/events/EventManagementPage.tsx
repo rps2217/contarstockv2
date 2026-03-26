@@ -73,14 +73,24 @@ const EventManagementPage: React.FC = () => {
 
   const handleBulkSearchDocument = () => {
     const selectedIds = Array.from(state.selectedIds);
+    console.log('Selected IDs:', selectedIds);
     if (selectedIds.length === 0) return;
 
     // Use the first selected item for the search
     const item = state.processedEvents.find(e => e.id === selectedIds[0]);
+    console.log('Item found:', item);
+    
     if (item && item.barcode && item.nguia) {
       const query = `${item.barcode} ${item.nguia}`;
-      window.open(`https://mail.google.com/mail/u/0/#search/${encodeURIComponent(query)}`, '_blank');
+      console.log('Gmail Search Query:', query);
+      const url = `https://mail.google.com/mail/u/0/#search/${encodeURIComponent(query)}`;
+      console.log('Opening URL:', url);
+      const opened = window.open(url, '_blank');
+      if (!opened) {
+        toast.error('El navegador bloqueó la apertura de la ventana de Gmail. Por favor, permite las ventanas emergentes.');
+      }
     } else {
+      console.error('Missing barcode or nguia:', item);
       toast.error('No se pudo obtener SKU o Guía para la búsqueda');
     }
   };

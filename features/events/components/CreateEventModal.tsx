@@ -26,6 +26,7 @@ interface Props {
     quantity: number;
     frc: string;
     nguia: string;
+    destino: string;
     traspaso: string;
     observaciones: string;
   }) => Promise<void>;
@@ -48,6 +49,7 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
   const [quantity, setQuantity] = useState<number>(1);
   const [frc, setFrc] = useState('');
   const [nguia, setNguia] = useState('');
+  const [destino, setDestino] = useState('');
   const [traspaso, setTraspaso] = useState('');
   const [observaciones, setObservaciones] = useState('');
   const [showAdditional, setShowAdditional] = useState(false);
@@ -61,6 +63,7 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
       setQuantity(editingItem.quantity);
       setFrc(editingItem.frc || '');
       setNguia(editingItem.nguia || '');
+      setDestino(editingItem.destino || '');
       setTraspaso(editingItem.traspaso || '');
       setObservaciones(editingItem.observaciones || '');
       
@@ -84,6 +87,7 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
       setQuantity(1);
       setFrc('');
       setNguia('');
+      setDestino('');
       setTraspaso('');
       setObservaciones('');
     }
@@ -132,6 +136,7 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
         quantity,
         frc,
         nguia,
+        destino,
         traspaso,
         observaciones
       });
@@ -354,6 +359,23 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
                   exit={{ height: 0, opacity: 0 }}
                   className="space-y-4 overflow-hidden"
                 >
+                  <div className="space-y-2">
+                    <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
+                      theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                    }`}>
+                      <Truck className="w-3 h-3" /> Destino
+                    </label>
+                    <input
+                      type="text"
+                      value={destino}
+                      onChange={(e) => setDestino(e.target.value.toUpperCase())}
+                      className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none ${
+                        theme === 'dark'
+                          ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
+                          : 'bg-slate-50 border-slate-200 focus:border-blue-500 text-slate-900'
+                      }`}
+                    />
+                  </div>
                   <div className="space-y-2">
                     <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
                       theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
