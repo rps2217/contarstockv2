@@ -236,33 +236,34 @@ export const handlePrintSelectedEvents = (items: any[]) => {
           font-family: 'Courier New', Courier, monospace; 
           width: 72mm; 
           margin: 0 auto; 
-          padding: 4mm; 
+          padding: 5mm; 
           color: #000;
           background: #fff;
         }
         
         .header { 
           text-align: center; 
-          border-bottom: 2px dashed #000; 
-          padding-bottom: 10px; 
-          margin-bottom: 10px; 
+          border-bottom: 3px dashed #000; 
+          padding-bottom: 12px; 
+          margin-bottom: 12px; 
         }
         
         .title { 
-          font-size: 16px; 
+          font-size: 20px; 
           font-weight: 900; 
           display: block;
-          margin-bottom: 4px;
+          margin-bottom: 6px;
         }
         
         .subtitle {
-          font-size: 12px;
+          font-size: 14px;
           font-weight: bold;
+          letter-spacing: 1px;
         }
 
         .ticket-item {
-          border-bottom: 1px dashed #888;
-          padding: 8px 0;
+          border-bottom: 2px dashed #888;
+          padding: 12px 0;
           page-break-inside: avoid;
         }
 
@@ -271,49 +272,55 @@ export const handlePrintSelectedEvents = (items: any[]) => {
           justify-content: space-between;
           align-items: flex-start;
           width: 100%;
-          line-height: 1.2;
+          line-height: 1.3;
         }
 
         .item-name {
-          font-size: 13px;
+          font-size: 16px;
           font-weight: 900;
           word-break: break-word;
           display: block;
           width: 100%;
-          margin-bottom: 2px;
+          margin-bottom: 4px;
         }
 
         .secondary {
-          font-size: 12px;
-          margin-top: 2px;
+          font-size: 14px;
+          margin-top: 4px;
+          font-weight: bold;
         }
 
         .tertiary {
-          font-size: 10px;
-          color: #333;
-          margin-top: 2px;
+          font-size: 12px;
+          color: #000;
+          margin-top: 4px;
           text-transform: uppercase;
+          font-weight: bold;
         }
 
         .qty {
           background: #000;
           color: #fff;
-          padding: 0 4px;
-          border-radius: 2px;
+          padding: 2px 6px;
+          border-radius: 4px;
+          font-size: 15px;
         }
 
         .footer {
-          margin-top: 15px;
+          margin-top: 20px;
           text-align: center;
-          border-top: 2px dashed #000;
-          padding-top: 10px;
-          font-size: 11px;
+          border-top: 3px dashed #000;
+          padding-top: 15px;
+          font-size: 13px;
         }
 
         .summary {
           font-weight: 900;
-          font-size: 14px;
-          margin-bottom: 5px;
+          font-size: 18px;
+          margin-bottom: 8px;
+          border: 2px solid #000;
+          padding: 4px;
+          display: inline-block;
         }
 
         @media print {
@@ -324,15 +331,15 @@ export const handlePrintSelectedEvents = (items: any[]) => {
 
         .btn-print {
           width: 100%;
-          padding: 15px;
+          padding: 20px;
           background: #000;
           color: #fff;
           border: none;
           font-weight: 900;
-          font-size: 14px;
+          font-size: 18px;
           cursor: pointer;
-          margin-top: 20px;
-          border-radius: 8px;
+          margin-top: 30px;
+          border-radius: 12px;
         }
       </style>
     </head>
