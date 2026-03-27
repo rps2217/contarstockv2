@@ -197,7 +197,6 @@ export interface AppSettings {
  predictiveHintsEnabled: boolean; 
  continuousMode: boolean; 
  batchTrackingEnabled: boolean;
- selectedDestino?: string;
  appSheetConfig?: AppSheetConfig;
  mobileNavConfig?: ViewState[]; 
  thermalPrinter?: {
