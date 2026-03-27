@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../../db';
 import * as sessionService from '../../../services/sessionService';
@@ -156,8 +156,20 @@ export const useReceptionLogic = () => {
     }
   }, [isSyncing, unsyncedDrafts, addToast]);
 
+  const actions = React.useMemo(() => ({
+    handleScan, 
+    handleManualInput: handleScan, 
+    deleteDraft, 
+    finalizeReception, 
+    discardAll, 
+    syncToCloud, 
+    setCurrentErp, 
+    setIsExpiryMode, 
+    completeExpiryScan
+  }), [handleScan, deleteDraft, finalizeReception, discardAll, syncToCloud, setCurrentErp, setIsExpiryMode, completeExpiryScan]);
+
   return {
     state: { lastAction, flashActive, draftCount, unsyncedDrafts, isFinalizing, isSyncing, currentErp, isExpiryMode, pendingExpiryScan },
-    actions: { handleScan, handleManualInput: handleScan, deleteDraft, finalizeReception, discardAll, syncToCloud, setCurrentErp, setIsExpiryMode, completeExpiryScan }
+    actions
   };
 };

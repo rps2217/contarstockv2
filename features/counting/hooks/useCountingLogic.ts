@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useReducer } from 'react';
+import { useState, useEffect, useRef, useCallback, useReducer, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import * as sessionService from '../../../services/sessionService'; 
 import * as productService from '../../../services/productService';
@@ -137,6 +137,54 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
     engine.actions.triggerFeedback('undo');
   }, [sessionId, engine.actions]);
 
+  const actions = useMemo(() => ({
+    setMultiplier: engine.setMultiplier, 
+    setCurrentLocation, 
+    handleExternalScan: finalizeScanPipeline,
+    resetSession,
+    selectItem: (b: string) => { 
+      const norm = normalizeSku(b);
+      const existing = itemsRef.current.find(i => normalizeSku(i.barcode) === norm);
+      productService.getProductByBarcode(b).then(product => {
+        engine.actions.updateActiveItem(b, product || null, existing?.totalQuantity || 0, 0);
+      });
+    },
+    handlePharmaComplete: (m?: number, y?: number, b?: string) => {
+      if (engine.activeBarcode) finalizeScanPipeline(engine.activeBarcode, engine.multiplier, m, y, b);
+    },
+    cancelPharma: () => {
+      dispatch({ type: 'RESET' });
+    },
+    undoLastScan: async () => {
+      if(sessionId) {
+        const undone = await sessionService.undoLastAction(sessionId);
+        if(undone) engine.actions.triggerFeedback('undo');
+      }
+    },
+    toggleAutoLock: async () => {
+      if (sessionId && session) {
+        const newState = !session.isAutoLockEnabled;
+        await SessionRepository.update(sessionId, { isAutoLockEnabled: newState });
+        engine.actions.triggerFeedback(newState ? 'success' : 'undo');
+      }
+    },
+    setStatus: (s: 'manual' | 'idle') => {
+      if (s === 'manual') dispatch({ type: 'OPEN_MANUAL' });
+      else dispatch({ type: 'RESET' });
+    },
+    applyPotentialMatch: async () => {
+      if (!potentialMatch || !sessionId) return;
+      await SessionRepository.update(sessionId, {
+        erpOrder: potentialMatch.expectedOrder.internalId,
+        expectedItems: potentialMatch.expectedOrder.items,
+        isVerifiedMode: true
+      });
+      setPotentialMatch(null);
+      engine.actions.triggerFeedback('success');
+    },
+    dismissPotentialMatch: () => setPotentialMatch(null)
+  }), [engine.setMultiplier, setCurrentLocation, finalizeScanPipeline, resetSession, engine.actions, engine.activeBarcode, engine.multiplier, sessionId, session, potentialMatch]);
+
   return {
     state: { 
       isLoading: session === undefined,
@@ -150,52 +198,6 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
       potentialMatch
     },
     sessionData: { session, history: consolidatedHistory || [] },
-    actions: { 
-      setMultiplier: engine.setMultiplier, 
-      setCurrentLocation, 
-      handleExternalScan: finalizeScanPipeline,
-      resetSession,
-      selectItem: (b: string) => { 
-        const norm = normalizeSku(b);
-        const existing = itemsRef.current.find(i => normalizeSku(i.barcode) === norm);
-        productService.getProductByBarcode(b).then(product => {
-          engine.actions.updateActiveItem(b, product || null, existing?.totalQuantity || 0, 0);
-        });
-      },
-      handlePharmaComplete: (m?: number, y?: number, b?: string) => {
-        if (engine.activeBarcode) finalizeScanPipeline(engine.activeBarcode, engine.multiplier, m, y, b);
-      },
-      cancelPharma: () => {
-        dispatch({ type: 'RESET' });
-      },
-      undoLastScan: async () => {
-        if(sessionId) {
-          const undone = await sessionService.undoLastAction(sessionId);
-          if(undone) engine.actions.triggerFeedback('undo');
-        }
-      },
-      toggleAutoLock: async () => {
-        if (sessionId && session) {
-          const newState = !session.isAutoLockEnabled;
-          await SessionRepository.update(sessionId, { isAutoLockEnabled: newState });
-          engine.actions.triggerFeedback(newState ? 'success' : 'undo');
-        }
-      },
-      setStatus: (s: 'manual' | 'idle') => {
-        if (s === 'manual') dispatch({ type: 'OPEN_MANUAL' });
-        else dispatch({ type: 'RESET' });
-      },
-      applyPotentialMatch: async () => {
-        if (!potentialMatch || !sessionId) return;
-        await SessionRepository.update(sessionId, {
-          erpOrder: potentialMatch.expectedOrder.internalId,
-          expectedItems: potentialMatch.expectedOrder.items,
-          isVerifiedMode: true
-        });
-        setPotentialMatch(null);
-        engine.actions.triggerFeedback('success');
-      },
-      dismissPotentialMatch: () => setPotentialMatch(null)
-    }
+    actions
   };
 };

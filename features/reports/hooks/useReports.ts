@@ -67,6 +67,16 @@ export const useReports = () => {
  setActiveMenuId(prev => prev === id ? null : id); 
  }, []);
 
+ const actions = useMemo(() => ({
+  setSearchQuery,
+  setSelectedSessionId,
+  setIsStartModalOpen: setStartSessionModalOpen,
+  handleCleanSynced,
+  handleDeleteSession,
+  handleMenuToggle,
+  loadMore
+ }), [setStartSessionModalOpen, handleCleanSynced, handleDeleteSession, handleMenuToggle, loadMore]);
+
  return {
   state: {
   sessions,
@@ -80,14 +90,6 @@ export const useReports = () => {
   filterType,
   hasMore: sessions?.length === limit
   },
-  actions: {
-  setSearchQuery,
-  setSelectedSessionId,
-  setIsStartModalOpen: setStartSessionModalOpen,
-  handleCleanSynced,
-  handleDeleteSession,
-  handleMenuToggle,
-  loadMore
-  }
+  actions
  };
 };

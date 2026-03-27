@@ -25,7 +25,7 @@ export const ExpiryStats: React.FC<ExpiryStatsProps> = ({ stats, selectedStatuse
   ];
 
   return (
-    <div className="flex flex-wrap gap-3 mb-6">
+    <div className="flex gap-3 mb-6 overflow-x-auto no-scrollbar pb-2">
       {statItems.map((item) => {
         const Icon = item.icon;
         const isSelected = selectedStatuses.includes(item.id);
@@ -33,7 +33,7 @@ export const ExpiryStats: React.FC<ExpiryStatsProps> = ({ stats, selectedStatuse
           <button
             key={item.id}
             onClick={() => onStatusClick(item.id)}
-            className={`px-5 py-3 rounded-2xl flex items-center gap-3 transition-all border ${
+            className={`shrink-0 px-5 py-3 rounded-2xl flex items-center gap-3 transition-all border ${
               isSelected
                 ? item.color === 'rose' ? 'bg-rose-500 border-rose-400 text-white shadow-lg' :
                   item.color === 'amber' ? 'bg-amber-500 border-amber-400 text-white shadow-lg' :

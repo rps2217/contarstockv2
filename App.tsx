@@ -32,6 +32,7 @@ const HammerPage = lazyWithRetry(() => import('./features/hammer/HammerPage'));
 const DocumentReceptionPage = lazyWithRetry(() => import('./features/documents/DocumentReceptionPage'));
 const VisualPicking = lazyWithRetry(() => import('./features/visualPicking/VisualPickingPage'));
 const ExpiryManagement = lazyWithRetry(() => import('./features/expiry/ExpiryManagementPage'));
+const ExpiryCapturePage = lazyWithRetry(() => import('./features/expiry/ExpiryCapturePage'));
 const EventManagement = lazyWithRetry(() => import('./features/events/EventManagementPage'));
 
 const AppContent = () => {
@@ -53,8 +54,7 @@ const AppContent = () => {
     location.pathname === '/reception' || 
     location.pathname === '/documents' ||
     location.pathname === '/visual-picking' ||
-    location.pathname === '/expiry' ||
-    location.pathname === '/events' ||
+    location.pathname === '/expiry/capture' ||
     location.pathname.startsWith('/massive/');
 
   useEffect(() => {
@@ -146,6 +146,7 @@ const AppContent = () => {
                 <Route path="/documents" element={<DocumentReceptionPage />} />
                 <Route path="/visual-picking" element={<VisualPicking />} />
                 <Route path="/expiry" element={<ExpiryManagement />} />
+                <Route path="/expiry/capture" element={<ExpiryCapturePage />} />
                 <Route path="/events" element={<EventManagement />} />
                 <Route path="/counting/:id" element={<CountingPage />} />
                 <Route path="/massive/:batchId" element={<HammerPage />} />

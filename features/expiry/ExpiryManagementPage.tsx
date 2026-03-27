@@ -30,7 +30,6 @@ import { useExpiryDatabase, ExpiryStatus } from './hooks/useExpiryDatabase';
 import { ExpiryStats } from './components/ExpiryStats';
 import { ExpiryFilterDrawer } from './components/ExpiryFilterDrawer';
 import { ExpirySettingsDrawer } from './components/ExpirySettingsDrawer';
-import { ExpiryAddModal } from './components/ExpiryAddModal';
 import { ExpirySearchBar } from './components/ExpirySearchBar';
 import { ExpiryItemCard } from './components/ExpiryItemCard';
 import { ExpiryBulkActions } from './components/ExpiryBulkActions';
@@ -45,11 +44,18 @@ const ExpiryManagementPage: React.FC = () => {
   const { state, actions } = useExpiryDatabase();
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isSettingsDrawerOpen, setIsSettingsDrawerOpen] = useState(false);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isPriorityPanelOpen, setIsPriorityPanelOpen] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const navigate = useNavigate();
+
+  // Detect mobile device and redirect to capture view automatically
+  useEffect(() => {
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+    if (isMobile) {
+      navigate('/expiry/capture', { replace: true });
+    }
+  }, [navigate]);
 
   // Atajo de teclado Alt+E para ir a Eventos
   useEffect(() => {
@@ -398,7 +404,7 @@ const ExpiryManagementPage: React.FC = () => {
           searchQuery={state.searchQuery}
           setSearchQuery={actions.setSearchQuery}
           onOpenFilters={() => setIsFilterDrawerOpen(true)}
-          onOpenAdd={() => setIsAddModalOpen(true)}
+          onOpenAdd={() => navigate('/expiry/capture')}
           onClearFilters={handleClearFilters}
           activeFiltersCount={activeFiltersCount}
           theme={theme}
@@ -511,13 +517,6 @@ const ExpiryManagementPage: React.FC = () => {
         onClose={() => setIsSettingsDrawerOpen(false)}
         preferences={state.preferences}
         onUpdatePreferences={actions.handleUpdatePreferences}
-        theme={theme}
-      />
-
-      <ExpiryAddModal 
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onAdd={actions.handleAddItem}
         theme={theme}
       />
 
