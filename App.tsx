@@ -41,6 +41,7 @@ const AppContent = () => {
   const [bootState, setBootState] = useState<'initializing' | 'ready'>('initializing');
   const [initStep, setInitStep] = useState<InitStep>('idle');
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const navigate = useNavigate();
   
   // Activar sincronización automática inteligente
@@ -128,9 +129,16 @@ const AppContent = () => {
       <ToastContainer />
       
       <div className="flex-1 flex overflow-hidden relative">
-        {!isScanningMode && <Sidebar view={location.pathname.split('/')[1] || 'dashboard'} settings={settings} />}
+        {!isScanningMode && (
+          <Sidebar 
+            view={location.pathname.split('/')[1] || 'dashboard'} 
+            settings={settings} 
+            isCollapsed={isSidebarCollapsed}
+            onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          />
+        )}
         
-        <main className={`flex-1 relative overflow-hidden transition-all duration-500 ${!isScanningMode ? 'md:pl-64' : ''}`}>
+        <main className={`flex-1 relative overflow-hidden transition-all duration-500 ${!isScanningMode ? (isSidebarCollapsed ? 'md:pl-20' : 'md:pl-64') : ''}`}>
           <ErrorBoundary>
             <Suspense fallback={<div className="h-full w-full flex items-center justify-center"><Loader2 className="w-10 h-10 text-blue-600 animate-spin" /></div>}>
               <Routes>
