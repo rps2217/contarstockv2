@@ -11,7 +11,7 @@ import { useExpiryStore, ExpiryItem, ExpiryStatus, ExpiryPreferences } from '../
 import { SyncQueueService } from '../../../services/syncQueueService';
 import { processExpiryItem, filterExpiryItems, calculateExpiryStats } from '../utils/expiryProcessor';
 
-export type { ExpiryStatus, ExpiryPreferences };
+export type { ExpiryStatus, ExpiryPreferences, ExpiryItem };
 
 export const useExpiryDatabase = () => {
   const { addToast } = useToastStore.getState();

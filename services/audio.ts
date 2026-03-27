@@ -37,13 +37,13 @@ class AudioService {
  this.synth.speak(utterance);
  }
 
- public play(type: 'success' | 'error' | 'delete' | 'increment') {
+ public play(type: 'success' | 'error' | 'delete' | 'increment' | 'scan') {
  const settings = getSettings();
  
  // Haptics de alto impacto
  if (settings.hapticsEnabled && navigator.vibrate) {
  if (type === 'error') navigator.vibrate([100, 50, 100]);
- else if (type === 'success') navigator.vibrate(40);
+ else if (type === 'success' || type === 'scan') navigator.vibrate(40);
  else navigator.vibrate(20);
  }
 
@@ -61,6 +61,7 @@ class AudioService {
  gain.connect(ctx.destination);
 
  switch (type) {
+ case 'scan':
  case 'success': 
  // BEEP INDUSTRIAL: Onda cuadrada para máxima penetración en ruido ambiente
  osc.type = 'square';

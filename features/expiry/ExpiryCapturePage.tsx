@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ScanLine, ShieldAlert, Download, Trash2, X, Save, CornerDownLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
