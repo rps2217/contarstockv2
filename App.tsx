@@ -41,7 +41,7 @@ const AppContent = () => {
   const [bootState, setBootState] = useState<'initializing' | 'ready'>('initializing');
   const [initStep, setInitStep] = useState<InitStep>('idle');
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const navigate = useNavigate();
   
   // Activar sincronización automática inteligente

@@ -15,7 +15,7 @@ import { CloudSection } from './components/CloudSection';
 import { ThemeSection } from './components/ThemeSection';
 import { PrinterSection } from './components/PrinterSection';
 
-type TabId = 'general' | 'appearance' | 'cloud' | 'system';
+type TabId = 'general' | 'cloud' | 'system';
 
 export const Settings: React.FC = () => {
  const navigate = useNavigate();
@@ -28,7 +28,7 @@ export const Settings: React.FC = () => {
  useEffect(() => {
  const params = new URLSearchParams(location.search);
  const tabParam = params.get('tab') as TabId;
- if (tabParam && ['general', 'appearance', 'cloud', 'system'].includes(tabParam)) {
+ if (tabParam && ['general', 'cloud', 'system'].includes(tabParam)) {
  setActiveTab(tabParam);
  }
  }, [location]);
@@ -47,8 +47,7 @@ export const Settings: React.FC = () => {
  };
 
  const tabs: { id: TabId; label: string; icon: any; color: string }[] = [
- { id: 'general', label: 'General', icon: Zap, color: 'text-amber-500' },
- { id: 'appearance', label: 'Apariencia', icon: Palette, color: 'text-pink-500' },
+ { id: 'general', label: 'Operativa', icon: Zap, color: 'text-amber-500' },
  { id: 'cloud', label: 'Nube', icon: Cloud, color: 'text-sky-400' },
  { id: 'system', label: 'Soporte', icon: ShieldCheck, color: 'text-emerald-500' },
  ];
@@ -119,13 +118,9 @@ export const Settings: React.FC = () => {
  {activeTab === 'general' && (
    <>
      <OperationalSection settings={settings} updateSetting={updateSetting} />
-     <PrinterSection settings={settings} updateSetting={updateSetting} />
-   </>
- )}
- {activeTab === 'appearance' && (
-   <>
-     <ThemeSection settings={settings} updateSetting={updateSetting} />
      <NavigationSection settings={settings} updateSetting={updateSetting} />
+     <ThemeSection settings={settings} updateSetting={updateSetting} />
+     <PrinterSection settings={settings} updateSetting={updateSetting} />
    </>
  )}
  {activeTab === 'cloud' && <CloudSection settings={settings} updateSetting={updateSetting} />}
