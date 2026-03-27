@@ -12,10 +12,6 @@ export const ThemeSection: React.FC<Props> = ({ settings, updateSetting }) => {
  const themes: {id: Theme, label: string, bg: string, accent: string, text: string, icon: any}[] = [
  { id: 'light', label: 'Día', bg: 'bg-white', accent: 'bg-blue-600', text: 'text-slate-900', icon: Sun },
  { id: 'dark', label: 'Noche', bg: 'bg-slate-900', accent: 'bg-blue-500', text: 'text-white', icon: Moon },
- { id: 'navy', label: 'Bodega', bg: 'bg-blue-950', accent: 'bg-blue-400', text: 'text-blue-50', icon: Monitor },
- { id: 'oled', label: 'Pure OLED', bg: 'bg-black', accent: 'bg-slate-200', text: 'text-white', icon: Eye },
- { id: 'warm', label: 'Cálido', bg: 'bg-orange-50', accent: 'bg-orange-600', text: 'text-orange-950', icon: Zap },
- { id: 'contrast', label: 'Contraste', bg: 'bg-yellow-400', accent: 'bg-black', text: 'text-black', icon: Contrast },
  ];
 
  return (
@@ -41,7 +37,7 @@ export const ThemeSection: React.FC<Props> = ({ settings, updateSetting }) => {
  >
  {/* Previsualización de color */}
  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${t.accent} ${isSelected ? 'animate-bounce' : ''}`}>
- <Icon className={`w-6 h-6 ${t.id === 'contrast' ? 'text-black' : 'text-white'}`} />
+ <Icon className="w-6 h-6 text-white" />
  </div>
 
  <span className={`text-[11px] font-black uppercase tracking-widest ${t.text}`}>

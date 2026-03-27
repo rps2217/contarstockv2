@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
-import { Wifi, AlertCircle, Info, Link, ShieldAlert, Database, QrCode, Camera, X, Settings2, Save, Search, Table, Columns, CheckCircle2, RefreshCw } from 'lucide-react';
+import { Wifi, AlertCircle, Info, Link, ShieldAlert, Database, QrCode, Camera, X, Settings2, Save, Search, Table, Columns, CheckCircle2, RefreshCw, Box, Layers, ClipboardList } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { motion, AnimatePresence } from 'motion/react';
-import { AppSettings, ColumnMapping, SpreadsheetMetadata, TableMetadata } from '../../../types';
+import { AppSettings, ExpiryMapping, ProductMapping, CountMapping, SpreadsheetMetadata, TableMetadata } from '../../../types';
 import { SettingsSection, SettingsCard, SettingsButton, SettingsInput } from './common/SettingsElements';
 import { bootstrapByUrl, fetchSpreadsheetMetadata } from '../../../services/gasService';
 import { SoundFX } from '../../../services/audio';
@@ -13,6 +12,8 @@ interface Props {
  settings: AppSettings;
  updateSetting: (key: keyof AppSettings, value: any) => void;
 }
+
+type ModuleType = 'expiry' | 'products' | 'counts';
 
 export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
  const [urlInput, setUrlInput] = useState(settings.appSheetConfig?.gasWebAppUrl || '');
@@ -27,33 +28,38 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
  
  // Metadatos descubiertos
  const [metadata, setMetadata] = useState<SpreadsheetMetadata | null>(null);
- const [selectedSheet, setSelectedSheet] = useState<string>(settings.appSheetConfig?.inventoryRegistryTableName || '');
+ 
+ // Centro de Control de Datos
+ const [selectedModule, setSelectedModule] = useState<ModuleType>('expiry');
+ const [selectedSheet, setSelectedSheet] = useState<string>('');
+ const [mapping, setMapping] = useState<any>({});
 
- const [mapping, setMapping] = useState<ColumnMapping>(settings.appSheetConfig?.columnMapping || {
-  barcode: 'SKU',
-  productName: 'DESCRIPTOR',
-  quantity: 'CANTIDAD',
-  event: 'EVENTO',
-  mm: 'MM',
-  yyyy: 'YYYY',
-  location: 'BOD.',
-  frc: 'FRC',
-  erp: 'ERP',
-  traspaso: 'DOC-TRAS-INTER',
-  destino: 'DESTINO',
-  observaciones: 'OBSERVACIONES',
-  isAdjusted: 'AJUSTADO'
- });
-
- // Sincronizar estado local si cambian los settings externos
+ // Sincronizar estado local si cambian los settings externos o el módulo seleccionado
  useEffect(() => {
-  if (settings.appSheetConfig?.columnMapping) {
-    setMapping(settings.appSheetConfig.columnMapping);
-  }
-  if (settings.appSheetConfig?.inventoryRegistryTableName) {
-    setSelectedSheet(settings.appSheetConfig.inventoryRegistryTableName);
-  }
- }, [settings.appSheetConfig]);
+   // Cargar pestaña
+   let sheetName = '';
+   if (selectedModule === 'expiry') sheetName = settings.appSheetConfig?.inventoryRegistryTableName || '';
+   if (selectedModule === 'products') sheetName = settings.appSheetConfig?.productsTableName || '';
+   if (selectedModule === 'counts') sheetName = settings.appSheetConfig?.countsTableName || '';
+   setSelectedSheet(sheetName);
+
+   // Cargar mapeo
+   let currentMapping: any = {};
+   if (selectedModule === 'expiry') {
+     currentMapping = settings.appSheetConfig?.mappings?.expiry || settings.appSheetConfig?.columnMapping || {
+       barcode: 'SKU', productName: 'DESCRIPTOR', quantity: 'CANTIDAD', event: 'EVENTO', mm: 'MM', yyyy: 'YYYY', location: 'BOD.', frc: 'FRC', erp: 'ERP', traspaso: 'DOC-TRAS-INTER', destino: 'DESTINO', observaciones: 'OBSERVACIONES', isAdjusted: 'AJUSTADO'
+     };
+   } else if (selectedModule === 'products') {
+     currentMapping = settings.appSheetConfig?.mappings?.products || {
+       barcode: 'SKU', name: 'DESCRIPTOR', category: 'CATEGORIA', supplier: 'PROVEEDOR', price: 'PRECIO', unitsPerBox: 'UNIDADES_CAJA'
+     };
+   } else if (selectedModule === 'counts') {
+     currentMapping = settings.appSheetConfig?.mappings?.counts || {
+       barcode: 'SKU', quantity: 'CANTIDAD', timestamp: 'FECHA', operatorId: 'OPERADOR', location: 'UBICACION', batch: 'LOTE', expiry: 'VENCIMIENTO'
+     };
+   }
+   setMapping(currentMapping);
+ }, [settings.appSheetConfig, selectedModule]);
 
  const handleAutoConfig = async () => {
   if (!urlInput.includes('/exec')) {
@@ -70,7 +76,7 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
   
   const finalConfig = {
   ...fullConfig,
-  columnMapping: mapping 
+  columnMapping: mapping // Keep for backward compatibility if needed
   };
 
   updateSetting('appSheetConfig', finalConfig);
@@ -121,20 +127,84 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
  };
 
  const handleSaveMapping = () => {
-  updateSetting('appSheetConfig', {
-    ...settings.appSheetConfig,
-    inventoryRegistryTableName: selectedSheet,
-    columnMapping: mapping
-  });
+  const newConfig = { ...settings.appSheetConfig } as any;
+  if (!newConfig.mappings) newConfig.mappings = {};
+  
+  newConfig.mappings[selectedModule] = mapping;
+
+  if (selectedModule === 'expiry') newConfig.inventoryRegistryTableName = selectedSheet;
+  if (selectedModule === 'products') newConfig.productsTableName = selectedSheet;
+  if (selectedModule === 'counts') newConfig.countsTableName = selectedSheet;
+
+  updateSetting('appSheetConfig', newConfig);
   SoundFX.play('success');
-  alert("Estructura de datos actualizada correctamente.");
+  alert(`Estructura de datos para el módulo actualizada correctamente.`);
  };
 
- const updateMappingField = (key: keyof ColumnMapping, value: string) => {
-  setMapping(prev => ({ ...prev, [key]: value }));
+ const updateMappingField = (key: string, value: string) => {
+  setMapping((prev: any) => ({ ...prev, [key]: value }));
+ };
+
+ const handleScanQR = (data: string) => {
+   try {
+     const parsed = JSON.parse(data);
+     if (parsed.gasWebAppUrl) {
+       updateSetting('appSheetConfig', parsed);
+       setUrlInput(parsed.gasWebAppUrl);
+       setSsIdInput(parsed.spreadsheetId || '');
+       SoundFX.play('success');
+       setIsScanning(false);
+       alert("Configuración importada correctamente.");
+     }
+   } catch (e) {
+     SoundFX.play('error');
+     alert("Código QR inválido para configuración.");
+   }
  };
 
  const currentSheetMetadata = metadata?.sheets.find(s => s.sheetName === selectedSheet);
+
+ const getModuleFields = () => {
+   if (selectedModule === 'expiry') {
+     return [
+       { id: 'barcode', label: 'Código de Barras (SKU)', color: 'emerald' },
+       { id: 'productName', label: 'Descripción Producto', color: 'emerald' },
+       { id: 'quantity', label: 'Cantidad', color: 'emerald' },
+       { id: 'event', label: 'Evento / Tipo', color: 'emerald' },
+       { id: 'traspaso', label: 'N° Traspaso', color: 'amber' },
+       { id: 'destino', label: 'Destino', color: 'emerald' },
+       { id: 'observaciones', label: 'Observaciones', color: 'emerald' },
+       { id: 'isAdjusted', label: 'Flag Ajustado', color: 'emerald' },
+       { id: 'mm', label: 'Mes (MM)', color: 'slate' },
+       { id: 'yyyy', label: 'Año (YYYY)', color: 'slate' },
+       { id: 'location', label: 'Ubicación (BOD)', color: 'slate' },
+       { id: 'frc', label: 'FRC', color: 'slate' },
+       { id: 'erp', label: 'ERP', color: 'slate' },
+     ];
+   }
+   if (selectedModule === 'products') {
+     return [
+       { id: 'barcode', label: 'Código de Barras (SKU)', color: 'emerald' },
+       { id: 'name', label: 'Nombre del Producto', color: 'emerald' },
+       { id: 'category', label: 'Categoría', color: 'amber' },
+       { id: 'supplier', label: 'Proveedor', color: 'slate' },
+       { id: 'price', label: 'Precio', color: 'slate' },
+       { id: 'unitsPerBox', label: 'Unidades por Caja', color: 'slate' },
+     ];
+   }
+   if (selectedModule === 'counts') {
+     return [
+       { id: 'barcode', label: 'Código de Barras (SKU)', color: 'emerald' },
+       { id: 'quantity', label: 'Cantidad', color: 'emerald' },
+       { id: 'timestamp', label: 'Fecha/Hora', color: 'amber' },
+       { id: 'operatorId', label: 'ID Operador', color: 'slate' },
+       { id: 'location', label: 'Ubicación', color: 'slate' },
+       { id: 'batch', label: 'Lote', color: 'slate' },
+       { id: 'expiry', label: 'Vencimiento', color: 'slate' },
+     ];
+   }
+   return [];
+ };
 
  return (
  <div className="space-y-6 animate-in fade-in duration-500">
@@ -239,23 +309,54 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
     exit={{ opacity: 0, y: 20 }}
     className="space-y-6"
   >
-    <SettingsSection title="Mapeo Inteligente de Datos">
+    <SettingsSection title="Centro de Control de Datos">
       <SettingsCard className="bg-slate-900 border-emerald-500/30 text-white overflow-visible">
         <div className="space-y-8">
           <div className="flex items-center gap-4">
             <div className="p-4 bg-emerald-600 rounded-[1.5rem] shadow-lg shadow-emerald-900/40">
-              <Table className="w-8 h-8 text-white" />
+              <Database className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h3 className="text-xl font-black uppercase italic tracking-tighter leading-none">Módulo de Eventos</h3>
-              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">Configuración de Pestaña y Columnas</p>
+              <h3 className="text-xl font-black uppercase italic tracking-tighter leading-none">Mapeo de Módulos</h3>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">Configuración por Módulo</p>
             </div>
           </div>
 
+          {/* SELECTOR DE MÓDULOS */}
+          <div className="flex bg-black/40 p-1 rounded-2xl border border-white/5 overflow-x-auto hide-scrollbar">
+            <button
+              onClick={() => setSelectedModule('expiry')}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                selectedModule === 'expiry' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <AlertCircle className="w-4 h-4" />
+              Vencimientos
+            </button>
+            <button
+              onClick={() => setSelectedModule('products')}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                selectedModule === 'products' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Box className="w-4 h-4" />
+              Productos
+            </button>
+            <button
+              onClick={() => setSelectedModule('counts')}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                selectedModule === 'counts' ? 'bg-amber-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <ClipboardList className="w-4 h-4" />
+              Conteos
+            </button>
+          </div>
+
           {/* SELECCIÓN DE PESTAÑA */}
-          <div className="space-y-3">
+          <div className="space-y-3 bg-black/20 p-4 rounded-2xl border border-white/5">
             <div className="flex items-center gap-2 px-1">
-              <Database className="w-4 h-4 text-emerald-400" />
+              <Table className="w-4 h-4 text-emerald-400" />
               <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Pestaña de Origen (Google Sheet)</label>
             </div>
             {metadata ? (
@@ -279,38 +380,28 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
           {/* MAPEO DE COLUMNAS */}
           {selectedSheet && (
             <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+              key={selectedModule}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
               className="space-y-6 pt-4 border-t border-white/5"
             >
               <div className="flex items-center gap-2 px-1">
                 <Columns className="w-4 h-4 text-amber-400" />
-                <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Mapeo de Cabeceras</label>
+                <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Mapeo de Cabeceras - {selectedModule.toUpperCase()}</label>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                {[
-                  { id: 'barcode', label: 'Código de Barras (SKU)', color: 'emerald' },
-                  { id: 'productName', label: 'Descripción Producto', color: 'emerald' },
-                  { id: 'quantity', label: 'Cantidad', color: 'emerald' },
-                  { id: 'event', label: 'Evento / Tipo', color: 'emerald' },
-                  { id: 'traspaso', label: 'N° Traspaso (Columna L)', color: 'amber' },
-                  { id: 'destino', label: 'Destino', color: 'emerald' },
-                  { id: 'observaciones', label: 'Observaciones', color: 'emerald' },
-                  { id: 'isAdjusted', label: 'Flag Ajustado', color: 'emerald' },
-                  { id: 'mm', label: 'Mes (MM)', color: 'slate' },
-                  { id: 'yyyy', label: 'Año (YYYY)', color: 'slate' },
-                ].map((field) => (
+                {getModuleFields().map((field) => (
                   <div key={field.id} className="space-y-2">
                     <div className="flex justify-between items-center px-1">
                       <label className={`text-[9px] font-black text-${field.color}-400 uppercase tracking-widest`}>{field.label}</label>
-                      {currentSheetMetadata?.headers.includes(mapping[field.id as keyof ColumnMapping] || '') && (
+                      {currentSheetMetadata?.headers.includes(mapping[field.id] || '') && (
                         <CheckCircle2 className="w-3 h-3 text-emerald-500" />
                       )}
                     </div>
                     <select 
-                      value={mapping[field.id as keyof ColumnMapping] || ''}
-                      onChange={(e) => updateMappingField(field.id as keyof ColumnMapping, e.target.value)}
+                      value={mapping[field.id] || ''}
+                      onChange={(e) => updateMappingField(field.id, e.target.value)}
                       className="w-full bg-black/40 border border-white/5 rounded-xl px-3 py-2 text-[11px] font-mono text-white focus:border-emerald-500 outline-none transition-all"
                     >
                       <option value="">-- Sin asignar --</option>
@@ -324,7 +415,7 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
 
               <SettingsButton 
                 onClick={handleSaveMapping}
-                label="Guardar Configuración de Datos"
+                label={`Guardar Configuración de ${selectedModule.toUpperCase()}`}
                 icon={Save}
                 variant="primary"
                 className="bg-emerald-600 border-emerald-400 h-16 text-xs mt-4"
@@ -357,7 +448,7 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
  <p className="text-[10px] text-slate-400 uppercase tracking-widest text-center mb-8">Escanea este código desde otro dispositivo para clonar la configuración</p>
  
  <div className="bg-white p-4 rounded-2xl shadow-inner">
- <QRCodeSVG value={qrData} size={200} level="M" />
+ <QRCodeSVG value={JSON.stringify(settings.appSheetConfig || {})} size={200} level="M" />
  </div>
  </div>
  </div>

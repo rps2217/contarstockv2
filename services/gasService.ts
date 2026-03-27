@@ -1,6 +1,6 @@
 import { logger } from './logger';
 import { getSettings } from './settings';
-import { AppSheetConfig } from '../types';
+import { AppSheetConfig, SpreadsheetMetadata } from '../types';
 import Papa from 'papaparse';
 import { cloudApi } from './cloud/apiClient';
 

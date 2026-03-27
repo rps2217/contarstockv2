@@ -12,9 +12,6 @@ export const ThemeSection: React.FC<Props> = ({ settings, updateSetting }) => {
  const themes: {id: Theme, label: string, color: string}[] = [
  { id: 'light', label: 'Claro', color: 'bg-white border-slate-200' },
  { id: 'dark', label: 'Oscuro', color: 'bg-slate-900 border-slate-800' },
- { id: 'navy', label: 'Navy', color: 'bg-blue-900 border-blue-800' },
- { id: 'warm', label: 'Cálido', color: 'bg-orange-50 border-orange-100' },
- { id: 'contrast', label: 'Alto Contraste', color: 'bg-black border-yellow-400' },
  ];
 
  return (

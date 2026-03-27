@@ -2,6 +2,7 @@
 import { z } from 'zod';
 import { SHEET_COLUMNS } from './constants';
 import { normalizeSku } from './utils';
+import { getSettings } from './settings';
 
 const cleanString = z.union([z.string(), z.number(), z.null(), z.undefined()])
  .transform((val) => {
@@ -16,25 +17,33 @@ export const CloudProductSchema = z.record(z.any()).transform((raw) => {
  normalized[key] = raw[k];
  });
 
- const barcode = normalized["COD PRODUCTO"] || normalized["CODIGO"] || normalized["SKU"] || normalized["BARCODE"] || normalized["EAN"] || "";
- const name = normalized["DESCRIPCION"] || normalized["PRODUCTO"] || normalized["NOMBRE"] || normalized["DESCRIP"] || normalized["ITEM"] || "Sin descripción";
- const category = normalized["MUNDO"] || normalized["CATEGORIA"] || normalized["CATEGORY"] || "GENERAL";
- const supplier = normalized["PROVEEDOR"] || normalized["SUPPLIER"] || "";
+ const mapping = getSettings().appSheetConfig?.mappings?.products;
+
+ const barcode = mapping?.barcode ? raw[mapping.barcode] : (normalized["COD PRODUCTO"] || normalized["CODIGO"] || normalized["SKU"] || normalized["BARCODE"] || normalized["EAN"] || "");
+ const name = mapping?.name ? raw[mapping.name] : (normalized["DESCRIPCION"] || normalized["PRODUCTO"] || normalized["NOMBRE"] || normalized["DESCRIP"] || normalized["ITEM"] || "Sin descripción");
+ const category = mapping?.category ? raw[mapping.category] : (normalized["MUNDO"] || normalized["CATEGORIA"] || normalized["CATEGORY"] || "GENERAL");
+ const supplier = mapping?.supplier ? raw[mapping.supplier] : (normalized["PROVEEDOR"] || normalized["SUPPLIER"] || "");
  const supplierRut = normalized["RUT PROVEEDOR"] || normalized["RUT"] || "";
+ const price = mapping?.price ? raw[mapping.price] : undefined;
+ const unitsPerBox = mapping?.unitsPerBox ? raw[mapping.unitsPerBox] : undefined;
 
  return {
  barcode: normalizeSku(String(barcode)),
  name: String(name).trim(),
  category: String(category).trim(),
  supplier: String(supplier).trim(),
- supplierRut: normalizeSku(String(supplierRut))
+ supplierRut: normalizeSku(String(supplierRut)),
+ price: price ? Number(price) : undefined,
+ unitsPerBox: unitsPerBox ? Number(unitsPerBox) : undefined
  };
 }).pipe(z.object({
  barcode: z.string().min(1, "El código es obligatorio"),
  name: z.string().default("Sin descripción"),
  category: z.string().default("GENERAL"),
  supplier: z.string().default(""),
- supplierRut: z.string().default("")
+ supplierRut: z.string().default(""),
+ price: z.number().optional(),
+ unitsPerBox: z.number().optional()
 }));
 
 export const CloudStockSchema = z.record(z.any()).transform((raw) => {

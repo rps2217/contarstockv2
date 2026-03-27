@@ -10,13 +10,6 @@ const DEFAULT_SETTINGS: AppSettings = {
  soundEnabled: true,
  hapticsEnabled: true,
  ttsEnabled: false, 
- ttsMode: 'count', 
- speedometerEnabled: true, 
- confirmDelete: true,
- autoRegisterUnknown: true, 
- lowPerformanceMode: false,
- predictiveHintsEnabled: false,
- continuousMode: true, 
  batchTrackingEnabled: true,
  appSheetConfig: {
  appId: '',
@@ -28,6 +21,40 @@ const DEFAULT_SETTINGS: AppSettings = {
  receptionTableName: 'RECEPCION_BULTOS',
  ordersTableName: 'PEDIDOS',
  providersTableName: 'PROVEEDORES',
+ mappings: {
+   expiry: {
+     barcode: 'SKU',
+     productName: 'DESCRIPTOR',
+     quantity: 'CANTIDAD',
+     event: 'EVENTO',
+     mm: 'MM',
+     yyyy: 'YYYY',
+     location: 'BOD.',
+     frc: 'FRC',
+     erp: 'ERP',
+     traspaso: 'DOC-TRAS-INTER',
+     destino: 'DESTINO',
+     observaciones: 'OBSERVACIONES',
+     isAdjusted: 'AJUSTADO'
+   },
+   products: {
+     barcode: 'SKU',
+     name: 'DESCRIPTOR',
+     category: 'CATEGORIA',
+     supplier: 'PROVEEDOR',
+     price: 'PRECIO',
+     unitsPerBox: 'UNIDADES_CAJA'
+   },
+   counts: {
+     barcode: 'SKU',
+     quantity: 'CANTIDAD',
+     timestamp: 'FECHA',
+     operatorId: 'OPERADOR',
+     location: 'UBICACION',
+     batch: 'LOTE',
+     expiry: 'VENCIMIENTO'
+   }
+ },
  columnMapping: {
  barcode: 'SKU',
  productName: 'DESCRIPTOR',

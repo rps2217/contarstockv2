@@ -75,11 +75,7 @@ const AppContent = () => {
 
   const themeClasses: Record<string, string> = {
     'light': 'bg-slate-50 text-slate-900',
-    'dark': 'bg-slate-950 text-slate-100',
-    'navy': 'bg-blue-950 text-blue-50',
-    'oled': 'bg-black text-white',
-    'warm': 'bg-orange-50 text-orange-950',
-    'contrast': 'bg-yellow-400 text-black'
+    'dark': 'bg-slate-950 text-slate-100'
   };
 
   const currentThemeClass = themeClasses[settings.theme] || themeClasses.dark;

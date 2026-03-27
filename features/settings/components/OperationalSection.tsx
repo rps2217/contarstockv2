@@ -1,9 +1,7 @@
 
 import React from 'react';
 import { 
-  Zap, Volume2, Mic, Cpu, FastForward, 
-  Smartphone, ShieldCheck, CalendarRange, 
-  BellRing, MousePointerClick, Truck
+  Mic, Smartphone, CalendarRange, BellRing
 } from 'lucide-react';
 import { AppSettings } from '../../../types';
 import { SettingsSection, SettingsToggle } from './common/SettingsElements';
@@ -22,14 +20,6 @@ export const OperationalSection: React.FC<Props> = ({ settings, updateSetting })
 
  return (
  <SettingsSection title="Operativa">
- 
- <SettingsToggle 
- active={settings.continuousMode} 
- onClick={() => handleToggle('continuousMode')}
- label="Escaneo Continuo"
- description="Gatillo automático sin pausas"
- icon={FastForward}
- />
 
  <SettingsToggle 
  active={settings.batchTrackingEnabled} 
@@ -37,14 +27,6 @@ export const OperationalSection: React.FC<Props> = ({ settings, updateSetting })
  label="Trazabilidad Pharma"
  description="Control de lotes y vencimientos"
  icon={CalendarRange}
- />
-
- <SettingsToggle 
- active={settings.autoRegisterUnknown} 
- onClick={() => handleToggle('autoRegisterUnknown')}
- label="Auto-Registro"
- description="Captura de SKUs no catalogados"
- icon={Zap}
  />
 
  <SettingsToggle 
@@ -71,21 +53,6 @@ export const OperationalSection: React.FC<Props> = ({ settings, updateSetting })
  icon={Smartphone}
  />
 
- <SettingsToggle 
- active={settings.confirmDelete} 
- onClick={() => handleToggle('confirmDelete')}
- label="Protocolo Seguro"
- description="Validar antes de borrar picks"
- icon={ShieldCheck}
- />
- 
- <SettingsToggle 
- active={settings.lowPerformanceMode} 
- onClick={() => handleToggle('lowPerformanceMode')}
- label="Ecomodo PDA"
- description="Ahorro energético para turnos largos"
- icon={Cpu}
- />
  </SettingsSection>
  );
 };

@@ -225,7 +225,7 @@ export const importProductsFromAppSheet = async (): Promise<number> => {
 export const importExpirationsFromCloud = async (): Promise<number> => {
   try {
     const config = getSettings().appSheetConfig;
-    const mapping = config?.columnMapping;
+    const mapping = config?.mappings?.expiry || config?.columnMapping;
     const tableName = config?.inventoryRegistryTableName || "REGISTRO_INV";
     
     const response = await cloudApi.fetchTable(tableName);

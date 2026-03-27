@@ -85,6 +85,7 @@ export interface CountingSession {
  createdAt: number;
  status: 'active' | 'completed' | 'draft';
  sessionType: 'standard' | 'hammer'; 
+ operatorId?: string;
  totalUnits?: number;
  totalSKUs?: number;
  lastSyncTimestamp?: number;
@@ -138,7 +139,7 @@ export interface ConsolidatedItem {
 }
 
 export type ViewState = 'dashboard' | 'counting' | 'database' | 'reports' | 'settings' | 'reception' | 'sync' | 'massive' | 'documents' | 'visual-picking' | 'expiry' | 'events';
-export type Theme = 'light' | 'dark' | 'contrast' | 'warm' | 'navy' | 'oled';
+export type Theme = 'light' | 'dark';
 
 export interface VisualGuideItem {
   barcode: string;
@@ -189,13 +190,6 @@ export interface AppSettings {
  soundEnabled: boolean;
  hapticsEnabled: boolean;
  ttsEnabled: boolean; 
- ttsMode: 'product' | 'count'; 
- speedometerEnabled: boolean; 
- confirmDelete: boolean;
- autoRegisterUnknown: boolean; 
- lowPerformanceMode: boolean;
- predictiveHintsEnabled: boolean; 
- continuousMode: boolean; 
  batchTrackingEnabled: boolean;
  appSheetConfig?: AppSheetConfig;
  mobileNavConfig?: ViewState[]; 
@@ -206,7 +200,7 @@ export interface AppSettings {
  };
 }
 
-export interface ColumnMapping {
+export interface ExpiryMapping {
   barcode: string;
   productName: string;
   quantity: string;
@@ -221,6 +215,25 @@ export interface ColumnMapping {
   observaciones: string;
   isAdjusted: string;
   timestamp?: string;
+}
+
+export interface ProductMapping {
+  barcode: string;
+  name: string;
+  category: string;
+  supplier?: string;
+  price?: string;
+  unitsPerBox?: string;
+}
+
+export interface CountMapping {
+  barcode: string;
+  quantity: string;
+  timestamp: string;
+  operatorId?: string;
+  location?: string;
+  batch?: string;
+  expiry?: string;
 }
 
 export interface TableMetadata {
@@ -244,5 +257,10 @@ export interface AppSheetConfig {
   providersTableName?: string;
   gasWebAppUrl?: string; 
   spreadsheetId?: string;
-  columnMapping?: ColumnMapping;
+  columnMapping?: ExpiryMapping; // Keep for backward compatibility
+  mappings?: {
+    expiry: ExpiryMapping;
+    products: ProductMapping;
+    counts: CountMapping;
+  };
 }

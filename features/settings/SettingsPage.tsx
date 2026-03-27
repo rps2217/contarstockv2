@@ -15,7 +15,7 @@ import { CloudSection } from './components/CloudSection';
 import { ThemeSection } from './components/ThemeSection';
 import { PrinterSection } from './components/PrinterSection';
 
-type TabId = 'general' | 'theme' | 'printer' | 'cloud' | 'nav' | 'system';
+type TabId = 'general' | 'appearance' | 'cloud' | 'system';
 
 export const Settings: React.FC = () => {
  const navigate = useNavigate();
@@ -28,7 +28,7 @@ export const Settings: React.FC = () => {
  useEffect(() => {
  const params = new URLSearchParams(location.search);
  const tabParam = params.get('tab') as TabId;
- if (tabParam && ['general', 'theme', 'printer', 'cloud', 'nav', 'system'].includes(tabParam)) {
+ if (tabParam && ['general', 'appearance', 'cloud', 'system'].includes(tabParam)) {
  setActiveTab(tabParam);
  }
  }, [location]);
@@ -47,10 +47,8 @@ export const Settings: React.FC = () => {
  };
 
  const tabs: { id: TabId; label: string; icon: any; color: string }[] = [
- { id: 'general', label: 'Operativa', icon: Zap, color: 'text-amber-500' },
- { id: 'theme', label: 'Diseño', icon: Palette, color: 'text-pink-500' },
- { id: 'printer', label: 'Hardware', icon: Printer, color: 'text-blue-500' },
- { id: 'nav', label: 'Interfaz', icon: LayoutTemplate, color: 'text-indigo-500' },
+ { id: 'general', label: 'General', icon: Zap, color: 'text-amber-500' },
+ { id: 'appearance', label: 'Apariencia', icon: Palette, color: 'text-pink-500' },
  { id: 'cloud', label: 'Nube', icon: Cloud, color: 'text-sky-400' },
  { id: 'system', label: 'Soporte', icon: ShieldCheck, color: 'text-emerald-500' },
  ];
@@ -117,11 +115,19 @@ export const Settings: React.FC = () => {
  {/* CONTENIDO SCROLLABLE */}
  <div className="flex-1 overflow-y-auto px-6 pt-10 pb-40 no-scrollbar relative">
  <div className="max-w-2xl mx-auto">
- <div className="animate-in fade-in slide-in-from-bottom-6 duration-500">
- {activeTab === 'general' && <OperationalSection settings={settings} updateSetting={updateSetting} />}
- {activeTab === 'theme' && <ThemeSection settings={settings} updateSetting={updateSetting} />}
- {activeTab === 'printer' && <PrinterSection settings={settings} updateSetting={updateSetting} />}
- {activeTab === 'nav' && <NavigationSection settings={settings} updateSetting={updateSetting} />}
+ <div className="animate-in fade-in slide-in-from-bottom-6 duration-500 space-y-8">
+ {activeTab === 'general' && (
+   <>
+     <OperationalSection settings={settings} updateSetting={updateSetting} />
+     <PrinterSection settings={settings} updateSetting={updateSetting} />
+   </>
+ )}
+ {activeTab === 'appearance' && (
+   <>
+     <ThemeSection settings={settings} updateSetting={updateSetting} />
+     <NavigationSection settings={settings} updateSetting={updateSetting} />
+   </>
+ )}
  {activeTab === 'cloud' && <CloudSection settings={settings} updateSetting={updateSetting} />}
  {activeTab === 'system' && <SupportSection />}
  </div>
