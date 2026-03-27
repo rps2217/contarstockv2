@@ -4,6 +4,7 @@ import * as syncManager from '../services/syncManager';
 import { useToastStore } from '../store/useToastStore';
 import { erpService } from '../services/erpService';
 import { ExpectedOrderRepository } from '../repositories/ExpectedOrderRepository';
+import { SyncQueueService } from '../services/syncQueueService';
 
 export const useAutoSync = () => {
   const addToast = useToastStore(state => state.addToast);
@@ -13,6 +14,13 @@ export const useAutoSync = () => {
     if (isSyncing.current || !navigator.onLine) return;
 
     isSyncing.current = true;
+
+    // 0. Process Expiry Sync Queue
+    try {
+      await SyncQueueService.processQueue();
+    } catch (error) {
+      console.error('Expiry sync queue processing failed:', error);
+    }
 
     // 1. Upload pending counts
     const pendingGroups = await syncManager.getPendingUploadGroups();

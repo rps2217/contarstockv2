@@ -19,7 +19,7 @@ import { format } from 'date-fns';
 import { useToastStore } from '../../store/useToastStore';
 import { motion, AnimatePresence } from 'motion/react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { toast as sonnerToast } from 'sonner';
 
@@ -48,14 +48,17 @@ const ExpiryManagementPage: React.FC = () => {
   const [isPriorityPanelOpen, setIsPriorityPanelOpen] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Detect mobile device and redirect to capture view automatically
   useEffect(() => {
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
-    if (isMobile) {
+    const preventRedirect = (location.state as any)?.preventAutoRedirect;
+    
+    if (isMobile && !preventRedirect) {
       navigate('/expiry/capture', { replace: true });
     }
-  }, [navigate]);
+  }, [navigate, location]);
 
   // Atajo de teclado Alt+E para ir a Eventos
   useEffect(() => {

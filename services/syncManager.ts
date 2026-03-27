@@ -306,8 +306,24 @@ export const importExpirationsFromCloud = async (): Promise<number> => {
       });
       const uniqueExpirations = Array.from(uniqueExpirationsMap.values());
 
+      // Preserve pending items
+      const pendingItems = await db.cloudExpirations.filter(item => item.syncStatus === 'pending').toArray();
+      const pendingMap = new Map(pendingItems.map(item => [item.claveUnica || item.id, item]));
+
+      const finalExpirations = uniqueExpirations.map(exp => {
+        const key = exp.claveUnica || exp.id;
+        if (pendingMap.has(key)) {
+          // If it's in the cloud, it's no longer pending
+          pendingMap.delete(key);
+        }
+        return exp;
+      });
+
+      // Add back the remaining pending items
+      finalExpirations.push(...Array.from(pendingMap.values()));
+
       await db.cloudExpirations.clear();
-      await db.cloudExpirations.bulkPut(uniqueExpirations);
+      await db.cloudExpirations.bulkPut(finalExpirations);
     }
 
     return expirations.length;

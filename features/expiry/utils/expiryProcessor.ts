@@ -89,7 +89,8 @@ export const processExpiryItem = (
     quantity: item.quantity || 1,
     riskScore,
     price: product?.price || 0,
-    frc: item.frc || ''
+    frc: item.frc || '',
+    syncStatus: item.syncStatus
   };
 };
 

@@ -34,8 +34,9 @@ export interface ExpiryItem {
   lifePercent?: number;
   riskScore?: number;
   claveUnica?: string;
-  timestamp?: string;
+  timestamp?: number;
   frc?: string;
+  syncStatus?: 'synced' | 'pending' | 'error';
 }
 
 interface ExpiryState {

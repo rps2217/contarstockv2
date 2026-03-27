@@ -69,7 +69,21 @@ export class SyncQueueService {
         const { id: localId, ...payload } = data;
         result = await cloudApi.post('add_expiration', payload);
         if (result?.success && localId) {
-          await db.cloudExpirations.update(localId, { syncStatus: 'synced', syncError: undefined });
+          if (result.id && result.id !== localId) {
+            const item = await db.cloudExpirations.get(localId);
+            if (item) {
+              await db.cloudExpirations.delete(localId);
+              item.id = result.id;
+              if (result.clave) item.claveUnica = result.clave;
+              item.syncStatus = 'synced';
+              item.syncError = undefined;
+              await db.cloudExpirations.add(item);
+            }
+          } else {
+            const updates: any = { syncStatus: 'synced', syncError: undefined };
+            if (result.clave) updates.claveUnica = result.clave;
+            await db.cloudExpirations.update(localId, updates);
+          }
         }
       } else if (type === 'REMOVE_EXPIRY') {
         result = await cloudApi.post('remove_expiration', data);

@@ -108,7 +108,8 @@ export const useExpiryDatabase = () => {
         timestamp: exp.timestamp,
         quantity: exp.quantity || 0,
         location: exp.location || 'N/A',
-        claveUnica: exp.claveUnica
+        claveUnica: exp.claveUnica,
+        syncStatus: exp.syncStatus
       }, productMap, providerMap, now));
 
     return [...individualItems, ...sessionItems, ...cloudItems];
@@ -295,7 +296,8 @@ export const useExpiryDatabase = () => {
           location: 'MANUAL',
           timestamp: Date.now(),
           claveUnica: claveUnica,
-          fechaCC: data.fechaCC
+          fechaCC: data.fechaCC,
+          syncStatus: 'pending'
         });
         addToast('Producto registrado exitosamente', 'success');
       } catch (dbError: any) {
@@ -316,8 +318,10 @@ export const useExpiryDatabase = () => {
       setPendingOperations(p => p + 1);
       addExpirationToCloud({
         ...data,
+        id: localId,
         barcode: sanitizedBarcode,
-        event: 'VENCIMIENTOS'
+        event: 'VENCIMIENTOS',
+        claveUnica: claveUnica
       })
         .then(async (result: any) => {
           if (result.success) {
@@ -331,7 +335,16 @@ export const useExpiryDatabase = () => {
             }
             // Actualizar el ID/clave si la nube devolvió algo diferente
             if (result.id && result.id !== localId) {
-               await db.cloudExpirations.update(localId, { id: result.id, claveUnica: result.clave || claveUnica });
+               const item = await db.cloudExpirations.get(localId);
+               if (item) {
+                 await db.cloudExpirations.delete(localId);
+                 item.id = result.id;
+                 item.claveUnica = result.clave || claveUnica;
+                 item.syncStatus = 'synced';
+                 await db.cloudExpirations.add(item);
+               }
+            } else {
+               await db.cloudExpirations.update(localId, { syncStatus: 'synced' });
             }
           }
         })
