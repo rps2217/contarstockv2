@@ -43,24 +43,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, isCollapsed, onToggle })
 
   return (
     <aside className={`hidden md:flex flex-col ${isCollapsed ? 'w-20' : 'w-64'} h-screen fixed left-0 top-0 bg-slate-950 border-r-4 border-white/5 z-50 overflow-hidden transition-all duration-300`}>
-      <div className={`p-6 flex items-center ${isCollapsed ? 'justify-center' : 'gap-4'} border-b-4 border-white/5 bg-slate-900/30 relative`}>
-        <div className="bg-blue-600 p-2.5 rounded-xl shadow-2xl border-2 border-blue-400 shrink-0">
-          <Box className="w-6 h-6 text-white" />
-        </div>
+      <div className={`p-6 flex items-center ${isCollapsed ? 'justify-center' : 'gap-4'} border-b-4 border-white/5 bg-slate-900/30`}>
+        <button 
+          onClick={onToggle}
+          title={isCollapsed ? "Expandir" : "Colapsar"}
+          className="bg-blue-600 p-2.5 rounded-xl shadow-2xl border-2 border-blue-400 shrink-0 hover:bg-blue-500 active:scale-95 transition-all group"
+        >
+          <Box className={`w-6 h-6 text-white transition-transform ${isCollapsed ? 'group-hover:rotate-12' : 'group-hover:-rotate-12'}`} />
+        </button>
         {!isCollapsed && (
           <div className="overflow-hidden">
             <h1 className="text-white font-black text-xl leading-none uppercase tracking-tighter italic whitespace-nowrap">LogiCount</h1>
             <p className="text-blue-500 text-[8px] font-black uppercase tracking-[0.5em] mt-1">Enterprise_v4</p>
           </div>
         )}
-        
-        {/* Toggle Button */}
-        <button 
-          onClick={onToggle}
-          className={`absolute -right-1 top-1/2 -translate-y-1/2 translate-x-1/2 w-8 h-8 bg-blue-600 rounded-full border-2 border-blue-400 text-white flex items-center justify-center shadow-lg hover:bg-blue-500 transition-all z-10 ${isCollapsed ? 'rotate-180' : ''}`}
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
       </div>
 
       <nav className={`flex-1 ${isCollapsed ? 'px-2' : 'px-4'} space-y-2 overflow-y-auto no-scrollbar py-8`}>
