@@ -80,10 +80,10 @@ interface ExpiryState {
 }
 
 const DEFAULT_PREFERENCES: ExpiryPreferences = {
-  hideExpiredByDefault: false,
+  hideExpiredByDefault: true,
   defaultSort: 'withdrawal',
   compactView: false,
-  showPriorityAssistant: true
+  showPriorityAssistant: false
 };
 
 export const useExpiryStore = create<ExpiryState>()(

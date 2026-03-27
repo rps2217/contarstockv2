@@ -26,8 +26,8 @@ export interface CloudExpiration {
   id: string;
   barcode: string;
   productName: string;
-  mm: number;
-  yyyy: number;
+  mm: number | string;
+  yyyy: number | string;
   event: string;
   quantity: number;
   location: string;
@@ -45,6 +45,15 @@ export interface CloudExpiration {
   syncError?: string;
 }
 
+export interface DynamicRecord {
+  id: string;
+  tableName: string;
+  data: Record<string, any>;
+  timestamp: number;
+  syncStatus: 'synced' | 'pending' | 'error';
+  syncError?: string;
+}
+
 export class LogiCountDB extends Dexie {
   products!: Table<Product>;
   sessions!: Table<CountingSession>;
@@ -58,10 +67,11 @@ export class LogiCountDB extends Dexie {
   erpSessions!: Table<ErpOrderSession>;
   cloudExpirations!: Table<CloudExpiration>;
   providers!: Table<Provider>;
+  dynamic_data!: Table<DynamicRecord>;
 
   constructor() {
     super('LogiCountDB');
-    this.version(34).stores({
+    this.version(35).stores({
       products: '&barcode, name, syncStatus', 
       sessions: 'id, status, createdAt, erpOrder, logisticsLabel, sessionType, auditStatus, lastSyncTimestamp, mm, yyyy, batch, photoUrl, [erpOrder+createdAt], [status+lastSyncTimestamp]', 
       scans: 'id, sessionId, barcode, logisticsLabel, timestamp, synced, isIncident, expiryDate, mm, yyyy, batch, [sessionId+synced], [sessionId+barcode], [sessionId+logisticsLabel], [sessionId+timestamp]',
@@ -73,7 +83,8 @@ export class LogiCountDB extends Dexie {
       visualGuides: 'id, guideNumber, erpOrderId, status, createdAt',
       erpSessions: 'id, erpOrderId, status, createdAt',
       cloudExpirations: 'id, barcode, frc, erp, nguia, &claveUnica, [mm+yyyy]',
-      providers: '&rut, name'
+      providers: '&rut, name',
+      dynamic_data: 'id, tableName, timestamp, syncStatus, [tableName+syncStatus]'
     });
   }
 }

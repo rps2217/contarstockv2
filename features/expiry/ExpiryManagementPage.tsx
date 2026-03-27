@@ -13,7 +13,8 @@ import {
   ChevronDown,
   ChevronUp,
   Zap,
-  AlertCircle
+  AlertCircle,
+  X
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToastStore } from '../../store/useToastStore';
@@ -22,6 +23,8 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { toast as sonnerToast } from 'sonner';
+import { DynamicForm } from '../../components/DynamicForm';
+import { useAppStore } from '../../store/useAppStore';
 
 // Hooks
 import { useExpiryDatabase, ExpiryStatus } from './hooks/useExpiryDatabase';
@@ -46,9 +49,20 @@ const ExpiryManagementPage: React.FC = () => {
   const [isSettingsDrawerOpen, setIsSettingsDrawerOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isPriorityPanelOpen, setIsPriorityPanelOpen] = useState(false);
+  const [isDesktopAddModalOpen, setIsDesktopAddModalOpen] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const navigate = useNavigate();
   const location = useLocation();
+  const expirySchema = useAppStore(s => s.settings.schema?.expiry);
+
+  const handleOpenAdd = () => {
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+    if (isMobile) {
+      navigate('/expiry/capture');
+    } else {
+      setIsDesktopAddModalOpen(true);
+    }
+  };
 
   // Detect mobile device and redirect to capture view automatically
   useEffect(() => {
@@ -345,7 +359,7 @@ const ExpiryManagementPage: React.FC = () => {
         />
 
         {/* PRIORITY ASSISTANT (BENTO PANEL) - HIDDEN BEHIND TOGGLE */}
-        {(state.preferences.showPriorityAssistant ?? true) && (
+        {state.preferences.showPriorityAssistant && (
           <div className="mt-6 mb-6">
             <button
               onClick={() => setIsPriorityPanelOpen(!isPriorityPanelOpen)}
@@ -407,7 +421,7 @@ const ExpiryManagementPage: React.FC = () => {
           searchQuery={state.searchQuery}
           setSearchQuery={actions.setSearchQuery}
           onOpenFilters={() => setIsFilterDrawerOpen(true)}
-          onOpenAdd={() => navigate('/expiry/capture')}
+          onOpenAdd={handleOpenAdd}
           onClearFilters={handleClearFilters}
           activeFiltersCount={activeFiltersCount}
           theme={theme}
@@ -529,6 +543,59 @@ const ExpiryManagementPage: React.FC = () => {
         selectedItems={state.allItems.filter(item => state.selectedIds.has(item.id))}
         theme={theme}
       />
+
+      <AnimatePresence>
+        {isDesktopAddModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="w-full max-w-lg bg-[#111] border border-white/10 rounded-3xl overflow-hidden"
+            >
+              <div className="p-4 border-b border-white/10 flex items-center justify-between bg-[#1a1a1a]">
+                <h2 className="text-sm font-black uppercase tracking-widest text-white">Nuevo Registro</h2>
+                <button 
+                  onClick={() => setIsDesktopAddModalOpen(false)}
+                  className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-slate-400 active:bg-white/10"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-6">
+                {expirySchema && (
+                  <DynamicForm 
+                    schema={expirySchema}
+                    initialValues={{
+                      barcode: '',
+                      productName: '',
+                      quantity: 1
+                    }}
+                    onSubmit={async (values) => {
+                      await actions.handleAddItem({
+                        barcode: values.barcode || '',
+                        productName: values.productName || '',
+                        mm: Number(values.mm),
+                        yyyy: Number(values.yyyy),
+                        quantity: Number(values.quantity || 1),
+                        fechaCC: values.fechaCC
+                      });
+                      setIsDesktopAddModalOpen(false);
+                      addToast('Vencimiento registrado', 'success');
+                    }}
+                    onCancel={() => setIsDesktopAddModalOpen(false)}
+                  />
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

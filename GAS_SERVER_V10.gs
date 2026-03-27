@@ -11,9 +11,16 @@ function doPost(e) {
   var data = JSON.parse(e.postData.contents);
   var action = data.action;
   
+  // Autenticación básica
+  var secret = PropertiesService.getScriptProperties().getProperty('GAS_SECRET');
+  if (secret && data.secret !== secret) {
+    return JSONResponse({ success: false, error: "No autorizado" });
+  }
+  
   switch(action) {
     case 'upload_photo': return JSONResponse(uploadPhoto(data));
     case 'append_rows': return JSONResponse(appendRows(data));
+    case 'upsert_rows': return JSONResponse(upsertRows(data));
     case 'fetch_rows': return JSONResponse(fetchRows(data));
     case 'upsert_products': return JSONResponse(upsertProducts(data));
     case 'add_expiration': return JSONResponse(addExpiration(data));
@@ -28,6 +35,11 @@ function JSONResponse(obj) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+function logErrorAndReturnGeneric(e) {
+  console.error("Error en backend: " + e.toString());
+  return { success: false, error: "Error interno del servidor" };
+}
+
 // --- FUNCIONES DE VENCIMIENTO (NUEVAS Y CORREGIDAS) ---
 
 function addExpiration(data) {
@@ -38,12 +50,18 @@ function addExpiration(data) {
 
     // Normalización de datos
     var barcode = String(data.barcode || "").trim();
-    var lastDay = new Date(data.yyyy, data.mm, 0).getDate();
-    var mmPadded = ("0" + data.mm).slice(-2);
+    var mm = parseInt(data.mm);
+    var yyyy = parseInt(data.yyyy);
+    var quantity = parseInt(data.quantity);
+
+    if (isNaN(mm) || isNaN(yyyy)) return { success: false, error: "Mes o año inválido" };
+    
+    var lastDay = new Date(yyyy, mm, 0).getDate();
+    var mmPadded = ("0" + mm).slice(-2);
     var ddPadded = ("0" + lastDay).slice(-2);
     
     // Generación de CLAVE_UNICA (SKU + YYYY + MM + DD_FIN_MES) o usar la enviada por el cliente
-    var claveUnica = data.claveUnica || (barcode + data.yyyy + mmPadded + ddPadded);
+    var claveUnica = data.claveUnica || (barcode + yyyy + mmPadded + ddPadded);
 
     // Fecha de ingreso formateada dd/MM/yyyy para que Sheets la reconozca como fecha
     var now = new Date();
@@ -62,12 +80,12 @@ function addExpiration(data) {
       "SKU": barcode,
       "DESCRIPCION_PROD": data.productName,
       "DESCRIPCION": data.productName,
-      "MM": data.mm,
-      "MES": data.mm,
-      "YYYY": data.yyyy,
-      "ANO": data.yyyy,
+      "MM": mm,
+      "MES": mm,
+      "YYYY": yyyy,
+      "ANO": yyyy,
       "EVENTO": data.event || "VENCIMIENTOS",
-      "CANTIDAD": data.quantity !== undefined ? data.quantity : "",
+      "CANTIDAD": !isNaN(quantity) ? quantity : "",
       "FRC": data.frc || "",
       "NGUIA": data.nguia || "",
       "GUIA": data.nguia || "",
@@ -80,7 +98,7 @@ function addExpiration(data) {
       "OBSERVACIONES": data.observaciones || "",
       "FECHACC": data.fechaCC || "",
       "FECHA_CC": data.fechaCC || "",
-      "CANT": data.quantity !== undefined ? data.quantity : ""
+      "CANT": !isNaN(quantity) ? quantity : ""
     };
 
     // Validación de duplicados en la nube - SI EXISTE, ACTUALIZAMOS
@@ -134,7 +152,7 @@ function addExpiration(data) {
 
     return { success: true, id: data.id, clave: claveUnica };
   } catch (e) {
-    return { success: false, error: e.toString() };
+    return logErrorAndReturnGeneric(e);
   }
 }
 
@@ -169,7 +187,7 @@ function removeExpiration(data) {
       return { success: false, error: "NOT_FOUND", details: "Clave no hallada: " + targetClave };
     }
   } catch (e) {
-    return { success: false, error: e.toString() };
+    return logErrorAndReturnGeneric(e);
   }
 }
 
@@ -198,7 +216,7 @@ function fetchRows(data) {
     
     return { success: true, rows: rows, server_timestamp: new Date().toISOString() };
   } catch (e) {
-    return { success: false, error: e.toString() };
+    return logErrorAndReturnGeneric(e);
   }
 }
 
@@ -227,7 +245,70 @@ function appendRows(data) {
     
     return { success: true, rows_written: rows.length };
   } catch (e) {
-    return { success: false, error: e.toString() };
+    return logErrorAndReturnGeneric(e);
+  }
+}
+
+function upsertRows(data) {
+  try {
+    var ss = SpreadsheetApp.openById(data.spreadsheetId);
+    var sheet = ss.getSheetByName(data.tableName);
+    if (!sheet) return { success: false, error: "Hoja no encontrada: " + data.tableName };
+    
+    var lastRow = sheet.getLastRow();
+    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    var normalizedHeaders = headers.map(normalizeHeader);
+    
+    // Identificar columna de ID (ID o ID_REGISTRO)
+    var idColIdx = normalizedHeaders.indexOf("ID");
+    if (idColIdx === -1) idColIdx = normalizedHeaders.indexOf("ID_REGISTRO");
+    
+    if (idColIdx === -1) {
+      // Si no hay columna de ID, hacemos append normal
+      return appendRows(data);
+    }
+    
+    var rows = data.rows;
+    var updated = 0;
+    var added = 0;
+    
+    // Obtener todos los IDs existentes si hay filas
+    var existingIds = [];
+    if (lastRow >= 2) {
+      existingIds = sheet.getRange(2, idColIdx + 1, lastRow - 1, 1).getValues().flat().map(String);
+    }
+    
+    for (var i = 0; i < rows.length; i++) {
+      var rowData = rows[i];
+      var normalizedRowData = {};
+      for (var key in rowData) {
+        normalizedRowData[normalizeHeader(key)] = rowData[key];
+      }
+      
+      // Buscar el ID en los datos normalizados
+      var rowId = String(normalizedRowData["ID"] || normalizedRowData["ID_REGISTRO"] || "");
+      var rowIndex = rowId ? existingIds.indexOf(rowId) : -1;
+      
+      var valuesRow = normalizedHeaders.map(function(normH) {
+        return normalizedRowData[normH] !== undefined ? normalizedRowData[normH] : "";
+      });
+      
+      if (rowIndex !== -1) {
+        // Actualizar
+        sheet.getRange(rowIndex + 2, 1, 1, headers.length).setValues([valuesRow]);
+        updated++;
+      } else {
+        // Agregar
+        sheet.appendRow(valuesRow);
+        // Actualizar lista de IDs para evitar duplicados en el mismo lote
+        existingIds.push(rowId);
+        added++;
+      }
+    }
+    
+    return { success: true, updated: updated, added: added };
+  } catch (e) {
+    return logErrorAndReturnGeneric(e);
   }
 }
 
@@ -268,7 +349,7 @@ function upsertProducts(data) {
     
     return { success: true, updated: updated, added: added };
   } catch (e) {
-    return { success: false, error: e.toString() };
+    return logErrorAndReturnGeneric(e);
   }
 }
 
@@ -284,6 +365,6 @@ function uploadPhoto(data) {
     
     return { success: true, fileUrl: file.getUrl(), fileId: file.getId() };
   } catch (e) {
-    return { success: false, error: e.toString() };
+    return logErrorAndReturnGeneric(e);
   }
 }

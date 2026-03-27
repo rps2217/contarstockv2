@@ -1,5 +1,49 @@
-import { AppSettings } from '../types';
+import { AppSettings, TableSchema } from '../types';
 import { db } from '../db';
+
+const DEFAULT_EXPIRY_SCHEMA: TableSchema = {
+  tableName: 'VENCIMIENTOS',
+  columns: {
+    barcode: { col: 'SKU', label: 'Código de Barras', type: 'barcode', required: true },
+    productName: { col: 'DESCRIPTOR', label: 'Descripción', type: 'string', required: true },
+    quantity: { col: 'CANTIDAD', label: 'Cantidad', type: 'number', required: true, defaultValue: 1 },
+    event: { col: 'EVENTO', label: 'Evento', type: 'enum', options: ['VENCIMIENTOS', 'MERMA', 'CANJE'], defaultValue: 'VENCIMIENTOS' },
+    mm: { col: 'MM', label: 'Mes', type: 'enum', options: ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], renderType: 'grid', required: true },
+    yyyy: { col: 'YYYY', label: 'Año', type: 'enum', options: ['2026', '2027', '2028', '2029'], renderType: 'segmented', required: true },
+    location: { col: 'BOD.', label: 'Bodega', type: 'string' },
+    frc: { col: 'FRC', label: 'FRC', type: 'string' },
+    erp: { col: 'ERP', label: 'ERP', type: 'string' },
+    traspaso: { col: 'DOC-TRAS-INTER', label: 'Traspaso', type: 'string' },
+    destino: { col: 'DESTINO', label: 'Destino', type: 'string' },
+    observaciones: { col: 'OBSERVACIONES', label: 'Observaciones', type: 'string' },
+    isAdjusted: { col: 'AJUSTADO', label: 'Ajustado', type: 'boolean', defaultValue: false }
+  }
+};
+
+const DEFAULT_PRODUCTS_SCHEMA: TableSchema = {
+  tableName: 'PRODUCTOS',
+  columns: {
+    barcode: { col: 'SKU', label: 'Código', type: 'barcode', required: true },
+    name: { col: 'DESCRIPTOR', label: 'Nombre', type: 'string', required: true },
+    category: { col: 'CATEGORIA', label: 'Categoría', type: 'string' },
+    supplier: { col: 'PROVEEDOR', label: 'Proveedor', type: 'string' },
+    price: { col: 'PRECIO', label: 'Precio', type: 'number' },
+    unitsPerBox: { col: 'UNIDADES_CAJA', label: 'Unidades/Caja', type: 'number' }
+  }
+};
+
+const DEFAULT_COUNTS_SCHEMA: TableSchema = {
+  tableName: 'CONTEOS',
+  columns: {
+    barcode: { col: 'SKU', label: 'Código', type: 'barcode', required: true },
+    quantity: { col: 'CANTIDAD', label: 'Cantidad', type: 'number', required: true },
+    timestamp: { col: 'FECHA', label: 'Fecha', type: 'timestamp', required: true },
+    operatorId: { col: 'OPERADOR', label: 'Operador', type: 'string' },
+    location: { col: 'UBICACION', label: 'Ubicación', type: 'string' },
+    batch: { col: 'LOTE', label: 'Lote', type: 'string' },
+    expiry: { col: 'VENCIMIENTO', label: 'Vencimiento', type: 'date' }
+  }
+};
 
 const KEYS = {
  SETTINGS: 'logicount_settings',
@@ -70,6 +114,12 @@ const DEFAULT_SETTINGS: AppSettings = {
      batch: 'LOTE',
      expiry: 'VENCIMIENTO'
    }
+ },
+ schema: {
+   expiry: DEFAULT_EXPIRY_SCHEMA,
+   products: DEFAULT_PRODUCTS_SCHEMA,
+   counts: DEFAULT_COUNTS_SCHEMA,
+   events: DEFAULT_EXPIRY_SCHEMA
  },
  columnMapping: {
  barcode: 'SKU',

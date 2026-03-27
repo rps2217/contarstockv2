@@ -38,6 +38,7 @@ export const cloudApi = {
  action,
  ...payload,
  spreadsheetId: config.spreadsheetId,
+ secret: import.meta.env.VITE_GAS_SECRET,
  metadata: { 
  timestamp: Date.now(), 
  compressed: compress,
@@ -114,7 +115,10 @@ export const cloudApi = {
  },
 
  async appendRows(tableName: string, rows: any[]) {
- // Solo comprimir si el lote es grande (>20 filas) para ahorrar CPU en móviles
  return this.post('append_rows', { tableName, rows }, rows.length > 20);
+ },
+
+ async upsertRows(tableName: string, rows: any[]) {
+ return this.post('upsert_rows', { tableName, rows }, rows.length > 20);
  }
 };

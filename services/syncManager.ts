@@ -9,6 +9,7 @@ import { normalizeSku } from './utils';
 import { getSettings } from './settings';
 import { markScansAsSynced } from './sessionService';
 import { aggregateScans } from './aggregator';
+import { dynamicSyncService } from './dynamicSync';
 
 // Nuevas capas importadas
 import { cloudApi } from './cloud/apiClient';
@@ -28,12 +29,15 @@ export interface UploadGroup {
   totalUnits: number;
   sessionIds: string[];
   logisticsLabels: string[];
-  type: 'inventory' | 'reception' | 'products' | 'orphans';
+  type: 'inventory' | 'reception' | 'products' | 'orphans' | 'dynamic';
   isHammer: boolean;
+  tableName?: string;
 }
 
 export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
   const groups: Record<string, UploadGroup> = {};
+  
+  // 1. Scans (Inventory/Hammer)
   const unsyncedScans = await db.scans.where('synced').equals(0).toArray();
   
   if (unsyncedScans.length > 0) {
@@ -80,6 +84,7 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
     }
   }
 
+  // 2. Reception
   const unsyncedReception = await db.sessions
     .where('status').equals('completed')
     .and(s => !s.lastSyncTimestamp && (s.totalUnits === 0 || !s.totalUnits) && s.erpOrder === 'RECEPCION_BORRADOR')
@@ -97,6 +102,32 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
     };
   }
 
+  // 3. Dynamic Data
+  const pendingDynamic = await db.dynamic_data
+    .where('syncStatus')
+    .equals('pending')
+    .toArray();
+
+  if (pendingDynamic.length > 0) {
+    const dynamicGroups: Record<string, number> = {};
+    pendingDynamic.forEach(r => {
+      dynamicGroups[r.tableName] = (dynamicGroups[r.tableName] || 0) + 1;
+    });
+
+    for (const [tableName, count] of Object.entries(dynamicGroups)) {
+      groups[`DYNAMIC_${tableName}`] = {
+        erpOrder: `TABLA: ${tableName}`,
+        sessionCount: count,
+        totalUnits: count,
+        sessionIds: [],
+        logisticsLabels: [],
+        type: 'dynamic',
+        isHammer: false,
+        tableName
+      };
+    }
+  }
+
   return Object.values(groups);
 };
 
@@ -110,7 +141,9 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
   try {
     const config = getSettings().appSheetConfig;
     
-    if (group.erpOrder === 'REGISTROS_HUERFANOS') {
+    if (group.type === 'dynamic' && group.tableName) {
+      await dynamicSyncService.syncAllPending(onProgress, group.tableName);
+    } else if (group.erpOrder === 'REGISTROS_HUERFANOS') {
       if (onProgress) onProgress("Purgando registros residuales...");
       const unsynced = await db.scans.where('synced').equals(0).toArray();
       const orphanIds = unsynced.filter(s => !s.sessionId || s.sessionId === 'ORPHAN').map(s => s.id);

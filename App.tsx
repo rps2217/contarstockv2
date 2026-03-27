@@ -34,6 +34,8 @@ const VisualPicking = lazyWithRetry(() => import('./features/visualPicking/Visua
 const ExpiryManagement = lazyWithRetry(() => import('./features/expiry/ExpiryManagementPage'));
 const ExpiryCapturePage = lazyWithRetry(() => import('./features/expiry/ExpiryCapturePage'));
 const EventManagement = lazyWithRetry(() => import('./features/events/EventManagementPage'));
+const DynamicManagement = lazyWithRetry(() => import('./features/dynamic/DynamicManagementPage').then(m => ({ default: m.DynamicManagementPage })));
+const GlobalSyncQueue = lazyWithRetry(() => import('./features/sync/GlobalSyncQueuePage'));
 
 const AppContent = () => {
   const location = useLocation();
@@ -143,6 +145,7 @@ const AppContent = () => {
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/database" element={<DatabaseView />} />
                 <Route path="/sync" element={<Sync />} />
+                <Route path="/sync/queue" element={<GlobalSyncQueue />} />
                 <Route path="/settings" element={<Settings />} />
                 
                 {/* RUTAS MODULARES DE FEATURES */}
@@ -152,6 +155,7 @@ const AppContent = () => {
                 <Route path="/expiry" element={<ExpiryManagement />} />
                 <Route path="/expiry/capture" element={<ExpiryCapturePage />} />
                 <Route path="/events" element={<EventManagement />} />
+                <Route path="/dynamic/:tableKey" element={<DynamicManagement />} />
                 <Route path="/counting/:id" element={<CountingPage />} />
                 <Route path="/massive/:batchId" element={<HammerPage />} />
                 

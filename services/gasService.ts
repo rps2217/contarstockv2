@@ -86,6 +86,15 @@ export const bootstrapByUrl = async (url: string, manualId?: string): Promise<Ap
    }
  }
 
+ const schemaJson = findVal(['SCHEMA_JSON', 'SCHEMA']);
+ if (schemaJson) {
+   try {
+     config.schema = JSON.parse(schemaJson);
+   } catch (e) {
+     logger.warn('SCHEMA_PARSE_FAIL', 'Could not parse SCHEMA_JSON from cloud');
+   }
+ }
+
  return config;
  } catch (err: any) {
  logger.error('BOOTSTRAP_FAIL', err.message);
@@ -144,6 +153,15 @@ export const bootstrapConfigById = async (spreadsheetId: string): Promise<AppShe
      config.mappings = JSON.parse(mappingsJson);
    } catch (e) {
      logger.warn('MAPPINGS_PARSE_FAIL', 'Could not parse MAPPINGS_JSON from cloud');
+   }
+ }
+
+ const schemaJson = findVal(['SCHEMA_JSON', 'SCHEMA']);
+ if (schemaJson) {
+   try {
+     config.schema = JSON.parse(schemaJson);
+   } catch (e) {
+     logger.warn('SCHEMA_PARSE_FAIL', 'Could not parse SCHEMA_JSON from cloud');
    }
  }
 
@@ -255,7 +273,8 @@ export const saveConfigToCloud = async (config: AppSheetConfig): Promise<boolean
       TABLE_RECEPCION: config.receptionTableName,
       TABLE_PEDIDOS: config.ordersTableName,
       TABLE_EVENTOS: config.eventsTableName,
-      MAPPINGS_JSON: JSON.stringify(config.mappings || {})
+      MAPPINGS_JSON: JSON.stringify(config.mappings || {}),
+      SCHEMA_JSON: JSON.stringify(config.schema || {})
     };
 
     const res = await callGas('updateConfig', payload);

@@ -6,6 +6,8 @@ import { erpService } from '../services/erpService';
 import { ExpectedOrderRepository } from '../repositories/ExpectedOrderRepository';
 import { SyncQueueService } from '../services/syncQueueService';
 
+import { dynamicSyncService } from '../services/dynamicSync';
+
 export const useAutoSync = () => {
   const addToast = useToastStore(state => state.addToast);
   const isSyncing = useRef(false);
@@ -20,6 +22,16 @@ export const useAutoSync = () => {
       await SyncQueueService.processQueue();
     } catch (error) {
       console.error('Expiry sync queue processing failed:', error);
+    }
+
+    // 0.1 Process Dynamic Data Sync
+    try {
+      const dynamicResult = await dynamicSyncService.syncAllPending();
+      if (dynamicResult.success > 0) {
+        addToast(`Sincronización dinámica: ${dynamicResult.success} registros enviados`, 'success');
+      }
+    } catch (error) {
+      console.error('Dynamic data auto-sync failed:', error);
     }
 
     // 1. Upload pending counts

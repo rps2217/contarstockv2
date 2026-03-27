@@ -14,7 +14,7 @@ export interface Product {
  supplier?: string;
  supplierRut?: string;
  price?: number;
- syncStatus?: 'synced' | 'add' | 'edit';
+ syncStatus?: 'synced' | 'add' | 'edit' | 'pending' | 'error';
  unitsPerBox?: number;
  embedding?: number[]; 
 }
@@ -138,7 +138,7 @@ export interface ConsolidatedItem {
  embedding?: number[];
 }
 
-export type ViewState = 'dashboard' | 'counting' | 'database' | 'reports' | 'settings' | 'reception' | 'sync' | 'massive' | 'documents' | 'visual-picking' | 'expiry' | 'events';
+export type ViewState = 'dashboard' | 'counting' | 'database' | 'reports' | 'settings' | 'reception' | 'sync' | 'massive' | 'documents' | 'visual-picking' | 'expiry' | 'events' | 'sync-queue';
 export type Theme = 'light' | 'dark';
 
 export interface VisualGuideItem {
@@ -192,6 +192,7 @@ export interface AppSettings {
  ttsEnabled: boolean; 
  batchTrackingEnabled: boolean;
  appSheetConfig?: AppSheetConfig;
+ schema?: AppSchema;
  mobileNavConfig?: ViewState[]; 
  thermalPrinter?: {
  enabled: boolean;
@@ -245,6 +246,37 @@ export interface SpreadsheetMetadata {
   sheets: TableMetadata[];
 }
 
+export type ColumnDataType = 'string' | 'number' | 'date' | 'barcode' | 'boolean' | 'enum' | 'email' | 'url' | 'image' | 'timestamp';
+export type ColumnRenderType = 'default' | 'grid' | 'list' | 'segmented';
+
+export interface ColumnSchema {
+  col: string;
+  label: string;
+  type: ColumnDataType;
+  renderType?: ColumnRenderType;
+  required?: boolean;
+  editable?: boolean;
+  visible?: boolean;
+  defaultValue?: any;
+  options?: string[];
+  validation?: string;
+  placeholder?: string;
+  hint?: string;
+}
+
+export interface TableSchema {
+  tableName: string;
+  columns: Record<string, ColumnSchema>;
+}
+
+export interface AppSchema {
+  expiry: TableSchema;
+  products: TableSchema;
+  counts: TableSchema;
+  events?: TableSchema;
+  providers?: TableSchema;
+}
+
 export interface AppSheetConfig {
   appId: string;
   accessKey: string;
@@ -263,6 +295,7 @@ export interface AppSheetConfig {
     expiry: ExpiryMapping;
     products: ProductMapping;
     counts: CountMapping;
-    events?: ExpiryMapping; // Uses the same structure as expiry
+    events?: ExpiryMapping; 
   };
+  schema?: AppSchema; // New dynamic schema
 }

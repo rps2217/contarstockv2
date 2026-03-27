@@ -4,9 +4,10 @@ import { QRCodeSVG } from 'qrcode.react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AppSettings, ExpiryMapping, ProductMapping, CountMapping, SpreadsheetMetadata, TableMetadata } from '../../../types';
 import { SettingsSection, SettingsCard, SettingsButton, SettingsInput } from './common/SettingsElements';
-import { bootstrapByUrl, fetchSpreadsheetMetadata, saveConfigToCloud } from '../../../services/gasService';
+import { bootstrapByUrl, fetchSpreadsheetMetadata, saveConfigToCloud, fetchSystemConfig } from '../../../services/gasService';
 import { SoundFX } from '../../../services/audio';
 import { CameraScanner } from '../../../components/CameraScanner';
+import { toast } from 'sonner';
 
 interface Props {
  settings: AppSettings;
@@ -176,7 +177,31 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
    }
  };
 
- const currentSheetMetadata = metadata?.sheets.find(s => s.sheetName === selectedSheet);
+  const handleRefreshConfig = async () => {
+    if (!urlInput) return;
+    setIsConnecting(true);
+    try {
+      const newConfig = await fetchSystemConfig();
+      const updated = { 
+        ...settings, 
+        appSheetConfig: { 
+          ...settings.appSheetConfig, 
+          ...newConfig 
+        } 
+      };
+      updateSetting('appSheetConfig', updated.appSheetConfig);
+      SoundFX.play('success');
+      toast.success("Configuración dinámica actualizada");
+    } catch (e: any) {
+      setErrorMessage(e.message);
+      setErrorMode('GENERAL');
+      SoundFX.play('error');
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const currentSheetMetadata = metadata?.sheets.find(s => s.sheetName === selectedSheet);
 
  const getModuleFields = () => {
    if (selectedModule === 'expiry' || selectedModule === 'events') {
@@ -282,6 +307,15 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
     icon={Wifi}
     variant="primary"
     className="bg-indigo-600 border-indigo-400 h-16 text-xs"
+  />
+  <SettingsButton 
+    onClick={handleRefreshConfig}
+    isLoading={isConnecting}
+    disabled={!urlInput}
+    label={isConnecting ? "Actualizando..." : "Refrescar Configuración Dinámica"}
+    icon={RefreshCw}
+    variant="secondary"
+    className="bg-slate-800 border-blue-500/30 text-blue-400 h-16 text-xs"
   />
   <SettingsButton 
     onClick={handleDiscoverStructure}

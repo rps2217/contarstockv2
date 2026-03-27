@@ -10,6 +10,9 @@ import { useHIDScanner } from '../../hooks/useHIDScanner';
 import { SoundFX } from '../../services/audio';
 import { differenceInDays } from 'date-fns';
 
+import { useAppStore } from '../../store/useAppStore';
+import { DynamicForm } from '../../components/DynamicForm';
+
 // Memoized Item Component for performance on low-end devices
 const ExpiryItemRow = React.memo(({ 
   item, 
@@ -25,7 +28,7 @@ const ExpiryItemRow = React.memo(({
     return differenceInDays(expiryDate, new Date());
   };
 
-  const days = getDaysUntilExpiry(item.mm || 0, item.yyyy || 0);
+  const days = getDaysUntilExpiry(Number(item.mm) || 0, Number(item.yyyy) || 0);
   const isWarning = days <= 90;
   const formattedDate = `31/${(item.mm || 0).toString().padStart(2, '0')}/${item.yyyy}`;
 
@@ -162,12 +165,11 @@ export const ExpiryCapturePage: React.FC = () => {
   const navigate = useNavigate();
   const { addToast } = useToastStore.getState();
   const { state, actions } = useExpiryDatabase();
+  const expirySchema = useAppStore(s => s.settings.schema?.expiry);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [scannedBarcode, setScannedBarcode] = useState('');
   const [productName, setProductName] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
-  const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleScan = useCallback(async (code: string) => {
@@ -182,9 +184,7 @@ export const ExpiryCapturePage: React.FC = () => {
     const product = await db.products.get(normalizedCode);
     setProductName(product?.name || 'Producto Desconocido');
     
-    // Reset modal state and open
-    setSelectedMonth(null);
-    setSelectedYear(null);
+    // Open modal
     setIsModalOpen(true);
   }, []);
 
@@ -194,21 +194,14 @@ export const ExpiryCapturePage: React.FC = () => {
     maxLatency: 50
   });
 
-  const handleSave = async () => {
-    if (!selectedMonth || !selectedYear) {
-      addToast('Seleccione mes y año', 'error');
-      SoundFX.play('error');
-      return;
-    }
-
+  const handleDynamicSubmit = async (values: any) => {
     try {
       setIsSubmitting(true);
       await actions.handleAddItem({
-        barcode: scannedBarcode,
-        productName: productName,
-        mm: selectedMonth,
-        yyyy: selectedYear,
-        quantity: 1
+        ...values,
+        mm: Number(values.mm),
+        yyyy: Number(values.yyyy),
+        quantity: Number(values.quantity || 1)
       });
       
       SoundFX.play('success');
@@ -242,14 +235,6 @@ export const ExpiryCapturePage: React.FC = () => {
       .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
       .slice(0, 50);
   }, [state.allItems]);
-
-  const getDaysUntilExpiry = (mm: number, yyyy: number) => {
-    const expiryDate = new Date(yyyy, mm - 1, 1);
-    // Set to end of month
-    expiryDate.setMonth(expiryDate.getMonth() + 1);
-    expiryDate.setDate(0);
-    return differenceInDays(expiryDate, new Date());
-  };
 
   return (
     <div className="h-screen w-full flex flex-col bg-[#050505] overflow-hidden font-mono text-white">
@@ -285,7 +270,7 @@ export const ExpiryCapturePage: React.FC = () => {
         )}
       </div>
 
-      {/* SIMPLIFIED DATE MODAL */}
+      {/* DYNAMIC FORM MODAL */}
       <AnimatePresence>
         {isModalOpen && (
           <motion.div
@@ -305,7 +290,7 @@ export const ExpiryCapturePage: React.FC = () => {
               {/* Modal Header */}
               <div className="p-4 border-b border-white/10 flex items-center justify-between bg-[#1a1a1a]">
                 <div>
-                  <h2 className="text-sm font-black uppercase tracking-widest text-white">Fecha de Vencimiento</h2>
+                  <h2 className="text-sm font-black uppercase tracking-widest text-white">Registro de Vencimiento</h2>
                   <p className="text-[10px] text-slate-400 mt-1 truncate max-w-[250px]">{productName}</p>
                 </div>
                 <button 
@@ -317,68 +302,20 @@ export const ExpiryCapturePage: React.FC = () => {
               </div>
 
               {/* Modal Body */}
-              <div className="p-4 overflow-y-auto space-y-6">
-                
-                {/* Months Grid */}
-                <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3 block">
-                    Mes (1-12)
-                  </label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                      <button
-                        key={m}
-                        onClick={() => setSelectedMonth(m)}
-                        className={`h-12 rounded-xl text-lg font-black transition-all border ${
-                          selectedMonth === m
-                            ? 'bg-blue-600 border-blue-600 text-white'
-                            : 'bg-white/5 border-white/10 text-slate-400 active:bg-white/10'
-                        }`}
-                      >
-                        {m.toString().padStart(2, '0')}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Years Grid (2026, 2027) */}
-                <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3 block">
-                    Año
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {[2026, 2027].map((y) => (
-                      <button
-                        key={y}
-                        onClick={() => setSelectedYear(y)}
-                        className={`h-14 rounded-xl text-xl font-black transition-all border ${
-                          selectedYear === y
-                            ? 'bg-blue-600 border-blue-600 text-white'
-                            : 'bg-white/5 border-white/10 text-slate-400 active:bg-white/10'
-                        }`}
-                      >
-                        {y}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-              </div>
-
-              {/* Modal Footer */}
-              <div className="p-4 border-t border-white/10 bg-[#1a1a1a]">
-                <button
-                  onClick={handleSave}
-                  disabled={!selectedMonth || !selectedYear || isSubmitting}
-                  className="w-full h-14 rounded-xl bg-blue-600 text-white font-black uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-50 disabled:bg-slate-800 transition-all active:scale-[0.98]"
-                >
-                  {isSubmitting ? (
-                    <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <Save className="w-5 h-5" />
-                  )}
-                  Guardar
-                </button>
+              <div className="p-4 overflow-y-auto no-scrollbar">
+                {expirySchema && (
+                  <DynamicForm 
+                    schema={expirySchema}
+                    initialValues={{
+                      barcode: scannedBarcode,
+                      productName: productName,
+                      quantity: 1
+                    }}
+                    onSubmit={handleDynamicSubmit}
+                    onCancel={() => setIsModalOpen(false)}
+                    isLoading={isSubmitting}
+                  />
+                )}
               </div>
             </motion.div>
           </motion.div>

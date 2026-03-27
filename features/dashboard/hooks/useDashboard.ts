@@ -14,13 +14,20 @@ export const useDashboard = () => {
     return { scansToday, pendingSync };
   }, [], { scansToday: 0, pendingSync: 0 });
 
+  const dynamicStats = useLiveQuery(async () => {
+    const pending = await db.dynamic_data.where('syncStatus').equals('pending').count();
+    const error = await db.dynamic_data.where('syncStatus').equals('error').count();
+    return { pending, error };
+  }, [], { pending: 0, error: 0 });
+
   const pendingOrders = useLiveQuery(() => db.expectedOrders.toArray(), [], []);
 
   const operatorId = localStorage.getItem('logicount_operator_id') || 'SIN_IDENTIFICAR';
-  const isSyncNeeded = (stats?.pendingSync || 0) > 0;
+  const isSyncNeeded = (stats?.pendingSync || 0) > 0 || (dynamicStats?.pending || 0) > 0;
 
   return {
     stats,
+    dynamicStats,
     operatorId,
     isSyncNeeded,
     pendingOrders,

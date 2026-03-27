@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback, memo } from 'react';
 import { useLocation } from 'react-router-dom';
-import { ScanLine, Radio, Database, Settings, UserCircle, ShieldAlert, RefreshCw, FileText, Box, ArrowRight, Package, CheckCircle2 } from 'lucide-react';
+import { ScanLine, Radio, Database, Settings, UserCircle, ShieldAlert, RefreshCw, FileText, Box, ArrowRight, Package, CheckCircle2, Cloud, AlertCircle } from 'lucide-react';
 import { useDashboard } from './hooks/useDashboard';
 import { Button, Card } from '../../shared/components/ui';
 import { db } from '../../db';
@@ -14,13 +14,14 @@ import { sanitizeBarcode } from '../../services/utils';
 import { useHIDScanner } from '../../hooks/useHIDScanner';
 
 const Dashboard: React.FC = () => {
-  const { operatorId, isSyncNeeded, pendingOrders, navigate } = useDashboard();
+  const { operatorId, isSyncNeeded, pendingOrders, navigate, dynamicStats } = useDashboard();
   const location = useLocation();
   const [hasConfigError, setHasConfigError] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [scanInput, setScanInput] = useState('');
   const [isProcessingScan, setIsProcessingScan] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const { settings } = useAppStore();
 
   useEffect(() => {
     const msg = (location.state as any)?.message;
@@ -211,6 +212,47 @@ const Dashboard: React.FC = () => {
               <p className="text-xs text-rose-600 dark:text-rose-300 font-medium mt-0.5">Falta configurar el vínculo con Google Sheets</p>
             </div>
           </button>
+        )}
+
+        {/* SALUD DE TABLAS DINÁMICAS */}
+        {((dynamicStats?.pending || 0) > 0 || (dynamicStats?.error || 0) > 0) && (
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 rounded-2xl p-5 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Database className="w-5 h-5 text-blue-500" />
+                <h2 className="text-sm font-black uppercase tracking-widest text-slate-500">Salud de Tablas</h2>
+              </div>
+              <button 
+                onClick={() => navigate('/sync')}
+                className="text-[10px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-600 transition-colors"
+              >
+                Gestionar Sincronización
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-100 dark:border-white/5">
+                <div className="flex items-center gap-2 mb-1">
+                  <Cloud className="w-3.5 h-3.5 text-blue-500" />
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Pendientes</span>
+                </div>
+                <div className="text-xl font-black">{dynamicStats?.pending || 0}</div>
+              </div>
+              <div className={`p-3 rounded-xl border ${
+                (dynamicStats?.error || 0) > 0 
+                  ? 'bg-rose-50 dark:bg-rose-900/20 border-rose-100 dark:border-rose-500/30' 
+                  : 'bg-slate-50 dark:bg-white/5 border-slate-100 dark:border-white/5'
+              }`}>
+                <div className="flex items-center gap-2 mb-1">
+                  <AlertCircle className={`w-3.5 h-3.5 ${(dynamicStats?.error || 0) > 0 ? 'text-rose-500' : 'text-slate-400'}`} />
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Errores</span>
+                </div>
+                <div className={`text-xl font-black ${(dynamicStats?.error || 0) > 0 ? 'text-rose-500' : ''}`}>
+                  {dynamicStats?.error || 0}
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* ÓRDENES PENDIENTES */}

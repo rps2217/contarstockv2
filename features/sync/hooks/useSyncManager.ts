@@ -17,7 +17,7 @@ export const useSyncManager = () => {
 
  const refreshGroups = useCallback(async () => {
  const groups = await syncManager.getPendingUploadGroups();
- setUiGroups(groups.map(g => ({ ...g, uiStatus: 'idle' })));
+ setUiGroups(groups.map(g => ({ ...g, uiStatus: 'idle', progress: undefined })));
  
  if (logs.length === 0) {
  addLog(">>> Diagnóstico de Motor Cloud v6.3", 'info');
@@ -108,14 +108,17 @@ export const useSyncManager = () => {
  const group = uiGroups[i];
  if (group.uiStatus === 'success') continue;
 
- setUiGroups(prev => prev.map((g, idx) => idx === i ? { ...g, uiStatus: 'uploading' } : g));
+ setUiGroups(prev => prev.map((g, idx) => idx === i ? { ...g, uiStatus: 'uploading', progress: 'Iniciando...' } : g));
  
  try {
- await syncManager.performBatchUpload(group, (m) => addLog(m, 'info'));
- setUiGroups(prev => prev.map((g, idx) => idx === i ? { ...g, uiStatus: 'success' } : g));
+ await syncManager.performBatchUpload(group, (m) => {
+  addLog(m, 'info');
+  setUiGroups(prev => prev.map((g, idx) => idx === i ? { ...g, progress: m } : g));
+ });
+ setUiGroups(prev => prev.map((g, idx) => idx === i ? { ...g, uiStatus: 'success', progress: undefined } : g));
  addLog(`✓ Completado: ${group.erpOrder}`, 'success');
  } catch (e: any) {
- setUiGroups(prev => prev.map((g, idx) => idx === i ? { ...g, uiStatus: 'error' } : g));
+ setUiGroups(prev => prev.map((g, idx) => idx === i ? { ...g, uiStatus: 'error', progress: e.message } : g));
  addLog(`✗ Error en ${group.erpOrder}: ${e.message}`, 'error');
  }
  }

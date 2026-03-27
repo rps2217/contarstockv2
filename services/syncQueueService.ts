@@ -3,11 +3,24 @@ import { db } from '../db';
 import { SyncJob } from '../types';
 import { cloudApi } from './cloud/apiClient';
 import { logger } from './logger';
+import { dynamicSyncService } from './dynamicSync';
 
 export type SyncTaskType = 'ADD_EXPIRY' | 'REMOVE_EXPIRY';
 
 export class SyncQueueService {
   private static isProcessing = false;
+  private static syncTimeout: NodeJS.Timeout | null = null;
+
+  /**
+   * Dispara una sincronización en segundo plano con debouncing.
+   */
+  static triggerBackgroundSync() {
+    if (this.syncTimeout) clearTimeout(this.syncTimeout);
+    this.syncTimeout = setTimeout(() => {
+      this.processQueue();
+      dynamicSyncService.syncAllPending(); // Sincronizar registros pendientes
+    }, 2000); // Esperar 2 segundos de inactividad antes de sincronizar
+  }
 
   /**
    * Agrega una tarea a la cola de sincronización.
@@ -60,6 +73,12 @@ export class SyncQueueService {
     if (!job.id) return;
 
     try {
+      // Verificar si ya pasó el tiempo de espera para el reintento
+      const backoffDelay = Math.pow(2, job.retryCount || 0) * 1000;
+      if (Date.now() - job.createdAt < backoffDelay) {
+        return; // Aún no es momento de reintentar
+      }
+
       await db.syncQueue.update(job.id, { status: 'processing' });
       
       const { type, ...data } = job.data;
@@ -97,7 +116,7 @@ export class SyncQueueService {
       }
     } catch (error: any) {
       const retryCount = (job.retryCount || 0) + 1;
-      const status = retryCount >= 5 ? 'failed' : 'pending';
+      const status = retryCount >= 10 ? 'failed' : 'pending'; // Aumentamos a 10 intentos
       
       // Si falló definitivamente, marcar el registro local con error
       const { type, id: localId } = job.data;
@@ -108,7 +127,7 @@ export class SyncQueueService {
       await db.syncQueue.update(job.id, { 
         status, 
         retryCount,
-        createdAt: Date.now()
+        createdAt: Date.now() // Actualizamos para el backoff
       });
 
       logger.warn("SYNC_QUEUE_RETRY", `Tarea fallida (Intento ${retryCount}): ${job.data.type} - ${error.message}`);
@@ -116,9 +135,17 @@ export class SyncQueueService {
   }
 }
 
-// Escuchar cambios de conexión para procesar la cola
+// Escuchar cambios de conexión y visibilidad para procesar la cola
 if (typeof window !== 'undefined') {
   window.addEventListener('online', () => {
-    SyncQueueService.processQueue();
+    logger.info("SYNC_MANAGER", "Conexión recuperada, disparando sincronización...");
+    SyncQueueService.triggerBackgroundSync();
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      logger.info("SYNC_MANAGER", "App visible, disparando sincronización...");
+      SyncQueueService.triggerBackgroundSync();
+    }
   });
 }

@@ -1,10 +1,11 @@
 
 import React from 'react';
-import { Home, Database, History, Container, Cloud, Box, Settings, Zap, FileText, Camera, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Home, Database, History, Container, Cloud, Box, Settings, Zap, FileText, Camera, Calendar, ChevronLeft, ChevronRight, AlertCircle, RefreshCw } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { AppSettings } from '../types';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ScanRepository } from '../repositories/ScanRepository';
+import { db } from '../db';
 
 interface SidebarProps {
   view: string;
@@ -13,12 +14,22 @@ interface SidebarProps {
   onToggle: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ view, isCollapsed, onToggle }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, onToggle }) => {
   const navigate = useNavigate();
   const pendingCount = useLiveQuery(() => ScanRepository.getPendingSyncCount(), [], 0);
   
+  const dynamicTableStats = useLiveQuery(async () => {
+    const records = await db.dynamic_data.where('syncStatus').anyOf(['pending', 'error']).toArray();
+    const stats: Record<string, number> = {};
+    records.forEach(r => {
+      stats[r.tableName] = (stats[r.tableName] || 0) + 1;
+    });
+    return stats;
+  }, [], {});
+  
   const NavItem = ({ path, label, icon: Icon, badge, activeKey }: { path: string, label: string, icon: any, badge?: number, activeKey: string }) => {
-    const isActive = view === activeKey;
+    const location = useLocation();
+    const isActive = location.pathname === path || location.pathname === `/${activeKey}`;
     return (
       <button
         onClick={() => navigate(path)}
@@ -71,7 +82,25 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, isCollapsed, onToggle })
         <NavItem path="/visual-picking" activeKey="visual-picking" label="Visual_Picking" icon={Camera} />
         <NavItem path="/expiry" activeKey="expiry" label="Expiry_Control" icon={Calendar} />
         <NavItem path="/events" activeKey="events" label="Event_Control" icon={FileText} />
+        
+        {settings.schema && Object.keys(settings.schema).length > 0 && (
+          <>
+            {!isCollapsed && <div className="text-[9px] font-black text-slate-600 uppercase tracking-[0.4em] px-5 mb-6 mt-10">Dynamic_Tables</div>}
+            {Object.entries(settings.schema).map(([key, schema]) => (
+              <NavItem 
+                key={key} 
+                path={`/dynamic/${key}`} 
+                activeKey={`dynamic/${key}`} 
+                label={schema.tableName} 
+                icon={Database} 
+                badge={dynamicTableStats?.[schema.tableName] || 0}
+              />
+            ))}
+          </>
+        )}
+
         <NavItem path="/sync" activeKey="sync" label="Cloud_Sync" icon={Cloud} badge={pendingCount} />
+        <NavItem path="/sync/queue" activeKey="sync/queue" label="Sync_Queue" icon={RefreshCw} />
       </nav>
 
       <div className={`p-4 border-t-4 border-white/5 bg-slate-900/50`}>
