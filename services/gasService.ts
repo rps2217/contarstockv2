@@ -73,8 +73,18 @@ export const bootstrapByUrl = async (url: string, manualId?: string): Promise<Ap
  inventoryRegistryTableName: findVal(['TABLE_REGISTRO_INV', 'REGISTRO_INV']) || 'REGISTRO_INV',
  productsTableName: findVal(['TABLE_PRODUCTOS', 'PRODUCTOS']) || 'PRODUCTOS',
  receptionTableName: findVal(['TABLE_RECEPCION', 'RECEPCION']) || 'RECEPCION_BULTOS',
- ordersTableName: findVal(['TABLE_PEDIDOS', 'PEDIDOS']) || 'PEDIDOS'
+ ordersTableName: findVal(['TABLE_PEDIDOS', 'PEDIDOS']) || 'PEDIDOS',
+ eventsTableName: findVal(['TABLE_EVENTOS', 'EVENTOS']) || 'EVENTOS'
  };
+
+ const mappingsJson = findVal(['MAPPINGS_JSON', 'MAPPINGS']);
+ if (mappingsJson) {
+   try {
+     config.mappings = JSON.parse(mappingsJson);
+   } catch (e) {
+     logger.warn('MAPPINGS_PARSE_FAIL', 'Could not parse MAPPINGS_JSON from cloud');
+   }
+ }
 
  return config;
  } catch (err: any) {
@@ -124,8 +134,18 @@ export const bootstrapConfigById = async (spreadsheetId: string): Promise<AppShe
  productsTableName: findVal(['TABLE_PRODUCTOS', 'PRODUCTOS']) || 'PRODUCTOS',
  receptionTableName: findVal(['TABLE_RECEPCION', 'RECEPCION']) || 'RECEPCION_BULTOS',
  gasWebAppUrl: findVal(['GAS_URL', 'URL_GAS', 'SCRIPT_URL']),
- ordersTableName: findVal(['TABLE_PEDIDOS', 'PEDIDOS']) || 'PEDIDOS'
+ ordersTableName: findVal(['TABLE_PEDIDOS', 'PEDIDOS']) || 'PEDIDOS',
+ eventsTableName: findVal(['TABLE_EVENTOS', 'EVENTOS']) || 'EVENTOS'
  };
+
+ const mappingsJson = findVal(['MAPPINGS_JSON', 'MAPPINGS']);
+ if (mappingsJson) {
+   try {
+     config.mappings = JSON.parse(mappingsJson);
+   } catch (e) {
+     logger.warn('MAPPINGS_PARSE_FAIL', 'Could not parse MAPPINGS_JSON from cloud');
+   }
+ }
 
  if (!config.gasWebAppUrl) return reject(new Error("No se encontró la URL de Google Script en el Excel."));
  
@@ -222,6 +242,30 @@ export const fetchSpreadsheetMetadata = async (spreadsheetId?: string): Promise<
     throw err;
   }
 };
+/**
+ * Guarda la configuración completa en la nube (Pestaña CONFIG_SISTEMA)
+ */
+export const saveConfigToCloud = async (config: AppSheetConfig): Promise<boolean> => {
+  try {
+    const payload = {
+      TABLE_LOGS: config.countsTableName,
+      TABLE_CONSOLIDADO: config.consolidatedTableName,
+      TABLE_REGISTRO_INV: config.inventoryRegistryTableName,
+      TABLE_PRODUCTOS: config.productsTableName,
+      TABLE_RECEPCION: config.receptionTableName,
+      TABLE_PEDIDOS: config.ordersTableName,
+      TABLE_EVENTOS: config.eventsTableName,
+      MAPPINGS_JSON: JSON.stringify(config.mappings || {})
+    };
+
+    const res = await callGas('updateConfig', payload);
+    return res.success === true;
+  } catch (err: any) {
+    logger.error('SAVE_CONFIG_CLOUD_FAIL', err.message);
+    return false;
+  }
+};
+
 export const callGas = async (action: string, payload: any, compress: boolean = false): Promise<any> => {
  return cloudApi.post(action, payload, compress);
 };

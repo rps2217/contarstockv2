@@ -255,6 +255,7 @@ export interface AppSheetConfig {
   receptionTableName?: string;
   ordersTableName?: string; 
   providersTableName?: string;
+  eventsTableName?: string;
   gasWebAppUrl?: string; 
   spreadsheetId?: string;
   columnMapping?: ExpiryMapping; // Keep for backward compatibility
@@ -262,5 +263,6 @@ export interface AppSheetConfig {
     expiry: ExpiryMapping;
     products: ProductMapping;
     counts: CountMapping;
+    events?: ExpiryMapping; // Uses the same structure as expiry
   };
 }

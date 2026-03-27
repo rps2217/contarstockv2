@@ -4,7 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AppSettings, ExpiryMapping, ProductMapping, CountMapping, SpreadsheetMetadata, TableMetadata } from '../../../types';
 import { SettingsSection, SettingsCard, SettingsButton, SettingsInput } from './common/SettingsElements';
-import { bootstrapByUrl, fetchSpreadsheetMetadata } from '../../../services/gasService';
+import { bootstrapByUrl, fetchSpreadsheetMetadata, saveConfigToCloud } from '../../../services/gasService';
 import { SoundFX } from '../../../services/audio';
 import { CameraScanner } from '../../../components/CameraScanner';
 
@@ -13,7 +13,7 @@ interface Props {
  updateSetting: (key: keyof AppSettings, value: any) => void;
 }
 
-type ModuleType = 'expiry' | 'products' | 'counts';
+type ModuleType = 'expiry' | 'products' | 'counts' | 'events';
 
 export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
  const [urlInput, setUrlInput] = useState(settings.appSheetConfig?.gasWebAppUrl || '');
@@ -41,6 +41,7 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
    if (selectedModule === 'expiry') sheetName = settings.appSheetConfig?.inventoryRegistryTableName || '';
    if (selectedModule === 'products') sheetName = settings.appSheetConfig?.productsTableName || '';
    if (selectedModule === 'counts') sheetName = settings.appSheetConfig?.countsTableName || '';
+   if (selectedModule === 'events') sheetName = settings.appSheetConfig?.eventsTableName || '';
    setSelectedSheet(sheetName);
 
    // Cargar mapeo
@@ -56,6 +57,10 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
    } else if (selectedModule === 'counts') {
      currentMapping = settings.appSheetConfig?.mappings?.counts || {
        barcode: 'SKU', quantity: 'CANTIDAD', timestamp: 'FECHA', operatorId: 'OPERADOR', location: 'UBICACION', batch: 'LOTE', expiry: 'VENCIMIENTO'
+     };
+   } else if (selectedModule === 'events') {
+     currentMapping = settings.appSheetConfig?.mappings?.events || {
+       barcode: 'SKU', productName: 'DESCRIPTOR', quantity: 'CANTIDAD', event: 'EVENTO', mm: 'MM', yyyy: 'YYYY', location: 'BOD.', frc: 'FRC', erp: 'ERP', traspaso: 'DOC-TRAS-INTER', destino: 'DESTINO', observaciones: 'OBSERVACIONES', isAdjusted: 'AJUSTADO'
      };
    }
    setMapping(currentMapping);
@@ -126,7 +131,7 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
   }
  };
 
- const handleSaveMapping = () => {
+ const handleSaveMapping = async () => {
   const newConfig = { ...settings.appSheetConfig } as any;
   if (!newConfig.mappings) newConfig.mappings = {};
   
@@ -135,10 +140,19 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
   if (selectedModule === 'expiry') newConfig.inventoryRegistryTableName = selectedSheet;
   if (selectedModule === 'products') newConfig.productsTableName = selectedSheet;
   if (selectedModule === 'counts') newConfig.countsTableName = selectedSheet;
+  if (selectedModule === 'events') newConfig.eventsTableName = selectedSheet;
 
   updateSetting('appSheetConfig', newConfig);
-  SoundFX.play('success');
-  alert(`Estructura de datos para el módulo actualizada correctamente.`);
+  
+  // Persistir en la nube para que otros dispositivos lo carguen
+  try {
+    await saveConfigToCloud(newConfig);
+    SoundFX.play('success');
+    alert(`Estructura de datos para el módulo actualizada y sincronizada en la nube.`);
+  } catch (e) {
+    SoundFX.play('success');
+    alert(`Estructura guardada localmente.`);
+  }
  };
 
  const updateMappingField = (key: string, value: string) => {
@@ -165,7 +179,7 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
  const currentSheetMetadata = metadata?.sheets.find(s => s.sheetName === selectedSheet);
 
  const getModuleFields = () => {
-   if (selectedModule === 'expiry') {
+   if (selectedModule === 'expiry' || selectedModule === 'events') {
      return [
        { id: 'barcode', label: 'Código de Barras (SKU)', color: 'emerald' },
        { id: 'productName', label: 'Descripción Producto', color: 'emerald' },
@@ -332,6 +346,15 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
             >
               <AlertCircle className="w-4 h-4" />
               Vencimientos
+            </button>
+            <button
+              onClick={() => setSelectedModule('events')}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                selectedModule === 'events' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Layers className="w-4 h-4" />
+              Eventos
             </button>
             <button
               onClick={() => setSelectedModule('products')}
