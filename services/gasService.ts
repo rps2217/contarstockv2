@@ -196,8 +196,32 @@ export const updateConfigFromCloud = async (): Promise<Partial<AppSheetConfig> |
 };
 
 /**
- * Llama al motor GAS con compresión opcional
+ * RECUPERA METADATOS DEL SPREADSHEET (Hojas y Cabeceras)
  */
+export const fetchSpreadsheetMetadata = async (spreadsheetId?: string): Promise<SpreadsheetMetadata> => {
+  const settings = getSettings();
+  const url = settings.appSheetConfig?.gasWebAppUrl;
+  if (!url) throw new Error("URL de GAS no configurada");
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      body: JSON.stringify({ 
+        action: 'get_metadata', 
+        spreadsheetId: spreadsheetId || settings.appSheetConfig?.spreadsheetId 
+      }),
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+    });
+
+    const res = await response.json();
+    if (!res.success) throw new Error(res.error || "Error al obtener metadatos");
+    
+    return res.metadata as SpreadsheetMetadata;
+  } catch (err: any) {
+    logger.error('FETCH_METADATA_FAIL', err.message);
+    throw err;
+  }
+};
 export const callGas = async (action: string, payload: any, compress: boolean = false): Promise<any> => {
  return cloudApi.post(action, payload, compress);
 };

@@ -285,7 +285,8 @@ export const importExpirationsFromCloud = async (): Promise<number> => {
         // Un registro se considera ajustado si tiene el flag 'AJUSTADO' o si ya tiene un número de TRASPASO (Columna L)
         const isAdjusted = ['sí', 'si', 'yes', 'true', '1'].includes(ajustadoStr) || (traspaso && traspaso.trim() !== '');
 
-        const rawTimestamp = row['TIMESTAMP'] || row['FECHA_INGRESO'] || row['FECHA DE INGRESO'] || row['FECHA'] || row['FECHA CREACION'] || row['CREATED_AT'];
+        const tsKey = mapping?.timestamp || 'TIMESTAMP';
+        const rawTimestamp = row[tsKey] || row['TIMESTAMP'] || row['FECHA_INGRESO'] || row['FECHA DE INGRESO'] || row['FECHA'] || row['FECHA CREACION'] || row['CREATED_AT'];
         let parsedTimestamp = Date.now();
         if (rawTimestamp) {
           const parsed = new Date(rawTimestamp).getTime();

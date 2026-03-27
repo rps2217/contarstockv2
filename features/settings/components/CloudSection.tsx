@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-import { Wifi, AlertCircle, Info, Link, ShieldAlert, Database, QrCode, Camera, X, Settings2, Save } from 'lucide-react';
+import { Wifi, AlertCircle, Info, Link, ShieldAlert, Database, QrCode, Camera, X, Settings2, Save, Search, Table, Columns, CheckCircle2, RefreshCw } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { AppSettings, ColumnMapping } from '../../../types';
+import { motion, AnimatePresence } from 'motion/react';
+import { AppSettings, ColumnMapping, SpreadsheetMetadata, TableMetadata } from '../../../types';
 import { SettingsSection, SettingsCard, SettingsButton, SettingsInput } from './common/SettingsElements';
-import { bootstrapByUrl } from '../../../services/gasService';
+import { bootstrapByUrl, fetchSpreadsheetMetadata } from '../../../services/gasService';
 import { SoundFX } from '../../../services/audio';
 import { CameraScanner } from '../../../components/CameraScanner';
 
@@ -16,13 +17,17 @@ interface Props {
 export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
  const [urlInput, setUrlInput] = useState(settings.appSheetConfig?.gasWebAppUrl || '');
  const [ssIdInput, setSsIdInput] = useState(settings.appSheetConfig?.spreadsheetId || '');
- const [inventoryTableInput, setInventoryTableInput] = useState(settings.appSheetConfig?.inventoryRegistryTableName || 'REGISTRO_INV');
  const [isConnecting, setIsConnecting] = useState(false);
+ const [isDiscovering, setIsDiscovering] = useState(false);
  const [errorMode, setErrorMode] = useState<null | 'OAUTH_STALL' | 'GENERAL'>(null);
  const [errorMessage, setErrorMessage] = useState('');
  const [showQR, setShowQR] = useState(false);
  const [isScanning, setIsScanning] = useState(false);
  const [showMapping, setShowMapping] = useState(false);
+ 
+ // Metadatos descubiertos
+ const [metadata, setMetadata] = useState<SpreadsheetMetadata | null>(null);
+ const [selectedSheet, setSelectedSheet] = useState<string>(settings.appSheetConfig?.inventoryRegistryTableName || '');
 
  const [mapping, setMapping] = useState<ColumnMapping>(settings.appSheetConfig?.columnMapping || {
   barcode: 'SKU',
@@ -45,7 +50,10 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
   if (settings.appSheetConfig?.columnMapping) {
     setMapping(settings.appSheetConfig.columnMapping);
   }
- }, [settings.appSheetConfig?.columnMapping]);
+  if (settings.appSheetConfig?.inventoryRegistryTableName) {
+    setSelectedSheet(settings.appSheetConfig.inventoryRegistryTableName);
+  }
+ }, [settings.appSheetConfig]);
 
  const handleAutoConfig = async () => {
   if (!urlInput.includes('/exec')) {
@@ -58,20 +66,16 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
   setErrorMode(null);
   setIsConnecting(true);
   try {
-  // Intentamos vincular usando la URL y el ID manual si existe
   const fullConfig = await bootstrapByUrl(urlInput, ssIdInput);
   
-  // Sobrescribimos la tabla de inventario si el usuario la cambió manualmente
   const finalConfig = {
   ...fullConfig,
-  inventoryRegistryTableName: inventoryTableInput || fullConfig.inventoryRegistryTableName,
-  columnMapping: mapping // Preservamos el mapeo actual
+  columnMapping: mapping 
   };
 
   updateSetting('appSheetConfig', finalConfig);
   SoundFX.play('success');
   
-  // Intentar guardar la URL en la nube (Tabla CONFIG_SISTEMA)
   try {
     const { saveGasUrlToCloud } = await import('../../../services/gasService');
     await saveGasUrlToCloud(urlInput, finalConfig.spreadsheetId);
@@ -93,40 +97,44 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
  }
  };
 
+ const handleDiscoverStructure = async () => {
+  if (!urlInput || !ssIdInput) {
+    setErrorMessage("Se requiere URL e ID de Spreadsheet para explorar.");
+    setErrorMode('GENERAL');
+    return;
+  }
+
+  setIsDiscovering(true);
+  setErrorMode(null);
+  try {
+    const data = await fetchSpreadsheetMetadata(ssIdInput);
+    setMetadata(data);
+    SoundFX.play('success');
+    setShowMapping(true);
+  } catch (e: any) {
+    setErrorMessage(e.message);
+    setErrorMode('GENERAL');
+    SoundFX.play('error');
+  } finally {
+    setIsDiscovering(false);
+  }
+ };
+
  const handleSaveMapping = () => {
   updateSetting('appSheetConfig', {
     ...settings.appSheetConfig,
+    inventoryRegistryTableName: selectedSheet,
     columnMapping: mapping
   });
   SoundFX.play('success');
-  alert("Mapeo de columnas actualizado correctamente.");
+  alert("Estructura de datos actualizada correctamente.");
  };
 
  const updateMappingField = (key: keyof ColumnMapping, value: string) => {
   setMapping(prev => ({ ...prev, [key]: value }));
  };
 
- const handleScanQR = (code: string) => {
- try {
- const data = JSON.parse(code);
- if (data.gasUrl) {
- setUrlInput(data.gasUrl);
- if (data.ssId) setSsIdInput(data.ssId);
- if (data.invTable) setInventoryTableInput(data.invTable);
- setIsScanning(false);
- SoundFX.play('success');
- } else {
- throw new Error("Formato QR inválido");
- }
- } catch (e) {
- setErrorMessage("El código QR no contiene una configuración válida.");
- setErrorMode('GENERAL');
- SoundFX.play('error');
- setIsScanning(false);
- }
- };
-
- const qrData = JSON.stringify({ gasUrl: urlInput, ssId: ssIdInput, invTable: inventoryTableInput });
+ const currentSheetMetadata = metadata?.sheets.find(s => s.sheetName === selectedSheet);
 
  return (
  <div className="space-y-6 animate-in fade-in duration-500">
@@ -159,7 +167,7 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
  />
  </div>
 
- {/* CAMPO 2: ID DEL SPREADSHEET (EL QUE FALTABA) */}
+ {/* CAMPO 2: ID DEL SPREADSHEET */}
  <div className="space-y-1.5">
  <div className="flex justify-between items-center px-1">
  <label className="text-[10px] font-black text-amber-400 uppercase tracking-widest">ID del Spreadsheet (Excel)</label>
@@ -171,43 +179,8 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
  placeholder="Pegue aquí el ID largo de la URL de su Excel"
  className="bg-black/40 border-amber-500/20 text-amber-400 font-mono text-xs"
  />
- <p className="text-[8px] text-slate-500 px-1 italic">
- Si su script es independiente, pegue el ID para evitar el error "AUTO_DETECTED".
- </p>
- </div>
-
- {/* CAMPO 3: TABLA DE REGISTRO DE INVENTARIO (VENCIMIENTOS) */}
- <div className="space-y-1.5">
- <div className="flex justify-between items-center px-1">
- <label className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Tabla Registro Inventario (Vencimientos)</label>
- <span className="text-[8px] font-bold text-slate-500 uppercase">Configurable</span>
- </div>
- <SettingsInput 
- value={inventoryTableInput}
- onChange={(e: any) => setInventoryTableInput(e.target.value)}
- placeholder="REGISTRO_INV"
- className="bg-black/40 border-emerald-500/20 text-emerald-400 font-mono text-xs"
- />
- <p className="text-[8px] text-slate-500 px-1 italic">
- Pestaña donde se guardan los productos con fecha de vencimiento.
- </p>
  </div>
  </div>
-
- {errorMode === 'OAUTH_STALL' && (
- <div className="bg-amber-500/10 border-2 border-amber-500/40 p-5 rounded-[2rem] space-y-3 animate-in shake duration-500">
- <div className="flex items-center gap-3">
- <ShieldAlert className="w-6 h-6 text-amber-500 shrink-0" />
- <p className="text-[11px] text-amber-100 font-black uppercase">Acción Requerida en Google</p>
- </div>
- <p className="text-[10px] text-amber-200/70 leading-relaxed font-bold uppercase">
- Google bloqueó el acceso. 
- 1. Abra su Script en Google.
- 2. Seleccione la función "TRIGGER_PERMISSIONS".
- 3. Presione "Ejecutar" y acepte los permisos.
- </p>
- </div>
- )}
 
  {errorMode === 'GENERAL' && (
  <div className="bg-rose-500/10 border-2 border-rose-500/30 p-4 rounded-2xl flex items-center gap-3">
@@ -216,15 +189,26 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
  </div>
  )}
 
- <SettingsButton 
- onClick={handleAutoConfig}
- isLoading={isConnecting}
- disabled={!urlInput}
- label={isConnecting ? "Sincronizando..." : "Auto-Configurar App"}
- icon={Wifi}
- variant="primary"
- className="bg-indigo-600 border-indigo-400 h-20 text-sm"
- />
+ <div className="grid grid-cols-1 gap-3">
+  <SettingsButton 
+    onClick={handleAutoConfig}
+    isLoading={isConnecting}
+    disabled={!urlInput}
+    label={isConnecting ? "Vinculando..." : "Vincular Sistema"}
+    icon={Wifi}
+    variant="primary"
+    className="bg-indigo-600 border-indigo-400 h-16 text-xs"
+  />
+  <SettingsButton 
+    onClick={handleDiscoverStructure}
+    isLoading={isDiscovering}
+    disabled={!urlInput || !ssIdInput}
+    label={isDiscovering ? "Explorando..." : "Explorar Estructura (Auto-Descubrimiento)"}
+    icon={Search}
+    variant="secondary"
+    className="bg-slate-800 border-emerald-500/30 text-emerald-400 h-16 text-xs"
+  />
+ </div>
 
  <div className="grid grid-cols-2 gap-4">
  <SettingsButton 
@@ -245,149 +229,114 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
  </div>
  </div>
  </SettingsCard>
-
- <div className="bg-blue-900/10 border-2 border-blue-500/20 p-6 rounded-[2.5rem] flex gap-5">
- <Info className="w-8 h-8 text-blue-400 shrink-0" />
- <div className="space-y-2">
- <p className="text-[10px] text-blue-200 font-bold uppercase tracking-wider">¿Dónde obtengo el ID del Excel?</p>
- <p className="text-[9px] text-blue-400/80 leading-relaxed font-medium uppercase">
- Está en la URL de tu navegador cuando tienes el Excel abierto:<br/>
- docs.google.com/spreadsheets/d/<span className="text-white bg-blue-600 px-1 font-black">ESTE_ES_EL_ID</span>/edit
- </p>
- </div>
- </div>
-
  </SettingsSection>
 
- <SettingsSection title="Mapeo de Columnas (Inteligencia de Datos)">
-  <SettingsCard className="bg-slate-900 border-emerald-500/30 text-white">
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="p-4 bg-emerald-600 rounded-[1.5rem] shadow-lg shadow-emerald-900/40">
-            <Settings2 className="w-8 h-8 text-white" />
+ <AnimatePresence>
+ {showMapping && (
+  <motion.div 
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: 20 }}
+    className="space-y-6"
+  >
+    <SettingsSection title="Mapeo Inteligente de Datos">
+      <SettingsCard className="bg-slate-900 border-emerald-500/30 text-white overflow-visible">
+        <div className="space-y-8">
+          <div className="flex items-center gap-4">
+            <div className="p-4 bg-emerald-600 rounded-[1.5rem] shadow-lg shadow-emerald-900/40">
+              <Table className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl font-black uppercase italic tracking-tighter leading-none">Módulo de Eventos</h3>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">Configuración de Pestaña y Columnas</p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-xl font-black uppercase italic tracking-tighter leading-none">Estructura de Datos</h3>
-            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">Mapeo Dinámico de Cabeceras</p>
+
+          {/* SELECCIÓN DE PESTAÑA */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 px-1">
+              <Database className="w-4 h-4 text-emerald-400" />
+              <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Pestaña de Origen (Google Sheet)</label>
+            </div>
+            {metadata ? (
+              <select 
+                value={selectedSheet}
+                onChange={(e) => setSelectedSheet(e.target.value)}
+                className="w-full bg-black/60 border-2 border-white/10 rounded-2xl px-4 py-3 text-xs font-bold text-white focus:border-emerald-500 outline-none transition-all appearance-none cursor-pointer"
+              >
+                <option value="">Seleccione una pestaña...</option>
+                {metadata.sheets.map(s => (
+                  <option key={s.sheetName} value={s.sheetName}>{s.sheetName}</option>
+                ))}
+              </select>
+            ) : (
+              <div className="p-4 bg-black/40 border-2 border-dashed border-white/10 rounded-2xl text-center">
+                <p className="text-[9px] text-slate-500 font-bold uppercase">Use "Explorar Estructura" para listar pestañas</p>
+              </div>
+            )}
           </div>
+
+          {/* MAPEO DE COLUMNAS */}
+          {selectedSheet && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="space-y-6 pt-4 border-t border-white/5"
+            >
+              <div className="flex items-center gap-2 px-1">
+                <Columns className="w-4 h-4 text-amber-400" />
+                <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Mapeo de Cabeceras</label>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                {[
+                  { id: 'barcode', label: 'Código de Barras (SKU)', color: 'emerald' },
+                  { id: 'productName', label: 'Descripción Producto', color: 'emerald' },
+                  { id: 'quantity', label: 'Cantidad', color: 'emerald' },
+                  { id: 'event', label: 'Evento / Tipo', color: 'emerald' },
+                  { id: 'traspaso', label: 'N° Traspaso (Columna L)', color: 'amber' },
+                  { id: 'destino', label: 'Destino', color: 'emerald' },
+                  { id: 'observaciones', label: 'Observaciones', color: 'emerald' },
+                  { id: 'isAdjusted', label: 'Flag Ajustado', color: 'emerald' },
+                  { id: 'mm', label: 'Mes (MM)', color: 'slate' },
+                  { id: 'yyyy', label: 'Año (YYYY)', color: 'slate' },
+                ].map((field) => (
+                  <div key={field.id} className="space-y-2">
+                    <div className="flex justify-between items-center px-1">
+                      <label className={`text-[9px] font-black text-${field.color}-400 uppercase tracking-widest`}>{field.label}</label>
+                      {currentSheetMetadata?.headers.includes(mapping[field.id as keyof ColumnMapping] || '') && (
+                        <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                      )}
+                    </div>
+                    <select 
+                      value={mapping[field.id as keyof ColumnMapping] || ''}
+                      onChange={(e) => updateMappingField(field.id as keyof ColumnMapping, e.target.value)}
+                      className="w-full bg-black/40 border border-white/5 rounded-xl px-3 py-2 text-[11px] font-mono text-white focus:border-emerald-500 outline-none transition-all"
+                    >
+                      <option value="">-- Sin asignar --</option>
+                      {currentSheetMetadata?.headers.map(h => (
+                        <option key={h} value={h}>{h}</option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+              </div>
+
+              <SettingsButton 
+                onClick={handleSaveMapping}
+                label="Guardar Configuración de Datos"
+                icon={Save}
+                variant="primary"
+                className="bg-emerald-600 border-emerald-400 h-16 text-xs mt-4"
+              />
+            </motion.div>
+          )}
         </div>
-        <button 
-          onClick={() => setShowMapping(!showMapping)}
-          className="text-[10px] font-black text-emerald-400 uppercase tracking-widest hover:underline"
-        >
-          {showMapping ? 'Ocultar' : 'Configurar'}
-        </button>
-      </div>
-
-      {showMapping && (
-        <div className="space-y-6 animate-in slide-in-from-top-4 duration-300">
-          <p className="text-[10px] text-slate-400 font-bold uppercase leading-relaxed">
-            Define el nombre exacto de las cabeceras en tu Google Sheet para que la App pueda leer los datos correctamente.
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-            {/* SKU / BARCODE */}
-            <div className="space-y-1.5">
-              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1">Código de Barras (SKU)</label>
-              <SettingsInput 
-                value={mapping.barcode}
-                onChange={(e: any) => updateMappingField('barcode', e.target.value)}
-                placeholder="SKU"
-                className="bg-black/40 border-white/5 text-emerald-400 font-mono text-xs h-10"
-              />
-            </div>
-
-            {/* PRODUCT NAME */}
-            <div className="space-y-1.5">
-              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1">Descripción Producto</label>
-              <SettingsInput 
-                value={mapping.productName}
-                onChange={(e: any) => updateMappingField('productName', e.target.value)}
-                placeholder="DESCRIPTOR"
-                className="bg-black/40 border-white/5 text-emerald-400 font-mono text-xs h-10"
-              />
-            </div>
-
-            {/* QUANTITY */}
-            <div className="space-y-1.5">
-              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1">Cantidad</label>
-              <SettingsInput 
-                value={mapping.quantity}
-                onChange={(e: any) => updateMappingField('quantity', e.target.value)}
-                placeholder="CANTIDAD"
-                className="bg-black/40 border-white/5 text-emerald-400 font-mono text-xs h-10"
-              />
-            </div>
-
-            {/* EVENT */}
-            <div className="space-y-1.5">
-              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1">Evento / Tipo</label>
-              <SettingsInput 
-                value={mapping.event}
-                onChange={(e: any) => updateMappingField('event', e.target.value)}
-                placeholder="EVENTO"
-                className="bg-black/40 border-white/5 text-emerald-400 font-mono text-xs h-10"
-              />
-            </div>
-
-            {/* TRASPASO (COLUMNA L) */}
-            <div className="space-y-1.5">
-              <label className="text-[9px] font-black text-amber-400 uppercase tracking-widest px-1">N° Traspaso (Columna L)</label>
-              <SettingsInput 
-                value={mapping.traspaso}
-                onChange={(e: any) => updateMappingField('traspaso', e.target.value)}
-                placeholder="DOC-TRAS-INTER"
-                className="bg-black/40 border-amber-500/20 text-amber-400 font-mono text-xs h-10"
-              />
-            </div>
-
-            {/* DESTINO */}
-            <div className="space-y-1.5">
-              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1">Destino</label>
-              <SettingsInput 
-                value={mapping.destino}
-                onChange={(e: any) => updateMappingField('destino', e.target.value)}
-                placeholder="DESTINO"
-                className="bg-black/40 border-white/5 text-emerald-400 font-mono text-xs h-10"
-              />
-            </div>
-
-            {/* OBSERVACIONES */}
-            <div className="space-y-1.5">
-              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1">Observaciones</label>
-              <SettingsInput 
-                value={mapping.observaciones}
-                onChange={(e: any) => updateMappingField('observaciones', e.target.value)}
-                placeholder="OBSERVACIONES"
-                className="bg-black/40 border-white/5 text-emerald-400 font-mono text-xs h-10"
-              />
-            </div>
-
-            {/* AJUSTADO */}
-            <div className="space-y-1.5">
-              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1">Flag Ajustado</label>
-              <SettingsInput 
-                value={mapping.isAdjusted}
-                onChange={(e: any) => updateMappingField('isAdjusted', e.target.value)}
-                placeholder="AJUSTADO"
-                className="bg-black/40 border-white/5 text-emerald-400 font-mono text-xs h-10"
-              />
-            </div>
-          </div>
-
-          <SettingsButton 
-            onClick={handleSaveMapping}
-            label="Guardar Mapeo de Columnas"
-            icon={Save}
-            variant="primary"
-            className="bg-emerald-600 border-emerald-400 h-14 text-xs mt-4"
-          />
-        </div>
-      )}
-    </div>
-  </SettingsCard>
- </SettingsSection>
+      </SettingsCard>
+    </SettingsSection>
+  </motion.div>
+ )}
+ </AnimatePresence>
 
  {/* MODAL QR EXPORT */}
  {showQR && (
@@ -436,15 +385,6 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
  inline={true}
  isTriggered={true}
  />
- <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
- <div className="w-[70%] aspect-square border-2 border-white/20 rounded-3xl relative">
- <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-indigo-500 rounded-tl-xl -mt-1 -ml-1"></div>
- <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-indigo-500 rounded-tr-xl -mt-1 -mr-1"></div>
- <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-indigo-500 rounded-bl-xl -mb-1 -ml-1"></div>
- <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-indigo-500 rounded-br-xl -mb-1 -mr-1"></div>
- <div className="absolute top-1/2 left-2 right-2 h-[2px] bg-indigo-500/80 shadow-[0_0_8px_rgba(99,102,241,0.8)] animate-pulse"></div>
- </div>
- </div>
  </div>
  
  <div className="h-32 bg-slate-900 rounded-t-[2.5rem] -mt-8 relative z-10 flex flex-col items-center justify-center px-6 shadow-[0_-10px_40_rgba(0,0,0,0.5)] border-t border-white/5">

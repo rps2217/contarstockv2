@@ -220,6 +220,16 @@ export interface ColumnMapping {
   destino: string;
   observaciones: string;
   isAdjusted: string;
+  timestamp?: string;
+}
+
+export interface TableMetadata {
+  sheetName: string;
+  headers: string[];
+}
+
+export interface SpreadsheetMetadata {
+  sheets: TableMetadata[];
 }
 
 export interface AppSheetConfig {
