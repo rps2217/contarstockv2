@@ -225,6 +225,7 @@ export const importProductsFromAppSheet = async (): Promise<number> => {
 export const importExpirationsFromCloud = async (): Promise<number> => {
   try {
     const config = getSettings().appSheetConfig;
+    const mapping = config?.columnMapping;
     const tableName = config?.inventoryRegistryTableName || "REGISTRO_INV";
     
     const response = await cloudApi.fetchTable(tableName);
@@ -234,16 +235,33 @@ export const importExpirationsFromCloud = async (): Promise<number> => {
 
     const expirations = rawRows
       .filter((row: any) => {
-        const evento = String(row['EVENTO'] || '').toUpperCase();
-        const mm = row[SHEET_COLUMNS.MONTH] || row['MES'] || row['MONTH'];
-        const yyyy = row[SHEET_COLUMNS.YEAR] || row['AÑO'] || row['YEAR'];
+        const eventKey = mapping?.event || 'EVENTO';
+        const mmKey = mapping?.mm || 'MM';
+        const yyyyKey = mapping?.yyyy || 'YYYY';
+
+        const evento = String(row[eventKey] || row['EVENTO'] || '').toUpperCase();
+        const mm = row[mmKey] || row[SHEET_COLUMNS.MONTH] || row['MES'] || row['MONTH'];
+        const yyyy = row[yyyyKey] || row[SHEET_COLUMNS.YEAR] || row['AÑO'] || row['YEAR'];
         // Ahora permitimos cualquier evento, o si no tiene evento pero tiene mm y yyyy
         return evento || (mm && yyyy);
       })
       .map((row: any) => {
-        const mm = row[SHEET_COLUMNS.MONTH] || row['MES'] || row['MONTH'];
-        const yyyy = row[SHEET_COLUMNS.YEAR] || row['AÑO'] || row['YEAR'];
-        const barcode = normalizeSku(String(row['SKU'] || row['COD_BARRAS'] || row['COD PRODUCTO'] || ''));
+        const mmKey = mapping?.mm || 'MM';
+        const yyyyKey = mapping?.yyyy || 'YYYY';
+        const barcodeKey = mapping?.barcode || 'SKU';
+        const traspasoKey = mapping?.traspaso || 'TRASPASO';
+        const destinoKey = mapping?.destino || 'DESTINO';
+        const obsKey = mapping?.observaciones || 'OBSERVACIONES';
+        const eventKey = mapping?.event || 'EVENTO';
+        const qtyKey = mapping?.quantity || 'CANTIDAD';
+        const locKey = mapping?.location || 'BOD.';
+        const frcKey = mapping?.frc || 'FRC';
+        const erpKey = mapping?.erp || 'ERP';
+        const adjKey = mapping?.isAdjusted || 'AJUSTADO';
+
+        const mm = row[mmKey] || row[SHEET_COLUMNS.MONTH] || row['MES'] || row['MONTH'];
+        const yyyy = row[yyyyKey] || row[SHEET_COLUMNS.YEAR] || row['AÑO'] || row['YEAR'];
+        const barcode = normalizeSku(String(row[barcodeKey] || row['SKU'] || row['COD_BARRAS'] || row['COD PRODUCTO'] || ''));
         
         let claveUnica = row['CLAVE_UNICA'] || row['CLAVE'];
         if (!claveUnica && barcode) {
@@ -258,9 +276,14 @@ export const importExpirationsFromCloud = async (): Promise<number> => {
           }
         }
 
-        const ajustadoKey = Object.keys(row).find(key => key.toUpperCase() === 'AJUSTADO');
+        const traspaso = String(row[traspasoKey] || row['TRASPASO'] || row['TRANSFER'] || row['N_TRASPASO'] || row['DOC-TRAS-INTER'] || '');
+        const destino = String(row[destinoKey] || row['DESTINO'] || row['DESTINATION'] || '');
+        const observaciones = String(row[obsKey] || row['OBSERVACIONES'] || row['OBSERVATION'] || row['NOTAS'] || '');
+
+        const ajustadoKey = Object.keys(row).find(key => key.toUpperCase() === (adjKey?.toUpperCase() || 'AJUSTADO'));
         const ajustadoStr = ajustadoKey ? String(row[ajustadoKey] || '').toLowerCase().trim() : '';
-        const isAdjusted = ['sí', 'si', 'yes', 'true', '1'].includes(ajustadoStr);
+        // Un registro se considera ajustado si tiene el flag 'AJUSTADO' o si ya tiene un número de TRASPASO (Columna L)
+        const isAdjusted = ['sí', 'si', 'yes', 'true', '1'].includes(ajustadoStr) || (traspaso && traspaso.trim() !== '');
 
         const rawTimestamp = row['TIMESTAMP'] || row['FECHA_INGRESO'] || row['FECHA DE INGRESO'] || row['FECHA'] || row['FECHA CREACION'] || row['CREATED_AT'];
         let parsedTimestamp = Date.now();
@@ -269,24 +292,27 @@ export const importExpirationsFromCloud = async (): Promise<number> => {
           if (!isNaN(parsed)) parsedTimestamp = parsed;
         }
 
-        const frc = String(row['FRC'] || row['INCIDENT'] || row['RFC'] || row['FOLIO'] || row['INCIDENCIA'] || '');
-        const erp = String(row['ERP'] || row['PEDIDO'] || row['ORDEN'] || row['ORDEN_ERP'] || '');
+        const frc = String(row[frcKey] || row['FRC'] || row['INCIDENT'] || row['RFC'] || row['FOLIO'] || row['INCIDENCIA'] || '');
+        const erp = String(row[erpKey] || row['ERP'] || row['PEDIDO'] || row['ORDEN'] || row['ORDEN_ERP'] || '');
 
         return {
           id: row['ID_REGISTRO'] || row['ID'] || crypto.randomUUID(),
           barcode,
-          productName: String(row['DESCRIPTOR'] || row['DESCRIPCION_PROD'] || row['DESCRIPCION'] || ''),
+          productName: String(row[mapping?.productName || 'DESCRIPTOR'] || row['DESCRIPTOR'] || row['DESCRIPCION_PROD'] || row['DESCRIPCION'] || ''),
           mm: parseInt(mm, 10) || 0,
           yyyy: parseInt(yyyy, 10) || 0,
-          event: String(row['EVENTO'] || ''),
-          quantity: parseFloat(row['CANTIDAD'] || row['QUANTITY']) || 0,
-          location: String(row['BOD.'] || row['ETIQUETAS'] || ''),
+          event: String(row[eventKey] || row['EVENTO'] || ''),
+          quantity: parseFloat(row[qtyKey] || row['CANTIDAD'] || row['QUANTITY']) || 0,
+          location: String(row[locKey] || row['BOD.'] || row['ETIQUETAS'] || ''),
           fechaIngreso: String(row['FECHA_INGRESO'] || row['FECHA DE INGRESO'] || ''),
           timestamp: parsedTimestamp,
           claveUnica,
           isAdjusted,
           frc,
           erp,
+          destino,
+          traspaso,
+          observaciones,
           syncStatus: 'synced'
         };
       })

@@ -27,7 +27,22 @@ const DEFAULT_SETTINGS: AppSettings = {
  productsTableName: 'PRODUCTOS',
  receptionTableName: 'RECEPCION_BULTOS',
  ordersTableName: 'PEDIDOS',
- providersTableName: 'PROVEEDORES'
+ providersTableName: 'PROVEEDORES',
+ columnMapping: {
+ barcode: 'SKU',
+ productName: 'DESCRIPTOR',
+ quantity: 'CANTIDAD',
+ event: 'EVENTO',
+ mm: 'MM',
+ yyyy: 'YYYY',
+ location: 'BOD.',
+ frc: 'FRC',
+ erp: 'ERP',
+ traspaso: 'DOC-TRAS-INTER',
+ destino: 'DESTINO',
+ observaciones: 'OBSERVACIONES',
+ isAdjusted: 'AJUSTADO'
+ }
  },
  mobileNavConfig: ['dashboard', 'reports', 'sync', 'database'],
  thermalPrinter: {

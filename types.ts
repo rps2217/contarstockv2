@@ -206,6 +206,22 @@ export interface AppSettings {
  };
 }
 
+export interface ColumnMapping {
+  barcode: string;
+  productName: string;
+  quantity: string;
+  event: string;
+  mm: string;
+  yyyy: string;
+  location: string;
+  frc: string;
+  erp: string;
+  traspaso: string;
+  destino: string;
+  observaciones: string;
+  isAdjusted: string;
+}
+
 export interface AppSheetConfig {
   appId: string;
   accessKey: string;
@@ -218,4 +234,5 @@ export interface AppSheetConfig {
   providersTableName?: string;
   gasWebAppUrl?: string; 
   spreadsheetId?: string;
+  columnMapping?: ColumnMapping;
 }

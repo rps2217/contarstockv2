@@ -1,8 +1,8 @@
 
-import React, { useState } from 'react';
-import { Wifi, AlertCircle, Info, Link, ShieldAlert, Database, QrCode, Camera, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Wifi, AlertCircle, Info, Link, ShieldAlert, Database, QrCode, Camera, X, Settings2, Save } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { AppSettings } from '../../../types';
+import { AppSettings, ColumnMapping } from '../../../types';
 import { SettingsSection, SettingsCard, SettingsButton, SettingsInput } from './common/SettingsElements';
 import { bootstrapByUrl } from '../../../services/gasService';
 import { SoundFX } from '../../../services/audio';
@@ -22,6 +22,30 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
  const [errorMessage, setErrorMessage] = useState('');
  const [showQR, setShowQR] = useState(false);
  const [isScanning, setIsScanning] = useState(false);
+ const [showMapping, setShowMapping] = useState(false);
+
+ const [mapping, setMapping] = useState<ColumnMapping>(settings.appSheetConfig?.columnMapping || {
+  barcode: 'SKU',
+  productName: 'DESCRIPTOR',
+  quantity: 'CANTIDAD',
+  event: 'EVENTO',
+  mm: 'MM',
+  yyyy: 'YYYY',
+  location: 'BOD.',
+  frc: 'FRC',
+  erp: 'ERP',
+  traspaso: 'DOC-TRAS-INTER',
+  destino: 'DESTINO',
+  observaciones: 'OBSERVACIONES',
+  isAdjusted: 'AJUSTADO'
+ });
+
+ // Sincronizar estado local si cambian los settings externos
+ useEffect(() => {
+  if (settings.appSheetConfig?.columnMapping) {
+    setMapping(settings.appSheetConfig.columnMapping);
+  }
+ }, [settings.appSheetConfig?.columnMapping]);
 
  const handleAutoConfig = async () => {
   if (!urlInput.includes('/exec')) {
@@ -40,7 +64,8 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
   // Sobrescribimos la tabla de inventario si el usuario la cambió manualmente
   const finalConfig = {
   ...fullConfig,
-  inventoryRegistryTableName: inventoryTableInput || fullConfig.inventoryRegistryTableName
+  inventoryRegistryTableName: inventoryTableInput || fullConfig.inventoryRegistryTableName,
+  columnMapping: mapping // Preservamos el mapeo actual
   };
 
   updateSetting('appSheetConfig', finalConfig);
@@ -66,6 +91,19 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
  } finally {
  setIsConnecting(false);
  }
+ };
+
+ const handleSaveMapping = () => {
+  updateSetting('appSheetConfig', {
+    ...settings.appSheetConfig,
+    columnMapping: mapping
+  });
+  SoundFX.play('success');
+  alert("Mapeo de columnas actualizado correctamente.");
+ };
+
+ const updateMappingField = (key: keyof ColumnMapping, value: string) => {
+  setMapping(prev => ({ ...prev, [key]: value }));
  };
 
  const handleScanQR = (code: string) => {
@@ -221,6 +259,136 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
 
  </SettingsSection>
 
+ <SettingsSection title="Mapeo de Columnas (Inteligencia de Datos)">
+  <SettingsCard className="bg-slate-900 border-emerald-500/30 text-white">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="p-4 bg-emerald-600 rounded-[1.5rem] shadow-lg shadow-emerald-900/40">
+            <Settings2 className="w-8 h-8 text-white" />
+          </div>
+          <div>
+            <h3 className="text-xl font-black uppercase italic tracking-tighter leading-none">Estructura de Datos</h3>
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">Mapeo Dinámico de Cabeceras</p>
+          </div>
+        </div>
+        <button 
+          onClick={() => setShowMapping(!showMapping)}
+          className="text-[10px] font-black text-emerald-400 uppercase tracking-widest hover:underline"
+        >
+          {showMapping ? 'Ocultar' : 'Configurar'}
+        </button>
+      </div>
+
+      {showMapping && (
+        <div className="space-y-6 animate-in slide-in-from-top-4 duration-300">
+          <p className="text-[10px] text-slate-400 font-bold uppercase leading-relaxed">
+            Define el nombre exacto de las cabeceras en tu Google Sheet para que la App pueda leer los datos correctamente.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+            {/* SKU / BARCODE */}
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1">Código de Barras (SKU)</label>
+              <SettingsInput 
+                value={mapping.barcode}
+                onChange={(e: any) => updateMappingField('barcode', e.target.value)}
+                placeholder="SKU"
+                className="bg-black/40 border-white/5 text-emerald-400 font-mono text-xs h-10"
+              />
+            </div>
+
+            {/* PRODUCT NAME */}
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1">Descripción Producto</label>
+              <SettingsInput 
+                value={mapping.productName}
+                onChange={(e: any) => updateMappingField('productName', e.target.value)}
+                placeholder="DESCRIPTOR"
+                className="bg-black/40 border-white/5 text-emerald-400 font-mono text-xs h-10"
+              />
+            </div>
+
+            {/* QUANTITY */}
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1">Cantidad</label>
+              <SettingsInput 
+                value={mapping.quantity}
+                onChange={(e: any) => updateMappingField('quantity', e.target.value)}
+                placeholder="CANTIDAD"
+                className="bg-black/40 border-white/5 text-emerald-400 font-mono text-xs h-10"
+              />
+            </div>
+
+            {/* EVENT */}
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1">Evento / Tipo</label>
+              <SettingsInput 
+                value={mapping.event}
+                onChange={(e: any) => updateMappingField('event', e.target.value)}
+                placeholder="EVENTO"
+                className="bg-black/40 border-white/5 text-emerald-400 font-mono text-xs h-10"
+              />
+            </div>
+
+            {/* TRASPASO (COLUMNA L) */}
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-black text-amber-400 uppercase tracking-widest px-1">N° Traspaso (Columna L)</label>
+              <SettingsInput 
+                value={mapping.traspaso}
+                onChange={(e: any) => updateMappingField('traspaso', e.target.value)}
+                placeholder="DOC-TRAS-INTER"
+                className="bg-black/40 border-amber-500/20 text-amber-400 font-mono text-xs h-10"
+              />
+            </div>
+
+            {/* DESTINO */}
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1">Destino</label>
+              <SettingsInput 
+                value={mapping.destino}
+                onChange={(e: any) => updateMappingField('destino', e.target.value)}
+                placeholder="DESTINO"
+                className="bg-black/40 border-white/5 text-emerald-400 font-mono text-xs h-10"
+              />
+            </div>
+
+            {/* OBSERVACIONES */}
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1">Observaciones</label>
+              <SettingsInput 
+                value={mapping.observaciones}
+                onChange={(e: any) => updateMappingField('observaciones', e.target.value)}
+                placeholder="OBSERVACIONES"
+                className="bg-black/40 border-white/5 text-emerald-400 font-mono text-xs h-10"
+              />
+            </div>
+
+            {/* AJUSTADO */}
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1">Flag Ajustado</label>
+              <SettingsInput 
+                value={mapping.isAdjusted}
+                onChange={(e: any) => updateMappingField('isAdjusted', e.target.value)}
+                placeholder="AJUSTADO"
+                className="bg-black/40 border-white/5 text-emerald-400 font-mono text-xs h-10"
+              />
+            </div>
+          </div>
+
+          <SettingsButton 
+            onClick={handleSaveMapping}
+            label="Guardar Mapeo de Columnas"
+            icon={Save}
+            variant="primary"
+            className="bg-emerald-600 border-emerald-400 h-14 text-xs mt-4"
+          />
+        </div>
+      )}
+    </div>
+  </SettingsCard>
+ </SettingsSection>
+
  {/* MODAL QR EXPORT */}
  {showQR && (
  <div className="fixed inset-0 z-[200] bg-black/90 flex items-center justify-center p-6 animate-in fade-in duration-200">
@@ -279,7 +447,7 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
  </div>
  </div>
  
- <div className="h-32 bg-slate-900 rounded-t-[2.5rem] -mt-8 relative z-10 flex flex-col items-center justify-center px-6 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-white/5">
+ <div className="h-32 bg-slate-900 rounded-t-[2.5rem] -mt-8 relative z-10 flex flex-col items-center justify-center px-6 shadow-[0_-10px_40_rgba(0,0,0,0.5)] border-t border-white/5">
  <QrCode className="w-8 h-8 text-indigo-400 mb-2" />
  <p className="text-xs font-bold text-white uppercase tracking-widest">Escanea el código QR</p>
  <p className="text-[10px] text-slate-500 uppercase mt-1">Para importar la configuración</p>
