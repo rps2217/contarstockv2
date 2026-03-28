@@ -115,10 +115,14 @@ export const cloudApi = {
  },
 
  async appendRows(tableName: string, rows: any[]) {
- return this.post('append_rows', { tableName, rows }, rows.length > 20);
+  return this.post('append_rows', { tableName, rows }, rows.length > 20);
  },
 
  async upsertRows(tableName: string, rows: any[]) {
- return this.post('upsert_rows', { tableName, rows }, rows.length > 20);
+  return this.post('upsert_rows', { tableName, rows }, rows.length > 20);
+ },
+
+ async getSummary(tableName: string, filterColumn?: string, filterValue?: string) {
+  return this.post('get_summary', { tableName, filterColumn, filterValue });
  }
 };

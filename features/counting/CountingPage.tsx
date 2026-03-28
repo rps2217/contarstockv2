@@ -5,7 +5,6 @@ import { useCountingLogic } from './hooks/useCountingLogic';
 import { CountingCameraView } from './components/CountingCameraView';
 import { ScannerToolsSheet } from './components/ScannerToolsSheet';
 import { ScreenLockOverlay } from '../../shared/components/ui/ScreenLockOverlay';
-import { ExpirationModal } from '../expiry/components/ExpirationModal';
 import { Loader2 } from 'lucide-react';
 import { useAutoLock } from '../../hooks/useAutoLock';
 import { useHIDScanner } from '../../hooks/useHIDScanner';
@@ -93,13 +92,7 @@ export const CountingPage: React.FC = () => {
  currentLocation={state.currentLocation} onSelect={(loc) => { actions.setCurrentLocation(loc); setIsLocationModalOpen(false); }}
  />
 
- {state.status === 'awaiting_pharma' && state.activeBarcode && (
- <ExpirationModal 
- productName={state.activeProduct?.name || state.activeBarcode} 
- onComplete={actions.handlePharmaComplete} 
- onCancel={actions.cancelPharma}
- />
- )}
+
  
  <ScreenLockOverlay isLocked={isLocked} onUnlock={unlock} />
  </div>

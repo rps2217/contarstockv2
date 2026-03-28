@@ -202,6 +202,8 @@ export interface AppSettings {
 }
 
 export interface ExpiryMapping {
+  id?: string;
+  uniqueKey?: string;
   barcode: string;
   productName: string;
   quantity: string;
@@ -228,6 +230,8 @@ export interface ProductMapping {
 }
 
 export interface CountMapping {
+  id?: string;
+  uniqueKey?: string;
   barcode: string;
   quantity: string;
   timestamp: string;

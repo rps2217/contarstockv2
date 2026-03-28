@@ -6,6 +6,10 @@ export class ScanRepository {
     return await db.scans.where('sessionId').equals(sessionId).toArray();
   }
 
+  static async getAll(): Promise<ScanRecord[]> {
+    return await db.scans.toArray();
+  }
+
   static async add(scan: ScanRecord): Promise<void> {
     await db.scans.add(scan);
   }

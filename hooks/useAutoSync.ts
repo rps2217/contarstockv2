@@ -95,6 +95,14 @@ export const useAutoSync = () => {
 
     window.addEventListener('online', handleOnline);
     
+    // Sincronización periódica cada 5 minutos
+    const intervalId = setInterval(() => {
+      if (navigator.onLine) {
+        console.log('[AutoSync] Disparando sincronización periódica...');
+        triggerSync();
+      }
+    }, 5 * 60 * 1000);
+    
     // Initial check
     if (navigator.onLine) {
       triggerSync();
@@ -102,6 +110,7 @@ export const useAutoSync = () => {
 
     return () => {
       window.removeEventListener('online', handleOnline);
+      clearInterval(intervalId);
     };
   }, []);
 };

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Cloud, ChevronLeft, Loader2, ArrowUpCircle, Info, DownloadCloud, Database, RefreshCw } from 'lucide-react';
+import { Cloud, ChevronLeft, Loader2, ArrowUpCircle, Info, DownloadCloud, Database, RefreshCw, ShieldCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSyncManager } from './hooks/useSyncManager';
 import { SyncGroupCard } from './components/SyncGroupCard';
@@ -80,14 +80,24 @@ export const SyncManagerUI: React.FC = () => {
       </div>
 
       <div className="p-6 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-white/5 shrink-0 z-30 pb-safe flex flex-col gap-3">
-        <button 
-          onClick={actions.handleDownloadOrders}
-          disabled={state.isProcessing}
-          className="w-full bg-slate-100 hover:bg-slate-200 disabled:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 dark:disabled:bg-slate-900 disabled:text-slate-400 text-slate-700 dark:text-slate-300 font-black py-4 rounded-2xl shadow-sm flex items-center justify-center gap-3 transition-all active:scale-95 uppercase tracking-[0.1em] text-xs"
-        >
-          {state.isProcessing ? <Loader2 className="animate-spin w-5 h-5"/> : <DownloadCloud className="w-5 h-5" />}
-          Descargar Órdenes Pendientes
-        </button>
+        <div className="grid grid-cols-2 gap-3">
+          <button 
+            onClick={actions.handleDownloadOrders}
+            disabled={state.isProcessing}
+            className="bg-slate-100 hover:bg-slate-200 disabled:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 dark:disabled:bg-slate-900 disabled:text-slate-400 text-slate-700 dark:text-slate-300 font-black py-4 rounded-2xl shadow-sm flex items-center justify-center gap-2 transition-all active:scale-95 uppercase tracking-tight text-[10px]"
+          >
+            {state.isProcessing ? <Loader2 className="animate-spin w-4 h-4"/> : <DownloadCloud className="w-4 h-4" />}
+            Órdenes
+          </button>
+          <button 
+            onClick={actions.handleVerifyIntegrity}
+            disabled={state.isProcessing}
+            className="bg-emerald-50 hover:bg-emerald-100 disabled:bg-slate-50 dark:bg-emerald-900/20 dark:hover:bg-emerald-900/30 dark:disabled:bg-slate-900 disabled:text-slate-400 text-emerald-700 dark:text-emerald-400 font-black py-4 rounded-2xl shadow-sm flex items-center justify-center gap-2 transition-all active:scale-95 uppercase tracking-tight text-[10px]"
+          >
+            {state.isProcessing ? <Loader2 className="animate-spin w-4 h-4"/> : <ShieldCheck className="w-4 h-4" />}
+            Verificar
+          </button>
+        </div>
         <button 
           onClick={actions.handleSyncAll}
           disabled={state.isProcessing || state.uiGroups.length === 0}

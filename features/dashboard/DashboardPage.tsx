@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback, memo } from 'react';
 import { useLocation } from 'react-router-dom';
-import { ScanLine, Radio, Database, Settings, UserCircle, ShieldAlert, RefreshCw, FileText, Box, ArrowRight, Package, CheckCircle2, Cloud, AlertCircle } from 'lucide-react';
+import { ScanLine, Radio, Database, Settings, UserCircle, ShieldAlert, RefreshCw, FileText, Box, ArrowRight, Package, CheckCircle2, Cloud, AlertCircle, Zap } from 'lucide-react';
 import { useDashboard } from './hooks/useDashboard';
 import { Button, Card } from '../../shared/components/ui';
 import { db } from '../../db';
@@ -310,7 +310,7 @@ const Dashboard: React.FC = () => {
         </button>
 
         {/* HERRAMIENTAS */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <Card 
             hoverable
             onClick={() => navigate('/database')}
@@ -319,7 +319,18 @@ const Dashboard: React.FC = () => {
             <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-xl">
               <Database className="w-6 h-6 text-amber-600 dark:text-amber-500" />
             </div>
-            <span className="text-xs font-black uppercase tracking-wider">Catálogo</span>
+            <span className="text-[10px] font-black uppercase tracking-wider">Catálogo</span>
+          </Card>
+
+          <Card 
+            hoverable
+            onClick={() => navigate('/massive/BURST-MODE')}
+            className="flex flex-col items-center justify-center gap-3 p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-2xl"
+          >
+            <div className="bg-rose-50 dark:bg-rose-900/20 p-3 rounded-xl">
+              <Zap className="w-6 h-6 text-rose-600 dark:text-rose-500" />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-wider">Hammer</span>
           </Card>
 
           <Card 
@@ -327,10 +338,10 @@ const Dashboard: React.FC = () => {
             onClick={() => navigate('/sync')}
             className={`flex flex-col items-center justify-center gap-3 p-6 rounded-2xl transition-all ${isSyncNeeded ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-500/50 animate-pulse' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'}`}
           >
-            <div className={`p-3 rounded-xl ${isSyncNeeded ? 'bg-orange-100 dark:bg-orange-500/20' : 'bg-slate-50 dark:bg-slate-800'}`}>
+            <div className={`p-3 rounded-xl ${isSyncNeeded ? 'bg-orange-100 dark:bg-orange-500/20' : 'bg-slate-800'}`}>
               <Radio className={`w-6 h-6 ${isSyncNeeded ? 'text-orange-600 dark:text-orange-500' : 'text-slate-400'}`} />
             </div>
-            <span className="text-xs font-black uppercase tracking-wider">Sincronizar</span>
+            <span className="text-[10px] font-black uppercase tracking-wider">Sync</span>
           </Card>
         </div>
 

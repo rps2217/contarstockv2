@@ -189,31 +189,77 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
         }
 
         if (onProgress) onProgress(`Preparando bulto ${session.logisticsLabel}...`);
-        const unsyncedScans = await db.scans.where('sessionId').equals(session.id).filter(s => s.synced === 0).toArray();
+        
+        // Obtenemos TODOS los escaneos de la sesión para enviar el estado absoluto (idempotencia)
+        const allScans = await db.scans.where('sessionId').equals(session.id).toArray();
+        const unsyncedScans = allScans.filter(s => s.synced === 0);
+        
         if (unsyncedScans.length === 0) {
           await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
           continue;
         }
-        const consolidatedItems = await aggregateScans(unsyncedScans);
+
+        // Agregamos TODOS los escaneos para que el upsert en la nube represente el total real de la sesión
+        const consolidatedItems = await aggregateScans(allScans);
         const fullPayload = createInventoryPayload(session, consolidatedItems, 'manual');
         const targetTable = session.sessionType === 'hammer' 
           ? (config?.countsTableName || "CONTEOS") 
           : (config?.consolidatedTableName || "CONSOLIDADO");
 
         const totalBatches = Math.ceil(fullPayload.length / UPLOAD_BATCH_SIZE);
+        let sessionSuccess = true;
+        const allScanIdsToMark: string[] = unsyncedScans.map(s => s.id);
+
         for (let i = 0; i < totalBatches; i++) {
           const chunk = fullPayload.slice(i * UPLOAD_BATCH_SIZE, (i + 1) * UPLOAD_BATCH_SIZE);
           if (onProgress) onProgress(`Subiendo lote ${i + 1}/${totalBatches}...`);
-          const result = await cloudApi.appendRows(targetTable, chunk);
-          if (result.success) {
-            const chunkBarcodes = new Set(chunk.map((row: any) => row['CODIGO']));
-            const scanIdsToMark = unsyncedScans.filter(s => chunkBarcodes.has(s.barcode)).map(s => s.id);
-            await markScansAsSynced(scanIdsToMark);
-          } else {
+          
+          const result = await cloudApi.upsertRows(targetTable, chunk);
+          
+          if (!result.success) {
+            sessionSuccess = false;
             throw new Error(`Fallo en lote ${i+1}: ${result.error}`);
           }
         }
-        await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
+
+        if (sessionSuccess) {
+          if (onProgress) onProgress(`Verificando integridad en la nube...`);
+          
+          let integrityVerified = false;
+          const maxIntegrityRetries = 3;
+          
+          for (let attempt = 0; attempt < maxIntegrityRetries; attempt++) {
+            if (attempt > 0) {
+              if (onProgress) onProgress(`Reintentando verificación (${attempt}/${maxIntegrityRetries})...`);
+              await new Promise(r => setTimeout(r, 2000)); // Esperar 2s entre reintentos
+            }
+
+            const summary = await cloudApi.getSummary(targetTable, 'ERP', session.erpOrder);
+            
+            if (summary.success) {
+              const relatedSessions = await db.sessions.where('erpOrder').equals(session.erpOrder).toArray();
+              const sessionIds = relatedSessions.map(s => s.id);
+              const allLocalScansForErp = await db.scans.where('sessionId').anyOf(sessionIds).toArray();
+              const expectedTotal = allLocalScansForErp.reduce((acc, s) => acc + (s.quantity || 0), 0);
+              
+              if (summary.totalUnits >= expectedTotal) {
+                if (onProgress) onProgress(`✓ Integridad verificada: ${summary.totalUnits} unidades en nube.`);
+                integrityVerified = true;
+                break;
+              } else if (attempt === maxIntegrityRetries - 1) {
+                throw new Error(`Fallo de integridad: Nube(${summary.totalUnits}) < Local(${expectedTotal}). Los datos no coinciden tras ${maxIntegrityRetries} intentos.`);
+              }
+            } else if (attempt === maxIntegrityRetries - 1) {
+              if (onProgress) onProgress(`⚠️ Error verificando integridad: ${summary.error}. Marcando como éxito por upsert previo.`);
+              integrityVerified = true; // Fallback para no bloquear si el summary falla pero el upsert fue OK
+            }
+          }
+
+          if (integrityVerified) {
+            await markScansAsSynced(allScanIdsToMark);
+            await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
+          }
+        }
       }
     }
     useSyncStore.getState().setLastSyncTime(Date.now());

@@ -79,9 +79,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
         {!isCollapsed && <div className="text-[9px] font-black text-slate-600 uppercase tracking-[0.4em] px-5 mb-6 mt-10">Advanced_Tools</div>}
         <NavItem path="/massive/BURST-MODE" activeKey="massive" label="Modo_Martillo" icon={Zap} />
         <NavItem path="/reception" activeKey="reception" label="Reception" icon={Container} />
-        <NavItem path="/visual-picking" activeKey="visual-picking" label="Visual_Picking" icon={Camera} />
-        <NavItem path="/expiry" activeKey="expiry" label="Expiry_Control" icon={Calendar} />
-        <NavItem path="/events" activeKey="events" label="Event_Control" icon={FileText} />
         
         {settings.schema && Object.keys(settings.schema).length > 0 && (
           <>
