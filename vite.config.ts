@@ -41,6 +41,9 @@ export default defineConfig(({ mode }) => {
  type: 'module',
  },
  includeAssets: ['favicon.ico', 'pwa-icon.svg'],
+ workbox: {
+  globPatterns: ['**/*.{js,css,html,ico,png,svg}']
+ },
  manifest: {
  name: 'LogiCount Pro',
  short_name: 'LogiCount',

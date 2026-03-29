@@ -82,21 +82,28 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
         <NavItem path="/expiry" activeKey="expiry" label="Expiry_Control" icon={Calendar} />
         <NavItem path="/events" activeKey="events" label="Event_Control" icon={AlertCircle} />
         
-        {settings.schema && Object.keys(settings.schema).length > 0 && (
-          <>
-            {!isCollapsed && <div className="text-[9px] font-black text-slate-600 uppercase tracking-[0.4em] px-5 mb-6 mt-10">Dynamic_Tables</div>}
-            {Object.entries(settings.schema).map(([key, schema]) => (
-              <NavItem 
-                key={key} 
-                path={`/dynamic/${key}`} 
-                activeKey={`dynamic/${key}`} 
-                label={schema.tableName} 
-                icon={Database} 
-                badge={dynamicTableStats?.[schema.tableName] || 0}
-              />
-            ))}
-          </>
-        )}
+        {(() => {
+          const schema = settings.schema || settings.appSheetConfig?.schema;
+          if (!schema || Object.keys(schema).length === 0) return null;
+          
+          return (
+            <>
+              {!isCollapsed && <div className="text-[9px] font-black text-slate-600 uppercase tracking-[0.4em] px-5 mb-6 mt-10">Dynamic_Tables</div>}
+              {Object.entries(schema)
+                .filter(([key]) => key !== 'expiry' && key !== 'events')
+                .map(([key, tableSchema]) => (
+                <NavItem 
+                  key={key} 
+                  path={`/dynamic/${key}`} 
+                  activeKey={`dynamic/${key}`} 
+                  label={tableSchema.tableName} 
+                  icon={Database} 
+                  badge={dynamicTableStats?.[tableSchema.tableName] || 0}
+                />
+              ))}
+            </>
+          );
+        })()}
 
         <NavItem path="/sync" activeKey="sync" label="Cloud_Sync" icon={Cloud} badge={pendingCount} />
         <NavItem path="/sync/queue" activeKey="sync/queue" label="Sync_Queue" icon={RefreshCw} />

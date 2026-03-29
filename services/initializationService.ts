@@ -1,126 +1,133 @@
 
-
 import { logger } from './logger';
 import { fetchSystemConfig } from './gasService';
 import { importProductsFromAppSheet } from './syncManager';
 import { getSettings, saveSettings } from './settings';
 import { db } from '../db';
+import { migrationService } from './migrationService';
 
-export type InitStep = 'idle' | 'version_check' | 'config' | 'database' | 'ready' | 'offline' | 'purging';
+export type InitStep = 'idle' | 'version_check' | 'config' | 'database' | 'ready' | 'offline' | 'purging' | 'migrating';
 
 const CURRENT_APP_VERSION = "5.7.8"; // Incremento de versión para forzar limpieza estructural estable
 
 export const InitializationService = {
- /**
- * Gestión de ciclo de vida del Software. 
- * Si la versión cambia, limpia bultos antiguos pero preserva el catálogo si es posible.
- */
- runMaintenance: async (onStep: (step: InitStep) => void): Promise<boolean> => {
- const storedVersion = localStorage.getItem('logicount_app_version');
- 
- if (storedVersion !== CURRENT_APP_VERSION) {
- onStep('purging');
- try {
- // 1. Limpieza de Caché de Aplicación (PWA)
- if ('caches' in window) {
- const keys = await caches.keys();
- await Promise.all(keys.map(key => caches.delete(key)));
- }
+  /**
+  * Gestión de ciclo de vida del Software. 
+  * Si la versión cambia, limpia bultos antiguos pero preserva el catálogo si es posible.
+  */
+  runMaintenance: async (onStep: (step: InitStep) => void): Promise<boolean> => {
+    const storedVersion = localStorage.getItem('logicount_app_version');
+    
+    if (storedVersion !== CURRENT_APP_VERSION) {
+      onStep('purging');
+      try {
+        // 1. Limpieza de Caché de Aplicación (PWA)
+        if ('caches' in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map(key => caches.delete(key)));
+        }
 
- // 2. Desregistrar SWs para asegurar que el nuevo Kernel tome el control
- if ('serviceWorker' in navigator) {
- const regs = await navigator.serviceWorker.getRegistrations();
- for (const reg of regs) await reg.unregister();
- }
+        // 2. Desregistrar SWs para asegurar que el nuevo Kernel tome el control
+        if ('serviceWorker' in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          for (const reg of regs) await reg.unregister();
+        }
 
- // 3. Reset de estado operativo (Preservando Identidad)
- const auth = localStorage.getItem('logicount_auth');
- const opId = localStorage.getItem('logicount_operator_id');
- const sets = localStorage.getItem('logicount_settings');
- 
- localStorage.clear();
- 
- if (auth) localStorage.setItem('logicount_auth', auth);
- if (opId) localStorage.setItem('logicount_operator_id', opId);
- if (sets) localStorage.setItem('logicount_settings', sets);
- 
- localStorage.setItem('logicount_app_version', CURRENT_APP_VERSION);
- 
- // Forzar recarga limpia para aplicar esquema Dexie v23
- window.location.reload();
- return true;
- } catch (e) {
- localStorage.setItem('logicount_app_version', CURRENT_APP_VERSION);
- return false;
- }
- }
- return false;
- },
+        // 3. Reset de estado operativo (Preservando Identidad)
+        const auth = localStorage.getItem('logicount_auth');
+        const opId = localStorage.getItem('logicount_operator_id');
+        const sets = localStorage.getItem('logicount_settings');
+        
+        localStorage.clear();
+        
+        if (auth) localStorage.setItem('logicount_auth', auth);
+        if (opId) localStorage.setItem('logicount_operator_id', opId);
+        if (sets) localStorage.setItem('logicount_settings', sets);
+        
+        localStorage.setItem('logicount_app_version', CURRENT_APP_VERSION);
+        
+        // Forzar recarga limpia para aplicar esquema Dexie v23
+        window.location.reload();
+        return true;
+      } catch (e) {
+        localStorage.setItem('logicount_app_version', CURRENT_APP_VERSION);
+        return false;
+      }
+    }
+    return false;
+  },
 
- /**
- * Secuencia de Arranque Maestra
- */
- run: async (onStep: (step: InitStep) => void): Promise<void> => {
- try {
- onStep('version_check');
- const wasPurged = await InitializationService.runMaintenance(onStep);
- if (wasPurged) return;
+  /**
+  * Secuencia de Arranque Maestra
+  */
+  run: async (onStep: (step: InitStep) => void): Promise<void> => {
+    try {
+      onStep('version_check');
+      const wasPurged = await InitializationService.runMaintenance(onStep);
+      if (wasPurged) return;
 
- // Semáforo de Base de Datos: Esperar a que IndexedDB esté disponible
- let dbReady = false;
- let attempts = 0;
- while (!dbReady && attempts < 5) {
- try {
- // FIX: Added cast to any to resolve property 'open' access on Dexie instance
- await (db as any).open();
- dbReady = true;
- } catch (e) {
- attempts++;
- await new Promise(r => setTimeout(r, 500));
- }
- }
+      // Semáforo de Base de Datos: Esperar a que IndexedDB esté disponible
+      let dbReady = false;
+      let attempts = 0;
+      while (!dbReady && attempts < 5) {
+        try {
+          // FIX: Added cast to any to resolve property 'open' access on Dexie instance
+          await (db as any).open();
+          dbReady = true;
+        } catch (e) {
+          attempts++;
+          await new Promise(r => setTimeout(r, 500));
+        }
+      }
 
- const hasLocalData = (await db.products.count()) > 0;
+      // Ejecutar migración al nuevo motor si hay datos en la tabla antigua
+      const oldDataCount = await db.cloudExpirations.count();
+      if (oldDataCount > 0) {
+        onStep('migrating');
+        await migrationService.migrateCloudExpirationsToDynamic();
+      }
 
- if (hasLocalData) {
- onStep('ready'); 
- if (navigator.onLine) InitializationService.backgroundRefresh();
- return;
- }
+      const hasLocalData = (await db.products.count()) > 0;
 
- if (!navigator.onLine) {
- onStep('offline');
- setTimeout(() => onStep('ready'), 2000);
- return;
- }
+      if (hasLocalData) {
+        onStep('ready'); 
+        if (navigator.onLine) InitializationService.backgroundRefresh();
+        return;
+      }
 
- onStep('config');
- await InitializationService.syncConfig();
- onStep('database');
- await importProductsFromAppSheet();
- onStep('ready');
+      if (!navigator.onLine) {
+        onStep('offline');
+        setTimeout(() => onStep('ready'), 2000);
+        return;
+      }
 
- } catch (error: any) {
- logger.error('INIT_CRITICAL', 'Fallo en secuencia de arranque', error.message);
- onStep('ready'); // Fallback: permitir entrada a la app aunque falle el sync inicial
- }
- },
+      onStep('config');
+      await InitializationService.syncConfig();
+      onStep('database');
+      await importProductsFromAppSheet();
+      onStep('ready');
 
- syncConfig: async () => {
- try {
- const settings = getSettings();
- if (settings.appSheetConfig?.gasWebAppUrl) {
- const newConfig = await fetchSystemConfig();
- const updated = { ...settings, appSheetConfig: { ...settings.appSheetConfig, ...newConfig } };
- await saveSettings(updated);
- }
- } catch (e) {}
- },
+    } catch (error: any) {
+      logger.error('INIT_CRITICAL', 'Fallo en secuencia de arranque', error.message);
+      onStep('ready'); // Fallback: permitir entrada a la app aunque falle el sync inicial
+    }
+  },
 
- backgroundRefresh: async () => {
- try {
- await InitializationService.syncConfig();
- await importProductsFromAppSheet();
- } catch (e) {}
- }
+  syncConfig: async () => {
+    try {
+      const settings = getSettings();
+      if (settings.appSheetConfig?.gasWebAppUrl) {
+        const newConfig = await fetchSystemConfig();
+        const updated = { ...settings, appSheetConfig: { ...settings.appSheetConfig, ...newConfig } };
+        await saveSettings(updated);
+      }
+    } catch (e) {}
+  },
+
+  backgroundRefresh: async () => {
+    try {
+      await InitializationService.syncConfig();
+      await importProductsFromAppSheet();
+    } catch (e) {}
+  }
 };

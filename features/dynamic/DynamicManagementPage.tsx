@@ -27,7 +27,7 @@ export const DynamicManagementPage: React.FC<DynamicManagementPageProps> = ({
   const tableKey = (propTableKey || paramsTableKey) as 'expiry' | 'products' | 'counts' | 'events';
   
   const { settings } = useAppStore();
-  const schema = settings.schema?.[tableKey];
+  const schema = settings.schema?.[tableKey] || settings.appSheetConfig?.schema?.[tableKey];
   const [isAdding, setIsAdding] = React.useState(false);
   const [isEditing, setIsEditing] = React.useState(false);
   const [selectedItem, setSelectedItem] = React.useState<any>(null);

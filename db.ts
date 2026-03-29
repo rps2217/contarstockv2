@@ -31,6 +31,7 @@ export interface CloudExpiration {
   event: string;
   quantity: number;
   location: string;
+  batch?: string;
   timestamp: number;
   claveUnica?: string;
   isAdjusted?: boolean;
