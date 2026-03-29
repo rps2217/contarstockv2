@@ -31,7 +31,7 @@ const Settings = lazyWithRetry(() => import('./features/settings/SettingsPage'))
 const CountingPage = lazyWithRetry(() => import('./features/counting/CountingPage'));
 const HammerPage = lazyWithRetry(() => import('./features/hammer/HammerPage'));
 const DocumentReceptionPage = lazyWithRetry(() => import('./features/documents/DocumentReceptionPage'));
-const VisualPicking = lazyWithRetry(() => import('./features/visualPicking/VisualPickingPage'));
+const VisualPicking = lazyWithRetry(() => import('./features/visual-picking/VisualPickingPage'));
 const ExpiryManagement = lazyWithRetry(() => import('./features/expiry/ExpiryManagementPage'));
 const ExpiryCapturePage = lazyWithRetry(() => import('./features/expiry/ExpiryCapturePage'));
 const EventManagement = lazyWithRetry(() => import('./features/events/EventManagementPage'));
