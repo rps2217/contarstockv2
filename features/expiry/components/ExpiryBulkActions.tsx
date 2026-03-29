@@ -1,0 +1,157 @@
+
+import React from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { CheckSquare, Trash2, Printer, X, Mail } from 'lucide-react';
+import { toast } from 'sonner';
+
+interface ExpiryBulkActionsProps {
+  selectedCount: number;
+  onClearSelection: () => void;
+  onBulkRemove: () => void;
+  onPrintSelected: () => void;
+  onPrintLabels: () => void;
+  onSendEmail: () => void;
+  onSelectAllVisible: () => void;
+  theme?: 'dark' | 'light';
+}
+
+export const ExpiryBulkActions: React.FC<ExpiryBulkActionsProps> = ({
+  selectedCount,
+  onClearSelection,
+  onBulkRemove,
+  onPrintSelected,
+  onPrintLabels,
+  onSendEmail,
+  onSelectAllVisible,
+  theme = 'dark'
+}) => {
+  return (
+    <AnimatePresence>
+      {selectedCount > 0 && (
+        <>
+          {/* Side Menu (Non-blocking) */}
+          <motion.div
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className={`fixed top-0 right-0 h-full w-80 z-[70] shadow-2xl border-l flex flex-col pointer-events-auto ${
+              theme === 'dark' ? 'bg-slate-900 border-white/10' : 'bg-white border-slate-200'
+            }`}
+          >
+            <div className="p-6 flex items-center justify-between border-bottom border-white/5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/40">
+                  <CheckSquare className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className={`text-sm font-black uppercase tracking-tighter italic leading-none ${
+                    theme === 'dark' ? 'text-white' : 'text-slate-900'
+                  }`}>Acciones</h4>
+                  <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest mt-1">{selectedCount} Seleccionados</p>
+                </div>
+              </div>
+              <button
+                onClick={onClearSelection}
+                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
+                  theme === 'dark' ? 'hover:bg-white/10 text-slate-400' : 'hover:bg-slate-100 text-slate-500'
+                }`}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex-1 p-6 space-y-4">
+              <div className={`p-4 rounded-2xl border ${
+                theme === 'dark' ? 'bg-white/5 border-white/5' : 'bg-slate-50 border-slate-100'
+              }`}>
+                <p className={`text-[10px] font-bold uppercase tracking-widest mb-4 ${
+                  theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
+                }`}>Operaciones Disponibles</p>
+                
+                <div className="space-y-2">
+                  <button
+                    onClick={onSelectAllVisible}
+                    className={`w-full px-4 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 transition-all border ${
+                      theme === 'dark' 
+                        ? 'bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-500 border-indigo-500/20' 
+                        : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200 shadow-sm'
+                    }`}
+                  >
+                    <CheckSquare className="w-4 h-4 text-indigo-500" />
+                    Seleccionar Todos los Visibles
+                  </button>
+
+                  <button
+                    onClick={onPrintSelected}
+                    className={`w-full px-4 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 transition-all border ${
+                      theme === 'dark' 
+                        ? 'bg-slate-800 hover:bg-slate-700 text-white border-white/5' 
+                        : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 shadow-sm'
+                    }`}
+                  >
+                    <Printer className="w-4 h-4 text-indigo-500" />
+                    Imprimir Seleccionados
+                  </button>
+
+                  <button
+                    onClick={onPrintLabels}
+                    className={`w-full px-4 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 transition-all border ${
+                      theme === 'dark' 
+                        ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border-amber-500/20' 
+                        : 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200 shadow-sm'
+                    }`}
+                  >
+                    <Printer className="w-4 h-4 text-amber-500" />
+                    Imprimir Etiquetas
+                  </button>
+
+                  <button
+                    onClick={onSendEmail}
+                    className={`w-full px-4 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 transition-all border ${
+                      theme === 'dark' 
+                        ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 border-emerald-500/20' 
+                        : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200 shadow-sm'
+                    }`}
+                  >
+                    <Mail className="w-4 h-4 text-emerald-500" />
+                    Enviar por Correo
+                  </button>
+
+                  <button
+                    onClick={onBulkRemove}
+                    className="w-full bg-rose-500 hover:bg-rose-400 text-white px-4 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 transition-all shadow-lg shadow-rose-500/20"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Retirar Seleccionados
+                  </button>
+                </div>
+              </div>
+
+              <div className={`p-4 rounded-2xl border border-dashed ${
+                theme === 'dark' ? 'border-white/10' : 'border-slate-200'
+              }`}>
+                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest text-center italic">
+                  Próximamente más acciones masivas aquí...
+                </p>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-white/5">
+              <button
+                onClick={onClearSelection}
+                className={`w-full py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
+                  theme === 'dark' 
+                    ? 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10' 
+                    : 'bg-slate-100 border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-200'
+                }`}
+              >
+                Cancelar Selección
+              </button>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+};
