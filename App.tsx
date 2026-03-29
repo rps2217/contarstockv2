@@ -31,10 +31,6 @@ const Settings = lazyWithRetry(() => import('./features/settings/SettingsPage'))
 const CountingPage = lazyWithRetry(() => import('./features/counting/CountingPage'));
 const HammerPage = lazyWithRetry(() => import('./features/hammer/HammerPage'));
 const DocumentReceptionPage = lazyWithRetry(() => import('./features/documents/DocumentReceptionPage'));
-const VisualPicking = lazyWithRetry(() => import('./features/visual-picking-module/VisualPickingPage'));
-const ExpiryManagement = lazyWithRetry(() => import('./features/expiry-feature/ExpiryManagementPage'));
-const ExpiryCapturePage = lazyWithRetry(() => import('./features/expiry-feature/ExpiryCapturePage'));
-const EventManagement = lazyWithRetry(() => import('./features/events-feature/EventManagementPage'));
 const DynamicManagement = lazyWithRetry(() => import('./features/dynamic/DynamicManagementPage').then(m => ({ default: m.DynamicManagementPage })));
 const GlobalSyncQueue = lazyWithRetry(() => import('./features/sync/GlobalSyncQueuePage'));
 
@@ -57,8 +53,6 @@ const AppContent = () => {
   const isScanningMode = location.pathname.startsWith('/counting/') || 
     location.pathname === '/reception' || 
     location.pathname === '/documents' ||
-    location.pathname === '/visual-picking' ||
-    location.pathname === '/expiry/capture' ||
     location.pathname.startsWith('/massive/');
 
   useEffect(() => {
@@ -152,10 +146,8 @@ const AppContent = () => {
                 {/* RUTAS MODULARES DE FEATURES */}
                 <Route path="/reception" element={<ReceptionHub />} />
                 <Route path="/documents" element={<DocumentReceptionPage />} />
-                <Route path="/visual-picking" element={<VisualPicking />} />
-                <Route path="/expiry" element={<ExpiryManagement />} />
-                <Route path="/expiry/capture" element={<ExpiryCapturePage />} />
-                <Route path="/events" element={<EventManagement />} />
+                <Route path="/expiry" element={<DynamicManagement tableKey="expiry" />} />
+                <Route path="/events" element={<DynamicManagement tableKey="events" />} />
                 <Route path="/dynamic/:tableKey" element={<DynamicManagement />} />
                 <Route path="/counting/:id" element={<CountingPage />} />
                 <Route path="/massive/:batchId" element={<HammerPage />} />

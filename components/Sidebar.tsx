@@ -83,7 +83,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
         <NavItem path="/events" activeKey="events" label="Event_Control" icon={AlertCircle} />
         
         {(() => {
-          const schema = settings.schema || settings.appSheetConfig?.schema;
+          const schema = settings.appSheetConfig?.schema || settings.schema;
           if (!schema || Object.keys(schema).length === 0) return null;
           
           return (

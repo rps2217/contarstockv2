@@ -81,10 +81,12 @@ export const InitializationService = {
       }
 
       // Ejecutar migración al nuevo motor si hay datos en la tabla antigua
-      const oldDataCount = await db.cloudExpirations.count();
-      if (oldDataCount > 0) {
-        onStep('migrating');
-        await migrationService.migrateCloudExpirationsToDynamic();
+      if (dbReady) {
+        const oldDataCount = await db.cloudExpirations.count();
+        if (oldDataCount > 0) {
+          onStep('migrating');
+          await migrationService.migrateCloudExpirationsToDynamic();
+        }
       }
 
       const hasLocalData = (await db.products.count()) > 0;
