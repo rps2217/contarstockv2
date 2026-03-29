@@ -1,7 +1,7 @@
 import { AppSettings, TableSchema } from '../types';
 import { db } from '../db';
 
-const DEFAULT_EXPIRY_SCHEMA: TableSchema = {
+export const DEFAULT_EXPIRY_SCHEMA: TableSchema = {
   tableName: 'VENCIMIENTOS',
   columns: {
     barcode: { col: 'SKU', label: 'Código de Barras', type: 'barcode', required: true },
