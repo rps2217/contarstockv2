@@ -4,8 +4,7 @@ import { db } from '../db';
 export const DEFAULT_EXPIRY_SCHEMA: TableSchema = {
   tableName: 'VENCIMIENTOS',
   columns: {
-    barcode: { col: 'SKU', label: 'Código de Barras', type: 'barcode', required: true },
-    productName: { col: 'DESCRIPTOR', label: 'Descripción', type: 'string', required: true, readOnly: true },
+    barcode: { col: 'SKU', label: 'Código de Barras', type: 'barcode', required: true, readOnly: true },
     quantity: { col: 'CANTIDAD', label: 'Cantidad', type: 'number', required: true, defaultValue: 1 },
     event: { col: 'EVENTO', label: 'Evento', type: 'enum', options: ['VENCIMIENTOS', 'MERMA', 'CANJE'], defaultValue: 'VENCIMIENTOS' },
     mm: { col: 'MM', label: 'Mes', type: 'enum', options: ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], renderType: 'grid', required: true },

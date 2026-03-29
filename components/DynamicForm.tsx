@@ -200,7 +200,7 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {Object.entries(schema.columns).filter(([_, col]) => col.visible !== false).map(([key, col]) => (
+        {Object.entries(schema.columns).filter(([_, col]) => col.visible !== false && col.label !== 'Descripción').map(([key, col]) => (
           <div key={key} className="space-y-2">
             <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
               {col.label}
