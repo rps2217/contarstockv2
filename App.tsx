@@ -20,7 +20,7 @@ import { StartSessionModal } from './components/StartSessionModal';
 import { useNavigate } from 'react-router-dom';
 
 // --- VISTAS MAESTRAS ---
-// Forzamos un cambio para limpiar el caché de Vercel
+// Forzamos un cambio para limpiar el caché de Vercel (intento 2)
 const Dashboard = lazyWithRetry(() => import('./features/dashboard/DashboardPage'));
 const Reports = lazyWithRetry(() => import('./features/reports/ReportsPage'));
 const DatabaseView = lazyWithRetry(() => import('./features/inventory/InventoryPage'));
