@@ -1,4 +1,5 @@
 
+
 import { logger } from './logger';
 import { fetchSystemConfig } from './gasService';
 import { importProductsFromAppSheet } from './syncManager';
@@ -79,9 +80,6 @@ export const InitializationService = {
  }
  }
 
- // EJECUTAR MIGRACIÓN ANTES DE CUALQUIER OTRA COSA
- await InitializationService.migrateLegacyData();
-
  const hasLocalData = (await db.products.count()) > 0;
 
  if (hasLocalData) {
@@ -124,40 +122,5 @@ export const InitializationService = {
  await InitializationService.syncConfig();
  await importProductsFromAppSheet();
  } catch (e) {}
- },
-
- /**
-  * Migración de datos antiguos a la nueva estructura dinámica
-  */
- migrateLegacyData: async () => {
-  try {
-  const legacyCount = await db.cloudExpirations.count();
-  if (legacyCount === 0) return;
-
-  const legacyExpirations = await db.cloudExpirations.toArray();
-  logger.info('MIGRATION', `Detectados ${legacyExpirations.length} registros antiguos. Migrando...`);
-
-  const dynamicRecords = legacyExpirations.map(record => {
-  // Determinar tabla destino según el tipo de evento
-  const eventTableTypes = ['DIF. PED.', 'DET. PED.', 'VENCE CERC.', 'DET. CALIDAD INT.', 'DET. CALIDAD EXT.'];
-  const tableName = eventTableTypes.includes(record.event) ? 'EVENTOS' : 'VENCIMIENTOS';
-
-  return {
-  id: record.id || `migrated_${Math.random().toString(36).substr(2, 9)}`,
-  tableName,
-  data: { ...record },
-  timestamp: record.timestamp || Date.now(),
-  syncStatus: record.syncStatus || 'pending',
-  syncError: record.syncError
-  };
-  });
-
-  await db.dynamic_data.bulkPut(dynamicRecords);
-  await db.cloudExpirations.clear();
-  
-  logger.success('MIGRATION', `Migración exitosa: ${dynamicRecords.length} registros movidos a dynamic_data`);
-  } catch (error: any) {
-  logger.error('MIGRATION', 'Error en migración de datos', error.message);
-  }
  }
 };

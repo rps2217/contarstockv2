@@ -29,6 +29,7 @@ const Settings = lazyWithRetry(() => import('./features/settings/SettingsPage'))
 // --- MÓDULOS OPERATIVOS (FEATURES) ---
 const CountingPage = lazyWithRetry(() => import('./features/counting/CountingPage'));
 const HammerPage = lazyWithRetry(() => import('./features/hammer/HammerPage'));
+const ExpiryControlPage = lazyWithRetry(() => import('./features/expiry/ExpiryControlPage'));
 const DocumentReceptionPage = lazyWithRetry(() => import('./features/documents/DocumentReceptionPage'));
 const DynamicManagement = lazyWithRetry(() => import('./features/dynamic/DynamicManagementPage').then(m => ({ default: m.DynamicManagementPage })));
 const GlobalSyncQueue = lazyWithRetry(() => import('./features/sync/GlobalSyncQueuePage'));
@@ -147,7 +148,7 @@ const AppContent = () => {
                 {/* RUTAS MODULARES DE FEATURES */}
                 <Route path="/reception" element={<ReceptionHub />} />
                 <Route path="/documents" element={<DocumentReceptionPage />} />
-                <Route path="/expiry" element={<DynamicManagement tableKey="expiry" />} />
+                <Route path="/expiry" element={<ExpiryControlPage />} />
                 <Route path="/events" element={<DynamicManagement tableKey="events" />} />
                 <Route path="/dynamic/:tableKey" element={<DynamicManagement />} />
                 <Route path="/counting/:id" element={<CountingPage />} />
