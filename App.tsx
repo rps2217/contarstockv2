@@ -32,9 +32,9 @@ const CountingPage = lazyWithRetry(() => import('./features/counting/CountingPag
 const HammerPage = lazyWithRetry(() => import('./features/hammer/HammerPage'));
 const DocumentReceptionPage = lazyWithRetry(() => import('./features/documents/DocumentReceptionPage'));
 const VisualPicking = lazyWithRetry(() => import('./features/visual-picking-module/VisualPickingPage'));
-const ExpiryManagement = lazyWithRetry(() => import('./features/expiry/ExpiryManagementPage'));
-const ExpiryCapturePage = lazyWithRetry(() => import('./features/expiry/ExpiryCapturePage'));
-const EventManagement = lazyWithRetry(() => import('./features/events/EventManagementPage'));
+const ExpiryManagement = lazyWithRetry(() => import('./features/expiry-module/ExpiryManagementPage'));
+const ExpiryCapturePage = lazyWithRetry(() => import('./features/expiry-module/ExpiryCapturePage'));
+const EventManagement = lazyWithRetry(() => import('./features/events-module/EventManagementPage'));
 const DynamicManagement = lazyWithRetry(() => import('./features/dynamic/DynamicManagementPage').then(m => ({ default: m.DynamicManagementPage })));
 const GlobalSyncQueue = lazyWithRetry(() => import('./features/sync/GlobalSyncQueuePage'));
 
