@@ -11,7 +11,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { TableSchema } from '../../types';
 import { toast } from 'sonner';
 import { useParams, useNavigate } from 'react-router-dom';
-import { RefreshCw, Edit3, ArrowLeft } from 'lucide-react';
+import { RefreshCw, Edit3, ArrowLeft, Trash2 } from 'lucide-react';
 
 interface DynamicManagementPageProps {
   tableKey?: 'expiry' | 'products' | 'counts' | 'events';
@@ -34,6 +34,8 @@ export const DynamicManagementPage: React.FC<DynamicManagementPageProps> = ({
   const [isRetrying, setIsRetrying] = React.useState(false);
   const [isPulling, setIsPulling] = React.useState(false);
   const [pullProgress, setPullProgress] = React.useState<string | null>(null);
+  
+  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
 
   // Fetch data from dynamic_data table for this specific tableName
   const records = useLiveQuery(
@@ -91,6 +93,12 @@ export const DynamicManagementPage: React.FC<DynamicManagementPageProps> = ({
     if (confirm('¿Estás seguro de eliminar este registro?')) {
       await db.dynamic_data.delete(item.id);
       toast.success('Registro eliminado');
+      
+      if (selectedIds.has(item.id)) {
+        const newSelected = new Set(selectedIds);
+        newSelected.delete(item.id);
+        setSelectedIds(newSelected);
+      }
     }
   };
 
@@ -136,8 +144,97 @@ export const DynamicManagementPage: React.FC<DynamicManagementPageProps> = ({
     }
   };
 
+  const handleSelectAll = () => {
+    if (selectedIds.size === items.length && items.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(items.map(i => i.id)));
+    }
+  };
+
+  const toggleSelection = (id: string) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+  };
+
+  const handleMassDelete = async () => {
+    if (!window.confirm(`¿Estás seguro de eliminar ${selectedIds.size} registros?`)) return;
+    try {
+      await Promise.all(Array.from(selectedIds).map(id => db.dynamic_data.delete(id)));
+      toast.success(`${selectedIds.size} registros eliminados.`);
+      clearSelection();
+    } catch (error) {
+      console.error('Error deleting multiple items:', error);
+      toast.error('Error al eliminar los registros.');
+    }
+  };
+
+  const handleMassSync = async () => {
+    const toastId = toast.loading(`Sincronizando ${selectedIds.size} registros...`);
+    try {
+      await Promise.all(Array.from(selectedIds).map(id => 
+        db.dynamic_data.update(id, { syncStatus: 'pending', syncError: undefined })
+      ));
+      const result = await dynamicSyncService.syncAllPending(undefined, schema.tableName);
+      
+      if (result.success > 0) {
+        toast.success(`${result.success} registros sincronizados`, { id: toastId });
+      } else if (result.failed > 0) {
+        toast.error(`${result.failed} registros fallaron`, { id: toastId });
+      } else {
+        toast.success(`Sincronización completada`, { id: toastId });
+      }
+      clearSelection();
+    } catch (error: any) {
+      toast.error(`Error: ${error.message}`, { id: toastId });
+    }
+  };
+
   return (
-    <div className="h-full flex flex-col p-4 md:p-6 gap-6 overflow-hidden">
+    <div className="h-full flex flex-col p-4 md:p-6 gap-6 overflow-hidden relative">
+      {/* Mass Actions Panel */}
+      {selectedIds.size > 0 && (
+        <div className={`absolute bottom-6 left-1/2 -translate-x-1/2 z-[100] p-3 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.5)] flex items-center gap-4 animate-in slide-in-from-bottom-10 border ${
+          theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-stone-200'
+        }`}>
+          <div className="flex items-center gap-2 px-3">
+            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-500 text-white font-black text-xs">
+              {selectedIds.size}
+            </span>
+            <span className={`font-bold text-sm uppercase tracking-wider ${theme === 'dark' ? 'text-white' : 'text-stone-900'}`}>
+              Seleccionados
+            </span>
+          </div>
+          
+          <div className={`h-8 w-px ${theme === 'dark' ? 'bg-slate-700' : 'bg-stone-200'}`}></div>
+          
+          <button onClick={handleMassSync} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/20 transition-colors font-bold text-sm uppercase tracking-wider">
+            <Cloud className="w-4 h-4" /> Sincronizar
+          </button>
+          
+          <button onClick={handleMassDelete} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 transition-colors font-bold text-sm uppercase tracking-wider">
+            <Trash2 className="w-4 h-4" /> Eliminar
+          </button>
+          
+          <div className={`h-8 w-px ${theme === 'dark' ? 'bg-slate-700' : 'bg-stone-200'}`}></div>
+          
+          <button onClick={clearSelection} className={`p-2 transition-colors rounded-xl ${
+            theme === 'dark' ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-stone-400 hover:text-stone-900 hover:bg-stone-100'
+          }`}>
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      )}
+
       <div className="flex-1 overflow-hidden">
         <DynamicList
           items={items}
@@ -154,6 +251,9 @@ export const DynamicManagementPage: React.FC<DynamicManagementPageProps> = ({
           title={schema.tableName}
           onPullSync={handlePullSync}
           isPulling={isPulling}
+          selectedIds={selectedIds}
+          onSelect={toggleSelection}
+          onSelectAll={handleSelectAll}
         />
       </div>
 
@@ -163,7 +263,7 @@ export const DynamicManagementPage: React.FC<DynamicManagementPageProps> = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm"
+            className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm"
           >
             <motion.div
               initial={{ scale: 0.9, y: 20 }}

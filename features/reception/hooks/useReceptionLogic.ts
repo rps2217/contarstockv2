@@ -15,8 +15,6 @@ export const useReceptionLogic = () => {
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [currentErp, setCurrentErp] = useState('');
-  const [isExpiryMode, setIsExpiryMode] = useState(false);
-  const [pendingExpiryScan, setPendingExpiryScan] = useState<{code: string, erp?: string} | null>(null);
 
   const { addToast } = useToastStore();
 
@@ -40,11 +38,6 @@ export const useReceptionLogic = () => {
       return;
     }
 
-    if (isExpiryMode) {
-      setPendingExpiryScan({ code: cleanCode, erp: erpToUse || currentErp });
-      return;
-    }
-
     try {
       await sessionService.createDraftSession(cleanCode, erpToUse || currentErp);
       setLastAction({ type: 'success', label: cleanCode });
@@ -57,26 +50,7 @@ export const useReceptionLogic = () => {
     } catch (err) { 
       SoundFX.play('error'); 
     }
-  }, [currentErp, isExpiryMode]);
-
-  const completeExpiryScan = useCallback(async (mm?: number, yyyy?: number, batch?: string) => {
-    if (!pendingExpiryScan) return;
-    
-    try {
-      await sessionService.createDraftSession(pendingExpiryScan.code, pendingExpiryScan.erp, mm, yyyy, batch);
-      setLastAction({ type: 'success', label: pendingExpiryScan.code });
-      setFlashActive(true);
-      SoundFX.play('success');
-      if (navigator.vibrate) navigator.vibrate(40);
-      
-      setTimeout(() => setFlashActive(false), 150);
-      setTimeout(() => setLastAction(prev => prev?.label === pendingExpiryScan.code && prev.type === 'success' ? null : prev), 1500);
-    } catch (err) {
-      SoundFX.play('error');
-    } finally {
-      setPendingExpiryScan(null);
-    }
-  }, [pendingExpiryScan]);
+  }, [currentErp]);
 
   const finalizeReception = useCallback(async () => {
     if (!unsyncedDrafts?.length) return false;
@@ -163,13 +137,11 @@ export const useReceptionLogic = () => {
     finalizeReception, 
     discardAll, 
     syncToCloud, 
-    setCurrentErp, 
-    setIsExpiryMode, 
-    completeExpiryScan
-  }), [handleScan, deleteDraft, finalizeReception, discardAll, syncToCloud, setCurrentErp, setIsExpiryMode, completeExpiryScan]);
+    setCurrentErp
+  }), [handleScan, deleteDraft, finalizeReception, discardAll, syncToCloud, setCurrentErp]);
 
   return {
-    state: { lastAction, flashActive, draftCount, unsyncedDrafts, isFinalizing, isSyncing, currentErp, isExpiryMode, pendingExpiryScan },
+    state: { lastAction, flashActive, draftCount, unsyncedDrafts, isFinalizing, isSyncing, currentErp },
     actions
   };
 };

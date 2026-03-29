@@ -15,6 +15,7 @@ import { db } from '../../../db';
 import { Product } from '../../../types';
 import { normalizeSku } from '../../../services/utils';
 import { toast } from 'sonner';
+import { DEFAULT_EVENTS_SCHEMA } from '../../../services/settings';
 
 interface Props {
   isOpen: boolean;
@@ -34,13 +35,7 @@ interface Props {
   editingItem?: any;
 }
 
-const EVENT_TYPES = [
-  'DIF. PED.',
-  'DET. PED.',
-  'VENCE CERC.',
-  'DET. CALIDAD INT.',
-  'DET. CALIDAD EXT.'
-];
+const EVENT_TYPES = DEFAULT_EVENTS_SCHEMA.columns.event.options as string[];
 
 const DESTINOS = [
   'BOD. 37',

@@ -2,12 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, FileText, Box, DownloadCloud, Camera, CheckCircle2, AlertCircle, Loader2, Zap, ScanLine } from 'lucide-react';
 import ReceptionPage from './ReceptionPage';
-import DocumentReceptionPage from '../documents/DocumentReceptionPage';
 import { erpService, ErpManifest } from '../../services/erpService';
 import { SoundFX } from '../../services/audio';
 import { MassiveDbRepository } from '../../repositories/MassiveDbRepository';
 
-type ReceptionMode = 'menu' | 'trays' | 'documents' | 'cloud';
+type ReceptionMode = 'menu' | 'trays' | 'cloud';
 
 export const ReceptionHub: React.FC = () => {
   const navigate = useNavigate();
@@ -74,26 +73,6 @@ export const ReceptionHub: React.FC = () => {
             initialErp={downloadedManifest?.id}
             initialItems={downloadedManifest?.items}
           />
-        </div>
-      </div>
-    );
-  }
-
-  if (mode === 'documents') {
-    return (
-      <div className="h-screen w-full flex flex-col bg-black overflow-hidden font-mono text-white">
-        <header className="h-16 px-4 flex items-center justify-between border-b border-white/10 bg-slate-900 shrink-0 z-50">
-          <button onClick={() => setMode('menu')} className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl active:bg-blue-600 transition-colors">
-            <ChevronLeft className="w-6 h-6 text-white" />
-          </button>
-          <div className="flex flex-col items-center">
-            <span className="text-[8px] font-black uppercase tracking-[0.3em] text-white/40 leading-none mb-1">DIGITALIZAR</span>
-            <span className="text-xs font-black uppercase tracking-widest text-white italic">Manifiesto OCR</span>
-          </div>
-          <div className="w-10"></div>
-        </header>
-        <div className="flex-1 min-h-0 relative">
-          <DocumentReceptionPage isEmbedded />
         </div>
       </div>
     );
@@ -182,20 +161,6 @@ export const ReceptionHub: React.FC = () => {
             <span className="text-[9px] text-slate-500 uppercase font-black tracking-widest mt-1 block">Conteo de Bandejas / Bultos (Gatekeeper)</span>
           </div>
           <CheckCircle2 className="absolute top-6 right-6 w-5 h-5 text-blue-500 opacity-20 group-hover:opacity-100 transition-opacity" />
-        </button>
-
-        <button 
-          onClick={() => setMode('documents')}
-          className="group relative bg-slate-900 border-2 border-slate-800 rounded-[2rem] p-6 flex items-center gap-6 hover:border-emerald-500 transition-all text-left active:scale-[0.98]"
-        >
-          <div className="w-16 h-16 bg-emerald-600 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-900/40 shrink-0">
-            <Camera className="w-8 h-8 text-white" />
-          </div>
-          <div>
-            <span className="block text-lg font-black uppercase tracking-tighter italic text-white">Digitalizar Manifiesto</span>
-            <span className="text-[9px] text-slate-500 uppercase font-black tracking-widest mt-1 block">OCR / Captura de Guías Físicas</span>
-          </div>
-          <FileText className="absolute top-6 right-6 w-5 h-5 text-emerald-500 opacity-20 group-hover:opacity-100 transition-opacity" />
         </button>
 
         <button 

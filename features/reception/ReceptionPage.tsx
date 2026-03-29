@@ -10,11 +10,9 @@ import { ScannerFooter } from '../../shared/components/controls/ScannerFooter';
 import { VirtualList } from '../../shared/components/ui/VirtualList';
 import { ScreenLockOverlay } from '../../shared/components/ui/ScreenLockOverlay';
 import { NumericKeypad } from '../../components/NumericKeypad';
-import { ExpirationModal } from '../expiry/components/ExpirationModal';
-import { ChevronLeft, Box, Trash2, Camera, Loader2, Calendar, Settings } from 'lucide-react';
+import { ChevronLeft, Box, Trash2, Camera, Loader2, Settings } from 'lucide-react';
 import { useAutoLock } from '../../hooks/useAutoLock';
 import { useHIDScanner } from '../../hooks/useHIDScanner';
-import * as documentProcessor from '../../services/documentProcessor';
 import { SoundFX } from '../../services/audio';
 
 const ReceptionRow = React.memo(({ index, data }: any) => {

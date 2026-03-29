@@ -2,7 +2,9 @@ import React from 'react';
 import { TableSchema } from '../types';
 import { DynamicCard } from './DynamicCard';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Filter, Plus, Database, ArrowLeft, RefreshCw } from 'lucide-react';
+import { Search, Filter, Plus, Database, ArrowLeft, RefreshCw, CheckSquare, Square, Printer, Sun, Settings, FileText, Moon } from 'lucide-react';
+import { useAppStore } from '../store/useAppStore';
+import { useNavigate } from 'react-router-dom';
 
 interface DynamicListProps {
   items: any[];
@@ -16,6 +18,9 @@ interface DynamicListProps {
   title?: string;
   theme?: 'dark' | 'light';
   isLoading?: boolean;
+  selectedIds?: Set<string>;
+  onSelect?: (id: string) => void;
+  onSelectAll?: () => void;
 }
 
 export const DynamicList: React.FC<DynamicListProps> = ({
@@ -29,10 +34,15 @@ export const DynamicList: React.FC<DynamicListProps> = ({
   isPulling = false,
   title,
   theme = 'dark',
-  isLoading = false
+  isLoading = false,
+  selectedIds = new Set(),
+  onSelect,
+  onSelectAll
 }) => {
   const [search, setSearch] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState<'all' | 'pending' | 'synced' | 'error'>('all');
+  const navigate = useNavigate();
+  const { updateSetting } = useAppStore();
 
   const filteredItems = React.useMemo(() => {
     let result = items;
@@ -50,9 +60,33 @@ export const DynamicList: React.FC<DynamicListProps> = ({
     );
   }, [items, search, statusFilter]);
 
+  const handleExportCSV = () => {
+    if (filteredItems.length === 0) return;
+    
+    const headers = Object.keys(schema.columns);
+    const rows = filteredItems.map(item => 
+      headers.map(header => `"${String(item[header] || '').replace(/"/g, '""')}"`)
+    );
+    
+    const csvContent = [
+      headers.map(h => schema.columns[h].label).join(','), 
+      ...rows.map(r => r.join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${schema.tableName}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="flex flex-col gap-4 h-full">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           {onBack && (
             <button
@@ -78,12 +112,12 @@ export const DynamicList: React.FC<DynamicListProps> = ({
           </div>
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {onPullSync && (
             <button
               onClick={onPullSync}
               disabled={isPulling}
-              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all border ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all border ${
                 isPulling ? 'animate-pulse' : ''
               } ${
                 theme === 'dark' 
@@ -92,34 +126,65 @@ export const DynamicList: React.FC<DynamicListProps> = ({
               }`}
               title="Sincronizar desde la nube"
             >
-              <RefreshCw className={`w-5 h-5 ${isPulling ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${isPulling ? 'animate-spin' : ''}`} />
+              <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Sincronizar</span>
             </button>
           )}
+          <button onClick={() => window.print()} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all border ${theme === 'dark' ? 'bg-white/5 border-white/10 text-stone-300 hover:bg-white/10' : 'bg-stone-100 border-stone-200 text-stone-600 hover:bg-stone-200'}`}>
+            <Printer className="w-4 h-4" />
+            <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Imprimir</span>
+          </button>
+          <button onClick={() => updateSetting('theme', theme === 'dark' ? 'light' : 'dark')} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all border ${theme === 'dark' ? 'bg-white/5 border-white/10 text-stone-300 hover:bg-white/10' : 'bg-stone-100 border-stone-200 text-stone-600 hover:bg-stone-200'}`}>
+            {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
+          <button onClick={() => navigate('/settings')} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all border ${theme === 'dark' ? 'bg-white/5 border-white/10 text-stone-300 hover:bg-white/10' : 'bg-stone-100 border-stone-200 text-stone-600 hover:bg-stone-200'}`}>
+            <Settings className="w-4 h-4" />
+          </button>
+          <button onClick={handleExportCSV} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all border ${theme === 'dark' ? 'bg-white/5 border-white/10 text-stone-300 hover:bg-white/10' : 'bg-stone-100 border-stone-200 text-stone-600 hover:bg-stone-200'}`}>
+            <FileText className="w-4 h-4" />
+            <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Exportar CSV</span>
+          </button>
           {onAdd && (
             <button
               onClick={onAdd}
-              className="w-10 h-10 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl flex items-center justify-center transition-all shadow-lg shadow-indigo-500/20"
+              className="flex items-center gap-2 px-4 py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl transition-all shadow-lg shadow-indigo-500/20"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-4 h-4" />
+              <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Nuevo</span>
             </button>
           )}
         </div>
       </div>
 
       <div className="flex flex-col md:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-500" />
-          <input
-            type="text"
-            placeholder={`Buscar en ${schema.tableName}...`}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className={`w-full pl-10 pr-4 py-3 rounded-xl text-sm font-bold border transition-all outline-none ${
-              theme === 'dark' 
-                ? 'bg-white/5 border-white/5 text-white focus:bg-white/10 focus:border-indigo-500/50' 
-                : 'bg-stone-50 border-stone-200 text-stone-900 focus:bg-white focus:border-indigo-500'
-            }`}
-          />
+        <div className="relative flex-1 flex items-center gap-2">
+          {onSelectAll && (
+            <button 
+              onClick={onSelectAll}
+              className={`w-12 h-12 shrink-0 rounded-xl flex items-center justify-center transition-all border ${
+                selectedIds.size === filteredItems.length && filteredItems.length > 0
+                  ? (theme === 'dark' ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-500' : 'bg-indigo-50 border-indigo-300 text-indigo-600')
+                  : (theme === 'dark' ? 'bg-white/5 border-white/10 text-stone-400 hover:text-white' : 'bg-stone-50 border-stone-200 text-stone-500 hover:text-stone-900')
+              }`}
+              title="Seleccionar Todos"
+            >
+              {selectedIds.size === filteredItems.length && filteredItems.length > 0 ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
+            </button>
+          )}
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-500" />
+            <input
+              type="text"
+              placeholder={`Buscar en ${schema.tableName}...`}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className={`w-full pl-10 pr-4 py-3 rounded-xl text-sm font-bold border transition-all outline-none ${
+                theme === 'dark' 
+                  ? 'bg-white/5 border-white/5 text-white focus:bg-white/10 focus:border-indigo-500/50' 
+                  : 'bg-stone-50 border-stone-200 text-stone-900 focus:bg-white focus:border-indigo-500'
+              }`}
+            />
+          </div>
         </div>
 
         <div className="flex gap-1 p-1 bg-white/5 rounded-xl border border-white/5 shrink-0">
@@ -160,6 +225,8 @@ export const DynamicList: React.FC<DynamicListProps> = ({
                   onRemove={onRemove}
                   onClick={onClick}
                   theme={theme}
+                  isSelected={selectedIds.has(item.id)}
+                  onSelect={onSelect}
                 />
               ))}
             </AnimatePresence>
