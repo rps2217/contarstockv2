@@ -122,7 +122,7 @@ export const dynamicSyncService = {
         const recordsToPut: DynamicRecord[] = [];
         
         for (const remoteRow of batch) {
-          const remoteId = String(remoteRow['ID'] || remoteRow['ID_REGISTRO'] || '');
+          const remoteId = String(remoteRow['ID'] || remoteRow['ID_REGISTRO'] || remoteRow['CLAVE_UNICA'] || '');
           if (!remoteId) continue;
 
           const localRecord = await db.dynamic_data.get(remoteId);

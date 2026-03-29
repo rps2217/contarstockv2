@@ -39,9 +39,12 @@ export const useEventDatabase = () => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  const tableName = settings?.appSheetConfig?.eventsTableName || 'EVENTOS';
+
   // Nuevo Motor: Leer de dynamic_data en lugar de cloudExpirations
   const dynamicEvents = useLiveQuery(() => 
-    db.dynamic_data.where('tableName').equals('EVENTOS').toArray()
+    db.dynamic_data.where('tableName').equals(tableName).toArray(),
+    [tableName]
   );
   
   const products = useLiveQuery(() => db.products.toArray());
@@ -246,7 +249,7 @@ export const useEventDatabase = () => {
       const record = await db.dynamic_data.get(id);
       if (record) {
         const updatedData = { ...record.data, isAdjusted };
-        await dynamicDataService.saveRecord('EVENTOS', updatedData, id);
+        await dynamicDataService.saveRecord(tableName, updatedData, id);
       }
     },
     updateEventBulkFields: async (id: string, updates: { destino?: string; traspaso?: string; observaciones?: string }) => {
@@ -266,7 +269,7 @@ export const useEventDatabase = () => {
       if (newUpdates.isAdjusted) mappedUpdates.isAdjusted = true;
 
       const updatedData = { ...record.data, ...mappedUpdates };
-      await dynamicDataService.saveRecord('EVENTOS', updatedData, id);
+      await dynamicDataService.saveRecord(tableName, updatedData, id);
     },
     updateEventBulkFieldsMany: async (ids: string[], updates: { destino?: string; traspaso?: string; observaciones?: string }) => {
       setPendingOperations(p => p + ids.length);
@@ -286,7 +289,7 @@ export const useEventDatabase = () => {
             if (newUpdates.isAdjusted) mappedUpdates.isAdjusted = true;
 
             const updatedData = { ...record.data, ...mappedUpdates };
-            await dynamicDataService.saveRecord('EVENTOS', updatedData, id);
+            await dynamicDataService.saveRecord(tableName, updatedData, id);
           }
         }
       } finally {
@@ -297,7 +300,7 @@ export const useEventDatabase = () => {
       const record = await db.dynamic_data.get(id);
       if (!record) return;
       const updatedData = { ...record.data, DESTINO: destino };
-      await dynamicDataService.saveRecord('EVENTOS', updatedData, id);
+      await dynamicDataService.saveRecord(tableName, updatedData, id);
     },
     updateEventTraspaso: async (id: string, traspaso: string) => {
       const record = await db.dynamic_data.get(id);
@@ -308,13 +311,13 @@ export const useEventDatabase = () => {
         updates.isAdjusted = true;
       }
       const updatedData = { ...record.data, ...updates };
-      await dynamicDataService.saveRecord('EVENTOS', updatedData, id);
+      await dynamicDataService.saveRecord(tableName, updatedData, id);
     },
     updateEventObservaciones: async (id: string, observaciones: string) => {
       const record = await db.dynamic_data.get(id);
       if (!record) return;
       const updatedData = { ...record.data, OBSERVACIONES: observaciones };
-      await dynamicDataService.saveRecord('EVENTOS', updatedData, id);
+      await dynamicDataService.saveRecord(tableName, updatedData, id);
     },
     updateEvent: async (id: string, data: {
       barcode: string;
@@ -347,7 +350,7 @@ export const useEventDatabase = () => {
         TIMESTAMP: Date.now(),
       };
 
-      await dynamicDataService.saveRecord('EVENTOS', updatedData, id);
+      await dynamicDataService.saveRecord(tableName, updatedData, id);
       return { id, ...updatedData };
     },
     createEvent: async (data: {
@@ -380,7 +383,7 @@ export const useEventDatabase = () => {
         UBICACION: 'GENERAL'
       };
 
-      const id = await dynamicDataService.saveRecord('EVENTOS', newEventData);
+      const id = await dynamicDataService.saveRecord(tableName, newEventData, claveUnica);
       return { id, ...newEventData };
     }
   };

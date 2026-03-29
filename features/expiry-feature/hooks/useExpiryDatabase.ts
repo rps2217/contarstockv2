@@ -8,6 +8,7 @@ import { dynamicDataService } from '../../../services/dynamicDataService';
 import { dynamicSyncService } from '../../../services/dynamicSync';
 import { normalizeSku } from '../../../services/utils';
 import { useToastStore } from '../../../store/useToastStore';
+import { useAppStore } from '../../../store/useAppStore';
 import { useExpiryStore, ExpiryItem, ExpiryStatus, ExpiryPreferences } from '../../../store/useExpiryStore';
 import { SyncQueueService } from '../../../services/syncQueueService';
 import { processExpiryItem, filterExpiryItems, calculateExpiryStats } from '../utils/expiryProcessor';
@@ -16,6 +17,8 @@ export type { ExpiryStatus, ExpiryPreferences, ExpiryItem };
 
 export const useExpiryDatabase = () => {
   const { addToast } = useToastStore.getState();
+  const { settings } = useAppStore();
+  const tableName = settings?.appSheetConfig?.expiryTableName || 'VENCIMIENTOS';
   
   // Procesar cola de sincronización al iniciar
   useEffect(() => {
@@ -63,7 +66,8 @@ export const useExpiryDatabase = () => {
   
   // Nuevo Motor: Leer de dynamic_data en lugar de cloudExpirations
   const dynamicExpirations = useLiveQuery(() =>
-    db.dynamic_data.where('tableName').equals('VENCIMIENTOS').toArray()
+    db.dynamic_data.where('tableName').equals(tableName).toArray(),
+    [tableName]
   );
 
   const products = useLiveQuery(() => db.products.toArray());
@@ -175,7 +179,7 @@ export const useExpiryDatabase = () => {
     try {
       setIsSyncing(true);
       // Usar el nuevo motor de sincronización
-      await dynamicSyncService.pullSync('VENCIMIENTOS');
+      await dynamicSyncService.pullSync(tableName);
       await importProvidersFromCloud();
       addToast(`Sincronización completa.`, 'success');
     } catch (error: any) {
@@ -183,7 +187,7 @@ export const useExpiryDatabase = () => {
     } finally {
       setIsSyncing(false);
     }
-  }, []);
+  }, [tableName]);
 
   const handleRemoveItem = useCallback(async (item: any) => {
     try {
@@ -249,7 +253,7 @@ export const useExpiryDatabase = () => {
 
       // 1. Validar duplicado localmente antes de ir a la nube
       const existingLocal = await db.dynamic_data
-        .where('tableName').equals('VENCIMIENTOS')
+        .where('tableName').equals(tableName)
         .filter(r => r.data.claveUnica === claveUnica)
         .first();
         
@@ -259,9 +263,8 @@ export const useExpiryDatabase = () => {
       }
 
       // 2. Guardar usando el nuevo motor dinámico
-      const localId = crypto.randomUUID();
       try {
-        await dynamicDataService.saveRecord('VENCIMIENTOS', {
+        await dynamicDataService.saveRecord(tableName, {
           SKU: sanitizedBarcode,
           DESCRIPTOR: data.productName,
           MM: data.mm,
@@ -271,7 +274,7 @@ export const useExpiryDatabase = () => {
           claveUnica: claveUnica,
           fechaCC: data.fechaCC,
           TIMESTAMP: Date.now()
-        }, localId);
+        }, claveUnica);
         
         addToast('Producto registrado exitosamente', 'success');
       } catch (dbError: any) {

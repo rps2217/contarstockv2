@@ -49,7 +49,11 @@ export const dynamicDataService = {
     if (!record || record.syncStatus === 'synced') return;
 
     try {
-      const response = await cloudApi.appendRows(record.tableName, [record.data]);
+      const rowData = { ...record.data };
+      if (!rowData['ID']) rowData['ID'] = record.id;
+      if (!rowData['TIMESTAMP']) rowData['TIMESTAMP'] = new Date(record.timestamp).toLocaleString('es-CL');
+
+      const response = await cloudApi.upsertRows(record.tableName, [rowData]);
       if (response.success) {
         await db.dynamic_data.update(id, { syncStatus: 'synced' });
       } else {

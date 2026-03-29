@@ -37,7 +37,7 @@ import { AnimatePresence } from 'motion/react';
 import { Zap, ChevronUp, ChevronDown } from 'lucide-react';
 
 // Services
-import { importExpirationsFromCloud } from '../../services/syncManager';
+import { dynamicSyncService } from '../../services/dynamicSync';
 import { removeExpirationFromCloud } from '../../services/expiry-sync-service';
 
 const EventManagementPage: React.FC = () => {
@@ -153,8 +153,9 @@ const EventManagementPage: React.FC = () => {
   const handleSync = async () => {
     try {
       setIsSyncing(true);
-      const count = await importExpirationsFromCloud();
-      toast.success(`Sincronización completada. ${count} registros procesados.`);
+      const tableName = settings?.appSheetConfig?.eventsTableName || 'EVENTOS';
+      const result = await dynamicSyncService.pullSync(tableName);
+      toast.success(`Sincronización completada. ${result.added} añadidos, ${result.updated} actualizados.`);
     } catch (error: any) {
       toast.error(error.message || 'Error al sincronizar con la nube');
     } finally {
