@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Search, Filter, X, Camera, Plus } from 'lucide-react';
-import { BarcodeScannerModal } from '../../expiry-module/components/BarcodeScannerModal';
+import { BarcodeScannerModal } from './BarcodeScannerModal';
 
-interface EventSearchBarProps {
+interface ExpirySearchBarProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   onOpenFilters: () => void;
@@ -12,7 +12,7 @@ interface EventSearchBarProps {
   theme?: 'dark' | 'light';
 }
 
-export const EventSearchBar: React.FC<EventSearchBarProps> = ({
+export const ExpirySearchBar: React.FC<ExpirySearchBarProps> = ({
   searchQuery,
   setSearchQuery,
   onOpenFilters,
@@ -30,11 +30,11 @@ export const EventSearchBar: React.FC<EventSearchBarProps> = ({
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
           <input 
             type="text"
-            placeholder="BUSCAR POR NOMBRE, SKU, EVENTO, FRC O ERP..."
+            placeholder="BUSCAR POR NOMBRE, SKU O LOTE..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className={`w-full border rounded-2xl py-4 pl-12 pr-28 text-sm font-bold focus:outline-none transition-all shadow-2xl ${
-              theme === 'dark' ? 'bg-black border-blue-500/50 text-white' : 'bg-white border-blue-500/50 text-slate-900 shadow-slate-200/50'
+              theme === 'dark' ? 'bg-black border-amber-500/50 text-white' : 'bg-white border-amber-500/50 text-slate-900 shadow-slate-200/50'
             }`}
           />
           {searchQuery && (
@@ -55,8 +55,8 @@ export const EventSearchBar: React.FC<EventSearchBarProps> = ({
           onClick={() => setIsScannerOpen(true)}
           className={`shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center border transition-all ${
             theme === 'dark' 
-              ? 'bg-blue-500/10 border-blue-500/20 text-blue-500 hover:bg-blue-500/20' 
-              : 'bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100'
+              ? 'bg-amber-500/10 border-amber-500/20 text-amber-500 hover:bg-amber-500/20' 
+              : 'bg-amber-50 border-amber-200 text-amber-600 hover:bg-amber-100'
           }`}
           title="Escanear código de barras"
         >
@@ -69,8 +69,8 @@ export const EventSearchBar: React.FC<EventSearchBarProps> = ({
           onClick={onOpenAdd}
           className={`flex-1 md:flex-none px-6 py-4 md:py-0 rounded-2xl flex items-center justify-center gap-3 transition-all border shadow-lg group ${
             theme === 'dark' 
-              ? 'bg-blue-600 border-blue-500 text-white hover:bg-blue-500' 
-              : 'bg-blue-600 border-blue-500 text-white hover:bg-blue-500 shadow-sm'
+              ? 'bg-amber-500 border-amber-400 text-black hover:bg-amber-400' 
+              : 'bg-amber-500 border-amber-400 text-black hover:bg-amber-400 shadow-sm'
           }`}
         >
           <Plus className="w-5 h-5" />
@@ -81,16 +81,16 @@ export const EventSearchBar: React.FC<EventSearchBarProps> = ({
           onClick={onOpenFilters}
           className={`flex-1 md:flex-none px-6 py-4 md:py-0 rounded-2xl flex items-center justify-center gap-3 transition-all border shadow-lg group ${
             activeFiltersCount > 0
-              ? 'bg-blue-500 border-blue-400 text-white'
+              ? 'bg-amber-500 border-amber-400 text-black'
               : theme === 'dark' 
                 ? 'bg-slate-800 border-white/10 text-white hover:bg-slate-700'
                 : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 shadow-sm'
           }`}
         >
-          <Filter className={`w-5 h-5 ${activeFiltersCount > 0 ? 'text-white' : 'text-slate-400'}`} />
+          <Filter className={`w-5 h-5 ${activeFiltersCount > 0 ? 'text-black' : 'text-slate-400'}`} />
           <span className="text-xs font-black uppercase tracking-widest">Filtros</span>
           {activeFiltersCount > 0 && (
-            <span className="bg-white text-blue-600 text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center">
+            <span className="bg-black text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center">
               {activeFiltersCount}
             </span>
           )}
@@ -108,7 +108,7 @@ export const EventSearchBar: React.FC<EventSearchBarProps> = ({
           <X className="w-5 h-5 text-slate-400 group-hover:rotate-90 transition-transform" />
         </button>
       </div>
-
+      
       <BarcodeScannerModal 
         isOpen={isScannerOpen}
         onClose={() => setIsScannerOpen(false)}

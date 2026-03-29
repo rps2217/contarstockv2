@@ -268,7 +268,7 @@ const EventManagementPage: React.FC = () => {
     const selectedItems = state.processedEvents.filter(item => state.selectedIds.has(item.id));
     if (selectedItems.length === 0) return;
     
-    import('../expiry-module/utils/expiryUtils').then(utils => {
+    import('../expiry-feature/utils/expiryUtils').then(utils => {
       utils.handlePrintLabels(selectedItems);
       toast.success(`Generando etiquetas para ${selectedItems.length} productos`);
     });
@@ -278,7 +278,7 @@ const EventManagementPage: React.FC = () => {
     const selectedItems = state.processedEvents.filter(item => state.selectedIds.has(item.id));
     if (selectedItems.length === 0) return;
     
-    import('../expiry-module/utils/expiryUtils').then(utils => {
+    import('../expiry-feature/utils/expiryUtils').then(utils => {
       utils.handlePrintSelectedEvents(selectedItems);
       toast.success(`Generando reporte para ${selectedItems.length} productos`);
     });
@@ -288,7 +288,7 @@ const EventManagementPage: React.FC = () => {
     const selectedItems = state.processedEvents.filter(item => state.selectedIds.has(item.id));
     if (selectedItems.length === 0) return;
     
-    import('../expiry-module/utils/expiryUtils').then(utils => {
+    import('../expiry-feature/utils/expiryUtils').then(utils => {
       utils.handleSendEmail(selectedItems);
       toast.success(`Generando reporte de correo para ${selectedItems.length} productos`);
     });

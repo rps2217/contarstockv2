@@ -5,7 +5,7 @@ import { useCountingLogic } from './hooks/useCountingLogic';
 import { CountingCameraView } from './components/CountingCameraView';
 import { ScannerToolsSheet } from './components/ScannerToolsSheet';
 import { ScreenLockOverlay } from '../../shared/components/ui/ScreenLockOverlay';
-import { ExpirationModal } from '../expiry-module/components/ExpirationModal';
+import { ExpirationModal } from '../expiry-feature/components/ExpirationModal';
 import { Loader2 } from 'lucide-react';
 import { useAutoLock } from '../../hooks/useAutoLock';
 import { useHIDScanner } from '../../hooks/useHIDScanner';
