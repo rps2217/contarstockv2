@@ -38,7 +38,7 @@ import { Zap, ChevronUp, ChevronDown } from 'lucide-react';
 
 // Services
 import { importExpirationsFromCloud } from '../../services/syncManager';
-import { removeExpirationFromCloud } from '../../services/expirySync';
+import { removeExpirationFromCloud } from '../../services/expiry-sync';
 
 const EventManagementPage: React.FC = () => {
   const { settings, updateSetting } = useAppStore();
