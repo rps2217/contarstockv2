@@ -20,6 +20,7 @@ import { StartSessionModal } from './components/StartSessionModal';
 import { useNavigate } from 'react-router-dom';
 
 // --- VISTAS MAESTRAS ---
+// Forzamos un cambio para limpiar el caché de Vercel
 const Dashboard = lazyWithRetry(() => import('./features/dashboard/DashboardPage'));
 const Reports = lazyWithRetry(() => import('./features/reports/ReportsPage'));
 const DatabaseView = lazyWithRetry(() => import('./features/inventory/InventoryPage'));
@@ -30,10 +31,12 @@ const Settings = lazyWithRetry(() => import('./features/settings/SettingsPage'))
 const CountingPage = lazyWithRetry(() => import('./features/counting/CountingPage'));
 const HammerPage = lazyWithRetry(() => import('./features/hammer/HammerPage'));
 const DocumentReceptionPage = lazyWithRetry(() => import('./features/documents/DocumentReceptionPage'));
+const VisualPicking = lazyWithRetry(() => import('./features/visualPicking/VisualPickingPage'));
+const ExpiryManagement = lazyWithRetry(() => import('./features/expiry/ExpiryManagementPage'));
+const ExpiryCapturePage = lazyWithRetry(() => import('./features/expiry/ExpiryCapturePage'));
+const EventManagement = lazyWithRetry(() => import('./features/events/EventManagementPage'));
 const DynamicManagement = lazyWithRetry(() => import('./features/dynamic/DynamicManagementPage').then(m => ({ default: m.DynamicManagementPage })));
 const GlobalSyncQueue = lazyWithRetry(() => import('./features/sync/GlobalSyncQueuePage'));
-const ExpiryControl = lazyWithRetry(() => import('./features/expiry/ExpiryControlPage'));
-const EventsControl = lazyWithRetry(() => import('./features/events/EventsPage'));
 
 const AppContent = () => {
   const location = useLocation();
@@ -54,8 +57,8 @@ const AppContent = () => {
   const isScanningMode = location.pathname.startsWith('/counting/') || 
     location.pathname === '/reception' || 
     location.pathname === '/documents' ||
-    location.pathname === '/expiry' ||
-    location.pathname === '/events' ||
+    location.pathname === '/visual-picking' ||
+    location.pathname === '/expiry/capture' ||
     location.pathname.startsWith('/massive/');
 
   useEffect(() => {
@@ -149,8 +152,10 @@ const AppContent = () => {
                 {/* RUTAS MODULARES DE FEATURES */}
                 <Route path="/reception" element={<ReceptionHub />} />
                 <Route path="/documents" element={<DocumentReceptionPage />} />
-                <Route path="/expiry" element={<ExpiryControl />} />
-                <Route path="/events" element={<EventsControl />} />
+                <Route path="/visual-picking" element={<VisualPicking />} />
+                <Route path="/expiry" element={<ExpiryManagement />} />
+                <Route path="/expiry/capture" element={<ExpiryCapturePage />} />
+                <Route path="/events" element={<EventManagement />} />
                 <Route path="/dynamic/:tableKey" element={<DynamicManagement />} />
                 <Route path="/counting/:id" element={<CountingPage />} />
                 <Route path="/massive/:batchId" element={<HammerPage />} />
