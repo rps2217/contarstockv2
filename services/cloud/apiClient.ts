@@ -42,7 +42,7 @@ export const cloudApi = {
  metadata: { 
  timestamp: Date.now(), 
  compressed: compress,
- client_version: 'v5.7.5-AI' 
+ client_version: 'v5.7.9-AI' 
  }
  };
 
@@ -124,5 +124,9 @@ export const cloudApi = {
 
  async getSummary(tableName: string, filterColumn?: string, filterValue?: string) {
   return this.post('get_summary', { tableName, filterColumn, filterValue });
+ },
+
+ async deleteRow(tableName: string, id: string) {
+  return this.post('delete_row', { tableName, id });
  }
 };

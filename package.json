@@ -1,7 +1,7 @@
 {
   "name": "logicount-pro-core",
   "private": true,
-  "version": "3.1.0",
+  "version": "3.1.1",
   "type": "module",
   "dependencies": {
     "@google/genai": "1.30.0",

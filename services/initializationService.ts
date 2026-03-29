@@ -8,7 +8,7 @@ import { migrationService } from './migrationService';
 
 export type InitStep = 'idle' | 'version_check' | 'config' | 'database' | 'ready' | 'offline' | 'purging' | 'migrating';
 
-const CURRENT_APP_VERSION = "5.7.8"; // Incremento de versión para forzar limpieza estructural estable
+const CURRENT_APP_VERSION = "5.7.9"; // Incremento de versión para forzar limpieza estructural estable
 
 export const InitializationService = {
   /**

@@ -287,6 +287,7 @@ export interface AppSheetConfig {
   countsTableName: string;
   consolidatedTableName: string;
   inventoryRegistryTableName?: string;
+  expiryTableName?: string;
   productsTableName: string;
   receptionTableName?: string;
   ordersTableName?: string; 

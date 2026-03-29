@@ -19,8 +19,8 @@ export const migrationService = {
       logger.info('MIGRATION', `Iniciando migración de ${oldRecords.length} registros...`);
 
       const settings = getSettings();
-      const expiryTableName = settings.appSheetConfig?.appId ? (settings.appSheetConfig.mappings?.expiry?.tableName || 'VENCIMIENTOS') : 'VENCIMIENTOS';
-      const eventsTableName = settings.appSheetConfig?.appId ? (settings.appSheetConfig.mappings?.events?.tableName || 'EVENTOS') : 'EVENTOS';
+      const expiryTableName = settings.appSheetConfig?.appId ? (settings.appSheetConfig.expiryTableName || 'VENCIMIENTOS') : 'VENCIMIENTOS';
+      const eventsTableName = settings.appSheetConfig?.appId ? (settings.appSheetConfig.eventsTableName || 'EVENTOS') : 'EVENTOS';
 
       const dynamicRecords = oldRecords.map(old => {
         const isExpiry = !old.event || old.event.toUpperCase() === 'VENCIMIENTOS' || old.event.toUpperCase() === 'VENCIMIENTO';
