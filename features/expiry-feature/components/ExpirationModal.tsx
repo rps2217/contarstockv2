@@ -59,7 +59,48 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
 
         if (response.success && response.rows && response.rows.length > 0) {
           const product = response.rows[0];
-          setProductName(product[nameCol] || product.DESCRIPTOR || 'PRODUCTO ENCONTRADO');
+          const name = product[nameCol] || product.DESCRIPTOR || 'PRODUCTO ENCONTRADO';
+          setProductName(name);
+
+          // ESTRATEGIA LOCAL-FIRST: Guardar en DB local para que el siguiente escaneo sea instantáneo
+          const { db } = await import('../../../db');
+          const supplierRut = normalizeSku(product.PROVEEDOR_RUT || product.supplierRut || '');
+          
+          const newProduct = {
+            barcode: sku,
+            name: name,
+            category: product.CATEGORIA || product.category || 'GENERAL',
+            supplier: product.PROVEEDOR || product.supplier || 'N/A',
+            supplierRut: supplierRut,
+            price: parseFloat(product.PRECIO || 0),
+            syncStatus: 'synced' as const
+          };
+          
+          await db.products.put(newProduct);
+
+          // Si el proveedor no existe localmente, también lo traemos en caliente
+          if (supplierRut) {
+            const localProvider = await db.providers.get(supplierRut);
+            if (!localProvider) {
+              const providersTable = config?.providersTableName || 'PROVEEDORES';
+              const rutCol = 'ID_RUT'; // Ajustar según realidad o mapping
+              const provResponse = await cloudApi.getSummary(providersTable, rutCol, supplierRut);
+              
+              if (provResponse.success && provResponse.rows && provResponse.rows.length > 0) {
+                const p = provResponse.rows[0];
+                const withdrawalRaw = String(p['RETIRO (DÍAS)'] || p['RETIRO'] || '0');
+                const match = withdrawalRaw.match(/\d+/);
+                const withdrawalDays = match ? parseInt(match[0], 10) : 0;
+
+                await db.providers.put({
+                  rut: supplierRut,
+                  name: String(p['NOMBRE PROVEEDOR'] || p['PROVEEDOR'] || 'N/A'),
+                  withdrawalDays,
+                  hasExchange: withdrawalDays > 0
+                });
+              }
+            }
+          }
         } else {
           setProductName('PRODUCTO NO ENCONTRADO EN NINGÚN SISTEMA');
         }

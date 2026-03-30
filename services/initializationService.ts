@@ -1,7 +1,7 @@
 
 import { logger } from './logger';
 import { fetchSystemConfig } from './gasService';
-import { importProductsFromAppSheet } from './syncManager';
+import { importProductsFromAppSheet, importProvidersFromCloud } from './syncManager';
 import { getSettings, saveSettings } from './settings';
 import { db } from '../db';
 import { migrationService } from './migrationService';
@@ -107,6 +107,7 @@ export const InitializationService = {
       await InitializationService.syncConfig();
       onStep('database');
       await importProductsFromAppSheet();
+      await importProvidersFromCloud();
       onStep('ready');
 
     } catch (error: any) {
@@ -130,6 +131,7 @@ export const InitializationService = {
     try {
       await InitializationService.syncConfig();
       await importProductsFromAppSheet();
+      await importProvidersFromCloud();
     } catch (e) {}
   }
 };

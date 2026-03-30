@@ -27,6 +27,7 @@ const DEFAULT_PRODUCTS_SCHEMA: TableSchema = {
     name: { col: 'DESCRIPTOR', label: 'Nombre', type: 'string', required: true },
     category: { col: 'CATEGORIA', label: 'Categoría', type: 'string' },
     supplier: { col: 'PROVEEDOR', label: 'Proveedor', type: 'string' },
+    supplierRut: { col: 'PROVEEDOR_RUT', label: 'RUT Proveedor', type: 'string' },
     price: { col: 'PRECIO', label: 'Precio', type: 'number' },
     unitsPerBox: { col: 'UNIDADES_CAJA', label: 'Unidades/Caja', type: 'number' }
   }
@@ -106,6 +107,7 @@ const DEFAULT_SETTINGS: AppSettings = {
      name: 'DESCRIPTOR',
      category: 'CATEGORIA',
      supplier: 'PROVEEDOR',
+     supplierRut: 'PROVEEDOR_RUT',
      price: 'PRECIO',
      unitsPerBox: 'UNIDADES_CAJA'
    },
