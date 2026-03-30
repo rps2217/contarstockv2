@@ -23,7 +23,7 @@ export const CloudProductSchema = z.record(z.any()).transform((raw) => {
  const name = mapping?.name ? raw[mapping.name] : (normalized["DESCRIPCION"] || normalized["PRODUCTO"] || normalized["NOMBRE"] || normalized["DESCRIP"] || normalized["ITEM"] || "Sin descripción");
  const category = mapping?.category ? raw[mapping.category] : (normalized["MUNDO"] || normalized["CATEGORIA"] || normalized["CATEGORY"] || "GENERAL");
  const supplier = mapping?.supplier ? raw[mapping.supplier] : (normalized["PROVEEDOR"] || normalized["SUPPLIER"] || "");
- const supplierRut = normalized["RUT PROVEEDOR"] || normalized["RUT"] || "";
+ const supplierRut = mapping?.supplierRut ? raw[mapping.supplierRut] : (normalized["RUT PROVEEDOR"] || normalized["RUT"] || "");
  const price = mapping?.price ? raw[mapping.price] : undefined;
  const unitsPerBox = mapping?.unitsPerBox ? raw[mapping.unitsPerBox] : undefined;
 

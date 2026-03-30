@@ -205,6 +205,7 @@ export interface ExpiryMapping {
   id?: string;
   uniqueKey?: string;
   barcode: string;
+  name?: string;
   productName: string;
   quantity: string;
   event: string;
@@ -215,16 +216,20 @@ export interface ExpiryMapping {
   erp: string;
   traspaso: string;
   destino: string;
+  nguia?: string;
   observaciones: string;
   isAdjusted: string;
+  batch?: string;
   timestamp?: string;
 }
 
 export interface ProductMapping {
+  id?: string;
   barcode: string;
   name: string;
   category: string;
   supplier?: string;
+  supplierRut?: string;
   price?: string;
   unitsPerBox?: string;
 }

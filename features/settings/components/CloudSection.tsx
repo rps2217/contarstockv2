@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Wifi, AlertCircle, Info, Link, ShieldAlert, Database, QrCode, Camera, X, Settings2, Save, Search, Table, Columns, CheckCircle2, RefreshCw, Box, Layers, ClipboardList } from 'lucide-react';
+import { Wifi, AlertCircle, Info, Link, ShieldAlert, Database, QrCode, Camera, X, Settings2, Save, Search, Table, Columns, CheckCircle2, RefreshCw, Box, Layers, ClipboardList, Activity } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AppSettings, ExpiryMapping, ProductMapping, CountMapping, SpreadsheetMetadata, TableMetadata } from '../../../types';
@@ -8,6 +8,7 @@ import { bootstrapByUrl, fetchSpreadsheetMetadata, saveConfigToCloud, fetchSyste
 import { SoundFX } from '../../../services/audio';
 import { CameraScanner } from '../../../components/CameraScanner';
 import { toast } from 'sonner';
+import { SyncLogsModal } from './SyncLogsModal';
 
 interface Props {
  settings: AppSettings;
@@ -26,6 +27,7 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
  const [showQR, setShowQR] = useState(false);
  const [isScanning, setIsScanning] = useState(false);
  const [showMapping, setShowMapping] = useState(false);
+ const [showLogs, setShowLogs] = useState(false);
  
  // Metadatos descubiertos
  const [metadata, setMetadata] = useState<SpreadsheetMetadata | null>(null);
@@ -138,7 +140,10 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
   
   newConfig.mappings[selectedModule] = mapping;
 
-  if (selectedModule === 'expiry') newConfig.inventoryRegistryTableName = selectedSheet;
+  if (selectedModule === 'expiry') {
+    newConfig.inventoryRegistryTableName = selectedSheet;
+    newConfig.expiryTableName = selectedSheet; // Asegurar que use el nombre correcto en toda la App
+  }
   if (selectedModule === 'products') newConfig.productsTableName = selectedSheet;
   if (selectedModule === 'counts') newConfig.countsTableName = selectedSheet;
   if (selectedModule === 'events') newConfig.eventsTableName = selectedSheet;
@@ -203,47 +208,66 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
 
   const currentSheetMetadata = metadata?.sheets.find(s => s.sheetName === selectedSheet);
 
- const getModuleFields = () => {
-   if (selectedModule === 'expiry' || selectedModule === 'events') {
-     return [
-       { id: 'barcode', label: 'Código de Barras (SKU)', color: 'emerald' },
-       { id: 'productName', label: 'Descripción Producto', color: 'emerald' },
-       { id: 'quantity', label: 'Cantidad', color: 'emerald' },
-       { id: 'event', label: 'Evento / Tipo', color: 'emerald' },
-       { id: 'traspaso', label: 'N° Traspaso', color: 'amber' },
-       { id: 'destino', label: 'Destino', color: 'emerald' },
-       { id: 'observaciones', label: 'Observaciones', color: 'emerald' },
-       { id: 'isAdjusted', label: 'Flag Ajustado', color: 'emerald' },
-       { id: 'mm', label: 'Mes (MM)', color: 'slate' },
-       { id: 'yyyy', label: 'Año (YYYY)', color: 'slate' },
-       { id: 'location', label: 'Ubicación (BOD)', color: 'slate' },
-       { id: 'frc', label: 'FRC', color: 'slate' },
-       { id: 'erp', label: 'ERP', color: 'slate' },
-     ];
-   }
-   if (selectedModule === 'products') {
-     return [
-       { id: 'barcode', label: 'Código de Barras (SKU)', color: 'emerald' },
-       { id: 'name', label: 'Nombre del Producto', color: 'emerald' },
-       { id: 'category', label: 'Categoría', color: 'amber' },
-       { id: 'supplier', label: 'Proveedor', color: 'slate' },
-       { id: 'price', label: 'Precio', color: 'slate' },
-       { id: 'unitsPerBox', label: 'Unidades por Caja', color: 'slate' },
-     ];
-   }
-   if (selectedModule === 'counts') {
-     return [
-       { id: 'barcode', label: 'Código de Barras (SKU)', color: 'emerald' },
-       { id: 'quantity', label: 'Cantidad', color: 'emerald' },
-       { id: 'timestamp', label: 'Fecha/Hora', color: 'amber' },
-       { id: 'operatorId', label: 'ID Operador', color: 'slate' },
-       { id: 'location', label: 'Ubicación', color: 'slate' },
-       { id: 'batch', label: 'Lote', color: 'slate' },
-       { id: 'expiry', label: 'Vencimiento', color: 'slate' },
-     ];
-   }
-   return [];
- };
+  const getModuleFields = () => {
+    if (selectedModule === 'expiry') {
+      return [
+        { id: 'id', label: 'ID del Registro (Key)', color: 'indigo', required: true, hint: 'Columna única de la fila en Google Sheets' },
+        { id: 'uniqueKey', label: 'Clave Única (Idempotencia)', color: 'indigo', required: true, hint: 'SKU+LOTE+FECHA para evitar duplicados' },
+        { id: 'barcode', label: 'Código de Barras (SKU)', color: 'emerald', required: true },
+        { id: 'productName', label: 'Descripción Producto', color: 'emerald' },
+        { id: 'quantity', label: 'Cantidad', color: 'emerald', required: true },
+        { id: 'mm', label: 'Mes (MM)', color: 'slate' },
+        { id: 'yyyy', label: 'Año (YYYY)', color: 'slate' },
+        { id: 'location', label: 'Ubicación (BOD)', color: 'slate' },
+        { id: 'timestamp', label: 'Fecha/Hora Registro', color: 'slate' },
+        { label: 'Nombre Producto (Opcional)', key: 'name' }
+      ];
+    }
+    if (selectedModule === 'events') {
+      return [
+        { id: 'id', label: 'ID del Registro (Key)', color: 'indigo', required: true, hint: 'Columna única de la fila en Google Sheets' },
+        { id: 'uniqueKey', label: 'Clave Única (Idempotencia)', color: 'indigo', required: true, hint: 'SKU+LOTE+FECHA para evitar duplicados' },
+        { id: 'barcode', label: 'Código de Barras (SKU)', color: 'emerald', required: true },
+        { id: 'productName', label: 'Descripción Producto', color: 'emerald' },
+        { id: 'quantity', label: 'Cantidad', color: 'emerald', required: true },
+        { id: 'event', label: 'Evento / Tipo', color: 'emerald' },
+        { id: 'nguia', label: 'N° Guía', color: 'amber' },
+        { id: 'frc', label: 'FRC', color: 'slate' },
+        { id: 'erp', label: 'Orden ERP', color: 'slate' },
+        { id: 'traspaso', label: 'N° Traspaso / Doc', color: 'amber' },
+        { id: 'destino', label: 'Destino', color: 'slate' },
+        { id: 'observaciones', label: 'Observaciones', color: 'slate' },
+        { id: 'isAdjusted', label: 'Flag Ajustado (Boolean)', color: 'emerald' },
+        { id: 'timestamp', label: 'Fecha/Hora Registro', color: 'slate' },
+        { label: 'Nombre Producto (Opcional)', key: 'name' }
+      ];
+    }
+    if (selectedModule === 'products') {
+      return [
+        { id: 'id', label: 'ID del Registro (Key)', color: 'indigo', required: true, hint: 'Columna única de la fila (Key)' },
+        { id: 'barcode', label: 'Código de Barras (SKU)', color: 'emerald', required: true },
+        { id: 'name', label: 'Nombre del Producto', color: 'emerald', required: true },
+        { id: 'category', label: 'Categoría (Mundo)', color: 'amber' },
+        { id: 'supplier', label: 'Nombre Proveedor', color: 'indigo' },
+        { id: 'supplierRut', label: 'RUT Proveedor', color: 'indigo' },
+        { id: 'price', label: 'Precio', color: 'slate' },
+        { id: 'unitsPerBox', label: 'Unidades por Caja', color: 'slate' },
+      ];
+    }
+    if (selectedModule === 'counts') {
+      return [
+        { id: 'id', label: 'ID del Registro (Key)', color: 'indigo', required: true },
+        { id: 'uniqueKey', label: 'Clave Única', color: 'indigo', required: true },
+        { id: 'barcode', label: 'Código de Barras (SKU)', color: 'emerald', required: true },
+        { id: 'quantity', label: 'Cantidad', color: 'emerald', required: true },
+        { id: 'timestamp', label: 'Fecha/Hora', color: 'amber' },
+        { id: 'operatorId', label: 'ID Operador', color: 'slate' },
+        { id: 'location', label: 'Ubicación', color: 'slate' },
+        { id: 'expiry', label: 'Vencimiento (M-Y)', color: 'slate' },
+      ];
+    }
+    return [];
+  };
 
  return (
  <div className="space-y-6 animate-in fade-in duration-500">
@@ -328,23 +352,30 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
   />
  </div>
 
- <div className="grid grid-cols-2 gap-4">
- <SettingsButton 
- onClick={() => setIsScanning(true)}
- label="Escanear QR"
- icon={Camera}
- variant="secondary"
- className="bg-slate-800 border-white/10"
- />
- <SettingsButton 
- onClick={() => setShowQR(true)}
- disabled={!urlInput}
- label="Compartir QR"
- icon={QrCode}
- variant="secondary"
- className="bg-slate-800 border-white/10"
- />
- </div>
+  <div className="grid grid-cols-3 gap-3">
+  <SettingsButton 
+  onClick={() => setIsScanning(true)}
+  label="Escanear QR"
+  icon={Camera}
+  variant="secondary"
+  className="bg-slate-800 border-white/10"
+  />
+  <SettingsButton 
+  onClick={() => setShowQR(true)}
+  disabled={!urlInput}
+  label="Compartir QR"
+  icon={QrCode}
+  variant="secondary"
+  className="bg-slate-800 border-white/10"
+  />
+  <SettingsButton 
+  onClick={() => setShowLogs(true)}
+  label="Diagnóstico"
+  icon={Activity}
+  variant="secondary"
+  className="bg-slate-800 border-indigo-500/20 text-indigo-400"
+  />
+  </div>
  </div>
  </SettingsCard>
  </SettingsSection>
@@ -442,41 +473,97 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
               animate={{ opacity: 1, x: 0 }}
               className="space-y-6 pt-4 border-t border-white/5"
             >
-              <div className="flex items-center gap-2 px-1">
-                <Columns className="w-4 h-4 text-amber-400" />
-                <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Mapeo de Cabeceras - {selectedModule.toUpperCase()}</label>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                {getModuleFields().map((field) => (
-                  <div key={field.id} className="space-y-2">
-                    <div className="flex justify-between items-center px-1">
-                      <label className={`text-[9px] font-black text-${field.color}-400 uppercase tracking-widest`}>{field.label}</label>
-                      {currentSheetMetadata?.headers.includes(mapping[field.id] || '') && (
-                        <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                      )}
-                    </div>
-                    <select 
-                      value={mapping[field.id] || ''}
-                      onChange={(e) => updateMappingField(field.id, e.target.value)}
-                      className="w-full bg-black/40 border border-white/5 rounded-xl px-3 py-2 text-[11px] font-mono text-white focus:border-emerald-500 outline-none transition-all"
-                    >
-                      <option value="">-- Sin asignar --</option>
-                      {currentSheetMetadata?.headers.map(h => (
-                        <option key={h} value={h}>{h}</option>
-                      ))}
-                    </select>
+              <div className="space-y-8">
+                {/* GRUPO: CAMPOS CRÍTICOS */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 px-1">
+                    <ShieldAlert className="w-4 h-4 text-rose-500" />
+                    <label className="text-[10px] font-black text-rose-100 uppercase tracking-widest leading-none">Campos Críticos de Integridad</label>
                   </div>
-                ))}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {getModuleFields().filter(f => f.required).map((field) => (
+                      <div key={field.id} className="p-4 bg-slate-800/40 rounded-2xl border border-white/5 space-y-3">
+                        <div className="flex justify-between items-center">
+                          <label className={`text-[9px] font-black text-${field.id === 'id' ? 'indigo' : 'emerald'}-400 uppercase tracking-widest`}>{field.label}</label>
+                          {currentSheetMetadata?.headers.includes(mapping[field.id] || '') && (
+                            <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                          )}
+                        </div>
+                        <select 
+                          value={mapping[field.id] || ''}
+                          onChange={(e) => updateMappingField(field.id, e.target.value)}
+                          className="w-full bg-black/60 border-2 border-white/10 rounded-xl px-3 py-2 text-[10px] font-mono text-white focus:border-indigo-500 outline-none transition-all"
+                        >
+                          <option value="">-- SELECCIONAR COLUMNA --</option>
+                          {currentSheetMetadata?.headers.map(h => (
+                            <option key={h} value={h}>{h}</option>
+                          ))}
+                        </select>
+                        {(field as any).hint && (
+                          <p className="text-[8px] text-slate-500 font-bold uppercase italic leading-tight">TIP: {(field as any).hint}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* GRUPO: DATOS DE NEGOCIO */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 px-1">
+                    <Box className="w-4 h-4 text-blue-400" />
+                    <label className="text-[10px] font-black text-blue-100 uppercase tracking-widest leading-none">Datos de Negocio / Metadatos</label>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {getModuleFields().filter(f => !f.required).map((field) => (
+                      <div key={field.id} className="p-3 bg-white/5 rounded-xl border border-white/5 space-y-2">
+                        <label className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">{field.label}</label>
+                        <select 
+                          value={mapping[field.id] || ''}
+                          onChange={(e) => updateMappingField(field.id, e.target.value)}
+                          className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-[9px] font-mono text-slate-300 focus:border-blue-500 outline-none transition-all"
+                        >
+                          <option value="">-- No asig. --</option>
+                          {currentSheetMetadata?.headers.map(h => (
+                            <option key={h} value={h}>{h}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
 
-              <SettingsButton 
-                onClick={handleSaveMapping}
-                label={`Guardar Configuración de ${selectedModule.toUpperCase()}`}
-                icon={Save}
-                variant="primary"
-                className="bg-emerald-600 border-emerald-400 h-16 text-xs mt-4"
-              />
+              <div className="pt-6 border-t border-white/5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <SettingsButton 
+                  onClick={() => {
+                    const newMapping = { ...mapping };
+                    const headers = currentSheetMetadata?.headers || [];
+                    const fields = getModuleFields();
+                    
+                    fields.forEach(f => {
+                      const match = headers.find(h => 
+                        h.toLowerCase() === f.id.toLowerCase() || 
+                        h.toLowerCase() === f.label.toLowerCase() ||
+                        (f.id === 'barcode' && (h.toLowerCase() === 'sku' || h.toLowerCase() === 'upc')) ||
+                        (f.id === 'id' && (h.toLowerCase() === 'id' || h.toLowerCase() === 'key' || h.toLowerCase() === 'codigo'))
+                      );
+                      if (match && !newMapping[f.id]) newMapping[f.id] = match;
+                    });
+                    setMapping(newMapping);
+                  }}
+                  label="Auto-Sugerir Mapeo"
+                  icon={RefreshCw}
+                  variant="secondary"
+                  className="bg-slate-800 border-white/10"
+                />
+                <SettingsButton 
+                  onClick={handleSaveMapping}
+                  label={`Guardar Estructura de ${selectedModule.toUpperCase()}`}
+                  icon={Save}
+                  variant="primary"
+                  className="bg-indigo-600 border-indigo-400"
+                />
+              </div>
             </motion.div>
           )}
         </div>

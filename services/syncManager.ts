@@ -276,7 +276,10 @@ export const importProductsFromAppSheet = async (): Promise<number> => {
   try {
     const config = getSettings().appSheetConfig;
     const lastSyncTimestamp = localStorage.getItem('last_product_sync_time') || '0';
-    const response = await cloudApi.fetchTable(config?.productsTableName || "PRODUCTOS", lastSyncTimestamp);
+    const response = await cloudApi.fetchTable(
+      config?.productsTableName || "PRODUCTOS", 
+      lastSyncTimestamp
+    );
     const rawProducts = response.rows || [];
     
     if (rawProducts.length === 0) return 0;

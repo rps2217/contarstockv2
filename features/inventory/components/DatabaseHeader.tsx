@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { ChevronLeft, HardDrive, Upload, Loader2, FileSpreadsheet, Plus, RefreshCw, BrainCircuit, Download, Cpu, Cloud, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, HardDrive, Upload, Loader2, FileSpreadsheet, Plus, RefreshCw, BrainCircuit, Download, Cpu, Cloud, CheckCircle2, Database } from 'lucide-react';
 import { SearchBar } from '../../../components/SearchBar';
 import { useNavigate } from 'react-router-dom';
 
@@ -41,13 +40,17 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
  <button onClick={() => navigate('/dashboard')} className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl text-slate-600 dark:text-slate-400 transition-all active:scale-90">
  <ChevronLeft className="w-6 h-6 stroke-[3px]" />
  </button>
- <div>
- <h1 className="text-lg font-black text-slate-900 dark:text-white tracking-tighter uppercase italic leading-none">Catálogo</h1>
- <div className="flex items-center gap-1.5 text-[8px] text-slate-400 font-black uppercase tracking-widest mt-1">
- <HardDrive className="w-2.5 h-2.5" />
- <span>{props.usedMb} MB LOCAL</span>
- </div>
- </div>
+ <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-black uppercase tracking-tighter italic text-slate-900 dark:text-white flex items-center gap-2">
+                  <Database className="w-6 h-6 text-blue-500" />
+                  CATÁLOGO
+                </h1>
+                <span className="text-[10px] font-mono text-slate-500 bg-slate-100 dark:bg-slate-900 px-2 py-0.5 rounded border border-slate-200 dark:border-white/5 uppercase tracking-widest">
+                  {props.usedMb} MB LOCAL
+                </span>
+              </div>
+            </div>
  </div>
  
  <div className="flex gap-2">

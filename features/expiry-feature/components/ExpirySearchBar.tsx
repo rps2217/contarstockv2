@@ -21,7 +21,23 @@ export const ExpirySearchBar: React.FC<ExpirySearchBarProps> = ({
   activeFiltersCount,
   theme = 'dark'
 }) => {
-  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = React.useState(false);
+  const [localQuery, setLocalQuery] = React.useState(searchQuery);
+
+  // Sincronizar localQuery con searchQuery cuando cambie externamente (ej: al limpiar filtros)
+  React.useEffect(() => {
+    setLocalQuery(searchQuery);
+  }, [searchQuery]);
+
+  // Debounce interno para no estresar la App mientras se escribe
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      if (localQuery !== searchQuery) {
+        setSearchQuery(localQuery);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [localQuery, searchQuery, setSearchQuery]);
 
   return (
     <div className="flex flex-col md:flex-row gap-3">
@@ -30,9 +46,9 @@ export const ExpirySearchBar: React.FC<ExpirySearchBarProps> = ({
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
           <input 
             type="text"
-            placeholder="BUSCAR POR NOMBRE, SKU O LOTE..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="BUSCAR SKU, NOMBRE O PROVEEDOR..."
+            value={localQuery}
+            onChange={(e) => setLocalQuery(e.target.value)}
             className={`w-full border rounded-2xl py-4 pl-12 pr-28 text-sm font-bold focus:outline-none transition-all shadow-2xl ${
               theme === 'dark' ? 'bg-black border-amber-500/50 text-white' : 'bg-white border-amber-500/50 text-slate-900 shadow-slate-200/50'
             }`}

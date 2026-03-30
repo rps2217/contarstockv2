@@ -107,15 +107,28 @@ export const filterExpiryItems = (
 ): ExpiryItem[] => {
   const { query, selectedCategories, selectedCanje, selectedEstado, dateRange, withdrawalDateRange } = filters;
   
+  // Pre-procesar la query para búsqueda ultra-rápida una sola vez
+  const searchTerm = query.trim().toLowerCase();
+  
   return items.filter(item => {
-    if (query) {
-      const matchesSearch = 
-        item.productName.toLowerCase().includes(query) ||
-        item.barcode.includes(query) ||
-        (item.batch && item.batch.toLowerCase().includes(query)) ||
-        (item.providerName && item.providerName.toLowerCase().includes(query)) ||
-        (item.frc && item.frc.toLowerCase().includes(query));
-      if (!matchesSearch) return false;
+    // 1. Búsqueda Triple (SKU, Nombre, Proveedor) - PRIORIDAD ALTA
+    if (searchTerm) {
+      // Forzar conversión a String para evitar el crash ".includes is not a function"
+      const barcodeStr = String(item.barcode || "").toLowerCase();
+      const nameStr = String(item.productName || "").toLowerCase();
+      const providerStr = String(item.providerName || "").toLowerCase();
+      const batchStr = String(item.batch || "").toLowerCase();
+      const frcStr = String(item.frc || "").toLowerCase();
+
+      const barcodeMatch = barcodeStr.includes(searchTerm);
+      const nameMatch = nameStr.includes(searchTerm);
+      const providerMatch = providerStr.includes(searchTerm);
+      const batchMatch = batchStr.includes(searchTerm);
+      const frcMatch = frcStr.includes(searchTerm);
+      
+      if (!barcodeMatch && !nameMatch && !providerMatch && !batchMatch && !frcMatch) {
+        return false;
+      }
     }
 
     if (selectedCategories.length > 0 && !selectedCategories.includes(item.category)) {
@@ -160,75 +173,73 @@ export const filterExpiryItems = (
 };
 
 export const calculateExpiryStats = (items: ExpiryItem[]) => {
-  const expiredCount = items.filter(s => s.status === 'expired').length;
-  const criticalCount = items.filter(s => s.status === 'critical').length;
-  const nextExpiryCount = items.filter(s => s.status === 'next_expiry').length;
-  const withdrawalCount = items.filter(s => s.status === 'withdrawal').length;
-  
-  const priorityItems = [...items]
-    .filter(item => item.status !== 'safe')
-    .sort((a, b) => (b.riskScore || 0) - (a.riskScore || 0))
-    .slice(0, 5);
+  const stats = {
+    expired: 0,
+    critical: 0,
+    next_expiry: 0,
+    withdrawal: 0,
+    total: items.length
+  };
 
   const categoryCounts: Record<string, number> = {};
+  const suggestGroups = {
+    merma: [] as ExpiryItem[],
+    canje: [] as ExpiryItem[],
+    drenaje: [] as ExpiryItem[],
+    impulso: [] as ExpiryItem[]
+  };
+
+  // ÚNICO RECORRIDO DE DATOS (O(n))
   items.forEach(item => {
+    // 1. Contadores por estado
+    if (item.status === 'expired') stats.expired++;
+    else if (item.status === 'critical') stats.critical++;
+    else if (item.status === 'next_expiry') stats.next_expiry++;
+    else if (item.status === 'withdrawal') stats.withdrawal++;
+
+    // 2. Alertar por volumen (Categorías)
     if (item.status !== 'safe') {
       categoryCounts[item.category] = (categoryCounts[item.category] || 0) + 1;
     }
+
+    // 3. Agrupar para acciones sugeridas
+    const isUrgent = item.status === 'critical' || item.status === 'expired';
+    const isNext = item.status === 'next_expiry';
+
+    if (isUrgent) {
+      if (item.hasCanje) suggestGroups.canje.push(item);
+      else suggestGroups.merma.push(item);
+    } else if (isNext) {
+      if (item.hasCanje) suggestGroups.impulso.push(item);
+      else suggestGroups.drenaje.push(item);
+    }
   });
+
+  // Procesar resultados finales
   const volumeAlerts = Object.entries(categoryCounts)
     .map(([name, count]) => ({ name, count }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 3);
 
-  const suggestedActions = [];
-  
-  const mermaItems = items.filter(item => !item.hasCanje && (item.status === 'critical' || item.status === 'expired'));
-  if (mermaItems.length > 0) {
-    suggestedActions.push({
-      title: 'Solicitudes de precios especiales',
-      description: `Gestionar rebajas para ${mermaItems.length} ítems críticos/vencidos sin opción a canje.`,
-      count: mermaItems.length,
-      type: 'merma'
-    });
-  }
+  const suggestedActions = [
+    { type: 'merma', list: suggestGroups.merma, title: 'Solicitudes de precios especiales', desc: 'Gestionar rebajas para ítems críticos/vencidos sin opción a canje.' },
+    { type: 'canje', list: suggestGroups.canje, title: 'Gestión de Canjes', desc: 'Coordinar devolución con proveedores para ítems críticos/vencidos.' },
+    { type: 'drenaje', list: suggestGroups.drenaje, title: 'Plan de Drenaje (Próximos)', desc: 'Solicitar ofertas para ítems (4 meses) sin canje para evitar pérdidas.' },
+    { type: 'impulso', list: suggestGroups.impulso, title: 'Impulso de Ventas (Próximos)', desc: 'Promocionar ítems (4 meses) con canje para minimizar devoluciones.' }
+  ].filter(a => a.list.length > 0).map(a => ({
+    title: a.title,
+    description: a.desc.replace('ítems', `${a.list.length} ítems`),
+    count: a.list.length,
+    type: a.type
+  }));
 
-  const canjeItems = items.filter(item => item.hasCanje && (item.status === 'critical' || item.status === 'expired'));
-  if (canjeItems.length > 0) {
-    suggestedActions.push({
-      title: 'Gestión de Canjes',
-      description: `Coordinar devolución con proveedores para ${canjeItems.length} ítems críticos/vencidos.`,
-      count: canjeItems.length,
-      type: 'canje'
-    });
-  }
-
-  const drenajeItems = items.filter(item => !item.hasCanje && item.status === 'next_expiry');
-  if (drenajeItems.length > 0) {
-    suggestedActions.push({
-      title: 'Plan de Drenaje (Próximos)',
-      description: `Solicitar ofertas para ${drenajeItems.length} ítems (4 meses) sin canje para evitar pérdidas.`,
-      count: drenajeItems.length,
-      type: 'drenaje'
-    });
-  }
-
-  const impulsoItems = items.filter(item => item.hasCanje && item.status === 'next_expiry');
-  if (impulsoItems.length > 0) {
-    suggestedActions.push({
-      title: 'Impulso de Ventas (Próximos)',
-      description: `Promocionar ${impulsoItems.length} ítems (4 meses) con canje para minimizar devoluciones.`,
-      count: impulsoItems.length,
-      type: 'impulso'
-    });
-  }
+  const priorityItems = [...items]
+    .filter(item => item.status !== 'safe')
+    .sort((a, b) => (b.riskScore || 0) - (a.riskScore || 0))
+    .slice(0, 5);
 
   return {
-    expired: expiredCount,
-    critical: criticalCount,
-    next_expiry: nextExpiryCount,
-    withdrawal: withdrawalCount,
-    total: items.length,
+    ...stats,
     priorityItems,
     volumeAlerts,
     suggestedActions

@@ -49,14 +49,31 @@ export const dynamicSyncService = {
         // Preparar las filas para el envío
         // Usamos el esquema para asegurar que las columnas coincidan con lo esperado en la nube
         // Si no hay esquema, enviamos la data tal cual
-        const schema = Object.values(schemas).find((s: any) => s?.tableName === tableName);
-        
+        const config = settings.appSheetConfig;
+        let idCol = 'ID';
+        let tsCol = 'TIMESTAMP';
+
+        if (config?.mappings) {
+          if (tableName === config.inventoryRegistryTableName) {
+            idCol = config.mappings.expiry?.id || 'ID';
+            tsCol = config.mappings.expiry?.timestamp || 'TIMESTAMP';
+          } else if (tableName === config.eventsTableName) {
+            idCol = config.mappings.events?.id || 'ID';
+            tsCol = config.mappings.events?.timestamp || 'TIMESTAMP';
+          } else if (tableName === config.productsTableName) {
+            idCol = config.mappings.products?.id || 'ID';
+          } else if (tableName === config.countsTableName) {
+            idCol = config.mappings.counts?.id || 'ID';
+            tsCol = config.mappings.counts?.timestamp || 'TIMESTAMP';
+          }
+        }
+
         const rows = records.map(r => {
           const row: Record<string, any> = { ...r.data };
           
-          // Asegurar que el ID y el Timestamp se incluyan si no están
-          if (!row['ID']) row['ID'] = r.id;
-          if (!row['TIMESTAMP']) row['TIMESTAMP'] = new Date(r.timestamp).toLocaleString('es-CL');
+          // Asegurar que el ID y el Timestamp se incluyan si no están bajo el nombre correcto
+          if (!row[idCol]) row[idCol] = r.id;
+          if (!row[tsCol]) row[tsCol] = new Date(r.timestamp).toLocaleString('es-CL');
           
           return row;
         });
@@ -111,10 +128,22 @@ export const dynamicSyncService = {
     let added = 0;
     let updated = 0;
 
+    const settings = getSettings();
+    const config = settings.appSheetConfig;
+    
+    // Determinar qué mapeo usar según la tabla
+    let idColumn = 'ID';
+    if (config?.mappings) {
+      if (tableName === config.inventoryRegistryTableName) idColumn = config.mappings.expiry?.id || 'ID';
+      else if (tableName === config.eventsTableName) idColumn = config.mappings.events?.id || 'ID';
+      else if (tableName === config.productsTableName) idColumn = config.mappings.products?.id || 'ID';
+      else if (tableName === config.countsTableName) idColumn = config.mappings.counts?.id || 'ID';
+    }
+
     if (onProgress) onProgress(`Procesando ${remoteRows.length} registros...`);
 
     // Procesar en lotes para no bloquear la UI
-    const batchSize = 100; // Aumentamos el tamaño del lote
+    const batchSize = 100;
     for (let i = 0; i < remoteRows.length; i += batchSize) {
       const batch = remoteRows.slice(i, i + batchSize);
       
@@ -122,7 +151,8 @@ export const dynamicSyncService = {
         const recordsToPut: DynamicRecord[] = [];
         
         for (const remoteRow of batch) {
-          const remoteId = String(remoteRow['ID'] || remoteRow['ID_REGISTRO'] || remoteRow['CLAVE_UNICA'] || '');
+          // Intentar obtener el ID usando el mapeo o fallbacks
+          const remoteId = String(remoteRow[idColumn] || remoteRow['ID'] || remoteRow['ID_REGISTRO'] || remoteRow['CLAVE_UNICA'] || '');
           if (!remoteId) continue;
 
           const localRecord = await db.dynamic_data.get(remoteId);

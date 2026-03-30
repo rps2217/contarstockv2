@@ -12,13 +12,17 @@ import { useAppStore } from '../../../store/useAppStore';
 import { useExpiryStore, ExpiryItem, ExpiryStatus, ExpiryPreferences } from '../../../store/useExpiryStore';
 import { SyncQueueService } from '../../../services/syncQueueService';
 import { processExpiryItem, filterExpiryItems, calculateExpiryStats } from '../utils/expiryProcessor';
+import { SoundFX } from '../../../services/audio';
+import { cloudApi } from '../../../services/cloud/apiClient';
 
 export type { ExpiryStatus, ExpiryPreferences, ExpiryItem };
 
 export const useExpiryDatabase = () => {
   const { addToast } = useToastStore.getState();
   const { settings } = useAppStore();
-  const tableName = settings?.appSheetConfig?.expiryTableName || 'VENCIMIENTOS';
+  const tableName = settings?.appSheetConfig?.inventoryRegistryTableName || 
+                    settings?.appSheetConfig?.expiryTableName || 
+                    'VENCIMIENTOS';
   
   // Procesar cola de sincronización al iniciar
   useEffect(() => {
@@ -40,15 +44,23 @@ export const useExpiryDatabase = () => {
 
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
-  const [pendingOperations, setPendingOperations] = useState(0);
+  
+  // Monitoreo en tiempo real de operaciones pendientes en la nube
+  const pendingOperations = useLiveQuery(
+    () => db.dynamic_data.where('syncStatus').equals('pending').count(),
+    []
+  ) || 0;
 
-  // Debounce search query
+  // Debounce search query - Aumentado a 400ms para mayor fluidez en búsquedas rápidas
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSearch(searchQuery);
-    }, 300);
+      // Solo actualizamos si el valor ha cambiado realmente
+      if (debouncedSearch !== searchQuery) {
+        setDebouncedSearch(searchQuery);
+      }
+    }, 400); 
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchQuery, debouncedSearch]);
 
   // Clear statuses when a specific estado is selected to ensure visibility
   useEffect(() => {
@@ -103,21 +115,26 @@ export const useExpiryDatabase = () => {
       location: session.logisticsLabel || 'N/A'
     }, productMap, providerMap, now));
     
-    // Mapeo del Nuevo Motor al formato esperado por la UI
+    const expiryMapping = settings?.appSheetConfig?.mappings?.expiry;
     const cloudItems = (dynamicExpirations || [])
+      .filter(record => {
+        const exp = record.data;
+        const eventValue = expiryMapping?.event ? exp[expiryMapping.event] : (exp.EVENTO || exp.event);
+        return String(eventValue || "").toUpperCase() === 'VENCIMIENTOS';
+      })
       .map(record => {
         const exp = record.data;
         return processExpiryItem({
           id: record.id,
-          barcode: exp.SKU || exp.barcode,
-          productName: exp.DESCRIPTOR || exp.productName,
-          mm: exp.MM || exp.mm,
-          yyyy: exp.YYYY || exp.yyyy,
-          batch: exp.LOTE || 'N/A',
+          barcode: expiryMapping?.barcode ? exp[expiryMapping.barcode] : (exp.SKU || exp.barcode),
+          productName: expiryMapping?.name ? exp[expiryMapping.name] : (exp.DESCRIPTOR || exp.productName),
+          mm: expiryMapping?.mm ? exp[expiryMapping.mm] : (exp.MM || exp.mm),
+          yyyy: expiryMapping?.yyyy ? exp[expiryMapping.yyyy] : (exp.YYYY || exp.yyyy),
+          batch: expiryMapping?.batch ? exp[expiryMapping.batch] : (exp.LOTE || 'N/A'),
           type: 'Nube',
           timestamp: record.timestamp,
-          quantity: exp.CANTIDAD || exp.quantity || 0,
-          location: exp.UBICACION || exp.location || 'N/A',
+          quantity: expiryMapping?.quantity ? exp[expiryMapping.quantity] : (exp.CANTIDAD || exp.quantity || 0),
+          location: expiryMapping?.location ? exp[expiryMapping.location] : (exp.UBICACION || exp.location || 'N/A'),
           claveUnica: exp.claveUnica,
           syncStatus: record.syncStatus
         }, productMap, providerMap, now);
@@ -246,45 +263,94 @@ export const useExpiryDatabase = () => {
       }
 
       // Generar clave única localmente para validación previa
+      const yearStr = String(data.yyyy);
       const mmPadded = String(data.mm).padStart(2, '0');
+      
+      // Cálculo preciso del último día del mes
       const lastDay = new Date(data.yyyy, data.mm, 0).getDate();
       const ddPadded = String(lastDay).padStart(2, '0');
-      const claveUnica = `${sanitizedBarcode}${data.yyyy}${mmPadded}${ddPadded}`;
+      
+      // Composición de clave FINAL: SKU + YYYY + MM + DD (Sin separadores)
+      const claveUnica = `${sanitizedBarcode}${yearStr}${mmPadded}${ddPadded}`;
 
-      // 1. Validar duplicado localmente antes de ir a la nube
+      // 1. VALIDACIÓN LOCAL (Búsqueda exacta por Clave Única)
       const existingLocal = await db.dynamic_data
         .where('tableName').equals(tableName)
-        .filter(r => r.data.claveUnica === claveUnica)
+        .and(r => r.data.claveUnica === claveUnica)
         .first();
         
       if (existingLocal) {
-        addToast('Este producto ya está registrado para el mes y año seleccionados.', 'error');
+        addToast(`⚠️ Error: El producto ya tiene este vencimiento (${mmPadded}/${data.yyyy}) registrado localmente.`, 'error');
+        SoundFX.play('error');
         return;
       }
 
-      // 2. Guardar usando el nuevo motor dinámico
+      // 2. VALIDACIÓN EN NUBE (Preventiva y Exacta)
       try {
-        await dynamicDataService.saveRecord(tableName, {
-          SKU: sanitizedBarcode,
-          DESCRIPTOR: data.productName,
-          MM: data.mm,
-          YYYY: data.yyyy,
-          CANTIDAD: data.quantity,
-          UBICACION: 'MANUAL',
-          claveUnica: claveUnica,
-          fechaCC: data.fechaCC,
-          TIMESTAMP: Date.now()
-        }, claveUnica);
-        
-        addToast('Producto registrado exitosamente', 'success');
-      } catch (dbError: any) {
-        throw dbError;
+        const cloudCheck = await cloudApi.getSummary(tableName, 'claveUnica', claveUnica);
+        // Validamos que el resultado no sea solo 'exitoso', sino que contenga exactamente la clave buscada
+        const matchInCloud = cloudCheck.success && 
+                             cloudCheck.rows && 
+                             cloudCheck.rows.some(row => String(row.claveUnica || row.ID) === claveUnica);
+
+        if (matchInCloud) {
+          addToast(`⚠️ Aviso: Este vencimiento (${mmPadded}/${data.yyyy}) ya existe en Google Sheets.`, 'warning');
+          SoundFX.play('error');
+          return;
+        }
+      } catch (cloudErr) {
+        console.warn("Consulta de duplicados en la nube omitida por error de conexión. Se continúa con validación local.");
       }
 
+      // 3. CONSTRUIR REGISTRO ADAPTATIVO (Basado en la estructura de tu Imagen)
+      const expiryMapping = settings?.appSheetConfig?.mappings?.expiry;
+      const shortId = Math.random().toString(16).substring(2, 10); // Genera ID corto de 8 chars hex
+      const now = new Date();
+      const formattedDate = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+      
+      const rowData: Record<string, any> = {};
+
+      // Mapear campos dinámicamente según la estructura de tu Google Sheets
+      const setMappedField = (internalKey: string, value: any, fallbackKey: string) => {
+        const cloudKey = (expiryMapping as any)?.[internalKey] || fallbackKey;
+        rowData[cloudKey] = value;
+      };
+
+      // ALINEACIÓN CON IMAGEN:
+      setMappedField('id', shortId, 'ID_REGISTRO'); // Columna A
+      setMappedField('uniqueKey', claveUnica, 'CLAVE_UNICA'); // Columna B
+      setMappedField('timestamp', formattedDate, 'FECHA_INGRESO'); // Columna C
+      setMappedField('barcode', sanitizedBarcode, 'COD_BARRAS'); // Columna D
+      setMappedField('productName', data.productName, 'DESCRIPCION_PROD'); // Columna E
+      setMappedField('mm', data.mm, 'MM'); // Columna F
+      setMappedField('yyyy', data.yyyy, 'YYYY'); // Columna G
+      setMappedField('event', 'VENCIMIENTOS', 'EVENTO'); // Columna H
+      
+      // Metadatos adicionales
+      setMappedField('location', 'MANUAL', 'UBICACION'); 
+      setMappedField('origin', 'REGISTRO DIRECTO', 'ORIGEN');
+
+      if (data.fechaCC) setMappedField('fechaCC', data.fechaCC, 'fechaCC');
+
+      // GUARDADO LOCAL
+      const recordId = await dynamicDataService.saveRecord(tableName, rowData, shortId);
+      
+      // INICIAR RESPALDO EN NUBE (Segundo plano)
+      dynamicDataService.syncRecord(recordId).then(() => {
+        addToast('✅ Respaldo en la nube OK', 'success');
+        SoundFX.play('success');
+      }).catch((err) => {
+        console.warn("Cloud sync deferred:", err.message);
+        addToast('Guardado localmente. El respaldo se completará pronto.', 'warning');
+      });
+
+      return recordId;
+
     } catch (error: any) {
-      addToast(`Error al agregar localmente: ${error.message}`, 'error');
+      addToast(`Error crítico al registrar: ${error.message}`, 'error');
+      SoundFX.play('error');
     }
-  }, []);
+  }, [tableName]);
 
   const handleUpdatePreferences = useCallback((newPrefs: Partial<ExpiryPreferences>) => {
     setPreferences(newPrefs);

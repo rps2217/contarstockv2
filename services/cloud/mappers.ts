@@ -48,17 +48,17 @@ export const createInventoryPayload = (
 
     // Use expiry mapping for consolidated/expiry
     return {
-      [SHEET_COLUMNS.ID]: uniqueKey, // Col A: Ahora usamos uniqueKey para idempotencia
-      [SHEET_COLUMNS.UNIQUE_KEY]: uniqueKey, // Col B
-      [SHEET_COLUMNS.ENTRY_DATE]: dateStr, // Col C: FECHA_INGRESO (DD/MM/YYYY)
-      [expiryMapping?.barcode || SHEET_COLUMNS.BARCODE]: item.barcode, // Col D: COD PRODUCTO
-      [expiryMapping?.productName || SHEET_COLUMNS.PRODUCT_NAME]: item.productName || 'Cargando...', // Col E: DESCRIPCION
-      [expiryMapping?.location || SHEET_COLUMNS.LABEL]: activeLabel, // Col F: ETIQUETAS
-      [expiryMapping?.quantity || SHEET_COLUMNS.QUANTITY]: item.totalQuantity, // Col G: CANTIDAD
-      [expiryMapping?.yyyy || SHEET_COLUMNS.YEAR]: item.yyyy || "", // Col H: YYYY
-      [expiryMapping?.erp || SHEET_COLUMNS.ERP_ORDER]: session.erpOrder, // Col I: ERP
-      [SHEET_COLUMNS.DATE]: dateStr, // Col J: FECHA (DD/MM/YYYY)
-      [expiryMapping?.mm || SHEET_COLUMNS.MONTH]: item.mm || "", // Col K: MM
+      [expiryMapping?.id || SHEET_COLUMNS.ID]: uniqueKey,
+      [expiryMapping?.uniqueKey || SHEET_COLUMNS.UNIQUE_KEY]: uniqueKey,
+      [SHEET_COLUMNS.ENTRY_DATE]: dateStr,
+      [expiryMapping?.barcode || SHEET_COLUMNS.BARCODE]: item.barcode,
+      [expiryMapping?.productName || SHEET_COLUMNS.PRODUCT_NAME]: item.productName || 'Cargando...',
+      [expiryMapping?.location || SHEET_COLUMNS.LABEL]: activeLabel,
+      [expiryMapping?.quantity || SHEET_COLUMNS.QUANTITY]: item.totalQuantity,
+      [expiryMapping?.yyyy || SHEET_COLUMNS.YEAR]: item.yyyy || "",
+      [expiryMapping?.erp || SHEET_COLUMNS.ERP_ORDER]: session.erpOrder,
+      [expiryMapping?.timestamp || SHEET_COLUMNS.DATE]: dateStr,
+      [expiryMapping?.mm || SHEET_COLUMNS.MONTH]: item.mm || "",
       [expiryMapping?.frc || SHEET_COLUMNS.INCIDENT]: item.isIncident ? "FRC" : "OK",
       [SHEET_COLUMNS.AUDIT_STATUS]: session.auditStatus?.toUpperCase() || "",
       [SHEET_COLUMNS.AUDIT_SCORE]: session.auditScore || "",

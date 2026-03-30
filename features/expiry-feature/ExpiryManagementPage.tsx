@@ -23,6 +23,8 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { toast as sonnerToast } from 'sonner';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { productRepository } from '../../repositories/DexieProductRepository';
 import { DynamicForm } from '../../components/DynamicForm';
 import { useAppStore } from '../../store/useAppStore';
 
@@ -38,13 +40,29 @@ import { ExpiryItemCard } from './components/ExpiryItemCard';
 import { ExpiryBulkActions } from './components/ExpiryBulkActions';
 import { ExpiryEmailModal } from './components/ExpiryEmailModal';
 import { ExpiryPriorityPanel } from './components/ExpiryPriorityPanel';
+import { ExpirationModal } from './components/ExpirationModal';
+import { useProductDatabase } from '../inventory/hooks/useProductDatabase';
 
 // Utils
 import { handlePrintExpirations, handlePrintLabels, handleExportExpirationsCSV } from './utils/expiryUtils';
+import { normalizeSku } from '../../services/utils';
 
 const ExpiryManagementPage: React.FC = () => {
   const { addToast } = useToastStore.getState();
   const { state, actions } = useExpiryDatabase();
+  const { state: { products: visibleProducts } } = useProductDatabase();
+  
+  // MOTOR DE IDENTIFICACIÓN TOTAL: Obtiene el catálogo completo sin límites de 200
+  const productMap = useLiveQuery(async () => {
+    const allProducts = await productRepository.getAll();
+    const map: Record<string, any> = {};
+    allProducts.forEach(p => {
+      const sku = normalizeSku(p.barcode);
+      if (sku) map[sku] = p;
+    });
+    return map;
+  }, []);
+
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isSettingsDrawerOpen, setIsSettingsDrawerOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
@@ -53,7 +71,7 @@ const ExpiryManagementPage: React.FC = () => {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const navigate = useNavigate();
   const location = useLocation();
-  const expirySchema = useAppStore(s => s.settings.schema?.expiry);
+  const expirySchema = useAppStore(s => s.settings.appSheetConfig?.schema?.expiry || s.settings.schema?.expiry);
 
   const handleOpenAdd = () => {
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
@@ -285,11 +303,14 @@ const ExpiryManagementPage: React.FC = () => {
               onClick={actions.handleSyncExpirations}
               disabled={state.isSyncing}
               className={`border px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all disabled:opacity-50 ${
-                theme === 'dark' ? 'bg-white/5 hover:bg-white/10 border-white/10' : 'bg-slate-100 hover:bg-slate-200 border-slate-200'
+                (state.isSyncing || state.pendingOperations > 0)
+                  ? 'bg-amber-500/10 border-amber-500/40 text-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.2)] animate-pulse'
+                  : theme === 'dark' ? 'bg-white/5 hover:bg-white/10 border-white/10 text-slate-400' 
+                  : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-600'
               }`}
             >
-              <RefreshCw className={`w-3.5 h-3.5 text-amber-500 ${state.isSyncing ? 'animate-spin' : ''}`} />
-              {state.isSyncing ? 'Sincronizando...' : 'Sincronizar Nube'}
+              <RefreshCw className={`w-3.5 h-3.5 ${ (state.isSyncing || state.pendingOperations > 0) ? 'animate-spin text-amber-500' : 'text-slate-500' }`} />
+              {state.isSyncing ? 'Sincronizando...' : state.pendingOperations > 0 ? `Subiendo (${state.pendingOperations})` : 'Sincronizar Nube'}
             </button>
             <button 
               onClick={() => handlePrintExpirations(state.processedScans)}
@@ -546,54 +567,25 @@ const ExpiryManagementPage: React.FC = () => {
 
       <AnimatePresence>
         {isDesktopAddModalOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="w-full max-w-lg bg-[#111] border border-white/10 rounded-3xl overflow-hidden"
-            >
-              <div className="p-4 border-b border-white/10 flex items-center justify-between bg-[#1a1a1a]">
-                <h2 className="text-sm font-black uppercase tracking-widest text-white">Nuevo Registro</h2>
-                <button 
-                  onClick={() => setIsDesktopAddModalOpen(false)}
-                  className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-slate-400 active:bg-white/10"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="p-6">
-                {expirySchema && (
-                  <DynamicForm 
-                    schema={expirySchema}
-                    initialValues={{
-                      barcode: '',
-                      productName: '',
-                      quantity: 1
-                    }}
-                    onSubmit={async (values) => {
-                      await actions.handleAddItem({
-                        barcode: values.barcode || '',
-                        productName: values.productName || '',
-                        mm: Number(values.mm),
-                        yyyy: Number(values.yyyy),
-                        quantity: Number(values.quantity || 1),
-                        fechaCC: values.fechaCC
-                      });
-                      setIsDesktopAddModalOpen(false);
-                      addToast('Vencimiento registrado', 'success');
-                    }}
-                    onCancel={() => setIsDesktopAddModalOpen(false)}
-                  />
-                )}
-              </div>
-            </motion.div>
-          </motion.div>
+          <ExpirationModal 
+            productMap={productMap}
+            onCancel={() => setIsDesktopAddModalOpen(false)}
+            onComplete={(data) => {
+              // CIERRE INMEDIATO PARA UI OPTIMISTA
+              setIsDesktopAddModalOpen(false);
+              
+              actions.handleAddItem({
+                barcode: data.barcode,
+                productName: data.productName,
+                mm: data.mm,
+                yyyy: data.yyyy,
+                quantity: 1, // Default to 1 as requested
+                fechaCC: `${String(data.mm).padStart(2, '0')}/${data.yyyy}`
+              });
+              
+              sonnerToast.success('Registrando vencimiento...');
+            }}
+          />
         )}
       </AnimatePresence>
     </div>

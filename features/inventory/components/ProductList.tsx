@@ -132,9 +132,9 @@ export const ProductList: React.FC<ProductListProps> = memo(({ products, onEdit,
     <div className="h-full flex flex-col bg-transparent md:bg-white md:dark:bg-slate-900 md:rounded-[2.5rem] md:border md:border-slate-200 md:dark:border-white/5 overflow-hidden">
       <div className="hidden md:flex bg-slate-50 dark:bg-black/40 border-b border-slate-100 dark:border-white/5 px-8 py-4 shrink-0">
         <div className="w-40 text-[9px] font-black text-slate-400 uppercase tracking-widest">EAN/SKU</div>
-        <div className="flex-1 text-[9px] font-black text-slate-400 uppercase tracking-widest px-4">Descripción</div>
-        <div className="w-32 text-[9px] font-black text-slate-400 uppercase tracking-widest">Familia</div>
-        <div className="w-24 text-right text-[9px] font-black text-slate-400 uppercase tracking-widest">Acción</div>
+        <div className="flex-1 text-[9px] font-black text-slate-400 uppercase tracking-widest px-4">DESCRIPCIÓN</div>
+        <div className="w-32 text-[9px] font-black text-slate-400 uppercase tracking-widest">FAMILIA</div>
+        <div className="w-24 text-right text-[9px] font-black text-slate-400 uppercase tracking-widest">ACCIÓN</div>
       </div>
 
       <div className="flex-1 min-h-0">

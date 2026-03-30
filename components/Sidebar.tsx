@@ -90,7 +90,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
             <>
               {!isCollapsed && <div className="text-[9px] font-black text-slate-600 uppercase tracking-[0.4em] px-5 mb-6 mt-10">Dynamic_Tables</div>}
               {Object.entries(schema)
-                .filter(([key]) => key !== 'expiry' && key !== 'events')
+                .filter(([key]) => key !== 'expiry' && key !== 'events' && key !== 'products')
                 .map(([key, tableSchema]) => (
                 <NavItem 
                   key={key} 

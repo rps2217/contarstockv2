@@ -4,8 +4,8 @@ import { db } from '../db';
 export const DEFAULT_EXPIRY_SCHEMA: TableSchema = {
   tableName: 'VENCIMIENTOS',
   columns: {
-    barcode: { col: 'SKU', label: 'Código de Barras', type: 'barcode', required: true, readOnly: true },
-    productName: { col: 'DESCRIPTOR', label: 'Descripción', type: 'string', required: true, readOnly: true },
+    barcode: { col: 'SKU', label: 'Código de Barras', type: 'barcode', required: true },
+    productName: { col: 'DESCRIPTOR', label: 'Descripción', type: 'string', required: true },
     quantity: { col: 'CANTIDAD', label: 'Cantidad', type: 'number', required: true, defaultValue: 1 },
     event: { col: 'EVENTO', label: 'Evento', type: 'enum', options: ['VENCIMIENTOS', 'MERMA', 'CANJE'], defaultValue: 'VENCIMIENTOS' },
     mm: { col: 'MM', label: 'Mes', type: 'enum', options: ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], renderType: 'grid', required: true },
@@ -69,13 +69,16 @@ const DEFAULT_SETTINGS: AppSettings = {
  eventsTableName: 'EVENTOS',
  mappings: {
    expiry: {
-     barcode: 'SKU',
-     productName: 'DESCRIPTOR',
+     barcode: 'COD_BARRAS',
+     productName: 'DESCRIPCION_PROD',
      quantity: 'CANTIDAD',
      event: 'EVENTO',
      mm: 'MM',
      yyyy: 'YYYY',
-     location: 'BOD.',
+     location: 'UBICACION',
+     id: 'ID_REGISTRO',
+     uniqueKey: 'CLAVE_UNICA',
+     timestamp: 'FECHA_INGRESO',
      frc: 'FRC',
      erp: 'ERP',
      traspaso: 'DOC-TRAS-INTER',

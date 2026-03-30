@@ -165,7 +165,7 @@ export const ExpiryCapturePage: React.FC = () => {
   const navigate = useNavigate();
   const { addToast } = useToastStore.getState();
   const { state, actions } = useExpiryDatabase();
-  const expirySchema = useAppStore(s => s.settings.schema?.expiry);
+  const expirySchema = useAppStore(s => s.settings.appSheetConfig?.schema?.expiry || s.settings.schema?.expiry);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [scannedBarcode, setScannedBarcode] = useState('');

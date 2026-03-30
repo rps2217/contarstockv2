@@ -58,31 +58,38 @@ export const useEventDatabase = () => {
   const baseProcessedData = useMemo(() => {
     if (!dynamicEvents) return [];
 
+    const eventMapping = settings?.appSheetConfig?.mappings?.events;
     return dynamicEvents
+      .filter(record => {
+        const exp = record.data;
+        const eventValue = eventMapping?.event ? exp[eventMapping.event] : (exp.EVENTO || exp.event);
+        return String(eventValue || "").toUpperCase() !== 'VENCIMIENTOS';
+      })
       .map(record => {
         const exp = record.data;
-        const product = productMap.get(normalizeSku(exp.SKU || exp.barcode));
-        const productName = product?.name || exp.DESCRIPTOR || exp.productName || 'Producto Desconocido';
+        const barcode = eventMapping?.barcode ? exp[eventMapping.barcode] : (exp.SKU || exp.barcode);
+        const product = productMap.get(normalizeSku(barcode));
+        const productName = product?.name || (eventMapping?.name ? exp[eventMapping.name] : (exp.DESCRIPTOR || exp.productName)) || 'Producto Desconocido';
         
         return {
           id: record.id,
-          barcode: exp.SKU || exp.barcode,
+          barcode,
           productName,
-          event: exp.EVENTO || exp.event || 'OTRO',
-          quantity: exp.CANTIDAD || exp.quantity || 0,
-          location: exp.UBICACION || exp.location || 'GENERAL',
+          event: eventMapping?.event ? exp[eventMapping.event] : (exp.EVENTO || exp.event || 'OTRO'),
+          quantity: eventMapping?.quantity ? exp[eventMapping.quantity] : (exp.CANTIDAD || exp.quantity || 0),
+          location: eventMapping?.location ? exp[eventMapping.location] : (exp.UBICACION || exp.location || 'GENERAL'),
           timestamp: record.timestamp,
           claveUnica: exp.claveUnica,
           category: product?.category || 'GENERAL',
-          isAdjusted: exp.isAdjusted || false,
-          frc: exp.FRC || exp.frc,
-          erp: exp.ERP || exp.erp,
-          nguia: exp.NGUIA || exp.nguia,
-          destino: exp.DESTINO || exp.destino,
-          traspaso: exp.TRASPASO || exp.traspaso,
-          observaciones: exp.OBSERVACIONES || exp.observaciones,
-          mm: exp.MM || exp.mm,
-          yyyy: exp.YYYY || exp.yyyy,
+          isAdjusted: !!(eventMapping?.traspaso ? exp[eventMapping.traspaso] : exp.TRASPASO) || !!(exp.isAdjusted || exp.AJUSTADO),
+          frc: eventMapping?.frc ? exp[eventMapping.frc] : (exp.FRC || exp.frc),
+          erp: eventMapping?.erp ? exp[eventMapping.erp] : (exp.ERP || exp.erp),
+          nguia: eventMapping?.nguia ? exp[eventMapping.nguia] : (exp.NGUIA || exp.nguia),
+          destino: eventMapping?.destino ? exp[eventMapping.destino] : (exp.DESTINO || exp.destino),
+          traspaso: eventMapping?.traspaso ? exp[eventMapping.traspaso] : (exp.TRASPASO || exp.traspaso),
+          observaciones: eventMapping?.observaciones ? exp[eventMapping.observaciones] : (exp.OBSERVACIONES || exp.observaciones),
+          mm: eventMapping?.mm ? exp[eventMapping.mm] : (exp.MM || exp.mm),
+          yyyy: eventMapping?.yyyy ? exp[eventMapping.yyyy] : (exp.YYYY || exp.yyyy),
           syncStatus: record.syncStatus || 'synced',
           syncError: record.syncError
         };

@@ -62,50 +62,86 @@ export const cloudApi = {
  const controller = new AbortController();
  const timeoutId = setTimeout(() => controller.abort(), baseTimeout);
 
- try {
- if (attempt > 0) {
- await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
- }
+  try {
+    if (attempt > 0) {
+      await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
+    }
 
- const response = await fetch(url, {
- method: 'POST',
- body: JSON.stringify(bodyToSend),
- headers: { 'Content-Type': 'text/plain;charset=utf-8' },
- signal: controller.signal
- });
+    const response = await fetch(url, {
+      method: 'POST',
+      body: JSON.stringify(bodyToSend),
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      signal: controller.signal
+    });
 
- clearTimeout(timeoutId);
+    clearTimeout(timeoutId);
 
- if (!response.ok) throw new Error(`HTTP_${response.status}`);
+    if (!response.ok) throw new Error(`HTTP_${response.status}`);
 
- const text = await response.text();
- let json: ApiResponse;
- 
- try {
- json = JSON.parse(text);
- } catch (e) {
- throw new Error("SERVER_JSON_PARSE_ERROR");
- }
+    const text = await response.text();
+    let json: ApiResponse;
+    
+    try {
+      json = JSON.parse(text);
+    } catch (e) {
+      // Log failed parse
+      await (await import('../../db')).db.sync_logs.add({
+        timestamp: Date.now(),
+        action,
+        tableName: payload.tableName || 'unknown',
+        payload: bodyToSend,
+        response: text,
+        status: 'error',
+        errorMessage: 'SERVER_JSON_PARSE_ERROR'
+      });
+      throw new Error("SERVER_JSON_PARSE_ERROR");
+    }
 
- if (json.success === false) {
- // Manejo de bloqueos de Google Sheets
- if (json.error?.toLowerCase().includes("busy") || json.error?.toLowerCase().includes("lock")) {
- throw new Error("SHEET_LOCKED");
- }
- throw new Error(json.error || "UNKNOWN_SERVER_ERROR");
- }
+    // REGISTRO DE LOG EXITOSO O CON ERROR DE NEGOCIO
+    await (await import('../../db')).db.sync_logs.add({
+      timestamp: Date.now(),
+      action,
+      tableName: payload.tableName || 'unknown',
+      payload: bodyToSend,
+      response: json,
+      status: json.success ? 'success' : 'error',
+      errorMessage: json.error
+    });
 
- return json;
+    if (json.success === false) {
+      if (json.error?.toLowerCase().includes("busy") || json.error?.toLowerCase().includes("lock")) {
+        throw new Error("SHEET_LOCKED");
+      }
+      throw new Error(json.error || "UNKNOWN_SERVER_ERROR");
+    }
 
- } catch (error: any) {
- clearTimeout(timeoutId);
- if (attempt === maxRetries) {
- logger.error('CLOUD_API', `Fallo crítico tras ${attempt + 1} intentos`, error.message);
- throw error;
- }
- console.warn(`[CloudApi] Reintento ${attempt + 1}/${maxRetries} debido a: ${error.message}`);
- }
- }
+    return json;
+
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    
+    // REGISTRO DE ERROR DE RED / TIMEOUT
+    if (error.name !== 'AbortError' || attempt === maxRetries) {
+      try {
+        const { db } = await import('../../db');
+        await db.sync_logs.add({
+          timestamp: Date.now(),
+          action,
+          tableName: payload.tableName || 'unknown',
+          payload: bodyToSend,
+          status: 'error',
+          errorMessage: error.message
+        });
+      } catch (e) { /* ignore log error */ }
+    }
+
+    if (attempt === maxRetries) {
+      logger.error('CLOUD_API', `Fallo crítico tras ${attempt + 1} intentos`, error.message);
+      throw error;
+    }
+    console.warn(`[CloudApi] Reintento ${attempt + 1}/${maxRetries} debido a: ${error.message}`);
+  }
+}
  
  throw new Error("RETRY_LIMIT_EXCEEDED");
  },
@@ -128,5 +164,13 @@ export const cloudApi = {
 
  async deleteRow(tableName: string, id: string) {
   return this.post('delete_row', { tableName, id });
+ },
+
+ async addExpiration(data: any) {
+  return this.post('add_expiration', data);
+ },
+
+ async removeExpiration(claveUnica: string) {
+  return this.post('remove_expiration', { claveUnica });
  }
 };
