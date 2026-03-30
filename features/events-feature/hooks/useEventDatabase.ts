@@ -1,11 +1,13 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../../db';
 import { Product } from '../../../types';
 import { normalizeSku } from '../../../services/utils';
 import { useAppStore } from '../../../store/useAppStore';
-import { dynamicDataService } from '../../../services/dynamicDataService';
+import { useToastStore } from '../../../store/useToastStore';
+import { cloudApi } from '../../../services/cloud/apiClient';
 import { dynamicSyncService } from '../../../services/dynamicSync';
+import { dynamicDataService } from '../../../services/dynamicDataService';
 
 export interface EventPreferences {
   compactView: boolean;
@@ -19,6 +21,8 @@ const DEFAULT_PREFERENCES: EventPreferences = {
 
 export const useEventDatabase = () => {
   const { settings } = useAppStore();
+  const { addToast } = useToastStore.getState();
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const [preferences, setPreferences] = useState<EventPreferences>(() => {
     const saved = localStorage.getItem('event_preferences');
@@ -96,6 +100,51 @@ export const useEventDatabase = () => {
       })
       .sort((a, b) => b.timestamp - a.timestamp);
   }, [dynamicEvents, productMap]);
+
+  // MOTOR DETECTIVE: Resuelve 'Productos Desconocidos' en segundo plano para eventos
+  useEffect(() => {
+    if (!baseProcessedData || isSyncing || !settings?.appSheetConfig?.gasWebAppUrl) return;
+
+    const unknownSkus = Array.from(new Set(
+      baseProcessedData
+        .filter(item => (item.productName === 'Producto Desconocido' || !item.productName))
+        .map(item => normalizeSku(item.barcode))
+    )).slice(0, 10);
+
+    if (unknownSkus.length === 0) return;
+
+    const resolveUnknown = async () => {
+      for (const sku of unknownSkus) {
+        try {
+          const config = settings.appSheetConfig;
+          const productsTable = config?.productsTableName || 'PRODUCTOS';
+          const nameCol = config?.mappings?.products?.name || 'DESCRIPTOR';
+          
+          const response = await cloudApi.getSummary(productsTable, 'SKU', sku);
+          
+          if (response.success && response.rows && response.rows.length > 0) {
+            const p = response.rows[0];
+            const sanitizedSku = normalizeSku(sku); 
+            
+            await db.products.put({
+              barcode: sanitizedSku,
+              name: p[nameCol] || p.DESCRIPTOR || p.DESCRIPCION_PROD || p.DESCRIPCION || 'PRODUCTO IDENTIFICADO',
+              category: p.CATEGORIA || p.category || 'GENERAL',
+              supplier: p.PROVEEDOR || p.supplier || 'N/A',
+              supplierRut: normalizeSku(p.PROVEEDOR_RUT || p.supplierRut || ''),
+              price: parseFloat(String(p.PRECIO || 0).replace(/[^0-9.]/g, '')),
+              syncStatus: 'synced'
+            });
+          }
+        } catch (e) {
+          console.warn(`[Detective-Eventos] Error en SKU ${sku}:`, e);
+        }
+      }
+    };
+
+    const timer = setTimeout(resolveUnknown, 1000);
+    return () => clearTimeout(timer);
+  }, [baseProcessedData, isSyncing, settings]);
 
   const getSyncPayload = (item: any) => ({
     id: item.id,

@@ -17,7 +17,10 @@ export const saveProduct = async (product: Product) => {
   }
   
   const validatedData = validation.data!;
-  const existing = await productRepository.getById(validatedData.barcode);
+  // UNIFICACIÓN DE IDENTIDAD: Sanitizar el SKU antes de guardar
+  const sanitizedBarcode = sanitizeBarcode(validatedData.barcode);
+  
+  const existing = await productRepository.getById(sanitizedBarcode);
   
   // Preservar embedding si el nuevo no trae nada (aprendizaje local)
   const embedding = validatedData.embedding || existing?.embedding;
@@ -29,6 +32,7 @@ export const saveProduct = async (product: Product) => {
 
   await productRepository.save({ 
     ...validatedData,
+    barcode: sanitizedBarcode,
     embedding,
     syncStatus
   });
@@ -38,13 +42,17 @@ export const saveProductBatch = async (products: Product[]) => {
   const validInbound = products
     .map(p => validateProduct(p))
     .filter(v => v.valid)
-    .map(v => v.data!);
+    .map(v => ({
+      ...v.data!,
+      barcode: sanitizeBarcode(v.data!.barcode) // NORMALIZACIÓN MASIVA
+    }));
 
   if (validInbound.length === 0) return;
 
   // Lógica Anti-Sobrescritura de Aprendizaje IA
   const barcodes = validInbound.map(p => p.barcode);
-  const existingProducts = await productRepository.getAll(); // In a real app we would filter by barcodes in the repo
+  // Nota: getAll() podría ser lento con muchos productos, pero es necesario para la fusión local
+  const existingProducts = await productRepository.getAll(); 
   const filteredExisting = existingProducts.filter(p => barcodes.includes(p.barcode));
   
   const existingMap = new Map<string, Product>(filteredExisting.map(p => [p.barcode, p]));

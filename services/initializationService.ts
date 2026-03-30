@@ -1,10 +1,10 @@
-
 import { logger } from './logger';
 import { fetchSystemConfig } from './gasService';
 import { importProductsFromAppSheet, importProvidersFromCloud } from './syncManager';
 import { getSettings, saveSettings } from './settings';
 import { db } from '../db';
 import { migrationService } from './migrationService';
+import { sanitizeBarcode, normalizeSku } from '../services/utils';
 
 export type InitStep = 'idle' | 'version_check' | 'config' | 'database' | 'ready' | 'offline' | 'purging' | 'migrating';
 
@@ -89,9 +89,33 @@ export const InitializationService = {
         }
       }
 
-      const hasLocalData = (await db.products.count()) > 0;
+      const sanitizeExistingData = async () => {
+        try {
+          const products = await db.products.toArray();
+          const providers = await db.providers.toArray();
+          for (const p of products) {
+            const sanitized = normalizeSku(p.barcode);
+            if (sanitized !== p.barcode) {
+              await db.products.delete(p.barcode);
+              await db.products.put({ ...p, barcode: sanitized });
+            }
+          }
+          for (const prov of providers) {
+            const sanitized = normalizeSku(prov.rut);
+            if (sanitized !== prov.rut) {
+              await db.providers.delete(prov.rut);
+              await db.providers.put({ ...prov, rut: sanitized });
+            }
+          }
+        } catch (e) {}
+      };
 
-      if (hasLocalData) {
+      await sanitizeExistingData();
+
+      const productCount = await db.products.count();
+      const hasLocalData = productCount > 0;
+
+      if (hasLocalData && productCount >= 10) {
         onStep('ready'); 
         if (navigator.onLine) InitializationService.backgroundRefresh();
         return;

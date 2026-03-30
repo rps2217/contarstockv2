@@ -147,45 +147,53 @@ export const useExpiryDatabase = () => {
     return [...individualItems, ...sessionItems, ...cloudItems];
   }, [scans, sessions, dynamicExpirations, productMap, providerMap]);
 
-  // MOTOR DETECTIVE: Resuelve 'Productos Desconocidos' en segundo plano
+  // MOTOR DETECTIVE: Resuelve 'Productos Desconocidos' en segundo plano con alta prioridad
   useEffect(() => {
-    if (!baseProcessedData || isSyncing) return;
+    if (!baseProcessedData || isSyncing || !settings?.appSheetConfig?.gasWebAppUrl) return;
 
     const unknownSkus = Array.from(new Set(
       baseProcessedData
         .filter(item => item.productName === 'Producto Desconocido')
         .map(item => normalizeSku(item.barcode))
-    )).slice(0, 5); // Procesamos de 5 en 5 para no saturar
+    )).slice(0, 10); // Aumentado a 10 para mayor velocidad
 
     if (unknownSkus.length === 0) return;
 
     const resolveUnknown = async () => {
       for (const sku of unknownSkus) {
         try {
-          const config = settings?.appSheetConfig;
+          const config = settings.appSheetConfig;
           const productsTable = config?.productsTableName || 'PRODUCTOS';
           const nameCol = config?.mappings?.products?.name || 'DESCRIPTOR';
           
+          console.debug(`[Detective] Buscando identidad de SKU: ${sku}`);
           const response = await cloudApi.getSummary(productsTable, 'SKU', sku);
+          
           if (response.success && response.rows && response.rows.length > 0) {
             const p = response.rows[0];
+            const sanitizedSku = normalizeSku(sku); 
+            
             await db.products.put({
-              barcode: sku,
-              name: p[nameCol] || p.DESCRIPTOR || p.DESCRIPCION_PROD || 'PRODUCTO IDENTIFICADO',
+              barcode: sanitizedSku,
+              name: p[nameCol] || p.DESCRIPTOR || p.DESCRIPCION_PROD || p.DESCRIPCION || 'PRODUCTO IDENTIFICADO',
               category: p.CATEGORIA || p.category || 'GENERAL',
               supplier: p.PROVEEDOR || p.supplier || 'N/A',
               supplierRut: normalizeSku(p.PROVEEDOR_RUT || p.supplierRut || ''),
-              price: parseFloat(p.PRECIO || 0),
+              price: parseFloat(String(p.PRECIO || 0).replace(/[^0-9.]/g, '')),
               syncStatus: 'synced'
             });
+            console.info(`[Detective] SKU ${sku} identificado como: ${p[nameCol] || p.DESCRIPTOR}`);
+          } else {
+            console.warn(`[Detective] SKU ${sku} no encontrado en Google Sheets.`);
           }
         } catch (e) {
-          console.warn(`Fallo al resolver SKU desconocido ${sku}:`, e);
+          console.warn(`[Detective] Error al resolver SKU ${sku}:`, e);
         }
       }
     };
 
-    const timer = setTimeout(resolveUnknown, 2000);
+    // Delay corto para no saturar al mover filtros
+    const timer = setTimeout(resolveUnknown, 800);
     return () => clearTimeout(timer);
   }, [baseProcessedData, isSyncing, settings]);
 
