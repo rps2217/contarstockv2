@@ -20,21 +20,61 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
   const [selectedMm, setSelectedMm] = useState<number | null>(null);
   const [selectedYyyy, setSelectedYyyy] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSearchingCloud, setIsSearchingCloud] = useState(false);
   const barcodeRef = useRef<HTMLInputElement>(null);
 
-  // Auto-lookup logic - Búsqueda ultra-precisa con SKU normalizado
+  // Auto-lookup logic - Búsqueda Híbrida (Local + Cloud)
   useEffect(() => {
     const sku = normalizeSku(barcode);
-    if (sku) {
-      const product = productMap[sku];
-      if (product) {
-        setProductName(product.name || product.DESCRIPTOR || 'PRODUCTO ENCONTRADO');
-      } else {
-        setProductName('PRODUCTO NO ENCONTRADO EN CATÁLOGO');
-      }
-    } else {
+    if (!sku) {
       setProductName('');
+      return;
     }
+
+    // 1. INTENTO LOCAL (Instante)
+    const localProduct = productMap[sku];
+    if (localProduct) {
+      setProductName(localProduct.name || localProduct.DESCRIPTOR || 'PRODUCTO IDENTIFICADO');
+      setIsSearchingCloud(false);
+      return;
+    }
+
+    // 2. INTENTO EN LA NUBE (Fallback)
+    let isMounted = true;
+    const searchInCloud = async () => {
+      try {
+        setIsSearchingCloud(true);
+        setProductName('BUSCANDO EN LA NUBE...');
+        
+        const settings = (await import('../../../services/settings')).getSettings();
+        const config = settings.appSheetConfig;
+        const productsTable = config?.productsTableName || 'PRODUCTOS';
+        const barcodeCol = config?.mappings?.products?.barcode || 'SKU';
+        const nameCol = config?.mappings?.products?.name || 'DESCRIPTOR';
+
+        const { cloudApi } = await import('../../../services/cloud/apiClient');
+        const response = await cloudApi.getSummary(productsTable, barcodeCol, sku);
+        
+        if (!isMounted) return;
+
+        if (response.success && response.rows && response.rows.length > 0) {
+          const product = response.rows[0];
+          setProductName(product[nameCol] || product.DESCRIPTOR || 'PRODUCTO ENCONTRADO');
+        } else {
+          setProductName('PRODUCTO NO ENCONTRADO EN NINGÚN SISTEMA');
+        }
+      } catch (err) {
+        if (isMounted) setProductName('ERROR AL BUSCAR EN LA NUBE');
+      } finally {
+        if (isMounted) setIsSearchingCloud(false);
+      }
+    };
+
+    const timer = setTimeout(searchInCloud, 600); // Pequeño delay para no saturar al escribir
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
   }, [barcode, productMap]);
 
   const handleSave = async () => {
