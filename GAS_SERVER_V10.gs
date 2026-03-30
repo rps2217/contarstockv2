@@ -633,7 +633,7 @@ function getSummary(data) {
     if (!sheet) return { success: false, error: "Hoja no encontrada" };
     
     var lastRow = sheet.getLastRow();
-    if (lastRow < 2) return { success: true, totalUnits: 0, rowCount: 0 };
+    if (lastRow < 2) return { success: true, totalUnits: 0, rowCount: 0, rows: [] };
     
     var lastCol = sheet.getLastColumn();
     var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
@@ -647,23 +647,12 @@ function getSummary(data) {
       filterColIdx = normalizedHeaders.indexOf(normalizeHeader(data.filterColumn));
     }
     
-    // Optimización: Si tenemos los índices, solo leemos esas columnas si están lejos una de otra,
-    // o leemos el rango mínimo que las contenga.
+    // Normalización para Match Flexible
+    var normalize = function(val) { return String(val || "").trim().replace(/^0+/, ""); };
+    var target = normalize(data.filterValue);
+    
     var totalUnits = 0;
     var rowCount = 0;
-    var values;
-
-    if (filterColIdx !== -1 && qtyColIdx !== -1) {
-      var minCol = Math.min(filterColIdx, qtyColIdx) + 1;
-      var maxCol = Math.max(filterColIdx, qtyColIdx) + 1;
-      var numCols = maxCol - minCol + 1;
-      values = sheet.getRange(2, minCol, lastRow - 1, numCols).getValues();
-      
-      var relFilterIdx = filterColIdx + 1 - minCol;
-      var relQtyIdx = qtyColIdx + 1 - minCol;
-      
-      for (var i = 0; i < values.length; i++) {
-        var row = values[i];
         if (String(row[relFilterIdx]) === String(data.filterValue)) {
           rowCount++;
           var val = parseFloat(row[relQtyIdx]);

@@ -51,103 +51,105 @@ const KEYS = {
 };
 
 const DEFAULT_SETTINGS: AppSettings = {
- theme: 'dark',
- soundEnabled: true,
- hapticsEnabled: true,
- ttsEnabled: false, 
- batchTrackingEnabled: true,
- appSheetConfig: {
- appId: '',
- accessKey: '',
- countsTableName: 'CONTEOS', 
- consolidatedTableName: 'CONSOLIDADOS', 
- inventoryRegistryTableName: 'REGISTRO_INV',
- expiryTableName: 'VENCIMIENTOS',
- productsTableName: 'PRODUCTOS',
- receptionTableName: 'RECEPCION_BULTOS',
- ordersTableName: 'PEDIDOS',
- providersTableName: 'PROVEEDORES',
- eventsTableName: 'EVENTOS',
- mappings: {
-   expiry: {
-     barcode: 'COD_BARRAS',
-     productName: 'DESCRIPCION_PROD',
-     quantity: 'CANTIDAD',
-     event: 'EVENTO',
-     mm: 'MM',
-     yyyy: 'YYYY',
-     location: 'UBICACION',
-     id: 'ID_REGISTRO',
-     uniqueKey: 'CLAVE_UNICA',
-     timestamp: 'FECHA_INGRESO',
-     frc: 'FRC',
-     erp: 'ERP',
-     traspaso: 'DOC-TRAS-INTER',
-     destino: 'DESTINO',
-     observaciones: 'OBSERVACIONES',
-     isAdjusted: 'AJUSTADO'
-   },
-   events: {
-     barcode: 'SKU',
-     productName: 'DESCRIPTOR',
-     quantity: 'CANTIDAD',
-     event: 'EVENTO',
-     mm: 'MM',
-     yyyy: 'YYYY',
-     location: 'BOD.',
-     frc: 'FRC',
-     erp: 'ERP',
-     traspaso: 'DOC-TRAS-INTER',
-     destino: 'DESTINO',
-     observaciones: 'OBSERVACIONES',
-     isAdjusted: 'AJUSTADO'
-   },
-   products: {
-     barcode: 'SKU',
-     name: 'DESCRIPTOR',
-     category: 'CATEGORIA',
-     supplier: 'PROVEEDOR',
-     supplierRut: 'PROVEEDOR_RUT',
-     price: 'PRECIO',
-     unitsPerBox: 'UNIDADES_CAJA'
-   },
-   counts: {
-     barcode: 'SKU',
-     quantity: 'CANTIDAD',
-     timestamp: 'FECHA',
-     operatorId: 'OPERADOR',
-     location: 'UBICACION',
-     batch: 'LOTE',
-     expiry: 'VENCIMIENTO'
-   }
- },
- schema: {
-   expiry: DEFAULT_EXPIRY_SCHEMA,
-   products: DEFAULT_PRODUCTS_SCHEMA,
-   counts: DEFAULT_COUNTS_SCHEMA,
-   events: DEFAULT_EXPIRY_SCHEMA
- },
- columnMapping: {
- barcode: 'SKU',
- productName: 'DESCRIPTOR',
- quantity: 'CANTIDAD',
- event: 'EVENTO',
- mm: 'MM',
- yyyy: 'YYYY',
- location: 'BOD.',
- frc: 'FRC',
- erp: 'ERP',
- traspaso: 'DOC-TRAS-INTER',
- destino: 'DESTINO',
- observaciones: 'OBSERVACIONES',
- isAdjusted: 'AJUSTADO'
- }
- },
- mobileNavConfig: ['dashboard', 'reports', 'sync', 'database'],
- thermalPrinter: {
- enabled: false,
- type: 'bluetooth'
- }
+  theme: 'dark',
+  soundEnabled: true,
+  hapticsEnabled: true,
+  ttsEnabled: false, 
+  batchTrackingEnabled: true,
+  appSheetConfig: {
+    appId: import.meta.env.VITE_APPSHEET_APP_ID || '',
+    accessKey: import.meta.env.VITE_APPSHEET_ACCESS_KEY || '',
+    gasWebAppUrl: import.meta.env.VITE_GAS_WEB_APP_URL || '',
+    spreadsheetId: import.meta.env.VITE_SPREADSHEET_ID || '',
+    countsTableName: 'CONTEOS', 
+    consolidatedTableName: 'CONSOLIDADOS', 
+    inventoryRegistryTableName: 'REGISTRO_INV',
+    expiryTableName: 'VENCIMIENTOS',
+    productsTableName: 'PRODUCTOS',
+    receptionTableName: 'RECEPCION_BULTOS',
+    ordersTableName: 'PEDIDOS',
+    providersTableName: 'PROVEEDORES',
+    eventsTableName: 'EVENTOS',
+    mappings: {
+      expiry: {
+        barcode: 'COD_BARRAS',
+        productName: 'DESCRIPCION_PROD',
+        quantity: 'CANTIDAD',
+        event: 'EVENTO',
+        mm: 'MM',
+        yyyy: 'YYYY',
+        location: 'UBICACION',
+        id: 'ID_REGISTRO',
+        uniqueKey: 'CLAVE_UNICA',
+        timestamp: 'FECHA_INGRESO',
+        frc: 'FRC',
+        erp: 'ERP',
+        traspaso: 'DOC-TRAS-INTER',
+        destino: 'DESTINO',
+        observaciones: 'OBSERVACIONES',
+        isAdjusted: 'AJUSTADO'
+      },
+      events: {
+        barcode: 'SKU',
+        productName: 'DESCRIPTOR',
+        quantity: 'CANTIDAD',
+        event: 'EVENTO',
+        mm: 'MM',
+        yyyy: 'YYYY',
+        location: 'BOD.',
+        frc: 'FRC',
+        erp: 'ERP',
+        traspaso: 'DOC-TRAS-INTER',
+        destino: 'DESTINO',
+        observaciones: 'OBSERVACIONES',
+        isAdjusted: 'AJUSTADO'
+      },
+      products: {
+        barcode: 'SKU',
+        name: 'DESCRIPTOR',
+        category: 'CATEGORIA',
+        supplier: 'PROVEEDOR',
+        supplierRut: 'PROVEEDOR_RUT',
+        price: 'PRECIO',
+        unitsPerBox: 'UNIDADES_CAJA'
+      },
+      counts: {
+        barcode: 'SKU',
+        quantity: 'CANTIDAD',
+        timestamp: 'FECHA',
+        operatorId: 'OPERADOR',
+        location: 'UBICACION',
+        batch: 'LOTE',
+        expiry: 'VENCIMIENTO'
+      }
+    },
+    schema: {
+      expiry: DEFAULT_EXPIRY_SCHEMA,
+      products: DEFAULT_PRODUCTS_SCHEMA,
+      counts: DEFAULT_COUNTS_SCHEMA,
+      events: DEFAULT_EXPIRY_SCHEMA
+    },
+    columnMapping: {
+      barcode: 'SKU',
+      productName: 'DESCRIPTOR',
+      quantity: 'CANTIDAD',
+      event: 'EVENTO',
+      mm: 'MM',
+      yyyy: 'YYYY',
+      location: 'BOD.',
+      frc: 'FRC',
+      erp: 'ERP',
+      traspaso: 'DOC-TRAS-INTER',
+      destino: 'DESTINO',
+      observaciones: 'OBSERVACIONES',
+      isAdjusted: 'AJUSTADO'
+    }
+  },
+  mobileNavConfig: ['dashboard', 'reports', 'sync', 'database'],
+  thermalPrinter: {
+    enabled: false,
+    type: 'bluetooth'
+  }
 };
 
 export const getSettings = (): AppSettings => {
