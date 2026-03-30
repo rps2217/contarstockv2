@@ -124,10 +124,14 @@ export const useExpiryDatabase = () => {
       })
       .map(record => {
         const exp = record.data;
+        // FALLBACK ROBUSTO: Buscamos el nombre en todas las variantes posibles de tu Google Sheets
+        const productName = expiryMapping?.name ? exp[expiryMapping.name] : 
+                           (exp.DESCRIPTOR || exp.DESCRIPCION_PROD || exp.DESCRIPCION || exp.productName || '');
+        
         return processExpiryItem({
           id: record.id,
           barcode: expiryMapping?.barcode ? exp[expiryMapping.barcode] : (exp.SKU || exp.barcode),
-          productName: expiryMapping?.name ? exp[expiryMapping.name] : (exp.DESCRIPTOR || exp.productName),
+          productName,
           mm: expiryMapping?.mm ? exp[expiryMapping.mm] : (exp.MM || exp.mm),
           yyyy: expiryMapping?.yyyy ? exp[expiryMapping.yyyy] : (exp.YYYY || exp.yyyy),
           batch: expiryMapping?.batch ? exp[expiryMapping.batch] : (exp.LOTE || 'N/A'),
@@ -142,6 +146,48 @@ export const useExpiryDatabase = () => {
 
     return [...individualItems, ...sessionItems, ...cloudItems];
   }, [scans, sessions, dynamicExpirations, productMap, providerMap]);
+
+  // MOTOR DETECTIVE: Resuelve 'Productos Desconocidos' en segundo plano
+  useEffect(() => {
+    if (!baseProcessedData || isSyncing) return;
+
+    const unknownSkus = Array.from(new Set(
+      baseProcessedData
+        .filter(item => item.productName === 'Producto Desconocido')
+        .map(item => normalizeSku(item.barcode))
+    )).slice(0, 5); // Procesamos de 5 en 5 para no saturar
+
+    if (unknownSkus.length === 0) return;
+
+    const resolveUnknown = async () => {
+      for (const sku of unknownSkus) {
+        try {
+          const config = settings?.appSheetConfig;
+          const productsTable = config?.productsTableName || 'PRODUCTOS';
+          const nameCol = config?.mappings?.products?.name || 'DESCRIPTOR';
+          
+          const response = await cloudApi.getSummary(productsTable, 'SKU', sku);
+          if (response.success && response.rows && response.rows.length > 0) {
+            const p = response.rows[0];
+            await db.products.put({
+              barcode: sku,
+              name: p[nameCol] || p.DESCRIPTOR || p.DESCRIPCION_PROD || 'PRODUCTO IDENTIFICADO',
+              category: p.CATEGORIA || p.category || 'GENERAL',
+              supplier: p.PROVEEDOR || p.supplier || 'N/A',
+              supplierRut: normalizeSku(p.PROVEEDOR_RUT || p.supplierRut || ''),
+              price: parseFloat(p.PRECIO || 0),
+              syncStatus: 'synced'
+            });
+          }
+        } catch (e) {
+          console.warn(`Fallo al resolver SKU desconocido ${sku}:`, e);
+        }
+      }
+    };
+
+    const timer = setTimeout(resolveUnknown, 2000);
+    return () => clearTimeout(timer);
+  }, [baseProcessedData, isSyncing, settings]);
 
   const categories = useMemo(() => {
     const cats = new Set<string>();
