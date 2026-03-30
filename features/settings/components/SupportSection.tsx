@@ -8,8 +8,24 @@ import { BackupCard } from './support/BackupCard';
 import { UnitTestsCard } from './support/UnitTestsCard';
 import { SoundFX } from '../../../services/audio';
 
-export const SupportSection: React.FC = () => {
+ export const SupportSection: React.FC = () => {
  
+ const handleKernelReset = () => {
+  if(confirm("⚠️ REINICIAR KERNEL ⚠️\nSe limpiará el caché de la aplicación y se recargarán las nuevas características.\n\n¿Confirmar?")) {
+  SoundFX.play('success');
+  localStorage.clear();
+  sessionStorage.clear();
+  if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(registrations => {
+  for (const registration of registrations) {
+  registration.unregister();
+  }
+  });
+  }
+  window.location.href = '/?v=' + Date.now();
+  }
+  };
+
  const handleSoftUpdate = () => {
  SoundFX.play('success');
  sessionStorage.clear();
@@ -42,12 +58,20 @@ export const SupportSection: React.FC = () => {
  <BackupCard />
 
  <div className="space-y-3">
+ <div className="grid grid-cols-2 gap-3">
  <SettingsButton 
  onClick={handleSoftUpdate} 
  label="Refrescar Interfaz" 
  icon={RefreshCw} 
+ variant="outline" 
+ />
+ <SettingsButton 
+ onClick={handleKernelReset} 
+ label="Reiniciar Kernel" 
+ icon={RefreshCw} 
  variant="dark" 
  />
+ </div>
  
  <div className="grid grid-cols-2 gap-3">
  <SettingsButton 

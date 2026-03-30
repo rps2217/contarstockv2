@@ -119,27 +119,28 @@ export const useExpiryDatabase = () => {
     const cloudItems = (dynamicExpirations || [])
       .filter(record => {
         const exp = record.data;
-        const eventValue = expiryMapping?.event ? exp[expiryMapping.event] : (exp.EVENTO || exp.event);
+        const eventValue = exp[expiryMapping?.event || ''] || exp.EVENTO || exp.event;
         return String(eventValue || "").toUpperCase() === 'VENCIMIENTOS';
       })
       .map(record => {
         const exp = record.data;
         // FALLBACK ROBUSTO: Buscamos el nombre en todas las variantes posibles de tu Google Sheets
-        const productName = expiryMapping?.name ? exp[expiryMapping.name] : 
-                           (exp.DESCRIPTOR || exp.DESCRIPCION_PROD || exp.DESCRIPCION || exp.productName || '');
+        const productName = exp[expiryMapping?.name || ''] || exp.DESCRIPTOR || exp.DESCRIPCION_PROD || exp.DESCRIPCION || exp.productName || '';
+        const providerName = exp.PROVEEDOR || exp.proveedor || exp.supplier || '';
         
         return processExpiryItem({
           id: record.id,
-          barcode: expiryMapping?.barcode ? exp[expiryMapping.barcode] : (exp.SKU || exp.barcode),
+          barcode: exp[expiryMapping?.barcode || ''] || exp.SKU || exp.COD_BARRAS || exp.barcode || '',
           productName,
-          mm: expiryMapping?.mm ? exp[expiryMapping.mm] : (exp.MM || exp.mm),
-          yyyy: expiryMapping?.yyyy ? exp[expiryMapping.yyyy] : (exp.YYYY || exp.yyyy),
-          batch: expiryMapping?.batch ? exp[expiryMapping.batch] : (exp.LOTE || 'N/A'),
+          providerName,
+          mm: exp[expiryMapping?.mm || ''] || exp.MM || exp.mm,
+          yyyy: exp[expiryMapping?.yyyy || ''] || exp.YYYY || exp.yyyy,
+          batch: exp[expiryMapping?.batch || ''] || exp.LOTE || exp.batch || 'N/A',
           type: 'Nube',
           timestamp: record.timestamp,
-          quantity: expiryMapping?.quantity ? exp[expiryMapping.quantity] : (exp.CANTIDAD || exp.quantity || 0),
-          location: expiryMapping?.location ? exp[expiryMapping.location] : (exp.UBICACION || exp.location || 'N/A'),
-          claveUnica: exp.claveUnica,
+          quantity: exp[expiryMapping?.quantity || ''] || exp.CANTIDAD || exp.quantity || 0,
+          location: exp[expiryMapping?.location || ''] || exp.UBICACION || exp.location || 'N/A',
+          claveUnica: exp.claveUnica || exp.CLAVE_UNICA,
           syncStatus: record.syncStatus
         }, productMap, providerMap, now);
       });
@@ -250,6 +251,7 @@ export const useExpiryDatabase = () => {
     try {
       setIsSyncing(true);
       // Usar el nuevo motor de sincronización
+      await dynamicSyncService.syncAllPending(undefined, tableName);
       await dynamicSyncService.pullSync(tableName);
       await importProvidersFromCloud();
       addToast(`Sincronización completa.`, 'success');
