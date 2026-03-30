@@ -309,8 +309,8 @@ export const importExpirationsFromCloud = async (): Promise<number> => {
     const config = getSettings().appSheetConfig;
     const mapping = config?.mappings?.expiry || config?.columnMapping;
     const tableName = config?.inventoryRegistryTableName || "REGISTRO_INV";
-    
-    const response = await cloudApi.fetchTable(tableName);
+    const lastSyncTimestamp = localStorage.getItem('last_expiry_sync_time') || '0';
+    const response = await cloudApi.fetchTable(tableName, lastSyncTimestamp);
     const rawRows = response.rows || [];
     
     if (rawRows.length === 0) return 0;
@@ -431,8 +431,8 @@ export const importExpirationsFromCloud = async (): Promise<number> => {
       // Add back the remaining pending items
       finalExpirations.push(...Array.from(pendingMap.values()));
 
-      await db.cloudExpirations.clear();
       await db.cloudExpirations.bulkPut(finalExpirations);
+      localStorage.setItem('last_expiry_sync_time', String(response.server_timestamp || Date.now()));
     }
 
     return expirations.length;
@@ -446,8 +446,8 @@ export const importProvidersFromCloud = async (): Promise<number> => {
   try {
     const config = getSettings().appSheetConfig;
     const tableName = config?.providersTableName || "PROVEEDORES";
-    
-    const response = await cloudApi.fetchTable(tableName);
+    const lastSyncTimestamp = localStorage.getItem('last_provider_sync_time') || '0';
+    const response = await cloudApi.fetchTable(tableName, lastSyncTimestamp);
     const rawRows = response.rows || [];
     
     if (rawRows.length === 0) return 0;
@@ -508,8 +508,8 @@ export const importProvidersFromCloud = async (): Promise<number> => {
       .filter((p: Provider) => p.rut && p.name);
 
     if (providers.length > 0) {
-      await db.providers.clear();
       await db.providers.bulkPut(providers);
+      localStorage.setItem('last_provider_sync_time', String(response.server_timestamp || Date.now()));
     }
 
     return providers.length;

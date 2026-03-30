@@ -361,21 +361,44 @@ function fetchRows(data) {
     if (!sheet) return { success: false, error: "Hoja no encontrada: " + data.tableName };
     
     var lastRow = sheet.getLastRow();
-    if (lastRow < 2) return { success: true, rows: [], server_timestamp: new Date().toISOString() };
+    if (lastRow < 2) return { success: true, rows: [], server_timestamp: new Date().getTime() };
     
     var values = sheet.getDataRange().getValues();
     var headers = values[0];
+    var lastSyncTimestamp = parseInt(data.lastSyncTimestamp || 0);
     var rows = [];
     
+    // Identificar columnas de fecha para el filtro delta
+    var normalizedHeaders = headers.map(normalizeHeader);
+    var tsIdx = normalizedHeaders.indexOf("TIMESTAMP");
+    if (tsIdx === -1) tsIdx = normalizedHeaders.indexOf("FECHA_INGRESO");
+    if (tsIdx === -1) tsIdx = normalizedHeaders.indexOf("FECHA");
+    
     for (var i = 1; i < values.length; i++) {
+      var rowValues = values[i];
+      
+      // Aplicar filtro Delta si hay un timestamp de referencia
+      if (lastSyncTimestamp > 0 && tsIdx !== -1) {
+        var rawDate = rowValues[tsIdx];
+        var rowTime = 0;
+        if (rawDate instanceof Date) {
+          rowTime = rawDate.getTime();
+        } else if (rawDate) {
+          rowTime = new Date(rawDate).getTime();
+        }
+        
+        // Si no pudimos parsear la fecha o la fecha es anterior, saltamos la fila
+        if (isNaN(rowTime) || rowTime <= lastSyncTimestamp) continue;
+      }
+      
       var row = {};
       for (var j = 0; j < headers.length; j++) {
-        row[headers[j]] = values[i][j];
+        row[headers[j]] = rowValues[j];
       }
       rows.push(row);
     }
     
-    return { success: true, rows: rows, server_timestamp: new Date().toISOString() };
+    return { success: true, rows: rows, server_timestamp: new Date().getTime() };
   } catch (e) {
     return logErrorAndReturnGeneric(e);
   }
