@@ -102,6 +102,11 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
               {item.syncStatus === 'error' && <span title={item.syncError || 'Error de sincronización'}><CloudOff className="w-4 h-4 text-rose-500" /></span>}
             </div>
           </div>
+          <p className={`text-[10px] font-bold uppercase tracking-widest truncate ${
+            theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
+          }`}>
+            {item.providerName || 'N/A'}
+          </p>
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={handleCopyBarcode}
@@ -158,6 +163,11 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
         }`}>
           {item.productName}
         </h3>
+        <p className={`text-[10px] font-bold uppercase tracking-widest truncate ${
+          theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
+        }`}>
+          {item.providerName || 'N/A'}
+        </p>
         {item.isAdjusted && (
           <span className={`text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md inline-block w-fit ${
             theme === 'dark' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-700'

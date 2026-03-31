@@ -47,11 +47,12 @@ export const useEventDatabase = () => {
 
   const tableName = settings?.appSheetConfig?.eventsTableName || 'EVENTOS';
 
-  const { dynamicEvents, productMap } = useLiveQuery(async () => {
+  const { dynamicEvents, productMap, providerMap } = useLiveQuery(async () => {
     const dynamicEventsData = await db.dynamic_data.where('tableName').equals(tableName).toArray();
     
     const eventMapping = settings?.appSheetConfig?.mappings?.events;
     const skus = new Set<string>();
+    const ruts = new Set<string>();
     
     dynamicEventsData.forEach(record => {
       const exp = record.data;
@@ -61,15 +62,24 @@ export const useEventDatabase = () => {
         if (barcode) {
           skus.add(normalizeSku(barcode));
         }
+        const rut = eventMapping?.supplierRut ? exp[eventMapping.supplierRut] : (exp.RUT_PROVEEDOR || exp.supplierRut);
+        if (rut) ruts.add(normalizeSku(rut));
       }
     });
 
-    const productsData = await db.products.where('barcode').anyOf(Array.from(skus)).toArray();
+    const [productsData, providersData] = await Promise.all([
+      db.products.where('barcode').anyOf(Array.from(skus)).toArray(),
+      db.providers.where('rut').anyOf(Array.from(ruts)).toArray()
+    ]);
+
     const pMap = new Map<string, Product>();
     productsData.forEach(p => pMap.set(normalizeSku(p.barcode), p));
 
-    return { dynamicEvents: dynamicEventsData, productMap: pMap };
-  }, [tableName, settings?.appSheetConfig?.mappings?.events]) || { dynamicEvents: [], productMap: new Map() };
+    const provMap = new Map<string, any>();
+    providersData.forEach(p => provMap.set(normalizeSku(p.rut), p));
+
+    return { dynamicEvents: dynamicEventsData, productMap: pMap, providerMap: provMap };
+  }, [tableName, settings?.appSheetConfig?.mappings?.events]) || { dynamicEvents: [], productMap: new Map(), providerMap: new Map() };
 
   const baseProcessedData = useMemo(() => {
     if (!dynamicEvents) return [];
@@ -87,10 +97,18 @@ export const useEventDatabase = () => {
         const product = productMap.get(normalizeSku(barcode));
         const productName = product?.name || (eventMapping?.name ? exp[eventMapping.name] : (exp.DESCRIPTOR || exp.productName)) || 'Producto Desconocido';
         
+        const rut = eventMapping?.supplierRut ? exp[eventMapping.supplierRut] : (exp.RUT_PROVEEDOR || exp.supplierRut);
+        const provider = providerMap.get(normalizeSku(rut || ''));
+        const providerName = provider?.name || 
+                             product?.supplier || 
+                             (eventMapping?.supplier ? exp[eventMapping.supplier] : (exp.PROVEEDOR || exp.supplier)) || 
+                             'N/A';
+
         return {
           id: record.id,
           barcode,
           productName,
+          providerName,
           event: eventMapping?.event ? exp[eventMapping.event] : (exp.EVENTO || exp.event || 'OTRO'),
           quantity: eventMapping?.quantity ? exp[eventMapping.quantity] : (exp.CANTIDAD || exp.quantity || 0),
           location: eventMapping?.location ? exp[eventMapping.location] : (exp.UBICACION || exp.location || 'GENERAL'),
@@ -363,6 +381,7 @@ export const useEventDatabase = () => {
     updateEvent: async (id: string, data: {
       barcode: string;
       productName: string;
+      providerName?: string;
       event: string;
       quantity: number;
       frc: string;
@@ -374,18 +393,20 @@ export const useEventDatabase = () => {
       const record = await db.dynamic_data.get(id);
       if (!record) throw new Error('Evento no encontrado');
 
+      const eventMapping = settings?.appSheetConfig?.mappings?.events;
       const claveUnica = `${normalizeSku(data.barcode)}${data.frc}`;
       const updatedData = {
         ...record.data,
-        SKU: normalizeSku(data.barcode),
-        DESCRIPTOR: data.productName,
-        EVENTO: data.event,
-        CANTIDAD: data.quantity,
-        FRC: data.frc,
-        NGUIA: data.nguia,
-        DESTINO: data.destino || '',
-        TRASPASO: data.traspaso,
-        OBSERVACIONES: data.observaciones,
+        [eventMapping?.barcode || 'SKU']: normalizeSku(data.barcode),
+        [eventMapping?.name || 'DESCRIPTOR']: data.productName,
+        [eventMapping?.supplier || 'PROVEEDOR']: data.providerName || record.data[eventMapping?.supplier || 'PROVEEDOR'] || 'N/A',
+        [eventMapping?.event || 'EVENTO']: data.event,
+        [eventMapping?.quantity || 'CANTIDAD']: data.quantity,
+        [eventMapping?.frc || 'FRC']: data.frc,
+        [eventMapping?.nguia || 'NGUIA']: data.nguia,
+        [eventMapping?.destino || 'DESTINO']: data.destino || '',
+        [eventMapping?.traspaso || 'TRASPASO']: data.traspaso,
+        [eventMapping?.observaciones || 'OBSERVACIONES']: data.observaciones,
         isAdjusted: (data.traspaso && data.traspaso.trim() !== '') ? true : record.data.isAdjusted,
         claveUnica,
         TIMESTAMP: Date.now(),
@@ -397,6 +418,7 @@ export const useEventDatabase = () => {
     createEvent: async (data: {
       barcode: string;
       productName: string;
+      providerName?: string;
       event: string;
       quantity: number;
       frc: string;
@@ -405,17 +427,19 @@ export const useEventDatabase = () => {
       traspaso?: string;
       observaciones?: string;
     }) => {
+      const eventMapping = settings?.appSheetConfig?.mappings?.events;
       const claveUnica = `${normalizeSku(data.barcode)}${data.frc}`;
       const newEventData = {
-        SKU: normalizeSku(data.barcode),
-        DESCRIPTOR: data.productName,
-        EVENTO: data.event,
-        CANTIDAD: data.quantity,
-        FRC: data.frc,
-        NGUIA: data.nguia,
-        DESTINO: data.destino || '',
-        TRASPASO: data.traspaso,
-        OBSERVACIONES: data.observaciones,
+        [eventMapping?.barcode || 'SKU']: normalizeSku(data.barcode),
+        [eventMapping?.name || 'DESCRIPTOR']: data.productName,
+        [eventMapping?.supplier || 'PROVEEDOR']: data.providerName || 'N/A',
+        [eventMapping?.event || 'EVENTO']: data.event,
+        [eventMapping?.quantity || 'CANTIDAD']: data.quantity,
+        [eventMapping?.frc || 'FRC']: data.frc,
+        [eventMapping?.nguia || 'NGUIA']: data.nguia,
+        [eventMapping?.destino || 'DESTINO']: data.destino || '',
+        [eventMapping?.traspaso || 'TRASPASO']: data.traspaso,
+        [eventMapping?.observaciones || 'OBSERVACIONES']: data.observaciones,
         isAdjusted: (data.traspaso && data.traspaso.trim() !== ''),
         claveUnica,
         TIMESTAMP: Date.now(),

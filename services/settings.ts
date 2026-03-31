@@ -99,6 +99,8 @@ const DEFAULT_SETTINGS: AppSettings = {
         mm: 'MM',
         yyyy: 'YYYY',
         location: 'BOD.',
+        supplier: 'PROVEEDOR',
+        supplierRut: 'RUT_PROVEEDOR',
         frc: 'FRC',
         erp: 'ERP',
         traspaso: 'DOC-TRAS-INTER',

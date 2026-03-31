@@ -213,6 +213,7 @@ export interface ExpiryMapping {
   yyyy: string;
   location: string;
   supplier?: string;
+  supplierRut?: string;
   frc: string;
   erp: string;
   traspaso: string;

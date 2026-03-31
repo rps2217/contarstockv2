@@ -22,6 +22,7 @@ interface Props {
   onSubmit: (data: Array<{
     barcode: string;
     productName: string;
+    providerName?: string;
     event: string;
     quantity: number;
     frc: string;
@@ -64,7 +65,7 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
   const [showAdditional, setShowAdditional] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [items, setItems] = useState<Array<{ barcode: string; productName: string; quantity: number }>>([]);
+  const [items, setItems] = useState<Array<{ barcode: string; productName: string; providerName?: string; quantity: number }>>([]);
 
   useEffect(() => {
     if (editingItem) {
@@ -86,6 +87,7 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
           setProduct({
             barcode: editingItem.barcode,
             name: editingItem.productName,
+            supplier: editingItem.providerName,
             category: 'GENERAL'
           } as Product);
         }
@@ -142,6 +144,7 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
     setItems(prev => [...prev, {
       barcode: product.barcode,
       productName: product.name,
+      providerName: product.supplier || 'N/A',
       quantity
     }]);
 
@@ -166,6 +169,7 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
       finalItems.push({
         barcode: product.barcode,
         productName: product.name,
+        providerName: product.supplier || 'N/A',
         quantity
       });
     }
@@ -436,7 +440,7 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
                                 {item.productName}
                               </p>
                               <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">
-                                {item.barcode} • <span className="text-blue-500">{item.quantity} UNID</span>
+                                {item.barcode} • {item.providerName || 'N/A'} • <span className="text-blue-500">{item.quantity} UNID</span>
                               </p>
                             </div>
                           </div>
@@ -475,7 +479,7 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
                             {editingItem.productName}
                           </p>
                           <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest">
-                            {editingItem.barcode}
+                            {editingItem.barcode} • {editingItem.providerName || 'N/A'}
                           </p>
                         </div>
                       </div>

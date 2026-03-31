@@ -261,6 +261,9 @@ export const EventPriorityPanel: React.FC<EventPriorityPanelProps> = ({ stats, t
                     <h4 className={`text-xs font-black uppercase truncate max-w-[200px] ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`}>
                       {item.productName}
                     </h4>
+                    <p className={`text-[9px] font-bold uppercase truncate max-w-[180px] ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`}>
+                      {item.providerName || 'N/A'}
+                    </p>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">
                         <PackageSearch className="w-2.5 h-2.5" />
