@@ -1,14 +1,16 @@
 
-import React from 'react';
-import { RefreshCw, LogOut, Trash2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { RefreshCw, LogOut, Trash2, Terminal } from 'lucide-react';
 import { SettingsSection, SettingsButton } from './common/SettingsElements';
 import { DiagnosticsCard } from './support/DiagnosticsCard';
 import { MaintenanceCard } from './support/MaintenanceCard';
 import { BackupCard } from './support/BackupCard';
 import { UnitTestsCard } from './support/UnitTestsCard';
+import { SystemLogsModal } from './support/SystemLogsModal';
 import { SoundFX } from '../../../services/audio';
 
  export const SupportSection: React.FC = () => {
+ const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
  
  const handleKernelReset = () => {
   if(confirm("⚠️ REINICIAR KERNEL ⚠️\nSe limpiará el caché de la aplicación y se recargarán las nuevas características.\n\n¿Confirmar?")) {
@@ -58,6 +60,12 @@ import { SoundFX } from '../../../services/audio';
  <BackupCard />
 
  <div className="space-y-3">
+ <SettingsButton 
+ onClick={() => setIsLogsModalOpen(true)} 
+ label="Ver Logs del Sistema" 
+ icon={Terminal} 
+ variant="outline" 
+ />
  <div className="grid grid-cols-2 gap-3">
  <SettingsButton 
  onClick={handleSoftUpdate} 
@@ -88,6 +96,7 @@ import { SoundFX } from '../../../services/audio';
  />
  </div>
  </div>
+ <SystemLogsModal isOpen={isLogsModalOpen} onClose={() => setIsLogsModalOpen(false)} />
  </SettingsSection>
  );
 };

@@ -137,12 +137,13 @@ export class SyncQueueService {
 
 // Escuchar cambios de conexión y visibilidad para procesar la cola
 if (typeof window !== 'undefined') {
-  window.addEventListener('online', () => {
+  window.addEventListener('online', async () => {
     logger.info("SYNC_MANAGER", "Conexión recuperada, disparando sincronización...");
+    await dynamicSyncService.resetRetries();
     SyncQueueService.triggerBackgroundSync();
   });
 
-  document.addEventListener('visibilitychange', () => {
+  document.addEventListener('visibilitychange', async () => {
     if (document.visibilityState === 'visible') {
       logger.info("SYNC_MANAGER", "App visible, disparando sincronización...");
       SyncQueueService.triggerBackgroundSync();

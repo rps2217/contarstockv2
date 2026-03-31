@@ -5,6 +5,7 @@ import { getSettings, saveSettings } from './settings';
 import { db } from '../db';
 import { migrationService } from './migrationService';
 import { sanitizeBarcode, normalizeSku } from '../services/utils';
+import { recoverFromEmergencySnapshot } from './backupService';
 
 export type InitStep = 'idle' | 'version_check' | 'config' | 'database' | 'ready' | 'offline' | 'purging' | 'migrating';
 
@@ -86,6 +87,15 @@ export const InitializationService = {
         if (oldDataCount > 0) {
           onStep('migrating');
           await migrationService.migrateCloudExpirationsToDynamic();
+        }
+
+        // RECUPERACIÓN DE EMERGENCIA: Si la DB está vacía pero hay snapshot en localStorage
+        const sessionCount = await db.sessions.count();
+        if (sessionCount === 0) {
+          const recovered = await recoverFromEmergencySnapshot();
+          if (recovered) {
+            logger.success('SYSTEM', 'Datos recuperados desde snapshot de emergencia.');
+          }
         }
       }
 

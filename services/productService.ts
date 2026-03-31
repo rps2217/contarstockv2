@@ -5,9 +5,44 @@ import { productRepository } from '../repositories/DexieProductRepository';
 import Papa from 'papaparse';
 import { sanitizeBarcode } from './utils';
 import { validateProduct } from './validator';
+import { cloudApi } from './cloud/apiClient';
 
 export const getProductByBarcode = async (barcode: string): Promise<Product | undefined> => {
   return await productRepository.getById(sanitizeBarcode(barcode));
+};
+
+export const resolveUnknownProducts = async (skus: string[], config: any) => {
+  if (!skus || skus.length === 0 || !config?.gasWebAppUrl) return;
+
+  const productsTable = config?.productsTableName || 'PRODUCTOS';
+  const nameCol = config?.mappings?.products?.name || 'DESCRIPTOR';
+
+  for (const sku of skus) {
+    try {
+      console.debug(`[Detective] Buscando identidad de SKU: ${sku}`);
+      const response = await cloudApi.getSummary(productsTable, 'SKU', sku);
+      
+      if (response.success && response.rows && response.rows.length > 0) {
+        const p = response.rows[0];
+        const sanitizedSku = sanitizeBarcode(sku); 
+        
+        await saveProduct({
+          barcode: sanitizedSku,
+          name: p[nameCol] || p.DESCRIPTOR || p.DESCRIPCION_PROD || p.DESCRIPCION || 'PRODUCTO IDENTIFICADO',
+          category: p.CATEGORIA || p.category || 'GENERAL',
+          supplier: p.PROVEEDOR || p.supplier || 'N/A',
+          supplierRut: sanitizeBarcode(p.PROVEEDOR_RUT || p.supplierRut || ''),
+          price: parseFloat(String(p.PRECIO || 0).replace(/[^0-9.]/g, '')),
+          syncStatus: 'synced'
+        });
+        console.info(`[Detective] SKU ${sku} identificado como: ${p[nameCol] || p.DESCRIPTOR}`);
+      } else {
+        console.warn(`[Detective] SKU ${sku} no encontrado en Google Sheets.`);
+      }
+    } catch (e) {
+      console.warn(`[Detective] Error al resolver SKU ${sku}:`, e);
+    }
+  }
 };
 
 export const saveProduct = async (product: Product) => {

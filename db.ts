@@ -53,6 +53,8 @@ export interface DynamicRecord {
   timestamp: number;
   syncStatus: 'synced' | 'pending' | 'error';
   syncError?: string;
+  retryCount?: number;
+  nextRetry?: number;
 }
 
 export interface SyncLog {

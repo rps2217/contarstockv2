@@ -11,17 +11,21 @@ export const dynamicSyncService = {
   async syncAllPending(onProgress?: (msg: string) => void, tableNameFilter?: string): Promise<{ success: number; failed: number }> {
     let query = db.dynamic_data
       .where('syncStatus')
-      .equals('pending');
+      .anyOf(['pending', 'error']); // Include errors to retry them automatically
     
     if (tableNameFilter) {
       // Dexie doesn't support multiple where clauses easily without compound indexes or filtering
       // Since we have [tableName+syncStatus] index, we can use it
       query = db.dynamic_data
         .where('[tableName+syncStatus]')
-        .equals([tableNameFilter, 'pending']);
+        .anyOf([[tableNameFilter, 'pending'], [tableNameFilter, 'error']]);
     }
 
-    const pendingRecords = await query.toArray();
+    const allPendingRecords = await query.toArray();
+
+    // Filter out records that are waiting for their next retry
+    const now = Date.now();
+    const pendingRecords = allPendingRecords.filter(r => !r.nextRetry || r.nextRetry <= now);
 
     if (pendingRecords.length === 0) {
       return { success: 0, failed: 0 };
@@ -45,67 +49,85 @@ export const dynamicSyncService = {
     for (const [tableName, records] of Object.entries(groups)) {
       if (onProgress) onProgress(`Sincronizando ${records.length} registros de ${tableName}...`);
       
-      try {
-        // Preparar las filas para el envío
-        // Usamos el esquema para asegurar que las columnas coincidan con lo esperado en la nube
-        // Si no hay esquema, enviamos la data tal cual
-        const config = settings.appSheetConfig;
-        let idCol = 'ID';
-        let tsCol = 'TIMESTAMP';
+      // BATCHING: Dividir en lotes de 200 registros para evitar payload muy grande y errores 429
+      const BATCH_SIZE = 200;
+      for (let i = 0; i < records.length; i += BATCH_SIZE) {
+        const batchRecords = records.slice(i, i + BATCH_SIZE);
+        
+        try {
+          // Preparar las filas para el envío
+          const config = settings.appSheetConfig;
+          let idCol = 'ID';
+          let tsCol = 'TIMESTAMP';
 
-        if (config?.mappings) {
-          if (tableName === config.inventoryRegistryTableName) {
-            idCol = config.mappings.expiry?.id || 'ID';
-            tsCol = config.mappings.expiry?.timestamp || 'TIMESTAMP';
-          } else if (tableName === config.eventsTableName) {
-            idCol = config.mappings.events?.id || 'ID';
-            tsCol = config.mappings.events?.timestamp || 'TIMESTAMP';
-          } else if (tableName === config.productsTableName) {
-            idCol = config.mappings.products?.id || 'ID';
-          } else if (tableName === config.countsTableName) {
-            idCol = config.mappings.counts?.id || 'ID';
-            tsCol = config.mappings.counts?.timestamp || 'TIMESTAMP';
+          if (config?.mappings) {
+            if (tableName === config.inventoryRegistryTableName) {
+              idCol = config.mappings.expiry?.id || 'ID';
+              tsCol = config.mappings.expiry?.timestamp || 'TIMESTAMP';
+            } else if (tableName === config.eventsTableName) {
+              idCol = config.mappings.events?.id || 'ID';
+              tsCol = config.mappings.events?.timestamp || 'TIMESTAMP';
+            } else if (tableName === config.productsTableName) {
+              idCol = config.mappings.products?.id || 'ID';
+            } else if (tableName === config.countsTableName) {
+              idCol = config.mappings.counts?.id || 'ID';
+              tsCol = config.mappings.counts?.timestamp || 'TIMESTAMP';
+            }
           }
-        }
 
-        const rows = records.map(r => {
-          const row: Record<string, any> = { ...r.data };
-          
-          // Asegurar que el ID y el Timestamp se incluyan si no están bajo el nombre correcto
-          if (!row[idCol]) row[idCol] = r.id;
-          if (!row[tsCol]) row[tsCol] = new Date(r.timestamp).toLocaleString('es-CL');
-          
-          return row;
-        });
-
-        const result = await cloudApi.upsertRows(tableName, rows);
-
-        if (result.success) {
-          const ids = records.map(r => r.id);
-          await db.dynamic_data.where('id').anyOf(ids).modify({ 
-            syncStatus: 'synced',
-            syncError: undefined 
+          const rows = batchRecords.map(r => {
+            const row: Record<string, any> = { ...r.data };
+            
+            // Asegurar que el ID y el Timestamp se incluyan si no están bajo el nombre correcto
+            if (!row[idCol]) row[idCol] = r.id;
+            // Conflict Resolution: Enviar el timestamp exacto del registro local para que el servidor aplique Last-Write-Wins
+            if (!row[tsCol]) row[tsCol] = new Date(r.timestamp).toISOString(); // Usar ISO para mejor parseo en GAS
+            
+            return row;
           });
-          totalSuccess += records.length;
-          if (onProgress) onProgress(`✓ ${tableName}: ${records.length} sincronizados.`);
-        } else {
-          throw new Error(result.error || 'Error desconocido en el servidor');
-        }
-      } catch (error: any) {
-        totalFailed += records.length;
-        logger.error('DYNAMIC_SYNC_FAIL', `Error sincronizando ${tableName}: ${error.message}`);
-        
-        const ids = records.map(r => r.id);
-        await db.dynamic_data.where('id').anyOf(ids).modify({ 
-          syncStatus: 'error',
-          syncError: error.message 
-        });
-        
-        if (onProgress) onProgress(`✗ ${tableName}: Falló la sincronización.`);
-        
-        // Si estamos filtrando por una tabla específica, lanzamos el error para que el llamador lo maneje
-        if (tableNameFilter) {
-          throw error;
+
+          const result = await cloudApi.upsertRows(tableName, rows);
+
+          if (result.success) {
+            const ids = batchRecords.map(r => r.id);
+            await db.dynamic_data.where('id').anyOf(ids).modify({ 
+              syncStatus: 'synced',
+              syncError: undefined,
+              retryCount: 0,
+              nextRetry: undefined
+            });
+            totalSuccess += batchRecords.length;
+            if (onProgress) onProgress(`✓ ${tableName}: ${batchRecords.length} sincronizados (Lote ${Math.floor(i/BATCH_SIZE)+1}).`);
+          } else {
+            throw new Error(result.error || 'Error desconocido en el servidor');
+          }
+        } catch (error: any) {
+          totalFailed += batchRecords.length;
+          logger.error('DYNAMIC_SYNC_FAIL', `Error sincronizando lote de ${tableName}: ${error.message}`);
+          
+          // EXPONENTIAL BACKOFF
+          const ids = batchRecords.map(r => r.id);
+          await db.transaction('rw', db.dynamic_data, async () => {
+            for (const record of batchRecords) {
+              const retryCount = (record.retryCount || 0) + 1;
+              // Esperar 2s, 4s, 8s, 16s... máximo 5 minutos (300000 ms)
+              const backoffMs = Math.min(300000, Math.pow(2, retryCount) * 1000);
+              
+              await db.dynamic_data.update(record.id, {
+                syncStatus: 'error',
+                syncError: error.message,
+                retryCount,
+                nextRetry: Date.now() + backoffMs
+              });
+            }
+          });
+          
+          if (onProgress) onProgress(`✗ ${tableName}: Falló la sincronización del lote.`);
+          
+          // Si estamos filtrando por una tabla específica, lanzamos el error para que el llamador lo maneje
+          if (tableNameFilter) {
+            throw error;
+          }
         }
       }
     }
@@ -158,9 +180,10 @@ export const dynamicSyncService = {
           const localRecord = await db.dynamic_data.get(remoteId);
 
           if (localRecord) {
-            if (localRecord.syncStatus === 'synced') {
-              const remoteTimestamp = remoteRow['TIMESTAMP'] ? new Date(remoteRow['TIMESTAMP']).getTime() : 0;
-              
+            const remoteTimestamp = remoteRow['TIMESTAMP'] ? new Date(remoteRow['TIMESTAMP']).getTime() : 0;
+            
+            // Si el registro local ya está sincronizado, o si el remoto es más reciente que nuestra edición local pendiente
+            if (localRecord.syncStatus === 'synced' || remoteTimestamp > localRecord.timestamp) {
               if (remoteTimestamp > localRecord.timestamp) {
                 const newData = { ...localRecord.data, ...remoteRow };
                 recordsToPut.push({
@@ -168,7 +191,9 @@ export const dynamicSyncService = {
                   tableName: tableName,
                   data: newData,
                   timestamp: remoteTimestamp || Date.now(),
-                  syncStatus: 'synced'
+                  syncStatus: 'synced',
+                  retryCount: 0,
+                  nextRetry: 0
                 });
                 updated++;
               }
@@ -209,6 +234,24 @@ export const dynamicSyncService = {
     const synced = await db.dynamic_data.where('syncStatus').equals('synced').count();
     
     return { pending, errors, synced };
+  },
+
+  /**
+   * Reinicia los contadores de reintento (útil cuando vuelve la conexión)
+   */
+  async resetRetries(): Promise<void> {
+    const recordsToReset = await db.dynamic_data
+      .where('syncStatus')
+      .anyOf(['pending', 'error'])
+      .toArray();
+      
+    if (recordsToReset.length > 0) {
+      const ids = recordsToReset.map(r => r.id);
+      await db.dynamic_data.where('id').anyOf(ids).modify({
+        retryCount: 0,
+        nextRetry: 0
+      });
+    }
   },
 
   /**

@@ -26,6 +26,7 @@ export const useAutoSync = () => {
 
     // 0.1 Process Dynamic Data Sync
     try {
+      await dynamicSyncService.resetRetries(); // Reset retries before attempting sync
       const dynamicResult = await dynamicSyncService.syncAllPending();
       if (dynamicResult.success > 0) {
         addToast(`Sincronización dinámica: ${dynamicResult.success} registros enviados`, 'success');

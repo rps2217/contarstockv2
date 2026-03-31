@@ -24,7 +24,11 @@ export default defineConfig(({ mode }) => {
  output: {
  manualChunks: {
  'vendor-react': ['react', 'react-dom', 'react-router-dom'],
- 'vendor-utils': ['xlsx', 'jspdf', 'papaparse', 'date-fns']
+ 'vendor-ui': ['lucide-react', 'framer-motion', 'motion', 'recharts', 'sonner'],
+ 'vendor-db': ['dexie', 'dexie-react-hooks'],
+ 'vendor-utils': ['xlsx', 'jspdf', 'papaparse', 'date-fns', 'jszip'],
+ 'vendor-scanner': ['html5-qrcode', 'qrcode.react'],
+ 'vendor-ai': ['@google/genai', '@xenova/transformers']
  }
  }
  },

@@ -30,6 +30,27 @@ interface IndustrialScannerLayoutProps {
   labelPhoto?: string;
 }
 
+import { VirtualList } from '../ui/VirtualList';
+
+const ScannedItemRowWrapper = React.memo(({ index, data }: any) => {
+  const item = data.items[index];
+  if (!item) return null;
+  const { activeBarcode, onScan, allowEditQuantity, setEditingItem, setEditQty } = data;
+
+  return (
+    <ScannedItemRow 
+      item={item}
+      index={index}
+      isActive={item.barcode === activeBarcode}
+      onScan={onScan}
+      onEditQty={allowEditQuantity ? (i) => {
+        setEditingItem(i);
+        setEditQty(i.totalQuantity);
+      } : undefined}
+    />
+  );
+});
+
 export const IndustrialScannerLayout: React.FC<IndustrialScannerLayoutProps> = ({
   onBack,
   onScan,
@@ -203,29 +224,27 @@ export const IndustrialScannerLayout: React.FC<IndustrialScannerLayoutProps> = (
         )}
 
         {/* LISTA DE ITEMS */}
-        <div className={`flex-1 min-h-0 overflow-y-auto no-scrollbar bg-slate-950 ${bottomContent ? 'pb-36' : 'pb-20'}`}>
-          {filteredItems.length > 0 ? (
-            filteredItems.map((item, index) => (
-              <ScannedItemRow 
-                key={item.barcode}
-                item={item}
-                index={index}
-                isActive={item.barcode === activeBarcode}
-                onScan={onScan}
-                onEditQty={allowEditQuantity ? (i) => {
-                  setEditingItem(i);
-                  setEditQty(i.totalQuantity);
-                } : undefined}
-              />
-            ))
-          ) : (
-            <div className="h-full flex flex-col items-center justify-center opacity-30">
-              <Box className="w-16 h-16 mb-4 text-slate-500" />
-              <span className="text-sm font-black uppercase tracking-widest text-slate-400">
-                {searchQuery ? 'No hay resultados' : 'Escanea para comenzar'}
-              </span>
-            </div>
-          )}
+        <div className={`flex-1 min-h-0 bg-slate-950 ${bottomContent ? 'pb-36' : 'pb-20'}`}>
+          <VirtualList
+            items={filteredItems}
+            itemHeight={68} // Approximate height of ScannedItemRow
+            renderRow={ScannedItemRowWrapper}
+            rowData={{
+              activeBarcode,
+              onScan,
+              allowEditQuantity,
+              setEditingItem,
+              setEditQty
+            }}
+            emptyState={
+              <>
+                <Box className="w-16 h-16 mb-4 text-slate-500" />
+                <span className="text-sm font-black uppercase tracking-widest text-slate-400">
+                  {searchQuery ? 'No hay resultados' : 'Escanea para comenzar'}
+                </span>
+              </>
+            }
+          />
         </div>
       </div>
 

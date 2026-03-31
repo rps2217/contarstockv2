@@ -69,7 +69,7 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
       theme === 'dark' 
         ? 'bg-white/5 border-white/10 focus:border-amber-500/50 text-white' 
         : 'bg-slate-50 border-slate-200 focus:border-amber-500 text-slate-900 shadow-sm'
-    } ${errors[key] ? 'border-rose-500' : ''} ${col.readOnly ? 'opacity-50 cursor-not-allowed' : ''}`;
+    } ${errors[key] ? 'border-rose-500' : ''} ${col.editable === false ? 'opacity-50 cursor-not-allowed' : ''}`;
 
     switch (col.type) {
       case 'barcode':
@@ -81,7 +81,7 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
               onChange={(e) => handleChange(key, e.target.value)}
               placeholder={col.placeholder || `Escanear o ingresar ${col.label.toLowerCase()}`}
               className={`${commonClasses} pr-12 font-mono`}
-              readOnly={col.readOnly}
+              readOnly={col.editable === false}
             />
             <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-amber-500 transition-colors">
               <Barcode className="w-5 h-5" />
@@ -96,7 +96,7 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
               value={values[key] || ''}
               onChange={(e) => handleChange(key, Number(e.target.value))}
               className={`${commonClasses} pr-12`}
-              readOnly={col.readOnly}
+              readOnly={col.editable === false}
             />
             <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-amber-500 transition-colors">
               <Hash className="w-5 h-5" />
@@ -112,7 +112,7 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
               onChange={(e) => handleChange(key, e.target.value)}
               placeholder={col.placeholder || `Ingresar ${col.label.toLowerCase()}`}
               className={`${commonClasses} pr-12`}
-              readOnly={col.readOnly}
+              readOnly={col.editable === false}
             />
           </div>
         );

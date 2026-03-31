@@ -14,6 +14,7 @@ import { SyncQueueService } from '../../../services/syncQueueService';
 import { processExpiryItem, filterExpiryItems, calculateExpiryStats } from '../utils/expiryProcessor';
 import { SoundFX } from '../../../services/audio';
 import { cloudApi } from '../../../services/cloud/apiClient';
+import { resolveUnknownProducts } from '../../../services/productService';
 
 export type { ExpiryStatus, ExpiryPreferences, ExpiryItem };
 
@@ -69,33 +70,52 @@ export const useExpiryDatabase = () => {
     }
   }, [selectedEstado]);
 
-  const scans = useLiveQuery(() => 
-    db.scans.filter(s => !!s.expiryDate || (!!s.mm && !!s.yyyy)).toArray()
-  );
-  const sessions = useLiveQuery(() =>
-    db.sessions.filter(s => !!s.mm && !!s.yyyy).toArray()
-  );
-  
-  // Nuevo Motor: Leer de dynamic_data en lugar de cloudExpirations
-  const dynamicExpirations = useLiveQuery(() =>
-    db.dynamic_data.where('tableName').equals(tableName).toArray(),
-    [tableName]
-  );
+  const { scans, sessions, dynamicExpirations, productMap, providerMap } = useLiveQuery(async () => {
+    const scansData = await db.scans.filter(s => !!s.expiryDate || (!!s.mm && !!s.yyyy)).toArray();
+    const sessionsData = await db.sessions.filter(s => !!s.mm && !!s.yyyy).toArray();
+    const dynamicExpirationsData = await db.dynamic_data.where('tableName').equals(tableName).toArray();
+    
+    // Extraer SKUs únicos para no cargar todo el catálogo de productos en memoria
+    const skus = new Set<string>();
+    scansData.forEach(s => skus.add(normalizeSku(s.barcode)));
+    sessionsData.forEach(s => skus.add(normalizeSku(s.logisticsLabel)));
+    
+    const expiryMapping = settings?.appSheetConfig?.mappings?.expiry;
+    dynamicExpirationsData.forEach(record => {
+      const exp = record.data;
+      const eventValue = exp[expiryMapping?.event || ''] || exp.EVENTO || exp.event;
+      if (String(eventValue || "").toUpperCase() === 'VENCIMIENTOS') {
+         const barcode = exp[expiryMapping?.barcode || ''] || exp.SKU || exp.COD_BARRAS || exp.barcode || '';
+         skus.add(normalizeSku(barcode));
+      }
+    });
 
-  const products = useLiveQuery(() => db.products.toArray());
-  const providers = useLiveQuery(() => db.providers.toArray());
+    // Cargar SOLO los productos necesarios
+    const productsData = await db.products.where('barcode').anyOf(Array.from(skus)).toArray();
+    const pMap = new Map<string, Product>();
+    productsData.forEach(p => pMap.set(normalizeSku(p.barcode), p));
 
-  const productMap = useMemo(() => {
-    const map = new Map<string, Product>();
-    products?.forEach(p => map.set(normalizeSku(p.barcode), p));
-    return map;
-  }, [products]);
+    // Extraer RUTs únicos de los productos cargados para no cargar todos los proveedores
+    const ruts = new Set<string>();
+    productsData.forEach(p => {
+      if (p.supplierRut) ruts.add(normalizeSku(p.supplierRut));
+    });
+    
+    // Cargar SOLO los proveedores necesarios
+    const providersData = await db.providers.where('rut').anyOf(Array.from(ruts)).toArray();
+    const provMap = new Map<string, Provider>();
+    providersData.forEach(p => provMap.set(normalizeSku(p.rut), p));
 
-  const providerMap = useMemo(() => {
-    const map = new Map<string, Provider>();
-    providers?.forEach(p => map.set(normalizeSku(p.rut), p));
-    return map;
-  }, [providers]);
+    return { 
+      scans: scansData, 
+      sessions: sessionsData, 
+      dynamicExpirations: dynamicExpirationsData, 
+      productMap: pMap, 
+      providerMap: provMap 
+    };
+  }, [tableName, settings?.appSheetConfig?.mappings?.expiry]) || { 
+    scans: [], sessions: [], dynamicExpirations: [], productMap: new Map(), providerMap: new Map() 
+  };
 
   const baseProcessedData = useMemo(() => {
     if (!scans) return [];
@@ -146,7 +166,7 @@ export const useExpiryDatabase = () => {
       });
 
     return [...individualItems, ...sessionItems, ...cloudItems];
-  }, [scans, sessions, dynamicExpirations, productMap, providerMap]);
+  }, [scans, sessions, dynamicExpirations, productMap, providerMap, settings?.appSheetConfig?.mappings?.expiry]);
 
   // MOTOR DETECTIVE: Resuelve 'Productos Desconocidos' en segundo plano con alta prioridad
   useEffect(() => {
@@ -160,41 +180,9 @@ export const useExpiryDatabase = () => {
 
     if (unknownSkus.length === 0) return;
 
-    const resolveUnknown = async () => {
-      for (const sku of unknownSkus) {
-        try {
-          const config = settings.appSheetConfig;
-          const productsTable = config?.productsTableName || 'PRODUCTOS';
-          const nameCol = config?.mappings?.products?.name || 'DESCRIPTOR';
-          
-          console.debug(`[Detective] Buscando identidad de SKU: ${sku}`);
-          const response = await cloudApi.getSummary(productsTable, 'SKU', sku);
-          
-          if (response.success && response.rows && response.rows.length > 0) {
-            const p = response.rows[0];
-            const sanitizedSku = normalizeSku(sku); 
-            
-            await db.products.put({
-              barcode: sanitizedSku,
-              name: p[nameCol] || p.DESCRIPTOR || p.DESCRIPCION_PROD || p.DESCRIPCION || 'PRODUCTO IDENTIFICADO',
-              category: p.CATEGORIA || p.category || 'GENERAL',
-              supplier: p.PROVEEDOR || p.supplier || 'N/A',
-              supplierRut: normalizeSku(p.PROVEEDOR_RUT || p.supplierRut || ''),
-              price: parseFloat(String(p.PRECIO || 0).replace(/[^0-9.]/g, '')),
-              syncStatus: 'synced'
-            });
-            console.info(`[Detective] SKU ${sku} identificado como: ${p[nameCol] || p.DESCRIPTOR}`);
-          } else {
-            console.warn(`[Detective] SKU ${sku} no encontrado en Google Sheets.`);
-          }
-        } catch (e) {
-          console.warn(`[Detective] Error al resolver SKU ${sku}:`, e);
-        }
-      }
-    };
-
-    // Delay corto para no saturar al mover filtros
-    const timer = setTimeout(resolveUnknown, 800);
+    const timer = setTimeout(() => {
+      resolveUnknownProducts(unknownSkus, settings.appSheetConfig);
+    }, 800);
     return () => clearTimeout(timer);
   }, [baseProcessedData, isSyncing, settings]);
 

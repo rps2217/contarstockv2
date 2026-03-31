@@ -10,14 +10,15 @@ import { SystemStatus } from './components/SystemStatus';
 import { Box, Loader2, Database, WifiOff, Cpu, RefreshCw, Plus } from 'lucide-react';
 import { lazyWithRetry } from './services/lazyLoad';
 import { initPersistence } from './services/backupService';
-import { Login } from './components/Login';
 import { InitializationService, InitStep } from './services/initializationService';
 import { ToastContainer } from './shared/components/ui/ToastContainer';
 import { useAutoSync } from './hooks/useAutoSync';
 import { useAutoSession } from './hooks/useAutoSession';
-import ReceptionHub from './features/reception/ReceptionHub';
-import { StartSessionModal } from './components/StartSessionModal';
 import { useNavigate } from 'react-router-dom';
+
+// --- COMPONENTES DIFERIDOS ---
+const Login = lazyWithRetry(() => import('./components/Login').then(m => ({ default: m.Login })));
+const StartSessionModal = lazyWithRetry(() => import('./components/StartSessionModal').then(m => ({ default: m.StartSessionModal })));
 
 // --- VISTAS MAESTRAS ---
 // Forzamos un cambio para limpiar el caché de Vercel (intento 2)
@@ -28,6 +29,7 @@ const Sync = lazyWithRetry(() => import('./features/sync/SyncPage'));
 const Settings = lazyWithRetry(() => import('./features/settings/SettingsPage'));
 
 // --- MÓDULOS OPERATIVOS (FEATURES) ---
+const ReceptionHub = lazyWithRetry(() => import('./features/reception/ReceptionHub'));
 const CountingPage = lazyWithRetry(() => import('./features/counting/CountingPage'));
 const HammerPage = lazyWithRetry(() => import('./features/hammer/HammerPage'));
 const DocumentReceptionPage = lazyWithRetry(() => import('./features/documents/DocumentReceptionPage'));
@@ -117,7 +119,17 @@ const AppContent = () => {
     );
   }
 
-  if (!isAuthenticated) return <Login onLoginSuccess={() => setIsAuthenticated(true)} />;
+  if (!isAuthenticated) {
+    return (
+      <Suspense fallback={
+        <div className="h-screen w-full bg-slate-950 flex items-center justify-center">
+          <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+        </div>
+      }>
+        <Login onLoginSuccess={() => setIsAuthenticated(true)} />
+      </Suspense>
+    );
+  }
 
   return (
     <div className={`w-full h-full flex flex-col transition-colors duration-500 ${currentThemeClass} font-mono`}>
@@ -178,11 +190,15 @@ const AppContent = () => {
         </>
       )}
 
-      <StartSessionModal 
-        isOpen={isStartSessionModalOpen}
-        onClose={() => setStartSessionModalOpen(false)}
-        onSessionStart={(session) => navigate(`/counting/${session.id}`)}
-      />
+      {isStartSessionModalOpen && (
+        <Suspense fallback={null}>
+          <StartSessionModal 
+            isOpen={isStartSessionModalOpen}
+            onClose={() => setStartSessionModalOpen(false)}
+            onSessionStart={(session) => navigate(`/counting/${session.id}`)}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };

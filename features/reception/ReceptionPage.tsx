@@ -14,7 +14,6 @@ import { ExpirationModal } from '../expiry-feature/components/ExpirationModal';
 import { ChevronLeft, Box, Trash2, Camera, Loader2, Calendar, Settings } from 'lucide-react';
 import { useAutoLock } from '../../hooks/useAutoLock';
 import { useHIDScanner } from '../../hooks/useHIDScanner';
-import * as documentProcessor from '../../services/documentProcessor';
 import { SoundFX } from '../../services/audio';
 
 const ReceptionRow = React.memo(({ index, data }: any) => {

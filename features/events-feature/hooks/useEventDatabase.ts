@@ -19,6 +19,8 @@ const DEFAULT_PREFERENCES: EventPreferences = {
   showPriorityAssistant: true
 };
 
+import { resolveUnknownProducts } from '../../../services/productService';
+
 export const useEventDatabase = () => {
   const { settings } = useAppStore();
   const { addToast } = useToastStore.getState();
@@ -45,19 +47,29 @@ export const useEventDatabase = () => {
 
   const tableName = settings?.appSheetConfig?.eventsTableName || 'EVENTOS';
 
-  // Nuevo Motor: Leer de dynamic_data en lugar de cloudExpirations
-  const dynamicEvents = useLiveQuery(() => 
-    db.dynamic_data.where('tableName').equals(tableName).toArray(),
-    [tableName]
-  );
-  
-  const products = useLiveQuery(() => db.products.toArray());
+  const { dynamicEvents, productMap } = useLiveQuery(async () => {
+    const dynamicEventsData = await db.dynamic_data.where('tableName').equals(tableName).toArray();
+    
+    const eventMapping = settings?.appSheetConfig?.mappings?.events;
+    const skus = new Set<string>();
+    
+    dynamicEventsData.forEach(record => {
+      const exp = record.data;
+      const eventValue = eventMapping?.event ? exp[eventMapping.event] : (exp.EVENTO || exp.event);
+      if (String(eventValue || "").toUpperCase() !== 'VENCIMIENTOS') {
+        const barcode = eventMapping?.barcode ? exp[eventMapping.barcode] : (exp.SKU || exp.barcode);
+        if (barcode) {
+          skus.add(normalizeSku(barcode));
+        }
+      }
+    });
 
-  const productMap = useMemo(() => {
-    const map = new Map<string, Product>();
-    products?.forEach(p => map.set(normalizeSku(p.barcode), p));
-    return map;
-  }, [products]);
+    const productsData = await db.products.where('barcode').anyOf(Array.from(skus)).toArray();
+    const pMap = new Map<string, Product>();
+    productsData.forEach(p => pMap.set(normalizeSku(p.barcode), p));
+
+    return { dynamicEvents: dynamicEventsData, productMap: pMap };
+  }, [tableName, settings?.appSheetConfig?.mappings?.events]) || { dynamicEvents: [], productMap: new Map() };
 
   const baseProcessedData = useMemo(() => {
     if (!dynamicEvents) return [];
@@ -113,36 +125,9 @@ export const useEventDatabase = () => {
 
     if (unknownSkus.length === 0) return;
 
-    const resolveUnknown = async () => {
-      for (const sku of unknownSkus) {
-        try {
-          const config = settings.appSheetConfig;
-          const productsTable = config?.productsTableName || 'PRODUCTOS';
-          const nameCol = config?.mappings?.products?.name || 'DESCRIPTOR';
-          
-          const response = await cloudApi.getSummary(productsTable, 'SKU', sku);
-          
-          if (response.success && response.rows && response.rows.length > 0) {
-            const p = response.rows[0];
-            const sanitizedSku = normalizeSku(sku); 
-            
-            await db.products.put({
-              barcode: sanitizedSku,
-              name: p[nameCol] || p.DESCRIPTOR || p.DESCRIPCION_PROD || p.DESCRIPCION || 'PRODUCTO IDENTIFICADO',
-              category: p.CATEGORIA || p.category || 'GENERAL',
-              supplier: p.PROVEEDOR || p.supplier || 'N/A',
-              supplierRut: normalizeSku(p.PROVEEDOR_RUT || p.supplierRut || ''),
-              price: parseFloat(String(p.PRECIO || 0).replace(/[^0-9.]/g, '')),
-              syncStatus: 'synced'
-            });
-          }
-        } catch (e) {
-          console.warn(`[Detective-Eventos] Error en SKU ${sku}:`, e);
-        }
-      }
-    };
-
-    const timer = setTimeout(resolveUnknown, 1000);
+    const timer = setTimeout(() => {
+      resolveUnknownProducts(unknownSkus, settings.appSheetConfig);
+    }, 1000);
     return () => clearTimeout(timer);
   }, [baseProcessedData, isSyncing, settings]);
 

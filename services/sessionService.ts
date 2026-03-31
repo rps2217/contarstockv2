@@ -3,11 +3,12 @@
 import { Dexie } from 'dexie';
 import { db } from '../db';
 import { ScanRecord, CountingSession, ExpectedOrder } from '../types';
-import { generateUUID, sanitizeBarcode } from './utils';
+import { generateUUID, sanitizeBarcode, compressImage } from './utils';
 import { logger } from './logger';
 import { IntegrityGuard } from './integrityGuard';
 import { CloudOrderRowSchema } from './schemas';
 import { cloudApi } from './cloud/apiClient';
+import { createEmergencySnapshot } from './backupService';
 
 /**
  * POOL DE ESCRITURA INDUSTRIAL v3.0 (Atomic Buffer)
@@ -41,6 +42,9 @@ const commitBufferToDatabase = async () => {
         await updateSessionMetadata(id);
       }
     });
+    
+    // Snapshot de emergencia tras persistencia exitosa
+    createEmergencySnapshot().catch(() => {});
     
     triggerBackgroundSync();
   } catch (error: any) {
@@ -144,6 +148,16 @@ export const createSession = async (
   labelPhoto?: string,
   isAutoLockEnabled: boolean = true
 ): Promise<CountingSession> => {
+  // Optimización de Imagen (Punto 6)
+  let finalPhoto = labelPhoto;
+  if (labelPhoto && labelPhoto.startsWith('data:image')) {
+    try {
+      finalPhoto = await compressImage(labelPhoto);
+    } catch (e) {
+      console.warn("Image compression failed, using original", e);
+    }
+  }
+
   const s: CountingSession = { 
     id: generateUUID(), 
     erpOrder: erp.trim().toUpperCase(), 
@@ -155,10 +169,14 @@ export const createSession = async (
     totalSKUs: 0, 
     expectedItems: expected?.items || [], 
     isVerifiedMode: !!(expected?.items?.length),
-    labelPhoto,
+    labelPhoto: finalPhoto,
     isAutoLockEnabled
   };
   await db.sessions.add(s);
+  
+  // Snapshot de emergencia tras crear sesión
+  createEmergencySnapshot().catch(() => {});
+  
   return s;
 };
 

@@ -95,8 +95,8 @@ export const CountingPage: React.FC = () => {
 
  {state.status === 'awaiting_pharma' && state.activeBarcode && (
  <ExpirationModal 
- productName={state.activeProduct?.name || state.activeBarcode} 
- onComplete={actions.handlePharmaComplete} 
+ productMap={{ [state.activeBarcode]: state.activeProduct }}
+ onComplete={(data) => actions.handlePharmaComplete(data.mm, data.yyyy, data.barcode)} 
  onCancel={actions.cancelPharma}
  />
  )}

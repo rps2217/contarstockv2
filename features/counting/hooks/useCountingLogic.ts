@@ -30,23 +30,26 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
     return await SessionRepository.getById(sessionId);
   }, [sessionId]);
 
-  const consolidatedHistory = useLiveQuery(async () => {
+  const rawHistory = useLiveQuery(async () => {
     if (!sessionId) return [];
     const scans = await ScanRepository.getBySessionId(sessionId);
-    // INTEGRACIÓN DEL BUFFER DE PERSISTENCIA:
     const pending = sessionService.getPendingBuffer().filter(s => s.sessionId === sessionId);
-    const physicalItems = await aggregateScans([...scans, ...pending]);
+    return await aggregateScans([...scans, ...pending]);
+  }, [sessionId]);
+
+  const consolidatedHistory = useMemo(() => {
+    if (!rawHistory) return [];
     
     const expectedItems = session?.expectedItems || [];
     const expectedMap = new Map<string, number>(expectedItems.map(ei => [normalizeSku(ei.barcode), ei.expectedQty]));
 
-    const finalItems = physicalItems.map(pi => ({
+    const finalItems = rawHistory.map(pi => ({
       ...pi,
       expectedQuantity: expectedMap.get(normalizeSku(pi.barcode)) || 0
     }));
 
     if (session?.isVerifiedMode) {
-      const scannedBarcodes = new Set(physicalItems.map(pi => normalizeSku(pi.barcode)));
+      const scannedBarcodes = new Set(rawHistory.map(pi => normalizeSku(pi.barcode)));
       expectedItems.forEach(exp => {
         if (!scannedBarcodes.has(normalizeSku(exp.barcode))) {
           finalItems.push({
@@ -68,7 +71,25 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
 
     itemsRef.current = sorted;
     return sorted;
-  }, [sessionId, session, engine.activeBarcode, engine.feedback, engine.optimisticQty]);
+  }, [rawHistory, session, engine.activeBarcode]);
+
+  // MOTOR DETECTIVE: Resuelve 'Productos Desconocidos' en segundo plano para el conteo
+  useEffect(() => {
+    if (!consolidatedHistory || !settings?.appSheetConfig?.gasWebAppUrl) return;
+
+    const unknownSkus = Array.from(new Set(
+      consolidatedHistory
+        .filter(item => (item.productName === 'Cargando...' || item.productName === 'Producto Desconocido' || !item.productName))
+        .map(item => normalizeSku(item.barcode))
+    )).slice(0, 10);
+
+    if (unknownSkus.length === 0) return;
+
+    const timer = setTimeout(() => {
+      productService.resolveUnknownProducts(unknownSkus, settings.appSheetConfig);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [consolidatedHistory, settings]);
 
   // LÓGICA DE INFERENCIA EN SEGUNDO PLANO (Inteligencia Proactiva)
   useEffect(() => {
