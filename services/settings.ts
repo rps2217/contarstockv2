@@ -6,6 +6,7 @@ export const DEFAULT_EXPIRY_SCHEMA: TableSchema = {
   columns: {
     barcode: { col: 'SKU', label: 'Código de Barras', type: 'barcode', required: true },
     productName: { col: 'DESCRIPTOR', label: 'Descripción', type: 'string', required: true },
+    providerName: { col: 'PROVEEDOR', label: 'Proveedor', type: 'string', editable: false },
     quantity: { col: 'CANTIDAD', label: 'Cantidad', type: 'number', required: true, defaultValue: 1 },
     event: { col: 'EVENTO', label: 'Evento', type: 'enum', options: ['VENCIMIENTOS', 'MERMA', 'CANJE'], defaultValue: 'VENCIMIENTOS' },
     mm: { col: 'MM', label: 'Mes', type: 'enum', options: ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], renderType: 'grid', required: true },
@@ -79,6 +80,7 @@ const DEFAULT_SETTINGS: AppSettings = {
         mm: 'MM',
         yyyy: 'YYYY',
         location: 'UBICACION',
+        supplier: 'PROVEEDOR',
         id: 'ID_REGISTRO',
         uniqueKey: 'CLAVE_UNICA',
         timestamp: 'FECHA_INGRESO',

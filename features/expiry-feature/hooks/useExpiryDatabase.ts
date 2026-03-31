@@ -145,8 +145,20 @@ export const useExpiryDatabase = () => {
       .map(record => {
         const exp = record.data;
         // FALLBACK ROBUSTO: Buscamos el nombre en todas las variantes posibles de tu Google Sheets
-        const productName = exp[expiryMapping?.name || ''] || exp.DESCRIPTOR || exp.DESCRIPCION_PROD || exp.DESCRIPCION || exp.productName || '';
-        const providerName = exp.PROVEEDOR || exp.proveedor || exp.supplier || '';
+        // Ahora que normalizamos las llaves en pullSync, buscamos también las versiones normalizadas
+        const productName = exp[expiryMapping?.name || ''] || 
+                            exp.DESCRIPTOR || 
+                            exp.DESCRIPCION_PROD || 
+                            exp.DESCRIPCION || 
+                            exp.PRODUCTO ||
+                            exp.ITEM ||
+                            exp.productName || '';
+                            
+        const providerName = exp[expiryMapping?.supplier || ''] ||
+                             exp.PROVEEDOR || 
+                             exp.PROV ||
+                             exp.proveedor || 
+                             exp.supplier || '';
         
         return processExpiryItem({
           id: record.id,
@@ -292,6 +304,7 @@ export const useExpiryDatabase = () => {
   const handleAddItem = useCallback(async (data: {
     barcode: string;
     productName: string;
+    providerName?: string;
     mm: number;
     yyyy: number;
     quantity: number;
@@ -366,6 +379,7 @@ export const useExpiryDatabase = () => {
       setMappedField('timestamp', formattedDate, 'FECHA_INGRESO'); // Columna C
       setMappedField('barcode', sanitizedBarcode, 'COD_BARRAS'); // Columna D
       setMappedField('productName', data.productName, 'DESCRIPCION_PROD'); // Columna E
+      setMappedField('providerName', data.providerName || 'N/A', 'PROVEEDOR'); // Columna Adicional
       setMappedField('mm', data.mm, 'MM'); // Columna F
       setMappedField('yyyy', data.yyyy, 'YYYY'); // Columna G
       setMappedField('event', 'VENCIMIENTOS', 'EVENTO'); // Columna H

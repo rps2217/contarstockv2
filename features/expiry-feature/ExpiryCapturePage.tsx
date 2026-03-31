@@ -170,6 +170,7 @@ export const ExpiryCapturePage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [scannedBarcode, setScannedBarcode] = useState('');
   const [productName, setProductName] = useState('');
+  const [providerName, setProviderName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleScan = useCallback(async (code: string) => {
@@ -183,6 +184,7 @@ export const ExpiryCapturePage: React.FC = () => {
     // Fetch product info
     const product = await db.products.get(normalizedCode);
     setProductName(product?.name || 'Producto Desconocido');
+    setProviderName(product?.supplier || 'N/A');
     
     // Open modal
     setIsModalOpen(true);
@@ -309,6 +311,7 @@ export const ExpiryCapturePage: React.FC = () => {
                     initialValues={{
                       barcode: scannedBarcode,
                       productName: productName,
+                      providerName: providerName,
                       quantity: 1
                     }}
                     onSubmit={handleDynamicSubmit}

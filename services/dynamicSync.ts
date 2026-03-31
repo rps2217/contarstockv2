@@ -172,7 +172,15 @@ export const dynamicSyncService = {
       await db.transaction('rw', db.dynamic_data, async () => {
         const recordsToPut: DynamicRecord[] = [];
         
-        for (const remoteRow of batch) {
+        for (const rawRow of batch) {
+          // NORMALIZACIÓN DE LLAVES (Protocolo de Resiliencia)
+          // Esto asegura que exp["SKU"] funcione aunque en el Excel diga "Sku " o "sku"
+          const remoteRow: Record<string, any> = {};
+          Object.keys(rawRow).forEach(k => {
+            const normalizedKey = k.trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, "_");
+            remoteRow[normalizedKey] = rawRow[k];
+          });
+
           // Intentar obtener el ID usando el mapeo o fallbacks
           const remoteId = String(remoteRow[idColumn] || remoteRow['ID'] || remoteRow['ID_REGISTRO'] || remoteRow['CLAVE_UNICA'] || '');
           if (!remoteId) continue;
@@ -180,26 +188,29 @@ export const dynamicSyncService = {
           const localRecord = await db.dynamic_data.get(remoteId);
 
           if (localRecord) {
-            const remoteTimestamp = remoteRow['TIMESTAMP'] ? new Date(remoteRow['TIMESTAMP']).getTime() : 0;
+            const remoteTimestamp = remoteRow['TIMESTAMP'] || remoteRow['FECHA_INGRESO'] || remoteRow['FECHA'] 
+              ? new Date(remoteRow['TIMESTAMP'] || remoteRow['FECHA_INGRESO'] || remoteRow['FECHA']).getTime() 
+              : 0;
             
             // Si el registro local ya está sincronizado, o si el remoto es más reciente que nuestra edición local pendiente
             if (localRecord.syncStatus === 'synced' || remoteTimestamp > localRecord.timestamp) {
-              if (remoteTimestamp > localRecord.timestamp) {
-                const newData = { ...localRecord.data, ...remoteRow };
-                recordsToPut.push({
-                  id: remoteId,
-                  tableName: tableName,
-                  data: newData,
-                  timestamp: remoteTimestamp || Date.now(),
-                  syncStatus: 'synced',
-                  retryCount: 0,
-                  nextRetry: 0
-                });
-                updated++;
-              }
+              const newData = { ...localRecord.data, ...remoteRow };
+              recordsToPut.push({
+                id: remoteId,
+                tableName: tableName,
+                data: newData,
+                timestamp: remoteTimestamp || Date.now(),
+                syncStatus: 'synced',
+                retryCount: 0,
+                nextRetry: 0
+              });
+              updated++;
             }
           } else {
-            const remoteTimestamp = remoteRow['TIMESTAMP'] ? new Date(remoteRow['TIMESTAMP']).getTime() : Date.now();
+            const remoteTimestamp = remoteRow['TIMESTAMP'] || remoteRow['FECHA_INGRESO'] || remoteRow['FECHA']
+              ? new Date(remoteRow['TIMESTAMP'] || remoteRow['FECHA_INGRESO'] || remoteRow['FECHA']).getTime() 
+              : Date.now();
+              
             recordsToPut.push({
               id: remoteId,
               tableName: tableName,

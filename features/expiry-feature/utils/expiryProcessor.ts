@@ -76,7 +76,14 @@ export const processExpiryItem = (
   return {
     ...item,
     productName,
-    providerName: provider?.name || product?.supplier || item.providerName || 'N/A',
+    providerName: provider?.name || 
+                  product?.supplier || 
+                  item.providerName || 
+                  (item as any).PROVEEDOR || 
+                  (item as any).PROV || 
+                  (item as any).proveedor || 
+                  (item as any).supplier || 
+                  'N/A',
     category: product?.category || 'GENERAL',
     withdrawalDays: provider?.withdrawalDays || 0,
     hasCanje,
