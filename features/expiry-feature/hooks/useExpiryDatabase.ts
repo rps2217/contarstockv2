@@ -385,7 +385,7 @@ export const useExpiryDatabase = () => {
       setMappedField('event', 'VENCIMIENTOS', 'EVENTO'); // Columna H
       
       // Metadatos adicionales
-      setMappedField('location', 'MANUAL', 'UBICACION'); 
+      setMappedField('location', '', 'UBICACION'); 
       setMappedField('origin', 'REGISTRO DIRECTO', 'ORIGEN');
 
       if (data.fechaCC) setMappedField('fechaCC', data.fechaCC, 'fechaCC');
@@ -393,14 +393,8 @@ export const useExpiryDatabase = () => {
       // GUARDADO LOCAL
       const recordId = await dynamicDataService.saveRecord(tableName, rowData, shortId);
       
-      // INICIAR RESPALDO EN NUBE (Segundo plano)
-      dynamicDataService.syncRecord(recordId).then(() => {
-        addToast('✅ Respaldo en la nube OK', 'success');
-        SoundFX.play('success');
-      }).catch((err) => {
-        console.warn("Cloud sync deferred:", err.message);
-        addToast('Guardado localmente. El respaldo se completará pronto.', 'warning');
-      });
+      addToast('Guardado localmente. El respaldo se completará en segundo plano.', 'success');
+      SoundFX.play('success');
 
       return recordId;
 

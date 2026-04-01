@@ -463,7 +463,7 @@ export const useEventDatabase = () => {
         UBICACION: 'GENERAL'
       };
 
-      const id = await dynamicDataService.saveRecord(tableName, newEventData, claveUnica);
+      const id = await dynamicDataService.saveRecord(tableName, newEventData);
       return { id, ...newEventData };
     },
     clearLocalData: async () => {

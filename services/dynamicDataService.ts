@@ -102,7 +102,7 @@ export const dynamicDataService = {
           quantity: getVal(['CANTIDAD', 'quantity']),
           event: getVal(['EVENTO', 'event']) || 'VENCIMIENTOS',
           claveUnica: getVal(['CLAVE_UNICA', 'uniqueKey', 'claveUnica']),
-          location: getVal(['UBICACION', 'BOD.', 'location']) || 'MANUAL',
+          location: getVal(['UBICACION', 'BOD.', 'location']) || '',
           destino: getVal(['DESTINO', 'destino']) || '',
           traspaso: getVal(['DOCTRASINTER', 'TRASPASO', 'traspaso']) || '',
           observaciones: getVal(['OBSERVACIONES', 'OBS', 'observaciones']) || '',

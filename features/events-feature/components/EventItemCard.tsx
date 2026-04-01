@@ -178,7 +178,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
         {item.syncError && (
           <div className="flex items-center gap-1 text-rose-500 text-[9px] font-black uppercase tracking-widest mt-1">
             <AlertCircle className="w-3 h-3" />
-            Error de sincronización
+            {item.syncError}
           </div>
         )}
         <button
