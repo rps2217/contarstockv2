@@ -160,8 +160,8 @@ export const createSession = async (
 
   const s: CountingSession = { 
     id: generateUUID(), 
-    erpOrder: erp.trim().toUpperCase(), 
-    logisticsLabel: label.trim().toUpperCase(), 
+    erpOrder: String(erp || '').trim().toUpperCase(), 
+    logisticsLabel: String(label || '').trim().toUpperCase(), 
     createdAt: Date.now(), 
     status: 'active', 
     sessionType: type, 
@@ -183,8 +183,8 @@ export const createSession = async (
 export const createDraftSession = async (label: string, erpOrder?: string, mm?: number, yyyy?: number, batch?: string): Promise<CountingSession> => {
  const s: CountingSession = { 
  id: generateUUID(), 
- erpOrder: erpOrder ? erpOrder.trim().toUpperCase() : 'RECEPCION_BORRADOR', 
- logisticsLabel: label.trim().toUpperCase(), 
+ erpOrder: erpOrder ? String(erpOrder || '').trim().toUpperCase() : 'RECEPCION_BORRADOR', 
+ logisticsLabel: String(label || '').trim().toUpperCase(), 
  createdAt: Date.now(), 
  status: 'draft', 
  sessionType: 'standard',
@@ -207,7 +207,7 @@ export const fetchExpectedItemsFromCloud = async (erp: string): Promise<Expected
  if (res.success && res.rows) {
  const rows = res.rows
  .map((row: any) => CloudOrderRowSchema.safeParse(row))
- .filter((p: any) => p.success && p.data.erp === erp.toUpperCase());
+ .filter((p: any) => p.success && String(p.data.erp || '').toUpperCase() === String(erp || '').toUpperCase());
 
  if (rows.length === 0) return null;
 
@@ -218,8 +218,8 @@ export const fetchExpectedItemsFromCloud = async (erp: string): Promise<Expected
  }));
 
  return {
- id: erp.toUpperCase(),
- internalId: erp.toUpperCase(),
+ id: String(erp || '').toUpperCase(),
+ internalId: String(erp || '').toUpperCase(),
  items,
  totalExpectedUnits: items.reduce((acc, i) => acc + i.expectedQty, 0),
  totalExpectedSKUs: items.length,
@@ -274,7 +274,7 @@ export const markScansAsSynced = async (ids: string[]) => {
 };
 
 export const checkLabelExists = async (label: string): Promise<boolean> => {
- const count = await db.sessions.where('logisticsLabel').equals(label.trim().toUpperCase()).count();
+ const count = await db.sessions.where('logisticsLabel').equals(String(label || '').trim().toUpperCase()).count();
  return count > 0;
 };
 

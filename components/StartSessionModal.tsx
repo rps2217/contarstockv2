@@ -77,11 +77,11 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
   };
 
   const handleFetchFromCloud = async () => {
-    if (!erpOrder.trim()) return;
+    if (!erpOrder || !erpOrder.trim()) return;
     setIsCloudLoading(true);
     setError("");
     try {
-      const localOrder = await ExpectedOrderRepository.getById(erpOrder.toUpperCase());
+      const localOrder = await ExpectedOrderRepository.getById(String(erpOrder || '').toUpperCase());
       if (localOrder) {
         setCloudOrder(localOrder);
         SoundFX.play('success');

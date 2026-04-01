@@ -168,7 +168,7 @@ export const useEventDatabase = () => {
   const eventTypes = useMemo(() => {
     const types = new Set<string>();
     baseProcessedData.forEach(item => {
-      if (item.event) types.add(item.event.toUpperCase());
+      if (item.event) types.add(String(item.event).toUpperCase());
     });
     return Array.from(types).sort();
   }, [baseProcessedData]);
@@ -177,14 +177,15 @@ export const useEventDatabase = () => {
     const query = debouncedSearch.toLowerCase();
     
     return baseProcessedData.filter(item => {
+      const eventStr = String(item.event || '');
       const matchesSearch = 
         item.productName.toLowerCase().includes(query) ||
         item.barcode.includes(query) ||
-        item.event.toLowerCase().includes(query) ||
+        eventStr.toLowerCase().includes(query) ||
         (item.frc && item.frc.toLowerCase().includes(query)) ||
         (item.erp && item.erp.toLowerCase().includes(query));
       
-      const matchesEvent = selectedEvents.length === 0 || selectedEvents.includes(item.event.toUpperCase());
+      const matchesEvent = selectedEvents.length === 0 || selectedEvents.includes(eventStr.toUpperCase());
 
       return matchesSearch && matchesEvent;
     });
@@ -239,7 +240,7 @@ export const useEventDatabase = () => {
     // Event alerts: count per event type for pending items
     const eventCounts: Record<string, number> = {};
     pendingItems.forEach(item => {
-      const type = item.event.toUpperCase();
+      const type = String(item.event || '').toUpperCase();
       eventCounts[type] = (eventCounts[type] || 0) + 1;
     });
 
@@ -251,7 +252,7 @@ export const useEventDatabase = () => {
     // Suggested actions based on event types
     const suggestedActions = [];
     
-    const diffInv = pendingItems.filter(i => i.event.toUpperCase().includes('DIF.'));
+    const diffInv = pendingItems.filter(i => String(i.event || '').toUpperCase().includes('DIF.'));
     if (diffInv.length > 0) {
       suggestedActions.push({
         title: 'Conciliación de Inventario',
@@ -261,7 +262,7 @@ export const useEventDatabase = () => {
       });
     }
 
-    const calidad = pendingItems.filter(i => i.event.toUpperCase().includes('CALIDAD'));
+    const calidad = pendingItems.filter(i => String(i.event || '').toUpperCase().includes('CALIDAD'));
     if (calidad.length > 0) {
       suggestedActions.push({
         title: 'Control de Calidad',
@@ -271,7 +272,7 @@ export const useEventDatabase = () => {
       });
     }
 
-    const vence = pendingItems.filter(i => i.event.toUpperCase().includes('VENCE'));
+    const vence = pendingItems.filter(i => String(i.event || '').toUpperCase().includes('VENCE'));
     if (vence.length > 0) {
       suggestedActions.push({
         title: 'Vencimientos Cercanos',

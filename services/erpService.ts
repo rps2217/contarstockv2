@@ -28,7 +28,7 @@ export const erpService = {
         throw new Error(res.error || 'Error al conectar con la nube');
       }
 
-      const erpId = manifestId.toUpperCase().trim();
+      const erpId = String(manifestId || '').toUpperCase().trim();
       
       // Filter rows for this ERP
       const rows = res.rows
@@ -39,7 +39,7 @@ export const erpService = {
             return null;
           }
         })
-        .filter((p: any) => p !== null && p.erp.toUpperCase() === erpId);
+        .filter((p: any) => p !== null && String(p.erp || '').toUpperCase() === erpId);
 
       if (rows.length === 0) {
         throw new Error(`No se encontró el ERP "${erpId}" en la nube.`);
@@ -99,7 +99,7 @@ export const erpService = {
       res.rows.forEach((row: any) => {
         try {
           const parsed = CloudOrderRowSchema.parse(row);
-          const erpId = parsed.erp.toUpperCase().trim();
+          const erpId = String(parsed.erp || '').toUpperCase().trim();
           if (!erpGroups.has(erpId)) {
             erpGroups.set(erpId, []);
           }

@@ -12,7 +12,7 @@ export const useLocationManager = (storageKey: string = 'last_active_loc') => {
  const [isModalOpen, setIsModalOpen] = useState(false);
 
  const setLocation = useCallback(async (name: string) => {
- const cleanName = name.trim().toUpperCase();
+ const cleanName = String(name || '').trim().toUpperCase();
  if (!cleanName) return;
 
  await LocationService.saveLocation(cleanName);

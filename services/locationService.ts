@@ -13,7 +13,7 @@ export const LocationService = {
  * Guarda una nueva ubicación o actualiza el timestamp de una existente
  */
  saveLocation: async (name: string): Promise<void> => {
- const cleanName = name.trim().toUpperCase();
+ const cleanName = String(name || '').trim().toUpperCase();
  if (!cleanName) return;
 
  const existing = await db.locations.where('name').equals(cleanName).first();
