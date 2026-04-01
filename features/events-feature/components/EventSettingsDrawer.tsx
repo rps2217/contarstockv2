@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Settings2, Layout, RefreshCw } from 'lucide-react';
+import { X, Settings2, Layout, RefreshCw, Trash2 } from 'lucide-react';
 import { EventPreferences } from '../hooks/useEventDatabase';
 
 interface EventSettingsDrawerProps {
@@ -8,6 +8,7 @@ interface EventSettingsDrawerProps {
   onClose: () => void;
   preferences: EventPreferences;
   onUpdatePreferences: (prefs: Partial<EventPreferences>) => void;
+  onClearLocalData?: () => void;
   theme?: 'dark' | 'light';
 }
 
@@ -16,6 +17,7 @@ export const EventSettingsDrawer: React.FC<EventSettingsDrawerProps> = ({
   onClose,
   preferences,
   onUpdatePreferences,
+  onClearLocalData,
   theme = 'dark'
 }) => {
   return (
@@ -168,6 +170,32 @@ export const EventSettingsDrawer: React.FC<EventSettingsDrawerProps> = ({
                     <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Recargar nuevas características</p>
                   </div>
                 </button>
+
+                {onClearLocalData && (
+                  <button
+                    onClick={async () => {
+                      if (confirm("⚠️ ADVERTENCIA ⚠️\n\nEsto eliminará todos los registros locales de EVENTOS. Se volverán a descargar desde la nube en la próxima sincronización.\n\n¿Estás seguro de continuar?")) {
+                        await onClearLocalData();
+                        const { toast } = await import('sonner');
+                        toast.success('Datos locales eliminados. Sincroniza para descargar nuevamente.');
+                        onClose();
+                      }
+                    }}
+                    className={`w-full p-4 rounded-xl border flex items-center gap-4 transition-all mt-2 ${
+                      theme === 'dark' ? 'border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10' : 'border-amber-200 bg-amber-50 hover:bg-amber-100'
+                    }`}
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                      <Trash2 className="w-5 h-5 text-amber-500" />
+                    </div>
+                    <div className="text-left">
+                      <p className={`text-xs font-black uppercase tracking-tight ${
+                        theme === 'dark' ? 'text-white' : 'text-slate-900'
+                      }`}>Limpiar Datos Locales</p>
+                      <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Forzar descarga desde la nube</p>
+                    </div>
+                  </button>
+                )}
               </section>
             </div>
 

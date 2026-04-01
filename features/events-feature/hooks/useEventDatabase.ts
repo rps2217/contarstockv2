@@ -465,6 +465,9 @@ export const useEventDatabase = () => {
 
       const id = await dynamicDataService.saveRecord(tableName, newEventData, claveUnica);
       return { id, ...newEventData };
+    },
+    clearLocalData: async () => {
+      await db.dynamic_data.where('tableName').equals(tableName).delete();
     }
   };
 

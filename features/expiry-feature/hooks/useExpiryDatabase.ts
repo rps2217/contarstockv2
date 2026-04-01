@@ -414,6 +414,10 @@ export const useExpiryDatabase = () => {
     setPreferences(newPrefs);
   }, [setPreferences]);
 
+  const clearLocalData = useCallback(async () => {
+    await db.dynamic_data.where('tableName').equals(tableName).delete();
+  }, [tableName]);
+
   return {
     state: {
       searchQuery,
@@ -447,7 +451,8 @@ export const useExpiryDatabase = () => {
       handleRemoveItem,
       handleBulkRemove,
       handleAddItem,
-      handleUpdatePreferences
+      handleUpdatePreferences,
+      clearLocalData
     }
   };
 };

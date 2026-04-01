@@ -555,6 +555,7 @@ const ExpiryManagementPage: React.FC = () => {
         onClose={() => setIsSettingsDrawerOpen(false)}
         preferences={state.preferences}
         onUpdatePreferences={actions.handleUpdatePreferences}
+        onClearLocalData={actions.clearLocalData}
         theme={theme}
       />
 

@@ -559,6 +559,7 @@ const EventManagementPage: React.FC = () => {
         onClose={() => setIsSettingsDrawerOpen(false)}
         preferences={state.preferences}
         onUpdatePreferences={actions.togglePreference}
+        onClearLocalData={actions.clearLocalData}
         theme={theme}
       />
 
