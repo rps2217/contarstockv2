@@ -61,7 +61,7 @@ export const dynamicDataService = {
       let tsCol = 'TIMESTAMP';
 
       if (config?.mappings) {
-        if (record.tableName === config.inventoryRegistryTableName) {
+        if (record.tableName === config.inventoryRegistryTableName || record.tableName === config.expiryTableName) {
           idCol = config.mappings.expiry?.id || 'ID';
           tsCol = config.mappings.expiry?.timestamp || 'TIMESTAMP';
         } else if (record.tableName === config.eventsTableName) {
