@@ -485,7 +485,7 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
                       <div key={field.id} className="p-4 bg-slate-800/40 rounded-2xl border border-white/5 space-y-3">
                         <div className="flex justify-between items-center">
                           <label className={`text-[9px] font-black text-${field.id === 'id' ? 'indigo' : 'emerald'}-400 uppercase tracking-widest`}>{field.label}</label>
-                          {currentSheetMetadata?.headers.includes(mapping[field.id] || '') && (
+                          {(currentSheetMetadata?.headers || []).includes(mapping[field.id] || '') && (
                             <CheckCircle2 className="w-3 h-3 text-emerald-500" />
                           )}
                         </div>
@@ -495,7 +495,7 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
                           className="w-full bg-black/60 border-2 border-white/10 rounded-xl px-3 py-2 text-[10px] font-mono text-white focus:border-indigo-500 outline-none transition-all"
                         >
                           <option value="">-- SELECCIONAR COLUMNA --</option>
-                          {currentSheetMetadata?.headers.map(h => (
+                          {(currentSheetMetadata?.headers || []).map(h => (
                             <option key={h} value={h}>{h}</option>
                           ))}
                         </select>
@@ -523,7 +523,7 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
                           className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-[9px] font-mono text-slate-300 focus:border-blue-500 outline-none transition-all"
                         >
                           <option value="">-- No asig. --</option>
-                          {currentSheetMetadata?.headers.map(h => (
+                          {(currentSheetMetadata?.headers || []).map(h => (
                             <option key={h} value={h}>{h}</option>
                           ))}
                         </select>
