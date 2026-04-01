@@ -78,10 +78,15 @@ export const dynamicSyncService = {
           const rows = batchRecords.map(r => {
             const row: Record<string, any> = { ...r.data };
             
-            // Asegurar que el ID y el Timestamp se incluyan si no están bajo el nombre correcto
-            if (!row[idCol]) row[idCol] = r.id;
-            // Conflict Resolution: Enviar el timestamp exacto del registro local para que el servidor aplique Last-Write-Wins
-            if (!row[tsCol]) row[tsCol] = new Date(r.timestamp).toISOString(); // Usar ISO para mejor parseo en GAS
+            // Asegurar que el ID y el Timestamp se incluyan siempre
+            row['ID'] = r.id;
+            row['TIMESTAMP'] = new Date(r.timestamp).toISOString();
+            
+            // Si hay mapeo, asegurar que las columnas mapeadas también tengan los valores
+            if (config?.mappings) {
+                if (idCol !== 'ID') row[idCol] = r.id;
+                if (tsCol !== 'TIMESTAMP') row[tsCol] = row['TIMESTAMP'];
+            }
             
             return row;
           });
