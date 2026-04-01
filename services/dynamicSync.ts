@@ -61,10 +61,10 @@ export const dynamicSyncService = {
           let tsCol = 'TIMESTAMP';
 
           if (config?.mappings) {
-            if (tableName === config.inventoryRegistryTableName) {
+            if (tableName === config.inventoryRegistryTableName || tableName === config.expiryTableName) {
               idCol = config.mappings.expiry?.id || 'ID';
               tsCol = config.mappings.expiry?.timestamp || 'TIMESTAMP';
-            } else if (tableName === config.eventsTableName) {
+            } else if (tableName === config.eventsTableName || tableName === 'EVENTOS') {
               idCol = config.mappings.events?.id || 'ID';
               tsCol = config.mappings.events?.timestamp || 'TIMESTAMP';
             } else if (tableName === config.productsTableName) {
