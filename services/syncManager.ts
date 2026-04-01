@@ -364,8 +364,8 @@ export const importExpirationsFromCloud = async (): Promise<number> => {
 
         const ajustadoKey = Object.keys(row).find(key => key.toUpperCase() === (adjKey?.toUpperCase() || 'AJUSTADO'));
         const ajustadoStr = ajustadoKey ? String(row[ajustadoKey] || '').toLowerCase().trim() : '';
-        // Un registro se considera ajustado si tiene el flag 'AJUSTADO' o si ya tiene un número de TRASPASO (Columna L)
-        const isAdjusted = ['sí', 'si', 'yes', 'true', '1'].includes(ajustadoStr) || (traspaso && traspaso.trim() !== '');
+        // Un registro se considera ajustado si ya tiene un número de TRASPASO (Columna L)
+        const isAdjusted = (traspaso && traspaso.trim() !== '');
 
         const tsKey = mapping?.timestamp || 'TIMESTAMP';
         const rawTimestamp = row[tsKey] || row['TIMESTAMP'] || row['FECHA_INGRESO'] || row['FECHA DE INGRESO'] || row['FECHA'] || row['FECHA CREACION'] || row['CREATED_AT'];

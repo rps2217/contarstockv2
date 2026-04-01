@@ -115,7 +115,7 @@ export const useEventDatabase = () => {
           timestamp: record.timestamp,
           claveUnica: exp.claveUnica,
           category: product?.category || 'GENERAL',
-          isAdjusted: !!(eventMapping?.traspaso ? exp[eventMapping.traspaso] : exp.TRASPASO) || !!(exp.isAdjusted || exp.AJUSTADO),
+          isAdjusted: !!(eventMapping?.traspaso ? exp[eventMapping.traspaso] : (exp.TRASPASO || exp.traspaso || exp['DOC-TRAS-INTER'])),
           frc: eventMapping?.frc ? exp[eventMapping.frc] : (exp.FRC || exp.frc),
           erp: eventMapping?.erp ? exp[eventMapping.erp] : (exp.ERP || exp.erp),
           nguia: eventMapping?.nguia ? exp[eventMapping.nguia] : (exp.NGUIA || exp.nguia),
@@ -307,7 +307,9 @@ export const useEventDatabase = () => {
     updateEventStatus: async (id: string, isAdjusted: boolean) => {
       const record = await db.dynamic_data.get(id);
       if (record) {
-        const updatedData = { ...record.data, isAdjusted };
+        const eventMapping = settings?.appSheetConfig?.mappings?.events;
+        const isAdjustedKey = eventMapping?.isAdjusted || 'isAdjusted';
+        const updatedData = { ...record.data, [isAdjustedKey]: isAdjusted };
         await dynamicDataService.saveRecord(tableName, updatedData, id);
       }
     },
@@ -315,37 +317,42 @@ export const useEventDatabase = () => {
       const record = await db.dynamic_data.get(id);
       if (!record) return;
       
-      const newUpdates: any = { ...updates };
-      if (updates.traspaso && updates.traspaso.trim() !== '') {
-        newUpdates.isAdjusted = true;
+      const eventMapping = settings?.appSheetConfig?.mappings?.events;
+      const mappedUpdates: any = {};
+      
+      if (updates.destino !== undefined) {
+        mappedUpdates[eventMapping?.destino || 'DESTINO'] = updates.destino;
+      }
+      if (updates.traspaso !== undefined) {
+        mappedUpdates[eventMapping?.traspaso || 'TRASPASO'] = updates.traspaso;
+        mappedUpdates[eventMapping?.isAdjusted || 'isAdjusted'] = !!(updates.traspaso && updates.traspaso.trim() !== '');
+      }
+      if (updates.observaciones !== undefined) {
+        mappedUpdates[eventMapping?.observaciones || 'OBSERVACIONES'] = updates.observaciones;
       }
       
-      // Mapear campos a nombres del nuevo motor
-      const mappedUpdates: any = {};
-      if (updates.destino) mappedUpdates.DESTINO = updates.destino;
-      if (updates.traspaso) mappedUpdates.TRASPASO = updates.traspaso;
-      if (updates.observaciones) mappedUpdates.OBSERVACIONES = updates.observaciones;
-      if (newUpdates.isAdjusted) mappedUpdates.isAdjusted = true;
-
       const updatedData = { ...record.data, ...mappedUpdates };
       await dynamicDataService.saveRecord(tableName, updatedData, id);
     },
     updateEventBulkFieldsMany: async (ids: string[], updates: { destino?: string; traspaso?: string; observaciones?: string }) => {
       setPendingOperations(p => p + ids.length);
       try {
+        const eventMapping = settings?.appSheetConfig?.mappings?.events;
         for (const id of ids) {
           const record = await db.dynamic_data.get(id);
           if (record) {
-            const newUpdates: any = { ...updates };
-            if (updates.traspaso && updates.traspaso.trim() !== '') {
-              newUpdates.isAdjusted = true;
-            }
-            
             const mappedUpdates: any = {};
-            if (updates.destino) mappedUpdates.DESTINO = updates.destino;
-            if (updates.traspaso) mappedUpdates.TRASPASO = updates.traspaso;
-            if (updates.observaciones) mappedUpdates.OBSERVACIONES = updates.observaciones;
-            if (newUpdates.isAdjusted) mappedUpdates.isAdjusted = true;
+            
+            if (updates.destino !== undefined) {
+              mappedUpdates[eventMapping?.destino || 'DESTINO'] = updates.destino;
+            }
+            if (updates.traspaso !== undefined) {
+              mappedUpdates[eventMapping?.traspaso || 'TRASPASO'] = updates.traspaso;
+              mappedUpdates[eventMapping?.isAdjusted || 'isAdjusted'] = !!(updates.traspaso && updates.traspaso.trim() !== '');
+            }
+            if (updates.observaciones !== undefined) {
+              mappedUpdates[eventMapping?.observaciones || 'OBSERVACIONES'] = updates.observaciones;
+            }
 
             const updatedData = { ...record.data, ...mappedUpdates };
             await dynamicDataService.saveRecord(tableName, updatedData, id);
@@ -358,24 +365,31 @@ export const useEventDatabase = () => {
     updateEventDestino: async (id: string, destino: string) => {
       const record = await db.dynamic_data.get(id);
       if (!record) return;
-      const updatedData = { ...record.data, DESTINO: destino };
+      const eventMapping = settings?.appSheetConfig?.mappings?.events;
+      const updatedData = { ...record.data, [eventMapping?.destino || 'DESTINO']: destino };
       await dynamicDataService.saveRecord(tableName, updatedData, id);
     },
     updateEventTraspaso: async (id: string, traspaso: string) => {
       const record = await db.dynamic_data.get(id);
       if (!record) return;
       
-      const updates: any = { TRASPASO: traspaso };
-      if (traspaso && traspaso.trim() !== '') {
-        updates.isAdjusted = true;
-      }
+      const eventMapping = settings?.appSheetConfig?.mappings?.events;
+      const traspasoKey = eventMapping?.traspaso || 'TRASPASO';
+      const isAdjustedKey = eventMapping?.isAdjusted || 'isAdjusted';
+
+      const updates: any = { 
+        [traspasoKey]: traspaso,
+        [isAdjustedKey]: !!(traspaso && traspaso.trim() !== '')
+      };
+      
       const updatedData = { ...record.data, ...updates };
       await dynamicDataService.saveRecord(tableName, updatedData, id);
     },
     updateEventObservaciones: async (id: string, observaciones: string) => {
       const record = await db.dynamic_data.get(id);
       if (!record) return;
-      const updatedData = { ...record.data, OBSERVACIONES: observaciones };
+      const eventMapping = settings?.appSheetConfig?.mappings?.events;
+      const updatedData = { ...record.data, [eventMapping?.observaciones || 'OBSERVACIONES']: observaciones };
       await dynamicDataService.saveRecord(tableName, updatedData, id);
     },
     updateEvent: async (id: string, data: {
@@ -407,7 +421,7 @@ export const useEventDatabase = () => {
         [eventMapping?.destino || 'DESTINO']: data.destino || '',
         [eventMapping?.traspaso || 'TRASPASO']: data.traspaso,
         [eventMapping?.observaciones || 'OBSERVACIONES']: data.observaciones,
-        isAdjusted: (data.traspaso && data.traspaso.trim() !== '') ? true : record.data.isAdjusted,
+        [eventMapping?.isAdjusted || 'isAdjusted']: !!(data.traspaso && data.traspaso.trim() !== ''),
         claveUnica,
         TIMESTAMP: Date.now(),
       };
@@ -440,7 +454,7 @@ export const useEventDatabase = () => {
         [eventMapping?.destino || 'DESTINO']: data.destino || '',
         [eventMapping?.traspaso || 'TRASPASO']: data.traspaso,
         [eventMapping?.observaciones || 'OBSERVACIONES']: data.observaciones,
-        isAdjusted: (data.traspaso && data.traspaso.trim() !== ''),
+        [eventMapping?.isAdjusted || 'isAdjusted']: !!(data.traspaso && data.traspaso.trim() !== ''),
         claveUnica,
         TIMESTAMP: Date.now(),
         MM: new Date().getMonth() + 1,
