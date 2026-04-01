@@ -39,6 +39,10 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
 
  // Sincronizar estado local si cambian los settings externos o el módulo seleccionado
  useEffect(() => {
+   // Sincronizar inputs si cambiaron externamente (ej: por QR o vinculación)
+   if (settings.appSheetConfig?.gasWebAppUrl && !urlInput) setUrlInput(settings.appSheetConfig.gasWebAppUrl);
+   if (settings.appSheetConfig?.spreadsheetId && !ssIdInput) setSsIdInput(settings.appSheetConfig.spreadsheetId);
+
    // Cargar pestaña
    let sheetName = '';
    if (selectedModule === 'expiry') sheetName = settings.appSheetConfig?.inventoryRegistryTableName || '';
@@ -90,6 +94,9 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
   updateSetting('appSheetConfig', finalConfig);
   SoundFX.play('success');
   
+  // Actualizar inputs locales para que el botón de explorar se habilite
+  setSsIdInput(finalConfig.spreadsheetId);
+  
   try {
     const { saveGasUrlToCloud } = await import('../../../services/gasService');
     await saveGasUrlToCloud(urlInput, finalConfig.spreadsheetId);
@@ -97,7 +104,10 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
     console.warn("No se pudo sincronizar la URL en la nube:", e);
   }
 
-  alert(`¡CONEXIÓN EXITOSA!\nSistema vinculado al Excel: ${finalConfig.spreadsheetId}`);
+  // Auto-explorar estructura después de vincular exitosamente
+  setTimeout(() => {
+    handleDiscoverStructure();
+  }, 500);
   } catch (e: any) {
  if (e.message.includes('GOOGLE_OAUTH_STALL') || e.message.includes('ACCESO_DENEGADO')) {
  setErrorMode('OAUTH_STALL');
@@ -206,7 +216,9 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
     }
   };
 
-  const currentSheetMetadata = metadata?.sheets.find(s => s.sheetName === selectedSheet);
+  const currentSheetMetadata = metadata?.sheets?.find(s => 
+    s.sheetName?.toLowerCase() === selectedSheet?.toLowerCase()
+  );
 
   const getModuleFields = () => {
     if (selectedModule === 'expiry') {
@@ -220,7 +232,7 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
         { id: 'yyyy', label: 'Año (YYYY)', color: 'slate' },
         { id: 'location', label: 'Ubicación (BOD)', color: 'slate' },
         { id: 'timestamp', label: 'Fecha/Hora Registro', color: 'slate' },
-        { label: 'Nombre Producto (Opcional)', key: 'name' }
+        { id: 'name', label: 'Nombre Producto (Opcional)', color: 'emerald' }
       ];
     }
     if (selectedModule === 'events') {
@@ -239,7 +251,7 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
         { id: 'observaciones', label: 'Observaciones', color: 'slate' },
         { id: 'isAdjusted', label: 'Flag Ajustado (Boolean)', color: 'emerald' },
         { id: 'timestamp', label: 'Fecha/Hora Registro', color: 'slate' },
-        { label: 'Nombre Producto (Opcional)', key: 'name' }
+        { id: 'name', label: 'Nombre Producto (Opcional)', color: 'emerald' }
       ];
     }
     if (selectedModule === 'products') {
@@ -495,7 +507,7 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
                           className="w-full bg-black/60 border-2 border-white/10 rounded-xl px-3 py-2 text-[10px] font-mono text-white focus:border-indigo-500 outline-none transition-all"
                         >
                           <option value="">-- SELECCIONAR COLUMNA --</option>
-                          {(currentSheetMetadata?.headers || []).map(h => (
+                          {Array.isArray(currentSheetMetadata?.headers) && currentSheetMetadata.headers.map(h => (
                             <option key={h} value={h}>{h}</option>
                           ))}
                         </select>
@@ -523,7 +535,7 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
                           className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-[9px] font-mono text-slate-300 focus:border-blue-500 outline-none transition-all"
                         >
                           <option value="">-- No asig. --</option>
-                          {(currentSheetMetadata?.headers || []).map(h => (
+                          {Array.isArray(currentSheetMetadata?.headers) && currentSheetMetadata.headers.map(h => (
                             <option key={h} value={h}>{h}</option>
                           ))}
                         </select>
@@ -537,13 +549,14 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
                 <SettingsButton 
                   onClick={() => {
                     const newMapping = { ...mapping };
-                    const headers = currentSheetMetadata?.headers || [];
+                    const headers = Array.isArray(currentSheetMetadata?.headers) ? currentSheetMetadata.headers : [];
                     const fields = getModuleFields();
                     
                     fields.forEach(f => {
+                      if (!f.id) return;
                       const match = headers.find(h => 
                         h.toLowerCase() === f.id.toLowerCase() || 
-                        h.toLowerCase() === f.label.toLowerCase() ||
+                        h.toLowerCase() === (f.label || '').toLowerCase() ||
                         (f.id === 'barcode' && (h.toLowerCase() === 'sku' || h.toLowerCase() === 'upc')) ||
                         (f.id === 'id' && (h.toLowerCase() === 'id' || h.toLowerCase() === 'key' || h.toLowerCase() === 'codigo'))
                       );

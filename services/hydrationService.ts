@@ -24,7 +24,7 @@ export const HydrationService = {
         db.dynamic_data.where('syncStatus').equals('pending').count()
       ]);
 
-      const lastSession = await db.sessions.orderBy('startTime').last();
+      const lastSession = await db.sessions.orderBy('createdAt').last();
       const lastSyncStr = localStorage.getItem('logicount_last_sync');
 
       const snapshot: AppSnapshot = {
