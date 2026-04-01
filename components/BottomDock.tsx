@@ -25,14 +25,13 @@ export const BottomDock: React.FC<Props> = ({ currentView, settings }) => {
  'database': { label: 'DB', icon: Database, path: '/database' },
  'reception': { label: 'INBOUND', icon: Container, path: '/reception' },
  'sync': { label: 'SYNC', icon: Cloud, path: '/sync' },
- 'sync-queue': { label: 'QUEUE', icon: RefreshCw, path: '/sync/queue' },
  'visual-picking': { label: 'VISUAL', icon: Camera, path: '/visual-picking' },
  'expiry': { label: 'EXPIRY', icon: Calendar, path: '/expiry' },
  'events': { label: 'EVENTS', icon: FileText, path: '/events' },
  'settings': { label: 'SETUP', icon: Settings, path: '/settings' }
  };
 
- const activeNavKeys = settings.mobileNavConfig?.filter(k => k !== 'massive' && k !== 'documents') || ['dashboard', 'reports', 'sync', 'sync-queue'];
+ const activeNavKeys = settings.mobileNavConfig?.filter(k => k !== 'massive' && k !== 'documents') || ['dashboard', 'reports', 'sync'];
  
  return (
  <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[100] bg-slate-950/95 border-t-2 border-white/10 px-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-3 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
@@ -64,15 +63,9 @@ export const BottomDock: React.FC<Props> = ({ currentView, settings }) => {
  <div className="absolute -bottom-1 w-1 h-1 bg-blue-400 rounded-full shadow-[0_0_8px_#60a5fa] animate-pulse"></div>
  )}
 
- {key === 'sync' && pendingSync > 0 && (
+ { (key === 'sync' || key === 'expiry' || key === 'events') && (pendingSync > 0 || dynamicStats > 0) && (
  <span className="absolute -top-1 right-1 bg-amber-500 text-black text-[9px] font-black px-1.5 py-0.5 rounded-md border-2 border-slate-950 animate-bounce">
- {pendingSync}
- </span>
- )}
-
- {key === 'sync-queue' && dynamicStats > 0 && (
- <span className="absolute -top-1 right-1 bg-amber-500 text-black text-[9px] font-black px-1.5 py-0.5 rounded-md border-2 border-slate-950 animate-bounce">
- {dynamicStats}
+ {pendingSync + dynamicStats}
  </span>
  )}
  </button>

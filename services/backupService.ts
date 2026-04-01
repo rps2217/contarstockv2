@@ -36,7 +36,7 @@ export const createFullBackup = async (): Promise<void> => {
         products: await db.products.toArray(),
         sessions: await db.sessions.toArray(),
         scans: await db.scans.toArray(),
-        syncQueue: await db.syncQueue.toArray(),
+        dynamicData: await db.dynamic_data.toArray(),
         expectedOrders: await db.expectedOrders.toArray(),
       },
     };
@@ -82,13 +82,13 @@ export const restoreFullBackup = async (file: File): Promise<number> => {
           db.products,
           db.sessions,
           db.scans,
-          db.syncQueue,
+          db.dynamic_data,
           db.expectedOrders,
           async () => {
             await db.products.clear();
             await db.sessions.clear();
             await db.scans.clear();
-            await db.syncQueue.clear();
+            await db.dynamic_data.clear();
             await db.expectedOrders.clear();
 
             if (json.data.products.length)
@@ -96,8 +96,8 @@ export const restoreFullBackup = async (file: File): Promise<number> => {
             if (json.data.sessions.length)
               await db.sessions.bulkAdd(json.data.sessions);
             if (json.data.scans.length) await db.scans.bulkAdd(json.data.scans);
-            if (json.data.syncQueue.length)
-              await db.syncQueue.bulkAdd(json.data.syncQueue);
+            if (json.data.dynamicData && json.data.dynamicData.length)
+              await db.dynamic_data.bulkAdd(json.data.dynamicData);
             if (json.data.expectedOrders.length)
               await db.expectedOrders.bulkAdd(json.data.expectedOrders);
           },

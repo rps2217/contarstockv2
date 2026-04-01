@@ -1,6 +1,6 @@
 import { Dexie } from 'dexie';
 import type { Table } from 'dexie';
-import { Product, CountingSession, ScanRecord, SyncJob, ExpectedOrder, VisualGuide, ErpOrderSession, Provider } from './types';
+import { Product, CountingSession, ScanRecord, ExpectedOrder, VisualGuide, ErpOrderSession, Provider } from './types';
 
 export interface SystemLog {
   id?: number;
@@ -20,30 +20,6 @@ export interface LocationEntry {
   id?: number;
   name: string;
   lastUsed: number;
-}
-
-export interface CloudExpiration {
-  id: string;
-  barcode: string;
-  productName: string;
-  mm: number | string;
-  yyyy: number | string;
-  event: string;
-  quantity: number;
-  location: string;
-  batch?: string;
-  timestamp: number;
-  claveUnica?: string;
-  isAdjusted?: boolean;
-  fechaCC?: string;
-  frc?: string;
-  erp?: string;
-  nguia?: string;
-  destino?: string;
-  traspaso?: string;
-  observaciones?: string;
-  syncStatus?: 'synced' | 'pending' | 'error';
-  syncError?: string;
 }
 
 export interface DynamicRecord {
@@ -72,7 +48,6 @@ export class LogiCountDB extends Dexie {
   products!: Table<Product>;
   sessions!: Table<CountingSession>;
   scans!: Table<ScanRecord>;
-  syncQueue!: Table<SyncJob>;
   expectedOrders!: Table<ExpectedOrder>;
   logs!: Table<SystemLog>;
   sync_logs!: Table<SyncLog>;
@@ -80,7 +55,6 @@ export class LogiCountDB extends Dexie {
   locations!: Table<LocationEntry>;
   visualGuides!: Table<VisualGuide>;
   erpSessions!: Table<ErpOrderSession>;
-  cloudExpirations!: Table<CloudExpiration>;
   providers!: Table<Provider>;
   dynamic_data!: Table<DynamicRecord>;
 
@@ -90,7 +64,6 @@ export class LogiCountDB extends Dexie {
       products: '&barcode, name, syncStatus', 
       sessions: 'id, status, createdAt, erpOrder, logisticsLabel, sessionType, auditStatus, lastSyncTimestamp, mm, yyyy, batch, photoUrl, [erpOrder+createdAt], [status+lastSyncTimestamp]', 
       scans: 'id, sessionId, barcode, logisticsLabel, timestamp, synced, isIncident, expiryDate, mm, yyyy, batch, [sessionId+synced], [sessionId+barcode], [sessionId+logisticsLabel], [sessionId+timestamp]',
-      syncQueue: '++id, status, createdAt, retryCount',
       expectedOrders: 'id, internalId',
       logs: '++id, level, module, timestamp',
       sync_logs: '++id, timestamp, action, tableName, status',
@@ -98,7 +71,6 @@ export class LogiCountDB extends Dexie {
       locations: '++id, &name, lastUsed',
       visualGuides: 'id, guideNumber, erpOrderId, status, createdAt',
       erpSessions: 'id, erpOrderId, status, createdAt',
-      cloudExpirations: 'id, barcode, frc, erp, nguia, &claveUnica, [mm+yyyy]',
       providers: '&rut, name',
       dynamic_data: 'id, tableName, timestamp, syncStatus, [tableName+syncStatus]'
     });

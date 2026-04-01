@@ -3,9 +3,9 @@ import { fetchSystemConfig } from './gasService';
 import { importProductsFromAppSheet, importProvidersFromCloud } from './syncManager';
 import { getSettings, saveSettings } from './settings';
 import { db } from '../db';
-import { migrationService } from './migrationService';
 import { sanitizeBarcode, normalizeSku } from '../services/utils';
 import { recoverFromEmergencySnapshot } from './backupService';
+import { HydrationService } from './hydrationService';
 
 export type InitStep = 'idle' | 'version_check' | 'config' | 'database' | 'ready' | 'offline' | 'purging' | 'migrating';
 
@@ -72,7 +72,6 @@ export const InitializationService = {
       let attempts = 0;
       while (!dbReady && attempts < 5) {
         try {
-          // FIX: Added cast to any to resolve property 'open' access on Dexie instance
           await (db as any).open();
           dbReady = true;
         } catch (e) {
@@ -81,14 +80,7 @@ export const InitializationService = {
         }
       }
 
-      // Ejecutar migración al nuevo motor si hay datos en la tabla antigua
       if (dbReady) {
-        const oldDataCount = await db.cloudExpirations.count();
-        if (oldDataCount > 0) {
-          onStep('migrating');
-          await migrationService.migrateCloudExpirationsToDynamic();
-        }
-
         // RECUPERACIÓN DE EMERGENCIA: Si la DB está vacía pero hay snapshot en localStorage
         const sessionCount = await db.sessions.count();
         if (sessionCount === 0) {
@@ -99,38 +91,64 @@ export const InitializationService = {
         }
       }
 
-      const sanitizeExistingData = async () => {
+      // Tareas de saneamiento y carga inicial (Optimizado para memoria y robustez)
+      const sanitizeTask = async () => {
         try {
-          const products = await db.products.toArray();
+          // Obtenemos solo las llaves primarias primero para evitar cargar objetos pesados en memoria
+          const allBarcodes = await db.products.toCollection().primaryKeys();
+          
+          const CHUNK_SIZE = 500;
+          for (let i = 0; i < allBarcodes.length; i += CHUNK_SIZE) {
+            const chunk = allBarcodes.slice(i, i + CHUNK_SIZE);
+            const products = await db.products.where('barcode').anyOf(chunk).toArray();
+            
+            const productUpdates = products
+              .filter(p => normalizeSku(p.barcode) !== p.barcode)
+              .map(p => ({ ...p, barcode: normalizeSku(p.barcode) }));
+
+            if (productUpdates.length > 0) {
+              // Si el barcode cambió, el bulkPut creará un nuevo registro. 
+              // Debemos borrar los antiguos para evitar duplicados "sucios"
+              const oldBarcodes = products
+                .filter(p => normalizeSku(p.barcode) !== p.barcode)
+                .map(p => p.barcode);
+                
+              await db.transaction('rw', db.products, async () => {
+                await db.products.bulkDelete(oldBarcodes);
+                await db.products.bulkPut(productUpdates);
+              });
+            }
+          }
+
+          // Lo mismo para proveedores (suelen ser pocos, pero por consistencia)
           const providers = await db.providers.toArray();
-          for (const p of products) {
-            const sanitized = normalizeSku(p.barcode);
-            if (sanitized !== p.barcode) {
-              await db.products.delete(p.barcode);
-              await db.products.put({ ...p, barcode: sanitized });
-            }
+          const providerUpdates = providers
+            .filter(prov => normalizeSku(prov.rut) !== prov.rut)
+            .map(prov => ({ ...prov, rut: normalizeSku(prov.rut) }));
+
+          if (providerUpdates.length > 0) {
+            await db.providers.bulkPut(providerUpdates);
           }
-          for (const prov of providers) {
-            const sanitized = normalizeSku(prov.rut);
-            if (sanitized !== prov.rut) {
-              await db.providers.delete(prov.rut);
-              await db.providers.put({ ...prov, rut: sanitized });
-            }
-          }
-        } catch (e) {}
+        } catch (e) {
+          logger.warn('INIT', 'Error en saneamiento de datos', e);
+        }
       };
 
-      await sanitizeExistingData();
-
+      // Ejecutar saneamiento en segundo plano si ya hay datos
       const productCount = await db.products.count();
-      const hasLocalData = productCount > 0;
+      const hasLocalData = productCount >= 10;
 
-      if (hasLocalData && productCount >= 10) {
-        onStep('ready'); 
-        if (navigator.onLine) InitializationService.backgroundRefresh();
+      if (hasLocalData) {
+        onStep('ready');
+        // Ejecutar tareas de mantenimiento y refresco en paralelo sin bloquear el inicio
+        Promise.all([
+          sanitizeTask(),
+          InitializationService.backgroundRefresh()
+        ]).catch(e => logger.warn('INIT', 'Error en tareas de fondo', e));
         return;
       }
 
+      // Si no hay datos locales, carga obligatoria secuencial/paralela controlada
       if (!navigator.onLine) {
         onStep('offline');
         setTimeout(() => onStep('ready'), 2000);
@@ -139,10 +157,17 @@ export const InitializationService = {
 
       onStep('config');
       await InitializationService.syncConfig();
+      
       onStep('database');
-      await importProductsFromAppSheet();
-      await importProvidersFromCloud();
+      // Paralelizar importación de productos y proveedores
+      await Promise.all([
+        importProductsFromAppSheet(),
+        importProvidersFromCloud(),
+        sanitizeTask()
+      ]);
+      
       onStep('ready');
+      await HydrationService.persist();
 
     } catch (error: any) {
       logger.error('INIT_CRITICAL', 'Fallo en secuencia de arranque', error.message);
@@ -155,17 +180,27 @@ export const InitializationService = {
       const settings = getSettings();
       if (settings.appSheetConfig?.gasWebAppUrl) {
         const newConfig = await fetchSystemConfig();
-        const updated = { ...settings, appSheetConfig: { ...settings.appSheetConfig, ...newConfig } };
-        await saveSettings(updated);
+        if (newConfig && Object.keys(newConfig).length > 0) {
+          const updated = { ...settings, appSheetConfig: { ...settings.appSheetConfig, ...newConfig } };
+          await saveSettings(updated);
+        }
       }
-    } catch (e) {}
+    } catch (e) {
+      logger.warn('INIT', 'Error sincronizando configuración', e);
+    }
   },
 
   backgroundRefresh: async () => {
     try {
-      await InitializationService.syncConfig();
-      await importProductsFromAppSheet();
-      await importProvidersFromCloud();
-    } catch (e) {}
+      // Refresco en paralelo
+      await Promise.all([
+        InitializationService.syncConfig(),
+        importProductsFromAppSheet(),
+        importProvidersFromCloud(),
+        HydrationService.persist()
+      ]);
+    } catch (e) {
+      logger.warn('INIT', 'Error en refresco de fondo', e);
+    }
   }
 };

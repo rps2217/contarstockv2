@@ -3,14 +3,13 @@ import { useMemo, useEffect, useCallback, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../../db';
 import { Product, Provider } from '../../../types';
-import { importExpirationsFromCloud, importProvidersFromCloud } from '../../../services/syncManager';
+import { importProvidersFromCloud } from '../../../services/syncManager';
 import { dynamicDataService } from '../../../services/dynamicDataService';
 import { dynamicSyncService } from '../../../services/dynamicSync';
 import { normalizeSku } from '../../../services/utils';
 import { useToastStore } from '../../../store/useToastStore';
 import { useAppStore } from '../../../store/useAppStore';
 import { useExpiryStore, ExpiryItem, ExpiryStatus, ExpiryPreferences } from '../../../store/useExpiryStore';
-import { SyncQueueService } from '../../../services/syncQueueService';
 import { processExpiryItem, filterExpiryItems, calculateExpiryStats } from '../utils/expiryProcessor';
 import { SoundFX } from '../../../services/audio';
 import { cloudApi } from '../../../services/cloud/apiClient';
@@ -25,10 +24,10 @@ export const useExpiryDatabase = () => {
                     settings?.appSheetConfig?.expiryTableName || 
                     'VENCIMIENTOS';
   
-  // Procesar cola de sincronización al iniciar
+  // Procesar registros pendientes al iniciar
   useEffect(() => {
-    SyncQueueService.processQueue();
-  }, []);
+    dynamicSyncService.syncAllPending(undefined, tableName);
+  }, [tableName]);
 
   const {
     preferences, setPreferences,

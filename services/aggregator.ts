@@ -35,15 +35,35 @@ const aggregateScansSync = (scans: ScanRecord[], productMap: Map<string, {name: 
  return Object.values(aggregation);
 };
 
+// Cache simple de productos para evitar consultas repetitivas a IndexedDB
+const productCache = new Map<string, {name: string, embedding?: number[]}>();
+const MAX_CACHE_SIZE = 5000;
+
+export const clearProductCache = () => productCache.clear();
+
 export const aggregateScans = async (scans: ScanRecord[]): Promise<ConsolidatedItem[]> => {
- if (scans.length === 0) return [];
- const uniqueBarcodes = Array.from(new Set(scans.map(s => s.barcode)));
- const products = await db.products.where('barcode').anyOf(uniqueBarcodes).toArray();
- 
- const productMap = new Map<string, {name: string, embedding?: number[]}>();
- products.forEach(p => { 
- productMap.set(p.barcode, { name: p.name, embedding: p.embedding }); 
- });
- 
- return aggregateScansSync(scans, productMap);
+  if (scans.length === 0) return [];
+  
+  const uniqueBarcodes = Array.from(new Set(scans.map(s => s.barcode)));
+  
+  // Identificar qué códigos no están en caché
+  const missingBarcodes = uniqueBarcodes.filter(b => !productCache.has(b));
+  
+  if (missingBarcodes.length > 0) {
+    const products = await db.products.where('barcode').anyOf(missingBarcodes).toArray();
+    
+    // Si la caché es muy grande, limpiamos la mitad más antigua (aproximadamente)
+    if (productCache.size > MAX_CACHE_SIZE) {
+      const keys = Array.from(productCache.keys());
+      for (let i = 0; i < Math.floor(keys.length / 2); i++) {
+        productCache.delete(keys[i]);
+      }
+    }
+
+    products.forEach(p => { 
+      productCache.set(p.barcode, { name: p.name, embedding: p.embedding }); 
+    });
+  }
+  
+  return aggregateScansSync(scans, productCache);
 };

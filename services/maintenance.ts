@@ -24,8 +24,8 @@ export const checkSystemHealth = async (): Promise<HealthReport> => {
  }
  });
 
- const stuckSyncJobs = await db.syncQueue
- .where('retryCount').above(10)
+ const stuckSyncJobs = await db.dynamic_data
+ .where('syncStatus').equals('error')
  .count();
 
  const corruptProducts = await db.products
@@ -84,9 +84,9 @@ export const repairSystem = async (): Promise<string[]> => {
  }
 
  // 3. Reset de Sincronizaciones Fallidas (Reintento forzado)
- const stuckJobsCount = await db.syncQueue.where('retryCount').above(5).modify({ retryCount: 0 });
+ const stuckJobsCount = await db.dynamic_data.where('syncStatus').equals('error').modify({ syncStatus: 'pending', retryCount: 0 });
  if (stuckJobsCount) {
- logs.push(`✅ Re-encolados ${stuckJobsCount} trabajos de sincronización.`);
+ logs.push(`✅ Re-encolados ${stuckJobsCount} registros de datos dinámicos.`);
  }
 
  if (logs.length === 0) {

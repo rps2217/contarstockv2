@@ -4,7 +4,6 @@ import * as syncManager from '../services/syncManager';
 import { useToastStore } from '../store/useToastStore';
 import { erpService } from '../services/erpService';
 import { ExpectedOrderRepository } from '../repositories/ExpectedOrderRepository';
-import { SyncQueueService } from '../services/syncQueueService';
 
 import { dynamicSyncService } from '../services/dynamicSync';
 
@@ -17,14 +16,7 @@ export const useAutoSync = () => {
 
     isSyncing.current = true;
 
-    // 0. Process Expiry Sync Queue
-    try {
-      await SyncQueueService.processQueue();
-    } catch (error) {
-      console.error('Expiry sync queue processing failed:', error);
-    }
-
-    // 0.1 Process Dynamic Data Sync
+    // 0. Process Dynamic Data Sync
     try {
       await dynamicSyncService.resetRetries(); // Reset retries before attempting sync
       const dynamicResult = await dynamicSyncService.syncAllPending();

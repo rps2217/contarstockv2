@@ -430,6 +430,9 @@ export const useEventDatabase = () => {
       await dynamicDataService.saveRecord(tableName, updatedData, id);
       return { id, ...updatedData };
     },
+    deleteEvent: async (id: string) => {
+      await dynamicDataService.deleteRecord(id);
+    },
     createEvent: async (data: {
       barcode: string;
       productName: string;

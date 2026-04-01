@@ -45,14 +45,6 @@ export interface ExpectedOrder {
  };
 }
 
-export interface SyncJob {
- id?: number;
- status: 'pending' | 'processing' | 'failed' | 'completed';
- createdAt: number;
- retryCount: number;
- data?: any;
-}
-
 export interface AliasSuggestion {
  physicalBarcode: string;
  physicalName: string;
@@ -138,7 +130,7 @@ export interface ConsolidatedItem {
  embedding?: number[];
 }
 
-export type ViewState = 'dashboard' | 'counting' | 'database' | 'reports' | 'settings' | 'reception' | 'sync' | 'massive' | 'documents' | 'visual-picking' | 'expiry' | 'events' | 'sync-queue';
+export type ViewState = 'dashboard' | 'counting' | 'database' | 'reports' | 'settings' | 'reception' | 'sync' | 'massive' | 'documents' | 'visual-picking' | 'expiry' | 'events';
 export type Theme = 'light' | 'dark';
 
 export interface VisualGuideItem {

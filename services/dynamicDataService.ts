@@ -36,17 +36,11 @@ export const dynamicDataService = {
         const settings = (await import('./settings')).getSettings();
         const config = settings.appSheetConfig;
         
-        if (record.tableName === config?.inventoryRegistryTableName) {
-          const uKey = record.data.CLAVE_UNICA || record.data.uniqueKey || record.data.claveUnica;
-          if (uKey) {
-            await cloudApi.removeExpiration(uKey);
-          }
-        } else {
-          const idCol = config?.mappings?.events?.id || 'ID';
-          const remoteId = record.data[idCol] || record.data['ID'] || record.data['id'];
-          if (remoteId) {
-            await cloudApi.deleteRow(record.tableName, remoteId);
-          }
+        const idCol = config?.mappings?.events?.id || 'ID';
+        const remoteId = record.data[idCol] || record.data['ID'] || record.data['id'] || record.data['CLAVE_UNICA'] || record.data['uniqueKey'];
+        
+        if (remoteId) {
+          await cloudApi.deleteRow(record.tableName, remoteId);
         }
       } catch (error: any) {
         logger.error('DYNAMIC_DATA', `Background deletion sync failed for record ${id}`, error.message);
@@ -84,41 +78,6 @@ export const dynamicDataService = {
       if (!rowData[idCol]) rowData[idCol] = record.id;
       if (!rowData[tsCol]) rowData[tsCol] = new Date(record.timestamp).toLocaleString('es-CL');
 
-      // PROTOCOLO DE ENLACE DIRECTO PARA VENCIMIENTOS
-      if (record.tableName === config?.inventoryRegistryTableName) {
-        const getVal = (keys: string[]) => {
-          for (const k of keys) {
-            if (rowData[k] !== undefined) return rowData[k];
-          }
-          return undefined;
-        };
-
-        const gasPayload = {
-          id: getVal([idCol, 'ID_REGISTRO', 'ID', 'id']),
-          barcode: getVal(['COD_BARRAS', 'SKU', 'barcode']),
-          productName: getVal(['DESCRIPCION_PROD', 'DESCRIPTOR', 'productName']),
-          mm: getVal(['MM', 'mm']),
-          yyyy: getVal(['YYYY', 'yyyy']),
-          quantity: getVal(['CANTIDAD', 'quantity']),
-          event: getVal(['EVENTO', 'event']) || 'VENCIMIENTOS',
-          claveUnica: getVal(['CLAVE_UNICA', 'uniqueKey', 'claveUnica']),
-          location: getVal(['UBICACION', 'BOD.', 'location']) || '',
-          destino: getVal(['DESTINO', 'destino']) || '',
-          traspaso: getVal(['DOCTRASINTER', 'TRASPASO', 'traspaso']) || '',
-          observaciones: getVal(['OBSERVACIONES', 'OBS', 'observaciones']) || '',
-          fechaCC: getVal(['FECHA_CC', 'FECHACC', 'fechaCC']) || ''
-        };
-
-        const response = await cloudApi.addExpiration(gasPayload);
-        if (response.success) {
-          await db.dynamic_data.update(id, { syncStatus: 'synced' });
-          return;
-        } else {
-          await db.dynamic_data.update(id, { syncStatus: 'error', syncError: response.error });
-          return;
-        }
-      }
-
       const response = await cloudApi.upsertRows(record.tableName, [rowData]);
       if (response.success) {
         await db.dynamic_data.update(id, { syncStatus: 'synced' });
@@ -133,8 +92,60 @@ export const dynamicDataService = {
 
   async syncAllPending() {
     const pending = await db.dynamic_data.where('syncStatus').equals('pending').toArray();
+    if (pending.length === 0) return;
+
+    // Agrupar por tabla para batching
+    const groups: Record<string, DynamicRecord[]> = {};
     for (const record of pending) {
-      await this.syncRecord(record.id).catch(() => {});
+      if (!groups[record.tableName]) groups[record.tableName] = [];
+      groups[record.tableName].push(record);
+    }
+
+    const settings = (await import('./settings')).getSettings();
+    const config = settings.appSheetConfig;
+
+    for (const [tableName, records] of Object.entries(groups)) {
+      try {
+        const rowsToUpsert = records.map(record => {
+          const rowData = { ...record.data };
+          let idCol = 'ID';
+          let tsCol = 'TIMESTAMP';
+
+          if (config?.mappings) {
+            if (tableName === config.inventoryRegistryTableName) {
+              idCol = config.mappings.expiry?.id || 'ID';
+              tsCol = config.mappings.expiry?.timestamp || 'TIMESTAMP';
+            } else if (tableName === config.eventsTableName) {
+              idCol = config.mappings.events?.id || 'ID';
+              tsCol = config.mappings.events?.timestamp || 'TIMESTAMP';
+            } else if (tableName === config.productsTableName) {
+              idCol = config.mappings.products?.id || 'ID';
+            } else if (tableName === config.countsTableName) {
+              idCol = config.mappings.counts?.id || 'ID';
+              tsCol = config.mappings.counts?.timestamp || 'TIMESTAMP';
+            }
+          }
+
+          if (!rowData[idCol]) rowData[idCol] = record.id;
+          if (!rowData[tsCol]) rowData[tsCol] = new Date(record.timestamp).toLocaleString('es-CL');
+          
+          return rowData;
+        });
+
+        const response = await cloudApi.upsertRows(tableName, rowsToUpsert);
+        
+        if (response.success) {
+          const ids = records.map(r => r.id);
+          await db.dynamic_data.where('id').anyOf(ids).modify({ syncStatus: 'synced' });
+        } else {
+          // Si falla el batch, intentamos uno por uno para no bloquear todo
+          for (const record of records) {
+            await this.syncRecord(record.id).catch(() => {});
+          }
+        }
+      } catch (error: any) {
+        logger.error('DYNAMIC_DATA', `Batch sync failed for table ${tableName}`, error.message);
+      }
     }
   }
 };

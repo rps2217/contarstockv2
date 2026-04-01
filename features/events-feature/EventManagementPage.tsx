@@ -38,7 +38,7 @@ import { Zap, ChevronUp, ChevronDown } from 'lucide-react';
 
 // Services
 import { dynamicSyncService } from '../../services/dynamicSync';
-import { removeExpirationFromCloud } from '../../services/expiry-sync-service';
+import { dynamicDataService } from '../../services/dynamicDataService';
 
 const EventManagementPage: React.FC = () => {
   const { settings, updateSetting } = useAppStore();
@@ -178,14 +178,9 @@ const EventManagementPage: React.FC = () => {
   };
 
   const handleRemoveItem = async (item: any) => {
-    if (!item.claveUnica) {
-      toast.error('No se puede eliminar: falta clave única');
-      return;
-    }
-    
     try {
       actions.setPendingOperations(p => p + 1);
-      await removeExpirationFromCloud(item.claveUnica);
+      await actions.deleteEvent(item.id);
       toast.success('Registro eliminado correctamente');
     } catch (error: any) {
       toast.error(error.message || 'Error al eliminar registro');
@@ -216,12 +211,8 @@ const EventManagementPage: React.FC = () => {
     actions.setPendingOperations(p => p + selectedItems.length);
     
     await Promise.all(selectedItems.map(async (item) => {
-      if (!item.claveUnica) {
-        failedItems.push(item.barcode || 'Desconocido');
-        return;
-      }
       try {
-        await removeExpirationFromCloud(item.claveUnica);
+        await actions.deleteEvent(item.id);
         successCount++;
       } catch (e) {
         failedItems.push(item.barcode || 'Desconocido');
