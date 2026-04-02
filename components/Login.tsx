@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Box, Lock, User, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
+import { Box, Lock, User, ArrowRight, AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
+import { auth, googleProvider } from '../src/lib/firebase';
+import { signInWithPopup } from 'firebase/auth';
 
 interface LoginProps {
  onLoginSuccess: () => void;
@@ -11,6 +13,24 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
  const [error, setError] = useState('');
  const [isLoading, setIsLoading] = useState(false);
  const [activeField, setActiveField] = useState<'user' | 'pass' | null>(null);
+
+ const handleGoogleLogin = async () => {
+  setIsLoading(true);
+  setError('');
+  try {
+   const result = await signInWithPopup(auth, googleProvider);
+   if (result.user) {
+    localStorage.setItem('logicount_auth', 'true');
+    localStorage.setItem('logicount_operator_id', result.user.displayName?.toUpperCase() || 'ADMIN');
+    onLoginSuccess();
+   }
+  } catch (e: any) {
+   console.error("Google Login Error:", e);
+   setError('Error al autenticar con Google: ' + e.message);
+  } finally {
+   setIsLoading(false);
+  }
+ };
 
  const handleLogin = (e: React.FormEvent) => {
  e.preventDefault();
@@ -109,6 +129,20 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
  {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Identificarse <ArrowRight className="w-5 h-5" /></>}
  </button>
  </form>
+
+ <div className="relative my-4">
+ <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-100"></div></div>
+ <div className="relative flex justify-center text-[10px] uppercase font-black tracking-widest"><span className="bg-white px-4 text-slate-300">O acceder como</span></div>
+ </div>
+
+ <button 
+ type="button"
+ onClick={handleGoogleLogin}
+ disabled={isLoading}
+ className="w-full h-14 bg-white border-2 border-slate-100 hover:border-blue-500 hover:bg-blue-50 text-slate-600 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-70"
+ >
+ <ShieldCheck className="w-5 h-5 text-blue-600" /> Acceso Administrador (Google)
+ </button>
  </div>
 
  <div className="text-center opacity-40 hover:opacity-100 transition-opacity">

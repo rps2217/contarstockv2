@@ -74,6 +74,9 @@ export const firebaseSyncService = {
         }
       });
       logger.info('SYNC_REALTIME', `SYNC_REALTIME: ${tableName} updated`);
+    }, (error) => {
+      logger.error(`SYNC_REALTIME_FAIL: ${tableName}`, error);
+      handleFirestoreError(error, OperationType.LIST, tableName);
     });
   },
 
@@ -95,6 +98,9 @@ export const firebaseSyncService = {
         }
       });
       logger.info('SYNC_REALTIME', `SYNC_REALTIME: ${tableName} filtered by ${field}=${value} updated`);
+    }, (error) => {
+      logger.error(`SYNC_REALTIME_FILTERED_FAIL: ${tableName}`, error);
+      handleFirestoreError(error, OperationType.LIST, tableName);
     });
   },
 
@@ -107,6 +113,7 @@ export const firebaseSyncService = {
       await setDoc(docRef, data, { merge: true });
     } catch (e) {
       logger.error(`SYNC_PUSH_FAIL: ${tableName}`, e);
+      handleFirestoreError(e, OperationType.WRITE, `${tableName}/${id}`);
     }
   },
 
@@ -125,6 +132,11 @@ export const firebaseSyncService = {
       return { success: true, rows_written: rows.length };
     } catch (e) {
       logger.error(`SYNC_BATCH_PUSH_FAIL: ${tableName}`, e);
+      try {
+        handleFirestoreError(e, OperationType.WRITE, tableName);
+      } catch (err) {
+        return { success: false, error: String(e) };
+      }
       return { success: false, error: String(e) };
     }
   },
@@ -135,6 +147,7 @@ export const firebaseSyncService = {
       await deleteDoc(docRef);
     } catch (e) {
       logger.error(`SYNC_DELETE_FAIL: ${tableName}`, e);
+      handleFirestoreError(e, OperationType.DELETE, `${tableName}/${id}`);
     }
   },
 
@@ -147,6 +160,11 @@ export const firebaseSyncService = {
       return { success: true, rows };
     } catch (e) {
       logger.error(`SYNC_QUERY_FAIL: ${tableName}`, e);
+      try {
+        handleFirestoreError(e, OperationType.LIST, tableName);
+      } catch (err) {
+        return { success: false, rows: [], error: String(e) };
+      }
       return { success: false, rows: [], error: String(e) };
     }
   },
@@ -159,6 +177,11 @@ export const firebaseSyncService = {
       return { success: true, rows };
     } catch (e) {
       logger.error(`SYNC_PULL_FAIL: ${tableName}`, e);
+      try {
+        handleFirestoreError(e, OperationType.LIST, tableName);
+      } catch (err) {
+        return { success: false, rows: [], error: String(e) };
+      }
       return { success: false, rows: [], error: String(e) };
     }
   },

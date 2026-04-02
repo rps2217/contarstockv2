@@ -6,6 +6,8 @@ import { sanitizeBarcode, normalizeSku } from '../services/utils';
 import { recoverFromEmergencySnapshot } from './backupService';
 import { HydrationService } from './hydrationService';
 import { firebaseSyncService } from './firebaseSyncService';
+import { auth } from '../src/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 export type InitStep = 'idle' | 'version_check' | 'config' | 'database' | 'ready' | 'offline' | 'purging' | 'migrating';
 
@@ -177,6 +179,23 @@ export const InitializationService = {
 
   syncConfig: async () => {
     try {
+      // Esperar un poco a que Firebase Auth intente conectar, pero no bloquear
+      if (!auth.currentUser) {
+        await new Promise((resolve) => {
+          const unsubscribe = onAuthStateChanged(auth, (user) => {
+            if (user) {
+              unsubscribe();
+              resolve(user);
+            }
+          });
+          // Timeout corto de 2 segundos
+          setTimeout(() => {
+            unsubscribe();
+            resolve(null);
+          }, 2000);
+        });
+      }
+
       const settings = getSettings();
       // Intentar sincronizar configuración desde Firestore
       const response = await firebaseSyncService.pullBatch('CONFIG_SISTEMA');

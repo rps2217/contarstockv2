@@ -4,6 +4,8 @@ import * as syncManager from '../services/syncManager';
 import { useToastStore } from '../store/useToastStore';
 import { erpService } from '../services/erpService';
 import { ExpectedOrderRepository } from '../repositories/ExpectedOrderRepository';
+import { auth } from '../src/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 import { dynamicSyncService } from '../services/dynamicSync';
 
@@ -101,9 +103,18 @@ export const useAutoSync = () => {
       triggerSync();
     }
 
+    // Listen for auth state changes
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      if (user && navigator.onLine) {
+        console.log('[AutoSync] Usuario autenticado en Firebase. Disparando sync...');
+        triggerSync();
+      }
+    });
+
     return () => {
       window.removeEventListener('online', handleOnline);
       clearInterval(intervalId);
+      unsubscribeAuth();
     };
   }, []);
 };

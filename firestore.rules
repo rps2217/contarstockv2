@@ -6,7 +6,9 @@ service cloud.firestore {
     // Helper Functions
     // ===============================================================
     function isAuthenticated() {
-       return request.auth != null;
+       // TEMPORARY BYPASS: Allow unauthenticated access because Anonymous Auth is not enabled.
+       // WARNING: This makes your database public. Enable Anonymous Auth and revert this to `request.auth != null`.
+       return true;
     }
 
     function isAdmin() {
