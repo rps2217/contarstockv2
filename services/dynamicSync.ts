@@ -1,5 +1,5 @@
 import { db, DynamicRecord } from '../db';
-import { cloudApi } from './cloud/apiClient';
+import { firebaseSyncService } from './firebaseSyncService';
 import { getSettings } from './settings';
 import { logger } from './logger';
 
@@ -14,8 +14,6 @@ export const dynamicSyncService = {
       .anyOf(['pending', 'error']); // Include errors to retry them automatically
     
     if (tableNameFilter) {
-      // Dexie doesn't support multiple where clauses easily without compound indexes or filtering
-      // Since we have [tableName+syncStatus] index, we can use it
       query = db.dynamic_data
         .where('[tableName+syncStatus]')
         .anyOf([[tableNameFilter, 'pending'], [tableNameFilter, 'error']]);
@@ -44,7 +42,6 @@ export const dynamicSyncService = {
     let totalFailed = 0;
 
     const settings = getSettings();
-    const schemas = (settings.schema || {}) as Record<string, any>;
 
     for (const [tableName, records] of Object.entries(groups)) {
       if (onProgress) onProgress(`Sincronizando ${records.length} registros de ${tableName}...`);
@@ -80,6 +77,7 @@ export const dynamicSyncService = {
             
             // Asegurar que el ID y el Timestamp se incluyan siempre
             row['ID'] = r.id;
+            row['id'] = r.id; // Firestore standard
             row['TIMESTAMP'] = new Date(r.timestamp).toISOString();
             
             // Si hay mapeo, asegurar que las columnas mapeadas también tengan los valores
@@ -91,7 +89,7 @@ export const dynamicSyncService = {
             return row;
           });
 
-          const result = await cloudApi.upsertRows(tableName, rows);
+          const result = await firebaseSyncService.pushBatch(tableName, rows);
 
           if (result.success) {
             const ids = batchRecords.map(r => r.id);
@@ -146,7 +144,7 @@ export const dynamicSyncService = {
   async pullSync(tableName: string, onProgress?: (msg: string) => void): Promise<{ added: number; updated: number }> {
     if (onProgress) onProgress(`Descargando datos de ${tableName}...`);
     
-    const result = await cloudApi.fetchTable(tableName);
+    const result = await firebaseSyncService.pullBatch(tableName);
     if (!result.success || !result.rows) {
       throw new Error(result.error || 'No se pudieron recuperar los datos de la nube');
     }

@@ -9,13 +9,16 @@ import { ExpirationModal } from '../expiry-feature/components/ExpirationModal';
 import { Loader2 } from 'lucide-react';
 import { useAutoLock } from '../../hooks/useAutoLock';
 import { useHIDScanner } from '../../hooks/useHIDScanner';
+import { useSyncStore } from '../../store/useSyncStore';
 import { LocationSelectorModal } from '../../shared/components/ui/LocationSelectorModal';
 import * as sessionService from '../../services/sessionService';
+import * as syncManager from '../../services/syncManager';
 
 export const CountingPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const { isSyncing } = useSyncStore();
   const { state, actions, sessionData } = useCountingLogic(id, () => navigate('/reports'));
   const { isLocked, unlock, lock } = useAutoLock(4000, sessionData.session?.isAutoLockEnabled ?? true);
 
@@ -44,6 +47,19 @@ export const CountingPage: React.FC = () => {
     }
   };
 
+  const handleManualSync = async () => {
+    if (!id) return;
+    try {
+      const groups = await syncManager.getPendingUploadGroups();
+      const sessionGroup = groups.find(g => g.sessionIds.includes(id));
+      if (sessionGroup) {
+        await syncManager.performBatchUpload(sessionGroup);
+      }
+    } catch (e) {
+      console.error("Manual sync failed", e);
+    }
+  };
+
   if (state.isLoading) {
  return (
  <div className="h-screen w-full flex flex-col items-center justify-center bg-black text-white">
@@ -63,6 +79,8 @@ export const CountingPage: React.FC = () => {
  onFinalize={handleFinalize}
  onOpenTools={() => setIsToolsOpen(true)}
  onLock={lock}
+ onSync={handleManualSync}
+ isSyncing={isSyncing}
  location={state.currentLocation}
  onChangeLocation={() => setIsLocationModalOpen(true)}
  activeBarcode={state.activeBarcode}

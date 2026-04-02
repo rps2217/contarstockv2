@@ -4,10 +4,8 @@ import { getSettings } from "./settings";
 import { markScansAsSynced } from "./sessionService"; 
 import { markProductsAsSynced } from "./productService";
 import { db } from "../db";
-import { callGas } from "./gasService";
-import { cloudApi } from "./cloud/apiClient";
-import { aggregateScans } from "./aggregator";
-import { createInventoryPayload, createProductsPayload } from "./cloud/mappers";
+import { firebaseSyncService } from "./firebaseSyncService";
+import { createProductsPayload } from "./cloud/mappers";
 
 /**
  * RESPALDO DE INTELIGENCIA COLECTIVA (UPSERT)
@@ -27,10 +25,7 @@ export const syncProductsToAppSheet = async (products: Product[]): Promise<void>
  
  console.log(`[CloudSync] Subiendo lote IA ${i+1}/${totalBatches}...`);
 
- const result = await cloudApi.post('upsert_products', { 
- tableName: config?.productsTableName || "PRODUCTOS",
- rows 
- }, true); // Compresión activa por defecto para vectores
+ const result = await firebaseSyncService.pushBatch(config?.productsTableName || "PRODUCTOS", rows);
  
  if (result && result.success) {
  await markProductsAsSynced(batch.map(p => p.barcode));

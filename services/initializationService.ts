@@ -1,15 +1,16 @@
 import { logger } from './logger';
 import { fetchSystemConfig } from './gasService';
-import { importProductsFromAppSheet, importProvidersFromCloud } from './syncManager';
+import { importProductsFromFirestore, importProvidersFromFirestore } from './syncManager';
 import { getSettings, saveSettings } from './settings';
 import { db } from '../db';
 import { sanitizeBarcode, normalizeSku } from '../services/utils';
 import { recoverFromEmergencySnapshot } from './backupService';
 import { HydrationService } from './hydrationService';
+import { firebaseSyncService } from './firebaseSyncService';
 
 export type InitStep = 'idle' | 'version_check' | 'config' | 'database' | 'ready' | 'offline' | 'purging' | 'migrating';
 
-const CURRENT_APP_VERSION = "5.7.9"; // Incremento de versión para forzar limpieza estructural estable
+const CURRENT_APP_VERSION = "5.8.0"; // Incremento de versión para migración Firebase completa
 
 export const InitializationService = {
   /**
@@ -159,10 +160,10 @@ export const InitializationService = {
       await InitializationService.syncConfig();
       
       onStep('database');
-      // Paralelizar importación de productos y proveedores
+      // Paralelizar importación de productos y proveedores desde Firestore
       await Promise.all([
-        importProductsFromAppSheet(),
-        importProvidersFromCloud(),
+        importProductsFromFirestore(),
+        importProvidersFromFirestore(),
         sanitizeTask()
       ]);
       
@@ -178,7 +179,21 @@ export const InitializationService = {
   syncConfig: async () => {
     try {
       const settings = getSettings();
-      if (settings.appSheetConfig?.gasWebAppUrl) {
+      // Intentar sincronizar configuración desde Firestore
+      const response = await firebaseSyncService.pullBatch('CONFIG_SISTEMA');
+      if (response.success && response.rows && response.rows.length > 0) {
+        const cloudConfig = response.rows[0];
+        const updated = { 
+          ...settings, 
+          appSheetConfig: { 
+            ...settings.appSheetConfig, 
+            ...cloudConfig 
+          } 
+        };
+        await saveSettings(updated);
+        logger.success('INIT', 'Configuración sincronizada desde Firestore');
+      } else if (settings.appSheetConfig?.gasWebAppUrl) {
+        // Fallback a GAS si no hay en Firestore
         const newConfig = await fetchSystemConfig();
         if (newConfig && Object.keys(newConfig).length > 0) {
           const updated = { ...settings, appSheetConfig: { ...settings.appSheetConfig, ...newConfig } };
@@ -195,8 +210,8 @@ export const InitializationService = {
       // Refresco en paralelo
       await Promise.all([
         InitializationService.syncConfig(),
-        importProductsFromAppSheet(),
-        importProvidersFromCloud(),
+        importProductsFromFirestore(),
+        importProvidersFromFirestore(),
         HydrationService.persist()
       ]);
     } catch (e) {

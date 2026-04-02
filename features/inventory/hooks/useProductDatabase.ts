@@ -3,7 +3,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Product } from '../../../types';
 import * as productService from '../../../services/productService';
-import { importProductsFromAppSheet } from '../../../services/syncManager';
+import { importProductsFromFirestore } from '../../../services/syncManager';
 import { syncProductsToAppSheet } from '../../../services/appsheet';
 import { fuzzySearchProducts } from '../../../services/search';
 import { VectorService } from '../../../services/vectorService';
@@ -113,7 +113,7 @@ export const useProductDatabase = () => {
  const handleDownloadFromCloud = useCallback(async () => {
  setIsDownloading(true);
  try {
- const count = await importProductsFromAppSheet();
+ const count = await importProductsFromFirestore();
  showFeedback('success', `${count} productos actualizados`);
  } catch (err: any) {
  showFeedback('error', 'Error en descarga Cloud');

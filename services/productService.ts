@@ -5,42 +5,42 @@ import { productRepository } from '../repositories/DexieProductRepository';
 import Papa from 'papaparse';
 import { sanitizeBarcode } from './utils';
 import { validateProduct } from './validator';
-import { cloudApi } from './cloud/apiClient';
+import { firebaseSyncService } from './firebaseSyncService';
 
 export const getProductByBarcode = async (barcode: string): Promise<Product | undefined> => {
   return await productRepository.getById(sanitizeBarcode(barcode));
 };
 
 export const resolveUnknownProducts = async (skus: string[], config: any) => {
-  if (!skus || skus.length === 0 || !config?.gasWebAppUrl) return;
+  if (!skus || skus.length === 0) return;
 
   const productsTable = config?.productsTableName || 'PRODUCTOS';
-  const barcodeCol = config?.mappings?.products?.barcode || 'SKU';
-  const nameCol = config?.mappings?.products?.name || 'DESCRIPTOR';
-  const supplierCol = config?.mappings?.products?.supplier || 'PROVEEDOR';
-  const supplierRutCol = config?.mappings?.products?.supplierRut || 'RUT_PROVEEDOR';
+  const barcodeCol = config?.mappings?.products?.barcode || 'barcode';
+  const nameCol = config?.mappings?.products?.name || 'name';
+  const supplierCol = config?.mappings?.products?.supplier || 'supplier';
+  const supplierRutCol = config?.mappings?.products?.supplierRut || 'supplierRut';
 
   for (const sku of skus) {
     try {
-      console.debug(`[Detective] Buscando identidad de SKU: ${sku} en columna: ${barcodeCol}`);
-      const response = await cloudApi.getSummary(productsTable, barcodeCol, sku);
+      console.debug(`[Detective] Buscando identidad de SKU: ${sku} en Firestore: ${productsTable}`);
+      const response = await firebaseSyncService.query(productsTable, barcodeCol, sku);
       
       if (response.success && response.rows && response.rows.length > 0) {
-        const p = response.rows[0];
+        const p = response.rows[0] as any;
         const sanitizedSku = sanitizeBarcode(sku); 
         
         await saveProduct({
           barcode: sanitizedSku,
-          name: p[nameCol] || p.DESCRIPTOR || p.DESCRIPCION_PROD || p.DESCRIPCION || p.productName || 'PRODUCTO IDENTIFICADO',
-          category: p.CATEGORIA || p.MUNDO || p.category || 'GENERAL',
-          supplier: p[supplierCol] || p.PROVEEDOR || p.supplier || 'N/A',
-          supplierRut: sanitizeBarcode(p[supplierRutCol] || p.PROVEEDOR_RUT || p.RUT_PROVEEDOR || p.supplierRut || ''),
-          price: parseFloat(String(p.PRECIO || p.PRICE || 0).replace(/[^0-9.]/g, '')),
+          name: p[nameCol] || p.name || p.DESCRIPTOR || 'PRODUCTO IDENTIFICADO',
+          category: p.category || p.CATEGORIA || 'GENERAL',
+          supplier: p[supplierCol] || p.supplier || p.PROVEEDOR || 'N/A',
+          supplierRut: sanitizeBarcode(p[supplierRutCol] || p.supplierRut || p.PROVEEDOR_RUT || ''),
+          price: typeof p.price === 'number' ? p.price : parseFloat(String(p.price || p.PRICE || 0).replace(/[^0-9.]/g, '')),
           syncStatus: 'synced'
         });
-        console.info(`[Detective] SKU ${sku} identificado como: ${p[nameCol] || p.DESCRIPTOR}`);
+        console.info(`[Detective] SKU ${sku} identificado como: ${p[nameCol] || p.name}`);
       } else {
-        console.warn(`[Detective] SKU ${sku} no encontrado en Google Sheets.`);
+        console.warn(`[Detective] SKU ${sku} no encontrado en Firestore.`);
       }
     } catch (e) {
       console.warn(`[Detective] Error al resolver SKU ${sku}:`, e);

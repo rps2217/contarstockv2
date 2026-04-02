@@ -11,52 +11,63 @@ import { VirtualList } from '../../shared/components/ui/VirtualList';
 import { ScreenLockOverlay } from '../../shared/components/ui/ScreenLockOverlay';
 import { NumericKeypad } from '../../components/NumericKeypad';
 import { ExpirationModal } from '../expiry-feature/components/ExpirationModal';
-import { ChevronLeft, Box, Trash2, Camera, Loader2, Calendar, Settings } from 'lucide-react';
+import { ChevronLeft, Box, Trash2, Camera, Loader2, Calendar, Settings, CheckCircle2, Cloud } from 'lucide-react';
 import { useAutoLock } from '../../hooks/useAutoLock';
 import { useHIDScanner } from '../../hooks/useHIDScanner';
 import { SoundFX } from '../../services/audio';
 
 const ReceptionRow = React.memo(({ index, data }: any) => {
- const item = data.items[index];
- if (!item) return null;
- const { onDelete } = data;
+  const item = data.items[index];
+  if (!item) return null;
+  const { onDelete } = data;
+  const isSynced = !!item.lastSyncTimestamp;
 
- return (
- <div className="px-3 py-1 h-full">
- <div className="w-full h-full border-2 border-white/5 bg-slate-900/40 p-4 rounded-2xl flex items-center justify-between transition-all active:scale-[0.98]">
- <div className="flex items-center gap-4 overflow-hidden">
- <div className="w-10 h-10 rounded-xl bg-blue-900/20 text-blue-500 border border-blue-500/20 flex items-center justify-center shrink-0">
- <Box className="w-5 h-5" />
- </div>
- <div className="min-w-0">
- <div className="font-mono font-black text-white truncate text-sm uppercase tracking-wider">
- {item.logisticsLabel}
- </div>
- <div className="text-[9px] font-bold text-slate-500 uppercase mt-1 flex items-center gap-2">
- <span>{new Date(item.createdAt).toLocaleTimeString()}</span>
- {item.erpOrder && item.erpOrder !== 'RECEPCION_BORRADOR' ? (
- <>
- <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
- <span className="text-emerald-500 font-black tracking-tighter">ERP: {item.erpOrder}</span>
- </>
- ) : (
- <>
- <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
- <span className="text-blue-500 font-black tracking-tighter">BORRADOR</span>
- </>
- )}
- </div>
- </div>
- </div>
- <button 
- onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}
- className="w-10 h-10 flex items-center justify-center text-slate-700 hover:text-rose-500 hover:bg-rose-900/20 rounded-xl transition-all"
- >
- <Trash2 className="w-5 h-5" />
- </button>
- </div>
- </div>
- );
+  return (
+    <div className="px-3 py-1 h-full">
+      <div className={`w-full h-full border-2 p-4 rounded-2xl flex items-center justify-between transition-all active:scale-[0.98] ${isSynced ? 'bg-emerald-900/10 border-emerald-500/20' : 'bg-slate-900/40 border-white/5'}`}>
+        <div className="flex items-center gap-4 overflow-hidden">
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${isSynced ? 'bg-emerald-900/20 text-emerald-500 border-emerald-500/20' : 'bg-blue-900/20 text-blue-500 border-blue-500/20'}`}>
+            <Box className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <div className={`font-mono font-black truncate text-sm uppercase tracking-wider ${isSynced ? 'text-emerald-400' : 'text-white'}`}>
+                {item.logisticsLabel}
+              </div>
+              {isSynced && (
+                <div className="flex items-center gap-1 bg-emerald-500/10 px-1.5 py-0.5 rounded-md border border-emerald-500/20">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                  <span className="text-[8px] font-black text-emerald-500 uppercase tracking-tighter">NUBE</span>
+                </div>
+              )}
+            </div>
+            <div className="text-[9px] font-bold text-slate-500 uppercase mt-1 flex items-center gap-2">
+              <span>{new Date(item.createdAt).toLocaleTimeString()}</span>
+              {item.erpOrder && item.erpOrder !== 'RECEPCION_BORRADOR' ? (
+                <>
+                  <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
+                  <span className="text-emerald-500 font-black tracking-tighter">ERP: {item.erpOrder}</span>
+                </>
+              ) : (
+                <>
+                  <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
+                  <span className="text-blue-500 font-black tracking-tighter">BORRADOR</span>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+        {!isSynced && (
+          <button 
+            onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}
+            className="w-10 h-10 flex items-center justify-center text-slate-700 hover:text-rose-500 hover:bg-rose-900/20 rounded-xl transition-all"
+          >
+            <Trash2 className="w-5 h-5" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
 });
 
 const ManifestRow = React.memo(({ index, data }: any) => {

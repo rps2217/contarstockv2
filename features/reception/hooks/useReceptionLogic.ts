@@ -19,10 +19,14 @@ export const useReceptionLogic = () => {
   const { addToast } = useToastStore();
 
   const unsyncedDrafts = useLiveQuery(() => 
-    SessionRepository.getDraftReceptionSessions()
+    db.sessions
+      .where('erpOrder').equals('RECEPCION_BORRADOR')
+      .reverse()
+      .limit(50)
+      .toArray()
   , [], []);
 
-  const draftCount = unsyncedDrafts?.length || 0;
+  const draftCount = unsyncedDrafts?.filter(s => s.status === 'draft').length || 0;
 
   const handleScan = useCallback(async (code: string, erpToUse?: string) => {
     const cleanCode = sanitizeBarcode(code);

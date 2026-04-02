@@ -1,6 +1,7 @@
 
-import { cloudApi } from './cloud/apiClient';
+import { firebaseSyncService } from './firebaseSyncService';
 import { CloudOrderRowSchema } from './schemas';
+import { getSettings } from './settings';
 
 export interface ErpManifest {
   id: string;
@@ -19,12 +20,11 @@ export const erpService = {
    */
   async downloadManifest(manifestId: string): Promise<ErpManifest> {
     try {
-      const res = await cloudApi.post('fetch_rows', { tableName: 'PEDIDOS' });
+      const config = getSettings().appSheetConfig;
+      const tableName = config?.ordersTableName || 'PEDIDOS';
+      const res = await firebaseSyncService.pullBatch(tableName);
       
       if (!res.success || !res.rows) {
-        if (res.error === 'URL_NOT_CONFIGURED') {
-          throw new Error('URL_NOT_CONFIGURED');
-        }
         throw new Error(res.error || 'Error al conectar con la nube');
       }
 
@@ -84,12 +84,11 @@ export const erpService = {
    */
   async downloadAllPendingManifests(): Promise<ErpManifest[]> {
     try {
-      const res = await cloudApi.post('fetch_rows', { tableName: 'PEDIDOS' });
+      const config = getSettings().appSheetConfig;
+      const tableName = config?.ordersTableName || 'PEDIDOS';
+      const res = await firebaseSyncService.pullBatch(tableName);
       
       if (!res.success || !res.rows) {
-        if (res.error === 'URL_NOT_CONFIGURED') {
-          throw new Error('URL_NOT_CONFIGURED');
-        }
         throw new Error(res.error || 'Error al conectar con la nube');
       }
 
@@ -141,9 +140,7 @@ export const erpService = {
 
       return manifests;
     } catch (error: any) {
-      if (error.message !== 'URL_NOT_CONFIGURED') {
-        console.error("ERP Download All Error:", error);
-      }
+      console.error("ERP Download All Error:", error);
       throw error;
     }
   }

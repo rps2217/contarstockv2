@@ -3,6 +3,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Settings2, Layout, SortAsc, EyeOff, Check, RefreshCw, Zap, Trash2 } from 'lucide-react';
 import { ExpiryPreferences } from '../hooks/useExpiryDatabase';
+import { CsvImporter } from '../../../src/components/CsvImporter';
 
 interface ExpirySettingsDrawerProps {
   isOpen: boolean;
@@ -64,6 +65,7 @@ export const ExpirySettingsDrawer: React.FC<ExpirySettingsDrawerProps> = ({
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-8">
+              <CsvImporter />
               {/* SECCIÓN: ORDENAMIENTO */}
               <section className="space-y-4">
                 <div className="flex items-center gap-2">
@@ -223,13 +225,9 @@ export const ExpirySettingsDrawer: React.FC<ExpirySettingsDrawerProps> = ({
 
                 <button
                   onClick={async () => {
-                    const { updateConfigFromCloud } = await import('../../../services/gasService');
-                    const newConfig = await updateConfigFromCloud();
-                    if (newConfig) {
-                      // Actualizar configuración global (esto debería estar en useAppStore)
-                      // Por ahora, recargamos para que se aplique si se guardó en settings
-                      window.location.reload();
-                    }
+                    const { InitializationService } = await import('../../../services/initializationService');
+                    await InitializationService.syncConfig();
+                    window.location.reload();
                   }}
                   className={`w-full p-4 rounded-xl border flex items-center gap-4 transition-all mb-2 ${
                     theme === 'dark' ? 'border-indigo-500/20 bg-indigo-500/5 hover:bg-indigo-500/10' : 'border-indigo-200 bg-indigo-50 hover:bg-indigo-100'
@@ -288,6 +286,33 @@ export const ExpirySettingsDrawer: React.FC<ExpirySettingsDrawerProps> = ({
                     </div>
                   </button>
                 )}
+                
+                <button
+                  onClick={async () => {
+                    const { firebaseSyncService } = await import('../../../services/firebaseSyncService');
+                    const { exportToCSV } = await import('../../../services/export');
+                    const result = await firebaseSyncService.pullBatch('VENCIMIENTOS');
+                    if (result.success) {
+                      await exportToCSV(result.rows, 'Vencimientos_Export');
+                    } else {
+                      const { toast } = await import('sonner');
+                      toast.error('Error al exportar datos');
+                    }
+                  }}
+                  className={`w-full p-4 rounded-xl border flex items-center gap-4 transition-all mt-2 ${
+                    theme === 'dark' ? 'border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10' : 'border-emerald-200 bg-emerald-50 hover:bg-emerald-100'
+                  }`}
+                >
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                    <Layout className="w-5 h-5 text-emerald-500" />
+                  </div>
+                  <div className="text-left">
+                    <p className={`text-xs font-black uppercase tracking-tight ${
+                      theme === 'dark' ? 'text-white' : 'text-slate-900'
+                    }`}>Exportar a CSV</p>
+                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Descargar todos los vencimientos</p>
+                  </div>
+                </button>
               </section>
             </div>
 

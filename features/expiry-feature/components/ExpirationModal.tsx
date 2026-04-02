@@ -52,8 +52,8 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
         const barcodeCol = config?.mappings?.products?.barcode || 'SKU';
         const nameCol = config?.mappings?.products?.name || 'DESCRIPTOR';
 
-        const { cloudApi } = await import('../../../services/cloud/apiClient');
-        const response = await cloudApi.getSummary(productsTable, barcodeCol, sku);
+        const { firebaseSyncService } = await import('../../../services/firebaseSyncService');
+        const response = await firebaseSyncService.query(productsTable, barcodeCol, sku);
         
         if (!isMounted) return;
 
@@ -84,7 +84,7 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
             if (!localProvider) {
               const providersTable = config?.providersTableName || 'PROVEEDORES';
               const rutCol = 'ID_RUT'; // Ajustar según realidad o mapping
-              const provResponse = await cloudApi.getSummary(providersTable, rutCol, supplierRut);
+              const provResponse = await firebaseSyncService.query(providersTable, rutCol, supplierRut);
               
               if (provResponse.success && provResponse.rows && provResponse.rows.length > 0) {
                 const p = provResponse.rows[0];

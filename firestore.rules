@@ -1,0 +1,193 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+       return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "rolando.pizarro.salas@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function hasRequiredFields(fields) {
+       return request.resource.data.keys().hasAll(fields);
+    }
+    
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function areImmutableFieldsUnchanged(fields) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    function isValidProduct(data) {
+      return hasRequiredFields(['barcode', 'name']) &&
+             hasOnlyAllowedFields(['barcode', 'name', 'category', 'supplier', 'supplierRut', 'price', 'unitsPerBox']) &&
+             data.barcode is string && data.barcode.size() > 0 && data.barcode.size() < 100 &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 200 &&
+             (data.category is string ? data.category.size() < 100 : true) &&
+             (data.supplier is string ? data.supplier.size() < 100 : true) &&
+             (data.supplierRut is string ? data.supplierRut.size() < 20 : true) &&
+             (data.price is number ? data.price >= 0 : true) &&
+             (data.unitsPerBox is number ? data.unitsPerBox >= 0 : true);
+    }
+
+    function isValidProvider(data) {
+      return hasRequiredFields(['rut', 'name']) &&
+             hasOnlyAllowedFields(['rut', 'name', 'withdrawalDays', 'hasExchange']) &&
+             data.rut is string && data.rut.size() > 0 && data.rut.size() < 20 &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 200 &&
+             (data.withdrawalDays is number ? data.withdrawalDays >= 0 : true) &&
+             (data.hasExchange is bool ? true : true);
+    }
+
+    function isValidOrder(data) {
+      return hasRequiredFields(['erp', 'barcode', 'quantity']) &&
+             hasOnlyAllowedFields(['erp', 'barcode', 'name', 'quantity', 'expectedTrays']) &&
+             data.erp is string && data.erp.size() > 0 && data.erp.size() < 100 &&
+             data.barcode is string && data.barcode.size() > 0 && data.barcode.size() < 100 &&
+             data.quantity is number && data.quantity >= 0;
+    }
+
+    function isValidReception(data) {
+      return hasRequiredFields(['id', 'ETIQUETA', 'ESTADO']) &&
+             hasOnlyAllowedFields(['id', 'ID_RECEPCION', 'FECHA_HORA', 'ETIQUETA', 'ESTADO']) &&
+             data.id is string && data.id.size() > 0 && data.id.size() < 100 &&
+             data.ETIQUETA is string && data.ETIQUETA.size() > 0 && data.ETIQUETA.size() < 100 &&
+             data.ESTADO is string && data.ESTADO.size() > 0 && data.ESTADO.size() < 50;
+    }
+
+    function isValidSessionCreate(data) {
+      return hasRequiredFields(['id', 'erpOrder', 'status', 'createdAt']) &&
+             hasOnlyAllowedFields(['id', 'erpOrder', 'logisticsLabel', 'createdAt', 'status', 'sessionType', 'operatorId', 'photoUrl']) &&
+             data.id is string && data.id.size() > 0 && data.id.size() < 100 &&
+             data.erpOrder is string && data.erpOrder.size() > 0 && data.erpOrder.size() < 100 &&
+             data.status in ['active', 'draft'] &&
+             data.createdAt is number;
+    }
+
+    function isValidSessionUpdate(data, previousData) {
+      return hasRequiredFields(['id', 'erpOrder', 'status', 'createdAt']) &&
+             hasOnlyAllowedFields(['id', 'erpOrder', 'logisticsLabel', 'createdAt', 'status', 'sessionType', 'operatorId', 'photoUrl']) &&
+             data.id is string && data.id.size() > 0 && data.id.size() < 100 &&
+             data.erpOrder is string && data.erpOrder.size() > 0 && data.erpOrder.size() < 100 &&
+             data.status in ['active', 'completed', 'draft'] &&
+             (data.status == previousData.status || 
+              (previousData.status == 'draft' && data.status == 'active') ||
+              (previousData.status == 'active' && data.status == 'completed') ||
+              (previousData.status == 'draft' && data.status == 'completed')) &&
+             data.createdAt is number;
+    }
+
+    function isValidScan(data) {
+      return hasRequiredFields(['id', 'sessionId', 'barcode', 'timestamp', 'quantity']) &&
+             hasOnlyAllowedFields(['id', 'sessionId', 'barcode', 'timestamp', 'quantity']) &&
+             data.id is string && data.id.size() > 0 && data.id.size() < 100 &&
+             data.sessionId is string && data.sessionId.size() > 0 && data.sessionId.size() < 100 &&
+             data.barcode is string && data.barcode.size() > 0 && data.barcode.size() < 100 &&
+             data.timestamp is number &&
+             data.quantity is number && data.quantity >= 0;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /PRODUCTOS/{barcode} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidProduct(request.resource.data);
+      allow update: if isAdmin() && isValidProduct(request.resource.data) && areImmutableFieldsUnchanged(['barcode']);
+      allow delete: if isAdmin();
+    }
+
+    match /PROVEEDORES/{rut} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidProvider(request.resource.data);
+      allow update: if isAdmin() && isValidProvider(request.resource.data) && areImmutableFieldsUnchanged(['rut']);
+      allow delete: if isAdmin();
+    }
+
+    match /PEDIDOS/{orderId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidOrder(request.resource.data);
+      allow update: if isAdmin() && isValidOrder(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /RECEPCION_BULTOS/{receptionId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidReception(request.resource.data);
+      allow update: if isAuthenticated() && isValidReception(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /CONTEOS/{countId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidScan(request.resource.data);
+      allow update: if isAuthenticated() && isValidScan(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /CONSOLIDADOS/{consolidatedId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidScan(request.resource.data);
+      allow update: if isAuthenticated() && isValidScan(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    function isValidConfig(data) {
+      return hasRequiredFields(['appId']) &&
+             data.appId is string && data.appId.size() > 0;
+    }
+
+    function isValidExpiry(data) {
+      return hasRequiredFields(['id', 'barcode', 'quantity', 'mm', 'yyyy']) &&
+             data.id is string && data.barcode is string &&
+             data.quantity is number && data.mm is string && data.yyyy is string;
+    }
+
+    match /CONFIG_SISTEMA/{configId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() && isValidConfig(request.resource.data);
+    }
+
+    match /VENCIMIENTOS/{expiryId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isValidExpiry(request.resource.data);
+    }
+
+    match /EVENTOS/{eventId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isValidExpiry(request.resource.data);
+    }
+
+    match /STOCK/{stockId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() && isValidOrder(request.resource.data);
+    }
+
+    match /sessions/{sessionId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidSessionCreate(request.resource.data);
+      allow update: if isAuthenticated() && isValidSessionUpdate(request.resource.data, resource.data) && areImmutableFieldsUnchanged(['id', 'createdAt']);
+      allow delete: if isAdmin();
+
+      match /scans/{scanId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() && isValidScan(request.resource.data);
+        allow update: if isAuthenticated() && isValidScan(request.resource.data) && areImmutableFieldsUnchanged(['id', 'sessionId', 'barcode', 'timestamp']);
+        allow delete: if isAdmin();
+      }
+    }
+  }
+}

@@ -278,14 +278,6 @@ const ExpiryManagementPage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 no-scrollbar">
-            {state.pendingOperations > 0 && (
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest animate-pulse ${
-                theme === 'dark' ? 'bg-amber-500/10 border-amber-500/20 text-amber-500' : 'bg-amber-50 border-amber-200 text-amber-600'
-              }`}>
-                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                Guardando ({state.pendingOperations})
-              </div>
-            )}
             <button 
               onClick={() => navigate('/events')}
               className={`border px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${
@@ -303,14 +295,14 @@ const ExpiryManagementPage: React.FC = () => {
               onClick={actions.handleSyncExpirations}
               disabled={state.isSyncing}
               className={`border px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all disabled:opacity-50 ${
-                (state.isSyncing || state.pendingOperations > 0)
+                state.isSyncing
                   ? 'bg-amber-500/10 border-amber-500/40 text-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.2)] animate-pulse'
                   : theme === 'dark' ? 'bg-white/5 hover:bg-white/10 border-white/10 text-slate-400' 
                   : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-600'
               }`}
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${ (state.isSyncing || state.pendingOperations > 0) ? 'animate-spin text-amber-500' : 'text-slate-500' }`} />
-              {state.isSyncing ? 'Sincronizando...' : state.pendingOperations > 0 ? `Subiendo (${state.pendingOperations})` : 'Sincronizar Nube'}
+              <RefreshCw className={`w-3.5 h-3.5 ${ state.isSyncing ? 'animate-spin text-amber-500' : 'text-slate-500' }`} />
+              {state.isSyncing ? 'Sincronizando...' : 'Sincronizar Nube'}
             </button>
             <button 
               onClick={() => handlePrintExpirations(state.processedScans)}

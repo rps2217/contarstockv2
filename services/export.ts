@@ -1,46 +1,63 @@
 import { CountingSession, ConsolidatedItem, MatchResult } from '../types';
 
 /**
+ * Generates and downloads a CSV file containing the provided data.
+ */
+export const exportToCSV = async (data: any[], fileName: string) => {
+  const Papa = await import('papaparse');
+  const csv = Papa.unparse(data);
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `${fileName}.csv`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
+/**
  * Generates and downloads an Excel file (.xlsx) containing the session data.
  * Optimized with Dynamic Import to reduce initial bundle size.
  */
 export const exportToExcel = async (session: CountingSession, items: ConsolidatedItem[]) => {
- // Dynamic Import
- const XLSX = await import('xlsx');
+  // Dynamic Import
+  const XLSX = await import('xlsx');
 
- // 1. Prepare Data Structure for Excel
- const data = items.map(item => ({
- 'Código/SKU': item.barcode,
- 'Descripción': item.productName,
- 'Cantidad Total': item.totalQuantity,
- 'Conteo de Escaneos': item.scans,
- 'Orden ERP': session.erpOrder,
- 'Etiqueta Logística': session.logisticsLabel,
- 'Fecha Conteo': new Date(session.createdAt).toLocaleDateString()
- }));
+  // 1. Prepare Data Structure for Excel
+  const data = items.map(item => ({
+  'Código/SKU': item.barcode,
+  'Descripción': item.productName,
+  'Cantidad Total': item.totalQuantity,
+  'Conteo de Escaneos': item.scans,
+  'Orden ERP': session.erpOrder,
+  'Etiqueta Logística': session.logisticsLabel,
+  'Fecha Conteo': new Date(session.createdAt).toLocaleDateString()
+  }));
 
- // 2. Create Worksheet
- const worksheet = XLSX.utils.json_to_sheet(data);
- 
- // 3. Auto-adjust column width (heuristic)
- const wscols = [
- { wch: 20 }, // SKU
- { wch: 40 }, // Desc
- { wch: 15 }, // Qty
- { wch: 15 }, // Scans
- { wch: 15 }, // ERP
- { wch: 15 }, // Label
- { wch: 15 }, // Date
- ];
- worksheet['!cols'] = wscols;
+  // 2. Create Worksheet
+  const worksheet = XLSX.utils.json_to_sheet(data);
+  
+  // 3. Auto-adjust column width (heuristic)
+  const wscols = [
+  { wch: 20 }, // SKU
+  { wch: 40 }, // Desc
+  { wch: 15 }, // Qty
+  { wch: 15 }, // Scans
+  { wch: 15 }, // ERP
+  { wch: 15 }, // Label
+  { wch: 15 }, // Date
+  ];
+  worksheet['!cols'] = wscols;
 
- // 4. Create Workbook and Append
- const workbook = XLSX.utils.book_new();
- XLSX.utils.book_append_sheet(workbook, worksheet, "Conteo");
+  // 4. Create Workbook and Append
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Conteo");
 
- // 5. Download
- const fileName = `Conteo_${session.erpOrder}_${session.logisticsLabel}.xlsx`;
- XLSX.writeFile(workbook, fileName);
+  // 5. Download
+  const fileName = `Conteo_${session.erpOrder}_${session.logisticsLabel}.xlsx`;
+  XLSX.writeFile(workbook, fileName);
 };
 
 /**

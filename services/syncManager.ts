@@ -1,18 +1,14 @@
 import { db } from '../db';
-import { SHEET_COLUMNS } from './constants';
 import { CountingSession, Product, Provider } from '../types';
 import { logger } from './logger';
 import { useSyncStore } from '../store/useSyncStore';
 import { saveProductBatch } from './productService';
 import { CloudProductSchema } from './schemas';
-import { normalizeSku } from './utils';
 import { getSettings } from './settings';
 import { markScansAsSynced } from './sessionService';
 import { aggregateScans } from './aggregator';
 import { dynamicSyncService } from './dynamicSync';
-
-// Nuevas capas importadas
-import { cloudApi } from './cloud/apiClient';
+import { firebaseSyncService } from './firebaseSyncService';
 import { createInventoryPayload } from './cloud/mappers';
 
 let isSyncingInProgress = false;
@@ -151,13 +147,14 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
     } else if (group.type === 'reception') {
       if (onProgress) onProgress(`Subiendo registro de ${group.sessionCount} bultos...`);
       const rows = group.sessionIds.map((id, idx) => ({
+        "id": id,
         "ID_RECEPCION": id,
-        "FECHA_HORA": new Date().toLocaleString('es-CL'),
+        "FECHA_HORA": new Date().toISOString(),
         "ETIQUETA": group.logisticsLabels[idx],
         "ESTADO": "INGRESADO"
       }));
       const targetTable = config?.receptionTableName || "RECEPCION_BULTOS";
-      const result = await cloudApi.appendRows(targetTable, rows);
+      const result = await firebaseSyncService.pushBatch(targetTable, rows);
       if (result.success) {
         await db.sessions.where('id').anyOf(group.sessionIds).modify({ lastSyncTimestamp: Date.now() });
         if (onProgress) onProgress(`✓ Recepción sincronizada.`);
@@ -169,28 +166,24 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
         const session = await db.sessions.get(sessionId);
         if (!session) continue;
 
-        // RESPALDO DE FOTO EN DRIVE (Si existe y no se ha subido)
+        // RESPALDO DE FOTO EN STORAGE (Si existe y no se ha subido)
         if (session.labelPhoto && !session.photoUrl) {
-          if (onProgress) onProgress(`Respaldando foto en Drive [${session.logisticsLabel}]...`);
+          if (onProgress) onProgress(`Respaldando foto en Firebase [${session.logisticsLabel}]...`);
           try {
-            const photoResult = await cloudApi.post('upload_photo', {
-              base64: session.labelPhoto,
-              erpOrder: session.erpOrder,
-              label: session.logisticsLabel,
-              mimeType: 'image/jpeg'
-            });
+            const photoPath = `labels/${session.erpOrder}/${session.logisticsLabel}_${session.id}.jpg`;
+            const photoResult = await firebaseSyncService.uploadPhoto(session.labelPhoto, photoPath);
+            
             if (photoResult.success && photoResult.fileUrl) {
               await db.sessions.update(sessionId, { photoUrl: photoResult.fileUrl });
-              if (onProgress) onProgress(`✓ Foto respaldada en Drive.`);
+              if (onProgress) onProgress(`✓ Foto respaldada en Firebase.`);
             }
           } catch (photoError) {
-            console.warn("Fallo al subir foto a Drive:", photoError);
+            console.warn("Fallo al subir foto a Firebase:", photoError);
           }
         }
 
         if (onProgress) onProgress(`Preparando bulto ${session.logisticsLabel}...`);
         
-        // Obtenemos TODOS los escaneos de la sesión para enviar el estado absoluto (idempotencia)
         const allScans = await db.scans.where('sessionId').equals(session.id).toArray();
         const unsyncedScans = allScans.filter(s => s.synced === 0);
         
@@ -199,7 +192,6 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
           continue;
         }
 
-        // Agregamos TODOS los escaneos para que el upsert en la nube represente el total real de la sesión
         const consolidatedItems = await aggregateScans(allScans);
         const fullPayload = createInventoryPayload(session, consolidatedItems, 'manual');
         const targetTable = session.sessionType === 'hammer' 
@@ -214,7 +206,7 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
           const chunk = fullPayload.slice(i * UPLOAD_BATCH_SIZE, (i + 1) * UPLOAD_BATCH_SIZE);
           if (onProgress) onProgress(`Subiendo lote ${i + 1}/${totalBatches}...`);
           
-          const result = await cloudApi.upsertRows(targetTable, chunk);
+          const result = await firebaseSyncService.pushBatch(targetTable, chunk);
           
           if (!result.success) {
             sessionSuccess = false;
@@ -223,42 +215,9 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
         }
 
         if (sessionSuccess) {
-          if (onProgress) onProgress(`Verificando integridad en la nube...`);
-          
-          let integrityVerified = false;
-          const maxIntegrityRetries = 3;
-          
-          for (let attempt = 0; attempt < maxIntegrityRetries; attempt++) {
-            if (attempt > 0) {
-              if (onProgress) onProgress(`Reintentando verificación (${attempt}/${maxIntegrityRetries})...`);
-              await new Promise(r => setTimeout(r, 2000)); // Esperar 2s entre reintentos
-            }
-
-            const summary = await cloudApi.getSummary(targetTable, 'ERP', session.erpOrder);
-            
-            if (summary.success) {
-              const relatedSessions = await db.sessions.where('erpOrder').equals(session.erpOrder).toArray();
-              const sessionIds = relatedSessions.map(s => s.id);
-              const allLocalScansForErp = await db.scans.where('sessionId').anyOf(sessionIds).toArray();
-              const expectedTotal = allLocalScansForErp.reduce((acc, s) => acc + (s.quantity || 0), 0);
-              
-              if (summary.totalUnits >= expectedTotal) {
-                if (onProgress) onProgress(`✓ Integridad verificada: ${summary.totalUnits} unidades en nube.`);
-                integrityVerified = true;
-                break;
-              } else if (attempt === maxIntegrityRetries - 1) {
-                throw new Error(`Fallo de integridad: Nube(${summary.totalUnits}) < Local(${expectedTotal}). Los datos no coinciden tras ${maxIntegrityRetries} intentos.`);
-              }
-            } else if (attempt === maxIntegrityRetries - 1) {
-              if (onProgress) onProgress(`⚠️ Error verificando integridad: ${summary.error}. Marcando como éxito por upsert previo.`);
-              integrityVerified = true; // Fallback para no bloquear si el summary falla pero el upsert fue OK
-            }
-          }
-
-          if (integrityVerified) {
-            await markScansAsSynced(allScanIdsToMark);
-            await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
-          }
+          await markScansAsSynced(allScanIdsToMark);
+          await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
+          if (onProgress) onProgress(`✓ Bulto ${session.logisticsLabel} sincronizado.`);
         }
       }
     }
@@ -272,19 +231,15 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
   }
 };
 
-export const importProductsFromAppSheet = async (): Promise<number> => {
+export const importProductsFromFirestore = async (): Promise<number> => {
   try {
     const config = getSettings().appSheetConfig;
-    const lastSyncTimestamp = localStorage.getItem('last_product_sync_time') || '0';
-    const response = await cloudApi.fetchTable(
-      config?.productsTableName || "PRODUCTOS", 
-      lastSyncTimestamp
-    );
-    const rawProducts = response.rows || [];
+    const tableName = config?.productsTableName || "PRODUCTOS";
+    const response = await firebaseSyncService.pullBatch(tableName);
     
-    if (rawProducts.length === 0) return 0;
+    if (!response.success || !response.rows) return 0;
 
-    const products: Product[] = rawProducts
+    const products: Product[] = response.rows
       .map((p: any) => {
         const result = CloudProductSchema.safeParse(p);
         return result.success ? result.data : null;
@@ -294,84 +249,36 @@ export const importProductsFromAppSheet = async (): Promise<number> => {
 
     if (products.length > 0) {
       await saveProductBatch(products);
-      localStorage.setItem('last_product_sync_time', response.server_timestamp || String(Date.now()));
     }
 
     return products.length;
   } catch (e: any) {
-    logger.error("FETCH_PRODUCTS_FAIL", `Error en Smart Sync: ${e.message}`);
+    logger.error("FETCH_PRODUCTS_FAIL", `Error en Firestore Sync: ${e.message}`);
     throw e;
   }
 };
 
-export const importProvidersFromCloud = async (): Promise<number> => {
+export const importProvidersFromFirestore = async (): Promise<number> => {
   try {
     const config = getSettings().appSheetConfig;
     const tableName = config?.providersTableName || "PROVEEDORES";
-    const lastSyncTimestamp = localStorage.getItem('last_provider_sync_time') || '0';
-    const response = await cloudApi.fetchTable(tableName, lastSyncTimestamp);
-    const rawRows = response.rows || [];
+    const response = await firebaseSyncService.pullBatch(tableName);
     
-    if (rawRows.length === 0) return 0;
+    if (!response.success || !response.rows) return 0;
 
-    const providers: Provider[] = rawRows
+    const providers: Provider[] = response.rows
       .map((row: any) => {
-        // Fallbacks para RUT (Columna A)
-        const rut = normalizeSku(
-          String(
-            row['ID_RUT'] || 
-            row['RUT'] || 
-            row['ID'] || 
-            row['RUT PROVEEDOR'] || 
-            row['RUT_PROVEEDOR'] ||
-            ''
-          )
-        );
-        
-        // Fallbacks para Nombre (Columna B/C)
-        const name = String(
-          row['NOMBRE PROVEEDOR'] || 
-          row['PROVEEDOR'] || 
-          row['NOMBRE'] || 
-          row['PROV'] ||
-          ''
-        );
-        
-        // Fallbacks para Días de Retiro (Columna H)
-        const withdrawalRaw = String(
-          row['RETIRO (DÍAS)'] || 
-          row['DIAS_RETIRO'] || 
-          row['RETIRO'] || 
-          row['DIAS RETIRO'] ||
-          '0'
-        );
-        
-        let withdrawalDays = 0;
-        const normalizedWithdrawal = withdrawalRaw.toUpperCase().trim();
-        if (normalizedWithdrawal === 'AL VENCE' || normalizedWithdrawal === 'AL VENCIMIENTO') {
-          withdrawalDays = 0;
-        } else {
-          const match = normalizedWithdrawal.match(/\d+/);
-          withdrawalDays = match ? parseInt(match[0], 10) : 0;
-        }
+        const rut = String(row.rut || row.RUT || row.ID || row.ID_RUT || '');
+        const name = String(row.name || row.NOMBRE || row.PROVEEDOR || '');
+        const withdrawalDays = Number(row.withdrawalDays || row.DIAS_RETIRO || 0);
+        const hasExchange = Boolean(row.hasExchange || withdrawalDays > 0);
 
-        // NUEVO ENFOQUE SIMPLIFICADO:
-        // Si Column H es 0 -> SIN CANJE.
-        // Si Column H es > 0 -> CON CANJE.
-        const hasExchange = withdrawalDays > 0;
-
-        return {
-          rut,
-          name,
-          withdrawalDays,
-          hasExchange
-        };
+        return { rut, name, withdrawalDays, hasExchange };
       })
       .filter((p: Provider) => p.rut && p.name);
 
     if (providers.length > 0) {
       await db.providers.bulkPut(providers);
-      localStorage.setItem('last_provider_sync_time', String(response.server_timestamp || Date.now()));
     }
 
     return providers.length;

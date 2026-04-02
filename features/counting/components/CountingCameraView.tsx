@@ -10,6 +10,8 @@ interface CountingCameraViewProps {
   onFinalize: () => void;
   onOpenTools: () => void;
   onLock?: () => void;
+  onSync?: () => void;
+  isSyncing?: boolean;
   location: string;
   onChangeLocation: () => void;
   activeBarcode: string | null;
@@ -31,6 +33,8 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = ({
   onFinalize,
   onOpenTools,
   onLock,
+  onSync,
+  isSyncing,
   location,
   onChangeLocation,
   activeBarcode,
@@ -93,6 +97,8 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = ({
         onFinalize={onFinalize}
         onOpenTools={onOpenTools}
         onLock={onLock}
+        onSync={onSync}
+        isSyncing={isSyncing}
         location={location}
         onChangeLocation={onChangeLocation}
         activeBarcode={activeBarcode}

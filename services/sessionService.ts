@@ -7,8 +7,9 @@ import { generateUUID, sanitizeBarcode, compressImage } from './utils';
 import { logger } from './logger';
 import { IntegrityGuard } from './integrityGuard';
 import { CloudOrderRowSchema } from './schemas';
-import { cloudApi } from './cloud/apiClient';
 import { createEmergencySnapshot } from './backupService';
+import { firebaseSyncService } from './firebaseSyncService';
+import { getSettings } from './settings';
 
 /**
  * POOL DE ESCRITURA INDUSTRIAL v3.0 (Atomic Buffer)
@@ -46,6 +47,17 @@ const commitBufferToDatabase = async () => {
     // Snapshot de emergencia tras persistencia exitosa
     createEmergencySnapshot().catch(() => {});
     
+    // Empuje proactivo a Firestore (Sincronización Inteligente)
+    if (navigator.onLine) {
+      const settings = getSettings();
+      const targetTable = settings.appSheetConfig?.countsTableName || 'CONTEOS';
+      firebaseSyncService.pushBatch(targetTable, records).then(res => {
+        if (res.success) {
+          markScansAsSynced(records.map(r => r.id));
+        }
+      });
+    }
+
     triggerBackgroundSync();
   } catch (error: any) {
     logger.error("DB_COMMIT_FAIL", error.message);
@@ -174,6 +186,13 @@ export const createSession = async (
   };
   await db.sessions.add(s);
   
+  // Sincronización proactiva de sesión
+  if (navigator.onLine) {
+    const settings = getSettings();
+    const sessionsTable = settings.appSheetConfig?.sessionsTableName || 'SESSIONS';
+    firebaseSyncService.pushChange(sessionsTable, s.id, s);
+  }
+
   // Snapshot de emergencia tras crear sesión
   createEmergencySnapshot().catch(() => {});
   
@@ -197,13 +216,23 @@ export const createDraftSession = async (label: string, erpOrder?: string, mm?: 
  batch
  };
  await db.sessions.add(s);
+ 
+ // Sincronización proactiva de sesión borrador
+ if (navigator.onLine) {
+   const settings = getSettings();
+   const sessionsTable = settings.appSheetConfig?.sessionsTableName || 'SESSIONS';
+   firebaseSyncService.pushChange(sessionsTable, s.id, s);
+ }
+
  triggerBackgroundSync();
  return s;
 };
 
 export const fetchExpectedItemsFromCloud = async (erp: string): Promise<ExpectedOrder | null> => {
  try {
- const res = await cloudApi.post('fetch_rows', { tableName: 'PEDIDOS' });
+ const settings = getSettings();
+ const tableName = settings.appSheetConfig?.ordersTableName || 'PEDIDOS';
+ const res = await firebaseSyncService.pullBatch(tableName);
  if (res.success && res.rows) {
  const rows = res.rows
  .map((row: any) => CloudOrderRowSchema.safeParse(row))
@@ -239,6 +268,16 @@ export const closeSession = async (id: string) => {
   }
   await db.sessions.update(id, { status: 'completed' }); 
   
+  // Sincronización proactiva de cierre
+  if (navigator.onLine) {
+    const session = await db.sessions.get(id);
+    if (session) {
+      const settings = getSettings();
+      const sessionsTable = settings.appSheetConfig?.sessionsTableName || 'SESSIONS';
+      firebaseSyncService.pushChange(sessionsTable, id, session);
+    }
+  }
+
   // Remove from pending orders queue
   const session = await db.sessions.get(id);
   if (session && session.erpOrder && session.erpOrder !== 'RECEPCION_BORRADOR') {

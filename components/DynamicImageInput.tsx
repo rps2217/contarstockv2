@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Camera, Image as ImageIcon, X, Loader2, Check } from 'lucide-react';
-import { uploadPhotoToDrive } from '../services/gasService';
+import { firebaseSyncService } from '../services/firebaseSyncService';
 import { toast } from 'sonner';
 
 interface DynamicImageInputProps {
@@ -53,9 +53,9 @@ export const DynamicImageInput: React.FC<DynamicImageInputProps> = ({
       reader.readAsDataURL(file);
       const base64 = await base64Promise;
 
-      // Upload to Drive
-      // We use tableName as erpOrder and label as label for the filename
-      const result = await uploadPhotoToDrive(base64, tableName, label.replace(/\s+/g, '_'));
+      // Upload to Firebase Storage
+      const photoPath = `dynamic/${tableName}/${label.replace(/\s+/g, '_')}_${Date.now()}.jpg`;
+      const result = await firebaseSyncService.uploadPhoto(base64, photoPath);
 
       if (result.success && result.fileUrl) {
         onChange(result.fileUrl);
@@ -65,7 +65,7 @@ export const DynamicImageInput: React.FC<DynamicImageInputProps> = ({
       }
     } catch (error) {
       console.error('Upload error:', error);
-      toast.error('Error al subir la imagen a Google Drive');
+      toast.error('Error al subir la imagen a Firebase Storage');
     } finally {
       setIsUploading(false);
     }

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Wifi, AlertCircle, Info, Link, ShieldAlert, Database, QrCode, Camera, X, Settings2, Save, Search, Table, Columns, CheckCircle2, RefreshCw, Box, Layers, ClipboardList, Activity } from 'lucide-react';
+import { Wifi, AlertCircle, Info, Link, ShieldAlert, Database, QrCode, Camera, X, Settings2, Save, Search, Table, Columns, CheckCircle2, RefreshCw, Box, Layers, ClipboardList, Activity, Zap } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AppSettings, ExpiryMapping, ProductMapping, CountMapping, SpreadsheetMetadata, TableMetadata } from '../../../types';
 import { SettingsSection, SettingsCard, SettingsButton, SettingsInput } from './common/SettingsElements';
 import { bootstrapByUrl, fetchSpreadsheetMetadata, saveConfigToCloud, fetchSystemConfig } from '../../../services/gasService';
+import { LoadTestService, LoadTestResult } from '../../../services/loadTestService';
 import { SoundFX } from '../../../services/audio';
 import { CameraScanner } from '../../../components/CameraScanner';
 import { toast } from 'sonner';
@@ -28,6 +29,8 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
  const [isScanning, setIsScanning] = useState(false);
  const [showMapping, setShowMapping] = useState(false);
  const [showLogs, setShowLogs] = useState(false);
+ const [isTestingLoad, setIsTestingLoad] = useState(false);
+ const [testResult, setTestResult] = useState<LoadTestResult | null>(null);
  
  // Metadatos descubiertos
  const [metadata, setMetadata] = useState<SpreadsheetMetadata | null>(null);
@@ -97,12 +100,6 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
   // Actualizar inputs locales para que el botón de explorar se habilite
   setSsIdInput(finalConfig.spreadsheetId);
   
-  try {
-    const { saveGasUrlToCloud } = await import('../../../services/gasService');
-    await saveGasUrlToCloud(urlInput, finalConfig.spreadsheetId);
-  } catch (e) {
-    console.warn("No se pudo sincronizar la URL en la nube:", e);
-  }
 
   // Auto-explorar estructura después de vincular exitosamente
   setTimeout(() => {
@@ -213,6 +210,27 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
       SoundFX.play('error');
     } finally {
       setIsConnecting(false);
+    }
+  };
+
+  const handleRunLoadTest = async () => {
+    setIsTestingLoad(true);
+    setTestResult(null);
+    try {
+      const result = await LoadTestService.runReceptionLoadTest(50);
+      setTestResult(result);
+      if (result.success) {
+        SoundFX.play('success');
+        toast.success(`Test exitoso: ${result.totalRecords} registros en ${result.totalTimeMs}ms`);
+      } else {
+        SoundFX.play('error');
+        toast.error(`Test fallido: ${result.error}`);
+      }
+    } catch (e) {
+      SoundFX.play('error');
+      toast.error("Error inesperado en el test de carga");
+    } finally {
+      setIsTestingLoad(false);
     }
   };
 
@@ -387,6 +405,33 @@ export const CloudSection: React.FC<Props> = ({ settings, updateSetting }) => {
   variant="secondary"
   className="bg-slate-800 border-indigo-500/20 text-indigo-400"
   />
+  </div>
+
+  <div className="pt-4 border-t border-white/5">
+    <SettingsButton 
+      onClick={handleRunLoadTest}
+      isLoading={isTestingLoad}
+      label={isTestingLoad ? "Ejecutando Test..." : "Test de Carga Firestore (50 recs)"}
+      icon={Zap}
+      variant="secondary"
+      className="bg-amber-500/10 border-amber-500/30 text-amber-500 h-14 text-[10px]"
+    />
+    {testResult && (
+      <div className="mt-3 p-3 bg-black/40 border border-white/10 rounded-xl space-y-1">
+        <div className="flex justify-between text-[9px] font-bold uppercase tracking-widest">
+          <span className="text-slate-400">Registros:</span>
+          <span className="text-white">{testResult.totalRecords}</span>
+        </div>
+        <div className="flex justify-between text-[9px] font-bold uppercase tracking-widest">
+          <span className="text-slate-400">Tiempo Total:</span>
+          <span className="text-amber-400">{testResult.totalTimeMs}ms</span>
+        </div>
+        <div className="flex justify-between text-[9px] font-bold uppercase tracking-widest">
+          <span className="text-slate-400">Promedio/Reg:</span>
+          <span className="text-emerald-400">{testResult.avgTimePerRecordMs}ms</span>
+        </div>
+      </div>
+    )}
   </div>
  </div>
  </SettingsCard>

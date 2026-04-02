@@ -1,0 +1,136 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "Catálogo de productos",
+      "type": "object",
+      "properties": {
+        "barcode": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "supplier": { "type": "string" },
+        "supplierRut": { "type": "string" },
+        "price": { "type": "number" },
+        "unitsPerBox": { "type": "number" }
+      },
+      "required": ["barcode", "name"]
+    },
+    "Provider": {
+      "title": "Provider",
+      "description": "Catálogo de proveedores",
+      "type": "object",
+      "properties": {
+        "rut": { "type": "string" },
+        "name": { "type": "string" },
+        "withdrawalDays": { "type": "number" },
+        "hasExchange": { "type": "boolean" }
+      },
+      "required": ["rut", "name"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Pedidos/Manifiestos del ERP",
+      "type": "object",
+      "properties": {
+        "erp": { "type": "string" },
+        "barcode": { "type": "string" },
+        "name": { "type": "string" },
+        "quantity": { "type": "number" },
+        "expectedTrays": { "type": "number" }
+      },
+      "required": ["erp", "barcode", "quantity"]
+    },
+    "Config": {
+      "title": "Config",
+      "description": "Configuración global del sistema",
+      "type": "object",
+      "properties": {
+        "appId": { "type": "string" },
+        "spreadsheetId": { "type": "string" },
+        "gasWebAppUrl": { "type": "string" },
+        "countsTableName": { "type": "string" },
+        "consolidatedTableName": { "type": "string" },
+        "receptionTableName": { "type": "string" },
+        "ordersTableName": { "type": "string" },
+        "productsTableName": { "type": "string" },
+        "providersTableName": { "type": "string" },
+        "expiryTableName": { "type": "string" },
+        "eventsTableName": { "type": "string" }
+      },
+      "required": ["appId"]
+    },
+    "Expiry": {
+      "title": "Expiry",
+      "description": "Registro de vencimientos",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "barcode": { "type": "string" },
+        "productName": { "type": "string" },
+        "quantity": { "type": "number" },
+        "mm": { "type": "string" },
+        "yyyy": { "type": "string" },
+        "event": { "type": "string" },
+        "location": { "type": "string" },
+        "timestamp": { "type": "number" }
+      },
+      "required": ["id", "barcode", "quantity", "mm", "yyyy"]
+    },
+    "Reception": {
+      "title": "Reception",
+      "description": "Registro de recepción de bultos",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ID_RECEPCION": { "type": "string" },
+        "FECHA_HORA": { "type": "string" },
+        "ETIQUETA": { "type": "string" },
+        "ESTADO": { "type": "string" }
+      },
+      "required": ["id", "ETIQUETA", "ESTADO"]
+    },
+    "CountingSession": {
+      "title": "CountingSession",
+      "description": "Sesiones de conteo",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "erpOrder": { "type": "string" },
+        "logisticsLabel": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "status": { "type": "string" },
+        "sessionType": { "type": "string" },
+        "operatorId": { "type": "string" },
+        "photoUrl": { "type": "string" }
+      },
+      "required": ["id", "erpOrder", "status", "createdAt"]
+    },
+    "ScanRecord": {
+      "title": "ScanRecord",
+      "description": "Registros de escaneo",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "sessionId": { "type": "string" },
+        "barcode": { "type": "string" },
+        "timestamp": { "type": "number" },
+        "quantity": { "type": "number" }
+      },
+      "required": ["id", "sessionId", "barcode", "timestamp", "quantity"]
+    }
+  },
+  "firestore": {
+    "/PRODUCTOS/{barcode}": { "schema": "Product", "description": "Colección de productos" },
+    "/PROVEEDORES/{rut}": { "schema": "Provider", "description": "Colección de proveedores" },
+    "/PEDIDOS/{orderId}": { "schema": "Order", "description": "Colección de pedidos/manifiestos" },
+    "/RECEPCION_BULTOS/{receptionId}": { "schema": "Reception", "description": "Colección de recepciones" },
+    "/sessions/{sessionId}": { "schema": "CountingSession", "description": "Colección de sesiones" },
+    "/sessions/{sessionId}/scans/{scanId}": { "schema": "ScanRecord", "description": "Subcolección de escaneos" },
+    "/CONTEOS/{countId}": { "schema": "ScanRecord", "description": "Colección de conteos (Hammer)" },
+    "/CONSOLIDADOS/{consolidatedId}": { "schema": "ScanRecord", "description": "Colección de consolidados" },
+    "/CONFIG_SISTEMA/{configId}": { "schema": "Config", "description": "Configuración del sistema" },
+    "/VENCIMIENTOS/{expiryId}": { "schema": "Expiry", "description": "Colección de vencimientos" },
+    "/EVENTOS/{eventId}": { "schema": "Expiry", "description": "Colección de eventos" },
+    "/STOCK/{stockId}": { "schema": "Order", "description": "Colección de stock (Manifiesto)" }
+  }
+}

@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useReducer, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from '../../../db';
+import { firebaseSyncService } from '../../../services/firebaseSyncService';
 import * as sessionService from '../../../services/sessionService'; 
 import * as productService from '../../../services/productService';
 import { normalizeSku } from '../../../services/utils';
@@ -16,6 +18,20 @@ import { SoundFX } from '../../../services/audio';
 
 export const useCountingLogic = (sessionId: string | undefined, onExit: () => void) => {
   const settings = getSettings();
+
+  // Sincronización en tiempo real para la sesión actual y sus escaneos
+  useEffect(() => {
+    if (!sessionId) return;
+    
+    const unsubSession = firebaseSyncService.startFilteredSync('SESSIONS', db.sessions, 'id', sessionId);
+    const unsubScans = firebaseSyncService.startFilteredSync('CONTEOS', db.scans, 'sessionId', sessionId);
+    
+    return () => {
+      unsubSession();
+      unsubScans();
+    };
+  }, [sessionId]);
+
   const { engine, processScan } = useScanPipeline(1);
   const [machineState, dispatch] = useReducer(scannerReducer, 'IDLE');
   

@@ -1,5 +1,5 @@
 import { TelemetryEvent, TelemetryEventType } from '../types';
-import { callGas } from './gasService';
+import { firebaseSyncService } from './firebaseSyncService';
 
 class TelemetryService {
   private buffer: TelemetryEvent[] = [];
@@ -45,8 +45,9 @@ class TelemetryService {
     this.buffer = [];
 
     try {
-      // Flatten metadata for spreadsheet storage
+      // Flatten metadata for storage
       const rows = eventsToFlush.map(e => ({
+        id: e.id,
         ID: e.id,
         TIMESTAMP: new Date(e.timestamp).toISOString(),
         TIPO: e.type,
@@ -58,7 +59,7 @@ class TelemetryService {
         METADATOS: JSON.stringify(e.metadata || {})
       }));
 
-      await callGas('append_rows', { tableName: 'TELEMETRIA', rows });
+      await firebaseSyncService.pushBatch('TELEMETRIA', rows);
     } catch (err: any) {
       console.error('[TelemetryService] FLUSH_FAIL:', err.message);
     }

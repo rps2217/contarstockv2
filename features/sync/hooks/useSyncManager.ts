@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import * as syncManager from '../../../services/syncManager';
 import { erpService } from '../../../services/erpService';
 import { ExpectedOrderRepository } from '../../../repositories/ExpectedOrderRepository';
-import { cloudApi } from '../../../services/cloud/apiClient';
+import { firebaseSyncService } from '../../../services/firebaseSyncService';
 import { getSettings } from '../../../services/settings';
 import { ScanRepository } from '../../../repositories/ScanRepository';
 
@@ -82,11 +82,7 @@ export const useSyncManager = () => {
         addLog("No se encontraron órdenes pendientes en la nube.", 'info');
       }
     } catch (error: any) {
-      if (error.message === 'URL_NOT_CONFIGURED') {
-        addLog("⚠️ URL de AppSheet no configurada. Configure la URL en Ajustes.", 'error');
-      } else {
-        addLog(`✗ Error al descargar órdenes: ${error.message}`, 'error');
-      }
+      addLog(`✗ Error al descargar órdenes: ${error.message}`, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -158,10 +154,10 @@ export const useSyncManager = () => {
           .filter(s => String(s.logisticsLabel) === erp)
           .reduce((acc, s) => acc + (s.quantity || 0), 0);
 
-        const summary = await cloudApi.getSummary(tableName, 'ERP', erp as string);
+        const summaryResponse = await firebaseSyncService.query(tableName, 'ERP', erp as string);
         
-        if (summary.success) {
-          const cloudTotal = summary.totalUnits || 0;
+        if (summaryResponse.success) {
+          const cloudTotal = (summaryResponse.rows as any[]).reduce((acc: number, row: any) => acc + Number(row.quantity || row.CANTIDAD || 0), 0);
           const diff = localTotal - cloudTotal;
           
           if (diff === 0) {
@@ -172,7 +168,7 @@ export const useSyncManager = () => {
             addLog(`⚠️ Discrepancia en ${erp}: Local(${localTotal}) < Nube(${cloudTotal}). Hay ${Math.abs(diff)} unidades extra en la nube.`, 'info');
           }
         } else {
-          addLog(`✗ Fallo al obtener resumen de nube para ${erp}: ${summary.error}`, 'error');
+          addLog(`✗ Fallo al obtener resumen de nube para ${erp}: ${summaryResponse.error}`, 'error');
         }
       }
       

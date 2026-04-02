@@ -1,8 +1,9 @@
+
 import { logger } from './logger';
 import { getSettings } from './settings';
 import { AppSheetConfig, SpreadsheetMetadata } from '../types';
 import Papa from 'papaparse';
-import { cloudApi } from './cloud/apiClient';
+import { firebaseSyncService } from './firebaseSyncService';
 
 const superNormalize = (s: string) => 
  String(s || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -17,7 +18,7 @@ const cleanSpreadsheetId = (input: string): string => {
 };
 
 /**
- * CONFIGURACIÓN AUTOMÁTICA POR URL
+ * CONFIGURACIÓN AUTOMÁTICA POR URL (GAS Fallback)
  */
 export const bootstrapByUrl = async (url: string, manualId?: string): Promise<AppSheetConfig> => {
  if (!url.startsWith('https://script.google.com')) {
@@ -105,7 +106,6 @@ export const bootstrapByUrl = async (url: string, manualId?: string): Promise<Ap
 /**
  * BOOTSTRAP POR ID (Vía CSV Público)
  */
-// Added export to fix error in hooks/useCloudConfig.ts
 export const bootstrapConfigById = async (spreadsheetId: string): Promise<AppSheetConfig> => {
  const idMatch = spreadsheetId.match(/\/d\/([a-zA-Z0-9-_]+)/);
  const cleanId = idMatch ? idMatch[1] : spreadsheetId.trim();
@@ -117,16 +117,16 @@ export const bootstrapConfigById = async (spreadsheetId: string): Promise<AppShe
  try {
  const response = await fetch(url);
  if (!response.ok) throw new Error("No se pudo acceder al Excel. Verifique que 'Cualquier persona con el enlace' pueda leer.");
- 
+  
  const csvText = await response.text();
- 
+  
  return new Promise((resolve, reject) => {
  Papa.parse(csvText, {
  header: true,
  skipEmptyLines: true,
  complete: (results) => {
  if (results.data.length === 0) return reject(new Error("La pestaña CONFIG_SISTEMA está vacía."));
- 
+  
  const master: any = results.data[0];
  const findVal = (keys: string[]) => {
  const foundKey = Object.keys(master).find(k => keys.includes(k.trim().toUpperCase()));
@@ -166,7 +166,7 @@ export const bootstrapConfigById = async (spreadsheetId: string): Promise<AppShe
  }
 
  if (!config.gasWebAppUrl) return reject(new Error("No se encontró la URL de Google Script en el Excel."));
- 
+  
  resolve(config);
  },
  error: (err: any) => reject(err)
@@ -181,7 +181,6 @@ export const bootstrapConfigById = async (spreadsheetId: string): Promise<AppShe
 /**
  * Actualiza la configuración del sistema desde la nube de forma silenciosa
  */
-// Added export to fix error in services/initializationService.ts
 export const fetchSystemConfig = async (): Promise<Partial<AppSheetConfig>> => {
  try {
  const settings = getSettings();
@@ -193,48 +192,26 @@ export const fetchSystemConfig = async (): Promise<Partial<AppSheetConfig>> => {
 };
 
 /**
- * GUARDA LA URL DEL GAS EN LA NUBE (Tabla CONFIG_SISTEMA)
+ * GUARDA LA CONFIGURACIÓN EN FIRESTORE
  */
-export const saveGasUrlToCloud = async (gasUrl: string, spreadsheetId: string): Promise<boolean> => {
+export const saveConfigToCloud = async (config: AppSheetConfig): Promise<boolean> => {
   try {
-    // Intentamos actualizar la configuración en la nube
-    // El script de GAS debe tener una acción 'update_config' o similar
-    // Si no la tiene, usamos appendRow como fallback si la tabla existe
-    const res = await cloudApi.post('update_config', {
-      tableName: 'CONFIG_SISTEMA',
-      data: {
-        GAS_URL: gasUrl,
-        SPREADSHEET_ID: spreadsheetId,
-        LAST_SYNC: new Date().toISOString()
-      }
-    });
-    return res.success;
-  } catch (e) {
-    logger.error('SAVE_GAS_URL_FAIL', String(e));
+    const payload = {
+      id: 'MASTER_CONFIG',
+      ...config,
+      LAST_SYNC: new Date().toISOString()
+    };
+
+    const res = await firebaseSyncService.pushBatch('CONFIG_SISTEMA', [payload]);
+    return res.success === true;
+  } catch (err: any) {
+    logger.error('SAVE_CONFIG_CLOUD_FAIL', err.message);
     return false;
   }
 };
 
 /**
- * ACTUALIZA LA CONFIGURACIÓN LOCAL DESDE LA NUBE
- */
-export const updateConfigFromCloud = async (): Promise<Partial<AppSheetConfig> | null> => {
-  try {
-    const settings = getSettings();
-    const currentConfig = settings.appSheetConfig;
-    if (!currentConfig?.gasWebAppUrl || !currentConfig?.spreadsheetId) return null;
-
-    // Re-ejecutamos el bootstrap para obtener los valores más recientes de CONFIG_SISTEMA
-    const newConfig = await bootstrapByUrl(currentConfig.gasWebAppUrl, currentConfig.spreadsheetId);
-    return newConfig;
-  } catch (e) {
-    logger.error('UPDATE_CONFIG_CLOUD_FAIL', String(e));
-    return null;
-  }
-};
-
-/**
- * RECUPERA METADATOS DEL SPREADSHEET (Hojas y Cabeceras)
+ * RECUPERA METADATOS DEL SPREADSHEET (Hojas y Cabeceras) - Mantener para compatibilidad si se usa GAS
  */
 export const fetchSpreadsheetMetadata = async (spreadsheetId?: string): Promise<SpreadsheetMetadata> => {
   const settings = getSettings();
@@ -258,68 +235,5 @@ export const fetchSpreadsheetMetadata = async (spreadsheetId?: string): Promise<
   } catch (err: any) {
     logger.error('FETCH_METADATA_FAIL', err.message);
     throw err;
-  }
-};
-/**
- * Guarda la configuración completa en la nube (Pestaña CONFIG_SISTEMA)
- */
-export const saveConfigToCloud = async (config: AppSheetConfig): Promise<boolean> => {
-  try {
-    const payload = {
-      TABLE_LOGS: config.countsTableName,
-      TABLE_CONSOLIDADO: config.consolidatedTableName,
-      TABLE_REGISTRO_INV: config.inventoryRegistryTableName,
-      TABLE_PRODUCTOS: config.productsTableName,
-      TABLE_RECEPCION: config.receptionTableName,
-      TABLE_PEDIDOS: config.ordersTableName,
-      TABLE_EVENTOS: config.eventsTableName,
-      MAPPINGS_JSON: JSON.stringify(config.mappings || {}),
-      SCHEMA_JSON: JSON.stringify(config.schema || {})
-    };
-
-    const res = await callGas('updateConfig', payload);
-    return res.success === true;
-  } catch (err: any) {
-    logger.error('SAVE_CONFIG_CLOUD_FAIL', err.message);
-    return false;
-  }
-};
-
-export const callGas = async (action: string, payload: any, compress: boolean = false): Promise<any> => {
- return cloudApi.post(action, payload, compress);
-};
-
-/**
- * Recupera filas de una tabla GAS
- */
-export const fetchFromGas = async (tableName: string): Promise<any[]> => {
- const res = await cloudApi.fetchTable(tableName);
- return res.rows || [];
-};
-
-/**
- * Envía filas a una tabla GAS
- */
-export const sendToGas = async (tableName: string, rows: any[]): Promise<any> => {
- return cloudApi.appendRows(tableName, rows);
-};
-
-/**
- * Respalda una foto en Google Drive vía GAS
- */
-export const uploadPhotoToDrive = async (base64: string, erpOrder: string, label: string): Promise<{ success: boolean; fileUrl?: string }> => {
-  try {
-    const res = await cloudApi.post('upload_photo', {
-      base64,
-      erpOrder,
-      label,
-      mimeType: 'image/jpeg'
-    });
-    return {
-      success: res.success,
-      fileUrl: res.fileUrl
-    };
-  } catch (e) {
-    return { success: false };
   }
 };

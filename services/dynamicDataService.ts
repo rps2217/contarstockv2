@@ -1,5 +1,5 @@
 import { db, DynamicRecord } from '../db';
-import { cloudApi } from './cloud/apiClient';
+import { firebaseSyncService } from './firebaseSyncService';
 import { logger } from './logger';
 
 export const dynamicDataService = {
@@ -37,10 +37,10 @@ export const dynamicDataService = {
         const config = settings.appSheetConfig;
         
         const idCol = config?.mappings?.events?.id || 'ID';
-        const remoteId = record.data[idCol] || record.data['ID'] || record.data['id'] || record.data['CLAVE_UNICA'] || record.data['uniqueKey'];
+        const remoteId = record.data[idCol] || record.data['ID'] || record.data['id'] || record.data['CLAVE_UNICA'] || record.data['uniqueKey'] || record.id;
         
         if (remoteId) {
-          await cloudApi.deleteRow(record.tableName, remoteId);
+          await firebaseSyncService.deleteRemote(record.tableName, String(remoteId));
         }
       } catch (error: any) {
         logger.error('DYNAMIC_DATA', `Background deletion sync failed for record ${id}`, error.message);
@@ -76,9 +76,10 @@ export const dynamicDataService = {
       }
 
       if (!rowData[idCol]) rowData[idCol] = record.id;
-      if (!rowData[tsCol]) rowData[tsCol] = new Date(record.timestamp).toLocaleString('es-CL');
+      if (!rowData['id']) rowData['id'] = record.id;
+      if (!rowData[tsCol]) rowData[tsCol] = new Date(record.timestamp).toISOString();
 
-      const response = await cloudApi.upsertRows(record.tableName, [rowData]);
+      const response = await firebaseSyncService.pushBatch(record.tableName, [rowData]);
       if (response.success) {
         await db.dynamic_data.update(id, { syncStatus: 'synced' });
       } else {
@@ -127,12 +128,13 @@ export const dynamicDataService = {
           }
 
           if (!rowData[idCol]) rowData[idCol] = record.id;
-          if (!rowData[tsCol]) rowData[tsCol] = new Date(record.timestamp).toLocaleString('es-CL');
+          if (!rowData['id']) rowData['id'] = record.id;
+          if (!rowData[tsCol]) rowData[tsCol] = new Date(record.timestamp).toISOString();
           
           return rowData;
         });
 
-        const response = await cloudApi.upsertRows(tableName, rowsToUpsert);
+        const response = await firebaseSyncService.pushBatch(tableName, rowsToUpsert);
         
         if (response.success) {
           const ids = records.map(r => r.id);
