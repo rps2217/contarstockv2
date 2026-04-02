@@ -185,6 +185,11 @@ service cloud.firestore {
       allow write: if isAdmin() && isValidOrder(request.resource.data);
     }
 
+    match /TELEMETRIA/{telemetryId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
     match /sessions/{sessionId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && isValidSessionCreate(request.resource.data);
