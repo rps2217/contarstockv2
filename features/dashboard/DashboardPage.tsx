@@ -65,8 +65,8 @@ const Dashboard: React.FC = () => {
   });
 
   useEffect(() => {
-    const config = getSettings().appSheetConfig;
-    setHasConfigError(!config?.gasWebAppUrl);
+    // Ya no dependemos de GAS, por lo que no hay error de configuración de URL
+    setHasConfigError(false);
   }, []);
 
   const handleHardRefresh = useCallback(async () => {
@@ -221,23 +221,7 @@ const Dashboard: React.FC = () => {
       </header>
 
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        {/* ALERTA DE CONFIGURACIÓN */}
-        {hasConfigError && (
-          <button
-            onClick={() => navigate("/settings?tab=cloud")}
-            className="w-full p-4 bg-rose-50 dark:bg-rose-900/20 border-2 border-rose-200 dark:border-rose-500/30 rounded-2xl flex items-center gap-4"
-          >
-            <ShieldAlert className="w-8 h-8 text-rose-600 dark:text-rose-500 shrink-0" />
-            <div className="text-left">
-              <div className="text-sm font-black text-rose-800 dark:text-rose-400">
-                Sistema Incompleto
-              </div>
-              <p className="text-xs text-rose-600 dark:text-rose-300 font-medium mt-0.5">
-                Falta configurar el vínculo con Google Sheets
-              </p>
-            </div>
-          </button>
-        )}
+        {/* ALERTA DE CONFIGURACIÓN - Eliminada por migración a Firebase */}
 
         {/* SALUD DE TABLAS DINÁMICAS */}
         {((dynamicStats?.pending || 0) > 0 ||

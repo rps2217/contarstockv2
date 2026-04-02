@@ -238,7 +238,7 @@ export const SyncLogsModal: React.FC<Props> = ({ isOpen, onClose }) => {
         {/* FOOTER */}
         <div className="p-4 bg-black/40 border-t border-white/5 text-center">
           <p className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">
-            Sugerencia: Si ves errors de "Out of Bounds" o "Header Mismatch", verifica que el mapeo coincida exactamente con las cabeceras del Sheets.
+            Sugerencia: Si ves errores de "Missing or insufficient permissions", verifica las reglas de seguridad en la consola de Firebase.
           </p>
         </div>
       </motion.div>

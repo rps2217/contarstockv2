@@ -91,7 +91,7 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
 
   // MOTOR DETECTIVE: Resuelve 'Productos Desconocidos' en segundo plano para el conteo
   useEffect(() => {
-    if (!consolidatedHistory || !settings?.appSheetConfig?.gasWebAppUrl) return;
+    if (!consolidatedHistory) return;
 
     const unknownSkus = Array.from(new Set(
       consolidatedHistory

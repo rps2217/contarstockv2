@@ -12,17 +12,16 @@ export const runStockEngineTest = async (): Promise<TestResult[]> => {
  const results: TestResult[] = [];
  const config = getSettings().appSheetConfig;
 
- // 1. Verificar Configuración Local
- const ssId = config?.spreadsheetId || "";
- if (ssId.toUpperCase().includes("AUTO_DETECTED") || ssId === "") {
- results.push({ 
- step: 'CONFIG_LOCAL', 
- status: 'warn', 
- message: 'Aviso: El ID del Excel no está configurado. El sistema usará Firestore por defecto.' 
- });
- } else {
-  results.push({ step: 'CONFIG_LOCAL', status: 'ok', message: `ID de Excel detectado: ${ssId.substring(0, 10)}...` });
- }
+  // 1. Verificar Configuración Local
+  if (!config) {
+    results.push({ 
+      step: 'CONFIG_LOCAL', 
+      status: 'warn', 
+      message: 'Aviso: La configuración cloud no está inicializada.' 
+    });
+  } else {
+    results.push({ step: 'CONFIG_LOCAL', status: 'ok', message: `Configuración cloud cargada correctamente.` });
+  }
 
  // 2. Ping a Firestore
  try {

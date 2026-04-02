@@ -1,6 +1,6 @@
 
 import React, { useEffect } from 'react';
-import { FileSpreadsheet, X, Loader2, CheckCircle2, AlertTriangle, Download, Upload } from 'lucide-react';
+import { FileSpreadsheet, X, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { useProductImporter } from '../hooks/useProductImporter';
 import { Modal } from '../../../shared/components/ui/Modal';
 
@@ -55,9 +55,9 @@ export const ImportTools: React.FC<ImportToolsProps> = ({ isOpen, onClose, onImp
  ) : (
  <div className={`space-y-8 transition-opacity duration-300 ${state.status === 'loading' ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
  
- {/* OPCIÓN A: ARCHIVO LOCAL */}
+ {/* IMPORTAR ARCHIVO LOCAL */}
  <div className="relative group">
- <label className="text-[10px] font-black text-slate-400 uppercase ml-1 block mb-2">Opción A: Archivo CSV</label>
+ <label className="text-[10px] font-black text-slate-400 uppercase ml-1 block mb-2">Importar Archivo CSV</label>
  <div className="border-2 border-dashed border-slate-200 rounded-2xl p-1 bg-slate-50 hover:bg-blue-50/50 hover:border-blue-200 transition-colors">
  <input 
  type="file" 
@@ -67,28 +67,6 @@ export const ImportTools: React.FC<ImportToolsProps> = ({ isOpen, onClose, onImp
  />
  </div>
  </div>
-
- <div className="relative flex items-center">
- <div className="flex-grow border-t border-slate-100"></div>
- <span className="flex-shrink-0 mx-4 text-slate-300 text-[9px] font-black uppercase tracking-widest">O desde la Nube</span>
- <div className="flex-grow border-t border-slate-100"></div>
- </div>
-
- {/* OPCIÓN B: URL GOOGLE */}
- <form onSubmit={actions.importFromSheet}>
- <label className="text-[10px] font-black text-slate-400 uppercase ml-1 block mb-2">Opción B: Google Sheet (Pública)</label>
- <div className="flex gap-2">
- <input
- value={state.sheetUrl}
- onChange={(e) => actions.setSheetUrl(e.target.value)}
- className="flex-1 h-14 pl-4 bg-slate-50 border-2 border-slate-200 rounded-2xl text-sm font-bold outline-none focus:bg-white focus:border-green-500 transition-all placeholder:text-slate-300"
- placeholder="https://docs.google.com/..."
- />
- <button type="submit" disabled={!state.sheetUrl} className="h-14 w-16 flex items-center justify-center bg-green-600 disabled:bg-slate-200 text-white rounded-2xl hover:bg-green-700 transition-colors shadow-lg active:scale-90">
- <Download className="w-6 h-6" />
- </button>
- </div>
- </form>
 
  {state.error && (
  <div className="bg-red-50 text-red-600 text-xs font-bold p-4 rounded-2xl flex items-center gap-3 animate-in shake border border-red-100">

@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import * as productService from '../../../services/productService';
 import { SoundFX } from '../../../services/audio';
 
@@ -31,32 +31,6 @@ export const useProductImporter = (onComplete: (count: number) => void) => {
  SoundFX.play('error');
  };
 
- const importFromSheet = async (e?: React.FormEvent) => {
- e?.preventDefault();
- if (!sheetUrl) return;
-
- setStatus('loading');
- setError('');
-
- try {
- const idMatch = sheetUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
- if (!idMatch) throw new Error("URL de Google Sheets no válida.");
-
- const sheetId = idMatch[1];
- const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
-
- const response = await fetch(csvUrl);
- if (!response.ok) throw new Error("Acceso denegado. Verifique que la hoja sea 'Pública para ver'.");
-
- const csvText = await response.text();
- const resultCount = await productService.bulkImportProducts(csvText);
- 
- handleSuccess(resultCount);
- } catch (err: any) {
- handleError(err.message || "Error de conexión con Google.");
- }
- };
-
  const importFromCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
  const file = e.target.files?.[0];
  if (!file) return;
@@ -80,6 +54,6 @@ export const useProductImporter = (onComplete: (count: number) => void) => {
 
  return {
  state: { status, count, error, sheetUrl },
- actions: { setSheetUrl, importFromSheet, importFromCSV, reset }
+ actions: { setSheetUrl, importFromCSV, reset }
  };
 };

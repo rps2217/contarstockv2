@@ -1,5 +1,4 @@
 import { logger } from './logger';
-import { fetchSystemConfig } from './gasService';
 import { importProductsFromFirestore, importProvidersFromFirestore } from './syncManager';
 import { getSettings, saveSettings } from './settings';
 import { db } from '../db';
@@ -192,13 +191,6 @@ export const InitializationService = {
         };
         await saveSettings(updated);
         logger.success('INIT', 'Configuración sincronizada desde Firestore');
-      } else if (settings.appSheetConfig?.gasWebAppUrl) {
-        // Fallback a GAS si no hay en Firestore
-        const newConfig = await fetchSystemConfig();
-        if (newConfig && Object.keys(newConfig).length > 0) {
-          const updated = { ...settings, appSheetConfig: { ...settings.appSheetConfig, ...newConfig } };
-          await saveSettings(updated);
-        }
       }
     } catch (e) {
       logger.warn('INIT', 'Error sincronizando configuración', e);

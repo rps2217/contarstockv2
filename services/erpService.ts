@@ -16,7 +16,7 @@ export interface ErpManifest {
  */
 export const erpService = {
   /**
-   * Downloads a manifest from the cloud (Google Sheets).
+   * Downloads a manifest from the cloud.
    */
   async downloadManifest(manifestId: string): Promise<ErpManifest> {
     try {
@@ -79,7 +79,7 @@ export const erpService = {
   },
 
   /**
-   * Downloads all manifests from the cloud (Google Sheets) and groups them by ERP.
+   * Downloads all manifests from the cloud and groups them by ERP.
    * Useful for background syncing so the Detective AI has data to work with.
    */
   async downloadAllPendingManifests(): Promise<ErpManifest[]> {

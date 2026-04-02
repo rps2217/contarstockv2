@@ -240,7 +240,7 @@ export const ExpirySettingsDrawer: React.FC<ExpirySettingsDrawerProps> = ({
                     <p className={`text-xs font-black uppercase tracking-tight ${
                       theme === 'dark' ? 'text-white' : 'text-slate-900'
                     }`}>Actualizar desde Nube</p>
-                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Sincronizar GAS_URL y parámetros</p>
+                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Sincronizar configuración desde Firestore</p>
                   </div>
                 </button>
 
