@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { db as firebaseDb } from '../../../src/lib/firebase';
 import { collection, onSnapshot, query } from 'firebase/firestore';
-import { firebaseSyncService } from '../../../services/firebaseSyncService';
+import { firebaseSyncService, handleFirestoreError, OperationType } from '../../../services/firebaseSyncService';
 import { useAppStore } from '../../../store/useAppStore';
 import { useToastStore } from '../../../store/useToastStore';
 
@@ -40,7 +40,11 @@ export const useEventDatabase = () => {
       setCloudItems(items);
     }, (error) => {
       console.error("Error en onSnapshot de Firestore:", error);
-      addToast("Error al conectar con la base de datos en tiempo real", "error");
+      try {
+        handleFirestoreError(error, OperationType.GET, tableName);
+      } catch (e) {
+        addToast("Error al conectar con la base de datos en tiempo real", "error");
+      }
     });
 
     return () => unsubscribe();

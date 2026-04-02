@@ -153,7 +153,9 @@ service cloud.firestore {
     function isValidExpiry(data) {
       return hasRequiredFields(['id', 'barcode', 'quantity', 'mm', 'yyyy']) &&
              data.id is string && data.barcode is string &&
-             data.quantity is number && data.mm is string && data.yyyy is string;
+             data.quantity is number && 
+             (data.mm is string || data.mm is number) && 
+             (data.yyyy is string || data.yyyy is number);
     }
 
     match /CONFIG_SISTEMA/{configId} {
@@ -162,6 +164,11 @@ service cloud.firestore {
     }
 
     match /VENCIMIENTOS/{expiryId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isValidExpiry(request.resource.data);
+    }
+
+    match /REGISTRO_INV/{expiryId} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated() && isValidExpiry(request.resource.data);
     }

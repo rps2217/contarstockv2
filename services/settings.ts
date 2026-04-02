@@ -64,7 +64,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     spreadsheetId: import.meta.env.VITE_SPREADSHEET_ID || '',
     countsTableName: 'CONTEOS', 
     consolidatedTableName: 'CONSOLIDADOS', 
-    inventoryRegistryTableName: 'REGISTRO_INV',
+    inventoryRegistryTableName: 'VENCIMIENTOS',
     expiryTableName: 'VENCIMIENTOS',
     productsTableName: 'PRODUCTOS',
     receptionTableName: 'RECEPCION_BULTOS',
