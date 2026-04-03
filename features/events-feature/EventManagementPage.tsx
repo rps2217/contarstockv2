@@ -168,6 +168,8 @@ const EventManagementPage: React.FC = () => {
   const handleClearFilters = () => {
     actions.setSelectedEvents([]);
     actions.setSearchQuery('');
+    actions.setActionPeriod('all');
+    actions.setCustomDateRange({ start: null, end: null });
   };
 
   const handleToggleEvent = (event: string) => {
@@ -386,67 +388,6 @@ const EventManagementPage: React.FC = () => {
           theme={theme}
         />
       </EventHeader>
-
-      {/* PRIORITY ASSISTANT (BENTO PANEL) */}
-      <div className="px-4 md:px-6 mt-4">
-        {(state.preferences.showPriorityAssistant ?? true) && (
-          <div className="mb-2">
-            <button
-              onClick={() => setIsPriorityPanelOpen(!isPriorityPanelOpen)}
-              className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${
-                theme === 'dark' 
-                  ? 'bg-slate-900/50 border-white/10 hover:bg-white/5' 
-                  : 'bg-white border-slate-200 shadow-sm hover:bg-slate-50'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                  theme === 'dark' ? 'bg-blue-500/10 text-blue-500' : 'bg-blue-100 text-blue-600'
-                }`}>
-                  <Zap className="w-4 h-4" />
-                </div>
-                <div className="text-left">
-                  <h3 className={`text-sm font-black uppercase tracking-tighter italic leading-none ${
-                    theme === 'dark' ? 'text-white' : 'text-slate-900'
-                  }`}>
-                    Asistente de Priorización
-                  </h3>
-                  <p className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${
-                    theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
-                  }`}>
-                    Análisis de volumen y alertas de gestión
-                  </p>
-                </div>
-              </div>
-              {isPriorityPanelOpen ? (
-                <ChevronUp className={`w-5 h-5 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`} />
-              ) : (
-                <ChevronDown className={`w-5 h-5 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`} />
-              )}
-            </button>
-
-            <AnimatePresence>
-              {isPriorityPanelOpen && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="overflow-hidden"
-                >
-                  <div className="pt-4">
-                    <EventPriorityPanel 
-                      stats={state.priorityStats} 
-                      theme={theme} 
-                      onSelectItem={handleSelectItemFromPriority}
-                      onActionClick={(event) => actions.setSelectedEvents([event])}
-                    />
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        )}
-      </div>
 
       {/* DUAL PANELS */}
       <div className={`flex-1 flex flex-col md:flex-row overflow-hidden gap-4 p-4 md:p-6 ${
