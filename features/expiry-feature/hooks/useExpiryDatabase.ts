@@ -39,23 +39,38 @@ export const useExpiryDatabase = () => {
 
   // Monitoreo en tiempo real de Firestore
   useEffect(() => {
-    const colRef = collection(firestoreDb, tableName);
-    // Limitamos a 3000 registros para evitar saturar el SDK de Firestore
-    const q = query(colRef, orderBy('timestamp', 'desc'), limit(3000));
+    if (!tableName || tableName === 'undefined') return;
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setCloudItems(items);
-    }, (error) => {
-      console.error("Error en onSnapshot de Firestore:", error);
-      try {
-        handleFirestoreError(error, OperationType.GET, tableName);
-      } catch (e) {
-        addToast("Error al conectar con la base de datos en tiempo real", "error");
-      }
-    });
+    try {
+      const colRef = collection(firestoreDb, tableName);
+      // FLEXIBILIZACIÓN: Eliminamos el 'orderBy' de la consulta de red para evitar errores de índices.
+      // El ordenamiento se realizará en memoria (frontend) para máxima compatibilidad.
+      const q = query(colRef, limit(3000));
 
-    return () => unsubscribe();
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setCloudItems(items);
+      }, (error) => {
+        // Log detallado para diagnóstico técnico
+        console.error(`[Firestore Error] Tabla: ${tableName}`, error);
+        
+        if (error.message.includes('permission-denied')) {
+          addToast("Error de permisos en la nube. Verifica tus reglas de Firestore.", "error");
+        } else {
+          addToast("Error de conexión en tiempo real. Reintentando...", "error");
+        }
+
+        try {
+          handleFirestoreError(error, OperationType.GET, tableName);
+        } catch (e) {
+          // Fallback silencioso
+        }
+      });
+
+      return () => unsubscribe();
+    } catch (e) {
+      console.error("Fallo crítico al iniciar suscripción:", e);
+    }
   }, [tableName]);
 
   // Debounce search query
@@ -73,7 +88,13 @@ export const useExpiryDatabase = () => {
     
     const expiryMapping = settings?.appSheetConfig?.mappings?.expiry;
     
-    return (cloudItems || []).map(record => {
+    return (cloudItems || [])
+      .sort((a, b) => {
+        const timeA = a.timestamp ? (typeof a.timestamp === 'string' ? new Date(a.timestamp).getTime() : a.timestamp) : 0;
+        const timeB = b.timestamp ? (typeof b.timestamp === 'string' ? new Date(b.timestamp).getTime() : b.timestamp) : 0;
+        return (timeB || 0) - (timeA || 0); // Descendente
+      })
+      .map(record => {
         const exp = record;
         const productName = exp[expiryMapping?.name || ''] || 
                             exp.DESCRIPTOR || 

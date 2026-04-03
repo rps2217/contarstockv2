@@ -32,28 +32,46 @@ export const useEventDatabase = () => {
   const tableName = settings?.appSheetConfig?.eventsTableName || 'EVENTOS';
 
   useEffect(() => {
-    const colRef = collection(firebaseDb, tableName);
-    // Limitamos a 3000 registros para evitar saturar el SDK de Firestore
-    const q = query(colRef, orderBy('timestamp', 'desc'), limit(3000));
+    if (!tableName || tableName === 'undefined') return;
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setCloudItems(items);
-    }, (error) => {
-      console.error("Error en onSnapshot de Firestore:", error);
-      try {
-        handleFirestoreError(error, OperationType.GET, tableName);
-      } catch (e) {
-        addToast("Error al conectar con la base de datos en tiempo real", "error");
-      }
-    });
+    try {
+      const colRef = collection(firebaseDb, tableName);
+      // FLEXIBILIZACIÓN: Eliminamos el 'orderBy' de la consulta de red.
+      const q = query(colRef, limit(3000));
 
-    return () => unsubscribe();
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setCloudItems(items);
+      }, (error) => {
+        console.error(`[Firestore Event Error] Tabla: ${tableName}`, error);
+        
+        if (error.message.includes('permission-denied')) {
+          addToast("Error de permisos en Eventos. Revisa Firestore.", "error");
+        } else {
+          addToast("Reintentando conexión con Eventos...", "error");
+        }
+
+        try {
+          handleFirestoreError(error, OperationType.GET, tableName);
+        } catch (e) {
+          // Fallback
+        }
+      });
+
+      return () => unsubscribe();
+    } catch (e) {
+      console.error("Fallo al suscribir eventos:", e);
+    }
   }, [tableName]);
 
   const baseProcessedData = useMemo(() => {
     const eventMapping = settings?.appSheetConfig?.mappings?.events;
     return (cloudItems || [])
+      .sort((a, b) => {
+        const timeA = a.timestamp ? (typeof a.timestamp === 'string' ? new Date(a.timestamp).getTime() : a.timestamp) : 0;
+        const timeB = b.timestamp ? (typeof b.timestamp === 'string' ? new Date(b.timestamp).getTime() : b.timestamp) : 0;
+        return (timeB || 0) - (timeA || 0); // Descendente
+      })
       .filter(record => {
         const exp = record;
         const eventValue = eventMapping?.event ? exp[eventMapping.event] : (exp.EVENTO || exp.event);
@@ -82,8 +100,7 @@ export const useEventDatabase = () => {
           yyyy: exp.YYYY,
           syncStatus: 'synced',
         };
-      })
-      .sort((a, b) => b.timestamp - a.timestamp);
+      });
   }, [cloudItems, settings?.appSheetConfig?.mappings?.events]);
 
   const handleRemoveItem = useCallback(async (item: any) => {
