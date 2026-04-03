@@ -181,12 +181,12 @@ export const ExpiryCapturePage: React.FC = () => {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false); // This is for the modal (legacy/alternative)
-  const [isCameraActive, setIsCameraActive] = useState(() => {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
-  }); // Persistent inline camera
+  const [isCameraActive, setIsCameraActive] = useState(false); // Persistent inline camera - CLOSED BY DEFAULT
   const [scannedBarcode, setScannedBarcode] = useState('');
   const [productName, setProductName] = useState('');
   const [providerName, setProviderName] = useState('');
+  const [selectedMm, setSelectedMm] = useState<number | null>(null);
+  const [selectedYyyy, setSelectedYyyy] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleScan = useCallback(async (code: string) => {
@@ -206,6 +206,8 @@ export const ExpiryCapturePage: React.FC = () => {
     setProviderName(product?.supplier || 'N/A');
     
     // Open modal
+    setSelectedMm(null);
+    setSelectedYyyy(null);
     setIsModalOpen(true);
   }, [isModalOpen, trigger]);
 
@@ -215,14 +217,18 @@ export const ExpiryCapturePage: React.FC = () => {
     maxLatency: 50
   });
 
-  const handleDynamicSubmit = async (values: any) => {
+  const handleSimpleSubmit = async () => {
+    if (!scannedBarcode || !selectedMm || !selectedYyyy || isSubmitting) return;
+    
     try {
       setIsSubmitting(true);
       await actions.handleAddItem({
-        ...values,
-        mm: Number(values.mm),
-        yyyy: Number(values.yyyy),
-        quantity: Number(values.quantity || 1)
+        barcode: scannedBarcode,
+        productName: productName,
+        providerName: providerName,
+        mm: selectedMm,
+        yyyy: selectedYyyy,
+        quantity: 1
       });
       
       SoundFX.play('success');
@@ -263,7 +269,7 @@ export const ExpiryCapturePage: React.FC = () => {
       <div className="shrink-0 p-4 bg-[#050505] z-10 border-b border-white/5">
         <div className="flex items-center gap-3 mb-4">
           <button 
-            onClick={() => navigate('/expiry', { state: { preventAutoRedirect: true } })} 
+            onClick={() => navigate('/')} 
             className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl active:bg-white/10 transition-colors"
           >
             <ChevronLeft className="w-6 h-6 text-white" />
@@ -364,21 +370,83 @@ export const ExpiryCapturePage: React.FC = () => {
               </div>
 
               {/* Modal Body */}
-              <div className="p-4 overflow-y-auto no-scrollbar">
-                {expirySchema && (
-                  <DynamicForm 
-                    schema={expirySchema}
-                    initialValues={{
-                      barcode: scannedBarcode,
-                      productName: productName,
-                      providerName: providerName,
-                      quantity: 1
-                    }}
-                    onSubmit={handleDynamicSubmit}
-                    onCancel={() => setIsModalOpen(false)}
-                    isLoading={isSubmitting}
-                  />
-                )}
+              <div className="p-4 overflow-y-auto no-scrollbar space-y-6">
+                {/* MONTH SELECTOR */}
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-2">1. MES</label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                      <button
+                        key={m}
+                        onClick={() => {
+                          setSelectedMm(m);
+                          SoundFX.play('increment');
+                        }}
+                        className={`h-12 rounded-xl font-black text-lg transition-all border-2 ${
+                          selectedMm === m 
+                            ? 'bg-blue-600 border-blue-400 text-white shadow-[0_0_15px_rgba(37,99,235,0.3)]' 
+                            : 'bg-white/5 border-white/5 text-slate-600 hover:bg-white/10 hover:border-white/20'
+                        }`}
+                      >
+                        {String(m).padStart(2, '0')}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* YEAR SELECTOR */}
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-2">2. AÑO</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[2026, 2027, 2028, 2029].map(y => (
+                      <button
+                        key={y}
+                        onClick={() => {
+                          setSelectedYyyy(y);
+                          SoundFX.play('increment');
+                        }}
+                        className={`h-16 rounded-2xl font-black text-2xl transition-all border-2 flex items-center justify-center italic tracking-tighter ${
+                          selectedYyyy === y 
+                            ? 'bg-emerald-600 border-emerald-400 text-white shadow-[0_0_20px_rgba(16,185,129,0.3)]' 
+                            : 'bg-white/5 border-white/5 text-slate-600 hover:bg-white/10 hover:border-white/20'
+                        }`}
+                      >
+                        {y}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* FINAL ACTION */}
+                <div className="pt-2">
+                  <button
+                    disabled={!scannedBarcode || !selectedMm || !selectedYyyy || isSubmitting}
+                    onClick={handleSimpleSubmit}
+                    className={`w-full py-6 rounded-2xl font-black text-xl uppercase tracking-[0.2em] flex items-center justify-center gap-4 transition-all ${
+                      isSubmitting 
+                        ? 'bg-blue-900/50 text-blue-200 border border-blue-500/30 cursor-wait'
+                        : scannedBarcode && selectedMm && selectedYyyy
+                          ? 'bg-white text-black hover:bg-blue-50 shadow-[0_10px_20px_rgba(255,255,255,0.05)] cursor-pointer'
+                          : 'bg-white/5 text-white/10 border border-white/5 cursor-not-allowed grayscale'
+                    }`}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                          className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full"
+                        />
+                        REGISTRANDO...
+                      </>
+                    ) : (
+                      <>
+                        <CornerDownLeft className="w-6 h-6" />
+                        REGISTRAR
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </motion.div>
           </motion.div>
