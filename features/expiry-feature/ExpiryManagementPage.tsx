@@ -451,10 +451,12 @@ const ExpiryManagementPage: React.FC = () => {
                 key={i}
                 onClick={() => {
                   handleClearFilters();
-                  actions.setActionPeriod(period);
+                  actions.setActionPeriod('custom');
+                  actions.setCustomDateRange({ start: startOfMonth(date), end: endOfMonth(date) });
                 }}
                 className={`px-3 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${
-                  state.actionPeriod === period
+                  state.actionPeriod === 'custom' && 
+                  state.customDateRange.start?.getMonth() === date.getMonth()
                     ? 'bg-amber-500 border-amber-400 text-black shadow-md shadow-amber-500/20'
                     : theme === 'dark'
                       ? 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'
