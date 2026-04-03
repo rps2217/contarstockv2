@@ -61,8 +61,8 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className={`border rounded-2xl flex flex-col md:grid md:grid-cols-[60px_2fr_1fr_1fr_140px] items-start md:items-center gap-4 md:gap-6 group transition-all relative ${
-        isCompact ? 'p-3 md:p-2' : 'p-4'
+      className={`border rounded-2xl flex flex-col md:grid md:grid-cols-[48px_minmax(0,2.5fr)_minmax(0,1.2fr)_minmax(0,1fr)_auto] items-start md:items-center gap-3 md:gap-4 group transition-all relative ${
+        isCompact ? 'p-2' : 'p-4'
       } ${
         theme === 'dark' ? 'bg-slate-900/40 hover:bg-slate-900/60' : 'bg-white shadow-sm hover:shadow-md'
       } ${
@@ -170,61 +170,61 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
       </div>
 
       {/* DESKTOP COLUMN 2: PRODUCT (Desktop View) */}
-      <div className="hidden md:flex flex-col gap-1.5 min-w-0">
+      <div className="hidden md:flex flex-col gap-1 min-w-0 overflow-hidden">
         <div className="flex items-center gap-2">
-          <span className={`text-[9px] font-black uppercase tracking-[0.2em] ${
+          <span className={`text-[8px] font-black uppercase tracking-[0.15em] whitespace-nowrap ${
             theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
           }`}>Producto</span>
-          {item.syncStatus === 'synced' && <Cloud className="w-3 h-3 text-emerald-500/70" />}
-          {item.syncStatus === 'pending' && <RefreshCw className="w-3 h-3 text-amber-500/70 animate-spin" />}
-          {item.syncStatus === 'error' && <CloudOff className="w-3 h-3 text-rose-500/70" />}
+          {item.syncStatus === 'synced' && <Cloud className="w-3 h-3 text-emerald-500/70 shrink-0" />}
+          {item.syncStatus === 'pending' && <RefreshCw className="w-3 h-3 text-amber-500/70 animate-spin shrink-0" />}
+          {item.syncStatus === 'error' && <CloudOff className="w-3 h-3 text-rose-500/70 shrink-0" />}
         </div>
-        <h3 className={`text-sm font-black uppercase tracking-tighter italic truncate leading-tight ${
+        <h3 className={`text-xs font-black uppercase tracking-tighter italic truncate leading-tight ${
           theme === 'dark' ? 'text-white' : 'text-slate-900'
         }`}>
           {item.productName || 'Producto Desconocido'}
         </h3>
         
-        <div className="flex items-center gap-6 mt-1">
-          <div className="flex flex-col">
-            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Proveedor</span>
-            <p className={`text-[11px] font-black uppercase truncate ${
+        <div className="flex flex-col lg:flex-row lg:items-center gap-x-4 gap-y-1 mt-1">
+          <div className="flex flex-col min-w-0">
+            <span className="text-[7px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Proveedor</span>
+            <p className={`text-[9px] font-bold uppercase truncate ${
               theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
             }`}>
               {item.providerName || 'N/A'}
             </p>
           </div>
-          <div className="flex flex-col">
-            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-0.5">SKU / EAN</span>
+          <div className="flex flex-col min-w-0">
+            <span className="text-[7px] font-black text-slate-500 uppercase tracking-widest mb-0.5">SKU / EAN</span>
             <button
               onClick={handleCopyBarcode}
-              className={`text-[11px] font-black uppercase flex items-center gap-1.5 transition-all hover:text-blue-500 active:scale-95 ${
+              className={`text-[9px] font-bold uppercase flex items-center gap-1 transition-all hover:text-blue-500 active:scale-95 ${
                 theme === 'dark' ? 'text-slate-300' : 'text-slate-700'
               }`}
             >
-              {item.barcode || 'N/A'}
-              <Copy className="w-3 h-3 opacity-50" />
+              <span className="truncate">{item.barcode || 'N/A'}</span>
+              <Copy className="w-2.5 h-2.5 opacity-50 shrink-0" />
             </button>
           </div>
         </div>
 
         {item.isAdjusted && (
-          <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg inline-block w-fit mt-1.5 ${
+          <span className={`text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md inline-block w-fit mt-1 ${
             theme === 'dark' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
           }`}>
-            Ajustado: {item.traspaso ? 'Traspaso' : 'Manual'}
+            Ajustado
           </span>
         )}
       </div>
 
       {/* DESKTOP COLUMN 3: FRC & EVENT (Priority Column) */}
-      <div className="hidden md:flex flex-col gap-1">
-        <div className="flex items-center gap-2">
-          <span className={`text-[10px] font-bold uppercase tracking-widest ${
+      <div className="hidden md:flex flex-col gap-1.5 min-w-0 overflow-hidden">
+        <div className="flex flex-col gap-1">
+          <span className={`text-[8px] font-black uppercase tracking-[0.15em] ${
             theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
           }`}>Folio FRC</span>
           {item.event && (
-            <span className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md ${
+            <span className={`text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md w-fit truncate ${
               theme === 'dark' ? 'bg-rose-500/20 text-rose-400' : 'bg-rose-100 text-rose-700'
             }`}>
               {item.event}
@@ -237,55 +237,55 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
               e.stopPropagation();
               onFrcClick?.(item.frc);
             }}
-            className={`px-3 py-2 rounded-xl border-2 font-black tracking-tighter italic transition-all hover:scale-105 active:scale-95 text-left flex flex-col ${
+            className={`px-2 py-1.5 rounded-xl border-2 font-black tracking-tighter italic transition-all hover:scale-105 active:scale-95 text-left flex flex-col w-fit max-w-full ${
               theme === 'dark' 
                 ? 'bg-amber-500/10 border-amber-500/30 text-amber-500 hover:bg-amber-500 hover:text-white' 
                 : 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-600 hover:text-white'
             }`}
           >
-            <span className="text-[14px] leading-none">{item.frc}</span>
+            <span className="text-[12px] leading-none truncate">{item.frc}</span>
           </button>
         ) : (
-          <div className={`px-3 py-2 rounded-xl border-2 border-dashed flex items-center justify-center ${
+          <div className={`px-2 py-1.5 rounded-xl border-2 border-dashed flex items-center justify-center w-fit ${
             theme === 'dark' ? 'border-white/10 text-slate-600' : 'border-slate-200 text-slate-400'
           }`}>
-            <span className="text-[10px] font-black uppercase tracking-widest italic">N/A</span>
+            <span className="text-[9px] font-black uppercase tracking-widest italic">N/A</span>
           </div>
         )}
       </div>
 
       {/* COLUMN 4: QUANTITY & DESTINO */}
-      <div className="flex items-center justify-between w-full md:w-auto md:flex-col md:items-start gap-2 md:gap-1">
-        <div className="flex items-center gap-2">
-          <Package className={`w-4 h-4 ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`} />
-          <span className={`text-sm font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
-            {item.quantity} <span className="text-[10px] text-slate-500 italic">UN</span>
+      <div className="flex items-center justify-between w-full md:w-auto md:flex-col md:items-start gap-2 md:gap-0.5 min-w-0 overflow-hidden">
+        <div className="flex items-center gap-1.5">
+          <Package className={`w-3.5 h-3.5 shrink-0 ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`} />
+          <span className={`text-xs font-black whitespace-nowrap ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+            {item.quantity} <span className="text-[9px] text-slate-500 italic">UN</span>
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          <Truck className={`w-3.5 h-3.5 ${theme === 'dark' ? 'text-emerald-500/80' : 'text-emerald-600/80'}`} />
-          <span className={`text-[11px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>
+        <div className="flex items-center gap-1.5">
+          <Truck className={`w-3 h-3 shrink-0 ${theme === 'dark' ? 'text-emerald-500/80' : 'text-emerald-600/80'}`} />
+          <span className={`text-[9px] font-black uppercase tracking-widest truncate ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>
             {item.destino || 'SIN DESTINO'}
           </span>
         </div>
       </div>
 
       {/* COLUMN 5: ACTIONS */}
-      <div className="flex items-center gap-1.5 w-full md:w-auto justify-end md:justify-center">
+      <div className="flex items-center gap-1 w-full md:w-auto justify-end md:justify-center shrink-0">
         {onEdit && (
           <button
             onClick={(e) => {
               e.stopPropagation();
               onEdit(item);
             }}
-            className={`w-9 h-9 rounded-xl transition-all border flex items-center justify-center ${
+            className={`w-8 h-8 rounded-lg transition-all border flex items-center justify-center ${
               theme === 'dark' 
                 ? 'bg-blue-500/10 border-blue-500/20 text-blue-500 hover:bg-blue-500 hover:text-white' 
                 : 'bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-600 hover:text-white'
             }`}
             title="Editar Registro"
           >
-            <MoreVertical className="w-4 h-4" />
+            <MoreVertical className="w-3.5 h-3.5" />
           </button>
         )}
         
@@ -295,14 +295,14 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
               e.stopPropagation();
               onRemove(item);
             }}
-            className={`w-9 h-9 rounded-xl transition-all border flex items-center justify-center ${
+            className={`w-8 h-8 rounded-lg transition-all border flex items-center justify-center ${
               theme === 'dark' 
                 ? 'bg-red-500/10 border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white' 
                 : 'bg-red-50 border-red-200 text-red-600 hover:bg-red-600 hover:text-white'
             }`}
             title="Eliminar Registro"
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className="w-3.5 h-3.5" />
           </button>
         )}
       </div>
