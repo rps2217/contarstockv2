@@ -16,7 +16,8 @@ import {
   AlertCircle,
   X
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, addMonths } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { useToastStore } from '../../store/useToastStore';
 import { motion, AnimatePresence } from 'motion/react';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -440,57 +441,30 @@ const ExpiryManagementPage: React.FC = () => {
 
         {/* QUICK FILTER PILLS */}
         <div className="flex items-center gap-2 mt-4 overflow-x-auto no-scrollbar pb-2">
-          <button
-            onClick={() => handleActionClick('monitor')}
-            className={`px-3 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${
-              state.selectedStatuses.includes('next_expiry') && state.selectedStatuses.length === 1 && state.selectedCanje === 'all'
-                ? 'bg-blue-500 border-blue-400 text-white shadow-md shadow-blue-500/20'
-                : theme === 'dark'
-                  ? 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'
-                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-            }`}
-          >
-            Próximos a Vencer
-          </button>
-          <button
-            onClick={() => handleActionClick('merma')}
-            className={`px-3 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${
-              state.selectedCanje === 'markdown' && state.selectedStatuses.includes('critical')
-                ? 'bg-rose-500 border-rose-400 text-white shadow-md shadow-rose-500/20'
-                : theme === 'dark'
-                  ? 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'
-                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-            }`}
-          >
-            Merma Crítica
-          </button>
-          <button
-            onClick={() => handleActionClick('canje')}
-            className={`px-3 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${
-              state.selectedCanje === 'canje' && state.selectedStatuses.includes('critical')
-                ? 'bg-amber-500 border-amber-400 text-black shadow-md shadow-amber-500/20'
-                : theme === 'dark'
-                  ? 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'
-                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-            }`}
-          >
-            Canjes Urgentes
-          </button>
-          <button
-            onClick={() => {
-              handleClearFilters();
-              actions.setActionPeriod('this_month');
-            }}
-            className={`px-3 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${
-              state.actionPeriod === 'this_month'
-                ? 'bg-emerald-500 border-emerald-400 text-white shadow-md shadow-emerald-500/20'
-                : theme === 'dark'
-                  ? 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'
-                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-            }`}
-          >
-            Retiros Este Mes
-          </button>
+          {Array.from({ length: 4 }).map((_, i) => {
+            const date = addMonths(new Date(), i);
+            const monthName = format(date, 'MMMM', { locale: es });
+            const period = i === 0 ? 'this_month' : i === 1 ? 'next_month' : 'next_3_months'; // Simplified mapping
+            
+            return (
+              <button
+                key={i}
+                onClick={() => {
+                  handleClearFilters();
+                  actions.setActionPeriod(period);
+                }}
+                className={`px-3 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${
+                  state.actionPeriod === period
+                    ? 'bg-amber-500 border-amber-400 text-black shadow-md shadow-amber-500/20'
+                    : theme === 'dark'
+                      ? 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'
+                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                }`}
+              >
+                {monthName}
+              </button>
+            );
+          })}
         </div>
       </div>
 
