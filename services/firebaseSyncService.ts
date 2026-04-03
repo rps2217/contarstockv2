@@ -76,11 +76,7 @@ export const firebaseSyncService = {
       logger.info('SYNC_REALTIME', `SYNC_REALTIME: ${tableName} updated`);
     }, (error) => {
       logger.error('SYNC_REALTIME_FAIL', `Error en tabla ${tableName}: ${error.message}`, error);
-      try {
-        handleFirestoreError(error, OperationType.LIST, tableName);
-      } catch (e) {
-        // Fallback silencioso para no crashear la UI ni causar Unhandled Promise Rejections.
-      }
+      handleFirestoreError(error, OperationType.LIST, tableName);
     });
   },
 
@@ -104,11 +100,7 @@ export const firebaseSyncService = {
       logger.info('SYNC_REALTIME', `SYNC_REALTIME: ${tableName} filtered by ${field}=${value} updated`);
     }, (error) => {
       logger.error('SYNC_REALTIME_FILTERED_FAIL', `Error filtrado en tabla ${tableName}: ${error.message}`, error);
-      try {
-        handleFirestoreError(error, OperationType.LIST, tableName);
-      } catch (e) {
-        // Fallback silencioso para proteger la interfaz
-      }
+      handleFirestoreError(error, OperationType.LIST, tableName);
     });
   },
 

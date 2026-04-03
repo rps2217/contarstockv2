@@ -5,16 +5,9 @@ service cloud.firestore {
     // ===============================================================
     // Helper Functions
     // ===============================================================
-    
-    // TEMPORARY GLOBAL BYPASS
-    match /{document=**} {
-      allow read, write: if true;
-    }
 
     function isAuthenticated() {
-       // TEMPORARY BYPASS: Allow unauthenticated access because Anonymous Auth is not enabled.
-       // WARNING: This makes your database public. Enable Anonymous Auth and revert this to `request.auth != null`.
-       return true;
+       return request.auth != null;
     }
 
     function isAdmin() {
@@ -126,7 +119,7 @@ service cloud.firestore {
     }
 
     match /PEDIDOS/{orderId} {
-      allow read: if true;
+      allow read: if isAuthenticated();
       allow create: if isAdmin() && isValidOrder(request.resource.data);
       allow update: if isAdmin() && isValidOrder(request.resource.data);
       allow delete: if isAdmin();
@@ -192,8 +185,8 @@ service cloud.firestore {
     }
 
     match /TELEMETRIA/{telemetryId} {
-      allow read: if true;
-      allow write: if true;
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
     }
 
     match /sessions/{sessionId} {

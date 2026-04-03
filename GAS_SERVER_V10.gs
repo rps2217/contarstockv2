@@ -630,7 +630,7 @@ function getSummary(data) {
   try {
     var ss = SpreadsheetApp.openById(data.spreadsheetId);
     var sheet = ss.getSheetByName(data.tableName);
-    if (!sheet) return { success: false, error: "Hoja no encontrada: " + data.tableName };
+    if (!sheet) return { success: false, error: "Hoja no encontrada" };
     
     var lastRow = sheet.getLastRow();
     if (lastRow < 2) return { success: true, totalUnits: 0, rowCount: 0, rows: [] };
@@ -647,45 +647,38 @@ function getSummary(data) {
       filterColIdx = normalizedHeaders.indexOf(normalizeHeader(data.filterColumn));
     }
     
-    // Normalización para Match Flexible (Ignora ceros a la izquierda)
+    // Normalización para Match Flexible
     var normalize = function(val) { return String(val || "").trim().replace(/^0+/, ""); };
-    var target = data.filterValue ? normalize(data.filterValue) : null;
+    var target = normalize(data.filterValue);
     
     var totalUnits = 0;
     var rowCount = 0;
-    var matches = [];
-    var fullData = sheet.getDataRange().getValues();
-
-    for (var i = 1; i < fullData.length; i++) {
-        var row = fullData[i];
-        var isMatch = true;
-        
-        if (filterColIdx !== -1 && target !== null) {
-            isMatch = normalize(row[filterColIdx]) === target;
+        if (String(row[relFilterIdx]) === String(data.filterValue)) {
+          rowCount++;
+          var val = parseFloat(row[relQtyIdx]);
+          if (!isNaN(val)) totalUnits += val;
         }
-        
-        if (isMatch) {
-            rowCount++;
-            if (qtyColIdx !== -1) {
-                var val = parseFloat(row[qtyColIdx]);
-                if (!isNaN(val)) totalUnits += val;
-            }
-            
-            // Devolver las filas para identificación (Detective de SKUs)
-            if (matches.length < 10) {
-                var obj = {};
-                headers.forEach(function(h, idx) { obj[h] = row[idx]; });
-                matches.push(obj);
-            }
+      }
+    } else {
+      // Fallback si no hay filtros o columnas claras
+      values = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+      for (var i = 0; i < values.length; i++) {
+        var row = values[i];
+        var matchesFilter = true;
+        if (filterColIdx !== -1 && data.filterValue) {
+          matchesFilter = String(row[filterColIdx]) === String(data.filterValue);
         }
+        if (matchesFilter) {
+          rowCount++;
+          if (qtyColIdx !== -1) {
+            var val = parseFloat(row[qtyColIdx]);
+            if (!isNaN(val)) totalUnits += val;
+          }
+        }
+      }
     }
     
-    return { 
-        success: true, 
-        totalUnits: totalUnits, 
-        rowCount: rowCount, 
-        rows: matches 
-    };
+    return { success: true, totalUnits: totalUnits, rowCount: rowCount };
   } catch (e) {
     return logErrorAndReturnGeneric(e);
   }

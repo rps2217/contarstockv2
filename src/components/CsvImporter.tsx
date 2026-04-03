@@ -56,8 +56,14 @@ export const CsvImporter: React.FC = () => {
   const confirmImport = async () => {
     setIsImporting(true);
     try {
-      const expiryData = parsedData.filter(row => row.event === 'VENCIMIENTOS');
-      const eventData = parsedData.filter(row => row.event !== 'VENCIMIENTOS');
+      // Filtrar los datos para importar solo los que no tienen errores
+      // Opcionalmente, el usuario pidió "ignorar esos errores", lo que puede significar
+      // importar todo de todas formas, o importar solo lo válido.
+      // Vamos a importar solo los registros válidos, ignorando los que tienen errores.
+      const validData = parsedData.filter(row => row.errors.length === 0);
+      
+      const expiryData = validData.filter(row => row.event === 'VENCIMIENTOS');
+      const eventData = validData.filter(row => row.event !== 'VENCIMIENTOS');
 
       if (expiryData.length > 0) {
         await firebaseSyncService.pushBatch(settings?.appSheetConfig?.expiryTableName || 'VENCIMIENTOS', expiryData);
@@ -76,6 +82,7 @@ export const CsvImporter: React.FC = () => {
   };
 
   const hasErrors = parsedData.some(row => row.errors.length > 0);
+  const validCount = parsedData.filter(row => row.errors.length === 0).length;
 
   return (
     <div className="p-4 border rounded-lg bg-slate-50 dark:bg-slate-900">
@@ -104,10 +111,10 @@ export const CsvImporter: React.FC = () => {
           </div>
           <button
             onClick={confirmImport}
-            disabled={isImporting || hasErrors}
+            disabled={isImporting || validCount === 0}
             className="mt-4 w-full bg-blue-600 text-white py-2 rounded font-semibold hover:bg-blue-700 disabled:opacity-50"
           >
-            {isImporting ? 'Importando...' : hasErrors ? 'Corrige los errores para importar' : 'Confirmar Importación'}
+            {isImporting ? 'Importando...' : hasErrors ? `Ignorar errores e importar ${validCount} válidos` : 'Confirmar Importación'}
           </button>
         </div>
       )}

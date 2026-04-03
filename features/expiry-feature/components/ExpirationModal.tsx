@@ -138,8 +138,7 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
   };
 
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
-  const currentYear = new Date().getFullYear();
-  const years = [currentYear, currentYear + 1];
+  const years = [2026, 2027];
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl">

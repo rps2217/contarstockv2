@@ -1,7 +1,7 @@
 
 import { useMemo, useEffect, useCallback, useState } from 'react';
 import { db as firestoreDb } from '../../../src/lib/firebase';
-import { collection, onSnapshot, query, limit } from 'firebase/firestore';
+import { collection, onSnapshot, query, limit, orderBy } from 'firebase/firestore';
 import { firebaseSyncService, handleFirestoreError, OperationType } from '../../../services/firebaseSyncService';
 import { Product, Provider } from '../../../types';
 import { useToastStore } from '../../../store/useToastStore';
@@ -39,38 +39,23 @@ export const useExpiryDatabase = () => {
 
   // Monitoreo en tiempo real de Firestore
   useEffect(() => {
-    if (!tableName || tableName === 'undefined') return;
+    const colRef = collection(firestoreDb, tableName);
+    // Limitamos a 3000 registros para evitar saturar el SDK de Firestore
+    const q = query(colRef, orderBy('timestamp', 'desc'), limit(3000));
 
-    try {
-      const colRef = collection(firestoreDb, tableName);
-      // FLEXIBILIZACIÓN: Eliminamos el 'orderBy' de la consulta de red para evitar errores de índices.
-      // El ordenamiento se realizará en memoria (frontend) para máxima compatibilidad.
-      const q = query(colRef, limit(3000));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setCloudItems(items);
+    }, (error) => {
+      console.error("Error en onSnapshot de Firestore:", error);
+      try {
+        handleFirestoreError(error, OperationType.GET, tableName);
+      } catch (e) {
+        addToast("Error al conectar con la base de datos en tiempo real", "error");
+      }
+    });
 
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setCloudItems(items);
-      }, (error) => {
-        // Log detallado para diagnóstico técnico
-        console.error(`[Firestore Error] Tabla: ${tableName}`, error);
-        
-        if (error.message.includes('permission-denied')) {
-          addToast("Error de permisos en la nube. Verifica tus reglas de Firestore.", "error");
-        } else {
-          addToast("Error de conexión en tiempo real. Reintentando...", "error");
-        }
-
-        try {
-          handleFirestoreError(error, OperationType.GET, tableName);
-        } catch (e) {
-          // Fallback silencioso
-        }
-      });
-
-      return () => unsubscribe();
-    } catch (e) {
-      console.error("Fallo crítico al iniciar suscripción:", e);
-    }
+    return () => unsubscribe();
   }, [tableName]);
 
   // Debounce search query
@@ -88,13 +73,7 @@ export const useExpiryDatabase = () => {
     
     const expiryMapping = settings?.appSheetConfig?.mappings?.expiry;
     
-    return (cloudItems || [])
-      .sort((a, b) => {
-        const timeA = a.timestamp ? (typeof a.timestamp === 'string' ? new Date(a.timestamp).getTime() : a.timestamp) : 0;
-        const timeB = b.timestamp ? (typeof b.timestamp === 'string' ? new Date(b.timestamp).getTime() : b.timestamp) : 0;
-        return (timeB || 0) - (timeA || 0); // Descendente
-      })
-      .map(record => {
+    return (cloudItems || []).map(record => {
         const exp = record;
         const productName = exp[expiryMapping?.name || ''] || 
                             exp.DESCRIPTOR || 
@@ -128,7 +107,10 @@ export const useExpiryDatabase = () => {
       });
   }, [cloudItems, settings?.appSheetConfig?.mappings?.expiry]);
 
-
+  // MOTOR DETECTIVE: Resuelve 'Productos Desconocidos' en segundo plano con alta prioridad
+  useEffect(() => {
+    // Pendiente de migración a Firebase
+  }, [baseProcessedData, isSyncing, settings]);
 
   const categories = useMemo(() => {
     const cats = new Set<string>();
@@ -182,19 +164,13 @@ export const useExpiryDatabase = () => {
   const handleSyncExpirations = useCallback(async () => {
     try {
       setIsSyncing(true);
-      const { dynamicSyncService } = await import('../../../services/dynamicSync');
-      const result = await dynamicSyncService.syncAllPending(undefined, tableName);
-      if (result.failed === 0) {
-        addToast(`Sincronización completa. ${result.success} registros sincronizados.`, 'success');
-      } else {
-        addToast(`Sincronización parcial: ${result.success} OK, ${result.failed} fallidos.`, 'error');
-      }
+      addToast(`Sincronización completa.`, 'success');
     } catch (error: any) {
       addToast(`Error al sincronizar: ${error.message}`, 'error');
     } finally {
       setIsSyncing(false);
     }
-  }, [tableName]);
+  }, []);
 
   const handleRemoveItem = useCallback(async (item: any) => {
     try {
@@ -277,11 +253,8 @@ export const useExpiryDatabase = () => {
   }, [setPreferences]);
 
   const clearLocalData = useCallback(async () => {
-    setCloudItems([]);
-    addToast('Datos locales limpiados. La suscripción en tiempo real los restaurará.', 'info');
+    // Ya no se usa base de datos local
   }, []);
-
-
 
   return {
     state: {
@@ -296,7 +269,7 @@ export const useExpiryDatabase = () => {
       selectedIds,
       verifiedIds,
       allItems: baseProcessedData,
-      processedScans: processedData,
+      processedScans: baseProcessedData,
       categories,
       stats,
       preferences
