@@ -10,6 +10,8 @@ import { useExpiryStore, ExpiryItem, ExpiryStatus, ExpiryPreferences } from '../
 import { processExpiryItem, filterExpiryItems, calculateExpiryStats } from '../utils/expiryProcessor';
 import { SoundFX } from '../../../services/audio';
 import { normalizeSku } from '../../../services/utils';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { productRepository } from '../../../repositories/DexieProductRepository';
 
 export type { ExpiryStatus, ExpiryPreferences, ExpiryItem };
 
@@ -36,6 +38,17 @@ export const useExpiryDatabase = () => {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   const [cloudItems, setCloudItems] = useState<any[]>([]);
+
+  const allProducts = useLiveQuery(() => productRepository.getAll(), []) || [];
+  
+  const productMap = useMemo(() => {
+    const map = new Map<string, Product>();
+    allProducts.forEach(p => {
+      const sku = normalizeSku(p.barcode);
+      if (sku) map.set(sku, p);
+    });
+    return map;
+  }, [allProducts]);
 
   // Monitoreo en tiempo real de Firestore
   useEffect(() => {
@@ -103,9 +116,9 @@ export const useExpiryDatabase = () => {
           location: exp[expiryMapping?.location || ''] || exp.UBICACION || exp.location || 'N/A',
           claveUnica: exp.claveUnica || exp.CLAVE_UNICA,
           syncStatus: 'synced'
-        }, new Map(), new Map(), now);
+        }, productMap, new Map(), now);
       });
-  }, [cloudItems, settings?.appSheetConfig?.mappings?.expiry]);
+  }, [cloudItems, settings?.appSheetConfig?.mappings?.expiry, productMap]);
 
   // MOTOR DETECTIVE: Resuelve 'Productos Desconocidos' en segundo plano con alta prioridad
   useEffect(() => {

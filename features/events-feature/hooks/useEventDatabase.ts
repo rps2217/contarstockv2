@@ -4,6 +4,10 @@ import { collection, onSnapshot, query, limit, orderBy } from 'firebase/firestor
 import { firebaseSyncService, handleFirestoreError, OperationType } from '../../../services/firebaseSyncService';
 import { useAppStore } from '../../../store/useAppStore';
 import { useToastStore } from '../../../store/useToastStore';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { productRepository } from '../../../repositories/DexieProductRepository';
+import { normalizeSku } from '../../../services/utils';
+import { Product } from '../../../types';
 
 export interface EventPreferences {
   compactView: boolean;
@@ -30,6 +34,17 @@ export const useEventDatabase = () => {
   const [cloudItems, setCloudItems] = useState<any[]>([]);
 
   const tableName = settings?.appSheetConfig?.eventsTableName || 'EVENTOS';
+
+  const allProducts = useLiveQuery(() => productRepository.getAll(), []) || [];
+  
+  const productMap = useMemo(() => {
+    const map = new Map<string, Product>();
+    allProducts.forEach(p => {
+      const sku = normalizeSku(p.barcode);
+      if (sku) map.set(sku, p);
+    });
+    return map;
+  }, [allProducts]);
 
   useEffect(() => {
     const colRef = collection(firebaseDb, tableName);
@@ -62,13 +77,15 @@ export const useEventDatabase = () => {
       .map(record => {
         const exp = record;
         const barcode = eventMapping?.barcode ? exp[eventMapping.barcode] : (exp.SKU || exp.barcode);
-        const productName = (eventMapping?.name ? exp[eventMapping.name] : (exp.DESCRIPTOR || exp.productName)) || 'Producto Desconocido';
+        const product = productMap.get(normalizeSku(barcode || ''));
+        const productName = product?.name || (eventMapping?.name ? exp[eventMapping.name] : (exp.DESCRIPTOR || exp.productName)) || 'Producto Desconocido';
+        const providerName = product?.supplier || (eventMapping?.supplier ? exp[eventMapping.supplier] : (exp.PROVEEDOR || exp.supplier)) || 'N/A';
         
         return {
           id: record.id,
           barcode,
           productName,
-          providerName: (eventMapping?.supplier ? exp[eventMapping.supplier] : (exp.PROVEEDOR || exp.supplier)) || 'N/A',
+          providerName,
           event: eventMapping?.event ? exp[eventMapping.event] : (exp.EVENTO || exp.event || 'OTRO'),
           quantity: eventMapping?.quantity ? exp[eventMapping.quantity] : (exp.CANTIDAD || exp.quantity || 0),
           location: eventMapping?.location ? exp[eventMapping.location] : (exp.UBICACION || exp.location || 'GENERAL'),
@@ -76,7 +93,7 @@ export const useEventDatabase = () => {
           nguia: eventMapping?.nguia ? exp[eventMapping.nguia] : (exp.NGUIA || exp.nguia || ''),
           timestamp: record.timestamp || Date.now(),
           claveUnica: exp.claveUnica,
-          category: 'GENERAL',
+          category: product?.category || 'GENERAL',
           isAdjusted: !!(exp.traspaso && exp.traspaso.trim() !== ''),
           mm: exp.MM,
           yyyy: exp.YYYY,
@@ -84,7 +101,7 @@ export const useEventDatabase = () => {
         };
       })
       .sort((a, b) => b.timestamp - a.timestamp);
-  }, [cloudItems, settings?.appSheetConfig?.mappings?.events]);
+  }, [cloudItems, settings?.appSheetConfig?.mappings?.events, productMap]);
 
   const handleRemoveItem = useCallback(async (item: any) => {
     try {
