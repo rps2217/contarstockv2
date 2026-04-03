@@ -21,6 +21,7 @@ import {
   ChevronUp,
   Upload,
   Trash2,
+  History,
 } from "lucide-react";
 import { NetworkStatus } from "../../shared/components/ui/NetworkStatus";
 import { OrderRow } from "./components/OrderRow";
@@ -254,11 +255,20 @@ const Dashboard: React.FC = () => {
               <NetworkStatus />
             </div>
           </div>
-          <div className="flex items-center gap-3 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full">
-            <UserCircle className="w-5 h-5 text-blue-600" />
-            <span className="text-xs font-bold uppercase tracking-wider">
-              {operatorId}
-            </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate("/reports")}
+              className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-500 hover:text-blue-600 transition-colors"
+              title="Historial de Cargas"
+            >
+              <History className="w-5 h-5" />
+            </button>
+            <div className="flex items-center gap-3 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full">
+              <UserCircle className="w-5 h-5 text-blue-600" />
+              <span className="text-xs font-bold uppercase tracking-wider">
+                {operatorId}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -465,16 +475,16 @@ const Dashboard: React.FC = () => {
             <ArrowRight className="w-8 h-8 text-white/50 group-hover:text-white transition-colors" />
           </button>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <Card
               hoverable
               onClick={() => navigate("/database")}
-              className="flex flex-col items-center justify-center gap-3 p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-3xl"
+              className="flex items-center gap-3 p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-3xl"
             >
-              <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-2xl">
-                <Database className="w-7 h-7 text-amber-600 dark:text-amber-500" />
+              <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-xl">
+                <Database className="w-5 h-5 text-amber-600 dark:text-amber-500" />
               </div>
-              <span className="text-[10px] font-black uppercase tracking-wider">
+              <span className="text-xs font-bold uppercase tracking-wider">
                 Catálogo
               </span>
             </Card>
@@ -482,60 +492,40 @@ const Dashboard: React.FC = () => {
             <Card
               hoverable
               onClick={() => navigate("/massive/BURST-MODE")}
-              className="flex flex-col items-center justify-center gap-3 p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-3xl"
+              className="flex items-center gap-3 p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-3xl"
             >
-              <div className="bg-rose-50 dark:bg-rose-900/20 p-4 rounded-2xl">
-                <Zap className="w-7 h-7 text-rose-600 dark:text-rose-500" />
+              <div className="bg-rose-50 dark:bg-rose-900/20 p-3 rounded-xl">
+                <Zap className="w-5 h-5 text-rose-600 dark:text-rose-500" />
               </div>
-              <span className="text-[10px] font-black uppercase tracking-wider">
+              <span className="text-xs font-bold uppercase tracking-wider">
                 Hammer
-              </span>
-            </Card>
-
-            <Card
-              hoverable
-              onClick={triggerSync}
-              className={`flex flex-col items-center justify-center gap-3 p-6 rounded-3xl transition-all ${
-                syncStatus.state === 'SYNCING' ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 animate-pulse" :
-                syncStatus.state === 'ERROR' ? "bg-rose-50 dark:bg-rose-900/20 border-rose-200" :
-                isSyncNeeded ? "bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-500/50" : 
-                "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
-              }`}
-            >
-              <div
-                className={`p-4 rounded-2xl ${
-                  syncStatus.state === 'SYNCING' ? "bg-blue-100" :
-                  syncStatus.state === 'ERROR' ? "bg-rose-100" :
-                  isSyncNeeded ? "bg-orange-100 dark:bg-orange-500/20" : 
-                  "bg-slate-800"
-                }`}
-              >
-                {syncStatus.state === 'SYNCING' ? (
-                  <RefreshCw className="w-7 h-7 text-blue-600 animate-spin" />
-                ) : (
-                  <Radio
-                    className={`w-7 h-7 ${
-                      syncStatus.state === 'ERROR' ? "text-rose-600" :
-                      isSyncNeeded ? "text-orange-600 dark:text-orange-500" : 
-                      "text-slate-400"
-                    }`}
-                  />
-                )}
-              </div>
-              <span className="text-[10px] font-black uppercase tracking-wider">
-                {syncStatus.state === 'SYNCING' ? 'Syncing...' : 'Sync'}
               </span>
             </Card>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <button
-              onClick={() => navigate("/reports")}
-              className="flex items-center justify-center gap-3 p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+              onClick={triggerSync}
+              className={`flex items-center justify-center gap-3 p-5 rounded-3xl border transition-all ${
+                syncStatus.state === 'SYNCING' ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 animate-pulse" :
+                syncStatus.state === 'ERROR' ? "bg-rose-50 dark:bg-rose-900/20 border-rose-200" :
+                isSyncNeeded ? "bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-500/50" : 
+                "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+              }`}
             >
-              <FileText className="w-5 h-5" />
-              <span className="text-sm font-bold uppercase tracking-wider">
-                Reportes
+              {syncStatus.state === 'SYNCING' ? (
+                <RefreshCw className="w-5 h-5 text-blue-600 animate-spin" />
+              ) : (
+                <Radio
+                  className={`w-5 h-5 ${
+                    syncStatus.state === 'ERROR' ? "text-rose-600" :
+                    isSyncNeeded ? "text-orange-600 dark:text-orange-500" : 
+                    "text-slate-400"
+                  }`}
+                />
+              )}
+              <span className="text-xs font-bold uppercase tracking-wider">
+                {syncStatus.state === 'SYNCING' ? 'Sincronizando' : 'Sincronizar'}
               </span>
             </button>
 

@@ -31,7 +31,7 @@ export const BottomDock: React.FC<Props> = ({ currentView, settings }) => {
  'settings': { label: 'SETUP', icon: Settings, path: '/settings' }
  };
 
- const activeNavKeys = settings.mobileNavConfig?.filter(k => k !== 'massive' && k !== 'documents') || ['dashboard', 'reports', 'sync'];
+ const activeNavKeys = settings.mobileNavConfig?.filter(k => k !== 'massive' && k !== 'documents' && k !== 'reports' && k !== 'database') || ['dashboard', 'sync', 'settings'];
  
  return (
  <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[100] bg-slate-950/95 border-t-2 border-white/10 px-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-3 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
