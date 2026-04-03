@@ -37,6 +37,7 @@ export interface ExpiryItem {
   timestamp?: number;
   frc?: string;
   syncStatus?: 'synced' | 'pending' | 'error';
+  _searchIndex?: string;
 }
 
 interface ExpiryState {
@@ -58,14 +59,11 @@ interface ExpiryState {
   selectedCanje: 'all' | 'canje' | 'markdown';
   setSelectedCanje: (val: 'all' | 'canje' | 'markdown') => void;
 
-  selectedEstado: string | null;
-  setSelectedEstado: (estado: string | null) => void;
+  actionPeriod: 'all' | 'this_month' | 'next_month' | 'next_3_months' | 'custom';
+  setActionPeriod: (period: 'all' | 'this_month' | 'next_month' | 'next_3_months' | 'custom') => void;
 
-  dateRange: { start: Date | null; end: Date | null };
-  setDateRange: (range: { start: Date | null; end: Date | null }) => void;
-
-  withdrawalDateRange: { start: Date | null; end: Date | null };
-  setWithdrawalDateRange: (range: { start: Date | null; end: Date | null }) => void;
+  customDateRange: { start: Date | null; end: Date | null };
+  setCustomDateRange: (range: { start: Date | null; end: Date | null }) => void;
 
   // Selection
   selectedIds: Set<string>;
@@ -111,14 +109,11 @@ export const useExpiryStore = create<ExpiryState>()(
       selectedCanje: 'all',
       setSelectedCanje: (selectedCanje) => set({ selectedCanje }),
 
-      selectedEstado: null,
-      setSelectedEstado: (selectedEstado) => set({ selectedEstado }),
+      actionPeriod: 'all',
+      setActionPeriod: (actionPeriod) => set({ actionPeriod }),
 
-      dateRange: { start: null, end: null },
-      setDateRange: (dateRange) => set({ dateRange }),
-
-      withdrawalDateRange: { start: null, end: null },
-      setWithdrawalDateRange: (withdrawalDateRange) => set({ withdrawalDateRange }),
+      customDateRange: { start: null, end: null },
+      setCustomDateRange: (customDateRange) => set({ customDateRange }),
 
       selectedIds: new Set(),
       setSelectedIds: (selectedIds) => set({ selectedIds }),

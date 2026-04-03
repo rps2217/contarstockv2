@@ -190,6 +190,21 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
               </span>
             )}
           </div>
+          
+          {/* LIFE PERCENT PROGRESS BAR */}
+          {item.lifePercent !== undefined && (
+            <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden mt-0.5 mb-0.5" title={`${Math.round(item.lifePercent)}% de vida útil restante`}>
+              <div 
+                className={`h-full rounded-full transition-all duration-1000 ${
+                  item.lifePercent > 50 ? 'bg-emerald-500' :
+                  item.lifePercent > 20 ? 'bg-amber-500' :
+                  'bg-rose-500'
+                }`}
+                style={{ width: `${item.lifePercent}%` }}
+              />
+            </div>
+          )}
+
           <div className="flex items-center gap-2">
             <span 
               onClick={(e) => {

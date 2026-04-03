@@ -15,10 +15,10 @@ interface ExpiryFilterDrawerProps {
   categories: string[];
   selectedCategories: string[];
   setSelectedCategories: (categories: string[]) => void;
-  dateRange: { start: Date | null, end: Date | null };
-  setDateRange: (range: { start: Date | null, end: Date | null }) => void;
-  withdrawalDateRange: { start: Date | null, end: Date | null };
-  setWithdrawalDateRange: (range: { start: Date | null, end: Date | null }) => void;
+  actionPeriod: 'all' | 'this_month' | 'next_month' | 'next_3_months' | 'custom';
+  setActionPeriod: (period: 'all' | 'this_month' | 'next_month' | 'next_3_months' | 'custom') => void;
+  customDateRange: { start: Date | null, end: Date | null };
+  setCustomDateRange: (range: { start: Date | null, end: Date | null }) => void;
   theme?: 'dark' | 'light';
 }
 
@@ -32,10 +32,10 @@ export const ExpiryFilterDrawer: React.FC<ExpiryFilterDrawerProps> = ({
   categories,
   selectedCategories,
   setSelectedCategories,
-  dateRange,
-  setDateRange,
-  withdrawalDateRange,
-  setWithdrawalDateRange,
+  actionPeriod,
+  setActionPeriod,
+  customDateRange,
+  setCustomDateRange,
   theme = 'dark'
 }) => {
   return (
@@ -92,136 +92,97 @@ export const ExpiryFilterDrawer: React.FC<ExpiryFilterDrawerProps> = ({
                     <Calendar className="w-4 h-4 text-slate-500" />
                     <span className={`text-xs font-black uppercase tracking-widest ${
                       theme === 'dark' ? 'text-slate-300' : 'text-slate-600'
-                    }`}>Rango de Vencimiento</span>
+                    }`}>Periodo Operativo</span>
                   </div>
-                  {(dateRange.start || dateRange.end) && (
+                  {actionPeriod !== 'all' && (
                     <button 
-                      onClick={() => setDateRange({ start: null, end: null })}
+                      onClick={() => setActionPeriod('all')}
                       className="text-[10px] font-black text-amber-500 uppercase hover:underline"
                     >
                       Limpiar
                     </button>
                   )}
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="date"
-                    value={dateRange.start ? format(dateRange.start, 'yyyy-MM-dd') : ''}
-                    onChange={(e) => setDateRange({ ...dateRange, start: e.target.value ? parseISO(e.target.value) : null })}
-                    className={`px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${
-                      theme === 'dark' 
-                        ? 'bg-white/5 border-white/5 text-white' 
-                        : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                  <input
-                    type="date"
-                    value={dateRange.end ? format(dateRange.end, 'yyyy-MM-dd') : ''}
-                    onChange={(e) => setDateRange({ ...dateRange, end: e.target.value ? parseISO(e.target.value) : null })}
-                    className={`px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${
-                      theme === 'dark' 
-                        ? 'bg-white/5 border-white/5 text-white' 
-                        : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
                 
-                {/* Quick Month Picker */}
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {[0, 1, 2, 3].map(offset => {
-                    const date = addMonths(new Date(), offset);
-                    const start = startOfMonth(date);
-                    const end = endOfMonth(date);
-                    const isActive = dateRange.start?.getTime() === start.getTime() && 
-                                   dateRange.end?.getTime() === end.getTime();
-                    
-                    return (
-                      <button
-                        key={offset}
-                        onClick={() => setDateRange({ start, end })}
-                        className={`px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border ${
-                          isActive
-                            ? 'bg-amber-500 border-amber-400 text-black shadow-lg shadow-amber-500/20'
-                            : theme === 'dark'
-                              ? 'bg-white/5 border-white/5 text-slate-400 hover:text-white hover:bg-white/10'
-                              : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
-                        }`}
-                      >
-                        {format(date, 'MMMM yyyy', { locale: undefined }).toUpperCase()}
-                      </button>
-                    );
-                  })}
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setActionPeriod('this_month')}
+                    className={`px-3 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
+                      actionPeriod === 'this_month'
+                        ? 'bg-amber-500 border-amber-400 text-black shadow-lg shadow-amber-500/20'
+                        : theme === 'dark'
+                          ? 'bg-white/5 border-white/5 text-slate-400 hover:text-white hover:bg-white/10'
+                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                    }`}
+                  >
+                    Este Mes
+                  </button>
+                  <button
+                    onClick={() => setActionPeriod('next_month')}
+                    className={`px-3 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
+                      actionPeriod === 'next_month'
+                        ? 'bg-amber-500 border-amber-400 text-black shadow-lg shadow-amber-500/20'
+                        : theme === 'dark'
+                          ? 'bg-white/5 border-white/5 text-slate-400 hover:text-white hover:bg-white/10'
+                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                    }`}
+                  >
+                    Próximo Mes
+                  </button>
+                  <button
+                    onClick={() => setActionPeriod('next_3_months')}
+                    className={`px-3 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border col-span-2 ${
+                      actionPeriod === 'next_3_months'
+                        ? 'bg-amber-500 border-amber-400 text-black shadow-lg shadow-amber-500/20'
+                        : theme === 'dark'
+                          ? 'bg-white/5 border-white/5 text-slate-400 hover:text-white hover:bg-white/10'
+                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                    }`}
+                  >
+                    Próximos 3 Meses
+                  </button>
+                  <button
+                    onClick={() => setActionPeriod('custom')}
+                    className={`px-3 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border col-span-2 ${
+                      actionPeriod === 'custom'
+                        ? 'bg-amber-500 border-amber-400 text-black shadow-lg shadow-amber-500/20'
+                        : theme === 'dark'
+                          ? 'bg-white/5 border-white/5 text-slate-400 hover:text-white hover:bg-white/10'
+                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                    }`}
+                  >
+                    Rango Personalizado
+                  </button>
                 </div>
-              </div>
 
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Download className="w-4 h-4 text-slate-500" />
-                    <span className={`text-xs font-black uppercase tracking-widest ${
-                      theme === 'dark' ? 'text-slate-300' : 'text-slate-600'
-                    }`}>Rango de Retiro</span>
-                  </div>
-                  {(withdrawalDateRange.start || withdrawalDateRange.end) && (
-                    <button 
-                      onClick={() => setWithdrawalDateRange({ start: null, end: null })}
-                      className="text-[10px] font-black text-amber-500 uppercase hover:underline"
-                    >
-                      Limpiar
-                    </button>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="date"
-                    value={withdrawalDateRange.start ? format(withdrawalDateRange.start, 'yyyy-MM-dd') : ''}
-                    onChange={(e) => setWithdrawalDateRange({ ...withdrawalDateRange, start: e.target.value ? parseISO(e.target.value) : null })}
-                    className={`px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${
-                      theme === 'dark' 
-                        ? 'bg-white/5 border-white/5 text-white' 
-                        : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                  <input
-                    type="date"
-                    value={withdrawalDateRange.end ? format(withdrawalDateRange.end, 'yyyy-MM-dd') : ''}
-                    onChange={(e) => setWithdrawalDateRange({ ...withdrawalDateRange, end: e.target.value ? parseISO(e.target.value) : null })}
-                    className={`px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${
-                      theme === 'dark' 
-                        ? 'bg-white/5 border-white/5 text-white' 
-                        : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
-                
-                {/* Quick Month Picker */}
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {[0, 1, 2, 3].map(offset => {
-                    const date = addMonths(new Date(), offset);
-                    const monthName = format(date, 'MMM', { locale: undefined }); // Simplified for now
-                    const year = format(date, 'yyyy');
-                    const start = startOfMonth(date);
-                    const end = endOfMonth(date);
-                    const isActive = withdrawalDateRange.start?.getTime() === start.getTime() && 
-                                   withdrawalDateRange.end?.getTime() === end.getTime();
-                    
-                    return (
-                      <button
-                        key={offset}
-                        onClick={() => setWithdrawalDateRange({ start, end })}
-                        className={`px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border ${
-                          isActive
-                            ? 'bg-amber-500 border-amber-400 text-black shadow-lg shadow-amber-500/20'
-                            : theme === 'dark'
-                              ? 'bg-white/5 border-white/5 text-slate-400 hover:text-white hover:bg-white/10'
-                              : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
-                        }`}
-                      >
-                        {format(date, 'MMMM yyyy', { locale: undefined }).toUpperCase()}
-                      </button>
-                    );
-                  })}
-                </div>
+                {actionPeriod === 'custom' && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="grid grid-cols-2 gap-2 pt-2"
+                  >
+                    <input
+                      type="date"
+                      value={customDateRange.start ? format(customDateRange.start, 'yyyy-MM-dd') : ''}
+                      onChange={(e) => setCustomDateRange({ ...customDateRange, start: e.target.value ? parseISO(e.target.value) : null })}
+                      className={`px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${
+                        theme === 'dark' 
+                          ? 'bg-white/5 border-white/5 text-white' 
+                          : 'bg-slate-50 border-slate-200 text-slate-900'
+                      }`}
+                    />
+                    <input
+                      type="date"
+                      value={customDateRange.end ? format(customDateRange.end, 'yyyy-MM-dd') : ''}
+                      onChange={(e) => setCustomDateRange({ ...customDateRange, end: e.target.value ? parseISO(e.target.value) : null })}
+                      className={`px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${
+                        theme === 'dark' 
+                          ? 'bg-white/5 border-white/5 text-white' 
+                          : 'bg-slate-50 border-slate-200 text-slate-900'
+                      }`}
+                    />
+                  </motion.div>
+                )}
               </div>
 
               <div className="space-y-4">

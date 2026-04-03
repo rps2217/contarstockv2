@@ -109,9 +109,8 @@ const ExpiryManagementPage: React.FC = () => {
     state.selectedStatuses.length + 
     state.selectedCategories.length + 
     (state.selectedCanje !== 'all' ? 1 : 0) +
-    (state.selectedEstado ? 1 : 0) +
-    (state.dateRange.start || state.dateRange.end ? 1 : 0) +
-    (state.withdrawalDateRange.start || state.withdrawalDateRange.end ? 1 : 0);
+    (state.actionPeriod !== 'all' ? 1 : 0) +
+    (state.customDateRange.start || state.customDateRange.end ? 1 : 0);
 
   const handleToggleSelect = (id: string) => {
     const newSelected = new Set(state.selectedIds);
@@ -154,9 +153,8 @@ const ExpiryManagementPage: React.FC = () => {
     actions.setSelectedStatuses([]);
     actions.setSelectedCategories([]);
     actions.setSelectedCanje('all');
-    actions.setSelectedEstado(null);
-    actions.setDateRange({ start: null, end: null });
-    actions.setWithdrawalDateRange({ start: null, end: null });
+    actions.setActionPeriod('all');
+    actions.setCustomDateRange({ start: null, end: null });
     addToast('Filtros restablecidos', 'info');
   };
 
@@ -439,6 +437,61 @@ const ExpiryManagementPage: React.FC = () => {
           activeFiltersCount={activeFiltersCount}
           theme={theme}
         />
+
+        {/* QUICK FILTER PILLS */}
+        <div className="flex items-center gap-2 mt-4 overflow-x-auto no-scrollbar pb-2">
+          <button
+            onClick={() => handleActionClick('monitor')}
+            className={`px-3 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${
+              state.selectedStatuses.includes('next_expiry') && state.selectedStatuses.length === 1 && state.selectedCanje === 'all'
+                ? 'bg-blue-500 border-blue-400 text-white shadow-md shadow-blue-500/20'
+                : theme === 'dark'
+                  ? 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'
+                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+            }`}
+          >
+            Próximos a Vencer
+          </button>
+          <button
+            onClick={() => handleActionClick('merma')}
+            className={`px-3 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${
+              state.selectedCanje === 'markdown' && state.selectedStatuses.includes('critical')
+                ? 'bg-rose-500 border-rose-400 text-white shadow-md shadow-rose-500/20'
+                : theme === 'dark'
+                  ? 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'
+                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+            }`}
+          >
+            Merma Crítica
+          </button>
+          <button
+            onClick={() => handleActionClick('canje')}
+            className={`px-3 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${
+              state.selectedCanje === 'canje' && state.selectedStatuses.includes('critical')
+                ? 'bg-amber-500 border-amber-400 text-black shadow-md shadow-amber-500/20'
+                : theme === 'dark'
+                  ? 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'
+                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+            }`}
+          >
+            Canjes Urgentes
+          </button>
+          <button
+            onClick={() => {
+              handleClearFilters();
+              actions.setActionPeriod('this_month');
+            }}
+            className={`px-3 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${
+              state.actionPeriod === 'this_month'
+                ? 'bg-emerald-500 border-emerald-400 text-white shadow-md shadow-emerald-500/20'
+                : theme === 'dark'
+                  ? 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'
+                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+            }`}
+          >
+            Retiros Este Mes
+          </button>
+        </div>
       </div>
 
       {/* MAIN LIST */}
@@ -474,7 +527,7 @@ const ExpiryManagementPage: React.FC = () => {
                   onToggleVerified={handleToggleVerified}
                   onRemove={confirmRemoveItem}
                   onFilterProvider={(provider) => actions.setSearchQuery(provider)}
-                  onFilterEstado={(estado) => actions.setSelectedEstado(estado)}
+                  onFilterEstado={(estado) => actions.setSearchQuery(estado)}
                   onFilterFrc={(frc) => actions.setSearchQuery(frc)}
                   theme={theme}
                   isCompact={state.preferences.compactView}
@@ -524,10 +577,10 @@ const ExpiryManagementPage: React.FC = () => {
         categories={state.categories}
         selectedCategories={state.selectedCategories}
         setSelectedCategories={actions.setSelectedCategories}
-        dateRange={state.dateRange}
-        setDateRange={actions.setDateRange}
-        withdrawalDateRange={state.withdrawalDateRange}
-        setWithdrawalDateRange={actions.setWithdrawalDateRange}
+        actionPeriod={state.actionPeriod}
+        setActionPeriod={actions.setActionPeriod}
+        customDateRange={state.customDateRange}
+        setCustomDateRange={actions.setCustomDateRange}
         theme={theme}
       />
 

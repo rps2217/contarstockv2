@@ -48,7 +48,7 @@ export const processExpiryItem = (
   const provider = supplierRut ? providerMap.get(supplierRut) : null;
   
   let withdrawalDate: Date | null = null;
-  const hasCanje = provider ? (provider.withdrawalDays ?? 0) > 0 : false;
+  const hasCanje = provider ? (provider.hasExchange ?? false) : false;
   
   if (item.fechaCC) {
     withdrawalDate = parseISO(item.fechaCC);
@@ -65,25 +65,35 @@ export const processExpiryItem = (
     : `${hasCanje ? "Canje" : "Merma"} ${format(withdrawalDate, 'MMM yyyy', { locale: es })}`;
 
   let riskScore = 0;
+  let lifePercent = 100;
   if (expiry) {
     const timeScore = Math.max(0, 60 - (daysLeft / 3)); 
     const commercialScore = hasCanje ? 10 : 25;
     const volumeScore = Math.min(15, (item.quantity || 1) * 0.3);
     riskScore = Math.round(timeScore + commercialScore + volumeScore);
     if (isPast(expiry)) riskScore = 100;
+    
+    // Calculate simple life percent (assuming 365 days total shelf life for visualization if unknown)
+    // If we have a creation date or similar, we could calculate accurate total shelf life.
+    // For now, we'll use a heuristic: 100% at 365 days, 0% at 0 days.
+    lifePercent = Math.max(0, Math.min(100, (daysLeft / 365) * 100));
   }
+
+  const providerName = provider?.name || 
+                       product?.supplier || 
+                       item.providerName || 
+                       (item as any).PROVEEDOR || 
+                       (item as any).PROV || 
+                       (item as any).proveedor || 
+                       (item as any).supplier || 
+                       'N/A';
+
+  const _searchIndex = `${item.barcode || ''} ${productName} ${providerName} ${item.batch || ''} ${item.frc || ''}`.toLowerCase();
 
   return {
     ...item,
     productName,
-    providerName: provider?.name || 
-                  product?.supplier || 
-                  item.providerName || 
-                  (item as any).PROVEEDOR || 
-                  (item as any).PROV || 
-                  (item as any).proveedor || 
-                  (item as any).supplier || 
-                  'N/A',
+    providerName,
     category: product?.category || 'GENERAL',
     withdrawalDays: provider?.withdrawalDays || 0,
     hasCanje,
@@ -95,9 +105,11 @@ export const processExpiryItem = (
     estado,
     quantity: item.quantity || 1,
     riskScore,
+    lifePercent,
     price: product?.price || 0,
     frc: item.frc || '',
-    syncStatus: item.syncStatus
+    syncStatus: item.syncStatus,
+    _searchIndex
   };
 };
 
@@ -107,35 +119,26 @@ export const filterExpiryItems = (
     query: string;
     selectedCategories: string[];
     selectedCanje: string;
-    selectedEstado: string | null;
-    dateRange: { start: Date | null; end: Date | null };
-    withdrawalDateRange: { start: Date | null; end: Date | null };
+    actionPeriod: 'all' | 'this_month' | 'next_month' | 'next_3_months' | 'custom';
+    customDateRange: { start: Date | null; end: Date | null };
   }
 ): ExpiryItem[] => {
-  const { query, selectedCategories, selectedCanje, selectedEstado, dateRange, withdrawalDateRange } = filters;
+  const { query, selectedCategories, selectedCanje, actionPeriod, customDateRange } = filters;
   
   // Pre-procesar la query para búsqueda ultra-rápida una sola vez
   const searchTerm = query.trim().toLowerCase();
   
-  return items.filter(item => {
-    // 1. Búsqueda Triple (SKU, Nombre, Proveedor) - PRIORIDAD ALTA
-    if (searchTerm) {
-      // Forzar conversión a String para evitar el crash ".includes is not a function"
-      const barcodeStr = String(item.barcode || "").toLowerCase();
-      const nameStr = String(item.productName || "").toLowerCase();
-      const providerStr = String(item.providerName || "").toLowerCase();
-      const batchStr = String(item.batch || "").toLowerCase();
-      const frcStr = String(item.frc || "").toLowerCase();
+  const now = new Date();
+  const currentMonthStart = startOfMonth(now);
+  const currentMonthEnd = endOfMonth(now);
+  const nextMonthStart = startOfMonth(addMonths(now, 1));
+  const nextMonthEnd = endOfMonth(addMonths(now, 1));
+  const next3MonthsEnd = endOfMonth(addMonths(now, 3));
 
-      const barcodeMatch = barcodeStr.includes(searchTerm);
-      const nameMatch = nameStr.includes(searchTerm);
-      const providerMatch = providerStr.includes(searchTerm);
-      const batchMatch = batchStr.includes(searchTerm);
-      const frcMatch = frcStr.includes(searchTerm);
-      
-      if (!barcodeMatch && !nameMatch && !providerMatch && !batchMatch && !frcMatch) {
-        return false;
-      }
+  return items.filter(item => {
+    // 1. Búsqueda Ultra-Rápida usando el índice pre-calculado
+    if (searchTerm && item._searchIndex && !item._searchIndex.includes(searchTerm)) {
+      return false;
     }
 
     if (selectedCategories.length > 0 && !selectedCategories.includes(item.category)) {
@@ -145,33 +148,32 @@ export const filterExpiryItems = (
     if (selectedCanje === 'canje' && !item.hasCanje) return false;
     if (selectedCanje === 'markdown' && item.hasCanje) return false;
 
-    if (selectedEstado && item.estado !== selectedEstado) return false;
-
-    if (dateRange.start || dateRange.end) {
-      if (!item.expiryDateObj) return false;
-      const itemDate = item.expiryDateObj.getTime();
-      
-      if (dateRange.start) {
-        const start = new Date(dateRange.start).setHours(0, 0, 0, 0);
-        if (itemDate < start) return false;
-      }
-      if (dateRange.end) {
-        const end = new Date(dateRange.end).setHours(23, 59, 59, 999);
-        if (itemDate > end) return false;
-      }
-    }
-
-    if (withdrawalDateRange.start || withdrawalDateRange.end) {
+    // Filtrado por Periodo Operativo basado en la Fecha de Retiro (Withdrawal Date)
+    if (actionPeriod !== 'all') {
       if (!item.withdrawalDate) return false;
-      const itemDate = item.withdrawalDate.getTime();
       
-      if (withdrawalDateRange.start) {
-        const start = new Date(withdrawalDateRange.start).setHours(0, 0, 0, 0);
-        if (itemDate < start) return false;
-      }
-      if (withdrawalDateRange.end) {
-        const end = new Date(withdrawalDateRange.end).setHours(23, 59, 59, 999);
-        if (itemDate > end) return false;
+      if (actionPeriod === 'this_month') {
+        if (!isWithinInterval(item.withdrawalDate, { start: currentMonthStart, end: currentMonthEnd }) && !isPast(item.withdrawalDate)) {
+          return false;
+        }
+      } else if (actionPeriod === 'next_month') {
+        if (!isWithinInterval(item.withdrawalDate, { start: nextMonthStart, end: nextMonthEnd })) {
+          return false;
+        }
+      } else if (actionPeriod === 'next_3_months') {
+        if (!isWithinInterval(item.withdrawalDate, { start: currentMonthStart, end: next3MonthsEnd }) && !isPast(item.withdrawalDate)) {
+          return false;
+        }
+      } else if (actionPeriod === 'custom') {
+        const itemDate = item.withdrawalDate.getTime();
+        if (customDateRange.start) {
+          const start = new Date(customDateRange.start).setHours(0, 0, 0, 0);
+          if (itemDate < start) return false;
+        }
+        if (customDateRange.end) {
+          const end = new Date(customDateRange.end).setHours(23, 59, 59, 999);
+          if (itemDate > end) return false;
+        }
       }
     }
 

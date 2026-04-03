@@ -29,9 +29,8 @@ export const useExpiryDatabase = () => {
     selectedStatuses, setSelectedStatuses,
     selectedCategories, setSelectedCategories,
     selectedCanje, setSelectedCanje,
-    selectedEstado, setSelectedEstado,
-    dateRange, setDateRange,
-    withdrawalDateRange, setWithdrawalDateRange,
+    actionPeriod, setActionPeriod,
+    customDateRange, setCustomDateRange,
     selectedIds, setSelectedIds,
     verifiedIds, setVerifiedIds
   } = useExpiryStore();
@@ -149,11 +148,10 @@ export const useExpiryDatabase = () => {
       query: debouncedSearch.toLowerCase(),
       selectedCategories,
       selectedCanje,
-      selectedEstado,
-      dateRange,
-      withdrawalDateRange
+      actionPeriod,
+      customDateRange
     });
-  }, [baseProcessedData, debouncedSearch, selectedCategories, selectedCanje, selectedEstado, dateRange, withdrawalDateRange]);
+  }, [baseProcessedData, debouncedSearch, selectedCategories, selectedCanje, actionPeriod, customDateRange]);
 
   const processedData = useMemo((): ExpiryItem[] => {
     const filtered = contextFilteredData.filter(item => {
@@ -281,13 +279,12 @@ export const useExpiryDatabase = () => {
     setSearchQuery('');
     setSelectedStatuses([]);
     setSelectedCategories([]);
-    setSelectedCanje(null);
-    setSelectedEstado(null);
-    setDateRange({ start: null, end: null });
-    setWithdrawalDateRange({ start: null, end: null });
+    setSelectedCanje('all');
+    setActionPeriod('all');
+    setCustomDateRange({ start: null, end: null });
     setSelectedIds(new Set());
     setVerifiedIds(new Set());
-  }, [setSearchQuery, setSelectedStatuses, setSelectedCategories, setSelectedCanje, setSelectedEstado, setDateRange, setWithdrawalDateRange, setSelectedIds, setVerifiedIds]);
+  }, [setSearchQuery, setSelectedStatuses, setSelectedCategories, setSelectedCanje, setActionPeriod, setCustomDateRange, setSelectedIds, setVerifiedIds]);
 
   return {
     state: {
@@ -295,9 +292,8 @@ export const useExpiryDatabase = () => {
       selectedStatuses,
       selectedCategories,
       selectedCanje,
-      selectedEstado,
-      dateRange,
-      withdrawalDateRange,
+      actionPeriod,
+      customDateRange,
       isSyncing,
       selectedIds,
       verifiedIds,
@@ -312,9 +308,8 @@ export const useExpiryDatabase = () => {
       setSelectedStatuses,
       setSelectedCategories,
       setSelectedCanje,
-      setSelectedEstado,
-      setDateRange,
-      setWithdrawalDateRange,
+      setActionPeriod,
+      setCustomDateRange,
       setSelectedIds,
       setVerifiedIds,
       handleSyncExpirations,
