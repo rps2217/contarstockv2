@@ -32,7 +32,6 @@ const Settings = lazyWithRetry(() => import('./features/settings/SettingsPage'))
 const ReceptionHub = lazyWithRetry(() => import('./features/reception/ReceptionHub'));
 const CountingPage = lazyWithRetry(() => import('./features/counting/CountingPage'));
 const HammerPage = lazyWithRetry(() => import('./features/hammer/HammerPage'));
-const DocumentReceptionPage = lazyWithRetry(() => import('./features/documents/DocumentReceptionPage'));
 const ExpiryManagement = lazyWithRetry(() => import('./features/expiry-feature/ExpiryManagementPage'));
 const EventManagement = lazyWithRetry(() => import('./features/events-feature/EventManagementPage'));
 const ExpiryCapturePage = lazyWithRetry(() => import('./features/expiry-feature/ExpiryCapturePage'));
@@ -58,7 +57,6 @@ const AppContent = () => {
   // Detectar si estamos en un modo de escaneo inmersivo
   const isScanningMode = location.pathname.startsWith('/counting/') || 
     location.pathname === '/reception' || 
-    location.pathname === '/documents' ||
     location.pathname === '/expiry/capture' ||
     location.pathname === '/events/capture' ||
     location.pathname.startsWith('/massive/');
@@ -163,7 +161,6 @@ const AppContent = () => {
                 
                 {/* RUTAS MODULARES DE FEATURES */}
                 <Route path="/reception" element={<ReceptionHub />} />
-                <Route path="/documents" element={<DocumentReceptionPage />} />
                 <Route path="/expiry" element={<ExpiryManagement />} />
                 <Route path="/expiry/capture" element={<ExpiryCapturePage />} />
                 <Route path="/events" element={<EventManagement />} />

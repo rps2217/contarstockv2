@@ -344,10 +344,10 @@ const Dashboard: React.FC = () => {
             </div>
             <div className="flex-1">
               <h4 className="text-lg font-black text-white uppercase tracking-wider">
-                Recepción Inteligente
+                Control de Arribo
               </h4>
               <p className="text-sm text-blue-100 font-medium mt-0.5">
-                Escanear documento físico con IA
+                Validar llegada de bultos y bandejas
               </p>
             </div>
             <ArrowRight className="w-8 h-8 text-white/50 group-hover:text-white transition-colors" />

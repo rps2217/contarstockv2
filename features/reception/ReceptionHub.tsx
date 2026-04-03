@@ -180,20 +180,6 @@ export const ReceptionHub: React.FC = () => {
         <div className="h-px bg-white/5 my-2"></div>
 
         <button 
-          onClick={() => navigate('/reports?create=true')}
-          className="group relative bg-blue-900/20 border-2 border-blue-500/20 rounded-[2rem] p-6 flex items-center gap-6 hover:border-blue-500 transition-all text-left active:scale-[0.98]"
-        >
-          <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-900/40 shrink-0">
-            <ScanLine className="w-8 h-8 text-white" />
-          </div>
-          <div>
-            <span className="block text-lg font-black uppercase tracking-tighter italic text-white">Nueva Carga</span>
-            <span className="text-[9px] text-blue-400 uppercase font-black tracking-widest mt-1 block">Conteo de Inventario Individual</span>
-          </div>
-          <ScanLine className="absolute top-6 right-6 w-5 h-5 text-blue-500 opacity-20 group-hover:opacity-100 transition-opacity" />
-        </button>
-
-        <button 
           onClick={handleEnterMartillo}
           className="group relative bg-slate-900 border-2 border-slate-800 rounded-[2rem] p-6 flex items-center gap-6 hover:border-blue-400 transition-all text-left active:scale-[0.98]"
         >
