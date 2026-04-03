@@ -27,8 +27,6 @@ interface CardSize {
 interface ExpiryPriorityPanelProps {
   stats: {
     priorityItems: ExpiryItem[];
-    volumeAlerts: { name: string; count: number }[];
-    suggestedActions?: { title: string; description: string; count: number; type: string }[];
   };
   theme: 'dark' | 'light';
   onSelectItem: (id: string) => void;
@@ -38,7 +36,25 @@ interface ExpiryPriorityPanelProps {
 const STORAGE_KEY = 'expiry-panel-layout';
 
 export const ExpiryPriorityPanel: React.FC<ExpiryPriorityPanelProps> = ({ stats, theme, onSelectItem, onActionClick }) => {
-  const { priorityItems, volumeAlerts, suggestedActions = [] } = stats;
+  const { priorityItems } = stats;
+
+  const getSuggestedActions = () => {
+    const actions: { title: string; description: string; type: string }[] = [];
+    
+    const hasExpiredMerma = priorityItems.some(i => i.daysLeft < 0 && !i.hasCanje);
+    const hasExpiredCanje = priorityItems.some(i => i.daysLeft < 0 && i.hasCanje);
+    const hasNearMerma = priorityItems.some(i => i.daysLeft >= 0 && i.daysLeft <= 30 && !i.hasCanje);
+    const hasNearCanje = priorityItems.some(i => i.daysLeft >= 0 && i.daysLeft <= 30 && i.hasCanje);
+
+    if (hasExpiredMerma) actions.push({ title: 'Merma Vencida', description: 'Retirar productos vencidos sin canje.', type: 'merma' });
+    if (hasExpiredCanje) actions.push({ title: 'Canje Vencido', description: 'Gestionar canje de productos vencidos.', type: 'canje' });
+    if (hasNearMerma) actions.push({ title: 'Merma Próxima', description: 'Revisar productos próximos a vencer sin canje.', type: 'merma' });
+    if (hasNearCanje) actions.push({ title: 'Canje Próximo', description: 'Revisar productos próximos a vencer con canje.', type: 'canje' });
+
+    return actions;
+  };
+
+  const suggestedActions = getSuggestedActions();
 
   // State for visibility and sizes
   const [hiddenCards, setHiddenCards] = useState<string[]>([]);
@@ -363,65 +379,6 @@ export const ExpiryPriorityPanel: React.FC<ExpiryPriorityPanelProps> = ({ stats,
                     No hay acciones prioritarias en este momento.
                   </div>
                 )}
-              </div>
-            </motion.div>
-          )}
-
-          {/* CARD 3: ALERTAS DE VOLUMEN */}
-          {!isHidden('volume-alerts') && (
-            <motion.div 
-              layout
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              style={{ 
-                height: cardSizes['volume-alerts']?.height || 'auto'
-              }}
-              className={`p-5 rounded-3xl border relative group transition-all overflow-hidden flex flex-col ${
-                theme === 'dark' ? 'bg-slate-900/50 border-white/10' : 'bg-white border-slate-200 shadow-sm'
-              }`}
-            >
-              <div className="absolute top-4 right-4 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button 
-                  onClick={() => updateSize('volume-alerts', { height: cardSizes['volume-alerts']?.height === '300px' ? 'auto' : '300px' })}
-                  className={`p-1.5 rounded-lg hover:bg-white/10 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}
-                  title="Cambiar altura"
-                >
-                  {cardSizes['volume-alerts']?.height === '300px' ? <Maximize2 className="rotate-90 w-3.5 h-3.5" /> : <Minimize2 className="rotate-90 w-3.5 h-3.5" />}
-                </button>
-                <button 
-                  onClick={() => toggleCard('volume-alerts')}
-                  className={`p-1.5 rounded-lg hover:bg-rose-500/20 text-rose-500`}
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
-                  <TrendingUp className="w-4 h-4 text-amber-500" />
-                </div>
-                <h3 className={`text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
-                  Alertas de Volumen
-                </h3>
-              </div>
-              
-              <div className={`space-y-3 flex-1 overflow-y-auto ${cardSizes['volume-alerts']?.height === '300px' ? 'max-h-[200px]' : ''}`}>
-                {volumeAlerts.map((alert) => (
-                  <div key={alert.name} className="space-y-1">
-                    <div className="flex items-center justify-between text-[10px] font-black uppercase">
-                      <span className={theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}>{alert.name}</span>
-                      <span className="text-amber-500">{alert.count} ítems</span>
-                    </div>
-                    <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-                      <motion.div 
-                        initial={{ width: 0 }}
-                        animate={{ width: `${Math.min(100, (alert.count / 10) * 100)}%` }}
-                        className="h-full bg-amber-500"
-                      />
-                    </div>
-                  </div>
-                ))}
               </div>
             </motion.div>
           )}
