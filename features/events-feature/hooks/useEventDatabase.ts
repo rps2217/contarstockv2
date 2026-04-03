@@ -76,7 +76,7 @@ export const useEventDatabase = () => {
       })
       .map(record => {
         const exp = record;
-        const barcode = eventMapping?.barcode ? exp[eventMapping.barcode] : (exp.SKU || exp.barcode);
+        const barcode = (eventMapping?.barcode ? exp[eventMapping.barcode] : (exp.SKU || exp.barcode)) || '';
         const product = productMap.get(normalizeSku(barcode || ''));
         const productName = product?.name || (eventMapping?.name ? exp[eventMapping.name] : (exp.DESCRIPTOR || exp.productName)) || 'Producto Desconocido';
         const providerName = product?.supplier || (eventMapping?.supplier ? exp[eventMapping.supplier] : (exp.PROVEEDOR || exp.supplier)) || 'N/A';
@@ -154,9 +154,10 @@ export const useEventDatabase = () => {
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       filtered = filtered.filter(e => 
-        e.productName.toLowerCase().includes(q) || 
-        e.barcode.toLowerCase().includes(q) ||
-        e.providerName.toLowerCase().includes(q)
+        (e.productName || '').toLowerCase().includes(q) || 
+        (e.barcode || '').toLowerCase().includes(q) ||
+        (e.providerName || '').toLowerCase().includes(q) ||
+        (e.frc || '').toLowerCase().includes(q)
       );
     }
     if (selectedEvents.length > 0) {
