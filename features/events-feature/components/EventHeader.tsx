@@ -10,6 +10,7 @@ interface EventHeaderProps {
   onNavigateExpiry: () => void;
   onToggleTheme: () => void;
   onOpenSettings: () => void;
+  onNavigateMobile: () => void;
   children?: React.ReactNode;
 }
 
@@ -22,6 +23,7 @@ export const EventHeader: React.FC<EventHeaderProps> = ({
   onNavigateExpiry,
   onToggleTheme,
   onOpenSettings,
+  onNavigateMobile,
   children
 }) => {
   return (
@@ -79,6 +81,19 @@ export const EventHeader: React.FC<EventHeaderProps> = ({
           >
             <Calendar className="w-4 h-4" />
             Vencimientos
+          </button>
+
+          <button
+            onClick={onNavigateMobile}
+            className={`flex-1 md:flex-none px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all border ${
+              theme === 'dark' 
+                ? 'bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/20 text-blue-500' 
+                : 'bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-600 shadow-sm'
+            }`}
+            title="Ir a Vista Móvil"
+          >
+            <AlertCircle className="w-4 h-4" />
+            Vista Móvil
           </button>
 
           <button

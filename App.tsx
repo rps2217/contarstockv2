@@ -36,6 +36,7 @@ const DocumentReceptionPage = lazyWithRetry(() => import('./features/documents/D
 const ExpiryManagement = lazyWithRetry(() => import('./features/expiry-feature/ExpiryManagementPage'));
 const EventManagement = lazyWithRetry(() => import('./features/events-feature/EventManagementPage'));
 const ExpiryCapturePage = lazyWithRetry(() => import('./features/expiry-feature/ExpiryCapturePage'));
+const EventCapturePage = lazyWithRetry(() => import('./features/events-feature/EventCapturePage'));
 const DynamicManagement = lazyWithRetry(() => import('./features/dynamic/DynamicManagementPage').then(m => ({ default: m.DynamicManagementPage })));
 const GlobalSyncQueue = lazyWithRetry(() => import('./features/sync/GlobalSyncQueuePage'));
 
@@ -59,6 +60,7 @@ const AppContent = () => {
     location.pathname === '/reception' || 
     location.pathname === '/documents' ||
     location.pathname === '/expiry/capture' ||
+    location.pathname === '/events/capture' ||
     location.pathname.startsWith('/massive/');
 
   useEffect(() => {
@@ -165,6 +167,7 @@ const AppContent = () => {
                 <Route path="/expiry" element={<ExpiryManagement />} />
                 <Route path="/expiry/capture" element={<ExpiryCapturePage />} />
                 <Route path="/events" element={<EventManagement />} />
+                <Route path="/events/capture" element={<EventCapturePage />} />
                 <Route path="/dynamic/:tableKey" element={<DynamicManagement />} />
                 <Route path="/counting/:id" element={<CountingPage />} />
                 <Route path="/massive/:batchId" element={<HammerPage />} />

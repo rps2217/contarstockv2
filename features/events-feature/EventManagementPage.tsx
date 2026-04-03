@@ -17,7 +17,7 @@ import { toast } from 'sonner';
 import { motion } from 'motion/react';
 import { format } from 'date-fns';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
 
 // Hooks
@@ -54,6 +54,17 @@ const EventManagementPage: React.FC = () => {
   
   const { state, actions } = useEventDatabase();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Redirección automática a vista móvil si es un PDA/Móvil
+  useEffect(() => {
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+    const preventAutoRedirect = location.state?.preventAutoRedirect;
+
+    if (isMobile && !preventAutoRedirect) {
+      navigate('/events/capture');
+    }
+  }, [navigate, location.state]);
 
   const handleBulkEdit = async (data: { destino: string; traspaso: string; observaciones: string }) => {
     const selectedIds = Array.from(state.selectedIds);
@@ -371,6 +382,7 @@ const EventManagementPage: React.FC = () => {
         onNavigateExpiry={() => navigate('/expiry')}
         onToggleTheme={toggleTheme}
         onOpenSettings={() => setIsSettingsDrawerOpen(true)}
+        onNavigateMobile={() => navigate('/events/capture')}
       >
         <EventSearchBar 
           searchQuery={state.searchQuery}
