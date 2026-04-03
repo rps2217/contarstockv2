@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, memo } from "react";
+import { motion } from "motion/react";
 import { useLocation } from "react-router-dom";
 import {
   ScanLine,
@@ -31,7 +32,7 @@ import { sanitizeBarcode } from "../../services/utils";
 import { useHIDScanner } from "../../hooks/useHIDScanner";
 
 const Dashboard: React.FC = () => {
-  const { operatorId, isSyncNeeded, pendingOrders, navigate, dynamicStats } =
+  const { operatorId, isSyncNeeded, pendingOrders, navigate, dynamicStats, syncStatus, triggerSync } =
     useDashboard();
   const location = useLocation();
   const [hasConfigError, setHasConfigError] = useState(false);
@@ -175,7 +176,7 @@ const Dashboard: React.FC = () => {
       )}
 
       {/* HEADER */}
-      <header className="px-6 py-8 bg-white dark:bg-slate-900/50 border-b border-slate-200 dark:border-white/5 sticky top-0 z-50 shadow-sm">
+      <header className="px-6 pt-8 pb-6 bg-white dark:bg-slate-900/50 border-b border-slate-200 dark:border-white/5 sticky top-0 z-50 shadow-sm">
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-2xl font-black tracking-tight leading-none">
@@ -193,44 +194,53 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* UNIVERSAL SCAN INPUT */}
-        <div className="relative">
-          <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-            <ScanLine className="w-6 h-6 text-blue-600" />
-          </div>
-          <input
-            type="text"
-            value={scanInput}
-            onChange={(e) => setScanInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                handleUniversalScan(scanInput);
-              }
-            }}
-            placeholder="Escanear Orden o Producto..."
-            className="w-full h-16 bg-white dark:bg-slate-950 border-2 border-blue-200 dark:border-blue-900 rounded-2xl pl-14 pr-4 text-lg font-black shadow-lg shadow-blue-500/10 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600"
-            disabled={isProcessingScan}
-            autoFocus
-          />
-          {isProcessingScan && (
-            <div className="absolute inset-y-0 right-4 flex items-center">
-              <RefreshCw className="w-5 h-5 text-blue-500 animate-spin" />
+        {/* UNIVERSAL SCAN INPUT - HERO ACTION */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative"
+        >
+          <motion.div 
+            animate={{ scale: [1, 1.01, 1] }}
+            transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+            className="relative"
+          >
+            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+              <ScanLine className="w-7 h-7 text-blue-600" />
             </div>
-          )}
-        </div>
+            <input
+              type="text"
+              value={scanInput}
+              onChange={(e) => setScanInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleUniversalScan(scanInput);
+                }
+              }}
+              placeholder="Escanear Orden o Producto..."
+              className="w-full h-20 bg-white dark:bg-slate-950 border-4 border-blue-500 rounded-3xl pl-16 pr-6 text-2xl font-black shadow-2xl shadow-blue-500/20 focus:border-blue-600 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600"
+              disabled={isProcessingScan}
+              autoFocus
+            />
+            {isProcessingScan && (
+              <div className="absolute inset-y-0 right-6 flex items-center">
+                <RefreshCw className="w-7 h-7 text-blue-500 animate-spin" />
+              </div>
+            )}
+          </motion.div>
+        </motion.div>
       </header>
 
-      <div className="p-6 max-w-4xl mx-auto space-y-6">
-        {/* ALERTA DE CONFIGURACIÓN - Eliminada por migración a Firebase */}
-
+      <div className="p-6 max-w-4xl mx-auto space-y-8">
+        
         {/* SALUD DE TABLAS DINÁMICAS */}
         {((dynamicStats?.pending || 0) > 0 ||
           (dynamicStats?.error || 0) > 0) && (
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 rounded-2xl p-5 shadow-sm">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 rounded-3xl p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Database className="w-5 h-5 text-blue-500" />
-                <h2 className="text-sm font-black uppercase tracking-widest text-slate-500">
+                <h2 className="text-xs font-black uppercase tracking-widest text-slate-500">
                   Salud de Tablas
                 </h2>
               </div>
@@ -242,20 +252,20 @@ const Dashboard: React.FC = () => {
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-100 dark:border-white/5">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-100 dark:border-white/5">
                 <div className="flex items-center gap-2 mb-1">
-                  <Cloud className="w-3.5 h-3.5 text-blue-500" />
+                  <Cloud className="w-4 h-4 text-blue-500" />
                   <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
                     Pendientes
                   </span>
                 </div>
-                <div className="text-xl font-black">
+                <div className="text-2xl font-black">
                   {dynamicStats?.pending || 0}
                 </div>
               </div>
               <div
-                className={`p-3 rounded-xl border ${
+                className={`p-4 rounded-2xl border ${
                   (dynamicStats?.error || 0) > 0
                     ? "bg-rose-50 dark:bg-rose-900/20 border-rose-100 dark:border-rose-500/30"
                     : "bg-slate-50 dark:bg-white/5 border-slate-100 dark:border-white/5"
@@ -263,14 +273,14 @@ const Dashboard: React.FC = () => {
               >
                 <div className="flex items-center gap-2 mb-1">
                   <AlertCircle
-                    className={`w-3.5 h-3.5 ${(dynamicStats?.error || 0) > 0 ? "text-rose-500" : "text-slate-400"}`}
+                    className={`w-4 h-4 ${(dynamicStats?.error || 0) > 0 ? "text-rose-500" : "text-slate-400"}`}
                   />
                   <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
                     Errores
                   </span>
                 </div>
                 <div
-                  className={`text-xl font-black ${(dynamicStats?.error || 0) > 0 ? "text-rose-500" : ""}`}
+                  className={`text-2xl font-black ${(dynamicStats?.error || 0) > 0 ? "text-rose-500" : ""}`}
                 >
                   {dynamicStats?.error || 0}
                 </div>
@@ -282,18 +292,18 @@ const Dashboard: React.FC = () => {
         {/* ÓRDENES PENDIENTES */}
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-black uppercase tracking-widest text-slate-500">
+            <h2 className="text-xs font-black uppercase tracking-widest text-slate-500">
               Órdenes Pendientes
             </h2>
-            <span className="bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-400 text-xs font-black px-2.5 py-1 rounded-full">
+            <span className="bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-400 text-xs font-black px-3 py-1 rounded-full">
               {pendingOrders?.length || 0}
             </span>
           </div>
 
           <div className="space-y-3">
             {!visibleOrders || visibleOrders.length === 0 ? (
-              <div className="bg-white dark:bg-slate-900 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl p-8 text-center">
-                <Package className="w-12 h-12 text-slate-300 dark:text-slate-700 mx-auto mb-3" />
+              <div className="bg-white dark:bg-slate-900 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl p-10 text-center">
+                <Package className="w-16 h-16 text-slate-300 dark:text-slate-700 mx-auto mb-4" />
                 <p className="text-sm font-bold text-slate-500">
                   No hay órdenes pendientes
                 </p>
@@ -313,7 +323,7 @@ const Dashboard: React.FC = () => {
                 {pendingOrders && pendingOrders.length > 5 && (
                   <button
                     onClick={() => setShowAllOrders(!showAllOrders)}
-                    className="w-full py-3 text-xs font-black text-blue-600 uppercase tracking-widest hover:bg-blue-50 rounded-xl transition-colors"
+                    className="w-full py-4 text-xs font-black text-blue-600 uppercase tracking-widest hover:bg-blue-50 rounded-2xl transition-colors"
                   >
                     {showAllOrders ? "Ver menos" : `Ver ${pendingOrders.length - 5} más...`}
                   </button>
@@ -323,92 +333,110 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* RECEPCIÓN (INBOUND HUB) */}
-        <button
-          onClick={() => navigate("/reception")}
-          className="w-full bg-slate-900 dark:bg-slate-800 border-2 border-slate-800 dark:border-slate-700 p-5 rounded-2xl flex items-center gap-4 active:scale-[0.98] transition-all text-left group hover:border-blue-500"
-        >
-          <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center shrink-0">
-            <Box className="w-6 h-6 text-white" />
-          </div>
-          <div className="flex-1">
-            <h4 className="text-base font-black text-white uppercase tracking-wider">
-              Recepción Inteligente
-            </h4>
-            <p className="text-xs text-slate-400 font-medium mt-0.5">
-              Escanear documento físico con IA
-            </p>
-          </div>
-          <ArrowRight className="w-5 h-5 text-slate-500 group-hover:text-white transition-colors" />
-        </button>
-
-        {/* HERRAMIENTAS */}
-        <div className="grid grid-cols-3 gap-4">
-          <Card
-            hoverable
-            onClick={() => navigate("/database")}
-            className="flex flex-col items-center justify-center gap-3 p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-2xl"
+        {/* ACCIONES RÁPIDAS Y HERRAMIENTAS */}
+        <div className="grid grid-cols-1 gap-4">
+          <button
+            onClick={() => navigate("/reception")}
+            className="w-full bg-blue-600 p-6 rounded-3xl flex items-center gap-5 active:scale-[0.98] transition-all text-left shadow-lg shadow-blue-600/20 group"
           >
-            <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-xl">
-              <Database className="w-6 h-6 text-amber-600 dark:text-amber-500" />
+            <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center shrink-0">
+              <Box className="w-8 h-8 text-white" />
             </div>
-            <span className="text-[10px] font-black uppercase tracking-wider">
-              Catálogo
-            </span>
-          </Card>
-
-          <Card
-            hoverable
-            onClick={() => navigate("/massive/BURST-MODE")}
-            className="flex flex-col items-center justify-center gap-3 p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-2xl"
-          >
-            <div className="bg-rose-50 dark:bg-rose-900/20 p-3 rounded-xl">
-              <Zap className="w-6 h-6 text-rose-600 dark:text-rose-500" />
+            <div className="flex-1">
+              <h4 className="text-lg font-black text-white uppercase tracking-wider">
+                Recepción Inteligente
+              </h4>
+              <p className="text-sm text-blue-100 font-medium mt-0.5">
+                Escanear documento físico con IA
+              </p>
             </div>
-            <span className="text-[10px] font-black uppercase tracking-wider">
-              Hammer
-            </span>
-          </Card>
+            <ArrowRight className="w-8 h-8 text-white/50 group-hover:text-white transition-colors" />
+          </button>
 
-          <Card
-            hoverable
-            onClick={() => navigate("/sync")}
-            className={`flex flex-col items-center justify-center gap-3 p-6 rounded-2xl transition-all ${isSyncNeeded ? "bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-500/50 animate-pulse" : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"}`}
-          >
-            <div
-              className={`p-3 rounded-xl ${isSyncNeeded ? "bg-orange-100 dark:bg-orange-500/20" : "bg-slate-800"}`}
+          <div className="grid grid-cols-3 gap-4">
+            <Card
+              hoverable
+              onClick={() => navigate("/database")}
+              className="flex flex-col items-center justify-center gap-3 p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-3xl"
             >
-              <Radio
-                className={`w-6 h-6 ${isSyncNeeded ? "text-orange-600 dark:text-orange-500" : "text-slate-400"}`}
-              />
-            </div>
-            <span className="text-[10px] font-black uppercase tracking-wider">
-              Sync
-            </span>
-          </Card>
-        </div>
+              <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-2xl">
+                <Database className="w-7 h-7 text-amber-600 dark:text-amber-500" />
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-wider">
+                Catálogo
+              </span>
+            </Card>
 
-        {/* AJUSTES Y REPORTES */}
-        <div className="grid grid-cols-2 gap-4">
-          <button
-            onClick={() => navigate("/reports")}
-            className="flex items-center justify-center gap-2 p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-          >
-            <FileText className="w-4 h-4" />
-            <span className="text-xs font-bold uppercase tracking-wider">
-              Reportes
-            </span>
-          </button>
+            <Card
+              hoverable
+              onClick={() => navigate("/massive/BURST-MODE")}
+              className="flex flex-col items-center justify-center gap-3 p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-3xl"
+            >
+              <div className="bg-rose-50 dark:bg-rose-900/20 p-4 rounded-2xl">
+                <Zap className="w-7 h-7 text-rose-600 dark:text-rose-500" />
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-wider">
+                Hammer
+              </span>
+            </Card>
 
-          <button
-            onClick={() => navigate("/settings")}
-            className="flex items-center justify-center gap-2 p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
-          >
-            <Settings className="w-4 h-4" />
-            <span className="text-xs font-bold uppercase tracking-wider">
-              Ajustes
-            </span>
-          </button>
+            <Card
+              hoverable
+              onClick={triggerSync}
+              className={`flex flex-col items-center justify-center gap-3 p-6 rounded-3xl transition-all ${
+                syncStatus.state === 'SYNCING' ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 animate-pulse" :
+                syncStatus.state === 'ERROR' ? "bg-rose-50 dark:bg-rose-900/20 border-rose-200" :
+                isSyncNeeded ? "bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-500/50" : 
+                "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+              }`}
+            >
+              <div
+                className={`p-4 rounded-2xl ${
+                  syncStatus.state === 'SYNCING' ? "bg-blue-100" :
+                  syncStatus.state === 'ERROR' ? "bg-rose-100" :
+                  isSyncNeeded ? "bg-orange-100 dark:bg-orange-500/20" : 
+                  "bg-slate-800"
+                }`}
+              >
+                {syncStatus.state === 'SYNCING' ? (
+                  <RefreshCw className="w-7 h-7 text-blue-600 animate-spin" />
+                ) : (
+                  <Radio
+                    className={`w-7 h-7 ${
+                      syncStatus.state === 'ERROR' ? "text-rose-600" :
+                      isSyncNeeded ? "text-orange-600 dark:text-orange-500" : 
+                      "text-slate-400"
+                    }`}
+                  />
+                )}
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-wider">
+                {syncStatus.state === 'SYNCING' ? 'Syncing...' : 'Sync'}
+              </span>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              onClick={() => navigate("/reports")}
+              className="flex items-center justify-center gap-3 p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            >
+              <FileText className="w-5 h-5" />
+              <span className="text-sm font-bold uppercase tracking-wider">
+                Reportes
+              </span>
+            </button>
+
+            <button
+              onClick={() => navigate("/settings")}
+              className="flex items-center justify-center gap-3 p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+            >
+              <Settings className="w-5 h-5" />
+              <span className="text-sm font-bold uppercase tracking-wider">
+                Ajustes
+              </span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

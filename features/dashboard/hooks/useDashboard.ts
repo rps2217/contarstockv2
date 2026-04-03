@@ -1,11 +1,18 @@
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useState, useEffect } from 'react';
 import { ScanRepository } from '../../../repositories/ScanRepository';
 import { ExpectedOrderRepository } from '../../../repositories/ExpectedOrderRepository';
 import { db } from '../../../db';
+import { syncFSM, SyncStatus } from '../../../services/syncFSM';
 
 export const useDashboard = () => {
   const navigate = useNavigate();
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>({ state: 'IDLE', pendingCount: 0 });
+
+  useEffect(() => {
+    return syncFSM.subscribe(setSyncStatus);
+  }, []);
   
   const stats = useLiveQuery(async () => {
     const today = new Date().setHours(0,0,0,0);
@@ -30,7 +37,9 @@ export const useDashboard = () => {
     dynamicStats,
     operatorId,
     isSyncNeeded,
+    syncStatus,
     pendingOrders,
-    navigate
+    navigate,
+    triggerSync: () => syncFSM.runSync()
   };
 };
