@@ -132,6 +132,22 @@ export const useEventDatabase = () => {
     localStorage.setItem('event_preferences', JSON.stringify({ ...preferences, ...newPrefs }));
   }, [preferences]);
 
+  const processedEvents = useMemo(() => {
+    let filtered = baseProcessedData;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(e => 
+        e.productName.toLowerCase().includes(q) || 
+        e.barcode.toLowerCase().includes(q) ||
+        e.providerName.toLowerCase().includes(q)
+      );
+    }
+    if (selectedEvents.length > 0) {
+      filtered = filtered.filter(e => selectedEvents.includes(e.event));
+    }
+    return filtered;
+  }, [baseProcessedData, searchQuery, selectedEvents]);
+
   return {
     state: {
       searchQuery,
@@ -139,13 +155,13 @@ export const useEventDatabase = () => {
       selectedIds,
       allItems: baseProcessedData,
       preferences,
-      processedEvents: baseProcessedData,
-      pendingEvents: baseProcessedData.filter(e => !e.isAdjusted),
-      adjustedEvents: baseProcessedData.filter(e => e.isAdjusted),
+      processedEvents: processedEvents,
+      pendingEvents: processedEvents.filter(e => !e.isAdjusted),
+      adjustedEvents: processedEvents.filter(e => e.isAdjusted),
       totalCount: baseProcessedData.length,
-      filteredCount: baseProcessedData.length,
-      pendingCount: baseProcessedData.filter(i => !i.isAdjusted).length,
-      adjustedCount: baseProcessedData.filter(i => i.isAdjusted).length,
+      filteredCount: processedEvents.length,
+      pendingCount: processedEvents.filter(i => !i.isAdjusted).length,
+      adjustedCount: processedEvents.filter(i => i.isAdjusted).length,
       priorityStats: { priorityItems: [], eventAlerts: [], suggestedActions: [] },
       eventTypes: Array.from(new Set(baseProcessedData.map(i => i.event))),
       pendingOperations: 0
@@ -158,14 +174,50 @@ export const useEventDatabase = () => {
       handleBulkRemove,
       handleAddItem,
       handleUpdatePreferences,
-      clearLocalData: async () => {},
-      updateEventBulkFieldsMany: async (ids: string[], updates: any) => {},
+      clearLocalData: async () => {
+        setSearchQuery('');
+        setSelectedEvents([]);
+        setSelectedIds(new Set());
+      },
+      updateEventBulkFieldsMany: async (ids: string[], updates: any) => {
+        try {
+          for (const id of ids) {
+            await firebaseSyncService.pushChange(tableName, id, updates);
+          }
+          addToast(`${ids.length} eventos actualizados`, 'success');
+        } catch (error: any) {
+          addToast(`Error al actualizar eventos: ${error.message}`, 'error');
+        }
+      },
       clearSelection: () => setSelectedIds(new Set()),
-      updateEvent: async (id: string, data: any) => ({}),
-      createEvent: async (data: any) => ({}),
+      updateEvent: async (id: string, data: any) => {
+        try {
+          await firebaseSyncService.pushChange(tableName, id, data);
+          addToast('Evento actualizado', 'success');
+        } catch (error: any) {
+          addToast(`Error al actualizar evento: ${error.message}`, 'error');
+        }
+      },
+      createEvent: async (data: any) => {
+        return handleAddItem(data);
+      },
       setPendingOperations: (op: any) => {},
-      deleteEvent: async (id: string) => {},
-      updateEventStatus: async (id: string, isAdjusted: boolean) => {},
+      deleteEvent: async (id: string) => {
+        try {
+          await firebaseSyncService.deleteRemote(tableName, id);
+          addToast('Evento eliminado', 'success');
+        } catch (error: any) {
+          addToast(`Error al eliminar evento: ${error.message}`, 'error');
+        }
+      },
+      updateEventStatus: async (id: string, isAdjusted: boolean) => {
+        try {
+          await firebaseSyncService.pushChange(tableName, id, { isAdjusted });
+          addToast('Estado actualizado', 'success');
+        } catch (error: any) {
+          addToast(`Error al actualizar estado: ${error.message}`, 'error');
+        }
+      },
       handleToggleSelect: (id: string) => {
         setSelectedIds(prev => {
           const next = new Set(prev);
@@ -174,8 +226,21 @@ export const useEventDatabase = () => {
           return next;
         });
       },
-      handleSelectAll: () => {},
-      updateEventDestino: async (id: string, destino: string) => {},
+      handleSelectAll: () => {
+        if (selectedIds.size === processedEvents.length) {
+          setSelectedIds(new Set());
+        } else {
+          setSelectedIds(new Set(processedEvents.map(e => e.id)));
+        }
+      },
+      updateEventDestino: async (id: string, destino: string) => {
+        try {
+          await firebaseSyncService.pushChange(tableName, id, { destino });
+          addToast('Destino actualizado', 'success');
+        } catch (error: any) {
+          addToast(`Error al actualizar destino: ${error.message}`, 'error');
+        }
+      },
       togglePreference: (prefs: Partial<EventPreferences>) => {
         setPreferences(prev => ({ ...prev, ...prefs }));
       }

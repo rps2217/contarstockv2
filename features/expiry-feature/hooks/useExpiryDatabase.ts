@@ -253,8 +253,17 @@ export const useExpiryDatabase = () => {
   }, [setPreferences]);
 
   const clearLocalData = useCallback(async () => {
-    // Ya no se usa base de datos local
-  }, []);
+    // Ya no se usa base de datos local, pero vaciamos el store
+    setSearchQuery('');
+    setSelectedStatuses([]);
+    setSelectedCategories([]);
+    setSelectedCanje(null);
+    setSelectedEstado(null);
+    setDateRange({ start: null, end: null });
+    setWithdrawalDateRange({ start: null, end: null });
+    setSelectedIds(new Set());
+    setVerifiedIds(new Set());
+  }, [setSearchQuery, setSelectedStatuses, setSelectedCategories, setSelectedCanje, setSelectedEstado, setDateRange, setWithdrawalDateRange, setSelectedIds, setVerifiedIds]);
 
   return {
     state: {
@@ -269,7 +278,7 @@ export const useExpiryDatabase = () => {
       selectedIds,
       verifiedIds,
       allItems: baseProcessedData,
-      processedScans: baseProcessedData,
+      processedScans: processedData,
       categories,
       stats,
       preferences
