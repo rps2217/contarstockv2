@@ -8,9 +8,7 @@ import { useToastStore } from '../../../store/useToastStore';
 interface ExpiryItemCardProps {
   item: any;
   isSelected: boolean;
-  isVerified: boolean;
   onToggleSelect: (id: string) => void;
-  onToggleVerified: (id: string) => void;
   onRemove: (item: any) => void;
   onFilterProvider?: (provider: string) => void;
   onFilterEstado?: (estado: string) => void;
@@ -84,9 +82,7 @@ const STATUS_CONFIG: Record<string, {
 export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
   item,
   isSelected,
-  isVerified,
   onToggleSelect,
-  onToggleVerified,
   onRemove,
   onFilterProvider,
   onFilterEstado,
@@ -105,9 +101,6 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
     if (isSelected) {
       return `${base} border-indigo-500 bg-indigo-500/10`;
     }
-    if (isVerified) {
-      return `${base} border-emerald-500/50 bg-emerald-500/10 opacity-60`;
-    }
     
     return `${base} ${themeBase} ${statusConfig.cardBorder} ${statusConfig.cardBg}`;
   };
@@ -122,7 +115,7 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
       className={`border rounded-2xl flex flex-col md:grid md:grid-cols-[80px_2fr_1fr_1fr_1.5fr_80px] items-start md:items-center gap-4 md:gap-6 group transition-all ${getCardStyles()}`}
     >
       <div className="flex w-full md:contents gap-4 items-start">
-        {/* COLUMN 1: ICON & VERIF */}
+        {/* COLUMN 1: ICON */}
         <div className="flex flex-col items-center gap-2 shrink-0">
           <div 
             onClick={(e) => {
@@ -144,22 +137,6 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
               </div>
             )}
           </div>
-          
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleVerified(item.id);
-            }}
-            className={`w-full py-0.5 rounded-lg text-[7px] font-black uppercase tracking-widest transition-all border ${
-              isVerified
-                ? 'bg-emerald-500 border-emerald-400 text-white'
-                : theme === 'dark' 
-                  ? 'bg-white/5 border-white/10 text-slate-500 hover:border-emerald-500/50'
-                  : 'bg-stone-100 border-stone-200 text-stone-400 hover:border-emerald-500/50'
-            }`}
-          >
-            {isVerified ? 'OK' : 'VERIF'}
-          </button>
         </div>
 
         {/* COLUMN 2: PRODUCT & PROVIDER */}
@@ -191,20 +168,6 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
             )}
           </div>
           
-          {/* LIFE PERCENT PROGRESS BAR */}
-          {item.lifePercent !== undefined && (
-            <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden mt-0.5 mb-0.5" title={`${Math.round(item.lifePercent)}% de vida útil restante`}>
-              <div 
-                className={`h-full rounded-full transition-all duration-1000 ${
-                  item.lifePercent > 50 ? 'bg-emerald-500' :
-                  item.lifePercent > 20 ? 'bg-amber-500' :
-                  'bg-rose-500'
-                }`}
-                style={{ width: `${item.lifePercent}%` }}
-              />
-            </div>
-          )}
-
           <div className="flex items-center gap-2">
             <span 
               onClick={(e) => {

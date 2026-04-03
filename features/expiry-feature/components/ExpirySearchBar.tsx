@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Filter, X, Camera, Plus } from 'lucide-react';
-import { BarcodeScannerModal } from './BarcodeScannerModal';
+import { Search, Filter, X, Plus } from 'lucide-react';
 
 interface ExpirySearchBarProps {
   searchQuery: string;
@@ -21,7 +20,6 @@ export const ExpirySearchBar: React.FC<ExpirySearchBarProps> = ({
   activeFiltersCount,
   theme = 'dark'
 }) => {
-  const [isScannerOpen, setIsScannerOpen] = React.useState(false);
   const [localQuery, setLocalQuery] = React.useState(searchQuery);
 
   // Sincronizar localQuery con searchQuery cuando cambie externamente (ej: al limpiar filtros)
@@ -67,17 +65,6 @@ export const ExpirySearchBar: React.FC<ExpirySearchBarProps> = ({
             </button>
           )}
         </div>
-        <button
-          onClick={() => setIsScannerOpen(true)}
-          className={`shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center border transition-all ${
-            theme === 'dark' 
-              ? 'bg-amber-500/10 border-amber-500/20 text-amber-500 hover:bg-amber-500/20' 
-              : 'bg-amber-50 border-amber-200 text-amber-600 hover:bg-amber-100'
-          }`}
-          title="Escanear código de barras"
-        >
-          <Camera className="w-6 h-6" />
-        </button>
       </div>
       
       <div className="flex gap-3">
@@ -124,13 +111,6 @@ export const ExpirySearchBar: React.FC<ExpirySearchBarProps> = ({
           <X className="w-5 h-5 text-slate-400 group-hover:rotate-90 transition-transform" />
         </button>
       </div>
-      
-      <BarcodeScannerModal 
-        isOpen={isScannerOpen}
-        onClose={() => setIsScannerOpen(false)}
-        onScan={(barcode) => setSearchQuery(barcode)}
-        theme={theme}
-      />
     </div>
   );
 };

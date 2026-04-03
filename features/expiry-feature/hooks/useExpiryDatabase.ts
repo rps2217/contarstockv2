@@ -31,8 +31,7 @@ export const useExpiryDatabase = () => {
     selectedCanje, setSelectedCanje,
     actionPeriod, setActionPeriod,
     customDateRange, setCustomDateRange,
-    selectedIds, setSelectedIds,
-    verifiedIds, setVerifiedIds
+    selectedIds, setSelectedIds
   } = useExpiryStore();
 
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -283,8 +282,7 @@ export const useExpiryDatabase = () => {
     setActionPeriod('all');
     setCustomDateRange({ start: null, end: null });
     setSelectedIds(new Set());
-    setVerifiedIds(new Set());
-  }, [setSearchQuery, setSelectedStatuses, setSelectedCategories, setSelectedCanje, setActionPeriod, setCustomDateRange, setSelectedIds, setVerifiedIds]);
+  }, [setSearchQuery, setSelectedStatuses, setSelectedCategories, setSelectedCanje, setActionPeriod, setCustomDateRange, setSelectedIds]);
 
   return {
     state: {
@@ -296,7 +294,6 @@ export const useExpiryDatabase = () => {
       customDateRange,
       isSyncing,
       selectedIds,
-      verifiedIds,
       allItems: baseProcessedData,
       processedScans: processedData,
       categories,
@@ -311,7 +308,6 @@ export const useExpiryDatabase = () => {
       setActionPeriod,
       setCustomDateRange,
       setSelectedIds,
-      setVerifiedIds,
       handleSyncExpirations,
       handleRemoveItem,
       handleBulkRemove,

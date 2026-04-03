@@ -168,8 +168,6 @@ const EventManagementPage: React.FC = () => {
   const handleClearFilters = () => {
     actions.setSelectedEvents([]);
     actions.setSearchQuery('');
-    actions.setActionPeriod('all');
-    actions.setCustomDateRange({ start: null, end: null });
   };
 
   const handleToggleEvent = (event: string) => {
