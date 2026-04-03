@@ -76,27 +76,49 @@ export const useEventDatabase = () => {
       })
       .map(record => {
         const exp = record;
-        const barcode = (eventMapping?.barcode ? exp[eventMapping.barcode] : (exp.SKU || exp.barcode)) || '';
-        const product = productMap.get(normalizeSku(barcode || ''));
-        const productName = product?.name || (eventMapping?.name ? exp[eventMapping.name] : (exp.DESCRIPTOR || exp.productName)) || 'Producto Desconocido';
-        const providerName = product?.supplier || (eventMapping?.supplier ? exp[eventMapping.supplier] : (exp.PROVEEDOR || exp.supplier)) || 'N/A';
         
+        // Helper to find field in record with multiple fallbacks
+        const getField = (mappingKey: string | undefined, fallbacks: string[]) => {
+          if (mappingKey && exp[mappingKey] !== undefined) return exp[mappingKey];
+          for (const key of fallbacks) {
+            if (exp[key] !== undefined) return exp[key];
+          }
+          return undefined;
+        };
+
+        const barcode = String(getField(eventMapping?.barcode, ['SKU', 'sku', 'barcode', 'BARCODE', 'codigo', 'CODIGO', 'Codigo', 'EAN', 'ean', 'UPC', 'upc']) || '').trim();
+        const product = productMap.get(normalizeSku(barcode));
+        
+        const productName = product?.name || 
+          getField(eventMapping?.name, ['DESCRIPTOR', 'descriptor', 'productName', 'PRODUCTO', 'producto', 'Name', 'name', 'DESCRIPCION', 'descripcion']) || 
+          'Producto Desconocido';
+          
+        const providerName = product?.supplier || 
+          getField(eventMapping?.supplier, ['PROVEEDOR', 'proveedor', 'supplier', 'SUPPLIER', 'Proveedor', 'Provider', 'FABRICANTE', 'fabricante']) || 
+          'N/A';
+        
+        const eventValue = getField(eventMapping?.event, ['EVENTO', 'evento', 'event', 'EVENT', 'Tipo', 'TIPO', 'MOTIVO', 'motivo']) || 'OTRO';
+        const quantityValue = getField(eventMapping?.quantity, ['CANTIDAD', 'cantidad', 'quantity', 'QUANTITY', 'Cant', 'CANT', 'QTY', 'qty']) || 0;
+        const locationValue = getField(eventMapping?.location, ['UBICACION', 'ubicacion', 'location', 'LOCATION', 'Ubic', 'UBIC', 'SITIO', 'sitio']) || 'GENERAL';
+        const frcValue = getField(eventMapping?.frc, ['FRC', 'frc', 'folio', 'FOLIO', 'folio_frc', 'FOLIO_FRC', 'Folio', 'FRC_FOLIO', 'folio_frc']) || '';
+        const nguiaValue = getField(eventMapping?.nguia, ['NGUIA', 'nguia', 'guia', 'GUIA', 'n_guia', 'N_GUIA', 'GUIA_NUM', 'guia_num']) || '';
+
         return {
           id: record.id,
           barcode,
           productName,
           providerName,
-          event: eventMapping?.event ? exp[eventMapping.event] : (exp.EVENTO || exp.event || 'OTRO'),
-          quantity: eventMapping?.quantity ? exp[eventMapping.quantity] : (exp.CANTIDAD || exp.quantity || 0),
-          location: eventMapping?.location ? exp[eventMapping.location] : (exp.UBICACION || exp.location || 'GENERAL'),
-          frc: eventMapping?.frc ? exp[eventMapping.frc] : (exp.FRC || exp.frc || ''),
-          nguia: eventMapping?.nguia ? exp[eventMapping.nguia] : (exp.NGUIA || exp.nguia || ''),
+          event: eventValue,
+          quantity: quantityValue,
+          location: locationValue,
+          frc: frcValue,
+          nguia: nguiaValue,
           timestamp: record.timestamp || Date.now(),
           claveUnica: exp.claveUnica,
           category: product?.category || 'GENERAL',
-          isAdjusted: !!(exp.traspaso && exp.traspaso.trim() !== ''),
-          mm: exp.MM,
-          yyyy: exp.YYYY,
+          isAdjusted: !!(exp.traspaso && String(exp.traspaso).trim() !== ''),
+          mm: exp.MM || exp.mm,
+          yyyy: exp.YYYY || exp.yyyy,
           syncStatus: 'synced',
         };
       })

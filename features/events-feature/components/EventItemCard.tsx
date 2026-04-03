@@ -89,44 +89,63 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
         </div>
 
         {/* COLUMN 2: PRODUCT (Mobile View) */}
-        <div className="flex-1 min-w-0 flex flex-col gap-1.5 md:hidden">
+        <div className="flex-1 min-w-0 flex flex-col gap-2 md:hidden">
           <div className="flex items-center justify-between gap-2">
-            <h3 className={`text-base font-black uppercase tracking-tighter italic truncate ${
-              theme === 'dark' ? 'text-white' : 'text-slate-900'
-            }`}>
-              {item.productName}
-            </h3>
+            <div className="flex flex-col">
+              <span className={`text-[8px] font-black uppercase tracking-[0.2em] ${
+                theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
+              }`}>Descripción del Producto</span>
+              <h3 className={`text-sm font-black uppercase tracking-tighter italic leading-tight ${
+                theme === 'dark' ? 'text-white' : 'text-slate-900'
+              }`}>
+                {item.productName}
+              </h3>
+            </div>
             <div className="shrink-0">
               {item.syncStatus === 'synced' && <span title="Sincronizado"><Cloud className="w-4 h-4 text-emerald-500" /></span>}
               {item.syncStatus === 'pending' && <span title="Pendiente"><RefreshCw className="w-4 h-4 text-amber-500 animate-spin" /></span>}
               {item.syncStatus === 'error' && <span title={item.syncError || 'Error de sincronización'}><CloudOff className="w-4 h-4 text-rose-500" /></span>}
             </div>
           </div>
-          <p className={`text-[10px] font-bold uppercase tracking-widest truncate ${
-            theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
-          }`}>
-            {item.providerName || 'N/A'}
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={handleCopyBarcode}
-              className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border transition-all active:scale-95 flex items-center gap-1 group/copy ${
-                theme === 'dark' ? 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10 hover:text-white' : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-900'
-              }`}
-              title="Copiar SKU"
-            >
-              {item.barcode}
-              <Copy className="w-2.5 h-2.5 opacity-0 group-hover/copy:opacity-100 transition-opacity" />
-            </button>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div className={`p-2 rounded-xl border ${
+              theme === 'dark' ? 'bg-black/20 border-white/5' : 'bg-slate-50 border-slate-100'
+            }`}>
+              <span className="text-[7px] font-black text-slate-500 uppercase tracking-widest block mb-0.5">Proveedor</span>
+              <p className={`text-[10px] font-bold uppercase truncate ${
+                theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
+              }`}>
+                {item.providerName || 'N/A'}
+              </p>
+            </div>
+            <div className={`p-2 rounded-xl border ${
+              theme === 'dark' ? 'bg-black/20 border-white/5' : 'bg-slate-50 border-slate-100'
+            }`}>
+              <span className="text-[7px] font-black text-slate-500 uppercase tracking-widest block mb-0.5">SKU / EAN</span>
+              <button
+                onClick={handleCopyBarcode}
+                className={`text-[10px] font-bold uppercase flex items-center gap-1 transition-all active:scale-95 ${
+                  theme === 'dark' ? 'text-slate-300' : 'text-slate-700'
+                }`}
+              >
+                {item.barcode || 'N/A'}
+                <Copy className="w-2.5 h-2.5 opacity-50" />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 mt-1">
             {item.frc && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   onFrcClick?.(item.frc);
                 }}
-                className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20 text-[8px] font-black uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-colors"
+                className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-amber-500 hover:text-white transition-all"
               >
-                FRC: {item.frc}
+                <span className="text-[7px] font-black uppercase">FRC:</span>
+                <span className="text-[10px] font-black tracking-tighter italic">{item.frc}</span>
               </button>
             )}
             {item.event && (
@@ -135,73 +154,67 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
                   e.stopPropagation();
                   onEventClick?.(item.event);
                 }}
-                className="px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-500 border border-rose-500/20 text-[8px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-colors"
+                className="px-2 py-1 rounded-lg bg-rose-500/10 text-rose-500 border border-rose-500/20 text-[9px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all"
               >
                 {item.event}
               </button>
             )}
-            {item.erp && (
-              <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 border border-blue-500/20 text-[8px] font-black uppercase tracking-widest">
-                {item.erp}
-              </span>
-            )}
             {item.nguia && (
-              <span className="px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-500 border border-purple-500/20 text-[8px] font-black uppercase tracking-widest">
-                {item.nguia}
-              </span>
-            )}
-            {item.destino && (
-              <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[8px] font-black uppercase tracking-widest">
-                {item.destino}
-              </span>
+              <div className="px-2 py-1 rounded-lg bg-purple-500/10 text-purple-500 border border-purple-500/20 flex items-center gap-1.5">
+                <span className="text-[7px] font-black uppercase">Guía:</span>
+                <span className="text-[9px] font-black">{item.nguia}</span>
+              </div>
             )}
           </div>
         </div>
       </div>
 
       {/* DESKTOP COLUMN 2: PRODUCT (Desktop View) */}
-      <div className="hidden md:flex flex-col gap-1 min-w-0">
+      <div className="hidden md:flex flex-col gap-1.5 min-w-0">
         <div className="flex items-center gap-2">
-          <span className={`text-[10px] font-bold uppercase tracking-widest ${
+          <span className={`text-[9px] font-black uppercase tracking-[0.2em] ${
             theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
           }`}>Producto</span>
-          {item.syncStatus === 'synced' && <span title="Sincronizado"><Cloud className="w-3 h-3 text-emerald-500/70" /></span>}
-          {item.syncStatus === 'pending' && <span title="Pendiente"><RefreshCw className="w-3 h-3 text-amber-500/70 animate-spin" /></span>}
-          {item.syncStatus === 'error' && <span title={item.syncError || 'Error de sincronización'}><CloudOff className="w-3 h-3 text-rose-500/70" /></span>}
+          {item.syncStatus === 'synced' && <Cloud className="w-3 h-3 text-emerald-500/70" />}
+          {item.syncStatus === 'pending' && <RefreshCw className="w-3 h-3 text-amber-500/70 animate-spin" />}
+          {item.syncStatus === 'error' && <CloudOff className="w-3 h-3 text-rose-500/70" />}
         </div>
-        <h3 className={`text-sm font-black uppercase tracking-tighter italic truncate ${
+        <h3 className={`text-sm font-black uppercase tracking-tighter italic truncate leading-tight ${
           theme === 'dark' ? 'text-white' : 'text-slate-900'
         }`}>
-          {item.productName}
+          {item.productName || 'Producto Desconocido'}
         </h3>
-        <p className={`text-[10px] font-bold uppercase tracking-widest truncate ${
-          theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
-        }`}>
-          {item.providerName || 'N/A'}
-        </p>
+        
+        <div className="flex items-center gap-6 mt-1">
+          <div className="flex flex-col">
+            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Proveedor</span>
+            <p className={`text-[11px] font-black uppercase truncate ${
+              theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
+            }`}>
+              {item.providerName || 'N/A'}
+            </p>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-0.5">SKU / EAN</span>
+            <button
+              onClick={handleCopyBarcode}
+              className={`text-[11px] font-black uppercase flex items-center gap-1.5 transition-all hover:text-blue-500 active:scale-95 ${
+                theme === 'dark' ? 'text-slate-300' : 'text-slate-700'
+              }`}
+            >
+              {item.barcode || 'N/A'}
+              <Copy className="w-3 h-3 opacity-50" />
+            </button>
+          </div>
+        </div>
+
         {item.isAdjusted && (
-          <span className={`text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md inline-block w-fit ${
-            theme === 'dark' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-700'
+          <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg inline-block w-fit mt-1.5 ${
+            theme === 'dark' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
           }`}>
-            Ajustado por: {item.traspaso ? 'Traspaso' : item.observaciones ? 'Observaciones' : 'Manual'}
+            Ajustado: {item.traspaso ? 'Traspaso' : 'Manual'}
           </span>
         )}
-        {item.syncError && (
-          <div className="flex items-center gap-1 text-rose-500 text-[9px] font-black uppercase tracking-widest mt-1">
-            <AlertCircle className="w-3 h-3" />
-            {item.syncError}
-          </div>
-        )}
-        <button
-          onClick={handleCopyBarcode}
-          className={`text-[10px] font-bold uppercase tracking-widest transition-all hover:text-blue-500 active:scale-95 text-left flex items-center gap-1 group/copy-desk ${
-            theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
-          }`}
-          title="Copiar SKU"
-        >
-          {item.barcode}
-          <Copy className="w-2.5 h-2.5 opacity-0 group-hover/copy-desk:opacity-100 transition-opacity" />
-        </button>
       </div>
 
       {/* DESKTOP COLUMN 3: FRC & EVENT (Priority Column) */}
@@ -224,14 +237,20 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
               e.stopPropagation();
               onFrcClick?.(item.frc);
             }}
-            className={`text-lg font-black tracking-tighter italic transition-all hover:scale-110 active:scale-95 text-left ${
-              theme === 'dark' ? 'text-amber-500 hover:text-amber-400' : 'text-amber-600 hover:text-amber-700'
+            className={`px-3 py-2 rounded-xl border-2 font-black tracking-tighter italic transition-all hover:scale-105 active:scale-95 text-left flex flex-col ${
+              theme === 'dark' 
+                ? 'bg-amber-500/10 border-amber-500/30 text-amber-500 hover:bg-amber-500 hover:text-white' 
+                : 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-600 hover:text-white'
             }`}
           >
-            {item.frc}
+            <span className="text-[14px] leading-none">{item.frc}</span>
           </button>
         ) : (
-          <span className="text-xs text-slate-500 italic">N/A</span>
+          <div className={`px-3 py-2 rounded-xl border-2 border-dashed flex items-center justify-center ${
+            theme === 'dark' ? 'border-white/10 text-slate-600' : 'border-slate-200 text-slate-400'
+          }`}>
+            <span className="text-[10px] font-black uppercase tracking-widest italic">N/A</span>
+          </div>
         )}
       </div>
 
