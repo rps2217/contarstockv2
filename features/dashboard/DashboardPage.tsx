@@ -17,6 +17,10 @@ import {
   Cloud,
   AlertCircle,
   Zap,
+  ChevronDown,
+  ChevronUp,
+  Upload,
+  Trash2,
 } from "lucide-react";
 import { NetworkStatus } from "../../shared/components/ui/NetworkStatus";
 import { OrderRow } from "./components/OrderRow";
@@ -30,6 +34,9 @@ import { ExpectedOrderRepository } from "../../repositories/ExpectedOrderReposit
 import * as sessionService from "../../services/sessionService";
 import { sanitizeBarcode } from "../../services/utils";
 import { useHIDScanner } from "../../hooks/useHIDScanner";
+import Papa from 'papaparse';
+import { toast } from 'sonner';
+import { ExpectedOrder, ExpectedItem } from "../../types";
 
 const Dashboard: React.FC = () => {
   const { operatorId, isSyncNeeded, pendingOrders, navigate, dynamicStats, syncStatus, triggerSync } =
@@ -40,6 +47,7 @@ const Dashboard: React.FC = () => {
   const [scanInput, setScanInput] = useState("");
   const [isProcessingScan, setIsProcessingScan] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [isOrdersCollapsed, setIsOrdersCollapsed] = useState(true);
   const { settings } = useAppStore();
 
   useEffect(() => {
@@ -156,6 +164,66 @@ const Dashboard: React.FC = () => {
 
   const handleOrderClick = async (orderId: string) => {
     handleUniversalScan(orderId);
+  };
+
+  const handleDeleteOrder = async (orderId: string) => {
+    if (confirm(`¿Eliminar orden ${orderId}?`)) {
+      await ExpectedOrderRepository.delete(orderId);
+      SoundFX.play('delete');
+      toast.success(`Orden ${orderId} eliminada`);
+    }
+  };
+
+  const handleCsvUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // TODO: PENDIENTE - Ajustar formato exacto cuando el usuario defina el documento
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
+        const data = results.data as any[];
+        const ordersMap = new Map<string, ExpectedOrder>();
+
+        data.forEach((row) => {
+          const orderId = row.id || row.orderId || row.orden;
+          const barcode = row.barcode || row.sku || row.codigo;
+          const name = row.name || row.productName || row.nombre || 'Producto';
+          const expectedQty = parseInt(row.expectedQty || row.qty || row.cantidad || '0');
+
+          if (!orderId || !barcode) return;
+
+          if (!ordersMap.has(orderId)) {
+            ordersMap.set(orderId, {
+              id: orderId,
+              internalId: orderId,
+              items: [],
+              totalExpectedUnits: 0,
+              totalExpectedSKUs: 0,
+              importedAt: Date.now()
+            });
+          }
+
+          const order = ordersMap.get(orderId)!;
+          order.items.push({ barcode, name, expectedQty });
+          order.totalExpectedUnits += expectedQty;
+          order.totalExpectedSKUs += 1;
+        });
+
+        for (const order of ordersMap.values()) {
+          await ExpectedOrderRepository.save(order);
+        }
+
+        toast.success(`${ordersMap.size} órdenes importadas correctamente`);
+        SoundFX.play('success');
+        if (event.target) event.target.value = '';
+      },
+      error: (error) => {
+        toast.error("Error al procesar el archivo CSV");
+        console.error(error);
+      }
+    });
   };
 
   const [showAllOrders, setShowAllOrders] = useState(false);
@@ -292,45 +360,89 @@ const Dashboard: React.FC = () => {
         {/* ÓRDENES PENDIENTES */}
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xs font-black uppercase tracking-widest text-slate-500">
-              Órdenes Pendientes
-            </h2>
-            <span className="bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-400 text-xs font-black px-3 py-1 rounded-full">
-              {pendingOrders?.length || 0}
-            </span>
-          </div>
-
-          <div className="space-y-3">
-            {!visibleOrders || visibleOrders.length === 0 ? (
-              <div className="bg-white dark:bg-slate-900 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl p-10 text-center">
-                <Package className="w-16 h-16 text-slate-300 dark:text-slate-700 mx-auto mb-4" />
-                <p className="text-sm font-bold text-slate-500">
-                  No hay órdenes pendientes
-                </p>
-                <p className="text-xs text-slate-400 mt-1">
-                  Escanea un producto para iniciar un conteo ciego
-                </p>
-              </div>
-            ) : (
-              <>
-                {visibleOrders.map((order) => (
-                  <OrderRow
-                    key={order.id}
-                    order={order}
-                    onClick={handleOrderClick}
-                  />
-                ))}
-                {pendingOrders && pendingOrders.length > 5 && (
-                  <button
-                    onClick={() => setShowAllOrders(!showAllOrders)}
-                    className="w-full py-4 text-xs font-black text-blue-600 uppercase tracking-widest hover:bg-blue-50 rounded-2xl transition-colors"
-                  >
-                    {showAllOrders ? "Ver menos" : `Ver ${pendingOrders.length - 5} más...`}
-                  </button>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xs font-black uppercase tracking-widest text-slate-500">
+                Órdenes Pendientes
+              </h2>
+              <span className="bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-400 text-[10px] font-black px-2 py-0.5 rounded-full">
+                {pendingOrders?.length || 0}
+              </span>
+            </div>
+            
+            {pendingOrders && pendingOrders.length > 0 && (
+              <button 
+                onClick={() => setIsOrdersCollapsed(!isOrdersCollapsed)}
+                className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-400 transition-colors"
+              >
+                {isOrdersCollapsed ? (
+                  <>Ver Órdenes <ChevronDown className="w-3 h-3" /></>
+                ) : (
+                  <>Colapsar <ChevronUp className="w-3 h-3" /></>
                 )}
-              </>
+              </button>
             )}
           </div>
+
+          {!isOrdersCollapsed || (pendingOrders?.length === 0) ? (
+            <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+              {!visibleOrders || visibleOrders.length === 0 ? (
+                <div className="bg-white dark:bg-slate-900 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl p-10 text-center">
+                  <Package className="w-16 h-16 text-slate-300 dark:text-slate-700 mx-auto mb-4" />
+                  <p className="text-sm font-bold text-slate-500">
+                    No hay órdenes pendientes
+                  </p>
+                  <p className="text-xs text-slate-400 mt-1 mb-6">
+                    Escanea un producto para iniciar un conteo ciego o sube un archivo
+                  </p>
+                  
+                  <label className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 cursor-pointer shadow-lg shadow-blue-900/40">
+                    <Upload className="w-4 h-4" />
+                    Subir CSV de Órdenes
+                    <input 
+                      type="file" 
+                      accept=".csv" 
+                      className="hidden" 
+                      onChange={handleCsvUpload}
+                    />
+                  </label>
+                </div>
+              ) : (
+                <>
+                  {visibleOrders.map((order) => (
+                    <OrderRow
+                      key={order.id}
+                      order={order}
+                      onClick={handleOrderClick}
+                      onDelete={handleDeleteOrder}
+                    />
+                  ))}
+                  {pendingOrders && pendingOrders.length > 5 && (
+                    <button
+                      onClick={() => setShowAllOrders(!showAllOrders)}
+                      className="w-full py-4 text-xs font-black text-blue-600 uppercase tracking-widest hover:bg-blue-50 rounded-2xl transition-colors"
+                    >
+                      {showAllOrders ? "Ver menos" : `Ver ${pendingOrders.length - 5} más...`}
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 rounded-2xl p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <FileText className="w-5 h-5 text-blue-500" />
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+                  {pendingOrders.length} Órdenes cargadas en memoria
+                </span>
+              </div>
+              <button 
+                onClick={() => setIsOrdersCollapsed(false)}
+                className="text-[10px] font-black uppercase tracking-widest text-blue-500"
+              >
+                Expandir
+              </button>
+            </div>
+          )}
         </div>
 
         {/* ACCIONES RÁPIDAS Y HERRAMIENTAS */}

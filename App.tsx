@@ -180,13 +180,15 @@ const AppContent = () => {
         <>
           <BottomDock currentView={location.pathname.split('/')[1] || 'dashboard'} settings={settings} />
           
-          {/* BOTÓN FLOTANTE DE ACCESO RÁPIDO (MÓVIL) */}
-          <button 
-            onClick={() => setStartSessionModalOpen(true)}
-            className="md:hidden fixed bottom-20 right-6 z-[110] w-14 h-14 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-900/40 flex items-center justify-center active:scale-95 transition-all border-b-4 border-blue-800"
-          >
-            <Plus className="w-8 h-8" />
-          </button>
+          {/* BOTÓN FLOTANTE DE ACCESO RÁPIDO (MÓVIL) - SOLO EN DASHBOARD */}
+          {(location.pathname === '/' || location.pathname === '/dashboard') && (
+            <button 
+              onClick={() => setStartSessionModalOpen(true)}
+              className="md:hidden fixed bottom-20 right-6 z-[110] w-14 h-14 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-900/40 flex items-center justify-center active:scale-95 transition-all border-b-4 border-blue-800"
+            >
+              <Plus className="w-8 h-8" />
+            </button>
+          )}
         </>
       )}
 

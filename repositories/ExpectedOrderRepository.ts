@@ -13,4 +13,8 @@ export class ExpectedOrderRepository {
   static async getAll(): Promise<ExpectedOrder[]> {
     return await db.expectedOrders.toArray();
   }
+
+  static async delete(id: string): Promise<void> {
+    await db.expectedOrders.delete(id);
+  }
 }
