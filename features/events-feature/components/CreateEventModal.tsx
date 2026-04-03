@@ -107,12 +107,24 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
   }, [editingItem, isOpen]);
 
   useEffect(() => {
-    if (!editingItem && sku.length >= 3) {
+    if (sku.length >= 3) {
       const timer = setTimeout(async () => {
         setIsSearching(true);
         try {
           const found = await db.products.get(normalizeSku(sku));
-          setProduct(found || null);
+          if (found) {
+            setProduct(found);
+          } else if (editingItem && sku === editingItem.barcode) {
+             // Keep existing product info if it's the original SKU and not in local DB
+             setProduct({
+               barcode: editingItem.barcode,
+               name: editingItem.productName,
+               supplier: editingItem.providerName,
+               category: 'GENERAL'
+             } as Product);
+          } else {
+            setProduct(null);
+          }
         } catch (error) {
           console.error('Error searching product:', error);
         } finally {
@@ -123,7 +135,7 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
     } else {
       setProduct(null);
     }
-  }, [sku]);
+  }, [sku, editingItem]);
 
   const addItem = () => {
     if (!product) {
@@ -323,57 +335,59 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
                   </div>
                 </div>
 
-                {/* ITEM BUILDER */}
-                {!editingItem && (
-                  <div className={`p-6 rounded-[2rem] border-4 border-black space-y-4 ${
-                    theme === 'dark' ? 'bg-blue-500/5' : 'bg-blue-50'
-                  }`}>
-                    <div className="flex items-center justify-between">
-                      <h3 className={`text-xs font-black uppercase tracking-widest ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`}>
-                        Agregar Productos
-                      </h3>
+                {/* ITEM BUILDER / SKU INPUT */}
+                <div className={`p-6 rounded-[2rem] border-4 border-black space-y-4 ${
+                  theme === 'dark' ? 'bg-blue-500/5' : 'bg-blue-50'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <h3 className={`text-xs font-black uppercase tracking-widest ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`}>
+                      {editingItem ? 'Información del Producto' : 'Agregar Productos'}
+                    </h3>
+                    {!editingItem && (
                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
                         {items.length} en lista
                       </span>
-                    </div>
+                    )}
+                  </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                      <div className="md:col-span-7 space-y-2">
-                        <div className="relative">
-                          <input
-                            type="text"
-                            value={sku}
-                            onChange={(e) => setSku(e.target.value)}
-                            placeholder="SKU / EAN..."
-                            className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none ${
-                              theme === 'dark'
-                                ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
-                                : 'bg-white border-slate-200 focus:border-blue-500 text-slate-900'
-                            }`}
-                          />
-                          <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                            {isSearching ? (
-                              <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
-                            ) : (
-                              <Search className={`w-5 h-5 ${theme === 'dark' ? 'text-slate-600' : 'text-slate-400'}`} />
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="md:col-span-3 space-y-2">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                    <div className="md:col-span-7 space-y-2">
+                      <div className="relative">
                         <input
-                          type="number"
-                          value={quantity}
-                          onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
+                          type="text"
+                          value={sku}
+                          onChange={(e) => setSku(e.target.value)}
+                          placeholder="SKU / EAN..."
                           className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none ${
                             theme === 'dark'
                               ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
                               : 'bg-white border-slate-200 focus:border-blue-500 text-slate-900'
                           }`}
                         />
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                          {isSearching ? (
+                            <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
+                          ) : (
+                            <Search className={`w-5 h-5 ${theme === 'dark' ? 'text-slate-600' : 'text-slate-400'}`} />
+                          )}
+                        </div>
                       </div>
+                    </div>
 
+                    <div className="md:col-span-3 space-y-2">
+                      <input
+                        type="number"
+                        value={quantity}
+                        onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
+                        className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none ${
+                          theme === 'dark'
+                            ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
+                            : 'bg-white border-slate-200 focus:border-blue-500 text-slate-900'
+                        }`}
+                      />
+                    </div>
+
+                    {!editingItem && (
                       <div className="md:col-span-2">
                         <button
                           type="button"
@@ -388,31 +402,31 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
                           <Plus className="w-6 h-6" />
                         </button>
                       </div>
-                    </div>
-
-                    {product && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className={`p-3 rounded-xl border-2 flex items-center gap-3 ${
-                          theme === 'dark' ? 'bg-black/40 border-blue-500/30' : 'bg-white border-blue-200 shadow-sm'
-                        }`}
-                      >
-                        <div className="w-10 h-10 rounded-lg bg-blue-500 flex items-center justify-center shrink-0">
-                          <Package className="w-5 h-5 text-white" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className={`text-[11px] font-black uppercase truncate ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
-                            {product.name}
-                          </p>
-                          <p className="text-[9px] font-bold text-blue-500 uppercase tracking-widest">
-                            {product.barcode}
-                          </p>
-                        </div>
-                      </motion.div>
                     )}
                   </div>
-                )}
+
+                  {product && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`p-3 rounded-xl border-2 flex items-center gap-3 ${
+                        theme === 'dark' ? 'bg-black/40 border-blue-500/30' : 'bg-white border-blue-200 shadow-sm'
+                      }`}
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-blue-500 flex items-center justify-center shrink-0">
+                        <Package className="w-5 h-5 text-white" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className={`text-[11px] font-black uppercase truncate ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                          {product.name}
+                        </p>
+                        <p className="text-[9px] font-bold text-blue-500 uppercase tracking-widest">
+                          {product.barcode} • {product.supplier || 'N/A'}
+                        </p>
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
 
                 {/* ITEMS LIST */}
                 {items.length > 0 && (
@@ -459,50 +473,6 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
                   </div>
                 )}
 
-                {/* EDIT MODE SINGLE ITEM */}
-                {editingItem && (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
-                        theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
-                      }`}>
-                        <Package className="w-3 h-3" /> Producto
-                      </label>
-                      <div className={`p-4 rounded-2xl border-2 flex items-center gap-4 ${
-                        theme === 'dark' ? 'bg-blue-500/5 border-blue-500/20' : 'bg-blue-50 border-blue-200'
-                      }`}>
-                        <div className="w-12 h-12 rounded-xl bg-blue-500 flex items-center justify-center shrink-0">
-                          <Package className="w-6 h-6 text-white" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className={`text-xs font-black uppercase truncate ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
-                            {editingItem.productName}
-                          </p>
-                          <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest">
-                            {editingItem.barcode} • {editingItem.providerName || 'N/A'}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
-                        theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
-                      }`}>
-                        <Hash className="w-3 h-3" /> Cantidad
-                      </label>
-                      <input
-                        type="number"
-                        value={quantity}
-                        onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
-                        className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none ${
-                          theme === 'dark'
-                            ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
-                            : 'bg-slate-50 border-slate-200 focus:border-blue-500 text-slate-900'
-                        }`}
-                      />
-                    </div>
-                  </div>
-                )}
 
                 <form id="event-form" onSubmit={handleSubmit} className="hidden" />
               </div>

@@ -153,11 +153,14 @@ export const useEventDatabase = () => {
     let filtered = baseProcessedData;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
+      const normalizedQ = normalizeSku(searchQuery);
+      
       filtered = filtered.filter(e => 
-        (e.productName || '').toLowerCase().includes(q) || 
-        (e.barcode || '').toLowerCase().includes(q) ||
-        (e.providerName || '').toLowerCase().includes(q) ||
-        (e.frc || '').toLowerCase().includes(q)
+        String(e.productName || '').toLowerCase().includes(q) || 
+        String(e.barcode || '').toLowerCase().includes(q) ||
+        (normalizedQ && String(e.barcode || '').includes(normalizedQ)) ||
+        String(e.providerName || '').toLowerCase().includes(q) ||
+        String(e.frc || '').toLowerCase().includes(q)
       );
     }
     if (selectedEvents.length > 0) {
