@@ -128,10 +128,7 @@ export const useExpiryDatabase = () => {
       });
   }, [cloudItems, settings?.appSheetConfig?.mappings?.expiry]);
 
-  // MOTOR DETECTIVE: Resuelve 'Productos Desconocidos' en segundo plano con alta prioridad
-  useEffect(() => {
-    // Pendiente de migración a Firebase
-  }, [baseProcessedData, isSyncing, settings]);
+
 
   const categories = useMemo(() => {
     const cats = new Set<string>();
@@ -273,9 +270,7 @@ export const useExpiryDatabase = () => {
     setPreferences(newPrefs);
   }, [setPreferences]);
 
-  const clearLocalData = useCallback(async () => {
-    // Ya no se usa base de datos local
-  }, []);
+
 
   return {
     state: {
@@ -309,8 +304,7 @@ export const useExpiryDatabase = () => {
       handleRemoveItem,
       handleBulkRemove,
       handleAddItem,
-      handleUpdatePreferences,
-      clearLocalData
+      handleUpdatePreferences
     }
   };
 };
