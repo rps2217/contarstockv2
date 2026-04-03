@@ -126,7 +126,18 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
                 }}
                 className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20 text-[8px] font-black uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-colors"
               >
-                {item.frc}
+                FRC: {item.frc}
+              </button>
+            )}
+            {item.event && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEventClick?.(item.event);
+                }}
+                className="px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-500 border border-rose-500/20 text-[8px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-colors"
+              >
+                {item.event}
               </button>
             )}
             {item.erp && (
@@ -193,11 +204,20 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
         </button>
       </div>
 
-      {/* DESKTOP COLUMN 3: FRC (Priority Column) */}
+      {/* DESKTOP COLUMN 3: FRC & EVENT (Priority Column) */}
       <div className="hidden md:flex flex-col gap-1">
-        <span className={`text-[10px] font-bold uppercase tracking-widest ${
-          theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
-        }`}>Folio FRC</span>
+        <div className="flex items-center gap-2">
+          <span className={`text-[10px] font-bold uppercase tracking-widest ${
+            theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
+          }`}>Folio FRC</span>
+          {item.event && (
+            <span className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md ${
+              theme === 'dark' ? 'bg-rose-500/20 text-rose-400' : 'bg-rose-100 text-rose-700'
+            }`}>
+              {item.event}
+            </span>
+          )}
+        </div>
         {item.frc ? (
           <button
             onClick={(e) => {
