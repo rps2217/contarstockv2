@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, Settings2, Layout, RefreshCw, Trash2 } from 'lucide-react';
 import { EventPreferences } from '../hooks/useEventDatabase';
 import { CsvImporter } from '../../../src/components/CsvImporter';
+import { resetFirestore } from '../../../src/lib/firebase';
 
 interface EventSettingsDrawerProps {
   isOpen: boolean;
@@ -149,6 +150,27 @@ export const EventSettingsDrawer: React.FC<EventSettingsDrawerProps> = ({
                       theme === 'dark' ? 'text-white' : 'text-slate-900'
                     }`}>Actualizar desde Nube</p>
                     <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Sincronizar configuración desde Firestore</p>
+                  </div>
+                </button>
+
+                <button
+                  onClick={async () => {
+                    if (confirm("⚠️ REPARACIÓN DE BASE DE DATOS ⚠️\n\nEsto cerrará la conexión y limpiará la caché de Firestore para solucionar errores internos de renderizado.\n\nLa aplicación se recargará automáticamente.\n\n¿Deseas continuar?")) {
+                      await resetFirestore();
+                    }
+                  }}
+                  className={`w-full p-4 rounded-xl border flex items-center gap-4 transition-all mt-2 ${
+                    theme === 'dark' ? 'border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10' : 'border-amber-200 bg-amber-50 hover:bg-amber-100'
+                  }`}
+                >
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                    <RefreshCw className="w-5 h-5 text-amber-500" />
+                  </div>
+                  <div className="text-left">
+                    <p className={`text-xs font-black uppercase tracking-tight ${
+                      theme === 'dark' ? 'text-white' : 'text-slate-900'
+                    }`}>Reparar Conexión</p>
+                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Solucionar errores de renderizado (ID: b815)</p>
                   </div>
                 </button>
 

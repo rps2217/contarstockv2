@@ -1,7 +1,8 @@
 
 import React, { ErrorInfo, ReactNode } from 'react';
-import { AlertTriangle, RefreshCw, Home, Terminal, ZapOff } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Home, Terminal, ZapOff, Database } from 'lucide-react';
 import { logger } from '../services/logger';
+import { resetFirestore } from '../src/lib/firebase';
 
 interface Props {
  children?: ReactNode;
@@ -41,6 +42,12 @@ export class ErrorBoundary extends React.Component<Props, State> {
  window.location.href = window.location.pathname + '?v=' + Date.now();
  };
 
+ handleRepairDatabase = async () => {
+ if (confirm("⚠️ REPARACIÓN DE BASE DE DATOS ⚠️\n\nEsto cerrará la conexión y limpiará la caché de Firestore para solucionar errores internos de renderizado.\n\n¿Deseas continuar?")) {
+ await resetFirestore();
+ }
+ };
+
  public render(): ReactNode {
  if (this.state.hasError) {
  return (
@@ -68,13 +75,21 @@ export class ErrorBoundary extends React.Component<Props, State> {
  </code>
  </div>
 
- <div className="grid grid-cols-1 gap-4">
+ <div className="grid grid-cols-1 gap-3">
  <button 
  onClick={this.handleReload}
  className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-5 rounded-2xl flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all uppercase tracking-widest text-xs"
  >
  <RefreshCw className="w-5 h-5" /> Reintentar Carga
  </button>
+ 
+ <button 
+ onClick={this.handleRepairDatabase}
+ className="w-full bg-amber-500 hover:bg-amber-600 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 uppercase tracking-widest text-[10px]"
+ >
+ <Database className="w-4 h-4" /> Reparar Base de Datos
+ </button>
+
  <button 
  onClick={this.handleHardReset}
  className="w-full bg-black hover:bg-gray-800 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 uppercase tracking-widest text-[10px]"

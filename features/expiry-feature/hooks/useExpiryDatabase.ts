@@ -1,7 +1,7 @@
 
 import { useMemo, useEffect, useCallback, useState } from 'react';
 import { db as firestoreDb } from '../../../src/lib/firebase';
-import { collection, onSnapshot, query } from 'firebase/firestore';
+import { collection, onSnapshot, query, limit, orderBy } from 'firebase/firestore';
 import { firebaseSyncService, handleFirestoreError, OperationType } from '../../../services/firebaseSyncService';
 import { Product, Provider } from '../../../types';
 import { useToastStore } from '../../../store/useToastStore';
@@ -40,7 +40,8 @@ export const useExpiryDatabase = () => {
   // Monitoreo en tiempo real de Firestore
   useEffect(() => {
     const colRef = collection(firestoreDb, tableName);
-    const q = query(colRef); // Puedes añadir filtros aquí si es necesario
+    // Limitamos a 3000 registros para evitar saturar el SDK de Firestore
+    const q = query(colRef, orderBy('timestamp', 'desc'), limit(3000));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));

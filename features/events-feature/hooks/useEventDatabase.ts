@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { db as firebaseDb } from '../../../src/lib/firebase';
-import { collection, onSnapshot, query } from 'firebase/firestore';
+import { collection, onSnapshot, query, limit, orderBy } from 'firebase/firestore';
 import { firebaseSyncService, handleFirestoreError, OperationType } from '../../../services/firebaseSyncService';
 import { useAppStore } from '../../../store/useAppStore';
 import { useToastStore } from '../../../store/useToastStore';
@@ -33,7 +33,8 @@ export const useEventDatabase = () => {
 
   useEffect(() => {
     const colRef = collection(firebaseDb, tableName);
-    const q = query(colRef);
+    // Limitamos a 3000 registros para evitar saturar el SDK de Firestore
+    const q = query(colRef, orderBy('timestamp', 'desc'), limit(3000));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
