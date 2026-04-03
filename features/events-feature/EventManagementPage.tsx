@@ -32,7 +32,6 @@ import { CreateEventModal } from './components/CreateEventModal';
 import { BulkEditModal } from './components/BulkEditModal';
 import { EventSettingsDrawer } from './components/EventSettingsDrawer';
 import { EventSearchBar } from './components/EventSearchBar';
-import { EventPriorityPanel } from './components/EventPriorityPanel';
 import { AnimatePresence } from 'motion/react';
 import { Zap, ChevronUp, ChevronDown } from 'lucide-react';
 
@@ -42,7 +41,7 @@ import { dynamicDataService } from '../../services/dynamicDataService';
 
 const EventManagementPage: React.FC = () => {
   const { settings, updateSetting } = useAppStore();
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [theme, setTheme] = useState<'dark' | 'light'>('light');
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isSettingsDrawerOpen, setIsSettingsDrawerOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);

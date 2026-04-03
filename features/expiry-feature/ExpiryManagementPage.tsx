@@ -40,7 +40,6 @@ import { ExpirySearchBar } from './components/ExpirySearchBar';
 import { ExpiryItemCard } from './components/ExpiryItemCard';
 import { ExpiryBulkActions } from './components/ExpiryBulkActions';
 import { ExpiryEmailModal } from './components/ExpiryEmailModal';
-import { ExpiryPriorityPanel } from './components/ExpiryPriorityPanel';
 import { ExpirationModal } from './components/ExpirationModal';
 import { useProductDatabase } from '../inventory/hooks/useProductDatabase';
 
@@ -67,9 +66,8 @@ const ExpiryManagementPage: React.FC = () => {
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isSettingsDrawerOpen, setIsSettingsDrawerOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
-  const [isPriorityPanelOpen, setIsPriorityPanelOpen] = useState(false);
   const [isDesktopAddModalOpen, setIsDesktopAddModalOpen] = useState(false);
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [theme, setTheme] = useState<'dark' | 'light'>('light');
   const navigate = useNavigate();
   const location = useLocation();
   const expirySchema = useAppStore(s => s.settings.appSheetConfig?.schema?.expiry || s.settings.schema?.expiry);
@@ -123,22 +121,6 @@ const ExpiryManagementPage: React.FC = () => {
     actions.setSelectedIds(newSelected);
   };
 
-  const handleSelectItemFromPriority = (id: string) => {
-    actions.setSearchQuery('');
-    handleClearFilters();
-    // Small delay to allow filters to clear
-    setTimeout(() => {
-      const element = document.getElementById(`expiry-item-${id}`);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        element.classList.add('ring-2', 'ring-amber-500', 'ring-offset-2', 'ring-offset-slate-900');
-        setTimeout(() => {
-          element.classList.remove('ring-2', 'ring-amber-500', 'ring-offset-2', 'ring-offset-slate-900');
-        }, 3000);
-      }
-    }, 100);
-  };
-
   const handleClearFilters = () => {
     actions.setSearchQuery('');
     actions.setSelectedStatuses([]);
@@ -147,35 +129,6 @@ const ExpiryManagementPage: React.FC = () => {
     actions.setActionPeriod('all');
     actions.setCustomDateRange({ start: null, end: null });
     addToast('Filtros restablecidos', 'info');
-  };
-
-  const handleActionClick = (type: string) => {
-    handleClearFilters();
-    if (type === 'merma') {
-      actions.setSelectedCanje('markdown');
-      actions.setSelectedStatuses(['critical', 'expired']);
-      addToast('Filtrando por Merma (Crítico/Vencido)', 'info');
-    } else if (type === 'canje') {
-      actions.setSelectedCanje('canje');
-      actions.setSelectedStatuses(['critical', 'expired']);
-      addToast('Filtrando por Canje (Crítico/Vencido)', 'info');
-    } else if (type === 'drenaje') {
-      actions.setSelectedCanje('markdown');
-      actions.setSelectedStatuses(['next_expiry']);
-      addToast('Plan de Drenaje: Próximos 4 meses sin canje', 'info');
-    } else if (type === 'impulso') {
-      actions.setSelectedCanje('canje');
-      actions.setSelectedStatuses(['next_expiry']);
-      addToast('Impulso de Ventas: Próximos 4 meses con canje', 'info');
-    } else if (type === 'monitor') {
-      actions.setSelectedStatuses(['next_expiry']);
-      addToast('Filtrando por Próximos a Vencer', 'info');
-    }
-    
-    // Scroll to list
-    setTimeout(() => {
-      parentRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
   };
 
   const confirmBulkRemove = () => {
@@ -346,65 +299,6 @@ const ExpiryManagementPage: React.FC = () => {
           }}
           theme={theme}
         />
-
-        {/* PRIORITY ASSISTANT (BENTO PANEL) - HIDDEN BEHIND TOGGLE */}
-        {state.preferences.showPriorityAssistant && (
-          <div className="mt-6 mb-6">
-            <button
-              onClick={() => setIsPriorityPanelOpen(!isPriorityPanelOpen)}
-              className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${
-                theme === 'dark' 
-                  ? 'bg-slate-900/50 border-white/10 hover:bg-white/5' 
-                  : 'bg-white border-slate-200 shadow-sm hover:bg-slate-50'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                  theme === 'dark' ? 'bg-amber-500/10 text-amber-500' : 'bg-amber-100 text-amber-600'
-                }`}>
-                  <Zap className="w-4 h-4" />
-                </div>
-                <div className="text-left">
-                  <h3 className={`text-sm font-black uppercase tracking-tighter italic leading-none ${
-                    theme === 'dark' ? 'text-white' : 'text-slate-900'
-                  }`}>
-                    Asistente de Priorización
-                  </h3>
-                  <p className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${
-                    theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
-                  }`}>
-                    Análisis de riesgo y alertas de volumen
-                  </p>
-                </div>
-              </div>
-              {isPriorityPanelOpen ? (
-                <ChevronUp className={`w-5 h-5 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`} />
-              ) : (
-                <ChevronDown className={`w-5 h-5 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`} />
-              )}
-            </button>
-
-            <AnimatePresence>
-              {isPriorityPanelOpen && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="overflow-hidden"
-                >
-                  <div className="pt-4">
-                    <ExpiryPriorityPanel 
-                      stats={state.stats} 
-                      theme={theme} 
-                      onSelectItem={handleSelectItemFromPriority}
-                      onActionClick={handleActionClick}
-                    />
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        )}
         
         <ExpirySearchBar 
           searchQuery={state.searchQuery}
