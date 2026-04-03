@@ -114,8 +114,6 @@ export const ReceptionPage: React.FC<{
   const [showKeypad, setShowKeypad] = useState(false);
   const [showQueue, setShowQueue] = useState(false);
   const [showTools, setShowTools] = useState(false);
-  const [expectedCount, setExpectedCount] = useState<number>(initialExpectedCount || 0);
-  const [isSettingExpected, setIsSettingExpected] = useState(!initialExpectedCount);
   const [viewMode, setViewMode] = useState<'scanned' | 'expected'>(initialItems ? 'expected' : 'scanned');
   const [expectedItems] = useState<any[]>(initialItems || []);
 
@@ -123,9 +121,6 @@ export const ReceptionPage: React.FC<{
   useEffect(() => {
     const initialScan = (location.state as any)?.initialScan;
     if (initialScan) {
-      // Bypass the expected count screen for blind receptions
-      setIsSettingExpected(false);
-      
       // Small delay to ensure DB is ready
       setTimeout(() => {
         actions.handleScan(initialScan, state.currentErp);
@@ -150,7 +145,7 @@ export const ReceptionPage: React.FC<{
   // ESCUCHA DE HARDWARE
   useHIDScanner({
     onScan: (barcode) => actions.handleScan(barcode, state.currentErp),
-    isEnabled: !isLocked && !showKeypad && !showQueue && !isSettingExpected,
+    isEnabled: !isLocked && !showKeypad && !showQueue,
     maxLatency: 50
   });
 
@@ -172,46 +167,12 @@ export const ReceptionPage: React.FC<{
     setShowKeypad(false);
   };
 
-  const handleSetExpected = (val: string) => {
-    const num = parseInt(val);
-    if (!isNaN(num)) {
-      setExpectedCount(num);
-      setIsSettingExpected(false);
-    }
-  };
-
-  const progress = expectedCount > 0 ? (state.draftCount / expectedCount) * 100 : 0;
-  const isComplete = expectedCount > 0 && state.draftCount >= expectedCount;
-
-  if (isSettingExpected) {
-    return (
-      <div className="h-full w-full bg-black flex flex-col items-center justify-center p-8 text-center">
-        <div className="w-20 h-20 bg-blue-600/20 rounded-3xl flex items-center justify-center mb-6 border border-blue-500/30">
-          <Box className="w-10 h-10 text-blue-500" />
-        </div>
-        <h2 className="text-2xl font-black uppercase tracking-tighter italic mb-2">Control de Arribo</h2>
-        <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-8 max-w-xs">
-          ¿Cuántas bandejas o bultos esperas recibir según el manifiesto?
-        </p>
-        <div className="w-full max-w-xs">
-          <NumericKeypad 
-            isOpen={true}
-            title="CANTIDAD ESPERADA"
-            onConfirm={handleSetExpected}
-            onClose={() => navigate('/dashboard')}
-            embedded
-          />
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className={`h-full w-full flex flex-col font-mono select-none overflow-hidden text-white transition-colors duration-200 ${isComplete ? 'bg-emerald-950/20' : 'bg-black'}`}>
+    <div className="h-full w-full flex flex-col font-mono select-none overflow-hidden text-white bg-black">
       
       {/* STATUS BAR - TRAY PROGRESS */}
       <div className="p-6 bg-slate-900 border-b border-white/10 shrink-0">
-        <div className="flex justify-between items-start mb-4">
+        <div className="flex justify-between items-start">
           <div className="flex items-center gap-3">
             <button 
               onClick={() => navigate('/dashboard')}
@@ -220,20 +181,14 @@ export const ReceptionPage: React.FC<{
               <ChevronLeft className="w-6 h-6" />
             </button>
             <div>
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">PROGRESO DE ARRIBO</span>
+              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">CONTEO ACTUAL</span>
               <div className="flex items-baseline gap-2">
-                <span className="text-5xl font-black italic tracking-tighter">{state.draftCount}</span>
-                <span className="text-xl font-bold text-slate-600">/ {expectedCount}</span>
+                <span className="text-5xl font-black italic tracking-tighter text-blue-500">{state.draftCount}</span>
+                <span className="text-xs font-bold text-slate-600 uppercase tracking-widest">Bultos</span>
               </div>
             </div>
           </div>
           <div className="flex flex-col items-end gap-2">
-            <div className="text-right">
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">ESTADO</span>
-              <span className={`text-xs font-black uppercase tracking-widest ${isComplete ? 'text-emerald-500' : 'text-blue-500'}`}>
-                {isComplete ? 'COMPLETO' : 'PENDIENTE'}
-              </span>
-            </div>
             {state.draftCount > 0 && (
               <div className="flex items-center gap-2">
                 <button 
@@ -261,13 +216,6 @@ export const ReceptionPage: React.FC<{
               </button>
             )}
           </div>
-        </div>
-        
-        <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden border border-white/10">
-          <div 
-            className={`h-full transition-all duration-500 ${isComplete ? 'bg-emerald-500' : 'bg-blue-600'}`}
-            style={{ width: `${Math.min(progress, 100)}%` }}
-          />
         </div>
       </div>
 
@@ -353,7 +301,6 @@ export const ReceptionPage: React.FC<{
         onFinalize={() => {
           actions.finalizeReception();
           setShowQueue(false);
-          setIsSettingExpected(true);
         }}
       />
 

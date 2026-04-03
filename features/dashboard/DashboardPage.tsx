@@ -11,7 +11,6 @@ import {
   RefreshCw,
   FileText,
   Box,
-  ArrowRight,
   Package,
   CheckCircle2,
   Cloud,
@@ -457,35 +456,17 @@ const Dashboard: React.FC = () => {
 
         {/* ACCIONES RÁPIDAS Y HERRAMIENTAS */}
         <div className="grid grid-cols-1 gap-4">
-          <button
-            onClick={() => navigate("/reception")}
-            className="w-full bg-blue-600 p-6 rounded-3xl flex items-center gap-5 active:scale-[0.98] transition-all text-left shadow-lg shadow-blue-600/20 group"
-          >
-            <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center shrink-0">
-              <Box className="w-8 h-8 text-white" />
-            </div>
-            <div className="flex-1">
-              <h4 className="text-lg font-black text-white uppercase tracking-wider">
-                Control de Arribo
-              </h4>
-              <p className="text-sm text-blue-100 font-medium mt-0.5">
-                Validar llegada de bultos y bandejas
-              </p>
-            </div>
-            <ArrowRight className="w-8 h-8 text-white/50 group-hover:text-white transition-colors" />
-          </button>
-
           <div className="grid grid-cols-2 gap-4">
             <Card
               hoverable
-              onClick={() => navigate("/database")}
+              onClick={() => navigate("/reception")}
               className="flex items-center gap-3 p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-3xl"
             >
-              <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-xl">
-                <Database className="w-5 h-5 text-amber-600 dark:text-amber-500" />
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl">
+                <Box className="w-5 h-5 text-blue-600 dark:text-blue-500" />
               </div>
               <span className="text-xs font-bold uppercase tracking-wider">
-                Catálogo
+                Arribo
               </span>
             </Card>
 
@@ -504,6 +485,19 @@ const Dashboard: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
+            <Card
+              hoverable
+              onClick={() => navigate("/database")}
+              className="flex items-center gap-3 p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-3xl"
+            >
+              <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-xl">
+                <Database className="w-5 h-5 text-amber-600 dark:text-amber-500" />
+              </div>
+              <span className="text-xs font-bold uppercase tracking-wider">
+                Catálogo
+              </span>
+            </Card>
+
             <button
               onClick={triggerSync}
               className={`flex items-center justify-center gap-3 p-5 rounded-3xl border transition-all ${
@@ -528,17 +522,17 @@ const Dashboard: React.FC = () => {
                 {syncStatus.state === 'SYNCING' ? 'Sincronizando' : 'Sincronizar'}
               </span>
             </button>
-
-            <button
-              onClick={() => navigate("/settings")}
-              className="flex items-center justify-center gap-3 p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
-            >
-              <Settings className="w-5 h-5" />
-              <span className="text-sm font-bold uppercase tracking-wider">
-                Ajustes
-              </span>
-            </button>
           </div>
+
+          <button
+            onClick={() => navigate("/settings")}
+            className="flex items-center justify-center gap-3 p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+          >
+            <Settings className="w-5 h-5" />
+            <span className="text-sm font-bold uppercase tracking-wider">
+              Ajustes
+            </span>
+          </button>
         </div>
       </div>
     </div>
