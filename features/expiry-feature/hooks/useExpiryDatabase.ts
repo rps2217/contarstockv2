@@ -1,7 +1,7 @@
 
 import { useMemo, useEffect, useCallback, useState } from 'react';
 import { db as firestoreDb } from '../../../src/lib/firebase';
-import { collection, onSnapshot, query, limit, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, limit } from 'firebase/firestore';
 import { firebaseSyncService, handleFirestoreError, OperationType } from '../../../services/firebaseSyncService';
 import { Product, Provider } from '../../../types';
 import { useToastStore } from '../../../store/useToastStore';
@@ -182,13 +182,19 @@ export const useExpiryDatabase = () => {
   const handleSyncExpirations = useCallback(async () => {
     try {
       setIsSyncing(true);
-      addToast(`Sincronización completa.`, 'success');
+      const { dynamicSyncService } = await import('../../../services/dynamicSync');
+      const result = await dynamicSyncService.syncAllPending(undefined, tableName);
+      if (result.failed === 0) {
+        addToast(`Sincronización completa. ${result.success} registros sincronizados.`, 'success');
+      } else {
+        addToast(`Sincronización parcial: ${result.success} OK, ${result.failed} fallidos.`, 'error');
+      }
     } catch (error: any) {
       addToast(`Error al sincronizar: ${error.message}`, 'error');
     } finally {
       setIsSyncing(false);
     }
-  }, []);
+  }, [tableName]);
 
   const handleRemoveItem = useCallback(async (item: any) => {
     try {
@@ -270,6 +276,11 @@ export const useExpiryDatabase = () => {
     setPreferences(newPrefs);
   }, [setPreferences]);
 
+  const clearLocalData = useCallback(async () => {
+    setCloudItems([]);
+    addToast('Datos locales limpiados. La suscripción en tiempo real los restaurará.', 'info');
+  }, []);
+
 
 
   return {
@@ -285,7 +296,7 @@ export const useExpiryDatabase = () => {
       selectedIds,
       verifiedIds,
       allItems: baseProcessedData,
-      processedScans: baseProcessedData,
+      processedScans: processedData,
       categories,
       stats,
       preferences
@@ -304,7 +315,8 @@ export const useExpiryDatabase = () => {
       handleRemoveItem,
       handleBulkRemove,
       handleAddItem,
-      handleUpdatePreferences
+      handleUpdatePreferences,
+      clearLocalData
     }
   };
 };

@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { db as firebaseDb } from '../../../src/lib/firebase';
-import { collection, onSnapshot, query, limit, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, limit } from 'firebase/firestore';
 import { firebaseSyncService, handleFirestoreError, OperationType } from '../../../services/firebaseSyncService';
 import { useAppStore } from '../../../store/useAppStore';
 import { useToastStore } from '../../../store/useToastStore';
@@ -25,18 +25,30 @@ export const useEventDatabase = () => {
   });
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [cloudItems, setCloudItems] = useState<any[]>([]);
+  const [pendingOperations, setPendingOperations] = useState(0);
 
   const tableName = settings?.appSheetConfig?.eventsTableName || 'EVENTOS';
 
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (debouncedSearch !== searchQuery) {
+        setDebouncedSearch(searchQuery);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery, debouncedSearch]);
+
+  // Firestore real-time subscription
   useEffect(() => {
     if (!tableName || tableName === 'undefined') return;
 
     try {
       const colRef = collection(firebaseDb, tableName);
-      // FLEXIBILIZACIÓN: Eliminamos el 'orderBy' de la consulta de red.
       const q = query(colRef, limit(3000));
 
       const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -54,7 +66,7 @@ export const useEventDatabase = () => {
         try {
           handleFirestoreError(error, OperationType.GET, tableName);
         } catch (e) {
-          // Fallback
+          // Fallback silencioso
         }
       });
 
@@ -64,13 +76,14 @@ export const useEventDatabase = () => {
     }
   }, [tableName]);
 
+  // Datos base procesados (sin filtros de UI)
   const baseProcessedData = useMemo(() => {
     const eventMapping = settings?.appSheetConfig?.mappings?.events;
     return (cloudItems || [])
       .sort((a, b) => {
         const timeA = a.timestamp ? (typeof a.timestamp === 'string' ? new Date(a.timestamp).getTime() : a.timestamp) : 0;
         const timeB = b.timestamp ? (typeof b.timestamp === 'string' ? new Date(b.timestamp).getTime() : b.timestamp) : 0;
-        return (timeB || 0) - (timeA || 0); // Descendente
+        return (timeB || 0) - (timeA || 0);
       })
       .filter(record => {
         const exp = record;
@@ -92,16 +105,62 @@ export const useEventDatabase = () => {
           location: eventMapping?.location ? exp[eventMapping.location] : (exp.UBICACION || exp.location || 'GENERAL'),
           frc: eventMapping?.frc ? exp[eventMapping.frc] : (exp.FRC || exp.frc || ''),
           nguia: eventMapping?.nguia ? exp[eventMapping.nguia] : (exp.NGUIA || exp.nguia || ''),
+          destino: exp.destino || exp.DESTINO || '',
+          traspaso: exp.traspaso || exp.TRASPASO || '',
+          observaciones: exp.observaciones || exp.OBSERVACIONES || '',
           timestamp: record.timestamp || Date.now(),
           claveUnica: exp.claveUnica,
           category: 'GENERAL',
-          isAdjusted: !!(exp.traspaso && exp.traspaso.trim() !== ''),
+          isAdjusted: !!(exp.traspaso && String(exp.traspaso).trim() !== ''),
           mm: exp.MM,
           yyyy: exp.YYYY,
           syncStatus: 'synced',
         };
       });
   }, [cloudItems, settings?.appSheetConfig?.mappings?.events]);
+
+  // Datos filtrados por búsqueda y tipo de evento
+  const filteredData = useMemo(() => {
+    let data = baseProcessedData;
+
+    // Filtro por tipo de evento
+    if (selectedEvents.length > 0) {
+      data = data.filter(item => selectedEvents.includes(item.event));
+    }
+
+    // Filtro por búsqueda de texto
+    if (debouncedSearch.trim()) {
+      const q = debouncedSearch.toLowerCase();
+      data = data.filter(item =>
+        (item.barcode || '').toLowerCase().includes(q) ||
+        (item.productName || '').toLowerCase().includes(q) ||
+        (item.providerName || '').toLowerCase().includes(q) ||
+        (item.frc || '').toLowerCase().includes(q) ||
+        (item.nguia || '').toLowerCase().includes(q) ||
+        (item.event || '').toLowerCase().includes(q) ||
+        (item.destino || '').toLowerCase().includes(q)
+      );
+    }
+
+    return data;
+  }, [baseProcessedData, selectedEvents, debouncedSearch]);
+
+  // Estadísticas de prioridad
+  const priorityStats = useMemo(() => {
+    const eventCounts: Record<string, number> = {};
+    filteredData.forEach(item => {
+      eventCounts[item.event] = (eventCounts[item.event] || 0) + 1;
+    });
+
+    const eventAlerts = Object.entries(eventCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5)
+      .map(([event, count]) => ({ name: event, count }));
+
+    return { priorityItems: [], eventAlerts, suggestedActions: [] };
+  }, [filteredData]);
+
+  // --- ACCIONES CRUD ---
 
   const handleRemoveItem = useCallback(async (item: any) => {
     try {
@@ -144,10 +203,74 @@ export const useEventDatabase = () => {
     }
   }, [tableName]);
 
+  const createEvent = useCallback(async (data: any) => {
+    return handleAddItem(data);
+  }, [handleAddItem]);
+
+  const updateEvent = useCallback(async (id: string, data: any) => {
+    try {
+      await firebaseSyncService.pushChange(tableName, id, { ...data, id });
+      addToast('Evento actualizado correctamente', 'success');
+    } catch (error: any) {
+      addToast(`Error al actualizar: ${error.message}`, 'error');
+    }
+  }, [tableName]);
+
+  const deleteEvent = useCallback(async (id: string) => {
+    try {
+      await firebaseSyncService.deleteRemote(tableName, id);
+      addToast('Evento eliminado', 'success');
+    } catch (error: any) {
+      addToast(`Error al eliminar: ${error.message}`, 'error');
+    }
+  }, [tableName]);
+
+  const updateEventStatus = useCallback(async (id: string, isAdjusted: boolean) => {
+    try {
+      await firebaseSyncService.pushChange(tableName, id, {
+        id,
+        traspaso: isAdjusted ? 'AJUSTADO' : '',
+      });
+    } catch (error: any) {
+      addToast(`Error al actualizar estado: ${error.message}`, 'error');
+    }
+  }, [tableName]);
+
+  const updateEventDestino = useCallback(async (id: string, destino: string) => {
+    try {
+      await firebaseSyncService.pushChange(tableName, id, {
+        id,
+        destino,
+      });
+    } catch (error: any) {
+      addToast(`Error al actualizar destino: ${error.message}`, 'error');
+    }
+  }, [tableName]);
+
+  const updateEventBulkFieldsMany = useCallback(async (ids: string[], updates: any) => {
+    try {
+      const rows = ids.map(id => ({ id, ...updates }));
+      await firebaseSyncService.pushBatch(tableName, rows);
+      addToast(`${ids.length} registros actualizados`, 'success');
+    } catch (error: any) {
+      addToast(`Error en actualización masiva: ${error.message}`, 'error');
+    }
+  }, [tableName]);
+
+  const clearLocalData = useCallback(async () => {
+    setCloudItems([]);
+    addToast('Datos locales limpiados. La suscripción en tiempo real los restaurará.', 'info');
+  }, []);
+
   const handleUpdatePreferences = useCallback((newPrefs: Partial<EventPreferences>) => {
     setPreferences(prev => ({ ...prev, ...newPrefs }));
     localStorage.setItem('event_preferences', JSON.stringify({ ...preferences, ...newPrefs }));
   }, [preferences]);
+
+  const handleSelectAll = useCallback(() => {
+    const allIds = new Set(filteredData.map(i => i.id));
+    setSelectedIds(allIds);
+  }, [filteredData]);
 
   return {
     state: {
@@ -156,16 +279,16 @@ export const useEventDatabase = () => {
       selectedIds,
       allItems: baseProcessedData,
       preferences,
-      processedEvents: baseProcessedData,
-      pendingEvents: baseProcessedData.filter(e => !e.isAdjusted),
-      adjustedEvents: baseProcessedData.filter(e => e.isAdjusted),
+      processedEvents: filteredData,
+      pendingEvents: filteredData.filter(e => !e.isAdjusted),
+      adjustedEvents: filteredData.filter(e => e.isAdjusted),
       totalCount: baseProcessedData.length,
-      filteredCount: baseProcessedData.length,
-      pendingCount: baseProcessedData.filter(i => !i.isAdjusted).length,
-      adjustedCount: baseProcessedData.filter(i => i.isAdjusted).length,
-      priorityStats: { priorityItems: [], eventAlerts: [], suggestedActions: [] },
+      filteredCount: filteredData.length,
+      pendingCount: filteredData.filter(i => !i.isAdjusted).length,
+      adjustedCount: filteredData.filter(i => i.isAdjusted).length,
+      priorityStats,
       eventTypes: Array.from(new Set(baseProcessedData.map(i => i.event))),
-      pendingOperations: 0
+      pendingOperations
     },
     actions: {
       setSearchQuery,
@@ -175,14 +298,14 @@ export const useEventDatabase = () => {
       handleBulkRemove,
       handleAddItem,
       handleUpdatePreferences,
-      clearLocalData: async () => {},
-      updateEventBulkFieldsMany: async (ids: string[], updates: any) => {},
+      clearLocalData,
+      updateEventBulkFieldsMany,
       clearSelection: () => setSelectedIds(new Set()),
-      updateEvent: async (id: string, data: any) => ({}),
-      createEvent: async (data: any) => ({}),
-      setPendingOperations: (op: any) => {},
-      deleteEvent: async (id: string) => {},
-      updateEventStatus: async (id: string, isAdjusted: boolean) => {},
+      updateEvent,
+      createEvent,
+      setPendingOperations,
+      deleteEvent,
+      updateEventStatus,
       handleToggleSelect: (id: string) => {
         setSelectedIds(prev => {
           const next = new Set(prev);
@@ -191,10 +314,12 @@ export const useEventDatabase = () => {
           return next;
         });
       },
-      handleSelectAll: () => {},
-      updateEventDestino: async (id: string, destino: string) => {},
+      handleSelectAll,
+      updateEventDestino,
       togglePreference: (prefs: Partial<EventPreferences>) => {
-        setPreferences(prev => ({ ...prev, ...prefs }));
+        const updated = { ...preferences, ...prefs };
+        setPreferences(updated);
+        localStorage.setItem('event_preferences', JSON.stringify(updated));
       }
     }
   };

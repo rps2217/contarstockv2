@@ -1,1 +1,0 @@
-import{j as e}from"./index-DQDGCxru.js";import"./vendor-react-CfnKvHkI.js";import"./vendor-utils-CQMXVLFB.js";const c=()=>e.jsxs("div",{className:"p-8 text-white",children:[e.jsx("h1",{className:"text-2xl font-bold mb-4",children:"Recepción de Documentos"}),e.jsx("p",{children:"Módulo en construcción..."})]});export{c as DocumentReceptionPage,c as default};
