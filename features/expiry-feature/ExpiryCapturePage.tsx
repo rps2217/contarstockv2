@@ -9,9 +9,15 @@ import { useExpiryDatabase, ExpiryItem } from './hooks/useExpiryDatabase';
 import { useHIDScanner } from '../../hooks/useHIDScanner';
 import { SoundFX } from '../../services/audio';
 import { differenceInDays } from 'date-fns';
+import { useFeedbackSystem } from '../../hooks/useFeedbackSystem';
 
 import { useAppStore } from '../../store/useAppStore';
 import { DynamicForm } from '../../components/DynamicForm';
+import { CameraScanner } from '../../components/CameraScanner';
+import { ScannerTargetOverlay } from '../../shared/components/scanner/ScannerTargetOverlay';
+
+// Components
+import { BarcodeScannerModal } from './components/BarcodeScannerModal';
 
 // Memoized Item Component for performance on low-end devices
 const ExpiryItemRow = React.memo(({ 
@@ -100,10 +106,12 @@ const ExpiryItemRow = React.memo(({
 // Memoized Scanner Input to isolate re-renders from the main list
 const ScannerInput = React.memo(({ 
   onScan, 
-  isModalOpen 
+  isModalOpen,
+  onOpenScanner
 }: { 
   onScan: (code: string) => void;
   isModalOpen: boolean;
+  onOpenScanner: () => void;
 }) => {
   const [value, setValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -131,9 +139,12 @@ const ScannerInput = React.memo(({
 
   return (
     <div className="relative flex items-center">
-      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+      <button 
+        onClick={onOpenScanner}
+        className="absolute inset-y-0 left-0 pl-4 flex items-center z-10 active:scale-90 transition-transform"
+      >
         <ScanLine className="w-6 h-6 text-blue-500" />
-      </div>
+      </button>
       <input
         ref={inputRef}
         type="text"
@@ -165,9 +176,14 @@ export const ExpiryCapturePage: React.FC = () => {
   const navigate = useNavigate();
   const { addToast } = useToastStore.getState();
   const { state, actions } = useExpiryDatabase();
+  const { feedback, trigger } = useFeedbackSystem(400);
   const expirySchema = useAppStore(s => s.settings.appSheetConfig?.schema?.expiry || s.settings.schema?.expiry);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false); // This is for the modal (legacy/alternative)
+  const [isCameraActive, setIsCameraActive] = useState(() => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+  }); // Persistent inline camera
   const [scannedBarcode, setScannedBarcode] = useState('');
   const [productName, setProductName] = useState('');
   const [providerName, setProviderName] = useState('');
@@ -175,8 +191,11 @@ export const ExpiryCapturePage: React.FC = () => {
 
   const handleScan = useCallback(async (code: string) => {
     if (!code) return;
-    SoundFX.play('scan');
-    if (navigator.vibrate) navigator.vibrate(40);
+    
+    // Evitar escaneos duplicados muy rápidos si el modal ya está abierto
+    if (isModalOpen) return;
+
+    trigger('success');
     
     const normalizedCode = normalizeSku(code);
     setScannedBarcode(normalizedCode);
@@ -188,11 +207,11 @@ export const ExpiryCapturePage: React.FC = () => {
     
     // Open modal
     setIsModalOpen(true);
-  }, []);
+  }, [isModalOpen, trigger]);
 
   useHIDScanner({
     onScan: handleScan,
-    isEnabled: !isModalOpen,
+    isEnabled: !isModalOpen && !isScannerOpen,
     maxLatency: 50
   });
 
@@ -252,8 +271,40 @@ export const ExpiryCapturePage: React.FC = () => {
           <h1 className="text-sm font-black uppercase tracking-widest text-slate-400">Captura Rápida</h1>
         </div>
 
-        <ScannerInput onScan={handleScan} isModalOpen={isModalOpen} />
+        <ScannerInput 
+          onScan={handleScan} 
+          isModalOpen={isModalOpen || isScannerOpen || isCameraActive} 
+          onOpenScanner={() => setIsCameraActive(!isCameraActive)}
+        />
       </div>
+
+      {/* PERSISTENT CAMERA SCANNER (Industrial Style) */}
+      <AnimatePresence>
+        {isCameraActive && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 200, opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="relative bg-black shrink-0 overflow-hidden border-b border-blue-500/30"
+          >
+            <CameraScanner 
+              onScan={handleScan} 
+              onClose={() => setIsCameraActive(false)} 
+              inline={true}
+              isTriggered={true}
+            />
+            <ScannerTargetOverlay feedback={feedback} />
+            
+            {/* Overlay Info */}
+            <div className="absolute bottom-2 left-4 z-40 flex items-center gap-2">
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-black/60 border border-white/10 backdrop-blur-md">
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                <span className="text-[8px] font-black uppercase tracking-widest text-white/80">Cámara Activa</span>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* SCROLLABLE LIST */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar pb-32">
@@ -274,6 +325,15 @@ export const ExpiryCapturePage: React.FC = () => {
 
       {/* DYNAMIC FORM MODAL */}
       <AnimatePresence>
+        {isScannerOpen && (
+          <BarcodeScannerModal 
+            isOpen={isScannerOpen}
+            onClose={() => setIsScannerOpen(false)}
+            onScan={handleScan}
+            theme="dark"
+          />
+        )}
+        
         {isModalOpen && (
           <motion.div
             initial={{ opacity: 0 }}
