@@ -83,6 +83,7 @@ export const Reports: React.FC = () => {
         isCleaning={state.isCleaning}
         onClean={actions.handleCleanSynced}
         onStartNew={() => actions.setIsStartModalOpen(true)}
+        syncedCount={state.syncedCount}
       />
 
       <div className="mt-4 mb-6 shrink-0">

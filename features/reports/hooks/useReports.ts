@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
+import { toast } from "sonner";
 import * as sessionService from "../../../services/sessionService";
 import { useLocation } from "react-router-dom";
 import { SessionRepository } from "../../../repositories/SessionRepository";
@@ -54,7 +55,18 @@ export const useReports = () => {
     setLimit((prev) => prev + 50);
   }, []);
 
+  const syncedCount = useLiveQuery(
+    () => SessionRepository.getSyncedCount(),
+    [],
+    0,
+  );
+
   const handleCleanSynced = useCallback(async () => {
+    if (syncedCount === 0) {
+      toast.error("No hay registros sincronizados para limpiar.");
+      return;
+    }
+
     if (
       !confirm("Se purgarán los datos ya respaldados en la nube. ¿Continuar?")
     )
@@ -62,11 +74,15 @@ export const useReports = () => {
     setIsCleaning(true);
     try {
       const count = await sessionService.cleanSyncedSessions();
-      if (count > 0) alert(`Purga exitosa: ${count} registros eliminados.`);
+      if (count > 0) {
+        toast.success(`Purga exitosa: ${count} registros eliminados.`);
+      }
+    } catch (error) {
+      toast.error("Error al realizar la limpieza.");
     } finally {
       setIsCleaning(false);
     }
-  }, []);
+  }, [syncedCount]);
 
   const handleDeleteSession = useCallback(
     async (e: React.MouseEvent, sessionId: string) => {
@@ -109,6 +125,7 @@ export const useReports = () => {
       isLoading,
       erpCounts: erpCounts || {},
       pendingSyncCount,
+      syncedCount: syncedCount || 0,
       searchQuery,
       selectedSessionId,
       isCleaning,

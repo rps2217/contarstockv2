@@ -66,4 +66,8 @@ export class SessionRepository {
       .and(s => s.erpOrder === 'RECEPCION_BORRADOR')
       .delete();
   }
+
+  static async getSyncedCount(): Promise<number> {
+    return await db.sessions.where('lastSyncTimestamp').above(0).count();
+  }
 }

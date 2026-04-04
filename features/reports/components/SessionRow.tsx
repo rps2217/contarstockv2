@@ -19,10 +19,10 @@ export const SessionRow = memo(({ index, style, data }: any) => {
  <div style={style} className="px-4 py-2">
  <div 
  onClick={() => onSelect(session.id)}
- className={`bg-white dark:bg-slate-900 border-4 rounded-[2.5rem] h-full flex items-center px-6 gap-5 transition-all active:scale-[0.98] shadow-sm relative overflow-hidden ${isMultiBulto ? 'border-indigo-100 dark:border-indigo-900/30' : 'border-slate-100 dark:border-white/5'}`}
+ className={`bg-white dark:bg-slate-900 border-4 rounded-[2.5rem] h-full flex items-center px-6 gap-5 transition-all active:scale-[0.98] shadow-sm relative ${isMultiBulto ? 'border-indigo-100 dark:border-indigo-900/30' : 'border-slate-100 dark:border-white/5'}`}
  >
  {/* INDICADOR LATERAL OPERATIVO DINÁMICO */}
- <div className={`absolute left-0 top-0 bottom-0 w-2.5 ${hasIssues ? 'bg-rose-500' : isVerified ? 'bg-emerald-500' : 'bg-blue-600'}`} />
+ <div className={`absolute left-0 top-0 bottom-0 w-2.5 rounded-l-[2.5rem] ${hasIssues ? 'bg-rose-500' : isVerified ? 'bg-emerald-500' : 'bg-blue-600'}`} />
 
  <div className="flex-1 min-w-0 py-4">
  <div className="flex items-center gap-2 mb-2">
