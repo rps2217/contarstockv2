@@ -160,7 +160,6 @@ const AppContent = () => {
                 <Route path="/settings" element={<Settings />} />
                 
                 {/* RUTAS MODULARES DE FEATURES */}
-                <Route path="/reception" element={<ReceptionHub />} />
                 <Route path="/expiry" element={<ExpiryManagement />} />
                 <Route path="/expiry/capture" element={<ExpiryCapturePage />} />
                 <Route path="/events" element={<EventManagement />} />

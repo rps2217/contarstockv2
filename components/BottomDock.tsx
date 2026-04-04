@@ -23,7 +23,6 @@ export const BottomDock: React.FC<Props> = ({ currentView, settings }) => {
   'dashboard': { label: 'HOME', icon: Home, path: '/dashboard' },
   'reports': { label: 'LOGS', icon: History, path: '/reports' },
   'database': { label: 'DB', icon: Database, path: '/database' },
-  'reception': { label: 'INBOUND', icon: Container, path: '/reception' },
   'sync': { label: 'SYNC', icon: Cloud, path: '/sync' },
   'expiry': { label: 'EXPIRY', icon: Calendar, path: '/expiry' },
   'events': { label: 'EVENTS', icon: FileText, path: '/events' },

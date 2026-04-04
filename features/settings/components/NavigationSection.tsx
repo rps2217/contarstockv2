@@ -14,7 +14,6 @@ export const NavigationSection: React.FC<Props> = ({ settings, updateSetting }) 
  { id: 'dashboard', label: 'Métricas', icon: Home },
  { id: 'reports', label: 'Historial', icon: History },
  { id: 'database', label: 'Catálogo', icon: Database },
- { id: 'reception', label: 'Recepción', icon: Container },
  { id: 'sync', label: 'Nube', icon: Cloud },
  { id: 'expiry', label: 'Vencimientos', icon: Calendar },
  { id: 'events', label: 'Eventos', icon: FileText },

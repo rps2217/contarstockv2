@@ -179,26 +179,6 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
         </div>
         <ArrowRight className="w-5 h-5 text-orange-500 opacity-50 group-hover:opacity-100 transition-opacity" />
       </button>
-
-      <div className="relative flex items-center py-2">
-        <div className="flex-grow border-t border-white/10"></div>
-        <span className="flex-shrink-0 mx-4 text-slate-500 text-[9px] font-black uppercase">Otras Opciones</span>
-        <div className="flex-grow border-t border-white/10"></div>
-      </div>
-
-      <button 
-        onClick={() => { onClose(); navigate('/reception'); }}
-        className="w-full bg-slate-800 border-2 border-white/5 p-4 rounded-2xl flex items-center gap-4 active:scale-95 transition-all text-left group hover:bg-slate-700"
-      >
-        <div className="w-12 h-12 bg-slate-700 rounded-xl flex items-center justify-center shrink-0">
-          <ScanLine className="w-6 h-6 text-slate-300" />
-        </div>
-        <div className="flex-1">
-          <h4 className="text-sm font-black text-white uppercase tracking-wider">Recepción</h4>
-          <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">Escanear documento físico con IA</p>
-        </div>
-        <ArrowRight className="w-5 h-5 text-slate-500 opacity-50 group-hover:opacity-100 transition-opacity" />
-      </button>
     </div>
   );
 
