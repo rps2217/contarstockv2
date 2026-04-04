@@ -3,7 +3,7 @@ import React, { Suspense, useEffect, useState } from 'react';
 import { HashRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { useAppStore } from '@/store/appStore'; // Vercel Cache Invalidation Ref: 20260404-03
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { NetworkStatus } from '@/components/NetworkStatus';
+import { NetworkStatus } from '@/shared/components/ui/NetworkStatus';
 import { Sidebar } from '@/components/Sidebar';
 import { BottomDock } from '@/components/BottomDock';
 import { SystemStatus } from '@/components/SystemStatus';
