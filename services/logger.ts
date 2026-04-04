@@ -4,21 +4,23 @@ import { telemetry } from './telemetryService';
 
 const MAX_LOGS = 2000; 
 
-const writeLog = async (level: SystemLog['level'], module: string, message: string, details?: any) => {
+const writeLog = async (level: SystemLog['level'], module: string, message: any, details?: any) => {
   try {
     const timestamp = Date.now();
+    const messageStr = typeof message === 'object' ? (message.message || JSON.stringify(message)) : String(message);
+    
     // Consola formateada para desarrollo
     const style = level === 'error' ? 'color: #ff4d4d; font-weight: bold' : level === 'success' ? 'color: #2ecc71' : 'color: #3498db';
-    console.log(`%c[${module}] [${level.toUpperCase()}] ${message}`, style, details || '');
+    console.log(`%c[${module}] [${level.toUpperCase()}] ${messageStr}`, style, details || '');
 
     if (level === 'error') {
-      telemetry.track('ERROR', module, { message, details });
+      telemetry.track('ERROR', module, { message: messageStr, details });
     }
 
     await db.logs.add({
       level,
       module,
-      message,
+      message: messageStr,
       details: details ? (typeof details === 'object' ? JSON.stringify(details) : String(details)) : undefined,
       timestamp
     });

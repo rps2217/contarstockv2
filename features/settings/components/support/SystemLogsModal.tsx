@@ -144,10 +144,12 @@ export const SystemLogsModal: React.FC<Props> = ({ isOpen, onClose }) => {
                       {new Date(log.timestamp).toLocaleString('es-CL')}
                     </span>
                   </div>
-                  <p className="font-medium leading-relaxed break-words">{log.message}</p>
+                  <p className="font-medium leading-relaxed break-words">
+                    {typeof log.message === 'object' ? JSON.stringify(log.message, null, 2) : String(log.message)}
+                  </p>
                   {log.details && (
                     <pre className="mt-2 p-2 bg-black/40 rounded-lg text-[10px] overflow-x-auto border border-white/5 text-slate-400">
-                      {log.details}
+                      {typeof log.details === 'object' ? JSON.stringify(log.details, null, 2) : String(log.details)}
                     </pre>
                   )}
                 </div>
