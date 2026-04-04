@@ -2,42 +2,42 @@
 import React, { Suspense, useEffect, useState } from 'react';
 import { HashRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { useAppStore } from '@/store/appStore'; // Vercel Cache Invalidation Ref: 20260404-03
-import { ErrorBoundary } from './components/ErrorBoundary';
-import { NetworkStatus } from './components/NetworkStatus';
-import { Sidebar } from './components/Sidebar';
-import { BottomDock } from './components/BottomDock';
-import { SystemStatus } from './components/SystemStatus';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { NetworkStatus } from '@/components/NetworkStatus';
+import { Sidebar } from '@/components/Sidebar';
+import { BottomDock } from '@/components/BottomDock';
+import { SystemStatus } from '@/components/SystemStatus';
 import { Box, Loader2, Database, WifiOff, Cpu, RefreshCw, Plus } from 'lucide-react';
-import { lazyWithRetry } from './services/lazyLoad';
-import { initPersistence } from './services/backupService';
-import { InitializationService, InitStep } from './services/initializationService';
-import { ToastContainer } from './shared/components/ui/ToastContainer';
-import { useAutoSync } from './hooks/useAutoSync';
-import { useAutoSession } from './hooks/useAutoSession';
+import { lazyWithRetry } from '@/services/lazyLoad';
+import { initPersistence } from '@/services/backupService';
+import { InitializationService, InitStep } from '@/services/initializationService';
+import { ToastContainer } from '@/shared/components/ui/ToastContainer';
+import { useAutoSync } from '@/hooks/useAutoSync';
+import { useAutoSession } from '@/hooks/useAutoSession';
 import { useNavigate } from 'react-router-dom';
 
 // --- COMPONENTES DIFERIDOS ---
-const Login = lazyWithRetry(() => import('./components/Login').then(m => ({ default: m.Login })));
-const StartSessionModal = lazyWithRetry(() => import('./components/StartSessionModal').then(m => ({ default: m.StartSessionModal })));
+const Login = lazyWithRetry(() => import('@/components/Login').then(m => ({ default: m.Login })));
+const StartSessionModal = lazyWithRetry(() => import('@/components/StartSessionModal').then(m => ({ default: m.StartSessionModal })));
 
 // --- VISTAS MAESTRAS ---
 // Forzamos un cambio para limpiar el caché de Vercel (intento 2)
-const Dashboard = lazyWithRetry(() => import('./features/dashboard/DashboardPage'));
-const Reports = lazyWithRetry(() => import('./features/reports/ReportsPage'));
-const DatabaseView = lazyWithRetry(() => import('./features/inventory/InventoryPage'));
-const Sync = lazyWithRetry(() => import('./features/sync/SyncPage'));
-const Settings = lazyWithRetry(() => import('./features/settings/SettingsPage'));
+const Dashboard = lazyWithRetry(() => import('@/features/dashboard/DashboardPage'));
+const Reports = lazyWithRetry(() => import('@/features/reports/ReportsPage'));
+const DatabaseView = lazyWithRetry(() => import('@/features/inventory/InventoryPage'));
+const Sync = lazyWithRetry(() => import('@/features/sync/SyncPage'));
+const Settings = lazyWithRetry(() => import('@/features/settings/SettingsPage'));
 
 // --- MÓDULOS OPERATIVOS (FEATURES) ---
-const ReceptionHub = lazyWithRetry(() => import('./features/reception/ReceptionHub'));
-const CountingPage = lazyWithRetry(() => import('./features/counting/CountingPage'));
-const HammerPage = lazyWithRetry(() => import('./features/hammer/HammerPage'));
-const ExpiryManagement = lazyWithRetry(() => import('./features/expiry/ExpiryManagementPage'));
-const EventManagement = lazyWithRetry(() => import('./features/events/EventManagementPage'));
-const ExpiryCapturePage = lazyWithRetry(() => import('./features/expiry/ExpiryCapturePage'));
-const EventCapturePage = lazyWithRetry(() => import('./features/events/EventCapturePage'));
-const DynamicManagement = lazyWithRetry(() => import('./features/dynamic/DynamicManagementPage').then(m => ({ default: m.DynamicManagementPage })));
-const GlobalSyncQueue = lazyWithRetry(() => import('./features/sync/GlobalSyncQueuePage'));
+const ReceptionHub = lazyWithRetry(() => import('@/features/reception/ReceptionHub'));
+const CountingPage = lazyWithRetry(() => import('@/features/counting/CountingPage'));
+const HammerPage = lazyWithRetry(() => import('@/features/hammer/HammerPage'));
+const ExpiryManagement = lazyWithRetry(() => import('@/features/expiry/ExpiryManagementPage'));
+const EventManagement = lazyWithRetry(() => import('@/features/events/EventManagementPage'));
+const ExpiryCapturePage = lazyWithRetry(() => import('@/features/expiry/ExpiryCapturePage'));
+const EventCapturePage = lazyWithRetry(() => import('@/features/events/EventCapturePage'));
+const DynamicManagement = lazyWithRetry(() => import('@/features/dynamic/DynamicManagementPage').then(m => ({ default: m.DynamicManagementPage })));
+const GlobalSyncQueue = lazyWithRetry(() => import('@/features/sync/GlobalSyncQueuePage'));
 
 const AppContent = () => {
   const location = useLocation();
