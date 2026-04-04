@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback, memo } from "react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { useLocation } from "react-router-dom";
 import {
-  ScanLine,
   Radio,
   Database,
   Settings,
@@ -21,6 +20,7 @@ import {
   Upload,
   Trash2,
   History,
+  Camera,
 } from "lucide-react";
 import { NetworkStatus } from "../../shared/components/ui/NetworkStatus";
 import { OrderRow } from "./components/OrderRow";
@@ -37,6 +37,7 @@ import { useHIDScanner } from "../../hooks/useHIDScanner";
 import Papa from 'papaparse';
 import { toast } from 'sonner';
 import { ExpectedOrder, ExpectedItem } from "../../types";
+import { CameraScanner } from "../../components/CameraScanner";
 
 const Dashboard: React.FC = () => {
   const { operatorId, isSyncNeeded, pendingOrders, navigate, dynamicStats, syncStatus, triggerSync } =
@@ -48,6 +49,7 @@ const Dashboard: React.FC = () => {
   const [isProcessingScan, setIsProcessingScan] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isOrdersCollapsed, setIsOrdersCollapsed] = useState(true);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
   const { settings } = useAppStore();
 
   useEffect(() => {
@@ -282,9 +284,13 @@ const Dashboard: React.FC = () => {
             transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
             className="relative"
           >
-            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-              <ScanLine className="w-7 h-7 text-blue-600" />
-            </div>
+            <button
+              onClick={() => setIsCameraOpen(true)}
+              className="absolute inset-y-0 left-4 flex items-center z-10 text-blue-600 hover:text-blue-700 active:scale-90 transition-all"
+              title="Abrir Cámara"
+            >
+              <Camera className="w-7 h-7" />
+            </button>
             <input
               type="text"
               value={scanInput}
@@ -535,6 +541,26 @@ const Dashboard: React.FC = () => {
           </button>
         </div>
       </div>
+
+      <AnimatePresence>
+        {isCameraOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200]"
+          >
+            <CameraScanner 
+              onScan={(code) => {
+                handleUniversalScan(code);
+                setIsCameraOpen(false);
+              }}
+              onClose={() => setIsCameraOpen(false)}
+              isTriggered={true}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
