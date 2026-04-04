@@ -21,6 +21,7 @@ import {
   Trash2,
   History,
   Camera,
+  ArrowRight,
 } from "lucide-react";
 import { NetworkStatus } from "../../shared/components/ui/NetworkStatus";
 import { OrderRow } from "./components/OrderRow";
@@ -111,6 +112,7 @@ const Dashboard: React.FC = () => {
     if (!cleanCode) return;
 
     setIsProcessingScan(true);
+    const loadingToast = toast.loading("Procesando escaneo...");
     SoundFX.play("success");
 
     try {
@@ -129,6 +131,7 @@ const Dashboard: React.FC = () => {
           undefined,
           true,
         );
+        toast.dismiss(loadingToast);
         navigate(`/count/${session.id}`);
       } else {
         // 2. Check if it's a Logistics Barcode (Reception)
@@ -137,6 +140,7 @@ const Dashboard: React.FC = () => {
           /[a-zA-Z]/.test(cleanCode) || cleanCode.length > 14;
 
         if (isLogisticsBarcode) {
+          toast.dismiss(loadingToast);
           navigate("/reception", { state: { initialScan: cleanCode } });
           return;
         }
@@ -152,11 +156,14 @@ const Dashboard: React.FC = () => {
           true,
         );
 
+        toast.dismiss(loadingToast);
         // Let the CountingPage handle the initial scan
         navigate(`/count/${session.id}`, { state: { initialScan: cleanCode } });
       }
     } catch (error) {
       console.error("Scan error:", error);
+      toast.dismiss(loadingToast);
+      toast.error("Error al procesar el escaneo");
       SoundFX.play("error");
     } finally {
       setIsProcessingScan(false);
@@ -293,6 +300,7 @@ const Dashboard: React.FC = () => {
             </button>
             <input
               type="text"
+              inputMode="numeric"
               value={scanInput}
               onChange={(e) => setScanInput(e.target.value)}
               onKeyDown={(e) => {
@@ -301,15 +309,22 @@ const Dashboard: React.FC = () => {
                 }
               }}
               placeholder="Escanear Orden o Producto..."
-              className="w-full h-20 bg-white dark:bg-slate-950 border-4 border-blue-500 rounded-3xl pl-16 pr-6 text-2xl font-black shadow-2xl shadow-blue-500/20 focus:border-blue-600 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600"
+              className="w-full h-20 bg-white dark:bg-slate-950 border-4 border-blue-500 rounded-3xl pl-16 pr-16 text-2xl font-black shadow-2xl shadow-blue-500/20 focus:border-blue-600 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600"
               disabled={isProcessingScan}
               autoFocus
             />
-            {isProcessingScan && (
-              <div className="absolute inset-y-0 right-6 flex items-center">
+            <div className="absolute inset-y-0 right-4 flex items-center gap-2">
+              {isProcessingScan ? (
                 <RefreshCw className="w-7 h-7 text-blue-500 animate-spin" />
-              </div>
-            )}
+              ) : scanInput ? (
+                <button
+                  onClick={() => handleUniversalScan(scanInput)}
+                  className="w-12 h-12 bg-blue-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-blue-900/40 active:scale-90 transition-all"
+                >
+                  <ArrowRight className="w-7 h-7" />
+                </button>
+              ) : null}
+            </div>
           </motion.div>
         </motion.div>
       </header>

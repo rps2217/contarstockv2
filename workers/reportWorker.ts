@@ -8,7 +8,7 @@ self.onmessage = async (e: MessageEvent) => {
     // Simulating heavy processing
     const productMap = new Map(products.map((p: any) => [p.barcode, p]));
     const reportData = scans.map((scan: any) => {
-      const product = productMap.get(scan.barcode);
+      const product = productMap.get(scan.barcode) as any;
       return {
         ...scan,
         productName: product?.name || 'Desconocido',

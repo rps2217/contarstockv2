@@ -10,8 +10,7 @@ export const sanitizeBarcode = (code: string): string => {
     .trim()
     .toUpperCase()
     .replace(/[\x00-\x1F\x7F-\x9F\u200B-\u200D\uFEFF]/g, "")
-    .replace(/[\s\.]+/g, "") // Remueve espacios y puntos
-    .replace(/^0+/, "");
+    .replace(/[\s\.]+/g, ""); // Remueve espacios y puntos
 };
 
 export const normalizeSku = (val: string): string => sanitizeBarcode(val);

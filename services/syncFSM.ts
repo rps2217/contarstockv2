@@ -97,10 +97,7 @@ class SyncStateMachine {
       if (pendingScans.length > 0) {
         const result = await firebaseSyncService.pushBatch('scans', pendingScans);
         if (result.success) {
-          await db.scans.bulkUpdate(pendingScans.map(s => ({
-            key: s.id,
-            changes: { synced: 1 }
-          })));
+          await db.scans.where('id').anyOf(pendingScans.map(s => s.id)).modify({ synced: 1 });
         } else {
           throw new Error(result.error);
         }
