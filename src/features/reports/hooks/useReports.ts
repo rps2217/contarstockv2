@@ -5,7 +5,7 @@ import * as sessionService from "../../../services/sessionService";
 import { useLocation } from "react-router-dom";
 import { SessionRepository } from "../../../repositories/SessionRepository";
 import { ScanRepository } from "../../../repositories/ScanRepository";
-import { useAppStore } from "@/store/appStore";
+import { useAppStore } from "@/store/mainAppStore";
 
 export const useReports = () => {
   const location = useLocation();

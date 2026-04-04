@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Papa from 'papaparse';
 import { firebaseSyncService } from '../services/firebaseSyncService';
-import { useAppStore } from '@/store/appStore';
+import { useAppStore } from '@/store/mainAppStore';
 import { toast } from 'sonner';
 
 export const CsvImporter: React.FC = () => {

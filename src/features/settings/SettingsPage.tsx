@@ -5,7 +5,7 @@ import {
  Zap, LayoutTemplate, ShieldCheck, Printer, Check, Info
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAppStore } from '@/store/appStore';
+import { useAppStore } from '@/store/mainAppStore';
 
 // Módulos
 import { OperationalSection } from './components/OperationalSection';

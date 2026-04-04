@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import * as sessionService from '../services/sessionService';
 import { sanitizeBarcode } from '../services/utils';
-import { useAppStore } from '@/store/appStore';
+import { useAppStore } from '@/store/mainAppStore';
 
 /**
  * HOOK DE INTELIGENCIA OPERATIVA: useAutoSession

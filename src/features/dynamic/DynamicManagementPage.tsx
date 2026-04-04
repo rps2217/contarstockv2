@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAppStore } from '@/store/appStore';
+import { useAppStore } from '@/store/mainAppStore';
 import { DynamicList } from '../../components/DynamicList';
 import { DynamicForm } from '../../components/DynamicForm';
 import { motion, AnimatePresence } from 'motion/react';
