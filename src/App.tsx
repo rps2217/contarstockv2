@@ -32,10 +32,10 @@ const Settings = lazyWithRetry(() => import('./features/settings/SettingsPage'))
 const ReceptionHub = lazyWithRetry(() => import('./features/reception/ReceptionHub'));
 const CountingPage = lazyWithRetry(() => import('./features/counting/CountingPage'));
 const HammerPage = lazyWithRetry(() => import('./features/hammer/HammerPage'));
-const ExpiryManagement = lazyWithRetry(() => import('./features/expiry-feature/ExpiryManagementPage'));
-const EventManagement = lazyWithRetry(() => import('./features/events-feature/EventManagementPage'));
-const ExpiryCapturePage = lazyWithRetry(() => import('./features/expiry-feature/ExpiryCapturePage'));
-const EventCapturePage = lazyWithRetry(() => import('./features/events-feature/EventCapturePage'));
+const ExpiryManagement = lazyWithRetry(() => import('./features/expiry/ExpiryManagementPage'));
+const EventManagement = lazyWithRetry(() => import('./features/events/EventManagementPage'));
+const ExpiryCapturePage = lazyWithRetry(() => import('./features/expiry/ExpiryCapturePage'));
+const EventCapturePage = lazyWithRetry(() => import('./features/events/EventCapturePage'));
 const DynamicManagement = lazyWithRetry(() => import('./features/dynamic/DynamicManagementPage').then(m => ({ default: m.DynamicManagementPage })));
 const GlobalSyncQueue = lazyWithRetry(() => import('./features/sync/GlobalSyncQueuePage'));
 
@@ -54,12 +54,17 @@ const AppContent = () => {
   // Activar detección de escaneo espontáneo (Zero-Click)
   useAutoSession();
 
-  // Detectar si estamos en un modo de escaneo inmersivo
-  const isScanningMode = location.pathname.startsWith('/counting/') || 
-    location.pathname === '/reception' || 
-    location.pathname === '/expiry/capture' ||
-    location.pathname === '/events/capture' ||
-    location.pathname.startsWith('/massive/');
+  // Detectar si estamos en un modo de escaneo inmersivo (Optimizado con useMemo)
+  const isScanningMode = React.useMemo(() => {
+    const paths = [
+      '/counting/', 
+      '/reception', 
+      '/expiry/capture', 
+      '/events/capture', 
+      '/massive/'
+    ];
+    return paths.some(p => location.pathname.startsWith(p));
+  }, [location.pathname]);
 
   useEffect(() => {
     initPersistence();

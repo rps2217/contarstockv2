@@ -293,7 +293,6 @@ export interface AppSheetConfig {
   providersTableName?: string;
   eventsTableName?: string;
   sessionsTableName?: string;
-  gasWebAppUrl?: string; 
   spreadsheetId?: string;
   columnMapping?: ExpiryMapping; // Keep for backward compatibility
   mappings?: {
