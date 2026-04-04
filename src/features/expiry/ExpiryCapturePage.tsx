@@ -11,7 +11,7 @@ import { SoundFX } from '../../services/audio';
 import { differenceInDays } from 'date-fns';
 import { useFeedbackSystem } from '../../hooks/useFeedbackSystem';
 
-import { useAppStore } from '../../store/appStore';
+import { useAppStore } from '@/store/appStore';
 import { DynamicForm } from '../../components/DynamicForm';
 import { CameraScanner } from '../../components/CameraScanner';
 import { ScannerTargetOverlay } from '../../shared/components/scanner/ScannerTargetOverlay';

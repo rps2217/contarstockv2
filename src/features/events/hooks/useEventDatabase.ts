@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { db as firebaseDb } from '../../../lib/firebase';
 import { collection, onSnapshot, query, limit, orderBy } from 'firebase/firestore';
 import { firebaseSyncService, handleFirestoreError, OperationType } from '../../../services/firebaseSyncService';
-import { useAppStore } from '../../../store/appStore';
+import { useAppStore } from '@/store/appStore';
 import { useToastStore } from '../../../store/useToastStore';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { productRepository } from '../../../repositories/DexieProductRepository';

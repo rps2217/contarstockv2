@@ -30,7 +30,7 @@ import { Button, Card } from "../../shared/components/ui";
 import { db } from "../../db";
 import { getSettings } from "../../services/settings";
 import { SoundFX } from "../../services/audio";
-import { useAppStore } from "../../store/appStore";
+import { useAppStore } from "@/store/appStore";
 import { ExpectedOrderRepository } from "../../repositories/ExpectedOrderRepository";
 import * as sessionService from "../../services/sessionService";
 import { sanitizeBarcode } from "../../services/utils";

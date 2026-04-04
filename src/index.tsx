@@ -28,7 +28,7 @@ if (typeof window !== 'undefined') {
 }
 
 // Importar App DESPUÉS de establecer los polyfills
-import App from './App.tsx';
+import App from './App';
 
 const container = document.getElementById('root');
 if (!container) {

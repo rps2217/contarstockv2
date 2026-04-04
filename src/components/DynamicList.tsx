@@ -3,7 +3,7 @@ import { TableSchema } from '../types';
 import { DynamicCard } from './DynamicCard';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, Filter, Plus, Database, ArrowLeft, RefreshCw, CheckSquare, Square, Printer, Sun, Settings, FileText, Moon } from 'lucide-react';
-import { useAppStore } from '../store/appStore';
+import { useAppStore } from '@/store/appStore';
 import { useNavigate } from 'react-router-dom';
 
 interface DynamicListProps {

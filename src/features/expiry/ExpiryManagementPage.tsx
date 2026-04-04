@@ -27,7 +27,7 @@ import { toast as sonnerToast } from 'sonner';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { productRepository } from '../../repositories/DexieProductRepository';
 import { DynamicForm } from '../../components/DynamicForm';
-import { useAppStore } from '../../store/appStore';
+import { useAppStore } from '@/store/appStore';
 
 // Hooks
 import { useExpiryDatabase, ExpiryStatus } from './hooks/useExpiryDatabase';

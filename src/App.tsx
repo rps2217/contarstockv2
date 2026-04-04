@@ -1,7 +1,7 @@
 
 import React, { Suspense, useEffect, useState } from 'react';
 import { HashRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
-import { useAppStore } from './store/appStore'; // Vercel Cache Invalidation Ref: 20260404-02
+import { useAppStore } from '@/store/appStore'; // Vercel Cache Invalidation Ref: 20260404-03
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { NetworkStatus } from './components/NetworkStatus';
 import { Sidebar } from './components/Sidebar';
