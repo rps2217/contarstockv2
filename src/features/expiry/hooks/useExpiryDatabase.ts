@@ -5,7 +5,7 @@ import { collection, onSnapshot, query, limit, orderBy } from 'firebase/firestor
 import { firebaseSyncService, handleFirestoreError, OperationType } from '../../../services/firebaseSyncService';
 import { Product, Provider } from '../../../types';
 import { useToastStore } from '../../../store/useToastStore';
-import { useAppStore } from '../../../store/useAppStore';
+import { useAppStore } from '../../../store/appStore';
 import { useExpiryStore, ExpiryItem, ExpiryStatus, ExpiryPreferences } from '../../../store/useExpiryStore';
 import { processExpiryItem, filterExpiryItems, calculateExpiryStats } from '../utils/expiryProcessor';
 import { SoundFX } from '../../../services/audio';

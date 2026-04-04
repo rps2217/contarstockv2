@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { useAppStore } from '../../store/useAppStore';
+import { useAppStore } from '../../store/appStore';
 import { 
   ChevronRight, 
   AlertCircle,
