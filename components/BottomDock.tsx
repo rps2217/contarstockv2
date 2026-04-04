@@ -20,13 +20,13 @@ export const BottomDock: React.FC<Props> = ({ currentView, settings }) => {
  const dynamicStats = useLiveQuery(() => db.dynamic_data.where('syncStatus').anyOf(['pending', 'error']).count(), [], 0);
 
  const iconMap: Record<string, { label: string, icon: any, path: string }> = {
-  'dashboard': { label: 'HOME', icon: Home, path: '/dashboard' },
-  'reports': { label: 'LOGS', icon: History, path: '/reports' },
-  'database': { label: 'DB', icon: Database, path: '/database' },
-  'sync': { label: 'SYNC', icon: Cloud, path: '/sync' },
-  'expiry': { label: 'EXPIRY', icon: Calendar, path: '/expiry' },
-  'events': { label: 'EVENTS', icon: FileText, path: '/events' },
-  'settings': { label: 'SETUP', icon: Settings, path: '/settings' }
+  'dashboard': { label: 'INICIO', icon: Home, path: '/dashboard' },
+  'reports': { label: 'HISTORIAL', icon: History, path: '/reports' },
+  'database': { label: 'CATÁLOGO', icon: Database, path: '/database' },
+  'sync': { label: 'NUBE', icon: Cloud, path: '/sync' },
+  'expiry': { label: 'VENCIMIENTOS', icon: Calendar, path: '/expiry' },
+  'events': { label: 'EVENTOS', icon: FileText, path: '/events' },
+  'settings': { label: 'AJUSTES', icon: Settings, path: '/settings' }
  };
 
  const activeNavKeys = (settings.mobileNavConfig || ['dashboard', 'sync', 'settings']).filter(k => k in iconMap);

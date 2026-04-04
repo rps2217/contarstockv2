@@ -11,7 +11,7 @@ interface Props {
 export const NavigationSection: React.FC<Props> = ({ settings, updateSetting }) => {
  // Lista filtrada: Solo módulos activos en la nueva arquitectura
  const availableNavItems: {id: ViewState, label: string, icon: any}[] = [
- { id: 'dashboard', label: 'Métricas', icon: Home },
+ { id: 'dashboard', label: 'Inicio', icon: Home },
  { id: 'reports', label: 'Historial', icon: History },
  { id: 'database', label: 'Catálogo', icon: Database },
  { id: 'sync', label: 'Nube', icon: Cloud },

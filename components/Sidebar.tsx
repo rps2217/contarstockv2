@@ -72,14 +72,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
 
       <nav className={`flex-1 ${isCollapsed ? 'px-2' : 'px-4'} space-y-2 overflow-y-auto no-scrollbar py-8`}>
         {!isCollapsed && <div className="text-[9px] font-black text-slate-600 uppercase tracking-[0.4em] px-5 mb-6">Execution_Layer</div>}
-        <NavItem path="/dashboard" activeKey="dashboard" label="Metrics" icon={Home} />
-        <NavItem path="/reports" activeKey="reports" label="History" icon={History} />
-        <NavItem path="/database" activeKey="database" label="Master_DB" icon={Database} />
+        <NavItem path="/dashboard" activeKey="dashboard" label="Inicio" icon={Home} />
+        <NavItem path="/reports" activeKey="reports" label="Historial" icon={History} />
+        <NavItem path="/database" activeKey="database" label="Catálogo" icon={Database} />
         
         {!isCollapsed && <div className="text-[9px] font-black text-slate-600 uppercase tracking-[0.4em] px-5 mb-6 mt-10">Advanced_Tools</div>}
         <NavItem path="/massive/BURST-MODE" activeKey="massive" label="Modo_Martillo" icon={Zap} />
-        <NavItem path="/expiry" activeKey="expiry" label="Expiry_Control" icon={Calendar} />
-        <NavItem path="/events" activeKey="events" label="Event_Control" icon={AlertCircle} />
+        <NavItem path="/expiry" activeKey="expiry" label="Vencimientos" icon={Calendar} />
+        <NavItem path="/events" activeKey="events" label="Eventos" icon={AlertCircle} />
         
         {(() => {
           const schema = settings.appSheetConfig?.schema || settings.schema;
@@ -104,8 +104,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
           );
         })()}
 
-        <NavItem path="/sync" activeKey="sync" label="Cloud_Sync" icon={Cloud} badge={pendingCount} />
-        <NavItem path="/sync/queue" activeKey="sync/queue" label="Sync_Queue" icon={RefreshCw} />
+        <NavItem path="/sync" activeKey="sync" label="Nube" icon={Cloud} badge={pendingCount} />
       </nav>
 
       <div className={`p-4 border-t-4 border-white/5 bg-slate-900/50`}>
@@ -115,7 +114,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
           className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-4 px-5'} py-4 rounded-2xl transition-all border-2 ${view === 'settings' ? 'bg-slate-800 border-white/10 text-white' : 'text-slate-600 border-transparent hover:text-white'}`}
         >
           <Settings className="w-5 h-5" />
-          {!isCollapsed && <span className="font-black text-[10px] font-mono uppercase tracking-[0.3em]">Setup</span>}
+          {!isCollapsed && <span className="font-black text-[10px] font-mono uppercase tracking-[0.3em]">Ajustes</span>}
         </button>
       </div>
     </aside>
