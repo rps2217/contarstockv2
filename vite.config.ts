@@ -41,10 +41,6 @@ export default defineConfig(({ mode }) => {
         srcDir: 'src', 
         filename: 'sw.ts',
         registerType: 'autoUpdate',
-        injectManifest: {
-          swDest: 'dist/sw.js',
-          globPatterns: ['**/*.{js,css,html,ico,png,svg}']
-        },
         devOptions: {
           enabled: false,
           type: 'module',

@@ -1,9 +1,6 @@
 
 /// <reference lib="webworker" />
 import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching';
-import { db } from './db';
-import { createInventoryPayload } from './services/cloud/mappers';
-import { Product } from './types';
 
 declare let self: ServiceWorkerGlobalScope & { __WB_MANIFEST: any };
 
