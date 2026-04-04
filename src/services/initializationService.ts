@@ -96,6 +96,7 @@ export const InitializationService = {
       // Tareas de saneamiento y carga inicial (Optimizado para memoria y robustez)
       const sanitizeTask = async () => {
         const lastSanitize = localStorage.getItem('logicount_last_sanitize');
+        const storedVersion = localStorage.getItem('logicount_app_version');
         const now = Date.now();
         
         // Solo ejecutar saneamiento profundo una vez cada 24 horas o si la versión cambió
