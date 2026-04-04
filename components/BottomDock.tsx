@@ -19,19 +19,18 @@ export const BottomDock: React.FC<Props> = ({ currentView, settings }) => {
  const pendingSync = useLiveQuery(() => ScanRepository.getPendingSyncCount(), [], 0);
  const dynamicStats = useLiveQuery(() => db.dynamic_data.where('syncStatus').anyOf(['pending', 'error']).count(), [], 0);
 
- const iconMap: Partial<Record<ViewState, { label: string, icon: any, path: string }>> = {
- 'dashboard': { label: 'HOME', icon: Home, path: '/dashboard' },
- 'reports': { label: 'LOGS', icon: History, path: '/reports' },
- 'database': { label: 'DB', icon: Database, path: '/database' },
- 'reception': { label: 'INBOUND', icon: Container, path: '/reception' },
- 'sync': { label: 'SYNC', icon: Cloud, path: '/sync' },
- 'visual-picking': { label: 'VISUAL', icon: Camera, path: '/visual-picking' },
- 'expiry': { label: 'EXPIRY', icon: Calendar, path: '/expiry' },
- 'events': { label: 'EVENTS', icon: FileText, path: '/events' },
- 'settings': { label: 'SETUP', icon: Settings, path: '/settings' }
+ const iconMap: Record<string, { label: string, icon: any, path: string }> = {
+  'dashboard': { label: 'HOME', icon: Home, path: '/dashboard' },
+  'reports': { label: 'LOGS', icon: History, path: '/reports' },
+  'database': { label: 'DB', icon: Database, path: '/database' },
+  'reception': { label: 'INBOUND', icon: Container, path: '/reception' },
+  'sync': { label: 'SYNC', icon: Cloud, path: '/sync' },
+  'expiry': { label: 'EXPIRY', icon: Calendar, path: '/expiry' },
+  'events': { label: 'EVENTS', icon: FileText, path: '/events' },
+  'settings': { label: 'SETUP', icon: Settings, path: '/settings' }
  };
 
- const activeNavKeys = settings.mobileNavConfig?.filter(k => k !== 'massive' && k !== 'documents' && k !== 'reports' && k !== 'database') || ['dashboard', 'sync', 'settings'];
+ const activeNavKeys = (settings.mobileNavConfig || ['dashboard', 'sync', 'settings']).filter(k => k in iconMap);
  
  return (
  <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[100] bg-slate-950/95 border-t-2 border-white/10 px-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-3 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">

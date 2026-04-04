@@ -509,7 +509,7 @@ const Dashboard: React.FC = () => {
             <Card
               hoverable
               onClick={() => navigate("/database")}
-              className="flex items-center gap-3 p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-3xl"
+              className="flex items-center gap-3 p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-3xl col-span-2"
             >
               <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-xl">
                 <Database className="w-5 h-5 text-amber-600 dark:text-amber-500" />
@@ -518,31 +518,6 @@ const Dashboard: React.FC = () => {
                 Catálogo
               </span>
             </Card>
-
-            <button
-              onClick={triggerSync}
-              className={`flex items-center justify-center gap-3 p-5 rounded-3xl border transition-all ${
-                syncStatus.state === 'SYNCING' ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 animate-pulse" :
-                syncStatus.state === 'ERROR' ? "bg-rose-50 dark:bg-rose-900/20 border-rose-200" :
-                isSyncNeeded ? "bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-500/50" : 
-                "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
-              }`}
-            >
-              {syncStatus.state === 'SYNCING' ? (
-                <RefreshCw className="w-5 h-5 text-blue-600 animate-spin" />
-              ) : (
-                <Radio
-                  className={`w-5 h-5 ${
-                    syncStatus.state === 'ERROR' ? "text-rose-600" :
-                    isSyncNeeded ? "text-orange-600 dark:text-orange-500" : 
-                    "text-slate-400"
-                  }`}
-                />
-              )}
-              <span className="text-xs font-bold uppercase tracking-wider">
-                {syncStatus.state === 'SYNCING' ? 'Sincronizando' : 'Sincronizar'}
-              </span>
-            </button>
           </div>
 
           <button
