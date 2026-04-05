@@ -357,14 +357,22 @@ const EventManagementPage: React.FC = () => {
   const pendingVirtualizer = useVirtualizer({
     count: pendingGrouped.length,
     getScrollElement: () => pendingRef.current,
-    estimateSize: (index) => pendingGrouped[index].type === 'header' ? 60 : (state.preferences.compactView ? 100 : 160),
+    estimateSize: (index) => {
+      if (pendingGrouped[index].type === 'header') return 60;
+      const baseHeight = state.preferences.compactView ? 100 : 160;
+      return expandedPanel === 'pending' ? baseHeight * 1.2 : baseHeight;
+    },
     overscan: 5,
   });
 
   const adjustedVirtualizer = useVirtualizer({
     count: adjustedGrouped.length,
     getScrollElement: () => adjustedRef.current,
-    estimateSize: (index) => adjustedGrouped[index].type === 'header' ? 60 : (state.preferences.compactView ? 100 : 160),
+    estimateSize: (index) => {
+      if (adjustedGrouped[index].type === 'header') return 60;
+      const baseHeight = state.preferences.compactView ? 100 : 160;
+      return expandedPanel === 'adjusted' ? baseHeight * 1.2 : baseHeight;
+    },
     overscan: 5,
   });
 
@@ -378,11 +386,9 @@ const EventManagementPage: React.FC = () => {
         pendingOperations={state.pendingOperations}
         isSyncing={isSyncing}
         theme={theme}
-        onSync={handleSync}
         onNavigateExpiry={() => navigate('/expiry')}
         onToggleTheme={toggleTheme}
         onOpenSettings={() => setIsSettingsDrawerOpen(true)}
-        onNavigateMobile={() => navigate('/events/capture')}
       >
         <EventSearchBar 
           searchQuery={state.searchQuery}

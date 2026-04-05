@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import { Search, Filter, X, Camera, Plus } from 'lucide-react';
-import { BarcodeScannerModal } from '../../expiry/components/BarcodeScannerModal';
+import React from 'react';
+import { Search, Filter, X, Plus } from 'lucide-react';
 
 interface EventSearchBarProps {
   searchQuery: string;
@@ -21,8 +20,6 @@ export const EventSearchBar: React.FC<EventSearchBarProps> = ({
   activeFiltersCount,
   theme = 'dark'
 }) => {
-  const [isScannerOpen, setIsScannerOpen] = useState(false);
-
   return (
     <div className="flex flex-col md:flex-row gap-3">
       <div className="relative flex-1 flex items-center gap-2">
@@ -51,17 +48,6 @@ export const EventSearchBar: React.FC<EventSearchBarProps> = ({
             </button>
           )}
         </div>
-        <button
-          onClick={() => setIsScannerOpen(true)}
-          className={`shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center border transition-all ${
-            theme === 'dark' 
-              ? 'bg-blue-500/10 border-blue-500/20 text-blue-500 hover:bg-blue-500/20' 
-              : 'bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100'
-          }`}
-          title="Escanear código de barras"
-        >
-          <Camera className="w-6 h-6" />
-        </button>
       </div>
       
       <div className="flex gap-3">
@@ -108,13 +94,6 @@ export const EventSearchBar: React.FC<EventSearchBarProps> = ({
           <X className="w-5 h-5 text-slate-400 group-hover:rotate-90 transition-transform" />
         </button>
       </div>
-
-      <BarcodeScannerModal 
-        isOpen={isScannerOpen}
-        onClose={() => setIsScannerOpen(false)}
-        onScan={(barcode) => setSearchQuery(barcode)}
-        theme={theme}
-      />
     </div>
   );
 };

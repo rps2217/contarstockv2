@@ -129,6 +129,7 @@ export const EventListPanel: React.FC<EventListPanelProps> = ({
                   onEventClick={onEventClick}
                   theme={theme}
                   isCompact={isCompact}
+                  isExpanded={isExpanded}
                 />
               </div>
             );
