@@ -8,6 +8,7 @@ import { HydrationService } from './hydrationService';
 import { firebaseSyncService } from './firebaseSyncService';
 import { auth } from '../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
+import { purgeOldData } from './maintenance';
 
 export type InitStep = 'idle' | 'version_check' | 'config' | 'database' | 'ready' | 'offline' | 'purging' | 'migrating';
 
@@ -229,12 +230,13 @@ export const InitializationService = {
 
   backgroundRefresh: async () => {
     try {
-      // Refresco en paralelo
+      // Refresco en paralelo y archivado automático
       await Promise.all([
         InitializationService.syncConfig(),
         importProductsFromFirestore(),
         importProvidersFromFirestore(),
-        HydrationService.persist()
+        HydrationService.persist(),
+        purgeOldData(30) // Step 5: Archivado automático > 30 días
       ]);
     } catch (e) {
       logger.warn('INIT', 'Error en refresco de fondo', e);

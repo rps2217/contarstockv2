@@ -1,12 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
-import { Activity, Bug } from 'lucide-react';
+import { Activity, Bug, Snowflake } from 'lucide-react';
 import { SettingsCard, SettingsCardHeader, SettingsButton } from '../common/SettingsElements';
-import { checkSystemHealth, repairSystem, HealthReport } from '../../../../services/maintenance';
+import { checkSystemHealth, repairSystem, purgeOldData, HealthReport } from '../../../../services/maintenance';
 
 export const MaintenanceCard: React.FC = () => {
  const [health, setHealth] = useState<HealthReport | null>(null);
  const [isRepairing, setIsRepairing] = useState(false);
+ const [isPurging, setIsPurging] = useState(false);
 
  const loadHealth = async () => setHealth(await checkSystemHealth());
  
@@ -17,6 +18,15 @@ export const MaintenanceCard: React.FC = () => {
  await repairSystem();
  await loadHealth();
  setIsRepairing(false);
+ };
+
+ const handlePurge = async () => {
+ if (confirm("❄️ ARCHIVADO EN FRÍO\nSe eliminarán sesiones completadas hace más de 30 días de la memoria local.\n\nLos datos seguirán seguros en la nube.\n\n¿Continuar?")) {
+ setIsPurging(true);
+ await purgeOldData(30);
+ await loadHealth();
+ setIsPurging(false);
+ }
  };
 
  return (
@@ -43,6 +53,7 @@ export const MaintenanceCard: React.FC = () => {
  </div>
  </div>
 
+ <div className="space-y-3">
  <SettingsButton 
  onClick={handleRepair}
  isLoading={isRepairing}
@@ -50,6 +61,15 @@ export const MaintenanceCard: React.FC = () => {
  icon={Bug}
  variant="outline"
  />
+
+ <SettingsButton 
+ onClick={handlePurge}
+ isLoading={isPurging}
+ label="Archivado Automático (30d)"
+ icon={Snowflake}
+ variant="outline"
+ />
+ </div>
  </SettingsCard>
  );
 };

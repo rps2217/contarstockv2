@@ -55,6 +55,80 @@ export const checkSystemHealth = async (): Promise<HealthReport> => {
 };
 
 /**
+ * PURGE OLD DATA (Step 5): Cold Storage Purging
+ * Elimina sesiones completadas hace más de 30 días de IndexedDB.
+ * Se asume que ya están en Firebase.
+ */
+export const purgeOldData = async (days: number = 30): Promise<string[]> => {
+ const logs: string[] = [];
+ const threshold = Date.now() - (days * 24 * 60 * 60 * 1000);
+
+ try {
+ // 1. Purgar Sesiones de Conteo
+ const oldSessions = await db.sessions
+ .where('status').equals('completed')
+ .and(s => s.createdAt < threshold)
+ .toArray();
+
+ if (oldSessions.length > 0) {
+ const sessionIds = oldSessions.map(s => s.id);
+ 
+ // Eliminar escaneos asociados
+ const scansToDelete = await db.scans
+ .where('sessionId').anyOf(sessionIds)
+ .primaryKeys();
+ 
+ await db.transaction('rw', [db.sessions, db.scans], async () => {
+ await db.scans.bulkDelete(scansToDelete);
+ await db.sessions.bulkDelete(sessionIds);
+ });
+
+ logs.push(`❄️ Archivado Frío: Eliminadas ${oldSessions.length} sesiones de conteo (> ${days} días).`);
+ }
+
+ // 2. Purgar Sesiones ERP y Guías Visuales
+ const oldErpSessions = await db.erpSessions
+ .where('status').equals('completed')
+ .and(s => s.createdAt < threshold)
+ .toArray();
+
+ if (oldErpSessions.length > 0) {
+ const erpIds = oldErpSessions.map(s => s.id);
+ const erpOrderIds = oldErpSessions.map(s => s.erpOrderId);
+
+ // Eliminar guías visuales asociadas
+ const guidesToDelete = await db.visualGuides
+ .where('erpOrderId').anyOf(erpOrderIds)
+ .primaryKeys();
+
+ await db.transaction('rw', [db.erpSessions, db.visualGuides], async () => {
+ await db.visualGuides.bulkDelete(guidesToDelete);
+ await db.erpSessions.bulkDelete(erpIds);
+ });
+
+ logs.push(`❄️ Archivado Frío: Eliminadas ${oldErpSessions.length} recepciones ERP (> ${days} días).`);
+ }
+
+ // 3. Limpieza de Logs (Mantener solo 7 días de logs operativos)
+ const logThreshold = Date.now() - (7 * 24 * 60 * 60 * 1000);
+ const oldLogs = await db.logs.where('timestamp').below(logThreshold).primaryKeys();
+ if (oldLogs.length > 0) {
+ await db.logs.bulkDelete(oldLogs);
+ logs.push(`🧹 Limpieza: Purgados ${oldLogs.length} logs antiguos.`);
+ }
+
+ if (logs.length > 0) {
+ logger.info('Maintenance', 'Archivado automático completado.', { actions: logs });
+ }
+
+ return logs;
+ } catch (e: any) {
+ logger.error('Maintenance', 'Error en purgado automático', e);
+ return [`❌ Error Purge: ${e.message}`];
+ }
+};
+
+/**
  * Ejecuta DEEP VACUUM: Purgado de huérfanos y compactación lógica.
  */
 export const repairSystem = async (): Promise<string[]> => {
