@@ -1,7 +1,7 @@
 
 import { useEffect, useRef } from 'react';
 import { collection, onSnapshot, query, limit, orderBy } from 'firebase/firestore';
-import { db as firestoreDb } from '../lib/firebase';
+import { auth, db as firestoreDb } from '../lib/firebase';
 import { useAppStore } from '../store/mainAppStore';
 import { useExpiryStore } from '../store/useExpiryStore';
 import { useToastStore } from '../store/useToastStore';
@@ -27,72 +27,89 @@ export const useExpiryWatcher = () => {
   useEffect(() => {
     if (!tableName) return;
 
-    const colRef = collection(firestoreDb, tableName);
-    // We only need a subset to check for alerts, but let's take enough to be accurate
-    const q = query(colRef, orderBy('timestamp', 'desc'), limit(500));
+    let unsubscribeSnapshot: (() => void) | null = null;
 
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
-      try {
-        // 1. Get context data from local DB
-        const [allProducts, allProviders] = await Promise.all([
-          productRepository.getAll(),
-          dexieDb.providers.toArray()
-        ]);
-
-        const productMap = new Map();
-        allProducts.forEach(p => {
-          const sku = normalizeSku(p.barcode);
-          if (sku) productMap.set(sku, p);
-        });
-
-        const providerMap = new Map();
-        allProviders.forEach(p => {
-          const rut = normalizeSku(p.rut);
-          if (rut) providerMap.set(rut, p);
-        });
-
-        const now = new Date();
-        const expiryMapping = settings?.appSheetConfig?.mappings?.expiry;
-
-        let criticalCount = 0;
-
-        // 2. Process items to find critical/expired ones
-        snapshot.docs.forEach(doc => {
-          const exp: any = doc.data();
-          
-          // Simplified item for status check
-          const itemData = {
-            id: doc.id,
-            barcode: exp[expiryMapping?.barcode || ''] || exp.SKU || exp.COD_BARRAS || exp.barcode || '',
-            mm: exp[expiryMapping?.mm || ''] || exp.MM || exp.mm,
-            yyyy: exp[expiryMapping?.yyyy || ''] || exp.YYYY || exp.yyyy,
-            fechaCC: exp.fechaCC || exp[expiryMapping?.fechaCC || '']
-          };
-
-          const processed = processExpiryItem(itemData, productMap, providerMap, now);
-
-          if (processed.status === 'critical' || processed.status === 'expired') {
-            criticalCount++;
-          }
-        });
-
-        // 3. Update global state
-        setAlertCount(criticalCount);
-
-        // 4. Notify if count increased (and it's not the first load)
-        if (lastCount.current !== null && criticalCount > lastCount.current) {
-          addToast(`Alerta de Vencimientos: Se detectaron ${criticalCount} lotes críticos.`, 'warning');
+    // We wait for auth to be ready to avoid permission denied errors on startup
+    const unsubscribeAuth = auth.onAuthStateChanged((user) => {
+      if (!user) {
+        if (unsubscribeSnapshot) {
+          unsubscribeSnapshot();
+          unsubscribeSnapshot = null;
         }
-        
-        lastCount.current = criticalCount;
-      } catch (error) {
-        console.error("[ExpiryWatcher] Error processing alerts:", error);
+        return;
       }
-    }, (error) => {
-      console.error("[ExpiryWatcher] Firestore connection error:", error);
+
+      if (unsubscribeSnapshot) return; // Already subscribed
+
+      const colRef = collection(firestoreDb, tableName);
+      const q = query(colRef, orderBy('timestamp', 'desc'), limit(500));
+
+      unsubscribeSnapshot = onSnapshot(q, async (snapshot) => {
+        try {
+          // 1. Get context data from local DB
+          const [allProducts, allProviders] = await Promise.all([
+            productRepository.getAll(),
+            dexieDb.providers.toArray()
+          ]);
+
+          const productMap = new Map();
+          allProducts.forEach(p => {
+            const sku = normalizeSku(p.barcode);
+            if (sku) productMap.set(sku, p);
+          });
+
+          const providerMap = new Map();
+          allProviders.forEach(p => {
+            const rut = normalizeSku(p.rut);
+            if (rut) providerMap.set(rut, p);
+          });
+
+          const now = new Date();
+          const expiryMapping = settings?.appSheetConfig?.mappings?.expiry;
+
+          let criticalCount = 0;
+
+          // 2. Process items to find critical/expired ones
+          snapshot.docs.forEach(doc => {
+            const exp: any = doc.data();
+            
+            // Simplified item for status check
+            const itemData = {
+              id: doc.id,
+              barcode: exp[expiryMapping?.barcode || ''] || exp.SKU || exp.COD_BARRAS || exp.barcode || '',
+              mm: exp[expiryMapping?.mm || ''] || exp.MM || exp.mm,
+              yyyy: exp[expiryMapping?.yyyy || ''] || exp.YYYY || exp.yyyy,
+              fechaCC: exp.fechaCC || exp[expiryMapping?.fechaCC || '']
+            };
+
+            const processed = processExpiryItem(itemData, productMap, providerMap, now);
+
+            if (processed.status === 'critical' || processed.status === 'expired') {
+              criticalCount++;
+            }
+          });
+
+          // 3. Update global state
+          setAlertCount(criticalCount);
+
+          // 4. Notify if count increased (and it's not the first load)
+          if (lastCount.current !== null && criticalCount > lastCount.current) {
+            addToast(`Alerta de Vencimientos: Se detectaron ${criticalCount} lotes críticos.`, 'warning');
+          }
+          
+          lastCount.current = criticalCount;
+        } catch (error) {
+          console.error("[ExpiryWatcher] Error processing alerts:", error);
+        }
+      }, (error) => {
+        console.error("[ExpiryWatcher] Firestore connection error:", error);
+      });
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeSnapshot) unsubscribeSnapshot();
+    };
   }, [tableName, settings, setAlertCount, addToast]);
 };
 
