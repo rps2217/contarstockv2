@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Check, Barcode, Calendar, Zap, AlertCircle } from 'lucide-react';
+import { X, Check, Barcode, Calendar, Zap, AlertCircle, RefreshCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SoundFX } from '../../../services/audio';
 import { normalizeSku } from '../../../services/utils';
@@ -8,20 +8,26 @@ interface ExpirationModalProps {
   onComplete: (data: { barcode: string; productName: string; mm: number; yyyy: number }) => void;
   onCancel?: () => void;
   productMap: Record<string, any>;
+  initialBarcode?: string;
 }
 
 export const ExpirationModal: React.FC<ExpirationModalProps> = ({ 
   onComplete, 
   onCancel,
-  productMap 
+  productMap,
+  initialBarcode = ''
 }) => {
-  const [barcode, setBarcode] = useState<string>('');
+  const [barcode, setBarcode] = useState<string>(initialBarcode);
   const [productName, setProductName] = useState<string>('');
   const [selectedMm, setSelectedMm] = useState<number | null>(null);
   const [selectedYyyy, setSelectedYyyy] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSearchingCloud, setIsSearchingCloud] = useState(false);
+  const [continuousMode, setContinuousMode] = useState(true);
+  
   const barcodeRef = useRef<HTMLInputElement>(null);
+  const monthRef = useRef<HTMLDivElement>(null);
+  const yearRef = useRef<HTMLDivElement>(null);
 
   // Auto-lookup logic - Búsqueda Híbrida (Local + Cloud)
   useEffect(() => {
@@ -102,21 +108,36 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
             }
           }
         } else {
-          setProductName('PRODUCTO NO ENCONTRADO EN NINGÚN SISTEMA');
+          setProductName('PRODUCTO NO ENCONTRADO');
         }
       } catch (err) {
-        if (isMounted) setProductName('ERROR AL BUSCAR EN LA NUBE');
+        if (isMounted) setProductName('ERROR DE CONEXIÓN');
       } finally {
         if (isMounted) setIsSearchingCloud(false);
       }
     };
 
-    const timer = setTimeout(searchInCloud, 600); // Pequeño delay para no saturar al escribir
+    const timer = setTimeout(searchInCloud, 600);
     return () => {
       isMounted = false;
       clearTimeout(timer);
     };
   }, [barcode, productMap]);
+
+  // Keyboard Navigation Logic
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && onCancel) onCancel();
+      
+      // Auto-submit on Enter if all fields are ready
+      if (e.key === 'Enter' && barcode && selectedMm && selectedYyyy && !isSubmitting) {
+        handleSave();
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [barcode, selectedMm, selectedYyyy, isSubmitting]);
 
   const handleSave = async () => {
     if (barcode && selectedMm && selectedYyyy && !isSubmitting) {
@@ -129,6 +150,16 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
           mm: selectedMm,
           yyyy: selectedYyyy
         });
+
+        if (continuousMode) {
+          // Reset for next item
+          setBarcode('');
+          setProductName('');
+          setSelectedMm(null);
+          setSelectedYyyy(null);
+          setIsSubmitting(false);
+          barcodeRef.current?.focus();
+        }
       } catch (err) {
         setIsSubmitting(false);
       }
@@ -138,14 +169,15 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
   };
 
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
-  const years = [2026, 2027];
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 6 }, (_, i) => currentYear + i);
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl">
       <motion.div 
         initial={{ scale: 0.9, opacity: 0, y: 30 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
-        className="w-full max-w-xl bg-[#0a0a0a] border border-white/10 rounded-[2rem] overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.8)]"
+        className="w-full max-w-2xl bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.9)]"
       >
         {/* HEADER */}
         <div className="p-6 bg-[#111] border-b border-white/5 flex justify-between items-center">
@@ -154,33 +186,47 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
               <Zap className="w-6 h-6 text-amber-500" />
             </div>
             <div>
-              <h3 className="text-xl font-black text-white uppercase italic tracking-tighter leading-none">REGISTRO</h3>
-              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Ingreso rápido</p>
+              <h3 className="text-xl font-black text-white uppercase italic tracking-tighter leading-none">REGISTRO DESKTOP</h3>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Optimizado para Teclado + Scanner</p>
             </div>
           </div>
-          {onCancel && (
+          <div className="flex items-center gap-3">
             <button 
-              onClick={onCancel} 
-              className="w-10 h-10 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center transition-colors group"
+              onClick={() => setContinuousMode(!continuousMode)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all ${
+                continuousMode 
+                  ? 'bg-blue-600/20 border-blue-500/40 text-blue-400' 
+                  : 'bg-white/5 border-white/10 text-slate-500'
+              }`}
+              title="Modo Continuo: No cierra el modal tras registrar"
             >
-              <X className="w-6 h-6 text-slate-500 group-hover:text-white transition-colors" />
+              <RefreshCcw className={`w-4 h-4 ${continuousMode ? 'animate-spin-slow' : ''}`} />
+              <span className="text-[9px] font-black uppercase tracking-widest">Modo Continuo</span>
             </button>
-          )}
+            {onCancel && (
+              <button 
+                onClick={onCancel} 
+                className="w-10 h-10 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center transition-colors group"
+              >
+                <X className="w-6 h-6 text-slate-500 group-hover:text-white transition-colors" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* CONTENT */}
-        <div className="p-6 space-y-6">
+        <div className="p-8 space-y-8">
           
           {/* BARCODE SECTION */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="flex justify-between items-center px-2">
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">1. SKU</label>
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">1. ESCANEAR PRODUCTO</label>
               <AnimatePresence>
                 {productName && (
                   <motion.span 
                     initial={{ opacity: 0, x: 10 }} 
                     animate={{ opacity: 1, x: 0 }} 
-                    className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${
+                    className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${
                       productName.includes('NO ENCONTRADO') ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'
                     }`}
                   >
@@ -190,8 +236,8 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
               </AnimatePresence>
             </div>
             <div className="relative group">
-              <div className="absolute left-4 top-1/2 -translate-y-1/2">
-                <Barcode className={`w-6 h-6 transition-colors ${barcode ? 'text-blue-500' : 'text-slate-700'}`} />
+              <div className="absolute left-5 top-1/2 -translate-y-1/2">
+                <Barcode className={`w-8 h-8 transition-colors ${barcode ? 'text-blue-500' : 'text-slate-700'}`} />
               </div>
               <input 
                 autoFocus
@@ -199,79 +245,86 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
                 type="text"
                 value={barcode}
                 onChange={(e) => setBarcode(e.target.value)}
-                className="w-full bg-black border-2 border-white/10 group-hover:border-white/20 rounded-2xl py-4 pl-14 pr-4 text-2xl font-black focus:outline-none focus:border-blue-600 text-white tracking-[0.1em] transition-all placeholder:text-white/5"
-                placeholder="00000000"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && barcode) {
+                    // Focus month buttons or handle auto-flow
+                  }
+                }}
+                className="w-full bg-black border-2 border-white/10 group-hover:border-white/20 rounded-3xl py-6 pl-16 pr-6 text-3xl font-black focus:outline-none focus:border-blue-600 text-white tracking-[0.15em] transition-all placeholder:text-white/5"
+                placeholder="ESCANEAR..."
               />
             </div>
             {productName && (
               <motion.div 
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="px-4 py-2 bg-blue-500/10 border border-blue-500/20 rounded-xl"
+                className="px-6 py-3 bg-blue-500/5 border border-blue-500/10 rounded-2xl"
               >
-                <p className="text-sm font-black text-blue-400 uppercase italic truncate text-center">
+                <p className="text-base font-black text-blue-400 uppercase italic truncate text-center tracking-tight">
                   {productName}
                 </p>
               </motion.div>
             )}
           </div>
 
-          {/* MONTH SELECTOR - FULL WIDTH ROW */}
-          <div className="space-y-3">
-            <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-2">2. MES</label>
-            <div className="grid grid-cols-6 gap-2">
-              {months.map(m => (
-                <button
-                  key={m}
-                  onClick={() => {
-                    setSelectedMm(m);
-                    SoundFX.play('increment');
-                  }}
-                  className={`h-12 rounded-xl font-black text-lg transition-all border-2 ${
-                    selectedMm === m 
-                      ? 'bg-blue-600 border-blue-400 text-white shadow-[0_0_15px_rgba(37,99,235,0.3)]' 
-                      : 'bg-white/5 border-white/5 text-slate-600 hover:bg-white/10 hover:border-white/20'
-                  }`}
-                >
-                  {String(m).padStart(2, '0')}
-                </button>
-              ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* MONTH SELECTOR */}
+            <div className="space-y-4">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-2">2. MES DE VENCIMIENTO</label>
+              <div className="grid grid-cols-4 gap-2">
+                {months.map(m => (
+                  <button
+                    key={m}
+                    onClick={() => {
+                      setSelectedMm(m);
+                      SoundFX.play('increment');
+                    }}
+                    className={`h-14 rounded-xl font-black text-xl transition-all border-2 ${
+                      selectedMm === m 
+                        ? 'bg-blue-600 border-blue-400 text-white shadow-[0_0_20px_rgba(37,99,235,0.4)] scale-105 z-10' 
+                        : 'bg-white/5 border-white/5 text-slate-600 hover:bg-white/10 hover:border-white/20'
+                    }`}
+                  >
+                    {String(m).padStart(2, '0')}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* YEAR SELECTOR - HORIZONTAL ROW */}
-          <div className="space-y-3">
-            <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-2">3. AÑO</label>
-            <div className="grid grid-cols-2 gap-3">
-              {years.map(y => (
-                <button
-                  key={y}
-                  onClick={() => {
-                    setSelectedYyyy(y);
-                    SoundFX.play('increment');
-                  }}
-                  className={`h-16 rounded-2xl font-black text-2xl transition-all border-2 flex items-center justify-center italic tracking-tighter ${
-                    selectedYyyy === y 
-                      ? 'bg-emerald-600 border-emerald-400 text-white shadow-[0_0_20px_rgba(16,185,129,0.3)]' 
-                      : 'bg-white/5 border-white/5 text-slate-600 hover:bg-white/10 hover:border-white/20'
-                  }`}
-                >
-                  {y}
-                </button>
-              ))}
+            {/* YEAR SELECTOR */}
+            <div className="space-y-4">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-2">3. AÑO DE VENCIMIENTO</label>
+              <div className="grid grid-cols-2 gap-3">
+                {years.map(y => (
+                  <button
+                    key={y}
+                    onClick={() => {
+                      setSelectedYyyy(y);
+                      SoundFX.play('increment');
+                    }}
+                    className={`h-20 rounded-2xl font-black text-2xl transition-all border-2 flex items-center justify-center italic tracking-tighter ${
+                      selectedYyyy === y 
+                        ? 'bg-emerald-600 border-emerald-400 text-white shadow-[0_0_25px_rgba(16,185,129,0.4)] scale-105 z-10' 
+                        : 'bg-white/5 border-white/5 text-slate-600 hover:bg-white/10 hover:border-white/20'
+                    }`}
+                  >
+                    {y}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
           {/* FINAL ACTION */}
-          <div className="pt-2">
+          <div className="pt-4">
             <button
               disabled={!barcode || !selectedMm || !selectedYyyy || isSubmitting}
               onClick={handleSave}
-              className={`w-full py-6 rounded-2xl font-black text-xl uppercase tracking-[0.2em] flex items-center justify-center gap-4 transition-all ${
+              className={`w-full py-8 rounded-[2rem] font-black text-2xl uppercase tracking-[0.3em] flex items-center justify-center gap-6 transition-all ${
                 isSubmitting 
                   ? 'bg-blue-900/50 text-blue-200 border border-blue-500/30 cursor-wait'
                   : barcode && selectedMm && selectedYyyy
-                    ? 'bg-white text-black hover:bg-blue-50 shadow-[0_10px_20px_rgba(255,255,255,0.05)] cursor-pointer'
+                    ? 'bg-white text-black hover:bg-blue-50 shadow-[0_20px_40px_rgba(255,255,255,0.1)] cursor-pointer active:scale-[0.98]'
                     : 'bg-white/5 text-white/10 border border-white/5 cursor-not-allowed grayscale'
               }`}
             >
@@ -280,23 +333,39 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
                   <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-                    className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full"
+                    className="w-8 h-8 border-4 border-blue-400 border-t-transparent rounded-full"
                   />
-                  REGISTRANDO...
+                  PROCESANDO...
                 </>
               ) : (
                 <>
-                  <Check className="w-6 h-6" />
-                  REGISTRAR
+                  <Check className="w-8 h-8 stroke-[3px]" />
+                  CONFIRMAR REGISTRO
                 </>
               )}
             </button>
+            <p className="text-center text-[9px] font-bold text-slate-600 uppercase tracking-widest mt-4">
+              Presiona <span className="text-slate-400">ENTER</span> para confirmar rápido
+            </p>
           </div>
 
         </div>
       </motion.div>
+      
+      <style>{`
+        @keyframes spin-slow {
+          from { rotate: 0deg; }
+          to { rotate: 360deg; }
+        }
+        .animate-spin-slow {
+          animation: spin-slow 3s linear infinite;
+        }
+      `}</style>
     </div>
   );
 };
+
+// Forced GitHub sync
+
 
 // Forced GitHub sync

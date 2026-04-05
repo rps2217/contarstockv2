@@ -14,7 +14,9 @@ import {
   ChevronUp,
   Zap,
   AlertCircle,
-  X
+  X,
+  LayoutGrid,
+  List
 } from 'lucide-react';
 import { format, addMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -38,6 +40,7 @@ import { ExpiryFilterDrawer } from './components/ExpiryFilterDrawer';
 import { ExpirySettingsDrawer } from './components/ExpirySettingsDrawer';
 import { ExpirySearchBar } from './components/ExpirySearchBar';
 import { ExpiryItemCard } from './components/ExpiryItemCard';
+import { ExpiryItemRow } from './components/ExpiryItemRow';
 import { ExpiryBulkActions } from './components/ExpiryBulkActions';
 import { ExpiryEmailModal } from './components/ExpiryEmailModal';
 import { ExpirationModal } from './components/ExpirationModal';
@@ -67,19 +70,55 @@ const ExpiryManagementPage: React.FC = () => {
   const [isSettingsDrawerOpen, setIsSettingsDrawerOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isDesktopAddModalOpen, setIsDesktopAddModalOpen] = useState(false);
+  const [initialBarcode, setInitialBarcode] = useState('');
   const [theme, setTheme] = useState<'dark' | 'light'>('light');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const navigate = useNavigate();
   const location = useLocation();
   const expirySchema = useAppStore(s => s.settings.appSheetConfig?.schema?.expiry || s.settings.schema?.expiry);
 
-  const handleOpenAdd = () => {
+  const handleOpenAdd = (barcode: string = '') => {
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
     if (isMobile) {
       navigate('/expiry/capture');
     } else {
+      setInitialBarcode(barcode);
       setIsDesktopAddModalOpen(true);
     }
   };
+
+  // GLOBAL SCANNER LISTENER (Desktop Pro Feature)
+  useEffect(() => {
+    let buffer = '';
+    let lastKeyTime = Date.now();
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if we are already in a modal or input
+      if (isDesktopAddModalOpen || e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      const currentTime = Date.now();
+      
+      // Scanners are very fast, usually < 30ms between keys
+      if (currentTime - lastKeyTime > 50) {
+        buffer = '';
+      }
+
+      if (e.key.length === 1 && /[0-9]/.test(e.key)) {
+        buffer += e.key;
+        lastKeyTime = currentTime;
+      }
+
+      if (e.key === 'Enter' && buffer.length >= 6) {
+        handleOpenAdd(buffer);
+        buffer = '';
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isDesktopAddModalOpen]);
 
   // Detect mobile device and redirect to capture view automatically
   useEffect(() => {
@@ -91,18 +130,31 @@ const ExpiryManagementPage: React.FC = () => {
     }
   }, [navigate, location]);
 
-  // Atajo de teclado Alt+E para ir a Eventos
+  // Atajos de teclado Alt+E para ir a Eventos, Alt+N para Nuevo, Alt+F para Filtros, Alt+T para Vista
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.altKey && e.key.toLowerCase() === 'e') {
-        e.preventDefault();
-        navigate('/events');
-        sonnerToast.info('Navegando a Control de Eventos');
+      if (e.altKey) {
+        const key = e.key.toLowerCase();
+        if (key === 'e') {
+          e.preventDefault();
+          navigate('/events');
+          sonnerToast.info('Navegando a Control de Eventos');
+        } else if (key === 'n') {
+          e.preventDefault();
+          handleOpenAdd();
+        } else if (key === 'f') {
+          e.preventDefault();
+          setIsFilterDrawerOpen(true);
+        } else if (key === 't') {
+          e.preventDefault();
+          setViewMode(prev => prev === 'grid' ? 'table' : 'grid');
+          sonnerToast.info(`Vista ${viewMode === 'grid' ? 'Tabla' : 'Cuadrícula'} activada`);
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [navigate]);
+  }, [navigate, viewMode]);
 
   const activeFiltersCount = 
     state.selectedStatuses.length + 
@@ -183,7 +235,7 @@ const ExpiryManagementPage: React.FC = () => {
   const rowVirtualizer = useVirtualizer({
     count: allItems.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => state.preferences.compactView ? 80 : 120,
+    estimateSize: () => viewMode === 'table' ? 48 : (state.preferences.compactView ? 80 : 120),
     overscan: 5,
   });
 
@@ -274,6 +326,33 @@ const ExpiryManagementPage: React.FC = () => {
             >
               <Settings2 className="w-5 h-5" />
             </button>
+
+            <div className={`flex items-center p-1 rounded-xl border ${
+              theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-slate-100 border-slate-200'
+            }`}>
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-1.5 rounded-lg transition-all ${
+                  viewMode === 'grid' 
+                    ? 'bg-amber-500 text-black shadow-sm' 
+                    : 'text-slate-500 hover:text-slate-300'
+                }`}
+                title="Vista Cuadrícula"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('table')}
+                className={`p-1.5 rounded-lg transition-all ${
+                  viewMode === 'table' 
+                    ? 'bg-amber-500 text-black shadow-sm' 
+                    : 'text-slate-500 hover:text-slate-300'
+                }`}
+                title="Vista Tabla"
+              >
+                <List className="w-4 h-4" />
+              </button>
+            </div>
 
             <button 
               onClick={() => handleExportExpirationsCSV(state.processedScans)}
@@ -367,17 +446,27 @@ const ExpiryManagementPage: React.FC = () => {
                   paddingBottom: '12px', // space-y-3 equivalent
                 }}
               >
-                <ExpiryItemCard 
-                  item={item}
-                  isSelected={state.selectedIds.has(item.id)}
-                  onToggleSelect={handleToggleSelect}
-                  onRemove={confirmRemoveItem}
-                  onFilterProvider={(provider) => actions.setSearchQuery(provider)}
-                  onFilterEstado={(estado) => actions.setSearchQuery(estado)}
-                  onFilterFrc={(frc) => actions.setSearchQuery(frc)}
-                  theme={theme}
-                  isCompact={state.preferences.compactView}
-                />
+                {viewMode === 'table' ? (
+                  <ExpiryItemRow 
+                    item={item}
+                    isSelected={state.selectedIds.has(item.id)}
+                    onToggleSelect={handleToggleSelect}
+                    onRemove={confirmRemoveItem}
+                    theme={theme}
+                  />
+                ) : (
+                  <ExpiryItemCard 
+                    item={item}
+                    isSelected={state.selectedIds.has(item.id)}
+                    onToggleSelect={handleToggleSelect}
+                    onRemove={confirmRemoveItem}
+                    onFilterProvider={(provider) => actions.setSearchQuery(provider)}
+                    onFilterEstado={(estado) => actions.setSearchQuery(estado)}
+                    onFilterFrc={(frc) => actions.setSearchQuery(frc)}
+                    theme={theme}
+                    isCompact={state.preferences.compactView}
+                  />
+                )}
               </div>
             );
           })}
@@ -461,7 +550,11 @@ const ExpiryManagementPage: React.FC = () => {
         {isDesktopAddModalOpen && (
           <ExpirationModal 
             productMap={productMap}
-            onCancel={() => setIsDesktopAddModalOpen(false)}
+            initialBarcode={initialBarcode}
+            onCancel={() => {
+              setIsDesktopAddModalOpen(false);
+              setInitialBarcode('');
+            }}
             onComplete={(data) => {
               // CIERRE INMEDIATO PARA UI OPTIMISTA
               setIsDesktopAddModalOpen(false);
