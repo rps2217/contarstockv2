@@ -6,6 +6,7 @@ import { DiagnosticsCard } from './support/DiagnosticsCard';
 import { MaintenanceCard } from './support/MaintenanceCard';
 import { BackupCard } from './support/BackupCard';
 import { UnitTestsCard } from './support/UnitTestsCard';
+import { KernelSystemCard } from './support/KernelSystemCard';
 import { SystemLogsModal } from './support/SystemLogsModal';
 
 export const SupportSection: React.FC = () => {
@@ -30,6 +31,7 @@ export const SupportSection: React.FC = () => {
       <DiagnosticsCard />
       <UnitTestsCard />
       <MaintenanceCard />
+      <KernelSystemCard />
       <BackupCard />
 
       <div className="space-y-3">

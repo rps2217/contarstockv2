@@ -123,124 +123,25 @@ export const EventSettingsDrawer: React.FC<EventSettingsDrawerProps> = ({
                 </div>
               </section>
 
-              {/* SECCIÓN: SISTEMA */}
-              <section className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <RefreshCw className="w-4 h-4 text-rose-500" />
-                  <h5 className={`text-[10px] font-black uppercase tracking-widest ${
-                    theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
-                  }`}>Sistema</h5>
-                </div>
-                
+              {/* ENLACE A SETUP GLOBAL */}
+              <section className="pt-4 border-t border-white/5">
                 <button
-                  onClick={async () => {
-                    const { InitializationService } = await import('../../../services/initializationService');
-                    await InitializationService.syncConfig();
-                    window.location.reload();
+                  onClick={() => {
+                    onClose();
+                    window.location.hash = '#/settings?tab=system';
                   }}
-                  className={`w-full p-4 rounded-xl border flex items-center gap-4 transition-all mb-2 ${
-                    theme === 'dark' ? 'border-indigo-500/20 bg-indigo-500/5 hover:bg-indigo-500/10' : 'border-indigo-200 bg-indigo-50 hover:bg-indigo-100'
-                  }`}
-                >
-                  <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center">
-                    <RefreshCw className="w-5 h-5 text-indigo-500" />
-                  </div>
-                  <div className="text-left">
-                    <p className={`text-xs font-black uppercase tracking-tight ${
-                      theme === 'dark' ? 'text-white' : 'text-slate-900'
-                    }`}>Actualizar desde Nube</p>
-                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Sincronizar configuración desde Firestore</p>
-                  </div>
-                </button>
-
-                <button
-                  onClick={async () => {
-                    if (confirm("⚠️ REPARACIÓN DE BASE DE DATOS ⚠️\n\nEsto cerrará la conexión y limpiará la caché de Firestore para solucionar errores internos de renderizado.\n\nLa aplicación se recargará automáticamente.\n\n¿Deseas continuar?")) {
-                      await resetFirestore();
-                    }
-                  }}
-                  className={`w-full p-4 rounded-xl border flex items-center gap-4 transition-all mt-2 ${
-                    theme === 'dark' ? 'border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10' : 'border-amber-200 bg-amber-50 hover:bg-amber-100'
-                  }`}
-                >
-                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
-                    <RefreshCw className="w-5 h-5 text-amber-500" />
-                  </div>
-                  <div className="text-left">
-                    <p className={`text-xs font-black uppercase tracking-tight ${
-                      theme === 'dark' ? 'text-white' : 'text-slate-900'
-                    }`}>Reparar Conexión</p>
-                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Solucionar errores de renderizado (ID: b815)</p>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => window.location.reload()}
                   className={`w-full p-4 rounded-xl border flex items-center gap-4 transition-all ${
-                    theme === 'dark' ? 'border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/10' : 'border-rose-200 bg-rose-50 hover:bg-rose-100'
+                    theme === 'dark' ? 'border-blue-500/20 bg-blue-500/5 hover:bg-blue-500/10' : 'border-blue-200 bg-blue-50 hover:bg-blue-100'
                   }`}
                 >
-                  <div className="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center">
-                    <RefreshCw className="w-5 h-5 text-rose-500" />
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                    <Settings2 className="w-5 h-5 text-blue-500" />
                   </div>
                   <div className="text-left">
                     <p className={`text-xs font-black uppercase tracking-tight ${
                       theme === 'dark' ? 'text-white' : 'text-slate-900'
-                    }`}>Reiniciar Kernel</p>
-                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Recargar nuevas características</p>
-                  </div>
-                </button>
-
-                {onClearLocalData && (
-                  <button
-                    onClick={async () => {
-                      if (confirm("⚠️ ADVERTENCIA ⚠️\n\nEsto eliminará todos los registros locales de EVENTOS. Se volverán a descargar desde la nube en la próxima sincronización.\n\n¿Estás seguro de continuar?")) {
-                        await onClearLocalData();
-                        const { toast } = await import('sonner');
-                        toast.success('Datos locales eliminados. Sincroniza para descargar nuevamente.');
-                        onClose();
-                      }
-                    }}
-                    className={`w-full p-4 rounded-xl border flex items-center gap-4 transition-all mt-2 ${
-                      theme === 'dark' ? 'border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10' : 'border-amber-200 bg-amber-50 hover:bg-amber-100'
-                    }`}
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
-                      <Trash2 className="w-5 h-5 text-amber-500" />
-                    </div>
-                    <div className="text-left">
-                      <p className={`text-xs font-black uppercase tracking-tight ${
-                        theme === 'dark' ? 'text-white' : 'text-slate-900'
-                      }`}>Limpiar Datos Locales</p>
-                      <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Forzar descarga desde la nube</p>
-                    </div>
-                  </button>
-                )}
-                
-                <button
-                  onClick={async () => {
-                    const { firebaseSyncService } = await import('../../../services/firebaseSyncService');
-                    const { exportToCSV } = await import('../../../services/export');
-                    const result = await firebaseSyncService.pullBatch('EVENTOS');
-                    if (result.success) {
-                      await exportToCSV(result.rows, 'Eventos_Export');
-                    } else {
-                      const { toast } = await import('sonner');
-                      toast.error('Error al exportar datos');
-                    }
-                  }}
-                  className={`w-full p-4 rounded-xl border flex items-center gap-4 transition-all mt-2 ${
-                    theme === 'dark' ? 'border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10' : 'border-emerald-200 bg-emerald-50 hover:bg-emerald-100'
-                  }`}
-                >
-                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                    <Layout className="w-5 h-5 text-emerald-500" />
-                  </div>
-                  <div className="text-left">
-                    <p className={`text-xs font-black uppercase tracking-tight ${
-                      theme === 'dark' ? 'text-white' : 'text-slate-900'
-                    }`}>Exportar a CSV</p>
-                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Descargar todos los eventos</p>
+                    }`}>Ajustes del Sistema</p>
+                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Sincronización y Kernel Global</p>
                   </div>
                 </button>
               </section>
