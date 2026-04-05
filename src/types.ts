@@ -186,6 +186,7 @@ export interface AppSettings {
  appSheetConfig?: AppSheetConfig;
  schema?: AppSchema;
  mobileNavConfig?: ViewState[]; 
+ defaultStartModule?: ViewState;
  thermalPrinter?: {
  enabled: boolean;
  type: 'usb' | 'bluetooth';

@@ -72,6 +72,29 @@ export default defineConfig(({ mode }) => {
               type: 'image/svg+xml',
               purpose: 'any maskable'
             }
+          ],
+          shortcuts: [
+            {
+              name: "Recepción",
+              short_name: "Recepción",
+              description: "Ir a Recepción de Mercadería",
+              url: "/#/reception",
+              icons: [{ src: "pwa-icon.svg", sizes: "192x192" }]
+            },
+            {
+              name: "Vencimientos",
+              short_name: "Vencimientos",
+              description: "Ir a Control de Vencimientos",
+              url: "/#/expiry",
+              icons: [{ src: "pwa-icon.svg", sizes: "192x192" }]
+            },
+            {
+              name: "Conteo a Ciegas",
+              short_name: "Conteo",
+              description: "Ir a Conteo a Ciegas",
+              url: "/#/counting",
+              icons: [{ src: "pwa-icon.svg", sizes: "192x192" }]
+            }
           ]
         }
       })

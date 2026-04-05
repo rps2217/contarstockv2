@@ -46,6 +46,7 @@ const AppContent = () => {
   const [initStep, setInitStep] = useState<InitStep>('idle');
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+  const [hasInitialRedirected, setHasInitialRedirected] = useState(false);
   const navigate = useNavigate();
   
   // Activar sincronización automática inteligente
@@ -53,6 +54,16 @@ const AppContent = () => {
   
   // Activar detección de escaneo espontáneo (Zero-Click)
   useAutoSession();
+
+  // Redirección inicial según configuración de módulo por defecto
+  useEffect(() => {
+    if (isAuthenticated && bootState === 'ready' && !hasInitialRedirected) {
+      setHasInitialRedirected(true);
+      if (settings.defaultStartModule && settings.defaultStartModule !== 'dashboard' && location.pathname === '/') {
+        navigate(`/${settings.defaultStartModule}`, { replace: true });
+      }
+    }
+  }, [isAuthenticated, bootState, hasInitialRedirected, settings.defaultStartModule, location.pathname, navigate]);
 
   // Detectar si estamos en un modo de escaneo inmersivo (Optimizado con useMemo)
   const isScanningMode = React.useMemo(() => {
