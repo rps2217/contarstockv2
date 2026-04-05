@@ -187,3 +187,4 @@ export const saveSettings = async (settings: AppSettings) => {
  console.warn("No se pudo persistir configuración para SW", e);
  }
 };
+// Forced GitHub sync

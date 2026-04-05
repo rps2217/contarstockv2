@@ -320,3 +320,5 @@ export const ReceptionPage: React.FC<{
 };
 
 export default ReceptionPage;
+
+// Forced GitHub sync

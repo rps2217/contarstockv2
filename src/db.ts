@@ -78,3 +78,5 @@ export class LogiCountDB extends Dexie {
 }
 
 export const db = new LogiCountDB();
+
+// Forced GitHub sync

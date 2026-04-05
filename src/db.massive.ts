@@ -32,3 +32,5 @@ export class MassiveDatabase extends Dexie {
 }
 
 export const massiveDb = new MassiveDatabase();
+
+// Forced GitHub sync

@@ -164,3 +164,5 @@ export const importManifestFromCloud = async (batchId: string): Promise<number> 
     throw e;
   }
 };
+
+// Forced GitHub sync

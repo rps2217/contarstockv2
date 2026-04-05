@@ -40,3 +40,5 @@ auth.onAuthStateChanged((user) => {
     });
   }
 });
+
+// Forced GitHub sync

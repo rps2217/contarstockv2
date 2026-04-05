@@ -74,3 +74,5 @@ export const useAutoSession = () => {
 
   return null;
 };
+
+// Forced GitHub sync

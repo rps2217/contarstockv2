@@ -118,3 +118,5 @@ export const EventSearchBar: React.FC<EventSearchBarProps> = ({
     </div>
   );
 };
+
+// Forced GitHub sync

@@ -257,3 +257,5 @@ export const EventSettingsDrawer: React.FC<EventSettingsDrawerProps> = ({
     </AnimatePresence>
   );
 };
+
+// Forced GitHub sync

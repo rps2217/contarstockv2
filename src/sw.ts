@@ -28,3 +28,5 @@ async function processBackgroundSync() {
   // La sincronización con GAS ha sido eliminada para simplificar la arquitectura.
   return;
 }
+
+// Forced GitHub sync

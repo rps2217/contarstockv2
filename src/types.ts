@@ -303,3 +303,5 @@ export interface AppSheetConfig {
   };
   schema?: AppSchema; // New dynamic schema
 }
+
+// Forced GitHub sync

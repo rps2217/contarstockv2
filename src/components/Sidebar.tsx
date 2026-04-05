@@ -121,3 +121,5 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
     </aside>
   );
 };
+
+// Forced GitHub sync
