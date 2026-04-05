@@ -34,7 +34,7 @@ export const useScannerEngine = (defaultMultiplier = 1) => {
  // Orquestación de Feedback
  if (delta > 0) {
  setStatus('success');
- trigger('success');
+ trigger(product ? 'success' : 'unknown');
  } else if (delta < 0) {
  setStatus('success');
  trigger('undo');

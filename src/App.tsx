@@ -14,6 +14,7 @@ import { InitializationService, InitStep } from '@/services/initializationServic
 import { ToastContainer } from '@/shared/components/ui/ToastContainer';
 import { useAutoSync } from '@/hooks/useAutoSync';
 import { useAutoSession } from '@/hooks/useAutoSession';
+import { useExpiryWatcher } from '@/hooks/useExpiryWatcher';
 import { useNavigate } from 'react-router-dom';
 
 // --- COMPONENTES DIFERIDOS ---
@@ -54,6 +55,9 @@ const AppContent = () => {
   
   // Activar detección de escaneo espontáneo (Zero-Click)
   useAutoSession();
+
+  // Activar vigilante de vencimientos proactivo
+  useExpiryWatcher();
 
   // Redirección inicial según configuración de módulo por defecto
   useEffect(() => {

@@ -2,6 +2,7 @@
 import { useEffect, useRef } from 'react';
 import * as syncManager from '../services/syncManager';
 import { useToastStore } from '../store/useToastStore';
+import { useSyncStore } from '../store/useSyncStore';
 import { erpService } from '../services/erpService';
 import { ExpectedOrderRepository } from '../repositories/ExpectedOrderRepository';
 import { auth } from '../lib/firebase';
@@ -11,41 +12,36 @@ import { dynamicSyncService } from '../services/dynamicSync';
 
 export const useAutoSync = () => {
   const addToast = useToastStore(state => state.addToast);
+  const { setSyncError } = useSyncStore();
   const isSyncing = useRef(false);
+  const retryCount = useRef(0);
+  const MAX_RETRIES = 3;
 
   const triggerSync = async () => {
     if (isSyncing.current || !navigator.onLine) return;
 
     isSyncing.current = true;
+    setSyncError(null);
 
-    // 0. Process Dynamic Data Sync
     try {
-      await dynamicSyncService.resetRetries(); // Reset retries before attempting sync
+      // 0. Process Dynamic Data Sync
+      await dynamicSyncService.resetRetries();
       const dynamicResult = await dynamicSyncService.syncAllPending();
       if (dynamicResult.success > 0) {
         addToast(`Sincronización dinámica: ${dynamicResult.success} registros enviados`, 'success');
       }
-    } catch (error) {
-      console.error('Dynamic data auto-sync failed:', error);
-    }
 
-    // 1. Upload pending counts
-    const pendingGroups = await syncManager.getPendingUploadGroups();
-    if (pendingGroups.length > 0) {
-      addToast(`Sincronización automática iniciada (${pendingGroups.length} lotes)`, 'info');
-      try {
+      // 1. Upload pending counts
+      const pendingGroups = await syncManager.getPendingUploadGroups();
+      if (pendingGroups.length > 0) {
+        addToast(`Sincronización automática iniciada (${pendingGroups.length} lotes)`, 'info');
         for (const group of pendingGroups) {
           await syncManager.performBatchUpload(group, () => {});
         }
         addToast('Sincronización automática completada con éxito', 'success');
-      } catch (error) {
-        console.error('Auto-sync failed:', error);
-        addToast('Error en la sincronización automática', 'error');
       }
-    }
 
-    // 2. Download pending orders for Detective AI
-    try {
+      // 2. Download pending orders for Detective IA
       const manifests = await erpService.downloadAllPendingManifests();
       if (manifests.length > 0) {
         let newOrdersCount = 0;
@@ -73,9 +69,19 @@ export const useAutoSync = () => {
           addToast(`Se descargaron ${newOrdersCount} nuevas órdenes para el Detective IA`, 'success');
         }
       }
+      
+      retryCount.current = 0; // Reset on success
     } catch (error: any) {
-      if (error.message !== 'URL_NOT_CONFIGURED') {
-        console.error('Auto-download orders failed:', error);
+      console.error('Auto-sync failed:', error);
+      setSyncError(error.message || 'Error desconocido');
+      
+      if (retryCount.current < MAX_RETRIES) {
+        retryCount.current++;
+        const delay = Math.pow(2, retryCount.current) * 1000;
+        console.log(`[AutoSync] Reintentando en ${delay}ms... (Intento ${retryCount.current})`);
+        setTimeout(triggerSync, delay);
+      } else {
+        addToast('Error persistente en sincronización automática', 'error');
       }
     } finally {
       isSyncing.current = false;

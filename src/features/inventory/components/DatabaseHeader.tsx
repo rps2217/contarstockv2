@@ -29,6 +29,7 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
  
  const isModelDownloading = props.brainStatus?.status === 'downloading';
  const isModelReady = props.brainStatus?.status === 'ready';
+ const isModelDisabled = props.brainStatus?.status === 'disabled';
 
  return (
  <div className="shrink-0 z-30 bg-white dark:bg-slate-900 py-3 px-4 border-b border-slate-200 dark:border-white/5 shadow-md">
@@ -54,7 +55,7 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
  </div>
  
  <div className="flex gap-2">
- {!isModelReady && !isModelDownloading && (
+ {!isModelReady && !isModelDownloading && !isModelDisabled && (
  <button 
  onClick={props.onInitializeBrain}
  className="bg-blue-600 hover:bg-blue-700 text-white px-4 rounded-xl font-bold text-[9px] uppercase tracking-widest shadow-lg active:scale-95 flex items-center gap-2 animate-pulse"
@@ -113,28 +114,28 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
  <div className="grid grid-cols-3 gap-2 py-1">
  {/* BARRA 1: MOTOR IA (AZUL) */}
  <div className="space-y-1">
- <div className="flex justify-between items-center text-[7px] font-black text-blue-500 uppercase tracking-widest px-1">
+ <div className={`flex justify-between items-center text-[7px] font-black uppercase tracking-widest px-1 ${isModelDisabled ? 'text-slate-400' : 'text-blue-500'}`}>
  <span className="flex items-center gap-1"><Cpu className="w-2.5 h-2.5" /> IA Engine</span>
- <span>{isModelReady ? '100%' : `${props.brainStatus?.progress || 0}%`}</span>
+ <span>{isModelDisabled ? 'OFF' : (isModelReady ? '100%' : `${props.brainStatus?.progress || 0}%`)}</span>
  </div>
- <div className="h-1.5 w-full bg-blue-100 dark:bg-blue-900/20 rounded-full overflow-hidden">
+ <div className={`h-1.5 w-full rounded-full overflow-hidden ${isModelDisabled ? 'bg-slate-200 dark:bg-slate-800' : 'bg-blue-100 dark:bg-blue-900/20'}`}>
  <div 
- className={`h-full bg-blue-600 transition-all duration-500 ${isModelDownloading ? 'animate-pulse' : ''}`} 
- style={{ width: `${isModelReady ? 100 : (props.brainStatus?.progress || 0)}%` }} 
+ className={`h-full transition-all duration-500 ${isModelDisabled ? 'bg-slate-400' : 'bg-blue-600'} ${isModelDownloading ? 'animate-pulse' : ''}`} 
+ style={{ width: `${isModelDisabled ? 0 : (isModelReady ? 100 : (props.brainStatus?.progress || 0))}%` }} 
  />
  </div>
  </div>
 
  {/* BARRA 2: ENTRENAMIENTO (AMBAR) */}
  <div className="space-y-1">
- <div className="flex justify-between items-center text-[7px] font-black text-amber-500 uppercase tracking-widest px-1">
+ <div className={`flex justify-between items-center text-[7px] font-black uppercase tracking-widest px-1 ${isModelDisabled ? 'text-slate-400' : 'text-amber-500'}`}>
  <span className="flex items-center gap-1"><BrainCircuit className="w-2.5 h-2.5" /> Asimilación</span>
- <span>{props.trainedPercent}%</span>
+ <span>{isModelDisabled ? 'N/A' : `${props.trainedPercent}%`}</span>
  </div>
- <div className="h-1.5 w-full bg-amber-100 dark:bg-amber-900/20 rounded-full overflow-hidden">
+ <div className={`h-1.5 w-full rounded-full overflow-hidden ${isModelDisabled ? 'bg-slate-200 dark:bg-slate-800' : 'bg-amber-100 dark:bg-amber-900/20'}`}>
  <div 
- className={`h-full bg-amber-500 transition-all duration-500 ${props.isVectorizing ? 'animate-pulse' : ''}`} 
- style={{ width: `${props.trainedPercent}%` }} 
+ className={`h-full transition-all duration-500 ${isModelDisabled ? 'bg-slate-400' : 'bg-amber-500'} ${props.isVectorizing && !isModelDisabled ? 'animate-pulse' : ''}`} 
+ style={{ width: `${isModelDisabled ? 0 : props.trainedPercent}%` }} 
  />
  </div>
  </div>

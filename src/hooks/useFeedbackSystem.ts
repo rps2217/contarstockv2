@@ -34,9 +34,10 @@ export const useFeedbackSystem = (defaultDuration = 300) => {
 const mapStatusToSound = (status: FeedbackStatus) => {
  switch (status) {
  case 'success': return 'success';
- case 'unknown': return 'increment';
+ case 'unknown': return 'not_found';
  case 'error': return 'error';
  case 'undo': return 'delete';
+ case 'warning': return 'warning';
  default: return undefined;
  }
 };

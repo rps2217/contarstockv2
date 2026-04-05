@@ -75,6 +75,10 @@ interface ExpiryState {
   verifiedIds: Set<string>;
   setVerifiedIds: (ids: Set<string>) => void;
   toggleVerified: (id: string) => void;
+
+  // Alerts
+  alertCount: number;
+  setAlertCount: (count: number) => void;
 }
 
 const DEFAULT_PREFERENCES: ExpiryPreferences = {
@@ -133,6 +137,9 @@ export const useExpiryStore = create<ExpiryState>()(
         else next.add(id);
         return { verifiedIds: next };
       }),
+
+      alertCount: 0,
+      setAlertCount: (alertCount) => set({ alertCount }),
     }),
     {
       name: 'expiry-storage',

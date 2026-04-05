@@ -57,6 +57,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   hapticsEnabled: true,
   ttsEnabled: false, 
   batchTrackingEnabled: true,
+  lowEndMode: false,
   appSheetConfig: {
     appId: import.meta.env.VITE_APPSHEET_APP_ID || '',
     accessKey: import.meta.env.VITE_APPSHEET_ACCESS_KEY || '',

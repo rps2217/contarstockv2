@@ -183,6 +183,7 @@ export interface AppSettings {
  hapticsEnabled: boolean;
  ttsEnabled: boolean; 
  batchTrackingEnabled: boolean;
+ lowEndMode?: boolean;
  appSheetConfig?: AppSheetConfig;
  schema?: AppSchema;
  mobileNavConfig?: ViewState[]; 
@@ -216,6 +217,7 @@ export interface ExpiryMapping {
   isAdjusted: string;
   batch?: string;
   timestamp?: string;
+  fechaCC?: string;
 }
 
 export interface ProductMapping {

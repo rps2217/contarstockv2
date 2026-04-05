@@ -7,6 +7,7 @@ import { AppSettings } from '../types';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ScanRepository } from '../repositories/ScanRepository';
 import { db } from '../db';
+import { useExpiryStore } from '../store/useExpiryStore';
 
 interface SidebarProps {
   view: string;
@@ -18,6 +19,7 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, onToggle }) => {
   const navigate = useNavigate();
   const pendingCount = useLiveQuery(() => ScanRepository.getPendingSyncCount(), [], 0);
+  const alertCount = useExpiryStore(state => state.alertCount);
   
   const dynamicTableStats = useLiveQuery(async () => {
     const records = await db.dynamic_data.where('syncStatus').anyOf(['pending', 'error']).toArray();
@@ -79,7 +81,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
         
         {!isCollapsed && <div className="text-[9px] font-black text-slate-600 uppercase tracking-[0.4em] px-5 mb-6 mt-10">Advanced_Tools</div>}
         <NavItem path="/massive/BURST-MODE" activeKey="massive" label="Modo_Martillo" icon={Zap} />
-        <NavItem path="/expiry" activeKey="expiry" label="Vencimientos" icon={Calendar} />
+        <NavItem path="/expiry" activeKey="expiry" label="Vencimientos" icon={Calendar} badge={alertCount} />
         <NavItem path="/events" activeKey="events" label="Eventos" icon={AlertCircle} />
         
         {(() => {

@@ -79,6 +79,10 @@ export const useProductDatabase = () => {
  };
 
  const handleVectorize = async () => {
+ if (brainStatus.status === 'disabled') {
+ showFeedback('error', 'Modo Bajo Rendimiento Activo');
+ return;
+ }
  if (brainStatus.status !== 'ready') {
  showFeedback('error', 'Instale el motor IA primero');
  return;

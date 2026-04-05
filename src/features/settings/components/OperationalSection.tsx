@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { 
-  Mic, Smartphone, CalendarRange, BellRing
+  Mic, Smartphone, CalendarRange, BellRing, Cpu
 } from 'lucide-react';
 import { AppSettings } from '../../../types';
 import { SettingsSection, SettingsToggle } from './common/SettingsElements';
@@ -51,6 +51,14 @@ export const OperationalSection: React.FC<Props> = ({ settings, updateSetting })
  label="Respuesta Háptica"
  description="Vibración inteligente al scanear"
  icon={Smartphone}
+ />
+
+ <SettingsToggle 
+ active={settings.lowEndMode || false} 
+ onClick={() => handleToggle('lowEndMode')}
+ label="Modo Bajo Rendimiento"
+ description="Desactiva IA local para ahorrar RAM"
+ icon={Cpu}
  />
 
  </SettingsSection>

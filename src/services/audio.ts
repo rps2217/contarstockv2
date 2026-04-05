@@ -37,12 +37,13 @@ class AudioService {
  this.synth.speak(utterance);
  }
 
- public play(type: 'success' | 'error' | 'delete' | 'increment' | 'scan') {
+ public play(type: 'success' | 'error' | 'delete' | 'increment' | 'scan' | 'not_found' | 'warning') {
  const settings = getSettings();
  
  // Haptics de alto impacto
  if (settings.hapticsEnabled && navigator.vibrate) {
- if (type === 'error') navigator.vibrate([100, 50, 100]);
+ if (type === 'error' || type === 'not_found') navigator.vibrate([100, 50, 100]);
+ else if (type === 'warning') navigator.vibrate([50, 50, 50, 50]);
  else if (type === 'success' || type === 'scan') navigator.vibrate(40);
  else navigator.vibrate(20);
  }
@@ -95,6 +96,28 @@ class AudioService {
  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
  osc.start(now);
  osc.stop(now + 0.3);
+ break;
+ case 'not_found':
+ // Tono grave y seco para "Producto no encontrado"
+ osc.type = 'triangle';
+ osc.frequency.setValueAtTime(150, now);
+ osc.frequency.exponentialRampToValueAtTime(80, now + 0.2);
+ gain.gain.setValueAtTime(0.2, now);
+ gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+ osc.start(now);
+ osc.stop(now + 0.2);
+ break;
+ case 'warning':
+ // Doble tono rápido para "Alerta / Próximo a vencer"
+ osc.type = 'square';
+ osc.frequency.setValueAtTime(800, now);
+ osc.frequency.setValueAtTime(1200, now + 0.1);
+ gain.gain.setValueAtTime(0.15, now);
+ gain.gain.setValueAtTime(0, now + 0.08);
+ gain.gain.setValueAtTime(0.15, now + 0.1);
+ gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+ osc.start(now);
+ osc.stop(now + 0.2);
  break;
  }
  } catch (e) {

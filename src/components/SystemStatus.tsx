@@ -12,7 +12,7 @@ export const SystemStatus: React.FC = () => {
  const [isCharging, setIsCharging] = useState(false);
  const [storageCritical, setStorageCritical] = useState(false);
  
- const { isSyncing, latencyMs, pendingItems, setLatency, setPendingItems, setFirestoreConnected, isFirestoreConnected } = useSyncStore();
+ const { isSyncing, latencyMs, pendingItems, setLatency, setPendingItems, setFirestoreConnected, isFirestoreConnected, syncError } = useSyncStore();
 
  useEffect(() => {
    const checkMetrics = async () => {
@@ -81,6 +81,15 @@ export const SystemStatus: React.FC = () => {
  }, []);
 
  const alerts = [];
+
+ if (syncError) {
+  alerts.push(
+  <div key="sync-error" className="bg-rose-600 text-white px-4 py-1 text-[9px] font-black flex items-center justify-center gap-2 border-b border-rose-700 shadow-lg">
+  <RefreshCw className="w-3 h-3" />
+  <span className="uppercase tracking-widest">Error de Sincronización: {syncError}</span>
+  </div>
+  );
+ }
 
  if (isSyncing) {
   alerts.push(

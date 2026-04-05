@@ -7,6 +7,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { ScanRepository } from '../repositories/ScanRepository';
 import { db } from '../db';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import { useExpiryStore } from '../store/useExpiryStore';
 
 interface Props {
  currentView: string;
@@ -18,6 +19,7 @@ export const BottomDock: React.FC<Props> = ({ currentView, settings }) => {
  const isOnline = useNetworkStatus();
  const pendingSync = useLiveQuery(() => ScanRepository.getPendingSyncCount(), [], 0);
  const dynamicStats = useLiveQuery(() => db.dynamic_data.where('syncStatus').anyOf(['pending', 'error']).count(), [], 0);
+ const alertCount = useExpiryStore(state => state.alertCount);
 
  const iconMap: Record<string, { label: string, icon: any, path: string }> = {
   'dashboard': { label: 'INICIO', icon: Home, path: '/dashboard' },
@@ -61,9 +63,15 @@ export const BottomDock: React.FC<Props> = ({ currentView, settings }) => {
  <div className="absolute -bottom-1 w-1 h-1 bg-blue-400 rounded-full shadow-[0_0_8px_#60a5fa] animate-pulse"></div>
  )}
 
- { (key === 'sync' || key === 'expiry' || key === 'events') && (pendingSync > 0 || dynamicStats > 0) && (
+ { key === 'sync' && (pendingSync > 0 || dynamicStats > 0) && (
  <span className="absolute -top-1 right-1 bg-amber-500 text-black text-[9px] font-black px-1.5 py-0.5 rounded-md border-2 border-slate-950 animate-bounce">
  {pendingSync + dynamicStats}
+ </span>
+ )}
+
+ { key === 'expiry' && alertCount > 0 && (
+ <span className="absolute -top-1 right-1 bg-rose-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-md border-2 border-slate-950 animate-pulse">
+ {alertCount}
  </span>
  )}
  </button>

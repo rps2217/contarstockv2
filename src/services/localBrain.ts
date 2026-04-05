@@ -1,11 +1,12 @@
 
 import { pipeline, env } from '@xenova/transformers';
+import { getSettings } from './settings';
 
 // Configuración de entorno para máximo rendimiento local
 env.allowLocalModels = false;
 env.useBrowserCache = true;
 
-type BrainStatus = 'idle' | 'downloading' | 'ready' | 'error';
+type BrainStatus = 'idle' | 'downloading' | 'ready' | 'error' | 'disabled';
 type StatusListener = (status: BrainStatus, progress: number, details?: string) => void;
 
 class LocalBrainService {
@@ -49,6 +50,12 @@ class LocalBrainService {
  }
 
  async init(silent = false) {
+ const settings = getSettings();
+ if (settings.lowEndMode) {
+ this.updateStatus('disabled', 0, 'Modo Bajo Rendimiento');
+ return;
+ }
+
  if (this.pipe) return;
  if (this.initPromise) return this.initPromise;
 
@@ -83,10 +90,15 @@ class LocalBrainService {
  * Genera un embedding. Si el modelo no está cargado, lo inicia.
  */
  async embed(text: string): Promise<number[] | null> {
+ const settings = getSettings();
+ if (settings.lowEndMode) return null;
+
  if (!text || text.trim().length < 2) return null;
  try {
  if (!this.pipe) await this.init(false);
  
+ if (!this.pipe) return null; // Fallback in case init was aborted
+
  // Forzamos el uso de memoria reducida (Pooling Mean)
  const output = await this.pipe(text, { pooling: 'mean', normalize: true });
  const vector = Array.from(output.data) as number[];

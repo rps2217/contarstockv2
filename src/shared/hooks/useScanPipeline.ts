@@ -49,7 +49,7 @@ export const useScanPipeline = (defaultMultiplier = 1) => {
         
         // 3. Feedback de audio (TTS)
         const settings = getSettings();
-        if (settings.ttsEnabled && delta > 0) {
+        if (delta > 0 && settings.ttsEnabled) {
           SoundFX.speak(`${newQty}`);
         }
 

@@ -37,6 +37,13 @@ export const VectorService = {
 
  if (total === 0) return 0;
 
+ // Check if localBrain is disabled (lowEndMode)
+ const testVector = await localBrain.embed("test");
+ if (testVector === null) {
+ console.log("[VectorService] Motor IA deshabilitado. Abortando vectorización.");
+ return 0;
+ }
+
  let processed = 0;
  let successCount = 0;
 
