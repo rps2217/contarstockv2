@@ -17,12 +17,13 @@ export const useExpiryUI = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const handleOpenAdd = (barcode: string = '') => {
+  const handleOpenAdd = (barcode: any = '') => {
+    const finalBarcode = typeof barcode === 'string' ? barcode : '';
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
     if (isMobile) {
       navigate('/expiry/capture');
     } else {
-      setInitialBarcode(barcode);
+      setInitialBarcode(finalBarcode);
       setIsDesktopAddModalOpen(true);
     }
   };

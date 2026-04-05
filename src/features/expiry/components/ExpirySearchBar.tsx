@@ -69,7 +69,7 @@ export const ExpirySearchBar: React.FC<ExpirySearchBarProps> = ({
       
       <div className="flex gap-3">
         <button
-          onClick={onOpenAdd}
+          onClick={() => onOpenAdd()}
           className={`flex-1 md:flex-none px-6 py-4 md:py-0 rounded-2xl flex items-center justify-center gap-3 transition-all border shadow-lg group ${
             theme === 'dark' 
               ? 'bg-amber-500 border-amber-400 text-black hover:bg-amber-400' 
