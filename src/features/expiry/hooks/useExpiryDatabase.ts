@@ -13,12 +13,16 @@ import { normalizeSku } from '../../../services/utils';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { productRepository } from '../../../repositories/DexieProductRepository';
 import { db } from '../../../db';
+import { expiryRepository } from '../../../repositories/ExpiryRepository';
+import { expirySyncService } from '../../../services/expirySyncService';
+import { useTaskStore } from '@/store/useTaskStore';
 
 export type { ExpiryStatus, ExpiryPreferences, ExpiryItem };
 
 export const useExpiryDatabase = () => {
   const { addToast } = useToastStore.getState();
   const { settings } = useAppStore();
+  const { addTask, updateTask } = useTaskStore();
   const tableName = settings?.appSheetConfig?.inventoryRegistryTableName || 
                     settings?.appSheetConfig?.expiryTableName || 
                     'VENCIMIENTOS';
@@ -36,8 +40,9 @@ export const useExpiryDatabase = () => {
 
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
-  const [cloudItems, setCloudItems] = useState<any[]>([]);
-
+  
+  // Local data from Dexie
+  const localItems = useLiveQuery(() => expiryRepository.getAll(), []) || [];
   const allProducts = useLiveQuery(() => productRepository.getAll(), []) || [];
   const allProviders = useLiveQuery(() => db.providers.toArray(), []) || [];
   
@@ -59,25 +64,10 @@ export const useExpiryDatabase = () => {
     return map;
   }, [allProviders]);
 
-  // Monitoreo en tiempo real de Firestore
+  // Start real-time sync with Firestore
   useEffect(() => {
-    const colRef = collection(firestoreDb, tableName);
-    // Limitamos a 3000 registros para evitar saturar el SDK de Firestore
-    const q = query(colRef, orderBy('timestamp', 'desc'), limit(3000));
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setCloudItems(items);
-    }, (error) => {
-      console.error("Error en onSnapshot de Firestore:", error);
-      try {
-        handleFirestoreError(error, OperationType.GET, tableName);
-      } catch (e) {
-        addToast("Error al conectar con la base de datos en tiempo real", "error");
-      }
-    });
-
-    return () => unsubscribe();
+    const unsubscribe = expirySyncService.startSync(tableName);
+    return () => expirySyncService.stopSync();
   }, [tableName]);
 
   // Debounce search query
@@ -92,47 +82,41 @@ export const useExpiryDatabase = () => {
 
   const baseProcessedData = useMemo(() => {
     const now = new Date();
-    
     const expiryMapping = settings?.appSheetConfig?.mappings?.expiry;
     
-    return (cloudItems || []).map(record => {
+    return (localItems || []).map(record => {
         const exp = record;
         const productName = exp[expiryMapping?.name || ''] || 
-                            exp.DESCRIPTOR || 
-                            exp.DESCRIPCION_PROD || 
-                            exp.DESCRIPCION || 
-                            exp.PRODUCTO ||
-                            exp.ITEM ||
+                            (exp as any).DESCRIPTOR || 
+                            (exp as any).DESCRIPCION_PROD || 
+                            (exp as any).DESCRIPCION || 
+                            (exp as any).PRODUCTO ||
+                            (exp as any).ITEM ||
                             exp.productName || '';
                             
         const providerName = exp[expiryMapping?.supplier || ''] ||
-                             exp.PROVEEDOR || 
-                             exp.PROV ||
-                             exp.proveedor || 
-                             exp.supplier || '';
+                             (exp as any).PROVEEDOR || 
+                             (exp as any).PROV ||
+                             (exp as any).proveedor || 
+                             (exp as any).supplier || exp.providerName || '';
         
         return processExpiryItem({
           id: record.id,
-          barcode: exp[expiryMapping?.barcode || ''] || exp.SKU || exp.COD_BARRAS || exp.barcode || '',
+          barcode: exp[expiryMapping?.barcode || ''] || (exp as any).SKU || (exp as any).COD_BARRAS || exp.barcode || '',
           productName,
           providerName,
-          mm: exp[expiryMapping?.mm || ''] || exp.MM || exp.mm,
-          yyyy: exp[expiryMapping?.yyyy || ''] || exp.YYYY || exp.yyyy,
-          batch: exp[expiryMapping?.batch || ''] || exp.LOTE || exp.batch || 'N/A',
+          mm: exp[expiryMapping?.mm || ''] || (exp as any).MM || exp.mm,
+          yyyy: exp[expiryMapping?.yyyy || ''] || (exp as any).YYYY || exp.yyyy,
+          batch: exp[expiryMapping?.batch || ''] || (exp as any).LOTE || exp.batch || 'N/A',
           type: 'Nube',
           timestamp: record.timestamp || Date.now(),
-          quantity: exp[expiryMapping?.quantity || ''] || exp.CANTIDAD || exp.quantity || 0,
-          location: exp[expiryMapping?.location || ''] || exp.UBICACION || exp.location || 'N/A',
-          claveUnica: exp.claveUnica || exp.CLAVE_UNICA,
-          syncStatus: 'synced'
+          quantity: exp[expiryMapping?.quantity || ''] || (exp as any).CANTIDAD || exp.quantity || 0,
+          location: exp[expiryMapping?.location || ''] || (exp as any).UBICACION || exp.location || 'N/A',
+          claveUnica: exp.claveUnica || (exp as any).CLAVE_UNICA,
+          syncStatus: record.syncStatus || 'synced'
         }, productMap, providerMap, now);
       });
-  }, [cloudItems, settings?.appSheetConfig?.mappings?.expiry, productMap, providerMap]);
-
-  // MOTOR DETECTIVE: Resuelve 'Productos Desconocidos' en segundo plano con alta prioridad
-  useEffect(() => {
-    // Pendiente de migración a Firebase
-  }, [baseProcessedData, isSyncing, settings]);
+  }, [localItems, settings?.appSheetConfig?.mappings?.expiry, productMap, providerMap]);
 
   const categories = useMemo(() => {
     const cats = new Set<string>();
@@ -203,16 +187,37 @@ export const useExpiryDatabase = () => {
   }, [tableName]);
 
   const handleBulkRemove = useCallback(async (ids: Set<string>) => {
+    const taskId = `bulk-remove-expiry-${Date.now()}`;
+    const idArray = Array.from(ids);
+    
+    addTask({
+      id: taskId,
+      name: `Retirando ${idArray.length} vencimientos`,
+      progress: 0,
+      status: 'running'
+    });
+
     try {
-      for (const id of ids) {
-        await firebaseSyncService.deleteRemote(tableName, id);
+      let successCount = 0;
+      for (let i = 0; i < idArray.length; i++) {
+        const id = idArray[i];
+        try {
+          await firebaseSyncService.deleteRemote(tableName, id);
+          successCount++;
+        } catch (e) {
+          console.error(`Error al eliminar ${id}:`, e);
+        }
+        updateTask(taskId, { progress: Math.round(((i + 1) / idArray.length) * 100) });
       }
+      
+      updateTask(taskId, { status: 'completed', progress: 100 });
       setSelectedIds(new Set());
-      addToast(`${ids.size} ítems retirados correctamente`, 'success');
+      addToast(`${successCount} ítems retirados correctamente`, 'success');
     } catch (error) {
+      updateTask(taskId, { status: 'error', error: 'Error en operación masiva' });
       addToast('Error al retirar los ítems', 'error');
     }
-  }, [tableName]);
+  }, [tableName, addTask, updateTask, setSelectedIds]);
 
   const handleAddItem = useCallback(async (data: {
     barcode: string;

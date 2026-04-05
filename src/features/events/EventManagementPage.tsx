@@ -39,94 +39,16 @@ import { Zap, ChevronUp, ChevronDown } from 'lucide-react';
 import { dynamicSyncService } from '../../services/dynamicSync';
 import { dynamicDataService } from '../../services/dynamicDataService';
 
+import { useEventUI } from './hooks/useEventUI';
+
 const EventManagementPage: React.FC = () => {
-  const { settings, updateSetting } = useAppStore();
-  const [theme, setTheme] = useState<'dark' | 'light'>('light');
-  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
-  const [isSettingsDrawerOpen, setIsSettingsDrawerOpen] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<any>(null);
-  const [isPriorityPanelOpen, setIsPriorityPanelOpen] = useState(false);
-  
-  const [expandedPanel, setExpandedPanel] = useState<'pending' | 'adjusted' | 'dual'>('dual');
-  
-  const { state, actions } = useEventDatabase();
+  const { ui, actions: uiActions, db } = useEventUI();
+  const { state, actions } = db;
   const navigate = useNavigate();
-  const location = useLocation();
-
-  // Redirección automática a vista móvil si es un PDA/Móvil
-  useEffect(() => {
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
-    const preventAutoRedirect = location.state?.preventAutoRedirect;
-
-    if (isMobile && !preventAutoRedirect) {
-      navigate('/events/capture');
-    }
-  }, [navigate, location.state]);
-
-  const handleBulkEdit = async (data: { destino: string; traspaso: string; observaciones: string }) => {
-    const selectedIds = Array.from(state.selectedIds);
-    if (selectedIds.length === 0) return;
-
-    try {
-      const updates: any = {};
-      if (data.destino) updates.destino = data.destino;
-      if (data.traspaso) updates.traspaso = data.traspaso;
-      if (data.observaciones) updates.observaciones = data.observaciones;
-      
-      if (Object.keys(updates).length > 0) {
-        await actions.updateEventBulkFieldsMany(selectedIds, updates);
-      }
-
-      toast.success(`${selectedIds.length} registros actualizados`);
-      actions.clearSelection();
-    } catch (error) {
-      toast.error('Error al actualizar registros masivamente');
-    }
-  };
-
-  const handleBulkSearchDocument = () => {
-    const selectedIds = Array.from(state.selectedIds);
-    console.log('Selected IDs:', selectedIds);
-    if (selectedIds.length === 0) return;
-
-    // Use the first selected item for the search
-    const item = state.processedEvents.find(e => e.id === selectedIds[0]);
-    console.log('Item found:', item);
-    
-    if (item && item.barcode && item.nguia) {
-      const query = `${item.barcode} ${item.nguia}`;
-      console.log('Gmail Search Query:', query);
-      const url = `https://mail.google.com/mail/u/0/#search/${encodeURIComponent(query)}`;
-      console.log('Opening URL:', url);
-      const opened = window.open(url, '_blank');
-      if (!opened) {
-        toast.error('El navegador bloqueó la apertura de la ventana de Gmail. Por favor, permite las ventanas emergentes.');
-      }
-    } else {
-      console.error('Missing barcode or nguia:', item);
-      toast.error('No se pudo obtener SKU o Guía para la búsqueda');
-    }
-  };
-
-  // Atajo de teclado Alt+V para ir a Vencimientos
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.altKey && e.key.toLowerCase() === 'v') {
-        e.preventDefault();
-        navigate('/expiry');
-        toast.info('Navegando a Control de Vencimientos');
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [navigate]);
 
   const handleSelectItemFromPriority = (id: string) => {
     actions.setSearchQuery('');
-    handleClearFilters();
+    uiActions.handleClearFilters();
     // Small delay to allow filters to clear
     setTimeout(() => {
       const element = document.getElementById(`event-item-${id}`);
@@ -140,294 +62,99 @@ const EventManagementPage: React.FC = () => {
     }, 100);
   };
 
-  const handleCreateOrUpdate = async (data: any | any[]) => {
-    const items = Array.isArray(data) ? data : [data];
-    
-    if (editingItem) {
-      await actions.updateEvent(editingItem.id, items[0]);
-    } else {
-      for (const item of items) {
-        // Check for duplicates
-        const isDuplicate = state.processedEvents.some(
-          (event) => event.barcode === item.barcode && event.frc === item.frc
-        );
-        if (isDuplicate) {
-          toast.error(`Ya existe un evento para ${item.productName} con el mismo FRC`);
-          continue;
-        }
-        await actions.createEvent(item);
-      }
-    }
-  };
-
-  const handleSync = async () => {
-    try {
-      setIsSyncing(true);
-      const tableName = settings?.appSheetConfig?.eventsTableName || 'EVENTOS';
-      const result = await dynamicSyncService.pullSync(tableName);
-      toast.success(`Sincronización completada. ${result.added} añadidos, ${result.updated} actualizados.`);
-    } catch (error: any) {
-      toast.error(error.message || 'Error al sincronizar con la nube');
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
-  const activeFiltersCount = state.selectedEvents.length;
-
-  const handleClearFilters = () => {
-    actions.setSelectedEvents([]);
-    actions.setSearchQuery('');
-  };
-
-  const handleToggleEvent = (event: string) => {
-    const next = state.selectedEvents.includes(event)
-      ? state.selectedEvents.filter(e => e !== event)
-      : [...state.selectedEvents, event];
-    actions.setSelectedEvents(next);
-  };
-
-  const handleRemoveItem = async (item: any) => {
-    try {
-      actions.setPendingOperations(p => p + 1);
-      await actions.deleteEvent(item.id);
-      toast.success('Registro eliminado correctamente');
-    } catch (error: any) {
-      toast.error(error.message || 'Error al eliminar registro');
-    } finally {
-      actions.setPendingOperations(p => Math.max(0, p - 1));
-    }
-  };
-
-  const handleUpdateStatus = async (id: string, isAdjusted: boolean) => {
-    try {
-      await actions.updateEventStatus(id, isAdjusted);
-      toast.success(isAdjusted ? 'Evento marcado como ajustado' : 'Evento revertido a pendiente');
-    } catch (error: any) {
-      toast.error('Error al actualizar estado');
-    }
-  };
-
-  const handleBulkRemove = async () => {
-    const selectedItems = state.processedEvents.filter(item => state.selectedIds.has(item.id));
-    if (selectedItems.length === 0) return;
-
-    const confirm = window.confirm(`¿RETIRAR ${selectedItems.length} REGISTROS? ESTA ACCIÓN ES IRREVERSIBLE.`);
-    if (!confirm) return;
-
-    let successCount = 0;
-    const failedItems: string[] = [];
-
-    actions.setPendingOperations(p => p + selectedItems.length);
-    
-    await Promise.all(selectedItems.map(async (item) => {
-      try {
-        await actions.deleteEvent(item.id);
-        successCount++;
-      } catch (e) {
-        failedItems.push(item.barcode || 'Desconocido');
-      }
-    }));
-
-    actions.setPendingOperations(p => Math.max(0, p - selectedItems.length));
-
-    if (successCount > 0) toast.success(`${successCount} registros eliminados`);
-    if (failedItems.length > 0) toast.error(`Error al eliminar: ${failedItems.join(', ')}`);
-    
-    actions.clearSelection();
-  };
-
-  const handleBulkUpdateStatus = async (isAdjusted: boolean) => {
-    const selectedIds = Array.from(state.selectedIds);
-    if (selectedIds.length === 0) return;
-
-    try {
-      await Promise.all(selectedIds.map(id => actions.updateEventStatus(id, isAdjusted)));
-      toast.success(`${selectedIds.length} registros actualizados`);
-      actions.clearSelection();
-    } catch (error) {
-      toast.error('Error al actualizar registros masivamente');
-    }
-  };
-  
-  const handleBulkUpdateDestino = async (destino: string) => {
-    const selectedIds = Array.from(state.selectedIds);
-    if (selectedIds.length === 0) return;
-
-    try {
-      actions.setPendingOperations(p => p + selectedIds.length);
-      await Promise.all(selectedIds.map(id => actions.updateEventDestino(id, destino)));
-      toast.success(`${selectedIds.length} registros actualizados a ${destino}`);
-      actions.clearSelection();
-    } catch (error) {
-      toast.error('Error al actualizar destino masivamente');
-    } finally {
-      actions.setPendingOperations(p => Math.max(0, p - selectedIds.length));
-    }
-  };
-
-  const handleBulkPrintLabels = () => {
-    const selectedItems = state.processedEvents.filter(item => state.selectedIds.has(item.id));
-    if (selectedItems.length === 0) return;
-    
-    import('../expiry/utils/expiryUtils').then(utils => {
-      utils.handlePrintLabels(selectedItems);
-      toast.success(`Generando etiquetas para ${selectedItems.length} productos`);
-    });
-  };
-
-  const handleBulkPrintSelected = () => {
-    const selectedItems = state.processedEvents.filter(item => state.selectedIds.has(item.id));
-    if (selectedItems.length === 0) return;
-    
-    import('../expiry/utils/expiryUtils').then(utils => {
-      utils.handlePrintSelectedEvents(selectedItems);
-      toast.success(`Generando reporte para ${selectedItems.length} productos`);
-    });
-  };
-
-  const handleBulkSendEmail = () => {
-    const selectedItems = state.processedEvents.filter(item => state.selectedIds.has(item.id));
-    if (selectedItems.length === 0) return;
-    
-    import('../expiry/utils/expiryUtils').then(utils => {
-      utils.handleSendEmail(selectedItems);
-      toast.success(`Generando reporte de correo para ${selectedItems.length} productos`);
-    });
-  };
-
-  const confirmRemoveItem = (item: any) => {
-    const confirm = window.confirm(`¿RETIRAR ${item.productName}? ESTA ACCIÓN ES IRREVERSIBLE.`);
-    if (confirm) {
-      handleRemoveItem(item);
-    }
-  };
-
-  const toggleTheme = () => {
-    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
-    toast.info(`Modo ${theme === 'dark' ? 'Claro' : 'Oscuro'} activado`);
-  };
-
-  const handleFrcClick = (frc: string) => {
-    actions.setSearchQuery(frc);
-    toast.info(`Filtrando por FRC: ${frc}`);
-  };
-
-  const handleEventClick = (event: string) => {
-    // Si ya está seleccionado, no hacemos nada o podríamos limpiar otros.
-    // El usuario quiere que "se filtre", así que lo pondremos como el único filtro activo
-    // para que sea una acción directa y clara.
-    actions.setSelectedEvents([event]);
-    toast.info(`Filtrando por evento: ${event}`);
-  };
-
-  // Grouping Logic
-  const getGroupedItems = (events: any[]) => {
-    const groups: { [key: string]: any[] } = {};
-    events.forEach(event => {
-      const date = format(event.timestamp, 'dd/MM/yyyy');
-      if (!groups[date]) groups[date] = [];
-      groups[date].push(event);
-    });
-
-    const flattened: any[] = [];
-    const sortedDates = Object.keys(groups).sort((a, b) => {
-      const [dayA, monthA, yearA] = a.split('/').map(Number);
-      const [dayB, monthB, yearB] = b.split('/').map(Number);
-      const dateA = new Date(yearA, monthA - 1, dayA).getTime();
-      const dateB = new Date(yearB, monthB - 1, dayB).getTime();
-      return dateB - dateA;
-    });
-
-    sortedDates.forEach(date => {
-      flattened.push({ type: 'header', date });
-      groups[date].forEach(item => {
-        flattened.push({ type: 'item', data: item });
-      });
-    });
-    return flattened;
-  };
-
-  const pendingGrouped = getGroupedItems(state.pendingEvents);
-  const adjustedGrouped = getGroupedItems(state.adjustedEvents);
-
   const pendingRef = useRef<HTMLDivElement>(null);
   const adjustedRef = useRef<HTMLDivElement>(null);
   
   const pendingVirtualizer = useVirtualizer({
-    count: pendingGrouped.length,
+    count: ui.pendingGrouped.length,
     getScrollElement: () => pendingRef.current,
     estimateSize: (index) => {
-      if (pendingGrouped[index].type === 'header') return 60;
+      if (ui.pendingGrouped[index].type === 'header') return 60;
       const baseHeight = state.preferences.compactView ? 100 : 160;
-      return expandedPanel === 'pending' ? baseHeight * 1.2 : baseHeight;
+      return ui.expandedPanel === 'pending' ? baseHeight * 1.2 : baseHeight;
     },
     overscan: 5,
   });
 
   const adjustedVirtualizer = useVirtualizer({
-    count: adjustedGrouped.length,
+    count: ui.adjustedGrouped.length,
     getScrollElement: () => adjustedRef.current,
     estimateSize: (index) => {
-      if (adjustedGrouped[index].type === 'header') return 60;
+      if (ui.adjustedGrouped[index].type === 'header') return 60;
       const baseHeight = state.preferences.compactView ? 100 : 160;
-      return expandedPanel === 'adjusted' ? baseHeight * 1.2 : baseHeight;
+      return ui.expandedPanel === 'adjusted' ? baseHeight * 1.2 : baseHeight;
     },
     overscan: 5,
   });
 
+  // Re-mapping confirmRemoveItem to use single item delete
+  const handleSingleRemove = async (item: any) => {
+    const confirm = window.confirm(`¿RETIRAR ${item.productName}? ESTA ACCIÓN ES IRREVERSIBLE.`);
+    if (confirm) {
+      try {
+        actions.setPendingOperations(p => p + 1);
+        await actions.deleteEvent(item.id);
+        toast.success('Registro eliminado correctamente');
+      } catch (error: any) {
+        toast.error(error.message || 'Error al eliminar registro');
+      } finally {
+        actions.setPendingOperations(p => Math.max(0, p - 1));
+      }
+    }
+  };
+
   return (
     <div className={`h-full flex flex-col overflow-hidden font-sans selection:bg-blue-500/30 transition-colors duration-500 ${
-      theme === 'dark' ? 'bg-black text-white' : 'bg-slate-50 text-slate-900'
+      ui.theme === 'dark' ? 'bg-black text-white' : 'bg-slate-50 text-slate-900'
     }`}>
       {/* HEADER */}
       <EventHeader 
         totalCount={state.totalCount}
         pendingOperations={state.pendingOperations}
-        isSyncing={isSyncing}
-        theme={theme}
+        isSyncing={ui.isSyncing}
+        theme={ui.theme}
         onNavigateExpiry={() => navigate('/expiry')}
-        onToggleTheme={toggleTheme}
-        onOpenSettings={() => setIsSettingsDrawerOpen(true)}
+        onToggleTheme={uiActions.toggleTheme}
+        onOpenSettings={() => uiActions.setIsSettingsDrawerOpen(true)}
       >
         <EventSearchBar 
           searchQuery={state.searchQuery}
           setSearchQuery={actions.setSearchQuery}
-          onOpenFilters={() => setIsFilterDrawerOpen(true)}
+          onOpenFilters={() => uiActions.setIsFilterDrawerOpen(true)}
           onOpenAdd={() => {
-            setEditingItem(null);
-            setIsCreateModalOpen(true);
+            uiActions.setEditingItem(null);
+            uiActions.setIsCreateModalOpen(true);
           }}
-          onClearFilters={handleClearFilters}
-          activeFiltersCount={activeFiltersCount}
-          theme={theme}
+          onClearFilters={uiActions.handleClearFilters}
+          activeFiltersCount={ui.activeFiltersCount}
+          theme={ui.theme}
         />
       </EventHeader>
 
       {/* DUAL PANELS */}
       <div className={`flex-1 flex flex-col md:flex-row overflow-hidden gap-4 p-4 md:p-6 ${
-        theme === 'dark' ? 'bg-black' : 'bg-slate-50'
+        ui.theme === 'dark' ? 'bg-black' : 'bg-slate-50'
       }`}>
         {/* PENDING PANEL */}
-        {(expandedPanel === 'dual' || expandedPanel === 'pending') && (
+        {(ui.expandedPanel === 'dual' || ui.expandedPanel === 'pending') && (
           <EventListPanel
             title="Pendientes"
             count={state.pendingCount}
-            theme={theme}
+            theme={ui.theme}
             virtualizer={pendingVirtualizer}
-            groupedItems={pendingGrouped}
-            onTogglePanel={() => setExpandedPanel(expandedPanel === 'pending' ? 'dual' : 'pending')}
-            isExpanded={expandedPanel === 'pending'}
+            groupedItems={ui.pendingGrouped}
+            onTogglePanel={() => uiActions.setExpandedPanel(ui.expandedPanel === 'pending' ? 'dual' : 'pending')}
+            isExpanded={ui.expandedPanel === 'pending'}
             icon={<AlertCircle className="w-4 h-4 text-white" />}
             headerColor="bg-blue-600"
-            onUpdateStatus={handleUpdateStatus}
-            onRemove={confirmRemoveItem}
+            onUpdateStatus={uiActions.handleUpdateStatus}
+            onRemove={handleSingleRemove}
             onEdit={(item) => {
-              setEditingItem(item);
-              setIsCreateModalOpen(true);
+              uiActions.setEditingItem(item);
+              uiActions.setIsCreateModalOpen(true);
             }}
-            onFrcClick={handleFrcClick}
-            onEventClick={handleEventClick}
+            onFrcClick={uiActions.handleFrcClick}
+            onEventClick={uiActions.handleEventClick}
             isCompact={state.preferences.compactView}
             selectedIds={state.selectedIds}
             onToggleSelect={actions.handleToggleSelect}
@@ -438,25 +165,25 @@ const EventManagementPage: React.FC = () => {
         )}
 
         {/* ADJUSTED PANEL */}
-        {(expandedPanel === 'dual' || expandedPanel === 'adjusted') && (
+        {(ui.expandedPanel === 'dual' || ui.expandedPanel === 'adjusted') && (
           <EventListPanel
             title="Ajustados"
             count={state.adjustedCount}
-            theme={theme}
+            theme={ui.theme}
             virtualizer={adjustedVirtualizer}
-            groupedItems={adjustedGrouped}
-            onTogglePanel={() => setExpandedPanel(expandedPanel === 'adjusted' ? 'dual' : 'adjusted')}
-            isExpanded={expandedPanel === 'adjusted'}
+            groupedItems={ui.adjustedGrouped}
+            onTogglePanel={() => uiActions.setExpandedPanel(ui.expandedPanel === 'adjusted' ? 'dual' : 'adjusted')}
+            isExpanded={ui.expandedPanel === 'adjusted'}
             icon={<RefreshCw className="w-4 h-4 text-white" />}
             headerColor="bg-emerald-600"
-            onUpdateStatus={handleUpdateStatus}
-            onRemove={confirmRemoveItem}
+            onUpdateStatus={uiActions.handleUpdateStatus}
+            onRemove={handleSingleRemove}
             onEdit={(item) => {
-              setEditingItem(item);
-              setIsCreateModalOpen(true);
+              uiActions.setEditingItem(item);
+              uiActions.setIsCreateModalOpen(true);
             }}
-            onFrcClick={handleFrcClick}
-            onEventClick={handleEventClick}
+            onFrcClick={uiActions.handleFrcClick}
+            onEventClick={uiActions.handleEventClick}
             isCompact={state.preferences.compactView}
             selectedIds={state.selectedIds}
             onToggleSelect={actions.handleToggleSelect}
@@ -469,14 +196,14 @@ const EventManagementPage: React.FC = () => {
 
       {/* DRAWERS & MODALS */}
       <EventFilterDrawer 
-        isOpen={isFilterDrawerOpen}
-        onClose={() => setIsFilterDrawerOpen(false)}
+        isOpen={ui.isFilterDrawerOpen}
+        onClose={() => uiActions.setIsFilterDrawerOpen(false)}
         eventTypes={state.eventTypes}
         selectedEvents={state.selectedEvents}
-        onToggleEvent={handleToggleEvent}
-        onClearFilters={handleClearFilters}
-        activeFiltersCount={activeFiltersCount}
-        theme={theme}
+        onToggleEvent={uiActions.handleToggleEvent}
+        onClearFilters={uiActions.handleClearFilters}
+        activeFiltersCount={ui.activeFiltersCount}
+        theme={ui.theme}
       />
 
       <EventBulkActions 
@@ -484,41 +211,41 @@ const EventManagementPage: React.FC = () => {
         totalVisibleCount={state.filteredCount}
         onClearSelection={actions.clearSelection}
         onSelectAllVisible={actions.handleSelectAll}
-        onBulkRemove={handleBulkRemove}
-        onBulkPrintLabels={handleBulkPrintLabels}
-        onBulkPrintSelected={handleBulkPrintSelected}
-        onBulkSendEmail={handleBulkSendEmail}
-        onBulkSearchDocument={handleBulkSearchDocument}
-        onOpenBulkEdit={() => setIsBulkEditModalOpen(true)}
-        theme={theme}
+        onBulkRemove={uiActions.handleBulkRemove}
+        onBulkPrintLabels={uiActions.handleBulkPrintLabels}
+        onBulkPrintSelected={uiActions.handleBulkPrintSelected}
+        onBulkSendEmail={uiActions.handleBulkSendEmail}
+        onBulkSearchDocument={uiActions.handleBulkSearchDocument}
+        onOpenBulkEdit={() => uiActions.setIsBulkEditModalOpen(true)}
+        theme={ui.theme}
       />
 
       <BulkEditModal
-        isOpen={isBulkEditModalOpen}
-        onClose={() => setIsBulkEditModalOpen(false)}
-        onApply={handleBulkEdit}
-        theme={theme}
+        isOpen={ui.isBulkEditModalOpen}
+        onClose={() => uiActions.setIsBulkEditModalOpen(false)}
+        onApply={uiActions.handleBulkEdit}
+        theme={ui.theme}
         selectedCount={state.selectedIds.size}
       />
 
       <EventSettingsDrawer 
-        isOpen={isSettingsDrawerOpen}
-        onClose={() => setIsSettingsDrawerOpen(false)}
+        isOpen={ui.isSettingsDrawerOpen}
+        onClose={() => uiActions.setIsSettingsDrawerOpen(false)}
         preferences={state.preferences}
         onUpdatePreferences={actions.togglePreference}
         onClearLocalData={actions.clearLocalData}
-        theme={theme}
+        theme={ui.theme}
       />
 
       <CreateEventModal 
-        isOpen={isCreateModalOpen}
+        isOpen={ui.isCreateModalOpen}
         onClose={() => {
-          setIsCreateModalOpen(false);
-          setEditingItem(null);
+          uiActions.setIsCreateModalOpen(false);
+          uiActions.setEditingItem(null);
         }}
-        onSubmit={handleCreateOrUpdate}
-        editingItem={editingItem}
-        theme={theme}
+        onSubmit={uiActions.handleCreateOrUpdate}
+        editingItem={ui.editingItem}
+        theme={ui.theme}
       />
     </div>
   );

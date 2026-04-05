@@ -12,6 +12,7 @@ import { lazyWithRetry } from '@/services/lazyLoad';
 import { initPersistence } from '@/services/backupService';
 import { InitializationService, InitStep } from '@/services/initializationService';
 import { ToastContainer } from '@/shared/components/ui/ToastContainer';
+import { TaskProgressIndicator } from '@/shared/components/TaskProgressIndicator';
 import { useAutoSync } from '@/hooks/useAutoSync';
 import { useAutoSession } from '@/hooks/useAutoSession';
 import { useExpiryWatcher } from '@/hooks/useExpiryWatcher';
@@ -156,6 +157,7 @@ const AppContent = () => {
       <SystemStatus />
       <NetworkStatus />
       <ToastContainer />
+      <TaskProgressIndicator />
       
       <div className="flex-1 flex overflow-hidden relative">
         {!isScanningMode && (

@@ -6,6 +6,8 @@ import { useAppStore } from '@/store/mainAppStore';
 import { useToastStore } from '../../../store/useToastStore';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { productRepository } from '../../../repositories/DexieProductRepository';
+import { eventRepository } from '../../../repositories/EventRepository';
+import { eventSyncService } from '../../../services/eventSyncService';
 import { normalizeSku } from '../../../services/utils';
 import { Product } from '../../../types';
 
@@ -31,99 +33,90 @@ export const useEventDatabase = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [cloudItems, setCloudItems] = useState<any[]>([]);
 
   const tableName = settings?.appSheetConfig?.eventsTableName || 'EVENTOS';
 
   const allProducts = useLiveQuery(() => productRepository.getAll(), []) || [];
+  const localEvents = useLiveQuery(() => eventRepository.getAll(), []) || [];
   
   const productMap = useMemo(() => {
     const map = new Map<string, Product>();
-    allProducts.forEach(p => {
+    if (!allProducts) return map;
+    for (let i = 0; i < allProducts.length; i++) {
+      const p = allProducts[i];
       const sku = normalizeSku(p.barcode);
       if (sku) map.set(sku, p);
-    });
+    }
     return map;
   }, [allProducts]);
 
   useEffect(() => {
-    const colRef = collection(firebaseDb, tableName);
-    // Limitamos a 3000 registros para evitar saturar el SDK de Firestore
-    const q = query(colRef, orderBy('timestamp', 'desc'), limit(3000));
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setCloudItems(items);
-    }, (error) => {
-      console.error("Error en onSnapshot de Firestore:", error);
-      try {
-        handleFirestoreError(error, OperationType.GET, tableName);
-      } catch (e) {
-        addToast("Error al conectar con la base de datos en tiempo real", "error");
-      }
-    });
-
-    return () => unsubscribe();
+    const unsubscribe = eventSyncService.startSync(tableName);
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, [tableName]);
 
   const baseProcessedData = useMemo(() => {
     const eventMapping = settings?.appSheetConfig?.mappings?.events;
-    return (cloudItems || [])
-      .filter(record => {
-        const exp = record;
-        const eventValue = eventMapping?.event ? exp[eventMapping.event] : (exp.EVENTO || exp.event);
-        return String(eventValue || "").toUpperCase() !== 'VENCIMIENTOS';
-      })
-      .map(record => {
-        const exp = record;
-        
-        // Helper to find field in record with multiple fallbacks
-        const getField = (mappingKey: string | undefined, fallbacks: string[]) => {
-          if (mappingKey && exp[mappingKey] !== undefined) return exp[mappingKey];
-          for (const key of fallbacks) {
-            if (exp[key] !== undefined) return exp[key];
-          }
-          return undefined;
-        };
+    const items = localEvents || [];
+    const result = [];
 
-        const barcode = String(getField(eventMapping?.barcode, ['SKU', 'sku', 'barcode', 'BARCODE', 'codigo', 'CODIGO', 'Codigo', 'EAN', 'ean', 'UPC', 'upc']) || '').trim();
-        const product = productMap.get(normalizeSku(barcode));
-        
-        const productName = product?.name || 
-          getField(eventMapping?.name, ['DESCRIPTOR', 'descriptor', 'productName', 'PRODUCTO', 'producto', 'Name', 'name', 'DESCRIPCION', 'descripcion']) || 
-          'Producto Desconocido';
-          
-        const providerName = product?.supplier || 
-          getField(eventMapping?.supplier, ['PROVEEDOR', 'proveedor', 'supplier', 'SUPPLIER', 'Proveedor', 'Provider', 'FABRICANTE', 'fabricante']) || 
-          'N/A';
-        
-        const eventValue = getField(eventMapping?.event, ['EVENTO', 'evento', 'event', 'EVENT', 'Tipo', 'TIPO', 'MOTIVO', 'motivo']) || 'OTRO';
-        const quantityValue = getField(eventMapping?.quantity, ['CANTIDAD', 'cantidad', 'quantity', 'QUANTITY', 'Cant', 'CANT', 'QTY', 'qty']) || 0;
-        const locationValue = getField(eventMapping?.location, ['UBICACION', 'ubicacion', 'location', 'LOCATION', 'Ubic', 'UBIC', 'SITIO', 'sitio']) || 'GENERAL';
-        const frcValue = getField(eventMapping?.frc, ['FRC', 'frc', 'folio', 'FOLIO', 'folio_frc', 'FOLIO_FRC', 'Folio', 'FRC_FOLIO', 'folio_frc']) || '';
-        const nguiaValue = getField(eventMapping?.nguia, ['NGUIA', 'nguia', 'guia', 'GUIA', 'n_guia', 'N_GUIA', 'GUIA_NUM', 'guia_num']) || '';
+    for (let i = 0; i < items.length; i++) {
+      const record = items[i];
+      const exp = record;
+      
+      // Helper to find field in record with multiple fallbacks
+      const getField = (mappingKey: string | undefined, fallbacks: string[]) => {
+        if (mappingKey && exp[mappingKey] !== undefined) return exp[mappingKey];
+        for (const key of fallbacks) {
+          if (exp[key] !== undefined) return exp[key];
+        }
+        return undefined;
+      };
 
-        return {
-          id: record.id,
-          barcode,
-          productName,
-          providerName,
-          event: eventValue,
-          quantity: quantityValue,
-          location: locationValue,
-          frc: frcValue,
-          nguia: nguiaValue,
-          timestamp: record.timestamp || Date.now(),
-          claveUnica: exp.claveUnica,
-          category: product?.category || 'GENERAL',
-          isAdjusted: !!(exp.traspaso && String(exp.traspaso).trim() !== ''),
-          mm: exp.MM || exp.mm,
-          yyyy: exp.YYYY || exp.yyyy,
-          syncStatus: 'synced',
-        };
-      })
-      .sort((a, b) => b.timestamp - a.timestamp);
-  }, [cloudItems, settings?.appSheetConfig?.mappings?.events, productMap]);
+      const eventValue = getField(eventMapping?.event, ['EVENTO', 'evento', 'event', 'EVENT', 'Tipo', 'TIPO', 'MOTIVO', 'motivo']) || 'OTRO';
+      
+      if (String(eventValue || "").toUpperCase() === 'VENCIMIENTOS') continue;
+
+      const barcode = String(getField(eventMapping?.barcode, ['SKU', 'sku', 'barcode', 'BARCODE', 'codigo', 'CODIGO', 'Codigo', 'EAN', 'ean', 'UPC', 'upc']) || '').trim();
+      const product = productMap.get(normalizeSku(barcode));
+      
+      const productName = product?.name || 
+        getField(eventMapping?.name, ['DESCRIPTOR', 'descriptor', 'productName', 'PRODUCTO', 'producto', 'Name', 'name', 'DESCRIPCION', 'descripcion']) || 
+        'Producto Desconocido';
+        
+      const providerName = product?.supplier || 
+        getField(eventMapping?.supplier, ['PROVEEDOR', 'proveedor', 'supplier', 'SUPPLIER', 'Proveedor', 'Provider', 'FABRICANTE', 'fabricante']) || 
+        'N/A';
+      
+      const quantityValue = getField(eventMapping?.quantity, ['CANTIDAD', 'cantidad', 'quantity', 'QUANTITY', 'Cant', 'CANT', 'QTY', 'qty']) || 0;
+      const locationValue = getField(eventMapping?.location, ['UBICACION', 'ubicacion', 'location', 'LOCATION', 'Ubic', 'UBIC', 'SITIO', 'sitio']) || 'GENERAL';
+      const frcValue = getField(eventMapping?.frc, ['FRC', 'frc', 'folio', 'FOLIO', 'folio_frc', 'FOLIO_FRC', 'Folio', 'FRC_FOLIO', 'folio_frc']) || '';
+      const nguiaValue = getField(eventMapping?.nguia, ['NGUIA', 'nguia', 'guia', 'GUIA', 'n_guia', 'N_GUIA', 'GUIA_NUM', 'guia_num']) || '';
+
+      result.push({
+        id: record.id,
+        barcode,
+        productName,
+        providerName,
+        event: eventValue,
+        quantity: quantityValue,
+        location: locationValue,
+        frc: frcValue,
+        nguia: nguiaValue,
+        timestamp: record.timestamp || Date.now(),
+        claveUnica: exp.claveUnica,
+        category: product?.category || 'GENERAL',
+        isAdjusted: !!(exp.traspaso && String(exp.traspaso).trim() !== ''),
+        mm: (exp as any).MM || exp.mm,
+        yyyy: (exp as any).YYYY || exp.yyyy,
+        syncStatus: 'synced',
+      });
+    }
+
+    return result.sort((a, b) => b.timestamp - a.timestamp);
+  }, [localEvents, settings?.appSheetConfig?.mappings?.events, productMap]);
 
   const handleRemoveItem = useCallback(async (item: any) => {
     try {
