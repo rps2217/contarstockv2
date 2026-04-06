@@ -95,12 +95,12 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
           <div className="flex items-center justify-between gap-2">
             <div className="flex flex-col">
               <span className={`font-black uppercase tracking-[0.2em] ${
-                isExpanded ? 'text-[10px]' : 'text-[8px]'
+                isExpanded ? 'text-xs' : 'text-[10px]'
               } ${
                 theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
               }`}>Descripción del Producto</span>
               <h3 className={`font-black uppercase tracking-tighter italic leading-tight ${
-                isExpanded ? 'text-base' : 'text-sm'
+                isExpanded ? 'text-lg' : 'text-base'
               } ${
                 theme === 'dark' ? 'text-white' : 'text-slate-900'
               }`}>
@@ -119,10 +119,10 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
               theme === 'dark' ? 'bg-black/20 border-white/5' : 'bg-slate-50 border-slate-100'
             }`}>
               <span className={`font-black text-slate-500 uppercase tracking-widest block mb-0.5 ${
-                isExpanded ? 'text-[9px]' : 'text-[7px]'
+                isExpanded ? 'text-[10px]' : 'text-[9px]'
               }`}>Proveedor</span>
               <p className={`font-bold uppercase truncate ${
-                isExpanded ? 'text-xs' : 'text-[10px]'
+                isExpanded ? 'text-sm' : 'text-xs'
               } ${
                 theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
               }`}>
@@ -133,12 +133,12 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
               theme === 'dark' ? 'bg-black/20 border-white/5' : 'bg-slate-50 border-slate-100'
             }`}>
               <span className={`font-black text-slate-500 uppercase tracking-widest block mb-0.5 ${
-                isExpanded ? 'text-[9px]' : 'text-[7px]'
+                isExpanded ? 'text-[10px]' : 'text-[9px]'
               }`}>SKU / EAN</span>
               <button
                 onClick={handleCopyBarcode}
                 className={`font-bold uppercase flex items-center gap-1 transition-all active:scale-95 ${
-                  isExpanded ? 'text-xs' : 'text-[10px]'
+                  isExpanded ? 'text-sm' : 'text-xs'
                 } ${
                   theme === 'dark' ? 'text-slate-300' : 'text-slate-700'
                 }`}
@@ -158,8 +158,8 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
                 }}
                 className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-amber-500 hover:text-white transition-all"
               >
-                <span className="text-[7px] font-black uppercase">FRC:</span>
-                <span className="text-[10px] font-black tracking-tighter italic">{item.frc}</span>
+                <span className="text-[9px] font-black uppercase">FRC:</span>
+                <span className="text-xs font-black tracking-tighter italic">{item.frc}</span>
               </button>
             )}
             {item.event && (
@@ -187,7 +187,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
       <div className="hidden md:flex flex-col gap-1 min-w-0 overflow-hidden">
         <div className="flex items-center gap-2">
           <span className={`font-black uppercase tracking-[0.15em] whitespace-nowrap ${
-            isExpanded ? 'text-[10px]' : 'text-[8px]'
+            isExpanded ? 'text-xs' : 'text-[10px]'
           } ${
             theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
           }`}>Producto</span>
@@ -196,7 +196,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
           {item.syncStatus === 'error' && <CloudOff className="w-3 h-3 text-rose-500/70 shrink-0" />}
         </div>
         <h3 className={`font-black uppercase tracking-tighter italic truncate leading-tight ${
-          isExpanded ? 'text-base' : 'text-xs'
+          isExpanded ? 'text-lg' : 'text-base'
         } ${
           theme === 'dark' ? 'text-white' : 'text-slate-900'
         }`}>
@@ -206,10 +206,10 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
         <div className="flex flex-col lg:flex-row lg:items-center gap-x-4 gap-y-1 mt-1">
           <div className="flex flex-col min-w-0">
             <span className={`font-black text-slate-500 uppercase tracking-widest mb-0.5 ${
-              isExpanded ? 'text-[9px]' : 'text-[7px]'
+              isExpanded ? 'text-[10px]' : 'text-[9px]'
             }`}>Proveedor</span>
             <p className={`font-bold uppercase truncate ${
-              isExpanded ? 'text-xs' : 'text-[9px]'
+              isExpanded ? 'text-sm' : 'text-xs'
             } ${
               theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
             }`}>
@@ -218,12 +218,12 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
           </div>
           <div className="flex flex-col min-w-0">
             <span className={`font-black text-slate-500 uppercase tracking-widest mb-0.5 ${
-              isExpanded ? 'text-[9px]' : 'text-[7px]'
+              isExpanded ? 'text-[10px]' : 'text-[9px]'
             }`}>SKU / EAN</span>
             <button
               onClick={handleCopyBarcode}
               className={`font-bold uppercase flex items-center gap-1 transition-all hover:text-blue-500 active:scale-95 ${
-                isExpanded ? 'text-xs' : 'text-[9px]'
+                isExpanded ? 'text-sm' : 'text-xs'
               } ${
                 theme === 'dark' ? 'text-slate-300' : 'text-slate-700'
               }`}
@@ -247,13 +247,13 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
       <div className="hidden md:flex flex-col gap-1.5 min-w-0 overflow-hidden">
         <div className="flex flex-col gap-1">
           <span className={`font-black uppercase tracking-[0.15em] ${
-            isExpanded ? 'text-[10px]' : 'text-[8px]'
+            isExpanded ? 'text-xs' : 'text-[10px]'
           } ${
             theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
           }`}>Folio FRC</span>
           {item.event && (
             <span className={`font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md w-fit truncate ${
-              isExpanded ? 'text-[9px]' : 'text-[7px]'
+              isExpanded ? 'text-[10px]' : 'text-[9px]'
             } ${
               theme === 'dark' ? 'bg-rose-500/20 text-rose-400' : 'bg-rose-100 text-rose-700'
             }`}>
@@ -274,7 +274,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
             }`}
           >
             <span className={`leading-none truncate ${
-              isExpanded ? 'text-base' : 'text-[12px]'
+              isExpanded ? 'text-lg' : 'text-sm'
             }`}>{item.frc}</span>
           </button>
         ) : (
@@ -293,10 +293,10 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
             isExpanded ? 'w-4 h-4' : 'w-3.5 h-3.5'
           } ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`} />
           <span className={`font-black whitespace-nowrap ${
-            isExpanded ? 'text-base' : 'text-xs'
+            isExpanded ? 'text-lg' : 'text-sm'
           } ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
             {item.quantity} <span className={`${
-              isExpanded ? 'text-xs' : 'text-[9px]'
+              isExpanded ? 'text-sm' : 'text-[10px]'
             } text-slate-500 italic`}>UN</span>
           </span>
         </div>
@@ -305,7 +305,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
             isExpanded ? 'w-4 h-4' : 'w-3 h-3'
           } ${theme === 'dark' ? 'text-emerald-500/80' : 'text-emerald-600/80'}`} />
           <span className={`font-black uppercase tracking-widest truncate ${
-            isExpanded ? 'text-xs' : 'text-[9px]'
+            isExpanded ? 'text-sm' : 'text-xs'
           } ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>
             {item.destino || 'SIN DESTINO'}
           </span>
