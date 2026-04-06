@@ -205,6 +205,11 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
       return;
     }
 
+    if (traspaso.trim() && !destino.trim()) {
+      toast.error('El destino es obligatorio cuando hay un número de traspaso');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const payload = finalItems.map(item => ({
@@ -505,7 +510,7 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
                       <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
                         theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
                       }`}>
-                        <Truck className="w-3 h-3" /> Destino
+                        <Truck className="w-3 h-3" /> Destino {traspaso.trim() && <span className="text-rose-500">*</span>}
                       </label>
                       <select
                         value={destino}

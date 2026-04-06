@@ -28,6 +28,12 @@ export const BulkEditModal: React.FC<Props> = ({ isOpen, onClose, onApply, theme
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (traspaso.trim() && !destino.trim()) {
+      toast.error('El destino es obligatorio cuando hay un número de traspaso');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       await onApply({ destino, traspaso, observaciones });
@@ -90,7 +96,7 @@ export const BulkEditModal: React.FC<Props> = ({ isOpen, onClose, onApply, theme
               <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
                 theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
               }`}>
-                <Truck className="w-3 h-3" /> Destino
+                <Truck className="w-3 h-3" /> Destino {traspaso.trim() && <span className="text-rose-500">*</span>}
               </label>
               <select
                 value={destino}

@@ -168,6 +168,8 @@ export const EventCapturePage: React.FC = () => {
   const [quantity, setQuantity] = useState(1);
   const [frc, setFrc] = useState(() => localStorage.getItem('last_frc') || '');
   const [nguia, setNguia] = useState(() => localStorage.getItem('last_nguia') || '');
+  const [traspaso, setTraspaso] = useState('');
+  const [destino, setDestino] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleScan = useCallback(async (code: string) => {
@@ -195,6 +197,11 @@ export const EventCapturePage: React.FC = () => {
       addToast('Completa todos los campos obligatorios', 'error');
       return;
     }
+
+    if (traspaso.trim() && !destino.trim()) {
+      addToast('El destino es obligatorio cuando hay un número de traspaso', 'error');
+      return;
+    }
     
     try {
       setIsSubmitting(true);
@@ -211,6 +218,8 @@ export const EventCapturePage: React.FC = () => {
         quantity,
         frc,
         nguia,
+        traspaso,
+        destino,
         timestamp: new Date().toISOString()
       });
       
@@ -219,6 +228,8 @@ export const EventCapturePage: React.FC = () => {
       setIsModalOpen(false);
       // Reset some fields but keep FRC/Guía
       setQuantity(1);
+      setTraspaso('');
+      setDestino('');
     } catch (error) {
       SoundFX.play('error');
       addToast('Error al guardar', 'error');
@@ -355,6 +366,40 @@ export const EventCapturePage: React.FC = () => {
                       className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm font-bold text-white focus:border-blue-500 outline-none"
                       placeholder="Obligatorio"
                     />
+                  </div>
+                </div>
+
+                {/* TRASPASO & DESTINO */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1 flex items-center gap-1">
+                      <Hash className="w-3 h-3" /> Traspaso
+                    </label>
+                    <input
+                      type="text"
+                      value={traspaso}
+                      onChange={(e) => setTraspaso(e.target.value.toUpperCase())}
+                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm font-bold text-white focus:border-blue-500 outline-none"
+                      placeholder="Opcional"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1 flex items-center gap-1">
+                      <Truck className="w-3 h-3" /> Destino {traspaso.trim() && <span className="text-rose-500">*</span>}
+                    </label>
+                    <select
+                      value={destino}
+                      onChange={(e) => setDestino(e.target.value)}
+                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm font-bold text-white focus:border-blue-500 outline-none appearance-none"
+                    >
+                      <option value="">Seleccionar...</option>
+                      <option value="BOD. 37">BOD. 37</option>
+                      <option value="BOD. 80">BOD. 80</option>
+                      <option value="BOD. 95">BOD. 95</option>
+                      <option value="BOD. 98">BOD. 98</option>
+                      <option value="BOD. 106">BOD. 106</option>
+                      <option value="BOD. 121">BOD. 121</option>
+                    </select>
                   </div>
                 </div>
 
