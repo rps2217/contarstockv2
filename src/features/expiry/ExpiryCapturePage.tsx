@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ScanLine, ShieldAlert, Download, Trash2, X, Save, CornerDownLeft } from 'lucide-react';
+import { ChevronLeft, ScanLine, ShieldAlert, Download, Trash2, X, Save, CornerDownLeft, Search, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useToastStore } from '../../store/useToastStore';
 import { db } from '../../db';
@@ -19,6 +19,13 @@ import { ScannerTargetOverlay } from '../../shared/components/scanner/ScannerTar
 // Components
 import { BarcodeScannerModal } from './components/BarcodeScannerModal';
 
+const getDaysUntilExpiry = (mm: number, yyyy: number) => {
+  const expiryDate = new Date(yyyy, mm - 1, 1);
+  expiryDate.setMonth(expiryDate.getMonth() + 1);
+  expiryDate.setDate(0);
+  return differenceInDays(expiryDate, new Date());
+};
+
 // Memoized Item Component for performance on low-end devices
 const ExpiryItemRow = React.memo(({ 
   item, 
@@ -27,35 +34,31 @@ const ExpiryItemRow = React.memo(({
   item: ExpiryItem; 
   onDelete: (id: string) => void;
 }) => {
-  const getDaysUntilExpiry = (mm: number, yyyy: number) => {
-    const expiryDate = new Date(yyyy, mm - 1, 1);
-    expiryDate.setMonth(expiryDate.getMonth() + 1);
-    expiryDate.setDate(0);
-    return differenceInDays(expiryDate, new Date());
-  };
-
   const days = getDaysUntilExpiry(Number(item.mm) || 0, Number(item.yyyy) || 0);
   const isWarning = days <= 90;
+  const isExpired = days <= 0;
   const formattedDate = `31/${(item.mm || 0).toString().padStart(2, '0')}/${item.yyyy}`;
 
   return (
     <div
       className={`flex items-center gap-4 p-4 rounded-2xl bg-[#0a0a0a] border ${
-        isWarning ? 'border-amber-500/20' : 'border-indigo-500/20'
+        isExpired ? 'border-rose-500/30' : isWarning ? 'border-amber-500/20' : 'border-indigo-500/20'
       }`}
     >
       {/* Left Icon */}
       <div className="flex flex-col items-center shrink-0">
         <div className={`w-14 h-14 rounded-2xl flex items-center justify-center relative border ${
-          isWarning ? 'bg-amber-500/5 border-amber-500/30' : 'bg-indigo-500/5 border-indigo-500/30'
+          isExpired ? 'bg-rose-500/10 border-rose-500/30' : isWarning ? 'bg-amber-500/5 border-amber-500/30' : 'bg-indigo-500/5 border-indigo-500/30'
         }`}>
-          {isWarning ? (
+          {isExpired ? (
+            <AlertTriangle className="w-6 h-6 text-rose-500" />
+          ) : isWarning ? (
             <ShieldAlert className="w-6 h-6 text-amber-500" />
           ) : (
             <Download className="w-6 h-6 text-indigo-500" />
           )}
           <div className={`absolute -top-2 -right-2 text-[10px] font-black px-1.5 py-0.5 rounded-full ${
-            isWarning ? 'bg-amber-500 text-black' : 'bg-indigo-500 text-white'
+            isExpired ? 'bg-rose-500 text-white' : isWarning ? 'bg-amber-500 text-black' : 'bg-indigo-500 text-white'
           }`}>
             {days > 0 ? days : 0}
           </div>
@@ -89,7 +92,7 @@ const ExpiryItemRow = React.memo(({
         <span className="text-[8px] font-black uppercase tracking-widest text-slate-500">
           Vencimiento
         </span>
-        <span className="text-sm font-black text-white mt-0.5">
+        <span className={`text-sm font-black mt-0.5 ${isExpired ? 'text-rose-500' : 'text-white'}`}>
           {formattedDate}
         </span>
         <button
@@ -189,9 +192,21 @@ export const ExpiryCapturePage: React.FC = () => {
   const [selectedYyyy, setSelectedYyyy] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Search and Filter State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchActive, setIsSearchActive] = useState(false);
+  const [filterVencido, setFilterVencido] = useState(false);
+  const [filterCritico, setFilterCritico] = useState(false);
+
   const handleScan = useCallback(async (code: string) => {
     if (!code) return;
     
+    if (isSearchActive) {
+      setSearchQuery(code);
+      setIsCameraActive(false);
+      return;
+    }
+
     // Evitar escaneos duplicados muy rápidos si el modal ya está abierto
     if (isModalOpen) return;
 
@@ -209,7 +224,7 @@ export const ExpiryCapturePage: React.FC = () => {
     setSelectedMm(null);
     setSelectedYyyy(null);
     setIsModalOpen(true);
-  }, [isModalOpen, trigger]);
+  }, [isModalOpen, trigger, isSearchActive]);
 
   useHIDScanner({
     onScan: handleScan,
@@ -258,24 +273,109 @@ export const ExpiryCapturePage: React.FC = () => {
 
   // Sort items by newest first and limit to 50 for performance
   const sortedItems = useMemo(() => {
-    return [...state.allItems]
+    let items = [...state.allItems];
+
+    if (filterVencido || filterCritico) {
+      items = items.filter(item => {
+        const days = getDaysUntilExpiry(Number(item.mm) || 0, Number(item.yyyy) || 0);
+        const isVencido = days <= 0;
+        const isCritico = days > 0 && days <= 90;
+        
+        if (filterVencido && filterCritico) return isVencido || isCritico;
+        if (filterVencido) return isVencido;
+        if (filterCritico) return isCritico;
+        return true;
+      });
+    }
+
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      items = items.filter(item => 
+        item.barcode.toLowerCase().includes(q) || 
+        (item.productName && item.productName.toLowerCase().includes(q))
+      );
+    }
+
+    return items
       .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
       .slice(0, 50);
-  }, [state.allItems]);
+  }, [state.allItems, filterVencido, filterCritico, searchQuery]);
 
   return (
     <div className="h-screen w-full flex flex-col bg-[#050505] overflow-hidden font-mono text-white">
       {/* STICKY HEADER & SCANNER INPUT */}
       <div className="shrink-0 p-4 bg-[#050505] z-10 border-b border-white/5">
-        <div className="flex items-center gap-3 mb-4">
-          <button 
-            onClick={() => navigate('/')} 
-            className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl active:bg-white/10 transition-colors"
-          >
-            <ChevronLeft className="w-6 h-6 text-white" />
-          </button>
-          <h1 className="text-sm font-black uppercase tracking-widest text-slate-400">Captura Rápida</h1>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => navigate('/')} 
+              className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl active:bg-white/10 transition-colors"
+            >
+              <ChevronLeft className="w-6 h-6 text-white" />
+            </button>
+            <h1 className="text-sm font-black uppercase tracking-widest text-slate-400">Captura Rápida</h1>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsSearchActive(!isSearchActive)}
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+                isSearchActive ? 'bg-blue-600 text-white' : 'bg-white/5 text-slate-400 active:bg-white/10'
+              }`}
+            >
+              <Search className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setFilterCritico(!filterCritico)}
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+                filterCritico ? 'bg-amber-500 text-black' : 'bg-white/5 text-slate-400 active:bg-white/10'
+              }`}
+              title="Crítico"
+            >
+              <ShieldAlert className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setFilterVencido(!filterVencido)}
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+                filterVencido ? 'bg-rose-500 text-white' : 'bg-white/5 text-slate-400 active:bg-white/10'
+              }`}
+              title="Vencido"
+            >
+              <AlertTriangle className="w-5 h-5" />
+            </button>
+          </div>
         </div>
+
+        <AnimatePresence>
+          {isSearchActive && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="mb-4 overflow-hidden"
+            >
+              <div className="relative flex items-center">
+                <Search className="absolute left-4 w-5 h-5 text-slate-500" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Buscar por SKU o descripción..."
+                  className="w-full pl-12 pr-12 py-3 bg-white/5 border border-white/10 rounded-xl text-sm font-bold text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/50 transition-all"
+                  autoFocus
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-4 p-1 rounded-full bg-white/10 text-slate-400 hover:text-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <ScannerInput 
           onScan={handleScan} 
