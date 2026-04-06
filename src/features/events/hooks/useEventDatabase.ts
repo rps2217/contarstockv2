@@ -94,6 +94,9 @@ export const useEventDatabase = () => {
       const locationValue = getField(eventMapping?.location, ['UBICACION', 'ubicacion', 'location', 'LOCATION', 'Ubic', 'UBIC', 'SITIO', 'sitio']) || 'GENERAL';
       const frcValue = getField(eventMapping?.frc, ['FRC', 'frc', 'folio', 'FOLIO', 'folio_frc', 'FOLIO_FRC', 'Folio', 'FRC_FOLIO', 'folio_frc']) || '';
       const nguiaValue = getField(eventMapping?.nguia, ['NGUIA', 'nguia', 'guia', 'GUIA', 'n_guia', 'N_GUIA', 'GUIA_NUM', 'guia_num']) || '';
+      const destinoValue = getField(eventMapping?.destino, ['DESTINO', 'destino', 'Destino', 'BODEGA', 'bodega']) || '';
+      const traspasoValue = getField(eventMapping?.traspaso, ['TRASPASO', 'traspaso', 'Traspaso', 'N_TRASPASO', 'n_traspaso']) || '';
+      const observacionesValue = getField(eventMapping?.observaciones, ['OBSERVACIONES', 'observaciones', 'Observaciones', 'OBS', 'obs', 'NOTAS', 'notas']) || '';
 
       result.push({
         id: record.id,
@@ -105,10 +108,13 @@ export const useEventDatabase = () => {
         location: locationValue,
         frc: frcValue,
         nguia: nguiaValue,
+        destino: destinoValue,
+        traspaso: traspasoValue,
+        observaciones: observacionesValue,
         timestamp: record.timestamp || Date.now(),
         claveUnica: exp.claveUnica,
         category: product?.category || 'GENERAL',
-        isAdjusted: !!(exp.traspaso && String(exp.traspaso).trim() !== ''),
+        isAdjusted: !!(traspasoValue && String(traspasoValue).trim() !== ''),
         mm: (exp as any).MM || exp.mm,
         yyyy: (exp as any).YYYY || exp.yyyy,
         syncStatus: 'synced',
