@@ -78,7 +78,8 @@ interface ExpiryState {
 
   // Alerts
   alertCount: number;
-  setAlertCount: (count: number) => void;
+  alertItems: ExpiryItem[];
+  setAlerts: (count: number, items: ExpiryItem[]) => void;
 }
 
 const DEFAULT_PREFERENCES: ExpiryPreferences = {
@@ -139,7 +140,8 @@ export const useExpiryStore = create<ExpiryState>()(
       }),
 
       alertCount: 0,
-      setAlertCount: (alertCount) => set({ alertCount }),
+      alertItems: [],
+      setAlerts: (alertCount, alertItems) => set({ alertCount, alertItems }),
     }),
     {
       name: 'expiry-storage',

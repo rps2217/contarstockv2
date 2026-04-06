@@ -3,7 +3,6 @@ import React, { Suspense, useEffect, useState } from 'react';
 import { HashRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { useAppStore } from '@/store/mainAppStore'; // Vercel Cache Invalidation Ref: 20260404-03
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { NetworkStatus } from '@/shared/components/ui/NetworkStatus';
 import { Sidebar } from '@/components/Sidebar';
 import { BottomDock } from '@/components/BottomDock';
 import { SystemStatus } from '@/components/SystemStatus';
@@ -40,6 +39,8 @@ const ExpiryCapturePage = lazyWithRetry(() => import('@/features/expiry/ExpiryCa
 const EventCapturePage = lazyWithRetry(() => import('@/features/events/EventCapturePage'));
 const DynamicManagement = lazyWithRetry(() => import('@/features/dynamic/DynamicManagementPage').then(m => ({ default: m.DynamicManagementPage })));
 const GlobalSyncQueue = lazyWithRetry(() => import('@/features/sync/GlobalSyncQueuePage'));
+
+import { ExpiryAlertBanner } from '@/features/expiry/components/ExpiryAlertBanner';
 
 const AppContent = () => {
   const location = useLocation();
@@ -154,8 +155,6 @@ const AppContent = () => {
 
   return (
     <div className={`w-full h-full flex flex-col transition-colors duration-500 ${currentThemeClass} font-mono`}>
-      <SystemStatus />
-      <NetworkStatus />
       <ToastContainer />
       <TaskProgressIndicator />
       
@@ -170,6 +169,8 @@ const AppContent = () => {
         )}
         
         <main className={`flex-1 relative overflow-hidden transition-all duration-500 ${!isScanningMode ? (isSidebarCollapsed ? 'md:pl-20' : 'md:pl-64') : ''}`}>
+          <SystemStatus />
+          <ExpiryAlertBanner theme={settings.theme} />
           <ErrorBoundary>
             <Suspense fallback={<div className="h-full w-full flex items-center justify-center"><Loader2 className="w-10 h-10 text-blue-600 animate-spin" /></div>}>
               <Routes>

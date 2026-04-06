@@ -163,7 +163,7 @@ export const SystemStatus: React.FC = () => {
  if (alerts.length === 0) return null;
 
  return (
- <div className="fixed top-0 left-0 right-0 z-[100] flex flex-col pointer-events-none select-none">
+ <div className="w-full flex flex-col pointer-events-none select-none">
  {alerts}
  </div>
  );

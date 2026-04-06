@@ -16,7 +16,7 @@ import { db as dexieDb } from '../db';
  */
 export const useExpiryWatcher = () => {
   const { settings } = useAppStore();
-  const { setAlertCount } = useExpiryStore();
+  const { setAlerts } = useExpiryStore();
   const addToast = useToastStore(state => state.addToast);
   const lastCount = useRef<number | null>(null);
 
@@ -67,9 +67,9 @@ export const useExpiryWatcher = () => {
           const now = new Date();
           const expiryMapping = settings?.appSheetConfig?.mappings?.expiry;
 
-          let criticalCount = 0;
+          const alertItems: any[] = [];
 
-          // 2. Process items to find critical/expired ones
+          // 2. Process items to find critical/expired/withdrawal ones
           snapshot.docs.forEach(doc => {
             const exp: any = doc.data();
             
@@ -79,25 +79,29 @@ export const useExpiryWatcher = () => {
               barcode: exp[expiryMapping?.barcode || ''] || exp.SKU || exp.COD_BARRAS || exp.barcode || '',
               mm: exp[expiryMapping?.mm || ''] || exp.MM || exp.mm,
               yyyy: exp[expiryMapping?.yyyy || ''] || exp.YYYY || exp.yyyy,
-              fechaCC: exp.fechaCC || exp[expiryMapping?.fechaCC || '']
+              fechaCC: exp.fechaCC || exp[expiryMapping?.fechaCC || ''],
+              productName: exp[expiryMapping?.name || ''] || exp.DESCRIPTOR || exp.DESCRIPCION_PROD || exp.DESCRIPCION || exp.PRODUCTO || exp.ITEM || exp.productName || '',
+              quantity: exp[expiryMapping?.quantity || ''] || exp.CANTIDAD || exp.quantity || 0,
+              batch: exp[expiryMapping?.batch || ''] || exp.LOTE || exp.batch || 'N/A',
+              location: exp[expiryMapping?.location || ''] || exp.UBICACION || exp.location || 'N/A'
             };
 
             const processed = processExpiryItem(itemData, productMap, providerMap, now);
 
-            if (processed.status === 'critical' || processed.status === 'expired') {
-              criticalCount++;
+            if (processed.status === 'critical' || processed.status === 'expired' || processed.status === 'withdrawal') {
+              alertItems.push(processed);
             }
           });
 
           // 3. Update global state
-          setAlertCount(criticalCount);
+          setAlerts(alertItems.length, alertItems);
 
           // 4. Notify if count increased (and it's not the first load)
-          if (lastCount.current !== null && criticalCount > lastCount.current) {
-            addToast(`Alerta de Vencimientos: Se detectaron ${criticalCount} lotes críticos.`, 'warning');
+          if (lastCount.current !== null && alertItems.length > lastCount.current) {
+            addToast(`Alerta de Vencimientos: Se detectaron ${alertItems.length} lotes que requieren atención.`, 'warning');
           }
           
-          lastCount.current = criticalCount;
+          lastCount.current = alertItems.length;
         } catch (error) {
           console.error("[ExpiryWatcher] Error processing alerts:", error);
         }
@@ -110,7 +114,7 @@ export const useExpiryWatcher = () => {
       unsubscribeAuth();
       if (unsubscribeSnapshot) unsubscribeSnapshot();
     };
-  }, [tableName, settings, setAlertCount, addToast]);
+  }, [tableName, settings, setAlerts, addToast]);
 };
 
 // Forced GitHub sync
