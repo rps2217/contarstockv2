@@ -67,11 +67,30 @@ export const useEventDatabase = () => {
       const exp = record;
       
       // Helper to find field in record with multiple fallbacks
+      // Prioritizes non-empty values to avoid issues with duplicate fields (e.g. NGUIA vs nguia)
       const getField = (mappingKey: string | undefined, fallbacks: string[]) => {
-        if (mappingKey && exp[mappingKey] !== undefined) return exp[mappingKey];
+        // 1. Try mapping key first (non-empty)
+        if (mappingKey && exp[mappingKey] !== undefined && String(exp[mappingKey]).trim() !== '') {
+          return exp[mappingKey];
+        }
+        
+        // 2. Try fallbacks (non-empty)
+        for (const key of fallbacks) {
+          if (exp[key] !== undefined && String(exp[key]).trim() !== '') {
+            return exp[key];
+          }
+        }
+
+        // 3. Fallback to mapping key even if empty
+        if (mappingKey && exp[mappingKey] !== undefined) {
+          return exp[mappingKey];
+        }
+
+        // 4. Fallback to first existing key even if empty
         for (const key of fallbacks) {
           if (exp[key] !== undefined) return exp[key];
         }
+        
         return undefined;
       };
 
@@ -145,6 +164,34 @@ export const useEventDatabase = () => {
     }
   }, [tableName]);
 
+  // Helper to map internal keys back to configured mapping keys before saving to Firestore
+  const unmapData = useCallback((data: any) => {
+    const eventMapping = settings?.appSheetConfig?.mappings?.events;
+    if (!eventMapping) return data;
+
+    const unmapped: any = { ...data };
+    
+    const mapKey = (internalKey: string, mappingKey: string | undefined) => {
+      if (mappingKey && mappingKey !== internalKey) {
+        unmapped[mappingKey] = data[internalKey];
+        // We keep the internal key too to avoid breaking local logic, 
+        // but Firestore will have the mapped key as primary.
+      }
+    };
+
+    if (data.barcode !== undefined) mapKey('barcode', eventMapping.barcode);
+    if (data.event !== undefined) mapKey('event', eventMapping.event);
+    if (data.quantity !== undefined) mapKey('quantity', eventMapping.quantity);
+    if (data.location !== undefined) mapKey('location', eventMapping.location);
+    if (data.frc !== undefined) mapKey('frc', eventMapping.frc);
+    if (data.nguia !== undefined) mapKey('nguia', eventMapping.nguia);
+    if (data.destino !== undefined) mapKey('destino', eventMapping.destino);
+    if (data.traspaso !== undefined) mapKey('traspaso', eventMapping.traspaso);
+    if (data.observaciones !== undefined) mapKey('observaciones', eventMapping.observaciones);
+
+    return unmapped;
+  }, [settings?.appSheetConfig?.mappings?.events]);
+
   const handleAddItem = useCallback(async (data: any) => {
     try {
       const shortId = Math.random().toString(16).substring(2, 10);
@@ -157,13 +204,14 @@ export const useEventDatabase = () => {
         event: data.event || 'OTRO'
       };
 
-      await firebaseSyncService.pushChange(tableName, shortId, rowData);
+      const finalData = unmapData(rowData);
+      await firebaseSyncService.pushChange(tableName, shortId, finalData);
       addToast('Guardado en la nube correctamente.', 'success');
       return shortId;
     } catch (error: any) {
       addToast(`Error al registrar: ${error.message}`, 'error');
     }
-  }, [tableName]);
+  }, [tableName, unmapData]);
 
   const handleUpdatePreferences = useCallback((newPrefs: Partial<EventPreferences>) => {
     setPreferences(prev => ({ ...prev, ...newPrefs }));
@@ -223,8 +271,9 @@ export const useEventDatabase = () => {
       },
       updateEventBulkFieldsMany: async (ids: string[], updates: any) => {
         try {
+          const finalData = unmapData(updates);
           for (const id of ids) {
-            await firebaseSyncService.pushChange(tableName, id, updates);
+            await firebaseSyncService.pushChange(tableName, id, finalData);
           }
           addToast(`${ids.length} eventos actualizados`, 'success');
         } catch (error: any) {
@@ -234,7 +283,8 @@ export const useEventDatabase = () => {
       clearSelection: () => setSelectedIds(new Set()),
       updateEvent: async (id: string, data: any) => {
         try {
-          await firebaseSyncService.pushChange(tableName, id, data);
+          const finalData = unmapData(data);
+          await firebaseSyncService.pushChange(tableName, id, finalData);
           addToast('Evento actualizado', 'success');
         } catch (error: any) {
           addToast(`Error al actualizar evento: ${error.message}`, 'error');
