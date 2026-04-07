@@ -34,7 +34,7 @@ export const CloudProductSchema = z.record(z.any()).transform((raw) => {
   return "";
  };
 
- const barcode = getVal([mapping?.barcode || '', "COD PRODUCTO", "CODIGO", "SKU", "BARCODE", "EAN"]);
+ const barcode = getVal([mapping?.barcode || '', "COD PRODUCTO", "COD_PRODUCTO", "CODIGO", "CODIGO BARRAS", "CODIGO_BARRAS", "SKU", "BARCODE", "EAN", "ID", "ID_PRODUCTO"]);
  const name = getVal([mapping?.name || '', "DESCRIPCION", "PRODUCTO", "NOMBRE", "DESCRIP", "ITEM"]) || "Sin descripción";
  const category = getVal([mapping?.category || '', "MUNDO", "CATEGORIA", "CATEGORY"]) || "GENERAL";
  const supplier = getVal([mapping?.supplier || '', "PROVEEDOR", "SUPPLIER", "PROVIDER", "LABORATORIO", "LAB", "MARCA"]);
@@ -42,8 +42,11 @@ export const CloudProductSchema = z.record(z.any()).transform((raw) => {
  const priceRaw = getVal([mapping?.price || '', "PRECIO", "PRICE"]);
  const unitsPerBoxRaw = getVal([mapping?.unitsPerBox || '', "UNIDADES POR CAJA", "UNIDADES", "UNITS"]);
 
- const price = priceRaw ? Number(priceRaw) : undefined;
- const unitsPerBox = unitsPerBoxRaw ? Number(unitsPerBoxRaw) : undefined;
+ const parsedPrice = Number(priceRaw);
+ const price = priceRaw && !isNaN(parsedPrice) ? parsedPrice : undefined;
+ 
+ const parsedUnits = Number(unitsPerBoxRaw);
+ const unitsPerBox = unitsPerBoxRaw && !isNaN(parsedUnits) ? parsedUnits : undefined;
 
  return {
  barcode: normalizeSku(String(barcode)),

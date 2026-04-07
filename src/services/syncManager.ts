@@ -242,6 +242,9 @@ export const importProductsFromFirestore = async (): Promise<number> => {
     const products: Product[] = response.rows
       .map((p: any) => {
         const result = CloudProductSchema.safeParse(p);
+        if (!result.success) {
+          console.warn("Product validation failed:", p, result.error);
+        }
         return result.success ? result.data : null;
       })
       .filter((p): p is Product => p !== null)
