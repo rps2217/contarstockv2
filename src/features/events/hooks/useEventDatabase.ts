@@ -145,6 +145,10 @@ export const useEventDatabase = () => {
 
   const handleRemoveItem = useCallback(async (item: any) => {
     try {
+      // Delete locally first for immediate feedback
+      await eventRepository.delete(item.id);
+      
+      // Then delete remotely
       await firebaseSyncService.deleteRemote(tableName, item.id);
       addToast('Ítem retirado correctamente', 'success');
     } catch (error: any) {
@@ -155,6 +159,10 @@ export const useEventDatabase = () => {
   const handleBulkRemove = useCallback(async (ids: Set<string>) => {
     try {
       for (const id of ids) {
+        // Delete locally first
+        await eventRepository.delete(id);
+        
+        // Then delete remotely
         await firebaseSyncService.deleteRemote(tableName, id);
       }
       setSelectedIds(new Set());
@@ -188,12 +196,17 @@ export const useEventDatabase = () => {
     if (data.destino !== undefined) mapKey('destino', eventMapping.destino);
     if (data.traspaso !== undefined) mapKey('traspaso', eventMapping.traspaso);
     if (data.observaciones !== undefined) mapKey('observaciones', eventMapping.observaciones);
+    if (data.claveUnica !== undefined) mapKey('claveUnica', eventMapping.uniqueKey || 'CLAVE_UNICA');
 
     return unmapped;
   }, [settings?.appSheetConfig?.mappings?.events]);
 
   const handleAddItem = useCallback(async (data: any) => {
     try {
+      const sanitizedBarcode = normalizeSku(data.barcode);
+      const frcValue = String(data.frc || '').trim();
+      const claveUnica = `${sanitizedBarcode}${frcValue}`;
+
       const shortId = Math.random().toString(16).substring(2, 10);
       const now = new Date();
       
@@ -201,6 +214,8 @@ export const useEventDatabase = () => {
         id: shortId,
         timestamp: now.toISOString(),
         ...data,
+        barcode: sanitizedBarcode,
+        claveUnica: claveUnica,
         event: data.event || 'OTRO'
       };
 
@@ -283,7 +298,15 @@ export const useEventDatabase = () => {
       clearSelection: () => setSelectedIds(new Set()),
       updateEvent: async (id: string, data: any) => {
         try {
-          const finalData = unmapData(data);
+          const updates = { ...data };
+          if (data.barcode || data.frc) {
+            const item = baseProcessedData.find(e => e.id === id);
+            const barcode = normalizeSku(data.barcode || item?.barcode || '');
+            const frc = String(data.frc || item?.frc || '').trim();
+            updates.claveUnica = `${barcode}${frc}`;
+            updates.barcode = barcode;
+          }
+          const finalData = unmapData(updates);
           await firebaseSyncService.pushChange(tableName, id, finalData);
           addToast('Evento actualizado', 'success');
         } catch (error: any) {
@@ -296,6 +319,10 @@ export const useEventDatabase = () => {
       setPendingOperations: (op: any) => {},
       deleteEvent: async (id: string) => {
         try {
+          // Delete locally first
+          await eventRepository.delete(id);
+          
+          // Then delete remotely
           await firebaseSyncService.deleteRemote(tableName, id);
           addToast('Evento eliminado', 'success');
         } catch (error: any) {

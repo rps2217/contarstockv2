@@ -117,6 +117,29 @@
         "quantity": { "type": "number" }
       },
       "required": ["id", "sessionId", "barcode", "timestamp", "quantity"]
+    },
+    "Event": {
+      "title": "Event",
+      "description": "Registro de eventos (Diferencias, Calidad, etc.)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "barcode": { "type": "string" },
+        "productName": { "type": "string" },
+        "providerName": { "type": "string" },
+        "event": { "type": "string" },
+        "quantity": { "type": "number" },
+        "location": { "type": "string" },
+        "frc": { "type": "string" },
+        "nguia": { "type": "string" },
+        "destino": { "type": "string" },
+        "traspaso": { "type": "string" },
+        "observaciones": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "claveUnica": { "type": "string" },
+        "isAdjusted": { "type": "boolean" }
+      },
+      "required": ["id", "barcode", "quantity", "event", "frc", "claveUnica"]
     }
   },
   "firestore": {
@@ -130,7 +153,7 @@
     "/CONSOLIDADOS/{consolidatedId}": { "schema": "ScanRecord", "description": "Colección de consolidados" },
     "/CONFIG_SISTEMA/{configId}": { "schema": "Config", "description": "Configuración del sistema" },
     "/VENCIMIENTOS/{expiryId}": { "schema": "Expiry", "description": "Colección de vencimientos" },
-    "/EVENTOS/{eventId}": { "schema": "Expiry", "description": "Colección de eventos" },
+    "/EVENTOS/{eventId}": { "schema": "Event", "description": "Colección de eventos" },
     "/STOCK/{stockId}": { "schema": "Order", "description": "Colección de stock (Manifiesto)" }
   }
 }

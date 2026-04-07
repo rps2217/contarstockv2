@@ -179,6 +179,10 @@ export const useExpiryDatabase = () => {
 
   const handleRemoveItem = useCallback(async (item: any) => {
     try {
+      // Delete locally first for immediate feedback
+      await expiryRepository.delete(item.id);
+      
+      // Then delete remotely
       await firebaseSyncService.deleteRemote(tableName, item.id);
       addToast('Ítem retirado correctamente', 'success');
     } catch (error: any) {
@@ -202,6 +206,10 @@ export const useExpiryDatabase = () => {
       for (let i = 0; i < idArray.length; i++) {
         const id = idArray[i];
         try {
+          // Delete locally first
+          await expiryRepository.delete(id);
+          
+          // Then delete remotely
           await firebaseSyncService.deleteRemote(tableName, id);
           successCount++;
         } catch (e) {

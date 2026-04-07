@@ -159,6 +159,16 @@ service cloud.firestore {
              (data.yyyy is string || data.yyyy is number);
     }
 
+    function isValidEvent(data) {
+      return hasRequiredFields(['id', 'barcode', 'quantity', 'event', 'frc', 'claveUnica']) &&
+             data.id is string && data.id.size() > 0 &&
+             data.barcode is string && data.barcode.size() > 0 &&
+             data.quantity is number && data.quantity >= 0 &&
+             data.event is string && data.event.size() > 0 &&
+             data.frc is string && data.frc.size() > 0 &&
+             data.claveUnica is string && data.claveUnica == data.barcode + data.frc;
+    }
+
     match /CONFIG_SISTEMA/{configId} {
       allow read: if isAuthenticated();
       allow write: if isAdmin() && isValidConfig(request.resource.data);
@@ -166,17 +176,20 @@ service cloud.firestore {
 
     match /VENCIMIENTOS/{expiryId} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated() && isValidExpiry(request.resource.data);
+      allow create, update: if isAuthenticated() && isValidExpiry(request.resource.data);
+      allow delete: if isAuthenticated();
     }
 
     match /REGISTRO_INV/{expiryId} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated() && isValidExpiry(request.resource.data);
+      allow create, update: if isAuthenticated() && isValidExpiry(request.resource.data);
+      allow delete: if isAuthenticated();
     }
 
     match /EVENTOS/{eventId} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated() && isValidExpiry(request.resource.data);
+      allow create, update: if isAuthenticated() && isValidEvent(request.resource.data);
+      allow delete: if isAuthenticated();
     }
 
     match /STOCK/{stockId} {
