@@ -92,9 +92,9 @@ export const useExpiryDatabase = () => {
           if (val) return val;
         }
       }
-      const lowerKeys = keys.filter(Boolean).map(k => k.toLowerCase());
+      const lowerKeys = keys.filter(Boolean).map(k => k.trim().toLowerCase());
       for (const k in obj) {
-        if (lowerKeys.includes(k.toLowerCase()) && obj[k] !== undefined && obj[k] !== null) {
+        if (lowerKeys.includes(k.trim().toLowerCase()) && obj[k] !== undefined && obj[k] !== null) {
           const val = String(obj[k]).trim();
           if (val) return val;
         }
@@ -105,7 +105,7 @@ export const useExpiryDatabase = () => {
     return (localItems || []).map(record => {
         const exp = record;
         const productName = getVal(exp, [expiryMapping?.name || '', 'DESCRIPTOR', 'DESCRIPCION_PROD', 'DESCRIPCION', 'PRODUCTO', 'ITEM', 'productName', 'name', 'nombre']);
-        const providerName = getVal(exp, [expiryMapping?.supplier || '', 'PROVEEDOR', 'PROV', 'supplier', 'providerName', 'proveedor', 'Proveedor']);
+        const providerName = getVal(exp, [expiryMapping?.supplier || '', 'PROVEEDOR', 'PROV', 'supplier', 'providerName', 'proveedor', 'Proveedor', 'LABORATORIO', 'LAB', 'MARCA']);
         
         return processExpiryItem({
           id: record.id,

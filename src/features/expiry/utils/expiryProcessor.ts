@@ -42,12 +42,25 @@ export const processExpiryItem = (
     expiry = item.expiryDateObj;
   }
 
+  const isValidStr = (val: any) => typeof val === 'string' && val.trim() !== '' && val.trim().toUpperCase() !== 'N/A' && val.trim().toUpperCase() !== 'PRODUCTO DESCONOCIDO';
+
   const product = productMap.get(normalizeSku(item.barcode));
-  let productName = product?.name || item.productName || 'Producto Desconocido';
-  if (typeof productName === 'string') {
-    productName = productName.trim() || 'Producto Desconocido';
-  } else {
-    productName = 'Producto Desconocido';
+  
+  let productName = 'Producto Desconocido';
+  if (isValidStr(product?.name)) {
+    productName = product!.name.trim();
+  } else if (isValidStr(item.productName)) {
+    productName = item.productName.trim();
+  } else if (isValidStr((item as any).DESCRIPTOR)) {
+    productName = (item as any).DESCRIPTOR.trim();
+  } else if (isValidStr((item as any).DESCRIPCION_PROD)) {
+    productName = (item as any).DESCRIPCION_PROD.trim();
+  } else if (isValidStr((item as any).DESCRIPCION)) {
+    productName = (item as any).DESCRIPCION.trim();
+  } else if (isValidStr((item as any).PRODUCTO)) {
+    productName = (item as any).PRODUCTO.trim();
+  } else if (isValidStr((item as any).ITEM)) {
+    productName = (item as any).ITEM.trim();
   }
   const supplierRut = product?.supplierRut ? normalizeSku(product.supplierRut) : null;
   const provider = supplierRut ? providerMap.get(supplierRut) : null;
@@ -84,19 +97,23 @@ export const processExpiryItem = (
     lifePercent = Math.max(0, Math.min(100, (daysLeft / 365) * 100));
   }
 
-  let providerName = provider?.name || 
-                       product?.supplier || 
-                       item.providerName || 
-                       (item as any).PROVEEDOR || 
-                       (item as any).PROV || 
-                       (item as any).proveedor || 
-                       (item as any).supplier || 
-                       'N/A';
-                       
-  if (typeof providerName === 'string') {
-    providerName = providerName.trim() || 'N/A';
-  } else {
-    providerName = 'N/A';
+  const isValidProviderStr = (val: any) => typeof val === 'string' && val.trim() !== '' && val.trim().toUpperCase() !== 'N/A' && val.trim().toUpperCase() !== 'SIN PROVEEDOR';
+
+  let providerName = 'N/A';
+  if (isValidProviderStr(provider?.name)) {
+    providerName = provider!.name.trim();
+  } else if (isValidProviderStr(product?.supplier)) {
+    providerName = product!.supplier.trim();
+  } else if (isValidProviderStr(item.providerName)) {
+    providerName = item.providerName.trim();
+  } else if (isValidProviderStr((item as any).PROVEEDOR)) {
+    providerName = (item as any).PROVEEDOR.trim();
+  } else if (isValidProviderStr((item as any).PROV)) {
+    providerName = (item as any).PROV.trim();
+  } else if (isValidProviderStr((item as any).proveedor)) {
+    providerName = (item as any).proveedor.trim();
+  } else if (isValidProviderStr((item as any).supplier)) {
+    providerName = (item as any).supplier.trim();
   }
 
   const _searchIndex = `${item.barcode || ''} ${productName} ${providerName} ${item.batch || ''} ${item.frc || ''}`.toLowerCase();

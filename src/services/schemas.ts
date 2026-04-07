@@ -19,13 +19,31 @@ export const CloudProductSchema = z.record(z.any()).transform((raw) => {
 
  const mapping = getSettings().appSheetConfig?.mappings?.products;
 
- const barcode = mapping?.barcode ? raw[mapping.barcode] : (normalized["COD PRODUCTO"] || normalized["CODIGO"] || normalized["SKU"] || normalized["BARCODE"] || normalized["EAN"] || "");
- const name = mapping?.name ? raw[mapping.name] : (normalized["DESCRIPCION"] || normalized["PRODUCTO"] || normalized["NOMBRE"] || normalized["DESCRIP"] || normalized["ITEM"] || "Sin descripción");
- const category = mapping?.category ? raw[mapping.category] : (normalized["MUNDO"] || normalized["CATEGORIA"] || normalized["CATEGORY"] || "GENERAL");
- const supplier = mapping?.supplier ? raw[mapping.supplier] : (normalized["PROVEEDOR"] || normalized["SUPPLIER"] || "");
- const supplierRut = mapping?.supplierRut ? raw[mapping.supplierRut] : (normalized["RUT PROVEEDOR"] || normalized["RUT"] || "");
- const price = mapping?.price ? raw[mapping.price] : undefined;
- const unitsPerBox = mapping?.unitsPerBox ? raw[mapping.unitsPerBox] : undefined;
+ const getVal = (keys: string[]) => {
+  for (const k of keys) {
+   if (k && raw[k] !== undefined && raw[k] !== null && String(raw[k]).trim() !== '') {
+    return String(raw[k]).trim();
+   }
+  }
+  for (const k of keys) {
+   const normK = k ? k.trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : '';
+   if (normK && normalized[normK] !== undefined && normalized[normK] !== null && String(normalized[normK]).trim() !== '') {
+    return String(normalized[normK]).trim();
+   }
+  }
+  return "";
+ };
+
+ const barcode = getVal([mapping?.barcode || '', "COD PRODUCTO", "CODIGO", "SKU", "BARCODE", "EAN"]);
+ const name = getVal([mapping?.name || '', "DESCRIPCION", "PRODUCTO", "NOMBRE", "DESCRIP", "ITEM"]) || "Sin descripción";
+ const category = getVal([mapping?.category || '', "MUNDO", "CATEGORIA", "CATEGORY"]) || "GENERAL";
+ const supplier = getVal([mapping?.supplier || '', "PROVEEDOR", "SUPPLIER", "PROVIDER", "LABORATORIO", "LAB", "MARCA"]);
+ const supplierRut = getVal([mapping?.supplierRut || '', "RUT PROVEEDOR", "RUT"]);
+ const priceRaw = getVal([mapping?.price || '', "PRECIO", "PRICE"]);
+ const unitsPerBoxRaw = getVal([mapping?.unitsPerBox || '', "UNIDADES POR CAJA", "UNIDADES", "UNITS"]);
+
+ const price = priceRaw ? Number(priceRaw) : undefined;
+ const unitsPerBox = unitsPerBoxRaw ? Number(unitsPerBoxRaw) : undefined;
 
  return {
  barcode: normalizeSku(String(barcode)),
