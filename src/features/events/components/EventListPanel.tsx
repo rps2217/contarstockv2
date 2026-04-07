@@ -18,6 +18,7 @@ interface EventListPanelProps {
   onEdit: (item: any) => void;
   onFrcClick: (frc: string) => void;
   onEventClick: (event: string) => void;
+  onDestinoClick: (destino: string) => void;
   isCompact: boolean;
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
@@ -41,6 +42,7 @@ export const EventListPanel: React.FC<EventListPanelProps> = ({
   onEdit,
   onFrcClick,
   onEventClick,
+  onDestinoClick,
   isCompact,
   selectedIds,
   onToggleSelect,
@@ -127,6 +129,7 @@ export const EventListPanel: React.FC<EventListPanelProps> = ({
                   onEdit={onEdit}
                   onFrcClick={onFrcClick}
                   onEventClick={onEventClick}
+                  onDestinoClick={onDestinoClick}
                   theme={theme}
                   isCompact={isCompact}
                   isExpanded={isExpanded}

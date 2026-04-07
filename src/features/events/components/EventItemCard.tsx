@@ -30,6 +30,7 @@ interface EventItemCardProps {
   onEdit?: (item: any) => void;
   onFrcClick?: (frc: string) => void;
   onEventClick?: (event: string) => void;
+  onDestinoClick?: (destino: string) => void;
   theme?: 'dark' | 'light';
   isCompact?: boolean;
   isExpanded?: boolean;
@@ -44,6 +45,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
   onEdit,
   onFrcClick,
   onEventClick,
+  onDestinoClick,
   theme = 'dark',
   isCompact = false,
   isExpanded = false
@@ -300,7 +302,13 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
             } text-slate-500 italic`}>UN</span>
           </span>
         </div>
-        <div className="flex items-center gap-1.5">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDestinoClick?.(item.destino);
+          }}
+          className="flex items-center gap-1.5 hover:bg-emerald-500/10 rounded-lg px-1 transition-all"
+        >
           <Truck className={`shrink-0 ${
             isExpanded ? 'w-4 h-4' : 'w-3 h-3'
           } ${theme === 'dark' ? 'text-emerald-500/80' : 'text-emerald-600/80'}`} />
@@ -309,7 +317,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
           } ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>
             {item.destino || 'SIN DESTINO'}
           </span>
-        </div>
+        </button>
       </div>
 
       {/* COLUMN 5: ACTIONS */}

@@ -129,6 +129,7 @@ export const useEventUI = () => {
   const handleClearFilters = () => {
     actions.setSelectedEvents([]);
     actions.setSearchQuery('');
+    actions.setDateRange({ start: null, end: null });
   };
 
   const handleToggleEvent = (event: string) => {
@@ -235,6 +236,11 @@ export const useEventUI = () => {
     toast.info(`Filtrando por evento: ${event}`);
   };
 
+  const handleDestinoClick = (destino: string) => {
+    actions.setSearchQuery(destino);
+    toast.info(`Filtrando por destino: ${destino}`);
+  };
+
   const getGroupedItems = useCallback((events: any[]) => {
     const groups: { [key: string]: any[] } = {};
     events.forEach(event => {
@@ -274,9 +280,10 @@ export const useEventUI = () => {
       isBulkEditModalOpen,
       editingItem,
       expandedPanel,
-      activeFiltersCount: state.selectedEvents.length,
+      activeFiltersCount: state.selectedEvents.length + (state.dateRange.start || state.dateRange.end ? 1 : 0),
       pendingGrouped,
-      adjustedGrouped
+      adjustedGrouped,
+      dateRange: state.dateRange
     },
     actions: {
       setTheme,
@@ -286,6 +293,7 @@ export const useEventUI = () => {
       setIsBulkEditModalOpen,
       setEditingItem,
       setExpandedPanel,
+      setDateRange: actions.setDateRange,
       toggleTheme,
       handleBulkEdit,
       handleBulkSearchDocument,
@@ -299,7 +307,8 @@ export const useEventUI = () => {
       handleBulkPrintSelected,
       handleBulkSendEmail,
       handleFrcClick,
-      handleEventClick
+      handleEventClick,
+      handleDestinoClick
     },
     db: {
       state,

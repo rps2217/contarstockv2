@@ -155,6 +155,7 @@ const EventManagementPage: React.FC = () => {
             }}
             onFrcClick={uiActions.handleFrcClick}
             onEventClick={uiActions.handleEventClick}
+            onDestinoClick={uiActions.handleDestinoClick}
             isCompact={state.preferences.compactView}
             selectedIds={state.selectedIds}
             onToggleSelect={actions.handleToggleSelect}
@@ -184,6 +185,7 @@ const EventManagementPage: React.FC = () => {
             }}
             onFrcClick={uiActions.handleFrcClick}
             onEventClick={uiActions.handleEventClick}
+            onDestinoClick={uiActions.handleDestinoClick}
             isCompact={state.preferences.compactView}
             selectedIds={state.selectedIds}
             onToggleSelect={actions.handleToggleSelect}
@@ -203,6 +205,8 @@ const EventManagementPage: React.FC = () => {
         onToggleEvent={uiActions.handleToggleEvent}
         onClearFilters={uiActions.handleClearFilters}
         activeFiltersCount={ui.activeFiltersCount}
+        dateRange={ui.dateRange}
+        onSetDateRange={uiActions.setDateRange}
         theme={ui.theme}
       />
 

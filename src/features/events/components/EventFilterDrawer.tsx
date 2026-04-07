@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Filter, X, Tag } from 'lucide-react';
+import { Filter, X, Tag, Calendar, Clock } from 'lucide-react';
+import { startOfMonth, endOfMonth, addMonths, format } from 'date-fns';
 
 interface EventFilterDrawerProps {
   isOpen: boolean;
@@ -10,6 +11,8 @@ interface EventFilterDrawerProps {
   onToggleEvent: (event: string) => void;
   onClearFilters: () => void;
   activeFiltersCount: number;
+  dateRange: { start: string | null; end: string | null };
+  onSetDateRange: (range: { start: string | null; end: string | null }) => void;
   theme?: 'dark' | 'light';
 }
 
@@ -21,8 +24,33 @@ export const EventFilterDrawer: React.FC<EventFilterDrawerProps> = ({
   onToggleEvent,
   onClearFilters,
   activeFiltersCount,
+  dateRange,
+  onSetDateRange,
   theme = 'dark'
 }) => {
+  const handleQuickDateFilter = (type: 'this-month' | 'next-month' | 'today') => {
+    const now = new Date();
+    let start: Date;
+    let end: Date;
+
+    if (type === 'this-month') {
+      start = startOfMonth(now);
+      end = endOfMonth(now);
+    } else if (type === 'next-month') {
+      const nextMonth = addMonths(now, 1);
+      start = startOfMonth(nextMonth);
+      end = endOfMonth(nextMonth);
+    } else {
+      start = now;
+      end = now;
+    }
+
+    onSetDateRange({
+      start: format(start, 'yyyy-MM-dd'),
+      end: format(end, 'yyyy-MM-dd')
+    });
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -65,7 +93,77 @@ export const EventFilterDrawer: React.FC<EventFilterDrawerProps> = ({
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-8">
+            <div className="flex-1 overflow-y-auto p-6 space-y-8 no-scrollbar">
+              {/* Quick Date Filters */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Clock className={`w-4 h-4 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`} />
+                  <h5 className={`text-xs font-black uppercase tracking-widest ${
+                    theme === 'dark' ? 'text-slate-300' : 'text-slate-700'
+                  }`}>Accesos Rápidos</h5>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => handleQuickDateFilter('this-month')}
+                    className={`px-3 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${
+                      theme === 'dark'
+                        ? 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10 hover:text-white'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    Este Mes
+                  </button>
+                  <button
+                    onClick={() => handleQuickDateFilter('next-month')}
+                    className={`px-3 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${
+                      theme === 'dark'
+                        ? 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10 hover:text-white'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    Próximo Mes
+                  </button>
+                </div>
+              </div>
+
+              {/* Date Range */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Calendar className={`w-4 h-4 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`} />
+                  <h5 className={`text-xs font-black uppercase tracking-widest ${
+                    theme === 'dark' ? 'text-slate-300' : 'text-slate-700'
+                  }`}>Rango de Fechas</h5>
+                </div>
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] font-bold text-slate-500 uppercase px-1">Desde</label>
+                    <input
+                      type="date"
+                      value={dateRange.start || ''}
+                      onChange={(e) => onSetDateRange({ ...dateRange, start: e.target.value || null })}
+                      className={`w-full px-4 py-2.5 rounded-xl text-xs font-bold outline-none border transition-all ${
+                        theme === 'dark'
+                          ? 'bg-white/5 border-white/10 text-white focus:border-blue-500/50'
+                          : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-blue-500/50'
+                      }`}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] font-bold text-slate-500 uppercase px-1">Hasta</label>
+                    <input
+                      type="date"
+                      value={dateRange.end || ''}
+                      onChange={(e) => onSetDateRange({ ...dateRange, end: e.target.value || null })}
+                      className={`w-full px-4 py-2.5 rounded-xl text-xs font-bold outline-none border transition-all ${
+                        theme === 'dark'
+                          ? 'bg-white/5 border-white/10 text-white focus:border-blue-500/50'
+                          : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-blue-500/50'
+                      }`}
+                    />
+                  </div>
+                </div>
+              </div>
+
               {/* Event Types */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2">

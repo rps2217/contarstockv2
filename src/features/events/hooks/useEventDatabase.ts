@@ -33,6 +33,7 @@ export const useEventDatabase = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [dateRange, setDateRange] = useState<{ start: string | null; end: string | null }>({ start: null, end: null });
 
   const tableName = settings?.appSheetConfig?.eventsTableName || 'EVENTOS';
 
@@ -249,14 +250,27 @@ export const useEventDatabase = () => {
     if (selectedEvents.length > 0) {
       filtered = filtered.filter(e => selectedEvents.includes(e.event));
     }
+    if (dateRange.start || dateRange.end) {
+      filtered = filtered.filter(e => {
+        const itemDate = new Date(e.timestamp);
+        if (dateRange.start && itemDate < new Date(dateRange.start)) return false;
+        if (dateRange.end) {
+          const endDate = new Date(dateRange.end);
+          endDate.setHours(23, 59, 59, 999);
+          if (itemDate > endDate) return false;
+        }
+        return true;
+      });
+    }
     return filtered;
-  }, [baseProcessedData, searchQuery, selectedEvents]);
+  }, [baseProcessedData, searchQuery, selectedEvents, dateRange]);
 
   return {
     state: {
       searchQuery,
       selectedEvents,
       selectedIds,
+      dateRange,
       allItems: baseProcessedData,
       preferences,
       processedEvents: processedEvents,
@@ -274,6 +288,7 @@ export const useEventDatabase = () => {
       setSearchQuery,
       setSelectedEvents,
       setSelectedIds,
+      setDateRange,
       handleRemoveItem,
       handleBulkRemove,
       handleAddItem,

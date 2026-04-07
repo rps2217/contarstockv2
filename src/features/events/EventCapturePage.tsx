@@ -30,7 +30,9 @@ const EVENT_TYPES = [
   'DET. PED.',
   'VENCE CERC.',
   'DET. CALIDAD INT.',
-  'DET. CALIDAD EXT.'
+  'DET. CALIDAD EXT.',
+  'CANJES',
+  'MERMAS'
 ];
 
 // Memoized Item Component
