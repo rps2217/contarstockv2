@@ -19,6 +19,8 @@ interface ExpiryFilterDrawerProps {
   setActionPeriod: (period: 'all' | 'this_month' | 'next_month' | 'next_3_months' | 'custom') => void;
   customDateRange: { start: Date | null, end: Date | null };
   setCustomDateRange: (range: { start: Date | null, end: Date | null }) => void;
+  creationDateRange: { start: Date | null, end: Date | null };
+  setCreationDateRange: (range: { start: Date | null, end: Date | null }) => void;
   theme?: 'dark' | 'light';
 }
 
@@ -36,6 +38,8 @@ export const ExpiryFilterDrawer: React.FC<ExpiryFilterDrawerProps> = ({
   setActionPeriod,
   customDateRange,
   setCustomDateRange,
+  creationDateRange,
+  setCreationDateRange,
   theme = 'dark'
 }) => {
   return (
@@ -183,6 +187,48 @@ export const ExpiryFilterDrawer: React.FC<ExpiryFilterDrawerProps> = ({
                     />
                   </motion.div>
                 )}
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-slate-500" />
+                    <span className={`text-xs font-black uppercase tracking-widest ${
+                      theme === 'dark' ? 'text-slate-300' : 'text-slate-600'
+                    }`}>Fecha de Creación</span>
+                  </div>
+                  {(creationDateRange.start || creationDateRange.end) && (
+                    <button 
+                      onClick={() => setCreationDateRange({ start: null, end: null })}
+                      className="text-[10px] font-black text-amber-500 uppercase hover:underline"
+                    >
+                      Limpiar
+                    </button>
+                  )}
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="date"
+                    value={creationDateRange.start ? format(creationDateRange.start, 'yyyy-MM-dd') : ''}
+                    onChange={(e) => setCreationDateRange({ ...creationDateRange, start: e.target.value ? parseISO(e.target.value) : null })}
+                    className={`px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${
+                      theme === 'dark' 
+                        ? 'bg-white/5 border-white/5 text-white' 
+                        : 'bg-slate-50 border-slate-200 text-slate-900'
+                    }`}
+                  />
+                  <input
+                    type="date"
+                    value={creationDateRange.end ? format(creationDateRange.end, 'yyyy-MM-dd') : ''}
+                    onChange={(e) => setCreationDateRange({ ...creationDateRange, end: e.target.value ? parseISO(e.target.value) : null })}
+                    className={`px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${
+                      theme === 'dark' 
+                        ? 'bg-white/5 border-white/5 text-white' 
+                        : 'bg-slate-50 border-slate-200 text-slate-900'
+                    }`}
+                  />
+                </div>
               </div>
 
               <div className="space-y-4">

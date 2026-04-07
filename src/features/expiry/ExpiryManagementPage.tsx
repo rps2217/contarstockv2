@@ -335,6 +335,8 @@ const ExpiryManagementPage: React.FC = () => {
         setActionPeriod={dbActions.setActionPeriod}
         customDateRange={state.customDateRange}
         setCustomDateRange={dbActions.setCustomDateRange}
+        creationDateRange={state.creationDateRange}
+        setCreationDateRange={dbActions.setCreationDateRange}
         theme={ui.theme}
       />
 

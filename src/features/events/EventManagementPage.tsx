@@ -32,6 +32,7 @@ import { CreateEventModal } from './components/CreateEventModal';
 import { BulkEditModal } from './components/BulkEditModal';
 import { EventSettingsDrawer } from './components/EventSettingsDrawer';
 import { EventSearchBar } from './components/EventSearchBar';
+import { EventEmailModal } from './components/EventEmailModal';
 import { AnimatePresence } from 'motion/react';
 import { Zap, ChevronUp, ChevronDown } from 'lucide-react';
 
@@ -249,6 +250,13 @@ const EventManagementPage: React.FC = () => {
         }}
         onSubmit={uiActions.handleCreateOrUpdate}
         editingItem={ui.editingItem}
+        theme={ui.theme}
+      />
+
+      <EventEmailModal
+        isOpen={ui.isEmailModalOpen}
+        onClose={() => uiActions.setIsEmailModalOpen(false)}
+        selectedItems={state.processedEvents.filter(item => state.selectedIds.has(item.id))}
         theme={ui.theme}
       />
     </div>

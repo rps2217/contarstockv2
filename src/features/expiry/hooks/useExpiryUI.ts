@@ -111,6 +111,7 @@ export const useExpiryUI = () => {
     actions.setSelectedCanje('all');
     actions.setActionPeriod('all');
     actions.setCustomDateRange({ start: null, end: null });
+    actions.setCreationDateRange({ start: null, end: null });
     toast.info('Filtros restablecidos');
   };
 
@@ -182,7 +183,7 @@ export const useExpiryUI = () => {
       setTheme,
       viewMode,
       setViewMode,
-      activeFiltersCount: state.selectedStatuses.length + state.selectedCategories.length + (state.selectedCanje !== 'all' ? 1 : 0) + (state.actionPeriod !== 'all' ? 1 : 0) + (state.customDateRange.start || state.customDateRange.end ? 1 : 0)
+      activeFiltersCount: state.selectedStatuses.length + state.selectedCategories.length + (state.selectedCanje !== 'all' ? 1 : 0) + (state.actionPeriod !== 'all' ? 1 : 0) + (state.customDateRange.start || state.customDateRange.end ? 1 : 0) + (state.creationDateRange?.start || state.creationDateRange?.end ? 1 : 0)
     },
     actions: {
       handleOpenAdd,

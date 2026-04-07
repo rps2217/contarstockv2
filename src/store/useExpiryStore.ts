@@ -65,6 +65,9 @@ interface ExpiryState {
   customDateRange: { start: Date | null; end: Date | null };
   setCustomDateRange: (range: { start: Date | null; end: Date | null }) => void;
 
+  creationDateRange: { start: Date | null; end: Date | null };
+  setCreationDateRange: (range: { start: Date | null; end: Date | null }) => void;
+
   // Selection
   selectedIds: Set<string>;
   setSelectedIds: (ids: Set<string>) => void;
@@ -119,6 +122,9 @@ export const useExpiryStore = create<ExpiryState>()(
 
       customDateRange: { start: null, end: null },
       setCustomDateRange: (customDateRange) => set({ customDateRange }),
+
+      creationDateRange: { start: null, end: null },
+      setCreationDateRange: (creationDateRange) => set({ creationDateRange }),
 
       selectedIds: new Set(),
       setSelectedIds: (selectedIds) => set({ selectedIds }),

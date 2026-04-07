@@ -121,9 +121,10 @@ export const filterExpiryItems = (
     selectedCanje: string;
     actionPeriod: 'all' | 'this_month' | 'next_month' | 'next_3_months' | 'custom';
     customDateRange: { start: Date | null; end: Date | null };
+    creationDateRange?: { start: Date | null; end: Date | null };
   }
 ): ExpiryItem[] => {
-  const { query, selectedCategories, selectedCanje, actionPeriod, customDateRange } = filters;
+  const { query, selectedCategories, selectedCanje, actionPeriod, customDateRange, creationDateRange } = filters;
   
   // Pre-procesar la query para búsqueda ultra-rápida una sola vez
   const searchTerm = query.trim().toLowerCase();
@@ -174,6 +175,21 @@ export const filterExpiryItems = (
           const end = new Date(customDateRange.end).setHours(23, 59, 59, 999);
           if (itemDate > end) return false;
         }
+      }
+    }
+
+    // Filtrado por Fecha de Creación (timestamp)
+    if (creationDateRange && (creationDateRange.start || creationDateRange.end)) {
+      if (!item.timestamp) return false;
+      const itemCreationDate = typeof item.timestamp === 'number' ? item.timestamp : new Date(item.timestamp).getTime();
+      
+      if (creationDateRange.start) {
+        const start = new Date(creationDateRange.start).setHours(0, 0, 0, 0);
+        if (itemCreationDate < start) return false;
+      }
+      if (creationDateRange.end) {
+        const end = new Date(creationDateRange.end).setHours(23, 59, 59, 999);
+        if (itemCreationDate > end) return false;
       }
     }
 

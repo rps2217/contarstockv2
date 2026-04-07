@@ -27,7 +27,7 @@ export const useExpiryDatabase = () => {
                     settings?.appSheetConfig?.expiryTableName || 
                     'VENCIMIENTOS';
   
-  const {
+    const {
     preferences, setPreferences,
     searchQuery, setSearchQuery,
     selectedStatuses, setSelectedStatuses,
@@ -35,6 +35,7 @@ export const useExpiryDatabase = () => {
     selectedCanje, setSelectedCanje,
     actionPeriod, setActionPeriod,
     customDateRange, setCustomDateRange,
+    creationDateRange, setCreationDateRange,
     selectedIds, setSelectedIds
   } = useExpiryStore();
 
@@ -132,9 +133,10 @@ export const useExpiryDatabase = () => {
       selectedCategories,
       selectedCanje,
       actionPeriod,
-      customDateRange
+      customDateRange,
+      creationDateRange
     });
-  }, [baseProcessedData, debouncedSearch, selectedCategories, selectedCanje, actionPeriod, customDateRange]);
+  }, [baseProcessedData, debouncedSearch, selectedCategories, selectedCanje, actionPeriod, customDateRange, creationDateRange]);
 
   const processedData = useMemo((): ExpiryItem[] => {
     const filtered = contextFilteredData.filter(item => {
@@ -301,8 +303,9 @@ export const useExpiryDatabase = () => {
     setSelectedCanje('all');
     setActionPeriod('all');
     setCustomDateRange({ start: null, end: null });
+    setCreationDateRange({ start: null, end: null });
     setSelectedIds(new Set());
-  }, [setSearchQuery, setSelectedStatuses, setSelectedCategories, setSelectedCanje, setActionPeriod, setCustomDateRange, setSelectedIds]);
+  }, [setSearchQuery, setSelectedStatuses, setSelectedCategories, setSelectedCanje, setActionPeriod, setCustomDateRange, setCreationDateRange, setSelectedIds]);
 
   return {
     state: {
@@ -312,6 +315,7 @@ export const useExpiryDatabase = () => {
       selectedCanje,
       actionPeriod,
       customDateRange,
+      creationDateRange,
       isSyncing,
       selectedIds,
       allItems: baseProcessedData,
@@ -327,6 +331,7 @@ export const useExpiryDatabase = () => {
       setSelectedCanje,
       setActionPeriod,
       setCustomDateRange,
+      setCreationDateRange,
       setSelectedIds,
       handleSyncExpirations,
       handleRemoveItem,

@@ -17,6 +17,7 @@ export const useEventUI = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [expandedPanel, setExpandedPanel] = useState<'pending' | 'adjusted' | 'dual'>('dual');
   
@@ -213,12 +214,11 @@ export const useEventUI = () => {
 
   const handleBulkSendEmail = () => {
     const selectedItems = state.processedEvents.filter(item => state.selectedIds.has(item.id));
-    if (selectedItems.length === 0) return;
-    
-    import('../../expiry/utils/expiryUtils').then(utils => {
-      utils.handleSendEmail(selectedItems);
-      toast.success(`Generando reporte de correo para ${selectedItems.length} productos`);
-    });
+    if (selectedItems.length > 0) {
+      setIsEmailModalOpen(true);
+    } else {
+      toast.error('No hay ítems seleccionados para enviar por correo');
+    }
   };
 
   const toggleTheme = () => {
@@ -278,6 +278,7 @@ export const useEventUI = () => {
       isSyncing,
       isCreateModalOpen,
       isBulkEditModalOpen,
+      isEmailModalOpen,
       editingItem,
       expandedPanel,
       activeFiltersCount: state.selectedEvents.length + (state.dateRange.start || state.dateRange.end ? 1 : 0),
@@ -291,6 +292,7 @@ export const useEventUI = () => {
       setIsSettingsDrawerOpen,
       setIsCreateModalOpen,
       setIsBulkEditModalOpen,
+      setIsEmailModalOpen,
       setEditingItem,
       setExpandedPanel,
       setDateRange: actions.setDateRange,
