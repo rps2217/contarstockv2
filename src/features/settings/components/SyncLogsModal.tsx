@@ -54,7 +54,19 @@ export const SyncLogsModal: React.FC<Props> = ({ isOpen, onClose }) => {
   };
 
   const copyToClipboard = (text: any) => {
-    const stringified = typeof text === 'string' ? text : JSON.stringify(text, null, 2);
+    const safeStringify = (obj: any) => {
+      const cache = new Set();
+      return JSON.stringify(obj, (key, value) => {
+        if (typeof value === 'object' && value !== null) {
+          if (cache.has(value)) {
+            return '[Circular]';
+          }
+          cache.add(value);
+        }
+        return value;
+      }, 2);
+    };
+    const stringified = typeof text === 'string' ? text : safeStringify(text);
     navigator.clipboard.writeText(stringified);
     toast.success('Copiado al portapapeles');
   };
@@ -207,7 +219,16 @@ export const SyncLogsModal: React.FC<Props> = ({ isOpen, onClose }) => {
                             </button>
                           </div>
                           <pre className="bg-black/80 rounded-2xl p-4 text-[10px] font-mono text-blue-300 overflow-x-auto max-h-60 custom-scrollbar border border-white/5">
-                            {JSON.stringify(log.payload, null, 2)}
+                            {(() => {
+                              const cache = new Set();
+                              return JSON.stringify(log.payload, (key, value) => {
+                                if (typeof value === 'object' && value !== null) {
+                                  if (cache.has(value)) return '[Circular]';
+                                  cache.add(value);
+                                }
+                                return value;
+                              }, 2);
+                            })()}
                           </pre>
                         </div>
 
@@ -223,7 +244,16 @@ export const SyncLogsModal: React.FC<Props> = ({ isOpen, onClose }) => {
                             </button>
                           </div>
                           <pre className={`bg-black/80 rounded-2xl p-4 text-[10px] font-mono overflow-x-auto max-h-60 custom-scrollbar border ${log.status === 'success' ? 'text-emerald-300 border-emerald-500/20' : 'text-rose-300 border-rose-500/20'}`}>
-                            {typeof log.response === 'string' ? log.response : JSON.stringify(log.response, null, 2)}
+                            {typeof log.response === 'string' ? log.response : (() => {
+                              const cache = new Set();
+                              return JSON.stringify(log.response, (key, value) => {
+                                if (typeof value === 'object' && value !== null) {
+                                  if (cache.has(value)) return '[Circular]';
+                                  cache.add(value);
+                                }
+                                return value;
+                              }, 2);
+                            })()}
                           </pre>
                         </div>
                       </div>

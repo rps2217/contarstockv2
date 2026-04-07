@@ -40,7 +40,19 @@ export const SystemLogsModal: React.FC<Props> = ({ isOpen, onClose }) => {
   };
 
   const handleExport = () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(logs, null, 2));
+    const safeStringify = (obj: any) => {
+      const cache = new Set();
+      return JSON.stringify(obj, (key, value) => {
+        if (typeof value === 'object' && value !== null) {
+          if (cache.has(value)) {
+            return '[Circular]';
+          }
+          cache.add(value);
+        }
+        return value;
+      }, 2);
+    };
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(safeStringify(logs));
     const downloadAnchorNode = document.createElement('a');
     downloadAnchorNode.setAttribute("href", dataStr);
     downloadAnchorNode.setAttribute("download", `logicount_system_logs_${new Date().toISOString()}.json`);
@@ -145,11 +157,29 @@ export const SystemLogsModal: React.FC<Props> = ({ isOpen, onClose }) => {
                     </span>
                   </div>
                   <p className="font-medium leading-relaxed break-words">
-                    {typeof log.message === 'object' ? JSON.stringify(log.message, null, 2) : String(log.message)}
+                    {typeof log.message === 'object' ? (() => {
+                      const cache = new Set();
+                      return JSON.stringify(log.message, (key, value) => {
+                        if (typeof value === 'object' && value !== null) {
+                          if (cache.has(value)) return '[Circular]';
+                          cache.add(value);
+                        }
+                        return value;
+                      }, 2);
+                    })() : String(log.message)}
                   </p>
                   {log.details && (
                     <pre className="mt-2 p-2 bg-black/40 rounded-lg text-[10px] overflow-x-auto border border-white/5 text-slate-400">
-                      {typeof log.details === 'object' ? JSON.stringify(log.details, null, 2) : String(log.details)}
+                      {typeof log.details === 'object' ? (() => {
+                        const cache = new Set();
+                        return JSON.stringify(log.details, (key, value) => {
+                          if (typeof value === 'object' && value !== null) {
+                            if (cache.has(value)) return '[Circular]';
+                            cache.add(value);
+                          }
+                          return value;
+                        }, 2);
+                      })() : String(log.details)}
                     </pre>
                   )}
                 </div>
