@@ -15,7 +15,19 @@ export const useSyncManager = () => {
   
   const addLog = useCallback((msg: any, type: 'info'|'error'|'success' = 'info') => {
     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    const safeMsg = typeof msg === 'string' ? msg : JSON.stringify(msg);
+    const safeStringify = (obj: any) => {
+      const cache = new Set();
+      return JSON.stringify(obj, (key, value) => {
+        if (typeof value === 'object' && value !== null) {
+          if (cache.has(value)) {
+            return '[Circular]';
+          }
+          cache.add(value);
+        }
+        return value;
+      });
+    };
+    const safeMsg = typeof msg === 'string' ? msg : safeStringify(msg);
     setLogs(prev => [...prev, { time, msg: safeMsg, type }]);
   }, []);
 
