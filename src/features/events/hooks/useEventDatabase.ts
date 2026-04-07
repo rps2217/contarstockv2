@@ -244,7 +244,9 @@ export const useEventDatabase = () => {
         String(e.barcode || '').toLowerCase().includes(q) ||
         (normalizedQ && String(e.barcode || '').includes(normalizedQ)) ||
         String(e.providerName || '').toLowerCase().includes(q) ||
-        String(e.frc || '').toLowerCase().includes(q)
+        String(e.frc || '').toLowerCase().includes(q) ||
+        String(e.destino || '').toLowerCase().includes(q) ||
+        String(e.traspaso || '').toLowerCase().includes(q)
       );
     }
     if (selectedEvents.length > 0) {
