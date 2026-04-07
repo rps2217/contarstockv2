@@ -207,11 +207,10 @@ export const useEventDatabase = () => {
       const frcValue = String(data.frc || '').trim();
       const claveUnica = `${sanitizedBarcode}${frcValue}`;
 
-      const shortId = Math.random().toString(16).substring(2, 10);
       const now = new Date();
       
       const rowData = {
-        id: shortId,
+        id: claveUnica, // Use claveUnica as the ID
         timestamp: now.toISOString(),
         ...data,
         barcode: sanitizedBarcode,
@@ -220,9 +219,9 @@ export const useEventDatabase = () => {
       };
 
       const finalData = unmapData(rowData);
-      await firebaseSyncService.pushChange(tableName, shortId, finalData);
+      await firebaseSyncService.pushChange(tableName, claveUnica, finalData);
       addToast('Guardado en la nube correctamente.', 'success');
-      return shortId;
+      return claveUnica;
     } catch (error: any) {
       addToast(`Error al registrar: ${error.message}`, 'error');
     }

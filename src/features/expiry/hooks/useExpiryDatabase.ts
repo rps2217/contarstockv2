@@ -250,12 +250,19 @@ export const useExpiryDatabase = () => {
       const ddPadded = String(lastDay).padStart(2, '0');
       const claveUnica = `${sanitizedBarcode}${yearStr}${mmPadded}${ddPadded}`;
 
-      const shortId = Math.random().toString(16).substring(2, 10);
+      // Duplicate check with visual feedback
+      const isDuplicate = localItems.some(item => item.claveUnica === claveUnica);
+      if (isDuplicate) {
+        addToast(`Este producto ya fue registrado para el mes ${mmPadded}/${yearStr}. No se permiten duplicados.`, 'warning');
+        SoundFX.play('error');
+        return;
+      }
+
       const now = new Date();
       
       const rowData: Record<string, any> = {
-        id: shortId,
-        ID: shortId,
+        id: claveUnica, // Use claveUnica as the ID
+        ID: claveUnica,
         claveUnica: claveUnica,
         timestamp: now.toISOString(),
         barcode: sanitizedBarcode,
@@ -274,13 +281,13 @@ export const useExpiryDatabase = () => {
       addToast('Guardado en la nube correctamente.', 'success');
       SoundFX.play('success');
 
-      return shortId;
+      return claveUnica;
 
     } catch (error: any) {
       addToast(`Error crítico al registrar: ${error.message}`, 'error');
       SoundFX.play('error');
     }
-  }, [tableName]);
+  }, [tableName, localItems]);
 
   const handleUpdatePreferences = useCallback((newPrefs: Partial<ExpiryPreferences>) => {
     setPreferences(newPrefs);
