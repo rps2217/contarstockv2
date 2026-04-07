@@ -43,7 +43,12 @@ export const processExpiryItem = (
   }
 
   const product = productMap.get(normalizeSku(item.barcode));
-  const productName = product?.name || item.productName || 'Producto Desconocido';
+  let productName = product?.name || item.productName || 'Producto Desconocido';
+  if (typeof productName === 'string') {
+    productName = productName.trim() || 'Producto Desconocido';
+  } else {
+    productName = 'Producto Desconocido';
+  }
   const supplierRut = product?.supplierRut ? normalizeSku(product.supplierRut) : null;
   const provider = supplierRut ? providerMap.get(supplierRut) : null;
   
@@ -79,7 +84,7 @@ export const processExpiryItem = (
     lifePercent = Math.max(0, Math.min(100, (daysLeft / 365) * 100));
   }
 
-  const providerName = provider?.name || 
+  let providerName = provider?.name || 
                        product?.supplier || 
                        item.providerName || 
                        (item as any).PROVEEDOR || 
@@ -87,6 +92,12 @@ export const processExpiryItem = (
                        (item as any).proveedor || 
                        (item as any).supplier || 
                        'N/A';
+                       
+  if (typeof providerName === 'string') {
+    providerName = providerName.trim() || 'N/A';
+  } else {
+    providerName = 'N/A';
+  }
 
   const _searchIndex = `${item.barcode || ''} ${productName} ${providerName} ${item.batch || ''} ${item.frc || ''}`.toLowerCase();
 

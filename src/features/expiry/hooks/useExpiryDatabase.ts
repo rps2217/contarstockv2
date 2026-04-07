@@ -85,21 +85,27 @@ export const useExpiryDatabase = () => {
     const now = new Date();
     const expiryMapping = settings?.appSheetConfig?.mappings?.expiry;
     
+    const getVal = (obj: any, keys: string[]) => {
+      for (const k of keys) {
+        if (k && obj[k] !== undefined && obj[k] !== null) {
+          const val = String(obj[k]).trim();
+          if (val) return val;
+        }
+      }
+      const lowerKeys = keys.filter(Boolean).map(k => k.toLowerCase());
+      for (const k in obj) {
+        if (lowerKeys.includes(k.toLowerCase()) && obj[k] !== undefined && obj[k] !== null) {
+          const val = String(obj[k]).trim();
+          if (val) return val;
+        }
+      }
+      return '';
+    };
+
     return (localItems || []).map(record => {
         const exp = record;
-        const productName = exp[expiryMapping?.name || ''] || 
-                            (exp as any).DESCRIPTOR || 
-                            (exp as any).DESCRIPCION_PROD || 
-                            (exp as any).DESCRIPCION || 
-                            (exp as any).PRODUCTO ||
-                            (exp as any).ITEM ||
-                            exp.productName || '';
-                            
-        const providerName = exp[expiryMapping?.supplier || ''] ||
-                             (exp as any).PROVEEDOR || 
-                             (exp as any).PROV ||
-                             (exp as any).proveedor || 
-                             (exp as any).supplier || exp.providerName || '';
+        const productName = getVal(exp, [expiryMapping?.name || '', 'DESCRIPTOR', 'DESCRIPCION_PROD', 'DESCRIPCION', 'PRODUCTO', 'ITEM', 'productName', 'name', 'nombre']);
+        const providerName = getVal(exp, [expiryMapping?.supplier || '', 'PROVEEDOR', 'PROV', 'supplier', 'providerName', 'proveedor', 'Proveedor']);
         
         return processExpiryItem({
           id: record.id,
