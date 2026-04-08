@@ -114,6 +114,23 @@ export const useProductDatabase = () => {
  }
  }, [showFeedback]);
 
+ const handleForceSyncToCloud = useCallback(async () => {
+ const allProds = await productRepository.getAll();
+ if (allProds.length === 0) {
+ showFeedback('error', 'No hay productos locales para subir');
+ return;
+ }
+ setIsSyncing(true);
+ try {
+ await syncProductsToCloud(allProds);
+ showFeedback('success', 'Catálogo completo subido a la nube');
+ } catch (err: any) {
+ showFeedback('error', err.message);
+ } finally {
+ setIsSyncing(false);
+ }
+ }, [showFeedback]);
+
  const handleDownloadFromCloud = useCallback(async () => {
  setIsDownloading(true);
  try {
@@ -161,6 +178,7 @@ export const useProductDatabase = () => {
  handleDelete, 
  handleDeleteAll, 
  handleSyncToCloud, 
+ handleForceSyncToCloud,
  handleDownloadFromCloud, 
  handleVectorize, 
  handleInitializeBrain,

@@ -16,6 +16,7 @@ interface Props {
  onSearch: (q: string) => void;
  onDownload: () => void;
  onSync: () => void;
+ onForceSync?: () => void;
  onVectorize?: () => void;
  onInitializeBrain?: () => void; 
  onImport: () => void;
@@ -101,6 +102,20 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
  </div>
  </div>
  
+ {/* BOTÓN FORZAR SUBIDA (MÓVIL) */}
+ <button 
+ onClick={() => {
+   if (confirm('¿Desea forzar la subida de TODO el catálogo local a la nube? Esto puede tomar tiempo.')) {
+     props.onForceSync?.();
+   }
+ }}
+ disabled={props.isSyncing}
+ className="md:hidden w-full bg-indigo-600 hover:bg-indigo-700 text-white p-3 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all"
+ >
+ {props.isSyncing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+ Subir Copia Local a la Nube
+ </button>
+
  {/* NIVEL 2: BÚSQUEDA */}
  <div className="flex gap-2 w-full">
  <div className="flex-1"><SearchBar onSearch={props.onSearch} placeholder="Filtrar catálogo..." className="h-11" /></div>

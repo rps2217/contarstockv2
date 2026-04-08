@@ -37,6 +37,7 @@ export const Database: React.FC = () => {
  onSearch={actions.setSearchQuery}
  onDownload={actions.handleDownloadFromCloud}
  onSync={actions.handleSyncToCloud}
+ onForceSync={actions.handleForceSyncToCloud}
  onVectorize={actions.handleVectorize}
  onInitializeBrain={actions.handleInitializeBrain}
  onImport={() => setIsImportOpen(true)}
