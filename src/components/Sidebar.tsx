@@ -3,7 +3,7 @@ import React from 'react';
 import { Home, Database, History, Container, Cloud, Box, Settings, Zap, FileText, Camera, Calendar, ChevronLeft, ChevronRight, AlertCircle, RefreshCw } from 'lucide-react';
 // Forced update to trigger GitHub sync for the components folder
 import { useNavigate, useLocation } from 'react-router-dom';
-import { AppSettings } from '../types';
+import { AppSettings, TableSchema } from '../types';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ScanRepository } from '../repositories/ScanRepository';
 import { db } from '../db';
@@ -92,16 +92,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
               {!isCollapsed && <div className="text-[9px] font-black text-slate-600 uppercase tracking-[0.4em] px-5 mb-6 mt-10">Dynamic_Tables</div>}
               {Object.entries(schema)
                 .filter(([key]) => key !== 'expiry' && key !== 'events' && key !== 'products')
-                .map(([key, tableSchema]) => (
-                <NavItem 
-                  key={key} 
-                  path={`/dynamic/${key}`} 
-                  activeKey={`dynamic/${key}`} 
-                  label={tableSchema.tableName} 
-                  icon={Database} 
-                  badge={dynamicTableStats?.[tableSchema.tableName] || 0}
-                />
-              ))}
+                .map(([key, tableSchema]) => {
+                  const schema = tableSchema as TableSchema;
+                  return (
+                    <NavItem 
+                      key={key} 
+                      path={`/dynamic/${key}`} 
+                      activeKey={`dynamic/${key}`} 
+                      label={schema.tableName} 
+                      icon={Database} 
+                      badge={dynamicTableStats?.[schema.tableName] || 0}
+                    />
+                  );
+                })}
             </>
           );
         })()}

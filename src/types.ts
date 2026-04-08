@@ -283,6 +283,8 @@ export interface AppSchema {
   providers?: TableSchema;
 }
 
+export type CloudConfig = AppSheetConfig;
+
 export interface AppSheetConfig {
   appId: string;
   accessKey: string;

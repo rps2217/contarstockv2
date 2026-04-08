@@ -8,7 +8,7 @@ import { dynamicSyncService } from '../../services/dynamicSync';
 import { dynamicDataService } from '../../services/dynamicDataService';
 import { db, DynamicRecord } from '../../db';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { TableSchema } from '../../types';
+import { TableSchema, ColumnSchema } from '../../types';
 import { toast } from 'sonner';
 import { useParams, useNavigate } from 'react-router-dom';
 import { RefreshCw, Edit3, ArrowLeft, Trash2 } from 'lucide-react';
@@ -310,16 +310,19 @@ export const DynamicManagementPage: React.FC<DynamicManagementPageProps> = ({
                 ) : (
                   <div className="flex flex-col gap-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {Object.entries(schema.columns).map(([key, col]) => (
-                        <div key={key} className="flex flex-col gap-1 p-3 rounded-xl bg-white/5 border border-white/5">
-                          <span className="text-[10px] font-black text-stone-500 uppercase tracking-widest">
-                            {col.label}
-                          </span>
-                          <span className="text-sm font-bold text-white">
-                            {String(selectedItem?.[key] || 'N/A')}
-                          </span>
-                        </div>
-                      ))}
+                      {Object.entries(schema.columns).map(([key, col]) => {
+                        const column = col as ColumnSchema;
+                        return (
+                          <div key={key} className="flex flex-col gap-1 p-3 rounded-xl bg-white/5 border border-white/5">
+                            <span className="text-[10px] font-black text-stone-500 uppercase tracking-widest">
+                              {column.label}
+                            </span>
+                            <span className="text-sm font-bold text-white">
+                              {String(selectedItem?.[key] || 'N/A')}
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
                     
                     <div className={`flex flex-col gap-3 p-4 rounded-2xl border ${

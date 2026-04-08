@@ -176,7 +176,7 @@ const ExpiryManagementPage: React.FC = () => {
             </div>
 
             <button 
-              onClick={actions.handleSyncExpirations}
+              onClick={dbActions.handleSyncExpirations}
               disabled={state.isSyncing}
               className={`border px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${
                 state.isSyncing 
