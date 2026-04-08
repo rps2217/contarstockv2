@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Truck, Search, Plus, ShieldAlert, AlertTriangle, CheckCircle2, ChevronRight, Edit2, Trash2, Wand2 } from 'lucide-react';
+import { Truck, Search, Plus, ShieldAlert, AlertTriangle, CheckCircle2, ChevronRight, Edit2, Trash2, Wand2, UploadCloud } from 'lucide-react';
 import { Provider } from '../../../types';
 import { ProviderRepository } from '../../../repositories/ProviderRepository';
 import { db } from '../../../db';
 import { toast } from 'sonner';
 import { ProviderFormModal } from '../components/ProviderFormModal';
+import { syncProvidersToAppSheet } from '../../../services/appsheet';
 
 export const ProvidersPage: React.FC = () => {
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -77,6 +78,23 @@ export const ProvidersPage: React.FC = () => {
     }
   };
 
+  const handleSyncToCloud = async () => {
+    try {
+      const allProviders = await ProviderRepository.getAll();
+      if (allProviders.length === 0) {
+        toast.info('No hay proveedores para sincronizar.');
+        return;
+      }
+      toast.loading('Sincronizando proveedores a la nube...');
+      await syncProvidersToAppSheet(allProviders);
+      toast.dismiss();
+      toast.success('Proveedores sincronizados exitosamente.');
+    } catch (e: any) {
+      toast.dismiss();
+      toast.error('Error al sincronizar: ' + e.message);
+    }
+  };
+
   const filteredProviders = providers.filter(p => 
     p.name.toLowerCase().includes(search.toLowerCase()) || 
     p.rut.toLowerCase().includes(search.toLowerCase())
@@ -97,6 +115,13 @@ export const ProvidersPage: React.FC = () => {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={handleSyncToCloud}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-xl font-bold text-sm hover:bg-blue-200 transition-colors"
+            >
+              <UploadCloud className="w-5 h-5" />
+              <span className="hidden sm:inline">Sincronizar Nube</span>
+            </button>
             <button
               onClick={handleAutoFill}
               className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold text-sm hover:bg-slate-200 transition-colors"

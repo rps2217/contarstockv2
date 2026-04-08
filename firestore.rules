@@ -32,15 +32,17 @@ service cloud.firestore {
     // Domain Validators
     // ===============================================================
     function isValidProduct(data) {
-      return hasRequiredFields(['barcode', 'name']) &&
-             hasOnlyAllowedFields(['barcode', 'name', 'category', 'supplier', 'supplierRut', 'price', 'unitsPerBox']) &&
-             data.barcode is string && data.barcode.size() > 0 && data.barcode.size() < 100 &&
-             data.name is string && data.name.size() > 0 && data.name.size() < 200 &&
-             (data.category is string ? data.category.size() < 100 : true) &&
-             (data.supplier is string ? data.supplier.size() < 100 : true) &&
-             (data.supplierRut is string ? data.supplierRut.size() < 20 : true) &&
-             (data.price is number ? data.price >= 0 : true) &&
-             (data.unitsPerBox is number ? data.unitsPerBox >= 0 : true);
+      return (hasRequiredFields(['SKU', 'DESCRIPTOR']) || hasRequiredFields(['barcode', 'name'])) &&
+             hasOnlyAllowedFields(['SKU', 'DESCRIPTOR', 'CATEGORIA', 'MUNDO', 'PROVEEDOR', 'PROVEEDOR_RUT', 'PRECIO', 'UNIDADES_CAJA', 'FIRMA_IA', 'barcode', 'name', 'category', 'supplier', 'supplierRut', 'price', 'unitsPerBox']) &&
+             (data.SKU is string ? data.SKU.size() > 0 && data.SKU.size() < 100 : (data.barcode is string ? data.barcode.size() > 0 && data.barcode.size() < 100 : false)) &&
+             (data.DESCRIPTOR is string ? data.DESCRIPTOR.size() > 0 && data.DESCRIPTOR.size() < 200 : (data.name is string ? data.name.size() > 0 && data.name.size() < 200 : false)) &&
+             (data.CATEGORIA is string ? data.CATEGORIA.size() < 100 : true) &&
+             (data.MUNDO is string ? data.MUNDO.size() < 100 : true) &&
+             (data.PROVEEDOR is string ? data.PROVEEDOR.size() < 100 : true) &&
+             (data.PROVEEDOR_RUT is string ? data.PROVEEDOR_RUT.size() < 20 : true) &&
+             (data.PRECIO is number ? data.PRECIO >= 0 : (data.PRECIO is string ? true : true)) &&
+             (data.UNIDADES_CAJA is number ? data.UNIDADES_CAJA >= 0 : (data.UNIDADES_CAJA is string ? true : true)) &&
+             (data.FIRMA_IA is string ? true : true);
     }
 
     function isValidProvider(data) {
@@ -106,15 +108,15 @@ service cloud.firestore {
 
     match /PRODUCTOS/{barcode} {
       allow read: if isAuthenticated();
-      allow create: if isAdmin() && isValidProduct(request.resource.data);
-      allow update: if isAdmin() && isValidProduct(request.resource.data) && areImmutableFieldsUnchanged(['barcode']);
+      allow create: if isAuthenticated() && isValidProduct(request.resource.data);
+      allow update: if isAuthenticated() && isValidProduct(request.resource.data) && areImmutableFieldsUnchanged(['SKU', 'barcode']);
       allow delete: if isAdmin();
     }
 
     match /PROVEEDORES/{rut} {
       allow read: if isAuthenticated();
-      allow create: if isAdmin() && isValidProvider(request.resource.data);
-      allow update: if isAdmin() && isValidProvider(request.resource.data) && areImmutableFieldsUnchanged(['rut']);
+      allow create: if isAuthenticated() && isValidProvider(request.resource.data);
+      allow update: if isAuthenticated() && isValidProvider(request.resource.data) && areImmutableFieldsUnchanged(['rut']);
       allow delete: if isAdmin();
     }
 

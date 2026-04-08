@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Box, Lock, User, ArrowRight, AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
 import { auth, googleProvider } from '../lib/firebase';
-import { signInWithPopup } from 'firebase/auth';
+import { signInWithPopup, signInAnonymously } from 'firebase/auth';
 
 interface LoginProps {
  onLoginSuccess: () => void;
@@ -32,7 +32,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   }
  };
 
- const handleLogin = (e: React.FormEvent) => {
+ const handleLogin = async (e: React.FormEvent) => {
  e.preventDefault();
  setError('');
  
@@ -43,20 +43,28 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
  setIsLoading(true);
 
- setTimeout(() => {
- // Corrección: Uso de optional chaining (?.) para evitar crash si env es undefined
- // Fallback a 'admin' si no hay configuración
- const validPass = (import.meta as any).env?.VITE_APP_PASS || 'admin'; 
+ try {
+  const validPass = (import.meta as any).env?.VITE_APP_PASS || 'admin'; 
 
- if (password === validPass || password === 'admin') {
- localStorage.setItem('logicount_auth', 'true');
- localStorage.setItem('logicount_operator_id', username.trim().toUpperCase());
- onLoginSuccess();
- } else {
- setError('Contraseña incorrecta');
- setIsLoading(false);
+  if (password === validPass || password === 'admin') {
+   if (!auth.currentUser) {
+    await signInAnonymously(auth);
+   }
+   localStorage.setItem('logicount_auth', 'true');
+   localStorage.setItem('logicount_operator_id', username.trim().toUpperCase());
+   onLoginSuccess();
+  } else {
+   setError('Contraseña incorrecta');
+  }
+ } catch (err: any) {
+  if (err.code === 'auth/configuration-not-found') {
+   setError('Error: Autenticación anónima no habilitada en Firebase.');
+  } else {
+   setError('Error de autenticación: ' + err.message);
+  }
+ } finally {
+  setIsLoading(false);
  }
- }, 800);
  };
 
  return (

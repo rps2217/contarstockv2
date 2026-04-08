@@ -1,5 +1,5 @@
 
-import { CountingSession, Product, ConsolidatedItem } from "../types";
+import { CountingSession, Product, ConsolidatedItem, Provider } from "../types";
 import { getSettings } from "./settings"; 
 import { markScansAsSynced } from "./sessionService"; 
 import { markProductsAsSynced } from "./productService";
@@ -31,6 +31,32 @@ export const syncProductsToAppSheet = async (products: Product[]): Promise<void>
  await markProductsAsSynced(batch.map(p => p.barcode));
  } else {
  throw new Error(result?.error || "Error al respaldar firmas IA en lote " + (i+1));
+ }
+ }
+};
+
+export const syncProvidersToAppSheet = async (providers: Provider[]): Promise<void> => {
+ const config = getSettings().appSheetConfig;
+ if (!providers.length) return;
+
+ const BATCH_SIZE = 50;
+ const totalBatches = Math.ceil(providers.length / BATCH_SIZE);
+
+ for (let i = 0; i < totalBatches; i++) {
+ const batch = providers.slice(i * BATCH_SIZE, (i + 1) * BATCH_SIZE);
+ const rows = batch.map(p => ({
+   rut: p.rut,
+   name: p.name,
+   withdrawalDays: p.withdrawalDays,
+   hasExchange: p.hasExchange
+ }));
+ 
+ console.log(`[CloudSync] Subiendo lote Proveedores ${i+1}/${totalBatches}...`);
+
+ const result = await firebaseSyncService.pushBatch(config?.providersTableName || "PROVEEDORES", rows);
+ 
+ if (!result || !result.success) {
+ throw new Error(result?.error || "Error al respaldar proveedores en lote " + (i+1));
  }
  }
 };
