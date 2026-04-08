@@ -9,7 +9,8 @@ import {
   Settings2,
   AlertCircle,
   LayoutGrid,
-  List
+  List,
+  Cloud
 } from 'lucide-react';
 import { format, addMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -173,6 +174,21 @@ const ExpiryManagementPage: React.FC = () => {
                 <List className="w-4 h-4" />
               </button>
             </div>
+
+            <button 
+              onClick={actions.handleSyncExpirations}
+              disabled={state.isSyncing}
+              className={`border px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${
+                state.isSyncing 
+                  ? 'opacity-50 cursor-not-allowed' 
+                  : ui.theme === 'dark' 
+                    ? 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20 text-emerald-500' 
+                    : 'bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-600 shadow-sm'
+              }`}
+            >
+              <Cloud className={`w-3.5 h-3.5 ${state.isSyncing ? 'animate-bounce' : ''}`} />
+              {state.isSyncing ? 'Sincronizando...' : 'Sincronizar Nube'}
+            </button>
 
             <button 
               onClick={() => handleExportExpirationsCSV(state.processedScans)}

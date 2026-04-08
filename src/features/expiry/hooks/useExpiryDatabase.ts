@@ -177,13 +177,36 @@ export const useExpiryDatabase = () => {
   const handleSyncExpirations = useCallback(async () => {
     try {
       setIsSyncing(true);
-      addToast(`Sincronización completa.`, 'success');
+      const items = await expiryRepository.getAll();
+      if (items.length === 0) {
+        addToast('No hay registros locales para sincronizar.', 'info');
+        return;
+      }
+
+      // Preparar el lote para Firestore
+      const rows = items.map(item => ({
+        id: item.id,
+        ...item,
+        syncStatus: 'synced'
+      }));
+
+      const result = await firebaseSyncService.pushBatch(tableName, rows);
+      
+      if (result.success) {
+        // Actualizar estado local a synced
+        await expiryRepository.bulkSave(items.map(i => ({ ...i, syncStatus: 'synced' })));
+        addToast(`Sincronización completa: ${items.length} registros subidos.`, 'success');
+        SoundFX.play('success');
+      } else {
+        throw new Error(result.error);
+      }
     } catch (error: any) {
       addToast(`Error al sincronizar: ${error.message}`, 'error');
+      SoundFX.play('error');
     } finally {
       setIsSyncing(false);
     }
-  }, []);
+  }, [tableName, addToast]);
 
   const handleRemoveItem = useCallback(async (item: any) => {
     try {
