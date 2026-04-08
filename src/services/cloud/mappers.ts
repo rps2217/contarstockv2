@@ -33,6 +33,7 @@ export const createInventoryPayload = (
     if (session.sessionType === 'hammer') {
       // Use counts mapping
       return {
+        id: uniqueKey,
         [countsMapping?.id || SHEET_COLUMNS.ID]: uniqueKey,
         [countsMapping?.uniqueKey || SHEET_COLUMNS.UNIQUE_KEY]: uniqueKey,
         [countsMapping?.timestamp || 'FECHA']: dateStr,
@@ -48,6 +49,7 @@ export const createInventoryPayload = (
 
     // Use expiry mapping for consolidated/expiry
     return {
+      id: uniqueKey,
       [expiryMapping?.id || SHEET_COLUMNS.ID]: uniqueKey,
       [expiryMapping?.uniqueKey || SHEET_COLUMNS.UNIQUE_KEY]: uniqueKey,
       [SHEET_COLUMNS.ENTRY_DATE]: dateStr,
