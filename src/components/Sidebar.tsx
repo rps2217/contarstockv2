@@ -84,7 +84,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
         <NavItem path="/providers" activeKey="providers" label="Proveedores" icon={Container} />
         
         {(() => {
-          const schema = settings.appSheetConfig?.schema || settings.schema;
+          const schema = settings.cloudConfig?.schema || settings.schema;
           if (!schema || Object.keys(schema).length === 0) return null;
           
           return (

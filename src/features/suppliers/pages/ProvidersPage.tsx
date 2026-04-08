@@ -6,7 +6,7 @@ import { ProviderRepository } from '../../../repositories/ProviderRepository';
 import { db } from '../../../db';
 import { toast } from 'sonner';
 import { ProviderFormModal } from '../components/ProviderFormModal';
-import { syncProvidersToAppSheet } from '../../../services/appsheet';
+import { syncProvidersToCloud } from '../../../services/cloudSync';
 
 export const ProvidersPage: React.FC = () => {
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -86,7 +86,7 @@ export const ProvidersPage: React.FC = () => {
         return;
       }
       toast.loading('Sincronizando proveedores a la nube...');
-      await syncProvidersToAppSheet(allProviders);
+      await syncProvidersToCloud(allProviders);
       toast.dismiss();
       toast.success('Proveedores sincronizados exitosamente.');
     } catch (e: any) {

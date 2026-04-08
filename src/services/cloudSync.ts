@@ -11,8 +11,8 @@ import { createProductsPayload } from "./cloud/mappers";
  * RESPALDO DE INTELIGENCIA COLECTIVA (UPSERT)
  * Envía el catálogo con firmas IA en lotes pequeños para evitar Timeouts.
  */
-export const syncProductsToAppSheet = async (products: Product[]): Promise<void> => {
- const config = getSettings().appSheetConfig;
+export const syncProductsToCloud = async (products: Product[]): Promise<void> => {
+ const config = getSettings().cloudConfig;
  if (!products.length) return;
 
  // Lotes de 50 para manejar el peso de los vectores (embeddings)
@@ -35,8 +35,8 @@ export const syncProductsToAppSheet = async (products: Product[]): Promise<void>
  }
 };
 
-export const syncProvidersToAppSheet = async (providers: Provider[]): Promise<void> => {
- const config = getSettings().appSheetConfig;
+export const syncProvidersToCloud = async (providers: Provider[]): Promise<void> => {
+ const config = getSettings().cloudConfig;
  if (!providers.length) return;
 
  const BATCH_SIZE = 50;

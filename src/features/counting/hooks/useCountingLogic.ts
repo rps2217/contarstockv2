@@ -102,7 +102,7 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
     if (unknownSkus.length === 0) return;
 
     const timer = setTimeout(() => {
-      productService.resolveUnknownProducts(unknownSkus, settings.appSheetConfig);
+      productService.resolveUnknownProducts(unknownSkus, settings.cloudConfig);
     }, 1000);
     return () => clearTimeout(timer);
   }, [consolidatedHistory, settings]);

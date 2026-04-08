@@ -151,7 +151,7 @@ export const useSyncManager = () => {
     addLog(">>> INICIANDO VERIFICACIÓN DE INTEGRIDAD...", 'info');
 
     try {
-      const config = getSettings().appSheetConfig;
+      const config = getSettings().cloudConfig;
       const tableName = config?.countsTableName || 'CONTEOS';
       
       const allScans = await ScanRepository.getAll();

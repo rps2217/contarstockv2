@@ -215,8 +215,8 @@ export const InitializationService = {
         const cloudConfig = response.rows[0];
         const updated = { 
           ...settings, 
-          appSheetConfig: { 
-            ...settings.appSheetConfig, 
+          cloudConfig: { 
+            ...settings.cloudConfig, 
             ...cloudConfig 
           } 
         };

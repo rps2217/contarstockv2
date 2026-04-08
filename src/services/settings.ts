@@ -58,7 +58,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   ttsEnabled: false, 
   batchTrackingEnabled: true,
   lowEndMode: false,
-  appSheetConfig: {
+  cloudConfig: {
     appId: import.meta.env.VITE_APPSHEET_APP_ID || '',
     accessKey: import.meta.env.VITE_APPSHEET_ACCESS_KEY || '',
     spreadsheetId: import.meta.env.VITE_SPREADSHEET_ID || '',
@@ -165,9 +165,9 @@ export const getSettings = (): AppSettings => {
  return { 
  ...DEFAULT_SETTINGS, 
  ...parsed,
- appSheetConfig: {
- ...DEFAULT_SETTINGS.appSheetConfig,
- ...(parsed.appSheetConfig || {})
+ cloudConfig: {
+ ...DEFAULT_SETTINGS.cloudConfig,
+ ...(parsed.cloudConfig || {})
  },
  thermalPrinter: {
  ...DEFAULT_SETTINGS.thermalPrinter,

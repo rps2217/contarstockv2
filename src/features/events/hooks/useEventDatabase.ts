@@ -35,7 +35,7 @@ export const useEventDatabase = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [dateRange, setDateRange] = useState<{ start: string | null; end: string | null }>({ start: null, end: null });
 
-  const tableName = settings?.appSheetConfig?.eventsTableName || 'EVENTOS';
+  const tableName = settings?.cloudConfig?.eventsTableName || 'EVENTOS';
 
   const allProducts = useLiveQuery(() => productRepository.getAll(), []) || [];
   const localEvents = useLiveQuery(() => eventRepository.getAll(), []) || [];
@@ -59,7 +59,7 @@ export const useEventDatabase = () => {
   }, [tableName]);
 
   const baseProcessedData = useMemo(() => {
-    const eventMapping = settings?.appSheetConfig?.mappings?.events;
+    const eventMapping = settings?.cloudConfig?.mappings?.events;
     const items = localEvents || [];
     const result = [];
 
@@ -142,7 +142,7 @@ export const useEventDatabase = () => {
     }
 
     return result.sort((a, b) => b.timestamp - a.timestamp);
-  }, [localEvents, settings?.appSheetConfig?.mappings?.events, productMap]);
+  }, [localEvents, settings?.cloudConfig?.mappings?.events, productMap]);
 
   const handleRemoveItem = useCallback(async (item: any) => {
     try {
@@ -175,7 +175,7 @@ export const useEventDatabase = () => {
 
   // Helper to map internal keys back to configured mapping keys before saving to Firestore
   const unmapData = useCallback((data: any) => {
-    const eventMapping = settings?.appSheetConfig?.mappings?.events;
+    const eventMapping = settings?.cloudConfig?.mappings?.events;
     if (!eventMapping) return data;
 
     const unmapped: any = { ...data };
@@ -200,7 +200,7 @@ export const useEventDatabase = () => {
     if (data.claveUnica !== undefined) mapKey('claveUnica', eventMapping.uniqueKey || 'CLAVE_UNICA');
 
     return unmapped;
-  }, [settings?.appSheetConfig?.mappings?.events]);
+  }, [settings?.cloudConfig?.mappings?.events]);
 
   const handleAddItem = useCallback(async (data: any) => {
     try {

@@ -32,26 +32,15 @@ service cloud.firestore {
     // Domain Validators
     // ===============================================================
     function isValidProduct(data) {
-      return (hasRequiredFields(['SKU', 'DESCRIPTOR']) || hasRequiredFields(['barcode', 'name'])) &&
-             hasOnlyAllowedFields(['SKU', 'DESCRIPTOR', 'CATEGORIA', 'MUNDO', 'PROVEEDOR', 'PROVEEDOR_RUT', 'PRECIO', 'UNIDADES_CAJA', 'FIRMA_IA', 'barcode', 'name', 'category', 'supplier', 'supplierRut', 'price', 'unitsPerBox']) &&
-             (data.SKU is string ? data.SKU.size() > 0 && data.SKU.size() < 100 : (data.barcode is string ? data.barcode.size() > 0 && data.barcode.size() < 100 : false)) &&
-             (data.DESCRIPTOR is string ? data.DESCRIPTOR.size() > 0 && data.DESCRIPTOR.size() < 200 : (data.name is string ? data.name.size() > 0 && data.name.size() < 200 : false)) &&
-             (data.CATEGORIA is string ? data.CATEGORIA.size() < 100 : true) &&
-             (data.MUNDO is string ? data.MUNDO.size() < 100 : true) &&
-             (data.PROVEEDOR is string ? data.PROVEEDOR.size() < 100 : true) &&
-             (data.PROVEEDOR_RUT is string ? data.PROVEEDOR_RUT.size() < 20 : true) &&
-             (data.PRECIO is number ? data.PRECIO >= 0 : (data.PRECIO is string ? true : true)) &&
-             (data.UNIDADES_CAJA is number ? data.UNIDADES_CAJA >= 0 : (data.UNIDADES_CAJA is string ? true : true)) &&
-             (data.FIRMA_IA is string ? true : true);
+      return (hasRequiredFields(['SKU', 'DESCRIPTOR']) || hasRequiredFields(['barcode', 'name']) || hasRequiredFields(['COD PRODUCTO', 'DESCRIPCION'])) &&
+             (data.SKU is string ? data.SKU.size() > 0 && data.SKU.size() < 100 : (data.barcode is string ? data.barcode.size() > 0 && data.barcode.size() < 100 : (data['COD PRODUCTO'] is string ? data['COD PRODUCTO'].size() > 0 && data['COD PRODUCTO'].size() < 100 : false))) &&
+             (data.DESCRIPTOR is string ? data.DESCRIPTOR.size() > 0 && data.DESCRIPTOR.size() < 200 : (data.name is string ? data.name.size() > 0 && data.name.size() < 200 : (data['DESCRIPCION'] is string ? data['DESCRIPCION'].size() > 0 && data['DESCRIPCION'].size() < 200 : false)));
     }
 
     function isValidProvider(data) {
       return hasRequiredFields(['rut', 'name']) &&
-             hasOnlyAllowedFields(['rut', 'name', 'withdrawalDays', 'hasExchange']) &&
              data.rut is string && data.rut.size() > 0 && data.rut.size() < 20 &&
-             data.name is string && data.name.size() > 0 && data.name.size() < 200 &&
-             (data.withdrawalDays is number ? data.withdrawalDays >= 0 : true) &&
-             (data.hasExchange is bool ? true : true);
+             data.name is string && data.name.size() > 0 && data.name.size() < 200;
     }
 
     function isValidOrder(data) {

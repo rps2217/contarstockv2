@@ -4,7 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { Product } from '../../../types';
 import * as productService from '../../../services/productService';
 import { importProductsFromFirestore } from '../../../services/syncManager';
-import { syncProductsToAppSheet } from '../../../services/appsheet';
+import { syncProductsToCloud } from '../../../services/cloudSync';
 import { fuzzySearchProducts } from '../../../services/search';
 import { VectorService } from '../../../services/vectorService';
 import { localBrain } from '../../../services/localBrain';
@@ -105,7 +105,7 @@ export const useProductDatabase = () => {
  if (unsyncedProds.length === 0) return;
  setIsSyncing(true);
  try {
- await syncProductsToAppSheet(unsyncedProds);
+ await syncProductsToCloud(unsyncedProds);
  showFeedback('success', 'Catálogo sincronizado');
  } catch (err: any) {
  showFeedback('error', err.message);

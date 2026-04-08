@@ -10,7 +10,7 @@ export interface TestResult {
 
 export const runStockEngineTest = async (): Promise<TestResult[]> => {
  const results: TestResult[] = [];
- const config = getSettings().appSheetConfig;
+ const config = getSettings().cloudConfig;
 
   // 1. Verificar Configuración Local
   if (!config) {

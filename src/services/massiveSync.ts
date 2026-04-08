@@ -88,7 +88,7 @@ export const pushScansToCloud = async (batchId: string): Promise<void> => {
       timestamp: new Date(s.timestamp).toISOString()
     }));
 
-    const config = getSettings().appSheetConfig;
+    const config = getSettings().cloudConfig;
     const tableName = config?.countsTableName || 'CONTEOS';
 
     await firebaseSyncService.pushBatch(tableName, payload);

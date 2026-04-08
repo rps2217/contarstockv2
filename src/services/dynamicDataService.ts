@@ -34,7 +34,7 @@ export const dynamicDataService = {
     (async () => {
       try {
         const settings = (await import('./settings')).getSettings();
-        const config = settings.appSheetConfig;
+        const config = settings.cloudConfig;
         
         const idCol = config?.mappings?.events?.id || 'ID';
         const remoteId = record.data[idCol] || record.data['ID'] || record.data['id'] || record.data['CLAVE_UNICA'] || record.data['uniqueKey'] || record.id;
@@ -55,7 +55,7 @@ export const dynamicDataService = {
     try {
       const rowData = { ...record.data };
       const settings = (await import('./settings')).getSettings();
-      const config = settings.appSheetConfig;
+      const config = settings.cloudConfig;
       
       let idCol = 'ID';
       let tsCol = 'TIMESTAMP';
@@ -103,7 +103,7 @@ export const dynamicDataService = {
     }
 
     const settings = (await import('./settings')).getSettings();
-    const config = settings.appSheetConfig;
+    const config = settings.cloudConfig;
 
     for (const [tableName, records] of Object.entries(groups)) {
       try {

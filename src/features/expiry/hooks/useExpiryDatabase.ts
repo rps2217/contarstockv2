@@ -23,8 +23,8 @@ export const useExpiryDatabase = () => {
   const { addToast } = useToastStore.getState();
   const { settings } = useAppStore();
   const { addTask, updateTask } = useTaskStore();
-  const tableName = settings?.appSheetConfig?.inventoryRegistryTableName || 
-                    settings?.appSheetConfig?.expiryTableName || 
+  const tableName = settings?.cloudConfig?.inventoryRegistryTableName || 
+                    settings?.cloudConfig?.expiryTableName || 
                     'VENCIMIENTOS';
   
     const {
@@ -83,7 +83,7 @@ export const useExpiryDatabase = () => {
 
   const baseProcessedData = useMemo(() => {
     const now = new Date();
-    const expiryMapping = settings?.appSheetConfig?.mappings?.expiry;
+    const expiryMapping = settings?.cloudConfig?.mappings?.expiry;
     
     const getVal = (obj: any, keys: string[]) => {
       for (const k of keys) {
@@ -123,7 +123,7 @@ export const useExpiryDatabase = () => {
           syncStatus: record.syncStatus || 'synced'
         }, productMap, providerMap, now);
       });
-  }, [localItems, settings?.appSheetConfig?.mappings?.expiry, productMap, providerMap]);
+  }, [localItems, settings?.cloudConfig?.mappings?.expiry, productMap, providerMap]);
 
   const categories = useMemo(() => {
     const cats = new Set<string>();

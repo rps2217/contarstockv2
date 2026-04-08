@@ -50,7 +50,7 @@ const commitBufferToDatabase = async () => {
     // Empuje proactivo a Firestore (Sincronización Inteligente)
     if (navigator.onLine) {
       const settings = getSettings();
-      const targetTable = settings.appSheetConfig?.countsTableName || 'CONTEOS';
+      const targetTable = settings.cloudConfig?.countsTableName || 'CONTEOS';
       firebaseSyncService.pushBatch(targetTable, records).then(res => {
         if (res.success) {
           markScansAsSynced(records.map(r => r.id));
@@ -189,7 +189,7 @@ export const createSession = async (
   // Sincronización proactiva de sesión
   if (navigator.onLine) {
     const settings = getSettings();
-    const sessionsTable = settings.appSheetConfig?.sessionsTableName || 'SESSIONS';
+    const sessionsTable = settings.cloudConfig?.sessionsTableName || 'SESSIONS';
     firebaseSyncService.pushChange(sessionsTable, s.id, s);
   }
 
@@ -220,7 +220,7 @@ export const createDraftSession = async (label: string, erpOrder?: string, mm?: 
  // Sincronización proactiva de sesión borrador
  if (navigator.onLine) {
    const settings = getSettings();
-   const sessionsTable = settings.appSheetConfig?.sessionsTableName || 'SESSIONS';
+   const sessionsTable = settings.cloudConfig?.sessionsTableName || 'SESSIONS';
    firebaseSyncService.pushChange(sessionsTable, s.id, s);
  }
 
@@ -231,7 +231,7 @@ export const createDraftSession = async (label: string, erpOrder?: string, mm?: 
 export const fetchExpectedItemsFromCloud = async (erp: string): Promise<ExpectedOrder | null> => {
  try {
  const settings = getSettings();
- const tableName = settings.appSheetConfig?.ordersTableName || 'PEDIDOS';
+ const tableName = settings.cloudConfig?.ordersTableName || 'PEDIDOS';
  const res = await firebaseSyncService.pullBatch(tableName);
  if (res.success && res.rows) {
  const rows = res.rows
@@ -273,7 +273,7 @@ export const closeSession = async (id: string) => {
     const session = await db.sessions.get(id);
     if (session) {
       const settings = getSettings();
-      const sessionsTable = settings.appSheetConfig?.sessionsTableName || 'SESSIONS';
+      const sessionsTable = settings.cloudConfig?.sessionsTableName || 'SESSIONS';
       firebaseSyncService.pushChange(sessionsTable, id, session);
     }
   }

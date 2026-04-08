@@ -53,7 +53,7 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
         setProductName('BUSCANDO EN LA NUBE...');
         
         const settings = (await import('../../../services/settings')).getSettings();
-        const config = settings.appSheetConfig;
+        const config = settings.cloudConfig;
         const productsTable = config?.productsTableName || 'PRODUCTOS';
         const barcodeCol = config?.mappings?.products?.barcode || 'SKU';
         const nameCol = config?.mappings?.products?.name || 'DESCRIPTOR';

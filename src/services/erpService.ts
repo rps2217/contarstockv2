@@ -20,7 +20,7 @@ export const erpService = {
    */
   async downloadManifest(manifestId: string): Promise<ErpManifest> {
     try {
-      const config = getSettings().appSheetConfig;
+      const config = getSettings().cloudConfig;
       const tableName = config?.ordersTableName || 'PEDIDOS';
       const res = await firebaseSyncService.pullBatch(tableName);
       
@@ -84,7 +84,7 @@ export const erpService = {
    */
   async downloadAllPendingManifests(): Promise<ErpManifest[]> {
     try {
-      const config = getSettings().appSheetConfig;
+      const config = getSettings().cloudConfig;
       const tableName = config?.ordersTableName || 'PEDIDOS';
       const res = await firebaseSyncService.pullBatch(tableName);
       

@@ -17,7 +17,7 @@ export const CloudProductSchema = z.record(z.any()).transform((raw) => {
  normalized[key] = raw[k];
  });
 
- const mapping = getSettings().appSheetConfig?.mappings?.products;
+ const mapping = getSettings().cloudConfig?.mappings?.products;
 
  const getVal = (keys: string[]) => {
   for (const k of keys) {

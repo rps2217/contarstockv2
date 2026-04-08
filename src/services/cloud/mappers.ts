@@ -14,7 +14,7 @@ export const createInventoryPayload = (
   items: ConsolidatedItem[],
   source: 'manual' | 'background' = 'manual'
 ) => {
-  const config = getSettings().appSheetConfig;
+  const config = getSettings().cloudConfig;
   const countsMapping = config?.mappings?.counts as CountMapping | undefined;
   const expiryMapping = (config?.mappings?.expiry || config?.columnMapping) as ExpiryMapping | undefined;
 
@@ -70,7 +70,7 @@ export const createInventoryPayload = (
 };
 
 export const createProductsPayload = (products: Product[]) => {
-  const config = getSettings().appSheetConfig;
+  const config = getSettings().cloudConfig;
   const mapping = config?.mappings?.products;
 
   return products.map(p => ({

@@ -20,8 +20,8 @@ export const useExpiryWatcher = () => {
   const addToast = useToastStore(state => state.addToast);
   const lastCount = useRef<number | null>(null);
 
-  const tableName = settings?.appSheetConfig?.inventoryRegistryTableName || 
-                    settings?.appSheetConfig?.expiryTableName || 
+  const tableName = settings?.cloudConfig?.inventoryRegistryTableName || 
+                    settings?.cloudConfig?.expiryTableName || 
                     'VENCIMIENTOS';
 
   useEffect(() => {
@@ -65,7 +65,7 @@ export const useExpiryWatcher = () => {
           });
 
           const now = new Date();
-          const expiryMapping = settings?.appSheetConfig?.mappings?.expiry;
+          const expiryMapping = settings?.cloudConfig?.mappings?.expiry;
 
           const alertItems: any[] = [];
 

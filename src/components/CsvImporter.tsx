@@ -66,10 +66,10 @@ export const CsvImporter: React.FC = () => {
       const eventData = validData.filter(row => row.event !== 'VENCIMIENTOS');
 
       if (expiryData.length > 0) {
-        await firebaseSyncService.pushBatch(settings?.appSheetConfig?.expiryTableName || 'VENCIMIENTOS', expiryData);
+        await firebaseSyncService.pushBatch(settings?.cloudConfig?.expiryTableName || 'VENCIMIENTOS', expiryData);
       }
       if (eventData.length > 0) {
-        await firebaseSyncService.pushBatch(settings?.appSheetConfig?.eventsTableName || 'EVENTOS', eventData);
+        await firebaseSyncService.pushBatch(settings?.cloudConfig?.eventsTableName || 'EVENTOS', eventData);
       }
 
       toast.success(`Importación completada: ${expiryData.length} vencimientos, ${eventData.length} eventos.`);

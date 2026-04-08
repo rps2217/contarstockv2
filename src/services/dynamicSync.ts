@@ -53,7 +53,7 @@ export const dynamicSyncService = {
         
         try {
           // Preparar las filas para el envío
-          const config = settings.appSheetConfig;
+          const config = settings.cloudConfig;
           let idCol = 'ID';
           let tsCol = 'TIMESTAMP';
 
@@ -154,7 +154,7 @@ export const dynamicSyncService = {
     let updated = 0;
 
     const settings = getSettings();
-    const config = settings.appSheetConfig;
+    const config = settings.cloudConfig;
     
     // Determinar qué mapeo usar según la tabla
     let idColumn = 'ID';

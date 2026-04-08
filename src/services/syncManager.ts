@@ -135,7 +135,7 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
   useSyncStore.getState().setSyncing(true);
 
   try {
-    const config = getSettings().appSheetConfig;
+    const config = getSettings().cloudConfig;
     
     if (group.type === 'dynamic' && group.tableName) {
       await dynamicSyncService.syncAllPending(onProgress, group.tableName);
@@ -233,7 +233,7 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
 
 export const importProductsFromFirestore = async (): Promise<number> => {
   try {
-    const config = getSettings().appSheetConfig;
+    const config = getSettings().cloudConfig;
     const tableName = config?.productsTableName || "PRODUCTOS";
     const response = await firebaseSyncService.pullBatch(tableName);
     
@@ -263,7 +263,7 @@ export const importProductsFromFirestore = async (): Promise<number> => {
 
 export const importProvidersFromFirestore = async (): Promise<number> => {
   try {
-    const config = getSettings().appSheetConfig;
+    const config = getSettings().cloudConfig;
     const tableName = config?.providersTableName || "PROVEEDORES";
     const response = await firebaseSyncService.pullBatch(tableName);
     

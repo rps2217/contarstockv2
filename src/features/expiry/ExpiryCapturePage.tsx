@@ -180,7 +180,7 @@ export const ExpiryCapturePage: React.FC = () => {
   const { addToast } = useToastStore.getState();
   const { state, actions } = useExpiryDatabase();
   const { feedback, trigger } = useFeedbackSystem(400);
-  const expirySchema = useAppStore(s => s.settings.appSheetConfig?.schema?.expiry || s.settings.schema?.expiry);
+  const expirySchema = useAppStore(s => s.settings.cloudConfig?.schema?.expiry || s.settings.schema?.expiry);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false); // This is for the modal (legacy/alternative)

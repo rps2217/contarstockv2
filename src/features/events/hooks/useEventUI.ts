@@ -117,7 +117,7 @@ export const useEventUI = () => {
   const handleSync = async () => {
     try {
       setIsSyncing(true);
-      const tableName = settings?.appSheetConfig?.eventsTableName || 'EVENTOS';
+      const tableName = settings?.cloudConfig?.eventsTableName || 'EVENTOS';
       const result = await dynamicSyncService.pullSync(tableName);
       toast.success(`Sincronización completada. ${result.added} añadidos, ${result.updated} actualizados.`);
     } catch (error: any) {

@@ -184,7 +184,7 @@ export interface AppSettings {
  ttsEnabled: boolean; 
  batchTrackingEnabled: boolean;
  lowEndMode?: boolean;
- appSheetConfig?: AppSheetConfig;
+ cloudConfig?: CloudConfig;
  schema?: AppSchema;
  mobileNavConfig?: ViewState[]; 
  defaultStartModule?: ViewState;
