@@ -80,7 +80,7 @@ export const ProviderFormModal: React.FC<Props> = ({ isOpen, onClose, onSave, in
                 value={formData.rut}
                 onChange={e => setFormData({ ...formData, rut: e.target.value })}
                 placeholder="Ej: 76.123.456-7"
-                className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:bg-white outline-none transition-all font-medium disabled:opacity-50"
+                className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:bg-white outline-none transition-all font-medium text-slate-900 disabled:opacity-50"
               />
               {!initialData && (
                 <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1">
@@ -99,7 +99,7 @@ export const ProviderFormModal: React.FC<Props> = ({ isOpen, onClose, onSave, in
                 value={formData.name}
                 onChange={e => setFormData({ ...formData, name: e.target.value.toUpperCase() })}
                 placeholder="Ej: LABORATORIOS CHILE S.A."
-                className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:bg-white outline-none transition-all font-medium uppercase"
+                className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:bg-white outline-none transition-all font-medium text-slate-900 uppercase"
               />
             </div>
           </div>
@@ -134,7 +134,7 @@ export const ProviderFormModal: React.FC<Props> = ({ isOpen, onClose, onSave, in
                   max="365"
                   value={formData.withdrawalDays}
                   onChange={e => setFormData({ ...formData, withdrawalDays: parseInt(e.target.value) || 0 })}
-                  className="w-24 px-4 py-2 bg-white border-2 border-slate-200 rounded-xl focus:border-indigo-500 outline-none transition-all font-black text-center text-lg"
+                  className="w-24 px-4 py-2 bg-white border-2 border-slate-200 rounded-xl focus:border-indigo-500 outline-none transition-all font-black text-center text-lg text-slate-900"
                 />
                 <span className="text-sm font-bold text-slate-600">Días antes de la fecha de caducidad</span>
               </div>

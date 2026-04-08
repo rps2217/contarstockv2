@@ -122,7 +122,7 @@ export const ProvidersPage: React.FC = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar por nombre o RUT..."
-            className="w-full pl-10 pr-4 py-2 bg-slate-100 border-transparent focus:bg-white focus:border-indigo-500 rounded-xl text-sm font-medium transition-all outline-none border-2"
+            className="w-full pl-10 pr-4 py-2 bg-slate-100 border-transparent focus:bg-white focus:border-indigo-500 rounded-xl text-sm font-medium text-slate-900 transition-all outline-none border-2"
           />
         </div>
       </div>
