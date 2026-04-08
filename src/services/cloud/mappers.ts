@@ -74,6 +74,7 @@ export const createProductsPayload = (products: Product[]) => {
   const mapping = config?.mappings?.products;
 
   return products.map(p => ({
+    id: p.barcode,
     [mapping?.barcode || SHEET_COLUMNS.BARCODE]: p.barcode,
     [mapping?.name || SHEET_COLUMNS.PRODUCT_NAME]: p.name,
     [mapping?.category || "MUNDO"]: p.category,

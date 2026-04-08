@@ -45,6 +45,7 @@ export const syncProvidersToCloud = async (providers: Provider[]): Promise<void>
  for (let i = 0; i < totalBatches; i++) {
  const batch = providers.slice(i * BATCH_SIZE, (i + 1) * BATCH_SIZE);
  const rows = batch.map(p => ({
+   id: p.rut,
    rut: p.rut,
    name: p.name,
    withdrawalDays: p.withdrawalDays,

@@ -241,6 +241,7 @@ export const importProductsFromFirestore = async (): Promise<number> => {
 
     const products: Product[] = response.rows
       .map((p: any) => {
+        if (p.id === 'undefined') return null;
         const result = CloudProductSchema.safeParse(p);
         if (!result.success) {
           console.warn("Product validation failed:", p, (result as any).error);
@@ -270,6 +271,7 @@ export const importProvidersFromFirestore = async (): Promise<number> => {
     if (!response.success || !response.rows) return 0;
 
     const providers: Provider[] = response.rows
+      .filter((row: any) => row.id !== 'undefined')
       .map((row: any) => {
         const rut = String(row.rut || row.RUT || row.ID || row.ID_RUT || '');
         const name = String(row.name || row.NOMBRE || row.PROVEEDOR || '');
