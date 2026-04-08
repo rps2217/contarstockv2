@@ -243,7 +243,7 @@ export const importProductsFromFirestore = async (): Promise<number> => {
       .map((p: any) => {
         const result = CloudProductSchema.safeParse(p);
         if (!result.success) {
-          console.warn("Product validation failed:", p, result.error);
+          console.warn("Product validation failed:", p, (result as any).error);
         }
         return result.success ? result.data : null;
       })

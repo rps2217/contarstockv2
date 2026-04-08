@@ -15,6 +15,7 @@ export const useProductForm = ({ initialData, onSaveSuccess, onClose }: UseProdu
   const [formData, setFormData] = useState<Product>({ 
     barcode: '', name: '', category: '', supplier: '', supplierRut: '' 
   });
+  const [isDuplicating, setIsDuplicating] = useState(false);
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const addToast = useToastStore(state => state.addToast);
@@ -22,14 +23,22 @@ export const useProductForm = ({ initialData, onSaveSuccess, onClose }: UseProdu
   useEffect(() => {
     if (initialData) {
       setFormData({ ...initialData });
+      setIsDuplicating(false);
     } else {
       setFormData({ barcode: '', name: '', category: '', supplier: '', supplierRut: '' });
+      setIsDuplicating(false);
     }
     setError('');
   }, [initialData]);
 
   const updateField = (key: keyof Product, value: any) => {
     setFormData(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleDuplicate = () => {
+    setFormData(prev => ({ ...prev, barcode: '' }));
+    setIsDuplicating(true);
+    addToast('Modo duplicación: Ingrese el nuevo SKU', 'info');
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -71,7 +80,9 @@ export const useProductForm = ({ initialData, onSaveSuccess, onClose }: UseProdu
     formData,
     error,
     isSaving,
+    isDuplicating,
     updateField,
+    handleDuplicate,
     handleSave
   };
 };

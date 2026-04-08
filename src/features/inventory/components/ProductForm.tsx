@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Product } from '../../../types';
-import { Pencil, Plus, Save, Box, ScanLine } from 'lucide-react';
+import { Pencil, Plus, Save, Box, ScanLine, Copy } from 'lucide-react';
 import { useProductForm } from '../hooks/useProductForm';
 import { Modal } from '../../../shared/components/ui/Modal';
 import { SettingsButton, SettingsInput } from '../../settings/components/common/SettingsElements';
@@ -14,21 +14,37 @@ interface ProductFormProps {
 }
 
 export const ProductForm: React.FC<ProductFormProps> = ({ isOpen, onClose, initialData, onSaveSuccess }) => {
- const { formData, error, isSaving, updateField, handleSave } = useProductForm({
- initialData, onSaveSuccess, onClose
- });
+  const { formData, error, isSaving, isDuplicating, updateField, handleDuplicate, handleSave } = useProductForm({
+    initialData, onSaveSuccess, onClose
+  });
 
- return (
- <Modal isOpen={isOpen} onClose={onClose} className="md:max-w-md" showCloseButton={true}>
- <div className="px-8 pt-8 pb-4 flex items-center gap-4">
- <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shrink-0 border border-blue-100">
- {initialData ? <Pencil className="w-6 h-6" /> : <Plus className="w-6 h-6" />}
- </div>
- <div>
- <h2 className="text-2xl font-black text-slate-900 leading-none tracking-tight">{initialData ? 'Editar SKU' : 'Nuevo SKU'}</h2>
- <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">Ficha Maestra de Producto</p>
- </div>
- </div>
+  const title = isDuplicating ? 'Duplicar Producto' : (initialData ? 'Editar SKU' : 'Nuevo SKU');
+  const icon = isDuplicating ? <Copy className="w-6 h-6" /> : (initialData ? <Pencil className="w-6 h-6" /> : <Plus className="w-6 h-6" />);
+
+  return (
+  <Modal isOpen={isOpen} onClose={onClose} className="md:max-w-md" showCloseButton={true}>
+  <div className="px-8 pt-8 pb-4 flex items-center justify-between">
+    <div className="flex items-center gap-4">
+      <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shrink-0 border border-blue-100">
+        {icon}
+      </div>
+      <div>
+        <h2 className="text-2xl font-black text-slate-900 leading-none tracking-tight">{title}</h2>
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">Ficha Maestra de Producto</p>
+      </div>
+    </div>
+    {initialData && !isDuplicating && (
+      <button
+        type="button"
+        onClick={handleDuplicate}
+        className="p-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-colors flex items-center gap-2 font-bold text-xs uppercase tracking-widest"
+        title="Duplicar con nuevo SKU"
+      >
+        <Copy className="w-4 h-4" />
+        <span className="hidden sm:inline">Duplicar</span>
+      </button>
+    )}
+  </div>
 
  <form onSubmit={handleSave} className="px-8 pb-8 space-y-5">
  
@@ -38,7 +54,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ isOpen, onClose, initi
  <ScanLine className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
  <input
  required
- disabled={!!initialData}
+ disabled={!!initialData && !isDuplicating}
  value={formData.barcode}
  onChange={(e) => updateField('barcode', e.target.value)}
  className="w-full h-14 pl-12 pr-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-mono font-bold text-slate-900 outline-none focus:bg-white focus:border-blue-500 transition-all placeholder:text-slate-300 disabled:opacity-60 disabled:bg-slate-100"
@@ -89,8 +105,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({ isOpen, onClose, initi
  <div className="pt-2">
  <SettingsButton 
  type="submit" 
- label="Guardar Cambios" 
- icon={Save} 
+ label={isDuplicating ? "Crear Duplicado" : (initialData ? "Guardar Cambios" : "Crear Producto")} 
+ icon={isDuplicating ? Copy : Save} 
  isLoading={isSaving} 
  variant="primary" 
  />
