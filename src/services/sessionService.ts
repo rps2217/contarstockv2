@@ -206,7 +206,7 @@ export const createDraftSession = async (label: string, erpOrder?: string, mm?: 
  logisticsLabel: String(label || '').trim().toUpperCase(), 
  createdAt: Date.now(), 
  status: 'draft', 
- sessionType: 'standard',
+ sessionType: 'reception',
  totalUnits: 0, 
  totalSKUs: 0,
  expectedItems: [],

@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useEffect } from "react";
-import { Archive, WifiOff, Zap, Package } from "lucide-react";
+import { Archive, WifiOff, Zap, Package, History } from "lucide-react";
 import { StartSessionModal } from "../../components/StartSessionModal";
 import { SearchBar } from "../../components/SearchBar";
 import { ReportDetail } from "./components/ReportDetail";
@@ -87,6 +87,14 @@ export const Reports: React.FC = () => {
             Ver Cargas
           </button>
         )}
+        <button
+          onClick={() => navigate("/reception/history")}
+          className={`text-[10px] font-black px-3 py-1.5 rounded-lg uppercase transition-colors flex items-center gap-2 ${
+            theme === 'dark' ? 'bg-emerald-900/20 text-emerald-500 hover:bg-emerald-900/40' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
+          }`}
+        >
+          <History className="w-3 h-3" /> Gestión Recepción
+        </button>
       </div>
 
       <ReportsHeader

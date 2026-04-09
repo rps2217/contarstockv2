@@ -41,6 +41,28 @@ export class SessionRepository {
     return await collection.reverse().limit(limit).toArray();
   }
 
+  static async getReceptionHistory(query: string, limit: number, startDate?: number, endDate?: number): Promise<CountingSession[]> {
+    let collection = db.sessions.where('sessionType').equals('reception');
+    
+    if (startDate || endDate) {
+      collection = db.sessions.where('createdAt').between(startDate || 0, endDate || Date.now(), true, true)
+        .and(s => s.sessionType === 'reception');
+    }
+
+    if (query) {
+      return await collection
+        .filter(s => 
+          (s.erpOrder?.toLowerCase() || '').includes(query) || 
+          (s.logisticsLabel?.toLowerCase() || '').includes(query)
+        )
+        .reverse()
+        .limit(limit)
+        .toArray();
+    }
+
+    return await collection.reverse().limit(limit).toArray();
+  }
+
   static async save(session: CountingSession): Promise<void> {
     await db.sessions.put(session);
   }

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, History } from 'lucide-react';
 import ReceptionPage from './ReceptionPage';
 
 export const ReceptionHub: React.FC = () => {
@@ -20,7 +20,12 @@ export const ReceptionHub: React.FC = () => {
           <span className="text-[8px] font-black uppercase tracking-[0.3em] text-white/40 leading-none mb-1">CONTROL</span>
           <span className="text-xs font-black uppercase tracking-widest text-white italic">Arribo de Bultos</span>
         </div>
-        <div className="w-10"></div>
+        <button 
+          onClick={() => navigate('/reception/history')} 
+          className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl active:bg-blue-600 transition-colors"
+        >
+          <History className="w-5 h-5 text-white" />
+        </button>
       </header>
       <div className="flex-1 min-h-0 relative">
         <ReceptionPage isEmbedded />

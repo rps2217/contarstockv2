@@ -1,7 +1,8 @@
 
 import React from 'react';
-import { Lock, Unlock, X, Trash2, Cloud, Printer } from 'lucide-react';
+import { Lock, Unlock, X, Trash2, Cloud, Printer, History } from 'lucide-react';
 import { Modal } from '../../../shared/components/ui/Modal';
+import { useNavigate } from 'react-router-dom';
 
 interface Props {
   isOpen: boolean;
@@ -16,6 +17,7 @@ interface Props {
 export const ReceptionToolsSheet: React.FC<Props> = ({ 
   isOpen, onClose, isAutoLockEnabled, onToggleAutoLock, onDiscardAll, onSync, isSyncing 
 }) => {
+  const navigate = useNavigate();
   
   const ToolButton = ({ onClick, icon: Icon, label, color, disabled = false, loading = false }: any) => (
     <button
@@ -66,6 +68,12 @@ export const ReceptionToolsSheet: React.FC<Props> = ({
             icon={Printer} 
             label="Imprimir Resumen" 
             color="text-emerald-400 border-emerald-500/20" 
+          />
+          <ToolButton 
+            onClick={() => navigate('/reception/history')} 
+            icon={History} 
+            label="Ver Historial" 
+            color="text-slate-400 border-slate-500/20" 
           />
           <ToolButton 
             onClick={onDiscardAll} 

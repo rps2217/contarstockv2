@@ -76,7 +76,7 @@ export interface CountingSession {
  logisticsLabel: string;
  createdAt: number;
  status: 'active' | 'completed' | 'draft';
- sessionType: 'standard' | 'hammer'; 
+ sessionType: 'standard' | 'hammer' | 'reception'; 
  operatorId?: string;
  totalUnits?: number;
  totalSKUs?: number;

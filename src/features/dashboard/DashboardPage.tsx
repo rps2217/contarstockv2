@@ -477,7 +477,19 @@ const Dashboard: React.FC = () => {
 
         {/* ACCIONES RÁPIDAS Y HERRAMIENTAS */}
         <div className="grid grid-cols-1 gap-4">
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-2 gap-4">
+            <Card
+              hoverable
+              onClick={() => navigate("/reception/history")}
+              className="flex items-center gap-3 p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-3xl"
+            >
+              <div className="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-xl">
+                <History className="w-5 h-5 text-emerald-600 dark:text-emerald-500" />
+              </div>
+              <span className="text-xs font-bold uppercase tracking-wider">
+                Gestión Recepción
+              </span>
+            </Card>
             <Card
               hoverable
               onClick={() => navigate("/massive/BURST-MODE")}
