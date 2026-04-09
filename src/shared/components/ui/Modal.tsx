@@ -56,7 +56,7 @@ export const Modal: React.FC<ModalProps> = ({
  // Z-Index 200: Modales estándar (debajo del teclado que es 2000)
  <div className={`fixed inset-0 z-[200] ${containerClasses[variant]}`}>
  <div 
- className="absolute inset-0 bg-slate-900/80 transition-opacity animate-in fade-in duration-300" 
+ className="absolute inset-0 bg-brand-dark/80 backdrop-blur-sm transition-opacity animate-in fade-in duration-300" 
  onClick={onClose} 
  />
  

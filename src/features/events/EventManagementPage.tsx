@@ -105,8 +105,8 @@ const EventManagementPage: React.FC = () => {
   };
 
   return (
-    <div className={`h-full flex flex-col overflow-hidden font-sans selection:bg-blue-500/30 transition-colors duration-500 ${
-      ui.theme === 'dark' ? 'bg-black text-white' : 'bg-slate-50 text-slate-900'
+    <div className={`h-full flex flex-col overflow-hidden font-sans selection:bg-brand-warning/30 transition-colors duration-500 ${
+      ui.theme === 'dark' ? 'bg-brand-dark text-white' : 'bg-slate-50 text-slate-900'
     }`}>
       {/* HEADER */}
       <EventHeader 
@@ -134,7 +134,7 @@ const EventManagementPage: React.FC = () => {
 
       {/* DUAL PANELS */}
       <div className={`flex-1 flex flex-col md:flex-row overflow-hidden gap-4 p-4 md:p-6 ${
-        ui.theme === 'dark' ? 'bg-black' : 'bg-slate-50'
+        ui.theme === 'dark' ? 'bg-brand-dark' : 'bg-slate-50'
       }`}>
         {/* PENDING PANEL */}
         {(ui.expandedPanel === 'dual' || ui.expandedPanel === 'pending') && (

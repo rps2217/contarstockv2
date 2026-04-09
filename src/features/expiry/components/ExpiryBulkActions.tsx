@@ -36,7 +36,7 @@ export const ExpiryBulkActions: React.FC<ExpiryBulkActionsProps> = ({
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className={`fixed top-0 right-0 h-full w-80 z-[70] shadow-2xl border-l flex flex-col pointer-events-auto ${
-              theme === 'dark' ? 'bg-slate-900 border-white/10' : 'bg-white border-slate-200'
+              theme === 'dark' ? 'bg-brand-surface border-white/10' : 'bg-white border-slate-200'
             }`}
           >
             <div className="p-6 flex items-center justify-between border-bottom border-white/5">
@@ -63,7 +63,7 @@ export const ExpiryBulkActions: React.FC<ExpiryBulkActionsProps> = ({
 
             <div className="flex-1 p-6 space-y-4">
               <div className={`p-4 rounded-2xl border ${
-                theme === 'dark' ? 'bg-white/5 border-white/5' : 'bg-slate-50 border-slate-100'
+                theme === 'dark' ? 'bg-brand-dark border-white/5' : 'bg-slate-50 border-slate-100'
               }`}>
                 <p className={`text-[10px] font-bold uppercase tracking-widest mb-4 ${
                   theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
@@ -86,7 +86,7 @@ export const ExpiryBulkActions: React.FC<ExpiryBulkActionsProps> = ({
                     onClick={onPrintSelected}
                     className={`w-full px-4 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 transition-all border ${
                       theme === 'dark' 
-                        ? 'bg-slate-800 hover:bg-slate-700 text-white border-white/5' 
+                        ? 'bg-brand-dark hover:bg-brand-dark/80 text-white border-white/5' 
                         : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 shadow-sm'
                     }`}
                   >

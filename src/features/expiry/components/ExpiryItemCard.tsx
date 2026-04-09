@@ -96,7 +96,7 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
 
   const getCardStyles = () => {
     let base = isCompact ? 'p-3 md:p-2' : 'p-4';
-    let themeBase = theme === 'dark' ? 'bg-white/5 border-white/5' : 'bg-stone-50 shadow-sm border-stone-200';
+    let themeBase = theme === 'dark' ? 'bg-brand-surface border-white/5' : 'bg-stone-50 shadow-sm border-stone-200';
     
     if (isSelected) {
       return `${base} border-indigo-500 bg-indigo-500/10`;
@@ -176,7 +176,7 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
                 addToast(`SKU ${item.barcode} copiado al portapapeles`, 'success');
               }}
               className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-widest border cursor-pointer transition-colors ${
-              theme === 'dark' ? 'bg-slate-800 text-slate-200 border-white/10 hover:bg-slate-700' : 'bg-stone-100 text-stone-700 border-stone-200 hover:bg-stone-200'
+              theme === 'dark' ? 'bg-brand-dark text-slate-200 border-white/10 hover:bg-slate-700' : 'bg-stone-100 text-stone-700 border-stone-200 hover:bg-stone-200'
             }`}
               title="Copiar SKU"
             >

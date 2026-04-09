@@ -27,7 +27,7 @@ export const Input = memo(forwardRef<HTMLInputElement, InputProps>(({
       )}
       <div className="relative group">
         {leftIcon && (
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors">
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-brand-info transition-colors">
             {leftIcon}
           </div>
         )}

@@ -45,7 +45,7 @@ export const ExpiryItemRow: React.FC<ExpiryItemRowProps> = React.memo(({
         isSelected 
           ? 'bg-indigo-500/10 border-indigo-500/30' 
           : theme === 'dark' 
-            ? 'bg-black/20 border-white/5 hover:bg-white/5' 
+            ? 'bg-brand-surface/40 border-white/5 hover:bg-brand-surface/60' 
             : 'bg-white border-stone-100 hover:bg-stone-50'
       }`}
     >
@@ -69,7 +69,7 @@ export const ExpiryItemRow: React.FC<ExpiryItemRowProps> = React.memo(({
             addToast(`SKU ${item.barcode} copiado`, 'success');
           }}
           className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border cursor-pointer transition-colors ${
-            theme === 'dark' ? 'bg-slate-800 text-slate-300 border-white/10' : 'bg-stone-100 text-stone-600 border-stone-200'
+            theme === 'dark' ? 'bg-brand-dark text-slate-300 border-white/10' : 'bg-stone-100 text-stone-600 border-stone-200'
           }`}
         >
           {item.barcode}

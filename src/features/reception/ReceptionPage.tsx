@@ -26,7 +26,7 @@ const ReceptionRow = React.memo(({ index, data }: any) => {
     <div className="px-3 py-1 h-full">
       <div className={`w-full h-full border-2 p-4 rounded-2xl flex items-center justify-between transition-all active:scale-[0.98] ${isSynced ? 'bg-emerald-900/10 border-emerald-500/20' : 'bg-slate-900/40 border-white/5'}`}>
         <div className="flex items-center gap-4 overflow-hidden">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${isSynced ? 'bg-emerald-900/20 text-emerald-500 border-emerald-500/20' : 'bg-blue-900/20 text-blue-500 border-blue-500/20'}`}>
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${isSynced ? 'bg-emerald-900/20 text-emerald-500 border-emerald-500/20' : 'bg-brand-info/20 text-brand-info border-brand-info/20'}`}>
             <Box className="w-5 h-5" />
           </div>
           <div className="min-w-0">
@@ -51,7 +51,7 @@ const ReceptionRow = React.memo(({ index, data }: any) => {
               ) : (
                 <>
                   <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
-                  <span className="text-blue-500 font-black tracking-tighter">BORRADOR</span>
+                  <span className="text-brand-info font-black tracking-tighter">BORRADOR</span>
                 </>
               )}
             </div>

@@ -37,11 +37,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
         title={isCollapsed ? label : undefined}
         className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-4 px-5'} py-4 rounded-2xl transition-all duration-200 group relative border-2 ${
           isActive 
-            ? 'bg-blue-600 border-blue-400 text-white shadow-xl shadow-blue-900/40' 
+            ? 'bg-brand-warning border-brand-warning/50 text-white shadow-xl shadow-brand-warning/20' 
             : 'text-slate-500 border-transparent hover:bg-white/5 hover:text-slate-200'
         }`}
       >
-        <Icon className={`w-5 h-5 transition-transform group-hover:scale-110 group-active:scale-90 ${isActive ? 'text-white' : 'text-slate-600 group-hover:text-blue-400'}`} />
+        <Icon className={`w-5 h-5 transition-transform group-hover:scale-110 group-active:scale-90 ${isActive ? 'text-white' : 'text-slate-600 group-hover:text-brand-info'}`} />
         {!isCollapsed && <span className="font-black text-[10px] font-mono uppercase tracking-[0.2em]">{label}</span>}
         
         {badge && badge > 0 && (
@@ -59,14 +59,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
         <button 
           onClick={onToggle}
           title={isCollapsed ? "Expandir" : "Colapsar"}
-          className="bg-blue-600 p-2.5 rounded-xl shadow-2xl border-2 border-blue-400 shrink-0 hover:bg-blue-500 active:scale-95 transition-all group"
+          className="bg-brand-warning p-2.5 rounded-xl shadow-2xl border-2 border-brand-warning/50 shrink-0 hover:bg-brand-warning/80 active:scale-95 transition-all group"
         >
           <Box className={`w-6 h-6 text-white transition-transform ${isCollapsed ? 'group-hover:rotate-12' : 'group-hover:-rotate-12'}`} />
         </button>
         {!isCollapsed && (
           <div className="overflow-hidden">
             <h1 className="text-white font-black text-xl leading-none uppercase tracking-tighter italic whitespace-nowrap">LogiCount</h1>
-            <p className="text-blue-500 text-[8px] font-black uppercase tracking-[0.5em] mt-1">Enterprise_v4</p>
+            <p className="text-brand-info text-[8px] font-black uppercase tracking-[0.5em] mt-1">Enterprise_v4</p>
           </div>
         )}
       </div>

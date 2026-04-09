@@ -19,10 +19,10 @@ export const ReceptionHero: React.FC<Props> = memo(({
  const textColor = isEcoMode ? 'text-white/80' : 'text-white';
 
  return (
- <div className="h-[30vh] shrink-0 flex flex-col items-center justify-center p-4 relative border-b-4 border-black bg-slate-950 transition-colors duration-300 overflow-hidden select-none">
+ <div className="h-[30vh] shrink-0 flex flex-col items-center justify-center p-4 relative border-b-4 border-black bg-brand-dark transition-colors duration-300 overflow-hidden select-none">
  
  {/* Fondo Gradiente Sutil (Sin círculos sólidos) */}
- <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-900/10 via-slate-950 to-slate-950 pointer-events-none"></div>
+ <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-brand-info/10 via-brand-dark to-brand-dark pointer-events-none"></div>
 
  {/* ZONA SUPERIOR: Feedback de Último Scan */}
  <div className="flex-1 flex flex-col justify-end w-full items-center pb-4 z-10">
@@ -58,7 +58,7 @@ export const ReceptionHero: React.FC<Props> = memo(({
  <div className={`text-[7rem] md:text-[9rem] leading-none font-black tabular-nums tracking-tighter drop-shadow-2xl ${textColor}`}>
  {draftCount}
  </div>
- <div className="mt-2 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] bg-slate-900/50 px-4 py-1.5 rounded-full border border-white/5 ">
+ <div className="mt-2 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] bg-brand-surface/50 px-4 py-1.5 rounded-full border border-white/5 ">
  Bultos en Cola
  </div>
  </div>

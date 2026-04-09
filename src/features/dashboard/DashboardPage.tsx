@@ -239,7 +239,7 @@ const Dashboard: React.FC = () => {
   const visibleOrders = showAllOrders ? pendingOrders : pendingOrders?.slice(0, 5);
 
   return (
-    <div className="h-full w-full bg-slate-50 dark:bg-black overflow-y-auto no-scrollbar pb-32 font-sans text-slate-900 dark:text-white relative">
+    <div className="h-full w-full bg-slate-50 dark:bg-brand-dark overflow-y-auto no-scrollbar pb-32 font-sans text-slate-900 dark:text-white relative">
       {/* SUCCESS OVERLAY */}
       {successMessage && (
         <div className="absolute inset-0 z-[200] bg-emerald-500/90 backdrop-blur-sm flex flex-col items-center justify-center animate-in fade-in duration-300">
@@ -253,11 +253,11 @@ const Dashboard: React.FC = () => {
       )}
 
       {/* HEADER */}
-      <header className="px-6 pt-8 pb-6 bg-white dark:bg-slate-900/50 border-b border-slate-200 dark:border-white/5 sticky top-0 z-50 shadow-sm">
+      <header className="px-6 pt-8 pb-6 bg-white dark:bg-brand-surface/50 border-b border-slate-200 dark:border-white/5 sticky top-0 z-50 shadow-sm">
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-2xl font-black tracking-tight leading-none">
-              LOGI<span className="text-blue-600">COUNT</span>
+              LOGI<span className="text-brand-warning">COUNT</span>
             </h1>
             <div className="mt-2">
               <NetworkStatus />
@@ -266,13 +266,13 @@ const Dashboard: React.FC = () => {
           <div className="flex items-center gap-2">
             <button
               onClick={() => navigate("/reports")}
-              className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-500 hover:text-blue-600 transition-colors"
+              className="w-10 h-10 bg-slate-100 dark:bg-brand-surface rounded-full flex items-center justify-center text-slate-500 hover:text-brand-warning transition-colors"
               title="Historial de Cargas"
             >
               <History className="w-5 h-5" />
             </button>
-            <div className="flex items-center gap-3 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full">
-              <UserCircle className="w-5 h-5 text-blue-600" />
+            <div className="flex items-center gap-3 bg-slate-100 dark:bg-brand-surface px-3 py-1.5 rounded-full">
+              <UserCircle className="w-5 h-5 text-brand-warning" />
               <span className="text-xs font-bold uppercase tracking-wider">
                 {operatorId}
               </span>
@@ -293,7 +293,7 @@ const Dashboard: React.FC = () => {
           >
             <button
               onClick={() => setIsCameraOpen(true)}
-              className="absolute inset-y-0 left-4 flex items-center z-10 text-blue-600 hover:text-blue-700 active:scale-90 transition-all"
+              className="absolute inset-y-0 left-4 flex items-center z-10 text-brand-warning hover:text-brand-warning/80 active:scale-90 transition-all"
               title="Abrir Cámara"
             >
               <Camera className="w-7 h-7" />
@@ -309,17 +309,17 @@ const Dashboard: React.FC = () => {
                 }
               }}
               placeholder="Escanear Orden o Producto..."
-              className="w-full h-20 bg-white dark:bg-slate-950 border-4 border-blue-500 rounded-3xl pl-16 pr-16 text-2xl font-black shadow-2xl shadow-blue-500/20 focus:border-blue-600 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600"
+              className="w-full h-20 bg-white dark:bg-brand-dark border-4 border-brand-warning rounded-3xl pl-16 pr-16 text-2xl font-black shadow-2xl shadow-brand-warning/20 focus:border-brand-warning/80 focus:ring-4 focus:ring-brand-warning/20 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600"
               disabled={isProcessingScan}
               autoFocus
             />
             <div className="absolute inset-y-0 right-4 flex items-center gap-2">
               {isProcessingScan ? (
-                <RefreshCw className="w-7 h-7 text-blue-500 animate-spin" />
+                <RefreshCw className="w-7 h-7 text-brand-warning animate-spin" />
               ) : scanInput ? (
                 <button
                   onClick={() => handleUniversalScan(scanInput)}
-                  className="w-12 h-12 bg-blue-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-blue-900/40 active:scale-90 transition-all"
+                  className="w-12 h-12 bg-brand-warning text-white rounded-2xl flex items-center justify-center shadow-lg shadow-brand-warning/40 active:scale-90 transition-all"
                 >
                   <ArrowRight className="w-7 h-7" />
                 </button>
@@ -334,17 +334,17 @@ const Dashboard: React.FC = () => {
         {/* SALUD DE TABLAS DINÁMICAS */}
         {((dynamicStats?.pending || 0) > 0 ||
           (dynamicStats?.error || 0) > 0) && (
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 rounded-3xl p-6 shadow-sm">
+          <div className="bg-white dark:bg-brand-surface border border-slate-200 dark:border-white/5 rounded-3xl p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <Database className="w-5 h-5 text-blue-500" />
+                <Database className="w-5 h-5 text-brand-info" />
                 <h2 className="text-xs font-black uppercase tracking-widest text-slate-500">
                   Salud de Tablas
                 </h2>
               </div>
               <button
                 onClick={() => navigate("/sync")}
-                className="text-[10px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-600 transition-colors"
+                className="text-[10px] font-black uppercase tracking-widest text-brand-info hover:text-brand-info/80 transition-colors"
               >
                 Gestionar Sincronización
               </button>
@@ -353,7 +353,7 @@ const Dashboard: React.FC = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-100 dark:border-white/5">
                 <div className="flex items-center gap-2 mb-1">
-                  <Cloud className="w-4 h-4 text-blue-500" />
+                  <Cloud className="w-4 h-4 text-brand-info" />
                   <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
                     Pendientes
                   </span>
@@ -394,7 +394,7 @@ const Dashboard: React.FC = () => {
               <h2 className="text-xs font-black uppercase tracking-widest text-slate-500">
                 Órdenes Pendientes
               </h2>
-              <span className="bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-400 text-[10px] font-black px-2 py-0.5 rounded-full">
+              <span className="bg-brand-info/10 text-brand-info text-[10px] font-black px-2 py-0.5 rounded-full">
                 {pendingOrders?.length || 0}
               </span>
             </div>
@@ -402,7 +402,7 @@ const Dashboard: React.FC = () => {
             {pendingOrders && pendingOrders.length > 0 && (
               <button 
                 onClick={() => setIsOrdersCollapsed(!isOrdersCollapsed)}
-                className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-400 transition-colors"
+                className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-brand-info hover:text-brand-info/80 transition-colors"
               >
                 {isOrdersCollapsed ? (
                   <>Ver Órdenes <ChevronDown className="w-3 h-3" /></>
@@ -416,7 +416,7 @@ const Dashboard: React.FC = () => {
           {!isOrdersCollapsed || (pendingOrders?.length === 0) ? (
             <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
               {!visibleOrders || visibleOrders.length === 0 ? (
-                <div className="bg-white dark:bg-slate-900 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl p-10 text-center">
+                <div className="bg-white dark:bg-brand-surface border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl p-10 text-center">
                   <Package className="w-16 h-16 text-slate-300 dark:text-slate-700 mx-auto mb-4" />
                   <p className="text-sm font-bold text-slate-500">
                     No hay órdenes pendientes
@@ -425,7 +425,7 @@ const Dashboard: React.FC = () => {
                     Escanea un producto para iniciar un conteo ciego o sube un archivo
                   </p>
                   
-                  <label className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 cursor-pointer shadow-lg shadow-blue-900/40">
+                  <label className="inline-flex items-center gap-2 bg-brand-warning hover:bg-brand-warning/80 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 cursor-pointer shadow-lg shadow-brand-warning/40">
                     <Upload className="w-4 h-4" />
                     Subir CSV de Órdenes
                     <input 
@@ -449,7 +449,7 @@ const Dashboard: React.FC = () => {
                   {pendingOrders && pendingOrders.length > 5 && (
                     <button
                       onClick={() => setShowAllOrders(!showAllOrders)}
-                      className="w-full py-4 text-xs font-black text-blue-600 uppercase tracking-widest hover:bg-blue-50 rounded-2xl transition-colors"
+                      className="w-full py-4 text-xs font-black text-brand-info uppercase tracking-widest hover:bg-brand-info/5 rounded-2xl transition-colors"
                     >
                       {showAllOrders ? "Ver menos" : `Ver ${pendingOrders.length - 5} más...`}
                     </button>
@@ -458,16 +458,16 @@ const Dashboard: React.FC = () => {
               )}
             </div>
           ) : (
-            <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 rounded-2xl p-4 flex items-center justify-between">
+            <div className="bg-white dark:bg-brand-surface/40 border border-slate-200 dark:border-white/5 rounded-2xl p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <FileText className="w-5 h-5 text-blue-500" />
+                <FileText className="w-5 h-5 text-brand-info" />
                 <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">
                   {pendingOrders.length} Órdenes cargadas en memoria
                 </span>
               </div>
               <button 
                 onClick={() => setIsOrdersCollapsed(false)}
-                className="text-[10px] font-black uppercase tracking-widest text-blue-500"
+                className="text-[10px] font-black uppercase tracking-widest text-brand-info"
               >
                 Expandir
               </button>

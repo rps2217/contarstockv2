@@ -68,7 +68,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
       className={`border rounded-2xl flex flex-col md:grid md:grid-cols-[48px_minmax(0,2.5fr)_minmax(0,1.2fr)_minmax(0,1fr)_auto] items-start md:items-center gap-3 md:gap-4 group transition-all relative ${
         isCompact ? 'p-2' : 'p-4'
       } ${
-        theme === 'dark' ? 'bg-slate-900/40 hover:bg-slate-900/60' : 'bg-white shadow-sm hover:shadow-md'
+        theme === 'dark' ? 'bg-brand-surface hover:bg-brand-surface/80' : 'bg-white shadow-sm hover:shadow-md'
       } ${
         isSelected ? 'border-blue-500 bg-blue-500/5' :
         theme === 'dark' ? 'border-white/5' : 'border-slate-200'
@@ -118,7 +118,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
 
           <div className="grid grid-cols-2 gap-2">
             <div className={`p-2 rounded-xl border ${
-              theme === 'dark' ? 'bg-black/20 border-white/5' : 'bg-slate-50 border-slate-100'
+              theme === 'dark' ? 'bg-brand-dark border-white/5' : 'bg-slate-50 border-slate-100'
             }`}>
               <span className={`font-black text-slate-500 uppercase tracking-widest block mb-0.5 ${
                 isExpanded ? 'text-[10px]' : 'text-[9px]'
@@ -132,7 +132,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
               </p>
             </div>
             <div className={`p-2 rounded-xl border ${
-              theme === 'dark' ? 'bg-black/20 border-white/5' : 'bg-slate-50 border-slate-100'
+              theme === 'dark' ? 'bg-brand-dark border-white/5' : 'bg-slate-50 border-slate-100'
             }`}>
               <span className={`font-black text-slate-500 uppercase tracking-widest block mb-0.5 ${
                 isExpanded ? 'text-[10px]' : 'text-[9px]'

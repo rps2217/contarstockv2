@@ -48,7 +48,7 @@ export const ExpirySearchBar: React.FC<ExpirySearchBarProps> = ({
             value={localQuery}
             onChange={(e) => setLocalQuery(e.target.value)}
             className={`w-full border rounded-2xl py-4 pl-12 pr-28 text-sm font-bold focus:outline-none transition-all shadow-2xl ${
-              theme === 'dark' ? 'bg-black border-amber-500/50 text-white' : 'bg-white border-amber-500/50 text-slate-900 shadow-slate-200/50'
+              theme === 'dark' ? 'bg-brand-dark border-brand-warning/50 text-white' : 'bg-white border-amber-500/50 text-slate-900 shadow-slate-200/50'
             }`}
           />
           {searchQuery && (
@@ -84,9 +84,9 @@ export const ExpirySearchBar: React.FC<ExpirySearchBarProps> = ({
           onClick={onOpenFilters}
           className={`flex-1 md:flex-none px-6 py-4 md:py-0 rounded-2xl flex items-center justify-center gap-3 transition-all border shadow-lg group ${
             activeFiltersCount > 0
-              ? 'bg-amber-500 border-amber-400 text-black'
+              ? 'bg-brand-warning border-brand-warning text-black'
               : theme === 'dark' 
-                ? 'bg-slate-800 border-white/10 text-white hover:bg-slate-700'
+                ? 'bg-brand-surface border-white/10 text-white hover:bg-brand-surface/80'
                 : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 shadow-sm'
           }`}
         >
@@ -103,7 +103,7 @@ export const ExpirySearchBar: React.FC<ExpirySearchBarProps> = ({
           onClick={onClearFilters}
           className={`px-4 py-4 md:py-0 rounded-2xl flex items-center justify-center transition-all group shrink-0 border ${
             theme === 'dark' 
-              ? 'bg-slate-800 border-white/10 hover:bg-slate-700' 
+              ? 'bg-brand-surface border-white/10 hover:bg-brand-surface/80' 
               : 'bg-white border-slate-200 hover:bg-slate-50 shadow-sm'
           }`}
           title="Limpiar Filtros"

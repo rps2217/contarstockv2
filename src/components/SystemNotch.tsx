@@ -63,7 +63,7 @@ export const SystemNotch: React.FC<SystemNotchProps> = ({ children, theme }) => 
               className={`
                 flex items-center gap-3 px-6 py-1 rounded-b-3xl border-x border-b shadow-2xl transition-all
                 ${theme === 'dark' 
-                  ? 'bg-slate-900/95 border-white/10 text-slate-400 hover:text-white shadow-black/50' 
+                  ? 'bg-brand-surface/95 border-white/10 text-slate-400 hover:text-white shadow-black/50' 
                   : 'bg-white/95 border-slate-200 text-slate-600 hover:text-slate-900 shadow-slate-200'}
               `}
               whileTap={{ scale: 0.98 }}

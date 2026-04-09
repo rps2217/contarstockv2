@@ -9,10 +9,10 @@ interface BadgeProps {
 
 export const Badge = memo(({ children, variant = 'neutral', className = '' }: BadgeProps) => {
   const variants = {
-    success: 'bg-brand-accent/10 text-brand-accent border-brand-accent/20',
+    success: 'bg-brand-info/10 text-brand-info border-brand-info/20',
     warning: 'bg-brand-warning/10 text-brand-warning border-brand-warning/20',
     error: 'bg-rose-500/10 text-rose-500 border-rose-500/20',
-    info: 'bg-brand-info/10 text-brand-info border-brand-info/20',
+    info: 'bg-brand-accent/10 text-brand-accent border-brand-accent/20',
     neutral: 'bg-slate-500/10 text-slate-400 border-slate-500/20'
   };
 

@@ -13,7 +13,11 @@ import { ScanRepository } from '../../../repositories/ScanRepository';
 import { DetectiveService } from '../../../services/detectiveService';
 import { MatchResult } from '../../../types';
 
+import { useAppStore } from '../../../store/mainAppStore';
+
 export const ReportDetail: React.FC<{ sessionId: string; onBack: () => void }> = ({ sessionId, onBack }) => {
+  const { settings } = useAppStore();
+  const theme = settings.theme;
   const [isPrinting, setIsPrinting] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [matchResults, setMatchResults] = useState<MatchResult[]>([]);
@@ -79,11 +83,13 @@ export const ReportDetail: React.FC<{ sessionId: string; onBack: () => void }> =
  };
 
  return (
- <div className="flex flex-col h-screen bg-slate-50">
- <header className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between sticky top-0 z-20">
+ <div className={`flex flex-col h-screen ${theme === 'dark' ? 'bg-brand-background' : 'bg-slate-50'}`}>
+ <header className={`border-b px-4 py-3 flex items-center justify-between sticky top-0 z-20 ${
+   theme === 'dark' ? 'bg-brand-surface border-white/5' : 'bg-white border-slate-200'
+ }`}>
  <div className="flex items-center gap-3">
- <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full"><ChevronLeft className="w-5 h-5" /></button>
- <div><h2 className="font-black text-slate-900 leading-none uppercase">{session?.erpOrder}</h2><span className="text-[10px] text-slate-400 font-bold uppercase">{session?.logisticsLabel}</span></div>
+ <button onClick={onBack} className={`p-2 rounded-full transition-colors ${theme === 'dark' ? 'hover:bg-white/5 text-slate-400' : 'hover:bg-slate-100 text-slate-600'}`}><ChevronLeft className="w-5 h-5" /></button>
+ <div><h2 className={`font-black leading-none uppercase ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{session?.erpOrder}</h2><span className="text-[10px] text-slate-400 font-bold uppercase">{session?.logisticsLabel}</span></div>
  </div>
  <div className="flex gap-2">
  {session && !session.isVerifiedMode && (
@@ -104,11 +110,13 @@ export const ReportDetail: React.FC<{ sessionId: string; onBack: () => void }> =
  <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-24">
  <div className="max-w-4xl mx-auto space-y-4">
  {showDetective && (
- <div className="bg-indigo-50 border-2 border-indigo-200 rounded-[2rem] p-6 mb-6 animate-in slide-in-from-top duration-300">
+ <div className={`bg-indigo-50 border-2 border-indigo-200 rounded-[2rem] p-6 mb-6 animate-in slide-in-from-top duration-300 ${
+   theme === 'dark' ? 'bg-indigo-950/30 border-indigo-500/20' : ''
+ }`}>
  <div className="flex items-center justify-between mb-4">
  <div className="flex items-center gap-2">
  <Zap className="w-5 h-5 text-indigo-600" />
- <h3 className="font-black text-indigo-900 uppercase text-xs tracking-widest">Resultados del Detective IA</h3>
+ <h3 className={`font-black uppercase text-xs tracking-widest ${theme === 'dark' ? 'text-indigo-300' : 'text-indigo-900'}`}>Resultados del Detective IA</h3>
  </div>
  <button onClick={() => setShowDetective(false)} className="text-[10px] font-black uppercase text-indigo-400 hover:text-indigo-600">Cerrar</button>
  </div>
@@ -121,10 +129,12 @@ export const ReportDetail: React.FC<{ sessionId: string; onBack: () => void }> =
  ) : matchResults.length > 0 ? (
  <div className="grid gap-3">
  {matchResults.map((match, idx) => (
- <div key={idx} className="bg-white p-4 rounded-2xl border border-indigo-100 flex items-center justify-between shadow-sm">
+ <div key={idx} className={`p-4 rounded-2xl border flex items-center justify-between shadow-sm ${
+   theme === 'dark' ? 'bg-brand-surface border-white/5' : 'bg-white border-indigo-100'
+ }`}>
  <div>
  <div className="flex items-center gap-2">
- <span className="font-black text-slate-900 uppercase">{match.expectedOrder.internalId}</span>
+ <span className={`font-black uppercase ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{match.expectedOrder.internalId}</span>
  <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${
  match.matchScore > 90 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
  }`}>
@@ -138,7 +148,7 @@ export const ReportDetail: React.FC<{ sessionId: string; onBack: () => void }> =
  <div className="flex gap-2">
  <button 
  onClick={() => exportDiscrepancyPDF(match, session?.logisticsLabel || 'Bulto')}
- className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg"
+ className={`p-2 text-rose-600 rounded-lg transition-colors ${theme === 'dark' ? 'hover:bg-white/5' : 'hover:bg-rose-50'}`}
  title="Ver Discrepancias"
  >
  <FileText className="w-4 h-4" />
@@ -162,7 +172,9 @@ export const ReportDetail: React.FC<{ sessionId: string; onBack: () => void }> =
  </div>
  )}
  {session?.labelPhoto && (
- <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm overflow-hidden mb-4">
+ <div className={`p-4 rounded-3xl border shadow-sm overflow-hidden mb-4 ${
+   theme === 'dark' ? 'bg-brand-surface border-white/5' : 'bg-white border-slate-200'
+ }`}>
  <div className="flex items-center justify-between mb-2">
  <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Evidencia de Etiqueta</h3>
  {session.photoUrl && (
@@ -184,14 +196,16 @@ export const ReportDetail: React.FC<{ sessionId: string; onBack: () => void }> =
  {consolidation?.map((item) => {
  const status = determineItemStatus(item.totalQuantity, item.expectedQuantity);
  return (
- <div key={item.barcode} className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between">
+ <div key={item.barcode} className={`p-5 rounded-3xl border shadow-sm flex items-center justify-between ${
+   theme === 'dark' ? 'bg-brand-surface border-white/5' : 'bg-white border-slate-200'
+ }`}>
  <div className="min-w-0 flex-1 pr-4">
- <h4 className="font-black text-slate-900 uppercase truncate text-sm">{item.productName}</h4>
+ <h4 className={`font-black uppercase truncate text-sm ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{item.productName}</h4>
  <div className="flex items-center gap-3 mt-1"><span className="font-mono text-blue-600 text-[10px] font-bold">{item.barcode}</span>{item.expectedQuantity > 0 && <span className="text-[8px] font-black bg-slate-100 px-2 py-0.5 rounded uppercase">Meta: {item.expectedQuantity}</span>}</div>
  </div>
  <div className="flex items-center gap-4">
  <div className={`text-2xl font-black tabular-nums ${getStatusColorClasses(status, 'text')}`}>{item.totalQuantity}</div>
- <button onClick={() => sessionService.deleteSessionItem(sessionId, item.barcode)} className="p-2 text-slate-300 hover:text-rose-600"><Trash2 className="w-5 h-5" /></button>
+ <button onClick={() => sessionService.deleteSessionItem(sessionId, item.barcode)} className={`p-2 transition-colors ${theme === 'dark' ? 'text-slate-500 hover:text-rose-500' : 'text-slate-300 hover:text-rose-600'}`}><Trash2 className="w-5 h-5" /></button>
  </div>
  </div>
  );

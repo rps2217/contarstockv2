@@ -24,7 +24,7 @@ export const EventHeader: React.FC<EventHeaderProps> = ({
 }) => {
   return (
     <div className={`p-4 md:p-6 pb-4 backdrop-blur-xl border-b shrink-0 transition-colors ${
-      theme === 'dark' ? 'bg-slate-900/50 border-white/5' : 'bg-white/80 border-slate-200 shadow-sm'
+      theme === 'dark' ? 'bg-brand-surface/50 border-white/5' : 'bg-white/80 border-slate-200 shadow-sm'
     }`}>
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-4">

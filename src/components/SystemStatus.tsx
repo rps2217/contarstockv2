@@ -95,7 +95,7 @@ export const SystemStatus: React.FC = () => {
 
   if (isSyncing) {
    alerts.push(
-   <div key="sync" className="bg-indigo-600 text-white px-4 py-1 text-[9px] font-black flex items-center justify-center gap-2 border-b border-indigo-700 shadow-lg">
+   <div key="sync" className="bg-brand-info text-white px-4 py-1 text-[9px] font-black flex items-center justify-center gap-2 border-b border-brand-info/20 shadow-lg">
    <RefreshCw className="w-3 h-3 animate-spin" />
    <span className="uppercase tracking-widest">Sincronizando con Nube...</span>
    </div>
@@ -107,7 +107,7 @@ export const SystemStatus: React.FC = () => {
    <div 
     key="pending" 
     onClick={() => navigate('/sync')}
-    className="bg-amber-600 text-white px-4 py-1 text-[9px] font-black flex items-center justify-center gap-2 border-b border-amber-700 shadow-lg cursor-pointer hover:bg-amber-700 transition-colors pointer-events-auto"
+    className="bg-brand-warning text-white px-4 py-1 text-[9px] font-black flex items-center justify-center gap-2 border-b border-brand-warning/20 shadow-lg cursor-pointer hover:bg-brand-warning/80 transition-colors pointer-events-auto"
    >
    <Database className="w-3 h-3" />
    <span className="uppercase tracking-widest">{pendingItems} Registros Pendientes de Subida</span>
@@ -116,9 +116,9 @@ export const SystemStatus: React.FC = () => {
   }
 
   if (isOnline && isFirestoreConnected && latencyMs !== null) {
-   const latencyColor = latencyMs < 150 ? 'text-emerald-400' : latencyMs < 400 ? 'text-amber-400' : 'text-rose-400';
+   const latencyColor = latencyMs < 150 ? 'text-brand-info' : latencyMs < 400 ? 'text-brand-warning' : 'text-rose-400';
    alerts.push(
-   <div key="latency" className="bg-slate-900 text-white px-4 py-1 text-[9px] font-black flex items-center justify-center gap-3 border-b border-white/5">
+   <div key="latency" className="bg-brand-surface text-white px-4 py-1 text-[9px] font-black flex items-center justify-center gap-3 border-b border-white/5">
    <div className="flex items-center gap-1.5">
    <Activity className={`w-3 h-3 ${latencyColor}`} />
    <span className="uppercase tracking-widest">Latencia Cloud: <span className={latencyColor}>{latencyMs}ms</span></span>
