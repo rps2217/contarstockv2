@@ -23,6 +23,7 @@ export const BottomDock: React.FC<Props> = ({ currentView, settings }) => {
 
  const iconMap: Record<string, { label: string, icon: any, path: string }> = {
   'dashboard': { label: 'INICIO', icon: Home, path: '/dashboard' },
+  'reception': { label: 'RECEPCIÓN', icon: Container, path: '/reception' },
   'reports': { label: 'HISTORIAL', icon: History, path: '/reports' },
   'database': { label: 'CATÁLOGO', icon: Database, path: '/database' },
   'sync': { label: 'NUBE', icon: Cloud, path: '/sync' },

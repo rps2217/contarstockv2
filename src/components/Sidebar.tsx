@@ -74,6 +74,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
       <nav className={`flex-1 ${isCollapsed ? 'px-2' : 'px-4'} space-y-2 overflow-y-auto no-scrollbar py-8`}>
         {!isCollapsed && <div className="text-[9px] font-black text-slate-600 uppercase tracking-[0.4em] px-5 mb-6">Execution_Layer</div>}
         <NavItem path="/dashboard" activeKey="dashboard" label="Inicio" icon={Home} />
+        <NavItem path="/reception" activeKey="reception" label="Recepción" icon={Container} />
         <NavItem path="/reports" activeKey="reports" label="Historial" icon={History} />
         <NavItem path="/database" activeKey="database" label="Catálogo" icon={Database} />
         

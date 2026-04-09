@@ -149,7 +149,7 @@ const DEFAULT_SETTINGS: AppSettings = {
       isAdjusted: 'AJUSTADO'
     }
   },
-  mobileNavConfig: ['dashboard', 'reports', 'sync', 'database'],
+  mobileNavConfig: ['dashboard', 'reception', 'reports', 'sync', 'database'],
   thermalPrinter: {
     enabled: false,
     type: 'bluetooth'
