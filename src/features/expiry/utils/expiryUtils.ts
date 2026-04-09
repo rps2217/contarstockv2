@@ -16,18 +16,20 @@ export const handlePrintExpirations = (processedScans: any[]) => {
     ? `<div style='text-align:center; padding:20px; border:2px solid #000'>NO HAY REGISTROS</div>`
     : processedScans.map((r, index) => `
         <div class="item">
-          <div class="col-left">
-            <span class="desc">${(r.productName || '').substring(0,35).toUpperCase()}</span><br>
-            <span class="prov">${(r.providerName || '').substring(0,30).toUpperCase()}</span><br>
-            <div class="barcode-row">
-              <span class="cod-sku">ID: ${r.barcode}</span>
-              <svg class="barcode-svg" id="barcode_${index}"></svg>
+          <div class="top-row">
+            <div class="col-left">
+              <span class="desc">${(r.productName || '').substring(0,40).toUpperCase()}</span><br>
+              <span class="prov">${(r.providerName || '').substring(0,35).toUpperCase()}</span>
+            </div>
+            <div class="col-right">
+              <span class="lbl">VENCE</span><br>
+              <span class="venc-grande">${r.expiryDateObj ? format(r.expiryDateObj, 'dd/MM/yy') : 'N/A'}</span><br>
+              <span class="lbl-mini">RET: ${r.withdrawalDate ? format(r.withdrawalDate, 'dd/MM/yy') : 'N/A'}</span>
             </div>
           </div>
-          <div class="col-right">
-            <span class="lbl">VENCE</span><br>
-            <span class="venc-grande">${r.expiryDateObj ? format(r.expiryDateObj, 'dd/MM/yy') : 'N/A'}</span><br>
-            <span class="lbl-mini">RET: ${r.withdrawalDate ? format(r.withdrawalDate, 'dd/MM/yy') : 'N/A'}</span>
+          <div class="barcode-row">
+            <span class="cod-sku">ID: ${r.barcode}</span>
+            <svg class="barcode-svg" id="barcode_${index}"></svg>
           </div>
         </div>`).join('');
 
@@ -41,18 +43,19 @@ export const handlePrintExpirations = (processedScans: any[]) => {
           .header { text-align: center; border-bottom: 3px solid #000; padding-bottom: 8px; margin-bottom: 8px; }
           .titulo { font-size: 16px; font-weight: 900; }
           
-          .item { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding: 8px 0; align-items: flex-start; page-break-inside: avoid; }
-          .col-left { width: 65%; text-align: left; }
-          .col-right { width: 38%; text-align: right; padding-right: 4mm; box-sizing: border-box; display: flex; flex-direction: column; align-items: flex-end; }
+          .item { border-bottom: 2px solid #000; padding: 10px 0; page-break-inside: avoid; }
+          .top-row { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; }
+          .col-left { width: 62%; text-align: left; }
+          .col-right { width: 38%; text-align: right; padding-right: 2mm; box-sizing: border-box; display: flex; flex-direction: column; align-items: flex-end; }
           
-          .desc { font-weight: 900; font-size: 13px; line-height: 1.2; }
+          .desc { font-weight: 900; font-size: 14px; line-height: 1.1; }
           .prov { font-weight: bold; font-size: 11px; margin-top: 2px; display: block; }
           
-          .barcode-row { display: flex; align-items: center; margin-top: 6px; gap: 6px; }
-          .cod-sku { font-weight: 900; font-size: 10px; background-color: #eee; padding: 2px 4px; border: 1px solid #000; white-space: nowrap; }
-          .barcode-svg { height: 32px; max-width: 130px; }
+          .barcode-row { display: flex; align-items: center; margin-top: 12px; gap: 8px; width: 100%; justify-content: flex-start; }
+          .cod-sku { font-weight: 900; font-size: 11px; background-color: #eee; padding: 4px 6px; border: 2px solid #000; white-space: nowrap; }
+          .barcode-svg { height: 60px; width: 65%; max-width: 220px; }
           
-          .venc-grande { font-weight: 900; font-size: 15px; border: 2px solid #000; padding: 2px 4px; display: inline-block; margin: 2px 0; background: #fff; }
+          .venc-grande { font-weight: 900; font-size: 16px; border: 2px solid #000; padding: 2px 5px; display: inline-block; margin: 2px 0; background: #fff; }
           .lbl { font-size: 9px; font-weight: bold; }
           .lbl-mini { font-size: 9px; font-weight: bold; white-space: nowrap; }
 
@@ -85,8 +88,8 @@ export const handlePrintExpirations = (processedScans: any[]) => {
                 JsBarcode("#barcode_" + index, item.barcode, {
                   format: "CODE128",
                   lineColor: "#000",
-                  width: 1.5,
-                  height: 40,
+                  width: 2.0,
+                  height: 80,
                   displayValue: false,
                   margin: 0
                 });
