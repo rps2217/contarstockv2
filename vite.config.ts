@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// Vercel Deployment Cache Bust: 20260409-01
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   return {
