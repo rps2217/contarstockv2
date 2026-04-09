@@ -14,12 +14,15 @@ export const handlePrintExpirations = (processedScans: any[]) => {
 
   const listaItems = processedScans.length === 0 
     ? `<div style='text-align:center; padding:20px; border:2px solid #000'>NO HAY REGISTROS</div>`
-    : processedScans.map(r => `
+    : processedScans.map((r, index) => `
         <div class="item">
           <div class="col-left">
-            <span class="desc">${(r.productName || '').substring(0,25).toUpperCase()}</span><br>
-            <span class="prov">${(r.providerName || '').substring(0,20).toUpperCase()}</span><br>
-            <span class="cod-grande">ID: ${r.barcode}</span>
+            <span class="desc">${(r.productName || '').substring(0,35).toUpperCase()}</span><br>
+            <span class="prov">${(r.providerName || '').substring(0,30).toUpperCase()}</span><br>
+            <div class="barcode-row">
+              <span class="cod-sku">ID: ${r.barcode}</span>
+              <svg class="barcode-svg" id="barcode_${index}"></svg>
+            </div>
           </div>
           <div class="col-right">
             <span class="lbl">VENCE</span><br>
@@ -39,17 +42,19 @@ export const handlePrintExpirations = (processedScans: any[]) => {
           .titulo { font-size: 16px; font-weight: 900; }
           
           .item { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding: 8px 0; align-items: flex-start; page-break-inside: avoid; }
-          .col-left { width: 68%; text-align: left; }
-          .col-right { width: 30%; text-align: right; }
+          .col-left { width: 65%; text-align: left; }
+          .col-right { width: 35%; text-align: right; padding-right: 3mm; box-sizing: border-box; }
           
           .desc { font-weight: 900; font-size: 13px; line-height: 1.2; }
           .prov { font-weight: bold; font-size: 11px; margin-top: 2px; display: block; }
           
-          .cod-grande { font-weight: 900; font-size: 12px; margin-top: 4px; display: inline-block; background-color: #eee; padding: 1px 3px; }
+          .barcode-row { display: flex; align-items: center; margin-top: 5px; gap: 4px; }
+          .cod-sku { font-weight: 900; font-size: 10px; background-color: #eee; padding: 1px 3px; white-space: nowrap; }
+          .barcode-svg { height: 22px; max-width: 120px; }
           
-          .venc-grande { font-weight: 900; font-size: 14px; border: 1px solid #000; padding: 1px; display: inline-block; margin: 2px 0; }
+          .venc-grande { font-weight: 900; font-size: 14px; border: 1px solid #000; padding: 1px 3px; display: inline-block; margin: 2px 0; }
           .lbl { font-size: 9px; font-weight: bold; }
-          .lbl-mini { font-size: 9px; font-weight: bold; }
+          .lbl-mini { font-size: 9px; font-weight: bold; white-space: nowrap; }
 
           .footer { margin-top: 10px; text-align: center; border-top: 3px solid #000; padding-top: 5px; font-size: 11px; font-weight: bold; }
           @media print { 
@@ -58,7 +63,6 @@ export const handlePrintExpirations = (processedScans: any[]) => {
             @page { margin: 0; }
           }
         </style>
-        <script>window.onload = function() { window.print(); }</script>
       </head>
       <body>
         <div class="header">
@@ -71,6 +75,28 @@ export const handlePrintExpirations = (processedScans: any[]) => {
           ${format(new Date(), "dd/MM/yyyy HH:mm")}
         </div>
         <button class="no-print" onclick="window.print()" style="width:100%; margin-top:20px; padding:15px; font-weight:bold; cursor:pointer;">🖨️ IMPRIMIR TICKET</button>
+
+        <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+        <script>
+          window.onload = function() {
+            const items = ${JSON.stringify(processedScans.map(i => ({ barcode: i.barcode })))};
+            items.forEach((item, index) => {
+              try {
+                JsBarcode("#barcode_" + index, item.barcode, {
+                  format: "CODE128",
+                  lineColor: "#000",
+                  width: 1.1,
+                  height: 30,
+                  displayValue: false,
+                  margin: 0
+                });
+              } catch (e) {
+                console.error("Error barcode", e);
+              }
+            });
+            setTimeout(() => { window.print(); }, 500);
+          };
+        </script>
       </body>
     </html>
   `;
