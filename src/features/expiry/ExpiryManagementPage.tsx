@@ -68,7 +68,7 @@ const ExpiryManagementPage: React.FC = () => {
 
   return (
     <div className={`h-full flex flex-col overflow-hidden font-sans selection:bg-brand-warning/30 transition-colors duration-500 ${
-      ui.theme === 'dark' ? 'bg-brand-dark text-white' : 'bg-stone-50 text-stone-900'
+      ui.theme === 'dark' ? 'bg-brand-dark text-white' : 'bg-stone-200/50 text-stone-900'
     }`}>
       {/* HEADER */}
       <div className={`p-4 md:p-6 pb-4 backdrop-blur-xl border-b shrink-0 transition-colors ${
@@ -258,7 +258,7 @@ const ExpiryManagementPage: React.FC = () => {
 
       {/* MAIN LIST */}
       <div ref={parentRef} className={`flex-1 overflow-y-auto p-4 md:p-6 no-scrollbar pb-32 transition-colors ${
-        ui.theme === 'dark' ? 'bg-slate-950/60' : ''
+        ui.theme === 'dark' ? 'bg-slate-950/60' : 'bg-stone-100/80'
       }`}>
         <div
           style={{
