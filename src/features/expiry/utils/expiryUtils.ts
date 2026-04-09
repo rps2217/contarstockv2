@@ -43,16 +43,16 @@ export const handlePrintExpirations = (processedScans: any[]) => {
           
           .item { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding: 8px 0; align-items: flex-start; page-break-inside: avoid; }
           .col-left { width: 65%; text-align: left; }
-          .col-right { width: 35%; text-align: right; padding-right: 3mm; box-sizing: border-box; }
+          .col-right { width: 38%; text-align: right; padding-right: 4mm; box-sizing: border-box; display: flex; flex-direction: column; align-items: flex-end; }
           
           .desc { font-weight: 900; font-size: 13px; line-height: 1.2; }
           .prov { font-weight: bold; font-size: 11px; margin-top: 2px; display: block; }
           
-          .barcode-row { display: flex; align-items: center; margin-top: 5px; gap: 4px; }
-          .cod-sku { font-weight: 900; font-size: 10px; background-color: #eee; padding: 1px 3px; white-space: nowrap; }
-          .barcode-svg { height: 22px; max-width: 120px; }
+          .barcode-row { display: flex; align-items: center; margin-top: 6px; gap: 6px; }
+          .cod-sku { font-weight: 900; font-size: 10px; background-color: #eee; padding: 2px 4px; border: 1px solid #000; white-space: nowrap; }
+          .barcode-svg { height: 32px; max-width: 130px; }
           
-          .venc-grande { font-weight: 900; font-size: 14px; border: 1px solid #000; padding: 1px 3px; display: inline-block; margin: 2px 0; }
+          .venc-grande { font-weight: 900; font-size: 15px; border: 2px solid #000; padding: 2px 4px; display: inline-block; margin: 2px 0; background: #fff; }
           .lbl { font-size: 9px; font-weight: bold; }
           .lbl-mini { font-size: 9px; font-weight: bold; white-space: nowrap; }
 
@@ -85,8 +85,8 @@ export const handlePrintExpirations = (processedScans: any[]) => {
                 JsBarcode("#barcode_" + index, item.barcode, {
                   format: "CODE128",
                   lineColor: "#000",
-                  width: 1.1,
-                  height: 30,
+                  width: 1.5,
+                  height: 40,
                   displayValue: false,
                   margin: 0
                 });
