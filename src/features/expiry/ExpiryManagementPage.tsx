@@ -72,7 +72,7 @@ const ExpiryManagementPage: React.FC = () => {
     }`}>
       {/* HEADER */}
       <div className={`p-4 md:p-6 pb-4 backdrop-blur-xl border-b shrink-0 transition-colors ${
-        ui.theme === 'dark' ? 'bg-brand-surface/50 border-white/5' : 'bg-stone-50/80 border-stone-200 shadow-sm'
+        ui.theme === 'dark' ? 'bg-slate-950/40 border-white/5' : 'bg-stone-50/80 border-stone-200 shadow-sm'
       }`}>
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-4">
@@ -257,7 +257,9 @@ const ExpiryManagementPage: React.FC = () => {
       </div>
 
       {/* MAIN LIST */}
-      <div ref={parentRef} className="flex-1 overflow-y-auto p-4 md:p-6 no-scrollbar pb-32">
+      <div ref={parentRef} className={`flex-1 overflow-y-auto p-4 md:p-6 no-scrollbar pb-32 transition-colors ${
+        ui.theme === 'dark' ? 'bg-slate-950/60' : ''
+      }`}>
         <div
           style={{
             height: `${rowVirtualizer.getTotalSize()}px`,

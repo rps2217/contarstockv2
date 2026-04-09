@@ -41,7 +41,7 @@ export const ExpiryStats: React.FC<ExpiryStatsProps> = ({ stats, selectedStatuse
                   item.color === 'blue' ? 'bg-blue-500 border-blue-400 text-white shadow-lg' :
                   'bg-emerald-500 border-emerald-400 text-white shadow-lg'
                 : theme === 'dark'
-                  ? `bg-brand-surface border-white/10 text-${item.color}-500 hover:bg-brand-surface/80`
+                  ? `bg-slate-900/50 border-white/10 text-${item.color}-500 hover:bg-slate-800`
                   : `bg-white border-stone-200 text-${item.color}-600 hover:bg-stone-50 shadow-sm`
             }`}
           >

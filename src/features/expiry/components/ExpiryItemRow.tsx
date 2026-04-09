@@ -45,7 +45,7 @@ export const ExpiryItemRow: React.FC<ExpiryItemRowProps> = React.memo(({
         isSelected 
           ? 'bg-indigo-500/10 border-indigo-500/30' 
           : theme === 'dark' 
-            ? 'bg-brand-surface/40 border-white/5 hover:bg-brand-surface/60' 
+            ? 'bg-brand-surface/60 border-white/10 hover:bg-brand-surface/80' 
             : 'bg-white border-stone-100 hover:bg-stone-50'
       }`}
     >

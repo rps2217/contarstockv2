@@ -96,7 +96,7 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
 
   const getCardStyles = () => {
     let base = isCompact ? 'p-3 md:p-2' : 'p-4';
-    let themeBase = theme === 'dark' ? 'bg-brand-surface border-white/5' : 'bg-stone-50 shadow-sm border-stone-200';
+    let themeBase = theme === 'dark' ? 'bg-brand-surface border-white/10 shadow-lg shadow-black/20' : 'bg-stone-50 shadow-sm border-stone-200';
     
     if (isSelected) {
       return `${base} border-indigo-500 bg-indigo-500/10`;
