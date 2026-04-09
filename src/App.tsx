@@ -13,6 +13,7 @@ import { initPersistence } from '@/services/backupService';
 import { InitializationService, InitStep } from '@/services/initializationService';
 import { ToastContainer } from '@/shared/components/ui/ToastContainer';
 import { TaskProgressIndicator } from '@/shared/components/TaskProgressIndicator';
+import { OfflineBanner } from '@/components/OfflineBanner';
 import { useAutoSync } from '@/hooks/useAutoSync';
 import { useAutoSession } from '@/hooks/useAutoSession';
 import { useExpiryWatcher } from '@/hooks/useExpiryWatcher';
@@ -157,6 +158,7 @@ const AppContent = () => {
 
   return (
     <div className={`w-full h-full flex flex-col transition-colors duration-500 ${currentThemeClass} font-mono`}>
+      <OfflineBanner />
       <ToastContainer />
       <TaskProgressIndicator />
       

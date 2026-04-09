@@ -175,20 +175,14 @@ const ExpiryManagementPage: React.FC = () => {
               </button>
             </div>
 
-            <button 
-              onClick={dbActions.handleSyncExpirations}
-              disabled={state.isSyncing}
-              className={`border px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${
-                state.isSyncing 
-                  ? 'opacity-50 cursor-not-allowed' 
-                  : ui.theme === 'dark' 
-                    ? 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20 text-emerald-500' 
-                    : 'bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-600 shadow-sm'
-              }`}
-            >
+            <div className={`border px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${
+              state.isSyncing 
+                ? ui.theme === 'dark' ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' : 'bg-blue-50 border-blue-200 text-blue-600'
+                : ui.theme === 'dark' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-emerald-50 border-emerald-200 text-emerald-600 shadow-sm'
+            }`}>
               <Cloud className={`w-3.5 h-3.5 ${state.isSyncing ? 'animate-bounce' : ''}`} />
-              {state.isSyncing ? 'Sincronizando...' : 'Sincronizar Nube'}
-            </button>
+              {state.isSyncing ? 'Sincronizando...' : 'Nube Sincronizada'}
+            </div>
 
             <button 
               onClick={() => handleExportExpirationsCSV(state.processedScans)}

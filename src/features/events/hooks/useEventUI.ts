@@ -11,7 +11,7 @@ import { useTaskStore } from '@/store/useTaskStore';
 export const useEventUI = () => {
   const { settings } = useAppStore();
   const { addTask, updateTask } = useTaskStore();
-  const [theme, setTheme] = useState<'dark' | 'light'>('light');
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isSettingsDrawerOpen, setIsSettingsDrawerOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);

@@ -11,7 +11,7 @@ export const useExpiryUI = () => {
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isDesktopAddModalOpen, setIsDesktopAddModalOpen] = useState(false);
   const [initialBarcode, setInitialBarcode] = useState('');
-  const [theme, setTheme] = useState<'dark' | 'light'>('light');
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   
   const navigate = useNavigate();

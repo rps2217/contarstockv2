@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertCircle, RefreshCw, Calendar, Sun, Moon, Settings2 } from 'lucide-react';
+import { AlertCircle, RefreshCw, Calendar, Sun, Moon, Settings2, Cloud } from 'lucide-react';
 
 interface EventHeaderProps {
   totalCount: number;
@@ -53,6 +53,16 @@ export const EventHeader: React.FC<EventHeaderProps> = ({
               Guardando ({pendingOperations})
             </div>
           )}
+
+          <div className={`border px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${
+            isSyncing 
+              ? theme === 'dark' ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' : 'bg-blue-50 border-blue-200 text-blue-600'
+              : theme === 'dark' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-emerald-50 border-emerald-200 text-emerald-600 shadow-sm'
+          }`}>
+            <Cloud className={`w-3.5 h-3.5 ${isSyncing ? 'animate-bounce' : ''}`} />
+            {isSyncing ? 'Sincronizando...' : 'Nube Sincronizada'}
+          </div>
+
           <button
             onClick={onNavigateExpiry}
             className={`flex-1 md:flex-none px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all border ${
