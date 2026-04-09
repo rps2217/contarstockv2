@@ -102,7 +102,7 @@ const AppContent = () => {
 
   const themeClasses: Record<string, string> = {
     'light': 'bg-slate-50 text-slate-900',
-    'dark': 'bg-slate-950 text-slate-100'
+    'dark': 'bg-brand-dark text-slate-100'
   };
 
   const currentThemeClass = themeClasses[settings.theme] || themeClasses.dark;

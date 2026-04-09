@@ -54,8 +54,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
   };
 
   return (
-    <aside className={`hidden md:flex flex-col ${isCollapsed ? 'w-20' : 'w-64'} h-screen fixed left-0 top-0 bg-slate-950 border-r-4 border-white/5 z-50 overflow-hidden transition-all duration-300`}>
-      <div className={`p-6 flex items-center ${isCollapsed ? 'justify-center' : 'gap-4'} border-b-4 border-white/5 bg-slate-900/30`}>
+    <aside className={`hidden md:flex flex-col ${isCollapsed ? 'w-20' : 'w-64'} h-screen fixed left-0 top-0 bg-brand-dark border-r border-white/5 z-50 overflow-hidden transition-all duration-300`}>
+      <div className={`p-6 flex items-center ${isCollapsed ? 'justify-center' : 'gap-4'} border-b border-white/5 bg-brand-surface/30`}>
         <button 
           onClick={onToggle}
           title={isCollapsed ? "Expandir" : "Colapsar"}

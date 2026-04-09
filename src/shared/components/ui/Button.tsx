@@ -23,11 +23,12 @@ export const Button = memo(({
   const baseStyles = 'inline-flex items-center justify-center font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100 select-none';
   
   const variants = {
-    primary: 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-900/20',
-    secondary: 'bg-slate-800 text-slate-100 hover:bg-slate-700 border border-slate-700',
+    primary: 'bg-brand-info text-white hover:bg-brand-info/90 shadow-lg shadow-brand-info/20',
+    secondary: 'bg-brand-surface text-slate-300 hover:bg-brand-surface/80 border border-white/10',
     danger: 'bg-rose-600 text-white hover:bg-rose-700 shadow-lg shadow-rose-900/20',
     ghost: 'bg-transparent text-slate-400 hover:bg-white/5',
-    outline: 'bg-transparent border-2 border-blue-600 text-blue-500 hover:bg-blue-600/10'
+    outline: 'bg-transparent border-2 border-brand-info text-brand-info hover:bg-brand-info/10',
+    warning: 'bg-brand-warning text-white hover:bg-brand-warning/90 shadow-lg shadow-brand-warning/20'
   };
 
   const sizes = {

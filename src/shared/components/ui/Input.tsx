@@ -34,8 +34,8 @@ export const Input = memo(forwardRef<HTMLInputElement, InputProps>(({
         <input
           ref={ref}
           className={`
-            w-full bg-slate-900/50 border-2 border-slate-800 rounded-2xl px-5 py-4 text-sm font-bold
-            placeholder:text-slate-600 focus:outline-none focus:border-blue-600 focus:bg-slate-900
+            w-full bg-brand-surface/40 border border-white/5 rounded-2xl px-5 py-4 text-sm font-bold
+            placeholder:text-slate-600 focus:outline-none focus:border-brand-info focus:bg-brand-surface/60
             transition-all disabled:opacity-50
             ${leftIcon ? 'pl-12' : ''}
             ${rightIcon ? 'pr-12' : ''}
