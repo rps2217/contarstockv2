@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Box, Trash2, Camera, Loader2, Plus, CornerDownLeft, Search, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, Box, Trash2, Camera, Loader2, Plus, CornerDownLeft, Search, CheckCircle2, Cloud } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useReceptionLogic } from './hooks/useReceptionLogic';
 import { useHIDScanner } from '../../hooks/useHIDScanner';
@@ -99,9 +99,26 @@ export const ReceptionCapturePage: React.FC = () => {
             </button>
             <h1 className="text-sm font-black uppercase tracking-widest text-slate-400">Captura Recepción</h1>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-2xl font-black italic text-blue-500">{state.draftCount}</span>
-            <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Bultos</span>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={actions.syncToCloud}
+              disabled={state.isSyncing}
+              className={`w-10 h-10 flex items-center justify-center rounded-xl border transition-all ${
+                state.isSyncing 
+                  ? 'bg-blue-500/20 border-blue-500/40 text-blue-400' 
+                  : 'bg-white/5 border-white/10 text-slate-400 active:bg-white/10'
+              }`}
+            >
+              {state.isSyncing ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Cloud className="w-5 h-5" />
+              )}
+            </button>
+            <div className="flex items-center gap-2">
+              <span className="text-2xl font-black italic text-blue-500">{state.draftCount}</span>
+              <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Bultos</span>
+            </div>
           </div>
         </div>
 
