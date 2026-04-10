@@ -32,8 +32,8 @@ const Sync = lazyWithRetry(() => import('@/features/sync/SyncPage'));
 const Settings = lazyWithRetry(() => import('@/features/settings/SettingsPage'));
 
 // --- MÓDULOS OPERATIVOS (FEATURES) ---
-const ReceptionHub = lazyWithRetry(() => import('@/features/reception/ReceptionHub'));
-const ReceptionHistory = lazyWithRetry(() => import('@/features/reception/ReceptionHistoryPage'));
+const ReceptionManagement = lazyWithRetry(() => import('@/features/reception/ReceptionManagementPage'));
+const ReceptionCapture = lazyWithRetry(() => import('@/features/reception/ReceptionCapturePage'));
 const CountingPage = lazyWithRetry(() => import('@/features/counting/CountingPage'));
 const HammerPage = lazyWithRetry(() => import('@/features/hammer/HammerPage'));
 const ExpiryManagement = lazyWithRetry(() => import('@/features/expiry/ExpiryManagementPage'));
@@ -199,8 +199,8 @@ const AppContent = () => {
                 <Route path="/settings" element={<Settings />} />
                 
                 {/* RUTAS MODULARES DE FEATURES */}
-                <Route path="/reception" element={<ReceptionHub />} />
-                <Route path="/reception/history" element={<ReceptionHistory />} />
+                <Route path="/reception" element={<ReceptionManagement />} />
+                <Route path="/reception/capture" element={<ReceptionCapture />} />
                 <Route path="/expiry" element={<ExpiryManagement />} />
                 <Route path="/expiry/capture" element={<ExpiryCapturePage />} />
                 <Route path="/events" element={<EventManagement />} />
