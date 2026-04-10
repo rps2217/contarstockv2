@@ -40,26 +40,26 @@ export const handlePrintExpirations = (processedScans: any[]) => {
         <meta charset="UTF-8">
         <style>
           body { font-family: 'Arial', sans-serif; width: 72mm; margin: 0 auto; padding: 0; color: #000; background: #fff; }
-          .header { text-align: center; border-bottom: 3px solid #000; padding-bottom: 8px; margin-bottom: 8px; }
-          .titulo { font-size: 16px; font-weight: 900; }
+          .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 4px; margin-bottom: 6px; }
+          .titulo { font-size: 14px; font-weight: 900; }
           
-          .item { border-bottom: 2px solid #000; padding: 10px 0; page-break-inside: avoid; }
+          .item { border-bottom: 1px solid #000; padding: 6px 0; page-break-inside: avoid; }
           .top-row { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; }
           .col-left { width: 62%; text-align: left; }
-          .col-right { width: 38%; text-align: right; padding-right: 2mm; box-sizing: border-box; display: flex; flex-direction: column; align-items: flex-end; }
+          .col-right { width: 38%; text-align: right; padding-right: 1mm; box-sizing: border-box; display: flex; flex-direction: column; align-items: flex-end; }
           
-          .desc { font-weight: 900; font-size: 14px; line-height: 1.1; }
-          .prov { font-weight: bold; font-size: 11px; margin-top: 2px; display: block; }
+          .desc { font-weight: 900; font-size: 12px; line-height: 1.1; }
+          .prov { font-weight: bold; font-size: 10px; margin-top: 1px; display: block; }
           
-          .barcode-row { display: flex; align-items: center; margin-top: 12px; gap: 8px; width: 100%; justify-content: flex-start; }
-          .cod-sku { font-weight: 900; font-size: 11px; background-color: #eee; padding: 4px 6px; border: 2px solid #000; white-space: nowrap; }
-          .barcode-svg { height: 60px; width: 65%; max-width: 220px; }
+          .barcode-row { display: flex; flex-direction: column; align-items: center; margin-top: 8px; width: 100%; gap: 2px; }
+          .cod-sku { font-weight: 900; font-size: 11px; background-color: #eee; padding: 1px 6px; border: 1px solid #000; width: fit-content; }
+          .barcode-svg { height: 35px; width: 100%; }
           
-          .venc-grande { font-weight: 900; font-size: 16px; border: 2px solid #000; padding: 2px 5px; display: inline-block; margin: 2px 0; background: #fff; }
-          .lbl { font-size: 9px; font-weight: bold; }
-          .lbl-mini { font-size: 9px; font-weight: bold; white-space: nowrap; }
+          .venc-grande { font-weight: 900; font-size: 14px; border: 2px solid #000; padding: 1px 4px; display: inline-block; margin: 1px 0; background: #fff; }
+          .lbl { font-size: 8px; font-weight: bold; }
+          .lbl-mini { font-size: 8px; font-weight: bold; white-space: nowrap; }
 
-          .footer { margin-top: 10px; text-align: center; border-top: 3px solid #000; padding-top: 5px; font-size: 11px; font-weight: bold; }
+          .footer { margin-top: 6px; text-align: center; border-top: 2px solid #000; padding-top: 4px; font-size: 10px; font-weight: bold; }
           @media print { 
             .no-print { display: none; } 
             body { width: 100%; }
@@ -88,8 +88,8 @@ export const handlePrintExpirations = (processedScans: any[]) => {
                 JsBarcode("#barcode_" + index, item.barcode, {
                   format: "CODE128",
                   lineColor: "#000",
-                  width: 2.0,
-                  height: 80,
+                  width: 2.5,
+                  height: 40,
                   displayValue: false,
                   margin: 0
                 });
