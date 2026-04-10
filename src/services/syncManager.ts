@@ -80,10 +80,10 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
     }
   }
 
-  // 2. Reception
+  // 2. Reception (Incluir borradores y sesiones finalizadas no sincronizadas)
   const unsyncedReception = await db.sessions
-    .where('status').equals('completed')
-    .and(s => !s.lastSyncTimestamp && (s.totalUnits === 0 || !s.totalUnits) && s.erpOrder === 'RECEPCION_BORRADOR')
+    .where('sessionType').equals('reception')
+    .filter(s => !s.lastSyncTimestamp)
     .toArray();
 
   if (unsyncedReception.length > 0) {
