@@ -8,13 +8,24 @@ import { useExpiryStore } from '../store/useExpiryStore';
 interface SystemNotchProps {
   children: React.ReactNode;
   theme: 'dark' | 'light';
+  mode?: 'expiry' | 'reception' | 'counting' | 'events' | 'default';
 }
 
-export const SystemNotch: React.FC<SystemNotchProps> = ({ children, theme }) => {
+export const SystemNotch: React.FC<SystemNotchProps> = ({ children, theme, mode = 'default' }) => {
   const [isOpen, setIsOpen] = useState(false);
   const { pendingItems, isSyncing, latencyMs, isFirestoreConnected } = useSyncStore();
   const { alertCount } = useExpiryStore();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  const modeColors = {
+    expiry: 'border-brand-warning shadow-brand-warning/20',
+    reception: 'border-emerald-500 shadow-emerald-500/20',
+    counting: 'border-blue-500 shadow-blue-500/20',
+    events: 'border-purple-500 shadow-purple-500/20',
+    default: theme === 'dark' ? 'border-white/10 shadow-black/50' : 'border-slate-200 shadow-slate-200'
+  };
+
+  const currentModeClass = modeColors[mode] || modeColors.default;
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -56,8 +67,10 @@ export const SystemNotch: React.FC<SystemNotchProps> = ({ children, theme }) => 
             className={`
               flex items-center gap-3 px-6 py-1 rounded-b-3xl border-x border-b shadow-2xl transition-all
               ${theme === 'dark' 
-                ? 'bg-brand-surface/95 border-white/10 text-slate-400 hover:text-white shadow-black/50' 
-                : 'bg-white/95 border-slate-200 text-slate-600 hover:text-slate-900 shadow-slate-200'}
+                ? 'bg-brand-surface/95 text-slate-400 hover:text-white' 
+                : 'bg-white/95 text-slate-600 hover:text-slate-900'}
+              ${currentModeClass}
+              ${mode !== 'default' ? 'border-b-2' : ''}
             `}
             whileTap={{ scale: 0.98 }}
           >

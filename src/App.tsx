@@ -87,6 +87,15 @@ const AppContent = () => {
     return paths.some(p => location.pathname.startsWith(p));
   }, [location.pathname]);
 
+  // Determinar el modo de color para el SystemNotch
+  const systemMode = React.useMemo(() => {
+    if (location.pathname.startsWith('/expiry')) return 'expiry';
+    if (location.pathname.startsWith('/reception')) return 'reception';
+    if (location.pathname.startsWith('/counting')) return 'counting';
+    if (location.pathname.startsWith('/events')) return 'events';
+    return 'default';
+  }, [location.pathname]);
+
   useEffect(() => {
     initPersistence();
     const authStatus = localStorage.getItem('logicount_auth') === 'true';
@@ -174,7 +183,7 @@ const AppContent = () => {
         )}
         
         <main className={`flex-1 relative overflow-hidden transition-all duration-500 ${!isScanningMode ? (isSidebarCollapsed ? 'md:pl-20' : 'md:pl-64') : ''}`}>
-          <SystemNotch theme={settings.theme}>
+          <SystemNotch theme={settings.theme} mode={systemMode}>
             <SystemStatus />
             <ExpiryAlertBanner theme={settings.theme} />
           </SystemNotch>
