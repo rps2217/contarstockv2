@@ -127,6 +127,49 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
   return Object.values(groups);
 };
 
+/**
+ * Reconciliación de Recepción:
+ * Compara los registros locales con la nube y elimina los que ya no existen en Firestore.
+ */
+export const reconcileReception = async (onProgress?: (msg: string) => void): Promise<{ deleted: number }> => {
+  try {
+    const config = getSettings().cloudConfig;
+    const targetTable = config?.receptionTableName || "RECEPCION_BULTOS";
+    
+    if (onProgress) onProgress("Verificando integridad con la nube...");
+    
+    const response = await firebaseSyncService.pullBatch(targetTable);
+    if (!response.success || !response.rows) return { deleted: 0 };
+
+    const remoteIds = new Set(response.rows.map((r: any) => String(r.id || r.ID)));
+    
+    // Buscar sesiones locales de recepción que ya fueron sincronizadas (tienen timestamp)
+    const localSyncedReception = await db.sessions
+      .where('sessionType').equals('reception')
+      .filter(s => !!s.lastSyncTimestamp)
+      .toArray();
+
+    const toDelete = localSyncedReception.filter(s => !remoteIds.has(s.id));
+    
+    if (toDelete.length > 0) {
+      const idsToDelete = toDelete.map(s => s.id);
+      if (onProgress) onProgress(`Limpiando ${idsToDelete.length} registros obsoletos...`);
+      
+      await (db as any).transaction('rw', db.scans, db.sessions, async () => {
+        await db.scans.where('sessionId').anyOf(idsToDelete).delete();
+        await db.sessions.where('id').anyOf(idsToDelete).delete();
+      });
+      
+      return { deleted: idsToDelete.length };
+    }
+
+    return { deleted: 0 };
+  } catch (e: any) {
+    logger.error("RECONCILE_RECEPTION_FAIL", e.message);
+    return { deleted: 0 };
+  }
+};
+
 export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: string) => void): Promise<void> => {
   if (isSyncingInProgress) {
     throw new Error("Sincronización en progreso, por favor intente nuevamente en unos segundos.");

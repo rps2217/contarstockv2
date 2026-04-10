@@ -120,7 +120,15 @@ export const useReceptionLogic = () => {
       
       if (receptionGroup) {
         await syncManager.performBatchUpload(receptionGroup);
-        addToast('Recepción sincronizada correctamente', 'success');
+      }
+
+      // RECONCILIACIÓN: Limpiar registros borrados en otros dispositivos
+      const reconcileResult = await syncManager.reconcileReception();
+      
+      if (receptionGroup || reconcileResult.deleted > 0) {
+        let msg = 'Recepción sincronizada correctamente';
+        if (reconcileResult.deleted > 0) msg += `. Se limpiaron ${reconcileResult.deleted} registros obsoletos.`;
+        addToast(msg, 'success');
         SoundFX.play('success');
       } else {
         addToast('No hay datos pendientes de sincronizar', 'info');
