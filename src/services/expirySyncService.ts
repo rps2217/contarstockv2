@@ -15,7 +15,25 @@ export class ExpirySyncService {
     const colRef = collection(firestoreDb, tableName);
     const q = query(colRef, orderBy('timestamp', 'desc'), limit(3000));
 
-    this.unsubscribe = onSnapshot(q, (snapshot) => {
+    this.unsubscribe = onSnapshot(q, async (snapshot) => {
+      // RECONCILIACIÓN INICIAL: Si es la primera carga o hay cambios masivos, 
+      // verificamos qué registros locales ya no existen en la nube.
+      const remoteIds = new Set(snapshot.docs.map(doc => doc.id));
+      const localItems = await expiryRepository.getAll();
+      
+      // Solo reconciliamos registros que ya han sido sincronizados previamente (tienen syncStatus === 'synced')
+      // para no borrar borradores locales que aún no suben a la nube.
+      const obsoleteItems = localItems.filter(item => 
+        item.syncStatus === 'synced' && !remoteIds.has(item.id)
+      );
+
+      if (obsoleteItems.length > 0) {
+        logger.info('EXPIRY_SYNC', `Eliminando ${obsoleteItems.length} registros obsoletos detectados en reconciliación`);
+        for (const item of obsoleteItems) {
+          await expiryRepository.delete(item.id);
+        }
+      }
+
       snapshot.docChanges().forEach(async (change) => {
         const data = { id: change.doc.id, ...change.doc.data() };
         

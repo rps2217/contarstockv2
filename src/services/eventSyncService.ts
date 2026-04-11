@@ -15,7 +15,22 @@ export class EventSyncService {
     const colRef = collection(firestoreDb, tableName);
     const q = query(colRef, orderBy('timestamp', 'desc'), limit(3000));
 
-    this.unsubscribe = onSnapshot(q, (snapshot) => {
+    this.unsubscribe = onSnapshot(q, async (snapshot) => {
+      // RECONCILIACIÓN INICIAL: Limpiar registros locales que ya no existen en la nube
+      const remoteIds = new Set(snapshot.docs.map(doc => doc.id));
+      const localItems = await eventRepository.getAll();
+      
+      const obsoleteItems = localItems.filter(item => 
+        item.syncStatus === 'synced' && !remoteIds.has(item.id)
+      );
+
+      if (obsoleteItems.length > 0) {
+        logger.info('EVENT_SYNC', `Eliminando ${obsoleteItems.length} eventos obsoletos detectados en reconciliación`);
+        for (const item of obsoleteItems) {
+          await eventRepository.delete(item.id);
+        }
+      }
+
       snapshot.docChanges().forEach(async (change) => {
         const data = { id: change.doc.id, ...change.doc.data() };
         
