@@ -1,14 +1,12 @@
 
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { PrintService } from '../../../services/printService';
 
 /**
  * Genera un reporte tipo ticket de los productos seleccionados
  */
 export const handlePrintExpirations = (processedScans: any[]) => {
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) return;
-
   const now = new Date();
   const nombreMesTitulo = format(now, "MMMM yyyy", { locale: es }).toUpperCase();
 
@@ -16,95 +14,51 @@ export const handlePrintExpirations = (processedScans: any[]) => {
     ? `<div style='text-align:center; padding:20px; border:2px solid #000'>NO HAY REGISTROS</div>`
     : processedScans.map((r, index) => `
         <div class="item">
-          <div class="desc">${(r.productName || '').substring(0,60).toUpperCase()}</div>
-          <div class="info-row">
-            <div class="info-left">
-              <span class="prov">${(r.providerName || '').substring(0,30).toUpperCase()}</span>
-              <span class="cod-sku">ID: ${r.barcode}</span>
+          <div class="item-desc">${(r.productName || '').substring(0,60).toUpperCase()}</div>
+          <div style="display: flex; justify-content: space-between; align-items: flex-end; width: 100%; margin-top: 2px;">
+            <div style="display: flex; flex-direction: column; gap: 1px; width: 58%;">
+              <span style="font-weight: bold; font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${(r.providerName || '').substring(0,30).toUpperCase()}</span>
+              <span style="font-weight: 900; font-size: 10px; background-color: #eee; padding: 0px 4px; border: 1px solid #000; width: fit-content;">ID: ${r.barcode}</span>
             </div>
-            <div class="info-right">
-              <span class="venc-grande">${r.expiryDateObj ? format(r.expiryDateObj, 'dd/MM/yy') : 'N/A'}</span>
-              <span class="lbl-mini">RET: ${r.withdrawalDate ? format(r.withdrawalDate, 'dd/MM/yy') : 'N/A'}</span>
+            <div style="display: flex; flex-direction: column; align-items: flex-end; width: 42%;">
+              <span style="font-weight: 900; font-size: 14px; border: 2px solid #000; padding: 0px 4px; background: #fff; line-height: 1.2; margin-bottom: 1px;">${r.expiryDateObj ? format(r.expiryDateObj, 'dd/MM/yy') : 'N/A'}</span>
+              <span style="font-size: 8px; font-weight: bold; white-space: nowrap;">RET: ${r.withdrawalDate ? format(r.withdrawalDate, 'dd/MM/yy') : 'N/A'}</span>
             </div>
           </div>
-          <div class="barcode-row">
-            <svg class="barcode-svg" id="barcode_${index}"></svg>
+          <div style="width: 100%; margin-top: 2px; display: flex; justify-content: center;">
+            <svg style="height: 30px; width: 100%;" id="barcode_${index}"></svg>
           </div>
         </div>`).join('');
 
-  const html = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="UTF-8">
-        <style>
-          body { font-family: 'Arial', sans-serif; width: 76mm; margin: 0 auto; padding: 0 2mm; color: #000; background: #fff; box-sizing: border-box; }
-          .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 4px; margin-bottom: 6px; }
-          .titulo { font-size: 14px; font-weight: 900; }
-          
-          .item { border-bottom: 1px solid #000; padding: 3px 0; page-break-inside: avoid; display: flex; flex-direction: column; gap: 1px; }
-          .desc { font-weight: 900; font-size: 13px; line-height: 1.1; width: 100%; display: block; }
-          
-          .info-row { display: flex; justify-content: space-between; align-items: flex-end; width: 100%; margin-top: 1px; }
-          .info-left { display: flex; flex-direction: column; gap: 1px; width: 58%; }
-          .info-right { display: flex; flex-direction: column; align-items: flex-end; width: 42%; }
-          
-          .prov { font-weight: bold; font-size: 9px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-          .cod-sku { font-weight: 900; font-size: 10px; background-color: #eee; padding: 0px 4px; border: 1px solid #000; width: fit-content; }
-          
-          .venc-grande { font-weight: 900; font-size: 14px; border: 2px solid #000; padding: 0px 4px; background: #fff; line-height: 1.2; margin-bottom: 1px; }
-          .lbl-mini { font-size: 8px; font-weight: bold; white-space: nowrap; }
-
-          .barcode-row { width: 100%; margin-top: 1px; display: flex; justify-content: center; }
-          .barcode-svg { height: 30px; width: 100%; }
-
-          .footer { margin-top: 6px; text-align: center; border-top: 2px solid #000; padding-top: 4px; font-size: 10px; font-weight: bold; }
-          @media print { 
-            .no-print { display: none; } 
-            body { width: 100%; }
-            @page { margin: 0; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <span class="titulo">REPORTE VENCIMIENTOS</span><br>
-          <strong>${nombreMesTitulo}</strong>
-        </div>
-        ${listaItems}
-        <div class="footer">
-          TOTAL PRODUCTOS: ${processedScans.length}<br>
-          ${format(new Date(), "dd/MM/yyyy HH:mm")}
-        </div>
-        <button class="no-print" onclick="window.print()" style="width:100%; margin-top:20px; padding:15px; font-weight:bold; cursor:pointer;">🖨️ IMPRIMIR TICKET</button>
-
-        <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-        <script>
-          window.onload = function() {
-            const items = ${JSON.stringify(processedScans.map(i => ({ barcode: i.barcode })))};
-            items.forEach((item, index) => {
-              try {
-                JsBarcode("#barcode_" + index, item.barcode, {
-                  format: "CODE128",
-                  lineColor: "#000",
-                  width: 2.0,
-                  height: 30,
-                  displayValue: false,
-                  margin: 0
-                });
-              } catch (e) {
-                console.error("Error barcode", e);
-              }
-            });
-            setTimeout(() => { window.print(); }, 500);
-          };
-        </script>
-      </body>
-    </html>
-  `;
-
-  printWindow.document.write(html);
-  printWindow.document.close();
+  PrintService.printTicket({
+    title: "REPORTE VENCIMIENTOS",
+    subtitle: nombreMesTitulo,
+    content: listaItems,
+    footer: `TOTAL PRODUCTOS: ${processedScans.length}<br>${format(new Date(), "dd/MM/yyyy HH:mm")}`,
+    scripts: `
+      <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+      <script>
+        window.onload = function() {
+          const items = ${JSON.stringify(processedScans.map(i => ({ barcode: i.barcode })))};
+          items.forEach((item, index) => {
+            try {
+              JsBarcode("#barcode_" + index, item.barcode, {
+                format: "CODE128",
+                lineColor: "#000",
+                width: 2.0,
+                height: 30,
+                displayValue: false,
+                margin: 0
+              });
+            } catch (e) {
+              console.error("Error barcode", e);
+            }
+          });
+          setTimeout(() => { window.print(); }, 500);
+        };
+      </script>
+    `
+  });
 };
 
 /**
@@ -229,180 +183,30 @@ export const handlePrintLabels = (processedScans: any[]) => {
  * Genera un reporte de impresión para eventos seleccionados optimizado para ticket térmico
  */
 export const handlePrintSelectedEvents = (items: any[]) => {
-  const printWindow = window.open('', '_blank', 'width=400,height=600');
-  if (!printWindow) return;
-
   const now = new Date();
   const fechaGeneracion = format(now, "dd/MM/yyyy HH:mm");
 
   const itemsHtml = items.map(item => `
-    <div class="ticket-item">
-      <div class="item-row">
-        <span class="item-name">${(item.productName || 'N/A').toUpperCase()}</span>
+    <div class="ticket-item" style="border-bottom: 2px dashed #888; padding: 12px 0; page-break-inside: avoid;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%; line-height: 1.3;">
+        <span style="font-size: 16px; font-weight: 900; word-break: break-word; display: block; width: 100%; margin-bottom: 4px;">${(item.productName || 'N/A').toUpperCase()}</span>
       </div>
-      <div class="item-row secondary">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%; line-height: 1.3; font-size: 14px; margin-top: 4px; font-weight: bold;">
         <span>SKU: <strong>${item.barcode || 'N/A'}</strong></span>
-        <span class="qty">CANT: <strong>${item.quantity || 0}</strong></span>
+        <span style="background: #000; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 15px;">CANT: <strong>${item.quantity || 0}</strong></span>
       </div>
-      <div class="item-row tertiary">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%; line-height: 1.3; font-size: 12px; color: #000; margin-top: 4px; text-transform: uppercase; font-weight: bold;">
         <span>FRC: ${item.frc || 'N/A'}</span>
         <span>DST: ${item.destino || 'N/A'}</span>
       </div>
     </div>
   `).join('');
 
-  const html = `
-    <!DOCTYPE html>
-    <html lang="es">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Ticket de Eventos</title>
-      <style>
-        * { box-sizing: border-box; }
-        body { 
-          font-family: 'Courier New', Courier, monospace; 
-          width: 72mm; 
-          margin: 0 auto; 
-          padding: 5mm; 
-          color: #000;
-          background: #fff;
-        }
-        
-        .header { 
-          text-align: center; 
-          border-bottom: 3px dashed #000; 
-          padding-bottom: 12px; 
-          margin-bottom: 12px; 
-        }
-        
-        .title { 
-          font-size: 20px; 
-          font-weight: 900; 
-          display: block;
-          margin-bottom: 6px;
-        }
-        
-        .subtitle {
-          font-size: 14px;
-          font-weight: bold;
-          letter-spacing: 1px;
-        }
-
-        .ticket-item {
-          border-bottom: 2px dashed #888;
-          padding: 12px 0;
-          page-break-inside: avoid;
-        }
-
-        .item-row {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          width: 100%;
-          line-height: 1.3;
-        }
-
-        .item-name {
-          font-size: 16px;
-          font-weight: 900;
-          word-break: break-word;
-          display: block;
-          width: 100%;
-          margin-bottom: 4px;
-        }
-
-        .secondary {
-          font-size: 14px;
-          margin-top: 4px;
-          font-weight: bold;
-        }
-
-        .tertiary {
-          font-size: 12px;
-          color: #000;
-          margin-top: 4px;
-          text-transform: uppercase;
-          font-weight: bold;
-        }
-
-        .qty {
-          background: #000;
-          color: #fff;
-          padding: 2px 6px;
-          border-radius: 4px;
-          font-size: 15px;
-        }
-
-        .footer {
-          margin-top: 20px;
-          text-align: center;
-          border-top: 3px dashed #000;
-          padding-top: 15px;
-          font-size: 13px;
-        }
-
-        .summary {
-          font-weight: 900;
-          font-size: 18px;
-          margin-bottom: 8px;
-          border: 2px solid #000;
-          padding: 4px;
-          display: inline-block;
-        }
-
-        @media print {
-          .no-print { display: none; }
-          body { width: 100%; padding: 0; }
-          @page { margin: 0; }
-        }
-
-        .btn-print {
-          width: 100%;
-          padding: 20px;
-          background: #000;
-          color: #fff;
-          border: none;
-          font-weight: 900;
-          font-size: 18px;
-          cursor: pointer;
-          margin-top: 30px;
-          border-radius: 12px;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="header">
-        <span class="title">LOGICOUNT PRO</span>
-        <span class="subtitle">CONTROL DE EVENTOS</span>
-      </div>
-
-      <div class="content">
-        ${itemsHtml}
-      </div>
-
-      <div class="footer">
-        <div class="summary">TOTAL ITEMS: ${items.length}</div>
-        <div>FECHA: ${fechaGeneracion}</div>
-        <div style="margin-top: 10px; font-style: italic;">*** FIN DE REPORTE ***</div>
-      </div>
-
-      <button class="no-print btn-print" onclick="window.print()">🖨️ IMPRIMIR TICKET</button>
-      
-      <script>
-        window.onload = () => {
-          // Pequeño delay para asegurar renderizado
-          setTimeout(() => {
-            // window.print();
-          }, 500);
-        };
-      </script>
-    </body>
-    </html>
-  `;
-
-  printWindow.document.write(html);
-  printWindow.document.close();
+  PrintService.printTicket({
+    title: "CONTROL DE EVENTOS",
+    content: itemsHtml,
+    footer: `<div style="font-weight: 900; font-size: 18px; margin-bottom: 8px; border: 2px solid #000; padding: 4px; display: inline-block;">TOTAL ITEMS: ${items.length}</div><br>FECHA: ${fechaGeneracion}<br><div style="margin-top: 10px; font-style: italic;">*** FIN DE REPORTE ***</div>`
+  });
 };
 
 export const handleExportExpirationsCSV = (processedScans: any[]) => {

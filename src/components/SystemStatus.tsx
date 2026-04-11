@@ -40,7 +40,8 @@ export const SystemStatus: React.FC = () => {
       try {
         const unsyncedScans = await db.scans.where('synced').equals(0).count();
         const pendingDynamic = await db.dynamic_data.where('syncStatus').equals('pending').count();
-        setPendingItems(unsyncedScans + pendingDynamic);
+        const pendingSessions = await db.sessions.filter(s => !s.lastSyncTimestamp).count();
+        setPendingItems(unsyncedScans + pendingDynamic + pendingSessions);
       } catch (e) {}
     };
 

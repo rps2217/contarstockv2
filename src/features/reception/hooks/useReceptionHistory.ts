@@ -21,6 +21,48 @@ export const useReceptionHistory = () => {
     [searchQuery, limit, startTimestamp, endTimestamp]
   );
 
+  // Descarga inicial de datos de recepción desde la nube
+  const [isInitialLoading, setIsInitialLoading] = useState(false);
+  
+  const pullCloudData = useCallback(async () => {
+    if (isInitialLoading) return;
+    setIsInitialLoading(true);
+    try {
+      const config = (await import('../../../services/settings')).getSettings().cloudConfig;
+      const targetTable = config?.receptionTableName || "RECEPCION_BULTOS";
+      const { firebaseSyncService } = await import('../../../services/firebaseSyncService');
+      const { db } = await import('../../../db');
+      
+      const response = await firebaseSyncService.pullBatch(targetTable);
+      if (response.success && response.rows) {
+        const sessionsToPut = response.rows.map((r: any) => ({
+          id: r.id || r.ID,
+          erpOrder: r.erpOrder || r.ERP_ORDEN || 'RECEPCION_BORRADOR',
+          logisticsLabel: r.logisticsLabel || r.ETIQUETA_LOGISTICA || '',
+          createdAt: r.createdAt || (r.TIMESTAMP ? new Date(r.TIMESTAMP).getTime() : Date.now()),
+          status: r.status || 'completed',
+          sessionType: 'reception' as const,
+          lastSyncTimestamp: r.lastSyncTimestamp || Date.now(),
+          totalUnits: r.totalUnits || 0,
+          totalSKUs: r.totalSKUs || 0
+        }));
+
+        if (sessionsToPut.length > 0) {
+          await db.sessions.bulkPut(sessionsToPut);
+        }
+      }
+    } catch (e) {
+      console.error('Error pulling reception data:', e);
+    } finally {
+      setIsInitialLoading(false);
+    }
+  }, [isInitialLoading]);
+
+  // Ejecutar descarga al montar el componente
+  useState(() => {
+    pullCloudData();
+  });
+
   const loadMore = useCallback(() => {
     setLimit(prev => prev + 50);
   }, []);

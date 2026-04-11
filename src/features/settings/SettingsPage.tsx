@@ -14,8 +14,9 @@ import { SupportSection } from './components/SupportSection';
 import { CloudSection } from './components/CloudSection';
 import { ThemeSection } from './components/ThemeSection';
 import { PrinterSection } from './components/PrinterSection';
+import { PreferencesSection } from './components/PreferencesSection';
 
-type TabId = 'general' | 'cloud' | 'system';
+type TabId = 'general' | 'preferences' | 'cloud' | 'system';
 
 export const Settings: React.FC = () => {
  const navigate = useNavigate();
@@ -47,9 +48,10 @@ export const Settings: React.FC = () => {
  };
 
  const tabs: { id: TabId; label: string; icon: any; color: string }[] = [
- { id: 'general', label: 'Operativa', icon: Zap, color: 'text-amber-500' },
- { id: 'cloud', label: 'Nube', icon: Cloud, color: 'text-sky-400' },
- { id: 'system', label: 'Soporte', icon: ShieldCheck, color: 'text-emerald-500' },
+  { id: 'general', label: 'Operativa', icon: Zap, color: 'text-amber-500' },
+  { id: 'preferences', label: 'Preferencias', icon: Palette, color: 'text-purple-500' },
+  { id: 'cloud', label: 'Nube', icon: Cloud, color: 'text-sky-400' },
+  { id: 'system', label: 'Soporte', icon: ShieldCheck, color: 'text-emerald-500' },
  ];
 
  return (
@@ -123,6 +125,7 @@ export const Settings: React.FC = () => {
      <PrinterSection settings={settings} updateSetting={updateSetting} />
    </>
  )}
+ {activeTab === 'preferences' && <PreferencesSection settings={settings} updateSetting={updateSetting} />}
  {activeTab === 'cloud' && <CloudSection settings={settings} updateSetting={updateSetting} />}
  {activeTab === 'system' && <SupportSection />}
  </div>

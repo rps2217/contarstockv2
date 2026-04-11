@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Target, Zap, Activity, X, Camera } from 'lucide-react';
 import { useOpticalEngine } from '../hooks/useOpticalEngine';
+import { useAppStore } from '@/store/mainAppStore';
 
 interface CameraScannerProps {
   onScan: (code: string) => void;
@@ -20,7 +21,9 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
   mode = 'scan',
   onCapture
 }) => {
+  const { settings } = useAppStore();
   const [feedbackStatus, setFeedbackStatus] = useState<'success' | null>(null);
+  const isMirrored = settings.captureSettings?.cameraMirrorMode || false;
   
   const effectiveTrigger = inline ? isTriggered : true;
   const SCANNER_DOM_ID = "v8-core-optical-engine";
@@ -46,6 +49,10 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
     canvas.height = videoRef.current.videoHeight;
     const ctx = canvas.getContext('2d');
     if (ctx) {
+      if (isMirrored) {
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+      }
       ctx.drawImage(videoRef.current, 0, 0);
       const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
       onCapture(dataUrl);
@@ -83,8 +90,18 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
       <div className="flex-1 relative bg-black flex flex-col justify-center h-full">
         {feedbackStatus === 'success' && <div className="absolute inset-0 z-[60] bg-emerald-600/40 flex items-center justify-center animate-in fade-in duration-75"><CheckCircle2 className="w-20 h-20 text-white" /></div>}
         {error && <div className="absolute inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center p-6 text-center"><AlertTriangle className="w-12 h-12 text-rose-500 mb-4" /><h3 className="text-white font-black uppercase text-[10px] tracking-widest">{error}</h3><button onClick={onClose} className="mt-8 bg-white text-black px-10 py-4 font-black uppercase text-[10px] border-b-8 border-slate-300">Volver</button></div>}
-        <video ref={videoRef} className={`w-full h-full object-cover transition-all duration-150 ${engineType === 'native' ? 'block' : 'hidden'} ${effectiveTrigger ? 'opacity-100 scale-100' : 'opacity-10 scale-110 grayscale blur-sm'}`} playsInline muted />
-        <div id={SCANNER_DOM_ID} className={`w-full h-full transition-all duration-150 ${engineType === 'wasm' ? 'block' : 'hidden'} ${effectiveTrigger ? 'opacity-100 scale-100' : 'opacity-10 scale-110 grayscale blur-sm'}`}></div>
+        <video 
+          ref={videoRef} 
+          className={`w-full h-full object-cover transition-all duration-150 ${engineType === 'native' ? 'block' : 'hidden'} ${effectiveTrigger ? 'opacity-100 scale-100' : 'opacity-10 scale-110 grayscale blur-sm'}`} 
+          style={{ transform: isMirrored ? 'scaleX(-1)' : 'none' }}
+          playsInline 
+          muted 
+        />
+        <div 
+          id={SCANNER_DOM_ID} 
+          className={`w-full h-full transition-all duration-150 ${engineType === 'wasm' ? 'block' : 'hidden'} ${effectiveTrigger ? 'opacity-100 scale-100' : 'opacity-10 scale-110 grayscale blur-sm'}`}
+          style={{ transform: isMirrored ? 'scaleX(-1)' : 'none' }}
+        ></div>
       </div>
 
       {mode === 'photo' && (

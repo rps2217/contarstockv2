@@ -150,9 +150,19 @@ const DEFAULT_SETTINGS: AppSettings = {
     }
   },
   mobileNavConfig: ['dashboard', 'reception', 'reports', 'sync', 'database'],
+  pharmacyName: 'Mi Farmacia',
+  autoLockTimeout: 300000, // 5 minutos por defecto
+  captureSettings: {
+    cameraMirrorMode: false,
+    keypadVibration: true,
+    scannerSpeed: 'normal',
+    scannerDelay: 100,
+  },
   thermalPrinter: {
     enabled: false,
-    type: 'bluetooth'
+    type: 'bluetooth',
+    paperWidth: 80,
+    margin: 2
   }
 };
 
@@ -172,6 +182,10 @@ export const getSettings = (): AppSettings => {
  thermalPrinter: {
  ...DEFAULT_SETTINGS.thermalPrinter,
  ...(parsed.thermalPrinter || {})
+ },
+ captureSettings: {
+ ...DEFAULT_SETTINGS.captureSettings,
+ ...(parsed.captureSettings || {})
  }
  };
  } catch (e) {

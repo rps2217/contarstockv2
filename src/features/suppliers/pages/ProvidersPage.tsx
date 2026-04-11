@@ -7,7 +7,7 @@ import { db } from '../../../db';
 import { toast } from 'sonner';
 import { ProviderFormModal } from '../components/ProviderFormModal';
 import { syncProvidersToCloud } from '../../../services/cloudSync';
-
+import { ManagementSearchBar } from '../../../shared/components/core/ManagementSearchBar';
 import { useAppStore } from '../../../store/mainAppStore';
 
 export const ProvidersPage: React.FC = () => {
@@ -112,66 +112,56 @@ export const ProvidersPage: React.FC = () => {
       <div className={`border-b px-6 py-4 shrink-0 transition-colors ${
         theme === 'dark' ? 'bg-brand-surface/50 border-white/5' : 'bg-white border-slate-200'
       }`}>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className={`text-2xl font-black uppercase tracking-tighter flex items-center gap-3 ${
+            <h1 className={`text-2xl md:text-3xl font-black uppercase tracking-tighter italic leading-none flex items-center gap-3 ${
               theme === 'dark' ? 'text-white' : 'text-slate-900'
             }`}>
               <Truck className="w-7 h-7 text-brand-info" />
-              Proveedores y Canjes
+              {settings.pharmacyName || 'Proveedores'}
             </h1>
-            <p className={`text-xs font-bold uppercase tracking-widest mt-1 ${
-              theme === 'dark' ? 'text-slate-500' : 'text-slate-500'
+            <p className={`text-[10px] font-bold uppercase tracking-widest mt-1.5 flex items-center gap-2 ${
+              theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
             }`}>
-              Políticas de Logística Inversa
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse shrink-0" />
+              Políticas de Logística Inversa y Canjes
             </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleSyncToCloud}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-colors ${
-                theme === 'dark' ? 'bg-brand-info/20 text-brand-info hover:bg-brand-info/30' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-              }`}
-            >
-              <UploadCloud className="w-5 h-5" />
-              <span className="hidden sm:inline">Sincronizar Nube</span>
-            </button>
-            <button
-              onClick={handleAutoFill}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-colors ${
-                theme === 'dark' ? 'bg-brand-surface border border-white/10 text-slate-300 hover:bg-brand-surface/80' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              }`}
-            >
-              <Wand2 className="w-5 h-5" />
-              <span className="hidden sm:inline">Autocompletar</span>
-            </button>
-            <button
-              onClick={() => { setEditingProvider(undefined); setIsFormOpen(true); }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-colors shadow-lg ${
-                theme === 'dark' ? 'bg-brand-warning text-black hover:bg-brand-warning/90 shadow-brand-warning/20' : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200'
-              }`}
-            >
-              <Plus className="w-5 h-5" />
-              <span className="hidden sm:inline">Nuevo Proveedor</span>
-            </button>
           </div>
         </div>
 
-        {/* Search */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nombre o RUT..."
-            className={`w-full pl-10 pr-4 py-2 rounded-xl text-sm font-medium transition-all outline-none border-2 ${
-              theme === 'dark' 
-                ? 'bg-brand-dark border-white/5 focus:bg-brand-surface focus:border-brand-warning text-white' 
-                : 'bg-slate-100 border-transparent focus:bg-white focus:border-indigo-500 text-slate-900'
-            }`}
-          />
-        </div>
+        <ManagementSearchBar 
+          searchQuery={search}
+          setSearchQuery={setSearch}
+          onOpenFilters={() => {}} // No filters for now
+          onOpenAdd={() => { setEditingProvider(undefined); setIsFormOpen(true); }}
+          onClearFilters={() => setSearch('')}
+          activeFiltersCount={0}
+          placeholder="BUSCAR POR NOMBRE O RUT..."
+          accentColor="indigo"
+          theme={theme}
+          extraActions={
+            <div className="flex gap-2">
+              <button
+                onClick={handleSyncToCloud}
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all border ${
+                  theme === 'dark' ? 'bg-brand-info/10 border-brand-info/20 text-brand-info hover:bg-brand-info/20' : 'bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100'
+                }`}
+                title="Sincronizar con la Nube"
+              >
+                <UploadCloud className="w-5 h-5" />
+              </button>
+              <button
+                onClick={handleAutoFill}
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all border ${
+                  theme === 'dark' ? 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10' : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
+                }`}
+                title="Autocompletar desde Catálogo"
+              >
+                <Wand2 className="w-5 h-5" />
+              </button>
+            </div>
+          }
+        />
       </div>
 
       {/* List */}

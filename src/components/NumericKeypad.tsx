@@ -34,18 +34,21 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
  setInternalBuffer(prev => (prev.length < 25 ? prev + char : prev));
  onInput?.(char);
  SoundFX.play('increment');
+ SoundFX.vibrateKeypad();
  }, [onInput]);
 
  const handleDelete = useCallback(() => {
  setInternalBuffer(prev => prev.slice(0, -1));
  onDelete?.();
  SoundFX.play('delete');
+ SoundFX.vibrateKeypad();
  }, [onDelete]);
 
  const handleConfirm = useCallback(() => {
  if (internalBuffer.trim().length > 0) {
  onConfirm?.(internalBuffer.trim());
  setInternalBuffer("");
+ SoundFX.vibrateKeypad();
  }
  }, [internalBuffer, onConfirm]);
 

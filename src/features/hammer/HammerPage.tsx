@@ -11,22 +11,19 @@ import { useHIDScanner } from '../../hooks/useHIDScanner';
 import { SoundFX } from '../../services/audio';
 import { HammerCameraView } from './components/HammerCameraView';
 
+import { useAppStore } from '../../store/mainAppStore';
+
 export const HammerPage: React.FC = () => {
  const navigate = useNavigate();
  const { batchId = 'CORE' } = useParams();
  const { state, actions } = useHammerLogic(batchId);
+ const { settings, updateSetting } = useAppStore();
  const locManager = useLocationManager(`hammer_loc_${batchId}`);
 
  const [isToolsOpen, setIsToolsOpen] = useState(false);
  const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
  const [isMigrating, setIsMigrating] = useState(false);
  const [isDownloading, setIsDownloading] = useState(false);
- const [isVoiceEnabled, setIsVoiceEnabled] = useState(() => localStorage.getItem('hammer_voice') === 'true');
-
- // Persistir preferencia de voz
- useEffect(() => {
- localStorage.setItem('hammer_voice', isVoiceEnabled.toString());
- }, [isVoiceEnabled]);
 
  // ESCUCHA DE HARDWARE (HID LASER)
  useHIDScanner({
@@ -82,7 +79,7 @@ export const HammerPage: React.FC = () => {
  optimisticQty={state.optimisticQty}
  feedback={state.feedback}
  items={state.items}
- isVoiceEnabled={isVoiceEnabled}
+ isVoiceEnabled={settings.ttsEnabled}
  onSync={actions.syncToCloud}
  isSyncing={state.isSyncing}
  />
@@ -96,8 +93,8 @@ export const HammerPage: React.FC = () => {
  onSync={actions.syncToCloud}
  isSyncing={state.isSyncing}
  onPrintSummary={() => {}}
- isVoiceEnabled={isVoiceEnabled}
- onToggleVoice={() => setIsVoiceEnabled(!isVoiceEnabled)}
+ isVoiceEnabled={settings.ttsEnabled}
+ onToggleVoice={() => updateSetting('ttsEnabled', !settings.ttsEnabled)}
  />
 
  <LocationSelectorModal 

@@ -1,28 +1,34 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useAppStore } from '../store/mainAppStore';
 
 /**
- * HOOK: AUTO-BLOQUEO INDUSTRIAL v3.1
+ * HOOK: AUTO-BLOQUEO INDUSTRIAL v3.2
  * Monitorea la actividad y bloquea el terminal tras X ms de inactividad.
+ * Utiliza el tiempo de bloqueo global por defecto.
  */
-export const useAutoLock = (delayMs: number = 3000, enabled: boolean = true) => {
+export const useAutoLock = (delayMs?: number, enabled: boolean = true) => {
+  const { settings } = useAppStore();
   const [isLocked, setIsLocked] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isLockedRef = useRef(false);
+
+  // Usar el delay pasado por props o el global de settings (default 5 min)
+  const effectiveDelay = delayMs ?? settings.autoLockTimeout ?? 300000;
 
   useEffect(() => {
     isLockedRef.current = isLocked;
   }, [isLocked]);
 
   const lock = useCallback(() => {
-    if (isLockedRef.current || !enabled) return;
+    if (isLockedRef.current || !enabled || effectiveDelay === 0) return;
     setIsLocked(true);
     if (navigator.vibrate) navigator.vibrate([10, 30, 10]);
-  }, [enabled]);
+  }, [enabled, effectiveDelay]);
 
   const resetTimer = useCallback((forceState?: boolean) => {
     if (timerRef.current) clearTimeout(timerRef.current);
     
-    if (!enabled) return;
+    if (!enabled || effectiveDelay === 0) return;
 
     // Use the forced state if provided, otherwise the ref
     const currentLockState = forceState !== undefined ? forceState : isLockedRef.current;
@@ -30,8 +36,8 @@ export const useAutoLock = (delayMs: number = 3000, enabled: boolean = true) => 
 
     timerRef.current = setTimeout(() => {
       lock();
-    }, delayMs);
-  }, [delayMs, lock, enabled]);
+    }, effectiveDelay);
+  }, [effectiveDelay, lock, enabled]);
 
   useEffect(() => {
     if (!enabled) {

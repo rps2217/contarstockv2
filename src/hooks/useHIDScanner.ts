@@ -2,6 +2,7 @@
 import { useEffect, useRef } from 'react';
 import { sanitizeBarcode } from '../services/utils';
 import { telemetry } from '../services/telemetryService';
+import { useAppStore } from '@/store/mainAppStore';
 
 interface HIDScannerOptions {
   onScan: (barcode: string) => void;
@@ -20,10 +21,13 @@ export const useHIDScanner = ({
   maxLatency = 50, 
   isEnabled = true
 }: HIDScannerOptions) => {
+  const { settings } = useAppStore();
   const buffer = useRef('');
   const lastKeyTime = useRef(0);
   const fallbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   
+  const effectiveLatency = settings.captureSettings?.scannerDelay || maxLatency;
+
   // ESTABILIZACIÓN CRÍTICA: Guardar callback en Ref para evitar que el listener se desmonte 
   // y remonte durante una ráfaga de escaneo (Keyboard Burst).
   const onScanRef = useRef(onScan);
@@ -65,8 +69,8 @@ export const useHIDScanner = ({
 
       const now = Date.now();
       
-      // Los láseres disparan a ~10ms por carácter. Si el gap es > maxLatency, es escritura humana.
-      if (now - lastKeyTime.current > maxLatency) {
+      // Los láseres disparan a ~10ms por carácter. Si el gap es > effectiveLatency, es escritura humana.
+      if (now - lastKeyTime.current > effectiveLatency) {
         buffer.current = '';
       }
       
@@ -85,7 +89,7 @@ export const useHIDScanner = ({
         if (fallbackTimer.current) clearTimeout(fallbackTimer.current);
         fallbackTimer.current = setTimeout(() => {
           if (buffer.current.length >= minChars) processBuffer();
-        }, 100); 
+        }, effectiveLatency); 
       }
     };
 
@@ -95,7 +99,7 @@ export const useHIDScanner = ({
       window.removeEventListener('keydown', handleKeyDown, { capture: true });
       if (fallbackTimer.current) clearTimeout(fallbackTimer.current);
     };
-  }, [isEnabled, minChars, maxLatency]);
+  }, [isEnabled, minChars, effectiveLatency]);
 };
 
 // Forced GitHub sync

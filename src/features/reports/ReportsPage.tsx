@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useEffect } from "react";
 import { Archive, WifiOff, Zap, Package, History } from "lucide-react";
 import { StartSessionModal } from "../../components/StartSessionModal";
-import { SearchBar } from "../../components/SearchBar";
+import { ManagementSearchBar } from "../../shared/components/core/ManagementSearchBar";
 import { ReportDetail } from "./components/ReportDetail";
 import { ReportsHeader } from "./components/ReportsHeader";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -106,9 +106,15 @@ export const Reports: React.FC = () => {
       />
 
       <div className="mt-4 mb-6 shrink-0">
-        <SearchBar
-          onSearch={actions.setSearchQuery}
+        <ManagementSearchBar
+          searchQuery={state.searchQuery}
+          setSearchQuery={actions.setSearchQuery}
+          onOpenFilters={() => {}} // No filters for now
+          onOpenAdd={() => actions.setIsStartModalOpen(true)}
+          onClearFilters={() => actions.setSearchQuery('')}
+          activeFiltersCount={0}
           placeholder="Filtrar por ERP o Bulto..."
+          accentColor={isHammerArchive ? "blue" : "indigo"}
           theme={theme}
         />
       </div>

@@ -134,9 +134,6 @@ export const DynamicList: React.FC<DynamicListProps> = ({
             <Printer className="w-4 h-4" />
             <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Imprimir</span>
           </button>
-          <button onClick={() => updateSetting('theme', theme === 'dark' ? 'light' : 'dark')} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all border ${theme === 'dark' ? 'bg-white/5 border-white/10 text-stone-300 hover:bg-white/10' : 'bg-stone-100 border-stone-200 text-stone-600 hover:bg-stone-200'}`}>
-            {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          </button>
           <button onClick={() => navigate('/settings')} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all border ${theme === 'dark' ? 'bg-white/5 border-white/10 text-stone-300 hover:bg-white/10' : 'bg-stone-100 border-stone-200 text-stone-600 hover:bg-stone-200'}`}>
             <Settings className="w-4 h-4" />
           </button>

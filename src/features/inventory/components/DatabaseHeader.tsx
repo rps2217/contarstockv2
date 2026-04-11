@@ -1,6 +1,6 @@
 import React from 'react';
-import { ChevronLeft, HardDrive, Upload, Loader2, FileSpreadsheet, Plus, RefreshCw, BrainCircuit, Download, Cpu, Cloud, CheckCircle2, Database } from 'lucide-react';
-import { SearchBar } from '../../../components/SearchBar';
+import { ChevronLeft, HardDrive, Upload, Loader2, FileSpreadsheet, Plus, RefreshCw, BrainCircuit, Download, Cpu, Cloud, CheckCircle2, Database, X } from 'lucide-react';
+import { ManagementSearchBar } from '../../../shared/components/core/ManagementSearchBar';
 import { useNavigate } from 'react-router-dom';
 
 interface Props {
@@ -64,41 +64,6 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
  <Download className="w-3.5 h-3.5" /> Instalar IA
  </button>
  )}
-
- {isModelReady && (
- <button 
- onClick={props.onVectorize} 
- disabled={props.isVectorizing || !props.missingVectorsCount}
- className={`p-3 rounded-xl transition-all relative ${
- props.missingVectorsCount ? 'bg-amber-100 text-amber-700 shadow-md active:scale-95 border-2 border-amber-200' : 'bg-slate-50 dark:bg-white/5 text-slate-400 opacity-40'
- }`}
- title="Entrenar Motor Local"
- >
- {props.isVectorizing ? <RefreshCw className="w-5 h-5 animate-spin" /> : <BrainCircuit className="w-5 h-5" />}
- {props.missingVectorsCount ? (
- <span className="absolute -top-2 -right-2 min-w-[1.25rem] h-5 px-1 bg-amber-500 text-[9px] font-black text-white flex items-center justify-center rounded-full border-2 border-white shadow-sm">
- {props.missingVectorsCount}
- </span>
- ) : null}
- </button>
- )}
-
- <button 
- onClick={props.onSync} 
- disabled={props.isSyncing}
- className={`p-3 rounded-xl transition-all relative ${props.pendingChangesCount > 0 ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-50 dark:bg-white/5 text-slate-400'}`}
- >
- {props.isSyncing ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
- {props.pendingChangesCount > 0 && (
- <span className="absolute -top-2 -right-2 w-5 h-5 bg-indigo-500 text-[9px] font-black text-white flex items-center justify-center rounded-full border-2 border-white shadow-sm">
- {props.pendingChangesCount}
- </span>
- )}
- </button>
-
- <button onClick={props.onCreate} className="bg-slate-900 dark:bg-slate-800 text-white p-3 rounded-xl shadow-lg active:scale-95 transition-all">
- <Plus className="w-5 h-5 stroke-[3px]" />
- </button>
  </div>
  </div>
  
@@ -116,14 +81,76 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
  Subir Copia Local a la Nube
  </button>
 
- {/* NIVEL 2: BÚSQUEDA */}
- <div className="flex gap-2 w-full">
- <div className="flex-1"><SearchBar onSearch={props.onSearch} placeholder="Filtrar catálogo..." className="h-11" /></div>
- <button onClick={props.onDownload} disabled={props.isDownloading} className="w-12 h-11 bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl flex items-center justify-center text-slate-400">
- {props.isDownloading ? <Loader2 className="w-5 h-5 animate-spin" /> : <RefreshCw className="w-5 h-5" />}
- </button>
- <button onClick={props.onImport} className="w-12 h-11 bg-slate-900 dark:bg-blue-600 text-white rounded-xl flex items-center justify-center shadow-lg"><FileSpreadsheet className="w-5 h-5" /></button>
- </div>
+ {/* NIVEL 2: BÚSQUEDA Y ACCIONES */}
+ <ManagementSearchBar 
+   searchQuery={""} 
+   setSearchQuery={props.onSearch}
+   onOpenFilters={() => {}} 
+   onOpenAdd={props.onCreate}
+   onClearFilters={() => props.onSearch('')}
+   activeFiltersCount={0}
+   placeholder="FILTRAR CATÁLOGO POR SKU O NOMBRE..."
+   accentColor="blue"
+   theme="dark"
+   extraActions={
+     <div className="flex gap-2">
+       {isModelReady && (
+         <button 
+           onClick={props.onVectorize} 
+           disabled={props.isVectorizing || !props.missingVectorsCount}
+           className={`w-12 h-12 rounded-2xl transition-all relative border flex items-center justify-center ${
+             props.missingVectorsCount 
+               ? 'bg-amber-500/10 border-amber-500/20 text-amber-500 hover:bg-amber-500/20 shadow-lg shadow-amber-500/10' 
+               : 'bg-white/5 border-white/5 text-slate-600 opacity-40'
+           }`}
+           title="Entrenar Motor Local"
+         >
+           {props.isVectorizing ? <RefreshCw className="w-5 h-5 animate-spin" /> : <BrainCircuit className="w-5 h-5" />}
+           {props.missingVectorsCount ? (
+             <span className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 text-[9px] font-black text-white flex items-center justify-center rounded-full border-2 border-white shadow-sm">
+               {props.missingVectorsCount}
+             </span>
+           ) : null}
+         </button>
+       )}
+
+       <button 
+         onClick={props.onSync} 
+         disabled={props.isSyncing}
+         className={`w-12 h-12 rounded-2xl transition-all relative border flex items-center justify-center ${
+           props.pendingChangesCount > 0 
+             ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-500 hover:bg-indigo-500/20 shadow-lg shadow-indigo-500/10' 
+             : 'bg-white/5 border-white/5 text-slate-600'
+         }`}
+         title="Sincronizar Cambios Pendientes"
+       >
+         {props.isSyncing ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
+         {props.pendingChangesCount > 0 && (
+           <span className="absolute -top-1 -right-1 w-5 h-5 bg-indigo-500 text-[9px] font-black text-white flex items-center justify-center rounded-full border-2 border-white shadow-sm">
+             {props.pendingChangesCount}
+           </span>
+         )}
+       </button>
+
+       <button 
+         onClick={props.onDownload} 
+         disabled={props.isDownloading} 
+         className="w-12 h-12 bg-white/5 border border-white/5 rounded-2xl flex items-center justify-center text-slate-400 hover:bg-white/10 transition-all"
+         title="Sincronizar Catálogo Completo"
+       >
+         {props.isDownloading ? <Loader2 className="w-5 h-5 animate-spin" /> : <RefreshCw className="w-5 h-5" />}
+       </button>
+       
+       <button 
+         onClick={props.onImport} 
+         className="w-12 h-12 bg-blue-600 text-white rounded-2xl flex items-center justify-center shadow-lg hover:bg-blue-500 transition-all border border-blue-400/20"
+         title="Importar desde Excel/CSV"
+       >
+         <FileSpreadsheet className="w-5 h-5" />
+       </button>
+     </div>
+   }
+ />
  
  {/* NIVEL 3: INDICADORES DE INTEGRIDAD (PROGRESO) */}
  <div className="grid grid-cols-3 gap-2 py-1">

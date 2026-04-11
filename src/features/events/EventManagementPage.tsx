@@ -26,12 +26,13 @@ import { useEventDatabase } from './hooks/useEventDatabase';
 // Components
 import { EventHeader } from './components/EventHeader';
 import { EventListPanel } from './components/EventListPanel';
-import { EventBulkActions } from './components/EventBulkActions';
+import { ManagementBulkActions } from '../../shared/components/core/ManagementBulkActions';
+import { CheckSquare, Trash2, Printer, Mail, Search, Edit3 } from 'lucide-react';
 import { EventFilterDrawer } from './components/EventFilterDrawer';
 import { CreateEventModal } from './components/CreateEventModal';
 import { BulkEditModal } from './components/BulkEditModal';
 import { EventSettingsDrawer } from './components/EventSettingsDrawer';
-import { EventSearchBar } from './components/EventSearchBar';
+import { ManagementSearchBar } from '../../shared/components/core/ManagementSearchBar';
 import { EventEmailModal } from './components/EventEmailModal';
 import { AnimatePresence } from 'motion/react';
 import { Zap, ChevronUp, ChevronDown } from 'lucide-react';
@@ -43,6 +44,7 @@ import { dynamicDataService } from '../../services/dynamicDataService';
 import { useEventUI } from './hooks/useEventUI';
 
 const EventManagementPage: React.FC = () => {
+  const { settings } = useAppStore();
   const { ui, actions: uiActions, db } = useEventUI();
   const { state, actions } = db;
   const navigate = useNavigate();
@@ -106,19 +108,19 @@ const EventManagementPage: React.FC = () => {
 
   return (
     <div className={`h-full flex flex-col overflow-hidden font-sans selection:bg-brand-warning/30 transition-colors duration-500 ${
-      ui.theme === 'dark' ? 'bg-brand-dark text-white' : 'bg-stone-200/50 text-slate-900'
+      settings.theme === 'dark' ? 'bg-brand-dark text-white' : 'bg-stone-200/50 text-slate-900'
     }`}>
       {/* HEADER */}
       <EventHeader 
         totalCount={state.totalCount}
         pendingOperations={state.pendingOperations}
         isSyncing={ui.isSyncing}
-        theme={ui.theme}
+        theme={settings.theme}
         onNavigateExpiry={() => navigate('/expiry')}
-        onToggleTheme={uiActions.toggleTheme}
+        onToggleTheme={() => {}} // No longer needed
         onOpenSettings={() => uiActions.setIsSettingsDrawerOpen(true)}
       >
-        <EventSearchBar 
+        <ManagementSearchBar 
           searchQuery={state.searchQuery}
           setSearchQuery={actions.setSearchQuery}
           onOpenFilters={() => uiActions.setIsFilterDrawerOpen(true)}
@@ -128,20 +130,22 @@ const EventManagementPage: React.FC = () => {
           }}
           onClearFilters={uiActions.handleClearFilters}
           activeFiltersCount={ui.activeFiltersCount}
-          theme={ui.theme}
+          placeholder="BUSCAR POR NOMBRE, SKU, EVENTO, FRC O ERP..."
+          accentColor="blue"
+          theme={settings.theme}
         />
       </EventHeader>
 
       {/* DUAL PANELS */}
       <div className={`flex-1 flex flex-col md:flex-row overflow-hidden gap-4 p-4 md:p-6 transition-colors ${
-        ui.theme === 'dark' ? 'bg-brand-dark' : 'bg-stone-100/80'
+        settings.theme === 'dark' ? 'bg-brand-dark' : 'bg-stone-100/80'
       }`}>
         {/* PENDING PANEL */}
         {(ui.expandedPanel === 'dual' || ui.expandedPanel === 'pending') && (
           <EventListPanel
             title="Pendientes"
             count={state.pendingCount}
-            theme={ui.theme}
+            theme={settings.theme}
             virtualizer={pendingVirtualizer}
             groupedItems={ui.pendingGrouped}
             onTogglePanel={() => uiActions.setExpandedPanel(ui.expandedPanel === 'pending' ? 'dual' : 'pending')}
@@ -171,7 +175,7 @@ const EventManagementPage: React.FC = () => {
           <EventListPanel
             title="Ajustados"
             count={state.adjustedCount}
-            theme={ui.theme}
+            theme={settings.theme}
             virtualizer={adjustedVirtualizer}
             groupedItems={ui.adjustedGrouped}
             onTogglePanel={() => uiActions.setExpandedPanel(ui.expandedPanel === 'adjusted' ? 'dual' : 'adjusted')}
@@ -208,28 +212,64 @@ const EventManagementPage: React.FC = () => {
         activeFiltersCount={ui.activeFiltersCount}
         dateRange={ui.dateRange}
         onSetDateRange={uiActions.setDateRange}
-        theme={ui.theme}
+        theme={settings.theme}
       />
 
-      <EventBulkActions 
+      <ManagementBulkActions 
         selectedCount={state.selectedIds.size}
-        totalVisibleCount={state.filteredCount}
         onClearSelection={actions.clearSelection}
-        onSelectAllVisible={actions.handleSelectAll}
-        onBulkRemove={uiActions.handleBulkRemove}
-        onBulkPrintLabels={uiActions.handleBulkPrintLabels}
-        onBulkPrintSelected={uiActions.handleBulkPrintSelected}
-        onBulkSendEmail={uiActions.handleBulkSendEmail}
-        onBulkSearchDocument={uiActions.handleBulkSearchDocument}
-        onOpenBulkEdit={() => uiActions.setIsBulkEditModalOpen(true)}
-        theme={ui.theme}
+        theme={settings.theme}
+        actions={[
+          {
+            label: "Seleccionar Todos los Visibles",
+            icon: CheckSquare,
+            onClick: actions.handleSelectAll,
+            variant: "primary"
+          },
+          {
+            label: "Retirar Seleccionados",
+            icon: Trash2,
+            onClick: uiActions.handleBulkRemove,
+            variant: "danger"
+          },
+          {
+            label: "Imprimir Etiquetas",
+            icon: Printer,
+            onClick: uiActions.handleBulkPrintLabels,
+            variant: "warning"
+          },
+          {
+            label: "Imprimir Reporte",
+            icon: Printer,
+            onClick: uiActions.handleBulkPrintSelected,
+            variant: "secondary"
+          },
+          {
+            label: "Enviar por Correo",
+            icon: Mail,
+            onClick: uiActions.handleBulkSendEmail,
+            variant: "success"
+          },
+          {
+            label: "Buscar Documento",
+            icon: Search,
+            onClick: uiActions.handleBulkSearchDocument,
+            variant: "info"
+          },
+          {
+            label: "Edición Masiva",
+            icon: Edit3,
+            onClick: () => uiActions.setIsBulkEditModalOpen(true),
+            variant: "primary"
+          }
+        ]}
       />
 
       <BulkEditModal
         isOpen={ui.isBulkEditModalOpen}
         onClose={() => uiActions.setIsBulkEditModalOpen(false)}
         onApply={uiActions.handleBulkEdit}
-        theme={ui.theme}
+        theme={settings.theme}
         selectedCount={state.selectedIds.size}
       />
 
@@ -239,7 +279,7 @@ const EventManagementPage: React.FC = () => {
         preferences={state.preferences}
         onUpdatePreferences={actions.togglePreference}
         onClearLocalData={actions.clearLocalData}
-        theme={ui.theme}
+        theme={settings.theme}
       />
 
       <CreateEventModal 
@@ -250,14 +290,14 @@ const EventManagementPage: React.FC = () => {
         }}
         onSubmit={uiActions.handleCreateOrUpdate}
         editingItem={ui.editingItem}
-        theme={ui.theme}
+        theme={settings.theme}
       />
 
       <EventEmailModal
         isOpen={ui.isEmailModalOpen}
         onClose={() => uiActions.setIsEmailModalOpen(false)}
         selectedItems={state.processedEvents.filter(item => state.selectedIds.has(item.id))}
-        theme={ui.theme}
+        theme={settings.theme}
       />
     </div>
   );

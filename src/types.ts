@@ -178,21 +178,32 @@ export interface TelemetryEvent {
 }
 
 export interface AppSettings {
- theme: Theme;
- soundEnabled: boolean;
- hapticsEnabled: boolean;
- ttsEnabled: boolean; 
- batchTrackingEnabled: boolean;
- lowEndMode?: boolean;
- cloudConfig?: CloudConfig;
- schema?: AppSchema;
- mobileNavConfig?: ViewState[]; 
- defaultStartModule?: ViewState;
- thermalPrinter?: {
- enabled: boolean;
- type: 'usb' | 'bluetooth';
- deviceName?: string;
- };
+  theme: Theme;
+  soundEnabled: boolean;
+  hapticsEnabled: boolean;
+  ttsEnabled: boolean; 
+  batchTrackingEnabled: boolean;
+  lowEndMode?: boolean;
+  pharmacyName?: string;
+  operatorId?: string;
+  autoLockTimeout?: number; // en milisegundos
+  cloudConfig?: CloudConfig;
+  schema?: AppSchema;
+  mobileNavConfig?: ViewState[]; 
+  defaultStartModule?: ViewState;
+  captureSettings?: {
+    cameraMirrorMode: boolean;
+    keypadVibration: boolean;
+    scannerSpeed: 'fast' | 'normal' | 'slow';
+    scannerDelay: number;
+  };
+  thermalPrinter?: {
+    enabled: boolean;
+    type: 'usb' | 'bluetooth' | 'network';
+    deviceName?: string;
+    paperWidth?: number; // 58, 80, etc.
+    margin?: number;
+  };
 }
 
 export interface ExpiryMapping {

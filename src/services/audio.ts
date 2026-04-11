@@ -37,6 +37,13 @@ class AudioService {
  this.synth.speak(utterance);
  }
 
+ public vibrateKeypad() {
+ const settings = getSettings();
+ if (settings.captureSettings?.keypadVibration && navigator.vibrate) {
+ navigator.vibrate(15);
+ }
+ }
+
  public play(type: 'success' | 'error' | 'delete' | 'increment' | 'scan' | 'not_found' | 'warning') {
  const settings = getSettings();
  

@@ -77,17 +77,6 @@ export const EventHeader: React.FC<EventHeaderProps> = ({
           </button>
 
           <button
-            onClick={onToggleTheme}
-            className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all border shrink-0 ${
-              theme === 'dark' 
-                ? 'bg-white/5 hover:bg-white/10 border-white/10 text-amber-500' 
-                : 'bg-white hover:bg-slate-50 border-slate-200 text-indigo-500 shadow-sm'
-            }`}
-          >
-            {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-          </button>
-
-          <button
             onClick={onOpenSettings}
             className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all border shrink-0 ${
               theme === 'dark' 
