@@ -11,17 +11,21 @@ export const dynamicSyncService = {
   async syncAllPending(onProgress?: (msg: string) => void, tableNameFilter?: string): Promise<{ success: number; failed: number }> {
     let query = db.dynamic_data
       .where('syncStatus')
-      .anyOf(['pending', 'error']); // Include errors to retry them automatically
+      .anyOf(['pending', 'error', 'pending_delete']); // Incluir eliminaciones pendientes
     
     if (tableNameFilter) {
       query = db.dynamic_data
         .where('[tableName+syncStatus]')
-        .anyOf([[tableNameFilter, 'pending'], [tableNameFilter, 'error']]);
+        .anyOf([
+          [tableNameFilter, 'pending'], 
+          [tableNameFilter, 'error'],
+          [tableNameFilter, 'pending_delete']
+        ]);
     }
 
     const allPendingRecords = await query.toArray();
 
-    // Filter out records that are waiting for their next retry
+    // Filtrar registros que están esperando su próximo reintento
     const now = Date.now();
     const pendingRecords = allPendingRecords.filter(r => !r.nextRetry || r.nextRetry <= now);
 
@@ -29,17 +33,39 @@ export const dynamicSyncService = {
       return { success: 0, failed: 0 };
     }
 
-    // Agrupar por nombre de tabla
+    // Separar eliminaciones de inserciones/actualizaciones
+    const toDelete = pendingRecords.filter(r => r.syncStatus === 'pending_delete');
+    const toUpsert = pendingRecords.filter(r => r.syncStatus !== 'pending_delete');
+
+    let totalSuccess = 0;
+    let totalFailed = 0;
+
+    // 1. Procesar Eliminaciones
+    if (toDelete.length > 0) {
+      if (onProgress) onProgress(`Procesando ${toDelete.length} eliminaciones...`);
+      for (const record of toDelete) {
+        try {
+          const remoteId = record.data['id'] || record.data['ID'] || record.id;
+          await firebaseSyncService.deleteRemote(record.tableName, String(remoteId));
+          await db.dynamic_data.delete(record.id);
+          totalSuccess++;
+        } catch (e: any) {
+          logger.error('DYNAMIC_SYNC', `Error al eliminar remoto ${record.id}`, e.message);
+          totalFailed++;
+        }
+      }
+    }
+
+    if (toUpsert.length === 0) return { success: totalSuccess, failed: totalFailed };
+
+    // 2. Procesar Inserciones/Actualizaciones (Agrupar por tabla)
     const groups: Record<string, DynamicRecord[]> = {};
-    for (const record of pendingRecords) {
+    for (const record of toUpsert) {
       if (!groups[record.tableName]) {
         groups[record.tableName] = [];
       }
       groups[record.tableName].push(record);
     }
-
-    let totalSuccess = 0;
-    let totalFailed = 0;
 
     const settings = getSettings();
 

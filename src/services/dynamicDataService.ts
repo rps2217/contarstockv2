@@ -27,25 +27,38 @@ export const dynamicDataService = {
     const record = await db.dynamic_data.get(id);
     if (!record) return;
 
-    // 1. Borrado local INMEDIATO (Optimistic UI)
-    await db.dynamic_data.delete(id);
+    // 1. Si el registro aún no se ha sincronizado (está pendiente), simplemente lo borramos localmente
+    if (record.syncStatus === 'pending') {
+      await db.dynamic_data.delete(id);
+      return;
+    }
 
-    // 2. Borrado en la nube en SEGUNDO PLANO
-    (async () => {
-      try {
-        const settings = (await import('./settings')).getSettings();
-        const config = settings.cloudConfig;
-        
-        const idCol = config?.mappings?.events?.id || 'ID';
-        const remoteId = record.data[idCol] || record.data['ID'] || record.data['id'] || record.data['CLAVE_UNICA'] || record.data['uniqueKey'] || record.id;
-        
-        if (remoteId) {
-          await firebaseSyncService.deleteRemote(record.tableName, String(remoteId));
-        }
-      } catch (error: any) {
-        logger.error('DYNAMIC_DATA', `Background deletion sync failed for record ${id}`, error.message);
-      }
-    })();
+    // 2. Marcamos como 'pending_delete' para que el sync manager lo borre de la nube cuando haya internet
+    await db.dynamic_data.update(id, { syncStatus: 'pending_delete', timestamp: Date.now() });
+
+    // 3. Intentar borrado inmediato en segundo plano
+    this.processDeletion(id).catch(() => {});
+  },
+
+  async processDeletion(id: string) {
+    const record = await db.dynamic_data.get(id);
+    if (!record || record.syncStatus !== 'pending_delete') return;
+
+    try {
+      const settings = (await import('./settings')).getSettings();
+      const config = settings.cloudConfig;
+      
+      // Intentar identificar el ID remoto
+      const remoteId = record.data['id'] || record.data['ID'] || record.id;
+      
+      await firebaseSyncService.deleteRemote(record.tableName, String(remoteId));
+      
+      // Si el borrado en la nube fue exitoso, borramos el registro local definitivamente
+      await db.dynamic_data.delete(id);
+    } catch (error: any) {
+      logger.error('DYNAMIC_DATA', `Background deletion failed for ${id}, will retry later`, error.message);
+      // No borramos localmente, se queda como 'pending_delete' para el próximo ciclo de sync
+    }
   },
 
   async syncRecord(id: string) {
@@ -92,12 +105,27 @@ export const dynamicDataService = {
   },
 
   async syncAllPending() {
-    const pending = await db.dynamic_data.where('syncStatus').equals('pending').toArray();
-    if (pending.length === 0) return;
+    const allPending = await db.dynamic_data
+      .where('syncStatus')
+      .anyOf(['pending', 'pending_delete', 'error'])
+      .toArray();
 
-    // Agrupar por tabla para batching
+    if (allPending.length === 0) return;
+
+    // Separar por tipo de acción
+    const toUpsert = allPending.filter(r => r.syncStatus === 'pending' || r.syncStatus === 'error');
+    const toDelete = allPending.filter(r => r.syncStatus === 'pending_delete');
+
+    // Procesar eliminaciones primero
+    for (const record of toDelete) {
+      await this.processDeletion(record.id).catch(() => {});
+    }
+
+    if (toUpsert.length === 0) return;
+
+    // Agrupar por tabla para batching (Upserts)
     const groups: Record<string, DynamicRecord[]> = {};
-    for (const record of pending) {
+    for (const record of toUpsert) {
       if (!groups[record.tableName]) groups[record.tableName] = [];
       groups[record.tableName].push(record);
     }

@@ -1,5 +1,6 @@
 import { db, DynamicRecord } from '../db';
 import { liveQuery } from 'dexie';
+import { dynamicDataService } from '../services/dynamicDataService';
 
 export interface ExpiryRecord {
   id: string;
@@ -13,7 +14,7 @@ export interface ExpiryRecord {
   location: string;
   timestamp: number;
   claveUnica?: string;
-  syncStatus: 'synced' | 'pending' | 'error';
+  syncStatus: 'synced' | 'pending' | 'error' | 'pending_delete';
   origin?: string;
 }
 
@@ -26,7 +27,9 @@ export class ExpiryRepository {
       .equals(this.tableName)
       .toArray();
     
-    return records.map(r => this.mapToExpiry(r));
+    return records
+      .filter(r => r.syncStatus !== 'pending_delete')
+      .map(r => this.mapToExpiry(r));
   }
 
   liveAll() {
@@ -36,19 +39,15 @@ export class ExpiryRepository {
         .equals(this.tableName)
         .reverse()
         .sortBy('timestamp')
-        .then(records => records.map(r => this.mapToExpiry(r)))
+        .then(records => records
+          .filter(r => r.syncStatus !== 'pending_delete')
+          .map(r => this.mapToExpiry(r))
+        )
     );
   }
 
   async save(expiry: Partial<ExpiryRecord> & { id: string }) {
-    const record: DynamicRecord = {
-      id: expiry.id,
-      tableName: this.tableName,
-      data: expiry,
-      timestamp: expiry.timestamp || Date.now(),
-      syncStatus: expiry.syncStatus || 'pending'
-    };
-    await db.dynamic_data.put(record);
+    await dynamicDataService.saveRecord(this.tableName, expiry, expiry.id);
   }
 
   async bulkSave(expiries: ExpiryRecord[]) {
@@ -63,11 +62,14 @@ export class ExpiryRepository {
   }
 
   async delete(id: string) {
-    await db.dynamic_data.delete(id);
+    await dynamicDataService.deleteRecord(id);
   }
 
   async clear() {
-    await db.dynamic_data.where('tableName').equals(this.tableName).delete();
+    const records = await this.getAll();
+    for (const record of records) {
+      await this.delete(record.id);
+    }
   }
 
   private mapToExpiry(record: DynamicRecord): ExpiryRecord {

@@ -30,7 +30,7 @@ export class ExpirySyncService {
       if (obsoleteItems.length > 0) {
         logger.info('EXPIRY_SYNC', `Eliminando ${obsoleteItems.length} registros obsoletos detectados en reconciliación`);
         for (const item of obsoleteItems) {
-          await expiryRepository.delete(item.id);
+          await (import('../db')).then(m => m.db.dynamic_data.delete(item.id));
         }
       }
 
@@ -38,9 +38,16 @@ export class ExpirySyncService {
         const data = { id: change.doc.id, ...change.doc.data() };
         
         if (change.type === 'added' || change.type === 'modified') {
-          await expiryRepository.save(data as any);
+          // Solo actualizamos si no hay una eliminación pendiente local
+          const db = (await import('../db')).db;
+          const local = await db.dynamic_data.get(change.doc.id);
+          if (local?.syncStatus !== 'pending_delete') {
+            await expiryRepository.save(data as any);
+          }
         } else if (change.type === 'removed') {
-          await expiryRepository.delete(change.doc.id);
+          // Si se eliminó en la nube, lo borramos localmente de forma directa
+          const db = (await import('../db')).db;
+          await db.dynamic_data.delete(change.doc.id);
         }
       });
       logger.info('EXPIRY_SYNC', `Real-time sync for ${tableName} updated`);

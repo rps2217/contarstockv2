@@ -27,7 +27,7 @@ export interface DynamicRecord {
   tableName: string;
   data: Record<string, any>;
   timestamp: number;
-  syncStatus: 'synced' | 'pending' | 'error';
+  syncStatus: 'synced' | 'pending' | 'error' | 'pending_delete';
   syncError?: string;
   retryCount?: number;
   nextRetry?: number;
