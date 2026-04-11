@@ -14,6 +14,7 @@ export interface Customer {
   phone: string;
   createdAt: number;
   updatedAt: number;
+  syncStatus?: 'synced' | 'pending' | 'error';
 }
 
 export interface MessageTemplate {

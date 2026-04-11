@@ -10,13 +10,15 @@ import { ManagementSearchBar } from '../../shared/components/core/ManagementSear
 import { CustomerFormModal } from './components/CustomerFormModal';
 import { SendMessageModal } from './components/SendMessageModal';
 import { TemplateManagerModal } from './components/TemplateManagerModal';
+import { customerSyncService } from '../../services/customerSyncService';
+import { useLiveQuery } from 'dexie-react-hooks';
 
 export const CustomersPage: React.FC = () => {
   const navigate = useNavigate();
   const { settings } = useAppStore();
   const theme = settings.theme || 'dark';
 
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const customers = useLiveQuery(() => CustomerRepository.getAll(), []) || [];
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | undefined>(undefined);
@@ -26,19 +28,9 @@ export const CustomersPage: React.FC = () => {
   
   const [isTemplateManagerOpen, setIsTemplateManagerOpen] = useState(false);
 
-  const loadCustomers = async () => {
-    try {
-      const data = await CustomerRepository.getAll();
-      // Sort by newest first
-      data.sort((a, b) => b.createdAt - a.createdAt);
-      setCustomers(data);
-    } catch (error) {
-      toast.error('Error al cargar los clientes');
-    }
-  };
-
   useEffect(() => {
-    loadCustomers();
+    customerSyncService.startSync();
+    return () => customerSyncService.stopSync();
   }, []);
 
   const filteredCustomers = useMemo(() => {
@@ -56,7 +48,6 @@ export const CustomersPage: React.FC = () => {
       await CustomerRepository.save(customer);
       toast.success(editingCustomer ? 'Cliente actualizado' : 'Cliente guardado');
       setIsFormOpen(false);
-      loadCustomers();
     } catch (error) {
       toast.error('Error al guardar el cliente');
     }
@@ -67,7 +58,6 @@ export const CustomersPage: React.FC = () => {
       try {
         await CustomerRepository.delete(id);
         toast.success('Cliente eliminado');
-        loadCustomers();
       } catch (error) {
         toast.error('Error al eliminar el cliente');
       }

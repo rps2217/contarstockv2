@@ -10,6 +10,7 @@ import { aggregateScans } from './aggregator';
 import { dynamicSyncService } from './dynamicSync';
 import { firebaseSyncService } from './firebaseSyncService';
 import { createInventoryPayload } from './cloud/mappers';
+import { CustomerRepository } from '../repositories/CustomerRepository';
 
 let isSyncingInProgress = false;
 const UPLOAD_BATCH_SIZE = 500; 
@@ -28,6 +29,7 @@ export interface UploadGroup {
   type: 'inventory' | 'reception' | 'products' | 'orphans' | 'dynamic';
   isHammer: boolean;
   tableName?: string;
+  isCustomer?: boolean;
 }
 
 export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
@@ -124,6 +126,21 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
     }
   }
 
+  // 4. Customers
+  const pendingCustomers = await db.customers.where('syncStatus').equals('pending').toArray();
+  if (pendingCustomers.length > 0) {
+    groups['CUSTOMERS_CLOUD'] = {
+      erpOrder: 'DIRECTORIO_CLIENTES',
+      sessionCount: pendingCustomers.length,
+      totalUnits: pendingCustomers.length,
+      sessionIds: pendingCustomers.map(c => c.id),
+      logisticsLabels: pendingCustomers.map(c => `${c.firstName} ${c.lastName}`),
+      type: 'dynamic',
+      isHammer: false,
+      isCustomer: true
+    };
+  }
+
   return Object.values(groups);
 };
 
@@ -182,6 +199,20 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
     
     if (group.type === 'dynamic' && group.tableName) {
       await dynamicSyncService.syncAllPending(onProgress, group.tableName);
+    } else if (group.isCustomer) {
+      if (onProgress) onProgress(`Sincronizando ${group.sessionCount} clientes...`);
+      const pending = await db.customers.where('syncStatus').equals('pending').toArray();
+      const rows = pending.map(c => ({
+        ...c,
+        id: c.id,
+        updatedAt: c.updatedAt || Date.now()
+      }));
+      const result = await firebaseSyncService.pushBatch("CLIENTES", rows);
+      if (result.success) {
+        await CustomerRepository.markAsSynced(pending.map(c => c.id));
+      } else {
+        throw new Error(result.error || "Error al sincronizar clientes");
+      }
     } else if (group.erpOrder === 'REGISTROS_HUERFANOS') {
       if (onProgress) onProgress("Purgando registros residuales...");
       const unsynced = await db.scans.where('synced').equals(0).toArray();
