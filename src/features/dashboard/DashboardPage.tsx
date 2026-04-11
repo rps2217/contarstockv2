@@ -508,13 +508,25 @@ const Dashboard: React.FC = () => {
             <Card
               hoverable
               onClick={() => navigate("/database")}
-              className="flex items-center gap-3 p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-3xl col-span-2"
+              className="flex items-center gap-3 p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-3xl"
             >
               <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-xl">
                 <Database className="w-5 h-5 text-amber-600 dark:text-amber-500" />
               </div>
               <span className="text-xs font-bold uppercase tracking-wider">
                 Catálogo
+              </span>
+            </Card>
+            <Card
+              hoverable
+              onClick={() => navigate("/customers")}
+              className="flex items-center gap-3 p-5 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-3xl"
+            >
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl">
+                <UserCircle className="w-5 h-5 text-blue-600 dark:text-blue-500" />
+              </div>
+              <span className="text-xs font-bold uppercase tracking-wider">
+                Clientes
               </span>
             </Card>
           </div>

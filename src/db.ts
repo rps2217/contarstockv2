@@ -1,6 +1,6 @@
 import { Dexie } from 'dexie';
 import type { Table } from 'dexie';
-import { Product, CountingSession, ScanRecord, ExpectedOrder, VisualGuide, ErpOrderSession, Provider } from './types';
+import { Product, CountingSession, ScanRecord, ExpectedOrder, VisualGuide, ErpOrderSession, Provider, Customer, MessageTemplate } from './types';
 
 export interface SystemLog {
   id?: number;
@@ -56,11 +56,13 @@ export class LogiCountDB extends Dexie {
   visualGuides!: Table<VisualGuide>;
   erpSessions!: Table<ErpOrderSession>;
   providers!: Table<Provider>;
+  customers!: Table<Customer>;
+  messageTemplates!: Table<MessageTemplate>;
   dynamic_data!: Table<DynamicRecord>;
 
   constructor() {
     super('LogiCountDB');
-    this.version(36).stores({
+    this.version(38).stores({
       products: '&barcode, name, syncStatus', 
       sessions: 'id, status, createdAt, erpOrder, logisticsLabel, sessionType, auditStatus, lastSyncTimestamp, mm, yyyy, batch, photoUrl, [erpOrder+createdAt], [status+lastSyncTimestamp]', 
       scans: 'id, sessionId, barcode, logisticsLabel, timestamp, synced, isIncident, expiryDate, mm, yyyy, batch, [sessionId+synced], [sessionId+barcode], [sessionId+logisticsLabel], [sessionId+timestamp]',
@@ -72,6 +74,8 @@ export class LogiCountDB extends Dexie {
       visualGuides: 'id, guideNumber, erpOrderId, status, createdAt',
       erpSessions: 'id, erpOrderId, status, createdAt',
       providers: '&rut, name',
+      customers: 'id, firstName, lastName, phone',
+      messageTemplates: 'id, name',
       dynamic_data: 'id, tableName, timestamp, syncStatus, [tableName+syncStatus]'
     });
   }

@@ -7,6 +7,23 @@ export interface Provider {
   hasExchange?: boolean;
 }
 
+export interface Customer {
+  id: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface MessageTemplate {
+  id: string;
+  name: string;
+  content: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface Product {
  barcode: string;
  name: string;

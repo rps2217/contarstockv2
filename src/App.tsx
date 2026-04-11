@@ -43,6 +43,7 @@ const EventCapturePage = lazyWithRetry(() => import('@/features/events/EventCapt
 const DynamicManagement = lazyWithRetry(() => import('@/features/dynamic/DynamicManagementPage').then(m => ({ default: m.DynamicManagementPage })));
 const GlobalSyncQueue = lazyWithRetry(() => import('@/features/sync/GlobalSyncQueuePage'));
 const ProvidersPage = lazyWithRetry(() => import('@/features/suppliers/pages/ProvidersPage').then(m => ({ default: m.ProvidersPage })));
+const CustomersPage = lazyWithRetry(() => import('@/features/customers/CustomersPage').then(m => ({ default: m.CustomersPage })));
 
 import { ExpiryAlertBanner } from '@/features/expiry/components/ExpiryAlertBanner';
 
@@ -206,6 +207,7 @@ const AppContent = () => {
                 <Route path="/events" element={<EventManagement />} />
                 <Route path="/events/capture" element={<EventCapturePage />} />
                 <Route path="/providers" element={<ProvidersPage />} />
+                <Route path="/customers" element={<CustomersPage />} />
                 <Route path="/dynamic/:tableKey" element={<DynamicManagement />} />
                 <Route path="/counting/:id" element={<CountingPage />} />
                 <Route path="/massive/:batchId" element={<HammerPage />} />

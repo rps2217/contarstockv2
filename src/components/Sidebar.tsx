@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Home, Database, History, Container, Cloud, Box, Settings, Zap, FileText, Camera, Calendar, ChevronLeft, ChevronRight, AlertCircle, RefreshCw } from 'lucide-react';
+import { Home, Database, History, Container, Cloud, Box, Settings, Zap, FileText, Camera, Calendar, ChevronLeft, ChevronRight, AlertCircle, RefreshCw, Users } from 'lucide-react';
 // Forced update to trigger GitHub sync for the components folder
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AppSettings, TableSchema } from '../types';
@@ -46,7 +46,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
         <Icon className={`w-5 h-5 transition-transform group-hover:scale-110 group-active:scale-90 ${isActive ? 'text-white' : 'text-slate-600 group-hover:text-brand-info'}`} />
         {!isCollapsed && <span className="font-black text-[10px] font-mono uppercase tracking-[0.2em]">{label}</span>}
         
-        {badge && badge > 0 && (
+        {(badge || 0) > 0 && (
           <span className={`absolute ${isCollapsed ? '-top-1 -right-1' : 'right-3'} bg-amber-500 text-black text-[9px] font-black px-2 py-0.5 rounded-lg border-2 border-slate-900 shadow-md animate-pulse`}>
             {badge}
           </span>
@@ -85,6 +85,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
         <NavItem path="/expiry" activeKey="expiry" label="Vencimientos" icon={Calendar} />
         <NavItem path="/events" activeKey="events" label="Eventos" icon={AlertCircle} />
         <NavItem path="/providers" activeKey="providers" label="Proveedores" icon={Container} />
+        <NavItem path="/customers" activeKey="customers" label="Clientes" icon={Users} />
         
         {(() => {
           const schema = settings.cloudConfig?.schema || settings.schema;
@@ -111,39 +112,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
             </>
           );
         })()}
-
-        <NavItem path="/sync" activeKey="sync" label="Nube" icon={Cloud} badge={pendingItems} />
       </nav>
 
       <div className={`p-4 border-t-4 border-white/5 bg-slate-900/50 space-y-3`}>
-        {/* SYNC CENTER MONITOR */}
-        <div 
-          onClick={() => navigate('/sync')}
-          className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between px-2'} py-2 rounded-lg bg-black/20 border border-white/5 cursor-pointer hover:bg-black/40 transition-all`}
-        >
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Cloud className={`w-3.5 h-3.5 ${isFirestoreConnected ? 'text-sky-400' : 'text-slate-600'}`} />
-              {isSyncing && (
-                <div className="absolute -top-1 -right-1">
-                  <RefreshCw className="w-2 h-2 text-blue-500 animate-spin" />
-                </div>
-              )}
-            </div>
-            {!isCollapsed && (
-              <span className={`text-[8px] font-black uppercase tracking-widest ${isFirestoreConnected ? 'text-sky-400' : 'text-slate-600'}`}>
-                {isSyncing ? 'Sincronizando' : isFirestoreConnected ? 'Nube_Online' : 'Nube_Offline'}
-              </span>
-            )}
-          </div>
-          {!isCollapsed && pendingItems > 0 && (
-            <div className="flex items-center gap-1">
-              <div className="w-1 h-1 rounded-full bg-amber-500 animate-pulse" />
-              <span className="text-[8px] font-black text-amber-500">{pendingItems}</span>
-            </div>
-          )}
-        </div>
-
+        <NavItem path="/sync" activeKey="sync" label="Nube" icon={Cloud} badge={pendingItems} />
         <NavItem path="/settings?tab=preferences" activeKey="settings" label="Configuración" icon={Settings} />
       </div>
     </aside>
