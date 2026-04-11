@@ -12,8 +12,8 @@ export const useAutoLock = (delayMs?: number, enabled: boolean = true) => {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isLockedRef = useRef(false);
 
-  // Usar el delay pasado por props o el global de settings (default 5 min)
-  const effectiveDelay = delayMs ?? settings.autoLockTimeout ?? 300000;
+  // Usar el delay pasado por props o el global de settings (default desactivado)
+  const effectiveDelay = delayMs !== undefined ? delayMs : (settings.autoLockTimeout !== undefined ? settings.autoLockTimeout : 0);
 
   useEffect(() => {
     isLockedRef.current = isLocked;

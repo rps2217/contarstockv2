@@ -150,8 +150,8 @@ const DEFAULT_SETTINGS: AppSettings = {
     }
   },
   mobileNavConfig: ['dashboard', 'reception', 'reports', 'sync', 'database'],
-  pharmacyName: 'Mi Farmacia',
-  autoLockTimeout: 300000, // 5 minutos por defecto
+  pharmacyName: 'L-121',
+  autoLockTimeout: 0, // Desactivado por defecto
   captureSettings: {
     cameraMirrorMode: false,
     keypadVibration: true,
