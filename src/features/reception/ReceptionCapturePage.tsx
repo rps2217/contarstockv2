@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Box, Trash2, Camera, Loader2, Plus, CornerDownLeft, Search, CheckCircle2, Cloud } from 'lucide-react';
+import { ChevronLeft, Box, Trash2, Camera, Loader2, Plus, CornerDownLeft, Search, CheckCircle2, Cloud, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useReceptionLogic } from './hooks/useReceptionLogic';
 import { useHIDScanner } from '../../hooks/useHIDScanner';
@@ -9,19 +9,23 @@ import { SoundFX } from '../../services/audio';
 import { CameraScanner } from '../../components/CameraScanner';
 import { format } from 'date-fns';
 
-const ReceptionItemRow = React.memo(({ item, onDelete }: { item: any; onDelete: (id: string) => void }) => {
+const ReceptionItemRow = React.memo(({ item, onDelete, onShowPhoto }: { item: any; onDelete: (id: string) => void; onShowPhoto: (item: any) => void }) => {
   const isSynced = !!item.lastSyncTimestamp;
+  const hasPhoto = !!(item.labelPhoto || item.photoUrl);
 
   return (
     <div className={`flex items-center gap-4 p-4 rounded-2xl border ${
       isSynced ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-blue-500/5 border-blue-500/20'
     }`}>
-      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border overflow-hidden ${
+      <button 
+        onClick={() => hasPhoto && onShowPhoto(item)}
+        disabled={!hasPhoto}
+        className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border overflow-hidden active:scale-90 transition-transform ${
         isSynced ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/20' : 'bg-blue-500/20 text-blue-500 border-blue-500/20'
       }`}>
-        {item.labelPhoto ? (
+        {item.labelPhoto || item.photoUrl ? (
           <img 
-            src={item.labelPhoto} 
+            src={item.labelPhoto || item.photoUrl} 
             alt="Etiqueta" 
             className="w-full h-full object-cover"
             referrerPolicy="no-referrer"
@@ -29,7 +33,7 @@ const ReceptionItemRow = React.memo(({ item, onDelete }: { item: any; onDelete: 
         ) : (
           <Box className="w-6 h-6" />
         )}
-      </div>
+      </button>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <h3 className={`text-sm font-black uppercase truncate ${isSynced ? 'text-emerald-400' : 'text-white'}`}>
@@ -66,6 +70,7 @@ export const ReceptionCapturePage: React.FC = () => {
   const { state, actions } = useReceptionLogic();
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [manualInput, setManualInput] = useState('');
+  const [selectedPhotoItem, setSelectedPhotoItem] = useState<any>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleScan = useCallback((code: string) => {
@@ -232,6 +237,7 @@ export const ReceptionCapturePage: React.FC = () => {
             key={item.id} 
             item={item} 
             onDelete={actions.deleteDraft} 
+            onShowPhoto={setSelectedPhotoItem}
           />
         ))}
         
@@ -241,6 +247,52 @@ export const ReceptionCapturePage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* PHOTO VIEWER MODAL */}
+      <AnimatePresence>
+        {selectedPhotoItem && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelectedPhotoItem(null)}
+            className="fixed inset-0 z-[300] bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-4"
+          >
+            <div className="absolute top-6 right-6">
+              <button className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center text-white">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="w-full max-w-lg bg-[#0a0a0a] rounded-3xl overflow-hidden shadow-2xl border border-white/10" onClick={e => e.stopPropagation()}>
+              <div className="p-4 border-b border-white/5 flex items-center justify-between">
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Etiqueta Logística</span>
+                  <h3 className="text-lg font-black text-white uppercase">{selectedPhotoItem.logisticsLabel}</h3>
+                </div>
+              </div>
+              
+              <div className="aspect-square w-full bg-black flex items-center justify-center">
+                <img 
+                  src={selectedPhotoItem.photoUrl || selectedPhotoItem.labelPhoto} 
+                  alt="Etiqueta" 
+                  className="max-w-full max-h-full object-contain"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+              
+              <div className="p-6 flex justify-center">
+                <button 
+                  onClick={() => setSelectedPhotoItem(null)}
+                  className="w-full py-4 bg-white text-black rounded-2xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* FOOTER ACTIONS */}
       {state.draftCount > 0 && (
