@@ -219,6 +219,8 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
             
             if (photoResult.success && photoResult.fileUrl) {
               await db.sessions.update(sessionId, { photoUrl: photoResult.fileUrl });
+              // Actualizar objeto en memoria para que el payload lleve la URL
+              session.photoUrl = photoResult.fileUrl;
               if (onProgress) onProgress(`✓ Foto respaldada en Firebase.`);
             }
           } catch (photoError) {

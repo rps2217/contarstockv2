@@ -17,7 +17,8 @@ import {
   LayoutGrid,
   List,
   Sun,
-  Moon
+  Moon,
+  X
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'motion/react';
@@ -41,10 +42,11 @@ import { ManagementSearchBar } from '../../shared/components/core/ManagementSear
 import { useAutoLock } from '../../hooks/useAutoLock';
 import { SoundFX } from '../../services/audio';
 
-const ReceptionItemCard = React.memo(({ item, onDelete, isCompact }: any) => {
+const ReceptionItemCard = React.memo(({ item, onDelete, onShowPhoto, isCompact }: any) => {
   const { settings } = useAppStore();
   const isSynced = !!item.lastSyncTimestamp;
   const isDraft = item.status === 'draft';
+  const hasPhoto = !!(item.labelPhoto || item.photoUrl);
 
   return (
     <div className={`group relative border-2 rounded-2xl p-4 transition-all active:scale-[0.98] ${
@@ -56,15 +58,27 @@ const ReceptionItemCard = React.memo(({ item, onDelete, isCompact }: any) => {
     }`}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4 overflow-hidden">
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border ${
+          <button 
+            onClick={() => hasPhoto && onShowPhoto(item)}
+            disabled={!hasPhoto}
+            className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border overflow-hidden transition-transform active:scale-90 ${
             isSynced 
               ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/20' 
               : isDraft 
                 ? 'bg-blue-500/20 text-blue-500 border-blue-500/20' 
                 : 'bg-slate-500/20 text-slate-500 border-slate-500/20'
           }`}>
-            <Box className="w-6 h-6" />
-          </div>
+            {item.labelPhoto || item.photoUrl ? (
+              <img 
+                src={item.labelPhoto || item.photoUrl} 
+                alt="Etiqueta" 
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <Box className="w-6 h-6" />
+            )}
+          </button>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <span className={`font-mono font-black truncate text-base uppercase tracking-wider ${
@@ -109,6 +123,7 @@ const ReceptionManagementPage: React.FC = () => {
   const { state: historyState, actions: historyActions } = useReceptionHistory();
   
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [selectedPhotoItem, setSelectedPhotoItem] = useState<any>(null);
   
   const capture = useCaptureHub({
     onCapture: (code) => logicActions.handleScan(code, logicState.currentErp)
@@ -317,12 +332,63 @@ const ReceptionManagementPage: React.FC = () => {
                 <ReceptionItemCard 
                   item={item.data}
                   onDelete={logicActions.deleteDraft}
+                  onShowPhoto={setSelectedPhotoItem}
                   isCompact={viewMode === 'list'}
                 />
               </div>
             );
           })}
         </div>
+
+        {/* PHOTO VIEWER MODAL */}
+        <AnimatePresence>
+          {selectedPhotoItem && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedPhotoItem(null)}
+              className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center p-4"
+            >
+              <div className="absolute top-6 right-6">
+                <button className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center text-white">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              
+              <div className="w-full max-w-2xl bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-white/10" onClick={e => e.stopPropagation()}>
+                <div className="p-4 border-b border-white/5 flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Etiqueta Logística</span>
+                    <h3 className="text-lg font-black text-white uppercase">{selectedPhotoItem.logisticsLabel}</h3>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase block">{format(selectedPhotoItem.createdAt, 'dd/MM/yyyy')}</span>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase">{format(selectedPhotoItem.createdAt, 'HH:mm:ss')}</span>
+                  </div>
+                </div>
+                
+                <div className="aspect-square w-full bg-black flex items-center justify-center">
+                  <img 
+                    src={selectedPhotoItem.photoUrl || selectedPhotoItem.labelPhoto} 
+                    alt="Etiqueta" 
+                    className="max-w-full max-h-full object-contain"
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
+                
+                <div className="p-6 flex justify-center">
+                  <button 
+                    onClick={() => setSelectedPhotoItem(null)}
+                    className="px-12 py-4 bg-white text-black rounded-2xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all"
+                  >
+                    Cerrar Vista
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {allItems.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 text-center">
