@@ -16,10 +16,19 @@ const ReceptionItemRow = React.memo(({ item, onDelete }: { item: any; onDelete: 
     <div className={`flex items-center gap-4 p-4 rounded-2xl border ${
       isSynced ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-blue-500/5 border-blue-500/20'
     }`}>
-      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border ${
+      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border overflow-hidden ${
         isSynced ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/20' : 'bg-blue-500/20 text-blue-500 border-blue-500/20'
       }`}>
-        <Box className="w-6 h-6" />
+        {item.labelPhoto ? (
+          <img 
+            src={item.labelPhoto} 
+            alt="Etiqueta" 
+            className="w-full h-full object-cover"
+            referrerPolicy="no-referrer"
+          />
+        ) : (
+          <Box className="w-6 h-6" />
+        )}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
@@ -62,17 +71,19 @@ export const ReceptionCapturePage: React.FC = () => {
   const handleScan = useCallback((code: string) => {
     actions.handleScan(code, state.currentErp);
     setManualInput('');
+    // Al escanear, si no estamos usando la cámara para escanear, 
+    // la lógica de negocio activará pendingPhotoCode y nosotros mostraremos la cámara de fotos
   }, [actions, state.currentErp]);
 
   useHIDScanner({
     onScan: handleScan,
-    isEnabled: !isCameraActive,
+    isEnabled: !isCameraActive && !state.pendingPhotoCode,
     maxLatency: 50
   });
 
   useEffect(() => {
     const focusInput = () => {
-      if (!isCameraActive && inputRef.current) {
+      if (!isCameraActive && !state.pendingPhotoCode && inputRef.current) {
         inputRef.current.focus();
       }
     };
@@ -154,9 +165,9 @@ export const ReceptionCapturePage: React.FC = () => {
         </div>
       </div>
 
-      {/* INLINE CAMERA */}
+      {/* INLINE CAMERA FOR SCANNING */}
       <AnimatePresence>
-        {isCameraActive && (
+        {isCameraActive && !state.pendingPhotoCode && (
           <motion.div 
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 200, opacity: 1 }}
@@ -169,6 +180,47 @@ export const ReceptionCapturePage: React.FC = () => {
               inline={true}
               isTriggered={true}
             />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* FULL SCREEN CAMERA FOR PHOTO CAPTURE */}
+      <AnimatePresence>
+        {state.pendingPhotoCode && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black flex flex-col"
+          >
+            <div className="absolute top-0 left-0 right-0 p-6 z-[110] flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em]">Capturar Etiqueta</span>
+                <h2 className="text-xl font-black text-white uppercase tracking-tighter">{state.pendingPhotoCode}</h2>
+              </div>
+              <button 
+                onClick={() => actions.setPendingPhotoCode(null)}
+                className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center text-white active:bg-white/20 transition-colors"
+              >
+                <Trash2 className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="flex-1 relative">
+              <CameraScanner 
+                onScan={() => {}} 
+                onClose={() => actions.setPendingPhotoCode(null)} 
+                inline={false}
+                mode="photo"
+                onCapture={(photo) => actions.completeReceptionWithPhoto(photo)}
+              />
+            </div>
+
+            <div className="p-8 bg-black flex flex-col items-center gap-4">
+              <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest text-center">
+                Encuadre la etiqueta y capture la imagen para finalizar el registro
+              </p>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

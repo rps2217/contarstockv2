@@ -15,6 +15,7 @@ export const useReceptionLogic = () => {
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [currentErp, setCurrentErp] = useState('');
+  const [pendingPhotoCode, setPendingPhotoCode] = useState<string | null>(null);
 
   const { addToast } = useToastStore();
 
@@ -43,18 +44,32 @@ export const useReceptionLogic = () => {
     }
 
     try {
-      await sessionService.createDraftSession(cleanCode, erpToUse || currentErp);
-      setLastAction({ type: 'success', label: cleanCode });
-      setFlashActive(true);
+      // En lugar de crear la sesión inmediatamente, activamos el modo foto
+      setPendingPhotoCode(cleanCode);
       SoundFX.play('success');
       if (navigator.vibrate) navigator.vibrate(40);
-      
-      setTimeout(() => setFlashActive(false), 150);
-      setTimeout(() => setLastAction(prev => prev?.label === cleanCode && prev.type === 'success' ? null : prev), 1500);
     } catch (err) { 
       SoundFX.play('error'); 
     }
   }, [currentErp]);
+
+  const completeReceptionWithPhoto = useCallback(async (photo: string) => {
+    if (!pendingPhotoCode) return;
+    
+    try {
+      await sessionService.createDraftSession(pendingPhotoCode, currentErp, undefined, undefined, undefined, photo);
+      
+      setLastAction({ type: 'success', label: pendingPhotoCode });
+      setFlashActive(true);
+      setPendingPhotoCode(null);
+      
+      setTimeout(() => setFlashActive(false), 150);
+      setTimeout(() => setLastAction(null), 1500);
+    } catch (err) {
+      SoundFX.play('error');
+      addToast('Error al guardar la fotografía', 'error');
+    }
+  }, [pendingPhotoCode, currentErp, addToast]);
 
   const finalizeReception = useCallback(async () => {
     if (!unsyncedDrafts?.length) return false;
@@ -149,11 +164,13 @@ export const useReceptionLogic = () => {
     finalizeReception, 
     discardAll, 
     syncToCloud, 
-    setCurrentErp
-  }), [handleScan, deleteDraft, finalizeReception, discardAll, syncToCloud, setCurrentErp]);
+    setCurrentErp,
+    setPendingPhotoCode,
+    completeReceptionWithPhoto
+  }), [handleScan, deleteDraft, finalizeReception, discardAll, syncToCloud, setCurrentErp, completeReceptionWithPhoto]);
 
   return {
-    state: { lastAction, flashActive, draftCount, unsyncedDrafts, isFinalizing, isSyncing, currentErp },
+    state: { lastAction, flashActive, draftCount, unsyncedDrafts, isFinalizing, isSyncing, currentErp, pendingPhotoCode },
     actions
   };
 };

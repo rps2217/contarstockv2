@@ -199,23 +199,34 @@ export const createSession = async (
   return s;
 };
 
-export const createDraftSession = async (label: string, erpOrder?: string, mm?: number, yyyy?: number, batch?: string): Promise<CountingSession> => {
- const s: CountingSession = { 
- id: generateUUID(), 
- erpOrder: erpOrder ? String(erpOrder || '').trim().toUpperCase() : 'RECEPCION_BORRADOR', 
- logisticsLabel: String(label || '').trim().toUpperCase(), 
- createdAt: Date.now(), 
- status: 'draft', 
- sessionType: 'reception',
- totalUnits: 0, 
- totalSKUs: 0,
- expectedItems: [],
- isVerifiedMode: false,
- mm,
- yyyy,
- batch
- };
- await db.sessions.add(s);
+export const createDraftSession = async (label: string, erpOrder?: string, mm?: number, yyyy?: number, batch?: string, labelPhoto?: string): Promise<CountingSession> => {
+  // Optimización de Imagen
+  let finalPhoto = labelPhoto;
+  if (labelPhoto && labelPhoto.startsWith('data:image')) {
+    try {
+      finalPhoto = await compressImage(labelPhoto);
+    } catch (e) {
+      console.warn("Image compression failed, using original", e);
+    }
+  }
+
+  const s: CountingSession = { 
+    id: generateUUID(), 
+    erpOrder: erpOrder ? String(erpOrder || '').trim().toUpperCase() : 'RECEPCION_BORRADOR', 
+    logisticsLabel: String(label || '').trim().toUpperCase(), 
+    createdAt: Date.now(), 
+    status: 'draft', 
+    sessionType: 'reception',
+    totalUnits: 0, 
+    totalSKUs: 0,
+    expectedItems: [],
+    isVerifiedMode: false,
+    mm,
+    yyyy,
+    batch,
+    labelPhoto: finalPhoto
+  };
+  await db.sessions.add(s);
  
  // Sincronización proactiva de sesión borrador
  if (navigator.onLine) {
