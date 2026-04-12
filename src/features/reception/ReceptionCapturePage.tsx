@@ -1,13 +1,14 @@
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Box, Trash2, Camera, Loader2, Plus, CornerDownLeft, Search, CheckCircle2, Cloud, X } from 'lucide-react';
+import { Box, Trash2, CheckCircle2, Cloud, X, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useReceptionLogic } from './hooks/useReceptionLogic';
-import { useHIDScanner } from '../../hooks/useHIDScanner';
-import { SoundFX } from '../../services/audio';
+import { useCaptureSession } from '../../hooks/useCaptureSession';
 import { CameraScanner } from '../../components/CameraScanner';
 import { format } from 'date-fns';
+import { ModuleHeader } from '../../shared/components/layout/ModuleHeader';
+import { CaptureLayout } from '../../shared/components/layout/CaptureLayout';
 
 const ReceptionItemRow = React.memo(({ item, onDelete, onShowPhoto }: { item: any; onDelete: (id: string) => void; onShowPhoto: (item: any) => void }) => {
   const isSynced = !!item.lastSyncTimestamp;
@@ -68,119 +69,105 @@ const ReceptionItemRow = React.memo(({ item, onDelete, onShowPhoto }: { item: an
 export const ReceptionCapturePage: React.FC = () => {
   const navigate = useNavigate();
   const { state, actions } = useReceptionLogic();
-  const [isCameraActive, setIsCameraActive] = useState(false);
-  const [manualInput, setManualInput] = useState('');
   const [selectedPhotoItem, setSelectedPhotoItem] = useState<any>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleScan = useCallback((code: string) => {
-    actions.handleScan(code, state.currentErp);
-    setManualInput('');
-    // Al escanear, si no estamos usando la cámara para escanear, 
-    // la lógica de negocio activará pendingPhotoCode y nosotros mostraremos la cámara de fotos
-  }, [actions, state.currentErp]);
-
-  useHIDScanner({
-    onScan: handleScan,
-    isEnabled: !isCameraActive && !state.pendingPhotoCode,
-    maxLatency: 50
+  const {
+    inputValue,
+    setInputValue,
+    isCameraActive,
+    setIsCameraActive,
+    inputRef,
+    handleManualSubmit
+  } = useCaptureSession({
+    onScan: (code) => actions.handleScan(code, state.currentErp),
+    isEnabled: !state.pendingPhotoCode
   });
-
-  useEffect(() => {
-    const focusInput = () => {
-      if (!isCameraActive && !state.pendingPhotoCode && inputRef.current) {
-        inputRef.current.focus();
-      }
-    };
-    focusInput();
-    window.addEventListener('click', focusInput);
-    return () => window.removeEventListener('click', focusInput);
-  }, [isCameraActive]);
 
   const sortedItems = useMemo(() => {
     return [...(state.unsyncedDrafts || [])].sort((a, b) => b.createdAt - a.createdAt);
   }, [state.unsyncedDrafts]);
 
-  return (
-    <div className="h-screen w-full flex flex-col bg-[#050505] overflow-hidden font-mono text-white">
-      {/* HEADER */}
-      <div className="shrink-0 p-4 bg-[#050505] z-10 border-b border-white/5">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => navigate('/reception', { state: { preventAutoRedirect: true } })} 
-              className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl active:bg-white/10 transition-colors"
-            >
-              <ChevronLeft className="w-6 h-6 text-white" />
-            </button>
-            <h1 className="text-sm font-black uppercase tracking-widest text-slate-400">Captura Recepción</h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={actions.syncToCloud}
-              disabled={state.isSyncing}
-              className={`w-10 h-10 flex items-center justify-center rounded-xl border transition-all ${
-                state.isSyncing 
-                  ? 'bg-blue-500/20 border-blue-500/40 text-blue-400' 
-                  : 'bg-white/5 border-white/10 text-slate-400 active:bg-white/10'
-              }`}
-            >
-              {state.isSyncing ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <Cloud className="w-5 h-5" />
-              )}
-            </button>
-            <div className="flex items-center gap-2">
-              <span className="text-2xl font-black italic text-blue-500">{state.draftCount}</span>
-              <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Bultos</span>
-            </div>
-          </div>
-        </div>
+  const header = (
+    <ModuleHeader 
+      title="Captura Recepción"
+      subtitle={`${state.draftCount} Bultos en sesión`}
+      onBack={() => navigate('/reception', { state: { preventAutoRedirect: true } })}
+      actions={
+        <button
+          onClick={actions.syncToCloud}
+          disabled={state.isSyncing}
+          className={`w-12 h-12 flex items-center justify-center rounded-2xl border transition-all ${
+            state.isSyncing 
+              ? 'bg-blue-500/20 border-blue-500/40 text-blue-400' 
+              : 'bg-white/5 border-white/10 text-slate-400 active:bg-white/10'
+          }`}
+        >
+          {state.isSyncing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Cloud className="w-5 h-5" />}
+        </button>
+      }
+    />
+  );
 
-        {/* SCANNER INPUT */}
-        <div className="relative flex items-center">
-          <button 
-            onClick={() => setIsCameraActive(!isCameraActive)}
-            className="absolute inset-y-0 left-0 pl-4 flex items-center z-10 active:scale-90 transition-transform"
-          >
-            <Camera className={`w-6 h-6 ${isCameraActive ? 'text-blue-500' : 'text-slate-500'}`} />
-          </button>
-          <input
-            ref={inputRef}
-            type="text"
-            value={manualInput}
-            onChange={(e) => setManualInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && manualInput.trim()) {
-                handleScan(manualInput.trim());
-              }
-            }}
-            placeholder="Escanear bulto..."
-            className="w-full pl-12 pr-14 py-4 bg-[#0a0a0a] border border-blue-900/30 rounded-2xl text-xl font-bold text-white placeholder-slate-600 focus:outline-none focus:border-blue-500/50 transition-all"
-          />
-          {manualInput.length > 0 && (
-            <button
-              onClick={() => handleScan(manualInput.trim())}
-              className="absolute right-2 w-10 h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center active:bg-blue-700 transition-colors"
-            >
-              <CornerDownLeft className="w-5 h-5" />
-            </button>
-          )}
-        </div>
-      </div>
+  return (
+    <>
+      <CaptureLayout
+        header={header}
+        inputValue={inputValue}
+        onInputChange={setInputValue}
+        onInputSubmit={handleManualSubmit}
+        onCameraToggle={() => setIsCameraActive(!isCameraActive)}
+        inputPlaceholder="Escanear bulto..."
+        inputRef={inputRef}
+        list={
+          <div className="space-y-4 pb-32">
+            {sortedItems.map((item) => (
+              <ReceptionItemRow 
+                key={item.id} 
+                item={item} 
+                onDelete={actions.deleteDraft} 
+                onShowPhoto={setSelectedPhotoItem}
+              />
+            ))}
+          </div>
+        }
+        emptyState={
+          sortedItems.length === 0 && (
+            <div className="text-center py-12 text-slate-500 font-bold text-sm uppercase tracking-widest">
+              No hay bultos en esta sesión
+            </div>
+          )
+        }
+        footer={
+          state.draftCount > 0 && (
+            <div className="flex gap-3">
+              <button
+                onClick={actions.discardAll}
+                className="flex-1 py-4 bg-rose-500/10 text-rose-500 rounded-2xl font-black text-xs uppercase tracking-widest border border-rose-500/20 active:bg-rose-500/20 transition-all"
+              >
+                Descartar
+              </button>
+              <button
+                onClick={actions.finalizeReception}
+                className="flex-[2] py-4 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-900/40 active:scale-95 transition-all"
+              >
+                Finalizar Lote
+              </button>
+            </div>
+          )
+        }
+      />
 
       {/* INLINE CAMERA FOR SCANNING */}
       <AnimatePresence>
         {isCameraActive && !state.pendingPhotoCode && (
           <motion.div 
             initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 200, opacity: 1 }}
+            animate={{ height: 250, opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="relative bg-black shrink-0 overflow-hidden border-b border-blue-500/30"
+            className="fixed top-[180px] left-0 right-0 z-50 bg-black overflow-hidden border-b border-blue-500/30 shadow-2xl"
           >
             <CameraScanner 
-              onScan={(code) => { handleScan(code); setIsCameraActive(false); }} 
+              onScan={(code) => { actions.handleScan(code, state.currentErp); setIsCameraActive(false); }} 
               onClose={() => setIsCameraActive(false)} 
               inline={true}
               isTriggered={true}
@@ -196,9 +183,9 @@ export const ReceptionCapturePage: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-black flex flex-col"
+            className="fixed inset-0 z-[2000] bg-black flex flex-col"
           >
-            <div className="absolute top-0 left-0 right-0 p-6 z-[110] flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent">
+            <div className="absolute top-0 left-0 right-0 p-6 z-[2110] flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent">
               <div className="flex flex-col">
                 <span className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em]">Capturar Etiqueta</span>
                 <h2 className="text-xl font-black text-white uppercase tracking-tighter">{state.pendingPhotoCode}</h2>
@@ -230,24 +217,6 @@ export const ReceptionCapturePage: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* LIST */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar pb-32">
-        {sortedItems.map((item) => (
-          <ReceptionItemRow 
-            key={item.id} 
-            item={item} 
-            onDelete={actions.deleteDraft} 
-            onShowPhoto={setSelectedPhotoItem}
-          />
-        ))}
-        
-        {sortedItems.length === 0 && (
-          <div className="text-center py-12 text-slate-500 font-bold text-sm uppercase tracking-widest">
-            No hay bultos en esta sesión
-          </div>
-        )}
-      </div>
-
       {/* PHOTO VIEWER MODAL */}
       <AnimatePresence>
         {selectedPhotoItem && (
@@ -256,7 +225,7 @@ export const ReceptionCapturePage: React.FC = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setSelectedPhotoItem(null)}
-            className="fixed inset-0 z-[300] bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-4"
+            className="fixed inset-0 z-[3000] bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-4"
           >
             <div className="absolute top-6 right-6">
               <button className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center text-white">
@@ -264,7 +233,7 @@ export const ReceptionCapturePage: React.FC = () => {
               </button>
             </div>
             
-            <div className="w-full max-w-lg bg-[#0a0a0a] rounded-3xl overflow-hidden shadow-2xl border border-white/10" onClick={e => e.stopPropagation()}>
+            <div className="w-full max-w-lg bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-white/10" onClick={e => e.stopPropagation()}>
               <div className="p-4 border-b border-white/5 flex items-center justify-between">
                 <div className="flex flex-col">
                   <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Etiqueta Logística</span>
@@ -293,25 +262,7 @@ export const ReceptionCapturePage: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* FOOTER ACTIONS */}
-      {state.draftCount > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#050505]/80 backdrop-blur-xl border-t border-white/5 flex gap-3">
-          <button
-            onClick={actions.discardAll}
-            className="flex-1 py-4 bg-rose-500/10 text-rose-500 rounded-2xl font-black text-xs uppercase tracking-widest border border-rose-500/20 active:bg-rose-500/20 transition-all"
-          >
-            Descartar
-          </button>
-          <button
-            onClick={actions.finalizeReception}
-            className="flex-[2] py-4 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-900/40 active:scale-95 transition-all"
-          >
-            Finalizar Lote
-          </button>
-        </div>
-      )}
-    </div>
+    </>
   );
 };
 
