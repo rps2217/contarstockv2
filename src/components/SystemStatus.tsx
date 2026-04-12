@@ -86,93 +86,96 @@ export const SystemStatus: React.FC = () => {
   const alerts = [];
 
   if (syncError) {
-   alerts.push(
-   <div key="sync-error" className="bg-rose-600 text-white px-4 py-1 text-[9px] font-black flex items-center justify-center gap-2 border-b border-rose-700 shadow-lg">
-   <RefreshCw className="w-3 h-3" />
-   <span className="uppercase tracking-widest">Error de Sincronización: {syncError}</span>
-   </div>
-   );
+    alerts.push(
+      <div key="sync-error" className="bg-rose-600 text-white px-4 py-3 text-[10px] font-black flex items-center gap-3 shadow-lg">
+        <RefreshCw className="w-4 h-4" />
+        <span className="uppercase tracking-widest">Error de Sincronización: {syncError}</span>
+      </div>
+    );
   }
 
   if (isSyncing) {
-   alerts.push(
-   <div key="sync" className="bg-brand-info text-white px-4 py-1 text-[9px] font-black flex items-center justify-center gap-2 border-b border-brand-info/20 shadow-lg">
-   <RefreshCw className="w-3 h-3 animate-spin" />
-   <span className="uppercase tracking-widest">Sincronizando con Nube...</span>
-   </div>
-   );
+    alerts.push(
+      <div key="sync" className="bg-blue-600 text-white px-4 py-3 text-[10px] font-black flex items-center gap-3 shadow-lg">
+        <RefreshCw className="w-4 h-4 animate-spin" />
+        <span className="uppercase tracking-widest">Sincronizando con Nube...</span>
+      </div>
+    );
   }
 
   if (pendingItems > 0 && !isSyncing) {
-   alerts.push(
-   <div 
-    key="pending" 
-    onClick={() => navigate('/sync')}
-    className="bg-brand-warning text-white px-4 py-1 text-[9px] font-black flex items-center justify-center gap-2 border-b border-brand-warning/20 shadow-lg cursor-pointer hover:bg-brand-warning/80 transition-colors pointer-events-auto"
-   >
-   <Database className="w-3 h-3" />
-   <span className="uppercase tracking-widest">{pendingItems} Registros Pendientes de Subida</span>
-   </div>
-   );
+    alerts.push(
+      <div 
+        key="pending" 
+        onClick={() => navigate('/sync')}
+        className="bg-amber-500 text-white px-4 py-3 text-[10px] font-black flex items-center gap-3 shadow-lg cursor-pointer hover:bg-amber-600 transition-colors pointer-events-auto"
+      >
+        <Database className="w-4 h-4" />
+        <span className="uppercase tracking-widest">{pendingItems} Registros Pendientes</span>
+      </div>
+    );
   }
 
   if (isOnline && isFirestoreConnected && latencyMs !== null) {
-   const latencyColor = latencyMs < 150 ? 'text-brand-info' : latencyMs < 400 ? 'text-brand-warning' : 'text-rose-400';
-   alerts.push(
-   <div key="latency" className="bg-brand-surface text-white px-4 py-1 text-[9px] font-black flex items-center justify-center gap-3 border-b border-white/5">
-   <div className="flex items-center gap-1.5">
-   <Activity className={`w-3 h-3 ${latencyColor}`} />
-   <span className="uppercase tracking-widest">Latencia Cloud: <span className={latencyColor}>{latencyMs}ms</span></span>
-   </div>
-   <div className="w-px h-2 bg-white/10"></div>
-   <div className="flex items-center gap-1.5">
-   <Cloud className="w-3 h-3 text-sky-400" />
-   <span className="uppercase tracking-widest text-sky-400">Firestore Live</span>
-   </div>
-   </div>
-   );
+    const latencyColor = latencyMs < 150 ? 'text-emerald-400' : latencyMs < 400 ? 'text-amber-400' : 'text-rose-400';
+    alerts.push(
+      <div key="latency" className="bg-slate-800 text-white px-4 py-3 text-[10px] font-black flex flex-col gap-2 border border-white/5">
+        <div className="flex items-center gap-2">
+          <Activity className={`w-4 h-4 ${latencyColor}`} />
+          <span className="uppercase tracking-widest">Latencia: <span className={latencyColor}>{latencyMs}ms</span></span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Cloud className="w-4 h-4 text-sky-400" />
+          <span className="uppercase tracking-widest text-sky-400">Firestore Live</span>
+        </div>
+      </div>
+    );
   }
 
   if (!isOnline) {
-  alerts.push(
-  <div key="net" className="bg-rose-700 text-white px-4 py-1 text-[9px] font-black flex items-center justify-center gap-2 border-b border-rose-800">
-  <WifiOff className="w-3 h-3" />
-  <span className="uppercase tracking-widest">Modo Local - Sin Red</span>
-  </div>
-  );
+    alerts.push(
+      <div key="net" className="bg-rose-900 text-white px-4 py-3 text-[10px] font-black flex items-center gap-3">
+        <WifiOff className="w-4 h-4" />
+        <span className="uppercase tracking-widest">Modo Local - Sin Red</span>
+      </div>
+    );
   } else if (showBackOnline) {
-  alerts.push(
-  <div key="net-back" className="bg-emerald-600 text-white px-4 py-1 text-[9px] font-black flex items-center justify-center gap-2 animate-in slide-in-from-top-full duration-500">
-  <Wifi className="w-3 h-3" />
-  <span className="uppercase tracking-widest">Conexión Restaurada</span>
-  </div>
-  );
+    alerts.push(
+      <div key="net-back" className="bg-emerald-600 text-white px-4 py-3 text-[10px] font-black flex items-center gap-3 animate-in slide-in-from-top-full duration-500">
+        <Wifi className="w-4 h-4" />
+        <span className="uppercase tracking-widest">Conexión Restaurada</span>
+      </div>
+    );
   }
 
   if (batteryLevel !== null && batteryLevel < 20 && !isCharging) {
-  alerts.push(
-  <div key="batt" className="bg-amber-500 text-black px-4 py-1 text-[9px] font-black flex items-center justify-center gap-2 border-b border-amber-600">
-  <BatteryWarning className="w-3 h-3" />
-  <span className="uppercase tracking-widest">Batería al {batteryLevel.toFixed(0)}% - Conecte PDA</span>
-  </div>
-  );
+    alerts.push(
+      <div key="batt" className="bg-amber-500 text-black px-4 py-3 text-[10px] font-black flex items-center gap-3">
+        <BatteryWarning className="w-4 h-4" />
+        <span className="uppercase tracking-widest">Batería al {batteryLevel.toFixed(0)}% - Conecte PDA</span>
+      </div>
+    );
   }
 
   if (storageCritical) {
-  alerts.push(
-  <div key="store" className="bg-rose-900 text-white px-4 py-1 text-[9px] font-black flex items-center justify-center gap-2 border-b border-black">
-  <HardDrive className="w-3 h-3" />
-  <span className="uppercase tracking-widest">Memoria Crítica - Vacíe Base Local</span>
-  </div>
-  );
+    alerts.push(
+      <div key="store" className="bg-rose-950 text-white px-4 py-3 text-[10px] font-black flex items-center gap-3">
+        <HardDrive className="w-4 h-4" />
+        <span className="uppercase tracking-widest">Memoria Crítica - Vacíe Base Local</span>
+      </div>
+    );
   }
 
   if (alerts.length === 0) return null;
 
   return (
-  <div className="w-full flex flex-col pointer-events-auto select-none">
-  {alerts}
-  </div>
+    <div className="w-full p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 pointer-events-auto select-none">
+      {alerts.map((alert, idx) => (
+        <div key={idx} className="overflow-hidden rounded-2xl shadow-sm">
+          {alert}
+        </div>
+      ))}
+    </div>
   );
 };
 

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Database, RefreshCw, Zap, Activity, Cloud, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Database, RefreshCw, Zap, Activity, Cloud, CheckCircle2, AlertCircle, UploadCloud, DownloadCloud } from 'lucide-react';
+import { configSyncService } from '../../../services/configSyncService';
 import { motion } from 'motion/react';
 import { AppSettings } from '../../../types';
 import { SettingsSection, SettingsCard, SettingsButton } from './common/SettingsElements';
@@ -18,8 +19,50 @@ export const CloudSection: React.FC<Props> = ({ settings }) => {
   const [showLogs, setShowLogs] = useState(false);
   const [isTestingLoad, setIsTestingLoad] = useState(false);
   const [testResult, setTestResult] = useState<LoadTestResult | null>(null);
+  const [isSyncingConfig, setIsSyncingConfig] = useState(false);
   
   const { latencyMs, pendingItems, isFirestoreConnected, isSyncing } = useSyncStore();
+
+  const handlePushConfig = async () => {
+    if (!isFirestoreConnected) {
+      toast.error("Sin conexión a Firestore");
+      return;
+    }
+    setIsSyncingConfig(true);
+    try {
+      await configSyncService.pushSettings();
+      SoundFX.play('success');
+      toast.success("Configuración y plantillas respaldadas");
+    } catch (e) {
+      SoundFX.play('error');
+      toast.error("Error al respaldar configuración");
+    } finally {
+      setIsSyncingConfig(false);
+    }
+  };
+
+  const handlePullConfig = async () => {
+    if (!isFirestoreConnected) {
+      toast.error("Sin conexión a Firestore");
+      return;
+    }
+    setIsSyncingConfig(true);
+    try {
+      const success = await configSyncService.pullSettings();
+      if (success) {
+        SoundFX.play('success');
+        toast.success("Configuración restaurada. Reiniciando...");
+        setTimeout(() => window.location.reload(), 1500);
+      } else {
+        toast.info("No se encontró configuración previa");
+      }
+    } catch (e) {
+      SoundFX.play('error');
+      toast.error("Error al restaurar configuración");
+    } finally {
+      setIsSyncingConfig(false);
+    }
+  };
 
   const handleRunLoadTest = async () => {
     setIsTestingLoad(true);
@@ -113,6 +156,22 @@ export const CloudSection: React.FC<Props> = ({ settings }) => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-4 border-t border-white/5">
+              <SettingsButton 
+                onClick={handlePushConfig}
+                isLoading={isSyncingConfig}
+                label={isSyncingConfig ? "Respaldando..." : "Respaldar Plantillas/Esquemas"}
+                icon={UploadCloud}
+                variant="secondary"
+                className="bg-blue-500/10 border-blue-500/30 text-blue-400 h-14"
+              />
+              <SettingsButton 
+                onClick={handlePullConfig}
+                isLoading={isSyncingConfig}
+                label={isSyncingConfig ? "Restaurando..." : "Restaurar Plantillas/Esquemas"}
+                icon={DownloadCloud}
+                variant="secondary"
+                className="bg-emerald-500/10 border-emerald-500/30 text-emerald-400 h-14"
+              />
               <SettingsButton 
                 onClick={() => setShowLogs(true)}
                 label="Ver Logs de Sincronización"

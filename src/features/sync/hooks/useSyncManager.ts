@@ -8,6 +8,8 @@ import { firebaseSyncService } from '../../../services/firebaseSyncService';
 import { getSettings } from '../../../services/settings';
 import { ScanRepository } from '../../../repositories/ScanRepository';
 
+import { configSyncService } from '../../../services/configSyncService';
+
 export const useSyncManager = () => {
   const [uiGroups, setUiGroups] = useState<any[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -30,6 +32,47 @@ export const useSyncManager = () => {
     const safeMsg = typeof msg === 'string' ? msg : safeStringify(msg);
     setLogs(prev => [...prev, { time, msg: safeMsg, type }]);
   }, []);
+
+  const handlePushConfig = async () => {
+    if (!navigator.onLine) {
+      addLog("Error: Sin conexión para respaldar configuración.", 'error');
+      return;
+    }
+    setIsProcessing(true);
+    addLog(">>> RESPALDANDO CONFIGURACIÓN Y PLANTILLAS...", 'info');
+    try {
+      await configSyncService.pushSettings();
+      addLog("✓ Configuración y esquemas respaldados con éxito.", 'success');
+      toast.success("Configuración respaldada");
+    } catch (error: any) {
+      addLog(`✗ Error al respaldar configuración: ${error.message}`, 'error');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handlePullConfig = async () => {
+    if (!navigator.onLine) {
+      addLog("Error: Sin conexión para restaurar configuración.", 'error');
+      return;
+    }
+    setIsProcessing(true);
+    addLog(">>> RESTAURANDO CONFIGURACIÓN DESDE LA NUBE...", 'info');
+    try {
+      const success = await configSyncService.pullSettings();
+      if (success) {
+        addLog("✓ Configuración restaurada. Reiniciando aplicación...", 'success');
+        toast.success("Configuración restaurada");
+        setTimeout(() => window.location.reload(), 1500);
+      } else {
+        addLog("No se encontró configuración previa en la nube.", 'info');
+      }
+    } catch (error: any) {
+      addLog(`✗ Error al restaurar configuración: ${error.message}`, 'error');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   const refreshGroups = useCallback(async () => {
     const groups = await syncManager.getPendingUploadGroups();
@@ -194,7 +237,7 @@ export const useSyncManager = () => {
 
   return {
     state: { uiGroups, isProcessing, logs },
-    actions: { handleSyncAll, refreshGroups, handleForceReset, handleDownloadOrders, handleVerifyIntegrity }
+    actions: { handleSyncAll, refreshGroups, handleForceReset, handleDownloadOrders, handleVerifyIntegrity, handlePushConfig, handlePullConfig }
   };
 };
 

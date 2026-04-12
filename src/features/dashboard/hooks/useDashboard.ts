@@ -18,8 +18,9 @@ export const useDashboard = () => {
     const today = new Date().setHours(0,0,0,0);
     const scansToday = await ScanRepository.getScansToday(today);
     const pendingSync = await ScanRepository.getPendingSyncCount();
-    return { scansToday, pendingSync };
-  }, [], { scansToday: 0, pendingSync: 0 });
+    const history = await ScanRepository.getScansLast7Days();
+    return { scansToday, pendingSync, history };
+  }, [], { scansToday: 0, pendingSync: 0, history: [] });
 
   const dynamicStats = useLiveQuery(async () => {
     const pending = await db.dynamic_data.where('syncStatus').equals('pending').count();

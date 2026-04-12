@@ -1,6 +1,7 @@
 import { db, DynamicRecord } from '../db';
 import { Customer } from '../types';
 import { dynamicDataService } from '../services/dynamicDataService';
+import { CustomerSchema } from '../services/validationService';
 
 export class CustomerRepository {
   private static tableName = 'CLIENTES';
@@ -25,7 +26,9 @@ export class CustomerRepository {
   }
 
   static async save(customer: Customer): Promise<void> {
-    await dynamicDataService.saveRecord(this.tableName, customer, customer.id);
+    // Validar antes de guardar
+    const validatedData = CustomerSchema.parse(customer);
+    await dynamicDataService.saveRecord(this.tableName, validatedData, customer.id);
   }
 
   static async delete(id: string): Promise<void> {

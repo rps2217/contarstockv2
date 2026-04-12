@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'motion/react';
-import { ChevronLeft, Users, MessageCircle, Edit2, Trash2, UserPlus, FileText } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { ChevronLeft, Users, MessageCircle, Edit2, Trash2, UserPlus, FileText, Cloud, CloudOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { Customer } from '../../types';
 import { CustomerRepository } from '../../repositories/CustomerRepository';
@@ -11,7 +11,9 @@ import { CustomerFormModal } from './components/CustomerFormModal';
 import { SendMessageModal } from './components/SendMessageModal';
 import { TemplateManagerModal } from './components/TemplateManagerModal';
 import { customerSyncService } from '../../services/customerSyncService';
+import { templateSyncService } from '../../services/templateSyncService';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useVirtualizer } from '@tanstack/react-virtual';
 
 export const CustomersPage: React.FC = () => {
   const navigate = useNavigate();
@@ -28,9 +30,15 @@ export const CustomersPage: React.FC = () => {
   
   const [isTemplateManagerOpen, setIsTemplateManagerOpen] = useState(false);
 
+  const parentRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     customerSyncService.startSync();
-    return () => customerSyncService.stopSync();
+    templateSyncService.startSync();
+    return () => {
+      customerSyncService.stopSync();
+      templateSyncService.stopSync();
+    };
   }, []);
 
   const filteredCustomers = useMemo(() => {
@@ -42,6 +50,14 @@ export const CustomersPage: React.FC = () => {
       c.phone.includes(lowerQuery)
     );
   }, [customers, searchQuery]);
+
+  // Virtualizer setup
+  const rowVirtualizer = useVirtualizer({
+    count: filteredCustomers.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 180, // Estimated height of a card
+    overscan: 5,
+  });
 
   const handleSave = async (customer: Customer) => {
     try {
@@ -136,70 +152,100 @@ export const CustomersPage: React.FC = () => {
         />
       </div>
 
-      {/* LIST */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6">
-        <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredCustomers.map((customer) => (
-            <motion.div
-              key={customer.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`p-5 rounded-2xl border transition-all ${
-                theme === 'dark' 
-                  ? 'bg-slate-900/50 border-white/10 hover:border-blue-500/50' 
-                  : 'bg-white border-slate-200 hover:border-blue-500/50 shadow-sm'
-              }`}
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-lg ${
-                    theme === 'dark' ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-600'
-                  }`}>
-                    {customer.firstName.charAt(0)}{customer.lastName.charAt(0)}
+      {/* LIST WITH VIRTUALIZATION */}
+      <div 
+        ref={parentRef}
+        className="flex-1 overflow-y-auto p-4 md:p-6"
+      >
+        <div 
+          className="max-w-4xl mx-auto relative"
+          style={{ height: `${rowVirtualizer.getTotalSize()}px` }}
+        >
+          {rowVirtualizer.getVirtualItems().map((virtualItem) => {
+            const customer = filteredCustomers[virtualItem.index];
+            return (
+              <div
+                key={customer.id}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: `${virtualItem.size}px`,
+                  transform: `translateY(${virtualItem.start}px)`,
+                }}
+                className="pb-4"
+              >
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`p-5 rounded-2xl border transition-all relative overflow-hidden h-full ${
+                    theme === 'dark' 
+                      ? 'bg-slate-900/50 border-white/10 hover:border-blue-500/50' 
+                      : 'bg-white border-slate-200 hover:border-blue-500/50 shadow-sm'
+                  }`}
+                >
+                  {/* Sync Indicator */}
+                  <div className="absolute top-3 right-3">
+                    {customer.syncStatus === 'synced' ? (
+                      <Cloud className="w-3 h-3 text-emerald-500 opacity-50" />
+                    ) : (
+                      <CloudOff className="w-3 h-3 text-amber-500 animate-pulse" />
+                    )}
                   </div>
-                  <div>
-                    <h3 className="font-bold text-lg leading-tight">
-                      {customer.firstName} {customer.lastName}
-                    </h3>
-                    <p className={`text-xs font-mono mt-0.5 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
-                      {customer.phone}
-                    </p>
-                  </div>
-                </div>
-              </div>
 
-              <div className="flex items-center gap-2 mt-4 pt-4 border-t border-white/5">
-                <button
-                  onClick={() => handleOpenSendMessage(customer)}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-colors"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  Enviar Mensaje
-                </button>
-                <button
-                  onClick={() => handleEdit(customer)}
-                  className={`p-2 rounded-xl transition-colors ${
-                    theme === 'dark' ? 'bg-white/5 hover:bg-white/10 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
-                  }`}
-                  title="Editar"
-                >
-                  <Edit2 className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => handleDelete(customer.id)}
-                  className={`p-2 rounded-xl transition-colors ${
-                    theme === 'dark' ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-500' : 'bg-rose-50 hover:bg-rose-100 text-rose-600'
-                  }`}
-                  title="Eliminar"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-lg ${
+                        theme === 'dark' ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-600'
+                      }`}>
+                        {customer.firstName.charAt(0)}{customer.lastName.charAt(0)}
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-lg leading-tight">
+                          {customer.firstName} {customer.lastName}
+                        </h3>
+                        <p className={`text-xs font-mono mt-0.5 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
+                          {customer.phone}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 mt-4 pt-4 border-t border-white/5">
+                    <button
+                      onClick={() => handleOpenSendMessage(customer)}
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-colors"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      Enviar Mensaje
+                    </button>
+                    <button
+                      onClick={() => handleEdit(customer)}
+                      className={`p-2 rounded-xl transition-colors ${
+                        theme === 'dark' ? 'bg-white/5 hover:bg-white/10 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                      }`}
+                      title="Editar"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(customer.id)}
+                      className={`p-2 rounded-xl transition-colors ${
+                        theme === 'dark' ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-500' : 'bg-rose-50 hover:bg-rose-100 text-rose-600'
+                      }`}
+                      title="Eliminar"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </motion.div>
               </div>
-            </motion.div>
-          ))}
+            );
+          })}
 
           {filteredCustomers.length === 0 && (
-            <div className="col-span-full py-12 flex flex-col items-center justify-center text-center">
+            <div className="py-12 flex flex-col items-center justify-center text-center">
               <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${
                 theme === 'dark' ? 'bg-white/5' : 'bg-slate-100'
               }`}>

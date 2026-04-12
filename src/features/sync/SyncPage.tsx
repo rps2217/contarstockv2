@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Cloud, ChevronLeft, Loader2, ArrowUpCircle, Info, DownloadCloud, Database, RefreshCw, ShieldCheck } from 'lucide-react';
+import { Cloud, ChevronLeft, Loader2, ArrowUpCircle, Info, DownloadCloud, Database, RefreshCw, ShieldCheck, Settings, UploadCloud } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSyncManager } from './hooks/useSyncManager';
 import { SyncGroupCard } from './components/SyncGroupCard';
@@ -37,21 +37,55 @@ export const SyncManagerUI: React.FC = () => {
             </p>
           </div>
 
-          <button 
-            onClick={() => navigate('/sync/queue')}
-            className="w-full p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center justify-between group hover:bg-amber-500/20 transition-all"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center text-black">
-                <Database className="w-5 h-5" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <button 
+              onClick={() => navigate('/sync/queue')}
+              className="w-full p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center justify-between group hover:bg-amber-500/20 transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
+                  <Database className="w-5 h-5" />
+                </div>
+                <div className="text-left">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-amber-600 block">Cola de Datos</span>
+                  <span className="text-[8px] font-bold uppercase tracking-widest text-slate-500">Registros pendientes</span>
+                </div>
               </div>
-              <div className="text-left">
-                <span className="text-[10px] font-black uppercase tracking-widest text-amber-600 block">Cola de Datos Dinámicos</span>
-                <span className="text-[8px] font-bold uppercase tracking-widest text-slate-500">Ver registros pendientes y errores</span>
-              </div>
+              <RefreshCw className="w-4 h-4 text-amber-500 group-hover:rotate-180 transition-transform duration-500" />
+            </button>
+
+            <div className="flex gap-2">
+              <button 
+                onClick={actions.handlePushConfig}
+                disabled={state.isProcessing}
+                className="flex-1 p-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex items-center gap-3 group hover:bg-blue-500/20 transition-all"
+                title="Respaldar Plantillas y Esquemas"
+              >
+                <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center text-white">
+                  <UploadCloud className="w-5 h-5" />
+                </div>
+                <div className="text-left">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 block">Respaldar</span>
+                  <span className="text-[8px] font-bold uppercase tracking-widest text-slate-500">Plantillas/Esquemas</span>
+                </div>
+              </button>
+
+              <button 
+                onClick={actions.handlePullConfig}
+                disabled={state.isProcessing}
+                className="flex-1 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-3 group hover:bg-emerald-500/20 transition-all"
+                title="Restaurar Plantillas y Esquemas"
+              >
+                <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-white">
+                  <DownloadCloud className="w-5 h-5" />
+                </div>
+                <div className="text-left">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 block">Restaurar</span>
+                  <span className="text-[8px] font-bold uppercase tracking-widest text-slate-500">Plantillas/Esquemas</span>
+                </div>
+              </button>
             </div>
-            <RefreshCw className="w-4 h-4 text-amber-500 group-hover:rotate-180 transition-transform duration-500" />
-          </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-4">

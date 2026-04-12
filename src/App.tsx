@@ -46,6 +46,7 @@ const ProvidersPage = lazyWithRetry(() => import('@/features/suppliers/pages/Pro
 const CustomersPage = lazyWithRetry(() => import('@/features/customers/CustomersPage').then(m => ({ default: m.CustomersPage })));
 
 import { ExpiryAlertBanner } from '@/features/expiry/components/ExpiryAlertBanner';
+import { OnboardingOverlay } from '@/shared/components/core/OnboardingOverlay';
 
 const AppContent = () => {
   const location = useLocation();
@@ -169,6 +170,7 @@ const AppContent = () => {
 
   return (
     <div className={`w-full h-full flex flex-col transition-colors duration-500 ${currentThemeClass} font-mono`}>
+      <OnboardingOverlay />
       <OfflineBanner />
       <ToastContainer />
       <TaskProgressIndicator />

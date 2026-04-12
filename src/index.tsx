@@ -31,6 +31,19 @@ if (typeof window !== 'undefined') {
 // Importar App DESPUÉS de establecer los polyfills
 import App from './App';
 
+/**
+ * SUPRESIÓN DE ADVERTENCIAS DE LIBRERÍAS (RECHARTS)
+ * Recharts utiliza defaultProps en componentes funcionales, lo cual está deprecado en React 18.3+.
+ * Esta advertencia será eliminada en futuras versiones de la librería.
+ */
+const originalWarn = console.warn;
+console.warn = (...args) => {
+  if (typeof args[0] === 'string' && args[0].includes('Support for defaultProps will be removed from function components')) {
+    return;
+  }
+  originalWarn(...args);
+};
+
 const container = document.getElementById('root');
 if (!container) {
  throw new Error('No se encontró el elemento root');
