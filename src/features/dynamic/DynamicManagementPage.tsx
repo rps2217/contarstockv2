@@ -3,7 +3,7 @@ import { useAppStore } from '@/store/mainAppStore';
 import { DynamicList } from '../../components/DynamicList';
 import { DynamicForm } from '../../components/DynamicForm';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Database, Cloud, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { X, Database, Cloud, AlertCircle, CheckCircle2, Printer } from 'lucide-react';
 import { dynamicSyncService } from '../../services/dynamicSync';
 import { dynamicDataService } from '../../services/dynamicDataService';
 import { db } from '../../db';
@@ -13,6 +13,9 @@ import { toast } from 'sonner';
 import { useParams, useNavigate } from 'react-router-dom';
 import { RefreshCw, Edit3, Trash2 } from 'lucide-react';
 import { ModuleHeader } from '../../shared/components/layout/ModuleHeader';
+import { BarcodeLabelModal } from '../../shared/components/ui/BarcodeLabelModal';
+import { thermalPrinter } from '../../services/thermalPrinterService';
+import { handlePrintLabels } from '../expiry/utils/expiryUtils';
 
 interface DynamicManagementPageProps {
   tableKey?: 'expiry' | 'products' | 'counts' | 'events';
@@ -34,8 +37,15 @@ export const DynamicManagementPage: React.FC<DynamicManagementPageProps> = ({
   const [selectedItem, setSelectedItem] = React.useState<any>(null);
   const [isRetrying, setIsRetrying] = React.useState(false);
   const [isPulling, setIsPulling] = React.useState(false);
+  const [isLabelModalOpen, setIsLabelModalOpen] = React.useState(false);
+  const [isPrinting, setIsPrinting] = React.useState(false);
   
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
+
+  // Helper to find barcode/name/qty in dynamic items
+  const findBarcode = (item: any) => item?.barcode || item?.code || item?.sku || item?.ean || item?.id;
+  const findName = (item: any) => item?.name || item?.description || item?.productName || item?.title || 'SIN_NOMBRE';
+  const findQty = (item: any) => Number(item?.quantity || item?.qty || item?.stock || item?.totalQuantity || 0);
 
   // Fetch data from dynamic_data table for this specific tableName
   const records = useLiveQuery(
@@ -174,6 +184,50 @@ export const DynamicManagementPage: React.FC<DynamicManagementPageProps> = ({
     }
   };
 
+  const handleMassPrint = () => {
+    if (selectedIds.size === 0) return;
+    const selectedItems = items.filter(i => selectedIds.has(i.id));
+    
+    // Adapt items for handlePrintLabels (expects { barcode, productName })
+    const printItems = selectedItems.map(i => ({
+      barcode: findBarcode(i),
+      productName: findName(i)
+    }));
+
+    handlePrintLabels(printItems);
+    toast.success(`Generando ${printItems.length} etiquetas`);
+    clearSelection();
+  };
+
+  const handlePrintThermal = async () => {
+    if (!selectedItem) return;
+    setIsPrinting(true);
+    try {
+      const barcode = findBarcode(selectedItem);
+      const name = findName(selectedItem);
+      const qty = findQty(selectedItem);
+      
+      if (!thermalPrinter.isConnected()) {
+        toast.error('Impresora no conectada. Conéctala en Configuración.');
+        return;
+      }
+
+      await thermalPrinter.printLabel(barcode, name, qty);
+      toast.success('Etiqueta enviada a impresora');
+    } catch (error: any) {
+      toast.error(`Error de impresión: ${error.message}`);
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
+  const handlePrintPDF = () => {
+    if (!selectedItem) return;
+    const barcode = findBarcode(selectedItem);
+    const name = findName(selectedItem);
+    handlePrintLabels([{ barcode, productName: name }]);
+  };
+
   return (
     <div className="h-full flex flex-col overflow-hidden relative bg-[#050505]">
       <ModuleHeader 
@@ -209,6 +263,9 @@ export const DynamicManagementPage: React.FC<DynamicManagementPageProps> = ({
               <span className="font-bold text-sm uppercase tracking-wider text-white">Seleccionados</span>
             </div>
             <div className="h-8 w-px bg-slate-700"></div>
+            <button onClick={handleMassPrint} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 transition-colors font-bold text-sm uppercase">
+              <Printer className="w-4 h-4" /> Imprimir
+            </button>
             <button onClick={handleMassSync} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/20 transition-colors font-bold text-sm uppercase">
               <Cloud className="w-4 h-4" /> Sync
             </button>
@@ -339,9 +396,17 @@ export const DynamicManagementPage: React.FC<DynamicManagementPageProps> = ({
                       )}
                     </div>
 
-                    <button onClick={() => setSelectedItem(null)} className="w-full py-4 bg-white/5 text-white font-black uppercase tracking-widest rounded-2xl border border-white/10">
-                      Cerrar
-                    </button>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button 
+                        onClick={() => setIsLabelModalOpen(true)}
+                        className="flex items-center justify-center gap-2 py-4 bg-amber-500 text-black font-black uppercase tracking-widest rounded-2xl border border-amber-600 shadow-lg shadow-amber-500/20"
+                      >
+                        <Printer className="w-5 h-5" /> Imprimir Etiqueta
+                      </button>
+                      <button onClick={() => setSelectedItem(null)} className="py-4 bg-white/5 text-white font-black uppercase tracking-widest rounded-2xl border border-white/10">
+                        Cerrar
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -349,6 +414,19 @@ export const DynamicManagementPage: React.FC<DynamicManagementPageProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {selectedItem && (
+        <BarcodeLabelModal 
+          isOpen={isLabelModalOpen}
+          onClose={() => setIsLabelModalOpen(false)}
+          barcode={findBarcode(selectedItem)}
+          productName={findName(selectedItem)}
+          quantity={findQty(selectedItem)}
+          isPrinting={isPrinting}
+          onPrintThermal={handlePrintThermal}
+          onPrintPDF={handlePrintPDF}
+        />
+      )}
     </div>
   );
 };
