@@ -30,17 +30,28 @@ export const ReportDetail: React.FC<{ sessionId: string; onBack: () => void }> =
  
  const expectedMap = new Map(session?.expectedItems?.map(i => [normalizeSku(i.barcode), i.expectedQty]));
 
- const results = physicalItems.map(pi => ({
- ...pi,
- expectedQuantity: expectedMap.get(normalizeSku(pi.barcode)) || 0
- }));
+  const results = physicalItems.map(pi => {
+    const expected = expectedMap.get(normalizeSku(pi.barcode)) || 0;
+    return {
+      ...pi,
+      expectedQuantity: expected,
+      difference: pi.totalQuantity - expected
+    };
+  });
 
  // Inyectar ítems faltantes de la guía
  if (session?.isVerifiedMode && session.expectedItems) {
  const scannedSet = new Set(physicalItems.map(pi => normalizeSku(pi.barcode)));
  session.expectedItems.forEach(exp => {
  if (!scannedSet.has(normalizeSku(exp.barcode))) {
- results.push({ barcode: exp.barcode, productName: exp.name, totalQuantity: 0, expectedQuantity: exp.expectedQty, scans: 0 });
+        results.push({ 
+          barcode: exp.barcode, 
+          productName: exp.name, 
+          totalQuantity: 0, 
+          expectedQuantity: exp.expectedQty, 
+          difference: -exp.expectedQty,
+          scans: 0 
+        });
  }
  });
  }
@@ -201,7 +212,21 @@ export const ReportDetail: React.FC<{ sessionId: string; onBack: () => void }> =
  }`}>
  <div className="min-w-0 flex-1 pr-4">
  <h4 className={`font-black uppercase truncate text-sm ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{item.productName}</h4>
- <div className="flex items-center gap-3 mt-1"><span className="font-mono text-blue-600 text-[10px] font-bold">{item.barcode}</span>{item.expectedQuantity > 0 && <span className="text-[8px] font-black bg-slate-100 px-2 py-0.5 rounded uppercase">Meta: {item.expectedQuantity}</span>}</div>
+  <div className="flex items-center gap-3 mt-1">
+    <span className="font-mono text-blue-600 text-[10px] font-bold">{item.barcode}</span>
+    {item.expectedQuantity > 0 && (
+      <div className="flex items-center gap-2">
+        <span className="text-[8px] font-black bg-slate-100 px-2 py-0.5 rounded uppercase">Meta: {item.expectedQuantity}</span>
+        {item.difference !== 0 && (
+          <span className={`text-[8px] font-black px-2 py-0.5 rounded uppercase ${
+            item.difference > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
+          }`}>
+            Dif: {item.difference > 0 ? `+${item.difference}` : item.difference}
+          </span>
+        )}
+      </div>
+    )}
+  </div>
  </div>
  <div className="flex items-center gap-4">
  <div className={`text-2xl font-black tabular-nums ${getStatusColorClasses(status, 'text')}`}>{item.totalQuantity}</div>

@@ -26,28 +26,44 @@ export const exportToExcel = async (session: CountingSession, items: Consolidate
   const XLSX = await import('xlsx');
 
   // 1. Prepare Data Structure for Excel
-  const data = items.map(item => ({
-  'Código/SKU': item.barcode,
-  'Descripción': item.productName,
-  'Cantidad Total': item.totalQuantity,
-  'Conteo de Escaneos': item.scans,
-  'Orden ERP': session.erpOrder,
-  'Etiqueta Logística': session.logisticsLabel,
-  'Fecha Conteo': new Date(session.createdAt).toLocaleDateString()
-  }));
+  const data = items.map(item => {
+    const base = {
+      'Código/SKU': item.barcode,
+      'Descripción': item.productName,
+      'Cantidad Total': item.totalQuantity,
+      'Conteo de Escaneos': item.scans,
+    };
+
+    if (session.isVerifiedMode) {
+      const expected = item.expectedQuantity || 0;
+      const diff = item.totalQuantity - expected;
+      return {
+        ...base,
+        'Esperado': expected,
+        'Diferencia': diff > 0 ? `+${diff}` : diff
+      };
+    }
+
+    return {
+      ...base,
+      'Orden ERP': session.erpOrder,
+      'Etiqueta Logística': session.logisticsLabel,
+      'Fecha Conteo': new Date(session.createdAt).toLocaleDateString()
+    };
+  });
 
   // 2. Create Worksheet
   const worksheet = XLSX.utils.json_to_sheet(data);
   
   // 3. Auto-adjust column width (heuristic)
   const wscols = [
-  { wch: 20 }, // SKU
-  { wch: 40 }, // Desc
-  { wch: 15 }, // Qty
-  { wch: 15 }, // Scans
-  { wch: 15 }, // ERP
-  { wch: 15 }, // Label
-  { wch: 15 }, // Date
+    { wch: 20 }, // SKU
+    { wch: 40 }, // Desc
+    { wch: 15 }, // Qty
+    { wch: 15 }, // Scans
+    { wch: 15 }, // Expected/ERP
+    { wch: 15 }, // Diff/Label
+    { wch: 15 }, // Date
   ];
   worksheet['!cols'] = wscols;
 
@@ -117,29 +133,60 @@ export const exportToPDF = async (session: CountingSession, items: ConsolidatedI
  doc.setFont(undefined, 'normal');
  doc.text(totalSKUs.toString(), 155, 52);
 
- // --- Table ---
- const tableColumn = ["Código", "Descripción", "Escaneos", "Cantidad"];
- const tableRows: any[] = [];
+  // --- Table ---
+  const isVerified = session.isVerifiedMode;
+  const tableColumn = isVerified 
+    ? ["Código", "Descripción", "Físico", "Esperado", "Diferencia"]
+    : ["Código", "Descripción", "Escaneos", "Cantidad"];
+    
+  const tableRows: any[] = [];
 
- items.forEach(item => {
- const itemData = [
- item.barcode,
- item.productName,
- item.scans,
- item.totalQuantity,
- ];
- tableRows.push(itemData);
- });
+  items.forEach(item => {
+    if (isVerified) {
+      const expected = item.expectedQuantity || 0;
+      const diff = item.totalQuantity - expected;
+      tableRows.push([
+        item.barcode,
+        item.productName,
+        item.totalQuantity,
+        expected,
+        diff > 0 ? `+${diff}` : diff
+      ]);
+    } else {
+      tableRows.push([
+        item.barcode,
+        item.productName,
+        item.scans,
+        item.totalQuantity,
+      ]);
+    }
+  });
 
- (autoTable as any)(doc, {
- startY: 80,
- head: [tableColumn],
- body: tableRows,
- theme: 'grid',
- headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: 'bold' },
- styles: { fontSize: 9, cellPadding: 3 },
- alternateRowStyles: { fillColor: [245, 245, 245] },
- });
+  (autoTable as any)(doc, {
+    startY: 80,
+    head: [tableColumn],
+    body: tableRows,
+    theme: 'grid',
+    headStyles: { 
+      fillColor: isVerified ? [220, 53, 69] : [41, 128, 185], 
+      textColor: 255, 
+      fontStyle: 'bold' 
+    },
+    styles: { fontSize: 9, cellPadding: 3 },
+    alternateRowStyles: { fillColor: [245, 245, 245] },
+    didParseCell: function (data: any) {
+      if (isVerified && data.section === 'body' && data.column.index === 4) {
+        const val = parseInt(data.cell.raw);
+        if (val < 0) {
+          data.cell.styles.textColor = [220, 53, 69]; // Red
+          data.cell.styles.fontStyle = 'bold';
+        } else if (val > 0) {
+          data.cell.styles.textColor = [40, 167, 69]; // Green
+          data.cell.styles.fontStyle = 'bold';
+        }
+      }
+    }
+  });
 
  // --- Footer / Signature ---
  const finalY = (doc as any).lastAutoTable.finalY + 40;
