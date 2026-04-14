@@ -16,6 +16,7 @@ import { ModuleHeader } from '../../shared/components/layout/ModuleHeader';
 import { BarcodeLabelModal } from '../../shared/components/ui/BarcodeLabelModal';
 import { thermalPrinter } from '../../services/thermalPrinterService';
 import { handlePrintLabels } from '../expiry/utils/expiryUtils';
+import { MassActionsPanel } from '../../shared/components/ui/MassActionsPanel';
 
 interface DynamicManagementPageProps {
   tableKey?: 'expiry' | 'products' | 'counts' | 'events';
@@ -247,38 +248,16 @@ export const DynamicManagementPage: React.FC<DynamicManagementPageProps> = ({
         }
       />
 
-      {/* Mass Actions Panel */}
-      <AnimatePresence>
-        {selectedIds.size > 0 && (
-          <motion.div 
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 100, opacity: 0 }}
-            className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[100] p-3 rounded-2xl shadow-2xl flex items-center gap-4 border bg-slate-800 border-slate-700"
-          >
-            <div className="flex items-center gap-2 px-3">
-              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-500 text-white font-black text-xs">
-                {selectedIds.size}
-              </span>
-              <span className="font-bold text-sm uppercase tracking-wider text-white">Seleccionados</span>
-            </div>
-            <div className="h-8 w-px bg-slate-700"></div>
-            <button onClick={handleMassPrint} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 transition-colors font-bold text-sm uppercase">
-              <Printer className="w-4 h-4" /> Imprimir
-            </button>
-            <button onClick={handleMassSync} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/20 transition-colors font-bold text-sm uppercase">
-              <Cloud className="w-4 h-4" /> Sync
-            </button>
-            <button onClick={handleMassDelete} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 transition-colors font-bold text-sm uppercase">
-              <Trash2 className="w-4 h-4" /> Borrar
-            </button>
-            <div className="h-8 w-px bg-slate-700"></div>
-            <button onClick={clearSelection} className="p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl">
-              <X className="w-5 h-5" />
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <MassActionsPanel 
+        selectedCount={selectedIds.size}
+        onClear={clearSelection}
+        actions={[
+          { label: 'Imprimir', icon: Printer, onClick: handleMassPrint, variant: 'warning' },
+          { label: 'Sync', icon: Cloud, onClick: handleMassSync, variant: 'info' },
+          { label: 'Borrar', icon: Trash2, onClick: handleMassDelete, variant: 'danger' }
+        ]}
+        theme={settings.theme}
+      />
 
       <div className="flex-1 overflow-hidden p-4">
         <DynamicList

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, memo, useMemo } from 'react';
 import { Product } from '../../../types';
-import { Pencil, Trash2, Package, Cloud, CloudOff, Tag, Loader2, AlertTriangle } from 'lucide-react';
+import { Pencil, Trash2, Package, Cloud, CloudOff, Tag, Loader2, AlertTriangle, Printer, CheckSquare, Square } from 'lucide-react';
 import { VirtualList } from '../../../shared/components/ui/VirtualList';
 import { Badge, Card, Button } from '../../../shared/components/ui';
 
@@ -10,13 +10,18 @@ interface ProductListProps {
   onEdit: (product: Product) => void;
   onDelete: (barcode: string) => void;
   onDeleteAll: () => void;
+  onPrint: (product: Product) => void;
   hasFilter: boolean;
+  selectedIds?: Set<string>;
+  onSelect?: (barcode: string) => void;
+  onSelectAll?: () => void;
 }
 
   const Row = memo(({ index, data }: any) => {
   const p = data.items[index];
   if (!p) return null;
-  const { isMobile, onEdit, onDelete } = data;
+  const { isMobile, onEdit, onDelete, onPrint, selectedIds, onSelect } = data;
+  const isSelected = selectedIds?.has(p.barcode);
 
   const getSyncStatusColor = (status?: string) => {
     switch (status) {
@@ -39,10 +44,24 @@ interface ProductListProps {
   if (isMobile) {
     return (
       <div className="px-2 py-1 h-full">
-        <Card className="h-full flex items-stretch overflow-hidden p-0 border-2 border-slate-100 dark:border-white/5 shadow-sm active:bg-slate-50 dark:active:bg-white/5 transition-colors">
+        <Card className={`h-full flex items-stretch overflow-hidden p-0 border-2 shadow-sm active:bg-slate-50 dark:active:bg-white/5 transition-colors ${
+          isSelected ? 'border-indigo-500 bg-indigo-500/5' : 'border-slate-100 dark:border-white/5'
+        }`}>
           {/* Barra de Estado Lateral - Comunicación No Verbal */}
-          <div className={`w-2 shrink-0 ${getSyncStatusColor(p.syncStatus)}`} />
+          <div className={`w-2 shrink-0 ${isSelected ? 'bg-indigo-500' : getSyncStatusColor(p.syncStatus)}`} />
           
+          {/* Checkbox para selección */}
+          {onSelect && (
+            <button 
+              onClick={() => onSelect(p.barcode)}
+              className={`w-10 flex items-center justify-center border-r border-slate-100 dark:border-white/5 ${
+                isSelected ? 'text-indigo-500' : 'text-slate-300 dark:text-slate-600'
+              }`}
+            >
+              {isSelected ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
+            </button>
+          )}
+
           {/* Información de Producto */}
           <div className="flex-1 min-w-0 p-3 flex flex-col justify-center">
             <div className="flex items-center gap-2 mb-1">
@@ -65,6 +84,12 @@ interface ProductListProps {
           {/* Zona de Acciones (Optimizada para Pulgar Derecho) */}
           <div className="flex bg-slate-50 dark:bg-white/5 border-l border-slate-100 dark:border-white/5">
             <button 
+              onClick={() => onPrint(p)} 
+              className="w-14 flex items-center justify-center text-amber-500 active:bg-amber-50 dark:active:bg-amber-900/20 transition-all border-r border-slate-100 dark:border-white/5"
+            >
+              <Printer className="w-5 h-5 stroke-[2.5px]" />
+            </button>
+            <button 
               onClick={() => onEdit(p)} 
               className="w-14 flex items-center justify-center text-slate-400 dark:text-slate-500 active:text-blue-600 active:bg-blue-50 dark:active:bg-blue-900/20 transition-all border-r border-slate-100 dark:border-white/5"
             >
@@ -83,7 +108,17 @@ interface ProductListProps {
   }
 
   return (
-    <div className="flex items-center border-b border-slate-100 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors px-6 bg-white dark:bg-slate-900 text-sm h-full group">
+    <div className={`flex items-center border-b border-slate-100 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors px-6 text-sm h-full group ${
+      isSelected ? 'bg-indigo-500/5' : 'bg-white dark:bg-slate-900'
+    }`}>
+      {onSelect && (
+        <button 
+          onClick={() => onSelect(p.barcode)}
+          className={`mr-4 transition-colors ${isSelected ? 'text-indigo-500' : 'text-slate-300 dark:text-slate-600 hover:text-slate-400'}`}
+        >
+          {isSelected ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
+        </button>
+      )}
       <div className="w-40 shrink-0 flex items-center gap-3 font-mono font-bold text-slate-600 dark:text-slate-400">
         <div className={`w-2 h-2 rounded-full ${getSyncStatusColor(p.syncStatus)}`} />
         {p.barcode}
@@ -93,6 +128,7 @@ interface ProductListProps {
         <Badge variant={p.syncStatus === 'synced' ? 'neutral' : p.syncStatus === 'error' ? 'error' : 'info'}>{p.category || '-'}</Badge>
       </div>
       <div className="w-24 shrink-0 flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button onClick={() => onPrint(p)} className="p-2 hover:bg-amber-50 dark:hover:bg-amber-900/20 text-amber-600 rounded-lg" title="Imprimir Código de Barras"><Printer className="w-4 h-4" /></button>
         <button onClick={() => onEdit(p)} className="p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 rounded-lg"><Pencil className="w-4 h-4" /></button>
         <button onClick={() => onDelete(p.barcode)} className="p-2 hover:bg-rose-50 dark:hover:bg-rose-900/20 text-rose-600 rounded-lg"><Trash2 className="w-4 h-4" /></button>
       </div>
@@ -102,7 +138,7 @@ interface ProductListProps {
 
 Row.displayName = 'ProductRow';
 
-export const ProductList: React.FC<ProductListProps> = memo(({ products, onEdit, onDelete, onDeleteAll, hasFilter }) => {
+export const ProductList: React.FC<ProductListProps> = memo(({ products, onEdit, onDelete, onDeleteAll, onPrint, hasFilter, selectedIds, onSelect, onSelectAll }) => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
@@ -111,7 +147,7 @@ export const ProductList: React.FC<ProductListProps> = memo(({ products, onEdit,
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const rowData = useMemo(() => ({ isMobile, onEdit, onDelete }), [isMobile, onEdit, onDelete]);
+  const rowData = useMemo(() => ({ isMobile, onEdit, onDelete, onPrint, selectedIds, onSelect }), [isMobile, onEdit, onDelete, onPrint, selectedIds, onSelect]);
   const itemHeight = isMobile ? 84 : 60;
 
   if (!products || products.length === 0) {
@@ -130,7 +166,15 @@ export const ProductList: React.FC<ProductListProps> = memo(({ products, onEdit,
 
   return (
     <div className="h-full flex flex-col bg-transparent md:bg-white md:dark:bg-slate-900 md:rounded-[2.5rem] md:border md:border-slate-200 md:dark:border-white/5 overflow-hidden">
-      <div className="hidden md:flex bg-slate-50 dark:bg-black/40 border-b border-slate-100 dark:border-white/5 px-8 py-4 shrink-0">
+      <div className="hidden md:flex bg-slate-50 dark:bg-black/40 border-b border-slate-100 dark:border-white/5 px-8 py-4 shrink-0 items-center">
+        {onSelectAll && (
+          <button 
+            onClick={onSelectAll}
+            className={`mr-4 transition-colors ${selectedIds?.size === products.length && products.length > 0 ? 'text-indigo-500' : 'text-slate-300 dark:text-slate-600 hover:text-slate-400'}`}
+          >
+            {selectedIds?.size === products.length && products.length > 0 ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
+          </button>
+        )}
         <div className="w-40 text-[9px] font-black text-slate-400 uppercase tracking-widest">EAN/SKU</div>
         <div className="flex-1 text-[9px] font-black text-slate-400 uppercase tracking-widest px-4">DESCRIPCIÓN</div>
         <div className="w-32 text-[9px] font-black text-slate-400 uppercase tracking-widest">FAMILIA</div>
