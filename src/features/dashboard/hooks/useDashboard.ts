@@ -1,4 +1,3 @@
-import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useState, useEffect } from 'react';
 import { ScanRepository } from '../../../repositories/ScanRepository';
@@ -7,7 +6,6 @@ import { db } from '../../../db';
 import { syncFSM, SyncStatus } from '../../../services/syncFSM';
 
 export const useDashboard = () => {
-  const navigate = useNavigate();
   const [syncStatus, setSyncStatus] = useState<SyncStatus>({ state: 'IDLE', pendingCount: 0 });
 
   useEffect(() => {
@@ -40,7 +38,6 @@ export const useDashboard = () => {
     isSyncNeeded,
     syncStatus,
     pendingOrders,
-    navigate,
     triggerSync: () => syncFSM.runSync()
   };
 };

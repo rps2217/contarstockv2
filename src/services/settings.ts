@@ -149,7 +149,7 @@ const DEFAULT_SETTINGS: AppSettings = {
       isAdjusted: 'AJUSTADO'
     }
   },
-  mobileNavConfig: ['dashboard', 'reception', 'reports', 'sync', 'database'],
+  mobileNavConfig: ['dashboard', 'reception', 'reports', 'sync', 'database', 'settings'],
   pharmacyName: 'L-121',
   autoLockTimeout: 0, // Desactivado por defecto
   captureSettings: {

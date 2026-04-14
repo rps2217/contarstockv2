@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, memo } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Radio,
   Database,
@@ -47,7 +47,8 @@ import { ExpectedOrder, ExpectedItem } from "../../types";
 import { CameraScanner } from "../../components/CameraScanner";
 
 const Dashboard: React.FC = () => {
-  const { operatorId, isSyncNeeded, pendingOrders, navigate, dynamicStats, syncStatus, triggerSync, stats } =
+  const navigate = useNavigate();
+  const { operatorId, isSyncNeeded, pendingOrders, dynamicStats, syncStatus, triggerSync, stats } =
     useDashboard();
   const location = useLocation();
   const [hasConfigError, setHasConfigError] = useState(false);
@@ -270,7 +271,7 @@ const Dashboard: React.FC = () => {
       </AnimatePresence>
 
       {/* HEADER / HERO */}
-      <header className="px-6 pt-10 pb-12 bg-white dark:bg-brand-surface border-b border-slate-200 dark:border-white/5 relative overflow-hidden">
+      <header className="px-6 pt-16 pb-12 bg-white dark:bg-brand-surface border-b border-slate-200 dark:border-white/5 relative overflow-hidden">
         {/* Decorative background element */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-brand-warning/5 rounded-full blur-3xl -mr-32 -mt-32" />
         
@@ -293,7 +294,7 @@ const Dashboard: React.FC = () => {
               </div>
               <button
                 onClick={() => navigate("/settings")}
-                className="w-12 h-12 bg-slate-100 dark:bg-white/5 rounded-2xl flex items-center justify-center text-slate-500 hover:text-brand-warning transition-all active:scale-90"
+                className="w-12 h-12 bg-slate-100 dark:bg-white/5 rounded-2xl flex items-center justify-center text-slate-500 hover:text-brand-warning transition-all active:scale-90 relative z-10"
               >
                 <Settings className="w-6 h-6" />
               </button>
