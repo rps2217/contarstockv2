@@ -73,20 +73,28 @@ export const Database: React.FC = () => {
   };
 
   const handleMassPrint = () => {
-    if (selectedIds.size === 0) return;
+    if (selectedIds.size === 0) {
+      toast.error('Selecciona al menos un producto');
+      return;
+    }
+    
     const selectedProducts = state.products.filter(p => selectedIds.has(p.barcode));
     const printItems = selectedProducts.map(p => ({
       barcode: p.barcode,
       productName: p.name
     }));
+    
     handlePrintLabels(printItems);
     toast.success(`Generando ${printItems.length} etiquetas`);
     setSelectedIds(new Set());
   };
 
   const handleMassDelete = async () => {
+    if (selectedIds.size === 0) return;
     if (!window.confirm(`¿Eliminar ${selectedIds.size} productos?`)) return;
+    
     try {
+      // Usar el servicio directamente para evitar múltiples confirmaciones
       await Promise.all(Array.from(selectedIds).map(barcode => actions.handleDelete(barcode)));
       toast.success('Productos eliminados');
       setSelectedIds(new Set());
