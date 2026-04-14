@@ -287,12 +287,12 @@ export const ExpiryCapturePage: React.FC = () => {
         {isCameraActive && (
           <motion.div 
             initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 250, opacity: 1 }}
+            animate={{ height: 200, opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="fixed top-[180px] left-0 right-0 z-50 bg-black overflow-hidden border-b border-blue-500/30 shadow-2xl"
+            className="fixed top-[80px] left-0 right-0 z-[100] bg-black overflow-hidden border-b-2 border-blue-500/50 shadow-[0_10px_40px_rgba(0,0,0,0.8)]"
           >
             <CameraScanner 
-              onScan={(code) => { handleScan(code); setIsCameraActive(false); }} 
+              onScan={(code) => { handleScan(code); }} 
               onClose={() => setIsCameraActive(false)} 
               inline={true}
               isTriggered={true}
@@ -309,13 +309,13 @@ export const ExpiryCapturePage: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[2000] flex items-end sm:items-center justify-center bg-black/90 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-[2000] flex items-end justify-center bg-black/20 backdrop-blur-[1px] pointer-events-none"
           >
             <motion.div
-              initial={{ y: 100, opacity: 0 }}
+              initial={{ y: "100%", opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 100, opacity: 0 }}
-              className="w-full max-w-md bg-slate-900 border border-white/10 rounded-3xl overflow-hidden flex flex-col max-h-[90vh]"
+              exit={{ y: "100%", opacity: 0 }}
+              className="w-full max-w-md bg-slate-900 border-t-4 border-blue-600 rounded-t-[2.5rem] shadow-[0_-20px_50px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col max-h-[60vh] pointer-events-auto pb-safe"
             >
               <div className="p-4 border-b border-white/10 flex items-center justify-between bg-slate-800">
                 <div>

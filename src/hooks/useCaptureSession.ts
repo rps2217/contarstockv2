@@ -37,10 +37,14 @@ export const useCaptureSession = ({
   });
 
   useEffect(() => {
-    if (!autoFocus || isCameraActive) return;
+    if (!isEnabled && inputRef.current) {
+      inputRef.current.blur();
+    }
+    
+    if (!autoFocus || isCameraActive || !isEnabled) return;
 
     const focusInput = () => {
-      if (inputRef.current) {
+      if (inputRef.current && isEnabled) {
         inputRef.current.focus();
       }
     };
