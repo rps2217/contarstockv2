@@ -107,6 +107,12 @@ export const useExpiryDatabase = () => {
         const productName = getVal(exp, [expiryMapping?.name || '', 'DESCRIPTOR', 'DESCRIPCION_PROD', 'DESCRIPCION', 'PRODUCTO', 'ITEM', 'productName', 'name', 'nombre']);
         const providerName = getVal(exp, [expiryMapping?.supplier || '', 'PROVEEDOR', 'PROV', 'supplier', 'providerName', 'proveedor', 'Proveedor', 'LABORATORIO', 'LAB', 'MARCA']);
         
+        // Extraer timestamp de forma inteligente
+        const rawTimestamp = getVal(exp, [expiryMapping?.timestamp || '', 'TIMESTAMP', 'timestamp', 'createdAt', 'fecha_creacion', 'FECHA_CREACION']);
+        const finalTimestamp = rawTimestamp 
+          ? (typeof rawTimestamp === 'number' ? rawTimestamp : new Date(rawTimestamp).getTime())
+          : (record.timestamp || Date.now());
+
         return processExpiryItem({
           id: record.id,
           barcode: exp[expiryMapping?.barcode || ''] || (exp as any).SKU || (exp as any).COD_BARRAS || exp.barcode || '',
@@ -116,7 +122,7 @@ export const useExpiryDatabase = () => {
           yyyy: exp[expiryMapping?.yyyy || ''] || (exp as any).YYYY || exp.yyyy,
           batch: exp[expiryMapping?.batch || ''] || (exp as any).LOTE || exp.batch || 'N/A',
           type: 'Nube',
-          timestamp: record.timestamp || Date.now(),
+          timestamp: finalTimestamp,
           quantity: exp[expiryMapping?.quantity || ''] || (exp as any).CANTIDAD || exp.quantity || 0,
           location: exp[expiryMapping?.location || ''] || (exp as any).UBICACION || exp.location || 'N/A',
           claveUnica: exp.claveUnica || (exp as any).CLAVE_UNICA,

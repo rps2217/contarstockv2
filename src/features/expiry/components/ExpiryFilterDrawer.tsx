@@ -211,7 +211,13 @@ export const ExpiryFilterDrawer: React.FC<ExpiryFilterDrawerProps> = ({
                   <input
                     type="date"
                     value={creationDateRange.start ? format(creationDateRange.start, 'yyyy-MM-dd') : ''}
-                    onChange={(e) => setCreationDateRange({ ...creationDateRange, start: e.target.value ? parseISO(e.target.value) : null })}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setCreationDateRange({ 
+                        ...creationDateRange, 
+                        start: val ? new Date(val + 'T00:00:00') : null 
+                      });
+                    }}
                     className={`px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${
                       theme === 'dark' 
                         ? 'bg-white/5 border-white/5 text-white' 
@@ -221,7 +227,13 @@ export const ExpiryFilterDrawer: React.FC<ExpiryFilterDrawerProps> = ({
                   <input
                     type="date"
                     value={creationDateRange.end ? format(creationDateRange.end, 'yyyy-MM-dd') : ''}
-                    onChange={(e) => setCreationDateRange({ ...creationDateRange, end: e.target.value ? parseISO(e.target.value) : null })}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setCreationDateRange({ 
+                        ...creationDateRange, 
+                        end: val ? new Date(val + 'T00:00:00') : null 
+                      });
+                    }}
                     className={`px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${
                       theme === 'dark' 
                         ? 'bg-white/5 border-white/5 text-white' 
