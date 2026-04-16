@@ -6,11 +6,18 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   
-  --color-brand-dark: #1a2233;
-  --color-brand-surface: #242f45;
-  --color-brand-accent: #d1fae5;
-  --color-brand-warning: #f97316;
-  --color-brand-info: #34d399;
+  /* Base color overrides to unify the deep dark mode based on the user's image */
+  --color-black: #1e2532;
+  --color-slate-950: #171d27;
+  --color-slate-900: #222b38;
+  --color-slate-800: #2c3747;
+  
+  /* Brand accents from the provided numeric keypad image */
+  --color-brand-dark: #1e2532;        /* Background behind modal */
+  --color-brand-surface: #222b38;     /* Modal surface */
+  --color-brand-accent: #d1fae5;      /* Mint green used in keypad keys and icons */
+  --color-brand-warning: #ea580c;     /* Vibrant orange used in primary buttons */
+  --color-brand-info: #059669;        /* Teal/emerald used in borders, focuses, and active radio */
 }
 
 :root {
