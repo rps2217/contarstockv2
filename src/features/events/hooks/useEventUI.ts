@@ -16,7 +16,7 @@ export const useEventUI = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
-  const [expandedPanel, setExpandedPanel] = useState<'pending' | 'adjusted' | 'dual'>('dual');
+  const [expandedPanel, setExpandedPanel] = useState<'pending' | 'destined' | 'adjusted' | 'dual'>('dual');
 
   const management = useManagementUI({
     featureName: 'Eventos',
@@ -230,6 +230,7 @@ export const useEventUI = () => {
   }, []);
 
   const pendingGrouped = useMemo(() => getGroupedItems(state.pendingEvents), [state.pendingEvents, getGroupedItems]);
+  const destinedGrouped = useMemo(() => getGroupedItems(state.destinedEvents || []), [(state as any).destinedEvents, getGroupedItems]);
   const adjustedGrouped = useMemo(() => getGroupedItems(state.adjustedEvents), [state.adjustedEvents, getGroupedItems]);
 
   return {
@@ -242,6 +243,7 @@ export const useEventUI = () => {
       expandedPanel,
       activeFiltersCount: state.selectedEvents.length + (state.dateRange.start || state.dateRange.end ? 1 : 0),
       pendingGrouped,
+      destinedGrouped,
       adjustedGrouped,
       dateRange: state.dateRange
     },

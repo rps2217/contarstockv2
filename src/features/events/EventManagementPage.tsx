@@ -66,6 +66,7 @@ const EventManagementPage: React.FC = () => {
   };
 
   const pendingRef = useRef<HTMLDivElement>(null);
+  const destinedRef = useRef<HTMLDivElement>(null);
   const adjustedRef = useRef<HTMLDivElement>(null);
   
   const pendingVirtualizer = useVirtualizer({
@@ -75,6 +76,17 @@ const EventManagementPage: React.FC = () => {
       if (ui.pendingGrouped[index].type === 'header') return 60;
       const baseHeight = state.preferences.compactView ? 100 : 160;
       return ui.expandedPanel === 'pending' ? baseHeight * 1.2 : baseHeight;
+    },
+    overscan: 5,
+  });
+
+  const destinedVirtualizer = useVirtualizer({
+    count: ui.destinedGrouped?.length || 0,
+    getScrollElement: () => destinedRef.current,
+    estimateSize: (index) => {
+      if (ui.destinedGrouped[index].type === 'header') return 60;
+      const baseHeight = state.preferences.compactView ? 100 : 160;
+      return ui.expandedPanel === 'destined' ? baseHeight * 1.2 : baseHeight;
     },
     overscan: 5,
   });
@@ -167,6 +179,36 @@ const EventManagementPage: React.FC = () => {
             emptyIcon={<AlertCircle className="w-10 h-10 mb-4" />}
             emptyText="Sin pendientes"
             scrollRef={pendingRef}
+          />
+        )}
+
+        {/* DESTINED PANEL */}
+        {(ui.expandedPanel === 'dual' || ui.expandedPanel === 'destined') && (
+          <EventListPanel
+            title="Destinados"
+            count={state.destinedCount || 0}
+            theme={settings.theme}
+            virtualizer={destinedVirtualizer}
+            groupedItems={ui.destinedGrouped || []}
+            onTogglePanel={() => uiActions.setExpandedPanel(ui.expandedPanel === 'destined' ? 'dual' : 'destined')}
+            isExpanded={ui.expandedPanel === 'destined'}
+            icon={<Truck className="w-4 h-4 text-white" />}
+            headerColor="bg-indigo-600"
+            onUpdateStatus={uiActions.handleUpdateStatus}
+            onRemove={handleSingleRemove}
+            onEdit={(item) => {
+              uiActions.setEditingItem(item);
+              uiActions.setIsCreateModalOpen(true);
+            }}
+            onFrcClick={uiActions.handleFrcClick}
+            onEventClick={uiActions.handleEventClick}
+            onDestinoClick={uiActions.handleDestinoClick}
+            isCompact={state.preferences.compactView}
+            selectedIds={state.selectedIds}
+            onToggleSelect={actions.handleToggleSelect}
+            emptyIcon={<Truck className="w-10 h-10 mb-4" />}
+            emptyText="Sin destinos"
+            scrollRef={destinedRef}
           />
         )}
 
