@@ -37,13 +37,30 @@ export const useCaptureSession = ({
   });
 
   useEffect(() => {
-    if (!isEnabled && inputRef.current) {
-      inputRef.current.blur();
+    if (!isEnabled) {
+      if (inputRef.current) {
+        inputRef.current.blur();
+      }
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      // Forzar doblemente en el siguiente ciclo (ayuda a navegadores testarudos en móvil)
+      setTimeout(() => {
+        if (document.activeElement instanceof HTMLElement && 
+            (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
+          document.activeElement.blur();
+        }
+      }, 10);
     }
     
     if (!autoFocus || isCameraActive || !isEnabled) return;
 
     const focusInput = () => {
+      const activeEl = document.activeElement;
+      // Do not steal focus if user is intentionally clicking something else like a select or another input
+      if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA') && activeEl !== inputRef.current) {
+        return;
+      }
       if (inputRef.current && isEnabled) {
         inputRef.current.focus();
       }
@@ -52,7 +69,7 @@ export const useCaptureSession = ({
     focusInput();
     window.addEventListener('click', focusInput);
     return () => window.removeEventListener('click', focusInput);
-  }, [autoFocus, isCameraActive]);
+  }, [autoFocus, isCameraActive, isEnabled]);
 
   return {
     inputValue,

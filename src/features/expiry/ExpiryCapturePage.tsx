@@ -262,6 +262,7 @@ export const ExpiryCapturePage: React.FC = () => {
         onCameraToggle={() => setIsCameraActive(!isCameraActive)}
         inputPlaceholder={isSearchActive ? "Buscar..." : "Escanear o digitar..."}
         inputRef={inputRef}
+        readOnly={isModalOpen}
         list={
           <div className="space-y-4 pb-32">
             {sortedItems.map((item) => (

@@ -16,6 +16,7 @@ interface CaptureLayoutProps {
   footer?: React.ReactNode;
   theme?: 'dark' | 'light';
   inputRef?: React.RefObject<HTMLInputElement>;
+  readOnly?: boolean;
 }
 
 export const CaptureLayout: React.FC<CaptureLayoutProps> = ({
@@ -30,7 +31,8 @@ export const CaptureLayout: React.FC<CaptureLayoutProps> = ({
   emptyState,
   footer,
   theme = 'dark',
-  inputRef
+  inputRef,
+  readOnly = false
 }) => {
   return (
     <div className={`h-screen flex flex-col overflow-hidden ${theme === 'dark' ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'}`}>
@@ -46,6 +48,7 @@ export const CaptureLayout: React.FC<CaptureLayoutProps> = ({
             <input
               ref={inputRef}
               type="text"
+              readOnly={readOnly}
               value={inputValue}
               onChange={(e) => onInputChange(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && onInputSubmit()}
