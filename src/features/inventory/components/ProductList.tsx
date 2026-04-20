@@ -69,6 +69,15 @@ interface ProductListProps {
                 {p.category || 'GRAL'}
               </Badge>
               {getSyncStatusIcon(p.syncStatus)}
+              {p.withdrawalDays !== undefined && (
+                <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded border ${
+                  p.hasExchange 
+                    ? 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20' 
+                    : 'bg-slate-500/10 text-slate-500 border-slate-500/20'
+                }`}>
+                  {p.withdrawalDays}D {p.hasExchange ? 'CANJE' : 'MERMA'}
+                </span>
+              )}
             </div>
             <h3 className="font-black text-slate-900 dark:text-slate-100 text-[13px] uppercase leading-tight truncate">
               {p.name}
@@ -127,6 +136,20 @@ interface ProductListProps {
       <div className="w-32 shrink-0">
         <Badge variant={p.syncStatus === 'synced' ? 'neutral' : p.syncStatus === 'error' ? 'error' : 'info'}>{p.category || '-'}</Badge>
       </div>
+      <div className="w-32 shrink-0 flex flex-col justify-center">
+        {p.withdrawalDays !== undefined ? (
+          <div className="flex flex-col">
+            <span className={`text-[11px] font-black uppercase leading-tight ${p.hasExchange ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500'}`}>
+              {p.withdrawalDays} Días Retiro
+            </span>
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+              {p.hasExchange ? 'Política de Canje' : 'Sin Canje / Merma'}
+            </span>
+          </div>
+        ) : (
+          <span className="text-[10px] italic text-slate-400 uppercase tracking-widest font-bold">Sin Info</span>
+        )}
+      </div>
       <div className="w-24 shrink-0 flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
         <button onClick={() => onPrint(p)} className="p-2 hover:bg-amber-50 dark:hover:bg-amber-900/20 text-amber-600 rounded-lg" title="Imprimir Código de Barras"><Printer className="w-4 h-4" /></button>
         <button onClick={() => onEdit(p)} className="p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 rounded-lg"><Pencil className="w-4 h-4" /></button>
@@ -178,6 +201,7 @@ export const ProductList: React.FC<ProductListProps> = memo(({ products, onEdit,
         <div className="w-40 text-[9px] font-black text-slate-400 uppercase tracking-widest">EAN/SKU</div>
         <div className="flex-1 text-[9px] font-black text-slate-400 uppercase tracking-widest px-4">DESCRIPCIÓN</div>
         <div className="w-32 text-[9px] font-black text-slate-400 uppercase tracking-widest">FAMILIA</div>
+        <div className="w-32 text-[9px] font-black text-slate-400 uppercase tracking-widest">POLÍTICA</div>
         <div className="w-24 text-right text-[9px] font-black text-slate-400 uppercase tracking-widest">ACCIÓN</div>
       </div>
 

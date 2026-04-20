@@ -197,6 +197,15 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
             >
               {item.providerName}
             </span>
+            {item.withdrawalDays !== undefined && (
+              <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full border shrink-0 ${
+                item.hasCanje 
+                  ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' 
+                  : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+              }`}>
+                {item.withdrawalDays}D {item.hasCanje ? 'Canje' : 'Merma'}
+              </span>
+            )}
           </div>
         </div>
 

@@ -125,6 +125,8 @@ export const Database: React.FC = () => {
         onInitializeBrain={actions.handleInitializeBrain}
         onImport={() => setIsImportOpen(true)}
         onCreate={handleOpenCreate}
+        policyFilter={state.policyFilter}
+        onPolicyFilterChange={actions.setPolicyFilter}
       />
 
       {state.feedback && (

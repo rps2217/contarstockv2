@@ -210,11 +210,14 @@ export const handlePrintSelectedEvents = (items: any[]) => {
 };
 
 export const handleExportExpirationsCSV = (processedScans: any[]) => {
-  const headers = ["SKU", "Producto", "Vencimiento", "Estado", "Ubicacion"];
+  const headers = ["SKU", "Producto", "Proveedor", "Vencimiento", "Retiro", "Política", "Estado", "Ubicacion"];
   const rows = processedScans.map(item => [
     item.barcode,
     item.productName,
+    item.providerName,
     item.expiryDateObj ? format(item.expiryDateObj, 'yyyy-MM-dd') : '',
+    item.withdrawalDate ? format(item.withdrawalDate, 'yyyy-MM-dd') : '',
+    item.hasCanje ? 'CANJE' : 'MERMA',
     item.status.toUpperCase(),
     item.location || ''
   ]);
@@ -244,6 +247,8 @@ export const handleSendEmail = (items: any[]) => {
 
   const filasHtml = items.map(item => {
     const expiry = item.mm && item.yyyy ? `${String(item.mm).padStart(2, '0')}/${item.yyyy}` : 'N/A';
+    const withdrawal = item.withdrawalDate ? format(item.withdrawalDate, 'dd/MM/yy') : 'N/A';
+    const politica = item.hasCanje ? 'Canje' : 'Merma';
     
     return `
       <tr>
@@ -251,6 +256,8 @@ export const handleSendEmail = (items: any[]) => {
         <td style="padding: 8px; border: 1px solid #ddd;">${item.productName || 'N/A'}</td>
         <td style="padding: 8px; border: 1px solid #ddd;">${item.providerName || 'N/A'}</td>
         <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${expiry}</td>
+        <td style="padding: 8px; border: 1px solid #ddd; text-align: center; background-color: #f8fafc; font-weight: bold;">${withdrawal}</td>
+        <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${politica}</td>
         <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">${item.quantity || 1}</td>
       </tr>
     `;
@@ -373,6 +380,8 @@ export const handleSendEmail = (items: any[]) => {
                 <th>Descripción</th>
                 <th>Proveedor</th>
                 <th style="text-align: center;">Vencimiento</th>
+                <th style="text-align: center;">Retiro</th>
+                <th style="text-align: center;">Política</th>
                 <th style="text-align: right;">Cantidad</th>
               </tr>
             </thead>

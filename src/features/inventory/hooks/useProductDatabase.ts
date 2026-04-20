@@ -1,7 +1,7 @@
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Product } from '../../../types';
+import { Product, Provider } from '../../../types';
 import * as productService from '../../../services/productService';
 import { importProductsFromFirestore } from '../../../services/syncManager';
 import { syncProductsToCloud } from '../../../services/cloudSync';
@@ -9,9 +9,11 @@ import { fuzzySearchProducts } from '../../../services/search';
 import { VectorService } from '../../../services/vectorService';
 import { localBrain } from '../../../services/localBrain';
 import { productRepository } from '../../../repositories/DexieProductRepository';
+import { db } from '../../../db';
 
 export const useProductDatabase = () => {
  const [searchQuery, setSearchQuery] = useState('');
+ const [policyFilter, setPolicyFilter] = useState<'all' | 'exchange' | 'loss' | 'no_info'>('all');
  const [isSyncing, setIsSyncing] = useState(false);
  const [isDownloading, setIsDownloading] = useState(false);
  
@@ -58,10 +60,37 @@ export const useProductDatabase = () => {
  }, []);
 
  const products = useLiveQuery(async () => {
- if (!searchQuery) return await productRepository.getLimited(200);
- const allProducts = await productRepository.getAll();
- return await fuzzySearchProducts(allProducts, searchQuery, 50);
- }, [searchQuery], []);
+  let baseProducts: Product[];
+  if (!searchQuery) {
+   baseProducts = await productRepository.getLimited(policyFilter === 'all' ? 200 : 1000); 
+  } else {
+   const allProducts = await productRepository.getAll();
+   baseProducts = await fuzzySearchProducts(allProducts, searchQuery, 200);
+  }
+
+  // Cruce con proveedores para obtener días de retiro y política de canje
+  const providers = await db.providers.toArray();
+  const providerMap = new Map<string, Provider>(providers.map(p => [p.rut, p]));
+
+  const mappedProducts = baseProducts.map((p: Product) => {
+   const provider = p.supplierRut ? providerMap.get(p.supplierRut) : null;
+   return {
+    ...p,
+    withdrawalDays: provider?.withdrawalDays,
+    hasExchange: provider?.hasExchange,
+    exchangePolicy: provider?.exchangePolicy
+   } as any;
+  });
+
+  if (policyFilter === 'all') return mappedProducts;
+
+  return mappedProducts.filter(p => {
+   if (policyFilter === 'exchange') return p.hasExchange === true;
+   if (policyFilter === 'loss') return p.hasExchange === false && p.withdrawalDays !== undefined;
+   if (policyFilter === 'no_info') return p.withdrawalDays === undefined;
+   return true;
+  });
+ }, [searchQuery, policyFilter], []);
 
  const pendingChangesCount = useLiveQuery(() => productRepository.getPendingSyncCount(), [], 0);
 
@@ -171,10 +200,12 @@ export const useProductDatabase = () => {
  storageUsage, 
  feedback, 
  searchQuery,
+ policyFilter,
  brainStatus 
  },
  actions: { 
  setSearchQuery, 
+ setPolicyFilter,
  handleDelete, 
  handleDeleteAll, 
  handleSyncToCloud, 

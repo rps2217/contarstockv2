@@ -96,6 +96,45 @@ export const ProductForm: React.FC<ProductFormProps> = ({ isOpen, onClose, initi
  </div>
  </div>
 
+ <div className="p-4 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100 dark:border-indigo-500/10 space-y-4">
+  <p className="text-[9px] font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-[0.2em] mb-2 flex items-center gap-2">
+   <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+   Logística del Proveedor
+  </p>
+  
+  <div className="grid grid-cols-2 gap-4">
+   <div className="space-y-1.5">
+    <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Días de Retiro</label>
+    <input 
+     type="number"
+     value={(formData as any).withdrawalDays || 0}
+     onChange={(e) => updateField('withdrawalDays', parseInt(e.target.value) || 0)}
+     className="w-full h-11 px-4 bg-white dark:bg-slate-950 border border-indigo-200 dark:border-indigo-500/20 rounded-xl font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+    />
+   </div>
+   <div className="space-y-1.5 flex flex-col justify-center pt-5">
+    <label className="flex items-center gap-3 cursor-pointer group">
+     <div 
+      onClick={() => updateField('hasExchange', !(formData as any).hasExchange)}
+      className={`w-12 h-6 rounded-full transition-all relative ${
+       (formData as any).hasExchange ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'
+      }`}
+     >
+      <div className={`absolute top-1 bottom-1 w-4 bg-white rounded-full transition-all ${
+       (formData as any).hasExchange ? 'left-7' : 'left-1'
+      }`} />
+     </div>
+     <span className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">
+      {(formData as any).hasExchange ? 'Tiene Canje' : 'Es Merma'}
+     </span>
+    </label>
+   </div>
+  </div>
+  <p className="text-[8px] font-medium text-indigo-400 dark:text-indigo-500/60 leading-tight italic px-1">
+   * Al modificar estos valores, se actualizará la política general para TODOS los productos de este proveedor.
+  </p>
+ </div>
+
  {error && (
  <div className="bg-rose-50 text-rose-600 text-xs font-bold p-4 rounded-2xl animate-in shake border border-rose-100 text-center">
  {error}

@@ -83,9 +83,20 @@ export const ExpiryItemRow: React.FC<ExpiryItemRowProps> = React.memo(({
         }`}>
           {item.productName}
         </h3>
-        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest truncate">
-          {item.providerName}
-        </p>
+        <div className="flex items-center gap-2 mt-0.5">
+          <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest truncate">
+            {item.providerName}
+          </p>
+          {item.withdrawalDays !== undefined && (
+            <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full border ${
+              item.hasCanje 
+                ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' 
+                : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+            }`}>
+              {item.withdrawalDays}D {item.hasCanje ? 'CANJE' : 'MERMA'}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* FRC / ESTADO */}

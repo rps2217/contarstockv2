@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronLeft, HardDrive, Upload, Loader2, FileSpreadsheet, Plus, RefreshCw, BrainCircuit, Download, Cpu, Cloud, CheckCircle2, Database, X } from 'lucide-react';
+import { ChevronLeft, Upload, Loader2, FileSpreadsheet, RefreshCw, BrainCircuit, Download, Cpu, Cloud, Database, ShieldAlert, BadgeCheck, Ghost } from 'lucide-react';
 import { ManagementSearchBar } from '../../../shared/components/core/ManagementSearchBar';
 import { useNavigate } from 'react-router-dom';
 
@@ -21,6 +21,8 @@ interface Props {
  onInitializeBrain?: () => void; 
  onImport: () => void;
  onCreate: () => void;
+ policyFilter: 'all' | 'exchange' | 'loss' | 'no_info';
+ onPolicyFilterChange: (filter: 'all' | 'exchange' | 'loss' | 'no_info') => void;
  vectorProgress?: { current: number, total: number };
  brainStatus?: { status: string, progress: number, details?: string };
 }
@@ -136,7 +138,7 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
          onClick={props.onDownload} 
          disabled={props.isDownloading} 
          className="w-12 h-12 bg-white/5 border border-white/5 rounded-2xl flex items-center justify-center text-slate-400 hover:bg-white/10 transition-all"
-         title="Sincronizar Catálogo Completo"
+         title="Sincronizar Catálogo Completto"
        >
          {props.isDownloading ? <Loader2 className="w-5 h-5 animate-spin" /> : <RefreshCw className="w-5 h-5" />}
        </button>
@@ -151,6 +153,50 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
      </div>
    }
  />
+
+ {/* NIVEL DE AUDITORÍA LOGÍSTICA (NUEVO) */}
+ <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+    <button
+      onClick={() => props.onPolicyFilterChange('all')}
+      className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all whitespace-nowrap flex items-center gap-2 ${
+        props.policyFilter === 'all' 
+          ? 'bg-slate-900 text-white border-slate-900 shadow-sm' 
+          : 'bg-white dark:bg-white/5 text-slate-500 border-slate-200 dark:border-white/10 hover:bg-slate-50'
+      }`}
+    >
+      Ver Todo
+    </button>
+    <button
+      onClick={() => props.onPolicyFilterChange('exchange')}
+      className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all whitespace-nowrap flex items-center gap-2 ${
+        props.policyFilter === 'exchange' 
+          ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' 
+          : 'bg-white dark:bg-white/5 text-indigo-500/70 border-indigo-200 dark:border-indigo-500/20 hover:bg-indigo-50'
+      }`}
+    >
+      <BadgeCheck className="w-3 h-3" /> Con Canje
+    </button>
+    <button
+      onClick={() => props.onPolicyFilterChange('loss')}
+      className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all whitespace-nowrap flex items-center gap-2 ${
+        props.policyFilter === 'loss' 
+          ? 'bg-rose-600 text-white border-rose-600 shadow-sm' 
+          : 'bg-white dark:bg-white/5 text-rose-500/70 border-rose-200 dark:border-rose-500/20 hover:bg-rose-50'
+      }`}
+    >
+      <ShieldAlert className="w-3 h-3" /> Solo Merma
+    </button>
+    <button
+      onClick={() => props.onPolicyFilterChange('no_info')}
+      className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all whitespace-nowrap flex items-center gap-2 ${
+        props.policyFilter === 'no_info' 
+          ? 'bg-amber-500 text-white border-amber-500 shadow-sm' 
+          : 'bg-white dark:bg-white/5 text-amber-500/70 border-amber-200 dark:border-amber-500/20 hover:bg-amber-500/5'
+      }`}
+    >
+      <Ghost className="w-3 h-3" /> Sin Proveedor
+    </button>
+ </div>
  
  {/* NIVEL 3: INDICADORES DE INTEGRIDAD (PROGRESO) */}
  <div className="grid grid-cols-3 gap-2 py-1">
@@ -211,5 +257,3 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
  </div>
  );
 };
-
-// Forced GitHub sync

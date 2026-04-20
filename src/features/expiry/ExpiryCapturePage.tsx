@@ -78,6 +78,15 @@ const ExpiryItemRow = React.memo(({
           <span className="text-slate-500 text-[10px] font-bold uppercase truncate">
             {item.providerName || 'SIN PROVEEDOR'}
           </span>
+          {item.withdrawalDays !== undefined && (
+            <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full border ${
+              item.hasCanje 
+                ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30' 
+                : 'bg-amber-500/20 text-amber-500 border-amber-500/30'
+            }`}>
+              {item.withdrawalDays}D {item.hasCanje ? 'CANJE' : 'MERMA'}
+            </span>
+          )}
         </div>
       </div>
 
@@ -109,6 +118,7 @@ export const ExpiryCapturePage: React.FC = () => {
   const [scannedBarcode, setScannedBarcode] = useState('');
   const [productName, setProductName] = useState('');
   const [providerName, setProviderName] = useState('');
+  const [providerPolicy, setProviderPolicy] = useState<{ days: number, hasCanje: boolean } | null>(null);
   const [selectedMm, setSelectedMm] = useState<number | null>(null);
   const [selectedYyyy, setSelectedYyyy] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -135,6 +145,21 @@ export const ExpiryCapturePage: React.FC = () => {
     const product = await db.products.get(normalizedCode);
     setProductName(product?.name || 'Producto Desconocido');
     setProviderName(product?.supplier || 'N/A');
+    
+    // Buscar política del proveedor
+    if (product?.supplierRut) {
+      const provider = await db.providers.get(normalizeSku(product.supplierRut));
+      if (provider) {
+        setProviderPolicy({ 
+          days: provider.withdrawalDays || 0, 
+          hasCanje: provider.hasExchange || false 
+        });
+      } else {
+        setProviderPolicy(null);
+      }
+    } else {
+      setProviderPolicy(null);
+    }
     
     setSelectedMm(null);
     setSelectedYyyy(null);
@@ -319,16 +344,25 @@ export const ExpiryCapturePage: React.FC = () => {
               className="w-full max-w-md bg-slate-900 border-t-4 border-blue-600 rounded-t-[2.5rem] shadow-[0_-20px_50px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col max-h-[60vh] pointer-events-auto pb-safe"
             >
               <div className="p-4 border-b border-white/10 flex items-center justify-between bg-slate-800">
-                <div>
-                  <h2 className="text-sm font-black uppercase tracking-widest text-white">Registro de Vencimiento</h2>
-                  <p className="text-[10px] text-slate-400 mt-1 truncate max-w-[250px]">{productName}</p>
+                <div className="flex-1 min-w-0 pr-2">
+                  <h2 className="text-sm font-black uppercase tracking-widest text-white truncate">Vencimiento</h2>
+                  <p className="text-[10px] text-slate-400 mt-0.5 truncate">{productName}</p>
                 </div>
-                <button 
-                  onClick={() => setIsModalOpen(false)}
-                  className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-slate-400 active:bg-white/10"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                <div className="flex items-center gap-2">
+                  {providerPolicy && (
+                    <div className={`px-2 py-1 rounded-lg border text-[9px] font-black uppercase tracking-tighter ${
+                      providerPolicy.hasCanje ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30' : 'bg-amber-500/20 text-amber-500 border-amber-500/30'
+                    }`}>
+                      {providerPolicy.hasCanje ? 'CANJE' : 'MERMA'} | {providerPolicy.days}D
+                    </div>
+                  )}
+                  <button 
+                    onClick={() => setIsModalOpen(false)}
+                    className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-slate-400 active:bg-white/10"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
 
               <div className="p-6 overflow-y-auto space-y-8">
