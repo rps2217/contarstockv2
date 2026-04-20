@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Product, Provider } from '../../../types';
 import * as productService from '../../../services/productService';
-import { sanitizeBarcode } from '../../../services/utils';
+import { sanitizeBarcode, normalizeIdentity } from '../../../services/utils';
 import { productSchema } from '../../../schemas/productSchema';
 import { useToastStore } from '../../../store/useToastStore';
 import { ProviderRepository } from '../../../repositories/ProviderRepository';
@@ -85,10 +85,11 @@ export const useProductForm = ({ initialData, onSaveSuccess, onClose }: UseProdu
       await productService.saveProduct(productData as Product);
       
       // Actualizar proveedor si hay RUT
-      if (formData.supplierRut) {
-        const existingProvider = await ProviderRepository.getByRut(formData.supplierRut);
+      const cleanRut = normalizeIdentity(formData.supplierRut);
+      if (cleanRut) {
+        const existingProvider = await ProviderRepository.getByRut(cleanRut);
         await ProviderRepository.save({
-          rut: formData.supplierRut,
+          rut: cleanRut,
           name: formData.supplier || 'PROVEEDOR N/A',
           withdrawalDays: Number(withdrawalDays) || 0,
           hasExchange: !!hasExchange,

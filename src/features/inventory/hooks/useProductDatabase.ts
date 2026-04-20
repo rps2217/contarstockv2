@@ -10,6 +10,7 @@ import { VectorService } from '../../../services/vectorService';
 import { localBrain } from '../../../services/localBrain';
 import { productRepository } from '../../../repositories/DexieProductRepository';
 import { db } from '../../../db';
+import { normalizeIdentity } from '../../../services/utils';
 
 export const useProductDatabase = () => {
  const [searchQuery, setSearchQuery] = useState('');
@@ -24,6 +25,9 @@ export const useProductDatabase = () => {
  
  const [storageUsage, setStorageUsage] = useState<{ used: number, quota: number } | null>(null);
  const [feedback, setFeedback] = useState<{ type: 'success' | 'error', msg: string } | null>(null);
+
+ // MOTOR DE NORMALIZACIÓN DE IDENTIDAD (RUT/SKU)
+ const norm = normalizeIdentity;
 
  useEffect(() => {
  const unsubscribe = localBrain.subscribe((status, progress, details) => {
@@ -70,10 +74,16 @@ export const useProductDatabase = () => {
 
   // Cruce con proveedores para obtener días de retiro y política de canje
   const providers = await db.providers.toArray();
-  const providerMap = new Map<string, Provider>(providers.map(p => [p.rut, p]));
+  const providerMap = new Map<string, Provider>();
+  
+  providers.forEach(p => {
+    providerMap.set(norm(p.rut), p);
+  });
 
   const mappedProducts = baseProducts.map((p: Product) => {
-   const provider = p.supplierRut ? providerMap.get(p.supplierRut) : null;
+   const pRut = p.supplierRut ? norm(p.supplierRut) : null;
+   const provider = pRut ? providerMap.get(pRut) : null;
+   
    return {
     ...p,
     withdrawalDays: provider?.withdrawalDays,

@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale/es';
 import { Product, Provider } from '../../../types';
 import { ExpiryItem, ExpiryStatus } from '../../../store/useExpiryStore';
-import { normalizeSku } from '../../../services/utils';
+import { normalizeSku, normalizeIdentity } from '../../../services/utils';
 
 export const getExpiryStatus = (expiry: Date | null, withdrawalDate: Date | null, now: Date): ExpiryStatus => {
   if (!expiry) return 'safe';
@@ -62,7 +62,7 @@ export const processExpiryItem = (
   } else if (isValidStr((item as any).ITEM)) {
     productName = (item as any).ITEM.trim();
   }
-  const supplierRut = product?.supplierRut ? normalizeSku(product.supplierRut) : null;
+  const supplierRut = product?.supplierRut ? normalizeIdentity(product.supplierRut) : null;
   const provider = supplierRut ? providerMap.get(supplierRut) : null;
   
   let withdrawalDate: Date | null = null;

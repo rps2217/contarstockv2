@@ -9,7 +9,7 @@ import { useAppStore } from '@/store/mainAppStore';
 import { useExpiryStore, ExpiryItem, ExpiryStatus, ExpiryPreferences } from '../../../store/useExpiryStore';
 import { processExpiryItem, filterExpiryItems, calculateExpiryStats } from '../utils/expiryProcessor';
 import { SoundFX } from '../../../services/audio';
-import { normalizeSku } from '../../../services/utils';
+import { normalizeSku, normalizeIdentity } from '../../../services/utils';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { productRepository } from '../../../repositories/DexieProductRepository';
 import { db } from '../../../db';
@@ -59,7 +59,7 @@ export const useExpiryDatabase = () => {
   const providerMap = useMemo(() => {
     const map = new Map<string, Provider>();
     allProviders.forEach(p => {
-      const rut = normalizeSku(p.rut);
+      const rut = normalizeIdentity(p.rut);
       if (rut) map.set(rut, p);
     });
     return map;

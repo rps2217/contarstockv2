@@ -16,6 +16,16 @@ export const sanitizeBarcode = (code: string): string => {
 export const normalizeSku = (val: string): string => sanitizeBarcode(val);
 
 /**
+ * NORMALIZADOR DE IDENTIDAD LOGÍSTICA (RUT/ID)
+ * Remueve ABSOLUTAMENTE TODO lo que no sea letra o número.
+ * Garantiza que "12.345.678-9" sea igual a "123456789".
+ */
+export const normalizeIdentity = (val: string | undefined | null): string => {
+  if (!val) return "";
+  return String(val).trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+};
+
+/**
  * NORMALIZACIÓN DE CABECERAS EXCEL (Protocolo Industrial)
  * Elimina espacios, acentos, caracteres especiales y convierte a mayúsculas.
  * Esto hace que "Cód. Producto" y "COD_PRODUCTO" sean lo mismo para el motor.
