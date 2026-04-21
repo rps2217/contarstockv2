@@ -3,6 +3,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { AlertTriangle, ShieldAlert, Download, Clock, CheckCircle2, CheckSquare, Trash2, Barcode } from 'lucide-react';
 import { format } from 'date-fns';
+import { es } from 'date-fns/locale/es';
 import { useToastStore } from '../../../store/useToastStore';
 
 interface ExpiryItemRowProps {
@@ -87,15 +88,6 @@ export const ExpiryItemRow: React.FC<ExpiryItemRowProps> = React.memo(({
           <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest truncate">
             {item.providerName}
           </p>
-          {item.withdrawalDays !== undefined && (
-            <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full border ${
-              item.hasCanje 
-                ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' 
-                : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-            }`}>
-              {item.withdrawalDays}D {item.hasCanje ? 'CANJE' : 'MERMA'}
-            </span>
-          )}
         </div>
       </div>
 
@@ -108,13 +100,41 @@ export const ExpiryItemRow: React.FC<ExpiryItemRowProps> = React.memo(({
         )}
       </div>
 
-      {/* EXPIRY DATE */}
-      <div className="w-32 text-right">
-        <div className={`text-xs font-black ${statusConfig.colorClass}`}>
-          {item.expiryDateObj ? format(item.expiryDateObj, 'dd/MM/yyyy') : 'N/A'}
+      {/* EXPIRY DATE & RETIRO DATE */}
+      <div className="w-48 flex gap-4">
+        {/* VENCIMIENTO */}
+        <div className="w-1/2 text-right">
+          <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Vencimiento</div>
+          <div className={`text-sm font-black ${statusConfig.colorClass}`}>
+            {item.expiryDateObj ? format(item.expiryDateObj, 'dd/MM/yyyy') : 'N/A'}
+          </div>
         </div>
-        <div className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">
-          {item.daysLeft} DÍAS RESTANTES
+        {/* RETIRO */}
+        <div className="w-1/2 text-right">
+          <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Retiro</div>
+          <div className="text-sm font-black text-indigo-400">
+            {item.withdrawalDate ? format(item.withdrawalDate, 'dd/MM/yyyy') : 'N/A'}
+          </div>
+        </div>
+      </div>
+
+      {/* STATUS PILLS (ESTADO y DÍAS) */}
+      <div className="w-40 flex flex-col gap-1 items-end">
+        {/* ESTADO (Amarillo) */}
+        <div className={`px-3 py-1.5 rounded-lg border-2 ${
+          item.hasCanje 
+            ? 'bg-indigo-900/20 border-indigo-500/50 text-indigo-300' 
+            : 'bg-amber-900/20 border-amber-500/50 text-amber-300'
+        }`}>
+          <span className="text-[10px] font-black uppercase tracking-widest">
+            {item.hasCanje ? 'Canje' : 'Merma'} {item.withdrawalDate ? format(item.withdrawalDate, 'MMM yy', { locale: es }) : ''}
+          </span>
+        </div>
+        {/* DÍAS RESTANTES (Rojo) */}
+        <div className="px-3 py-1 rounded-md bg-rose-600/20 border border-rose-500/50 text-rose-400">
+          <span className="text-xs font-black uppercase tracking-widest">
+            {item.daysLeft} DÍAS VENC
+          </span>
         </div>
       </div>
 
