@@ -1,5 +1,12 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore, terminate, clearIndexedDbPersistence, enableIndexedDbPersistence } from 'firebase/firestore';
+import { 
+  getFirestore, 
+  terminate, 
+  clearIndexedDbPersistence, 
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager
+} from 'firebase/firestore';
 import { getAuth, GoogleAuthProvider, signInAnonymously } from 'firebase/auth';
 import { getStorage } from 'firebase/storage';
 import firebaseConfig from '../../firebase-applet-config.json';
@@ -7,27 +14,19 @@ import firebaseConfig from '../../firebase-applet-config.json';
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize services
-export const db = getFirestore(app);
-export const auth = getAuth(app);
-export const storage = getStorage(app);
-export const googleProvider = new GoogleAuthProvider();
-
-// Habilitar Persistencia Offline (IndexedDB)
+// Initialize Firestore with modern persistence configuration
 // CLAVE PARA AHORRO DE CUOTA: 
 // Esto permite que Firestore solo pida los "deltas" (cambios) al servidor,
 // leyendo el resto de una base de datos local en el navegador.
-if (typeof window !== 'undefined') {
-  enableIndexedDbPersistence(db).catch((err) => {
-    if (err.code === 'failed-precondition') {
-      // Múltiples pestañas abiertas, la persistencia solo funciona en una.
-      console.warn("Firestore: Persistencia fallida (múltiples pestañas)");
-    } else if (err.code === 'unimplemented') {
-      // El navegador no soporta IndexedDB
-      console.warn("Firestore: El navegador no soporta persistencia");
-    }
-  });
-}
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager()
+  })
+});
+
+export const auth = getAuth(app);
+export const storage = getStorage(app);
+export const googleProvider = new GoogleAuthProvider();
 
 // Utility to reset Firestore in case of internal errors
 export const resetFirestore = async () => {

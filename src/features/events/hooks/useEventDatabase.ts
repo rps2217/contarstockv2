@@ -135,8 +135,6 @@ export const useEventDatabase = () => {
         claveUnica: exp.claveUnica || record.id,
         category: product?.category || 'GENERAL',
         isAdjusted: !!(traspasoValue && String(traspasoValue).trim() !== ''),
-        mm: (exp as any).MM || exp.mm,
-        yyyy: (exp as any).YYYY || exp.yyyy,
         syncStatus: record.syncStatus || 'synced',
       });
     }

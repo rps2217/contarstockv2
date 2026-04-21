@@ -161,8 +161,9 @@ export const firebaseSyncService = {
    */
   async pushChange(tableName: string, id: string, data: any) {
     try {
+      const sanitized = this.sanitizeData(data);
       const docRef = doc(collection(firestoreDb, tableName), id);
-      await setDoc(docRef, data, { merge: true });
+      await setDoc(docRef, sanitized, { merge: true });
     } catch (e) {
       logger.error(`SYNC_PUSH_FAIL: ${tableName}`, e);
       handleFirestoreError(e, OperationType.WRITE, `${tableName}/${id}`);
@@ -178,7 +179,8 @@ export const firebaseSyncService = {
       const batch = writeBatch(firestoreDb);
       for (const row of rows) {
         const docRef = doc(colRef, String(row.ID || row.id));
-        batch.set(docRef, row, { merge: true });
+        const sanitized = this.sanitizeData(row);
+        batch.set(docRef, sanitized, { merge: true });
       }
       await batch.commit();
       return { success: true, rows_written: rows.length };
@@ -191,6 +193,27 @@ export const firebaseSyncService = {
       }
       return { success: false, error: String(e) };
     }
+  },
+
+  /**
+   * Removes undefined fields from object to prevent Firestore errors.
+   */
+  sanitizeData(data: any): any {
+    if (!data || typeof data !== 'object') return data;
+    
+    // Create a shallow copy to avoid mutating original
+    const result = { ...data };
+    
+    Object.keys(result).forEach(key => {
+      if (result[key] === undefined) {
+        delete result[key];
+      } else if (result[key] !== null && typeof result[key] === 'object' && !Array.isArray(result[key])) {
+        // Recursive sanitization for nested objects (not arrays)
+        result[key] = this.sanitizeData(result[key]);
+      }
+    });
+    
+    return result;
   },
 
   async deleteRemote(tableName: string, id: string) {
