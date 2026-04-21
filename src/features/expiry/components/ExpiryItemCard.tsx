@@ -252,13 +252,13 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
           )}
         </div>
 
-        {/* COLUMN 4: STATUS (Days Left) */}
+        {/* COLUMN 4: STATUS (Policy Days) */}
         <div className="flex items-center">
-          <div className="flex flex-col items-center px-3 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-500 shadow-rose-500/5 shadow-inner">
+          <div className="flex flex-col items-center px-3 py-1.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-500 shadow-indigo-500/5 shadow-inner">
             <span className={`text-xl font-black leading-none italic ${statusConfig.shadowClass}`}>
-              {item.daysLeft}D
+              {item.withdrawalDays}D
             </span>
-            <span className="text-[7px] font-black uppercase tracking-tighter mt-0.5">Días Venc</span>
+            <span className="text-[7px] font-black uppercase tracking-tighter mt-0.5">Política</span>
           </div>
         </div>
 

@@ -89,9 +89,9 @@ export const ExpiryItemRow: React.FC<ExpiryItemRowProps> = React.memo(({
             {item.providerName}
           </p>
           
-          {/* DÍAS RESTANTES (Cuadrado Rojo - Destacado) */}
+          {/* POLÍTICA DE RETIRO (Días definidos por proveedor - Cuadrado Rojo) */}
           <div className="px-3 py-1 rounded-lg bg-rose-500/20 border-2 border-rose-500/50 text-rose-500 text-[12px] font-black uppercase tracking-widest shadow-lg shadow-rose-500/10">
-            {item.daysLeft}D {item.hasCanje ? 'Canje' : 'Merma'}
+            {item.withdrawalDays}D Política
           </div>
         </div>
       </div>
