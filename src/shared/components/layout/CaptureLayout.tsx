@@ -77,7 +77,7 @@ export const CaptureLayout: React.FC<CaptureLayoutProps> = ({
         </div>
 
         {/* LIST SECTION */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar will-change-scroll transform-gpu">
           {list}
           {emptyState}
         </div>

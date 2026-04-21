@@ -48,22 +48,24 @@ export const useExpiryDatabase = () => {
   const allProviders = useLiveQuery(() => db.providers.toArray(), []) || [];
   
   const productMap = useMemo(() => {
+    if (!allProducts.length) return new Map<string, Product>();
     const map = new Map<string, Product>();
     allProducts.forEach(p => {
       const sku = normalizeSku(p.barcode);
       if (sku) map.set(sku, p);
     });
     return map;
-  }, [allProducts]);
+  }, [allProducts.length]);
 
   const providerMap = useMemo(() => {
+    if (!allProviders.length) return new Map<string, Provider>();
     const map = new Map<string, Provider>();
     allProviders.forEach(p => {
       const rut = normalizeIdentity(p.rut);
       if (rut) map.set(rut, p);
     });
     return map;
-  }, [allProviders]);
+  }, [allProviders.length]);
 
   // Start real-time sync with Firestore
   useEffect(() => {

@@ -75,13 +75,20 @@ export const useOpticalEngine = ({ onScan, isTriggered, scannerDomId }: UseOptic
       const detectLoop = async (timestamp: number) => {
         if (!videoRef.current || !isComponentMounted.current) return;
         
-        if (timestamp - lastDetectTime >= 100) {
+        // Optimización móvil: Solo detectamos cada 150ms si el dispositivo es lento, 
+        // o mantenemos 100ms para balancear entre velocidad y consumo de batería.
+        if (timestamp - lastDetectTime >= 150) {
           try {
             if (triggerRef.current && videoRef.current.readyState === 4) {
               const barcodes = await detector.detect(videoRef.current);
-              if (barcodes.length > 0) handleSuccessfulScan(barcodes[0].rawValue);
+              if (barcodes.length > 0) {
+                // Debounce extra para evitar múltiples detecciones accidentales del mismo frame
+                handleSuccessfulScan(barcodes[0].rawValue);
+              }
             }
-          } catch (e) {}
+          } catch (e) {
+            // Silently ignore detection errors for smoother experience
+          }
           lastDetectTime = timestamp;
         }
         requestRef.current = requestAnimationFrame(detectLoop);
