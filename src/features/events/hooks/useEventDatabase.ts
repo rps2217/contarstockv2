@@ -132,12 +132,12 @@ export const useEventDatabase = () => {
         traspaso: traspasoValue,
         observaciones: observacionesValue,
         timestamp: record.timestamp || Date.now(),
-        claveUnica: exp.claveUnica,
+        claveUnica: exp.claveUnica || record.id,
         category: product?.category || 'GENERAL',
         isAdjusted: !!(traspasoValue && String(traspasoValue).trim() !== ''),
         mm: (exp as any).MM || exp.mm,
         yyyy: (exp as any).YYYY || exp.yyyy,
-        syncStatus: 'synced',
+        syncStatus: record.syncStatus || 'synced',
       });
     }
 
@@ -220,6 +220,10 @@ export const useEventDatabase = () => {
       };
 
       const finalData = unmapData(rowData);
+      
+      // Update local repository immediately for better UX
+      await eventRepository.save({ ...rowData, syncStatus: 'synced' });
+      
       await firebaseSyncService.pushChange(tableName, claveUnica, finalData);
       addToast('Guardado en la nube correctamente.', 'success');
       return claveUnica;
@@ -306,7 +310,13 @@ export const useEventDatabase = () => {
         try {
           const finalData = unmapData(updates);
           for (const id of ids) {
-            await firebaseSyncService.pushChange(tableName, id, finalData);
+            const item = baseProcessedData.find(e => e.id === id);
+            if (item) {
+              // Actualización local inmediata
+              await eventRepository.save({ ...item, ...updates, syncStatus: 'synced' });
+              // Actualización remota
+              await firebaseSyncService.pushChange(tableName, id, finalData);
+            }
           }
           addToast(`${ids.length} eventos actualizados`, 'success');
         } catch (error: any) {
@@ -316,17 +326,40 @@ export const useEventDatabase = () => {
       clearSelection: () => setSelectedIds(new Set()),
       updateEvent: async (id: string, data: any) => {
         try {
+          const item = baseProcessedData.find(e => e.id === id);
+          if (!item) throw new Error('Evento no encontrado localmente');
+
           const updates = { ...data };
+          let newId = id;
+
           if (data.barcode || data.frc) {
-            const item = baseProcessedData.find(e => e.id === id);
-            const barcode = normalizeSku(data.barcode || item?.barcode || '');
-            const frc = String(data.frc || item?.frc || '').trim();
-            updates.claveUnica = `${barcode}${frc}`;
+            const barcode = normalizeSku(data.barcode || item.barcode || '');
+            const frc = String(data.frc || item.frc || '').trim();
+            newId = `${barcode}${frc}`;
+            updates.claveUnica = newId;
             updates.barcode = barcode;
           }
-          const finalData = unmapData(updates);
-          await firebaseSyncService.pushChange(tableName, id, finalData);
-          addToast('Evento actualizado', 'success');
+
+          const finalData = unmapData({ 
+            ...item, 
+            ...updates, 
+            id: newId, 
+            timestamp: Date.now() 
+          });
+
+          // Si el ID cambió, debemos borrar el antiguo y crear el nuevo en Firestore
+          if (newId !== id) {
+            await firebaseSyncService.deleteRemote(tableName, id);
+            await eventRepository.delete(id);
+          }
+
+          // Actualización local inmediata
+          await eventRepository.save({ ...finalData, id: newId, syncStatus: 'synced' });
+
+          // Actualización remota
+          await firebaseSyncService.pushChange(tableName, newId, finalData);
+          
+          addToast('Evento actualizado correctamente', 'success');
         } catch (error: any) {
           addToast(`Error al actualizar evento: ${error.message}`, 'error');
         }
@@ -349,6 +382,10 @@ export const useEventDatabase = () => {
       },
       updateEventStatus: async (id: string, isAdjusted: boolean) => {
         try {
+          const item = baseProcessedData.find(e => e.id === id);
+          if (item) {
+            await eventRepository.save({ ...item, isAdjusted, syncStatus: 'synced' });
+          }
           await firebaseSyncService.pushChange(tableName, id, { isAdjusted });
           addToast('Estado actualizado', 'success');
         } catch (error: any) {
@@ -372,6 +409,10 @@ export const useEventDatabase = () => {
       },
       updateEventDestino: async (id: string, destino: string) => {
         try {
+          const item = baseProcessedData.find(e => e.id === id);
+          if (item) {
+            await eventRepository.save({ ...item, destino, syncStatus: 'synced' });
+          }
           await firebaseSyncService.pushChange(tableName, id, { destino });
           addToast('Destino actualizado', 'success');
         } catch (error: any) {

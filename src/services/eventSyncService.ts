@@ -1,4 +1,4 @@
-import { collection, onSnapshot, query, limit, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, limit, orderBy, where } from 'firebase/firestore';
 import { db as firestoreDb } from '../lib/firebase';
 import { eventRepository } from '../repositories/EventRepository';
 import { logger } from './logger';
@@ -13,40 +13,57 @@ export class EventSyncService {
     }
 
     const colRef = collection(firestoreDb, tableName);
-    const q = query(colRef, orderBy('timestamp', 'desc'), limit(3000));
+    
+    // ESTRATEGIA DELTA SYNC:
+    // Recuperamos el último timestamp sincronizado para solo pedir lo nuevo.
+    const lastSync = localStorage.getItem(`last_sync_${tableName}`);
+    const lastSyncTime = lastSync ? parseInt(lastSync) : 0;
+
+    const q = query(
+      colRef, 
+      where('timestamp', '>', lastSyncTime),
+      orderBy('timestamp', 'asc') // Ascendente para procesar en orden cronológico
+    );
 
     this.unsubscribe = onSnapshot(q, async (snapshot) => {
-      // RECONCILIACIÓN INICIAL: Limpiar registros locales que ya no existen en la nube
-      const remoteIds = new Set(snapshot.docs.map(doc => doc.id));
-      const localItems = await eventRepository.getAll();
-      
-      const obsoleteItems = localItems.filter(item => 
-        item.syncStatus === 'synced' && !remoteIds.has(item.id)
-      );
+      let latestTimestamp = lastSyncTime;
 
-      if (obsoleteItems.length > 0) {
-        logger.info('EVENT_SYNC', `Eliminando ${obsoleteItems.length} eventos obsoletos detectados en reconciliación`);
-        for (const item of obsoleteItems) {
-          await eventRepository.delete(item.id);
-        }
-      }
+      const changes = snapshot.docChanges();
+      if (changes.length === 0) return;
 
-      snapshot.docChanges().forEach(async (change) => {
-        const data = { id: change.doc.id, ...change.doc.data() };
+      for (const change of changes) {
+        const docData = change.doc.data();
+        const data = { id: change.doc.id, ...docData };
         
+        // Actualizamos el cursor del último cambio
+        if (docData.timestamp && docData.timestamp > latestTimestamp) {
+          latestTimestamp = docData.timestamp;
+        }
+
         if (change.type === 'added' || change.type === 'modified') {
-          await eventRepository.save(data as any);
+          await eventRepository.save({ ...(data as any), syncStatus: 'synced' });
         } else if (change.type === 'removed') {
           await eventRepository.delete(change.doc.id);
         }
-      });
-      logger.info('EVENT_SYNC', `Real-time sync for ${tableName} updated`);
+      }
+
+      // Guardamos el nuevo punto de referencia
+      if (latestTimestamp > lastSyncTime) {
+        localStorage.setItem(`last_sync_${tableName}`, latestTimestamp.toString());
+      }
+      
+      logger.info('EVENT_SYNC', `Delta sync processed ${snapshot.size} changes for ${tableName}`);
     }, (error) => {
-      logger.error('EVENT_SYNC_FAIL', `Error syncing ${tableName}: ${error.message}`, error);
-      try {
-        handleFirestoreError(error, OperationType.LIST, tableName);
-      } catch (e) {
-        // Silent fail for background sync
+      if (error.code === 'resource-exhausted') {
+        logger.error('EVENT_SYNC_CRITICAL', `Cuota agotada en ${tableName}: Suspendiendo sincronización`);
+        this.stopSync();
+      } else {
+        logger.error('EVENT_SYNC_FAIL', `Error syncing ${tableName}: ${error.message}`, error);
+        try {
+          handleFirestoreError(error, OperationType.LIST, tableName);
+        } catch (e) {
+          // Silent fail for background sync
+        }
       }
     });
 

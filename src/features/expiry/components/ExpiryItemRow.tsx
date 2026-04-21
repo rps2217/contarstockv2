@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { motion } from 'motion/react';
-import { AlertTriangle, ShieldAlert, Download, Clock, CheckCircle2, CheckSquare, Trash2, Barcode } from 'lucide-react';
+import { AlertTriangle, ShieldAlert, Download, Clock, CheckCircle2, CheckSquare, Trash2, Barcode, Edit2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale/es';
 import { useToastStore } from '../../../store/useToastStore';
@@ -11,6 +11,7 @@ interface ExpiryItemRowProps {
   isSelected: boolean;
   onToggleSelect: (id: string) => void;
   onRemove: (item: any) => void;
+  onEdit?: (item: any) => void;
   theme?: 'dark' | 'light';
 }
 
@@ -31,6 +32,7 @@ export const ExpiryItemRow: React.FC<ExpiryItemRowProps> = React.memo(({
   isSelected,
   onToggleSelect,
   onRemove,
+  onEdit,
   theme = 'dark'
 }) => {
   const { addToast } = useToastStore.getState();
@@ -42,7 +44,8 @@ export const ExpiryItemRow: React.FC<ExpiryItemRowProps> = React.memo(({
       layout
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className={`group flex items-center gap-4 px-6 py-4 border-b transition-all ${
+      onClick={() => onEdit?.(item)}
+      className={`group flex items-center gap-4 px-6 py-4 border-b transition-all cursor-pointer ${
         isSelected 
           ? 'bg-indigo-500/10 border-indigo-500/30' 
           : theme === 'dark' 
@@ -132,9 +135,21 @@ export const ExpiryItemRow: React.FC<ExpiryItemRowProps> = React.memo(({
       </div>
 
       {/* ACTIONS */}
-      <div className="w-12 flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="w-20 flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
-          onClick={() => onRemove(item)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit?.(item);
+          }}
+          className="w-8 h-8 bg-blue-500/10 hover:bg-blue-500 text-blue-500 hover:text-white rounded-lg flex items-center justify-center transition-all border border-blue-500/20"
+        >
+          <Edit2 className="w-3.5 h-3.5" />
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove(item);
+          }}
           className="w-8 h-8 bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white rounded-lg flex items-center justify-center transition-all border border-rose-500/20"
         >
           <Trash2 className="w-3.5 h-3.5" />

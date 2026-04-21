@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { motion } from 'motion/react';
-import { AlertTriangle, ShieldAlert, Download, Clock, CheckCircle2, CheckSquare, Trash2 } from 'lucide-react';
+import { AlertTriangle, ShieldAlert, Download, Clock, CheckCircle2, CheckSquare, Trash2, Edit2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale/es';
 import { useToastStore } from '../../../store/useToastStore';
@@ -11,6 +11,7 @@ interface ExpiryItemCardProps {
   isSelected: boolean;
   onToggleSelect: (id: string) => void;
   onRemove: (item: any) => void;
+  onEdit?: (item: any) => void;
   onFilterProvider?: (provider: string) => void;
   onFilterEstado?: (estado: string) => void;
   onFilterFrc?: (frc: string) => void;
@@ -85,6 +86,7 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
   isSelected,
   onToggleSelect,
   onRemove,
+  onEdit,
   onFilterProvider,
   onFilterEstado,
   onFilterFrc,
@@ -113,7 +115,8 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
       id={`expiry-item-${item.id}`}
-      className={`border rounded-2xl flex flex-col md:grid md:grid-cols-[80px_2fr_1fr_1fr_1.5fr_80px] items-start md:items-center gap-4 md:gap-6 group transition-all ${getCardStyles()}`}
+      onClick={() => onEdit?.(item)}
+      className={`border rounded-2xl flex flex-col md:grid md:grid-cols-[80px_2fr_1fr_1fr_1.5fr_120px] items-start md:items-center gap-4 md:gap-6 group transition-all cursor-pointer ${getCardStyles()}`}
     >
       <div className="flex w-full md:contents gap-4 items-start">
         {/* COLUMN 1: ICON */}
@@ -280,7 +283,17 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
       </div>
 
       {/* COLUMN 6: ACTIONS (Desktop) */}
-      <div className="hidden md:flex items-center justify-end">
+      <div className="hidden md:flex items-center justify-end gap-2">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit?.(item);
+          }}
+          className="w-11 h-11 bg-blue-500/10 hover:bg-blue-500 text-blue-500 hover:text-white rounded-xl flex items-center justify-center transition-all border border-blue-500/20 group-hover:scale-110 shrink-0 shadow-lg"
+          title="Editar Registro"
+        >
+          <Edit2 className="w-5 h-5" />
+        </button>
         <button
           onClick={(e) => {
             e.stopPropagation();

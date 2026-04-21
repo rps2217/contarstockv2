@@ -9,18 +9,22 @@ interface ExpirationModalProps {
   onCancel?: () => void;
   productMap: Record<string, any>;
   initialBarcode?: string;
+  initialData?: { mm: number; yyyy: number; productName: string };
+  title?: string;
 }
 
 export const ExpirationModal: React.FC<ExpirationModalProps> = ({ 
   onComplete, 
   onCancel,
   productMap,
-  initialBarcode = ''
+  initialBarcode = '',
+  initialData,
+  title = 'REGISTRO DESKTOP'
 }) => {
   const [barcode, setBarcode] = useState<string>(initialBarcode);
-  const [productName, setProductName] = useState<string>('');
-  const [selectedMm, setSelectedMm] = useState<number | null>(null);
-  const [selectedYyyy, setSelectedYyyy] = useState<number | null>(null);
+  const [productName, setProductName] = useState<string>(initialData?.productName || '');
+  const [selectedMm, setSelectedMm] = useState<number | null>(initialData?.mm || null);
+  const [selectedYyyy, setSelectedYyyy] = useState<number | null>(initialData?.yyyy || null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSearchingCloud, setIsSearchingCloud] = useState(false);
   const [continuousMode, setContinuousMode] = useState(true);
@@ -186,7 +190,7 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
               <Zap className="w-6 h-6 text-amber-500" />
             </div>
             <div>
-              <h3 className="text-xl font-black text-white uppercase italic tracking-tighter leading-none">REGISTRO DESKTOP</h3>
+              <h3 className="text-xl font-black text-white uppercase italic tracking-tighter leading-none">{title}</h3>
               <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Optimizado para Teclado + Scanner</p>
             </div>
           </div>

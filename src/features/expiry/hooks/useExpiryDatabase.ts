@@ -273,6 +273,7 @@ export const useExpiryDatabase = () => {
     mm: number;
     yyyy: number;
     quantity: number;
+    location?: string;
     fechaCC?: string;
   }) => {
     try {
@@ -289,44 +290,51 @@ export const useExpiryDatabase = () => {
       const ddPadded = String(lastDay).padStart(2, '0');
       const claveUnica = `${sanitizedBarcode}${yearStr}${mmPadded}${ddPadded}`;
 
-      // Duplicate check with visual feedback
-      const isDuplicate = localItems.some(item => item.claveUnica === claveUnica);
-      if (isDuplicate) {
-        addToast(`Este producto ya fue registrado para el mes ${mmPadded}/${yearStr}. No se permiten duplicados.`, 'warning');
-        SoundFX.play('error');
-        return;
-      }
-
       const now = new Date();
       
-      const rowData: Record<string, any> = {
-        id: claveUnica, // Use claveUnica as the ID
+      // BUSCAR SI YA EXISTE PARA ACTUALIZAR EN LUGAR DE BLOQUEAR
+      const existing = localItems.find(item => item.claveUnica === claveUnica);
+      
+      const rowData: any = {
+        id: claveUnica, 
         ID: claveUnica,
         claveUnica: claveUnica,
-        timestamp: now.toISOString(),
+        timestamp: now.getTime(), // Usar Number para el Delta Sync
         barcode: sanitizedBarcode,
         productName: data.productName,
-        providerName: data.providerName || 'N/A',
+        providerName: data.providerName || (existing?.providerName) || 'N/A',
         mm: data.mm,
         yyyy: data.yyyy,
         event: 'VENCIMIENTOS',
         quantity: data.quantity,
-        location: '',
-        origin: 'REGISTRO DIRECTO'
+        location: data.location || (existing?.location) || '',
+        origin: 'REGISTRO DIRECTO',
+        syncStatus: 'synced' as const
       };
 
-      await firebaseSyncService.pushBatch(tableName, [rowData]);
+      // GUARDADO LOCAL INMEDIATO (Cero Latencia)
+      await expiryRepository.save(rowData);
       
-      addToast('Guardado en la nube correctamente.', 'success');
+      // SINCRONIZACIÓN ASÍNCRONA CON LA NUBE
+      firebaseSyncService.pushChange(tableName, claveUnica, rowData).catch(err => {
+        console.error("[ExpiryCloudSync] Error:", err);
+        expiryRepository.save({ ...rowData, syncStatus: 'pending' });
+      });
+      
+      if (existing) {
+        addToast('Registro actualizado correctamente.', 'success');
+      } else {
+        addToast('Guardado correctamente.', 'success');
+      }
+      
       SoundFX.play('success');
-
       return claveUnica;
 
     } catch (error: any) {
       addToast(`Error crítico al registrar: ${error.message}`, 'error');
       SoundFX.play('error');
     }
-  }, [tableName, localItems]);
+  }, [tableName, localItems, addToast]);
 
   const handleUpdatePreferences = useCallback((newPrefs: Partial<ExpiryPreferences>) => {
     setPreferences(newPrefs);
@@ -343,6 +351,33 @@ export const useExpiryDatabase = () => {
     setCreationDateRange({ start: null, end: null });
     setSelectedIds(new Set());
   }, [setSearchQuery, setSelectedStatuses, setSelectedCategories, setSelectedCanje, setActionPeriod, setCustomDateRange, setCreationDateRange, setSelectedIds]);
+
+  const handleUpdateItem = useCallback(async (id: string, updates: Partial<any>) => {
+    try {
+      const existing = localItems.find(item => item.id === id);
+      if (!existing) throw new Error("Producto no encontrado");
+
+      const now = new Date();
+      const updatedData: any = {
+        ...existing,
+        ...updates,
+        timestamp: now.getTime(),
+        syncStatus: 'synced' as const
+      };
+
+      // 1. Local update
+      await expiryRepository.save(updatedData);
+
+      // 2. Cloud update (silent)
+      firebaseSyncService.pushChange(tableName, id, updatedData).catch(err => {
+        expiryRepository.save({ ...updatedData, syncStatus: 'pending' });
+      });
+
+      addToast('Cambios guardados', 'success');
+    } catch (error: any) {
+      addToast(`Error al actualizar: ${error.message}`, 'error');
+    }
+  }, [tableName, localItems, addToast]);
 
   return {
     state: {
@@ -374,6 +409,7 @@ export const useExpiryDatabase = () => {
       handleRemoveItem,
       handleBulkRemove,
       handleAddItem,
+      handleUpdateItem,
       handleUpdatePreferences,
       clearLocalData
     }

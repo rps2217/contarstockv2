@@ -269,6 +269,7 @@ const ExpiryManagementPage: React.FC = () => {
                     isSelected={state.selectedIds.has(item.id)}
                     onToggleSelect={actions.handleToggleSelect}
                     onRemove={actions.confirmRemoveItem}
+                    onEdit={actions.handleEdit}
                     theme={settings.theme}
                   />
                 ) : (
@@ -277,6 +278,7 @@ const ExpiryManagementPage: React.FC = () => {
                     isSelected={state.selectedIds.has(item.id)}
                     onToggleSelect={actions.handleToggleSelect}
                     onRemove={actions.confirmRemoveItem}
+                    onEdit={actions.handleEdit}
                     onFilterProvider={(provider) => dbActions.setSearchQuery(provider)}
                     onFilterEstado={(estado) => dbActions.setSearchQuery(estado)}
                     onFilterFrc={(frc) => dbActions.setSearchQuery(frc)}
@@ -415,6 +417,28 @@ const ExpiryManagementPage: React.FC = () => {
               });
               
               toast.success('Registrando vencimiento...');
+            }}
+          />
+        )}
+
+        {ui.editingItem && (
+          <ExpirationModal 
+            productMap={productMap}
+            title="EDITAR REGISTRO"
+            initialBarcode={ui.editingItem.barcode}
+            initialData={{
+              mm: ui.editingItem.mm,
+              yyyy: ui.editingItem.yyyy,
+              productName: ui.editingItem.productName
+            }}
+            onCancel={() => actions.setEditingItem(null)}
+            onComplete={(data) => {
+              actions.setEditingItem(null);
+              dbActions.handleUpdateItem(ui.editingItem.id, {
+                mm: data.mm,
+                yyyy: data.yyyy,
+                productName: data.productName
+              });
             }}
           />
         )}

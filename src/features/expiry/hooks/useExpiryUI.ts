@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { useExpiryDatabase } from './useExpiryDatabase';
 import { handlePrintExpirations, handlePrintLabels } from '../utils/expiryUtils';
 import { useManagementUI } from '../../../shared/hooks/useManagementUI';
 
 export const useExpiryUI = () => {
   const { state, actions: dbActions } = useExpiryDatabase();
+  const [editingItem, setEditingItem] = useState<any>(null);
   
   const management = useManagementUI({
     featureName: 'Vencimientos',
@@ -27,6 +29,7 @@ export const useExpiryUI = () => {
   return {
     ui: {
       ...management.ui,
+      editingItem,
       activeFiltersCount: state.selectedStatuses.length + 
                          state.selectedCategories.length + 
                          (state.selectedCanje !== 'all' ? 1 : 0) + 
@@ -37,6 +40,8 @@ export const useExpiryUI = () => {
     actions: {
       ...management.actions,
       handleClearFilters,
+      setEditingItem,
+      handleEdit: (item: any) => setEditingItem(item),
       confirmBulkRemove: () => management.actions.confirmBulkRemove(dbActions.handleBulkRemove),
       confirmRemoveItem: (item: any) => management.actions.confirmRemoveItem(item, dbActions.handleRemoveItem),
       handleSelectAllVisible: () => management.actions.handleSelectAllVisible(state.processedScans),
