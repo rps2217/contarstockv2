@@ -21,6 +21,7 @@ interface Props {
  onInitializeBrain?: () => void; 
  onImport: () => void;
  onCreate: () => void;
+ onSyncProviders: () => void;
  policyFilter: 'all' | 'exchange' | 'loss' | 'no_info';
  onPolicyFilterChange: (filter: 'all' | 'exchange' | 'loss' | 'no_info') => void;
  vectorProgress?: { current: number, total: number };
@@ -196,6 +197,15 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
     >
       <Ghost className="w-3 h-3" /> Sin Proveedor
     </button>
+    {props.policyFilter === 'no_info' && (
+      <button
+        onClick={props.onSyncProviders}
+        className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 transition-all flex items-center gap-2 animate-in fade-in slide-in-from-left-2"
+      >
+        <RefreshCw className={`w-3 h-3 ${props.isDownloading ? 'animate-spin' : ''}`} />
+        Fijar Políticas
+      </button>
+    )}
  </div>
  
  {/* NIVEL 3: INDICADORES DE INTEGRIDAD (PROGRESO) */}

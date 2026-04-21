@@ -153,7 +153,7 @@ export const bulkImportProducts = async (csvText: string): Promise<number> => {
  name: String(name),
  category: String(row['MUNDO'] || row['CATEGORIA'] || 'GENERAL'),
  supplier: String(row['PROVEEDOR'] || ''),
- supplierRut: String(row['RUT PROVEEDOR'] || ''),
+ supplierRut: sanitizeBarcode(String(row['RUT PROVEEDOR'] || row['RUT'] || row['PROVEEDOR_RUT'] || '')),
  syncStatus: 'synced'
  });
  }

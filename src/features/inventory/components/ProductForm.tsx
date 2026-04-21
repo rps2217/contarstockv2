@@ -96,6 +96,21 @@ export const ProductForm: React.FC<ProductFormProps> = ({ isOpen, onClose, initi
  </div>
  </div>
 
+ <div className="space-y-1.5">
+  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">RUT del Proveedor (Vínculo Logístico)</label>
+  <div className="relative">
+   <input
+    value={formData.supplierRut || ''}
+    onChange={(e) => updateField('supplierRut', e.target.value)}
+    className="w-full h-12 px-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-900 outline-none focus:bg-white focus:border-blue-500 transition-all placeholder:text-slate-300"
+    placeholder="Ej: 12345678-9"
+   />
+   <div className="absolute right-4 top-1/2 -translate-y-1/2">
+    <span className="text-[8px] font-black bg-blue-100 text-blue-600 px-2 py-1 rounded-lg uppercase">ID LOG</span>
+   </div>
+  </div>
+ </div>
+
  <div className="p-4 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100 dark:border-indigo-500/10 space-y-4">
   <p className="text-[9px] font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-[0.2em] mb-2 flex items-center gap-2">
    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />

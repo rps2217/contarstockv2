@@ -3,7 +3,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Product, Provider } from '../../../types';
 import * as productService from '../../../services/productService';
-import { importProductsFromFirestore } from '../../../services/syncManager';
+import { importProductsFromFirestore, importProvidersFromFirestore } from '../../../services/syncManager';
 import { syncProductsToCloud } from '../../../services/cloudSync';
 import { fuzzySearchProducts } from '../../../services/search';
 import { VectorService } from '../../../services/vectorService';
@@ -74,15 +74,21 @@ export const useProductDatabase = () => {
 
   // Cruce con proveedores para obtener días de retiro y política de canje
   const providers = await db.providers.toArray();
-  const providerMap = new Map<string, Provider>();
+  const providerMapByRut = new Map<string, Provider>();
+  const providerMapByName = new Map<string, Provider>();
   
   providers.forEach(p => {
-    providerMap.set(norm(p.rut), p);
+    if (p.rut) providerMapByRut.set(norm(p.rut), p);
+    if (p.name) providerMapByName.set(norm(p.name), p);
   });
 
   const mappedProducts = baseProducts.map((p: Product) => {
    const pRut = p.supplierRut ? norm(p.supplierRut) : null;
-   const provider = pRut ? providerMap.get(pRut) : null;
+   const pName = p.supplier ? norm(p.supplier) : null;
+   
+   // Intentar match por RUT, si no, por Nombre (Normalización Robusta)
+   const provider = (pRut ? providerMapByRut.get(pRut) : null) || 
+                    (pName ? providerMapByName.get(pName) : null);
    
    return {
     ...p,
@@ -174,12 +180,24 @@ export const useProductDatabase = () => {
  setIsDownloading(true);
  try {
  const count = await importProductsFromFirestore();
- showFeedback('success', `${count} productos actualizados`);
+ showFeedback('success', `${count} productos y políticas actualizados`);
  } catch (err: any) {
  showFeedback('error', 'Error en descarga Cloud');
  } finally {
  setIsDownloading(false);
  }
+ }, [showFeedback]);
+
+ const handleSyncProviders = useCallback(async () => {
+  setIsDownloading(true);
+  try {
+    const count = await importProvidersFromFirestore();
+    showFeedback('success', `${count} políticas logísticas actualizadas`);
+  } catch (err: any) {
+    showFeedback('error', 'Error al sincronizar políticas');
+  } finally {
+    setIsDownloading(false);
+  }
  }, [showFeedback]);
 
  const handleDelete = useCallback(async (barcode: string) => {
@@ -221,6 +239,7 @@ export const useProductDatabase = () => {
  handleSyncToCloud, 
  handleForceSyncToCloud,
  handleDownloadFromCloud, 
+ handleSyncProviders,
  handleVectorize, 
  handleInitializeBrain,
  showFeedback 

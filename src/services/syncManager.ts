@@ -301,6 +301,13 @@ export const importProductsFromFirestore = async (): Promise<number> => {
       await saveProductBatch(products);
     }
 
+    // DESCARGAR TAMBIÉN PROVEEDORES (Políticas de Retiro)
+    try {
+      await importProvidersFromFirestore();
+    } catch (e) {
+      console.warn("Fallo descarga de proveedores:", e);
+    }
+
     return products.length;
   } catch (e: any) {
     logger.error("FETCH_PRODUCTS_FAIL", `Error en Firestore Sync: ${e.message}`);
