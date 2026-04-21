@@ -63,7 +63,20 @@ export const processExpiryItem = (
     productName = (item as any).ITEM.trim();
   }
   const supplierRut = product?.supplierRut ? normalizeIdentity(product.supplierRut) : null;
-  const provider = supplierRut ? providerMap.get(supplierRut) : null;
+  const supplierName = product?.supplier ? normalizeIdentity(product.supplier) : null;
+  
+  // Intento de match por RUT, con respaldo por nombre
+  let provider = supplierRut ? providerMap.get(supplierRut) : null;
+  
+  if (!provider && supplierName) {
+    // Buscar en el providerMap por nombre normalizado
+    for (const p of Array.from(providerMap.values())) {
+        if (p.name && normalizeIdentity(p.name) === supplierName) {
+            provider = p;
+            break;
+        }
+    }
+  }
   
   let withdrawalDate: Date | null = null;
   const hasCanje = provider ? (provider.hasExchange ?? false) : false;
