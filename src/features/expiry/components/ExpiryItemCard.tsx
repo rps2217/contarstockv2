@@ -3,6 +3,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { AlertTriangle, ShieldAlert, Download, Clock, CheckCircle2, CheckSquare, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { es } from 'date-fns/locale/es';
 import { useToastStore } from '../../../store/useToastStore';
 
 interface ExpiryItemCardProps {
@@ -227,35 +228,54 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
       <div className="flex w-full md:contents flex-wrap gap-4 items-center justify-between mt-2 md:mt-0 pt-2 md:pt-0 border-t md:border-t-0 border-white/5">
         {/* COLUMN 3: ESTADO */}
         <div className="flex items-center">
-          {item.estado && (
-            <span 
+          {item.hasCanje !== undefined && (
+            <div 
               onClick={(e) => {
                 e.stopPropagation();
                 if (onFilterEstado) {
-                  onFilterEstado(item.estado);
-                  addToast(`Filtrando por estado: ${item.estado}`, 'info');
+                  onFilterEstado(item.hasCanje ? 'Canje' : 'Merma');
                 }
               }}
-              className="text-[10px] font-black bg-amber-500/10 px-3 py-1 rounded text-amber-600 uppercase tracking-widest border border-amber-500/20 cursor-pointer hover:bg-amber-500/20 transition-colors"
+              className={`px-4 py-2 rounded-xl border-2 shadow-lg transition-all hover:scale-105 flex flex-col items-center justify-center cursor-pointer min-w-[120px] ${
+                item.hasCanje 
+                  ? 'bg-indigo-600/10 border-indigo-500/40 text-indigo-400' 
+                  : 'bg-amber-600/10 border-amber-500/40 text-amber-500'
+              }`}
             >
-              {item.estado}
-            </span>
+              <span className="text-[10px] font-black uppercase tracking-widest leading-none">
+                {item.hasCanje ? 'Canje' : 'Merma'}
+              </span>
+              <span className="text-[9px] font-black uppercase mt-1 opacity-80">
+                {item.withdrawalDate ? format(item.withdrawalDate, 'MMM yy', { locale: es }) : ''}
+              </span>
+            </div>
           )}
         </div>
 
-        {/* COLUMN 4: STATUS */}
+        {/* COLUMN 4: STATUS (Days Left) */}
         <div className="flex items-center">
-          <div className={`text-lg font-black leading-none ${statusConfig.colorClass} ${statusConfig.shadowClass}`}>
-            {statusConfig.label(item.daysLeft)}
+          <div className="flex flex-col items-center px-3 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-500 shadow-rose-500/5 shadow-inner">
+            <span className={`text-xl font-black leading-none italic ${statusConfig.shadowClass}`}>
+              {item.daysLeft}D
+            </span>
+            <span className="text-[7px] font-black uppercase tracking-tighter mt-0.5">Días Venc</span>
           </div>
         </div>
 
         {/* COLUMN 5: DATES */}
-        <div className="flex flex-col gap-1">
-          <span className="text-[8px] font-black text-stone-500 uppercase tracking-widest">Vencimiento</span>
-          <span className={`text-sm font-black ${theme === 'dark' ? 'text-white' : 'text-stone-900'}`}>
-            {item.expiryDateObj ? format(item.expiryDateObj, 'dd/MM/yyyy') : 'N/A'}
-          </span>
+        <div className="flex gap-4">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[8px] font-black text-indigo-500/70 uppercase tracking-widest italic">Retiro</span>
+            <span className="text-xs font-black text-indigo-400 font-mono italic">
+              {item.withdrawalDate ? format(item.withdrawalDate, 'dd/MM/yy') : 'N/A'}
+            </span>
+          </div>
+          <div className="flex flex-col gap-0.5 border-l border-white/5 pl-4">
+            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Venc.</span>
+            <span className={`text-xs font-black font-mono italic ${statusConfig.colorClass}`}>
+              {item.expiryDateObj ? format(item.expiryDateObj, 'dd/MM/yy') : 'N/A'}
+            </span>
+          </div>
         </div>
       </div>
 
