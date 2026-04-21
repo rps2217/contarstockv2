@@ -42,7 +42,7 @@ export const ExpiryItemRow: React.FC<ExpiryItemRowProps> = React.memo(({
       layout
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className={`group flex items-center gap-4 px-4 py-2 border-b transition-all ${
+      className={`group flex items-center gap-4 px-6 py-4 border-b transition-all ${
         isSelected 
           ? 'bg-indigo-500/10 border-indigo-500/30' 
           : theme === 'dark' 
@@ -63,14 +63,14 @@ export const ExpiryItemRow: React.FC<ExpiryItemRowProps> = React.memo(({
       </div>
 
       {/* SKU */}
-      <div className="w-32 shrink-0">
+      <div className="w-44 shrink-0">
         <span 
           onClick={() => {
             navigator.clipboard.writeText(item.barcode);
             addToast(`SKU ${item.barcode} copiado`, 'success');
           }}
-          className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border cursor-pointer transition-colors ${
-            theme === 'dark' ? 'bg-brand-dark text-slate-300 border-white/10' : 'bg-stone-100 text-stone-600 border-stone-200'
+          className={`text-sm font-mono font-black px-4 py-1.5 rounded-xl border-2 cursor-pointer transition-all hover:scale-105 active:scale-95 shadow-sm inline-block ${
+            theme === 'dark' ? 'bg-brand-dark text-white border-white/20' : 'bg-stone-100 text-stone-900 border-stone-300'
           }`}
         >
           {item.barcode}
@@ -79,53 +79,53 @@ export const ExpiryItemRow: React.FC<ExpiryItemRowProps> = React.memo(({
 
       {/* PRODUCT NAME */}
       <div className="flex-1 min-w-0">
-        <h3 className={`text-xs font-black uppercase tracking-tight truncate mb-1 ${
+        <h3 className={`text-base font-black uppercase tracking-tighter italic truncate mb-1 ${
           theme === 'dark' ? 'text-white' : 'text-stone-900'
         }`}>
           {item.productName}
         </h3>
-        <div className="flex items-center gap-3">
-          <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest truncate">
+        <div className="flex items-center gap-4">
+          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest truncate">
             {item.providerName}
           </p>
           
           {/* DÍAS RESTANTES (Cuadrado Rojo - Destacado) */}
-          <div className="px-2 py-0.5 rounded bg-rose-500/20 border border-rose-500/50 text-rose-500 text-[10px] font-black uppercase tracking-widest shadow-sm">
+          <div className="px-3 py-1 rounded-lg bg-rose-500/20 border-2 border-rose-500/50 text-rose-500 text-[12px] font-black uppercase tracking-widest shadow-lg shadow-rose-500/10">
             {item.daysLeft}D {item.hasCanje ? 'Canje' : 'Merma'}
           </div>
         </div>
       </div>
 
       {/* ESTADO DE RETIRO (Indicador Central - Grande) */}
-      <div className="w-56 shrink-0 flex items-center justify-center">
-        <div className={`px-6 py-2.5 rounded-xl border-2 shadow-xl transition-all hover:scale-105 active:scale-95 cursor-default flex flex-col items-center justify-center min-w-[140px] ${
+      <div className="w-72 shrink-0 flex items-center justify-center px-4">
+        <div className={`px-10 py-4 rounded-3xl border-2 shadow-2xl transition-all hover:scale-105 active:scale-95 cursor-default flex flex-col items-center justify-center min-w-[180px] ${
           item.hasCanje 
-            ? 'bg-indigo-600/10 border-indigo-500/40 text-indigo-400' 
-            : 'bg-amber-600/10 border-amber-500/40 text-amber-500'
+            ? 'bg-indigo-600/10 border-indigo-500/60 text-indigo-400 shadow-indigo-500/10' 
+            : 'bg-amber-600/10 border-amber-500/60 text-amber-500 shadow-amber-500/10'
         }`}>
-          <div className="text-[11px] font-black uppercase tracking-[0.2em]">
+          <div className="text-[14px] font-black uppercase tracking-[0.3em] mb-1">
             {item.hasCanje ? 'Canje' : 'Merma'}
           </div>
-          <div className="text-sm font-black uppercase tracking-tight mt-0.5">
-            {item.withdrawalDate ? format(item.withdrawalDate, 'MMM yyyy', { locale: es }) : 'SIN FECHA'}
+          <div className="text-xl font-black uppercase tracking-tighter">
+            {item.withdrawalDate ? format(item.withdrawalDate, 'MMMM yyyy', { locale: es }) : 'SIN FECHA'}
           </div>
         </div>
       </div>
 
-      {/* COLUMNAS DE FECHAS DESTACADAS */}
-      <div className="w-64 flex gap-8 shrink-0 px-4">
+      {/* COLUMNAS DE FECHAS DESTACADAS (SUPER GIGANTE) */}
+      <div className="w-[400px] flex gap-16 shrink-0 px-8 border-l border-white/5 ml-4">
         {/* RETIRO */}
-        <div className="flex flex-col items-center gap-1">
-          <span className="text-[9px] font-black text-indigo-500/70 uppercase tracking-[0.15em] italic">Retiro</span>
-          <span className="text-base font-black text-indigo-400 font-mono tracking-tighter italic tabular-nums">
+        <div className="flex flex-col items-center gap-2">
+          <span className="text-[12px] font-black text-indigo-500 uppercase tracking-[0.25em] italic">RETIRO</span>
+          <span className="text-2xl font-black text-indigo-400 font-mono tracking-tighter italic tabular-nums leading-none">
             {item.withdrawalDate ? format(item.withdrawalDate, 'dd/MM/yyyy') : '--/--/----'}
           </span>
         </div>
 
         {/* VENCIMIENTO */}
-        <div className="flex flex-col items-center gap-1 border-l border-white/5 pl-8">
-          <span className="text-[9px] font-black text-slate-500/70 uppercase tracking-[0.15em] italic">Vencimiento</span>
-          <span className={`text-base font-black font-mono tracking-tighter italic tabular-nums ${statusConfig.colorClass}`}>
+        <div className="flex flex-col items-center gap-2 border-l-2 border-white/20 pl-16">
+          <span className="text-[12px] font-black text-slate-500 uppercase tracking-[0.25em] italic">VENCIMIENTO</span>
+          <span className={`text-2xl font-black font-mono tracking-tighter italic tabular-nums leading-none ${statusConfig.colorClass}`}>
             {item.expiryDateObj ? format(item.expiryDateObj, 'dd/MM/yyyy') : '--/--/----'}
           </span>
         </div>

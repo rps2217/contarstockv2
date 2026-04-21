@@ -143,7 +143,7 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
         {/* COLUMN 2: PRODUCT & PROVIDER */}
         <div className="flex-1 min-w-0 flex flex-col gap-1.5">
           <div className="flex items-center justify-between">
-            <h3 className={`text-base font-black uppercase tracking-tighter italic truncate ${
+            <h3 className={`text-lg font-black uppercase tracking-tighter italic truncate ${
               theme === 'dark' ? 'text-white' : 'text-stone-900'
             }`}>
               {item.productName}
@@ -157,7 +157,7 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
                     addToast(`Filtrando por FRC: ${item.frc}`, 'info');
                   }
                 }}
-                className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest border cursor-pointer transition-all hover:scale-105 ${
+                className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border cursor-pointer transition-all hover:scale-105 ${
                   theme === 'dark' 
                     ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30 hover:bg-indigo-500/30' 
                     : 'bg-indigo-50 text-indigo-600 border-indigo-200 hover:bg-indigo-100'
@@ -169,15 +169,15 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
             )}
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <span 
               onClick={(e) => {
                 e.stopPropagation();
                 navigator.clipboard.writeText(item.barcode);
                 addToast(`SKU ${item.barcode} copiado al portapapeles`, 'success');
               }}
-              className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-widest border cursor-pointer transition-colors ${
-              theme === 'dark' ? 'bg-brand-dark text-slate-200 border-white/10 hover:bg-slate-700' : 'bg-stone-100 text-stone-700 border-stone-200 hover:bg-stone-200'
+              className={`text-xs font-black px-2 py-1 rounded uppercase tracking-widest border cursor-pointer transition-colors ${
+              theme === 'dark' ? 'bg-brand-dark text-white border-white/20 hover:bg-slate-700' : 'bg-stone-100 text-stone-900 border-stone-300 hover:bg-stone-200'
             }`}
               title="Copiar SKU"
             >
@@ -191,15 +191,15 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
                   addToast(`Filtrando por proveedor: ${item.providerName}`, 'info');
                 }
               }}
-              className={`text-[9px] font-black uppercase tracking-widest truncate cursor-pointer transition-colors ${
-              theme === 'dark' ? 'text-slate-500 hover:text-indigo-400' : 'text-stone-400 hover:text-indigo-600'
+              className={`text-[10px] font-black uppercase tracking-widest truncate cursor-pointer transition-colors ${
+              theme === 'dark' ? 'text-slate-400 hover:text-indigo-400' : 'text-stone-500 hover:text-indigo-600'
             }`}
               title="Filtrar por este proveedor"
             >
               {item.providerName}
             </span>
             {item.withdrawalDays !== undefined && (
-              <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full border shrink-0 ${
+              <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border shrink-0 ${
                 item.hasCanje 
                   ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' 
                   : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
