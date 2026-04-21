@@ -112,20 +112,20 @@ export const ExpiryItemRow: React.FC<ExpiryItemRowProps> = React.memo(({
         </div>
       </div>
 
-      {/* COLUMNAS DE FECHAS DESTACADAS (SUPER GIGANTE) */}
-      <div className="w-[400px] flex gap-16 shrink-0 px-8 border-l border-white/5 ml-4">
+      {/* COLUMNAS DE FECHAS DESTACADAS (GIGANTE - VISIBILIDAD MÁXIMA) */}
+      <div className="w-[450px] flex gap-12 shrink-0 px-8 border-l border-white/5 ml-4">
         {/* RETIRO */}
-        <div className="flex flex-col items-center gap-2">
-          <span className="text-[12px] font-black text-indigo-500 uppercase tracking-[0.25em] italic">RETIRO</span>
-          <span className="text-2xl font-black text-indigo-400 font-mono tracking-tighter italic tabular-nums leading-none">
+        <div className="flex flex-col items-center gap-1">
+          <span className="text-[14px] font-black text-indigo-500 uppercase tracking-[0.3em] italic">RETIRO</span>
+          <span className="text-4xl font-black text-indigo-400 font-mono tracking-tighter italic tabular-nums leading-none">
             {item.withdrawalDate ? format(item.withdrawalDate, 'dd/MM/yyyy') : '--/--/----'}
           </span>
         </div>
 
         {/* VENCIMIENTO */}
-        <div className="flex flex-col items-center gap-2 border-l-2 border-white/20 pl-16">
-          <span className="text-[12px] font-black text-slate-500 uppercase tracking-[0.25em] italic">VENCIMIENTO</span>
-          <span className={`text-2xl font-black font-mono tracking-tighter italic tabular-nums leading-none ${statusConfig.colorClass}`}>
+        <div className="flex flex-col items-center gap-1 border-l-4 border-white/10 pl-12">
+          <span className="text-[14px] font-black text-slate-500 uppercase tracking-[0.3em] italic">VENCIMIENTO</span>
+          <span className={`text-4xl font-black font-mono tracking-tighter italic tabular-nums leading-none ${statusConfig.colorClass}`}>
             {item.expiryDateObj ? format(item.expiryDateObj, 'dd/MM/yyyy') : '--/--/----'}
           </span>
         </div>
