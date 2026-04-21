@@ -59,48 +59,100 @@ export const firebaseSyncService = {
   /**
    * Starts a real-time sync for a specific collection.
    * Updates local Dexie DB when Firestore changes.
+   * USES DELTA SYNC STRATEGY TO SAVE QUOTA.
    */
   startSync(tableName: string, localTable: any) {
     const colRef = collection(firestoreDb, tableName);
     
-    return onSnapshot(colRef, (snapshot) => {
+    // DELTA SYNC: Solo pedimos lo nuevo basado en el último timestamp local
+    const lastSync = localStorage.getItem(`last_sync_${tableName}`);
+    const lastSyncTime = lastSync ? parseInt(lastSync) : 0;
+
+    const q = query(
+      colRef, 
+      where('timestamp', '>', lastSyncTime)
+    );
+
+    return onSnapshot(q, (snapshot) => {
+      let latestTimestamp = lastSyncTime;
+
       snapshot.docChanges().forEach(async (change) => {
-        const data = { id: change.doc.id, ...change.doc.data() };
+        const docData = change.doc.data();
+        const data = { id: change.doc.id, ...docData };
         
+        if (docData.timestamp && docData.timestamp > latestTimestamp) {
+          latestTimestamp = docData.timestamp;
+        }
+
         if (change.type === 'added' || change.type === 'modified') {
           await localTable.put(data);
         } else if (change.type === 'removed') {
           await localTable.delete(change.doc.id);
         }
       });
-      logger.info('SYNC_REALTIME', `SYNC_REALTIME: ${tableName} updated`);
+
+      if (latestTimestamp > lastSyncTime) {
+        localStorage.setItem(`last_sync_${tableName}`, latestTimestamp.toString());
+      }
+      
+      logger.info('SYNC_REALTIME', `Delta sync: ${tableName} processed ${snapshot.size} changes`);
     }, (error) => {
-      logger.error('SYNC_REALTIME_FAIL', `Error en tabla ${tableName}: ${error.message}`, error);
-      handleFirestoreError(error, OperationType.LIST, tableName);
+      if (error.code === 'resource-exhausted') {
+        logger.error('SYNC_REALTIME_CRITICAL', `Cuota agotada en ${tableName}: Suspendiendo`);
+      } else {
+        logger.error('SYNC_REALTIME_FAIL', `Error en tabla ${tableName}: ${error.message}`, error);
+        handleFirestoreError(error, OperationType.LIST, tableName);
+      }
     });
   },
 
   /**
    * Starts a real-time sync for a specific collection with a filter.
+   * COMPATIBLE WITH DELTA SYNC TO SAVE QUOTA.
    */
   startFilteredSync(tableName: string, localTable: any, field: string, value: any) {
     const colRef = collection(firestoreDb, tableName);
-    const q = query(colRef, where(field, '==', value));
+    
+    // DELTA SYNC: Solo pedimos lo nuevo basado en el último timestamp local
+    const lastSync = localStorage.getItem(`last_sync_${tableName}_${field}_${value}`);
+    const lastSyncTime = lastSync ? parseInt(lastSync) : 0;
+
+    const q = query(
+      colRef, 
+      where(field, '==', value),
+      where('timestamp', '>', lastSyncTime)
+    );
     
     return onSnapshot(q, (snapshot) => {
+      let latestTimestamp = lastSyncTime;
+
       snapshot.docChanges().forEach(async (change) => {
-        const data = { id: change.doc.id, ...change.doc.data() };
+        const docData = change.doc.data();
+        const data = { id: change.doc.id, ...docData };
         
+        if (docData.timestamp && docData.timestamp > latestTimestamp) {
+          latestTimestamp = docData.timestamp;
+        }
+
         if (change.type === 'added' || change.type === 'modified') {
           await localTable.put(data);
         } else if (change.type === 'removed') {
           await localTable.delete(change.doc.id);
         }
       });
-      logger.info('SYNC_REALTIME', `SYNC_REALTIME: ${tableName} filtered by ${field}=${value} updated`);
+
+      if (latestTimestamp > lastSyncTime) {
+        localStorage.setItem(`last_sync_${tableName}_${field}_${value}`, latestTimestamp.toString());
+      }
+
+      logger.info('SYNC_REALTIME', `Delta sync filtered: ${tableName} updated`);
     }, (error) => {
-      logger.error('SYNC_REALTIME_FILTERED_FAIL', `Error filtrado en tabla ${tableName}: ${error.message}`, error);
-      handleFirestoreError(error, OperationType.LIST, tableName);
+      if (error.code === 'resource-exhausted') {
+        logger.error('SYNC_REALTIME_FILTERED_CRITICAL', `Cuota agotada en filtrado ${tableName}`);
+      } else {
+        logger.error('SYNC_REALTIME_FILTERED_FAIL', `Error filtrado en tabla ${tableName}: ${error.message}`, error);
+        handleFirestoreError(error, OperationType.LIST, tableName);
+      }
     });
   },
 
