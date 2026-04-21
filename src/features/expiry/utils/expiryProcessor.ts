@@ -34,12 +34,28 @@ export const processExpiryItem = (
   now: Date
 ): ExpiryItem => {
   let expiry: Date | null = null;
-  if (item.expiryDate) {
-    expiry = parseISO(item.expiryDate);
-  } else if (item.mm && item.yyyy) {
-    expiry = new Date(item.yyyy, item.mm, 0);
+  
+  /**
+   * ALGORITMO DE DETERMINACIÓN DE VENCIMIENTO (Regla de Negocio)
+   * Prioridad 1: Mes (mm) y Año (yyyy) -> Último día del mes (new Date(yyyy, mm, 0))
+   * Prioridad 2: Objeto fecha (expiryDateObj) -> Se usa tal cual
+   * Prioridad 3: String de fecha (expiryDate) -> Si es el día 1, se asume mes completo y se mueve al fin de mes.
+   */
+  if (item.mm && item.yyyy) {
+    // mm es 1-indexed (1=Ene, 12=Dic). 
+    // new Date(año, mes, 0) devuelve el ultimo dia del mes anterior al "mes" indicado.
+    // Ej: new Date(2026, 4, 0) -> 30 de abril de 2026.
+    expiry = new Date(Number(item.yyyy), Number(item.mm), 0);
   } else if (item.expiryDateObj) {
     expiry = item.expiryDateObj;
+  } else if (item.expiryDate) {
+    const parsed = parseISO(item.expiryDate);
+    // Si la fecha es el dia 1 del mes, asumimos que representa el mes completo (vence fin de ese mes)
+    if (parsed.getDate() === 1) {
+      expiry = endOfMonth(parsed);
+    } else {
+      expiry = parsed;
+    }
   }
 
   const isValidStr = (val: any) => typeof val === 'string' && val.trim() !== '' && val.trim().toUpperCase() !== 'N/A' && val.trim().toUpperCase() !== 'PRODUCTO DESCONOCIDO';
@@ -81,12 +97,17 @@ export const processExpiryItem = (
   let withdrawalDate: Date | null = null;
   const hasCanje = provider ? (provider.hasExchange ?? false) : false;
   
+  /**
+   * ALGORITMO DE CÁLCULO DE FECHA DE RETIRO
+   * 1. Si existe fecha de Control de Calidad (fechaCC), se respeta.
+   * 2. Si no, se toma el vencimiento y se restan los días de la política.
+   * 3. Si no hay política definida, el estándar industrial es 30 días.
+   */
   if (item.fechaCC) {
     withdrawalDate = parseISO(item.fechaCC);
   } else if (expiry) {
-    const rawDays = provider?.withdrawalDays ?? 30;
-    const days = rawDays === 0 ? 30 : rawDays;
-    withdrawalDate = addDays(expiry, -days);
+    const daysPolicy = provider?.withdrawalDays ?? 30; // 30 es el default si no hay proveedor
+    withdrawalDate = addDays(expiry, -daysPolicy);
   }
 
   const status = getExpiryStatus(expiry, withdrawalDate, now);
