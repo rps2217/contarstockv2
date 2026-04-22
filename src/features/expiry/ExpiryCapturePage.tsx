@@ -8,7 +8,7 @@ import { normalizeSku } from '../../services/utils';
 import { useExpiryDatabase, ExpiryItem } from './hooks/useExpiryDatabase';
 import { useCaptureSession } from '../../hooks/useCaptureSession';
 import { SoundFX } from '../../services/audio';
-import { differenceInDays } from 'date-fns';
+import { differenceInDays, format } from 'date-fns';
 import { useFeedbackSystem } from '../../hooks/useFeedbackSystem';
 import { useAppStore } from '@/store/mainAppStore';
 import { CameraScanner } from '../../components/CameraScanner';
@@ -30,10 +30,9 @@ const ExpiryItemRow = React.memo(({
   item: ExpiryItem; 
   onDelete: (id: string) => void;
 }) => {
-  const days = getDaysUntilExpiry(Number(item.mm) || 0, Number(item.yyyy) || 0);
-  const isWarning = days <= 90;
-  const isExpired = days <= 0;
-  const formattedDate = `31/${(item.mm || 0).toString().padStart(2, '0')}/${item.yyyy}`;
+  const isWarning = item.daysLeft <= 90;
+  const isExpired = item.daysLeft <= 0;
+  const formattedWithdrawalDate = item.withdrawalDate ? format(item.withdrawalDate, 'dd/MM/yyyy') : 'N/A';
 
   return (
     <div
@@ -55,7 +54,7 @@ const ExpiryItemRow = React.memo(({
           <div className={`absolute -top-2 -right-2 text-[10px] font-black px-1.5 py-0.5 rounded-full ${
             isExpired ? 'bg-rose-500 text-white' : isWarning ? 'bg-amber-500 text-black' : 'bg-indigo-500 text-white'
           }`}>
-            {days > 0 ? days : 0}
+            {item.daysLeft > 0 ? item.daysLeft : 0}
           </div>
         </div>
         <div className={`mt-2 text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded-full border ${
@@ -92,10 +91,10 @@ const ExpiryItemRow = React.memo(({
 
       <div className="flex flex-col items-end shrink-0">
         <span className="text-[8px] font-black uppercase tracking-widest text-slate-500">
-          Vencimiento
+          Retiro
         </span>
         <span className={`text-sm font-black mt-0.5 ${isExpired ? 'text-rose-500' : 'text-white'}`}>
-          {formattedDate}
+          {formattedWithdrawalDate}
         </span>
         <button
           onClick={() => onDelete(item.id)}
