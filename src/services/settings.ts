@@ -152,6 +152,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   mobileNavConfig: ['dashboard', 'reception', 'reports', 'sync', 'database', 'settings'],
   pharmacyName: 'L-121',
   autoLockTimeout: 0, // Desactivado por defecto
+  withdrawalDaysDefault: 30, // 30 días es el estándar de la tabla
   captureSettings: {
     cameraMirrorMode: false,
     keypadVibration: true,

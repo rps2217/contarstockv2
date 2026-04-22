@@ -67,6 +67,11 @@ const AppContent = () => {
   // Activar vigilante de vencimientos proactivo
   useExpiryWatcher();
 
+  // Expose settings to window for non-React utility components (like expiryProcessor)
+  useEffect(() => {
+    (window as any).__APP_SETTINGS__ = settings;
+  }, [settings]);
+
   // Redirección inicial según configuración de módulo por defecto
   useEffect(() => {
     if (isAuthenticated && bootState === 'ready' && !hasInitialRedirected) {

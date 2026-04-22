@@ -115,28 +115,23 @@ export const useExpiryDatabase = () => {
           if (val) return val;
         }
       }
-      const lowerKeys = keys.filter(Boolean).map(k => k.trim().toLowerCase());
-      for (const k in obj) {
-        if (lowerKeys.includes(k.trim().toLowerCase()) && obj[k] !== undefined && obj[k] !== null) {
-          const val = String(obj[k]).trim();
-          if (val) return val;
-        }
-      }
       return '';
     };
 
-    return (localItems || []).map(record => {
+    // Usar un Map para deduplicar por claveUnica (siendo la más reciente la que prevalece)
+    const dedupMap = new Map<string, ExpiryItem>();
+
+    (localItems || []).forEach(record => {
         const exp = record;
         const productName = getVal(exp, [expiryMapping?.name || '', 'DESCRIPTOR', 'DESCRIPCION_PROD', 'DESCRIPCION', 'PRODUCTO', 'ITEM', 'productName', 'name', 'nombre']);
         const providerName = getVal(exp, [expiryMapping?.supplier || '', 'PROVEEDOR', 'PROV', 'supplier', 'providerName', 'proveedor', 'Proveedor', 'LABORATORIO', 'LAB', 'MARCA']);
         
-        // Extraer timestamp de forma inteligente
         const rawTimestamp = getVal(exp, [expiryMapping?.timestamp || '', 'TIMESTAMP', 'timestamp', 'createdAt', 'fecha_creacion', 'FECHA_CREACION']);
         const finalTimestamp = rawTimestamp 
           ? (typeof rawTimestamp === 'number' ? rawTimestamp : new Date(rawTimestamp).getTime())
           : (record.timestamp || Date.now());
 
-        return processExpiryItem({
+        const processed = processExpiryItem({
           id: record.id,
           barcode: exp[expiryMapping?.barcode || ''] || (exp as any).SKU || (exp as any).COD_BARRAS || exp.barcode || '',
           productName,
@@ -148,10 +143,20 @@ export const useExpiryDatabase = () => {
           timestamp: finalTimestamp,
           quantity: exp[expiryMapping?.quantity || ''] || (exp as any).CANTIDAD || exp.quantity || 0,
           location: exp[expiryMapping?.location || ''] || (exp as any).UBICACION || exp.location || 'N/A',
-          claveUnica: exp.claveUnica || (exp as any).CLAVE_UNICA,
+          claveUnica: exp.claveUnica || (exp as any).CLAVE_UNICA || record.id, // Fallback al id si no hay claveUnica
           syncStatus: record.syncStatus || 'synced'
         }, productMap, providerMap, now);
+
+        const key = processed.claveUnica;
+        const existing = dedupMap.get(key);
+        
+        // Mantener el más reciente si hay duplicados
+        if (!existing || (processed.timestamp > (existing.timestamp || 0))) {
+          dedupMap.set(key, processed);
+        }
       });
+
+    return Array.from(dedupMap.values());
   }, [localItems, settings?.cloudConfig?.mappings?.expiry, productMap, providerMap]);
 
   const categories = useMemo(() => {
@@ -328,21 +333,32 @@ export const useExpiryDatabase = () => {
 
       const now = new Date();
       
-      // BUSCAR SI YA EXISTE PARA ACTUALIZAR EN LUGAR DE BLOQUEAR
-      const existing = localItems.find(item => item.claveUnica === claveUnica);
+      // BUSCAR SI YA EXISTE PARA ACTUALIZAR (Por claveUnica o por ID)
+      // Es vital buscar por claveUnica porque algunos registros antiguos podrían tener UUIDs como ID
+      const existing = localItems.find(item => item.claveUnica === claveUnica || item.id === claveUnica);
       
+      // Si existe un registro con un ID distinto a la claveUnica, lo eliminamos para evitar duplicidad de filas
+      if (existing && existing.id !== claveUnica) {
+        logger.warn('EXPIRY_DB', `Eliminando duplicado con ID inconsistente: ${existing.id}`);
+        await expiryRepository.delete(existing.id);
+        supabaseSyncService.deleteRemote(tableName, existing.id).catch(() => {});
+      }
+
+      // Sumar cantidades si ya existe, o usar la nueva
+      const finalQuantity = (existing?.quantity || 0) + data.quantity;
+
       const rowData: any = {
         id: claveUnica, 
         ID: claveUnica,
         claveUnica: claveUnica,
-        timestamp: now.getTime(), // Usar Number para el Delta Sync
+        timestamp: now.getTime(), 
         barcode: sanitizedBarcode,
         productName: data.productName,
         providerName: data.providerName || (existing?.providerName) || 'N/A',
         mm: data.mm,
         yyyy: data.yyyy,
         event: 'VENCIMIENTOS',
-        quantity: data.quantity,
+        quantity: finalQuantity,
         location: data.location || (existing?.location) || '',
         origin: 'REGISTRO DIRECTO',
         syncStatus: 'synced' as const
@@ -358,7 +374,7 @@ export const useExpiryDatabase = () => {
       });
       
       if (existing) {
-        addToast('Registro actualizado correctamente.', 'success');
+        addToast(`Actualizado: ${data.productName} (Total: ${finalQuantity})`, 'success');
       } else {
         addToast('Guardado correctamente.', 'success');
       }
@@ -394,9 +410,45 @@ export const useExpiryDatabase = () => {
       if (!existing) throw new Error("Producto no encontrado");
 
       const now = new Date();
+      
+      // Si cambian campos que afectan a la claveUnica, debemos regenerar el ID
+      let newId = id;
+      let newClaveUnica = existing.claveUnica || existing.id;
+      
+      if (updates.mm !== undefined || updates.yyyy !== undefined || updates.barcode !== undefined) {
+        const barcode = updates.barcode || existing.barcode;
+        const mm = updates.mm !== undefined ? updates.mm : existing.mm;
+        const yyyy = updates.yyyy !== undefined ? updates.yyyy : existing.yyyy;
+        
+        const sanitizedBarcode = normalizeSku(barcode);
+        const mmPadded = String(mm).padStart(2, '0');
+        const lastDay = new Date(Number(yyyy), Number(mm), 0).getDate();
+        const ddPadded = String(lastDay).padStart(2, '0');
+        newClaveUnica = `${sanitizedBarcode}${yyyy}${mmPadded}${ddPadded}`;
+        newId = newClaveUnica;
+        
+        // Si el ID cambió, debemos eliminar el registro antiguo
+        if (newId !== id) {
+          logger.info('EXPIRY_DB', `Actualizando ID de registro por cambio en fecha/sku: ${id} -> ${newId}`);
+          await expiryRepository.delete(id);
+          supabaseSyncService.deleteRemote(tableName, id).catch(() => {});
+          
+          // Verificar si el nuevo ID ya existe (colisión) y decidir si sobreescribir o sumar
+          const collision = localItems.find(item => item.id === newId || item.claveUnica === newClaveUnica);
+          if (collision) {
+             // Si hay colisión, podríamos sumar cantidades o simplemente sobreescribir.
+             // Para consistencia con handleAddItem, usaremos la lógica de sobreescritura/merge parcial
+             updates.quantity = (updates.quantity || 0) + (collision.quantity || 0);
+          }
+        }
+      }
+
       const updatedData: any = {
         ...existing,
         ...updates,
+        id: newId,
+        ID: newId,
+        claveUnica: newClaveUnica,
         timestamp: now.getTime(),
         syncStatus: 'synced' as const
       };
@@ -405,7 +457,7 @@ export const useExpiryDatabase = () => {
       await expiryRepository.save(updatedData);
 
       // 2. Cloud update (silent)
-      supabaseSyncService.pushChange(tableName, id, updatedData).catch(err => {
+      supabaseSyncService.pushChange(tableName, newId, updatedData).catch(err => {
         expiryRepository.save({ ...updatedData, syncStatus: 'pending' });
       });
 

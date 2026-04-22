@@ -106,7 +106,10 @@ export const processExpiryItem = (
   if (item.fechaCC) {
     withdrawalDate = parseISO(item.fechaCC);
   } else if (expiry) {
-    const daysPolicy = provider?.withdrawalDays ?? 30; // 30 es el default si no hay proveedor
+    // Intentar obtener la configuración global dinámica
+    const settings = (window as any).__APP_SETTINGS__;
+    const defaultDays = settings?.withdrawalDaysDefault ?? 30;
+    const daysPolicy = provider?.withdrawalDays ?? defaultDays; 
     withdrawalDate = addDays(expiry, -daysPolicy);
   }
 

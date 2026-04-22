@@ -205,6 +205,7 @@ export interface AppSettings {
   pharmacyName?: string;
   operatorId?: string;
   autoLockTimeout?: number; // en milisegundos
+  withdrawalDaysDefault?: number; // Días por defecto si no hay proveedor
   cloudConfig?: CloudConfig;
   schema?: AppSchema;
   mobileNavConfig?: ViewState[]; 
