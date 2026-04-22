@@ -7,6 +7,7 @@ import { productRepository } from '../../../repositories/DexieProductRepository'
 import { eventRepository } from '../../../repositories/EventRepository';
 import { normalizeSku } from '../../../services/utils';
 import { Product } from '../../../types';
+import { logger } from '../../../services/logger';
 
 export interface EventPreferences {
   compactView: boolean;
@@ -31,6 +32,7 @@ export const useEventDatabase = () => {
   const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [dateRange, setDateRange] = useState<{ start: string | null; end: string | null }>({ start: null, end: null });
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const tableName = settings?.cloudConfig?.eventsTableName || 'EVENTOS';
 
@@ -70,9 +72,9 @@ export const useEventDatabase = () => {
     fetchInitialData();
 
     // 2. Real-time Subscription
-    const subscription = supabaseSyncService.startSync(tableName, eventRepository);
+    const unsubscribe = supabaseSyncService.startSync(tableName, eventRepository);
     return () => {
-      subscription.unsubscribe();
+      unsubscribe();
     };
   }, [tableName]);
 

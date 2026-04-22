@@ -6,7 +6,7 @@ export const supabaseSyncService = {
    * Starts a real-time sync for a specific table.
    */
   startSync(tableName: string, localTable: any) {
-    return supabase
+    const channel = supabase
       .channel(tableName)
       .on('postgres_changes', { event: '*', schema: 'public', table: tableName }, async (payload) => {
         if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
@@ -17,13 +17,17 @@ export const supabaseSyncService = {
         logger.info('SYNC_REALTIME', `Supabase sync: ${tableName} updated`);
       })
       .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   },
 
   /**
    * Starts a real-time sync for a specific table with a filter.
    */
   startFilteredSync(tableName: string, localTable: any, field: string, value: any) {
-    return supabase
+    const channel = supabase
       .channel(`${tableName}_${field}_${value}`)
       .on(
         'postgres_changes',
@@ -43,6 +47,10 @@ export const supabaseSyncService = {
         }
       )
       .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   },
 
   /**

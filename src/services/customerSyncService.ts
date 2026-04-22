@@ -5,15 +5,15 @@ import { supabaseSyncService } from './supabaseSyncService';
 import { Customer } from '../types';
 
 export class CustomerSyncService {
-  private subscription: { unsubscribe: () => void } | null = null;
+  private unsubscribe: (() => void) | null = null;
 
   startSync(tableName: string = 'CLIENTES') {
-    if (this.subscription) {
-      this.subscription.unsubscribe();
+    if (this.unsubscribe) {
+      this.unsubscribe();
     }
 
     // Inicializar sincronización en tiempo real con Supabase
-    this.subscription = supabaseSyncService.startSync(tableName, {
+    this.unsubscribe = supabaseSyncService.startSync(tableName, {
       put: async (data: any) => {
         const customer = data as Customer;
         // Solo actualizamos si no tenemos una eliminación pendiente localmente
@@ -28,13 +28,13 @@ export class CustomerSyncService {
     });
 
     logger.info('CUSTOMER_SYNC', `Real-time sync for ${tableName} started via Supabase`);
-    return this.subscription.unsubscribe;
+    return this.unsubscribe;
   }
 
   stopSync() {
-    if (this.subscription) {
-      this.subscription.unsubscribe();
-      this.subscription = null;
+    if (this.unsubscribe) {
+      this.unsubscribe();
+      this.unsubscribe = null;
     }
   }
 }

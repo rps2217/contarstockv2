@@ -14,6 +14,7 @@ import { db } from '../../../db';
 import { expiryRepository } from '../../../repositories/ExpiryRepository';
 // import { expirySyncService } from '../../../services/expirySyncService'; // YA NO SE USA
 import { useTaskStore } from '@/store/useTaskStore';
+import { logger } from '../../../services/logger';
 
 export type { ExpiryStatus, ExpiryPreferences, ExpiryItem };
 
@@ -87,9 +88,9 @@ export const useExpiryDatabase = () => {
     fetchInitialData();
 
     // 2. Real-time Subscription
-    const subscription = supabaseSyncService.startSync(tableName, expiryRepository);
+    const unsubscribe = supabaseSyncService.startSync(tableName, expiryRepository);
     return () => {
-      subscription.unsubscribe();
+      unsubscribe();
     };
   }, [tableName]);
 
@@ -185,14 +186,29 @@ export const useExpiryDatabase = () => {
     });
 
     return filtered.sort((a, b) => {
+      // 1. Prioritize Withdrawal Date sorting as requested
       if (preferences.defaultSort === 'withdrawal') {
-        if (!a.withdrawalDate) return 1;
-        if (!b.withdrawalDate) return -1;
-        return a.withdrawalDate.getTime() - b.withdrawalDate.getTime();
+        const dateA = a.withdrawalDate?.getTime() || Infinity;
+        const dateB = b.withdrawalDate?.getTime() || Infinity;
+        
+        if (dateA !== dateB) {
+          return dateA - dateB;
+        }
+      } else {
+        // Fallback or Expiry Sort
+        const dateA = a.expiryDateObj?.getTime() || Infinity;
+        const dateB = b.expiryDateObj?.getTime() || Infinity;
+        
+        if (dateA !== dateB) {
+          return dateA - dateB;
+        }
       }
-      if (!a.expiryDateObj) return 1;
-      if (!b.expiryDateObj) return -1;
-      return a.expiryDateObj.getTime() - b.expiryDateObj.getTime();
+
+      // 2. Stable sorting by Barcode then ID if dates are identical
+      if (a.barcode !== b.barcode) {
+        return a.barcode.localeCompare(b.barcode);
+      }
+      return a.id.localeCompare(b.id);
     }).map(item => {
       const maxLifeDays = 730; 
       const percent = Math.max(0, Math.min(100, (item.daysLeft / maxLifeDays) * 100));
