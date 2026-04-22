@@ -5,7 +5,7 @@ import { db } from '../db';
 import { sanitizeBarcode, normalizeSku } from '../services/utils';
 import { recoverFromEmergencySnapshot } from './backupService';
 import { HydrationService } from './hydrationService';
-import { firebaseSyncService } from './firebaseSyncService';
+import { supabaseSyncService } from './supabaseSyncService';
 import { auth } from '../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { purgeOldData } from './maintenance';
@@ -184,7 +184,8 @@ export const InitializationService = {
       localStorage.setItem('logicount_last_sanitize', Date.now().toString());
 
     } catch (error: any) {
-      logger.error('INIT_CRITICAL', 'Fallo en secuencia de arranque', error.message);
+      const msg = error.message || (typeof error === 'object' ? JSON.stringify(error) : String(error));
+      logger.error('INIT_CRITICAL', 'Fallo en secuencia de arranque', msg);
       onStep('ready'); // Fallback: permitir entrada a la app aunque falle el sync inicial
     }
   },
@@ -209,8 +210,8 @@ export const InitializationService = {
       }
 
       const settings = getSettings();
-      // Intentar sincronizar configuración desde Firestore
-      const response = await firebaseSyncService.pullBatch('CONFIG_SISTEMA');
+      // Intentar sincronizar configuración desde la nube
+      const response = await supabaseSyncService.pullBatch('CONFIG_SISTEMA');
       if (response.success && response.rows && response.rows.length > 0) {
         const cloudConfig = response.rows[0];
         const updated = { 
@@ -221,7 +222,7 @@ export const InitializationService = {
           } 
         };
         await saveSettings(updated);
-        logger.success('INIT', 'Configuración sincronizada desde Firestore');
+        logger.success('INIT', 'Configuración sincronizada desde la nube');
       }
     } catch (e) {
       logger.warn('INIT', 'Error sincronizando configuración', e);

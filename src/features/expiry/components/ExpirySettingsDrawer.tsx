@@ -10,6 +10,7 @@ interface ExpirySettingsDrawerProps {
   onClose: () => void;
   preferences: ExpiryPreferences;
   onUpdatePreferences: (prefs: Partial<ExpiryPreferences>) => void;
+  onFullRefresh?: () => void;
   onClearLocalData?: () => void;
   theme?: 'dark' | 'light';
 }
@@ -19,6 +20,7 @@ export const ExpirySettingsDrawer: React.FC<ExpirySettingsDrawerProps> = ({
   onClose,
   preferences,
   onUpdatePreferences,
+  onFullRefresh,
   onClearLocalData,
   theme = 'dark'
 }) => {
@@ -66,6 +68,34 @@ export const ExpirySettingsDrawer: React.FC<ExpirySettingsDrawerProps> = ({
 
             <div className="flex-1 overflow-y-auto p-6 space-y-8">
               <CsvImporter />
+
+              {/* SECCIÓN: MANTENIMIENTO */}
+              <section className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <RefreshCw className="w-4 h-4 text-amber-500" />
+                  <h5 className={`text-[10px] font-black uppercase tracking-widest ${
+                    theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                  }`}>Mantenimiento</h5>
+                </div>
+                <button
+                  onClick={() => {
+                    const ok = window.confirm('Esto reiniciará la sincronización y recargará la página para asegurar que tienes los últimos datos de la nube. ¿Continuar?');
+                    if (ok) onFullRefresh?.();
+                  }}
+                  className={`w-full p-4 rounded-xl border flex items-center justify-between group transition-all ${
+                    theme === 'dark' ? 'border-amber-500/20 bg-amber-500/5 hover:bg-blue-500/10' : 'border-blue-200 bg-blue-50 hover:bg-blue-100'
+                  }`}
+                >
+                  <div className="text-left">
+                    <p className={`text-xs font-black uppercase tracking-tight ${
+                      theme === 'dark' ? 'text-white' : 'text-slate-900'
+                    }`}>Resincronización Total</p>
+                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">Fuerza re-descarga de la nube</p>
+                  </div>
+                  <RefreshCw className="w-4 h-4 text-amber-500 group-hover:rotate-180 transition-transform duration-500" />
+                </button>
+              </section>
+
               {/* SECCIÓN: ORDENAMIENTO */}
               <section className="space-y-4">
                 <div className="flex items-center gap-2">

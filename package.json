@@ -5,6 +5,7 @@
   "type": "module",
   "dependencies": {
     "@google/genai": "1.30.0",
+    "@supabase/supabase-js": "^2.104.0",
     "@tailwindcss/vite": "^4.2.2",
     "@tanstack/react-virtual": "^3.13.23",
     "@vitejs/plugin-react": "^4.2.1",

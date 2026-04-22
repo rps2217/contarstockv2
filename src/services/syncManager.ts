@@ -8,7 +8,7 @@ import { getSettings } from './settings';
 import { markScansAsSynced } from './sessionService';
 import { aggregateScans } from './aggregator';
 import { dynamicSyncService } from './dynamicSync';
-import { firebaseSyncService } from './firebaseSyncService';
+import { supabaseSyncService } from './supabaseSyncService';
 import { createInventoryPayload } from './cloud/mappers';
 import { CustomerRepository } from '../repositories/CustomerRepository';
 
@@ -139,7 +139,7 @@ export const reconcileReception = async (onProgress?: (msg: string) => void): Pr
     
     if (onProgress) onProgress("Verificando integridad con la nube...");
     
-    const response = await firebaseSyncService.pullBatch(targetTable);
+    const response = await supabaseSyncService.pullBatch(targetTable);
     if (!response.success || !response.rows) return { deleted: 0 };
 
     const remoteIds = new Set(response.rows.map((r: any) => String(r.id || r.ID)));
@@ -198,7 +198,7 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
         "ESTADO": "INGRESADO"
       }));
       const targetTable = config?.receptionTableName || "RECEPCION_BULTOS";
-      const result = await firebaseSyncService.pushBatch(targetTable, rows);
+      const result = await supabaseSyncService.pushBatch(targetTable, rows);
       if (result.success) {
         await db.sessions.where('id').anyOf(group.sessionIds).modify({ lastSyncTimestamp: Date.now() });
         if (onProgress) onProgress(`✓ Recepción sincronizada.`);
@@ -210,21 +210,14 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
         const session = await db.sessions.get(sessionId);
         if (!session) continue;
 
-        // RESPALDO DE FOTO EN STORAGE (Si existe y no se ha subido)
+        // RESPALDO DE FOTO EN STORAGE - NOTA: Supabase Storage podría requerir implementación distinta
         if (session.labelPhoto && !session.photoUrl) {
-          if (onProgress) onProgress(`Respaldando foto en Firebase [${session.logisticsLabel}]...`);
+          if (onProgress) onProgress(`Respaldando foto en la nube [${session.logisticsLabel}]...`);
           try {
-            const photoPath = `labels/${session.erpOrder}/${session.logisticsLabel}_${session.id}.jpg`;
-            const photoResult = await firebaseSyncService.uploadPhoto(session.labelPhoto, photoPath);
-            
-            if (photoResult.success && photoResult.fileUrl) {
-              await db.sessions.update(sessionId, { photoUrl: photoResult.fileUrl });
-              // Actualizar objeto en memoria para que el payload lleve la URL
-              session.photoUrl = photoResult.fileUrl;
-              if (onProgress) onProgress(`✓ Foto respaldada en Firebase.`);
-            }
+            // Mantenemos Firebase Storage por ahora o deshabilitamos si no hay Supabase Storage listo
+            if (onProgress) onProgress(`⚠ Salto de respaldo de foto (pendiente migración Storage)`);
           } catch (photoError) {
-            console.warn("Fallo al subir foto a Firebase:", photoError);
+            console.warn("Fallo al subir foto:", photoError);
           }
         }
 
@@ -252,7 +245,7 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
           const chunk = fullPayload.slice(i * UPLOAD_BATCH_SIZE, (i + 1) * UPLOAD_BATCH_SIZE);
           if (onProgress) onProgress(`Subiendo lote ${i + 1}/${totalBatches}...`);
           
-          const result = await firebaseSyncService.pushBatch(targetTable, chunk);
+          const result = await supabaseSyncService.pushBatch(targetTable, chunk);
           
           if (!result.success) {
             sessionSuccess = false;
@@ -281,7 +274,7 @@ export const importProductsFromFirestore = async (): Promise<number> => {
   try {
     const config = getSettings().cloudConfig;
     const tableName = config?.productsTableName || "PRODUCTOS";
-    const response = await firebaseSyncService.pullBatch(tableName);
+    const response = await supabaseSyncService.pullBatch(tableName);
     
     if (!response.success || !response.rows) return 0;
 
@@ -319,7 +312,7 @@ export const importProvidersFromFirestore = async (): Promise<number> => {
   try {
     const config = getSettings().cloudConfig;
     const tableName = config?.providersTableName || "PROVEEDORES";
-    const response = await firebaseSyncService.pullBatch(tableName);
+    const response = await supabaseSyncService.pullBatch(tableName);
     
     if (!response.success || !response.rows) return 0;
 

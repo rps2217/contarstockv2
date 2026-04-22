@@ -1,6 +1,6 @@
 
 import { db } from '../db';
-import { firebaseSyncService } from './firebaseSyncService';
+import { supabaseSyncService } from './supabaseSyncService';
 import { getSettings, saveSettings } from './settings';
 import { logger } from './logger';
 import { AppSettings } from '../types';
@@ -26,7 +26,7 @@ export const configSyncService = {
         updatedAt: Date.now()
       };
 
-      await firebaseSyncService.pushBatch(CONFIG_COLLECTION, [{
+      await supabaseSyncService.pushBatch(CONFIG_COLLECTION, [{
         id: CONFIG_DOC_ID,
         ...syncableSettings
       }]);
@@ -43,7 +43,7 @@ export const configSyncService = {
    */
   async pullSettings(): Promise<boolean> {
     try {
-      const response = await firebaseSyncService.pullBatch(CONFIG_COLLECTION);
+      const response = await supabaseSyncService.pullBatch(CONFIG_COLLECTION);
       if (!response.success || !response.rows || response.rows.length === 0) {
         return false;
       }

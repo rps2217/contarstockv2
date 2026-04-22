@@ -8,7 +8,7 @@ import { logger } from './logger';
 import { IntegrityGuard } from './integrityGuard';
 import { CloudOrderRowSchema } from './schemas';
 import { createEmergencySnapshot } from './backupService';
-import { firebaseSyncService } from './firebaseSyncService';
+import { supabaseSyncService } from './supabaseSyncService';
 import { getSettings } from './settings';
 
 /**
@@ -47,11 +47,11 @@ const commitBufferToDatabase = async () => {
     // Snapshot de emergencia tras persistencia exitosa
     createEmergencySnapshot().catch(() => {});
     
-    // Empuje proactivo a Firestore (Sincronización Inteligente)
+    // Empuje proactivo a Supabase (Sincronización Inteligente)
     if (navigator.onLine) {
       const settings = getSettings();
       const targetTable = settings.cloudConfig?.countsTableName || 'CONTEOS';
-      firebaseSyncService.pushBatch(targetTable, records).then(res => {
+      supabaseSyncService.pushBatch(targetTable, records).then(res => {
         if (res.success) {
           markScansAsSynced(records.map(r => r.id));
         }
@@ -190,7 +190,7 @@ export const createSession = async (
   if (navigator.onLine) {
     const settings = getSettings();
     const sessionsTable = settings.cloudConfig?.sessionsTableName || 'SESSIONS';
-    firebaseSyncService.pushChange(sessionsTable, s.id, s);
+    supabaseSyncService.pushChange(sessionsTable, s.id, s);
   }
 
   // Snapshot de emergencia tras crear sesión
@@ -232,7 +232,7 @@ export const createDraftSession = async (label: string, erpOrder?: string, mm?: 
  if (navigator.onLine) {
    const settings = getSettings();
    const sessionsTable = settings.cloudConfig?.sessionsTableName || 'SESSIONS';
-   firebaseSyncService.pushChange(sessionsTable, s.id, s);
+   supabaseSyncService.pushChange(sessionsTable, s.id, s);
  }
 
  triggerBackgroundSync();
@@ -243,7 +243,7 @@ export const fetchExpectedItemsFromCloud = async (erp: string): Promise<Expected
  try {
  const settings = getSettings();
  const tableName = settings.cloudConfig?.ordersTableName || 'PEDIDOS';
- const res = await firebaseSyncService.pullBatch(tableName);
+ const res = await supabaseSyncService.pullBatch(tableName);
  if (res.success && res.rows) {
  const rows = res.rows
  .map((row: any) => CloudOrderRowSchema.safeParse(row))
@@ -285,7 +285,7 @@ export const closeSession = async (id: string) => {
     if (session) {
       const settings = getSettings();
       const sessionsTable = settings.cloudConfig?.sessionsTableName || 'SESSIONS';
-      firebaseSyncService.pushChange(sessionsTable, id, session);
+      supabaseSyncService.pushChange(sessionsTable, id, session);
     }
   }
 

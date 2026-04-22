@@ -1,8 +1,6 @@
 
 import { useMemo, useEffect, useCallback, useState } from 'react';
-import { db as firestoreDb } from '../../../lib/firebase';
-import { collection, onSnapshot, query, limit, orderBy } from 'firebase/firestore';
-import { firebaseSyncService, handleFirestoreError, OperationType } from '../../../services/firebaseSyncService';
+import { supabaseSyncService } from '../../../services/supabaseSyncService';
 import { Product, Provider } from '../../../types';
 import { useToastStore } from '../../../store/useToastStore';
 import { useAppStore } from '@/store/mainAppStore';
@@ -14,7 +12,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { productRepository } from '../../../repositories/DexieProductRepository';
 import { db } from '../../../db';
 import { expiryRepository } from '../../../repositories/ExpiryRepository';
-import { expirySyncService } from '../../../services/expirySyncService';
+// import { expirySyncService } from '../../../services/expirySyncService'; // YA NO SE USA
 import { useTaskStore } from '@/store/useTaskStore';
 
 export type { ExpiryStatus, ExpiryPreferences, ExpiryItem };
@@ -67,10 +65,32 @@ export const useExpiryDatabase = () => {
     return map;
   }, [allProviders.length]);
 
-  // Start real-time sync with Firestore
+  // Start real-time sync with Supabase
   useEffect(() => {
-    const unsubscribe = expirySyncService.startSync(tableName);
-    return () => expirySyncService.stopSync();
+    // 1. Initial Pull - Fetch existing data
+    const fetchInitialData = async () => {
+      try {
+        setIsSyncing(true);
+        const { rows, error } = await supabaseSyncService.pullBatch(tableName);
+        if (error) throw new Error(error);
+        if (rows && rows.length > 0) {
+          await expiryRepository.bulkSave(rows.map((i: any) => ({ ...i, syncStatus: 'synced' })));
+          logger.info('SYNC_INITIAL', `Cargados ${rows.length} registros desde Supabase`);
+        }
+      } catch (err) {
+        logger.error('SYNC_INITIAL_FAIL', err);
+      } finally {
+        setIsSyncing(false);
+      }
+    };
+
+    fetchInitialData();
+
+    // 2. Real-time Subscription
+    const subscription = supabaseSyncService.startSync(tableName, expiryRepository);
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [tableName]);
 
   // Debounce search query
@@ -198,7 +218,7 @@ export const useExpiryDatabase = () => {
         syncStatus: 'synced'
       }));
 
-      const result = await firebaseSyncService.pushBatch(tableName, rows);
+      const result = await supabaseSyncService.pushBatch(tableName, rows);
       
       if (result.success) {
         // Actualizar estado local a synced
@@ -222,7 +242,7 @@ export const useExpiryDatabase = () => {
       await expiryRepository.delete(item.id);
       
       // Then delete remotely
-      await firebaseSyncService.deleteRemote(tableName, item.id);
+      await supabaseSyncService.deleteRemote(tableName, item.id);
       addToast('Ítem retirado correctamente', 'success');
     } catch (error: any) {
       addToast(`Error al retirar el ítem: ${error.message}`, 'error');
@@ -249,7 +269,7 @@ export const useExpiryDatabase = () => {
           await expiryRepository.delete(id);
           
           // Then delete remotely
-          await firebaseSyncService.deleteRemote(tableName, id);
+          await supabaseSyncService.deleteRemote(tableName, id);
           successCount++;
         } catch (e) {
           console.error(`Error al eliminar ${id}:`, e);
@@ -316,7 +336,7 @@ export const useExpiryDatabase = () => {
       await expiryRepository.save(rowData);
       
       // SINCRONIZACIÓN ASÍNCRONA CON LA NUBE
-      firebaseSyncService.pushChange(tableName, claveUnica, rowData).catch(err => {
+      supabaseSyncService.pushChange(tableName, claveUnica, rowData).catch(err => {
         console.error("[ExpiryCloudSync] Error:", err);
         expiryRepository.save({ ...rowData, syncStatus: 'pending' });
       });
@@ -369,7 +389,7 @@ export const useExpiryDatabase = () => {
       await expiryRepository.save(updatedData);
 
       // 2. Cloud update (silent)
-      firebaseSyncService.pushChange(tableName, id, updatedData).catch(err => {
+      supabaseSyncService.pushChange(tableName, id, updatedData).catch(err => {
         expiryRepository.save({ ...updatedData, syncStatus: 'pending' });
       });
 
@@ -411,6 +431,10 @@ export const useExpiryDatabase = () => {
       handleAddItem,
       handleUpdateItem,
       handleUpdatePreferences,
+      handleFullRefresh: () => {
+        localStorage.removeItem(`last_sync_${tableName}`);
+        window.location.reload();
+      },
       clearLocalData
     }
   };

@@ -1,7 +1,7 @@
 
 import { useEffect, useRef } from 'react';
-import { collection, onSnapshot, query, limit, orderBy } from 'firebase/firestore';
-import { auth, db as firestoreDb } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
+import { auth } from '../lib/firebase';
 import { useAppStore } from '../store/mainAppStore';
 import { useExpiryStore } from '../store/useExpiryStore';
 import { useToastStore } from '../store/useToastStore';
@@ -11,7 +11,7 @@ import { normalizeSku } from '../services/utils';
 import { db as dexieDb } from '../db';
 
 /**
- * useExpiryWatcher: Background service that monitors the expiry collection
+ * useExpiryWatcher: Background service that monitors the expiry table in Supabase
  * and updates a global badge count. It also triggers notifications for new critical items.
  */
 export const useExpiryWatcher = () => {
@@ -27,92 +27,89 @@ export const useExpiryWatcher = () => {
   useEffect(() => {
     if (!tableName) return;
 
-    let unsubscribeSnapshot: (() => void) | null = null;
+    let channel: any = null;
 
-    // We wait for auth to be ready to avoid permission denied errors on startup
-    const unsubscribeAuth = auth.onAuthStateChanged((user) => {
-      if (!user) {
-        if (unsubscribeSnapshot) {
-          unsubscribeSnapshot();
-          unsubscribeSnapshot = null;
-        }
-        return;
-      }
+    const runAnalysis = async () => {
+      try {
+        // 1. Get remote data from Supabase
+        const { data: remoteRows, error } = await supabase
+          .from(tableName)
+          .select('*')
+          .order('timestamp', { ascending: false })
+          .limit(500);
 
-      if (unsubscribeSnapshot) return; // Already subscribed
+        if (error) throw error;
+        if (!remoteRows) return;
 
-      const colRef = collection(firestoreDb, tableName);
-      const q = query(colRef, orderBy('timestamp', 'desc'), limit(500));
+        // 2. Get context data from local DB
+        const [allProducts, allProviders] = await Promise.all([
+          productRepository.getAll(),
+          dexieDb.providers.toArray()
+        ]);
 
-      unsubscribeSnapshot = onSnapshot(q, async (snapshot) => {
-        try {
-          // 1. Get context data from local DB
-          const [allProducts, allProviders] = await Promise.all([
-            productRepository.getAll(),
-            dexieDb.providers.toArray()
-          ]);
+        const productMap = new Map();
+        allProducts.forEach(p => {
+          const sku = normalizeSku(p.barcode);
+          if (sku) productMap.set(sku, p);
+        });
 
-          const productMap = new Map();
-          allProducts.forEach(p => {
-            const sku = normalizeSku(p.barcode);
-            if (sku) productMap.set(sku, p);
-          });
+        const providerMap = new Map();
+        allProviders.forEach(p => {
+          const rut = normalizeSku(p.rut);
+          if (rut) providerMap.set(rut, p);
+        });
 
-          const providerMap = new Map();
-          allProviders.forEach(p => {
-            const rut = normalizeSku(p.rut);
-            if (rut) providerMap.set(rut, p);
-          });
+        const now = new Date();
+        const expiryMapping = settings?.cloudConfig?.mappings?.expiry;
+        const alertItems: any[] = [];
 
-          const now = new Date();
-          const expiryMapping = settings?.cloudConfig?.mappings?.expiry;
+        // 3. Process items
+        remoteRows.forEach((exp: any) => {
+          const itemData = {
+            id: exp.id || exp.ID,
+            barcode: exp[expiryMapping?.barcode || ''] || exp.SKU || exp.COD_BARRAS || exp.barcode || '',
+            mm: exp[expiryMapping?.mm || ''] || exp.MM || exp.mm,
+            yyyy: exp[expiryMapping?.yyyy || ''] || exp.YYYY || exp.yyyy,
+            fechaCC: exp.fechaCC || exp[expiryMapping?.fechaCC || ''],
+            productName: exp[expiryMapping?.name || ''] || exp.DESCRIPTOR || exp.DESCRIPCION_PROD || exp.DESCRIPCION || exp.PRODUCTO || exp.ITEM || exp.productName || '',
+            quantity: exp[expiryMapping?.quantity || ''] || exp.CANTIDAD || exp.quantity || 0,
+            batch: exp[expiryMapping?.batch || ''] || exp.LOTE || exp.batch || 'N/A',
+            location: exp[expiryMapping?.location || ''] || exp.UBICACION || exp.location || 'N/A'
+          };
 
-          const alertItems: any[] = [];
-
-          // 2. Process items to find critical/expired/withdrawal ones
-          snapshot.docs.forEach(doc => {
-            const exp: any = doc.data();
-            
-            // Simplified item for status check
-            const itemData = {
-              id: doc.id,
-              barcode: exp[expiryMapping?.barcode || ''] || exp.SKU || exp.COD_BARRAS || exp.barcode || '',
-              mm: exp[expiryMapping?.mm || ''] || exp.MM || exp.mm,
-              yyyy: exp[expiryMapping?.yyyy || ''] || exp.YYYY || exp.yyyy,
-              fechaCC: exp.fechaCC || exp[expiryMapping?.fechaCC || ''],
-              productName: exp[expiryMapping?.name || ''] || exp.DESCRIPTOR || exp.DESCRIPCION_PROD || exp.DESCRIPCION || exp.PRODUCTO || exp.ITEM || exp.productName || '',
-              quantity: exp[expiryMapping?.quantity || ''] || exp.CANTIDAD || exp.quantity || 0,
-              batch: exp[expiryMapping?.batch || ''] || exp.LOTE || exp.batch || 'N/A',
-              location: exp[expiryMapping?.location || ''] || exp.UBICACION || exp.location || 'N/A'
-            };
-
-            const processed = processExpiryItem(itemData, productMap, providerMap, now);
-
-            if (processed.status === 'critical' || processed.status === 'expired' || processed.status === 'withdrawal') {
-              alertItems.push(processed);
-            }
-          });
-
-          // 3. Update global state
-          setAlerts(alertItems.length, alertItems);
-
-          // 4. Notify if count increased (and it's not the first load)
-          if (lastCount.current !== null && alertItems.length > lastCount.current) {
-            addToast(`Alerta de Vencimientos: Se detectaron ${alertItems.length} lotes que requieren atención.`, 'warning');
+          const processed = processExpiryItem(itemData, productMap, providerMap, now);
+          if (processed.status === 'critical' || processed.status === 'expired' || processed.status === 'withdrawal') {
+            alertItems.push(processed);
           }
-          
-          lastCount.current = alertItems.length;
-        } catch (error) {
-          console.error("[ExpiryWatcher] Error processing alerts:", error);
+        });
+
+        // 4. Update global state
+        setAlerts(alertItems.length, alertItems);
+
+        // 5. Notify if count increased
+        if (lastCount.current !== null && alertItems.length > lastCount.current) {
+          addToast(`Alerta de Vencimientos: Se detectaron ${alertItems.length} lotes que requieren atención.`, 'warning');
         }
-      }, (error) => {
-        console.error("[ExpiryWatcher] Firestore connection error:", error);
-      });
-    });
+        
+        lastCount.current = alertItems.length;
+      } catch (err) {
+        console.error("[ExpiryWatcher] Analysis error:", err);
+      }
+    };
+
+    // Subscribirse a cambios en tiempo real para re-ejecutar el análisis
+    channel = supabase
+      .channel('expiry_watcher_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: tableName }, () => {
+        runAnalysis();
+      })
+      .subscribe();
+
+    // Ejecución inicial
+    runAnalysis();
 
     return () => {
-      unsubscribeAuth();
-      if (unsubscribeSnapshot) unsubscribeSnapshot();
+      if (channel) supabase.removeChannel(channel);
     };
   }, [tableName, settings, setAlerts, addToast]);
 };

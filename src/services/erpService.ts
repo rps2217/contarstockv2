@@ -1,5 +1,5 @@
 
-import { firebaseSyncService } from './firebaseSyncService';
+import { supabaseSyncService } from './supabaseSyncService';
 import { CloudOrderRowSchema } from './schemas';
 import { getSettings } from './settings';
 
@@ -22,7 +22,7 @@ export const erpService = {
     try {
       const config = getSettings().cloudConfig;
       const tableName = config?.ordersTableName || 'PEDIDOS';
-      const res = await firebaseSyncService.pullBatch(tableName);
+      const res = await supabaseSyncService.pullBatch(tableName);
       
       if (!res.success || !res.rows) {
         throw new Error(res.error || 'Error al conectar con la nube');
@@ -73,8 +73,9 @@ export const erpService = {
         items: rows
       };
     } catch (error: any) {
-      console.error("ERP Download Error:", error);
-      throw error;
+      const msg = error.message || (typeof error === 'object' ? JSON.stringify(error) : String(error));
+      console.error("ERP Download Error:", msg);
+      throw new Error(msg);
     }
   },
 
@@ -86,7 +87,7 @@ export const erpService = {
     try {
       const config = getSettings().cloudConfig;
       const tableName = config?.ordersTableName || 'PEDIDOS';
-      const res = await firebaseSyncService.pullBatch(tableName);
+      const res = await supabaseSyncService.pullBatch(tableName);
       
       if (!res.success || !res.rows) {
         throw new Error(res.error || 'Error al conectar con la nube');
@@ -140,8 +141,9 @@ export const erpService = {
 
       return manifests;
     } catch (error: any) {
-      console.error("ERP Download All Error:", error);
-      throw error;
+      const msg = error.message || (typeof error === 'object' ? JSON.stringify(error) : String(error));
+      console.error("ERP Download All Error:", msg);
+      throw new Error(msg);
     }
   }
 };

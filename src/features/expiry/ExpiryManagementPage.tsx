@@ -383,6 +383,7 @@ const ExpiryManagementPage: React.FC = () => {
         onClose={() => actions.setIsSettingsDrawerOpen(false)}
         preferences={state.preferences}
         onUpdatePreferences={dbActions.handleUpdatePreferences}
+        onFullRefresh={dbActions.handleFullRefresh}
         onClearLocalData={dbActions.clearLocalData}
         theme={settings.theme}
       />

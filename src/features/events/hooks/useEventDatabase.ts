@@ -1,13 +1,10 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { db as firebaseDb } from '../../../lib/firebase';
-import { collection, onSnapshot, query, limit, orderBy } from 'firebase/firestore';
-import { firebaseSyncService, handleFirestoreError, OperationType } from '../../../services/firebaseSyncService';
+import { supabaseSyncService } from '../../../services/supabaseSyncService';
 import { useAppStore } from '@/store/mainAppStore';
 import { useToastStore } from '../../../store/useToastStore';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { productRepository } from '../../../repositories/DexieProductRepository';
 import { eventRepository } from '../../../repositories/EventRepository';
-import { eventSyncService } from '../../../services/eventSyncService';
 import { normalizeSku } from '../../../services/utils';
 import { Product } from '../../../types';
 
@@ -51,10 +48,31 @@ export const useEventDatabase = () => {
     return map;
   }, [allProducts]);
 
+  // Start real-time sync with Supabase
   useEffect(() => {
-    const unsubscribe = eventSyncService.startSync(tableName);
+    // 1. Initial Pull - Fetch existing data
+    const fetchInitialData = async () => {
+      try {
+        setIsSyncing(true);
+        const { rows, error } = await supabaseSyncService.pullBatch(tableName);
+        if (error) throw new Error(error);
+        if (rows && rows.length > 0) {
+          await eventRepository.bulkSave(rows.map((i: any) => ({ ...i, syncStatus: 'synced' })));
+          logger.info('SYNC_INITIAL_EVENTS', `Cargados ${rows.length} eventos desde Supabase`);
+        }
+      } catch (err) {
+        logger.error('SYNC_INITIAL_EVENTS_FAIL', err);
+      } finally {
+        setIsSyncing(false);
+      }
+    };
+
+    fetchInitialData();
+
+    // 2. Real-time Subscription
+    const subscription = supabaseSyncService.startSync(tableName, eventRepository);
     return () => {
-      if (unsubscribe) unsubscribe();
+      subscription.unsubscribe();
     };
   }, [tableName]);
 
@@ -148,7 +166,7 @@ export const useEventDatabase = () => {
       await eventRepository.delete(item.id);
       
       // Then delete remotely
-      await firebaseSyncService.deleteRemote(tableName, item.id);
+      await supabaseSyncService.deleteRemote(tableName, item.id);
       addToast('Ítem retirado correctamente', 'success');
     } catch (error: any) {
       addToast(`Error al retirar el ítem: ${error.message}`, 'error');
@@ -162,7 +180,7 @@ export const useEventDatabase = () => {
         await eventRepository.delete(id);
         
         // Then delete remotely
-        await firebaseSyncService.deleteRemote(tableName, id);
+        await supabaseSyncService.deleteRemote(tableName, id);
       }
       setSelectedIds(new Set());
       addToast(`${ids.size} ítems retirados correctamente`, 'success');
@@ -206,11 +224,11 @@ export const useEventDatabase = () => {
       const frcValue = String(data.frc || '').trim();
       const claveUnica = `${sanitizedBarcode}${frcValue}`;
 
-      const now = new Date();
+      const now = Date.now();
       
       const rowData = {
-        id: claveUnica, // Use claveUnica as the ID
-        timestamp: now.toISOString(),
+        id: claveUnica, 
+        timestamp: now,
         ...data,
         barcode: sanitizedBarcode,
         claveUnica: claveUnica,
@@ -222,7 +240,7 @@ export const useEventDatabase = () => {
       // Update local repository immediately for better UX
       await eventRepository.save({ ...rowData, syncStatus: 'synced' });
       
-      await firebaseSyncService.pushChange(tableName, claveUnica, finalData);
+      await supabaseSyncService.pushChange(tableName, claveUnica, finalData);
       addToast('Guardado en la nube correctamente.', 'success');
       return claveUnica;
     } catch (error: any) {
@@ -313,7 +331,7 @@ export const useEventDatabase = () => {
               // Actualización local inmediata
               await eventRepository.save({ ...item, ...updates, syncStatus: 'synced' });
               // Actualización remota
-              await firebaseSyncService.pushChange(tableName, id, finalData);
+              await supabaseSyncService.pushChange(tableName, id, finalData);
             }
           }
           addToast(`${ids.length} eventos actualizados`, 'success');
@@ -345,9 +363,9 @@ export const useEventDatabase = () => {
             timestamp: Date.now() 
           });
 
-          // Si el ID cambió, debemos borrar el antiguo y crear el nuevo en Firestore
+          // Si el ID cambió, debemos borrar el antiguo y crear el nuevo en Supabase
           if (newId !== id) {
-            await firebaseSyncService.deleteRemote(tableName, id);
+            await supabaseSyncService.deleteRemote(tableName, id);
             await eventRepository.delete(id);
           }
 
@@ -355,7 +373,7 @@ export const useEventDatabase = () => {
           await eventRepository.save({ ...finalData, id: newId, syncStatus: 'synced' });
 
           // Actualización remota
-          await firebaseSyncService.pushChange(tableName, newId, finalData);
+          await supabaseSyncService.pushChange(tableName, newId, finalData);
           
           addToast('Evento actualizado correctamente', 'success');
         } catch (error: any) {
@@ -372,7 +390,7 @@ export const useEventDatabase = () => {
           await eventRepository.delete(id);
           
           // Then delete remotely
-          await firebaseSyncService.deleteRemote(tableName, id);
+          await supabaseSyncService.deleteRemote(tableName, id);
           addToast('Evento eliminado', 'success');
         } catch (error: any) {
           addToast(`Error al eliminar evento: ${error.message}`, 'error');
@@ -384,7 +402,7 @@ export const useEventDatabase = () => {
           if (item) {
             await eventRepository.save({ ...item, isAdjusted, syncStatus: 'synced' });
           }
-          await firebaseSyncService.pushChange(tableName, id, { isAdjusted });
+          await supabaseSyncService.pushChange(tableName, id, { isAdjusted });
           addToast('Estado actualizado', 'success');
         } catch (error: any) {
           addToast(`Error al actualizar estado: ${error.message}`, 'error');
@@ -411,7 +429,7 @@ export const useEventDatabase = () => {
           if (item) {
             await eventRepository.save({ ...item, destino, syncStatus: 'synced' });
           }
-          await firebaseSyncService.pushChange(tableName, id, { destino });
+          await supabaseSyncService.pushChange(tableName, id, { destino });
           addToast('Destino actualizado', 'success');
         } catch (error: any) {
           addToast(`Error al actualizar destino: ${error.message}`, 'error');
@@ -419,6 +437,10 @@ export const useEventDatabase = () => {
       },
       togglePreference: (prefs: Partial<EventPreferences>) => {
         setPreferences(prev => ({ ...prev, ...prefs }));
+      },
+      handleFullRefresh: () => {
+        localStorage.removeItem(`last_sync_${tableName}`);
+        window.location.reload();
       }
     }
   };

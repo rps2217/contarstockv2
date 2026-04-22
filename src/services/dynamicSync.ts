@@ -1,5 +1,5 @@
 import { db, DynamicRecord } from '../db';
-import { firebaseSyncService } from './firebaseSyncService';
+import { supabaseSyncService } from './supabaseSyncService';
 import { getSettings } from './settings';
 import { logger } from './logger';
 
@@ -46,7 +46,7 @@ export const dynamicSyncService = {
       for (const record of toDelete) {
         try {
           const remoteId = record.data['id'] || record.data['ID'] || record.id;
-          await firebaseSyncService.deleteRemote(record.tableName, String(remoteId));
+          await supabaseSyncService.deleteRemote(record.tableName, String(remoteId));
           await db.dynamic_data.delete(record.id);
           totalSuccess++;
         } catch (e: any) {
@@ -102,20 +102,19 @@ export const dynamicSyncService = {
             const row: Record<string, any> = { ...r.data };
             
             // Asegurar que el ID y el Timestamp se incluyan siempre
-            row['ID'] = r.id;
-            row['id'] = r.id; // Firestore standard
+            row['id'] = r.id; // Supabase standard
             row['TIMESTAMP'] = new Date(r.timestamp).toISOString();
             
             // Si hay mapeo, asegurar que las columnas mapeadas también tengan los valores
             if (config?.mappings) {
-                if (idCol !== 'ID') row[idCol] = r.id;
+                if (idCol !== 'ID' && idCol !== 'id') row[idCol] = r.id;
                 if (tsCol !== 'TIMESTAMP') row[tsCol] = row['TIMESTAMP'];
             }
             
             return row;
           });
 
-          const result = await firebaseSyncService.pushBatch(tableName, rows);
+          const result = await supabaseSyncService.pushBatch(tableName, rows);
 
           if (result.success) {
             const ids = batchRecords.map(r => r.id);
@@ -170,7 +169,7 @@ export const dynamicSyncService = {
   async pullSync(tableName: string, onProgress?: (msg: string) => void): Promise<{ added: number; updated: number }> {
     if (onProgress) onProgress(`Descargando datos de ${tableName}...`);
     
-    const result = await firebaseSyncService.pullBatch(tableName);
+    const result = await supabaseSyncService.pullBatch(tableName);
     if (!result.success || !result.rows) {
       throw new Error(result.error || 'No se pudieron recuperar los datos de la nube');
     }

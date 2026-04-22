@@ -72,8 +72,9 @@ export const useAutoSync = () => {
       
       retryCount.current = 0; // Reset on success
     } catch (error: any) {
+      const errorMsg = error.message || (typeof error === 'object' ? JSON.stringify(error) : String(error));
       console.error('Auto-sync failed:', error);
-      setSyncError(error.message || 'Error desconocido');
+      setSyncError(errorMsg);
       
       if (retryCount.current < MAX_RETRIES) {
         retryCount.current++;

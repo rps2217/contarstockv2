@@ -5,7 +5,7 @@ import { productRepository } from '../repositories/DexieProductRepository';
 import Papa from 'papaparse';
 import { sanitizeBarcode } from './utils';
 import { validateProduct } from './validator';
-import { firebaseSyncService } from './firebaseSyncService';
+import { supabaseSyncService } from './supabaseSyncService';
 
 export const getProductByBarcode = async (barcode: string): Promise<Product | undefined> => {
   return await productRepository.getById(sanitizeBarcode(barcode));
@@ -22,8 +22,8 @@ export const resolveUnknownProducts = async (skus: string[], config: any) => {
 
   for (const sku of skus) {
     try {
-      console.debug(`[Detective] Buscando identidad de SKU: ${sku} en Firestore: ${productsTable}`);
-      const response = await firebaseSyncService.query(productsTable, barcodeCol, sku);
+      console.debug(`[Detective] Buscando identidad de SKU: ${sku} en Supabase: ${productsTable}`);
+      const response = await supabaseSyncService.query(productsTable, barcodeCol, sku);
       
       if (response.success && response.rows && response.rows.length > 0) {
         const p = response.rows[0] as any;

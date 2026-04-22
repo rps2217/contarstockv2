@@ -5,24 +5,22 @@ import {
   clearIndexedDbPersistence, 
   initializeFirestore,
   persistentLocalCache,
-  persistentMultipleTabManager
+  persistentMultipleTabManager,
+  setLogLevel
 } from 'firebase/firestore';
 import { getAuth, GoogleAuthProvider, signInAnonymously } from 'firebase/auth';
 import { getStorage } from 'firebase/storage';
 import firebaseConfig from '../../firebase-applet-config.json';
 
+// Silenciar logs internos
+setLogLevel('silent');
+
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firestore with modern persistence configuration
-// CLAVE PARA AHORRO DE CUOTA: 
-// Esto permite que Firestore solo pida los "deltas" (cambios) al servidor,
-// leyendo el resto de una base de datos local en el navegador.
-export const db = initializeFirestore(app, {
-  localCache: persistentLocalCache({
-    tabManager: persistentMultipleTabManager()
-  })
-});
+// DESCONECTADO: Firestore ha sido migrado a Supabase
+// export const db = initializeFirestore(app, { ... });
+export const db: any = null; 
 
 export const auth = getAuth(app);
 export const storage = getStorage(app);
