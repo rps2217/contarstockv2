@@ -10,9 +10,13 @@ export const supabaseSyncService = {
       .channel(tableName)
       .on('postgres_changes', { event: '*', schema: 'public', table: tableName }, async (payload) => {
         if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-          await localTable.put(payload.new);
+          if (localTable.put) {
+            await localTable.put(payload.new, tableName);
+          } else if (localTable.save) {
+            await localTable.save(payload.new, tableName);
+          }
         } else if (payload.eventType === 'DELETE') {
-          await localTable.delete(payload.old.id);
+          await localTable.delete(payload.old.id, tableName);
         }
         logger.info('SYNC_REALTIME', `Supabase sync: ${tableName} updated`);
       })
@@ -39,9 +43,13 @@ export const supabaseSyncService = {
         },
         async (payload) => {
           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-            await localTable.put(payload.new);
+            if (localTable.put) {
+                await localTable.put(payload.new, tableName);
+            } else {
+                await localTable.save(payload.new);
+            }
           } else if (payload.eventType === 'DELETE') {
-            await localTable.delete(payload.old.id);
+            await localTable.delete(payload.old.id, tableName);
           }
           logger.info('SYNC_REALTIME_FILTERED', `Supabase filtered sync: ${tableName} updated`);
         }

@@ -1,5 +1,5 @@
 import { db, DynamicRecord } from '../db';
-import { firebaseSyncService } from './firebaseSyncService';
+import { supabaseSyncService } from './supabaseSyncService';
 import { logger } from './logger';
 
 export const dynamicDataService = {
@@ -51,7 +51,7 @@ export const dynamicDataService = {
       // Intentar identificar el ID remoto
       const remoteId = record.data['id'] || record.data['ID'] || record.id;
       
-      await firebaseSyncService.deleteRemote(record.tableName, String(remoteId));
+      await supabaseSyncService.deleteRemote(record.tableName, String(remoteId));
       
       // Si el borrado en la nube fue exitoso, borramos el registro local definitivamente
       await db.dynamic_data.delete(id);
@@ -92,7 +92,7 @@ export const dynamicDataService = {
       if (!rowData['id']) rowData['id'] = record.id;
       if (!rowData[tsCol]) rowData[tsCol] = new Date(record.timestamp).toISOString();
 
-      const response = await firebaseSyncService.pushBatch(record.tableName, [rowData]);
+      const response = await supabaseSyncService.pushBatch(record.tableName, [rowData]);
       if (response.success) {
         await db.dynamic_data.update(id, { syncStatus: 'synced' });
       } else {
@@ -162,7 +162,7 @@ export const dynamicDataService = {
           return rowData;
         });
 
-        const response = await firebaseSyncService.pushBatch(tableName, rowsToUpsert);
+        const response = await supabaseSyncService.pushBatch(tableName, rowsToUpsert);
         
         if (response.success) {
           const ids = records.map(r => r.id);

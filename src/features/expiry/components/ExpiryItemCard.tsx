@@ -266,14 +266,14 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
         </div>
 
         {/* COLUMN 5: DATES */}
-        <div className="flex gap-8">
-          <div className="flex flex-col items-center gap-1">
+        <div className="flex gap-4 md:gap-8 min-w-0">
+          <div className="flex flex-col items-center gap-1 shrink-0">
             <span className="text-[10px] font-black text-indigo-500/70 uppercase tracking-widest italic">RETIRO</span>
-            <span className="text-2xl font-black text-indigo-400 font-mono italic tabular-nums leading-none">
+            <span className="text-xl md:text-2xl font-black text-indigo-400 font-mono italic tabular-nums leading-none">
               {item.withdrawalDate ? format(item.withdrawalDate, 'dd/MM/yy') : 'N/A'}
             </span>
           </div>
-          <div className="flex flex-col items-center gap-1 border-l-2 border-white/10 pl-8">
+          <div className="hidden md:flex flex-col items-center gap-1 border-l-2 border-white/10 pl-8 shrink-0">
             <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">VENC.</span>
             <span className={`text-2xl font-black font-mono italic tabular-nums leading-none ${statusConfig.colorClass}`}>
               {item.expiryDateObj ? format(item.expiryDateObj, 'dd/MM/yy') : 'N/A'}

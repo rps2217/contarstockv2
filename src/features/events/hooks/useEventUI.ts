@@ -230,7 +230,7 @@ export const useEventUI = () => {
   }, []);
 
   const pendingGrouped = useMemo(() => getGroupedItems(state.pendingEvents), [state.pendingEvents, getGroupedItems]);
-  const destinedGrouped = useMemo(() => getGroupedItems(state.destinedEvents || []), [(state as any).destinedEvents, getGroupedItems]);
+  const destinedGrouped = useMemo(() => getGroupedItems(state.destinedEvents), [state.destinedEvents, getGroupedItems]);
   const adjustedGrouped = useMemo(() => getGroupedItems(state.adjustedEvents), [state.adjustedEvents, getGroupedItems]);
 
   return {

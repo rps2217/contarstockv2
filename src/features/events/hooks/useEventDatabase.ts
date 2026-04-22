@@ -137,6 +137,8 @@ export const useEventDatabase = () => {
       const destinoValue = getField(eventMapping?.destino, ['DESTINO', 'destino', 'Destino', 'BODEGA', 'bodega']) || '';
       const traspasoValue = getField(eventMapping?.traspaso, ['TRASPASO', 'traspaso', 'Traspaso', 'N_TRASPASO', 'n_traspaso']) || '';
       const observacionesValue = getField(eventMapping?.observaciones, ['OBSERVACIONES', 'observaciones', 'Observaciones', 'OBS', 'obs', 'NOTAS', 'notas']) || '';
+      
+      const hasTraspaso = !!(traspasoValue && String(traspasoValue).trim() !== '');
 
       result.push({
         id: record.id,
@@ -154,7 +156,7 @@ export const useEventDatabase = () => {
         timestamp: record.timestamp || Date.now(),
         claveUnica: exp.claveUnica || record.id,
         category: product?.category || 'GENERAL',
-        isAdjusted: !!(traspasoValue && String(traspasoValue).trim() !== ''),
+        isAdjusted: hasTraspaso,
         syncStatus: record.syncStatus || 'synced',
       });
     }
@@ -225,6 +227,13 @@ export const useEventDatabase = () => {
       const sanitizedBarcode = normalizeSku(data.barcode);
       const frcValue = String(data.frc || '').trim();
       const claveUnica = `${sanitizedBarcode}${frcValue}`;
+
+      // Verificar duplicados antes de agregar
+      const isDuplicate = baseProcessedData.some(e => e.claveUnica === claveUnica);
+      if (isDuplicate) {
+        addToast(`Ya existe un registro para ${sanitizedBarcode} con el FRC ${frcValue}`, 'error');
+        return null;
+      }
 
       const now = Date.now();
       

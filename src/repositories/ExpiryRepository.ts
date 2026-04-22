@@ -21,10 +21,18 @@ export interface ExpiryRecord {
 export class ExpiryRepository {
   private tableName = 'VENCIMIENTOS';
 
-  async getAll(): Promise<ExpiryRecord[]> {
+  /**
+   * Asegura que el repositorio trabaje con el nombre de tabla correcto según configuración
+   */
+  setTableName(name: string) {
+    if (name) this.tableName = name;
+  }
+
+  async getAll(tableName: string): Promise<ExpiryRecord[]> {
+    const targetTable = tableName || this.tableName;
     const records = await db.dynamic_data
       .where('tableName')
-      .equals(this.tableName)
+      .equals(targetTable)
       .toArray();
     
     return records
@@ -32,11 +40,12 @@ export class ExpiryRepository {
       .map(r => this.mapToExpiry(r));
   }
 
-  liveAll() {
+  liveAll(tableName: string) {
+    const targetTable = tableName || this.tableName;
     return liveQuery(() => 
       db.dynamic_data
         .where('tableName')
-        .equals(this.tableName)
+        .equals(targetTable)
         .reverse()
         .sortBy('timestamp')
         .then(records => records
@@ -46,14 +55,28 @@ export class ExpiryRepository {
     );
   }
 
-  async save(expiry: Partial<ExpiryRecord> & { id: string }) {
-    await dynamicDataService.saveRecord(this.tableName, expiry, expiry.id);
+  async put(data: any, tableName?: string) {
+    // Método requerido por supabaseSyncService.startSync
+    const id = data.id || data.ID || data.claveUnica || data.CLAVE_UNICA;
+    if (!id) return;
+
+    await db.dynamic_data.put({
+      id: String(id),
+      tableName: tableName || this.tableName,
+      data: data,
+      timestamp: data.timestamp || Date.now(),
+      syncStatus: 'synced'
+    });
   }
 
-  async bulkSave(expiries: ExpiryRecord[]) {
+  async save(expiry: Partial<ExpiryRecord> & { id: string }, tableName?: string) {
+    await dynamicDataService.saveRecord(tableName || this.tableName, expiry, expiry.id);
+  }
+
+  async bulkSave(expiries: ExpiryRecord[], tableName?: string) {
     const records: DynamicRecord[] = expiries.map(e => ({
       id: e.id,
-      tableName: this.tableName,
+      tableName: tableName || this.tableName,
       data: e,
       timestamp: e.timestamp || Date.now(),
       syncStatus: e.syncStatus || 'synced'
@@ -61,14 +84,14 @@ export class ExpiryRepository {
     await db.dynamic_data.bulkPut(records);
   }
 
-  async delete(id: string) {
+  async delete(id: string, tableName?: string) {
     await dynamicDataService.deleteRecord(id);
   }
 
   async clear() {
-    const records = await this.getAll();
+    const records = await this.getAll(this.tableName);
     for (const record of records) {
-      await this.delete(record.id);
+      await this.delete(record.id, this.tableName);
     }
   }
 

@@ -13,6 +13,7 @@ import { productRepository } from '../../../repositories/DexieProductRepository'
 import { db } from '../../../db';
 import { expiryRepository } from '../../../repositories/ExpiryRepository';
 // import { expirySyncService } from '../../../services/expirySyncService'; // YA NO SE USA
+import { dynamicSyncService } from '../../../services/dynamicSync';
 import { useTaskStore } from '@/store/useTaskStore';
 import { logger } from '../../../services/logger';
 
@@ -41,8 +42,8 @@ export const useExpiryDatabase = () => {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   
-  // Local data from Dexie
-  const localItems = useLiveQuery(() => expiryRepository.getAll(), []) || [];
+  // Local data from Dexie - reactive to tableName
+  const localItems = useLiveQuery(() => expiryRepository.getAll(tableName), [tableName]) || [];
   const allProducts = useLiveQuery(() => productRepository.getAll(), []) || [];
   const allProviders = useLiveQuery(() => db.providers.toArray(), []) || [];
   
@@ -68,15 +69,18 @@ export const useExpiryDatabase = () => {
 
   // Start real-time sync with Supabase
   useEffect(() => {
-    // 1. Initial Pull - Fetch existing data
+    if (!tableName) return;
+
+    // Sincronizar nombre de tabla en el repositorio
+    expiryRepository.setTableName(tableName);
+
+    // 1. Initial Pull - Fetch existing data using the robust sync service
     const fetchInitialData = async () => {
       try {
         setIsSyncing(true);
-        const { rows, error } = await supabaseSyncService.pullBatch(tableName);
-        if (error) throw new Error(error);
-        if (rows && rows.length > 0) {
-          await expiryRepository.bulkSave(rows.map((i: any) => ({ ...i, syncStatus: 'synced' })));
-          logger.info('SYNC_INITIAL', `Cargados ${rows.length} registros desde Supabase`);
+        const { added, updated } = await dynamicSyncService.pullSync(tableName);
+        if (added > 0 || updated > 0) {
+          logger.info('SYNC_INITIAL', `Sincronizados ${added + updated} registros de ${tableName}`);
         }
       } catch (err) {
         logger.error('SYNC_INITIAL_FAIL', err);
@@ -226,7 +230,7 @@ export const useExpiryDatabase = () => {
   const handleSyncExpirations = useCallback(async () => {
     try {
       setIsSyncing(true);
-      const items = await expiryRepository.getAll();
+      const items = await expiryRepository.getAll(tableName);
       if (items.length === 0) {
         addToast('No hay registros locales para sincronizar.', 'info');
         return;
@@ -243,7 +247,7 @@ export const useExpiryDatabase = () => {
       
       if (result.success) {
         // Actualizar estado local a synced
-        await expiryRepository.bulkSave(items.map(i => ({ ...i, syncStatus: 'synced' })));
+        await expiryRepository.bulkSave(items.map(i => ({ ...i, syncStatus: 'synced' })), tableName);
         addToast(`Sincronización completa: ${items.length} registros subidos.`, 'success');
         SoundFX.play('success');
       } else {
@@ -334,18 +338,14 @@ export const useExpiryDatabase = () => {
       const now = new Date();
       
       // BUSCAR SI YA EXISTE PARA ACTUALIZAR (Por claveUnica o por ID)
-      // Es vital buscar por claveUnica porque algunos registros antiguos podrían tener UUIDs como ID
       const existing = localItems.find(item => item.claveUnica === claveUnica || item.id === claveUnica);
       
-      // Si existe un registro con un ID distinto a la claveUnica, lo eliminamos para evitar duplicidad de filas
-      if (existing && existing.id !== claveUnica) {
-        logger.warn('EXPIRY_DB', `Eliminando duplicado con ID inconsistente: ${existing.id}`);
-        await expiryRepository.delete(existing.id);
-        supabaseSyncService.deleteRemote(tableName, existing.id).catch(() => {});
+      // BLOQUEAR DUPLICADOS SEGÚN SOLICITUD DEL USUARIO
+      if (existing) {
+        addToast(`Ya existe un registro para ${data.productName} con vencimiento ${mmPadded}/${yearStr}. No se permiten duplicados.`, 'error');
+        SoundFX.play('error');
+        return null;
       }
-
-      // Sumar cantidades si ya existe, o usar la nueva
-      const finalQuantity = (existing?.quantity || 0) + data.quantity;
 
       const rowData: any = {
         id: claveUnica, 
@@ -354,31 +354,26 @@ export const useExpiryDatabase = () => {
         timestamp: now.getTime(), 
         barcode: sanitizedBarcode,
         productName: data.productName,
-        providerName: data.providerName || (existing?.providerName) || 'N/A',
+        providerName: data.providerName || 'N/A',
         mm: data.mm,
         yyyy: data.yyyy,
         event: 'VENCIMIENTOS',
-        quantity: finalQuantity,
-        location: data.location || (existing?.location) || '',
+        quantity: data.quantity,
+        location: data.location || '',
         origin: 'REGISTRO DIRECTO',
         syncStatus: 'synced' as const
       };
 
       // GUARDADO LOCAL INMEDIATO (Cero Latencia)
-      await expiryRepository.save(rowData);
+      await expiryRepository.save(rowData, tableName);
       
       // SINCRONIZACIÓN ASÍNCRONA CON LA NUBE
       supabaseSyncService.pushChange(tableName, claveUnica, rowData).catch(err => {
         console.error("[ExpiryCloudSync] Error:", err);
-        expiryRepository.save({ ...rowData, syncStatus: 'pending' });
+        expiryRepository.save({ ...rowData, syncStatus: 'pending' }, tableName);
       });
       
-      if (existing) {
-        addToast(`Actualizado: ${data.productName} (Total: ${finalQuantity})`, 'success');
-      } else {
-        addToast('Guardado correctamente.', 'success');
-      }
-      
+      addToast('Guardado correctamente.', 'success');
       SoundFX.play('success');
       return claveUnica;
 
@@ -454,11 +449,11 @@ export const useExpiryDatabase = () => {
       };
 
       // 1. Local update
-      await expiryRepository.save(updatedData);
+      await expiryRepository.save(updatedData, tableName);
 
       // 2. Cloud update (silent)
       supabaseSyncService.pushChange(tableName, newId, updatedData).catch(err => {
-        expiryRepository.save({ ...updatedData, syncStatus: 'pending' });
+        expiryRepository.save({ ...updatedData, syncStatus: 'pending' }, tableName);
       });
 
       addToast('Cambios guardados', 'success');
