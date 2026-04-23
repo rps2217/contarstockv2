@@ -338,11 +338,23 @@ export const migrateCatalogsFromFirebase = async (onProgress?: (msg: string) => 
       firebaseProviders.forEach((p: any) => {
         const provIdentity = normalizeIdentity(String(p.rut || p.RUT || p.ID || p.id || ''));
         if (provIdentity && String(p.name || p.PROVEEDOR || p.NOMBRE || '')) {
+            const withdrawalDays = Number(p.withdrawalDays || p.DIAS_RETIRO || p.DIAS_CANJE || p.DAYS || 0);
+            
+            // Lógica Robusta de Canje
+            let hasExchange = false;
+            const rawExchange = p.hasExchange !== undefined ? p.hasExchange : (p.CANJE !== undefined ? p.CANJE : p.TIENE_CANJE);
+            
+            if (rawExchange === true || rawExchange === 'true' || rawExchange === 1 || rawExchange === '1' || rawExchange === 'SI') {
+              hasExchange = true;
+            } else if (withdrawalDays > 0) {
+              hasExchange = true; // Heurística: Si hay días, hay política.
+            }
+
             uniqueProvMap.set(provIdentity, {
               rut: provIdentity,
               name: String(p.name || p.PROVEEDOR || p.NOMBRE || '').trim().toUpperCase(),
-              withdrawalDays: Number(p.withdrawalDays || p.DIAS_RETIRO || 0),
-              hasExchange: Boolean(p.hasExchange !== undefined ? p.hasExchange : (p.CANJE || (p.withdrawalDays && p.withdrawalDays > 0))),
+              withdrawalDays: withdrawalDays,
+              hasExchange: hasExchange,
               timestamp: new Date().toISOString()
             });
         }
@@ -396,8 +408,16 @@ export const repairProvidersFromFirebase = async (onProgress?: (msg: string) => 
     // 2. Mapear y Sanear
     const updates = firebaseProviders.map((p: any) => {
       const rut = normalizeIdentity(String(p.rut || p.RUT || p.ID || p.id || ''));
-      const withdrawalDays = Number(p.withdrawalDays || p.DIAS_RETIRO || 0);
-      const hasExchange = Boolean(p.hasExchange !== undefined ? p.hasExchange : (p.CANJE || withdrawalDays > 0));
+      const withdrawalDays = Number(p.withdrawalDays || p.DIAS_RETIRO || p.DIAS_CANJE || p.DAYS || 0);
+      
+      let hasExchange = false;
+      const rawExchange = p.hasExchange !== undefined ? p.hasExchange : (p.CANJE !== undefined ? p.CANJE : p.TIENE_CANJE);
+      
+      if (rawExchange === true || rawExchange === 'true' || rawExchange === 1 || rawExchange === '1' || rawExchange === 'SI') {
+        hasExchange = true;
+      } else if (withdrawalDays > 0) {
+        hasExchange = true;
+      }
       
       return {
         rut,
