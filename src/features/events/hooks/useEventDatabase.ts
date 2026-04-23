@@ -198,25 +198,26 @@ export const useEventDatabase = () => {
 
   // Helper to map internal keys back to standard lowercase columns for Supabase
   const unmapData = useCallback((data: any) => {
+    const idValue = data.id || data.claveUnica;
+    
     // Definimos exactamente qué columnas vamos a enviar a la nube.
-    // Empezamos por las que SABEMOS que existen según los logs del usuario.
+    // Incluimos tanto minúsculas como las mayúsculas críticas (como ID) para evitar fallos de restricción.
     const unmapped: any = {
-      id: data.id || data.claveUnica,
+      id: idValue,
+      ID: idValue, // Aseguramos que la columna ID (mayúsculas) no sea nula
       barcode: data.barcode,
       event: data.event,
       quantity: Number(data.quantity) || 0,
       frc: data.frc,
-      claveUnica: data.claveUnica || data.id,
+      claveUnica: data.claveUnica || idValue,
       timestamp: data.timestamp ? new Date(data.timestamp).toISOString() : new Date().toISOString()
     };
 
-    // Estas columnas "parecen" estar faltando en el esquema del usuario según el error 400.
-    // Las enviamos solo si existen en el objeto original, pero Supabase fallará si no están en la tabla.
     if (data.destino !== undefined) unmapped.destino = data.destino;
     if (data.traspaso !== undefined) unmapped.traspaso = data.traspaso;
     if (data.observaciones !== undefined) unmapped.observaciones = data.observaciones;
     
-    // Campos informativos adicionales (opcionales)
+    // Campos informativos adicionales
     if (data.productName) unmapped.productName = data.productName;
     if (data.providerName) unmapped.providerName = data.providerName;
     if (data.nguia) unmapped.nguia = data.nguia;
