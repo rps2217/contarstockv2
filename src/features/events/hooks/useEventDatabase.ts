@@ -196,46 +196,26 @@ export const useEventDatabase = () => {
     }
   }, [tableName]);
 
-  // Helper to map internal keys back to configured mapping keys before saving to Firestore
+  // Helper to map internal keys back to standard lowercase columns for Supabase
   const unmapData = useCallback((data: any) => {
-    // Solo permitimos estas columnas para evitar errores de "columna no existe" en Supabase
-    const allowedKeys = [
-      'id', 'ID', 'Id', 'barcode', 'event', 'quantity', 'frc', 'destino', 'traspaso', 
-      'observaciones', 'claveUnica', 'timestamp', 'nguia', 'productName', 
-      'providerName', 'SKU', 'EVENTO', 'CANTIDAD', 'FRC', 'DESTINO', 
-      'DOC-TRAS-INTER', 'OBSERVACIONES', 'CLAVE_UNICA', 'TIMESTAMP'
-    ];
-
-    const unmapped: any = {};
-    
-    // Mapeo básico desde el objeto de entrada
-    allowedKeys.forEach(key => {
-      if (data[key] !== undefined) unmapped[key] = data[key];
-    });
-
-    // Asegurar IDs consistentes
-    const idValue = data.id || data.claveUnica || data.CLAVE_UNICA;
-    unmapped.id = idValue;
-    unmapped.ID = idValue;
-    unmapped.Id = idValue;
-
-    // Mapeo cruzado de seguridad (Nombres Firebird <-> Nombres App)
-    if (data.barcode) unmapped.SKU = data.barcode;
-    if (data.event) unmapped.EVENTO = data.event;
-    if (data.quantity) unmapped.CANTIDAD = data.quantity;
-    if (data.frc) unmapped.FRC = data.frc;
-    if (data.destino) unmapped.DESTINO = data.destino;
-    if (data.traspaso) unmapped['DOC-TRAS-INTER'] = data.traspaso;
-    if (data.observaciones) unmapped.OBSERVACIONES = data.observaciones;
-    if (data.claveUnica) unmapped.CLAVE_UNICA = data.claveUnica;
-
-    // Manejo de timestamp
-    if (data.timestamp) {
-      unmapped.timestamp = data.timestamp;
-      // También enviamos formato ISO para columnas TIMESTAMP de Postgres
-      const isoTimestamp = typeof data.timestamp === 'number' ? new Date(data.timestamp).toISOString() : data.timestamp;
-      unmapped.TIMESTAMP = isoTimestamp;
-    }
+    // Definimos exactamente qué columnas vamos a enviar a la nube.
+    // Usamos minúsculas que es el estándar de nuestra base de datos Supabase.
+    const unmapped: any = {
+      id: data.id || data.claveUnica,
+      barcode: data.barcode,
+      event: data.event,
+      quantity: Number(data.quantity) || 0,
+      frc: data.frc,
+      destino: data.destino,
+      traspaso: data.traspaso,
+      observaciones: data.observaciones,
+      claveUnica: data.claveUnica || data.id,
+      timestamp: data.timestamp ? new Date(data.timestamp).toISOString() : new Date().toISOString(),
+      // Otros campos que podrían existir
+      productName: data.productName,
+      providerName: data.providerName,
+      nguia: data.nguia
+    };
     
     return unmapped;
   }, []);
