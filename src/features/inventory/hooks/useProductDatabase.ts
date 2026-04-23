@@ -4,7 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { Product, Provider } from '../../../types';
 import * as productService from '../../../services/productService';
 import { importProductsFromCloud, importProvidersFromCloud } from '../../../services/syncManager';
-import { syncProductsToCloud } from '../../../services/cloudSync';
+import { syncProductsToCloud, syncProvidersToCloud } from '../../../services/cloudSync';
 import { fuzzySearchProducts } from '../../../services/search';
 import { VectorService } from '../../../services/vectorService';
 import { localBrain } from '../../../services/localBrain';

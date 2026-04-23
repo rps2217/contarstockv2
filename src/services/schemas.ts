@@ -1,7 +1,7 @@
 
 import { z } from 'zod';
 import { SHEET_COLUMNS } from './constants';
-import { normalizeSku } from './utils';
+import { normalizeSku, normalizeIdentity } from './utils';
 import { getSettings } from './settings';
 
 const cleanString = z.union([z.string(), z.number(), z.null(), z.undefined()])
@@ -53,7 +53,7 @@ export const CloudProductSchema = z.record(z.any()).transform((raw) => {
  name: String(name).trim(),
  category: String(category).trim(),
  supplier: String(supplier).trim(),
- supplierRut: normalizeSku(String(supplierRut)),
+ supplierRut: normalizeIdentity(String(supplierRut)),
  price: price ? Number(price) : undefined,
  unitsPerBox: unitsPerBox ? Number(unitsPerBox) : undefined
  };

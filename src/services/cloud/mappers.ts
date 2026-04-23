@@ -77,13 +77,14 @@ export const createProductsPayload = (products: Product[]) => {
 
   return products.map(p => ({
     id: p.barcode,
-    [mapping?.barcode || SHEET_COLUMNS.BARCODE]: p.barcode,
-    [mapping?.name || SHEET_COLUMNS.PRODUCT_NAME]: p.name,
-    [mapping?.category || "MUNDO"]: p.category,
-    [mapping?.supplier || "PROVEEDOR"]: p.supplier,
-    [mapping?.price || "PRECIO"]: p.price || "",
-    [mapping?.unitsPerBox || "UNIDADES_CAJA"]: p.unitsPerBox || "",
-    [SHEET_COLUMNS.IA_SIGNATURE]: p.embedding ? JSON.stringify(p.embedding) : ""
+    [mapping?.barcode || "barcode"]: p.barcode,
+    [mapping?.name || "name"]: p.name,
+    [mapping?.category || "category"]: p.category,
+    [mapping?.supplier || "supplier"]: p.supplier,
+    [mapping?.supplierRut || "supplier_rut"]: p.supplierRut || "",
+    [mapping?.price || "price"]: p.price || 0,
+    [mapping?.unitsPerBox || "units_per_box"]: p.unitsPerBox || 1,
+    [SHEET_COLUMNS.IA_SIGNATURE || "ia_signature"]: p.embedding ? JSON.stringify(p.embedding) : ""
   }));
 };
 

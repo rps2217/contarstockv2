@@ -1,6 +1,7 @@
 import { db } from '../db';
 import { CountingSession, Product, Provider } from '../types';
 import { logger } from './logger';
+import { normalizeIdentity } from './utils';
 import { useSyncStore } from '../store/useSyncStore';
 import { saveProductBatch } from './productService';
 import { CloudProductSchema } from './schemas';
@@ -161,9 +162,9 @@ export const backupProductsToSupabase = async (onProgress?: (msg: string) => voi
         name: p.name,
         category: p.category || 'GENERAL',
         supplier: p.supplier || '',
-        supplierRut: p.supplierRut || '',
+        supplier_rut: p.supplierRut || '',
         price: p.price || 0,
-        unitsPerBox: p.unitsPerBox || 1,
+        units_per_box: p.unitsPerBox || 1,
         timestamp: new Date().toISOString()
       }));
 
@@ -200,8 +201,8 @@ export const backupProvidersToSupabase = async (onProgress?: (msg: string) => vo
     const rows = providers.map(p => ({
       rut: p.rut,
       name: p.name,
-      withdrawalDays: p.withdrawalDays || 0,
-      hasExchange: p.hasExchange || false,
+      withdrawal_days: p.withdrawalDays || 0,
+      has_exchange: p.hasExchange || false,
       timestamp: new Date().toISOString()
     }));
 
@@ -604,11 +605,35 @@ export const importProvidersFromCloud = async (): Promise<number> => {
     const providers: Provider[] = response.rows
       .filter((row: any) => row.id !== 'undefined')
       .map((row: any) => {
-        const rut = String(row.rut || row.RUT || row.ID || row.ID_RUT || '');
+        // Normalización de claves para manejar snake_case y camelCase
+        const rut = normalizeIdentity(String(row.rut || row.RUT || row.ID || row.ID_RUT || ''));
         const name = String(row.name || row.NOMBRE || row.PROVEEDOR || '');
-        const withdrawalDays = Number(row.withdrawalDays || row.DIAS_RETIRO || row.withdrawal_days || 0);
-        const hasExchange = Boolean(row.hasExchange || row.has_exchange || withdrawalDays > 0);
+        
+        // Días de retiro: Soporta múltiples formatos
+        const rawWithdrawal = row.withdrawal_days !== undefined ? row.withdrawal_days :
+                             row.withdrawalDays !== undefined ? row.withdrawalDays :
+                             row.DIAS_RETIRO || 0;
+        const withdrawalDays = Number(rawWithdrawal);
 
+        // Política de Canje: Manejo robusto de Booleanos (incluyendo strings de CSV/Legacy)
+        const rawExchange = row.has_exchange !== undefined ? row.has_exchange :
+                           row.hasExchange !== undefined ? row.hasExchange :
+                           row.CANJE;
+        
+        let hasExchange = false;
+        if (typeof rawExchange === 'boolean') {
+          hasExchange = rawExchange;
+        } else if (typeof rawExchange === 'string') {
+          const s = rawExchange.toUpperCase().trim();
+          hasExchange = (s === 'TRUE' || s === '1' || s === 'SI' || s === 'CANJE');
+        } else if (typeof rawExchange === 'number') {
+          hasExchange = rawExchange === 1;
+        } else {
+          // Heurística de supervivencia: si tiene días de retiro > 0, probablemente tiene canje
+          hasExchange = withdrawalDays > 0;
+        }
+
+        console.debug(`[Sync] Mapeando Proveedor: ${rut} - ${name} | Canje: ${hasExchange} | Días: ${withdrawalDays}`);
         return { rut, name, withdrawalDays, hasExchange };
       })
       .filter((p: Provider) => p.rut && p.name);
