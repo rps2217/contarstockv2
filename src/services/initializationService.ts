@@ -1,74 +1,29 @@
 import { logger } from './logger';
-import { importProductsFromFirestore, importProvidersFromFirestore } from './syncManager';
+import { importProductsFromCloud, importProvidersFromCloud } from './syncManager';
 import { getSettings, saveSettings } from './settings';
 import { db } from '../db';
-import { sanitizeBarcode, normalizeSku } from '../services/utils';
+import { normalizeSku } from '../services/utils';
 import { recoverFromEmergencySnapshot } from './backupService';
 import { HydrationService } from './hydrationService';
 import { supabaseSyncService } from './supabaseSyncService';
 import { auth } from '../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { purgeOldData } from './maintenance';
+import { AppMaintenanceService } from './maintenanceService';
 
 export type InitStep = 'idle' | 'version_check' | 'config' | 'database' | 'ready' | 'offline' | 'purging' | 'migrating';
 
-const CURRENT_APP_VERSION = "5.8.0"; // Incremento de versión para migración Firebase completa
+const CURRENT_APP_VERSION = "5.8.1"; 
 
 export const InitializationService = {
-  /**
-  * Gestión de ciclo de vida del Software. 
-  * Si la versión cambia, limpia bultos antiguos pero preserva el catálogo si es posible.
-  */
-  runMaintenance: async (onStep: (step: InitStep) => void): Promise<boolean> => {
-    const storedVersion = localStorage.getItem('logicount_app_version');
-    
-    if (storedVersion !== CURRENT_APP_VERSION) {
-      onStep('purging');
-      try {
-        // 1. Limpieza de Caché de Aplicación (PWA)
-        if ('caches' in window) {
-          const keys = await caches.keys();
-          await Promise.all(keys.map(key => caches.delete(key)));
-        }
-
-        // 2. Desregistrar SWs para asegurar que el nuevo Kernel tome el control
-        if ('serviceWorker' in navigator) {
-          const regs = await navigator.serviceWorker.getRegistrations();
-          for (const reg of regs) await reg.unregister();
-        }
-
-        // 3. Reset de estado operativo (Preservando Identidad)
-        const auth = localStorage.getItem('logicount_auth');
-        const opId = localStorage.getItem('logicount_operator_id');
-        const sets = localStorage.getItem('logicount_settings');
-        
-        localStorage.clear();
-        
-        if (auth) localStorage.setItem('logicount_auth', auth);
-        if (opId) localStorage.setItem('logicount_operator_id', opId);
-        if (sets) localStorage.setItem('logicount_settings', sets);
-        
-        localStorage.setItem('logicount_app_version', CURRENT_APP_VERSION);
-        
-        // Forzar recarga limpia para aplicar esquema Dexie v23
-        window.location.reload();
-        return true;
-      } catch (e) {
-        localStorage.setItem('logicount_app_version', CURRENT_APP_VERSION);
-        return false;
-      }
-    }
-    return false;
-  },
-
   /**
   * Secuencia de Arranque Maestra
   */
   run: async (onStep: (step: InitStep) => void): Promise<void> => {
     try {
       onStep('version_check');
-      const wasPurged = await InitializationService.runMaintenance(onStep);
-      if (wasPurged) return;
+      const wasUpdated = await AppMaintenanceService.checkVersion(CURRENT_APP_VERSION, onStep);
+      if (wasUpdated) return;
 
       // Semáforo de Base de Datos: Esperar a que IndexedDB esté disponible
       let dbReady = false;
@@ -84,44 +39,25 @@ export const InitializationService = {
       }
 
       if (dbReady) {
-        // RECUPERACIÓN DE EMERGENCIA: Si la DB está vacía pero hay snapshot en localStorage
         const sessionCount = await db.sessions.count();
         if (sessionCount === 0) {
-          const recovered = await recoverFromEmergencySnapshot();
-          if (recovered) {
-            logger.success('SYSTEM', 'Datos recuperados desde snapshot de emergencia.');
-          }
+          await recoverFromEmergencySnapshot();
         }
       }
 
-      // Tareas de saneamiento y carga inicial (Optimizado para memoria y robustez)
+      // Tareas de saneamiento y carga inicial
       const sanitizeTask = async () => {
-        const lastSanitize = localStorage.getItem('logicount_last_sanitize');
-        const storedVersion = localStorage.getItem('logicount_app_version');
-        const now = Date.now();
-        
-        // Solo ejecutar saneamiento profundo una vez cada 24 horas o si la versión cambió
-        if (lastSanitize && (now - parseInt(lastSanitize)) < 86400000 && storedVersion === CURRENT_APP_VERSION) {
-          return;
-        }
-
         try {
-          logger.info('INIT', 'Iniciando saneamiento de base de datos...');
-          // Obtenemos solo las llaves primarias primero para evitar cargar objetos pesados en memoria
           const allBarcodes = await db.products.toCollection().primaryKeys();
-          
           const CHUNK_SIZE = 500;
           for (let i = 0; i < allBarcodes.length; i += CHUNK_SIZE) {
             const chunk = allBarcodes.slice(i, i + CHUNK_SIZE);
             const products = await db.products.where('barcode').anyOf(chunk).toArray();
-            
             const productUpdates = products
               .filter(p => normalizeSku(p.barcode) !== p.barcode)
               .map(p => ({ ...p, barcode: normalizeSku(p.barcode) }));
 
             if (productUpdates.length > 0) {
-              // Si el barcode cambió, el bulkPut creará un nuevo registro. 
-              // Debemos borrar los antiguos para evitar duplicados "sucios"
               const oldBarcodes = products
                 .filter(p => normalizeSku(p.barcode) !== p.barcode)
                 .map(p => p.barcode);
@@ -132,36 +68,18 @@ export const InitializationService = {
               });
             }
           }
-
-          // Lo mismo para proveedores (suelen ser pocos, pero por consistencia)
-          const providers = await db.providers.toArray();
-          const providerUpdates = providers
-            .filter(prov => normalizeSku(prov.rut) !== prov.rut)
-            .map(prov => ({ ...prov, rut: normalizeSku(prov.rut) }));
-
-          if (providerUpdates.length > 0) {
-            await db.providers.bulkPut(providerUpdates);
-          }
         } catch (e) {
-          logger.warn('INIT', 'Error en saneamiento de datos', e);
+          logger.warn('INIT', 'Fallo saneamiento', e);
         }
       };
 
-      // Ejecutar saneamiento en segundo plano si ya hay datos
       const productCount = await db.products.count();
-      const hasLocalData = productCount >= 10;
-
-      if (hasLocalData) {
+      if (productCount >= 10) {
         onStep('ready');
-        // Ejecutar tareas de mantenimiento y refresco en paralelo sin bloquear el inicio
-        Promise.all([
-          sanitizeTask(),
-          InitializationService.backgroundRefresh()
-        ]).catch(e => logger.warn('INIT', 'Error en tareas de fondo', e));
+        InitializationService.backgroundRefresh();
         return;
       }
 
-      // Si no hay datos locales, carga obligatoria secuencial/paralela controlada
       if (!navigator.onLine) {
         onStep('offline');
         setTimeout(() => onStep('ready'), 2000);
@@ -172,21 +90,17 @@ export const InitializationService = {
       await InitializationService.syncConfig();
       
       onStep('database');
-      // Paralelizar importación de productos y proveedores desde Firestore
       await Promise.all([
-        importProductsFromFirestore(),
-        importProvidersFromFirestore(),
+        importProductsFromCloud(),
+        importProvidersFromCloud(),
         sanitizeTask()
       ]);
       
       onStep('ready');
       await HydrationService.persist();
-      localStorage.setItem('logicount_last_sanitize', Date.now().toString());
-
     } catch (error: any) {
-      const msg = error.message || (typeof error === 'object' ? JSON.stringify(error) : String(error));
-      logger.error('INIT_CRITICAL', 'Fallo en secuencia de arranque', msg);
-      onStep('ready'); // Fallback: permitir entrada a la app aunque falle el sync inicial
+      logger.error('INIT_CRITICAL', 'Fallo arranque', error.message);
+      onStep('ready');
     }
   },
 
@@ -234,8 +148,8 @@ export const InitializationService = {
       // Refresco en paralelo y archivado automático
       await Promise.all([
         InitializationService.syncConfig(),
-        importProductsFromFirestore(),
-        importProvidersFromFirestore(),
+        importProductsFromCloud(),
+        importProvidersFromCloud(),
         HydrationService.persist(),
         purgeOldData(30) // Step 5: Archivado automático > 30 días
       ]);

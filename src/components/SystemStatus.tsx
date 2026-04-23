@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Wifi, WifiOff, Battery, BatteryWarning, HardDrive, Cloud, RefreshCw, Zap, Database, Activity } from 'lucide-react';
 import { useSyncStore } from '../store/useSyncStore';
 import { db } from '../db';
-import { firebaseSyncService } from '../services/firebaseSyncService';
+import { supabaseSyncService } from '../services/supabaseSyncService';
 import { useNavigate } from 'react-router-dom';
 
 export const SystemStatus: React.FC = () => {
@@ -14,26 +14,26 @@ export const SystemStatus: React.FC = () => {
   const [isCharging, setIsCharging] = useState(false);
   const [storageCritical, setStorageCritical] = useState(false);
   
-  const { isSyncing, latencyMs, pendingItems, setLatency, setPendingItems, setFirestoreConnected, isFirestoreConnected, syncError } = useSyncStore();
+  const { isSyncing, latencyMs, pendingItems, setLatency, setPendingItems, setSupabaseConnected, isSupabaseConnected, syncError } = useSyncStore();
 
   useEffect(() => {
     const checkMetrics = async () => {
       if (!navigator.onLine) {
         setLatency(null);
-        setFirestoreConnected(false);
+        setSupabaseConnected(false);
         return;
       }
 
       // 1. Medir Latencia
       const start = performance.now();
       try {
-        await firebaseSyncService.pullBatch('CONFIG_SISTEMA');
+        await supabaseSyncService.pullBatch('CONFIG_SISTEMA');
         const end = performance.now();
         setLatency(Math.round(end - start));
-        setFirestoreConnected(true);
+        setSupabaseConnected(true);
       } catch (e) {
         setLatency(null);
-        setFirestoreConnected(false);
+        setSupabaseConnected(false);
       }
 
       // 2. Contar Pendientes
@@ -116,7 +116,7 @@ export const SystemStatus: React.FC = () => {
     );
   }
 
-  if (isOnline && isFirestoreConnected && latencyMs !== null) {
+  if (isOnline && isSupabaseConnected && latencyMs !== null) {
     const latencyColor = latencyMs < 150 ? 'text-emerald-400' : latencyMs < 400 ? 'text-amber-400' : 'text-rose-400';
     alerts.push(
       <div key="latency" className="bg-slate-800 text-white px-4 py-3 text-[10px] font-black flex flex-col gap-2 border border-white/5">
@@ -126,7 +126,7 @@ export const SystemStatus: React.FC = () => {
         </div>
         <div className="flex items-center gap-2">
           <Cloud className="w-4 h-4 text-sky-400" />
-          <span className="uppercase tracking-widest text-sky-400">Firestore Live</span>
+          <span className="uppercase tracking-widest text-sky-400">Cloud Engine Active</span>
         </div>
       </div>
     );

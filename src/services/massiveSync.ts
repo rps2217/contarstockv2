@@ -4,7 +4,7 @@ import { createSession, updateSessionMetadata } from './sessionService';
 import { logger } from './logger';
 import { generateUUID, sanitizeBarcode } from './utils';
 import { ScanRecord, ExpectedItem } from '../types';
-import { firebaseSyncService } from './firebaseSyncService';
+import { supabaseSyncService } from './supabaseSyncService';
 import { CloudStockSchema } from './schemas';
 import { telemetry } from './telemetryService';
 import { getSettings } from './settings';
@@ -91,7 +91,7 @@ export const pushScansToCloud = async (batchId: string): Promise<void> => {
     const config = getSettings().cloudConfig;
     const tableName = config?.countsTableName || 'CONTEOS';
 
-    await firebaseSyncService.pushBatch(tableName, payload);
+    await supabaseSyncService.pushBatch(tableName, payload);
     
     const duration = performance.now() - startTime;
     telemetry.track('SYNC', 'PUSH_SUCCESS', { batchId, count: scans.length }, duration, batchId);
@@ -113,7 +113,7 @@ export const importManifestFromCloud = async (batchId: string): Promise<number> 
   try {
     logger.info('CLOUD_MANIFEST', `Solicitando descarga de STOCK para lote: ${batchId}`);
     
-    const result = await firebaseSyncService.pullBatch('STOCK');
+    const result = await supabaseSyncService.pullBatch('STOCK');
     
     if (!result.success || !Array.isArray(result.rows)) {
       throw new Error("El servidor devolvió un formato inválido o la tabla STOCK está vacía.");

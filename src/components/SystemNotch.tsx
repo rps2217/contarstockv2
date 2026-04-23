@@ -13,7 +13,7 @@ interface SystemNotchProps {
 
 export const SystemNotch: React.FC<SystemNotchProps> = ({ children, theme, mode = 'default' }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const { pendingItems, isSyncing, latencyMs, isFirestoreConnected } = useSyncStore();
+  const { pendingItems, isSyncing, latencyMs, isSupabaseConnected } = useSyncStore();
   const { alertCount } = useExpiryStore();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
@@ -38,7 +38,7 @@ export const SystemNotch: React.FC<SystemNotchProps> = ({ children, theme, mode 
     };
   }, []);
 
-  const hasAlerts = alertCount > 0 || pendingItems > 0 || !isOnline || !isFirestoreConnected;
+  const hasAlerts = alertCount > 0 || pendingItems > 0 || !isOnline || !isSupabaseConnected;
 
   return (
     <div className="sticky top-0 w-full z-[1000] pointer-events-none flex flex-col items-center">

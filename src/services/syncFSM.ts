@@ -1,6 +1,6 @@
 
 import { db } from '../db';
-import { firebaseSyncService } from './firebaseSyncService';
+import { supabaseSyncService } from './supabaseSyncService';
 import { logger } from './logger';
 
 export type SyncState = 'IDLE' | 'SYNCING' | 'ERROR' | 'SUCCESS';
@@ -95,7 +95,7 @@ class SyncStateMachine {
       // 1. Sync Scans
       const pendingScans = await db.scans.where('synced').equals(0).toArray();
       if (pendingScans.length > 0) {
-        const result = await firebaseSyncService.pushBatch('scans', pendingScans);
+        const result = await supabaseSyncService.pushBatch('CONTEOS', pendingScans);
         if (result.success) {
           await db.scans.where('id').anyOf(pendingScans.map(s => s.id)).modify({ synced: 1 });
         } else {
@@ -106,8 +106,7 @@ class SyncStateMachine {
       // 2. Sync Dynamic Data
       const pendingDynamic = await db.dynamic_data.where('syncStatus').equals('pending').toArray();
       for (const record of pendingDynamic) {
-        const result = await firebaseSyncService.pushChange(record.tableName, record.id, record.data);
-        // pushChange doesn't return success, it throws on error
+        await supabaseSyncService.pushChange(record.tableName, record.id, record.data);
         await db.dynamic_data.update(record.id, { syncStatus: 'synced' });
       }
 

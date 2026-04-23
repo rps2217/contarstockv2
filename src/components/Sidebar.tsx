@@ -19,7 +19,7 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, onToggle }) => {
   const navigate = useNavigate();
-  const { pendingItems, isSyncing, isFirestoreConnected } = useSyncStore();
+  const { pendingItems, isSyncing, isSupabaseConnected } = useSyncStore();
   
   const dynamicTableStats = useLiveQuery(async () => {
     const records = await db.dynamic_data.where('syncStatus').anyOf(['pending', 'error']).toArray();

@@ -43,7 +43,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
  };
 
  handleRepairDatabase = async () => {
- if (confirm("⚠️ REPARACIÓN DE BASE DE DATOS ⚠️\n\nEsto cerrará la conexión y limpiará la caché de Firestore para solucionar errores internos de renderizado.\n\n¿Deseas continuar?")) {
+ if (confirm("⚠️ REPARACIÓN DE BASE DE DATOS ⚠️\n\nEsto cerrará la conexión y limpiará la caché interna para solucionar errores internos de renderizado.\n\n¿Deseas continuar?")) {
  await resetFirestore();
  }
  };

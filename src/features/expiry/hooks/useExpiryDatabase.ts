@@ -236,7 +236,7 @@ export const useExpiryDatabase = () => {
         return;
       }
 
-      // Preparar el lote para Firestore
+      // Preparar el lote para Supabase
       const rows = items.map(item => ({
         id: item.id,
         ...item,

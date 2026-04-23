@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Papa from 'papaparse';
-import { firebaseSyncService } from '../services/firebaseSyncService';
+import { supabaseSyncService } from '../services/supabaseSyncService';
 import { useAppStore } from '@/store/mainAppStore';
 import { toast } from 'sonner';
 
@@ -29,7 +29,6 @@ export const CsvImporter: React.FC = () => {
         const processedData = data.map((row) => {
           const rowData = {
             id: row.ID_REGISTRO || Math.random().toString(16).substring(2, 10),
-            ID: row.ID_REGISTRO || Math.random().toString(16).substring(2, 10),
             barcode: row.COD_BARRAS,
             productName: row.DESCRIPCION_PROD,
             providerName: 'N/A',
@@ -56,20 +55,16 @@ export const CsvImporter: React.FC = () => {
   const confirmImport = async () => {
     setIsImporting(true);
     try {
-      // Filtrar los datos para importar solo los que no tienen errores
-      // Opcionalmente, el usuario pidió "ignorar esos errores", lo que puede significar
-      // importar todo de todas formas, o importar solo lo válido.
-      // Vamos a importar solo los registros válidos, ignorando los que tienen errores.
       const validData = parsedData.filter(row => row.errors.length === 0);
       
       const expiryData = validData.filter(row => row.event === 'VENCIMIENTOS');
       const eventData = validData.filter(row => row.event !== 'VENCIMIENTOS');
 
       if (expiryData.length > 0) {
-        await firebaseSyncService.pushBatch(settings?.cloudConfig?.expiryTableName || 'VENCIMIENTOS', expiryData);
+        await supabaseSyncService.pushBatch(settings?.cloudConfig?.expiryTableName || 'VENCIMIENTOS', expiryData);
       }
       if (eventData.length > 0) {
-        await firebaseSyncService.pushBatch(settings?.cloudConfig?.eventsTableName || 'EVENTOS', eventData);
+        await supabaseSyncService.pushBatch(settings?.cloudConfig?.eventsTableName || 'EVENTOS', eventData);
       }
 
       toast.success(`Importación completada: ${expiryData.length} vencimientos, ${eventData.length} eventos.`);

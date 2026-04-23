@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import * as syncManager from '../../../services/syncManager';
 import { erpService } from '../../../services/erpService';
 import { ExpectedOrderRepository } from '../../../repositories/ExpectedOrderRepository';
-import { firebaseSyncService } from '../../../services/firebaseSyncService';
+import { supabaseSyncService } from '../../../services/supabaseSyncService';
 import { getSettings } from '../../../services/settings';
 import { ScanRepository } from '../../../repositories/ScanRepository';
 
@@ -209,7 +209,7 @@ export const useSyncManager = () => {
           .filter(s => String(s.logisticsLabel) === erp)
           .reduce((acc, s) => acc + (s.quantity || 0), 0);
 
-        const summaryResponse = await firebaseSyncService.query(tableName, 'ERP', erp as string);
+        const summaryResponse = await supabaseSyncService.query(tableName, 'ERP', erp as string);
         
         if (summaryResponse.success) {
           const cloudTotal = (summaryResponse.rows as any[]).reduce((acc: number, row: any) => acc + Number(row.quantity || row.CANTIDAD || 0), 0);

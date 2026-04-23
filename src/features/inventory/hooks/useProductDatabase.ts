@@ -3,7 +3,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Product, Provider } from '../../../types';
 import * as productService from '../../../services/productService';
-import { importProductsFromFirestore, importProvidersFromFirestore } from '../../../services/syncManager';
+import { importProductsFromCloud, importProvidersFromCloud } from '../../../services/syncManager';
 import { syncProductsToCloud } from '../../../services/cloudSync';
 import { fuzzySearchProducts } from '../../../services/search';
 import { VectorService } from '../../../services/vectorService';
@@ -179,7 +179,7 @@ export const useProductDatabase = () => {
  const handleDownloadFromCloud = useCallback(async () => {
  setIsDownloading(true);
  try {
- const count = await importProductsFromFirestore();
+ const count = await importProductsFromCloud();
  showFeedback('success', `${count} productos y políticas actualizados`);
  } catch (err: any) {
  showFeedback('error', 'Error en descarga Cloud');
@@ -191,7 +191,7 @@ export const useProductDatabase = () => {
  const handleSyncProviders = useCallback(async () => {
   setIsDownloading(true);
   try {
-    const count = await importProvidersFromFirestore();
+    const count = await importProvidersFromCloud();
     showFeedback('success', `${count} políticas logísticas actualizadas`);
   } catch (err: any) {
     showFeedback('error', 'Error al sincronizar políticas');

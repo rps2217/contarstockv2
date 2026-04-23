@@ -30,10 +30,10 @@ export const useReceptionHistory = () => {
     try {
       const config = (await import('../../../services/settings')).getSettings().cloudConfig;
       const targetTable = config?.receptionTableName || "RECEPCION_BULTOS";
-      const { firebaseSyncService } = await import('../../../services/firebaseSyncService');
+      const { supabaseSyncService } = await import('../../../services/supabaseSyncService');
       const { db } = await import('../../../db');
       
-      const response = await firebaseSyncService.pullBatch(targetTable);
+      const response = await supabaseSyncService.pullBatch(targetTable);
       if (response.success && response.rows) {
         const sessionsToPut = response.rows.map((r: any) => ({
           id: r.id || r.ID,

@@ -4,7 +4,7 @@ import { RefreshCw, Trash2, Layout, Database, ArrowUpCircle } from 'lucide-react
 import { SettingsCard, SettingsCardHeader, SettingsButton } from '../common/SettingsElements';
 import { resetFirestore } from '../../../../lib/firebase';
 import { InitializationService } from '../../../../services/initializationService';
-import { firebaseSyncService } from '../../../../services/firebaseSyncService';
+import { supabaseSyncService } from '../../../../services/supabaseSyncService';
 import { migrateCatalogsFromFirebase } from '../../../../services/syncManager';
 import { exportToCSV } from '../../../../services/export';
 import { toast } from 'sonner';
@@ -41,7 +41,7 @@ export const KernelSystemCard: React.FC = () => {
   };
 
   const handleRepairConnection = async () => {
-    if (confirm("⚠️ REPARACIÓN DE BASE DE DATOS ⚠️\n\nEsto cerrará la conexión y limpiará la caché de Firestore para solucionar errores internos de renderizado.\n\nLa aplicación se recargará automáticamente.\n\n¿Deseas continuar?")) {
+    if (confirm("⚠️ REPARACIÓN DE BASE DE DATOS ⚠️\n\nEsto cerrará la conexión y limpiará la caché de base de datos para solucionar errores internos de renderizado.\n\nLa aplicación se recargará automáticamente.\n\n¿Deseas continuar?")) {
       await resetFirestore();
     }
   };
@@ -58,7 +58,7 @@ export const KernelSystemCard: React.FC = () => {
   const handleExportAll = async (type: 'VENCIMIENTOS' | 'EVENTOS') => {
     setIsExporting(true);
     try {
-      const result = await firebaseSyncService.pullBatch(type);
+      const result = await supabaseSyncService.pullBatch(type);
       if (result.success) {
         await exportToCSV(result.rows, `${type}_Full_Export`);
         toast.success(`Exportación de ${type} completada`);

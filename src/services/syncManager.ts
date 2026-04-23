@@ -11,9 +11,9 @@ import { dynamicSyncService } from './dynamicSync';
 import { supabaseSyncService } from './supabaseSyncService';
 import { createInventoryPayload } from './cloud/mappers';
 import { CustomerRepository } from '../repositories/CustomerRepository';
-import { db as firebaseDb } from '../lib/firebase';
 import { supabase } from '../lib/supabase';
 import { collection, getDocs } from 'firebase/firestore';
+import { db as firebaseDb } from '../lib/firebase';
 
 let isSyncingInProgress = false;
 const UPLOAD_BATCH_SIZE = 500; 
@@ -555,7 +555,7 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
   }
 };
 
-export const importProductsFromFirestore = async (): Promise<number> => {
+export const importProductsFromCloud = async (): Promise<number> => {
   try {
     const config = getSettings().cloudConfig;
     const tableName = config?.productsTableName || "PRODUCTOS";
@@ -581,19 +581,19 @@ export const importProductsFromFirestore = async (): Promise<number> => {
 
     // DESCARGAR TAMBIÉN PROVEEDORES (Políticas de Retiro)
     try {
-      await importProvidersFromFirestore();
+      await importProvidersFromCloud();
     } catch (e) {
       console.warn("Fallo descarga de proveedores:", e);
     }
 
     return products.length;
   } catch (e: any) {
-    logger.error("FETCH_PRODUCTS_FAIL", `Error en Firestore Sync: ${e.message}`);
+    logger.error("FETCH_PRODUCTS_FAIL", `Error en Cloud Sync: ${e.message}`);
     throw e;
   }
 };
 
-export const importProvidersFromFirestore = async (): Promise<number> => {
+export const importProvidersFromCloud = async (): Promise<number> => {
   try {
     const config = getSettings().cloudConfig;
     const tableName = config?.providersTableName || "PROVEEDORES";
@@ -606,8 +606,8 @@ export const importProvidersFromFirestore = async (): Promise<number> => {
       .map((row: any) => {
         const rut = String(row.rut || row.RUT || row.ID || row.ID_RUT || '');
         const name = String(row.name || row.NOMBRE || row.PROVEEDOR || '');
-        const withdrawalDays = Number(row.withdrawalDays || row.DIAS_RETIRO || 0);
-        const hasExchange = Boolean(row.hasExchange || withdrawalDays > 0);
+        const withdrawalDays = Number(row.withdrawalDays || row.DIAS_RETIRO || row.withdrawal_days || 0);
+        const hasExchange = Boolean(row.hasExchange || row.has_exchange || withdrawalDays > 0);
 
         return { rut, name, withdrawalDays, hasExchange };
       })

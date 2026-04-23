@@ -4,7 +4,7 @@ import { getSettings } from "./settings";
 import { markScansAsSynced } from "./sessionService"; 
 import { markProductsAsSynced } from "./productService";
 import { db } from "../db";
-import { firebaseSyncService } from "./firebaseSyncService";
+import { supabaseSyncService } from "./supabaseSyncService";
 import { createProductsPayload } from "./cloud/mappers";
 
 /**
@@ -25,7 +25,7 @@ export const syncProductsToCloud = async (products: Product[]): Promise<void> =>
  
  console.log(`[CloudSync] Subiendo lote IA ${i+1}/${totalBatches}...`);
 
- const result = await firebaseSyncService.pushBatch(config?.productsTableName || "PRODUCTOS", rows);
+ const result = await supabaseSyncService.pushBatch(config?.productsTableName || "PRODUCTOS", rows);
  
  if (result && result.success) {
  await markProductsAsSynced(batch.map(p => p.barcode));
@@ -48,13 +48,13 @@ export const syncProvidersToCloud = async (providers: Provider[]): Promise<void>
    id: p.rut,
    rut: p.rut,
    name: p.name,
-   withdrawalDays: p.withdrawalDays,
-   hasExchange: p.hasExchange
+   withdrawal_days: p.withdrawalDays,
+   has_exchange: p.hasExchange
  }));
  
  console.log(`[CloudSync] Subiendo lote Proveedores ${i+1}/${totalBatches}...`);
 
- const result = await firebaseSyncService.pushBatch(config?.providersTableName || "PROVEEDORES", rows);
+ const result = await supabaseSyncService.pushBatch(config?.providersTableName || "PROVEEDORES", rows);
  
  if (!result || !result.success) {
  throw new Error(result?.error || "Error al respaldar proveedores en lote " + (i+1));

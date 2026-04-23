@@ -1,6 +1,4 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
-import { db as firestoreDb } from '../../../lib/firebase';
 import Papa from 'papaparse';
 import { supabaseSyncService } from '../../../services/supabaseSyncService';
 import { useAppStore } from '@/store/mainAppStore';
@@ -521,45 +519,6 @@ export const useEventDatabase = () => {
         } catch (error: any) {
           console.error('Clear DB Error:', error);
           addToast(`Error al resetear la base de datos: ${error.message}`, 'error');
-        }
-      },
-      handleExtractFromFirebase: async () => {
-        try {
-          addToast('Iniciando extracción desde Firebase...', 'info');
-          
-          if (!firestoreDb) {
-            throw new Error('Firestore no está inicializado.');
-          }
-
-          const querySnapshot = await getDocs(collection(firestoreDb, 'EVENTOS'));
-          const data = querySnapshot.docs.map(doc => ({
-            ...doc.data(),
-            firebaseId: doc.id
-          }));
-
-          if (data.length === 0) {
-            addToast('No se encontraron registros en la colección EVENTOS de Firebase.', 'error');
-            return;
-          }
-
-          // Convert to CSV
-          const csv = Papa.unparse(data);
-          
-          // Download file
-          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-          const link = document.createElement('a');
-          const url = URL.createObjectURL(blob);
-          link.setAttribute('href', url);
-          link.setAttribute('download', `respaldo_firebase_eventos_${new Date().toISOString().split('T')[0]}.csv`);
-          link.style.visibility = 'hidden';
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-
-          addToast(`Extracción completada: ${data.length} registros descargados.`, 'success');
-        } catch (error: any) {
-          console.error('Firebase Extraction Error:', error);
-          addToast(`Error al extraer de Firebase: ${error.message}`, 'error');
         }
       }
     }

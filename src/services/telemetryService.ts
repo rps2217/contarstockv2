@@ -1,5 +1,4 @@
 import { TelemetryEvent, TelemetryEventType } from '../types';
-import { firebaseSyncService } from './firebaseSyncService';
 
 class TelemetryService {
   private buffer: TelemetryEvent[] = [];

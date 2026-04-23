@@ -40,7 +40,7 @@ export const resolveUnknownProducts = async (skus: string[], config: any) => {
         });
         console.info(`[Detective] SKU ${sku} identificado como: ${p[nameCol] || p.name}`);
       } else {
-        console.warn(`[Detective] SKU ${sku} no encontrado en Firestore.`);
+        console.warn(`[Detective] SKU ${sku} no encontrado en Supabase.`);
       }
     } catch (e) {
       console.warn(`[Detective] Error al resolver SKU ${sku}:`, e);
