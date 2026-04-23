@@ -133,9 +133,9 @@ export const useEventDatabase = () => {
       const quantityValue = getField(eventMapping?.quantity, ['CANTIDAD', 'cantidad', 'quantity', 'QUANTITY', 'Cant', 'CANT', 'QTY', 'qty']) || 0;
       const locationValue = getField(eventMapping?.location, ['UBICACION', 'ubicacion', 'location', 'LOCATION', 'Ubic', 'UBIC', 'SITIO', 'sitio']) || 'GENERAL';
       const frcValue = getField(eventMapping?.frc, ['FRC', 'frc', 'folio', 'FOLIO', 'folio_frc', 'FOLIO_FRC', 'Folio', 'FRC_FOLIO', 'folio_frc']) || '';
-      const nguiaValue = getField(eventMapping?.nguia, ['NGUIA', 'nguia', 'guia', 'GUIA', 'n_guia', 'N_GUIA', 'GUIA_NUM', 'guia_num']) || '';
+      const nguiaValue = getField(eventMapping?.nguia, ['nguia', 'NGUIA', 'guia', 'GUIA', 'n_guia', 'N_GUIA', 'GUIA_NUM', 'guia_num']) || '';
       const destinoValue = getField(eventMapping?.destino, ['DESTINO', 'destino', 'Destino', 'BODEGA', 'bodega']) || '';
-      const traspasoValue = getField(eventMapping?.traspaso, ['TRASPASO', 'traspaso', 'Traspaso', 'N_TRASPASO', 'n_traspaso']) || '';
+      const traspasoValue = getField(eventMapping?.traspaso, ['DOC-TRAS-INTER', 'TRASPASO', 'traspaso', 'Traspaso', 'N_TRASPASO', 'n_traspaso']) || '';
       const observacionesValue = getField(eventMapping?.observaciones, ['OBSERVACIONES', 'observaciones', 'Observaciones', 'OBS', 'obs', 'NOTAS', 'notas']) || '';
       
       const hasTraspaso = !!(traspasoValue && String(traspasoValue).trim() !== '');
@@ -196,28 +196,80 @@ export const useEventDatabase = () => {
   // Helper to map internal keys back to configured mapping keys before saving to Firestore
   const unmapData = useCallback((data: any) => {
     const eventMapping = settings?.cloudConfig?.mappings?.events;
-    if (!eventMapping) return data;
+    
+    // Default mapping based on user's Firestore structure
+    const defaultMapping = {
+      barcode: 'SKU',
+      event: 'EVENTO',
+      quantity: 'CANTIDAD',
+      frc: 'FRC',
+      destino: 'DESTINO',
+      traspaso: 'DOC-TRAS-INTER',
+      observaciones: 'OBSERVACIONES',
+      uniqueKey: 'CLAVE_UNICA',
+      timestamp: 'TIMESTAMP'
+    };
 
+    const finalMapping = { ...defaultMapping, ...eventMapping };
     const unmapped: any = { ...data };
     
     const mapKey = (internalKey: string, mappingKey: string | undefined) => {
-      if (mappingKey && mappingKey !== internalKey) {
+      if (mappingKey) {
         unmapped[mappingKey] = data[internalKey];
-        // We keep the internal key too to avoid breaking local logic, 
-        // but Firestore will have the mapped key as primary.
       }
     };
 
-    if (data.barcode !== undefined) mapKey('barcode', eventMapping.barcode);
-    if (data.event !== undefined) mapKey('event', eventMapping.event);
-    if (data.quantity !== undefined) mapKey('quantity', eventMapping.quantity);
-    if (data.location !== undefined) mapKey('location', eventMapping.location);
-    if (data.frc !== undefined) mapKey('frc', eventMapping.frc);
-    if (data.nguia !== undefined) mapKey('nguia', eventMapping.nguia);
-    if (data.destino !== undefined) mapKey('destino', eventMapping.destino);
-    if (data.traspaso !== undefined) mapKey('traspaso', eventMapping.traspaso);
-    if (data.observaciones !== undefined) mapKey('observaciones', eventMapping.observaciones);
-    if (data.claveUnica !== undefined) mapKey('claveUnica', eventMapping.uniqueKey || 'CLAVE_UNICA');
+    if (data.barcode !== undefined) {
+      mapKey('barcode', finalMapping.barcode);
+      unmapped.barcode = data.barcode; // Keep both for safety
+    }
+    if (data.event !== undefined) {
+      mapKey('event', finalMapping.event);
+      unmapped.event = data.event;
+    }
+    if (data.quantity !== undefined) {
+      mapKey('quantity', finalMapping.quantity);
+      unmapped.quantity = data.quantity;
+    }
+    if (data.frc !== undefined) {
+      mapKey('frc', finalMapping.frc);
+      unmapped.frc = data.frc;
+    }
+    if (data.destino !== undefined) {
+      mapKey('destino', finalMapping.destino);
+      unmapped.destino = data.destino;
+    }
+    if (data.traspaso !== undefined) {
+      mapKey('traspaso', finalMapping.traspaso);
+      unmapped.traspaso = data.traspaso;
+      unmapped['DOC-TRAS-INTER'] = data.traspaso; // Explicit support
+    }
+    if (data.observaciones !== undefined) {
+      mapKey('observaciones', finalMapping.observaciones);
+      unmapped.observaciones = data.observaciones;
+    }
+    if (data.claveUnica !== undefined) {
+      mapKey('claveUnica', finalMapping.uniqueKey);
+      unmapped.claveUnica = data.claveUnica;
+      unmapped.CLAVE_UNICA = data.claveUnica;
+    }
+    
+    // Additional fields from user's list
+    if (data.nguia !== undefined) unmapped.nguia = data.nguia;
+    if (data.productName !== undefined) unmapped.productName = data.productName;
+    if (data.providerName !== undefined) unmapped.providerName = data.providerName;
+    
+    // Ensure ID is sent in all required cases
+    const idValue = data.id || data.claveUnica;
+    unmapped.ID = idValue;
+    unmapped.id = idValue;
+    unmapped.Id = idValue;
+    
+    if (data.timestamp) {
+      const isoTimestamp = typeof data.timestamp === 'number' ? new Date(data.timestamp).toISOString() : data.timestamp;
+      unmapped.TIMESTAMP = isoTimestamp;
+      unmapped.timestamp = isoTimestamp;
+    }
 
     return unmapped;
   }, [settings?.cloudConfig?.mappings?.events]);
