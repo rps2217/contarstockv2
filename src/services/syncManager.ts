@@ -415,6 +415,60 @@ export const migrateCatalogsFromFirebase = async (onProgress?: (msg: string) => 
 };
 
 /**
+ * RECONCILIACIÓN PROFUNDA DE POLÍTICAS (FIREBASE -> SUPABASE)
+ * Rescata la información original de políticas que pudo perderse en la migración inicial.
+ */
+export const repairProvidersFromFirebase = async (onProgress?: (msg: string) => void): Promise<{ repaired: number }> => {
+  try {
+    if (onProgress) onProgress("Iniciando rescate de políticas desde Firebase...");
+    
+    // 1. Obtener datos originales
+    const provSnap = await getDocs(collection(firebaseDb, 'PROVEEDORES'));
+    const firebaseProviders = provSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    
+    if (firebaseProviders.length === 0) {
+      throw new Error("No se encontraron proveedores en la fuente original (Firebase)");
+    }
+
+    // 2. Mapear y Sanear
+    const updates = firebaseProviders.map((p: any) => {
+      const rut = normalizeIdentity(String(p.rut || p.RUT || p.ID || p.id || ''));
+      const withdrawalDays = Number(p.withdrawalDays || p.DIAS_RETIRO || 0);
+      const hasExchange = Boolean(p.hasExchange !== undefined ? p.hasExchange : (p.CANJE || withdrawalDays > 0));
+      
+      return {
+        rut,
+        name: String(p.name || p.PROVEEDOR || p.NOMBRE || 'PROVEEDOR SIN NOMBRE').trim().toUpperCase(),
+        withdrawalDays,
+        hasExchange
+      };
+    }).filter(p => p.rut);
+
+    if (onProgress) onProgress(`Procesando ${updates.length} políticas rescatadas...`);
+
+    // 3. Persistir en Supabase (Master)
+    const { error: supabaseError } = await supabase.from('PROVEEDORES').upsert(updates.map(p => ({
+      rut: p.rut,
+      name: p.name,
+      withdrawal_days: p.withdrawalDays,
+      has_exchange: p.hasExchange
+    })), { onConflict: 'rut' });
+
+    if (supabaseError) throw supabaseError;
+
+    // 4. Persistir localmente
+    await db.providers.bulkPut(updates);
+    
+    if (onProgress) onProgress("Políticas sincronizadas y protegidas en la nube.");
+    
+    return { repaired: updates.length };
+  } catch (e: any) {
+    logger.error("REPAIR_PROVIDERS_FAIL", e.message);
+    throw e;
+  }
+};
+
+/**
  * Reconciliación de Recepción:
  * Compara los registros locales con la nube y elimina los que ya no existen en Firestore.
  */
@@ -612,24 +666,29 @@ export const importProvidersFromCloud = async (): Promise<number> => {
         // Días de retiro: Soporta múltiples formatos
         const rawWithdrawal = row.withdrawal_days !== undefined ? row.withdrawal_days :
                              row.withdrawalDays !== undefined ? row.withdrawalDays :
-                             row.DIAS_RETIRO || 0;
-        const withdrawalDays = Number(rawWithdrawal);
+                             row.DIAS_RETIRO !== undefined ? row.DIAS_RETIRO :
+                             row.DIAS_CANJE !== undefined ? row.DIAS_CANJE :
+                             row.DAYS || row.withdrawal_days || 0;
+        const withdrawalDays = Number(rawWithdrawal) || 0;
 
-        // Política de Canje: Manejo robusto de Booleanos (incluyendo strings de CSV/Legacy)
+        // Política de Canje: Manejo ultra-robusto de Booleanos y Strings
         const rawExchange = row.has_exchange !== undefined ? row.has_exchange :
                            row.hasExchange !== undefined ? row.hasExchange :
-                           row.CANJE;
+                           row.CANJE !== undefined ? row.CANJE :
+                           row.TIENE_CANJE !== undefined ? row.TIENE_CANJE :
+                           row.EXCHANGE_POLICY !== undefined ? row.EXCHANGE_POLICY :
+                           row.has_exchange;
         
         let hasExchange = false;
-        if (typeof rawExchange === 'boolean') {
-          hasExchange = rawExchange;
+        if (rawExchange === true || rawExchange === 'true' || rawExchange === 1 || rawExchange === '1') {
+          hasExchange = true;
         } else if (typeof rawExchange === 'string') {
           const s = rawExchange.toUpperCase().trim();
-          hasExchange = (s === 'TRUE' || s === '1' || s === 'SI' || s === 'CANJE');
-        } else if (typeof rawExchange === 'number') {
-          hasExchange = rawExchange === 1;
+          hasExchange = (s === 'TRUE' || s === '1' || s === 'SI' || s === 'CANJE' || s === 'ACTIVO' || s === 'YES');
+        } else if (typeof rawExchange === 'boolean') {
+          hasExchange = rawExchange;
         } else {
-          // Heurística de supervivencia: si tiene días de retiro > 0, probablemente tiene canje
+          // Heurística de supervivencia: si tiene días de retiro > 0, es altísimamente probable que tenga canje
           hasExchange = withdrawalDays > 0;
         }
 

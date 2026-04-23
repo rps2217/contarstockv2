@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Truck, Search, Plus, ShieldAlert, AlertTriangle, CheckCircle2, ChevronRight, Edit2, Trash2, Wand2, UploadCloud } from 'lucide-react';
+import { Truck, Search, Plus, ShieldAlert, AlertTriangle, CheckCircle2, ChevronRight, Edit2, Trash2, Wand2, UploadCloud, RefreshCw, ShieldCheck } from 'lucide-react';
 import { Provider } from '../../../types';
 import { ProviderRepository } from '../../../repositories/ProviderRepository';
 import { db } from '../../../db';
@@ -89,13 +89,49 @@ export const ProvidersPage: React.FC = () => {
         toast.info('No hay proveedores para sincronizar.');
         return;
       }
-      toast.loading('Sincronizando proveedores a la nube...');
+      toast.loading('Subiendo proveedores a la nube...');
       await syncProvidersToCloud(allProviders);
       toast.dismiss();
-      toast.success('Proveedores sincronizados exitosamente.');
+      toast.success('Proveedores respaldados exitosamente.');
     } catch (e: any) {
       toast.dismiss();
-      toast.error('Error al sincronizar: ' + e.message);
+      toast.error('Error al subir: ' + e.message);
+    }
+  };
+
+  const handleDownloadFromCloud = async () => {
+    try {
+      toast.loading('Descargando políticas desde la nube...');
+      const { importProvidersFromCloud } = await import('../../../services/syncManager');
+      const count = await importProvidersFromCloud();
+      toast.dismiss();
+      if (count > 0) {
+        toast.success(`${count} proveedores actualizados desde la nube.`);
+        loadProviders();
+      } else {
+        toast.info('No se encontraron proveedores en la nube.');
+      }
+    } catch (e: any) {
+      toast.dismiss();
+      toast.error('Error al descargar: ' + e.message);
+    }
+  };
+
+  const handleRepairPolicies = async () => {
+    if (!confirm('¿Deseas realizar un rescate profundo de políticas desde Firebase? Esto buscará la información original (días específicos y canje) y la sincronizará con tu base de datos actual en Supabase.')) return;
+    
+    try {
+      toast.loading('Iniciando rescate profundo...');
+      const { repairProvidersFromFirebase } = await import('../../../services/syncManager');
+      const { repaired } = await repairProvidersFromFirebase();
+      
+      toast.dismiss();
+      toast.success(`Rescate completado: ${repaired} políticas sincronizadas.`);
+      loadProviders();
+    } catch (e: any) {
+      toast.dismiss();
+      toast.error('Error en rescate: ' + e.message);
+      console.error(e);
     }
   };
 
@@ -142,11 +178,29 @@ export const ProvidersPage: React.FC = () => {
           extraActions={
             <div className="flex gap-2">
               <button
+                onClick={handleRepairPolicies}
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all border ${
+                  theme === 'dark' ? 'bg-rose-500/10 border-rose-500/20 text-rose-500 hover:bg-rose-500/20' : 'bg-rose-50 border-rose-200 text-rose-600 hover:bg-rose-100'
+                }`}
+                title="Rescate Profundo (Desde Firebase)"
+              >
+                <ShieldCheck className="w-5 h-5" />
+              </button>
+              <button
+                onClick={handleDownloadFromCloud}
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all border ${
+                  theme === 'dark' ? 'bg-amber-500/10 border-amber-500/20 text-amber-500 hover:bg-amber-500/20' : 'bg-amber-50 border-amber-200 text-amber-600 hover:bg-amber-100'
+                }`}
+                title="Descargar desde la Nube"
+              >
+                <RefreshCw className="w-5 h-5" />
+              </button>
+              <button
                 onClick={handleSyncToCloud}
                 className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all border ${
                   theme === 'dark' ? 'bg-brand-info/10 border-brand-info/20 text-brand-info hover:bg-brand-info/20' : 'bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100'
                 }`}
-                title="Sincronizar con la Nube"
+                title="Subir a la Nube (Respaldo)"
               >
                 <UploadCloud className="w-5 h-5" />
               </button>
