@@ -126,13 +126,17 @@ export const supabaseSyncService = {
         });
 
         if (error) {
-          // Detectar error de columna inexistente
-          if (error.message && error.message.includes("column") && error.message.includes("not find")) {
-            const match = error.message.match(/column '(.*?)' of/);
+          const errMsg = error.message || '';
+          
+          // 1. Detectar error de columna inexistente
+          if (errMsg.includes("column") && (errMsg.includes("not find") || errMsg.includes("does not exist"))) {
+            // Soporta: "column 'name' of", "the 'name' column", "'name' column does not exist"
+            const match = errMsg.match(/column\s+['"](.*?)['"]/i) || 
+                          errMsg.match(/['"](.*?)['"]\s+column/i);
             const missingColumn = match ? match[1] : null;
 
             if (missingColumn) {
-              console.warn(`[Resilience] Tabla ${tableName} no tiene columna '${missingColumn}'. Reintentando sin ella...`);
+              console.warn(`[Resilience] Tabla ${tableName} no tiene columna '${missingColumn}'. Reintentando sin ella... (${attempts + 1}/${maxRetries})`);
               currentRows = currentRows.map(row => {
                 const newRow = { ...row };
                 delete newRow[missingColumn];
@@ -142,18 +146,44 @@ export const supabaseSyncService = {
               continue; // Reintentar con el nuevo set de columnas
             }
           }
+
+          // 2. Detectar error de tabla inexistente (404)
+          if (errMsg.includes("not find") && errMsg.includes("table")) {
+            logger.warn(`[Resilience] La tabla ${tableName} no existe en Supabase. Omitiendo sincronización.`);
+            return { success: false, error: `Table '${tableName}' not found` };
+          }
+
           throw error;
         }
 
         return { success: true, rows_written: rows.length };
       } catch (e: any) {
+        // Solo llegamos aquí si throw error se ejecutó o hubo un fallo de red
+        const errMsg = e.message || '';
+        
+        // Si es un error de columna y no fue atrapado arriba (raro pero posible)
+        if (errMsg.includes("column") && (errMsg.includes("not find") || errMsg.includes("does not exist"))) {
+           const match = errMsg.match(/column "(.*?)"/i) || errMsg.match(/column '(.*?)'/i);
+           const missingCol = match ? match[1] : null;
+           if (missingCol && attempts < maxRetries) {
+              currentRows = currentRows.map(row => {
+                const newRow = { ...row };
+                delete newRow[missingCol];
+                return newRow;
+              });
+              attempts++;
+              continue;
+           }
+        }
+
         if (attempts >= maxRetries - 1) {
           logger.error(`SYNC_BATCH_PUSH_FAIL: ${tableName} (Tras ${attempts} reintentos)`, e);
           return { success: false, error: this.formatError(e) };
         }
+        
+        // Error genérico: esperar un poco y reintentar si no es un error de esquema
+        await new Promise(r => setTimeout(r, 500));
         attempts++;
-        // Si no detectamos la columna específica o es otro error, fallamos
-        return { success: false, error: this.formatError(e) };
       }
     }
     return { success: false, error: 'Maximo de reintentos de limpieza de columnas alcanzado' };

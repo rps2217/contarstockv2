@@ -332,75 +332,34 @@ export const migrateCatalogsFromFirebase = async (onProgress?: (msg: string) => 
       if (onProgress) onProgress(`Migrando ${firebaseProviders.length} proveedores a Supabase...`);
       const uniqueProvMap = new Map();
       firebaseProviders.forEach((p: any) => {
-        const provIdentity = String(p.rut || p.RUT || p.ID || p.id || crypto.randomUUID());
+        const provIdentity = normalizeIdentity(String(p.rut || p.RUT || p.ID || p.id || ''));
         if (provIdentity && String(p.name || p.PROVEEDOR || p.NOMBRE || '')) {
             uniqueProvMap.set(provIdentity, {
               rut: provIdentity,
-              name: String(p.name || p.PROVEEDOR || p.NOMBRE || ''),
+              name: String(p.name || p.PROVEEDOR || p.NOMBRE || '').trim().toUpperCase(),
               withdrawalDays: Number(p.withdrawalDays || p.DIAS_RETIRO || 0),
-              hasExchange: Boolean(p.hasExchange || p.CANJE || false),
+              hasExchange: Boolean(p.hasExchange !== undefined ? p.hasExchange : (p.CANJE || (p.withdrawalDays && p.withdrawalDays > 0))),
               timestamp: new Date().toISOString()
             });
         }
       });
       const rows = Array.from(uniqueProvMap.values());
 
-      // Bypassing any intermediate pushBatch wrapper strictly to avoid cache interference
-      let result = { success: false, error: '' };
+      if (onProgress) onProgress(`Inyectando estructura completa en Supabase (${rows.length} registros)...`);
       
-      // Primera Inyección Directa Pura con todas las propiedades en Snake Case estándar Postgres
-      try {
-         const { error } = await supabase.from('PROVEEDORES').upsert(rows.map(p => ({
-             rut: String(p.rut),
-             name: String(p.name),
-             withdrawal_days: Number(p.withdrawalDays || 0),
-             has_exchange: Boolean(p.hasExchange)
-         })), { onConflict: 'rut' });
-         
-         if (error) { throw error; }
-         result.success = true;
-      } catch(err: any) {
-         result.success = false;
-         result.error = err.message || JSON.stringify(err);
+      // Inyección Directa Pura con todas las propiedades - SIN CAPAS DE SUPERVIVENCIA
+      const { error } = await supabase.from('PROVEEDORES').upsert(rows.map(p => ({
+          rut: String(p.rut),
+          name: String(p.name),
+          withdrawal_days: Number(p.withdrawalDays || 0),
+          has_exchange: Boolean(p.hasExchange)
+      })), { onConflict: 'rut' });
+      
+      if (error) { 
+        logger.error("MIGRATION_PROV_ERROR", error.message, error);
+        throw new Error(`Supabase rechazó la estructura de proveedores: ${error.message}. Por favor, verifica que las columnas withdrawal_days (int) y has_exchange (bool) existan.`); 
       }
 
-      // Nivel 2 de Inyección Directa omitiendo "has_exchange" que parece conflictivo en tu schema actual Supabase
-      if (!result.success) {
-          if (onProgress) onProgress("Adaptando esquema: quitando campos estrictos...");
-          try {
-             const { error } = await supabase.from('PROVEEDORES').upsert(rows.map(p => ({
-                 rut: String(p.rut),
-                 name: String(p.name),
-                 withdrawal_days: Number(p.withdrawalDays || 0)
-             })), { onConflict: 'rut' });
-             
-             if (error) { throw error; }
-             result.success = true;
-          } catch(err: any) {
-             result.success = false;
-             result.error = err.message || JSON.stringify(err);
-          }
-      }
-
-      // Nivel 3 de Inyección de Supervivencia: Solo RUT y Nombre
-      if (!result.success) {
-          if (onProgress) onProgress("Reintento final: inyección de supervivencia en proveedores...");
-          try {
-             // Solo mandamos el rut y el nombre explícitamente y nada más
-             const { error } = await supabase.from('PROVEEDORES').upsert(rows.map(p => ({
-                 rut: String(p.rut),
-                 name: String(p.name)
-             })), { onConflict: 'rut' });
-             
-             if (error) { throw error; }
-             result.success = true;
-          } catch(err: any) {
-             result.success = false;
-             result.error = err.message || JSON.stringify(err);
-          }
-      }
-
-      if (!result.success) throw new Error(`Fallo ultra crítico en proveedores. La base de datos SQL rechazó las columnas rut o name: ${result.error}`);
       provCount = rows.length;
       
       // Guardar localmente
