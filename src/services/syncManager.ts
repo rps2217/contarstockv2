@@ -446,15 +446,18 @@ export const repairProvidersFromFirebase = async (onProgress?: (msg: string) => 
 
     if (onProgress) onProgress(`Procesando ${updates.length} políticas rescatadas...`);
 
-    // 3. Persistir en Supabase (Master)
-    const { error: supabaseError } = await supabase.from('PROVEEDORES').upsert(updates.map(p => ({
+    // 3. Persistir en Supabase (Master) usando el servicio resiliente
+    if (onProgress) onProgress(`Actualizando ${updates.length} proveedores en la nube con protección de esquema...`);
+    const result = await supabaseSyncService.pushBatch('PROVEEDORES', updates.map(p => ({
       rut: p.rut,
       name: p.name,
       withdrawal_days: p.withdrawalDays,
       has_exchange: p.hasExchange
-    })), { onConflict: 'rut' });
+    })));
 
-    if (supabaseError) throw supabaseError;
+    if (!result.success) {
+      throw new Error(`Error sincronizando con Supabase: ${result.error}`);
+    }
 
     // 4. Persistir localmente
     await db.providers.bulkPut(updates);

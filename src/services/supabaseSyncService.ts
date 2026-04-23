@@ -96,24 +96,67 @@ export const supabaseSyncService = {
   },
 
   /**
-   * Pushes a batch of changes to Supabase.
+   * Pushes a batch of changes to Supabase with automatic column-error recovery.
    */
   async pushBatch(tableName: string, rows: any[]) {
-    try {
-      const sanitizedRows = rows.map(row => this.sanitizeData(row));
-      
-      let query = supabase.from(tableName).upsert(sanitizedRows, {
-        onConflict: tableName === 'PROVEEDORES' ? 'rut' : undefined
+    if (!rows.length) return { success: true, rows_written: 0 };
+    
+    // Lista de campos prohibidos conocidos o nulos que a veces causan ruido
+    const forbiddenFields = new Set(['syncStatus', 'syncError', 'nextRetry', 'retryCount']);
+    
+    let currentRows = rows.map(row => {
+      const sanitized = this.sanitizeData(row);
+      // Eliminar campos de control local
+      Object.keys(sanitized).forEach(k => {
+        if (forbiddenFields.has(k)) delete sanitized[k];
       });
+      return sanitized;
+    });
 
-      const { error } = await query;
-      
-      if (error) throw error;
-      return { success: true, rows_written: rows.length };
-    } catch (e) {
-      logger.error(`SYNC_BATCH_PUSH_FAIL: ${tableName}`, e);
-      return { success: false, error: this.formatError(e) };
+    let primaryKey = 'id';
+    if (tableName === 'PROVEEDORES') primaryKey = 'rut';
+
+    const maxRetries = 10;
+    let attempts = 0;
+
+    while (attempts < maxRetries) {
+      try {
+        const { error } = await supabase.from(tableName).upsert(currentRows, {
+          onConflict: primaryKey
+        });
+
+        if (error) {
+          // Detectar error de columna inexistente
+          if (error.message && error.message.includes("column") && error.message.includes("not find")) {
+            const match = error.message.match(/column '(.*?)' of/);
+            const missingColumn = match ? match[1] : null;
+
+            if (missingColumn) {
+              console.warn(`[Resilience] Tabla ${tableName} no tiene columna '${missingColumn}'. Reintentando sin ella...`);
+              currentRows = currentRows.map(row => {
+                const newRow = { ...row };
+                delete newRow[missingColumn];
+                return newRow;
+              });
+              attempts++;
+              continue; // Reintentar con el nuevo set de columnas
+            }
+          }
+          throw error;
+        }
+
+        return { success: true, rows_written: rows.length };
+      } catch (e: any) {
+        if (attempts >= maxRetries - 1) {
+          logger.error(`SYNC_BATCH_PUSH_FAIL: ${tableName} (Tras ${attempts} reintentos)`, e);
+          return { success: false, error: this.formatError(e) };
+        }
+        attempts++;
+        // Si no detectamos la columna específica o es otro error, fallamos
+        return { success: false, error: this.formatError(e) };
+      }
     }
+    return { success: false, error: 'Maximo de reintentos de limpieza de columnas alcanzado' };
   },
 
   /**
