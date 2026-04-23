@@ -199,23 +199,27 @@ export const useEventDatabase = () => {
   // Helper to map internal keys back to standard lowercase columns for Supabase
   const unmapData = useCallback((data: any) => {
     // Definimos exactamente qué columnas vamos a enviar a la nube.
-    // Usamos minúsculas que es el estándar de nuestra base de datos Supabase.
+    // Empezamos por las que SABEMOS que existen según los logs del usuario.
     const unmapped: any = {
       id: data.id || data.claveUnica,
       barcode: data.barcode,
       event: data.event,
       quantity: Number(data.quantity) || 0,
       frc: data.frc,
-      destino: data.destino,
-      traspaso: data.traspaso,
-      observaciones: data.observaciones,
       claveUnica: data.claveUnica || data.id,
-      timestamp: data.timestamp ? new Date(data.timestamp).toISOString() : new Date().toISOString(),
-      // Otros campos que podrían existir
-      productName: data.productName,
-      providerName: data.providerName,
-      nguia: data.nguia
+      timestamp: data.timestamp ? new Date(data.timestamp).toISOString() : new Date().toISOString()
     };
+
+    // Estas columnas "parecen" estar faltando en el esquema del usuario según el error 400.
+    // Las enviamos solo si existen en el objeto original, pero Supabase fallará si no están en la tabla.
+    if (data.destino !== undefined) unmapped.destino = data.destino;
+    if (data.traspaso !== undefined) unmapped.traspaso = data.traspaso;
+    if (data.observaciones !== undefined) unmapped.observaciones = data.observaciones;
+    
+    // Campos informativos adicionales (opcionales)
+    if (data.productName) unmapped.productName = data.productName;
+    if (data.providerName) unmapped.providerName = data.providerName;
+    if (data.nguia) unmapped.nguia = data.nguia;
     
     return unmapped;
   }, []);
@@ -490,7 +494,7 @@ export const useEventDatabase = () => {
             const result = await supabaseSyncService.pushBatch(tableName, batchToPush);
             if (!result.success) {
               console.error(`Sync error at batch ${i/BATCH_SIZE}:`, result.error);
-              throw new Error(`Error al sincronizar con Supabase: ${result.error}`);
+              throw new Error(`Error en Supabase: ${result.error}. Asegúrate de que las columnas destino, traspaso y observaciones existan en la tabla ${tableName}.`);
             }
           }
 
