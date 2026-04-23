@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, Settings2, Layout, RefreshCw, Trash2 } from 'lucide-react';
 import { EventPreferences } from '../hooks/useEventDatabase';
 import { CsvImporter } from '../../../components/CsvImporter';
+import { FirebirdImporter } from './FirebirdImporter';
 import { resetFirestore } from '../../../lib/firebase';
 
 interface EventSettingsDrawerProps {
@@ -12,6 +13,9 @@ interface EventSettingsDrawerProps {
   onUpdatePreferences: (prefs: Partial<EventPreferences>) => void;
   onFullRefresh?: () => void;
   onClearLocalData?: () => void;
+  onBulkImport?: (items: any[]) => Promise<boolean>;
+  onClearAllEvents?: () => Promise<void>;
+  onExtractFromFirebase?: () => Promise<void>;
   theme?: 'dark' | 'light';
 }
 
@@ -22,6 +26,9 @@ export const EventSettingsDrawer: React.FC<EventSettingsDrawerProps> = ({
   onUpdatePreferences,
   onFullRefresh,
   onClearLocalData,
+  onBulkImport,
+  onClearAllEvents,
+  onExtractFromFirebase,
   theme = 'dark'
 }) => {
   return (
@@ -67,6 +74,16 @@ export const EventSettingsDrawer: React.FC<EventSettingsDrawerProps> = ({
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-8">
+              {onBulkImport && onClearAllEvents && (
+                <section className="space-y-4">
+                  <FirebirdImporter 
+                    onImport={onBulkImport} 
+                    onClearAll={onClearAllEvents} 
+                    onExtractFromFirebase={onExtractFromFirebase}
+                  />
+                </section>
+              )}
+              
               <CsvImporter />
               
               {/* SECCIÓN: MANTENIMIENTO */}

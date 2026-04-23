@@ -322,6 +322,9 @@ const EventManagementPage: React.FC = () => {
         onUpdatePreferences={actions.togglePreference}
         onFullRefresh={actions.handleFullRefresh}
         onClearLocalData={actions.clearLocalData}
+        onBulkImport={actions.handleBulkImport}
+        onClearAllEvents={actions.handleClearAllEvents}
+        onExtractFromFirebase={actions.handleExtractFromFirebase}
         theme={settings.theme}
       />
 

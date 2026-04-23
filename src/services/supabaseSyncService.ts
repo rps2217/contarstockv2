@@ -136,11 +136,33 @@ export const supabaseSyncService = {
       const { error } = await supabase
         .from(tableName)
         .delete()
-        .eq('id', id);
+        .or(`id.eq.${id},ID.eq.${id},claveUnica.eq.${id}`);
       
       if (error) throw error;
     } catch (e) {
       logger.error(`SYNC_DELETE_FAIL: ${tableName}`, e);
+      throw e;
+    }
+  },
+
+  async clearTable(tableName: string) {
+    try {
+      // In Supabase/Postgrest, a delete without a filter matching everything clears the table
+      // We use a filter that is always true for all records to bypass protection
+      const { error } = await supabase
+        .from(tableName)
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000') // Dummy filter to allow bulk delete
+        .or('id.neq.0,ID.neq.0,timestamp.neq.0'); 
+      
+      if (error) {
+        // Fallback for tables where 'id' might not be the primary key or doesn't exist
+        const { error: error2 } = await supabase.from(tableName).delete().filter('id', 'not.is', null);
+        if (error2) throw error2;
+      }
+      return { success: true };
+    } catch (e) {
+      logger.error(`CLEAR_TABLE_FAIL: ${tableName}`, e);
       throw e;
     }
   },

@@ -206,7 +206,25 @@ export const useEventUI = () => {
   const getGroupedItems = useCallback((events: any[]) => {
     const groups: { [key: string]: any[] } = {};
     events.forEach(event => {
-      const date = format(event.timestamp, 'dd/MM/yyyy');
+      // Safe date parsing to avoid "Invalid time value"
+      let dateObj: Date;
+      try {
+        if (!event.timestamp) {
+          dateObj = new Date();
+        } else if (typeof event.timestamp === 'number') {
+          dateObj = new Date(event.timestamp);
+        } else {
+          dateObj = new Date(event.timestamp);
+        }
+
+        if (isNaN(dateObj.getTime())) {
+          dateObj = new Date();
+        }
+      } catch (e) {
+        dateObj = new Date();
+      }
+
+      const date = format(dateObj, 'dd/MM/yyyy');
       if (!groups[date]) groups[date] = [];
       groups[date].push(event);
     });

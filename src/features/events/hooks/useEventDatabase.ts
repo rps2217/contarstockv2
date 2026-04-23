@@ -1,4 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import { collection, getDocs } from 'firebase/firestore';
+import { db as firestoreDb } from '../../../lib/firebase';
+import Papa from 'papaparse';
 import { supabaseSyncService } from '../../../services/supabaseSyncService';
 import { useAppStore } from '@/store/mainAppStore';
 import { useToastStore } from '../../../store/useToastStore';
@@ -195,76 +198,47 @@ export const useEventDatabase = () => {
 
   // Helper to map internal keys back to configured mapping keys before saving to Firestore
   const unmapData = useCallback((data: any) => {
-    const eventMapping = settings?.cloudConfig?.mappings?.events;
-    
-    // Default mapping based on user's Firestore structure
-    const defaultMapping = {
-      barcode: 'SKU',
-      event: 'EVENTO',
-      quantity: 'CANTIDAD',
-      frc: 'FRC',
-      destino: 'DESTINO',
-      traspaso: 'DOC-TRAS-INTER',
-      observaciones: 'OBSERVACIONES',
-      uniqueKey: 'CLAVE_UNICA',
-      timestamp: 'TIMESTAMP'
-    };
+    // Solo permitimos estas columnas para evitar errores de "columna no existe" en Supabase
+    const allowedKeys = [
+      'id', 'ID', 'Id', 'barcode', 'event', 'quantity', 'frc', 'destino', 'traspaso', 
+      'observaciones', 'claveUnica', 'timestamp', 'nguia', 'productName', 
+      'providerName', 'SKU', 'EVENTO', 'CANTIDAD', 'FRC', 'DESTINO', 
+      'DOC-TRAS-INTER', 'OBSERVACIONES', 'CLAVE_UNICA', 'TIMESTAMP'
+    ];
 
-    const unmapped: any = { ...data };
+    const unmapped: any = {};
     
-    const mapKey = (internalKey: string, mappingKey: string | undefined) => {
-      if (mappingKey && mappingKey !== internalKey) {
-        unmapped[mappingKey] = data[internalKey];
-      }
-    };
+    // Mapeo básico desde el objeto de entrada
+    allowedKeys.forEach(key => {
+      if (data[key] !== undefined) unmapped[key] = data[key];
+    });
 
-    // If we have explicit mappings in cloudConfig, we use them.
-    // Otherwise, we ONLY send the standard lowercase fields to avoid "column not found" errors in Supabase.
-    if (eventMapping) {
-      if (data.barcode !== undefined) mapKey('barcode', eventMapping.barcode);
-      if (data.event !== undefined) mapKey('event', eventMapping.event);
-      if (data.quantity !== undefined) mapKey('quantity', eventMapping.quantity);
-      if (data.frc !== undefined) mapKey('frc', eventMapping.frc);
-      if (data.destino !== undefined) mapKey('destino', eventMapping.destino);
-      if (data.traspaso !== undefined) mapKey('traspaso', eventMapping.traspaso);
-      if (data.observaciones !== undefined) mapKey('observaciones', eventMapping.observaciones);
-      if (data.claveUnica !== undefined) mapKey('claveUnica', eventMapping.uniqueKey);
-    }
-    
-    // Always include standard lowercase fields as they are part of our internal model
-    // and correctly match default Postgres table creation (which is lowercase).
-    unmapped.barcode = data.barcode;
-    unmapped.event = data.event;
-    unmapped.quantity = data.quantity;
-    unmapped.frc = data.frc;
-    unmapped.destino = data.destino;
-    unmapped.traspaso = data.traspaso;
-    unmapped.observaciones = data.observaciones;
-    unmapped.claveUnica = data.claveUnica;
-    
-    // Explicit support for your provided column names as fallbacks
-    if (data.traspaso !== undefined) unmapped['DOC-TRAS-INTER'] = data.traspaso;
-    if (data.claveUnica !== undefined) unmapped.CLAVE_UNICA = data.claveUnica;
-    
-    // Additional info fields
-    unmapped.nguia = data.nguia;
-    unmapped.productName = data.productName;
-    unmapped.providerName = data.providerName;
-    
-    // Standard IDs
-    const idValue = data.id || data.claveUnica;
-    unmapped.ID = idValue;
+    // Asegurar IDs consistentes
+    const idValue = data.id || data.claveUnica || data.CLAVE_UNICA;
     unmapped.id = idValue;
+    unmapped.ID = idValue;
     unmapped.Id = idValue;
-    
+
+    // Mapeo cruzado de seguridad (Nombres Firebird <-> Nombres App)
+    if (data.barcode) unmapped.SKU = data.barcode;
+    if (data.event) unmapped.EVENTO = data.event;
+    if (data.quantity) unmapped.CANTIDAD = data.quantity;
+    if (data.frc) unmapped.FRC = data.frc;
+    if (data.destino) unmapped.DESTINO = data.destino;
+    if (data.traspaso) unmapped['DOC-TRAS-INTER'] = data.traspaso;
+    if (data.observaciones) unmapped.OBSERVACIONES = data.observaciones;
+    if (data.claveUnica) unmapped.CLAVE_UNICA = data.claveUnica;
+
+    // Manejo de timestamp
     if (data.timestamp) {
+      unmapped.timestamp = data.timestamp;
+      // También enviamos formato ISO para columnas TIMESTAMP de Postgres
       const isoTimestamp = typeof data.timestamp === 'number' ? new Date(data.timestamp).toISOString() : data.timestamp;
       unmapped.TIMESTAMP = isoTimestamp;
-      unmapped.timestamp = isoTimestamp;
     }
-
+    
     return unmapped;
-  }, [settings?.cloudConfig?.mappings?.events]);
+  }, []);
 
   const handleAddItem = useCallback(async (data: any) => {
     try {
@@ -496,6 +470,115 @@ export const useEventDatabase = () => {
       handleFullRefresh: () => {
         localStorage.removeItem(`last_sync_${tableName}`);
         window.location.reload();
+      },
+      handleBulkImport: async (items: any[]) => {
+        try {
+          const processed = items.map(item => {
+            const sanitizedBarcode = normalizeSku(item.barcode || item.SKU || '');
+            const frcValue = String(item.frc || item.FRC || '').trim();
+            const claveUnica = item.claveUnica || item.CLAVE_UNICA || `${sanitizedBarcode}${frcValue}`;
+            
+            const rawTimestamp = item.timestamp || item.TIMESTAMP;
+            let finalTimestamp = Date.now();
+            
+            if (rawTimestamp) {
+              const parsed = new Date(rawTimestamp);
+              if (!isNaN(parsed.getTime())) {
+                finalTimestamp = parsed.getTime();
+              }
+            }
+            
+            return {
+              ...item,
+              id: claveUnica,
+              barcode: sanitizedBarcode,
+              frc: frcValue,
+              claveUnica,
+              timestamp: finalTimestamp,
+              syncStatus: 'synced' as const
+            };
+          });
+
+          // Guardado local masivo
+          await eventRepository.bulkSave(processed);
+
+          // Sincronización con la nube (por lotes para no saturar)
+          const BATCH_SIZE = 50;
+          for (let i = 0; i < processed.length; i += BATCH_SIZE) {
+            const batch = processed.slice(i, i + BATCH_SIZE);
+            const batchToPush = batch.map(item => unmapData(item));
+            const result = await supabaseSyncService.pushBatch(tableName, batchToPush);
+            if (!result.success) {
+              console.error(`Sync error at batch ${i/BATCH_SIZE}:`, result.error);
+              throw new Error(`Error al sincronizar con Supabase: ${result.error}`);
+            }
+          }
+
+          addToast(`${processed.length} registros importados correctamente`, 'success');
+          return true;
+        } catch (error: any) {
+          addToast(`Error en importación masiva: ${error.message}`, 'error');
+          return false;
+        }
+      },
+      handleClearAllEvents: async () => {
+        const taskId = `clear-events-${Date.now()}`;
+        addToast('Iniciando limpieza total...', 'info');
+
+        try {
+          // 1. Borrado masivo en Supabase (Nube)
+          await supabaseSyncService.clearTable(tableName);
+          
+          // 2. Borrado local en el repositorio corporativo
+          await eventRepository.clear();
+          
+          addToast('Base de datos de eventos limpiada correctamente (Nube y Local)', 'success');
+          
+          // Opcional: recargar después de una limpieza total para estado limpio
+          setTimeout(() => window.location.reload(), 1500);
+        } catch (error: any) {
+          console.error('Clear DB Error:', error);
+          addToast(`Error al resetear la base de datos: ${error.message}`, 'error');
+        }
+      },
+      handleExtractFromFirebase: async () => {
+        try {
+          addToast('Iniciando extracción desde Firebase...', 'info');
+          
+          if (!firestoreDb) {
+            throw new Error('Firestore no está inicializado.');
+          }
+
+          const querySnapshot = await getDocs(collection(firestoreDb, 'EVENTOS'));
+          const data = querySnapshot.docs.map(doc => ({
+            ...doc.data(),
+            firebaseId: doc.id
+          }));
+
+          if (data.length === 0) {
+            addToast('No se encontraron registros en la colección EVENTOS de Firebase.', 'error');
+            return;
+          }
+
+          // Convert to CSV
+          const csv = Papa.unparse(data);
+          
+          // Download file
+          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+          const link = document.createElement('a');
+          const url = URL.createObjectURL(blob);
+          link.setAttribute('href', url);
+          link.setAttribute('download', `respaldo_firebase_eventos_${new Date().toISOString().split('T')[0]}.csv`);
+          link.style.visibility = 'hidden';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+
+          addToast(`Extracción completada: ${data.length} registros descargados.`, 'success');
+        } catch (error: any) {
+          console.error('Firebase Extraction Error:', error);
+          addToast(`Error al extraer de Firebase: ${error.message}`, 'error');
+        }
       }
     }
   };

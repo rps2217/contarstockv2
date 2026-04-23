@@ -18,9 +18,8 @@ setLogLevel('silent');
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// DESCONECTADO: Firestore ha sido migrado a Supabase
-// export const db = initializeFirestore(app, { ... });
-export const db: any = null; 
+// RE-HABILITADO PARA EXTRACCIÓN DE DATOS LEGACY
+export const db = getFirestore(app);
 
 export const auth = getAuth(app);
 export const storage = getStorage(app);
