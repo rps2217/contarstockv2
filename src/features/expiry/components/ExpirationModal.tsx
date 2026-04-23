@@ -59,53 +59,52 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
         const settings = (await import('../../../services/settings')).getSettings();
         const config = settings.cloudConfig;
         const productsTable = config?.productsTableName || 'PRODUCTOS';
-        const barcodeCol = config?.mappings?.products?.barcode || 'SKU';
-        const nameCol = config?.mappings?.products?.name || 'DESCRIPTOR';
+        const barcodeCol = config?.mappings?.products?.barcode || 'barcode';
+        const nameCol = config?.mappings?.products?.name || 'name';
 
-        const { firebaseSyncService } = await import('../../../services/firebaseSyncService');
-        const response = await firebaseSyncService.query(productsTable, barcodeCol, sku);
+        // LÓGICA MIGRADA A SUPABASE
+        const { supabaseSyncService } = await import('../../../services/supabaseSyncService');
+        const response = await supabaseSyncService.query(productsTable, barcodeCol, sku);
         
         if (!isMounted) return;
 
         if (response.success && response.rows && response.rows.length > 0) {
           const product = response.rows[0];
-          const name = product[nameCol] || product.DESCRIPTOR || 'PRODUCTO ENCONTRADO';
+          const name = product[nameCol] || product.name || product.DESCRIPTOR || 'PRODUCTO ENCONTRADO';
           setProductName(name);
 
           // ESTRATEGIA LOCAL-FIRST: Guardar en DB local para que el siguiente escaneo sea instantáneo
           const { db } = await import('../../../db');
-          const supplierRut = normalizeSku(product.PROVEEDOR_RUT || product.supplierRut || '');
+          const supplierRut = normalizeSku(product.supplier_rut || product.supplierRut || product.PROVEEDOR_RUT || '');
           
           const newProduct = {
             barcode: sku,
             name: name,
-            category: product.CATEGORIA || product.category || 'GENERAL',
-            supplier: product.PROVEEDOR || product.supplier || 'N/A',
+            category: product.category || product.CATEGORIA || 'GENERAL',
+            supplier: product.supplier || product.PROVEEDOR || 'N/A',
             supplierRut: supplierRut,
-            price: parseFloat(product.PRECIO || 0),
+            price: parseFloat(product.price || product.PRECIO || 0),
             syncStatus: 'synced' as const
           };
           
           await db.products.put(newProduct);
 
-          // Si el proveedor no existe localmente, también lo traemos en caliente
+          // Si el proveedor no existe localmente, también lo traemos en caliente desde Supabase
           if (supplierRut) {
             const localProvider = await db.providers.get(supplierRut);
             if (!localProvider) {
               const providersTable = config?.providersTableName || 'PROVEEDORES';
-              const rutCol = 'ID_RUT'; // Ajustar según realidad o mapping
-              const provResponse = await firebaseSyncService.query(providersTable, rutCol, supplierRut);
+              const rutCol = 'rut'; // Supabase usa 'rut'
+              const provResponse = await supabaseSyncService.query(providersTable, rutCol, supplierRut);
               
               if (provResponse.success && provResponse.rows && provResponse.rows.length > 0) {
                 const p = provResponse.rows[0];
-                const withdrawalRaw = String(p['RETIRO (DÍAS)'] || p['RETIRO'] || '0');
-                const match = withdrawalRaw.match(/\d+/);
-                const withdrawalDays = match ? parseInt(match[0], 10) : 0;
+                const withdrawalDays = p.withdrawal_days || p.withdrawalDays || 0;
 
                 await db.providers.put({
                   rut: supplierRut,
-                  name: String(p['NOMBRE PROVEEDOR'] || p['PROVEEDOR'] || 'N/A'),
-                  withdrawalDays,
+                  name: String(p.name || p.NOMBRE || 'N/A'),
+                  withdrawalDays: Number(withdrawalDays),
                   hasExchange: withdrawalDays > 0
                 });
               }

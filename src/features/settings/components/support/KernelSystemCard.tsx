@@ -1,16 +1,18 @@
 
 import React, { useState } from 'react';
-import { RefreshCw, Trash2, Layout, Database } from 'lucide-react';
+import { RefreshCw, Trash2, Layout, Database, ArrowUpCircle } from 'lucide-react';
 import { SettingsCard, SettingsCardHeader, SettingsButton } from '../common/SettingsElements';
 import { resetFirestore } from '../../../../lib/firebase';
 import { InitializationService } from '../../../../services/initializationService';
 import { firebaseSyncService } from '../../../../services/firebaseSyncService';
+import { migrateCatalogsFromFirebase } from '../../../../services/syncManager';
 import { exportToCSV } from '../../../../services/export';
 import { toast } from 'sonner';
 
 export const KernelSystemCard: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isMigrating, setIsMigrating] = useState(false);
 
   const handleSyncConfig = async () => {
     setIsSyncing(true);
@@ -19,9 +21,22 @@ export const KernelSystemCard: React.FC = () => {
       toast.success('Configuración sincronizada');
       setTimeout(() => window.location.reload(), 1000);
     } catch (error) {
-      toast.error('Error al sincronizar configuración');
+      toast.error('Error al conocer configuración');
     } finally {
       setIsSyncing(false);
+    }
+  };
+
+  const handleMigrateCatalogs = async () => {
+    setIsMigrating(true);
+    try {
+      toast.info('Iniciando migración directa de Catálogos (Firebase → Supabase)...');
+      const counts = await migrateCatalogsFromFirebase((msg) => console.log(`[Migration] ${msg}`));
+      toast.success(`Migración completada: ${counts.products} productos y ${counts.providers} proveedores respaldados en Supabase.`);
+    } catch (error: any) {
+      toast.error(`Error en migración: ${error.message}`);
+    } finally {
+      setIsMigrating(false);
     }
   };
 
@@ -72,6 +87,14 @@ export const KernelSystemCard: React.FC = () => {
           isLoading={isSyncing}
           label="Actualizar desde Nube"
           icon={RefreshCw}
+          variant="primary"
+        />
+
+        <SettingsButton 
+          onClick={handleMigrateCatalogs}
+          isLoading={isMigrating}
+          label="Migrar Catálogos (Firebase → Supabase)"
+          icon={ArrowUpCircle}
           variant="primary"
         />
 

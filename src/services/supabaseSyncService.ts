@@ -101,9 +101,12 @@ export const supabaseSyncService = {
   async pushBatch(tableName: string, rows: any[]) {
     try {
       const sanitizedRows = rows.map(row => this.sanitizeData(row));
-      const { error } = await supabase
-        .from(tableName)
-        .upsert(sanitizedRows);
+      
+      let query = supabase.from(tableName).upsert(sanitizedRows, {
+        onConflict: tableName === 'PROVEEDORES' ? 'rut' : undefined
+      });
+
+      const { error } = await query;
       
       if (error) throw error;
       return { success: true, rows_written: rows.length };

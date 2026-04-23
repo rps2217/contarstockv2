@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
-import { firebaseSyncService } from '../services/firebaseSyncService';
+import { supabaseSyncService } from '../services/supabaseSyncService';
 import { db } from '../db';
 
 export const useRealtimeSync = (tableName: string, localTable: any) => {
   useEffect(() => {
-    const unsubscribe = firebaseSyncService.startSync(tableName, localTable);
+    const unsubscribe = supabaseSyncService.startSync(tableName, localTable);
     return () => unsubscribe();
   }, [tableName, localTable]);
 };
