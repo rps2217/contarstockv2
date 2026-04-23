@@ -198,29 +198,26 @@ export const useEventDatabase = () => {
 
   // Helper to map internal keys back to standard lowercase columns for Supabase
   const unmapData = useCallback((data: any) => {
-    const idValue = data.id || data.claveUnica;
+    const idValue = data.id || data.claveUnica || data.CLAVE_UNICA;
     
-    // Definimos exactamente qué columnas vamos a enviar a la nube.
-    // Incluimos tanto minúsculas como las mayúsculas críticas (como ID) para evitar fallos de restricción.
+    // Objeto definitivo para Supabase. 
+    // Enviamos tanto 'id' como 'ID' para evitar el error de "not-null constraint".
     const unmapped: any = {
       id: idValue,
-      ID: idValue, // Aseguramos que la columna ID (mayúsculas) no sea nula
-      barcode: data.barcode,
-      event: data.event,
+      ID: idValue,
+      barcode: data.barcode || '',
+      event: data.event || '',
       quantity: Number(data.quantity) || 0,
-      frc: data.frc,
+      frc: data.frc || '',
+      destino: data.destino || '',
+      traspaso: data.traspaso || '',
+      observaciones: data.observaciones || '',
       claveUnica: data.claveUnica || idValue,
-      timestamp: data.timestamp ? new Date(data.timestamp).toISOString() : new Date().toISOString()
+      timestamp: data.timestamp ? new Date(data.timestamp).toISOString() : new Date().toISOString(),
+      productName: data.productName || '',
+      providerName: data.providerName || '',
+      nguia: data.nguia || ''
     };
-
-    if (data.destino !== undefined) unmapped.destino = data.destino;
-    if (data.traspaso !== undefined) unmapped.traspaso = data.traspaso;
-    if (data.observaciones !== undefined) unmapped.observaciones = data.observaciones;
-    
-    // Campos informativos adicionales
-    if (data.productName) unmapped.productName = data.productName;
-    if (data.providerName) unmapped.providerName = data.providerName;
-    if (data.nguia) unmapped.nguia = data.nguia;
     
     return unmapped;
   }, []);
