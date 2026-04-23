@@ -34,13 +34,13 @@ export const CloudProductSchema = z.record(z.any()).transform((raw) => {
   return "";
  };
 
- const barcode = getVal([mapping?.barcode || '', "COD PRODUCTO", "COD_PRODUCTO", "CODIGO", "CODIGO BARRAS", "CODIGO_BARRAS", "SKU", "BARCODE", "EAN", "ID", "ID_PRODUCTO"]);
- const name = getVal([mapping?.name || '', "DESCRIPCION", "PRODUCTO", "NOMBRE", "DESCRIP", "ITEM"]) || "Sin descripción";
- const category = getVal([mapping?.category || '', "MUNDO", "CATEGORIA", "CATEGORY"]) || "GENERAL";
- const supplier = getVal([mapping?.supplier || '', "PROVEEDOR", "SUPPLIER", "PROVIDER", "LABORATORIO", "LAB", "MARCA"]);
- const supplierRut = getVal([mapping?.supplierRut || '', "RUT PROVEEDOR", "RUT"]);
- const priceRaw = getVal([mapping?.price || '', "PRECIO", "PRICE"]);
- const unitsPerBoxRaw = getVal([mapping?.unitsPerBox || '', "UNIDADES POR CAJA", "UNIDADES", "UNITS"]);
+ const barcode = getVal([mapping?.barcode || '', "barcode", "COD PRODUCTO", "COD_PRODUCTO", "CODIGO", "CODIGO BARRAS", "CODIGO_BARRAS", "SKU", "BARCODE", "EAN", "ID", "ID_PRODUCTO"]);
+ const name = getVal([mapping?.name || '', "name", "DESCRIPCION", "PRODUCTO", "NOMBRE", "DESCRIP", "ITEM"]) || "Sin descripción";
+ const category = getVal([mapping?.category || '', "category", "MUNDO", "CATEGORIA", "CATEGORY"]) || "GENERAL";
+ const supplier = getVal([mapping?.supplier || '', "supplier", "PROVEEDOR", "SUPPLIER", "PROVIDER", "LABORATORIO", "LAB", "MARCA"]);
+ const supplierRut = getVal([mapping?.supplierRut || '', "supplier_rut", "supplierrut", "RUT PROVEEDOR", "RUT"]);
+ const priceRaw = getVal([mapping?.price || '', "price", "PRECIO", "PRICE"]);
+ const unitsPerBoxRaw = getVal([mapping?.unitsPerBox || '', "units_per_box", "unitsperbox", "UNIDADES POR CAJA", "UNIDADES", "UNITS"]);
 
  const parsedPrice = Number(priceRaw);
  const price = priceRaw && !isNaN(parsedPrice) ? parsedPrice : undefined;
