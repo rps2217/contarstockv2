@@ -210,56 +210,48 @@ export const useEventDatabase = () => {
       timestamp: 'TIMESTAMP'
     };
 
-    const finalMapping = { ...defaultMapping, ...eventMapping };
     const unmapped: any = { ...data };
     
     const mapKey = (internalKey: string, mappingKey: string | undefined) => {
-      if (mappingKey) {
+      if (mappingKey && mappingKey !== internalKey) {
         unmapped[mappingKey] = data[internalKey];
       }
     };
 
-    if (data.barcode !== undefined) {
-      mapKey('barcode', finalMapping.barcode);
-      unmapped.barcode = data.barcode; // Keep both for safety
-    }
-    if (data.event !== undefined) {
-      mapKey('event', finalMapping.event);
-      unmapped.event = data.event;
-    }
-    if (data.quantity !== undefined) {
-      mapKey('quantity', finalMapping.quantity);
-      unmapped.quantity = data.quantity;
-    }
-    if (data.frc !== undefined) {
-      mapKey('frc', finalMapping.frc);
-      unmapped.frc = data.frc;
-    }
-    if (data.destino !== undefined) {
-      mapKey('destino', finalMapping.destino);
-      unmapped.destino = data.destino;
-    }
-    if (data.traspaso !== undefined) {
-      mapKey('traspaso', finalMapping.traspaso);
-      unmapped.traspaso = data.traspaso;
-      unmapped['DOC-TRAS-INTER'] = data.traspaso; // Explicit support
-    }
-    if (data.observaciones !== undefined) {
-      mapKey('observaciones', finalMapping.observaciones);
-      unmapped.observaciones = data.observaciones;
-    }
-    if (data.claveUnica !== undefined) {
-      mapKey('claveUnica', finalMapping.uniqueKey);
-      unmapped.claveUnica = data.claveUnica;
-      unmapped.CLAVE_UNICA = data.claveUnica;
+    // If we have explicit mappings in cloudConfig, we use them.
+    // Otherwise, we ONLY send the standard lowercase fields to avoid "column not found" errors in Supabase.
+    if (eventMapping) {
+      if (data.barcode !== undefined) mapKey('barcode', eventMapping.barcode);
+      if (data.event !== undefined) mapKey('event', eventMapping.event);
+      if (data.quantity !== undefined) mapKey('quantity', eventMapping.quantity);
+      if (data.frc !== undefined) mapKey('frc', eventMapping.frc);
+      if (data.destino !== undefined) mapKey('destino', eventMapping.destino);
+      if (data.traspaso !== undefined) mapKey('traspaso', eventMapping.traspaso);
+      if (data.observaciones !== undefined) mapKey('observaciones', eventMapping.observaciones);
+      if (data.claveUnica !== undefined) mapKey('claveUnica', eventMapping.uniqueKey);
     }
     
-    // Additional fields from user's list
-    if (data.nguia !== undefined) unmapped.nguia = data.nguia;
-    if (data.productName !== undefined) unmapped.productName = data.productName;
-    if (data.providerName !== undefined) unmapped.providerName = data.providerName;
+    // Always include standard lowercase fields as they are part of our internal model
+    // and correctly match default Postgres table creation (which is lowercase).
+    unmapped.barcode = data.barcode;
+    unmapped.event = data.event;
+    unmapped.quantity = data.quantity;
+    unmapped.frc = data.frc;
+    unmapped.destino = data.destino;
+    unmapped.traspaso = data.traspaso;
+    unmapped.observaciones = data.observaciones;
+    unmapped.claveUnica = data.claveUnica;
     
-    // Ensure ID is sent in all required cases
+    // Explicit support for your provided column names as fallbacks
+    if (data.traspaso !== undefined) unmapped['DOC-TRAS-INTER'] = data.traspaso;
+    if (data.claveUnica !== undefined) unmapped.CLAVE_UNICA = data.claveUnica;
+    
+    // Additional info fields
+    unmapped.nguia = data.nguia;
+    unmapped.productName = data.productName;
+    unmapped.providerName = data.providerName;
+    
+    // Standard IDs
     const idValue = data.id || data.claveUnica;
     unmapped.ID = idValue;
     unmapped.id = idValue;

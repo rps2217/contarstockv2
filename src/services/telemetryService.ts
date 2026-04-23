@@ -14,6 +14,8 @@ class TelemetryService {
   }
 
   public track(type: TelemetryEventType, action: string, metadata?: Record<string, any>, duration?: number, batchId?: string) {
+    if ((this as any).disabled) return;
+    
     const event: TelemetryEvent = {
       id: crypto.randomUUID(),
       timestamp: Date.now(),
@@ -59,9 +61,28 @@ class TelemetryService {
         METADATOS: JSON.stringify(e.metadata || {})
       }));
 
-      await firebaseSyncService.pushBatch('TELEMETRIA', rows);
+      // Use a direct call to avoid circular logging via firebaseSyncService -> logger -> telemetry
+      const { error } = await (await import('../lib/supabase')).supabase
+        .from('TELEMETRIA')
+        .insert(rows);
+        
+      if (error) {
+        // If table doesn't exist, we don't want to spam the console
+        if (error.code === '42P01' || error.message?.includes('schema cache') || error.code === 'PGRST116' || error.message?.includes('404')) {
+          console.warn('[TelemetryService] Table TELEMETRIA not found. Disabling telemetry.');
+          this.buffer = [];
+          if (this.flushTimer) {
+            clearInterval(this.flushTimer);
+            this.flushTimer = null;
+          }
+          // Mark as disabled to avoid further tracks
+          (this as any).disabled = true;
+          return;
+        }
+        throw error;
+      }
     } catch (err: any) {
-      console.error('[TelemetryService] FLUSH_FAIL:', err.message);
+      console.warn('[TelemetryService] Silent flush failure (prevents circular logging):', err.message);
     }
   }
 }
