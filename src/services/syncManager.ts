@@ -234,13 +234,17 @@ export const migrateCatalogsFromFirebase = async (onProgress?: (msg: string) => 
       // Deduplicar productos para evitar "ON CONFLICT DO UPDATE command cannot affect row a second time"
       const uniqueRowsMap = new Map();
       firebaseProducts.forEach((p: any) => {
-        const productIdentity = String(p.barcode || p.COD_PRODUCTO || p.CODIGO || p.SKU || p.id || crypto.randomUUID());
+        const rawBarcode = String(p.barcode || p.COD_PRODUCTO || p.CODIGO || p.SKU || p.id || '');
+        if (!rawBarcode) return;
+        
+        const productIdentity = normalizeSku(rawBarcode);
+        
         uniqueRowsMap.set(productIdentity, {
           id: productIdentity, 
           barcode: productIdentity,
-          name: String(p.name || p.NOMBRE || p.PRODUCTO || p.DESCRIPTOR || 'PRODUCTO DESCONOCIDO'),
+          name: String(p.name || p.NOMBRE || p.PRODUCTO || p.DESCRIPTOR || p.DESCRIPCION || p.DESC || 'PRODUCTO DESCONOCIDO').trim().toUpperCase(),
           category: String(p.category || p.CATEGORIA || p.MUNDO || 'GENERAL'),
-          supplier: String(p.supplier || p.PROVEEDOR || ''),
+          supplier: String(p.supplier || p.PROVEEDOR || p.LABORATORIO || p.MARCA || p.LAB || ''),
           supplierRut: String(p.supplierRut || p.PROVEEDOR_RUT || p.RUT || ''),
           price: Number(p.price || p.PRECIO || 0),
           unitsPerBox: Number(p.unitsPerBox || p.UNIDADES_X_CAJA || 1),

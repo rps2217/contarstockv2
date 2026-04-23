@@ -31,7 +31,7 @@ export const resolveUnknownProducts = async (skus: string[], config: any) => {
         
         await saveProduct({
           barcode: sanitizedSku,
-          name: p[nameCol] || p.name || p.DESCRIPTOR || 'PRODUCTO IDENTIFICADO',
+          name: p[nameCol] || p.name || p.DESCRIPTOR || p.DESCRIPCION || p.NOMBRE || 'PRODUCTO IDENTIFICADO',
           category: p.category || p.CATEGORIA || 'GENERAL',
           supplier: p[supplierCol] || p.supplier || p.PROVEEDOR || 'N/A',
           supplierRut: sanitizeBarcode(p[supplierRutCol] || p.supplierRut || p.PROVEEDOR_RUT || ''),
