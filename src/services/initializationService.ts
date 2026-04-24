@@ -1,5 +1,5 @@
 import { logger } from './logger';
-import { importProductsFromCloud, importProvidersFromCloud } from './syncManager';
+import { importProductsFromCloud, importProvidersFromCloud, importCustomersAndTemplatesFromCloud } from './syncManager';
 import { getSettings, saveSettings } from './settings';
 import { db } from '../db';
 import { normalizeSku } from '../services/utils';
@@ -93,6 +93,7 @@ export const InitializationService = {
       await Promise.all([
         importProductsFromCloud(),
         importProvidersFromCloud(),
+        importCustomersAndTemplatesFromCloud(),
         sanitizeTask()
       ]);
       
@@ -150,6 +151,7 @@ export const InitializationService = {
         InitializationService.syncConfig(),
         importProductsFromCloud(),
         importProvidersFromCloud(),
+        importCustomersAndTemplatesFromCloud(),
         HydrationService.persist(),
         purgeOldData(30) // Step 5: Archivado automático > 30 días
       ]);

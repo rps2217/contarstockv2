@@ -16,7 +16,7 @@ import { ThemeSection } from './components/ThemeSection';
 import { PrinterSection } from './components/PrinterSection';
 import { PreferencesSection } from './components/PreferencesSection';
 
-type TabId = 'general' | 'preferences' | 'cloud' | 'system';
+type TabId = 'general' | 'nube' | 'sistema';
 
 export const Settings: React.FC = () => {
  const navigate = useNavigate();
@@ -27,31 +27,30 @@ export const Settings: React.FC = () => {
 
  // Deep linking logic
  useEffect(() => {
- const params = new URLSearchParams(location.search);
- const tabParam = params.get('tab') as TabId;
- if (tabParam && ['general', 'cloud', 'system'].includes(tabParam)) {
- setActiveTab(tabParam);
- }
+   const params = new URLSearchParams(location.search);
+   const tabParam = params.get('tab') as TabId;
+   if (tabParam && ['general', 'nube', 'sistema'].includes(tabParam)) {
+     setActiveTab(tabParam);
+   }
  }, [location]);
 
  const handleShare = async () => {
- const data = { title: 'LogiCount Pro', url: window.location.href };
- if (navigator.share) {
- try { await navigator.share(data); } catch (e) {}
- } else {
- try {
- await navigator.clipboard.writeText(window.location.href);
- setCopied(true);
- setTimeout(() => setCopied(false), 2000);
- } catch (e) { alert("URL: " + window.location.href); }
- }
+   const data = { title: 'LogiCount Pro', url: window.location.href };
+   if (navigator.share) {
+     try { await navigator.share(data); } catch (e) {}
+   } else {
+     try {
+       await navigator.clipboard.writeText(window.location.href);
+       setCopied(true);
+       setTimeout(() => setCopied(false), 2000);
+     } catch (e) { alert("URL: " + window.location.href); }
+   }
  };
 
  const tabs: { id: TabId; label: string; icon: any; color: string }[] = [
-  { id: 'general', label: 'Operativa', icon: Zap, color: 'text-amber-500' },
-  { id: 'preferences', label: 'Preferencias', icon: Palette, color: 'text-purple-500' },
-  { id: 'cloud', label: 'Nube', icon: Cloud, color: 'text-sky-400' },
-  { id: 'system', label: 'Soporte', icon: ShieldCheck, color: 'text-emerald-500' },
+  { id: 'general', label: 'Operativa Física', icon: Zap, color: 'text-amber-500' },
+  { id: 'nube', label: 'Nube y Sync', icon: Cloud, color: 'text-sky-400' },
+  { id: 'sistema', label: 'Soporte y Sys', icon: ShieldCheck, color: 'text-emerald-500' },
  ];
 
  return (
@@ -119,15 +118,16 @@ export const Settings: React.FC = () => {
  <div className="animate-in fade-in slide-in-from-bottom-6 duration-500 space-y-8">
  {activeTab === 'general' && (
    <>
+     {/* Bloque Identidad / Preferencias */}
+     <PreferencesSection settings={settings} updateSetting={updateSetting} />
      <OperationalSection settings={settings} updateSetting={updateSetting} />
-     <NavigationSection settings={settings} updateSetting={updateSetting} />
      <ThemeSection settings={settings} updateSetting={updateSetting} />
+     <NavigationSection settings={settings} updateSetting={updateSetting} />
      <PrinterSection settings={settings} updateSetting={updateSetting} />
    </>
  )}
- {activeTab === 'preferences' && <PreferencesSection settings={settings} updateSetting={updateSetting} />}
- {activeTab === 'cloud' && <CloudSection settings={settings} updateSetting={updateSetting} />}
- {activeTab === 'system' && <SupportSection />}
+ {activeTab === 'nube' && <CloudSection settings={settings} updateSetting={updateSetting} />}
+ {activeTab === 'sistema' && <SupportSection />}
  </div>
 
  {/* Footer de versión */}

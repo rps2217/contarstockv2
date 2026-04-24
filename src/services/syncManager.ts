@@ -415,7 +415,7 @@ export const repairProvidersFromFirebase = async (onProgress?: (msg: string) => 
     }
 
     // 4. Persistir localmente
-    await db.providers.bulkPut(updates);
+    await db.providers.bulkPut(updates as Provider[]);
     
     if (onProgress) onProgress("Políticas sincronizadas y protegidas en la nube.");
     
@@ -642,6 +642,16 @@ export const importProvidersFromCloud = async (lastSyncDate?: string): Promise<n
   } catch (e: any) {
     logger.error("FETCH_PROVIDERS_FAIL", `Error descargando proveedores: ${e.message}`);
     throw e;
+  }
+};
+
+export const importCustomersAndTemplatesFromCloud = async (): Promise<void> => {
+  try {
+    await dynamicSyncService.pullSync('CLIENTES');
+    await dynamicSyncService.pullSync('PLANTILLAS_MENSAJES');
+    await dynamicSyncService.pullSync('PLANTILLAS_CORREOS');
+  } catch (e: any) {
+    logger.warn("FETCH_CONFIG_FAIL", `Error descargando clientes/plantillas: ${e.message}`);
   }
 };
 

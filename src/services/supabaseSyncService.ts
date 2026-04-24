@@ -149,7 +149,7 @@ export const supabaseSyncService = {
 
           // 2. Detectar error de tabla inexistente (404)
           if (errMsg.includes("not find") && errMsg.includes("table")) {
-            logger.warn(`[Resilience] La tabla ${tableName} no existe en Supabase. Omitiendo sincronización.`);
+            logger.warn('SYNC', `[Resilience] La tabla ${tableName} no existe en Supabase. Omitiendo sincronización.`);
             return { success: false, error: `Table '${tableName}' not found` };
           }
 
@@ -298,7 +298,7 @@ export const supabaseSyncService = {
       } catch (e: any) {
         // Fallback: Si falla el filtrado por fecha, intentar traer todo sin filtro de forma segura
         if (lastSyncDate) {
-            logger.warn(`Incremental sync failed for ${tableName}, falling back to full sync. Reason: ${e.message}`);
+            logger.warn('SYNC', `Incremental sync failed for ${tableName}, falling back to full sync. Reason: ${e.message}`);
             const data = await fetchWithPagination(true);
             return { success: true, rows: data };
         } else {

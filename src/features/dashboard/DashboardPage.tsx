@@ -288,10 +288,6 @@ const Dashboard: React.FC = () => {
             </div>
             
             <div className="flex items-center gap-3 relative z-[100]">
-              <div className="hidden md:flex flex-col items-end mr-2">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Operador</span>
-                <span className="text-sm font-black text-brand-warning italic">{operatorId}</span>
-              </div>
               <button
                 onClick={() => {
                   if (navigator.vibrate) navigator.vibrate(5);
@@ -359,21 +355,14 @@ const Dashboard: React.FC = () => {
             </div>
 
             {/* QUICK STATS BENTO */}
-            <div className="lg:col-span-4 grid grid-cols-2 gap-4">
-              <div className="bg-slate-100 dark:bg-white/5 rounded-3xl p-5 border border-slate-200 dark:border-white/5">
-                <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">Escaneos Hoy</p>
+            <div className="lg:col-span-4 flex flex-col gap-4">
+              <div className="flex-1 bg-slate-100 dark:bg-white/5 rounded-3xl p-5 border border-slate-200 dark:border-white/5 flex flex-col justify-center">
+                <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">Pendientes Sincronizar</p>
                 <div className="flex items-end gap-2">
-                  <span className="text-3xl font-black italic">{stats?.scansToday || 0}</span>
-                  <TrendingUp className="w-4 h-4 text-emerald-500 mb-1" />
-                </div>
-              </div>
-              <div className="bg-slate-100 dark:bg-white/5 rounded-3xl p-5 border border-slate-200 dark:border-white/5">
-                <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">Pendientes</p>
-                <div className="flex items-end gap-2">
-                  <span className={`text-3xl font-black italic ${isSyncNeeded ? 'text-amber-500' : ''}`}>
+                  <span className={`text-4xl font-black italic ${isSyncNeeded ? 'text-amber-500' : ''}`}>
                     {(stats?.pendingSync || 0) + (dynamicStats?.pending || 0)}
                   </span>
-                  <Cloud className={`w-4 h-4 mb-1 ${isSyncNeeded ? 'text-amber-500 animate-pulse' : 'text-slate-400'}`} />
+                  <Cloud className={`w-6 h-6 mb-1 ${isSyncNeeded ? 'text-amber-500 animate-pulse' : 'text-slate-400'}`} />
                 </div>
               </div>
             </div>

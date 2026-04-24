@@ -3,6 +3,13 @@ import { supabaseSyncService } from './supabaseSyncService';
 import { logger } from './logger';
 
 export const dynamicDataService = {
+  async getRecordsByTable(tableName: string) {
+    return await db.dynamic_data
+      .where('tableName')
+      .equals(tableName)
+      .toArray();
+  },
+
   async saveRecord(tableName: string, data: any, id?: string) {
     const recordId = id || crypto.randomUUID();
     const record: DynamicRecord = {

@@ -3,14 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, Mail, Copy, ExternalLink, Save, Trash2, Edit2, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToastStore } from '../../../store/useToastStore';
-
-interface EmailTemplate {
-  id: string;
-  name: string;
-  subject: string;
-  body: string;
-  to: string;
-}
+import { EmailTemplate, EmailTemplateRepository } from '../../../repositories/EmailTemplateRepository';
 
 const DEFAULT_TEMPLATES: EmailTemplate[] = [
   {
@@ -18,21 +11,24 @@ const DEFAULT_TEMPLATES: EmailTemplate[] = [
     name: 'Solicitud Markdown 30%',
     to: 'pm@empresa.com',
     subject: 'Solicitud de Precio Especial (Markdown 30%) - [CANTIDAD_ITEMS] productos',
-    body: 'Hola,\n\nTe escribo para solicitar autorización de un precio especial (Markdown 30%) para los siguientes productos que están próximos a su fecha de caducidad, con el objetivo de acelerar su venta y evitar mermas.\n\n[TABLA_PRODUCTOS]\n\nQuedo atento a tu confirmación para proceder con el cambio de flejes/etiquetas.\n\nSaludos.'
+    body: 'Hola,\n\nTe escribo para solicitar autorización de un precio especial (Markdown 30%) para los siguientes productos que están próximos a su fecha de caducidad, con el objetivo de acelerar su venta y evitar mermas.\n\n[TABLA_PRODUCTOS]\n\nQuedo atento a tu confirmación para proceder con el cambio de flejes/etiquetas.\n\nSaludos.',
+    module: 'expiry'
   },
   {
     id: 'default-2',
     name: 'Aviso de Merma / Destrucción',
     to: 'control@empresa.com',
     subject: 'Aviso de Merma - [CANTIDAD_ITEMS] productos vencidos',
-    body: 'Estimados,\n\nAdjunto el detalle de los productos que han cumplido su fecha de caducidad y serán procesados como merma/destrucción según el protocolo vigente.\n\n[TABLA_PRODUCTOS]\n\nPor favor confirmar recepción de esta información para proceder con el descarte físico.\n\nSaludos.'
+    body: 'Estimados,\n\nAdjunto el detalle de los productos que han cumplido su fecha de caducidad y serán procesados como merma/destrucción según el protocolo vigente.\n\n[TABLA_PRODUCTOS]\n\nPor favor confirmar recepción de esta información para proceder con el descarte físico.\n\nSaludos.',
+    module: 'expiry'
   },
   {
     id: 'default-3',
     name: 'Reporte General',
     to: '',
     subject: 'Reporte de Vencimientos - [FECHA]',
-    body: 'Adjunto el detalle de los productos seleccionados para revisión:\n\n[TABLA_PRODUCTOS]\n\nSaludos.'
+    body: 'Adjunto el detalle de los productos seleccionados para revisión:\n\n[TABLA_PRODUCTOS]\n\nSaludos.',
+    module: 'expiry'
   }
 ];
 
@@ -62,22 +58,41 @@ export const ExpiryEmailModal: React.FC<ExpiryEmailModalProps> = ({
 
   // Load templates on mount
   useEffect(() => {
-    const saved = localStorage.getItem('logicount_email_templates');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed && parsed.length > 0) {
-          setTemplates(parsed);
-          setSelectedTemplateId(parsed[0].id);
-          return;
+    if (!isOpen) return;
+    const loadTemplates = async () => {
+      const dbTemplates = await EmailTemplateRepository.getAll('expiry');
+      if (dbTemplates.length > 0) {
+        // Combinar con default templates pero solo dejar los defaults puros si no existen
+        const combined = [...DEFAULT_TEMPLATES.filter(d => !dbTemplates.some(db => db.id === d.id)), ...dbTemplates];
+        setTemplates(combined);
+        setSelectedTemplateId(combined[0].id);
+      } else {
+        setTemplates(DEFAULT_TEMPLATES);
+        setSelectedTemplateId(DEFAULT_TEMPLATES[0].id);
+        // Migramos los antiguos de localStorage si existen
+        const saved = localStorage.getItem('logicount_email_templates');
+        if (saved) {
+           try {
+              const parsed = JSON.parse(saved);
+              if (parsed && parsed.length > 0) {
+                 for (const p of parsed) {
+                     if (!p.id.startsWith('default-')) {
+                         p.module = 'expiry';
+                         await EmailTemplateRepository.save(p);
+                         dbTemplates.push(p);
+                     }
+                 }
+                 const combined = [...DEFAULT_TEMPLATES, ...dbTemplates];
+                 setTemplates(combined);
+                 setSelectedTemplateId(combined[0].id);
+                 localStorage.removeItem('logicount_email_templates');
+              }
+           } catch(e) {}
         }
-      } catch (e) {
-        console.error('Error parsing templates', e);
       }
-    }
-    setTemplates(DEFAULT_TEMPLATES);
-    setSelectedTemplateId(DEFAULT_TEMPLATES[0].id);
-  }, []);
+    };
+    loadTemplates();
+  }, [isOpen]);
 
   // Update form when template changes
   useEffect(() => {
@@ -90,44 +105,55 @@ export const ExpiryEmailModal: React.FC<ExpiryEmailModalProps> = ({
     }
   }, [selectedTemplateId, templates]);
 
-  const saveTemplates = (newTemplates: EmailTemplate[]) => {
+  const saveTemplatesLocally = (newTemplates: EmailTemplate[]) => {
     setTemplates(newTemplates);
-    localStorage.setItem('logicount_email_templates', JSON.stringify(newTemplates));
   };
 
-  const handleSaveAsNewTemplate = () => {
+  const handleSaveAsNewTemplate = async () => {
     if (!newTemplateName.trim()) {
       addToast('Ingresa un nombre para la plantilla', 'error');
       return;
     }
     const newTemplate: EmailTemplate = {
-      id: `custom-${Date.now()}`,
+      id: `custom-expiry-${Date.now()}`,
       name: newTemplateName,
       to,
       subject,
-      body
+      body,
+      module: 'expiry'
     };
-    saveTemplates([...templates, newTemplate]);
-    setSelectedTemplateId(newTemplate.id);
-    setIsEditingTemplate(false);
-    setNewTemplateName('');
-    addToast('Plantilla guardada exitosamente', 'success');
+    try {
+      await EmailTemplateRepository.save(newTemplate);
+      saveTemplatesLocally([...templates, newTemplate]);
+      setSelectedTemplateId(newTemplate.id);
+      setIsEditingTemplate(false);
+      setNewTemplateName('');
+      addToast('Plantilla guardada exitosamente y sincronizada', 'success');
+    } catch (e: any) {
+      addToast('Error guardando plantilla', 'error');
+    }
   };
 
-  const handleUpdateTemplate = () => {
+  const handleUpdateTemplate = async () => {
     const isDefault = selectedTemplateId.startsWith('default-');
     if (isDefault) {
       addToast('No puedes sobrescribir una plantilla por defecto. Guárdala como nueva.', 'error');
       return;
     }
-    const updated = templates.map(t => 
-      t.id === selectedTemplateId ? { ...t, to, subject, body } : t
-    );
-    saveTemplates(updated);
-    addToast('Plantilla actualizada', 'success');
+    try {
+      const templateToUpdate = { id: selectedTemplateId, name: templates.find(t => t.id === selectedTemplateId)?.name || 'Custom', to, subject, body, module: 'expiry' as const };
+      await EmailTemplateRepository.save(templateToUpdate);
+      const updated = templates.map(t => 
+        t.id === selectedTemplateId ? templateToUpdate : t
+      );
+      saveTemplatesLocally(updated);
+      addToast('Plantilla actualizada', 'success');
+    } catch (e: any) {
+      addToast('Error actualizando plantilla', 'error');
+    }
   };
 
-  const handleDeleteTemplate = () => {
+  const handleDeleteTemplate = async () => {
     const isDefault = selectedTemplateId.startsWith('default-');
     if (isDefault) {
       addToast('No puedes eliminar una plantilla por defecto', 'error');
@@ -135,10 +161,15 @@ export const ExpiryEmailModal: React.FC<ExpiryEmailModalProps> = ({
     }
     const confirm = window.confirm('¿Eliminar esta plantilla?');
     if (confirm) {
-      const updated = templates.filter(t => t.id !== selectedTemplateId);
-      saveTemplates(updated);
-      setSelectedTemplateId(updated[0]?.id || '');
-      addToast('Plantilla eliminada', 'success');
+      try {
+        await EmailTemplateRepository.delete(selectedTemplateId);
+        const updated = templates.filter(t => t.id !== selectedTemplateId);
+        saveTemplatesLocally(updated);
+        setSelectedTemplateId(updated[0]?.id || '');
+        addToast('Plantilla eliminada', 'success');
+      } catch(e: any) {
+        addToast('Error al eliminar', 'error');
+      }
     }
   };
 
