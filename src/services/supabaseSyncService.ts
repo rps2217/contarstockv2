@@ -258,18 +258,23 @@ export const supabaseSyncService = {
     }
   },
 
-  async pullBatch(tableName: string) {
-    try {
+  async pullBatch(tableName: string, lastSyncDate?: string, timestampColumn: string = 'updated_at') {
+    const fetchWithPagination = async (useLimit: boolean, fromDate?: string) => {
       let allData: any[] = [];
       let from = 0;
       const step = 1000;
       let hasMore = true;
 
       while (hasMore) {
-        const { data, error } = await supabase
+        let query = supabase
           .from(tableName)
-          .select('*')
-          .range(from, from + step - 1);
+          .select('*');
+          
+        if (fromDate) {
+          query = query.gte(timestampColumn, fromDate);
+        }
+        
+        const { data, error } = await query.range(from, from + step - 1);
         
         if (error) throw error;
         
@@ -283,8 +288,23 @@ export const supabaseSyncService = {
           hasMore = false;
         }
       }
+      return allData;
+    };
 
-      return { success: true, rows: allData };
+    try {
+      try {
+        const data = await fetchWithPagination(true, lastSyncDate);
+        return { success: true, rows: data };
+      } catch (e: any) {
+        // Fallback: Si falla el filtrado por fecha, intentar traer todo sin filtro de forma segura
+        if (lastSyncDate) {
+            logger.warn(`Incremental sync failed for ${tableName}, falling back to full sync. Reason: ${e.message}`);
+            const data = await fetchWithPagination(true);
+            return { success: true, rows: data };
+        } else {
+            throw e;
+        }
+      }
     } catch (e) {
       logger.error(`SYNC_PULL_FAIL: ${tableName}`, e);
       return { success: false, rows: [], error: this.formatError(e) };

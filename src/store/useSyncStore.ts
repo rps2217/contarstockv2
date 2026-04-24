@@ -1,5 +1,6 @@
 
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 interface SyncState {
   isSyncing: boolean;
@@ -16,19 +17,28 @@ interface SyncState {
   setSyncError: (error: string | null) => void;
 }
 
-export const useSyncStore = create<SyncState>((set) => ({
-  isSyncing: false,
-  lastSyncTime: null,
-  pendingItems: 0,
-  latencyMs: null,
-  isSupabaseConnected: true,
-  syncError: null,
-  setSyncing: (status) => set({ isSyncing: status }),
-  setLastSyncTime: (time) => set({ lastSyncTime: time }),
-  setPendingItems: (count) => set({ pendingItems: count }),
-  setLatency: (ms) => set({ latencyMs: ms }),
-  setSupabaseConnected: (status) => set({ isSupabaseConnected: status }),
-  setSyncError: (error) => set({ syncError: error }),
-}));
+export const useSyncStore = create<SyncState>()(
+  persist(
+    (set) => ({
+      isSyncing: false,
+      lastSyncTime: null,
+      pendingItems: 0,
+      latencyMs: null,
+      isSupabaseConnected: true,
+      syncError: null,
+      setSyncing: (status) => set({ isSyncing: status }),
+      setLastSyncTime: (time) => set({ lastSyncTime: time }),
+      setPendingItems: (count) => set({ pendingItems: count }),
+      setLatency: (ms) => set({ latencyMs: ms }),
+      setSupabaseConnected: (status) => set({ isSupabaseConnected: status }),
+      setSyncError: (error) => set({ syncError: error }),
+    }),
+    {
+      name: 'sync-storage',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ lastSyncTime: state.lastSyncTime }), // Solo persistimos lastSyncTime
+    }
+  )
+);
 
 // Forced GitHub sync

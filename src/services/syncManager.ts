@@ -572,7 +572,13 @@ export const importProductsFromCloud = async (): Promise<number> => {
   try {
     const config = getSettings().cloudConfig;
     const tableName = config?.productsTableName || "PRODUCTOS";
-    const response = await supabaseSyncService.pullBatch(tableName);
+    
+    // Incremental Sync (Option A)
+    const { lastSyncTime, setLastSyncTime } = useSyncStore.getState();
+    const lastSyncIso = lastSyncTime ? new Date(lastSyncTime).toISOString() : undefined;
+    
+    // Pull from cloud only rows updated after our last sync
+    const response = await supabaseSyncService.pullBatch(tableName, lastSyncIso, 'updated_at'); // Asumiendo updated_at col
     
     if (!response.success || !response.rows) return 0;
 
@@ -594,10 +600,13 @@ export const importProductsFromCloud = async (): Promise<number> => {
 
     // DESCARGAR TAMBIÉN PROVEEDORES (Políticas de Retiro)
     try {
-      await importProvidersFromCloud();
+      await importProvidersFromCloud(lastSyncIso);
     } catch (e) {
       console.warn("Fallo descarga de proveedores:", e);
     }
+
+    // Actualizar Timestamp global
+    setLastSyncTime(Date.now());
 
     return products.length;
   } catch (e: any) {
@@ -606,11 +615,11 @@ export const importProductsFromCloud = async (): Promise<number> => {
   }
 };
 
-export const importProvidersFromCloud = async (): Promise<number> => {
+export const importProvidersFromCloud = async (lastSyncDate?: string): Promise<number> => {
   try {
     const config = getSettings().cloudConfig;
     const tableName = config?.providersTableName || "PROVEEDORES";
-    const response = await supabaseSyncService.pullBatch(tableName);
+    const response = await supabaseSyncService.pullBatch(tableName, lastSyncDate, 'updated_at'); // Asumiendo que la tabla tiene updated_at
     
     if (!response.success || !response.rows) return 0;
 
