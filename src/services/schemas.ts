@@ -34,11 +34,11 @@ export const CloudProductSchema = z.record(z.any()).transform((raw) => {
   return "";
  };
 
- const barcode = getVal([mapping?.barcode || '', "barcode", "COD PRODUCTO", "COD_PRODUCTO", "CODIGO", "CODIGO BARRAS", "CODIGO_BARRAS", "SKU", "BARCODE", "EAN", "ID", "ID_PRODUCTO"]);
- const name = getVal([mapping?.name || '', "name", "DESCRIPCION", "PRODUCTO", "NOMBRE", "DESCRIP", "ITEM"]) || "Sin descripción";
+ const barcode = getVal([mapping?.barcode || '', "barcode", "COD PRODUCTO", "COD_PRODUCTO", "CODIGO", "CODIGO BARRAS", "CODIGO_BARRAS", "COD_BARRAS", "SKU", "BARCODE", "EAN", "ID", "ID_PRODUCTO", "ITEM", "COD_ITEM"]);
+ const name = getVal([mapping?.name || '', "name", "DESCRIPCION", "PRODUCTO", "NOMBRE", "DESCRIPTOR", "DESC", "DESCRIP", "ITEM", "DESCRIPCION_PROD", "DETALLE", "ITEM_NAME"]) || "PRODUCTO DESCONOCIDO";
  const category = getVal([mapping?.category || '', "category", "MUNDO", "CATEGORIA", "CATEGORY"]) || "GENERAL";
  const supplier = getVal([mapping?.supplier || '', "supplier", "PROVEEDOR", "SUPPLIER", "PROVIDER", "LABORATORIO", "LAB", "MARCA"]);
- const supplierRut = getVal([mapping?.supplierRut || '', "supplier_rut", "supplierrut", "RUT PROVEEDOR", "RUT"]);
+ const supplierRut = getVal([mapping?.supplierRut || '', "supplier_rut", "supplierrut", "RUT PROVEEDOR", "RUT", "PROVEEDOR_RUT", "RUT_PROVEEDOR", "RUT_PROV"]);
  const priceRaw = getVal([mapping?.price || '', "price", "PRECIO", "PRICE"]);
  const unitsPerBoxRaw = getVal([mapping?.unitsPerBox || '', "units_per_box", "unitsperbox", "UNIDADES POR CAJA", "UNIDADES", "UNITS"]);
 
@@ -50,16 +50,16 @@ export const CloudProductSchema = z.record(z.any()).transform((raw) => {
 
  return {
  barcode: normalizeSku(String(barcode)),
- name: String(name).trim(),
- category: String(category).trim(),
- supplier: String(supplier).trim(),
+ name: String(name).trim().toUpperCase(),
+ category: String(category).trim().toUpperCase(),
+ supplier: String(supplier).trim().toUpperCase(),
  supplierRut: normalizeIdentity(String(supplierRut)),
  price: price ? Number(price) : undefined,
  unitsPerBox: unitsPerBox ? Number(unitsPerBox) : undefined
  };
 }).pipe(z.object({
  barcode: z.string().min(1, "El código es obligatorio"),
- name: z.string().default("Sin descripción"),
+ name: z.string().default("PRODUCTO DESCONOCIDO"),
  category: z.string().default("GENERAL"),
  supplier: z.string().default(""),
  supplierRut: z.string().default(""),
@@ -119,6 +119,50 @@ export const CloudOrderRowSchema = z.record(z.any()).transform((raw) => {
  barcode: z.string().min(1),
  name: z.string(),
  qty: z.coerce.number().min(0) // Permitimos 0 para precarga de ítems faltantes
+}));
+
+export const CloudProviderSchema = z.record(z.any()).transform((raw) => {
+  const rut = normalizeIdentity(String(raw.rut || raw.RUT || raw.ID || raw.id || raw.ID_RUT || raw.RUT_PROVEEDOR || ''));
+  const name = String(raw.name || raw.NOMBRE || raw.PROVEEDOR || 'PROVEEDOR SIN NOMBRE').trim().toUpperCase();
+  
+  const rawWithdrawal = raw.withdrawal_days !== undefined ? raw.withdrawal_days :
+                        raw.withdrawalDays !== undefined ? raw.withdrawalDays :
+                        raw.DIAS_RETIRO !== undefined ? raw.DIAS_RETIRO :
+                        raw.DIAS_CANJE !== undefined ? raw.DIAS_CANJE :
+                        raw.DAYS !== undefined ? raw.DAYS : 0;
+  const withdrawalDays = Number(rawWithdrawal) || 0;
+
+  const rawExchange = raw.has_exchange !== undefined ? raw.has_exchange :
+                      raw.hasExchange !== undefined ? raw.hasExchange :
+                      raw.CANJE !== undefined ? raw.CANJE :
+                      raw.TIENE_CANJE !== undefined ? raw.TIENE_CANJE :
+                      raw.EXCHANGE_POLICY !== undefined ? raw.EXCHANGE_POLICY : false;
+  
+  let hasExchange = false;
+  if (rawExchange === true || rawExchange === 'true' || rawExchange === 1 || rawExchange === '1' || rawExchange === 'SI') {
+    hasExchange = true;
+  } else if (typeof rawExchange === 'string') {
+    const s = rawExchange.toUpperCase().trim();
+    hasExchange = (s === 'TRUE' || s === '1' || s === 'SI' || s === 'CANJE' || s === 'ACTIVO' || s === 'YES');
+  } else if (typeof rawExchange === 'boolean') {
+    hasExchange = rawExchange;
+  }
+  
+  if (withdrawalDays > 0) {
+    hasExchange = true; // Heurística fuerte
+  }
+
+  return {
+    rut,
+    name,
+    withdrawalDays,
+    hasExchange
+  };
+}).pipe(z.object({
+  rut: z.string().min(1),
+  name: z.string().min(1),
+  withdrawalDays: z.number().default(0),
+  hasExchange: z.boolean().default(false)
 }));
 
 export const CloudInventoryRowSchema = z.object({

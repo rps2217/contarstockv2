@@ -4,7 +4,7 @@ import { logger } from './logger';
 import { normalizeIdentity } from './utils';
 import { useSyncStore } from '../store/useSyncStore';
 import { saveProductBatch } from './productService';
-import { CloudProductSchema } from './schemas';
+import { CloudProductSchema, CloudProviderSchema } from './schemas';
 import { getSettings } from './settings';
 import { markScansAsSynced } from './sessionService';
 import { aggregateScans } from './aggregator';
@@ -235,37 +235,22 @@ export const migrateCatalogsFromFirebase = async (onProgress?: (msg: string) => 
       const uniqueRowsMap = new Map();
       
       firebaseProducts.forEach((p: any) => {
-        // Búsqueda Ultra-Robusta de SKU/Barcode
-        const rawBarcode = String(
-          p.barcode || p.COD_PRODUCTO || p.CODIGO || p.SKU || 
-          p.COD_BARRAS || p.CODIGO_BARRAS || p.EAN || p.ITEM || p.COD_ITEM || p.id || ''
-        );
-        if (!rawBarcode || rawBarcode.trim() === '') return;
+        // En lugar de la lógica duplicada, usamos el esquema estricto (SPOT)
+        const parsedNode = { ...p };
+        // Si el doc de Firebase no tiene un "barcode" en su data pero si en el ID, 
+        // pasamos el ID explícitamente para que el esquema lo rescate si no encuentra otro.
+        if (!parsedNode.id) parsedNode.id = p.id;
         
-        const productIdentity = normalizeSku(rawBarcode);
+        const result = CloudProductSchema.safeParse(parsedNode);
         
-        // Búsqueda Ultra-Robusta de Nombre/Descriptor
-        const name = String(
-          p.name || p.NOMBRE || p.PRODUCTO || p.DESCRIPTOR || 
-          p.DESCRIPCION || p.DESC || p.DESCRIPCION_PROD || p.DETALLE || p.ITEM_NAME || 'PRODUCTO DESCONOCIDO'
-        ).trim().toUpperCase();
-
-        // Búsqueda de Proveedor y su RUT (Normalizado para el link)
-        const supplier = String(p.supplier || p.PROVEEDOR || p.LABORATORIO || p.MARCA || p.LAB || '').trim().toUpperCase();
-        const rawRut = String(p.supplierRut || p.PROVEEDOR_RUT || p.RUT || p.RUT_PROVEEDOR || p.RUT_PROV || '');
-        const supplierRut = normalizeIdentity(rawRut);
-
-        uniqueRowsMap.set(productIdentity, {
-          id: productIdentity, 
-          barcode: productIdentity,
-          name,
-          category: String(p.category || p.CATEGORIA || p.MUNDO || 'GENERAL').trim().toUpperCase(),
-          supplier,
-          supplierRut,
-          price: Number(p.price || p.PRECIO || 0),
-          unitsPerBox: Number(p.unitsPerBox || p.UNIDADES_X_CAJA || 1),
-          timestamp: new Date().toISOString()
-        });
+        if (result.success && result.data.barcode) {
+            const productIdentity = result.data.barcode;
+            uniqueRowsMap.set(productIdentity, {
+              id: productIdentity, 
+              ...result.data,
+              timestamp: new Date().toISOString()
+            });
+        }
       });
       const rows = Array.from(uniqueRowsMap.values());
 
@@ -352,27 +337,10 @@ export const migrateCatalogsFromFirebase = async (onProgress?: (msg: string) => 
       if (onProgress) onProgress(`Migrando ${firebaseProviders.length} proveedores a Supabase...`);
       const uniqueProvMap = new Map();
       firebaseProviders.forEach((p: any) => {
-        const provIdentity = normalizeIdentity(String(p.rut || p.RUT || p.ID || p.id || p.RUT_PROVEEDOR || ''));
-        if (provIdentity && String(p.name || p.PROVEEDOR || p.NOMBRE || '')) {
-            const withdrawalDays = Number(p.withdrawalDays || p.DIAS_RETIRO || p.DIAS_CANJE || p.DAYS || 0);
-            
-            // Lógica Robusta de Canje
-            let hasExchange = false;
-            const rawExchange = p.hasExchange !== undefined ? p.hasExchange : (p.CANJE !== undefined ? p.CANJE : p.TIENE_CANJE);
-            
-            if (rawExchange === true || rawExchange === 'true' || rawExchange === 1 || rawExchange === '1' || rawExchange === 'SI') {
-              hasExchange = true;
-            } 
-            
-            if (withdrawalDays > 0) {
-              hasExchange = true; // REFUERZO: Si hay días, hay canje.
-            }
-
-            uniqueProvMap.set(provIdentity, {
-              rut: provIdentity,
-              name: String(p.name || p.PROVEEDOR || p.NOMBRE || '').trim().toUpperCase(),
-              withdrawalDays: withdrawalDays,
-              hasExchange: hasExchange,
+        const result = CloudProviderSchema.safeParse(p);
+        if (result.success && result.data.rut && result.data.name) {
+            uniqueProvMap.set(result.data.rut, {
+              ...result.data,
               timestamp: new Date().toISOString()
             });
         }
@@ -424,28 +392,12 @@ export const repairProvidersFromFirebase = async (onProgress?: (msg: string) => 
     }
 
     // 2. Mapear y Sanear
-    const updates = firebaseProviders.map((p: any) => {
-      const rut = normalizeIdentity(String(p.rut || p.RUT || p.ID || p.id || ''));
-      const withdrawalDays = Number(p.withdrawalDays || p.DIAS_RETIRO || p.DIAS_CANJE || p.DAYS || 0);
-      
-      let hasExchange = false;
-      const rawExchange = p.hasExchange !== undefined ? p.hasExchange : (p.CANJE !== undefined ? p.CANJE : p.TIENE_CANJE);
-      
-      if (rawExchange === true || rawExchange === 'true' || rawExchange === 1 || rawExchange === '1' || rawExchange === 'SI') {
-        hasExchange = true;
-      }
-      
-      if (withdrawalDays > 0) {
-        hasExchange = true;
-      }
-      
-      return {
-        rut,
-        name: String(p.name || p.PROVEEDOR || p.NOMBRE || 'PROVEEDOR SIN NOMBRE').trim().toUpperCase(),
-        withdrawalDays,
-        hasExchange
-      };
-    }).filter(p => p.rut);
+    const updates = firebaseProviders
+      .map((p: any) => {
+        const result = CloudProviderSchema.safeParse(p);
+        return result.success ? result.data : null;
+      })
+      .filter((p: any) => p && p.rut);
 
     if (onProgress) onProgress(`Procesando ${updates.length} políticas rescatadas...`);
 
@@ -665,45 +617,13 @@ export const importProvidersFromCloud = async (): Promise<number> => {
     const providers: Provider[] = response.rows
       .filter((row: any) => row.id !== 'undefined')
       .map((row: any) => {
-        // Normalización de claves para manejar snake_case y camelCase
-        const rut = normalizeIdentity(String(row.rut || row.RUT || row.ID || row.ID_RUT || ''));
-        const name = String(row.name || row.NOMBRE || row.PROVEEDOR || '');
-        
-        // Días de retiro: Soporta múltiples formatos
-        const rawWithdrawal = row.withdrawal_days !== undefined ? row.withdrawal_days :
-                             row.withdrawalDays !== undefined ? row.withdrawalDays :
-                             row.DIAS_RETIRO !== undefined ? row.DIAS_RETIRO :
-                             row.DIAS_CANJE !== undefined ? row.DIAS_CANJE :
-                             row.DAYS !== undefined ? row.DAYS : 0;
-        const withdrawalDays = Number(rawWithdrawal) || 0;
-
-        // Política de Canje: Manejo ultra-robusto de Booleanos y Strings
-        const rawExchange = row.has_exchange !== undefined ? row.has_exchange :
-                           row.hasExchange !== undefined ? row.hasExchange :
-                           row.CANJE !== undefined ? row.CANJE :
-                           row.TIENE_CANJE !== undefined ? row.TIENE_CANJE :
-                           row.EXCHANGE_POLICY !== undefined ? row.EXCHANGE_POLICY : false;
-        
-        let hasExchange = false;
-        if (rawExchange === true || rawExchange === 'true' || rawExchange === 1 || rawExchange === '1') {
-          hasExchange = true;
-        } else if (typeof rawExchange === 'string') {
-          const s = rawExchange.toUpperCase().trim();
-          hasExchange = (s === 'TRUE' || s === '1' || s === 'SI' || s === 'CANJE' || s === 'ACTIVO' || s === 'YES');
-        } else if (typeof rawExchange === 'boolean') {
-          hasExchange = rawExchange;
-        } else {
-          // Heurística de supervivencia (si no hay dato explícito)
-          hasExchange = withdrawalDays > 0;
+        const result = CloudProviderSchema.safeParse(row);
+        if (!result.success) {
+          console.warn("Provider validation failed:", row, (result as any).error);
         }
-
-        // REFUERZO DE SEGURIDAD: Si hay días, hay canje (independiente de lo que diga la nube si es falso)
-        if (withdrawalDays > 0) hasExchange = true;
-
-        console.debug(`[Sync] Mapeando Proveedor: ${rut} - ${name} | Canje: ${hasExchange} | Días: ${withdrawalDays}`);
-        return { rut, name, withdrawalDays, hasExchange };
+        return result.success ? result.data : null;
       })
-      .filter((p: Provider) => p.rut && p.name);
+      .filter((p): p is Provider => p !== null && !!p.rut && !!p.name);
 
     if (providers.length > 0) {
       await db.providers.bulkPut(providers);

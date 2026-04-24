@@ -55,7 +55,7 @@ export const useExpiryDatabase = () => {
       if (sku) map.set(sku, p);
     });
     return map;
-  }, [allProducts.length]);
+  }, [allProducts]);
 
   const providerMap = useMemo(() => {
     if (!allProviders.length) return new Map<string, Provider>();
@@ -65,7 +65,7 @@ export const useExpiryDatabase = () => {
       if (rut) map.set(rut, p);
     });
     return map;
-  }, [allProviders.length]);
+  }, [allProviders]);
 
   // Start real-time sync with Supabase
   useEffect(() => {
