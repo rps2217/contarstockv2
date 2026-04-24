@@ -260,12 +260,31 @@ export const supabaseSyncService = {
 
   async pullBatch(tableName: string) {
     try {
-      const { data, error } = await supabase
-        .from(tableName)
-        .select('*');
-      
-      if (error) throw error;
-      return { success: true, rows: data || [] };
+      let allData: any[] = [];
+      let from = 0;
+      const step = 1000;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from(tableName)
+          .select('*')
+          .range(from, from + step - 1);
+        
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          allData = [...allData, ...data];
+          from += step;
+          if (data.length < step) {
+            hasMore = false; // Última página
+          }
+        } else {
+          hasMore = false;
+        }
+      }
+
+      return { success: true, rows: allData };
     } catch (e) {
       logger.error(`SYNC_PULL_FAIL: ${tableName}`, e);
       return { success: false, rows: [], error: this.formatError(e) };
