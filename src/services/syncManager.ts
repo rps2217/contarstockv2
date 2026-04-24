@@ -674,7 +674,7 @@ export const importProvidersFromCloud = async (): Promise<number> => {
                              row.withdrawalDays !== undefined ? row.withdrawalDays :
                              row.DIAS_RETIRO !== undefined ? row.DIAS_RETIRO :
                              row.DIAS_CANJE !== undefined ? row.DIAS_CANJE :
-                             row.DAYS || row.withdrawal_days || 0;
+                             row.DAYS !== undefined ? row.DAYS : 0;
         const withdrawalDays = Number(rawWithdrawal) || 0;
 
         // Política de Canje: Manejo ultra-robusto de Booleanos y Strings
@@ -682,8 +682,7 @@ export const importProvidersFromCloud = async (): Promise<number> => {
                            row.hasExchange !== undefined ? row.hasExchange :
                            row.CANJE !== undefined ? row.CANJE :
                            row.TIENE_CANJE !== undefined ? row.TIENE_CANJE :
-                           row.EXCHANGE_POLICY !== undefined ? row.EXCHANGE_POLICY :
-                           row.has_exchange;
+                           row.EXCHANGE_POLICY !== undefined ? row.EXCHANGE_POLICY : false;
         
         let hasExchange = false;
         if (rawExchange === true || rawExchange === 'true' || rawExchange === 1 || rawExchange === '1') {
