@@ -233,19 +233,35 @@ export const migrateCatalogsFromFirebase = async (onProgress?: (msg: string) => 
       if (onProgress) onProgress(`Migrando ${firebaseProducts.length} productos a Supabase...`);
       // Deduplicar productos para evitar "ON CONFLICT DO UPDATE command cannot affect row a second time"
       const uniqueRowsMap = new Map();
+      
       firebaseProducts.forEach((p: any) => {
-        const rawBarcode = String(p.barcode || p.COD_PRODUCTO || p.CODIGO || p.SKU || p.id || '');
-        if (!rawBarcode) return;
+        // Búsqueda Ultra-Robusta de SKU/Barcode
+        const rawBarcode = String(
+          p.barcode || p.COD_PRODUCTO || p.CODIGO || p.SKU || 
+          p.COD_BARRAS || p.CODIGO_BARRAS || p.EAN || p.ITEM || p.COD_ITEM || p.id || ''
+        );
+        if (!rawBarcode || rawBarcode.trim() === '') return;
         
         const productIdentity = normalizeSku(rawBarcode);
         
+        // Búsqueda Ultra-Robusta de Nombre/Descriptor
+        const name = String(
+          p.name || p.NOMBRE || p.PRODUCTO || p.DESCRIPTOR || 
+          p.DESCRIPCION || p.DESC || p.DESCRIPCION_PROD || p.DETALLE || p.ITEM_NAME || 'PRODUCTO DESCONOCIDO'
+        ).trim().toUpperCase();
+
+        // Búsqueda de Proveedor y su RUT (Normalizado para el link)
+        const supplier = String(p.supplier || p.PROVEEDOR || p.LABORATORIO || p.MARCA || p.LAB || '').trim().toUpperCase();
+        const rawRut = String(p.supplierRut || p.PROVEEDOR_RUT || p.RUT || p.RUT_PROVEEDOR || p.RUT_PROV || '');
+        const supplierRut = normalizeIdentity(rawRut);
+
         uniqueRowsMap.set(productIdentity, {
           id: productIdentity, 
           barcode: productIdentity,
-          name: String(p.name || p.NOMBRE || p.PRODUCTO || p.DESCRIPTOR || p.DESCRIPCION || p.DESC || 'PRODUCTO DESCONOCIDO').trim().toUpperCase(),
-          category: String(p.category || p.CATEGORIA || p.MUNDO || 'GENERAL'),
-          supplier: String(p.supplier || p.PROVEEDOR || p.LABORATORIO || p.MARCA || p.LAB || ''),
-          supplierRut: String(p.supplierRut || p.PROVEEDOR_RUT || p.RUT || ''),
+          name,
+          category: String(p.category || p.CATEGORIA || p.MUNDO || 'GENERAL').trim().toUpperCase(),
+          supplier,
+          supplierRut,
           price: Number(p.price || p.PRECIO || 0),
           unitsPerBox: Number(p.unitsPerBox || p.UNIDADES_X_CAJA || 1),
           timestamp: new Date().toISOString()
@@ -336,7 +352,7 @@ export const migrateCatalogsFromFirebase = async (onProgress?: (msg: string) => 
       if (onProgress) onProgress(`Migrando ${firebaseProviders.length} proveedores a Supabase...`);
       const uniqueProvMap = new Map();
       firebaseProviders.forEach((p: any) => {
-        const provIdentity = normalizeIdentity(String(p.rut || p.RUT || p.ID || p.id || ''));
+        const provIdentity = normalizeIdentity(String(p.rut || p.RUT || p.ID || p.id || p.RUT_PROVEEDOR || ''));
         if (provIdentity && String(p.name || p.PROVEEDOR || p.NOMBRE || '')) {
             const withdrawalDays = Number(p.withdrawalDays || p.DIAS_RETIRO || p.DIAS_CANJE || p.DAYS || 0);
             
@@ -346,8 +362,10 @@ export const migrateCatalogsFromFirebase = async (onProgress?: (msg: string) => 
             
             if (rawExchange === true || rawExchange === 'true' || rawExchange === 1 || rawExchange === '1' || rawExchange === 'SI') {
               hasExchange = true;
-            } else if (withdrawalDays > 0) {
-              hasExchange = true; // Heurística: Si hay días, hay política.
+            } 
+            
+            if (withdrawalDays > 0) {
+              hasExchange = true; // REFUERZO: Si hay días, hay canje.
             }
 
             uniqueProvMap.set(provIdentity, {
@@ -415,7 +433,9 @@ export const repairProvidersFromFirebase = async (onProgress?: (msg: string) => 
       
       if (rawExchange === true || rawExchange === 'true' || rawExchange === 1 || rawExchange === '1' || rawExchange === 'SI') {
         hasExchange = true;
-      } else if (withdrawalDays > 0) {
+      }
+      
+      if (withdrawalDays > 0) {
         hasExchange = true;
       }
       
@@ -674,9 +694,12 @@ export const importProvidersFromCloud = async (): Promise<number> => {
         } else if (typeof rawExchange === 'boolean') {
           hasExchange = rawExchange;
         } else {
-          // Heurística de supervivencia: si tiene días de retiro > 0, es altísimamente probable que tenga canje
+          // Heurística de supervivencia (si no hay dato explícito)
           hasExchange = withdrawalDays > 0;
         }
+
+        // REFUERZO DE SEGURIDAD: Si hay días, hay canje (independiente de lo que diga la nube si es falso)
+        if (withdrawalDays > 0) hasExchange = true;
 
         console.debug(`[Sync] Mapeando Proveedor: ${rut} - ${name} | Canje: ${hasExchange} | Días: ${withdrawalDays}`);
         return { rut, name, withdrawalDays, hasExchange };
