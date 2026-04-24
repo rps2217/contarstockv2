@@ -97,13 +97,17 @@ export const useAutoSync = () => {
 
     window.addEventListener('online', handleOnline);
     
-    // Sincronización periódica cada 5 minutos
+    // Sincronización periódica más frecuente si hay datos pendientes
     const intervalId = setInterval(() => {
       if (navigator.onLine) {
-        console.log('[AutoSync] Disparando sincronización periódica...');
-        triggerSync();
+        // Si hay datos pendientes, sincronizar cada minuto, si no, cada 5 minutos
+        const pendingCount = useSyncStore.getState().pendingItems;
+        if (pendingCount > 0) {
+          console.log(`[AutoSync] Datos pendientes (${pendingCount}). Disparando sync...`);
+          triggerSync();
+        }
       }
-    }, 5 * 60 * 1000);
+    }, 60 * 1000); // Revisar cada minuto
     
     // Initial check
     if (navigator.onLine) {

@@ -62,21 +62,10 @@ export const supabaseSyncService = {
   },
 
   /**
-   * Pushes a local change to Supabase.
+   * Pushes a local change to Supabase with automatic column-error recovery.
    */
   async pushChange(tableName: string, id: string, data: any) {
-    try {
-      const sanitized = this.sanitizeData(data);
-      // Supabase upsert requires the ID to be part of the object
-      const { error } = await supabase
-        .from(tableName)
-        .upsert({ ...sanitized, id });
-      
-      if (error) throw error;
-    } catch (e) {
-      logger.error(`SYNC_PUSH_FAIL: ${tableName}`, e);
-      throw e;
-    }
+    return this.pushBatch(tableName, [{ ...data, id }]);
   },
 
   /**
@@ -84,15 +73,10 @@ export const supabaseSyncService = {
    */
   formatError(e: any): string {
     if (!e) return 'Error desconocido';
-    if (typeof e === 'string') return e;
-    if (e.message) return e.message;
-    if (e.details) return e.details;
-    if (e.hint) return `${e.message || ''} (Hint: ${e.hint})`;
-    try {
-      return JSON.stringify(e);
-    } catch (err) {
-      return String(e);
+    if (typeof e === 'object' && e.message) {
+      return e.message;
     }
+    return String(e);
   },
 
   /**
@@ -116,7 +100,7 @@ export const supabaseSyncService = {
     let primaryKey = 'id';
     if (tableName === 'PROVEEDORES') primaryKey = 'rut';
 
-    const maxRetries = 10;
+    const maxRetries = 12; // Un poco más para esquemas complejos
     let attempts = 0;
 
     while (attempts < maxRetries) {
@@ -129,14 +113,15 @@ export const supabaseSyncService = {
           const errMsg = error.message || '';
           
           // 1. Detectar error de columna inexistente
-          if (errMsg.includes("column") && (errMsg.includes("not find") || errMsg.includes("does not exist"))) {
-            // Soporta: "column 'name' of", "the 'name' column", "'name' column does not exist"
+          // Soporta: "column 'name' of", "the 'name' column", "'name' column does not exist", "Could not find the 'name' column"
+          if (errMsg.includes("column") && (errMsg.includes("not find") || errMsg.includes("does not exist") || errMsg.includes("unknown"))) {
             const match = errMsg.match(/column\s+['"](.*?)['"]/i) || 
                           errMsg.match(/['"](.*?)['"]\s+column/i);
             const missingColumn = match ? match[1] : null;
 
             if (missingColumn) {
-              console.warn(`[Resilience] Tabla ${tableName} no tiene columna '${missingColumn}'. Reintentando sin ella... (${attempts + 1}/${maxRetries})`);
+              // Reducimos nivel de log a info interna para no asustar al usuario
+              logger.info('SYNC_RESILIENCE', `Ajustando esquema: Tabla ${tableName} no tiene columna '${missingColumn}'.`);
               currentRows = currentRows.map(row => {
                 const newRow = { ...row };
                 delete newRow[missingColumn];
@@ -148,9 +133,9 @@ export const supabaseSyncService = {
           }
 
           // 2. Detectar error de tabla inexistente (404)
-          if (errMsg.includes("not find") && errMsg.includes("table")) {
+          if ((errMsg.includes("not find") && errMsg.includes("table")) || errMsg.includes("does not exist")) {
             logger.warn('SYNC', `[Resilience] La tabla ${tableName} no existe en Supabase. Omitiendo sincronización.`);
-            return { success: false, error: `Table '${tableName}' not found` };
+            return { success: false, error: `Table '${tableName}' not found`, isMissing: true };
           }
 
           throw error;
@@ -158,14 +143,14 @@ export const supabaseSyncService = {
 
         return { success: true, rows_written: rows.length };
       } catch (e: any) {
-        // Solo llegamos aquí si throw error se ejecutó o hubo un fallo de red
         const errMsg = e.message || '';
         
-        // Si es un error de columna y no fue atrapado arriba (raro pero posible)
-        if (errMsg.includes("column") && (errMsg.includes("not find") || errMsg.includes("does not exist"))) {
-           const match = errMsg.match(/column "(.*?)"/i) || errMsg.match(/column '(.*?)'/i);
+        // Si es un error de columna y no fue atrapado arriba
+        if (errMsg.includes("column") && (errMsg.includes("not find") || errMsg.includes("does not exist") || errMsg.includes("unknown"))) {
+           const match = errMsg.match(/column\s+['"](.*?)['"]/i) || errMsg.match(/['"](.*?)['"]\s+column/i);
            const missingCol = match ? match[1] : null;
            if (missingCol && attempts < maxRetries) {
+              logger.info('SYNC_RESILIENCE', `Ajustando esquema (catch): Tabla ${tableName} no tiene columna '${missingCol}'.`);
               currentRows = currentRows.map(row => {
                 const newRow = { ...row };
                 delete newRow[missingCol];
@@ -250,7 +235,14 @@ export const supabaseSyncService = {
         .select('*')
         .eq(field, value);
       
-      if (error) throw error;
+      if (error) {
+        const errMsg = error.message || '';
+        if (errMsg.includes("not find") && errMsg.includes("table")) {
+          logger.warn('SYNC', `Tabla ${tableName} no encontrada en Supabase. Omitiendo consulta.`);
+          return { success: false, rows: [], error: 'Table not found', isMissing: true };
+        }
+        throw error;
+      }
       return { success: true, rows: data || [] };
     } catch (e) {
       logger.error(`SYNC_QUERY_FAIL: ${tableName}`, e);
@@ -276,7 +268,14 @@ export const supabaseSyncService = {
         
         const { data, error } = await query.range(from, from + step - 1);
         
-        if (error) throw error;
+        if (error) {
+           const errMsg = error.message || '';
+           if (errMsg.includes("not find") && errMsg.includes("table")) {
+              // Soft fail for missing tables
+              return { isMissing: true, error: errMsg };
+           }
+           throw error;
+        }
         
         if (data && data.length > 0) {
           allData = [...allData, ...data];
@@ -293,19 +292,31 @@ export const supabaseSyncService = {
 
     try {
       try {
-        const data = await fetchWithPagination(true, lastSyncDate);
-        return { success: true, rows: data };
+        const result = await fetchWithPagination(true, lastSyncDate);
+        if (typeof result === 'object' && 'isMissing' in result) {
+           logger.warn('SYNC', `Tabla ${tableName} no encontrada en Supabase. Omitiendo descarga.`);
+           return { success: false, rows: [], error: 'Table not found', isMissing: true };
+        }
+        return { success: true, rows: result as any[] };
       } catch (e: any) {
         // Fallback: Si falla el filtrado por fecha, intentar traer todo sin filtro de forma segura
         if (lastSyncDate) {
             logger.warn('SYNC', `Incremental sync failed for ${tableName}, falling back to full sync. Reason: ${e.message}`);
             const data = await fetchWithPagination(true);
-            return { success: true, rows: data };
+            if (typeof data === 'object' && 'isMissing' in data) {
+               return { success: false, rows: [], error: 'Table not found', isMissing: true };
+            }
+            return { success: true, rows: data as any[] };
         } else {
             throw e;
         }
       }
-    } catch (e) {
+    } catch (e: any) {
+      const errMsg = e.message || '';
+      if (errMsg.includes("not find") && errMsg.includes("table")) {
+        logger.warn('SYNC', `Tabla ${tableName} no encontrada en Supabase. Omitiendo descarga.`);
+        return { success: false, rows: [], error: 'Table not found', isMissing: true };
+      }
       logger.error(`SYNC_PULL_FAIL: ${tableName}`, e);
       return { success: false, rows: [], error: this.formatError(e) };
     }

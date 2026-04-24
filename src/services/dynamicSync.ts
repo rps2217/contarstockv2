@@ -171,6 +171,10 @@ export const dynamicSyncService = {
     
     const result = await supabaseSyncService.pullBatch(tableName);
     if (!result.success || !result.rows) {
+      if ((result as any).isMissing) {
+        logger.info('SYNC', `Tabla ${tableName} no existe en el origen. Ignorando.`);
+        return { added: 0, updated: 0 };
+      }
       throw new Error(result.error || 'No se pudieron recuperar los datos de la nube');
     }
 

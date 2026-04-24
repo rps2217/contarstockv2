@@ -45,6 +45,9 @@ export const configSyncService = {
     try {
       const response = await supabaseSyncService.pullBatch(CONFIG_COLLECTION);
       if (!response.success || !response.rows || response.rows.length === 0) {
+        if ((response as any).isMissing) {
+          logger.info('CONFIG_SYNC', 'Tabla APP_CONFIG no existe. Usando configuración local.');
+        }
         return false;
       }
 

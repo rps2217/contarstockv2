@@ -646,12 +646,18 @@ export const importProvidersFromCloud = async (lastSyncDate?: string): Promise<n
 };
 
 export const importCustomersAndTemplatesFromCloud = async (): Promise<void> => {
-  try {
-    await dynamicSyncService.pullSync('CLIENTES');
-    await dynamicSyncService.pullSync('PLANTILLAS_MENSAJES');
-    await dynamicSyncService.pullSync('PLANTILLAS_CORREOS');
-  } catch (e: any) {
-    logger.warn("FETCH_CONFIG_FAIL", `Error descargando clientes/plantillas: ${e.message}`);
+  const tables = ['CLIENTES', 'PLANTILLAS_MENSAJES', 'PLANTILLAS_CORREOS'];
+  
+  for (const table of tables) {
+    try {
+      await dynamicSyncService.pullSync(table);
+    } catch (e: any) {
+      if (e.message?.includes('Table not found')) {
+        logger.info("FETCH_CONFIG", `Módulo ${table} no disponible en esta instancia (Tabla no encontrada).`);
+      } else {
+        logger.warn("FETCH_CONFIG_FAIL", `Error descargando ${table}: ${e.message}`);
+      }
+    }
   }
 };
 
