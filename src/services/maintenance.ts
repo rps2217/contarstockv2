@@ -55,16 +55,16 @@ export const checkSystemHealth = async (): Promise<HealthReport> => {
 };
 
 /**
- * PURGE OLD DATA (Step 5): Cold Storage Purging
- * Elimina sesiones completadas hace más de 30 días de IndexedDB.
+ * MOTOR DE LIMPIEZA DE RECURSOS (PUNTO 6)
+ * Elimina sesiones completadas hace más de 'days' días de IndexedDB.
  * Se asume que ya están en Firebase.
  */
-export const purgeOldData = async (days: number = 30): Promise<string[]> => {
+export const purgeOldData = async (days: number = 7): Promise<string[]> => {
  const logs: string[] = [];
  const threshold = Date.now() - (days * 24 * 60 * 60 * 1000);
 
  try {
- // 1. Purgar Sesiones de Conteo
+ // 1. Purgar Sesiones de Conteo Antiguas Completadas
  const oldSessions = await db.sessions
  .where('status').equals('completed')
  .and(s => s.createdAt < threshold)
@@ -86,7 +86,21 @@ export const purgeOldData = async (days: number = 30): Promise<string[]> => {
  logs.push(`❄️ Archivado Frío: Eliminadas ${oldSessions.length} sesiones de conteo (> ${days} días).`);
  }
 
- // 2. Purgar Sesiones ERP y Guías Visuales
+ // 2. Liberar espacio de imágenes en sesiones SINCRONIZADAS (> 1 día)
+ const oneDayAgo = Date.now() - (1 * 24 * 60 * 60 * 1000);
+ const syncedSessionsWithHeavyImages = await db.sessions
+  .filter(s => !!s.lastSyncTimestamp && s.lastSyncTimestamp < oneDayAgo && !!s.labelPhoto)
+  .toArray();
+ 
+ if (syncedSessionsWithHeavyImages.length > 0) {
+  const modifications = syncedSessionsWithHeavyImages.map(s => {
+    return db.sessions.update(s.id, { labelPhoto: undefined });
+  });
+  await Promise.all(modifications);
+  logs.push(`🧹 Optimización de Memoria: Vaciadas ${syncedSessionsWithHeavyImages.length} imágenes nativas de sesiones ya respaldadas.`);
+ }
+
+ // 3. Purgar Sesiones ERP y Guías Visuales
  const oldErpSessions = await db.erpSessions
  .where('status').equals('completed')
  .and(s => s.createdAt < threshold)
@@ -129,7 +143,8 @@ export const purgeOldData = async (days: number = 30): Promise<string[]> => {
 };
 
 /**
- * Ejecuta DEEP VACUUM: Purgado de huérfanos y compactación lógica.
+ * Ejecuta DEEP VACUUM: Purgado de huérfanos, compactación lógica y liberación de drafts.
+ * RUTINA DE MANTENIMIENTO: PUNTO 6
  */
 export const repairSystem = async (): Promise<string[]> => {
  const logs: string[] = [];
@@ -149,7 +164,23 @@ export const repairSystem = async (): Promise<string[]> => {
  logs.push(`✅ Eliminados ${orphansToDelete.length} escaneos huérfanos.`);
  }
 
- // 2. Limpieza de Logs Antiguos (Mantener solo últimos 500)
+ // 2. Depurar Drafts Antiguos (Basura del usuario abandonada > 3 días)
+ const threeDaysAgo = Date.now() - (3 * 24 * 60 * 60 * 1000);
+ const deadDrafts = await db.sessions
+   .where('status').equals('draft')
+   .and(s => s.createdAt < threeDaysAgo)
+   .toArray();
+
+ if (deadDrafts.length > 0) {
+   const draftIds = deadDrafts.map(d => d.id);
+   await db.transaction('rw', [db.sessions, db.scans], async () => {
+     await db.scans.where('sessionId').anyOf(draftIds).delete();
+     await db.sessions.bulkDelete(draftIds);
+   });
+   logs.push(`🗑️ Purgados ${deadDrafts.length} borradores abandonados para recuperar espacio.`);
+ }
+
+ // 3. Limpieza de Logs Antiguos (Mantener solo últimos 500)
  const totalLogs = await db.logs.count();
  if (totalLogs > 500) {
  const keysToDelete = await db.logs.orderBy('timestamp').limit(totalLogs - 500).primaryKeys();

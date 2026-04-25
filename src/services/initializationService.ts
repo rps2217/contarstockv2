@@ -6,8 +6,6 @@ import { normalizeSku } from '../services/utils';
 import { recoverFromEmergencySnapshot } from './backupService';
 import { HydrationService } from './hydrationService';
 import { supabaseSyncService } from './supabaseSyncService';
-import { auth } from '../lib/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
 import { purgeOldData } from './maintenance';
 import { AppMaintenanceService } from './maintenanceService';
 
@@ -107,23 +105,6 @@ export const InitializationService = {
 
   syncConfig: async () => {
     try {
-      // Esperar un poco a que Firebase Auth intente conectar, pero no bloquear
-      if (!auth.currentUser) {
-        await new Promise((resolve) => {
-          const unsubscribe = onAuthStateChanged(auth, (user) => {
-            if (user) {
-              unsubscribe();
-              resolve(user);
-            }
-          });
-          // Timeout corto de 2 segundos
-          setTimeout(() => {
-            unsubscribe();
-            resolve(null);
-          }, 2000);
-        });
-      }
-
       const settings = getSettings();
       // Intentar sincronizar configuración desde la nube
       const response = await supabaseSyncService.pullBatch('CONFIG_SISTEMA');

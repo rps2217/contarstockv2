@@ -25,7 +25,7 @@ export const ReportDetail: React.FC<{ sessionId: string; onBack: () => void }> =
   const session = useLiveQuery(() => SessionRepository.getById(sessionId), [sessionId]);
 
  const consolidation = useLiveQuery(async () => {
- const scans = await ScanRepository.getBySessionId(sessionId);
+ const scans = await ScanRepository.getBySession(sessionId);
  const physicalItems = await aggregateScans(scans);
  
  const expectedMap = new Map(session?.expectedItems?.map(i => [normalizeSku(i.barcode), i.expectedQty]));

@@ -25,6 +25,7 @@ export const useScanPipeline = (defaultMultiplier = 1) => {
       const cleanBarcode = sanitizeBarcode(rawBarcode);
       if (!cleanBarcode) {
         telemetry.track('SCAN', 'INVALID_BARCODE', { raw: rawBarcode });
+        engine.actions.triggerFeedback('error');
         return null;
       }
 
@@ -50,7 +51,11 @@ export const useScanPipeline = (defaultMultiplier = 1) => {
         // 3. Feedback de audio (TTS)
         const settings = getSettings();
         if (delta > 0 && settings.ttsEnabled) {
-          SoundFX.speak(`${newQty}`);
+          if (!product) {
+            SoundFX.speak(`Nuevo. ${newQty}`);
+          } else {
+            SoundFX.speak(`${newQty}`);
+          }
         }
 
         // 4. Persistencia (delegada al módulo)
@@ -67,7 +72,7 @@ export const useScanPipeline = (defaultMultiplier = 1) => {
       return { cleanBarcode, newQty };
     } catch (error: any) {
       telemetry.track('SCAN', 'CRITICAL_ERROR', { error: error.message });
-      engine.actions.triggerFeedback('error');
+      engine.actions.triggerFeedback('incident');
       if (onError) onError(error);
       return null;
     }

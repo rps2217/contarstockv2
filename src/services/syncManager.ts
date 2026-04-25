@@ -1,7 +1,6 @@
 import { db } from '../db';
 import { CountingSession, Product, Provider } from '../types';
 import { logger } from './logger';
-import { normalizeIdentity } from './utils';
 import { useSyncStore } from '../store/useSyncStore';
 import { saveProductBatch } from './productService';
 import { CloudProductSchema, CloudProviderSchema } from './schemas';
@@ -11,7 +10,8 @@ import { aggregateScans } from './aggregator';
 import { dynamicSyncService } from './dynamicSync';
 import { supabaseSyncService } from './supabaseSyncService';
 import { createInventoryPayload } from './cloud/mappers';
-import { CustomerRepository } from '../repositories/CustomerRepository';
+import { ScanRepository } from '../repositories/ScanRepository';
+import { SessionRepository } from '../repositories/SessionRepository';
 import { supabase } from '../lib/supabase';
 import { collection, getDocs } from 'firebase/firestore';
 import { db as firebaseDb } from '../lib/firebase';
@@ -39,11 +39,11 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
   const groups: Record<string, UploadGroup> = {};
   
   // 1. Scans (Inventory/Hammer)
-  const unsyncedScans = await db.scans.where('synced').equals(0).toArray();
+  const unsyncedScans = await ScanRepository.getUnsynced();
   
   if (unsyncedScans.length > 0) {
     const sessionIds = Array.from(new Set(unsyncedScans.map(s => s.sessionId)));
-    const sessions = await db.sessions.where('id').anyOf(sessionIds).toArray();
+    const sessions = await SessionRepository.getByIds(sessionIds);
     const sessionMap = new Map<string, CountingSession>(sessions.map(s => [s.id, s]));
 
     for (const scan of unsyncedScans) {
@@ -85,11 +85,9 @@ export const getPendingUploadGroups = async (): Promise<UploadGroup[]> => {
     }
   }
 
-  // 2. Reception (Incluir borradores y sesiones finalizadas no sincronizadas)
-  const unsyncedReception = await db.sessions
-    .where('sessionType').equals('reception')
-    .filter(s => !s.lastSyncTimestamp)
-    .toArray();
+  // 2. Reception (Incluir bultos finalizados no sincronizados)
+  const receptionSessions = await SessionRepository.getByType('reception');
+  const unsyncedReception = receptionSessions.filter(s => !s.lastSyncTimestamp);
 
   if (unsyncedReception.length > 0) {
     groups['RECEP_CLOUD'] = {
@@ -443,20 +441,18 @@ export const reconcileReception = async (onProgress?: (msg: string) => void): Pr
     const remoteIds = new Set(response.rows.map((r: any) => String(r.id || r.ID)));
     
     // Buscar sesiones locales de recepción que ya fueron sincronizadas (tienen timestamp)
-    const localSyncedReception = await db.sessions
-      .where('sessionType').equals('reception')
-      .filter(s => !!s.lastSyncTimestamp)
-      .toArray();
+    const localSyncedReception = await SessionRepository.getByType('reception');
+    const filteredSynced = localSyncedReception.filter(s => !!s.lastSyncTimestamp);
 
-    const toDelete = localSyncedReception.filter(s => !remoteIds.has(s.id));
+    const toDelete = filteredSynced.filter(s => !remoteIds.has(s.id));
     
     if (toDelete.length > 0) {
       const idsToDelete = toDelete.map(s => s.id);
       if (onProgress) onProgress(`Limpiando ${idsToDelete.length} registros obsoletos...`);
       
       await (db as any).transaction('rw', db.scans, db.sessions, async () => {
-        await db.scans.where('sessionId').anyOf(idsToDelete).delete();
-        await db.sessions.where('id').anyOf(idsToDelete).delete();
+        await ScanRepository.deleteBySessions(idsToDelete);
+        await SessionRepository.deleteMany(idsToDelete);
       });
       
       return { deleted: idsToDelete.length };
@@ -483,7 +479,7 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
       await dynamicSyncService.syncAllPending(onProgress, group.tableName);
     } else if (group.erpOrder === 'REGISTROS_HUERFANOS') {
       if (onProgress) onProgress("Purgando registros residuales...");
-      const unsynced = await db.scans.where('synced').equals(0).toArray();
+      const unsynced = await ScanRepository.getUnsynced();
       const orphanIds = unsynced.filter(s => !s.sessionId || s.sessionId === 'ORPHAN').map(s => s.id);
       await markScansAsSynced(orphanIds);
     } else if (group.type === 'reception') {
@@ -498,14 +494,16 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
       const targetTable = config?.receptionTableName || "RECEPCION_BULTOS";
       const result = await supabaseSyncService.pushBatch(targetTable, rows);
       if (result.success) {
-        await db.sessions.where('id').anyOf(group.sessionIds).modify({ lastSyncTimestamp: Date.now() });
+        for (const id of group.sessionIds) {
+          await SessionRepository.updateSyncTimestamp(id);
+        }
         if (onProgress) onProgress(`✓ Recepción sincronizada.`);
       } else {
         throw new Error(result.error);
       }
     } else {
       for (const sessionId of group.sessionIds) {
-        const session = await db.sessions.get(sessionId);
+        const session = await SessionRepository.getById(sessionId);
         if (!session) continue;
 
         // RESPALDO DE FOTO EN STORAGE - NOTA: Supabase Storage podría requerir implementación distinta
@@ -521,11 +519,11 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
 
         if (onProgress) onProgress(`Preparando bulto ${session.logisticsLabel}...`);
         
-        const allScans = await db.scans.where('sessionId').equals(session.id).toArray();
+        const allScans = await ScanRepository.getBySession(session.id);
         const unsyncedScans = allScans.filter(s => s.synced === 0);
         
         if (unsyncedScans.length === 0) {
-          await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
+          await SessionRepository.updateSyncTimestamp(sessionId);
           continue;
         }
 
@@ -552,8 +550,8 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
         }
 
         if (sessionSuccess) {
-          await markScansAsSynced(allScanIdsToMark);
-          await db.sessions.update(sessionId, { lastSyncTimestamp: Date.now() });
+          await ScanRepository.markAsSynced(allScanIdsToMark);
+          await SessionRepository.updateSyncTimestamp(sessionId);
           if (onProgress) onProgress(`✓ Bulto ${session.logisticsLabel} sincronizado.`);
         }
       }
@@ -573,12 +571,13 @@ export const importProductsFromCloud = async (): Promise<number> => {
     const config = getSettings().cloudConfig;
     const tableName = config?.productsTableName || "PRODUCTOS";
     
-    // Incremental Sync (Option A)
-    const { lastSyncTime, setLastSyncTime } = useSyncStore.getState();
+    // Incremental Sync per table
+    const { lastSyncPerTable, setTableSyncTime } = useSyncStore.getState();
+    const lastSyncTime = lastSyncPerTable[tableName];
     const lastSyncIso = lastSyncTime ? new Date(lastSyncTime).toISOString() : undefined;
     
     // Pull from cloud only rows updated after our last sync
-    const response = await supabaseSyncService.pullBatch(tableName, lastSyncIso, 'updated_at'); // Asumiendo updated_at col
+    const response = await supabaseSyncService.pullBatch(tableName, lastSyncIso, 'updated_at'); 
     
     if (!response.success || !response.rows) return 0;
 
@@ -598,15 +597,15 @@ export const importProductsFromCloud = async (): Promise<number> => {
       await saveProductBatch(products);
     }
 
+    // Actualizar Timestamp para esta tabla específica
+    setTableSyncTime(tableName, Date.now());
+
     // DESCARGAR TAMBIÉN PROVEEDORES (Políticas de Retiro)
     try {
-      await importProvidersFromCloud(lastSyncIso);
+      await importProvidersFromCloud(); // Sin fecha manual, el mismo import detectará su tabla
     } catch (e) {
       console.warn("Fallo descarga de proveedores:", e);
     }
-
-    // Actualizar Timestamp global
-    setLastSyncTime(Date.now());
 
     return products.length;
   } catch (e: any) {
@@ -615,11 +614,16 @@ export const importProductsFromCloud = async (): Promise<number> => {
   }
 };
 
-export const importProvidersFromCloud = async (lastSyncDate?: string): Promise<number> => {
+export const importProvidersFromCloud = async (): Promise<number> => {
   try {
     const config = getSettings().cloudConfig;
     const tableName = config?.providersTableName || "PROVEEDORES";
-    const response = await supabaseSyncService.pullBatch(tableName, lastSyncDate, 'updated_at'); // Asumiendo que la tabla tiene updated_at
+    
+    const { lastSyncPerTable, setTableSyncTime } = useSyncStore.getState();
+    const lastSyncTime = lastSyncPerTable[tableName];
+    const lastSyncIso = lastSyncTime ? new Date(lastSyncTime).toISOString() : undefined;
+
+    const response = await supabaseSyncService.pullBatch(tableName, lastSyncIso, 'updated_at'); 
     
     if (!response.success || !response.rows) return 0;
 
@@ -637,6 +641,8 @@ export const importProvidersFromCloud = async (lastSyncDate?: string): Promise<n
     if (providers.length > 0) {
       await db.providers.bulkPut(providers);
     }
+
+    setTableSyncTime(tableName, Date.now());
 
     return providers.length;
   } catch (e: any) {

@@ -45,9 +45,9 @@ export const CustomersPage: React.FC = () => {
     if (!searchQuery) return customers;
     const lowerQuery = searchQuery.toLowerCase();
     return customers.filter(c => 
-      c.firstName.toLowerCase().includes(lowerQuery) ||
-      c.lastName.toLowerCase().includes(lowerQuery) ||
-      c.phone.includes(lowerQuery)
+      (c.firstName?.toLowerCase() || '').includes(lowerQuery) ||
+      (c.lastName?.toLowerCase() || '').includes(lowerQuery) ||
+      (c.phone || '').includes(lowerQuery)
     );
   }, [customers, searchQuery]);
 
@@ -199,7 +199,7 @@ export const CustomersPage: React.FC = () => {
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-lg ${
                         theme === 'dark' ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-600'
                       }`}>
-                        {customer.firstName.charAt(0)}{customer.lastName.charAt(0)}
+                        {(customer.firstName?.charAt(0) || '')}{(customer.lastName?.charAt(0) || '')}
                       </div>
                       <div>
                         <h3 className="font-bold text-lg leading-tight">

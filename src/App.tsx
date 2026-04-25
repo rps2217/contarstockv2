@@ -48,6 +48,8 @@ const CustomersPage = lazyWithRetry(() => import('@/features/customers/Customers
 import { ExpiryAlertBanner } from '@/features/expiry/components/ExpiryAlertBanner';
 import { OnboardingOverlay } from '@/shared/components/core/OnboardingOverlay';
 
+import { motion, AnimatePresence } from 'motion/react';
+
 const AppContent = () => {
   const location = useLocation();
   const { settings, isStartSessionModalOpen, setStartSessionModalOpen } = useAppStore();
@@ -67,12 +69,10 @@ const AppContent = () => {
   // Activar vigilante de vencimientos proactivo
   useExpiryWatcher();
 
-  // Expose settings to window for non-React utility components (like expiryProcessor)
   useEffect(() => {
     (window as any).__APP_SETTINGS__ = settings;
   }, [settings]);
 
-  // Redirección inicial según configuración de módulo por defecto
   useEffect(() => {
     if (isAuthenticated && bootState === 'ready' && !hasInitialRedirected) {
       setHasInitialRedirected(true);
@@ -82,19 +82,11 @@ const AppContent = () => {
     }
   }, [isAuthenticated, bootState, hasInitialRedirected, settings.defaultStartModule, location.pathname, navigate]);
 
-  // Detectar si estamos en un modo de escaneo inmersivo (Optimizado con useMemo)
   const isScanningMode = React.useMemo(() => {
-    const paths = [
-      '/counting/', 
-      '/reception', 
-      '/expiry/capture', 
-      '/events/capture', 
-      '/massive/'
-    ];
+    const paths = ['/counting/', '/reception', '/expiry/capture', '/events/capture', '/massive/'];
     return paths.some(p => location.pathname.startsWith(p));
   }, [location.pathname]);
 
-  // Determinar el modo de color para el SystemNotch
   const systemMode = React.useMemo(() => {
     if (location.pathname.startsWith('/expiry')) return 'expiry';
     if (location.pathname.startsWith('/reception')) return 'reception';
@@ -120,41 +112,50 @@ const AppContent = () => {
 
   const themeClasses: Record<string, string> = {
     'light': 'bg-slate-50 text-slate-900',
-    'dark': 'bg-brand-dark text-slate-100'
+    'dark': 'bg-slate-950 text-slate-100'
   };
 
   const currentThemeClass = themeClasses[settings.theme] || themeClasses.dark;
 
   if (bootState === 'initializing' && isAuthenticated !== false) {
     return (
-      <div className="h-screen w-full bg-slate-950 flex flex-col items-center justify-center text-white p-8 font-mono">
-        <div className="relative mb-10">
-          <div className={`p-10 border-4 ${initStep === 'purging' ? 'border-amber-500' : 'border-blue-600'} rounded-[3rem] relative z-10 bg-slate-950`}>
+      <div className="h-screen w-full bg-slate-950 flex flex-col items-center justify-center text-white p-8">
+        <motion.div 
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="relative mb-12"
+        >
+          <div className="p-12 border border-white/5 rounded-[3.5rem] relative z-10 bg-slate-900/50 backdrop-blur-2xl shadow-2xl shadow-blue-500/10">
             {initStep === 'config' ? <Cpu className="w-16 h-16 text-blue-400 animate-pulse" /> : 
-            initStep === 'database' ? <Database className="w-16 h-16 text-amber-500 animate-bounce" /> :
+            initStep === 'database' ? <Database className="w-16 h-16 text-emerald-500 animate-bounce" /> :
             initStep === 'purging' ? <RefreshCw className="w-16 h-16 text-amber-500 animate-spin" /> :
             initStep === 'offline' ? <WifiOff className="w-16 h-16 text-rose-500" /> :
-            <Box className="w-16 h-16 text-blue-500 animate-pulse" />}
+            <Box className="w-16 h-16 text-blue-500" />}
           </div>
-          <div className={`absolute inset-0 ${initStep === 'purging' ? 'bg-amber-600' : 'bg-blue-600'} blur-[60px] opacity-20 animate-pulse`}></div>
-        </div>
+          <div className="absolute inset-0 bg-blue-500 blur-[80px] opacity-20 animate-pulse"></div>
+        </motion.div>
 
-        <h1 className="text-4xl font-black uppercase tracking-tighter italic mb-1">
+        <h1 className="text-5xl font-black uppercase tracking-tighter italic mb-2 bg-gradient-to-r from-white to-white/40 bg-clip-text text-transparent">
           LOGICOUNT <span className="text-blue-500">PRO</span>
         </h1>
         
-        <div className="mt-8 w-64">
-          <div className="flex justify-between items-center mb-2 px-1">
-            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
-              {initStep === 'config' ? 'Cloud_Sync' : 
-              initStep === 'database' ? 'Catalog_Refresh' : 
-              initStep === 'purging' ? 'Purging_Cache' :
-              'Kernel_Init'}
+        <div className="mt-10 w-72 space-y-4">
+          <div className="flex justify-between items-center px-1">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">
+              {initStep === 'config' ? 'Optimizing_Cloud' : 
+              initStep === 'database' ? 'Rebuilding_Catalog' : 
+              initStep === 'purging' ? 'Cleaning_Environment' :
+              'System_Warming_Up'}
             </span>
             <Loader2 className="w-3 h-3 text-blue-500 animate-spin" />
           </div>
-          <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/10">
-            <div className="h-full bg-blue-600 transition-all duration-500 w-1/2" />
+          <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden p-[1px] border border-white/10">
+            <motion.div 
+              initial={{ width: "10%" }}
+              animate={{ width: "100%" }}
+              transition={{ duration: 3, ease: "easeInOut" }}
+              className="h-full bg-blue-600 rounded-full" 
+            />
           </div>
         </div>
       </div>
@@ -163,18 +164,14 @@ const AppContent = () => {
 
   if (!isAuthenticated) {
     return (
-      <Suspense fallback={
-        <div className="h-screen w-full bg-slate-950 flex items-center justify-center">
-          <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
-        </div>
-      }>
+      <Suspense fallback={null}>
         <Login onLoginSuccess={() => setIsAuthenticated(true)} />
       </Suspense>
     );
   }
 
   return (
-    <div className={`w-full h-full flex flex-col transition-colors duration-500 ${currentThemeClass} font-mono`}>
+    <div className={`w-full h-full flex flex-col transition-colors duration-700 ${currentThemeClass} font-sans selection:bg-blue-500/30`}>
       <OnboardingOverlay />
       <OfflineBanner />
       <ToastContainer />
@@ -195,33 +192,48 @@ const AppContent = () => {
             <SystemStatus />
             <ExpiryAlertBanner theme={settings.theme} />
           </SystemNotch>
+          
           <ErrorBoundary>
-            <Suspense fallback={<div className="h-full w-full flex items-center justify-center"><Loader2 className="w-10 h-10 text-blue-600 animate-spin" /></div>}>
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/reports" element={<Reports />} />
-                <Route path="/database" element={<DatabaseView />} />
-                <Route path="/sync" element={<Sync />} />
-                <Route path="/sync/queue" element={<GlobalSyncQueue />} />
-                <Route path="/settings" element={<Settings />} />
-                
-                {/* RUTAS MODULARES DE FEATURES */}
-                <Route path="/reception" element={<ReceptionManagement />} />
-                <Route path="/reception/capture" element={<ReceptionCapture />} />
-                <Route path="/expiry" element={<ExpiryManagement />} />
-                <Route path="/expiry/capture" element={<ExpiryCapturePage />} />
-                <Route path="/events" element={<EventManagement />} />
-                <Route path="/events/capture" element={<EventCapturePage />} />
-                <Route path="/providers" element={<ProvidersPage />} />
-                <Route path="/customers" element={<CustomersPage />} />
-                <Route path="/dynamic/:tableKey" element={<DynamicManagement />} />
-                <Route path="/counting/:id" element={<CountingPage />} />
-                <Route path="/massive/:batchId" element={<HammerPage />} />
-                
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </Suspense>
+            <AnimatePresence mode="wait">
+              <Suspense 
+                fallback={
+                  <div className="h-full w-full flex items-center justify-center surface-glass">
+                    <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+                  </div>
+                }
+              >
+                <motion.div
+                  key={location.pathname}
+                  initial={{ opacity: 0, scale: 0.98, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 1.02, y: -10 }}
+                  transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
+                  className="h-full w-full"
+                >
+                  <Routes location={location}>
+                    <Route path="/" element={<Dashboard />} />
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/reports" element={<Reports />} />
+                    <Route path="/database" element={<DatabaseView />} />
+                    <Route path="/sync" element={<Sync />} />
+                    <Route path="/sync/queue" element={<GlobalSyncQueue />} />
+                    <Route path="/settings" element={<Settings />} />
+                    <Route path="/reception" element={<ReceptionManagement />} />
+                    <Route path="/reception/capture" element={<ReceptionCapture />} />
+                    <Route path="/expiry" element={<ExpiryManagement />} />
+                    <Route path="/expiry/capture" element={<ExpiryCapturePage />} />
+                    <Route path="/events" element={<EventManagement />} />
+                    <Route path="/events/capture" element={<EventCapturePage />} />
+                    <Route path="/providers" element={<ProvidersPage />} />
+                    <Route path="/customers" element={<CustomersPage />} />
+                    <Route path="/dynamic/:tableKey" element={<DynamicManagement />} />
+                    <Route path="/counting/:id" element={<CountingPage />} />
+                    <Route path="/massive/:batchId" element={<HammerPage />} />
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </motion.div>
+              </Suspense>
+            </AnimatePresence>
           </ErrorBoundary>
         </main>
       </div>
@@ -229,15 +241,15 @@ const AppContent = () => {
       {!isScanningMode && (
         <>
           <BottomDock currentView={location.pathname.split('/')[1] || 'dashboard'} settings={settings} />
-          
-          {/* BOTÓN FLOTANTE DE ACCESO RÁPIDO (MÓVIL) - SOLO EN DASHBOARD */}
           {(location.pathname === '/' || location.pathname === '/dashboard') && (
-            <button 
+            <motion.button 
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.9 }}
               onClick={() => setStartSessionModalOpen(true)}
-              className="md:hidden fixed bottom-20 right-6 z-[110] w-14 h-14 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-900/40 flex items-center justify-center active:scale-95 transition-all border-b-4 border-blue-800"
+              className="md:hidden fixed bottom-24 right-6 z-[110] w-14 h-14 bg-blue-600 text-white rounded-2xl shadow-2xl shadow-blue-900/50 flex items-center justify-center border-b-4 border-blue-800"
             >
               <Plus className="w-8 h-8" />
-            </button>
+            </motion.button>
           )}
         </>
       )}
@@ -254,6 +266,7 @@ const AppContent = () => {
     </div>
   );
 };
+
 
 const App = () => (
   <Router>

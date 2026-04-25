@@ -48,7 +48,7 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
 
   const rawHistory = useLiveQuery(async () => {
     if (!sessionId) return [];
-    const scans = await ScanRepository.getBySessionId(sessionId);
+    const scans = await ScanRepository.getBySession(sessionId);
     const pending = sessionService.getPendingBuffer().filter(s => s.sessionId === sessionId);
     return await aggregateScans([...scans, ...pending]);
   }, [sessionId]);
@@ -168,7 +168,7 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
 
   const resetSession = useCallback(async () => {
     if (!sessionId || !confirm("¿Vaciar todo el contenido de este bulto?")) return;
-    await ScanRepository.deleteBySessionId(sessionId);
+    await ScanRepository.deleteBySessions([sessionId]); 
     await sessionService.updateSessionMetadata(sessionId);
     engine.actions.resetActive();
     engine.actions.triggerFeedback('undo');

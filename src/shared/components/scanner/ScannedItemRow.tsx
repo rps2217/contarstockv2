@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'motion/react';
 import { Minus, Plus } from 'lucide-react';
 
 export interface ScannedItemProps {
@@ -24,46 +25,71 @@ export const ScannedItemRow: React.FC<ScannedItemRowProps> = ({
   onEditQty
 }) => {
   return (
-    <div 
-      className={`px-4 py-3 flex justify-between items-center border-b border-white/5 ${index % 2 === 0 ? 'bg-slate-900/40' : 'bg-transparent'} ${isActive ? 'bg-blue-900/40 border-l-4 border-l-blue-500' : 'border-l-4 border-l-transparent'}`}
+    <motion.div 
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: index * 0.03 }}
+      whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.03)' }}
+      className={`px-4 py-3 flex justify-between items-center border-b border-white/5 relative ${isActive ? 'bg-blue-600/5' : 'bg-transparent'}`}
     >
+      {isActive && (
+        <motion.div 
+          layoutId="activeIndicator"
+          className="absolute left-0 w-1 h-8 bg-blue-500 rounded-r-full"
+        />
+      )}
+      
       <div className="flex flex-col min-w-0 flex-1 pr-4">
-        <span className="text-lg font-mono font-black text-white leading-none mb-1 tracking-wider">{item.barcode}</span>
-        <span className="text-[10px] font-bold text-slate-400 uppercase leading-tight line-clamp-1">{item.name}</span>
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-sm font-mono font-black text-white tracking-widest">{item.barcode}</span>
+          {isActive && (
+            <motion.span 
+              initial={{ scale: 0 }} animate={{ scale: 1 }}
+              className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]" 
+            />
+          )}
+        </div>
+        <span className="text-[10px] font-bold text-slate-500 uppercase leading-tight line-clamp-1 tracking-wide">{item.name || 'SIN DESCRIPCIÓN'}</span>
       </div>
-      <div className="flex items-center gap-3 shrink-0">
+
+      <div className="flex items-center gap-2 shrink-0">
         {item.expectedQty !== undefined && (
-          <div className="flex flex-col items-end justify-center mr-1">
-            <span className="text-[8px] text-slate-500 font-black tracking-[0.2em] leading-none mb-1">TEO</span>
-            <span className={`text-sm font-mono font-black leading-none ${
-              item.totalQuantity === item.expectedQty ? 'text-emerald-400' : 
-              item.totalQuantity > item.expectedQty ? 'text-blue-400' : 'text-amber-400'
+          <div className="flex flex-col items-end justify-center mr-3">
+            <span className="text-[7px] text-slate-600 font-black uppercase tracking-widest mb-1">Manifiesto</span>
+            <span className={`text-xs font-black leading-none ${
+              item.totalQuantity === item.expectedQty ? 'text-emerald-500' : 
+              item.totalQuantity > item.expectedQty ? 'text-blue-500' : 'text-amber-500'
             }`}>
-              {item.expectedQty}
+              {item.totalQuantity}/{item.expectedQty}
             </span>
           </div>
         )}
-        <button 
-          onClick={() => onScan(item.barcode, -1)}
-          className="w-10 h-10 rounded-xl border border-rose-500/30 bg-rose-500/10 flex items-center justify-center text-rose-500 active:bg-rose-500 active:text-white active:scale-90 transition-all"
-        >
-          <Minus className="w-5 h-5" />
-        </button>
-        <button 
-          onClick={() => onEditQty && onEditQty(item)}
-          disabled={!onEditQty}
-          className={`text-xl font-mono font-black text-white min-w-[2.5rem] text-center pb-0.5 rounded-lg transition-colors ${onEditQty ? 'border-b-2 border-slate-600 active:bg-white/10' : ''}`}
-        >
-          {item.totalQuantity}
-        </button>
-        <button 
-          onClick={() => onScan(item.barcode, 1)}
-          className="w-10 h-10 rounded-xl border border-emerald-500/30 bg-emerald-500/10 flex items-center justify-center text-emerald-500 active:bg-emerald-500 active:text-white active:scale-90 transition-all"
-        >
-          <Plus className="w-5 h-5" />
-        </button>
+        
+        <div className="flex items-center bg-slate-900 border border-white/5 rounded-xl p-1 gap-1">
+          <button 
+            onClick={() => onScan(item.barcode, -1)}
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-white hover:bg-white/5 transition-all active:scale-90"
+          >
+            <Minus className="w-4 h-4" />
+          </button>
+          
+          <button 
+            onClick={() => onEditQty && onEditQty(item)}
+            disabled={!onEditQty}
+            className={`min-w-[2.5rem] px-2 h-8 flex items-center justify-center font-mono font-black text-white text-sm rounded-lg transition-colors ${onEditQty ? 'hover:bg-white/10 active:bg-blue-600' : 'cursor-default'}`}
+          >
+            {item.totalQuantity}
+          </button>
+          
+          <button 
+            onClick={() => onScan(item.barcode, 1)}
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-white hover:bg-white/5 transition-all active:scale-90"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+        </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

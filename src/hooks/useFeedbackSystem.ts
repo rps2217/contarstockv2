@@ -5,7 +5,7 @@ import { SoundFX } from '../services/audio';
 export type FeedbackStatus = 'idle' | 'success' | 'error' | 'warning' | 'info' | 'undo' | 'incident' | 'unknown';
 
 interface FeedbackOptions {
- sound?: 'success' | 'error' | 'delete' | 'increment';
+ sound?: 'success' | 'success_new' | 'error' | 'error_critical' | 'delete' | 'increment' | 'scan' | 'not_found' | 'warning';
  vibration?: number | number[];
  duration?: number;
 }
@@ -21,8 +21,14 @@ export const useFeedbackSystem = (defaultDuration = 300) => {
  const trigger = useCallback((status: FeedbackStatus, options?: FeedbackOptions) => {
  setFeedback(status);
  const soundToPlay = options?.sound || mapStatusToSound(status);
- if (soundToPlay) SoundFX.play(soundToPlay);
- if (navigator.vibrate) navigator.vibrate(options?.vibration || mapStatusToVibration(status));
+ 
+ if (soundToPlay) {
+   SoundFX.play(soundToPlay);
+ } else if (navigator.vibrate) {
+   // Fallback vibration if no sound is mapped but we still want feedback
+   let vib = options?.vibration || mapStatusToVibration(status);
+   if (vib) navigator.vibrate(vib);
+ }
 
  if (timeoutRef.current) clearTimeout(timeoutRef.current);
  timeoutRef.current = setTimeout(() => setFeedback('idle'), options?.duration || defaultDuration);
@@ -31,11 +37,12 @@ export const useFeedbackSystem = (defaultDuration = 300) => {
  return { feedback, trigger };
 };
 
-const mapStatusToSound = (status: FeedbackStatus) => {
+const mapStatusToSound = (status: FeedbackStatus): any => {
  switch (status) {
  case 'success': return 'success';
- case 'unknown': return 'not_found';
+ case 'unknown': return 'success_new';
  case 'error': return 'error';
+ case 'incident': return 'error_critical';
  case 'undo': return 'delete';
  case 'warning': return 'warning';
  default: return undefined;

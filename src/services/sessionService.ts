@@ -10,6 +10,8 @@ import { CloudOrderRowSchema } from './schemas';
 import { createEmergencySnapshot } from './backupService';
 import { supabaseSyncService } from './supabaseSyncService';
 import { getSettings } from './settings';
+import { ScanRepository } from '../repositories/ScanRepository';
+import { SessionRepository } from '../repositories/SessionRepository';
 
 /**
  * POOL DE ESCRITURA INDUSTRIAL v3.0 (Atomic Buffer)
@@ -67,7 +69,7 @@ const commitBufferToDatabase = async () => {
 };
 
 export const updateSessionMetadata = async (sessionId: string) => {
-  const scans = await db.scans.where('sessionId').equals(sessionId).toArray();
+  const scans = await ScanRepository.getBySession(sessionId);
   let totalUnits = 0;
   const uniqueSkus = new Set<string>();
   
@@ -76,10 +78,12 @@ export const updateSessionMetadata = async (sessionId: string) => {
     uniqueSkus.add(s.barcode);
   });
   
-  await db.sessions.update(sessionId, { 
+  const existing = await SessionRepository.getById(sessionId);
+  await SessionRepository.save({
+    ...existing!,
     totalUnits, 
     totalSKUs: uniqueSkus.size,
-    status: (await db.sessions.get(sessionId))?.status === 'draft' ? 'draft' : 'active'
+    status: existing?.status === 'draft' ? 'draft' : 'active'
   });
 };
 
@@ -100,7 +104,7 @@ export const addScanEvent = async (
   location?: string,
   batch?: string
 ): Promise<ScanRecord> => {
-  const session = await db.sessions.get(sessionId);
+  const session = await SessionRepository.getById(sessionId);
   const cleanBarcode = sanitizeBarcode(barcode);
   const finalLocation = location || session?.logisticsLabel || 'UNSET';
 
@@ -184,7 +188,7 @@ export const createSession = async (
     labelPhoto: finalPhoto,
     isAutoLockEnabled
   };
-  await db.sessions.add(s);
+  await SessionRepository.save(s);
   
   // Sincronización proactiva de sesión
   if (navigator.onLine) {
@@ -226,7 +230,7 @@ export const createDraftSession = async (label: string, erpOrder?: string, mm?: 
     batch,
     labelPhoto: finalPhoto
   };
-  await db.sessions.add(s);
+  await SessionRepository.save(s);
  
  // Sincronización proactiva de sesión borrador
  if (navigator.onLine) {
@@ -277,11 +281,11 @@ export const closeSession = async (id: string) => {
     clearTimeout(flushTimeout);
     await commitBufferToDatabase();
   }
-  await db.sessions.update(id, { status: 'completed' }); 
+  await SessionRepository.markAsCompleted(id); 
   
   // Sincronización proactiva de cierre
   if (navigator.onLine) {
-    const session = await db.sessions.get(id);
+    const session = await SessionRepository.getById(id);
     if (session) {
       const settings = getSettings();
       const sessionsTable = settings.cloudConfig?.sessionsTableName || 'SESSIONS';
@@ -290,7 +294,7 @@ export const closeSession = async (id: string) => {
   }
 
   // Remove from pending orders queue
-  const session = await db.sessions.get(id);
+  const session = await SessionRepository.getById(id);
   if (session && session.erpOrder && session.erpOrder !== 'RECEPCION_BORRADOR') {
     await db.expectedOrders.delete(session.erpOrder);
   }
@@ -299,28 +303,28 @@ export const closeSession = async (id: string) => {
 };
 
 export const deleteSession = async (id: string) => { 
- // FIX: Using (db as any) to resolve type error: Property 'transaction' does not exist on type 'LogiCountDB'
- await (db as any).transaction('rw', db.scans, db.sessions, async () => {
- await db.scans.where('sessionId').equals(id).delete(); 
- await db.sessions.delete(id); 
- });
+  await (db as any).transaction('rw', db.scans, db.sessions, async () => {
+    await ScanRepository.deleteBySessions([id]); 
+    await SessionRepository.delete(id); 
+  });
 };
 
 export const cleanSyncedSessions = async (): Promise<number> => {
- const synced = await db.sessions.where('lastSyncTimestamp').above(0).toArray();
- const ids = synced.map(s => s.id);
- if (ids.length === 0) return 0;
- // FIX: Using (db as any) to resolve type error: Property 'transaction' does not exist on type 'LogiCountDB'
- await (db as any).transaction('rw', db.scans, db.sessions, async () => {
- await db.scans.where('sessionId').anyOf(ids).delete();
- await db.sessions.where('id').anyOf(ids).delete();
- });
- return ids.length;
+  const sessions = await SessionRepository.getAll();
+  const syncedIds = sessions.filter(s => (s.lastSyncTimestamp || 0) > 0).map(s => s.id);
+  
+  if (syncedIds.length === 0) return 0;
+  
+  await (db as any).transaction('rw', db.scans, db.sessions, async () => {
+    await ScanRepository.deleteBySessions(syncedIds);
+    await SessionRepository.deleteMany(syncedIds);
+  });
+  return syncedIds.length;
 };
 
 export const markScansAsSynced = async (ids: string[]) => {
- if (ids.length === 0) return;
- await db.scans.where('id').anyOf(ids).modify({ synced: 1 });
+  if (ids.length === 0) return;
+  await ScanRepository.markAsSynced(ids);
 };
 
 export const checkLabelExists = async (label: string): Promise<boolean> => {

@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Terminal, RefreshCw, ShieldCheck, Activity, AlertCircle } from 'lucide-react';
 import { SettingsCard, SettingsCardHeader } from '../common/SettingsElements';
-import { runStockEngineTest, TestResult } from '../../../../services/diagnostics';
+import { runSystemHealthCheck, TestResult } from '../../../../services/diagnostics';
 import { SoundFX } from '../../../../services/audio';
 
 export const DiagnosticsCard: React.FC = () => {
@@ -13,7 +13,7 @@ export const DiagnosticsCard: React.FC = () => {
  setIsTesting(true);
  setTestResults([]);
  SoundFX.play('increment');
- const results = await runStockEngineTest();
+ const results = await runSystemHealthCheck();
  setTestResults(results);
  setIsTesting(false);
  const hasFail = results.some(r => r.status === 'fail');
@@ -62,7 +62,10 @@ export const DiagnosticsCard: React.FC = () => {
  </div>
  <div className="flex-1">
  <div className="flex justify-between items-center mb-1">
+ <div className="flex items-center gap-2">
  <span className="font-black uppercase text-slate-400">[{res.step}]</span>
+ <span className="text-[7px] px-1.5 py-0.5 rounded-full bg-white/10 text-slate-500 uppercase font-black tracking-widest">{res.category}</span>
+ </div>
  <span className={`font-black uppercase ${res.status === 'ok' ? 'text-emerald-500' : res.status === 'fail' ? 'text-rose-500' : 'text-amber-500'}`}>{res.status}</span>
  </div>
  <p className="text-slate-300 leading-tight">{res.message}</p>

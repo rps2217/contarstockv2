@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-import { Wifi, WifiOff, Battery, BatteryWarning, HardDrive, Cloud, RefreshCw, Zap, Database, Activity } from 'lucide-react';
+import { Wifi, WifiOff, Battery, BatteryWarning, HardDrive, Cloud, RefreshCw, Zap, Database, Activity, AlertTriangle } from 'lucide-react';
 import { useSyncStore } from '../store/useSyncStore';
-import { db } from '../db';
 import { supabaseSyncService } from '../services/supabaseSyncService';
 import { useNavigate } from 'react-router-dom';
+import { SystemRepository } from '../repositories/SystemRepository';
+import { ScanRepository } from '../repositories/ScanRepository';
 
 export const SystemStatus: React.FC = () => {
   const navigate = useNavigate();
@@ -13,18 +14,26 @@ export const SystemStatus: React.FC = () => {
   const [batteryLevel, setBatteryLevel] = useState<number | null>(null);
   const [isCharging, setIsCharging] = useState(false);
   const [storageCritical, setStorageCritical] = useState(false);
+  const [integrityAlert, setIntegrityAlert] = useState(false);
+  const [anomalyCount, setAnomalyCount] = useState(0);
   
   const { isSyncing, latencyMs, pendingItems, setLatency, setPendingItems, setSupabaseConnected, isSupabaseConnected, syncError } = useSyncStore();
 
   useEffect(() => {
     const checkMetrics = async () => {
+      // 1. Integridad y Anomalías
+      const integrity = await SystemRepository.checkIntegrity();
+      const anomalies = await SystemRepository.detectAnomalies(200); // Umbral de 200 unidades
+      setIntegrityAlert(integrity.orphanScans > 0);
+      setAnomalyCount(anomalies.length);
+
       if (!navigator.onLine) {
         setLatency(null);
         setSupabaseConnected(false);
         return;
       }
 
-      // 1. Medir Latencia
+      // 2. Medir Latencia
       const start = performance.now();
       try {
         await supabaseSyncService.pullBatch('CONFIG_SISTEMA');
@@ -36,12 +45,10 @@ export const SystemStatus: React.FC = () => {
         setSupabaseConnected(false);
       }
 
-      // 2. Contar Pendientes
+      // 3. Contar Pendientes (Usando repositorios)
       try {
-        const unsyncedScans = await db.scans.where('synced').equals(0).count();
-        const pendingDynamic = await db.dynamic_data.where('syncStatus').equals('pending').count();
-        const pendingSessions = await db.sessions.filter(s => !s.lastSyncTimestamp).count();
-        setPendingItems(unsyncedScans + pendingDynamic + pendingSessions);
+        const unsyncedScans = await ScanRepository.getPendingSyncCount();
+        setPendingItems(unsyncedScans);
       } catch (e) {}
     };
 
@@ -84,6 +91,24 @@ export const SystemStatus: React.FC = () => {
   }, []);
 
   const alerts = [];
+
+  if (integrityAlert) {
+    alerts.push(
+      <div key="integrity" className="bg-rose-900/80 backdrop-blur-md text-white px-4 py-3 text-[10px] font-black flex items-center gap-3 border border-rose-500/50">
+        <AlertTriangle className="w-4 h-4 text-rose-400" />
+        <span className="uppercase tracking-widest italic">Base de Datos Comprometida: Registros Huérfanos</span>
+      </div>
+    );
+  }
+
+  if (anomalyCount > 0) {
+    alerts.push(
+      <div key="anomaly" className="bg-amber-900/80 backdrop-blur-md text-white px-4 py-3 text-[10px] font-black flex items-center gap-3 border border-amber-500/50">
+        <Zap className="w-4 h-4 text-amber-400" />
+        <span className="uppercase tracking-widest">{anomalyCount} Anomalías de Cantidad Detectadas</span>
+      </div>
+    );
+  }
 
   if (syncError) {
     alerts.push(

@@ -26,7 +26,7 @@ export const useDashboard = () => {
     return { pending, error };
   }, [], { pending: 0, error: 0 });
 
-  const pendingOrders = useLiveQuery(() => db.expectedOrders.toArray(), [], []);
+  const pendingOrders = useLiveQuery(() => ExpectedOrderRepository.getAll(), [], []);
 
   const operatorId = localStorage.getItem('logicount_operator_id') || 'SIN_IDENTIFICAR';
   const isSyncNeeded = (stats?.pendingSync || 0) > 0 || (dynamicStats?.pending || 0) > 0;

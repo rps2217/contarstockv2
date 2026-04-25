@@ -76,7 +76,7 @@ export const useReceptionLogic = () => {
     setIsFinalizing(true);
     try {
       const ids = unsyncedDrafts.map(d => d.id);
-      await SessionRepository.markAsCompleted(ids);
+      await Promise.all(ids.map(id => SessionRepository.markAsCompleted(id)));
       SoundFX.play('success');
       
       // Automatic cloud synchronization
@@ -127,7 +127,7 @@ export const useReceptionLogic = () => {
       // Primero, intentar finalizar cualquier borrador pendiente
       if (unsyncedDrafts && unsyncedDrafts.length > 0) {
         const ids = unsyncedDrafts.map(d => d.id);
-        await SessionRepository.markAsCompleted(ids);
+        await Promise.all(ids.map(id => SessionRepository.markAsCompleted(id)));
       }
 
       const groups = await syncManager.getPendingUploadGroups();

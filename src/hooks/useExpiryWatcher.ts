@@ -1,7 +1,6 @@
 
 import { useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { auth } from '../lib/firebase';
 import { useAppStore } from '../store/mainAppStore';
 import { useExpiryStore } from '../store/useExpiryStore';
 import { useToastStore } from '../store/useToastStore';

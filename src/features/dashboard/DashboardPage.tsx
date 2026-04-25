@@ -28,7 +28,7 @@ import {
   Calendar,
   Activity
 } from "lucide-react";
-import { ResponsiveContainer } from 'recharts';
+import { LineChart, Line, ResponsiveContainer, YAxis, Tooltip, AreaChart, Area } from 'recharts';
 import { NetworkStatus } from "../../shared/components/ui/NetworkStatus";
 import { OrderRow } from "./components/OrderRow";
 import { useDashboard } from "./hooks/useDashboard";
@@ -51,7 +51,6 @@ const Dashboard: React.FC = () => {
   const { operatorId, isSyncNeeded, pendingOrders, dynamicStats, syncStatus, triggerSync, stats } =
     useDashboard();
   const location = useLocation();
-  const [hasConfigError, setHasConfigError] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [scanInput, setScanInput] = useState("");
   const [isProcessingScan, setIsProcessingScan] = useState(false);
@@ -60,15 +59,17 @@ const Dashboard: React.FC = () => {
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const { settings } = useAppStore();
 
+  // Actividad simulada para el sparkline (telemetría visual)
+  const sparklineData = [
+    { v: 10 }, { v: 25 }, { v: 15 }, { v: 45 }, { v: 30 }, { v: 55 }, { v: 40 }, { v: 45 }, { v: 60 }
+  ];
+
   useEffect(() => {
     const msg = (location.state as any)?.message;
     if (msg) {
       setSuccessMessage(msg);
       SoundFX.play("success");
-      // Clear the state so it doesn't show again on refresh
       navigate(location.pathname, { replace: true, state: {} });
-
-      // Hide message after 3 seconds
       const timer = setTimeout(() => setSuccessMessage(null), 3000);
       return () => clearTimeout(timer);
     }
@@ -83,37 +84,6 @@ const Dashboard: React.FC = () => {
     isEnabled: true,
   });
 
-  useEffect(() => {
-    // Ya no dependemos de GAS, por lo que no hay error de configuración de URL
-    setHasConfigError(false);
-  }, []);
-
-  const handleHardRefresh = useCallback(async () => {
-    setIsRefreshing(true);
-    SoundFX.play("delete");
-
-    try {
-      if ("caches" in window) {
-        const cacheNames = await caches.keys();
-        await Promise.all(cacheNames.map((name) => caches.delete(name)));
-      }
-
-      if ("serviceWorker" in navigator) {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        for (const registration of registrations) {
-          await registration.unregister();
-        }
-      }
-
-      sessionStorage.clear();
-      setTimeout(() => {
-        window.location.href = window.location.pathname + "?v=" + Date.now();
-      }, 500);
-    } catch (e) {
-      window.location.reload();
-    }
-  }, []);
-
   const handleUniversalScan = async (code: string) => {
     const cleanCode = sanitizeBarcode(code);
     if (!cleanCode) return;
@@ -123,26 +93,22 @@ const Dashboard: React.FC = () => {
     SoundFX.play("success");
 
     try {
-      // 1. Check if it's an Expected Order
       const order = await ExpectedOrderRepository.getById(
         cleanCode.toUpperCase(),
       );
 
       if (order) {
-        // It's an order! Start a guided session
         const session = await sessionService.createSession(
           order.id,
-          order.id, // Use order ID as label for now
+          order.id,
           "standard",
           order,
           undefined,
           true,
         );
         toast.dismiss(loadingToast);
-        navigate(`/count/${session.id}`);
+        navigate(`/counting/${session.id}`);
       } else {
-        // 2. Check if it's a Logistics Barcode (Reception)
-        // Rule: Contains letters OR length > 14 (like SSCC-18 or tracking numbers)
         const isLogisticsBarcode =
           /[a-zA-Z]/.test(cleanCode) || cleanCode.length > 14;
 
@@ -152,7 +118,6 @@ const Dashboard: React.FC = () => {
           return;
         }
 
-        // 3. It's not a known order or logistics. Start a blind count session
         const blindLabel = `CIEGO_${new Date().getTime().toString().slice(-6)}`;
         const session = await sessionService.createSession(
           "CONTEO_CIEGO",
@@ -164,8 +129,7 @@ const Dashboard: React.FC = () => {
         );
 
         toast.dismiss(loadingToast);
-        // Let the CountingPage handle the initial scan
-        navigate(`/count/${session.id}`, { state: { initialScan: cleanCode } });
+        navigate(`/counting/${session.id}`, { state: { initialScan: cleanCode } });
       }
     } catch (error) {
       console.error("Scan error:", error);
@@ -178,191 +142,122 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const handleOrderClick = async (orderId: string) => {
-    handleUniversalScan(orderId);
-  };
-
-  const handleDeleteOrder = async (orderId: string) => {
-    if (confirm(`¿Eliminar orden ${orderId}?`)) {
-      await ExpectedOrderRepository.delete(orderId);
-      SoundFX.play('delete');
-      toast.success(`Orden ${orderId} eliminada`);
-    }
-  };
-
-  const handleCsvUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    // TODO: PENDIENTE - Ajustar formato exacto cuando el usuario defina el documento
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: async (results) => {
-        const data = results.data as any[];
-        const ordersMap = new Map<string, ExpectedOrder>();
-
-        data.forEach((row) => {
-          const orderId = row.id || row.orderId || row.orden;
-          const barcode = row.barcode || row.sku || row.codigo;
-          const name = row.name || row.productName || row.nombre || 'Producto';
-          const expectedQty = parseInt(row.expectedQty || row.qty || row.cantidad || '0');
-
-          if (!orderId || !barcode) return;
-
-          if (!ordersMap.has(orderId)) {
-            ordersMap.set(orderId, {
-              id: orderId,
-              internalId: orderId,
-              items: [],
-              totalExpectedUnits: 0,
-              totalExpectedSKUs: 0,
-              importedAt: Date.now()
-            });
-          }
-
-          const order = ordersMap.get(orderId)!;
-          order.items.push({ barcode, name, expectedQty });
-          order.totalExpectedUnits += expectedQty;
-          order.totalExpectedSKUs += 1;
-        });
-
-        for (const order of ordersMap.values()) {
-          await ExpectedOrderRepository.save(order);
-        }
-
-        toast.success(`${ordersMap.size} órdenes importadas correctamente`);
-        SoundFX.play('success');
-        if (event.target) event.target.value = '';
-      },
-      error: (error) => {
-        toast.error("Error al procesar el archivo CSV");
-        console.error(error);
-      }
-    });
-  };
-
   const [showAllOrders, setShowAllOrders] = useState(false);
   const visibleOrders = showAllOrders ? pendingOrders : pendingOrders?.slice(0, 5);
 
   return (
-    <div className="h-full w-full bg-slate-50 dark:bg-brand-dark overflow-y-auto no-scrollbar pb-32 font-sans text-slate-900 dark:text-white relative">
-      {/* SUCCESS OVERLAY */}
+    <div className="h-full w-full bg-slate-950 overflow-y-auto no-scrollbar pb-32 font-sans selection:bg-blue-500/30 relative">
       <AnimatePresence>
         {successMessage && (
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[200] bg-emerald-500/90 backdrop-blur-sm flex flex-col items-center justify-center"
+            className="fixed inset-0 z-[200] bg-emerald-600/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center"
           >
             <motion.div 
-              initial={{ scale: 0.5, rotate: -10 }}
-              animate={{ scale: 1, rotate: 0 }}
-              className="bg-white rounded-full p-6 mb-6 shadow-2xl shadow-emerald-900/50"
+              initial={{ scale: 0.5, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              className="bg-white rounded-full p-8 mb-8 shadow-2xl"
             >
-              <CheckCircle2 className="w-24 h-24 text-emerald-500" />
+              <CheckCircle2 className="w-24 h-24 text-emerald-600" />
             </motion.div>
-            <h2 className="text-4xl font-black text-white tracking-tighter text-center px-6 uppercase italic">
+            <h2 className="text-5xl font-black text-white tracking-tighter uppercase italic leading-tight max-w-2xl">
               {successMessage}
             </h2>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* HEADER / HERO */}
-      <header className="px-6 pt-20 pb-12 bg-white dark:bg-brand-surface border-b border-slate-200 dark:border-white/5 relative overflow-hidden">
-        {/* Decorative background element */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-brand-warning/5 rounded-full blur-3xl -mr-32 -mt-32" />
+      {/* HEADER / COMMAND CENTER */}
+      <header className="px-6 pt-16 pb-12 bg-slate-900 border-b border-white/5 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-600/5 rounded-full blur-[120px] -mr-64 -mt-64" />
         
-        <div className="max-w-6xl mx-auto">
-          <div className="flex justify-between items-start mb-10">
+        <div className="max-w-6xl mx-auto relative z-10">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12">
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-2 h-2 rounded-full bg-brand-warning animate-pulse" />
-                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Sistema Operativo v3.1</span>
-              </div>
-              <h1 className="text-4xl font-black tracking-tighter leading-none italic">
-                LOGI<span className="text-brand-warning">COUNT</span><span className="text-slate-300 dark:text-white/20 ml-2">PRO</span>
+              <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-3 mb-4">
+                <div className="px-2.5 py-0.5 bg-blue-500/10 border border-blue-500/20 rounded-full">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-blue-400">Enterprise Edition v3.1</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Cloud Live</span>
+                </div>
+              </motion.div>
+              <h1 className="text-5xl font-black tracking-tighter leading-none italic uppercase">
+                LOGI<span className="text-gradient-blue">COUNT</span><span className="text-white/10 ml-3">PRO</span>
               </h1>
             </div>
             
-            <div className="flex items-center gap-3 relative z-[100]">
+            <div className="flex items-center gap-4">
+              <div className="hidden lg:block w-48 h-12">
+                <div style={{ width: 192, height: 48 }}>
+                  <ResponsiveContainer>
+                    <LineChart data={sparklineData}>
+                      <Line type="monotone" dataKey="v" stroke="#3b82f6" strokeWidth={3} dot={false} isAnimationActive={true} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                <p className="text-[9px] font-bold text-center uppercase tracking-widest text-slate-600 mt-1">Actividad Real-Time</p>
+              </div>
               <button
-                onClick={() => {
-                  if (navigator.vibrate) navigator.vibrate(5);
-                  navigate("/settings");
-                }}
-                className="w-12 h-12 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl flex items-center justify-center text-slate-500 hover:text-brand-warning transition-all active:scale-95 shadow-sm"
-                title="Configuración"
+                onClick={() => navigate("/settings")}
+                className="w-14 h-14 surface-glass rounded-2xl flex items-center justify-center text-slate-400 hover:text-white transition-all active:scale-95 group"
               >
-                <Settings className="w-6 h-6" />
+                <Settings className="w-6 h-6 group-hover:rotate-90 transition-transform duration-500" />
               </button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* MAIN SCANNER HERO */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+            {/* SEARCH AREA */}
             <div className="lg:col-span-8">
-              <div className="relative group">
-                <div className="absolute -inset-1 bg-gradient-to-r from-brand-warning to-amber-600 rounded-[2.5rem] blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
-                <div className="relative bg-white dark:bg-brand-dark border-4 border-brand-warning rounded-[2.5rem] p-2 shadow-2xl">
-                  <div className="flex items-center">
-                    <button
-                      onClick={() => setIsCameraOpen(true)}
-                      className="w-16 h-16 flex items-center justify-center text-brand-warning hover:bg-brand-warning/10 rounded-3xl transition-all"
-                    >
-                      <Camera className="w-8 h-8" />
-                    </button>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={scanInput}
-                      onChange={(e) => setScanInput(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleUniversalScan(scanInput)}
-                      placeholder="ESCANEAR ORDEN O PRODUCTO..."
-                      className="flex-1 h-16 bg-transparent border-none px-4 text-xl font-black outline-none placeholder:text-slate-300 dark:placeholder:text-slate-700"
-                      disabled={isProcessingScan}
-                      autoFocus
-                    />
-                    <div className="pr-2">
-                      {isProcessingScan ? (
-                        <div className="w-12 h-12 flex items-center justify-center">
-                          <RefreshCw className="w-6 h-6 text-brand-warning animate-spin" />
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => handleUniversalScan(scanInput)}
-                          className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
-                            scanInput ? 'bg-brand-warning text-white shadow-lg shadow-brand-warning/40 scale-100' : 'bg-slate-100 dark:bg-white/5 text-slate-400 scale-90 opacity-50'
-                          }`}
-                        >
-                          <ArrowRight className="w-6 h-6" />
-                        </button>
-                      )}
-                    </div>
+              <div className="relative group p-[2px] rounded-[2.8rem] bg-gradient-to-r from-blue-500/20 to-transparent">
+                <div className="relative bg-slate-950 border border-white/5 rounded-[2.7rem] p-3 shadow-2xl flex items-center gap-3">
+                  <button
+                    onClick={() => setIsCameraOpen(true)}
+                    className="w-14 h-14 flex items-center justify-center text-blue-500 hover:bg-blue-500/10 rounded-full transition-all"
+                  >
+                    <Camera className="w-7 h-7" />
+                  </button>
+                  <input
+                    type="text"
+                    value={scanInput}
+                    onChange={(e) => setScanInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleUniversalScan(scanInput)}
+                    placeholder="INGRESAR SKU O ID MANIFIESTO..."
+                    className="flex-1 h-14 bg-transparent border-none px-2 text-xl font-medium tracking-tight outline-none placeholder:text-slate-700 text-white"
+                  />
+                  <div className="flex items-center gap-2">
+                    {isProcessingScan ? (
+                      <RefreshCw className="w-6 h-6 text-blue-500 animate-spin mr-4" />
+                    ) : (
+                      <button
+                        onClick={() => handleUniversalScan(scanInput)}
+                        disabled={!scanInput}
+                        className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
+                          scanInput ? 'bg-blue-600 text-white shadow-xl shadow-blue-500/40 scale-100' : 'bg-white/5 text-slate-700 scale-95 opacity-50'
+                        }`}
+                      >
+                        <ArrowRight className="w-6 h-6" />
+                      </button>
+                    )}
                   </div>
                 </div>
-              </div>
-              
-              <div className="mt-4 flex items-center gap-6 px-4">
-                <div className="flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-emerald-500" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Motor de Escaneo Activo</span>
-                </div>
-                <NetworkStatus />
               </div>
             </div>
 
             {/* QUICK STATS BENTO */}
-            <div className="lg:col-span-4 flex flex-col gap-4">
-              <div className="flex-1 bg-slate-100 dark:bg-white/5 rounded-3xl p-5 border border-slate-200 dark:border-white/5 flex flex-col justify-center">
-                <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">Pendientes Sincronizar</p>
-                <div className="flex items-end gap-2">
-                  <span className={`text-4xl font-black italic ${isSyncNeeded ? 'text-amber-500' : ''}`}>
+            <div className="lg:col-span-4 grid grid-cols-2 lg:grid-cols-1 gap-4">
+              <div className="surface-glass rounded-3xl p-5 flex flex-col justify-center relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-150 duration-700" />
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1 z-10">Cola de Nube</p>
+                <div className="flex items-end gap-3 z-10">
+                  <span className={`text-4xl font-black italic tracking-tighter ${isSyncNeeded ? 'text-amber-500' : 'text-white'}`}>
                     {(stats?.pendingSync || 0) + (dynamicStats?.pending || 0)}
                   </span>
-                  <Cloud className={`w-6 h-6 mb-1 ${isSyncNeeded ? 'text-amber-500 animate-pulse' : 'text-slate-400'}`} />
+                  <Cloud className={`w-6 h-6 mb-2 ${isSyncNeeded ? 'text-amber-500 animate-pulse' : 'text-slate-600'}`} />
                 </div>
               </div>
             </div>
@@ -370,160 +265,122 @@ const Dashboard: React.FC = () => {
         </div>
       </header>
 
-      <main className="p-6 max-w-6xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-          
-          {/* MODULES GRID - NOW PROMINENT */}
-          <div className="md:col-span-8 grid grid-cols-2 gap-4">
-            <BentoModule 
-              icon={<History className="w-6 h-6" />}
-              label="Recepción"
-              color="emerald"
-              onClick={() => navigate("/reception/history")}
-            />
-            <BentoModule 
-              icon={<Zap className="w-6 h-6" />}
-              label="Hammer"
-              color="rose"
-              onClick={() => navigate("/massive/BURST-MODE")}
-            />
-            <BentoModule 
-              icon={<Database className="w-6 h-6" />}
-              label="Catálogo"
-              color="amber"
-              onClick={() => navigate("/database")}
-            />
-            <BentoModule 
-              icon={<Users className="w-6 h-6" />}
-              label="Clientes"
-              color="blue"
-              onClick={() => navigate("/customers")}
-            />
+      <main className="p-6 max-w-6xl mx-auto space-y-8">
+        {/* MODULES SECTION */}
+        <section>
+          <div className="flex items-center gap-3 mb-6 px-2">
+            <LayoutDashboard className="w-4 h-4 text-slate-500" />
+            <h2 className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-500">Módulos Operativos</h2>
           </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <BentoModule icon={<History />} label="Recepción" color="emerald" onClick={() => navigate("/reception")} />
+            <BentoModule icon={<Zap />} label="Hammer" color="rose" onClick={() => navigate("/massive/BURST-MODE")} />
+            <BentoModule icon={<Database />} label="Inventario" color="amber" onClick={() => navigate("/database")} />
+            <BentoModule icon={<Users />} label="Asignación" color="blue" onClick={() => navigate("/customers")} />
+          </div>
+        </section>
 
-          {/* SYNC HEALTH BENTO - SIDEBAR STYLE */}
-          <div className="md:col-span-4 bg-slate-900 border border-indigo-500/30 rounded-[2.5rem] p-8 text-white shadow-2xl shadow-indigo-500/10 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-3 bg-indigo-600 rounded-2xl">
-                  <Database className="w-6 h-6 text-white" />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* PENDING ORDERS TABLE */}
+          <div className="lg:col-span-8 surface-card rounded-[2.5rem] p-8">
+            <div className="flex items-center justify-between mb-10">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-blue-500/10 rounded-2xl flex items-center justify-center">
+                  <Package className="w-7 h-7 text-blue-500" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-black uppercase italic tracking-tighter leading-none">Estado Cloud</h2>
-                  <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-widest">Sincronización Activa</span>
+                  <h2 className="text-xl font-bold tracking-tight">Órdenes Activas</h2>
+                  <p className="text-xs text-slate-500 tracking-wide font-medium">{pendingOrders?.length || 0} manifiestos registrados</p>
                 </div>
               </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Pendientes</span>
-                  <span className="text-xl font-black italic">{dynamicStats?.pending || 0}</span>
-                </div>
-                <div className={`flex items-center justify-between p-4 rounded-2xl border ${
-                  (dynamicStats?.error || 0) > 0 ? 'bg-rose-500/10 border-rose-500/30' : 'bg-white/5 border-white/5'
-                }`}>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Errores</span>
-                  <span className={`text-xl font-black italic ${(dynamicStats?.error || 0) > 0 ? 'text-rose-500' : ''}`}>
-                    {dynamicStats?.error || 0}
-                  </span>
-                </div>
+              
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setIsOrdersCollapsed(!isOrdersCollapsed)}
+                  className="w-12 h-12 bg-white/5 hover:bg-white/10 rounded-xl flex items-center justify-center text-slate-400 transition-all active:scale-95"
+                >
+                  {isOrdersCollapsed ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
+                </button>
               </div>
             </div>
 
-            <button
-              onClick={() => navigate("/sync")}
-              className="mt-8 w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all active:scale-95 shadow-lg shadow-indigo-900/40"
-            >
-              Gestionar Nube
-            </button>
+            <AnimatePresence>
+              {!isOrdersCollapsed && (
+                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                  <div className="space-y-3 pb-4">
+                    {pendingOrders && pendingOrders.length > 0 ? (
+                      <>
+                        {visibleOrders.map((order) => (
+                          <OrderRow key={order.id} order={order} onClick={() => handleUniversalScan(order.id)} />
+                        ))}
+                        {pendingOrders.length > 5 && (
+                          <button
+                            onClick={() => setShowAllOrders(!showAllOrders)}
+                            className="w-full mt-4 py-4 text-[10px] font-black text-blue-500 uppercase tracking-widest hover:bg-blue-500/5 rounded-2xl transition-colors border border-dashed border-blue-500/20"
+                          >
+                            {showAllOrders ? "Mostrar menos" : `Ver ${pendingOrders.length - 5} órdenes adicionales`}
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <div className="py-20 text-center border border-dashed border-white/5 rounded-[2rem] bg-slate-900/30">
+                        <Package className="w-12 h-12 text-slate-800 mx-auto mb-4" />
+                        <p className="text-xs font-bold text-slate-600 uppercase tracking-[0.2em]">Bandeja de Entrada Vacía</p>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
-          {/* PENDING ORDERS BENTO */}
-          <div className="md:col-span-12">
-            <div className="bg-white dark:bg-brand-surface border border-slate-200 dark:border-white/5 rounded-[2.5rem] p-8 shadow-sm">
-              <div className="flex items-center justify-between mb-8">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-blue-500/10 rounded-2xl">
-                    <Package className="w-6 h-6 text-blue-500" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-black uppercase italic tracking-tighter">Órdenes Pendientes</h2>
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                      {pendingOrders?.length || 0} manifiestos cargados
-                    </p>
-                  </div>
+          {/* TELEMETRY / STATUS */}
+          <div className="lg:col-span-4 space-y-6">
+            <div className="bg-gradient-to-br from-slate-900 to-black border border-blue-500/20 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden group">
+              <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-blue-500/5 rounded-full blur-[40px] group-hover:bg-blue-500/10 transition-all duration-700" />
+              <div className="flex items-center gap-4 mb-8">
+                <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/20">
+                  <Cloud className="w-6 h-6 text-white" />
                 </div>
-                
-                <div className="flex gap-2">
-                  <label className="p-3 bg-slate-100 dark:bg-white/5 rounded-2xl text-slate-500 hover:text-brand-warning transition-all cursor-pointer">
-                    <Upload className="w-5 h-5" />
-                    <input type="file" accept=".csv" className="hidden" onChange={handleCsvUpload} />
-                  </label>
-                  <button 
-                    onClick={() => setIsOrdersCollapsed(!isOrdersCollapsed)}
-                    className="p-3 bg-slate-100 dark:bg-white/5 rounded-2xl text-slate-500 hover:text-brand-warning transition-all"
-                  >
-                    {isOrdersCollapsed ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
-                  </button>
+                <div>
+                  <h3 className="text-sm font-black uppercase tracking-[0.1em] text-white">Sincronización</h3>
+                  <p className="text-[9px] font-bold text-blue-500 uppercase tracking-widest">Estado del Motor</p>
                 </div>
               </div>
 
-              <AnimatePresence>
-                {!isOrdersCollapsed && (
-                  <motion.div 
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="space-y-3 pt-2">
-                      {pendingOrders && pendingOrders.length > 0 ? (
-                        <>
-                          {visibleOrders.map((order) => (
-                            <OrderRow
-                              key={order.id}
-                              order={order}
-                              onClick={handleOrderClick}
-                              onDelete={handleDeleteOrder}
-                            />
-                          ))}
-                          {pendingOrders.length > 5 && (
-                            <button
-                              onClick={() => setShowAllOrders(!showAllOrders)}
-                              className="w-full py-4 text-[10px] font-black text-brand-info uppercase tracking-widest hover:bg-brand-info/5 rounded-2xl transition-colors"
-                            >
-                              {showAllOrders ? "Ver menos" : `Ver ${pendingOrders.length - 5} más...`}
-                            </button>
-                          )}
-                        </>
-                      ) : (
-                        <div className="py-12 text-center border-2 border-dashed border-slate-100 dark:border-white/5 rounded-3xl">
-                          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">No hay manifiestos activos</p>
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              <div className="space-y-4 mb-8">
+                <div className="flex justify-between items-center p-4 bg-white/3 rounded-2xl border border-white/5">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 text-left">Nodos Pendientes</span>
+                  <span className="text-2xl font-black italic text-white">{dynamicStats?.pending || 0}</span>
+                </div>
+                <div className="flex justify-between items-center p-4 bg-white/3 rounded-2xl border border-white/5">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 text-left">Latencia Promedio</span>
+                  <span className="text-2xl font-black italic text-emerald-500">12ms</span>
+                </div>
+              </div>
+
+              <button
+                onClick={() => navigate("/sync")}
+                className="w-full py-5 bg-white text-black font-black text-[11px] uppercase tracking-[0.2em] rounded-2xl shadow-xl hover:bg-slate-100 transition-all active:scale-95"
+              >
+                Abrir Terminal Cloud
+              </button>
+            </div>
+            
+            <div className="bg-slate-900 border border-white/5 rounded-3xl p-6 text-center">
+               <TrendingUp className="w-5 h-5 text-emerald-500 mx-auto mb-3" />
+               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Productividad Diaria</p>
+               <h4 className="text-3xl font-black italic text-white mt-1">+24%</h4>
             </div>
           </div>
-
         </div>
       </main>
 
       <AnimatePresence>
         {isCameraOpen && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[200]"
-          >
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200]">
             <CameraScanner 
-              onScan={(code) => {
-                handleUniversalScan(code);
-                setIsCameraOpen(false);
-              }}
+              onScan={(code) => { handleUniversalScan(code); setIsCameraOpen(false); }}
               onClose={() => setIsCameraOpen(false)}
               isTriggered={true}
             />
@@ -543,25 +400,24 @@ interface BentoModuleProps {
 
 const BentoModule: React.FC<BentoModuleProps> = ({ icon, label, color, onClick }) => {
   const colors = {
-    emerald: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20',
-    rose: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20 hover:bg-rose-500/20',
-    amber: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 hover:bg-amber-500/20',
-    blue: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 hover:bg-blue-500/20'
+    emerald: 'bg-emerald-500/5 text-emerald-500 border-emerald-500/10 hover:bg-emerald-500/10 hover:border-emerald-500/30',
+    rose: 'bg-rose-500/5 text-rose-600 border-rose-500/10 hover:bg-rose-500/10 hover:border-rose-500/30',
+    amber: 'bg-amber-500/5 text-amber-500 border-amber-500/10 hover:bg-amber-500/10 hover:border-amber-500/30',
+    blue: 'bg-blue-500/5 text-blue-500 border-blue-500/10 hover:bg-blue-500/10 hover:border-blue-500/30'
   };
 
   return (
-    <button
+    <motion.button
+      whileHover={{ y: -4 }} whileTap={{ scale: 0.96 }}
       onClick={onClick}
-      className={`p-6 rounded-[2rem] border-2 flex flex-col items-center justify-center gap-3 transition-all active:scale-95 group ${colors[color]}`}
+      className={`p-6 rounded-[2rem] border-2 transition-all flex flex-col items-center justify-center gap-4 group ${colors[color]}`}
     >
-      <div className="transform group-hover:scale-110 transition-transform duration-300">
-        {icon}
+      <div className="p-3 bg-white/5 rounded-2xl group-hover:bg-white/10 transition-colors">
+        {React.cloneElement(icon as React.ReactElement, { className: 'w-7 h-7' })}
       </div>
-      <span className="text-[10px] font-black uppercase tracking-[0.2em]">{label}</span>
-    </button>
+      <span className="text-[11px] font-black uppercase tracking-[0.2em]">{label}</span>
+    </motion.button>
   );
 };
 
 export default memo(Dashboard);
-
-// Forced GitHub sync

@@ -44,13 +44,15 @@ class AudioService {
  }
  }
 
- public play(type: 'success' | 'error' | 'delete' | 'increment' | 'scan' | 'not_found' | 'warning') {
+ public play(type: 'success' | 'success_new' | 'error' | 'error_critical' | 'delete' | 'increment' | 'scan' | 'not_found' | 'warning') {
  const settings = getSettings();
  
  // Haptics de alto impacto
  if (settings.hapticsEnabled && navigator.vibrate) {
- if (type === 'error' || type === 'not_found') navigator.vibrate([100, 50, 100]);
+ if (type === 'error_critical') navigator.vibrate([200, 100, 200, 100, 300]);
+ else if (type === 'error' || type === 'not_found') navigator.vibrate([100, 50, 100]);
  else if (type === 'warning') navigator.vibrate([50, 50, 50, 50]);
+ else if (type === 'success_new') navigator.vibrate([30, 50, 30]);
  else if (type === 'success' || type === 'scan') navigator.vibrate(40);
  else navigator.vibrate(20);
  }
@@ -73,11 +75,22 @@ class AudioService {
  case 'success': 
  // BEEP INDUSTRIAL: Onda cuadrada para máxima penetración en ruido ambiente
  osc.type = 'square';
- osc.frequency.setValueAtTime(1200, now);
+ osc.frequency.setValueAtTime(1400, now);
  gain.gain.setValueAtTime(0.15, now);
  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
  osc.start(now);
  osc.stop(now + 0.08);
+ break;
+ case 'success_new':
+ osc.type = 'square';
+ osc.frequency.setValueAtTime(1200, now);
+ osc.frequency.setValueAtTime(1600, now + 0.1);
+ gain.gain.setValueAtTime(0.15, now);
+ gain.gain.setValueAtTime(0, now + 0.08);
+ gain.gain.setValueAtTime(0.15, now + 0.1);
+ gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+ osc.start(now);
+ osc.stop(now + 0.2);
  break;
  case 'increment':
  osc.type = 'sine';
@@ -89,20 +102,32 @@ class AudioService {
  break;
  case 'delete':
  osc.type = 'sawtooth';
- osc.frequency.setValueAtTime(400, now);
- gain.gain.setValueAtTime(0.1, now);
- gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+ osc.frequency.setValueAtTime(500, now);
+ osc.frequency.exponentialRampToValueAtTime(100, now + 0.2); // Tono descendente
+ gain.gain.setValueAtTime(0.15, now);
+ gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
  osc.start(now);
- osc.stop(now + 0.15);
+ osc.stop(now + 0.2);
  break;
  case 'error':
  osc.type = 'sawtooth';
- osc.frequency.setValueAtTime(100, now);
- osc.frequency.linearRampToValueAtTime(50, now + 0.3);
+ osc.frequency.setValueAtTime(150, now);
+ osc.frequency.linearRampToValueAtTime(80, now + 0.3);
  gain.gain.setValueAtTime(0.2, now);
  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
  osc.start(now);
  osc.stop(now + 0.3);
+ break;
+ case 'error_critical':
+ osc.type = 'square';
+ osc.frequency.setValueAtTime(400, now);
+ osc.frequency.setValueAtTime(600, now + 0.1);
+ osc.frequency.setValueAtTime(400, now + 0.2);
+ osc.frequency.setValueAtTime(600, now + 0.3);
+ gain.gain.setValueAtTime(0.25, now);
+ gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+ osc.start(now);
+ osc.stop(now + 0.5);
  break;
  case 'not_found':
  // Tono grave y seco para "Producto no encontrado"

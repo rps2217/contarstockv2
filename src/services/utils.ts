@@ -67,14 +67,14 @@ export const generateSessionSignature = (
 };
 
 /**
- * COMPRESOR DE IMÁGENES v1.0
- * Reduce el tamaño de las fotos de etiquetas antes de guardarlas en IndexedDB.
- * Optimiza de ~5MB a ~150KB manteniendo legibilidad.
+ * COMPRESOR DE IMÁGENES v2.0 (Punto 6: Rendimiento)
+ * Reduce drásticamente el tamaño de las fotos de etiquetas antes de guardarlas en IndexedDB.
+ * Optimiza de ~5MB a ~80KB manteniendo legibilidad básica de la etiqueta.
  */
 export const compressImage = (
   base64: string,
-  maxWidth = 800,
-  quality = 0.7,
+  maxWidth = 600,
+  quality = 0.6,
 ): Promise<string> => {
   return new Promise((resolve, reject) => {
     const img = new Image();

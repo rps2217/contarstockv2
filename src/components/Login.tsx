@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Box, Lock, User, ArrowRight, AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
-import { auth, googleProvider } from '../lib/firebase';
-import { signInWithPopup, signInAnonymously } from 'firebase/auth';
+import { supabase } from '../lib/supabase';
 
 interface LoginProps {
  onLoginSuccess: () => void;
@@ -18,12 +17,19 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   setIsLoading(true);
   setError('');
   try {
-   const result = await signInWithPopup(auth, googleProvider);
-   if (result.user) {
-    localStorage.setItem('logicount_auth', 'true');
-    localStorage.setItem('logicount_operator_id', result.user.displayName?.toUpperCase() || 'ADMIN');
-    onLoginSuccess();
-   }
+   const { data, error } = await supabase.auth.signInWithOAuth({
+     provider: 'google',
+     options: {
+       redirectTo: window.location.origin
+     }
+   });
+   
+   if (error) throw error;
+   
+   // Si no redirige inmediatamente y es exitoso:
+   localStorage.setItem('logicount_auth', 'true');
+   localStorage.setItem('logicount_operator_id', 'ADMIN');
+   onLoginSuccess();
   } catch (e: any) {
    console.error("Google Login Error:", e);
    setError('Error al autenticar con Google: ' + e.message);
@@ -47,9 +53,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const validPass = (import.meta as any).env?.VITE_APP_PASS || 'admin'; 
 
   if (password === validPass || password === 'admin') {
-   if (!auth.currentUser) {
-    await signInAnonymously(auth);
-   }
+   // Simulated local operators login (Supabase typically doesn't need anon if they use anon key for writes)
    localStorage.setItem('logicount_auth', 'true');
    localStorage.setItem('logicount_operator_id', username.trim().toUpperCase());
    onLoginSuccess();
@@ -57,11 +61,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
    setError('Contraseña incorrecta');
   }
  } catch (err: any) {
-  if (err.code === 'auth/configuration-not-found') {
-   setError('Error: Autenticación anónima no habilitada en Firebase.');
-  } else {
-   setError('Error de autenticación: ' + err.message);
-  }
+  setError('Error de autenticación: ' + err.message);
  } finally {
   setIsLoading(false);
  }
