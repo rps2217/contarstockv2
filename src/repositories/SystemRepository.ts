@@ -1,72 +1,91 @@
 import { db } from '../db';
-import { logger } from '../services/logger';
+import { ScanRepository } from './ScanRepository';
+import { SessionRepository } from './SessionRepository';
 
-export class SystemRepository {
-  /**
-   * Obtiene estadísticas de ocupación de las tablas locales
-   */
-  static async getStorageStats() {
+export const systemRepository = {
+  async getStorageStats() {
     const stats = {
-      scans: await db.scans.count(),
-      sessions: await db.sessions.count(),
       products: await db.products.count(),
+      sessions: await db.sessions.count(),
+      scans: await db.scans.count(),
       logs: await db.logs.count(),
-      dynamicData: await db.dynamic_data.count(),
-      expectedOrders: await db.expectedOrders.count()
     };
     return stats;
-  }
+  },
 
-  /**
-   * Realiza una limpieza de logs antiguos excediendo el límite
-   */
-  static async purgeLogs(limit = 1000) {
-    const count = await db.logs.count();
-    if (count > limit) {
-      const toDelete = count - limit;
-      const oldKeys = await db.logs.orderBy('timestamp').limit(toDelete).primaryKeys();
-      await db.logs.bulkDelete(oldKeys);
-      logger.info('SYSTEM', `Purgados ${toDelete} registros de log antiguos.`);
-      return toDelete;
+  async clearDiskData(): Promise<void> {
+    await db.transaction('rw', [db.products, db.sessions, db.scans, db.logs, db.expectedOrders], async () => {
+      await db.products.clear();
+      await db.sessions.clear();
+      await db.scans.clear();
+      await db.logs.clear();
+      await db.expectedOrders.clear();
+    });
+  },
+
+  async repairDatabase(): Promise<string[]> {
+    const logs: string[] = [];
+    try {
+      // 1. Verificar integridad de sesiones vs scans
+      const sessions = await SessionRepository.getAll();
+      for (const session of sessions) {
+        const scans = await ScanRepository.getBySession(session.id);
+        const totalUnits = scans.reduce((acc, s) => acc + (s.quantity || 1), 0);
+        const totalSKUs = new Set(scans.map(s => s.barcode)).size;
+        
+        if (session.totalUnits !== totalUnits || session.totalSKUs !== totalSKUs) {
+          await SessionRepository.save({
+            ...session,
+            totalUnits,
+            totalSKUs
+          });
+          logs.push(`🔧 Reparada sesión ${session.id}: Sincronizadas unidades (${totalUnits}) y SKUs (${totalSKUs}).`);
+        }
+      }
+
+      // 2. Limpiar scans huérfanos
+      const sessionIds = new Set(sessions.map(s => s.id));
+      const allScans = await ScanRepository.getAll();
+      const orphanedScans = allScans.filter(s => !sessionIds.has(s.sessionId));
+      
+      if (orphanedScans.length > 0) {
+        await ScanRepository.deleteBySessions(orphanedScans.map(s => s.sessionId));
+        logs.push(`🔧 Eliminados ${orphanedScans.length} registros de escaneo huérfanos.`);
+      }
+
+      return logs;
+    } catch (error: any) {
+      logs.push(`❌ Error durante reparación: ${error.message}`);
+      return logs;
     }
-    return 0;
-  }
+  },
 
-  /**
-   * Detecta anomalías en las cantidades escaneadas (ej. saltos de cantidad sospechosos)
-   */
-  static async detectAnomalies(threshold = 50) {
-    const scans = await db.scans.where('quantity').above(threshold).toArray();
-    return scans.map(s => ({
-      id: s.id,
-      barcode: s.barcode,
-      quantity: s.quantity,
-      timestamp: s.timestamp
-    }));
-  }
-
-  /**
-   * Verifica la integridad referencial básica
-   * (Scans sin sesión existente)
-   */
-  static async checkIntegrity() {
-    const scans = await db.scans.toArray();
-    const sessionIds = new Set((await db.sessions.toArray()).map(s => s.id));
+  async purgeOldData(daysThreshold: number): Promise<number> {
+    const dateLimit = Date.now() - (daysThreshold * 24 * 60 * 60 * 1000);
+    const oldSessions = (await db.sessions.toArray()).filter(s => s.createdAt < dateLimit && s.status === 'completed');
+    const ids = oldSessions.map(s => s.id);
     
-    const orphans = scans.filter(s => !sessionIds.has(s.sessionId));
-    return {
-      orphanScans: orphans.length,
-      orphanIds: orphans.map(o => o.id)
-    };
-  }
+    if (ids.length === 0) return 0;
 
-  /**
-   * Elimina registros huérfanos detectados
-   */
-  static async fixIntegrity(orphanIds: string[]) {
+    await db.transaction('rw', [db.sessions, db.scans], async () => {
+      await db.scans.where('sessionId').anyOf(ids).delete();
+      await db.sessions.bulkDelete(ids);
+    });
+
+    return ids.length;
+  },
+
+  async cleanOrphanedScans(): Promise<number> {
+    const sessions = await db.sessions.toArray();
+    const sessionIds = new Set(sessions.map(s => s.id));
+    const scans = await db.scans.toArray();
+    
+    const orphanIds = scans.filter(s => !sessionIds.has(s.sessionId)).map(s => s.id);
+    
     if (orphanIds.length > 0) {
       await db.scans.bulkDelete(orphanIds);
-      logger.warn('SYSTEM', `Eliminados ${orphanIds.length} registros huérfanos.`);
     }
+    
+    return orphanIds.length;
   }
-}
+};

@@ -1,120 +1,133 @@
-import React, { useState } from 'react';
-import Papa from 'papaparse';
-import { supabaseSyncService } from '../services/supabaseSyncService';
-import { useAppStore } from '@/store/mainAppStore';
-import { toast } from 'sonner';
+import React, { useState, useRef } from 'react';
+import { Upload, FileText, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { useSettingsStore } from '../store/useSettingsStore';
+import { db } from '../db';
+import { toast } from 'react-hot-toast';
+import { parse } from 'papaparse';
 
 export const CsvImporter: React.FC = () => {
-  const { settings } = useAppStore();
+  const [file, setFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
-  const [parsedData, setParsedData] = useState<any[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const validateRow = (row: any) => {
-    const errors: string[] = [];
-    if (!row.barcode) errors.push('Código de barras faltante');
-    if (!row.productName) errors.push('Nombre de producto faltante');
-    if (isNaN(row.quantity) || row.quantity < 0) errors.push('Cantidad inválida');
-    return errors;
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0];
+    if (selectedFile) {
+      setFile(selectedFile);
+    }
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const processCsv = async () => {
     if (!file) return;
 
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (results) => {
-        const data = results.data as any[];
-        const processedData = data.map((row) => {
-          const rowData = {
-            id: row.ID_REGISTRO || Math.random().toString(16).substring(2, 10),
-            barcode: row.COD_BARRAS,
-            productName: row.DESCRIPCION_PROD,
-            providerName: 'N/A',
-            event: row.EVENTO,
-            quantity: parseInt(row.CANTIDAD) || 0,
-            location: row['BOD.'] || 'GENERAL',
-            timestamp: Date.now(),
-            claveUnica: row.CLAVE_UNICA,
-            mm: parseInt(row.MM) || 0,
-            yyyy: parseInt(row.YYYY) || 0,
-            isAdjusted: row.AJUSTADO === 'TRUE' || row.AJUSTADO === '1',
-            syncStatus: 'synced',
-          };
-          return { ...rowData, errors: validateRow(rowData) };
-        });
-        setParsedData(processedData);
-      },
-      error: (error) => {
-        toast.error(`Error al parsear CSV: ${error.message}`);
-      }
-    });
-  };
-
-  const confirmImport = async () => {
     setIsImporting(true);
     try {
-      const validData = parsedData.filter(row => row.errors.length === 0);
-      
-      const expiryData = validData.filter(row => row.event === 'VENCIMIENTOS');
-      const eventData = validData.filter(row => row.event !== 'VENCIMIENTOS');
+      parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: async (results) => {
+          const rows = results.data;
+          
+          if (rows.length === 0) {
+            toast.error("El archivo está vacío");
+            setIsImporting(false);
+            return;
+          }
 
-      if (expiryData.length > 0) {
-        await supabaseSyncService.pushBatch(settings?.cloudConfig?.expiryTableName || 'VENCIMIENTOS', expiryData);
-      }
-      if (eventData.length > 0) {
-        await supabaseSyncService.pushBatch(settings?.cloudConfig?.eventsTableName || 'EVENTOS', eventData);
-      }
+          // Mapear filas a formato de producto
+          const products = rows.map((row: any) => ({
+            barcode: String(row.barcode || row.BARCODE || '').trim(),
+            name: String(row.name || row.NAME || row.description || row.DESCRIPTION || '').trim(),
+            syncStatus: 'pending' as const
+          })).filter(p => p.barcode !== '');
 
-      toast.success(`Importación completada: ${expiryData.length} vencimientos, ${eventData.length} eventos.`);
-      setParsedData([]);
+          if (products.length === 0) {
+            toast.error("No se encontraron registros válidos");
+            setIsImporting(false);
+            return;
+          }
+
+          // Guardar en la base de datos local
+          await db.products.bulkPut(products);
+          
+          toast.success(`${products.length} productos importados correctamente`);
+          setIsImporting(false);
+          setFile(null);
+          if (fileInputRef.current) fileInputRef.current.value = '';
+        },
+        error: (error) => {
+          toast.error("Error al procesar el archivo: " + error.message);
+          setIsImporting(false);
+        }
+      });
     } catch (error: any) {
-      toast.error(`Error al importar: ${error.message}`);
-    } finally {
+      toast.error("Error inesperado: " + error.message);
       setIsImporting(false);
     }
   };
 
-  const hasErrors = parsedData.some(row => row.errors.length > 0);
-  const validCount = parsedData.filter(row => row.errors.length === 0).length;
-
   return (
-    <div className="p-4 border rounded-lg bg-slate-50 dark:bg-slate-900">
-      <h3 className="text-lg font-semibold mb-2">Importar desde CSV</h3>
-      <input
-        type="file"
-        accept=".csv"
-        onChange={handleFileUpload}
-        disabled={isImporting}
-        className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-      />
-      
-      {parsedData.length > 0 && (
-        <div className="mt-4">
-          <p className="text-sm font-medium mb-2">
-            Vista previa ({parsedData.length} registros, {parsedData.filter(r => r.errors.length > 0).length} con errores):
-          </p>
-          <div className="max-h-60 overflow-y-auto border rounded p-2 text-xs">
-            {parsedData.slice(0, 5).map((row, i) => (
-              <div key={i} className={`border-b py-1 ${row.errors.length > 0 ? 'text-red-600' : ''}`}>
-                {row.productName} - {row.quantity}
-                {row.errors.length > 0 && <span className="ml-2 font-bold">({row.errors.join(', ')})</span>}
-              </div>
-            ))}
-            {parsedData.length > 5 && <p>...</p>}
-          </div>
-          <button
-            onClick={confirmImport}
-            disabled={isImporting || validCount === 0}
-            className="mt-4 w-full bg-blue-600 text-white py-2 rounded font-semibold hover:bg-blue-700 disabled:opacity-50"
-          >
-            {isImporting ? 'Importando...' : hasErrors ? `Ignorar errores e importar ${validCount} válidos` : 'Confirmar Importación'}
-          </button>
+    <div className="bg-white p-6 rounded-2xl border-4 border-slate-100 shadow-sm">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600">
+          <Upload size={20} />
         </div>
-      )}
+        <div>
+          <h3 className="font-black text-slate-900 leading-tight">Importador CSV</h3>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Maestro de Productos</p>
+        </div>
+      </div>
+
+      <div 
+        className={`border-4 border-dashed rounded-3xl p-8 transition-all text-center ${
+          file ? 'border-emerald-200 bg-emerald-50' : 'border-slate-100 bg-slate-50'
+        }`}
+      >
+        <input
+          type="file"
+          accept=".csv"
+          onChange={handleFileUpload}
+          ref={fileInputRef}
+          className="hidden"
+          id="csv-input"
+        />
+        
+        {file ? (
+          <div className="flex flex-col items-center">
+            <CheckCircle className="text-emerald-500 mb-2" size={32} />
+            <span className="font-black text-slate-900 text-sm mb-1">{file.name}</span>
+            <span className="text-[10px] text-slate-400 uppercase font-black">{(file.size / 1024).toFixed(1)} KB</span>
+          </div>
+        ) : (
+          <label htmlFor="csv-input" className="flex flex-col items-center cursor-pointer">
+            <FileText className="text-slate-300 mb-2" size={32} />
+            <span className="font-black text-slate-400 text-sm">Selecciona o arrastra tu archivo CSV</span>
+            <span className="text-[10px] text-slate-300 uppercase font-black mt-1">Headers requeridos: barcode, name</span>
+          </label>
+        )}
+      </div>
+
+      <button
+        onClick={processCsv}
+        disabled={!file || isImporting}
+        className={`w-full mt-6 py-4 rounded-2xl font-black transition-all flex items-center justify-center gap-2 ${
+          !file || isImporting 
+            ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
+            : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-200 active:scale-95'
+        }`}
+      >
+        {isImporting ? (
+          <>
+            <Loader2 className="animate-spin" size={20} />
+            PROCESANDO...
+          </>
+        ) : (
+          <>
+            <Upload size={20} />
+            COMENZAR IMPORTACIÓN
+          </>
+        )}
+      </button>
     </div>
   );
 };
-
-// Forced GitHub sync

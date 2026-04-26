@@ -1,4 +1,3 @@
-
 import { db } from '../db';
 import { supabaseSyncService } from './supabaseSyncService';
 import { getSettings, saveSettings } from './settings';

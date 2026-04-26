@@ -1,211 +1,82 @@
-
 import { db } from '../db';
-import { logger } from './logger';
+import { getSettings } from './settings';
+import { ScanRepository } from '../repositories/ScanRepository';
+import { SessionRepository } from '../repositories/SessionRepository';
 
 export interface HealthReport {
- status: 'healthy' | 'warning' | 'critical';
- orphanScans: number;
- stuckSyncJobs: number;
- corruptProducts: number;
- storageUsage: number; 
- totalRecords: number;
+  status: 'healthy' | 'warning' | 'critical';
+  totalRecords: number;
+  storageUsage: number;
+  orphans: number;
 }
 
 /**
- * Analiza la integridad referencial y el estado físico de la base de datos.
+ * 1. Reparar punteros de sesiones.
+ * 2. Limpiar registros antiguos.
  */
 export const checkSystemHealth = async (): Promise<HealthReport> => {
- const sessionIds = new Set(await db.sessions.toCollection().primaryKeys());
- 
- let orphanScans = 0;
- await db.scans.each(scan => {
- if (!sessionIds.has(scan.sessionId)) {
- orphanScans++;
- }
- });
+  const sessions = await SessionRepository.getAll();
+  const sessionIds = new Set(sessions.map(s => s.id));
+  const scans = await ScanRepository.getAll();
+  
+  const orphans = scans.filter(s => !sessionIds.has(s.sessionId)).length;
+  const total = sessions.length + scans.length;
+  
+  // Estimación simple de KB: ~1KB por sesión, ~0.5KB por scan
+  const usage = (sessions.length * 1024) + (scans.length * 512);
 
- const stuckSyncJobs = await db.dynamic_data
- .where('syncStatus').equals('error')
- .count();
-
- const corruptProducts = await db.products
- .filter(p => !p.barcode || !p.name)
- .count();
-
- let storageUsage = 0;
- if (navigator.storage && navigator.storage.estimate) {
- const estimate = await navigator.storage.estimate();
- storageUsage = estimate.usage || 0;
- }
-
- const totalRecords = (await db.scans.count()) + (await db.sessions.count());
-
- let status: 'healthy' | 'warning' | 'critical' = 'healthy';
- if (orphanScans > 0 || stuckSyncJobs > 0) status = 'warning';
- if (corruptProducts > 0 || storageUsage > 100 * 1024 * 1024) status = 'critical';
-
- return {
- status,
- orphanScans,
- stuckSyncJobs,
- corruptProducts,
- storageUsage,
- totalRecords
- };
+  return {
+    status: orphans > 100 ? 'critical' : orphans > 0 ? 'warning' : 'healthy',
+    totalRecords: total,
+    storageUsage: usage,
+    orphans
+  };
 };
 
-/**
- * MOTOR DE LIMPIEZA DE RECURSOS (PUNTO 6)
- * Elimina sesiones completadas hace más de 'days' días de IndexedDB.
- * Se asume que ya están en Firebase.
- */
-export const purgeOldData = async (days: number = 7): Promise<string[]> => {
- const logs: string[] = [];
- const threshold = Date.now() - (days * 24 * 60 * 60 * 1000);
-
- try {
- // 1. Purgar Sesiones de Conteo Antiguas Completadas
- const oldSessions = await db.sessions
- .where('status').equals('completed')
- .and(s => s.createdAt < threshold)
- .toArray();
-
- if (oldSessions.length > 0) {
- const sessionIds = oldSessions.map(s => s.id);
- 
- // Eliminar escaneos asociados
- const scansToDelete = await db.scans
- .where('sessionId').anyOf(sessionIds)
- .primaryKeys();
- 
- await db.transaction('rw', [db.sessions, db.scans], async () => {
- await db.scans.bulkDelete(scansToDelete);
- await db.sessions.bulkDelete(sessionIds);
- });
-
- logs.push(`❄️ Archivado Frío: Eliminadas ${oldSessions.length} sesiones de conteo (> ${days} días).`);
- }
-
- // 2. Liberar espacio de imágenes en sesiones SINCRONIZADAS (> 1 día)
- const oneDayAgo = Date.now() - (1 * 24 * 60 * 60 * 1000);
- const syncedSessionsWithHeavyImages = await db.sessions
-  .filter(s => !!s.lastSyncTimestamp && s.lastSyncTimestamp < oneDayAgo && !!s.labelPhoto)
-  .toArray();
- 
- if (syncedSessionsWithHeavyImages.length > 0) {
-  const modifications = syncedSessionsWithHeavyImages.map(s => {
-    return db.sessions.update(s.id, { labelPhoto: undefined });
-  });
-  await Promise.all(modifications);
-  logs.push(`🧹 Optimización de Memoria: Vaciadas ${syncedSessionsWithHeavyImages.length} imágenes nativas de sesiones ya respaldadas.`);
- }
-
- // 3. Purgar Sesiones ERP y Guías Visuales
- const oldErpSessions = await db.erpSessions
- .where('status').equals('completed')
- .and(s => s.createdAt < threshold)
- .toArray();
-
- if (oldErpSessions.length > 0) {
- const erpIds = oldErpSessions.map(s => s.id);
- const erpOrderIds = oldErpSessions.map(s => s.erpOrderId);
-
- // Eliminar guías visuales asociadas
- const guidesToDelete = await db.visualGuides
- .where('erpOrderId').anyOf(erpOrderIds)
- .primaryKeys();
-
- await db.transaction('rw', [db.erpSessions, db.visualGuides], async () => {
- await db.visualGuides.bulkDelete(guidesToDelete);
- await db.erpSessions.bulkDelete(erpIds);
- });
-
- logs.push(`❄️ Archivado Frío: Eliminadas ${oldErpSessions.length} recepciones ERP (> ${days} días).`);
- }
-
- // 3. Limpieza de Logs (Mantener solo 7 días de logs operativos)
- const logThreshold = Date.now() - (7 * 24 * 60 * 60 * 1000);
- const oldLogs = await db.logs.where('timestamp').below(logThreshold).primaryKeys();
- if (oldLogs.length > 0) {
- await db.logs.bulkDelete(oldLogs);
- logs.push(`🧹 Limpieza: Purgados ${oldLogs.length} logs antiguos.`);
- }
-
- if (logs.length > 0) {
- logger.info('Maintenance', 'Archivado automático completado.', { actions: logs });
- }
-
- return logs;
- } catch (e: any) {
- logger.error('Maintenance', 'Error en purgado automático', e);
- return [`❌ Error Purge: ${e.message}`];
- }
-};
-
-/**
- * Ejecuta DEEP VACUUM: Purgado de huérfanos, compactación lógica y liberación de drafts.
- * RUTINA DE MANTENIMIENTO: PUNTO 6
- */
 export const repairSystem = async (): Promise<string[]> => {
- const logs: string[] = [];
- 
- try {
- // 1. Eliminar Huérfanos
- const sessionIds = new Set(await db.sessions.toCollection().primaryKeys());
- const orphansToDelete: string[] = [];
- await db.scans.each(scan => {
- if (!sessionIds.has(scan.sessionId)) {
- orphansToDelete.push(scan.id);
- }
- });
- 
- if (orphansToDelete.length > 0) {
- await db.scans.bulkDelete(orphansToDelete);
- logs.push(`✅ Eliminados ${orphansToDelete.length} escaneos huérfanos.`);
- }
+  const logs: string[] = [];
+  
+  // 1. Reparar Metadata de Sesiones
+  const sessions = await SessionRepository.getAll();
+  for (const session of sessions) {
+    const scans = await ScanRepository.getBySession(session.id);
+    const totalUnits = scans.reduce((acc, s) => acc + (s.quantity || 1), 0);
+    const totalSKUs = new Set(scans.map(s => s.barcode)).size;
+    
+    if (session.totalUnits !== totalUnits || session.totalSKUs !== totalSKUs) {
+      await SessionRepository.save({
+        ...session,
+        totalUnits,
+        totalSKUs
+      });
+      logs.push(`🔧 Reparada sesión ${session.id}: Sincronizadas unidades (${totalUnits}) y SKUs (${totalSKUs}).`);
+    }
+  }
 
- // 2. Depurar Drafts Antiguos (Basura del usuario abandonada > 3 días)
- const threeDaysAgo = Date.now() - (3 * 24 * 60 * 60 * 1000);
- const deadDrafts = await db.sessions
-   .where('status').equals('draft')
-   .and(s => s.createdAt < threeDaysAgo)
-   .toArray();
+  // 2. Limpiar scans huérfanos
+  const sessionIds = new Set(sessions.map(s => s.id));
+  const allScans = await ScanRepository.getAll();
+  const orphanedScans = allScans.filter(s => !sessionIds.has(s.sessionId));
+  
+  if (orphanedScans.length > 0) {
+    await ScanRepository.deleteBySessions(orphanedScans.map(s => s.sessionId));
+    logs.push(`🔧 Eliminados ${orphanedScans.length} registros de escaneo huérfanos.`);
+  }
 
- if (deadDrafts.length > 0) {
-   const draftIds = deadDrafts.map(d => d.id);
-   await db.transaction('rw', [db.sessions, db.scans], async () => {
-     await db.scans.where('sessionId').anyOf(draftIds).delete();
-     await db.sessions.bulkDelete(draftIds);
-   });
-   logs.push(`🗑️ Purgados ${deadDrafts.length} borradores abandonados para recuperar espacio.`);
- }
-
- // 3. Limpieza de Logs Antiguos (Mantener solo últimos 500)
- const totalLogs = await db.logs.count();
- if (totalLogs > 500) {
- const keysToDelete = await db.logs.orderBy('timestamp').limit(totalLogs - 500).primaryKeys();
- await db.logs.bulkDelete(keysToDelete);
- logs.push(`✅ Vacuum: Purgados ${keysToDelete.length} logs antiguos.`);
- }
-
- // 3. Reset de Sincronizaciones Fallidas (Reintento forzado)
- const stuckJobsCount = await db.dynamic_data.where('syncStatus').equals('error').modify({ syncStatus: 'pending', retryCount: 0 });
- if (stuckJobsCount) {
- logs.push(`✅ Re-encolados ${stuckJobsCount} registros de datos dinámicos.`);
- }
-
- if (logs.length === 0) {
- logs.push("✨ Sistema optimizado. No se requiere acción.");
- } else {
- logger.success('Maintenance', 'Deep Vacuum completado.', { actions: logs });
- }
-
- return logs;
-
- } catch (e: any) {
- logger.error('Maintenance', 'Fallo en reparación profunda', e);
- return [`❌ Error: ${e.message}`];
- }
+  return logs;
 };
 
-// Forced GitHub sync
+export const purgeOldData = async (days: number): Promise<number> => {
+  const threshold = Date.now() - (days * 24 * 60 * 60 * 1000);
+  const oldSessions = (await db.sessions.toArray()).filter(s => s.createdAt < threshold && s.status === 'completed');
+  const ids = oldSessions.map(s => s.id);
+  
+  if (ids.length > 0) {
+    await db.transaction('rw', [db.sessions, db.scans], async () => {
+      await db.scans.where('sessionId').anyOf(ids).delete();
+      await db.sessions.bulkDelete(ids);
+    });
+  }
+  
+  return ids.length;
+};
