@@ -62,22 +62,9 @@ export const processExpiryItem = (
 
   const product = productMap.get(normalizeSku(item.barcode));
   
-  let productName = 'Producto Desconocido';
-  if (isValidStr(product?.name)) {
-    productName = product!.name.trim();
-  } else if (isValidStr(item.productName)) {
-    productName = item.productName.trim();
-  } else if (isValidStr((item as any).DESCRIPTOR)) {
-    productName = (item as any).DESCRIPTOR.trim();
-  } else if (isValidStr((item as any).DESCRIPCION_PROD)) {
-    productName = (item as any).DESCRIPCION_PROD.trim();
-  } else if (isValidStr((item as any).DESCRIPCION)) {
-    productName = (item as any).DESCRIPCION.trim();
-  } else if (isValidStr((item as any).PRODUCTO)) {
-    productName = (item as any).PRODUCTO.trim();
-  } else if (isValidStr((item as any).ITEM)) {
-    productName = (item as any).ITEM.trim();
-  }
+  // Confiar en el dato normalizado, con respaldo del catálogo si es necesario
+  const productName = (product?.name || item.productName || 'PRODUCTO DESCONOCIDO').trim().toUpperCase();
+  
   const supplierRut = product?.supplierRut ? normalizeIdentity(product.supplierRut) : null;
   const supplierName = product?.supplier ? normalizeIdentity(product.supplier) : null;
   
@@ -134,27 +121,9 @@ export const processExpiryItem = (
     lifePercent = Math.max(0, Math.min(100, (daysLeft / 365) * 100));
   }
 
-  const isValidProviderStr = (val: any) => typeof val === 'string' && val.trim() !== '' && val.trim().toUpperCase() !== 'N/A' && val.trim().toUpperCase() !== 'SIN PROVEEDOR';
-  const isValidObsStr = (val: any) => typeof val === 'string' && val.trim() !== '' && val.trim().toUpperCase() !== 'N/A';
+  const providerName = (provider?.name || product?.supplier || item.providerName || 'N/A').trim().toUpperCase();
 
-  let providerName = 'N/A';
-  if (isValidProviderStr(provider?.name)) {
-    providerName = provider!.name.trim();
-  } else if (isValidProviderStr(product?.supplier)) {
-    providerName = product!.supplier.trim();
-  } else if (isValidProviderStr(item.providerName)) {
-    providerName = item.providerName.trim();
-  } else if (isValidProviderStr((item as any).PROVEEDOR)) {
-    providerName = (item as any).PROVEEDOR.trim();
-  } else if (isValidProviderStr((item as any).PROV)) {
-    providerName = (item as any).PROV.trim();
-  } else if (isValidProviderStr((item as any).proveedor)) {
-    providerName = (item as any).proveedor.trim();
-  } else if (isValidProviderStr((item as any).supplier)) {
-    providerName = (item as any).supplier.trim();
-  }
-
-  const observaciones = isValidObsStr(item.observaciones) ? item.observaciones : '';
+  const observaciones = item.observaciones || '';
 
   const _searchIndex = `${item.barcode || ''} ${productName} ${providerName} ${item.batch || ''} ${item.frc || ''} ${observaciones}`.toLowerCase();
 

@@ -16,6 +16,7 @@ import { expiryRepository } from '../../../repositories/ExpiryRepository';
 import { dynamicSyncService } from '../../../services/dynamicSync';
 import { useTaskStore } from '@/store/useTaskStore';
 import { logger } from '../../../services/logger';
+import { normalizeExpiryRecord, NormalizedExpiry } from '../../../services/normalizationService';
 
 export type { ExpiryStatus, ExpiryPreferences, ExpiryItem };
 
@@ -23,6 +24,7 @@ export const useExpiryDatabase = () => {
   const { addToast } = useToastStore.getState();
   const { settings } = useAppStore();
   const { addTask, updateTask } = useTaskStore();
+  const expiryMapping = settings?.cloudConfig?.mappings?.expiry;
   const tableName = settings?.cloudConfig?.inventoryRegistryTableName || 
                     settings?.cloudConfig?.expiryTableName || 
                     'VENCIMIENTOS';
@@ -110,69 +112,24 @@ export const useExpiryDatabase = () => {
 
   const baseProcessedData = useMemo(() => {
     const now = new Date();
-    const expiryMapping = settings?.cloudConfig?.mappings?.expiry;
     
-    const getVal = (obj: any, keys: string[]) => {
-      for (const k of keys) {
-        if (k && obj[k] !== undefined && obj[k] !== null) {
-          const val = String(obj[k]).trim();
-          if (val) return val;
-        }
-      }
-      return '';
-    };
-
-    // Usar un Map para deduplicar por claveUnica (siendo la más reciente la que prevalece)
+    // Usar un Map para deduplicar por claveUnica
     const dedupMap = new Map<string, ExpiryItem>();
 
     (localItems || []).forEach(record => {
-        const exp = record;
-        const productName = getVal(exp, [
-          expiryMapping?.name || '', 
-          'productName', 'product_name',
-          'DESCRIPTOR', 'DESCRIPCION_PROD', 'DESCRIPCION', 'product_description',
-          'PRODUCTO', 'PRODUCT', 'ITEM', 
-          'name', 'nombre', 'NOMBRE_PRODUCTO'
-        ]);
-        const providerName = getVal(exp, [
-          expiryMapping?.supplier || '', 
-          'providerName', 'provider_name',
-          'PROVEEDOR', 'PROV', 'supplier', 'LABORATORIO', 'LAB', 'MARCA',
-          'proveedor', 'Proveedor', 'SUPPLIER'
-        ]);
-        const observaciones = getVal(exp, [
-          expiryMapping?.observaciones || '', 
-          'observaciones', 'observación', 'observacion',
-          'OBSERVACIONES', 'OBSERVACION', 'OBS', 'COMENTARIO', 'NOTAS', 
-          'description', 'descripción', 'descripcion', 'comments'
-        ]);
+        // NORMALIZACIÓN RÍGIDA: Único lugar de transformación
+        const normalized = normalizeExpiryRecord(record, expiryMapping);
         
-        const rawTimestamp = getVal(exp, [expiryMapping?.timestamp || '', 'TIMESTAMP', 'timestamp', 'createdAt', 'fecha_creacion', 'FECHA_CREACION']);
-        const finalTimestamp = rawTimestamp 
-          ? (typeof rawTimestamp === 'number' ? rawTimestamp : new Date(rawTimestamp).getTime())
-          : (record.timestamp || Date.now());
+        const processed = processExpiryItem(
+          normalized, 
+          productMap, 
+          providerMap, 
+          now
+        );
 
-        const processed = processExpiryItem({
-          id: record.id,
-          barcode: exp[expiryMapping?.barcode || ''] || (exp as any).SKU || (exp as any).COD_BARRAS || exp.barcode || '',
-          productName,
-          providerName,
-          mm: exp[expiryMapping?.mm || ''] || (exp as any).MM || exp.mm,
-          yyyy: exp[expiryMapping?.yyyy || ''] || (exp as any).YYYY || exp.yyyy,
-          batch: exp[expiryMapping?.batch || ''] || (exp as any).LOTE || exp.batch || 'N/A',
-          type: 'Nube',
-          timestamp: finalTimestamp,
-          quantity: exp[expiryMapping?.quantity || ''] || (exp as any).CANTIDAD || exp.quantity || 0,
-          location: exp[expiryMapping?.location || ''] || (exp as any).UBICACION || exp.location || 'N/A',
-          observaciones,
-          claveUnica: exp.claveUnica || (exp as any).CLAVE_UNICA || record.id, // Fallback al id si no hay claveUnica
-          syncStatus: record.syncStatus || 'synced'
-        }, productMap, providerMap, now);
-
-        const key = processed.claveUnica;
+        const key = processed.claveUnica || processed.id;
         const existing = dedupMap.get(key);
         
-        // Mantener el más reciente si hay duplicados
         if (!existing || (processed.timestamp > (existing.timestamp || 0))) {
           dedupMap.set(key, processed);
         }
@@ -366,32 +323,22 @@ export const useExpiryDatabase = () => {
         return null;
       }
 
-      const rowData: any = {
+      const rowData: NormalizedExpiry = normalizeExpiryRecord({
         id: claveUnica, 
-        ID: claveUnica,
         claveUnica: claveUnica,
         timestamp: now.getTime(), 
         barcode: sanitizedBarcode,
         productName: data.productName,
-        // Redundancia para compatibilidad con diferentes mappers/nube
-        DESCRIPTOR: data.productName,
-        DESCRIPCION: data.productName,
-        PRODUCTO: data.productName,
-        
         providerName: data.providerName || 'N/A',
-        PROVEEDOR: data.providerName || 'N/A',
-        
         mm: data.mm,
         yyyy: data.yyyy,
-        event: 'VENCIMIENTOS',
         quantity: data.quantity,
         location: data.location || '',
         observaciones: data.observaciones || '',
-        origin: 'REGISTRO DIRECTO',
-        syncStatus: 'synced' as const
-      };
+        syncStatus: 'synced'
+      }, expiryMapping);
 
-      // GUARDADO LOCAL INMEDIATO (Cero Latencia)
+      // GUARDADO LOCAL INMEDIATO
       await expiryRepository.save(rowData, tableName);
       
       // SINCRONIZACIÓN ASÍNCRONA CON LA NUBE
@@ -465,26 +412,14 @@ export const useExpiryDatabase = () => {
         }
       }
 
-      const updatedData: any = {
+      const updatedData = normalizeExpiryRecord({
         ...existing,
         ...updates,
         id: newId,
-        ID: newId,
         claveUnica: newClaveUnica,
         timestamp: now.getTime(),
-        syncStatus: 'synced' as const
-      };
-
-      // Mantener consistencia de descriptores si se actualiza el nombre
-      if (updates.productName) {
-        updatedData.DESCRIPTOR = updates.productName;
-        updatedData.DESCRIPCION = updates.productName;
-        updatedData.PRODUCTO = updates.productName;
-      }
-      
-      if (updates.providerName) {
-        updatedData.PROVEEDOR = updates.providerName;
-      }
+        syncStatus: 'synced'
+      }, settings?.cloudConfig?.mappings?.expiry);
 
       // 1. Local update
       await expiryRepository.save(updatedData, tableName);
