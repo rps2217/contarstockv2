@@ -84,6 +84,40 @@ export const ProvidersPage: React.FC = () => {
     }
   };
 
+  const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.csv')) {
+      toast.error('Por favor, selecciona un archivo CSV.');
+      return;
+    }
+
+    toast.loading('Importando políticas...');
+    const reader = new FileReader();
+
+    reader.onload = async (event) => {
+      try {
+        const csvText = event.target?.result as string;
+        const { bulkImportProviders } = await import('../../../services/providerImporter');
+        const count = await bulkImportProviders(csvText);
+        toast.dismiss();
+        toast.success(`¡Se importaron/actualizaron ${count} proveedores exitosamente!`);
+        loadProviders();
+      } catch (err: any) {
+        toast.dismiss();
+        toast.error('Error en formato CSV. Asegúrate de que tenga las columnas correctas.');
+      }
+    };
+    reader.onerror = () => {
+      toast.dismiss();
+      toast.error('Ocurrió un error al leer el archivo.');
+    };
+    reader.readAsText(file, 'UTF-8');
+    
+    if(e.target) e.target.value = '';
+  };
+
   const handleSyncToCloud = async () => {
     try {
       const allProviders = await ProviderRepository.getAll();
@@ -212,9 +246,18 @@ export const ProvidersPage: React.FC = () => {
               >
                 <RefreshCw className="w-5 h-5" />
               </button>
+              <label
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all border cursor-pointer ${
+                  theme === 'dark' ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-500 hover:bg-indigo-500/20' : 'bg-indigo-50 border-indigo-200 text-indigo-600 hover:bg-indigo-100'
+                }`}
+                title="Importar CSV"
+              >
+                <input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} />
+                <UploadCloud className="w-5 h-5" />
+              </label>
               <button
                 onClick={handleSyncToCloud}
-                className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all border ${
+                className={`hidden md:flex w-12 h-12 rounded-2xl items-center justify-center transition-all border ${
                   theme === 'dark' ? 'bg-brand-info/10 border-brand-info/20 text-brand-info hover:bg-brand-info/20' : 'bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100'
                 }`}
                 title="Subir a la Nube (Respaldo)"
@@ -344,8 +387,8 @@ export const ProvidersPage: React.FC = () => {
                       <p className={`text-sm font-black ${theme === 'dark' ? 'text-white' : 'text-slate-700'}`}>
                         {provider.withdrawalDays || 0} Días
                       </p>
-                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                        Anticipación de Retiro
+                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-tight">
+                        {provider.exchangePolicy || "Anticipación de Retiro"}
                       </p>
                     </div>
                   </div>
