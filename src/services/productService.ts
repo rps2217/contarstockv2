@@ -3,7 +3,7 @@
 import { Product } from '../types';
 import { productRepository } from '../repositories/DexieProductRepository';
 import Papa from 'papaparse';
-import { sanitizeBarcode } from './utils';
+import { sanitizeBarcode, normalizeIdentity } from './utils';
 import { validateProduct } from './validator';
 import { supabaseSyncService } from './supabaseSyncService';
 
@@ -153,7 +153,7 @@ export const bulkImportProducts = async (csvText: string): Promise<number> => {
  name: String(name),
  category: String(row['MUNDO'] || row['CATEGORIA'] || 'GENERAL'),
  supplier: String(row['PROVEEDOR'] || ''),
- supplierRut: sanitizeBarcode(String(row['RUT PROVEEDOR'] || row['RUT'] || row['PROVEEDOR_RUT'] || '')),
+ supplierRut: normalizeIdentity(String(row['RUT PROVEEDOR'] || row['RUT'] || row['PROVEEDOR_RUT'] || row['RUT_PROVEEDOR'] || '')),
  syncStatus: 'synced'
  });
  }

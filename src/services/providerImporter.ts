@@ -44,9 +44,9 @@ export const bulkImportProviders = async (csvText: string): Promise<number> => {
             // If the provider is 'Eliminado', maybe still import but leave as no exchange or delete? 
             // We'll just import whatever hasExchange is.
 
-            const canjeVal = getField(['canje sólo por vencimiento', 'canje', 'politica de canje', 'canje solo por vencimiento']);
-            const retiroVal = getField(['retiro (días)', 'retiro dias', 'dias retiro', 'retiro', 'días de anticipación', 'dias']);
-            const bodegaVal = getField(['bodega sólo por vencimient', 'bodega']);
+            const canjeVal = getField(['canje sólo por vencimiento', 'canje solo por vencimiento', 'canje', 'politica de canje']);
+            const retiroVal = getField(['retiro (días)', 'retiro (dias)', 'retiro dias', 'dias retiro', 'retiro', 'días de anticipación', 'dias']);
+            const bodegaVal = getField(['bodega sólo por vencimiento', 'bodega solo por vencimiento', 'bodega sólo por vencimient', 'bodega']);
             
             let hasExchange = true;
             let withdrawalDays = 90; // Default
@@ -64,9 +64,9 @@ export const bulkImportProviders = async (csvText: string): Promise<number> => {
               }
             }
 
-            if (retiroVal && !isNaN(Number(retiroVal))) {
+            if (retiroVal !== null && retiroVal !== '' && !isNaN(Number(retiroVal))) {
               withdrawalDays = parseInt(retiroVal, 10);
-            } else if (canjeVal && !isNaN(Number(canjeVal)) && withdrawalDays === 90) {
+            } else if (canjeVal && canjeVal !== '' && !isNaN(Number(canjeVal)) && withdrawalDays === 90) {
               // Si retiro no viene pero canje sí es número, asumimos canje como días de retiro
               withdrawalDays = parseInt(canjeVal, 10);
             }
