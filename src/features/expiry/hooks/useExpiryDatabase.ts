@@ -127,9 +127,25 @@ export const useExpiryDatabase = () => {
 
     (localItems || []).forEach(record => {
         const exp = record;
-        const productName = getVal(exp, [expiryMapping?.name || '', 'DESCRIPTOR', 'DESCRIPCION_PROD', 'DESCRIPCION', 'PRODUCTO', 'ITEM', 'productName', 'name', 'nombre']);
-        const providerName = getVal(exp, [expiryMapping?.supplier || '', 'PROVEEDOR', 'PROV', 'supplier', 'providerName', 'proveedor', 'Proveedor', 'LABORATORIO', 'LAB', 'MARCA']);
-        const observaciones = getVal(exp, [expiryMapping?.observaciones || '', 'OBSERVACIONES', 'OBSERVACION', 'OBS', 'COMENTARIO', 'NOTAS', 'description', 'descripción', 'descripcion']);
+        const productName = getVal(exp, [
+          expiryMapping?.name || '', 
+          'productName', 'product_name',
+          'DESCRIPTOR', 'DESCRIPCION_PROD', 'DESCRIPCION', 'product_description',
+          'PRODUCTO', 'PRODUCT', 'ITEM', 
+          'name', 'nombre', 'NOMBRE_PRODUCTO'
+        ]);
+        const providerName = getVal(exp, [
+          expiryMapping?.supplier || '', 
+          'providerName', 'provider_name',
+          'PROVEEDOR', 'PROV', 'supplier', 'LABORATORIO', 'LAB', 'MARCA',
+          'proveedor', 'Proveedor', 'SUPPLIER'
+        ]);
+        const observaciones = getVal(exp, [
+          expiryMapping?.observaciones || '', 
+          'observaciones', 'observación', 'observacion',
+          'OBSERVACIONES', 'OBSERVACION', 'OBS', 'COMENTARIO', 'NOTAS', 
+          'description', 'descripción', 'descripcion', 'comments'
+        ]);
         
         const rawTimestamp = getVal(exp, [expiryMapping?.timestamp || '', 'TIMESTAMP', 'timestamp', 'createdAt', 'fecha_creacion', 'FECHA_CREACION']);
         const finalTimestamp = rawTimestamp 
@@ -357,7 +373,14 @@ export const useExpiryDatabase = () => {
         timestamp: now.getTime(), 
         barcode: sanitizedBarcode,
         productName: data.productName,
+        // Redundancia para compatibilidad con diferentes mappers/nube
+        DESCRIPTOR: data.productName,
+        DESCRIPCION: data.productName,
+        PRODUCTO: data.productName,
+        
         providerName: data.providerName || 'N/A',
+        PROVEEDOR: data.providerName || 'N/A',
+        
         mm: data.mm,
         yyyy: data.yyyy,
         event: 'VENCIMIENTOS',
@@ -451,6 +474,17 @@ export const useExpiryDatabase = () => {
         timestamp: now.getTime(),
         syncStatus: 'synced' as const
       };
+
+      // Mantener consistencia de descriptores si se actualiza el nombre
+      if (updates.productName) {
+        updatedData.DESCRIPTOR = updates.productName;
+        updatedData.DESCRIPCION = updates.productName;
+        updatedData.PRODUCTO = updates.productName;
+      }
+      
+      if (updates.providerName) {
+        updatedData.PROVEEDOR = updates.providerName;
+      }
 
       // 1. Local update
       await expiryRepository.save(updatedData, tableName);
