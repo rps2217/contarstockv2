@@ -43,18 +43,18 @@ interface ProductListProps {
 
   if (isMobile) {
     return (
-      <div className="px-2 py-1 h-full">
-        <Card className={`h-full flex items-stretch overflow-hidden p-0 border-2 shadow-sm active:bg-slate-50 dark:active:bg-white/5 transition-colors ${
+      <div className="px-2 py-1 h-full font-sans">
+        <Card className={`h-full flex items-stretch overflow-hidden p-0 border shadow-sm active:bg-slate-50 dark:active:bg-white/5 transition-colors ${
           isSelected ? 'border-indigo-500 bg-indigo-500/5' : 'border-slate-100 dark:border-white/5'
         }`}>
-          {/* Barra de Estado Lateral - Comunicación No Verbal */}
-          <div className={`w-2 shrink-0 ${isSelected ? 'bg-indigo-500' : getSyncStatusColor(p.syncStatus)}`} />
+          {/* Barra de Estado Lateral */}
+          <div className={`w-1.5 shrink-0 ${isSelected ? 'bg-indigo-500' : getSyncStatusColor(p.syncStatus)}`} />
           
-          {/* Checkbox para selección */}
+          {/* Checkbox */}
           {onSelect && (
             <button 
               onClick={() => onSelect(p.barcode)}
-              className={`w-10 flex items-center justify-center border-r border-slate-100 dark:border-white/5 ${
+              className={`w-9 flex items-center justify-center border-r border-slate-100 dark:border-white/5 ${
                 isSelected ? 'text-indigo-500' : 'text-slate-300 dark:text-slate-600'
               }`}
             >
@@ -62,53 +62,47 @@ interface ProductListProps {
             </button>
           )}
 
-          {/* Información de Producto */}
-          <div className="flex-1 min-w-0 p-3 flex flex-col justify-center">
-            <div className="flex items-center gap-2 mb-1">
-              <Badge variant={p.syncStatus === 'synced' ? 'success' : p.syncStatus === 'error' ? 'error' : 'warning'}>
+          {/* Info Utama */}
+          <div className="flex-1 min-w-0 p-2.5 flex flex-col justify-center">
+            <div className="flex items-center gap-1.5 mb-0.5 overflow-x-auto no-scrollbar">
+              <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded ${
+                p.syncStatus === 'synced' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+              }`}>
                 {p.category || 'GRAL'}
-              </Badge>
-              {getSyncStatusIcon(p.syncStatus)}
+              </span>
               {p.withdrawalDays !== undefined && (
-                <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded border ${
+                <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded border whitespace-nowrap ${
                   p.hasExchange 
-                    ? 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20' 
-                    : 'bg-slate-500/10 text-slate-500 border-slate-500/20'
+                    ? 'bg-indigo-50 text-indigo-600 border-indigo-100' 
+                    : 'bg-slate-50 text-slate-500 border-slate-100'
                 }`}>
                   {p.withdrawalDays}D {p.hasExchange ? 'CANJE' : 'MERMA'}
                 </span>
               )}
             </div>
-            <h3 className="font-black text-slate-900 dark:text-slate-100 text-[13px] uppercase leading-tight truncate">
+            <h3 className="font-bold text-slate-900 dark:text-slate-100 text-xs uppercase leading-tight truncate">
               {p.name}
             </h3>
-            <div className="mt-1 flex items-center gap-1.5">
-              <Tag className="w-3 h-3 text-blue-500" />
-              <span className="font-mono text-[11px] font-black text-blue-600 dark:text-blue-400 tracking-wider">
+            <div className="mt-0.5 flex items-center gap-1 text-slate-400">
+              <span className="font-mono text-[10px] font-bold tracking-tight">
                 {p.barcode}
               </span>
             </div>
           </div>
 
-          {/* Zona de Acciones (Optimizada para Pulgar Derecho) */}
-          <div className="flex bg-slate-50 dark:bg-white/5 border-l border-slate-100 dark:border-white/5">
+          {/* Acciones */}
+          <div className="flex bg-slate-50/50 dark:bg-white/5 border-l border-slate-100 dark:border-white/5">
             <button 
               onClick={() => onPrint(p)} 
-              className="w-14 flex items-center justify-center text-amber-500 active:bg-amber-50 dark:active:bg-amber-900/20 transition-all border-r border-slate-100 dark:border-white/5"
+              className="w-11 flex items-center justify-center text-amber-500 active:bg-amber-100 transition-colors border-r border-slate-100 dark:border-white/10"
             >
-              <Printer className="w-5 h-5 stroke-[2.5px]" />
+              <Printer className="w-4 h-4" />
             </button>
             <button 
               onClick={() => onEdit(p)} 
-              className="w-14 flex items-center justify-center text-slate-400 dark:text-slate-500 active:text-blue-600 active:bg-blue-50 dark:active:bg-blue-900/20 transition-all border-r border-slate-100 dark:border-white/5"
+              className="w-11 flex items-center justify-center text-blue-500 active:bg-blue-100 transition-colors"
             >
-              <Pencil className="w-5 h-5 stroke-[2.5px]" />
-            </button>
-            <button 
-              onClick={() => onDelete(p.barcode)} 
-              className="w-14 flex items-center justify-center text-slate-300 dark:text-slate-600 active:text-rose-600 active:bg-rose-50 dark:active:bg-rose-900/20 transition-all"
-            >
-              <Trash2 className="w-5 h-5 stroke-[2.5px]" />
+              <Pencil className="w-4 h-4" />
             </button>
           </div>
         </Card>

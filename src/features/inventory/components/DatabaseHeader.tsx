@@ -47,12 +47,12 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
  </button>
  <div className="flex flex-col">
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-black uppercase tracking-tighter italic text-slate-900 dark:text-white flex items-center gap-2">
-                  <Database className="w-6 h-6 text-blue-500" />
+                <h1 className="text-lg sm:text-2xl font-black uppercase tracking-tighter italic text-slate-900 dark:text-white flex items-center gap-2 truncate">
+                  <Database className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500" />
                   CATÁLOGO
                 </h1>
-                <span className="text-[10px] font-mono text-slate-500 bg-slate-100 dark:bg-slate-900 px-2 py-0.5 rounded border border-slate-200 dark:border-white/5 uppercase tracking-widest">
-                  {props.usedMb} MB LOCAL
+                <span className="text-[8px] sm:text-[10px] font-mono text-slate-500 bg-slate-100 dark:bg-slate-900 px-2 py-0.5 rounded border border-slate-200 dark:border-white/5 uppercase tracking-widest">
+                  {props.usedMb} MB
                 </span>
               </div>
             </div>
@@ -70,19 +70,28 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
  </div>
  </div>
  
- {/* BOTÓN FORZAR SUBIDA (MÓVIL) */}
- <button 
- onClick={() => {
-   if (confirm('¿Desea forzar la subida de TODO el catálogo local a la nube? Esto puede tomar tiempo.')) {
-     props.onForceSync?.();
-   }
- }}
- disabled={props.isSyncing}
- className="md:hidden w-full bg-indigo-600 hover:bg-indigo-700 text-white p-3 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all"
- >
- {props.isSyncing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
- Subir Copia Local a la Nube
- </button>
+ {/* BOTÓN FORZAR SUBIDA (MÓVIL) - MÁS COMPACTO */}
+ <div className="md:hidden grid grid-cols-2 gap-2">
+   <button 
+    onClick={() => {
+      if (confirm('¿Desea forzar la subida de TODO el catálogo local a la nube? Esto puede tomar tiempo.')) {
+        props.onForceSync?.();
+      }
+    }}
+    disabled={props.isSyncing}
+    className="bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all h-10"
+   >
+    {props.isSyncing ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+    Forzar Nube
+   </button>
+   <button 
+    onClick={props.onImport}
+    className="bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all h-10"
+   >
+    <FileSpreadsheet className="w-3 h-3" />
+    Importar
+   </button>
+ </div>
 
  {/* NIVEL 2: BÚSQUEDA Y ACCIONES */}
  <ManagementSearchBar 
@@ -92,7 +101,7 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
    onOpenAdd={props.onCreate}
    onClearFilters={() => props.onSearch('')}
    activeFiltersCount={0}
-   placeholder="FILTRAR CATÁLOGO POR SKU O NOMBRE..."
+   placeholder="SKU O NOMBRE..."
    accentColor="blue"
    theme="dark"
    extraActions={
@@ -101,7 +110,7 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
          <button 
            onClick={props.onVectorize} 
            disabled={props.isVectorizing || !props.missingVectorsCount}
-           className={`w-12 h-12 rounded-2xl transition-all relative border flex items-center justify-center ${
+           className={`hidden sm:flex w-12 h-12 rounded-2xl transition-all relative border items-center justify-center ${
              props.missingVectorsCount 
                ? 'bg-amber-500/10 border-amber-500/20 text-amber-500 hover:bg-amber-500/20 shadow-lg shadow-amber-500/10' 
                : 'bg-white/5 border-white/5 text-slate-600 opacity-40'
@@ -146,18 +155,18 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
        
        <button 
          onClick={props.onImport} 
-         className="px-4 h-12 bg-emerald-600 text-white rounded-2xl flex items-center justify-center gap-2 shadow-lg hover:bg-emerald-500 transition-all border border-emerald-400/20 active:scale-95 group shrink-0"
+         className="hidden sm:flex px-4 h-12 bg-emerald-600 text-white rounded-2xl items-center justify-center gap-2 shadow-lg hover:bg-emerald-500 transition-all border border-emerald-400/20 active:scale-95 group shrink-0"
          title="Importar desde Excel/CSV"
        >
          <FileSpreadsheet className="w-5 h-5 group-hover:rotate-12 transition-transform" />
-         <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Importar CSV</span>
+         <span className="text-[10px] font-black uppercase tracking-widest">Importar CSV</span>
        </button>
      </div>
    }
  />
 
  {/* NIVEL DE AUDITORÍA LOGÍSTICA (NUEVO) */}
- <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+ <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar -mx-4 px-4">
     <button
       onClick={() => props.onPolicyFilterChange('all')}
       className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all whitespace-nowrap flex items-center gap-2 ${
@@ -210,14 +219,14 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
  </div>
  
  {/* NIVEL 3: INDICADORES DE INTEGRIDAD (PROGRESO) */}
- <div className="grid grid-cols-3 gap-2 py-1">
+ <div className="grid grid-cols-3 gap-1.5 sm:gap-4 py-1">
  {/* BARRA 1: MOTOR IA (AZUL) */}
- <div className="space-y-1">
- <div className={`flex justify-between items-center text-[7px] font-black uppercase tracking-widest px-1 ${isModelDisabled ? 'text-slate-400' : 'text-blue-500'}`}>
- <span className="flex items-center gap-1"><Cpu className="w-2.5 h-2.5" /> IA Engine</span>
+ <div className="space-y-0.5">
+ <div className={`flex justify-between items-center text-[6px] sm:text-[7px] font-black uppercase tracking-widest px-0.5 ${isModelDisabled ? 'text-slate-400' : 'text-blue-500'}`}>
+ <span className="flex items-center gap-1 truncate"><Cpu className="w-2 sm:w-2.5 h-2 sm:h-2.5" /> IA</span>
  <span>{isModelDisabled ? 'OFF' : (isModelReady ? '100%' : `${props.brainStatus?.progress || 0}%`)}</span>
  </div>
- <div className={`h-1.5 w-full rounded-full overflow-hidden ${isModelDisabled ? 'bg-slate-200 dark:bg-slate-800' : 'bg-blue-100 dark:bg-blue-900/20'}`}>
+ <div className={`h-1 sm:h-1.5 w-full rounded-full overflow-hidden ${isModelDisabled ? 'bg-slate-200 dark:bg-slate-800' : 'bg-blue-100 dark:bg-blue-900/20'}`}>
  <div 
  className={`h-full transition-all duration-500 ${isModelDisabled ? 'bg-slate-400' : 'bg-blue-600'} ${isModelDownloading ? 'animate-pulse' : ''}`} 
  style={{ width: `${isModelDisabled ? 0 : (isModelReady ? 100 : (props.brainStatus?.progress || 0))}%` }} 
@@ -226,12 +235,12 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
  </div>
 
  {/* BARRA 2: ENTRENAMIENTO (AMBAR) */}
- <div className="space-y-1">
- <div className={`flex justify-between items-center text-[7px] font-black uppercase tracking-widest px-1 ${isModelDisabled ? 'text-slate-400' : 'text-amber-500'}`}>
- <span className="flex items-center gap-1"><BrainCircuit className="w-2.5 h-2.5" /> Asimilación</span>
+ <div className="space-y-0.5">
+ <div className={`flex justify-between items-center text-[6px] sm:text-[7px] font-black uppercase tracking-widest px-0.5 ${isModelDisabled ? 'text-slate-400' : 'text-amber-500'}`}>
+ <span className="flex items-center gap-1 truncate"><BrainCircuit className="w-2 sm:w-2.5 h-2 sm:h-2.5" /> IA Scan</span>
  <span>{isModelDisabled ? 'N/A' : `${props.trainedPercent}%`}</span>
  </div>
- <div className={`h-1.5 w-full rounded-full overflow-hidden ${isModelDisabled ? 'bg-slate-200 dark:bg-slate-800' : 'bg-amber-100 dark:bg-amber-900/20'}`}>
+ <div className={`h-1 sm:h-1.5 w-full rounded-full overflow-hidden ${isModelDisabled ? 'bg-slate-200 dark:bg-slate-800' : 'bg-amber-100 dark:bg-amber-900/20'}`}>
  <div 
  className={`h-full transition-all duration-500 ${isModelDisabled ? 'bg-slate-400' : 'bg-amber-500'} ${props.isVectorizing && !isModelDisabled ? 'animate-pulse' : ''}`} 
  style={{ width: `${isModelDisabled ? 0 : props.trainedPercent}%` }} 
@@ -240,12 +249,12 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
  </div>
 
  {/* BARRA 3: RESPALDO (INDIGO) */}
- <div className="space-y-1">
- <div className="flex justify-between items-center text-[7px] font-black text-indigo-500 uppercase tracking-widest px-1">
- <span className="flex items-center gap-1"><Cloud className="w-2.5 h-2.5" /> Nube</span>
+ <div className="space-y-0.5">
+ <div className="flex justify-between items-center text-[6px] sm:text-[7px] font-black text-indigo-500 uppercase tracking-widest px-0.5">
+ <span className="flex items-center gap-1 truncate"><Cloud className="w-2 sm:w-2.5 h-2 sm:h-2.5" /> Nube</span>
  <span>{props.backedUpPercent}%</span>
  </div>
- <div className="h-1.5 w-full bg-indigo-100 dark:bg-indigo-900/20 rounded-full overflow-hidden">
+ <div className="h-1 sm:h-1.5 w-full bg-indigo-100 dark:bg-indigo-900/20 rounded-full overflow-hidden">
  <div 
  className={`h-full bg-indigo-600 transition-all duration-500 ${props.isSyncing ? 'animate-pulse' : ''}`} 
  style={{ width: `${props.backedUpPercent}%` }} 
