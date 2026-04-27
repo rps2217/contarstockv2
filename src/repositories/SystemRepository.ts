@@ -2,7 +2,7 @@ import { db } from '../db';
 import { ScanRepository } from './ScanRepository';
 import { SessionRepository } from './SessionRepository';
 
-export const systemRepository = {
+export const SystemRepository = {
   async getStorageStats() {
     const stats = {
       products: await db.products.count(),
@@ -11,6 +11,20 @@ export const systemRepository = {
       logs: await db.logs.count(),
     };
     return stats;
+  },
+
+  async checkIntegrity() {
+    const sessions = await db.sessions.toArray();
+    const sessionIds = new Set(sessions.map(s => s.id));
+    const scans = await db.scans.toArray();
+    
+    const orphanScans = scans.filter(s => !sessionIds.has(s.sessionId)).length;
+    return { orphanScans };
+  },
+
+  async detectAnomalies(threshold: number) {
+    const scans = await db.scans.toArray();
+    return scans.filter(s => (s.quantity || 1) > threshold);
   },
 
   async clearDiskData(): Promise<void> {

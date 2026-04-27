@@ -1,14 +1,14 @@
 import React, { useState, useRef } from 'react';
 import { Upload, FileText, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
-import { useSettingsStore } from '../store/useSettingsStore';
+import { useToastStore } from '../store/useToastStore';
 import { db } from '../db';
-import { toast } from 'react-hot-toast';
 import { parse } from 'papaparse';
 
 export const CsvImporter: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { addToast } = useToastStore();
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
@@ -29,7 +29,7 @@ export const CsvImporter: React.FC = () => {
           const rows = results.data;
           
           if (rows.length === 0) {
-            toast.error("El archivo está vacío");
+            addToast("El archivo está vacío", "error");
             setIsImporting(false);
             return;
           }
@@ -38,11 +38,12 @@ export const CsvImporter: React.FC = () => {
           const products = rows.map((row: any) => ({
             barcode: String(row.barcode || row.BARCODE || '').trim(),
             name: String(row.name || row.NAME || row.description || row.DESCRIPTION || '').trim(),
+            category: 'default',
             syncStatus: 'pending' as const
           })).filter(p => p.barcode !== '');
 
           if (products.length === 0) {
-            toast.error("No se encontraron registros válidos");
+            addToast("No se encontraron registros válidos", "error");
             setIsImporting(false);
             return;
           }
@@ -50,18 +51,18 @@ export const CsvImporter: React.FC = () => {
           // Guardar en la base de datos local
           await db.products.bulkPut(products);
           
-          toast.success(`${products.length} productos importados correctamente`);
+          addToast(`${products.length} productos importados correctamente`, "success");
           setIsImporting(false);
           setFile(null);
           if (fileInputRef.current) fileInputRef.current.value = '';
         },
         error: (error) => {
-          toast.error("Error al procesar el archivo: " + error.message);
+          addToast("Error al procesar el archivo: " + error.message, "error");
           setIsImporting(false);
         }
       });
     } catch (error: any) {
-      toast.error("Error inesperado: " + error.message);
+      addToast("Error inesperado: " + error.message, "error");
       setIsImporting(false);
     }
   };

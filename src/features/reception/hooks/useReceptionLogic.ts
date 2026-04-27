@@ -57,7 +57,7 @@ export const useReceptionLogic = () => {
     if (!pendingPhotoCode) return;
     
     try {
-      await sessionService.createDraftSession(pendingPhotoCode, currentErp, undefined, undefined, undefined, photo);
+      await sessionService.createSession(currentErp, pendingPhotoCode, 'reception', undefined, photo, undefined);
       
       setLastAction({ type: 'success', label: pendingPhotoCode });
       setFlashActive(true);

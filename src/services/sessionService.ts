@@ -2,101 +2,122 @@ import { db } from '../db';
 import { supabaseSyncService } from './supabaseSyncService';
 import { getSettings } from './settings';
 import { logger } from './logger';
+import { ExpectedOrderRepository } from '../repositories/ExpectedOrderRepository';
+import { SessionRepository } from '../repositories/SessionRepository';
+import { ScanRepository } from '../repositories/ScanRepository';
+import { CountingSession, ExpectedOrder, ScanRecord } from '../types';
 
-export const sessionService = {
-  /**
-   * Crea una nueva sesión.
-   */
-  startSession: async (erpOrder: string, logisticsLabel: string, sessionType: 'erp' | 'standard' = 'standard') => {
-    const id = crypto.randomUUID();
-    const session = {
-      id,
-      erpOrder: erpOrder.toUpperCase(),
-      logisticsLabel: logisticsLabel.toUpperCase(),
-      sessionType,
-      status: 'active' as const,
-      createdAt: Date.now()
-    };
-    
-    await db.sessions.add(session);
-    logger.info('SESSION_START', `Sesión ${id} iniciada`);
-    return id;
-  },
+let pendingBuffer: any[] = [];
 
-  /**
-   * Cierra y guarda una sesión con sus escaneos.
-   */
-  saveSession: async (session: any, scans: any[]) => {
-    try {
-      const settings = getSettings();
-      const targetTable = settings.sessionType === 'erp' ? 'ENTREGAS_LOGISTICA' : 'SESIONES_CONTEO';
-      
-      // 1. Guardar localmente
-      await db.sessions.put(session);
-      
-      // 2. Sincronización inmediata (Fondo)
-      supabaseSyncService.pushBatch(targetTable, [session]).then(res => {
-        if (res.success) {
-          db.sessions.update(session.id, { lastSyncTimestamp: Date.now() });
-        }
-      });
+export const getPendingBuffer = () => pendingBuffer;
 
-      // 2. Transacción de Items
-      const records = scans.map(s => ({
-        ...s,
-        sessionId: session.id,
-        synced: 0
-      }));
+export const createSession = async (
+  erpOrder: string, 
+  logisticsLabel: string, 
+  sessionType: 'standard' | 'hammer' | 'reception', 
+  expectedItems?: any,
+  photoUrl?: string,
+  isAutoLockEnabled?: boolean
+): Promise<CountingSession> => {
+  const session: CountingSession = {
+    id: crypto.randomUUID(),
+    erpOrder: erpOrder.toUpperCase(),
+    logisticsLabel: logisticsLabel.toUpperCase(),
+    sessionType,
+    status: 'active',
+    createdAt: Date.now(),
+    expectedItems: expectedItems?.items || [],
+    photoUrl,
+    isAutoLockEnabled,
+    totalUnits: 0,
+    totalSKUs: 0
+  };
+  await SessionRepository.save(session);
+  logger.info('SESSION', `Sesión creada: ${session.id}`);
+  return session;
+};
 
-      await (db as any).transaction('rw', db.scans, db.sessions, async () => {
-        await db.scans.bulkAdd(records);
-      });
+export const createDraftSession = async () => {
+  return await createSession('DRAFT', crypto.randomUUID(), 'reception');
+};
 
-      logger.info('SESSION_SAVE', `Sesión ${session.id} guardada con ${scans.length} items`);
-      return session.id;
-    } catch (error: any) {
-      logger.error('SESSION_SAVE_FAIL', error.message);
-      throw error;
-    }
-  },
+export const updateSessionMetadata = async (id: string, updates?: Partial<CountingSession>) => {
+  const session = await SessionRepository.getById(id);
+  if (!session) return;
+  await SessionRepository.save({ ...session, ...(updates || {}) });
+};
 
-  /**
-   * Obtiene todas las sesiones locales.
-   */
-  getSessions: async () => {
-    return await db.sessions.toArray();
-  },
-
-  /**
-   * Busca una sesión por ID.
-   */
-  getSession: async (id: string) => {
-    return await db.sessions.get(id);
-  },
-
-  /**
-   * Elimina una sesión y sus escaneos.
-   */
-  deleteSession: async (id: string) => {
-    await (db as any).transaction('rw', db.scans, db.sessions, async () => {
-      await db.scans.where('sessionId').equals(id).delete();
-      await db.sessions.delete(id);
-    });
-    logger.info('SESSION_DELETE', ` Sesión ${id} eliminada`);
-  },
-
-  /**
-   * Limpia sesiones sincronizadas.
-   */
-  cleanSynced: async () => {
-    const sessions = await db.sessions.where('lastSyncTimestamp').above(0).toArray();
-    const ids = sessions.map(s => s.id);
-    if (ids.length > 0) {
-      await (db as any).transaction('rw', db.scans, db.sessions, async () => {
-        await db.scans.where('sessionId').anyOf(ids).delete();
-        await db.sessions.bulkDelete(ids);
-      });
-    }
-    return ids.length;
+export const closeSession = async (id: string) => {
+  const session = await SessionRepository.getById(id);
+  if (!session) return;
+  await SessionRepository.save({ ...session, status: 'completed' });
+  
+  if (navigator.onLine) {
+      supabaseSyncService.pushBatch('SESIONES_CONTEO', [session as any]).catch(console.error);
   }
+};
+
+export const addScanEvent = async (sessionId: string, barcode: string, quantity: number = 1, mm?: number, yyyy?: number, location?: string, batch?: string) => {
+  const event = { id: crypto.randomUUID(), sessionId, barcode, quantity, mm, yyyy, location, batch, synced: 0, timestamp: Date.now() };
+  pendingBuffer.push({ ...event });
+  if (pendingBuffer.length >= 5) {
+    await db.scans.bulkAdd(pendingBuffer);
+    pendingBuffer = [];
+  }
+};
+
+export const undoLastAction = async (sessionId: string): Promise<boolean> => {
+  const reversed = [...pendingBuffer].reverse();
+  const idx = reversed.findIndex(s => s.sessionId === sessionId);
+  if (idx !== -1) {
+    const realIdx = pendingBuffer.length - 1 - idx;
+    pendingBuffer.splice(realIdx, 1);
+    return true;
+  }
+  const scans = await ScanRepository.getBySession(sessionId);
+  if (scans.length > 0) {
+    const last = scans.pop();
+    if (last?.id) {
+        await db.scans.delete(last.id);
+        return true;
+    }
+  }
+  return false;
+};
+
+export const deleteSessionItem = async (sessionId: string, barcode: string) => {
+  const scans = await ScanRepository.getBySession(sessionId);
+  const toDelete = scans.filter(s => s.barcode === barcode).map(s => s.id!);
+  if (toDelete.length > 0) {
+      await db.scans.bulkDelete(toDelete);
+  }
+  pendingBuffer = pendingBuffer.filter(s => !(s.sessionId === sessionId && s.barcode === barcode));
+};
+
+export const deleteSession = async (id: string) => {
+  await db.scans.where('sessionId').equals(id).delete();
+  await SessionRepository.delete(id);
+};
+
+export const cleanSyncedSessions = async () => {
+  const sessions = await db.sessions.where('lastSyncTimestamp').above(0).toArray();
+  const ids = sessions.map(s => s.id);
+  if (ids.length > 0) {
+    await db.scans.where('sessionId').anyOf(ids).delete();
+    await SessionRepository.deleteMany(ids);
+  }
+  return ids.length;
+};
+
+export const checkLabelExists = async (labelId: string) => {
+  const existing = await db.sessions.where('logisticsLabel').equals(labelId.toUpperCase()).toArray();
+  return existing.length > 0;
+};
+
+export const fetchExpectedItemsFromCloud = async (erpOrder: string): Promise<ExpectedOrder | null> => {
+   return await ExpectedOrderRepository.getById(erpOrder.toUpperCase()) || null;
+};
+
+export const markScansAsSynced = async (scanIds: string[]) => {
+   await db.scans.where('id').anyOf(scanIds).modify({ synced: 1 });
 };
