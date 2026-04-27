@@ -19,6 +19,7 @@ export const NavigationSection: React.FC<Props> = ({ settings, updateSetting }) 
  { id: 'database', label: 'Catálogo', icon: Database },
  { id: 'sync', label: 'Nube', icon: Cloud },
  { id: 'settings', label: 'Ajustes', icon: Settings },
+ { id: 'providers' as ViewState, label: 'Proveedores', icon: Container },
  ];
 
  const currentNav = settings.mobileNavConfig || ['dashboard', 'reports', 'sync'];

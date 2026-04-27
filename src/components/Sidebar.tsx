@@ -84,6 +84,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
         <NavItem path="/massive/BURST-MODE" activeKey="massive" label="Modo Hammer" icon={Zap} />
         <NavItem path="/expiry" activeKey="expiry" label="Vencimientos" icon={Calendar} />
         <NavItem path="/customers" activeKey="customers" label="Clientes" icon={Users} />
+        <NavItem path="/providers" activeKey="providers" label="Proveedores" icon={Container} />
         
         {(() => {
           const schema = settings.cloudConfig?.schema || settings.schema;

@@ -148,7 +148,7 @@ export interface ConsolidatedItem {
  embedding?: number[];
 }
 
-export type ViewState = 'dashboard' | 'counting' | 'database' | 'reports' | 'settings' | 'reception' | 'sync' | 'massive' | 'documents' | 'visual-picking' | 'expiry' | 'events';
+export type ViewState = 'dashboard' | 'counting' | 'database' | 'reports' | 'settings' | 'reception' | 'sync' | 'massive' | 'documents' | 'visual-picking' | 'expiry' | 'events' | 'providers' | 'customers';
 export type Theme = 'light' | 'dark';
 
 export interface VisualGuideItem {

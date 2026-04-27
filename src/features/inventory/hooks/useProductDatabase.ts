@@ -1,6 +1,7 @@
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useAppStore } from '../../../store/mainAppStore';
 import { Product, Provider } from '../../../types';
 import * as productService from '../../../services/productService';
 import { importProductsFromCloud, importProvidersFromCloud } from '../../../services/syncManager';
@@ -179,6 +180,10 @@ export const useProductDatabase = () => {
  const handleDownloadFromCloud = useCallback(async () => {
  setIsDownloading(true);
  try {
+ const { useSyncStore } = await import('../../../store/useSyncStore');
+ const settings = useAppStore.getState().settings;
+ useSyncStore.getState().setTableSyncTime(settings.cloudConfig.productsTableName || 'PRODUCTOS', 0);
+ useSyncStore.getState().setTableSyncTime(settings.cloudConfig.providersTableName || 'PROVEEDORES', 0);
  const count = await importProductsFromCloud();
  showFeedback('success', `${count} productos y políticas actualizados`);
  } catch (err: any) {
