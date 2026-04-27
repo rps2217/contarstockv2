@@ -17,6 +17,8 @@ export const ProvidersPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProvider, setEditingProvider] = useState<Provider | undefined>(undefined);
+  const [filterMode, setFilterMode] = useState<'all' | 'withExchange' | 'withoutExchange'>('all');
+  const [showFilters, setShowFilters] = useState(false);
 
   const loadProviders = async () => {
     const data = await ProviderRepository.getAll();
@@ -139,10 +141,17 @@ export const ProvidersPage: React.FC = () => {
     }
   };
 
-  const filteredProviders = providers.filter(p => 
-    p.name.toLowerCase().includes(search.toLowerCase()) || 
-    p.rut.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredProviders = providers.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || 
+                          p.rut.toLowerCase().includes(search.toLowerCase());
+    if (!matchesSearch) return false;
+    
+    if (filterMode === 'withExchange') return p.hasExchange === true;
+    if (filterMode === 'withoutExchange') return p.hasExchange === false;
+    return true;
+  });
+
+  const activeFiltersCount = (filterMode !== 'all' ? 1 : 0);
 
   return (
     <div className={`h-full flex flex-col transition-colors duration-500 ${
@@ -172,10 +181,14 @@ export const ProvidersPage: React.FC = () => {
         <ManagementSearchBar 
           searchQuery={search}
           setSearchQuery={setSearch}
-          onOpenFilters={() => {}} // No filters for now
+          onOpenFilters={() => setShowFilters(!showFilters)}
           onOpenAdd={() => { setEditingProvider(undefined); setIsFormOpen(true); }}
-          onClearFilters={() => setSearch('')}
-          activeFiltersCount={0}
+          onClearFilters={() => {
+            setSearch('');
+            setFilterMode('all');
+            setShowFilters(false);
+          }}
+          activeFiltersCount={activeFiltersCount}
           placeholder="BUSCAR POR NOMBRE O RUT..."
           accentColor="indigo"
           theme={theme}
@@ -220,6 +233,50 @@ export const ProvidersPage: React.FC = () => {
             </div>
           }
         />
+
+        <AnimatePresence>
+          {showFilters && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="pt-4 flex flex-wrap gap-2">
+                <button
+                  onClick={() => setFilterMode('all')}
+                  className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                    filterMode === 'all'
+                      ? theme === 'dark' ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+                      : theme === 'dark' ? 'bg-white/5 text-slate-400 hover:bg-white/10' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  Todos
+                </button>
+                <button
+                  onClick={() => setFilterMode('withExchange')}
+                  className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                    filterMode === 'withExchange'
+                      ? theme === 'dark' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50' : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                      : theme === 'dark' ? 'bg-white/5 text-slate-400 hover:bg-white/10' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  Con Canje
+                </button>
+                <button
+                  onClick={() => setFilterMode('withoutExchange')}
+                  className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                    filterMode === 'withoutExchange'
+                      ? theme === 'dark' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/50' : 'bg-rose-100 text-rose-700 border border-rose-200'
+                      : theme === 'dark' ? 'bg-white/5 text-slate-400 hover:bg-white/10' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  Sin Canje
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* List */}
