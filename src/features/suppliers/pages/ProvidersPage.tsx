@@ -101,7 +101,11 @@ export const ProvidersPage: React.FC = () => {
 
   const handleDownloadFromCloud = async () => {
     try {
-      toast.loading('Descargando políticas desde la nube...');
+      toast.loading('Forzando descarga completa de políticas desde la nube...');
+      const { useSyncStore } = await import('../../../store/useSyncStore');
+      // Reset the sync timestamp specifically for providers and products so it fetches all of them
+      useSyncStore.getState().setTableSyncTime(settings.cloudConfig.providersTableName || 'PROVEEDORES', 0);
+      
       const { importProvidersFromCloud } = await import('../../../services/syncManager');
       const count = await importProvidersFromCloud();
       toast.dismiss();
@@ -109,7 +113,7 @@ export const ProvidersPage: React.FC = () => {
         toast.success(`${count} proveedores actualizados desde la nube.`);
         loadProviders();
       } else {
-        toast.info('No se encontraron proveedores en la nube.');
+        toast.info('No se encontraron proveedores o no hay cambios.');
       }
     } catch (e: any) {
       toast.dismiss();
