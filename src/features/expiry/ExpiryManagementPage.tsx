@@ -414,6 +414,7 @@ const ExpiryManagementPage: React.FC = () => {
                 mm: data.mm,
                 yyyy: data.yyyy,
                 quantity: 1, // Default to 1 as requested
+                observaciones: data.observaciones,
                 fechaCC: `${String(data.mm).padStart(2, '0')}/${data.yyyy}`
               });
               
@@ -430,7 +431,8 @@ const ExpiryManagementPage: React.FC = () => {
             initialData={{
               mm: ui.editingItem.mm,
               yyyy: ui.editingItem.yyyy,
-              productName: ui.editingItem.productName
+              productName: ui.editingItem.productName,
+              observaciones: ui.editingItem.observaciones
             }}
             onCancel={() => actions.setEditingItem(null)}
             onComplete={(data) => {
@@ -438,7 +440,8 @@ const ExpiryManagementPage: React.FC = () => {
               dbActions.handleUpdateItem(ui.editingItem.id, {
                 mm: data.mm,
                 yyyy: data.yyyy,
-                productName: data.productName
+                productName: data.productName,
+                observaciones: data.observaciones
               });
             }}
           />

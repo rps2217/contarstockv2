@@ -129,6 +129,7 @@ export const useExpiryDatabase = () => {
         const exp = record;
         const productName = getVal(exp, [expiryMapping?.name || '', 'DESCRIPTOR', 'DESCRIPCION_PROD', 'DESCRIPCION', 'PRODUCTO', 'ITEM', 'productName', 'name', 'nombre']);
         const providerName = getVal(exp, [expiryMapping?.supplier || '', 'PROVEEDOR', 'PROV', 'supplier', 'providerName', 'proveedor', 'Proveedor', 'LABORATORIO', 'LAB', 'MARCA']);
+        const observaciones = getVal(exp, [expiryMapping?.observaciones || '', 'OBSERVACIONES', 'OBSERVACION', 'OBS', 'COMENTARIO', 'NOTAS', 'description', 'descripción', 'descripcion']);
         
         const rawTimestamp = getVal(exp, [expiryMapping?.timestamp || '', 'TIMESTAMP', 'timestamp', 'createdAt', 'fecha_creacion', 'FECHA_CREACION']);
         const finalTimestamp = rawTimestamp 
@@ -147,6 +148,7 @@ export const useExpiryDatabase = () => {
           timestamp: finalTimestamp,
           quantity: exp[expiryMapping?.quantity || ''] || (exp as any).CANTIDAD || exp.quantity || 0,
           location: exp[expiryMapping?.location || ''] || (exp as any).UBICACION || exp.location || 'N/A',
+          observaciones,
           claveUnica: exp.claveUnica || (exp as any).CLAVE_UNICA || record.id, // Fallback al id si no hay claveUnica
           syncStatus: record.syncStatus || 'synced'
         }, productMap, providerMap, now);
@@ -319,6 +321,7 @@ export const useExpiryDatabase = () => {
     yyyy: number;
     quantity: number;
     location?: string;
+    observaciones?: string;
     fechaCC?: string;
   }) => {
     try {
@@ -360,6 +363,7 @@ export const useExpiryDatabase = () => {
         event: 'VENCIMIENTOS',
         quantity: data.quantity,
         location: data.location || '',
+        observaciones: data.observaciones || '',
         origin: 'REGISTRO DIRECTO',
         syncStatus: 'synced' as const
       };

@@ -135,6 +135,7 @@ export const processExpiryItem = (
   }
 
   const isValidProviderStr = (val: any) => typeof val === 'string' && val.trim() !== '' && val.trim().toUpperCase() !== 'N/A' && val.trim().toUpperCase() !== 'SIN PROVEEDOR';
+  const isValidObsStr = (val: any) => typeof val === 'string' && val.trim() !== '' && val.trim().toUpperCase() !== 'N/A';
 
   let providerName = 'N/A';
   if (isValidProviderStr(provider?.name)) {
@@ -153,12 +154,15 @@ export const processExpiryItem = (
     providerName = (item as any).supplier.trim();
   }
 
-  const _searchIndex = `${item.barcode || ''} ${productName} ${providerName} ${item.batch || ''} ${item.frc || ''}`.toLowerCase();
+  const observaciones = isValidObsStr(item.observaciones) ? item.observaciones : '';
+
+  const _searchIndex = `${item.barcode || ''} ${productName} ${providerName} ${item.batch || ''} ${item.frc || ''} ${observaciones}`.toLowerCase();
 
   return {
     ...item,
     productName,
     providerName,
+    observaciones,
     category: product?.category || 'GENERAL',
     withdrawalDays: provider?.withdrawalDays || 0,
     hasCanje,

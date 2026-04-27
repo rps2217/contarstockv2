@@ -37,6 +37,7 @@ export interface ExpiryItem {
   timestamp?: number;
   frc?: string;
   syncStatus?: 'synced' | 'pending' | 'error';
+  observaciones?: string;
   _searchIndex?: string;
 }
 

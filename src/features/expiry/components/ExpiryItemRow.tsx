@@ -87,6 +87,13 @@ export const ExpiryItemRow: React.FC<ExpiryItemRowProps> = React.memo(({
         }`}>
           {item.productName}
         </h3>
+        {item.observaciones && (
+          <p className={`text-[10px] font-bold uppercase italic mb-1 ${
+            theme === 'dark' ? 'text-amber-500/80' : 'text-amber-600'
+          }`}>
+            {item.observaciones}
+          </p>
+        )}
         <div className="flex items-center gap-4">
           <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest truncate">
             {item.providerName}

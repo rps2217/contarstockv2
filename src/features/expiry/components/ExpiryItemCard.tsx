@@ -151,6 +151,13 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
             }`}>
               {item.productName}
             </h3>
+            {item.observaciones && (
+              <p className={`text-[10px] font-bold uppercase italic tracking-tight leading-none mt-1 ${
+                theme === 'dark' ? 'text-amber-500/80' : 'text-amber-600'
+              }`}>
+                {item.observaciones}
+              </p>
+            )}
             {item.frc && (
               <span 
                 onClick={(e) => {

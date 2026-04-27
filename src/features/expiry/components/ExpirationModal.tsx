@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Check, Barcode, Calendar, Zap, AlertCircle, RefreshCcw } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { SoundFX } from '../../../services/audio';
 import { normalizeSku } from '../../../services/utils';
 
 interface ExpirationModalProps {
-  onComplete: (data: { barcode: string; productName: string; mm: number; yyyy: number }) => void;
+  onComplete: (data: { barcode: string; productName: string; mm: number; yyyy: number; observaciones?: string }) => void;
   onCancel?: () => void;
   productMap: Record<string, any>;
   initialBarcode?: string;
-  initialData?: { mm: number; yyyy: number; productName: string };
+  initialData?: { mm: number; yyyy: number; productName: string; observaciones?: string };
   title?: string;
 }
 
@@ -23,6 +23,7 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
 }) => {
   const [barcode, setBarcode] = useState<string>(initialBarcode);
   const [productName, setProductName] = useState<string>(initialData?.productName || '');
+  const [observaciones, setObservaciones] = useState<string>(initialData?.observaciones || '');
   const [selectedMm, setSelectedMm] = useState<number | null>(initialData?.mm || null);
   const [selectedYyyy, setSelectedYyyy] = useState<number | null>(initialData?.yyyy || null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -151,13 +152,15 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
           barcode,
           productName: productName || 'Producto Manual',
           mm: selectedMm,
-          yyyy: selectedYyyy
+          yyyy: selectedYyyy,
+          observaciones
         });
 
         if (continuousMode) {
           // Reset for next item
           setBarcode('');
           setProductName('');
+          setObservaciones('');
           setSelectedMm(null);
           setSelectedYyyy(null);
           setIsSubmitting(false);
@@ -268,6 +271,18 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
                 </p>
               </motion.div>
             )}
+          </div>
+
+          {/* OBSERVATIONS SECTION */}
+          <div className="space-y-3">
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-2">DESCRIPCIÓN ADICIONAL / OBSERVACIONES</label>
+            <input 
+              type="text"
+              value={observaciones}
+              onChange={(e) => setObservaciones(e.target.value)}
+              className="w-full bg-black border-2 border-white/10 hover:border-white/20 rounded-2xl py-4 px-6 text-xl font-bold focus:outline-none focus:border-amber-500 text-white transition-all placeholder:text-white/5 uppercase"
+              placeholder="OPCIONAL (EJ: CAJA DAÑADA, RELLENO, ETC)"
+            />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

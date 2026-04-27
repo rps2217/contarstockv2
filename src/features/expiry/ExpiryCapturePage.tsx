@@ -70,6 +70,11 @@ const ExpiryItemRow = React.memo(({
         <h3 className="text-sm font-black text-white uppercase truncate">
           {item.productName}
         </h3>
+        {item.observaciones && (
+          <p className="text-[10px] font-bold text-amber-500/80 uppercase italic truncate">
+            {item.observaciones}
+          </p>
+        )}
         <div className="flex items-center gap-2 mt-1.5">
           <span className="bg-slate-800 text-slate-300 text-[10px] font-bold px-2 py-0.5 rounded">
             {item.barcode}
