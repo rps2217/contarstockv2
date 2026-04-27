@@ -1,6 +1,6 @@
 
 import { CountingSession, ConsolidatedItem, Product, CountMapping, ExpiryMapping } from '../../types';
-import { SHEET_COLUMNS } from '../constants';
+import { CLOUD_COLUMNS } from '../constants';
 import { generateUUID } from '../utils';
 import { getSettings } from '../settings';
 
@@ -34,8 +34,8 @@ export const createInventoryPayload = (
       // Use counts mapping
       return {
         id: uniqueKey,
-        [countsMapping?.id || SHEET_COLUMNS.ID]: uniqueKey,
-        [countsMapping?.uniqueKey || SHEET_COLUMNS.UNIQUE_KEY]: uniqueKey,
+        [countsMapping?.id || CLOUD_COLUMNS.ID]: uniqueKey,
+        [countsMapping?.uniqueKey || CLOUD_COLUMNS.UNIQUE_KEY]: uniqueKey,
         [countsMapping?.timestamp || 'FECHA']: dateStr,
         [countsMapping?.barcode || 'SKU']: item.barcode,
         [countsMapping?.quantity || 'CANTIDAD']: item.totalQuantity,
@@ -50,22 +50,22 @@ export const createInventoryPayload = (
     // Use expiry mapping for consolidated/expiry
     return {
       id: uniqueKey,
-      [expiryMapping?.id || SHEET_COLUMNS.ID]: uniqueKey,
-      [expiryMapping?.uniqueKey || SHEET_COLUMNS.UNIQUE_KEY]: uniqueKey,
-      [SHEET_COLUMNS.ENTRY_DATE]: dateStr,
-      [expiryMapping?.barcode || SHEET_COLUMNS.BARCODE]: item.barcode,
-      [expiryMapping?.productName || SHEET_COLUMNS.PRODUCT_NAME]: item.productName || 'Cargando...',
-      [expiryMapping?.location || SHEET_COLUMNS.LABEL]: activeLabel,
-      [expiryMapping?.quantity || SHEET_COLUMNS.QUANTITY]: item.totalQuantity,
-      [expiryMapping?.yyyy || SHEET_COLUMNS.YEAR]: item.yyyy || "",
-      [expiryMapping?.erp || SHEET_COLUMNS.ERP_ORDER]: session.erpOrder,
-      [expiryMapping?.timestamp || SHEET_COLUMNS.DATE]: dateStr,
-      [expiryMapping?.mm || SHEET_COLUMNS.MONTH]: item.mm || "",
-      [expiryMapping?.frc || SHEET_COLUMNS.INCIDENT]: item.isIncident ? "FRC" : "OK",
-      [SHEET_COLUMNS.AUDIT_STATUS]: session.auditStatus?.toUpperCase() || "",
-      [SHEET_COLUMNS.AUDIT_SCORE]: session.auditScore || "",
-      [SHEET_COLUMNS.IA_SIGNATURE]: item.embedding ? JSON.stringify(item.embedding) : "",
-      [SHEET_COLUMNS.PHOTO_URL]: session.photoUrl || "",
+      [expiryMapping?.id || CLOUD_COLUMNS.ID]: uniqueKey,
+      [expiryMapping?.uniqueKey || CLOUD_COLUMNS.UNIQUE_KEY]: uniqueKey,
+      [CLOUD_COLUMNS.ENTRY_DATE]: dateStr,
+      [expiryMapping?.barcode || CLOUD_COLUMNS.BARCODE]: item.barcode,
+      [expiryMapping?.productName || CLOUD_COLUMNS.PRODUCT_NAME]: item.productName || 'Cargando...',
+      [expiryMapping?.location || CLOUD_COLUMNS.LABEL]: activeLabel,
+      [expiryMapping?.quantity || CLOUD_COLUMNS.QUANTITY]: item.totalQuantity,
+      [expiryMapping?.yyyy || CLOUD_COLUMNS.YEAR]: item.yyyy || "",
+      [expiryMapping?.erp || CLOUD_COLUMNS.ERP_ORDER]: session.erpOrder,
+      [expiryMapping?.timestamp || CLOUD_COLUMNS.DATE]: dateStr,
+      [expiryMapping?.mm || CLOUD_COLUMNS.MONTH]: item.mm || "",
+      [expiryMapping?.frc || CLOUD_COLUMNS.INCIDENT]: item.isIncident ? "FRC" : "OK",
+      [CLOUD_COLUMNS.AUDIT_STATUS]: session.auditStatus?.toUpperCase() || "",
+      [CLOUD_COLUMNS.AUDIT_SCORE]: session.auditScore || "",
+      [CLOUD_COLUMNS.IA_SIGNATURE]: item.embedding ? JSON.stringify(item.embedding) : "",
+      [CLOUD_COLUMNS.PHOTO_URL]: session.photoUrl || "",
       "META_SOURCE": source
     };
   });
@@ -84,7 +84,7 @@ export const createProductsPayload = (products: Product[]) => {
     [mapping?.supplierRut || "supplier_rut"]: p.supplierRut || "",
     [mapping?.price || "price"]: p.price || 0,
     [mapping?.unitsPerBox || "units_per_box"]: p.unitsPerBox || 1,
-    [SHEET_COLUMNS.IA_SIGNATURE || "ia_signature"]: p.embedding ? JSON.stringify(p.embedding) : ""
+    [CLOUD_COLUMNS.IA_SIGNATURE || "ia_signature"]: p.embedding ? JSON.stringify(p.embedding) : ""
   }));
 };
 

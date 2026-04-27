@@ -273,15 +273,6 @@ export interface CountMapping {
   expiry?: string;
 }
 
-export interface TableMetadata {
-  sheetName: string;
-  headers: string[];
-}
-
-export interface SpreadsheetMetadata {
-  sheets: TableMetadata[];
-}
-
 export type ColumnDataType = 'string' | 'number' | 'date' | 'barcode' | 'boolean' | 'enum' | 'email' | 'url' | 'image' | 'timestamp';
 export type ColumnRenderType = 'default' | 'grid' | 'list' | 'segmented';
 
@@ -313,11 +304,9 @@ export interface AppSchema {
   providers?: TableSchema;
 }
 
-export type CloudConfig = AppSheetConfig;
+export type CloudConfig = CloudStorageConfig;
 
-export interface AppSheetConfig {
-  appId: string;
-  accessKey: string;
+export interface CloudStorageConfig {
   countsTableName: string;
   consolidatedTableName: string;
   inventoryRegistryTableName?: string;
@@ -328,7 +317,6 @@ export interface AppSheetConfig {
   providersTableName?: string;
   eventsTableName?: string;
   sessionsTableName?: string;
-  spreadsheetId?: string;
   columnMapping?: ExpiryMapping; // Keep for backward compatibility
   mappings?: {
     expiry: ExpiryMapping;

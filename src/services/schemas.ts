@@ -1,6 +1,6 @@
 
 import { z } from 'zod';
-import { SHEET_COLUMNS } from './constants';
+import { CLOUD_COLUMNS } from './constants';
 import { normalizeSku, normalizeIdentity } from './utils';
 import { getSettings } from './settings';
 
@@ -166,15 +166,15 @@ export const CloudProviderSchema = z.record(z.any()).transform((raw) => {
 }));
 
 export const CloudInventoryRowSchema = z.object({
- [SHEET_COLUMNS.ERP_ORDER]: cleanString,
- [SHEET_COLUMNS.LABEL]: cleanString,
- [SHEET_COLUMNS.BARCODE]: cleanString,
- [SHEET_COLUMNS.QUANTITY]: z.coerce.number().default(0),
- [SHEET_COLUMNS.DATE]: cleanString,
- [SHEET_COLUMNS.MONTH]: z.coerce.number().optional(),
- [SHEET_COLUMNS.YEAR]: z.coerce.number().optional(),
- [SHEET_COLUMNS.PRODUCT_NAME]: cleanString.optional(),
- [SHEET_COLUMNS.INCIDENT]: cleanString.optional(),
+ [CLOUD_COLUMNS.ERP_ORDER]: cleanString,
+ [CLOUD_COLUMNS.LABEL]: cleanString,
+ [CLOUD_COLUMNS.BARCODE]: cleanString,
+ [CLOUD_COLUMNS.QUANTITY]: z.coerce.number().default(0),
+ [CLOUD_COLUMNS.DATE]: cleanString,
+ [CLOUD_COLUMNS.MONTH]: z.coerce.number().optional(),
+ [CLOUD_COLUMNS.YEAR]: z.coerce.number().optional(),
+ [CLOUD_COLUMNS.PRODUCT_NAME]: cleanString.optional(),
+ [CLOUD_COLUMNS.INCIDENT]: cleanString.optional(),
 });
 
 export const CloudReceptionRowSchema = z.object({

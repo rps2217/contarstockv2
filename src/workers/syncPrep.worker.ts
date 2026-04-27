@@ -1,8 +1,8 @@
 
-import { SHEET_COLUMNS } from '../services/constants';
+import { CLOUD_COLUMNS } from '../services/constants';
 
 /**
- * Procesa la transformación de registros locales a formato AppSheet
+ * Procesa la transformación de registros locales a formato de nube (Supabase)
  * de forma paralela.
  */
 self.onmessage = (e: MessageEvent) => {
@@ -21,18 +21,18 @@ self.onmessage = (e: MessageEvent) => {
   const dateStr = `${day}/${month}/${year}`;
 
   return {
-  [SHEET_COLUMNS.ID]: `${uuidPrefix}-${index}`, // Col A
-  [SHEET_COLUMNS.UNIQUE_KEY]: uniqueKey, // Col B
-  [SHEET_COLUMNS.ENTRY_DATE]: dateStr, // Col C: FECHA_INGRESO (DD/MM/YYYY)
-  [SHEET_COLUMNS.BARCODE]: item.barcode, // Col D: COD PRODUCTO
-  [SHEET_COLUMNS.PRODUCT_NAME]: item.productName, // Col E: DESCRIPCION
-  [SHEET_COLUMNS.LABEL]: session.logisticsLabel, // Col F: ETIQUETAS
-  [SHEET_COLUMNS.QUANTITY]: item.totalQuantity, // Col G: CANTIDAD
-  [SHEET_COLUMNS.YEAR]: item.yyyy || 0, // Col H: YYYY
-  [SHEET_COLUMNS.ERP_ORDER]: session.erpOrder, // Col I: ERP
-  [SHEET_COLUMNS.DATE]: dateStr, // Col J: FECHA (DD/MM/YYYY)
-  [SHEET_COLUMNS.MONTH]: item.mm || 0, // Col K: MM
-  [SHEET_COLUMNS.INCIDENT]: item.isIncident ? "FRC" : ""
+  [CLOUD_COLUMNS.ID]: `${uuidPrefix}-${index}`, // Col A
+  [CLOUD_COLUMNS.UNIQUE_KEY]: uniqueKey, // Col B
+  [CLOUD_COLUMNS.ENTRY_DATE]: dateStr, // Col C: FECHA_INGRESO (DD/MM/YYYY)
+  [CLOUD_COLUMNS.BARCODE]: item.barcode, // Col D: COD PRODUCTO
+  [CLOUD_COLUMNS.PRODUCT_NAME]: item.productName, // Col E: DESCRIPCION
+  [CLOUD_COLUMNS.LABEL]: session.logisticsLabel, // Col F: ETIQUETAS
+  [CLOUD_COLUMNS.QUANTITY]: item.totalQuantity, // Col G: CANTIDAD
+  [CLOUD_COLUMNS.YEAR]: item.yyyy || 0, // Col H: YYYY
+  [CLOUD_COLUMNS.ERP_ORDER]: session.erpOrder, // Col I: ERP
+  [CLOUD_COLUMNS.DATE]: dateStr, // Col J: FECHA (DD/MM/YYYY)
+  [CLOUD_COLUMNS.MONTH]: item.mm || 0, // Col K: MM
+  [CLOUD_COLUMNS.INCIDENT]: item.isIncident ? "FRC" : ""
   };
  });
 

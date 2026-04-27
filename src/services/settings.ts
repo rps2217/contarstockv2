@@ -59,9 +59,6 @@ const DEFAULT_SETTINGS: AppSettings = {
   batchTrackingEnabled: true,
   lowEndMode: false,
   cloudConfig: {
-    appId: import.meta.env.VITE_APPSHEET_APP_ID || '',
-    accessKey: import.meta.env.VITE_APPSHEET_ACCESS_KEY || '',
-    spreadsheetId: import.meta.env.VITE_SPREADSHEET_ID || '',
     countsTableName: 'CONTEOS', 
     consolidatedTableName: 'CONSOLIDADOS', 
     inventoryRegistryTableName: 'VENCIMIENTOS',

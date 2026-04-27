@@ -45,9 +45,6 @@
       "description": "Configuración global del sistema",
       "type": "object",
       "properties": {
-        "appId": { "type": "string" },
-        "spreadsheetId": { "type": "string" },
-        "gasWebAppUrl": { "type": "string" },
         "countsTableName": { "type": "string" },
         "consolidatedTableName": { "type": "string" },
         "receptionTableName": { "type": "string" },
@@ -56,8 +53,7 @@
         "providersTableName": { "type": "string" },
         "expiryTableName": { "type": "string" },
         "eventsTableName": { "type": "string" }
-      },
-      "required": ["appId"]
+      }
     },
     "Expiry": {
       "title": "Expiry",
