@@ -122,8 +122,11 @@ export const CloudOrderRowSchema = z.record(z.any()).transform((raw) => {
 }));
 
 export const CloudProviderSchema = z.record(z.any()).transform((raw) => {
-  const rut = normalizeIdentity(String(raw.rut || raw.RUT || raw.ID || raw.id || raw.ID_RUT || raw.RUT_PROVEEDOR || ''));
   const name = String(raw.name || raw.NOMBRE || raw.PROVEEDOR || 'PROVEEDOR SIN NOMBRE').trim().toUpperCase();
+  let rut = normalizeIdentity(String(raw.rut || raw.RUT || raw.ID || raw.id || raw.ID_RUT || raw.RUT_PROVEEDOR || ''));
+  if (!rut) {
+    rut = 'RUT_NR_' + name.replace(/[^A-Z0-9]/g, '_').substring(0, 15);
+  }
   
   const rawWithdrawal = raw.withdrawal_days !== undefined ? raw.withdrawal_days :
                         raw.withdrawalDays !== undefined ? raw.withdrawalDays :
@@ -146,10 +149,6 @@ export const CloudProviderSchema = z.record(z.any()).transform((raw) => {
     hasExchange = (s === 'TRUE' || s === '1' || s === 'SI' || s === 'CANJE' || s === 'ACTIVO' || s === 'YES');
   } else if (typeof rawExchange === 'boolean') {
     hasExchange = rawExchange;
-  }
-  
-  if (withdrawalDays > 0) {
-    hasExchange = true; // Heurística fuerte
   }
 
   return {
