@@ -139,17 +139,18 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
          onClick={props.onDownload} 
          disabled={props.isDownloading} 
          className="w-12 h-12 bg-white/5 border border-white/5 rounded-2xl flex items-center justify-center text-slate-400 hover:bg-white/10 transition-all"
-         title="Sincronizar Catálogo Completto"
+         title="Sincronizar Catálogo Completo"
        >
          {props.isDownloading ? <Loader2 className="w-5 h-5 animate-spin" /> : <RefreshCw className="w-5 h-5" />}
        </button>
        
        <button 
          onClick={props.onImport} 
-         className="w-12 h-12 bg-blue-600 text-white rounded-2xl flex items-center justify-center shadow-lg hover:bg-blue-500 transition-all border border-blue-400/20"
+         className="px-4 h-12 bg-emerald-600 text-white rounded-2xl flex items-center justify-center gap-2 shadow-lg hover:bg-emerald-500 transition-all border border-emerald-400/20 active:scale-95 group shrink-0"
          title="Importar desde Excel/CSV"
        >
-         <FileSpreadsheet className="w-5 h-5" />
+         <FileSpreadsheet className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+         <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Importar CSV</span>
        </button>
      </div>
    }
@@ -182,7 +183,7 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
       className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all whitespace-nowrap flex items-center gap-2 ${
         props.policyFilter === 'loss' 
           ? 'bg-rose-600 text-white border-rose-600 shadow-sm' 
-          : 'bg-white dark:bg-white/5 text-rose-500/70 border-rose-200 dark:border-rose-500/20 hover:bg-rose-50'
+          : 'bg-white dark:bg-white/5 text-rose-500/70 border-rose-200 dark:border-rose-500/20 hover:bg-indigo-50'
       }`}
     >
       <ShieldAlert className="w-3 h-3" /> Solo Merma
