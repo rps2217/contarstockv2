@@ -8,6 +8,7 @@ interface PrintOptions {
   content: string;
   footer?: string;
   scripts?: string;
+  hideHeader?: boolean;
 }
 
 export class PrintService {
@@ -15,7 +16,7 @@ export class PrintService {
    * Genera y abre una ventana de impresión con estilos base unificados
    * basados en la configuración global de la aplicación.
    */
-  static printTicket({ title, subtitle, content, footer, scripts }: PrintOptions) {
+  static printTicket({ title, subtitle, content, footer, scripts, hideHeader }: PrintOptions) {
     const settings = getSettings();
     const pharmacyName = settings.pharmacyName || 'LOGICOUNT PRO';
     const paperWidth = settings.thermalPrinter?.paperWidth || 80;
@@ -59,7 +60,6 @@ export class PrintService {
               display: block;
               margin-bottom: 2px;
               text-transform: uppercase;
-              italic;
             }
             
             .ticket-title { 
@@ -109,11 +109,13 @@ export class PrintService {
           </style>
         </head>
         <body>
+          ${!hideHeader ? `
           <div class="print-header">
-            <span class="pharmacy-name">${pharmacyName}</span>
-            <span class="ticket-title">${title}</span>
+            ${pharmacyName ? `<span class="pharmacy-name">${pharmacyName}</span>` : ''}
+            ${title ? `<span class="ticket-title">${title}</span>` : ''}
             ${subtitle ? `<span class="ticket-subtitle">${subtitle}</span>` : ''}
           </div>
+          ` : ''}
 
           <div class="print-content">
             ${content}
@@ -121,7 +123,6 @@ export class PrintService {
 
           <div class="print-footer">
             ${footer || `GENERADO: ${format(new Date(), "dd/MM/yyyy HH:mm")}`}
-            <div style="margin-top: 4px; font-style: italic; font-size: 8px;">LOGICOUNT PRO v4.0</div>
           </div>
 
           <button class="no-print btn-print-manual" onclick="window.print()">🖨️ IMPRIMIR TICKET</button>

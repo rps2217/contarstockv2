@@ -204,14 +204,14 @@ export const handlePrintSelectedEvents = (items: any[]) => {
   `).join('');
 
   PrintService.printTicket({
-    title: "", // Removido por solicitud del usuario
+    title: "", 
+    hideHeader: true,
     content: itemsHtml,
     footer: `
-      <div style="width: 100%; display: flex; flex-direction: column; align-items: center; margin-top: 10px;">
-        <svg id="frc_barcode" style="width: 100%; max-width: 250px;"></svg>
+      <div style="width: 100%; display: flex; flex-direction: column; align-items: center; margin-top: 8px;">
+        <svg id="frc_barcode" style="width: 100%; max-width: 280px;"></svg>
         <div style="font-weight: 900; font-size: 14px; margin-top: 1px;">FRC: ${firstFrc}</div>
-        <div style="font-size: 9px; font-weight: bold; margin-top: 6px;">FECHA: ${fechaGeneracion}</div>
-        <div style="margin-top: 4px; font-style: italic; font-size: 8px;">*** FIN DE REPORTE ***</div>
+        <div style="font-size: 9px; font-weight: bold; margin-top: 4px;">FECHA: ${fechaGeneracion}</div>
       </div>`,
     scripts: `
       <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
@@ -223,8 +223,8 @@ export const handlePrintSelectedEvents = (items: any[]) => {
               JsBarcode("#frc_barcode", frc, {
                 format: "CODE128",
                 lineColor: "#000",
-                width: 2.2,
-                height: 45,
+                width: 2.8,
+                height: 50,
                 displayValue: false,
                 margin: 0
               });
