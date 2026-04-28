@@ -10,8 +10,6 @@ import { ManagementSearchBar } from '../../shared/components/core/ManagementSear
 import { CustomerFormModal } from './components/CustomerFormModal';
 import { SendMessageModal } from './components/SendMessageModal';
 import { TemplateManagerModal } from './components/TemplateManagerModal';
-import { customerSyncService } from '../../services/customerSyncService';
-import { templateSyncService } from '../../services/templateSyncService';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useVirtualizer } from '@tanstack/react-virtual';
 
@@ -31,15 +29,6 @@ export const CustomersPage: React.FC = () => {
   const [isTemplateManagerOpen, setIsTemplateManagerOpen] = useState(false);
 
   const parentRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    customerSyncService.startSync();
-    templateSyncService.startSync();
-    return () => {
-      customerSyncService.stopSync();
-      templateSyncService.stopSync();
-    };
-  }, []);
 
   const filteredCustomers = useMemo(() => {
     if (!searchQuery) return customers;

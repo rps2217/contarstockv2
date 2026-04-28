@@ -6,6 +6,8 @@ import { useSyncStore } from '../store/useSyncStore';
 import { erpService } from '../services/erpService';
 import { ExpectedOrderRepository } from '../repositories/ExpectedOrderRepository';
 import { dynamicSyncService } from '../services/dynamicSync';
+import { templateSyncService } from '../services/templateSyncService';
+import { customerSyncService } from '../services/customerSyncService';
 
 export const useAutoSync = () => {
   const addToast = useToastStore(state => state.addToast);
@@ -111,9 +113,15 @@ export const useAutoSync = () => {
       triggerSync();
     }
 
+    // Start Real-time background syncs
+    templateSyncService.startSync();
+    customerSyncService.startSync();
+
     return () => {
       window.removeEventListener('online', handleOnline);
       clearInterval(intervalId);
+      templateSyncService.stopSync();
+      customerSyncService.stopSync();
     };
   }, []);
 };

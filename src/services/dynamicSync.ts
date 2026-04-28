@@ -95,6 +95,9 @@ export const dynamicSyncService = {
             } else if (tableName === config.countsTableName) {
               idCol = config.mappings.counts?.id || 'ID';
               tsCol = config.mappings.counts?.timestamp || 'TIMESTAMP';
+            } else if (tableName === 'PLANTILLAS_CORREOS' || tableName === 'PLANTILLAS_MENSAJES' || tableName === 'CLIENTES') {
+              idCol = 'ID';
+              tsCol = 'TIMESTAMP';
             }
           }
 
@@ -103,6 +106,7 @@ export const dynamicSyncService = {
             
             // Asegurar que el ID y el Timestamp se incluyan siempre
             row['id'] = r.id; // Supabase standard
+            row['ID'] = r.id; // Legacy/Compat standard
             row['TIMESTAMP'] = new Date(r.timestamp).toISOString();
             
             // Si hay mapeo, asegurar que las columnas mapeadas también tengan los valores
