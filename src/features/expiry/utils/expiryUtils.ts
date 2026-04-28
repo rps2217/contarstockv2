@@ -208,10 +208,10 @@ export const handlePrintSelectedEvents = (items: any[]) => {
     hideHeader: true,
     content: itemsHtml,
     footer: `
-      <div style="width: 100%; display: flex; flex-direction: column; align-items: center; margin-top: 8px;">
+      <div style="width: 100%; display: flex; flex-direction: column; align-items: center; margin-top: 1px;">
         <svg id="frc_barcode" style="max-width: 100%; height: auto;"></svg>
-        <div style="font-weight: 900; font-size: 14px; margin-top: 2px;">FRC: ${firstFrc}</div>
-        <div style="font-size: 9px; font-weight: bold; margin-top: 4px;">FECHA: ${fechaGeneracion}</div>
+        <div style="font-weight: 900; font-size: 14px; margin-top: 0px;">FRC: ${firstFrc}</div>
+        <div style="font-size: 9px; font-weight: bold; margin-top: 1px;">FECHA: ${fechaGeneracion}</div>
       </div>`,
     scripts: `
       <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
@@ -224,9 +224,9 @@ export const handlePrintSelectedEvents = (items: any[]) => {
                 format: "CODE128",
                 lineColor: "#000",
                 width: 2.0,
-                height: 60,
+                height: 30,
                 displayValue: false,
-                margin: 10
+                margin: 0
               });
             }
           } catch (e) {
