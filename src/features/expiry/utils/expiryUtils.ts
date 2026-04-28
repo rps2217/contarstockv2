@@ -185,6 +185,7 @@ export const handlePrintLabels = (processedScans: any[]) => {
 export const handlePrintSelectedEvents = (items: any[]) => {
   const now = new Date();
   const fechaGeneracion = format(now, "dd/MM/yyyy HH:mm");
+  const firstFrc = items[0]?.frc || 'N/A';
 
   const itemsHtml = items.map(item => `
     <div class="ticket-item" style="border-bottom: 2px dashed #888; padding: 12px 0; page-break-inside: avoid;">
@@ -205,7 +206,36 @@ export const handlePrintSelectedEvents = (items: any[]) => {
   PrintService.printTicket({
     title: "CONTROL DE EVENTOS",
     content: itemsHtml,
-    footer: `<div style="font-weight: 900; font-size: 18px; margin-bottom: 8px; border: 2px solid #000; padding: 4px; display: inline-block;">TOTAL ITEMS: ${items.length}</div><br>FECHA: ${fechaGeneracion}<br><div style="margin-top: 10px; font-style: italic;">*** FIN DE REPORTE ***</div>`
+    footer: `
+      <div style="width: 100%; display: flex; flex-direction: column; align-items: center; margin-bottom: 10px;">
+        <svg id="frc_barcode"></svg>
+        <div style="font-weight: 900; font-size: 14px; margin-top: 2px;">FRC: ${firstFrc}</div>
+      </div>
+      <div style="font-size: 12px; font-weight: bold;">FECHA: ${fechaGeneracion}</div>
+      <div style="margin-top: 10px; font-style: italic; font-size: 10px;">*** FIN DE REPORTE ***</div>`,
+    scripts: `
+      <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+      <script>
+        window.onload = function() {
+          try {
+            const frc = "${firstFrc}";
+            if (frc && frc !== 'N/A') {
+              JsBarcode("#frc_barcode", frc, {
+                format: "CODE128",
+                lineColor: "#000",
+                width: 2.5,
+                height: 50,
+                displayValue: false,
+                margin: 0
+              });
+            }
+          } catch (e) {
+            console.error("Error generating FRC barcode", e);
+          }
+          setTimeout(() => { window.print(); }, 500);
+        };
+      </script>
+    `
   });
 };
 
