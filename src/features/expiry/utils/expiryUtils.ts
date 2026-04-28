@@ -188,31 +188,31 @@ export const handlePrintSelectedEvents = (items: any[]) => {
   const firstFrc = items[0]?.frc || 'N/A';
 
   const itemsHtml = items.map(item => `
-    <div class="ticket-item" style="border-bottom: 2px dashed #888; padding: 12px 0; page-break-inside: avoid;">
-      <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%; line-height: 1.3;">
-        <span style="font-size: 16px; font-weight: 900; word-break: break-word; display: block; width: 100%; margin-bottom: 4px;">${(item.productName || 'N/A').toUpperCase()}</span>
+    <div class="ticket-item" style="border-bottom: 1px dashed #bbb; padding: 4px 0; page-break-inside: avoid;">
+      <div style="line-height: 1.1;">
+        <span style="font-size: 11px; font-weight: 700; word-break: break-word; display: block; width: 100%; margin-bottom: 2px;">${(item.productName || 'N/A').toUpperCase()}</span>
       </div>
-      <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%; line-height: 1.3; font-size: 14px; margin-top: 4px; font-weight: bold;">
-        <span>SKU: <strong>${item.barcode || 'N/A'}</strong></span>
-        <span style="background: #000; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 15px;">CANT: <strong>${item.quantity || 0}</strong></span>
+      <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; line-height: 1.1; font-size: 10px; font-weight: 600;">
+        <span>SKU: ${item.barcode || 'N/A'}</span>
+        <span style="background: #000; color: #fff; padding: 1px 4px; border-radius: 2px; font-size: 11px;">CANT: ${item.quantity || 0}</span>
       </div>
-      <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%; line-height: 1.3; font-size: 12px; color: #000; margin-top: 4px; text-transform: uppercase; font-weight: bold;">
-        <span>FRC: ${item.frc || 'N/A'}</span>
+      <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; line-height: 1.1; font-size: 10px; color: #000; margin-top: 2px; text-transform: uppercase;">
+        <span>FRC: <strong style="font-size: 11px;">${item.frc || 'N/A'}</strong></span>
         <span>DST: ${item.destino || 'N/A'}</span>
       </div>
     </div>
   `).join('');
 
   PrintService.printTicket({
-    title: "CONTROL DE EVENTOS",
+    title: "", // Removido por solicitud del usuario
     content: itemsHtml,
     footer: `
-      <div style="width: 100%; display: flex; flex-direction: column; align-items: center; margin-bottom: 10px;">
-        <svg id="frc_barcode"></svg>
-        <div style="font-weight: 900; font-size: 14px; margin-top: 2px;">FRC: ${firstFrc}</div>
-      </div>
-      <div style="font-size: 12px; font-weight: bold;">FECHA: ${fechaGeneracion}</div>
-      <div style="margin-top: 10px; font-style: italic; font-size: 10px;">*** FIN DE REPORTE ***</div>`,
+      <div style="width: 100%; display: flex; flex-direction: column; align-items: center; margin-top: 10px;">
+        <svg id="frc_barcode" style="width: 100%; max-width: 250px;"></svg>
+        <div style="font-weight: 900; font-size: 14px; margin-top: 1px;">FRC: ${firstFrc}</div>
+        <div style="font-size: 9px; font-weight: bold; margin-top: 6px;">FECHA: ${fechaGeneracion}</div>
+        <div style="margin-top: 4px; font-style: italic; font-size: 8px;">*** FIN DE REPORTE ***</div>
+      </div>`,
     scripts: `
       <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
       <script>
@@ -223,8 +223,8 @@ export const handlePrintSelectedEvents = (items: any[]) => {
               JsBarcode("#frc_barcode", frc, {
                 format: "CODE128",
                 lineColor: "#000",
-                width: 2.5,
-                height: 50,
+                width: 2.2,
+                height: 45,
                 displayValue: false,
                 margin: 0
               });
