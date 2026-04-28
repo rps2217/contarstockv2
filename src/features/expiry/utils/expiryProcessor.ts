@@ -1,31 +1,10 @@
-import { differenceInDays, isPast, isBefore, addDays, parseISO, startOfMonth, addMonths, endOfMonth, isWithinInterval } from 'date-fns';
-import { format } from 'date-fns';
+
+import { parseISO, endOfMonth, format, startOfMonth, addMonths, isWithinInterval, isPast } from 'date-fns';
 import { es } from 'date-fns/locale/es';
 import { Product, Provider } from '../../../types';
-import { ExpiryItem, ExpiryStatus } from '../../../store/useExpiryStore';
+import { ExpiryItem } from '../../../store/useExpiryStore';
 import { normalizeSku, normalizeIdentity } from '../../../services/utils';
-
-export const getExpiryStatus = (expiry: Date | null, withdrawalDate: Date | null, now: Date): ExpiryStatus => {
-  if (!expiry) return 'safe';
-  if (isPast(expiry)) return 'expired';
-  
-  const criticalThreshold = addDays(now, 30);
-  if (isBefore(expiry, criticalThreshold)) return 'critical';
-  
-  const currentMonthStart = startOfMonth(now);
-  const currentMonthEnd = endOfMonth(now);
-  if (withdrawalDate && (isPast(withdrawalDate) || isWithinInterval(withdrawalDate, { start: currentMonthStart, end: currentMonthEnd }))) {
-    return 'withdrawal';
-  }
-  
-  const startOfNextMonth = startOfMonth(addMonths(now, 1));
-  const endOfFourMonths = endOfMonth(addMonths(now, 4));
-  if (isWithinInterval(expiry, { start: startOfNextMonth, end: endOfFourMonths })) {
-    return 'next_expiry';
-  }
-  
-  return 'safe';
-};
+import { evaluateExpiry, ExpiryPolicy } from '../domain/expiryEngine';
 
 export const processExpiryItem = (
   item: any, 
@@ -33,33 +12,18 @@ export const processExpiryItem = (
   providerMap: Map<string, Provider>, 
   now: Date
 ): ExpiryItem => {
+  // 1. DETERMINACIÓN DE LA FECHA DE VENCIMIENTO
   let expiry: Date | null = null;
-  
-  /**
-   * ALGORITMO DE DETERMINACIÓN DE VENCIMIENTO (Regla de Negocio)
-   * Prioridad 1: Mes (mm) y Año (yyyy) -> Último día del mes (new Date(yyyy, mm, 0))
-   * Prioridad 2: Objeto fecha (expiryDateObj) -> Se usa tal cual
-   * Prioridad 3: String de fecha (expiryDate) -> Si es el día 1, se asume mes completo y se mueve al fin de mes.
-   */
   if (item.mm && item.yyyy) {
-    // mm es 1-indexed (1=Ene, 12=Dic). 
-    // new Date(año, mes, 0) devuelve el ultimo dia del mes anterior al "mes" indicado.
-    // Ej: new Date(2026, 4, 0) -> 30 de abril de 2026.
-    expiry = new Date(Number(item.yyyy), Number(item.mm), 0);
+    expiry = endOfMonth(new Date(Number(item.yyyy), Number(item.mm) - 1));
   } else if (item.expiryDateObj) {
     expiry = item.expiryDateObj;
   } else if (item.expiryDate) {
     const parsed = parseISO(item.expiryDate);
-    // Si la fecha es el dia 1 del mes, asumimos que representa el mes completo (vence fin de ese mes)
-    if (parsed.getDate() === 1) {
-      expiry = endOfMonth(parsed);
-    } else {
-      expiry = parsed;
-    }
+    expiry = parsed.getDate() === 1 ? endOfMonth(parsed) : parsed;
   }
 
-  const isValidStr = (val: any) => typeof val === 'string' && val.trim() !== '' && val.trim().toUpperCase() !== 'N/A' && val.trim().toUpperCase() !== 'PRODUCTO DESCONOCIDO';
-
+  // 2. RESOLUCIÓN DE PRODUCTO Y PROVEEDOR (IDENTIDAD)
   const product = productMap.get(normalizeSku(item.barcode));
   
   // ESTRATEGIA DE RESOLUCIÓN DE NOMBRE (Source of Truth: Catálogo Maestro)
@@ -70,61 +34,30 @@ export const processExpiryItem = (
   const supplierRut = product?.supplierRut ? normalizeIdentity(product.supplierRut) : null;
   const supplierName = product?.supplier ? normalizeIdentity(product.supplier) : null;
   
-  // Intento de match por RUT, con respaldo por nombre
   let provider = supplierRut ? providerMap.get(supplierRut) : null;
-  
   if (!provider && supplierName) {
-    // Buscar en el providerMap por nombre normalizado
     for (const p of Array.from(providerMap.values())) {
-        if (p.name && normalizeIdentity(p.name) === supplierName) {
-            provider = p;
-            break;
-        }
+      if (p.name && normalizeIdentity(p.name) === supplierName) {
+        provider = p;
+        break;
+      }
     }
   }
   
-  let withdrawalDate: Date | null = null;
-  const hasCanje = provider ? (provider.hasExchange ?? false) : false;
-  
-  /**
-   * ALGORITMO DE CÁLCULO DE FECHA DE RETIRO
-   * 1. Si existe fecha de Control de Calidad (fechaCC), se respeta.
-   * 2. Si no, se toma el vencimiento y se restan los días de la política.
-   * 3. Si no hay política definida, el estándar industrial es 30 días.
-   */
-  if (item.fechaCC) {
-    withdrawalDate = parseISO(item.fechaCC);
-  } else if (expiry) {
-    // Intentar obtener la configuración global dinámica
-    const settings = (window as any).__APP_SETTINGS__;
-    const defaultDays = settings?.withdrawalDaysDefault ?? 30;
-    const daysPolicy = provider?.withdrawalDays ?? defaultDays; 
-    withdrawalDate = addDays(expiry, -daysPolicy);
-  }
+  // 3. APLICACIÓN DE POLÍTICAS DE NEGOCIO (DOMAIN ENGINE)
+  const policy: ExpiryPolicy = {
+    withdrawalDays: provider?.withdrawalDays || 30,
+    hasCanje: provider?.hasExchange ?? false
+  };
 
-  const status = getExpiryStatus(expiry, withdrawalDate, now);
-  const daysLeft = expiry ? differenceInDays(expiry, now) : 0;
-  const estado = !withdrawalDate 
+  const evaluation = evaluateExpiry(expiry, policy, now, item.quantity || 1);
+
+  // 4. CONSTRUCCIÓN DEL OBJETO DE INTERFAZ
+  const estado = !evaluation.withdrawalDate 
     ? "" 
-    : `${hasCanje ? "Canje" : "Merma"} ${format(withdrawalDate, 'MMM yyyy', { locale: es })}`;
-
-  let riskScore = 0;
-  let lifePercent = 100;
-  if (expiry) {
-    const timeScore = Math.max(0, 60 - (daysLeft / 3)); 
-    const commercialScore = hasCanje ? 10 : 25;
-    const volumeScore = Math.min(15, (item.quantity || 1) * 0.3);
-    riskScore = Math.round(timeScore + commercialScore + volumeScore);
-    if (isPast(expiry)) riskScore = 100;
-    
-    // Calculate simple life percent (assuming 365 days total shelf life for visualization if unknown)
-    // If we have a creation date or similar, we could calculate accurate total shelf life.
-    // For now, we'll use a heuristic: 100% at 365 days, 0% at 0 days.
-    lifePercent = Math.max(0, Math.min(100, (daysLeft / 365) * 100));
-  }
+    : `${policy.hasCanje ? "Canje" : "Merma"} ${format(evaluation.withdrawalDate, 'MMM yyyy', { locale: es })}`;
 
   const providerName = (provider?.name || product?.supplier || item.providerName || 'N/A').trim().toUpperCase();
-
   const observaciones = item.observaciones || '';
 
   const _searchIndex = `${item.barcode || ''} ${productName} ${providerName} ${item.batch || ''} ${item.frc || ''} ${observaciones}`.toLowerCase();
@@ -135,17 +68,17 @@ export const processExpiryItem = (
     providerName,
     observaciones,
     category: product?.category || 'GENERAL',
-    withdrawalDays: provider?.withdrawalDays || 0,
-    hasCanje,
-    status,
-    daysLeft,
+    withdrawalDays: policy.withdrawalDays,
+    hasCanje: policy.hasCanje,
+    status: evaluation.status,
+    daysLeft: evaluation.daysLeft,
     expiryDateObj: expiry,
-    withdrawalDate,
+    withdrawalDate: evaluation.withdrawalDate,
     location: item.location || 'N/A',
     estado,
     quantity: item.quantity || 1,
-    riskScore,
-    lifePercent,
+    riskScore: evaluation.riskScore,
+    lifePercent: evaluation.lifePercent,
     price: product?.price || 0,
     frc: item.frc || '',
     syncStatus: item.syncStatus,
