@@ -209,8 +209,8 @@ export const handlePrintSelectedEvents = (items: any[]) => {
     content: itemsHtml,
     footer: `
       <div style="width: 100%; display: flex; flex-direction: column; align-items: center; margin-top: 8px;">
-        <svg id="frc_barcode" style="width: 100%; max-width: 280px;"></svg>
-        <div style="font-weight: 900; font-size: 14px; margin-top: 1px;">FRC: ${firstFrc}</div>
+        <svg id="frc_barcode" style="max-width: 100%; height: auto;"></svg>
+        <div style="font-weight: 900; font-size: 14px; margin-top: 2px;">FRC: ${firstFrc}</div>
         <div style="font-size: 9px; font-weight: bold; margin-top: 4px;">FECHA: ${fechaGeneracion}</div>
       </div>`,
     scripts: `
@@ -223,10 +223,10 @@ export const handlePrintSelectedEvents = (items: any[]) => {
               JsBarcode("#frc_barcode", frc, {
                 format: "CODE128",
                 lineColor: "#000",
-                width: 2.8,
-                height: 50,
+                width: 2.0,
+                height: 60,
                 displayValue: false,
-                margin: 0
+                margin: 10
               });
             }
           } catch (e) {
