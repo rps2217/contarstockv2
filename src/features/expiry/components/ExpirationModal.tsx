@@ -43,9 +43,9 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
     }
 
     // 1. INTENTO LOCAL (Instante)
-    const localProduct = productMap[sku];
+    const localProduct = productMap instanceof Map ? productMap.get(sku) : productMap[sku];
     if (localProduct) {
-      setProductName(localProduct.name || localProduct.DESCRIPTOR || 'PRODUCTO IDENTIFICADO');
+      setProductName(localProduct.name || localProduct.DESCRIPTOR || localProduct.DESCRIPCION || 'PRODUCTO IDENTIFICADO');
       setIsSearchingCloud(false);
       return;
     }

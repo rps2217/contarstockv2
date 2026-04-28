@@ -62,8 +62,10 @@ export const processExpiryItem = (
 
   const product = productMap.get(normalizeSku(item.barcode));
   
-  // Confiar en el dato normalizado, con respaldo del catálogo si es necesario
-  const productName = (product?.name || item.productName || 'PRODUCTO DESCONOCIDO').trim().toUpperCase();
+  // ESTRATEGIA DE RESOLUCIÓN DE NOMBRE (Source of Truth: Catálogo Maestro)
+  const catalogueName = (product?.name || (product as any)?.DESCRIPTOR || (product as any)?.DESCRIPCION || '').trim();
+  const recordName = (item.productName || item.DESCRIPTOR || item.DESCRIPCION || item.PRODUCTO || '').trim();
+  const productName = (catalogueName || recordName || 'PRODUCTO SIN DESCRIPTOR').toUpperCase();
   
   const supplierRut = product?.supplierRut ? normalizeIdentity(product.supplierRut) : null;
   const supplierName = product?.supplier ? normalizeIdentity(product.supplier) : null;

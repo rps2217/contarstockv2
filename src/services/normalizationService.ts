@@ -81,7 +81,31 @@ export const getMappedValue = (obj: any, fieldKey: keyof typeof ALIASES, userMap
  * Normaliza un registro de vencimiento al esquema rígido de LogiCount
  */
 export const normalizeExpiryRecord = (raw: any, userMappings?: any): NormalizedExpiry => {
+  // 1. Obtener el Barcode (Fundamental)
   const barcode = normalizeSku(String(getMappedValue(raw, 'barcode', userMappings?.barcode) || raw.barcode || ''));
+  
+  // 2. Resolver el Nombre del Producto (Prioridad absoluta)
+  // Intentamos: Mapping Usuario -> Alias Conocidos -> Campos Crudos Comunes -> Valor por defecto
+  let productName = String(
+    getMappedValue(raw, 'name', userMappings?.name) || 
+    raw.productName || 
+    raw.product_name || 
+    raw.DESCRIPTOR || 
+    raw.DESCRIPCION || 
+    raw.PRODUCTO || 
+    'PRODUCTO SIN DESCRIPTOR'
+  ).trim().toUpperCase();
+
+  // 3. Resolver Proveedor
+  const providerName = String(
+    getMappedValue(raw, 'supplier', userMappings?.supplier) || 
+    raw.providerName || 
+    raw.provider_name || 
+    raw.PROVEEDOR || 
+    raw.LABORATORIO || 
+    'N/A'
+  ).trim().toUpperCase();
+
   const mm = Number(getMappedValue(raw, 'mm', userMappings?.mm) || raw.mm || 0);
   const yyyy = Number(getMappedValue(raw, 'yyyy', userMappings?.yyyy) || raw.yyyy || 0);
   
@@ -94,8 +118,8 @@ export const normalizeExpiryRecord = (raw: any, userMappings?: any): NormalizedE
   return {
     id: raw.id || raw.ID || claveUnica,
     barcode,
-    productName: String(getMappedValue(raw, 'name', userMappings?.name) || raw.productName || 'PRODUCTO DESCONOCIDO').trim().toUpperCase(),
-    providerName: String(getMappedValue(raw, 'supplier', userMappings?.supplier) || raw.providerName || 'N/A').trim().toUpperCase(),
+    productName,
+    providerName,
     mm,
     yyyy,
     quantity: Number(getMappedValue(raw, 'quantity', userMappings?.quantity) || raw.quantity || 0),
