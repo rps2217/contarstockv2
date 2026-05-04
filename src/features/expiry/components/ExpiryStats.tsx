@@ -44,24 +44,24 @@ export const ExpiryStats: React.FC<ExpiryStatsProps> = ({
             <button
               key={item.id}
               onClick={() => onStatusClick(item.id)}
-              className={`shrink-0 px-3 py-2 rounded-xl flex items-center gap-2 transition-all border ${
+              className={`shrink-0 px-5 py-3 rounded-2xl flex items-center gap-4 transition-all border ${
                 isSelected
-                  ? item.color === 'rose' ? 'bg-rose-500 border-rose-400 text-white shadow-md' :
-                    item.color === 'amber' ? 'bg-amber-500 border-amber-400 text-white shadow-md' :
-                    item.color === 'indigo' ? 'bg-indigo-500 border-indigo-400 text-white shadow-md' :
-                    item.color === 'blue' ? 'bg-blue-500 border-blue-400 text-white shadow-md' :
-                    'bg-emerald-500 border-emerald-400 text-white shadow-md'
+                  ? item.color === 'rose' ? 'bg-rose-500 border-rose-400 text-white shadow-lg' :
+                    item.color === 'amber' ? 'bg-amber-500 border-amber-400 text-white shadow-lg' :
+                    item.color === 'indigo' ? 'bg-indigo-500 border-indigo-400 text-white shadow-lg' :
+                    item.color === 'blue' ? 'bg-blue-500 border-blue-400 text-white shadow-lg' :
+                    'bg-emerald-500 border-emerald-400 text-white shadow-lg'
                   : theme === 'dark'
                     ? `bg-slate-900/50 border-white/5 text-${item.color}-500 hover:bg-slate-800`
                     : `bg-white border-stone-200 text-${item.color}-600 hover:bg-stone-50 shadow-sm`
               }`}
             >
-              <Icon className={`w-3.5 h-3.5 ${isSelected ? 'text-white' : `text-${item.color}-500`}`} />
-              <div className="flex items-center gap-1">
-                <span className={`text-[11px] font-black leading-none ${isSelected ? 'text-white' : `text-${item.color}-500`}`}>
+              <Icon className={`w-5 h-5 ${isSelected ? 'text-white' : `text-${item.color}-500`}`} />
+              <div className="flex flex-col items-start leading-none -space-y-0.5">
+                <span className={`text-xl font-black italic tracking-tighter ${isSelected ? 'text-white' : `text-${item.color}-500`}`}>
                   {item.count}
                 </span>
-                <span className={`text-[9px] font-bold uppercase tracking-tight leading-none ${isSelected ? 'text-white/80' : 'text-slate-500'}`}>
+                <span className={`text-[10px] font-black uppercase tracking-widest ${isSelected ? 'text-white/80' : 'text-slate-500/80'}`}>
                   {item.label}
                 </span>
               </div>
