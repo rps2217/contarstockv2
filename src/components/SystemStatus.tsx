@@ -94,36 +94,36 @@ export const SystemStatus: React.FC = () => {
 
   if (integrityAlert) {
     alerts.push(
-      <div key="integrity" className="bg-rose-900/80 backdrop-blur-md text-white px-4 py-3 text-[10px] font-black flex items-center gap-3 border border-rose-500/50">
-        <AlertTriangle className="w-4 h-4 text-rose-400" />
-        <span className="uppercase tracking-widest italic">Base de Datos Comprometida: Registros Huérfanos</span>
+      <div key="integrity" className="bg-rose-900/60 backdrop-blur-md text-white px-3 py-1.5 text-[9px] font-bold flex items-center gap-2 rounded-lg border border-rose-500/30">
+        <AlertTriangle className="w-3 h-3 text-rose-400" />
+        <span className="uppercase tracking-wider">Integridad: Registros Huérfanos</span>
       </div>
     );
   }
 
   if (anomalyCount > 0) {
     alerts.push(
-      <div key="anomaly" className="bg-amber-900/80 backdrop-blur-md text-white px-4 py-3 text-[10px] font-black flex items-center gap-3 border border-amber-500/50">
-        <Zap className="w-4 h-4 text-amber-400" />
-        <span className="uppercase tracking-widest">{anomalyCount} Anomalías de Cantidad Detectadas</span>
+      <div key="anomaly" className="bg-amber-900/60 backdrop-blur-md text-white px-3 py-1.5 text-[9px] font-bold flex items-center gap-2 rounded-lg border border-amber-500/30">
+        <Zap className="w-3 h-3 text-amber-400" />
+        <span className="uppercase tracking-wider">{anomalyCount} Anomalías Detectadas</span>
       </div>
     );
   }
 
   if (syncError) {
     alerts.push(
-      <div key="sync-error" className="bg-rose-600 text-white px-4 py-3 text-[10px] font-black flex items-center gap-3 shadow-lg">
-        <RefreshCw className="w-4 h-4" />
-        <span className="uppercase tracking-widest">Error de Sincronización: {syncError}</span>
+      <div key="sync-error" className="bg-rose-600/80 text-white px-3 py-1.5 text-[9px] font-bold flex items-center gap-2 rounded-lg">
+        <RefreshCw className="w-3 h-3" />
+        <span className="uppercase tracking-wider">Error Sinc: {syncError}</span>
       </div>
     );
   }
 
   if (isSyncing) {
     alerts.push(
-      <div key="sync" className="bg-blue-600 text-white px-4 py-3 text-[10px] font-black flex items-center gap-3 shadow-lg">
-        <RefreshCw className="w-4 h-4 animate-spin" />
-        <span className="uppercase tracking-widest">Sincronizando con Nube...</span>
+      <div key="sync" className="bg-blue-600/80 text-white px-3 py-1.5 text-[9px] font-bold flex items-center gap-2 rounded-lg">
+        <RefreshCw className="w-3 h-3 animate-spin" />
+        <span className="uppercase tracking-wider">Sincronizando...</span>
       </div>
     );
   }
@@ -133,10 +133,10 @@ export const SystemStatus: React.FC = () => {
       <div 
         key="pending" 
         onClick={() => navigate('/sync')}
-        className="bg-amber-500 text-white px-4 py-3 text-[10px] font-black flex items-center gap-3 shadow-lg cursor-pointer hover:bg-amber-600 transition-colors pointer-events-auto"
+        className="bg-amber-500/80 text-white px-3 py-1.5 text-[9px] font-bold flex items-center gap-2 rounded-lg cursor-pointer pointer-events-auto"
       >
-        <Database className="w-4 h-4" />
-        <span className="uppercase tracking-widest">{pendingItems} Registros Pendientes</span>
+        <Database className="w-3 h-3" />
+        <span className="uppercase tracking-wider">{pendingItems} Pendientes</span>
       </div>
     );
   }
@@ -144,14 +144,14 @@ export const SystemStatus: React.FC = () => {
   if (isOnline && isSupabaseConnected && latencyMs !== null) {
     const latencyColor = latencyMs < 150 ? 'text-emerald-400' : latencyMs < 400 ? 'text-amber-400' : 'text-rose-400';
     alerts.push(
-      <div key="latency" className="bg-slate-800 text-white px-4 py-3 text-[10px] font-black flex flex-col gap-2 border border-white/5">
-        <div className="flex items-center gap-2">
-          <Activity className={`w-4 h-4 ${latencyColor}`} />
-          <span className="uppercase tracking-widest">Latencia: <span className={latencyColor}>{latencyMs}ms</span></span>
+      <div key="latency" className="bg-slate-900/60 backdrop-blur-md text-white px-3 py-1.5 text-[9px] font-bold flex items-center gap-3 rounded-lg border border-white/5">
+        <div className="flex items-center gap-1.5 px-2 py-0.5 bg-black/20 rounded-md">
+          <Activity className={`w-3 h-3 ${latencyColor}`} />
+          <span className="uppercase tracking-wider">LAT: <span className={latencyColor}>{latencyMs}MS</span></span>
         </div>
-        <div className="flex items-center gap-2">
-          <Cloud className="w-4 h-4 text-sky-400" />
-          <span className="uppercase tracking-widest text-sky-400">Cloud Engine Active</span>
+        <div className="flex items-center gap-1.5">
+          <Cloud className="w-3 h-3 text-sky-400" />
+          <span className="uppercase tracking-wider text-sky-400">Cloud Active</span>
         </div>
       </div>
     );
@@ -159,34 +159,34 @@ export const SystemStatus: React.FC = () => {
 
   if (!isOnline) {
     alerts.push(
-      <div key="net" className="bg-rose-900 text-white px-4 py-3 text-[10px] font-black flex items-center gap-3">
-        <WifiOff className="w-4 h-4" />
-        <span className="uppercase tracking-widest">Modo Local - Sin Red</span>
+      <div key="net" className="bg-rose-900/80 text-white px-3 py-1.5 text-[9px] font-bold flex items-center gap-2 rounded-lg">
+        <WifiOff className="w-3 h-3" />
+        <span className="uppercase tracking-wider">Modo Local</span>
       </div>
     );
   } else if (showBackOnline) {
     alerts.push(
-      <div key="net-back" className="bg-emerald-600 text-white px-4 py-3 text-[10px] font-black flex items-center gap-3 animate-in slide-in-from-top-full duration-500">
-        <Wifi className="w-4 h-4" />
-        <span className="uppercase tracking-widest">Conexión Restaurada</span>
+      <div key="net-back" className="bg-emerald-600 px-3 py-1.5 text-[9px] font-bold flex items-center gap-2 rounded-lg animate-in slide-in-from-top-full">
+        <Wifi className="w-3 h-3" />
+        <span className="uppercase tracking-wider">Online</span>
       </div>
     );
   }
 
   if (batteryLevel !== null && batteryLevel < 20 && !isCharging) {
     alerts.push(
-      <div key="batt" className="bg-amber-500 text-black px-4 py-3 text-[10px] font-black flex items-center gap-3">
-        <BatteryWarning className="w-4 h-4" />
-        <span className="uppercase tracking-widest">Batería al {batteryLevel.toFixed(0)}% - Conecte PDA</span>
+      <div key="batt" className="bg-amber-500 text-black px-3 py-1.5 text-[9px] font-bold flex items-center gap-2 rounded-lg">
+        <BatteryWarning className="w-3 h-3" />
+        <span className="uppercase tracking-wider">Batería {batteryLevel.toFixed(0)}%</span>
       </div>
     );
   }
 
   if (storageCritical) {
     alerts.push(
-      <div key="store" className="bg-rose-950 text-white px-4 py-3 text-[10px] font-black flex items-center gap-3">
-        <HardDrive className="w-4 h-4" />
-        <span className="uppercase tracking-widest">Memoria Crítica - Vacíe Base Local</span>
+      <div key="store" className="bg-rose-950 text-white px-3 py-1.5 text-[9px] font-bold flex items-center gap-2 rounded-lg">
+        <HardDrive className="w-3 h-3" />
+        <span className="uppercase tracking-wider">Memoria Crítica</span>
       </div>
     );
   }
@@ -194,12 +194,8 @@ export const SystemStatus: React.FC = () => {
   if (alerts.length === 0) return null;
 
   return (
-    <div className="w-full p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 pointer-events-auto select-none">
-      {alerts.map((alert, idx) => (
-        <div key={idx} className="overflow-hidden rounded-2xl shadow-sm">
-          {alert}
-        </div>
-      ))}
+    <div className="w-full p-2 flex flex-wrap gap-2 pointer-events-auto select-none overflow-x-auto no-scrollbar">
+      {alerts}
     </div>
   );
 };

@@ -42,33 +42,31 @@ export const ExpiryAlertBanner: React.FC<{ theme: 'dark' | 'light' }> = ({ theme
       exit={{ height: 0, opacity: 0 }}
       className={`w-full overflow-hidden z-[100] border-b ${
         isCritical 
-          ? 'bg-rose-600 border-rose-500 text-white' 
-          : 'bg-amber-500 border-amber-400 text-slate-900'
-      }`}
+          ? 'bg-rose-600/90 border-rose-500 text-white' 
+          : 'bg-amber-500/90 border-amber-400 text-slate-900'
+      } backdrop-blur-sm shadow-lg`}
     >
       <div 
-        className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-between cursor-pointer group"
+        className="max-w-7xl mx-auto px-4 py-1.5 flex items-center justify-between cursor-pointer group"
         onClick={handleGoToManage}
       >
         <div className="flex items-center gap-3">
-          <div className={`p-1 rounded-lg ${isCritical ? 'bg-rose-700' : 'bg-amber-600'}`}>
-            <AlertTriangle className="w-4 h-4 animate-pulse" />
-          </div>
-          <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-3">
-            <span className="text-xs font-black uppercase tracking-tighter">
-              Alerta de Vencimientos
+          <AlertTriangle className={`w-3.5 h-3.5 ${isCritical ? 'text-white' : 'text-slate-800'} animate-pulse`} />
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-black uppercase tracking-widest leading-none">
+              Vencimientos:
             </span>
-            <span className="text-[10px] font-bold opacity-90">
-              Hay {alertCount} productos que requieren atención inmediata
+            <span className="text-[10px] font-bold opacity-90 leading-none">
+              {alertCount} productos requieren atención
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="hidden md:block text-[10px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
-            Ir a Gestionar
+        <div className="flex items-center gap-1">
+          <span className="text-[9px] font-black uppercase tracking-widest opacity-60 group-hover:opacity-100 transition-opacity">
+            Gestionar
           </span>
-          <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+          <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
         </div>
       </div>
     </motion.div>
