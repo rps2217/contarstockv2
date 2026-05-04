@@ -6,10 +6,6 @@ import { expiryRepository } from '../../../repositories/ExpiryRepository';
 import { useAppStore } from '../../../store/mainAppStore';
 
 export interface ComplianceStats {
-  criticalAlertsCount: number;
-  upcomingRetiralsCount: number;
-  totalUnitsAtRisk: number;
-  providerPolicyHealth: number;
   riskItems: {
     barcode: string;
     name: string;
@@ -19,11 +15,6 @@ export interface ComplianceStats {
     providerName: string;
     status: 'critical' | 'warning' | 'protected';
     hasExchange: boolean;
-  }[];
-  statusDistribution: {
-    label: string;
-    value: number;
-    color: string;
   }[];
 }
 
@@ -43,20 +34,11 @@ export const useComplianceData = () => {
       if (p.name) providerMap.set(p.name.toUpperCase(), p);
     });
 
-    let criticalAlertsCount = 0;
-    let upcomingRetiralsCount = 0;
-    let totalUnitsAtRisk = 0;
-    
     const now = new Date();
     const riskItems: ComplianceStats['riskItems'] = [];
-    
-    let criticalCount = 0;
-    let warningCount = 0;
-    let okCount = 0;
 
     expiries.forEach(item => {
       const qty = item.quantity || 0;
-      
       const providerName = item.providerName || '';
       const provider = providerMap.get(providerName.toUpperCase()) || 
                        (providerName ? providerMap.get(providerName) : null);
@@ -75,19 +57,12 @@ export const useComplianceData = () => {
       
       if (daysToWithdraw < 0) {
         status = 'critical';
-        criticalCount++;
-        criticalAlertsCount++;
       } else if (daysToWithdraw <= 10) {
         status = 'warning';
-        warningCount++;
-        upcomingRetiralsCount++;
       } else {
         status = 'protected';
-        okCount++;
       }
 
-      totalUnitsAtRisk += qty;
-      
       riskItems.push({
         barcode: item.barcode,
         name: item.productName,
@@ -100,27 +75,13 @@ export const useComplianceData = () => {
       });
     });
 
-    // Ordenar riesgos por urgencia
+    // Ordenar riesgos por urgencia (días para retiro)
     riskItems.sort((a, b) => a.daysToWithdraw - b.daysToWithdraw);
 
     return {
-      criticalAlertsCount,
-      upcomingRetiralsCount,
-      totalUnitsAtRisk,
-      providerPolicyHealth: providers.length > 0 ? Math.round((providers.filter(p => p.hasExchange).length / providers.length) * 100) : 100,
-      riskItems: riskItems,
-      statusDistribution: [
-        { label: 'Fuera de Plazo', value: criticalCount, color: '#f43f5e' },
-        { label: 'Próximos Retiros', value: warningCount, color: '#f59e0b' },
-        { label: 'En Plazo', value: okCount, color: '#10b981' }
-      ]
+      riskItems
     };
   }, [tableName], {
-    criticalAlertsCount: 0,
-    upcomingRetiralsCount: 0,
-    totalUnitsAtRisk: 0,
-    providerPolicyHealth: 100,
-    riskItems: [],
-    statusDistribution: []
+    riskItems: []
   });
 };

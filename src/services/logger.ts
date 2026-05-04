@@ -66,9 +66,9 @@ const writeLog = async (level: SystemLog['level'], module: string, message: any,
         await db.logs.bulkDelete(keys);
       }
     }
-  } catch (e) {
-    // Fallback silencioso si falla IndexedDB
-    console.warn("Logger persistency failed", e);
+  } catch (e: any) {
+    // Fallback silencioso si falla IndexedDB (ej. cuota excedida o bloqueo)
+    console.warn("Logger persistency failed:", e?.message || e);
   }
 };
 

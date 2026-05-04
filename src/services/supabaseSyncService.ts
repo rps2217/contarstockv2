@@ -148,7 +148,7 @@ export const supabaseSyncService = {
 
           // 2. Detectar error de tabla inexistente (404)
           if ((errMsg.includes("not find") && errMsg.includes("table")) || errMsg.includes("does not exist")) {
-            logger.warn('SYNC', `[Resilience] La tabla ${tableName} no existe en Supabase. Omitiendo sincronización.`);
+            logger.info('SYNC', `[Resilience] La tabla ${tableName} no existe en Supabase. Omitiendo sincronización.`);
             return { success: false, error: `Table '${tableName}' not found`, isMissing: true };
           }
 
@@ -207,16 +207,41 @@ export const supabaseSyncService = {
   },
 
   async deleteRemote(tableName: string, id: string) {
-    try {
-      const { error } = await supabase
-        .from(tableName)
-        .delete()
-        .or(`id.eq.${id},ID.eq.${id},claveUnica.eq.${id}`);
-      
-      if (error) throw error;
-    } catch (e) {
-      logger.error(`SYNC_DELETE_FAIL: ${tableName}`, e);
-      throw e;
+    const filters = [`id.eq.${id}`, `ID.eq.${id}`, `claveUnica.eq.${id}`];
+    let attempts = 0;
+    let currentFilters = [...filters];
+
+    while (attempts < filters.length) {
+      try {
+        const { error } = await supabase
+          .from(tableName)
+          .delete()
+          .or(currentFilters.join(','));
+        
+        if (error) {
+           const errMsg = error.message || '';
+           if (errMsg.includes("column") && (errMsg.includes("not find") || errMsg.includes("does not exist"))) {
+              const match = errMsg.match(/column\s+['"](.*?)['"]/i) || errMsg.match(/['"](.*?)['"]\s+column/i);
+              const missingCol = match ? match[1] : null;
+              
+              if (missingCol) {
+                // Eliminar el filtro que causa problemas
+                currentFilters = currentFilters.filter(f => !f.startsWith(`${missingCol}.`));
+                if (currentFilters.length === 0) break;
+                attempts++;
+                continue;
+              }
+           }
+           throw error;
+        }
+        return;
+      } catch (e: any) {
+        if (attempts >= filters.length - 1) {
+          logger.error(`SYNC_DELETE_FAIL: ${tableName}`, e);
+          throw e;
+        }
+        attempts++;
+      }
     }
   },
 
@@ -252,7 +277,7 @@ export const supabaseSyncService = {
       if (error) {
         const errMsg = error.message || '';
         if (errMsg.includes("not find") && errMsg.includes("table")) {
-          logger.warn('SYNC', `Tabla ${tableName} no encontrada en Supabase. Omitiendo consulta.`);
+          logger.info('SYNC', `Tabla ${tableName} no encontrada en Supabase. Omitiendo consulta.`);
           return { success: false, rows: [], error: 'Table not found', isMissing: true };
         }
         throw error;
@@ -308,7 +333,7 @@ export const supabaseSyncService = {
       try {
         const result = await fetchWithPagination(true, lastSyncDate);
         if (typeof result === 'object' && 'isMissing' in result) {
-           logger.warn('SYNC', `Tabla ${tableName} no encontrada en Supabase. Omitiendo descarga.`);
+           logger.info('SYNC', `Tabla ${tableName} no encontrada en Supabase. Omitiendo descarga.`);
            return { success: false, rows: [], error: 'Table not found', isMissing: true };
         }
         return { success: true, rows: result as any[] };
@@ -328,7 +353,7 @@ export const supabaseSyncService = {
     } catch (e: any) {
       const errMsg = e.message || '';
       if (errMsg.includes("not find") && errMsg.includes("table")) {
-        logger.warn('SYNC', `Tabla ${tableName} no encontrada en Supabase. Omitiendo descarga.`);
+        logger.info('SYNC', `Tabla ${tableName} no encontrada en Supabase. Omitiendo descarga.`);
         return { success: false, rows: [], error: 'Table not found', isMissing: true };
       }
       logger.error(`SYNC_PULL_FAIL: ${tableName}`, e);

@@ -192,8 +192,8 @@ const Dashboard: React.FC = () => {
             
             <div className="flex items-center gap-4">
               <div className="hidden lg:block w-48 h-12">
-                <div style={{ width: 192, height: 48 }}>
-                  <ResponsiveContainer>
+                <div style={{ width: '100%', height: '100%', minWidth: 150, minHeight: 40 }}>
+                  <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={sparklineData}>
                       <Line type="monotone" dataKey="v" stroke="#3b82f6" strokeWidth={3} dot={false} isAnimationActive={true} />
                     </LineChart>
