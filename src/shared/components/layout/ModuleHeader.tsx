@@ -12,6 +12,7 @@ interface ModuleHeaderProps {
   actions?: React.ReactNode;
   theme?: 'dark' | 'light';
   hideTitleOnMobile?: boolean;
+  hideBackButtonOnMobile?: boolean;
 }
 
 export const ModuleHeader: React.FC<ModuleHeaderProps> = ({
@@ -21,7 +22,8 @@ export const ModuleHeader: React.FC<ModuleHeaderProps> = ({
   onBack,
   actions,
   theme = 'dark',
-  hideTitleOnMobile = false
+  hideTitleOnMobile = false,
+  hideBackButtonOnMobile = false
 }) => {
   const navigate = useNavigate();
   const handleBack = onBack || (() => navigate(-1));
@@ -34,7 +36,7 @@ export const ModuleHeader: React.FC<ModuleHeaderProps> = ({
             onClick={handleBack}
             className={`p-3 rounded-2xl transition-all active:scale-90 ${
               theme === 'dark' ? 'bg-white/5 text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-600 hover:text-slate-900'
-            }`}
+            } ${hideBackButtonOnMobile ? 'hidden md:flex' : ''}`}
           >
             <ChevronLeft className="w-6 h-6" />
           </button>

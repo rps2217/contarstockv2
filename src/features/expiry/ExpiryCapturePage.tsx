@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldAlert, Download, Trash2, X, AlertTriangle, Search, CornerDownLeft, Loader2, RefreshCw, AlertCircle } from 'lucide-react';
+import { ShieldAlert, Download, Trash2, X, AlertTriangle, Search, CornerDownLeft, Loader2, RefreshCw, AlertCircle, Home } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useToastStore } from '../../store/useToastStore';
@@ -267,6 +267,7 @@ export const ExpiryCapturePage: React.FC = () => {
       title="Captura Rápida"
       subtitle="Control de Vencimientos"
       hideTitleOnMobile={true}
+      hideBackButtonOnMobile={true}
       onBack={() => navigate('/')}
       actions={
         <div className="hidden md:flex items-center gap-2">
@@ -318,57 +319,49 @@ export const ExpiryCapturePage: React.FC = () => {
   );
 
   const mobileDock = (
-    <div className="md:hidden flex items-center justify-around bg-slate-900/90 backdrop-blur-2xl border border-white/10 px-2 py-3 mb-[max(32px,env(safe-area-inset-bottom)+16px)] mx-4 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.6)]">
+    <div className="md:hidden flex items-center justify-around bg-brand-surface/80 backdrop-blur-3xl border border-white/10 px-4 py-3 mb-[max(32px,env(safe-area-inset-bottom))] mx-6 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+      <button
+        onClick={() => navigate('/')}
+        className="flex flex-col items-center gap-1 text-slate-400 active:scale-125 transition-transform"
+      >
+        <div className="p-3">
+          <Home className="w-6 h-6" />
+        </div>
+      </button>
+
+      <div className="w-[1px] h-8 bg-white/5" />
+
       <button
         onClick={() => setIsSearchActive(!isSearchActive)}
         className={`flex flex-col items-center gap-1 transition-all ${
-          isSearchActive ? 'text-blue-400 scale-110' : 'text-slate-600'
+          isSearchActive ? 'text-blue-400 scale-110' : 'text-slate-500'
         }`}
       >
-        <div className={`p-3 rounded-2xl ${isSearchActive ? 'bg-blue-500/20' : 'bg-white/5'}`}>
+        <div className={`p-3 rounded-2xl ${isSearchActive ? 'bg-blue-500/20' : ''}`}>
           <Search className="w-5 h-5" />
         </div>
-        <span className="text-[8px] font-black tracking-widest uppercase">Buscar</span>
       </button>
 
       <button
         onClick={() => setFilterCritico(!filterCritico)}
         className={`flex flex-col items-center gap-1 transition-all ${
-          filterCritico ? 'text-amber-500 scale-110' : 'text-slate-600'
+          filterCritico ? 'text-amber-500 scale-110' : 'text-slate-500'
         }`}
       >
-        <div className={`p-3 rounded-2xl ${filterCritico ? 'bg-amber-500/20' : 'bg-white/5'}`}>
+        <div className={`p-3 rounded-2xl ${filterCritico ? 'bg-amber-500/20' : ''}`}>
           <ShieldAlert className="w-5 h-5" />
         </div>
-        <span className="text-[8px] font-black tracking-widest uppercase">Críticos</span>
       </button>
 
       <button
         onClick={() => setFilterVencido(!filterVencido)}
         className={`flex flex-col items-center gap-1 transition-all ${
-          filterVencido ? 'text-rose-500 scale-110' : 'text-slate-600'
+          filterVencido ? 'text-rose-500 scale-110' : 'text-slate-500'
         }`}
       >
-        <div className={`p-3 rounded-2xl ${filterVencido ? 'bg-rose-500/20' : 'bg-white/5'}`}>
+        <div className={`p-3 rounded-2xl ${filterVencido ? 'bg-rose-500/20' : ''}`}>
           <AlertTriangle className="w-5 h-5" />
         </div>
-        <span className="text-[8px] font-black tracking-widest uppercase">Vencidos</span>
-      </button>
-
-      <button
-        onClick={() => setIsSyncModalOpen(true)}
-        className={`flex flex-col items-center gap-1 transition-all ${
-          syncStore.incidents.length > 0 ? 'text-rose-500 animate-pulse' : 'text-slate-600'
-        }`}
-      >
-        <div className={`p-3 rounded-2xl ${syncStore.incidents.length > 0 ? 'bg-rose-500/20' : 'bg-white/5'}`}>
-          {syncStore.incidents.length > 0 ? (
-            <AlertCircle className="w-5 h-5" />
-          ) : (
-            <RefreshCw className={`w-5 h-5 ${syncStore.isSyncing ? 'animate-spin' : ''}`} />
-          )}
-        </div>
-        <span className="text-[8px] font-black tracking-widest uppercase">Sync</span>
       </button>
     </div>
   );
