@@ -42,7 +42,7 @@ export const CaptureLayout: React.FC<CaptureLayoutProps> = ({
 
       <div className="flex-1 overflow-hidden flex flex-col max-w-6xl mx-auto w-full">
         {/* INPUT SECTION */}
-        <div className="p-6 border-b border-white/5 bg-slate-950/50 backdrop-blur-md sticky top-0 z-10">
+        <div className="p-3 md:p-6 border-b border-white/5 bg-slate-950/50 backdrop-blur-md sticky top-0 z-10">
           {/* ... existing input code remains same ... */}
           <div className="relative group">
             <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
@@ -82,7 +82,7 @@ export const CaptureLayout: React.FC<CaptureLayoutProps> = ({
         {/* LIST SECTION */}
         <div 
           ref={scrollRef}
-          className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar will-change-scroll transform-gpu"
+          className="flex-1 overflow-y-auto p-3 md:p-6 space-y-4 custom-scrollbar will-change-scroll transform-gpu"
         >
           {list}
           {emptyState}

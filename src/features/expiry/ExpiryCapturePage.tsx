@@ -318,7 +318,7 @@ export const ExpiryCapturePage: React.FC = () => {
   );
 
   const mobileDock = (
-    <div className="md:hidden flex items-center justify-around bg-slate-950/95 backdrop-blur-xl border-t border-white/10 px-2 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+    <div className="md:hidden flex items-center justify-around bg-slate-900/90 backdrop-blur-2xl border border-white/10 px-2 py-3 mb-[max(32px,env(safe-area-inset-bottom)+16px)] mx-4 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.6)]">
       <button
         onClick={() => setIsSearchActive(!isSearchActive)}
         className={`flex flex-col items-center gap-1 transition-all ${
