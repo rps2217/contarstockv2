@@ -165,8 +165,10 @@ const AppContent = () => {
         )}
         
         <main className={`flex-1 relative overflow-hidden transition-all duration-500 ${!isScanningMode ? (isSidebarCollapsed ? 'md:pl-20' : 'md:pl-64') : ''}`}>
-          <SystemStatus />
-          <ExpiryAlertBanner theme={settings.theme} />
+          <div className={isScanningMode ? 'hidden md:block' : ''}>
+            <SystemStatus />
+            <ExpiryAlertBanner theme={settings.theme} />
+          </div>
           
           <ErrorBoundary>
             <AnimatePresence mode="wait">

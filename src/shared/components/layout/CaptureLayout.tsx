@@ -86,15 +86,17 @@ export const CaptureLayout: React.FC<CaptureLayoutProps> = ({
         {/* LIST SECTION */}
         <div 
           ref={scrollRef}
-          className="flex-1 overflow-y-auto p-3 md:p-6 space-y-4 custom-scrollbar will-change-scroll transform-gpu"
+          className="flex-1 overflow-y-auto p-3 md:p-6 space-y-4 custom-scrollbar will-change-scroll transform-gpu pb-32 md:pb-6"
         >
           {list}
           {emptyState}
         </div>
 
         {footer && (
-          <div className="z-10">
-            {footer}
+          <div className="md:relative fixed bottom-0 left-0 right-0 z-50 md:z-auto p-0 md:p-0 pointer-events-none md:pointer-events-auto">
+            <div className="max-w-6xl mx-auto w-full pointer-events-auto">
+              {footer}
+            </div>
           </div>
         )}
       </div>

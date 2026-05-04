@@ -231,22 +231,22 @@ export const EventCapturePage: React.FC = () => {
   );
 
   const mobileDock = (
-    <div className="md:hidden flex items-center bg-brand-surface/80 backdrop-blur-3xl border border-white/10 px-4 py-2 mb-[max(24px,env(safe-area-inset-bottom))] mx-6 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-x-auto no-scrollbar">
-      <div className="flex items-center gap-2 min-w-max mx-auto">
+    <div className="flex items-center bg-brand-surface/90 backdrop-blur-3xl border border-white/10 px-2 py-2 mb-6 mx-6 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden">
+      <div className="flex items-center gap-1 overflow-x-auto no-scrollbar w-full px-2 py-1">
         <button
           onClick={() => navigate('/')}
-          className="flex flex-col items-center gap-1 text-slate-400 active:scale-125 transition-transform"
+          className="flex flex-col items-center gap-1 text-slate-400 active:scale-125 transition-transform shrink-0"
         >
           <div className="p-3">
             <Home className="w-6 h-6" />
           </div>
         </button>
 
-        <div className="w-[1px] h-8 bg-white/5 mx-2" />
+        <div className="w-[1px] h-6 bg-white/10 mx-1 shrink-0" />
 
         <button
           onClick={() => setIsSearchActive(!isSearchActive)}
-          className={`flex flex-col items-center gap-1 transition-all ${
+          className={`flex flex-col items-center gap-1 transition-all shrink-0 ${
             isSearchActive ? 'text-blue-400 scale-110' : 'text-slate-500'
           }`}
         >
@@ -255,12 +255,11 @@ export const EventCapturePage: React.FC = () => {
           </div>
         </button>
 
-        {/* Espacio para más acciones futuras */}
-        <div className="w-[1px] h-8 bg-white/5 mx-2" />
+        <div className="w-[1px] h-6 bg-white/10 mx-1 shrink-0" />
         
         <button
           onClick={() => {}} // Placeholder or refresh
-          className="flex flex-col items-center gap-1 text-slate-500"
+          className="flex flex-col items-center gap-1 text-slate-500 shrink-0"
         >
           <div className="p-3">
              <RefreshCw className="w-5 h-5" />
