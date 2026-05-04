@@ -108,7 +108,7 @@ export const useComplianceData = () => {
       upcomingRetiralsCount,
       totalUnitsAtRisk,
       providerPolicyHealth: providers.length > 0 ? Math.round((providers.filter(p => p.hasExchange).length / providers.length) * 100) : 100,
-      riskItems: riskItems.slice(0, 50),
+      riskItems: riskItems,
       statusDistribution: [
         { label: 'Fuera de Plazo', value: criticalCount, color: '#f43f5e' },
         { label: 'Próximos Retiros', value: warningCount, color: '#f59e0b' },
