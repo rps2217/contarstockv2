@@ -258,7 +258,7 @@ export const ExpiryCapturePage: React.FC = () => {
   const rowVirtualizer = useVirtualizer({
     count: sortedItems.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 110,
+    estimateSize: () => 130,
     overscan: 10
   });
 
@@ -342,7 +342,7 @@ export const ExpiryCapturePage: React.FC = () => {
                   style={{
                     height: `${virtualRow.size}px`,
                     transform: `translateY(${virtualRow.start}px)`,
-                    paddingBottom: '16px' // Espaciado entre items
+                    paddingBottom: '24px' // Espaciado entre items para evitar solapamiento en móvil
                   }}
                 >
                   <ExpiryItemRow 
