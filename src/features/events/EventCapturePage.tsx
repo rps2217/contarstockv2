@@ -21,13 +21,14 @@ import { useToastStore } from '../../store/useToastStore';
 import { db } from '../../db';
 import { normalizeSku } from '../../services/utils';
 import { useEventDatabase } from './hooks/useEventDatabase';
-import { useCaptureSession } from '../../hooks/useCaptureSession';
+import { useScannerEngine } from '../../hooks/useScannerEngine';
 import { SoundFX } from '../../services/audio';
-import { useFeedbackSystem } from '../../hooks/useFeedbackSystem';
+import { useSyncStore } from '../../store/useSyncStore';
 import { CameraScanner } from '../../components/CameraScanner';
 import { ScannerTargetOverlay } from '../../shared/components/scanner/ScannerTargetOverlay';
 import { ModuleHeader } from '../../shared/components/layout/ModuleHeader';
 import { CaptureLayout } from '../../shared/components/layout/CaptureLayout';
+import { SyncDiagnosticsPanel } from '../sync/components/SyncDiagnosticsPanel';
 
 const EVENT_TYPES = [
   'DIF. PED.',
@@ -93,16 +94,9 @@ export const EventCapturePage: React.FC = () => {
   const navigate = useNavigate();
   const { addToast } = useToastStore.getState();
   const { state, actions } = useEventDatabase();
-  const { feedback, trigger } = useFeedbackSystem(400);
+  const syncStore = useSyncStore();
+  const engine = useScannerEngine();
   
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [scannedBarcode, setScannedBarcode] = useState('');
-  const [productName, setProductName] = useState('');
-  const [providerName, setProviderName] = useState('');
-  
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isSearchActive, setIsSearchActive] = useState(false);
-
   // Form State
   const [selectedEvent, setSelectedEvent] = useState('DIF. PED.');
   const [quantity, setQuantity] = useState(1);
@@ -112,42 +106,8 @@ export const EventCapturePage: React.FC = () => {
   const [destino, setDestino] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleScan = useCallback(async (code: string) => {
-    if (!code) return;
-    
-    if (isSearchActive) {
-      setSearchQuery(code);
-      return;
-    }
-
-    if (isModalOpen) return;
-
-    trigger('success');
-    const normalizedCode = normalizeSku(code);
-    setScannedBarcode(normalizedCode);
-    
-    const product = await db.products.get(normalizedCode);
-    setProductName(product?.name || 'Producto Desconocido');
-    setProviderName(product?.supplier || 'N/A');
-    
-    setIsModalOpen(true);
-  }, [isModalOpen, trigger, isSearchActive]);
-
-  const {
-    inputValue,
-    setInputValue,
-    isCameraActive,
-    setIsCameraActive,
-    isProcessing,
-    inputRef,
-    handleManualSubmit
-  } = useCaptureSession({
-    onScan: handleScan,
-    isEnabled: !isModalOpen
-  });
-
   const handleSubmit = async () => {
-    if (!scannedBarcode || !selectedEvent || !quantity || !frc || !nguia || isSubmitting) {
+    if (!engine.scannedBarcode || !selectedEvent || !quantity || !frc || !nguia || isSubmitting) {
       addToast('Completa todos los campos obligatorios', 'error');
       return;
     }
@@ -165,9 +125,9 @@ export const EventCapturePage: React.FC = () => {
       localStorage.setItem('last_nguia', nguia);
 
       await actions.handleAddItem({
-        barcode: scannedBarcode,
-        productName,
-        providerName,
+        barcode: engine.scannedBarcode,
+        productName: engine.product?.name || 'Producto Desconocido',
+        providerName: engine.product?.supplier || 'N/A',
         event: selectedEvent,
         quantity,
         frc,
@@ -179,7 +139,9 @@ export const EventCapturePage: React.FC = () => {
       
       SoundFX.play('success');
       addToast('Evento registrado correctamente', 'success');
-      setIsModalOpen(false);
+      
+      engine.resetScanner();
+      
       // Reset some fields but keep FRC/Guía
       setQuantity(1);
       setTraspaso('');
@@ -217,10 +179,23 @@ export const EventCapturePage: React.FC = () => {
       onBack={() => navigate('/')}
       actions={
         <div className="hidden md:flex items-center gap-2">
+          {/* SYNC STATUS INDICATOR - Desktop */}
           <button
-            onClick={() => setIsSearchActive(!isSearchActive)}
+            onClick={() => engine.setIsSyncModalOpen(true)}
+            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+              syncStore.incidents.length > 0 
+                ? 'bg-rose-500 text-white animate-pulse shadow-[0_0_15px_rgba(244,63,94,0.4)]' 
+                : 'bg-white/5 text-slate-400 hover:bg-white/10'
+            }`}
+            title="Sincronización"
+          >
+             <RefreshCw className={`w-5 h-5 ${syncStore.isSyncing ? 'animate-spin' : ''}`} />
+          </button>
+
+          <button
+            onClick={() => engine.setIsSearchActive(!engine.isSearchActive)}
             className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-              isSearchActive ? 'bg-blue-600 text-white' : 'bg-white/5 text-slate-400 active:bg-white/10'
+              engine.isSearchActive ? 'bg-blue-600 text-white' : 'bg-white/5 text-slate-400 active:bg-white/10'
             }`}
           >
             <Search className="w-5 h-5" />
@@ -231,7 +206,7 @@ export const EventCapturePage: React.FC = () => {
   );
 
   const mobileDock = (
-    <div className="flex items-center bg-brand-surface/90 backdrop-blur-3xl border border-white/10 px-2 py-2 mb-6 mx-6 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden">
+    <div className="flex items-center bg-brand-surface/95 backdrop-blur-3xl border border-white/10 px-2 py-2 mb-6 mx-6 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden">
       <div className="flex items-center gap-1 overflow-x-auto no-scrollbar w-full px-2 py-1">
         <button
           onClick={() => navigate('/')}
@@ -245,12 +220,12 @@ export const EventCapturePage: React.FC = () => {
         <div className="w-[1px] h-6 bg-white/10 mx-1 shrink-0" />
 
         <button
-          onClick={() => setIsSearchActive(!isSearchActive)}
+          onClick={() => engine.setIsSearchActive(!engine.isSearchActive)}
           className={`flex flex-col items-center gap-1 transition-all shrink-0 ${
-            isSearchActive ? 'text-blue-400 scale-110' : 'text-slate-500'
+            engine.isSearchActive ? 'text-blue-400 scale-110' : 'text-slate-500 hover:text-slate-400'
           }`}
         >
-          <div className={`p-3 rounded-2xl ${isSearchActive ? 'bg-blue-500/20' : ''}`}>
+          <div className={`p-3 rounded-2xl ${engine.isSearchActive ? 'bg-blue-500/20' : ''}`}>
             <Search className="w-5 h-5" />
           </div>
         </button>
@@ -258,11 +233,13 @@ export const EventCapturePage: React.FC = () => {
         <div className="w-[1px] h-6 bg-white/10 mx-1 shrink-0" />
         
         <button
-          onClick={() => {}} // Placeholder or refresh
-          className="flex flex-col items-center gap-1 text-slate-500 shrink-0"
+          onClick={() => engine.setIsSyncModalOpen(true)}
+          className={`flex flex-col items-center gap-1 transition-all shrink-0 ${
+            syncStore.incidents.length > 0 ? 'text-rose-500 animate-pulse' : 'text-slate-500 hover:text-slate-400'
+          }`}
         >
-          <div className="p-3">
-             <RefreshCw className="w-5 h-5" />
+          <div className={`p-3 rounded-2xl ${syncStore.incidents.length > 0 ? 'bg-rose-500/20' : ''}`}>
+             <RefreshCw className={`w-5 h-5 ${syncStore.isSyncing ? 'animate-spin text-blue-400' : ''}`} />
           </div>
         </button>
       </div>
@@ -271,7 +248,7 @@ export const EventCapturePage: React.FC = () => {
 
   const cameraArea = (
     <AnimatePresence>
-      {isCameraActive && (
+      {engine.capture.isCameraActive && (
         <motion.div 
           initial={{ height: 0, opacity: 0 }}
           animate={{ height: 260, opacity: 1 }}
@@ -279,12 +256,12 @@ export const EventCapturePage: React.FC = () => {
           className="bg-black overflow-hidden border-b-2 border-blue-500/50 shadow-inner relative"
         >
           <CameraScanner 
-            onScan={handleScan} 
-            onClose={() => setIsCameraActive(false)} 
+            onScan={engine.handleScan} 
+            onClose={() => engine.capture.setIsCameraActive(false)} 
             inline={true}
             isTriggered={true}
           />
-          <ScannerTargetOverlay feedback={feedback} />
+          <ScannerTargetOverlay feedback={engine.feedback} />
         </motion.div>
       )}
     </AnimatePresence>
@@ -296,13 +273,13 @@ export const EventCapturePage: React.FC = () => {
         header={header}
         footer={mobileDock}
         extra={cameraArea}
-        inputValue={isSearchActive ? searchQuery : inputValue}
-        onInputChange={isSearchActive ? setSearchQuery : setInputValue}
-        onInputSubmit={handleManualSubmit}
-        onCameraToggle={() => setIsCameraActive(!isCameraActive)}
-        inputPlaceholder={isSearchActive ? "Buscar..." : "Escanear o digitar..."}
-        inputRef={inputRef}
-        readOnly={isModalOpen}
+        inputValue={engine.isSearchActive ? engine.searchQuery : engine.capture.inputValue}
+        onInputChange={engine.isSearchActive ? engine.setSearchQuery : engine.capture.setInputValue}
+        onInputSubmit={engine.capture.handleManualSubmit}
+        onCameraToggle={() => engine.capture.setIsCameraActive(!engine.capture.isCameraActive)}
+        inputPlaceholder={engine.isSearchActive ? "Buscar..." : "Escanear o digitar..."}
+        inputRef={engine.capture.inputRef}
+        readOnly={engine.isModalOpen}
         list={
           <div className="space-y-4">
             {sortedItems.map((item) => (
@@ -325,13 +302,13 @@ export const EventCapturePage: React.FC = () => {
 
       {/* MODAL */}
       <AnimatePresence>
-        {isModalOpen && (
+        {engine.isModalOpen && (
           <div className="fixed inset-0 z-[2000] flex items-end justify-center pointer-events-none">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setIsModalOpen(false)}
+              onClick={() => engine.setIsModalOpen(false)}
               className="absolute inset-0 bg-black/60 backdrop-blur-sm pointer-events-auto"
             />
             
@@ -348,12 +325,12 @@ export const EventCapturePage: React.FC = () => {
                 <div className="flex-1 min-w-0 pr-4">
                   <span className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-500">Evento</span>
                   <p className="text-base font-black text-white truncate leading-tight mt-1 uppercase italic tracking-tighter tabular-nums">
-                    {scannedBarcode}
+                    {engine.scannedBarcode}
                   </p>
-                  <p className="text-[11px] text-slate-500 mt-0.5 truncate uppercase font-bold">{productName}</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5 truncate uppercase font-bold">{engine.product?.name}</p>
                 </div>
                 <button 
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => engine.setIsModalOpen(false)}
                   className="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center text-slate-400 active:bg-white/10 active:scale-95 transition-all"
                 >
                   <X className="w-6 h-6" />
@@ -480,6 +457,10 @@ export const EventCapturePage: React.FC = () => {
           </div>
         )}
       </AnimatePresence>
+      <SyncDiagnosticsPanel 
+        isOpen={engine.isSyncModalOpen} 
+        onClose={() => engine.setIsSyncModalOpen(false)} 
+      />
     </>
   );
 };

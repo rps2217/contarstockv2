@@ -1,8 +1,7 @@
 
 import React, { ErrorInfo, ReactNode } from 'react';
-import { AlertTriangle, RefreshCw, Home, Terminal, ZapOff, Database, Download } from 'lucide-react';
+import { RefreshCw, Home, Terminal, ZapOff, Download } from 'lucide-react';
 import { logger } from '../services/logger';
-import { resetFirestore } from '../lib/firebase';
 import { db } from '../db';
 
 interface Props {
@@ -43,12 +42,6 @@ export class ErrorBoundary extends React.Component<Props, State> {
  // Forzamos la recarga rompiendo el caché con un timestamp
  sessionStorage.clear();
  window.location.href = window.location.pathname + '?v=' + Date.now();
- };
-
- handleRepairDatabase = async () => {
- if (confirm("⚠️ REPARACIÓN DE BASE DE DATOS ⚠️\n\nEsto cerrará la conexión y limpiará la caché interna para solucionar errores internos de renderizado.\n\n¿Deseas continuar?")) {
- await resetFirestore();
- }
  };
 
  handleRescueData = async () => {
@@ -135,13 +128,6 @@ export class ErrorBoundary extends React.Component<Props, State> {
  </button>
  
  <button 
- onClick={this.handleRepairDatabase}
- className="w-full bg-amber-500 hover:bg-amber-600 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 uppercase tracking-widest text-[10px]"
- >
- <Database className="w-4 h-4" /> Reparar Base de Datos
- </button>
-
- <button 
  onClick={this.handleHardReset}
  className="w-full bg-black hover:bg-gray-800 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 uppercase tracking-widest text-[10px]"
  >
@@ -157,5 +143,3 @@ export class ErrorBoundary extends React.Component<Props, State> {
  return (this as any).props.children;
  }
 }
-
-// Forced GitHub sync

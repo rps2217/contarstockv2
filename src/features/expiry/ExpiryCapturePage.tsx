@@ -7,7 +7,7 @@ import { useToastStore } from '../../store/useToastStore';
 import { db } from '../../db';
 import { normalizeSku } from '../../services/utils';
 import { useExpiryDatabase, ExpiryItem } from './hooks/useExpiryDatabase';
-import { useCaptureSession } from '../../hooks/useCaptureSession';
+import { useScannerEngine } from '../../hooks/useScannerEngine';
 import { SoundFX } from '../../services/audio';
 import { differenceInDays, format } from 'date-fns';
 import { useFeedbackSystem } from '../../hooks/useFeedbackSystem';
@@ -119,89 +119,28 @@ export const ExpiryCapturePage: React.FC = () => {
   const navigate = useNavigate();
   const { addToast } = useToastStore.getState();
   const { state, actions } = useExpiryDatabase();
-  const { feedback, trigger } = useFeedbackSystem(400);
   const syncStore = useSyncStore();
+  const engine = useScannerEngine();
   
   const parentRef = useRef<HTMLDivElement>(null);
   
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
-  const [scannedBarcode, setScannedBarcode] = useState('');
-  const [productName, setProductName] = useState('');
-  const [providerName, setProviderName] = useState('');
-  const [providerPolicy, setProviderPolicy] = useState<{ days: number, hasCanje: boolean } | null>(null);
   const [selectedMm, setSelectedMm] = useState<number | null>(null);
-  const [selectedYyyy, setSelectedYyyy] = useState<number | null>(new Date().getFullYear() + 1); // Predicción inteligente
+  const [selectedYyyy, setSelectedYyyy] = useState<number | null>(new Date().getFullYear() + 1); 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isSearchActive, setIsSearchActive] = useState(false);
   const [filterVencido, setFilterVencido] = useState(false);
   const [filterCritico, setFilterCritico] = useState(false);
 
-  const handleScan = useCallback(async (code: string) => {
-    if (!code) return;
-    
-    if (isSearchActive) {
-      setSearchQuery(code);
-      return;
-    }
-
-    // Si ya hay un modal abierto con el mismo código, ignoramos para evitar duplicados rápidos
-    if (isModalOpen && scannedBarcode === normalizeSku(code)) return;
-
-    trigger('success');
-    const normalizedCode = normalizeSku(code);
-    setScannedBarcode(normalizedCode);
-    
-    const product = await db.products.get(normalizedCode);
-    setProductName(product?.name || 'Producto Desconocido');
-    setProviderName(product?.supplier || 'N/A');
-    
-    // Buscar política del proveedor
-    if (product?.supplierRut) {
-      const provider = await db.providers.get(normalizeSku(product.supplierRut));
-      if (provider) {
-        setProviderPolicy({ 
-          days: provider.withdrawalDays || 0, 
-          hasCanje: provider.hasExchange || false 
-        });
-      } else {
-        setProviderPolicy(null);
-      }
-    } else {
-      setProviderPolicy(null);
-    }
-    
-    // No reseteamos el año si ya está seleccionado para agilizar capturas masivas
-    setSelectedMm(null);
-    setIsModalOpen(true);
-    
-    // Si la cámara estaba activa, la mantenemos activa pero "pausamos" el procesamiento visual si es necesario
-    // En este caso, el motor óptico tiene su propio debounce de 1s
-  }, [isModalOpen, scannedBarcode, trigger, isSearchActive]);
-
-  const {
-    inputValue,
-    setInputValue,
-    isCameraActive,
-    setIsCameraActive,
-    inputRef,
-    handleManualSubmit
-  } = useCaptureSession({
-    onScan: handleScan,
-    isEnabled: true // Mantener siempre habilitado para captura constante
-  });
-
   const handleSimpleSubmit = async () => {
-    if (!scannedBarcode || !selectedMm || !selectedYyyy || isSubmitting) return;
+    if (!engine.scannedBarcode || !selectedMm || !selectedYyyy || isSubmitting) return;
     
     try {
       setIsSubmitting(true);
+      
       await actions.handleAddItem({
-        barcode: scannedBarcode,
-        productName: productName,
-        providerName: providerName,
+        barcode: engine.scannedBarcode,
+        productName: engine.product?.name || 'Producto Desconocido',
+        providerName: engine.product?.supplier || 'N/A',
         mm: selectedMm,
         yyyy: selectedYyyy,
         quantity: 1
@@ -209,7 +148,8 @@ export const ExpiryCapturePage: React.FC = () => {
       
       SoundFX.play('success');
       addToast(navigator.onLine ? 'Vencimiento registrado' : 'Guardado en cola', navigator.onLine ? 'success' : 'info');
-      setIsModalOpen(false);
+      engine.resetScanner();
+      setSelectedMm(null);
     } catch (error) {
       SoundFX.play('error');
       addToast('Error al guardar', 'error');
@@ -243,16 +183,16 @@ export const ExpiryCapturePage: React.FC = () => {
       });
     }
 
-    if (searchQuery || inputValue) {
-      const q = (searchQuery || inputValue).toLowerCase();
+    const q = (engine.isSearchActive ? engine.searchQuery : engine.capture.inputValue).toLowerCase();
+    if (q) {
       items = items.filter(item => 
         item.barcode.toLowerCase().includes(q) || 
         (item.productName && item.productName.toLowerCase().includes(q))
       );
     }
 
-    return items.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-  }, [state.allItems, filterVencido, filterCritico, searchQuery, inputValue]);
+    return items.sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
+  }, [state.allItems, filterVencido, filterCritico, engine.isSearchActive, engine.searchQuery, engine.capture.inputValue]);
 
   // VIRTUALIZADOR DE ALTO RENDIMIENTO
   const rowVirtualizer = useVirtualizer({
@@ -273,7 +213,7 @@ export const ExpiryCapturePage: React.FC = () => {
         <div className="hidden md:flex items-center gap-2">
           {/* SYNC STATUS INDICATOR - Desktop */}
           <button
-            onClick={() => setIsSyncModalOpen(true)}
+            onClick={() => engine.setIsSyncModalOpen(true)}
             className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
               syncStore.incidents.length > 0 
                 ? 'bg-rose-500 text-white animate-pulse shadow-[0_0_15px_rgba(244,63,94,0.4)]' 
@@ -290,9 +230,9 @@ export const ExpiryCapturePage: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setIsSearchActive(!isSearchActive)}
+            onClick={() => engine.setIsSearchActive(!engine.isSearchActive)}
             className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-              isSearchActive ? 'bg-blue-600 text-white' : 'bg-white/5 text-slate-400 active:bg-white/10'
+              engine.isSearchActive ? 'bg-blue-600 text-white' : 'bg-white/5 text-slate-400 active:bg-white/10'
             }`}
           >
             <Search className="w-5 h-5" />
@@ -319,7 +259,7 @@ export const ExpiryCapturePage: React.FC = () => {
   );
 
   const mobileDock = (
-    <div className="flex items-center bg-brand-surface/90 backdrop-blur-3xl border border-white/10 px-2 py-2 mb-6 mx-6 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden">
+    <div className="flex items-center bg-brand-surface/95 backdrop-blur-3xl border border-white/10 px-2 py-2 mb-6 mx-6 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden">
       <div className="flex items-center gap-1 overflow-x-auto no-scrollbar w-full px-2 py-1">
         <button
           onClick={() => navigate('/')}
@@ -333,20 +273,23 @@ export const ExpiryCapturePage: React.FC = () => {
         <div className="w-[1px] h-6 bg-white/10 mx-1 shrink-0" />
 
         <button
-          onClick={() => setIsSearchActive(!isSearchActive)}
+          onClick={() => engine.setIsSearchActive(!engine.isSearchActive)}
           className={`flex flex-col items-center gap-1 transition-all shrink-0 ${
-            isSearchActive ? 'text-blue-400 scale-110' : 'text-slate-500'
+            engine.isSearchActive ? 'text-blue-400 scale-110' : 'text-slate-500 hover:text-slate-400'
           }`}
         >
-          <div className={`p-3 rounded-2xl ${isSearchActive ? 'bg-blue-500/20' : ''}`}>
+          <div className={`p-3 rounded-2xl ${engine.isSearchActive ? 'bg-blue-500/20' : ''}`}>
             <Search className="w-5 h-5" />
           </div>
         </button>
 
         <button
-          onClick={() => setFilterCritico(!filterCritico)}
+          onClick={() => {
+            setFilterCritico(!filterCritico);
+            if (filterVencido) setFilterVencido(false);
+          }}
           className={`flex flex-col items-center gap-1 transition-all shrink-0 ${
-            filterCritico ? 'text-amber-500 scale-110' : 'text-slate-500'
+            filterCritico ? 'text-amber-500 scale-110' : 'text-slate-500 hover:text-slate-400'
           }`}
         >
           <div className={`p-3 rounded-2xl ${filterCritico ? 'bg-amber-500/20' : ''}`}>
@@ -355,9 +298,12 @@ export const ExpiryCapturePage: React.FC = () => {
         </button>
 
         <button
-          onClick={() => setFilterVencido(!filterVencido)}
+          onClick={() => {
+            setFilterVencido(!filterVencido);
+            if (filterCritico) setFilterCritico(false);
+          }}
           className={`flex flex-col items-center gap-1 transition-all shrink-0 ${
-            filterVencido ? 'text-rose-500 scale-110' : 'text-slate-500'
+            filterVencido ? 'text-rose-500 scale-110' : 'text-slate-500 hover:text-slate-400'
           }`}
         >
           <div className={`p-3 rounded-2xl ${filterVencido ? 'bg-rose-500/20' : ''}`}>
@@ -368,13 +314,13 @@ export const ExpiryCapturePage: React.FC = () => {
         <div className="w-[1px] h-6 bg-white/10 mx-1 shrink-0" />
         
         <button
-          onClick={() => setIsSyncModalOpen(true)}
+          onClick={() => engine.setIsSyncModalOpen(true)}
           className={`flex flex-col items-center gap-1 transition-all shrink-0 ${
-            syncStore.incidents.length > 0 ? 'text-rose-500 animate-pulse' : 'text-slate-500'
+            syncStore.incidents.length > 0 ? 'text-rose-500 animate-pulse' : 'text-slate-500 hover:text-slate-400'
           }`}
         >
           <div className={`p-3 rounded-2xl ${syncStore.incidents.length > 0 ? 'bg-rose-500/20' : ''}`}>
-             <RefreshCw className={`w-5 h-5 ${syncStore.isSyncing ? 'animate-spin' : ''}`} />
+             <RefreshCw className={`w-5 h-5 ${syncStore.isSyncing ? 'animate-spin text-blue-400' : ''}`} />
           </div>
         </button>
       </div>
@@ -383,7 +329,7 @@ export const ExpiryCapturePage: React.FC = () => {
 
   const cameraArea = (
     <AnimatePresence>
-      {isCameraActive && (
+      {engine.capture.isCameraActive && (
         <motion.div 
           initial={{ height: 0, opacity: 0 }}
           animate={{ height: 260, opacity: 1 }}
@@ -391,12 +337,12 @@ export const ExpiryCapturePage: React.FC = () => {
           className="bg-black overflow-hidden border-b-2 border-blue-500/50 shadow-inner relative"
         >
           <CameraScanner 
-            onScan={(code) => { handleScan(code); }} 
-            onClose={() => setIsCameraActive(false)} 
+            onScan={(code) => { engine.handleScan(code); }} 
+            onClose={() => engine.capture.setIsCameraActive(false)} 
             inline={true}
             isTriggered={true}
           />
-          <ScannerTargetOverlay feedback={feedback} />
+          <ScannerTargetOverlay feedback={engine.feedback} />
         </motion.div>
       )}
     </AnimatePresence>
@@ -408,14 +354,14 @@ export const ExpiryCapturePage: React.FC = () => {
         header={header}
         footer={mobileDock}
         extra={cameraArea}
-        inputValue={isSearchActive ? searchQuery : inputValue}
-        onInputChange={isSearchActive ? setSearchQuery : setInputValue}
-        onInputSubmit={handleManualSubmit}
-        onCameraToggle={() => setIsCameraActive(!isCameraActive)}
-        inputPlaceholder={isSearchActive ? "Buscar..." : "Escanear o digitar..."}
-        inputRef={inputRef}
+        inputValue={engine.isSearchActive ? engine.searchQuery : engine.capture.inputValue}
+        onInputChange={engine.isSearchActive ? engine.setSearchQuery : engine.capture.setInputValue}
+        onInputSubmit={engine.capture.handleManualSubmit}
+        onCameraToggle={() => engine.capture.setIsCameraActive(!engine.capture.isCameraActive)}
+        inputPlaceholder={engine.isSearchActive ? "Buscar..." : "Escanear o digitar..."}
+        inputRef={engine.capture.inputRef}
         scrollRef={parentRef}
-        readOnly={isModalOpen}
+        readOnly={engine.isModalOpen}
         list={
           <div 
             className="relative w-full"
@@ -453,14 +399,14 @@ export const ExpiryCapturePage: React.FC = () => {
 
       {/* DYNAMIC FORM MODAL - MOBILE OPTIMIZED DRAWER */}
       <AnimatePresence>
-        {isModalOpen && (
+        {engine.isModalOpen && (
           <div className="fixed inset-0 z-[2000] flex items-end justify-center pointer-events-none">
             {/* Backdrop sutil solo para áreas fuera del drawer pero permitiendo clicks en la cámara si se desea */}
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setIsModalOpen(false)}
+              onClick={() => engine.setIsModalOpen(false)}
               className="absolute inset-0 bg-black/40 backdrop-blur-sm pointer-events-auto"
             />
             
@@ -478,21 +424,21 @@ export const ExpiryCapturePage: React.FC = () => {
                 <div className="flex-1 min-w-0 pr-4">
                   <span className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-warning">Escaneado</span>
                   <p className="text-base font-black text-white truncate leading-tight mt-1 uppercase italic tracking-tighter tabular-nums">
-                    {scannedBarcode}
+                    {engine.scannedBarcode}
                   </p>
-                  <p className="text-[11px] text-slate-500 mt-0.5 truncate uppercase font-bold">{productName}</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5 truncate uppercase font-bold">{engine.product?.name}</p>
                 </div>
                 <div className="flex items-center gap-3">
-                  {providerPolicy && (
+                  {engine.providerPolicy && (
                     <div className={`px-3 py-1.5 rounded-xl border-2 text-[10px] font-black uppercase tracking-tighter flex flex-col items-center leading-none ${
-                      providerPolicy.hasCanje ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30' : 'bg-amber-500/10 text-amber-500 border-amber-500/30'
+                      engine.providerPolicy.hasCanje ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30' : 'bg-amber-500/10 text-amber-500 border-amber-500/30'
                     }`}>
-                      <span className="mb-1">{providerPolicy.hasCanje ? 'CANJE' : 'MERMA'}</span>
-                      <span className="text-xs">{providerPolicy.days}D</span>
+                      <span className="mb-1">{engine.providerPolicy.hasCanje ? 'CANJE' : 'MERMA'}</span>
+                      <span className="text-xs">{engine.providerPolicy.days}D</span>
                     </div>
                   )}
                   <button 
-                    onClick={() => setIsModalOpen(false)}
+                    onClick={() => engine.setIsModalOpen(false)}
                     className="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center text-slate-400 active:bg-white/10 active:scale-95 transition-all"
                   >
                     <X className="w-6 h-6" />
@@ -550,12 +496,12 @@ export const ExpiryCapturePage: React.FC = () => {
                 {/* ACTION BUTTON */}
                 <div className="pt-2">
                   <button
-                    disabled={!scannedBarcode || !selectedMm || !selectedYyyy || isSubmitting}
+                    disabled={!engine.scannedBarcode || !selectedMm || !selectedYyyy || isSubmitting}
                     onClick={handleSimpleSubmit}
                     className={`w-full py-7 rounded-[1.5rem] font-black text-2xl uppercase tracking-[0.2em] flex items-center justify-center gap-4 transition-all active:scale-95 shadow-2xl ${
                       isSubmitting 
                         ? 'bg-slate-800 text-slate-500 cursor-wait'
-                        : scannedBarcode && selectedMm && selectedYyyy
+                        : engine.scannedBarcode && selectedMm && selectedYyyy
                           ? 'bg-white text-black hover:bg-blue-50 shadow-blue-500/20'
                           : 'bg-white/5 text-slate-700 border border-white/5 cursor-not-allowed'
                     }`}
@@ -577,8 +523,8 @@ export const ExpiryCapturePage: React.FC = () => {
       </AnimatePresence>
 
       <SyncDiagnosticsPanel 
-        isOpen={isSyncModalOpen} 
-        onClose={() => setIsSyncModalOpen(false)} 
+        isOpen={engine.isSyncModalOpen} 
+        onClose={() => engine.setIsSyncModalOpen(false)} 
       />
     </>
   );

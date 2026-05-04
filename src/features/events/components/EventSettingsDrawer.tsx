@@ -4,7 +4,6 @@ import { X, Settings2, Layout, RefreshCw, Trash2 } from 'lucide-react';
 import { EventPreferences } from '../hooks/useEventDatabase';
 import { CsvImporter } from '../../../components/CsvImporter';
 import { FirebirdImporter } from './FirebirdImporter';
-import { resetFirestore } from '../../../lib/firebase';
 
 interface EventSettingsDrawerProps {
   isOpen: boolean;
@@ -15,7 +14,6 @@ interface EventSettingsDrawerProps {
   onClearLocalData?: () => void;
   onBulkImport?: (items: any[]) => Promise<boolean>;
   onClearAllEvents?: () => Promise<void>;
-  onExtractFromFirebase?: () => Promise<void>;
   theme?: 'dark' | 'light';
 }
 
@@ -28,7 +26,6 @@ export const EventSettingsDrawer: React.FC<EventSettingsDrawerProps> = ({
   onClearLocalData,
   onBulkImport,
   onClearAllEvents,
-  onExtractFromFirebase,
   theme = 'dark'
 }) => {
   return (
@@ -79,7 +76,6 @@ export const EventSettingsDrawer: React.FC<EventSettingsDrawerProps> = ({
                   <FirebirdImporter 
                     onImport={onBulkImport} 
                     onClearAll={onClearAllEvents} 
-                    onExtractFromFirebase={onExtractFromFirebase}
                   />
                 </section>
               )}

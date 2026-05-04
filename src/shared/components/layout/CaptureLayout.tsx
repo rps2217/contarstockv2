@@ -39,10 +39,10 @@ export const CaptureLayout: React.FC<CaptureLayoutProps> = ({
   extra
 }) => {
   return (
-    <div className={`h-screen flex flex-col overflow-hidden ${theme === 'dark' ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'}`}>
+    <div className={`h-screen h-[100dvh] flex flex-col overflow-hidden ${theme === 'dark' ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'}`}>
       {header}
 
-      <div className="flex-1 overflow-hidden flex flex-col max-w-6xl mx-auto w-full">
+      <div className="flex-1 overflow-hidden flex flex-col max-w-6xl mx-auto w-full relative">
         {/* INPUT SECTION */}
         <div className="p-3 md:p-6 border-b border-white/5 bg-slate-950/50 backdrop-blur-md sticky top-0 z-10">
           {/* ... existing input code remains same ... */}
@@ -93,8 +93,8 @@ export const CaptureLayout: React.FC<CaptureLayoutProps> = ({
         </div>
 
         {footer && (
-          <div className="md:relative fixed bottom-0 left-0 right-0 z-50 md:z-auto p-0 md:p-0 pointer-events-none md:pointer-events-auto">
-            <div className="max-w-6xl mx-auto w-full pointer-events-auto">
+          <div className="md:relative fixed bottom-0 left-0 right-0 z-[100] md:z-auto p-0 md:p-0 pointer-events-none md:pointer-events-auto">
+            <div className="max-w-6xl mx-auto w-full pointer-events-auto font-sans">
               {footer}
             </div>
           </div>

@@ -157,24 +157,6 @@ export const ProvidersPage: React.FC = () => {
     }
   };
 
-  const handleRepairPolicies = async () => {
-    if (!confirm('¿Deseas realizar un rescate profundo de políticas desde Firebase? Esto buscará la información original (días específicos y canje) y la sincronizará con tu base de datos actual en Supabase.')) return;
-    
-    try {
-      toast.loading('Iniciando rescate profundo...');
-      const { repairProvidersFromFirebase } = await import('../../../services/syncManager');
-      const { repaired } = await repairProvidersFromFirebase();
-      
-      toast.dismiss();
-      toast.success(`Rescate completado: ${repaired} políticas sincronizadas.`);
-      loadProviders();
-    } catch (e: any) {
-      toast.dismiss();
-      toast.error('Error en rescate: ' + e.message);
-      console.error(e);
-    }
-  };
-
   const filteredProviders = providers.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || 
                           p.rut.toLowerCase().includes(search.toLowerCase());
@@ -228,15 +210,6 @@ export const ProvidersPage: React.FC = () => {
           theme={theme}
           extraActions={
             <div className="flex gap-2">
-              <button
-                onClick={handleRepairPolicies}
-                className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all border ${
-                  theme === 'dark' ? 'bg-rose-500/10 border-rose-500/20 text-rose-500 hover:bg-rose-500/20' : 'bg-rose-50 border-rose-200 text-rose-600 hover:bg-rose-100'
-                }`}
-                title="Rescate Profundo (Desde Firebase)"
-              >
-                <ShieldCheck className="w-5 h-5" />
-              </button>
               <button
                 onClick={handleDownloadFromCloud}
                 className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all border ${

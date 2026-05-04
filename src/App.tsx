@@ -86,8 +86,10 @@ const AppContent = () => {
     else if (path.startsWith('/counting')) mode = 'counting';
     else if (path.startsWith('/events')) mode = 'events';
 
+    const isScanning = scanningPaths.some(p => path.startsWith(p));
+
     return {
-      isScanningMode: scanningPaths.some(p => path.startsWith(p)),
+      isScanningMode: isScanning,
       systemMode: mode
     };
   }, [location.pathname]);
@@ -165,7 +167,8 @@ const AppContent = () => {
         )}
         
         <main className={`flex-1 relative overflow-hidden transition-all duration-500 ${!isScanningMode ? (isSidebarCollapsed ? 'md:pl-20' : 'md:pl-64') : ''}`}>
-          <div className={isScanningMode ? 'hidden md:block' : ''}>
+          {/* Ocultar indicadores en móvil durante escaneo */}
+          <div className={isScanningMode ? 'hidden sm:block' : ''}>
             <SystemStatus />
             <ExpiryAlertBanner theme={settings.theme} />
           </div>

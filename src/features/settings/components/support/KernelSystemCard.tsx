@@ -2,17 +2,14 @@
 import React, { useState } from 'react';
 import { RefreshCw, Trash2, Layout, Database, ArrowUpCircle } from 'lucide-react';
 import { SettingsCard, SettingsCardHeader, SettingsButton } from '../common/SettingsElements';
-import { resetFirestore } from '../../../../lib/firebase';
 import { InitializationService } from '../../../../services/initializationService';
 import { supabaseSyncService } from '../../../../services/supabaseSyncService';
-import { migrateCatalogsFromFirebase } from '../../../../services/syncManager';
 import { exportToCSV } from '../../../../services/export';
 import { toast } from 'sonner';
 
 export const KernelSystemCard: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  const [isMigrating, setIsMigrating] = useState(false);
 
   const handleSyncConfig = async () => {
     setIsSyncing(true);
@@ -24,25 +21,6 @@ export const KernelSystemCard: React.FC = () => {
       toast.error('Error al conocer configuración');
     } finally {
       setIsSyncing(false);
-    }
-  };
-
-  const handleMigrateCatalogs = async () => {
-    setIsMigrating(true);
-    try {
-      toast.info('Iniciando migración directa de Catálogos (Firebase → Supabase)...');
-      const counts = await migrateCatalogsFromFirebase((msg) => console.log(`[Migration] ${msg}`));
-      toast.success(`Migración completada: ${counts.products} productos y ${counts.providers} proveedores respaldados en Supabase.`);
-    } catch (error: any) {
-      toast.error(`Error en migración: ${error.message}`);
-    } finally {
-      setIsMigrating(false);
-    }
-  };
-
-  const handleRepairConnection = async () => {
-    if (confirm("⚠️ REPARACIÓN DE BASE DE DATOS ⚠️\n\nEsto cerrará la conexión y limpiará la caché de base de datos para solucionar errores internos de renderizado.\n\nLa aplicación se recargará automáticamente.\n\n¿Deseas continuar?")) {
-      await resetFirestore();
     }
   };
 
@@ -90,21 +68,7 @@ export const KernelSystemCard: React.FC = () => {
           variant="primary"
         />
 
-        <SettingsButton 
-          onClick={handleMigrateCatalogs}
-          isLoading={isMigrating}
-          label="Migrar Catálogos (Firebase → Supabase)"
-          icon={ArrowUpCircle}
-          variant="primary"
-        />
-
-        <div className="grid grid-cols-2 gap-3">
-          <SettingsButton 
-            onClick={handleRepairConnection}
-            label="Reparar Conexión"
-            icon={RefreshCw}
-            variant="outline"
-          />
+        <div className="grid grid-cols-1 gap-3">
           <SettingsButton 
             onClick={() => window.location.reload()}
             label="Reiniciar Kernel"

@@ -7,13 +7,11 @@ import { motion, AnimatePresence } from 'motion/react';
 interface FirebirdImporterProps {
   onImport: (items: any[]) => Promise<boolean>;
   onClearAll: () => Promise<void>;
-  onExtractFromFirebase?: () => Promise<void>;
 }
 
 export const FirebirdImporter: React.FC<FirebirdImporterProps> = ({ 
   onImport, 
-  onClearAll, 
-  onExtractFromFirebase 
+  onClearAll
 }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [showConfirmClear, setShowConfirmClear] = useState(false);
@@ -140,21 +138,6 @@ export const FirebirdImporter: React.FC<FirebirdImporterProps> = ({
             </p>
           )}
         </div>
-
-        {onExtractFromFirebase && (
-          <div className="mt-6 pt-6 border-t border-white/5">
-            <p className="text-[10px] text-brand-warning font-black uppercase tracking-widest mb-3 opacity-80">
-              ¿Tus datos están en la nube antigua?
-            </p>
-            <button
-              onClick={onExtractFromFirebase}
-              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-brand-warning/10 hover:bg-brand-warning text-brand-warning hover:text-black border border-brand-warning/30 rounded-xl font-black uppercase tracking-widest text-xs transition-all active:scale-95 shadow-lg shadow-brand-warning/5"
-            >
-              <Share2 className="w-4 h-4" />
-              Extraer Datos de Firebase (EVENTOS)
-            </button>
-          </div>
-        )}
       </div>
 
       <AnimatePresence>
