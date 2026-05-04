@@ -576,6 +576,23 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
   }
 };
 
+export const syncCatalogs = async (onProgress?: (msg: string) => void): Promise<{ products: number, providers: number }> => {
+  if (onProgress) onProgress("Sincronizando catálogos maestros...");
+  
+  try {
+    const [productsCount, providersCount] = await Promise.all([
+      importProductsFromCloud(),
+      importProvidersFromCloud()
+    ]);
+    
+    if (onProgress) onProgress(`✓ Catálogos actualizados: ${productsCount} productos, ${providersCount} proveedores.`);
+    return { products: productsCount, providers: providersCount };
+  } catch (e: any) {
+    logger.warn("CATALOG_SYNC_PARTIAL_FAIL", e.message);
+    throw e;
+  }
+};
+
 export const importProductsFromCloud = async (): Promise<number> => {
   try {
     const config = getSettings().cloudConfig;
@@ -609,13 +626,6 @@ export const importProductsFromCloud = async (): Promise<number> => {
 
     // Actualizar Timestamp para esta tabla específica
     setTableSyncTime(tableName, Date.now());
-
-    // DESCARGAR TAMBIÉN PROVEEDORES (Políticas de Retiro)
-    try {
-      await importProvidersFromCloud(); // Sin fecha manual, el mismo import detectará su tabla
-    } catch (e) {
-      console.warn("Fallo descarga de proveedores:", e);
-    }
 
     return products.length;
   } catch (e: any) {

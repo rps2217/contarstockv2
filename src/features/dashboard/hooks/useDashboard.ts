@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useState, useEffect } from 'react';
 import { ScanRepository } from '../../../repositories/ScanRepository';
+import { AnalyticService } from '../../../services/analyticService';
 import { ExpectedOrderRepository } from '../../../repositories/ExpectedOrderRepository';
 import { db } from '../../../db';
 import { syncFSM, SyncStatus } from '../../../services/syncFSM';
@@ -13,10 +14,12 @@ export const useDashboard = () => {
   }, []);
   
   const stats = useLiveQuery(async () => {
-    const today = new Date().setHours(0,0,0,0);
-    const scansToday = await ScanRepository.getScansToday(today);
-    const pendingSync = await ScanRepository.getPendingSyncCount();
-    const history = await ScanRepository.getScansLast7Days();
+    const [scansToday, history, pendingSync] = await Promise.all([
+      AnalyticService.getTotalUnitsToday(),
+      AnalyticService.getWeeklyTrend(),
+      ScanRepository.getPendingSyncCount()
+    ]);
+    
     return { scansToday, pendingSync, history };
   }, [], { scansToday: 0, pendingSync: 0, history: [] });
 

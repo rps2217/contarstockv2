@@ -9,8 +9,6 @@ import { SystemStatus } from '@/components/SystemStatus';
 import { SystemNotch } from '@/components/SystemNotch';
 import { Box, Loader2, Database, WifiOff, Cpu, RefreshCw, Plus } from 'lucide-react';
 import { lazyWithRetry } from '@/services/lazyLoad';
-import { initPersistence } from '@/services/backupService';
-import { InitializationService, InitStep } from '@/services/initializationService';
 import { ToastContainer } from '@/shared/components/ui/ToastContainer';
 import { TaskProgressIndicator } from '@/shared/components/TaskProgressIndicator';
 import { OfflineBanner } from '@/components/OfflineBanner';
@@ -49,25 +47,21 @@ const CustomersPage = lazyWithRetry(() => import('@/features/customers/Customers
 import { ExpiryAlertBanner } from '@/features/expiry/components/ExpiryAlertBanner';
 import { OnboardingOverlay } from '@/shared/components/core/OnboardingOverlay';
 
+import { useAppInit } from '@/hooks/useAppInit';
 import { motion, AnimatePresence } from 'motion/react';
 
 const AppContent = () => {
   const location = useLocation();
   const { settings, isStartSessionModalOpen, setStartSessionModalOpen } = useAppStore();
-  const [bootState, setBootState] = useState<'initializing' | 'ready'>('initializing');
-  const [initStep, setInitStep] = useState<InitStep>('idle');
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const { bootState, initStep, isAuthenticated, handleLoginSuccess } = useAppInit();
+  
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [hasInitialRedirected, setHasInitialRedirected] = useState(false);
   const navigate = useNavigate();
   
-  // Activar sincronización automática inteligente
+  // Activar hooks globales
   useAutoSync();
-  
-  // Activar detección de escaneo espontáneo (Zero-Click)
   useAutoSession();
-
-  // Activar vigilante de vencimientos proactivo
   useExpiryWatcher();
 
   useEffect(() => {
@@ -83,40 +77,23 @@ const AppContent = () => {
     }
   }, [isAuthenticated, bootState, hasInitialRedirected, settings.defaultStartModule, location.pathname, navigate]);
 
-  const isScanningMode = React.useMemo(() => {
-    const paths = ['/counting/', '/reception', '/expiry/capture', '/events/capture', '/massive/'];
-    return paths.some(p => location.pathname.startsWith(p));
-  }, [location.pathname]);
-
-  const systemMode = React.useMemo(() => {
-    if (location.pathname.startsWith('/expiry')) return 'expiry';
-    if (location.pathname.startsWith('/reception')) return 'reception';
-    if (location.pathname.startsWith('/counting')) return 'counting';
-    if (location.pathname.startsWith('/events')) return 'events';
-    return 'default';
-  }, [location.pathname]);
-
-  useEffect(() => {
-    initPersistence();
-    const authStatus = localStorage.getItem('logicount_auth') === 'true';
-    setIsAuthenticated(authStatus);
+  const { isScanningMode, systemMode } = React.useMemo(() => {
+    const path = location.pathname;
+    const scanningPaths = ['/counting/', '/reception', '/expiry/capture', '/events/capture', '/massive/'];
     
-    if (authStatus) {
-      InitializationService.run((step) => {
-        setInitStep(step);
-        if (step === 'ready') setBootState('ready');
-      });
-    } else {
-      setBootState('ready');
-    }
-  }, [isAuthenticated]);
+    let mode: 'expiry' | 'reception' | 'counting' | 'events' | 'default' = 'default';
+    if (path.startsWith('/expiry')) mode = 'expiry';
+    else if (path.startsWith('/reception')) mode = 'reception';
+    else if (path.startsWith('/counting')) mode = 'counting';
+    else if (path.startsWith('/events')) mode = 'events';
 
-  const themeClasses: Record<string, string> = {
-    'light': 'bg-slate-50 text-slate-900',
-    'dark': 'bg-slate-950 text-slate-100'
-  };
+    return {
+      isScanningMode: scanningPaths.some(p => path.startsWith(p)),
+      systemMode: mode
+    };
+  }, [location.pathname]);
 
-  const currentThemeClass = themeClasses[settings.theme] || themeClasses.dark;
+  const currentThemeClass = settings.theme === 'light' ? 'bg-slate-50 text-slate-900' : 'bg-slate-950 text-slate-100';
 
   if (bootState === 'initializing' && isAuthenticated !== false) {
     return (
@@ -166,7 +143,7 @@ const AppContent = () => {
   if (!isAuthenticated) {
     return (
       <Suspense fallback={null}>
-        <Login onLoginSuccess={() => setIsAuthenticated(true)} />
+        <Login onLoginSuccess={handleLoginSuccess} />
       </Suspense>
     );
   }

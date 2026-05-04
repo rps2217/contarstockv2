@@ -30,24 +30,6 @@ export class ScanRepository {
     return await db.scans.where('synced').equals(0).count();
   }
 
-  static async getScansToday(startOfDay: number): Promise<number> {
-    const scans = await db.scans.where('timestamp').aboveOrEqual(startOfDay).toArray();
-    return scans.reduce((acc, s) => acc + s.quantity, 0);
-  }
-
-  static async getScansLast7Days(): Promise<{ date: string, v: number }[]> {
-    const sevenDaysAgo = new Date().setDate(new Date().getDate() - 7);
-    const scans = await db.scans.where('timestamp').aboveOrEqual(sevenDaysAgo).toArray();
-    
-    const groups: Record<string, number> = {};
-    scans.forEach(s => {
-      const date = new Date(s.timestamp).toISOString().split('T')[0];
-      groups[date] = (groups[date] || 0) + s.quantity;
-    });
-
-    return Object.entries(groups).map(([date, v]) => ({ date, v }));
-  }
-
   static async deleteBySessions(sessionIds: string[]): Promise<void> {
     await db.scans.where('sessionId').anyOf(sessionIds).delete();
   }
