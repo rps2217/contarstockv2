@@ -11,6 +11,7 @@ interface ModuleHeaderProps {
   onBack?: () => void;
   actions?: React.ReactNode;
   theme?: 'dark' | 'light';
+  hideTitleOnMobile?: boolean;
 }
 
 export const ModuleHeader: React.FC<ModuleHeaderProps> = ({
@@ -19,7 +20,8 @@ export const ModuleHeader: React.FC<ModuleHeaderProps> = ({
   icon,
   onBack,
   actions,
-  theme = 'dark'
+  theme = 'dark',
+  hideTitleOnMobile = false
 }) => {
   const navigate = useNavigate();
   const handleBack = onBack || (() => navigate(-1));
@@ -37,7 +39,7 @@ export const ModuleHeader: React.FC<ModuleHeaderProps> = ({
             <ChevronLeft className="w-6 h-6" />
           </button>
           
-          <div className="flex items-center gap-3">
+          <div className={`items-center gap-3 ${hideTitleOnMobile ? 'hidden md:flex' : 'flex'}`}>
             {icon && (
               <div className={`p-3 rounded-2xl ${theme === 'dark' ? 'bg-white/5' : 'bg-slate-100'}`}>
                 {icon}

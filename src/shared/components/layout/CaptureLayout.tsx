@@ -89,7 +89,7 @@ export const CaptureLayout: React.FC<CaptureLayoutProps> = ({
         </div>
 
         {footer && (
-          <div className="p-6 border-t border-white/5 bg-slate-950/80 backdrop-blur-xl">
+          <div className="z-10">
             {footer}
           </div>
         )}
