@@ -6,7 +6,6 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Sidebar } from '@/components/Sidebar';
 import { BottomDock } from '@/components/BottomDock';
 import { SystemStatus } from '@/components/SystemStatus';
-import { SystemNotch } from '@/components/SystemNotch';
 import { Box, Loader2, Database, WifiOff, Cpu, RefreshCw, Plus } from 'lucide-react';
 import { lazyWithRetry } from '@/services/lazyLoad';
 import { ToastContainer } from '@/shared/components/ui/ToastContainer';
@@ -166,10 +165,8 @@ const AppContent = () => {
         )}
         
         <main className={`flex-1 relative overflow-hidden transition-all duration-500 ${!isScanningMode ? (isSidebarCollapsed ? 'md:pl-20' : 'md:pl-64') : ''}`}>
-          <SystemNotch theme={settings.theme} mode={systemMode}>
-            <SystemStatus />
-            <ExpiryAlertBanner theme={settings.theme} />
-          </SystemNotch>
+          <SystemStatus />
+          <ExpiryAlertBanner theme={settings.theme} />
           
           <ErrorBoundary>
             <AnimatePresence mode="wait">

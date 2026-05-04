@@ -18,6 +18,7 @@ interface CaptureLayoutProps {
   inputRef?: React.RefObject<HTMLInputElement>;
   scrollRef?: React.RefObject<HTMLDivElement>;
   readOnly?: boolean;
+  extra?: React.ReactNode;
 }
 
 export const CaptureLayout: React.FC<CaptureLayoutProps> = ({
@@ -34,7 +35,8 @@ export const CaptureLayout: React.FC<CaptureLayoutProps> = ({
   theme = 'dark',
   inputRef,
   scrollRef,
-  readOnly = false
+  readOnly = false,
+  extra
 }) => {
   return (
     <div className={`h-screen flex flex-col overflow-hidden ${theme === 'dark' ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'}`}>
@@ -78,6 +80,8 @@ export const CaptureLayout: React.FC<CaptureLayoutProps> = ({
             </div>
           </div>
         </div>
+
+        {extra}
 
         {/* LIST SECTION */}
         <div 

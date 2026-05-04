@@ -319,51 +319,88 @@ export const ExpiryCapturePage: React.FC = () => {
   );
 
   const mobileDock = (
-    <div className="md:hidden flex items-center justify-around bg-brand-surface/80 backdrop-blur-3xl border border-white/10 px-4 py-3 mb-[max(32px,env(safe-area-inset-bottom))] mx-6 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
-      <button
-        onClick={() => navigate('/')}
-        className="flex flex-col items-center gap-1 text-slate-400 active:scale-125 transition-transform"
-      >
-        <div className="p-3">
-          <Home className="w-6 h-6" />
-        </div>
-      </button>
+    <div className="md:hidden flex items-center bg-brand-surface/80 backdrop-blur-3xl border border-white/10 px-4 py-2 mb-[max(32px,env(safe-area-inset-bottom))] mx-6 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-x-auto no-scrollbar">
+      <div className="flex items-center gap-2 min-w-max mx-auto">
+        <button
+          onClick={() => navigate('/')}
+          className="flex flex-col items-center gap-1 text-slate-400 active:scale-125 transition-transform"
+        >
+          <div className="p-3">
+            <Home className="w-6 h-6" />
+          </div>
+        </button>
 
-      <div className="w-[1px] h-8 bg-white/5" />
+        <div className="w-[1px] h-8 bg-white/5 mx-2" />
 
-      <button
-        onClick={() => setIsSearchActive(!isSearchActive)}
-        className={`flex flex-col items-center gap-1 transition-all ${
-          isSearchActive ? 'text-blue-400 scale-110' : 'text-slate-500'
-        }`}
-      >
-        <div className={`p-3 rounded-2xl ${isSearchActive ? 'bg-blue-500/20' : ''}`}>
-          <Search className="w-5 h-5" />
-        </div>
-      </button>
+        <button
+          onClick={() => setIsSearchActive(!isSearchActive)}
+          className={`flex flex-col items-center gap-1 transition-all ${
+            isSearchActive ? 'text-blue-400 scale-110' : 'text-slate-500'
+          }`}
+        >
+          <div className={`p-3 rounded-2xl ${isSearchActive ? 'bg-blue-500/20' : ''}`}>
+            <Search className="w-5 h-5" />
+          </div>
+        </button>
 
-      <button
-        onClick={() => setFilterCritico(!filterCritico)}
-        className={`flex flex-col items-center gap-1 transition-all ${
-          filterCritico ? 'text-amber-500 scale-110' : 'text-slate-500'
-        }`}
-      >
-        <div className={`p-3 rounded-2xl ${filterCritico ? 'bg-amber-500/20' : ''}`}>
-          <ShieldAlert className="w-5 h-5" />
-        </div>
-      </button>
+        <button
+          onClick={() => setFilterCritico(!filterCritico)}
+          className={`flex flex-col items-center gap-1 transition-all ${
+            filterCritico ? 'text-amber-500 scale-110' : 'text-slate-500'
+          }`}
+        >
+          <div className={`p-3 rounded-2xl ${filterCritico ? 'bg-amber-500/20' : ''}`}>
+            <ShieldAlert className="w-5 h-5" />
+          </div>
+        </button>
 
-      <button
-        onClick={() => setFilterVencido(!filterVencido)}
-        className={`flex flex-col items-center gap-1 transition-all ${
-          filterVencido ? 'text-rose-500 scale-110' : 'text-slate-500'
-        }`}
-      >
-        <div className={`p-3 rounded-2xl ${filterVencido ? 'bg-rose-500/20' : ''}`}>
-          <AlertTriangle className="w-5 h-5" />
-        </div>
-      </button>
+        <button
+          onClick={() => setFilterVencido(!filterVencido)}
+          className={`flex flex-col items-center gap-1 transition-all ${
+            filterVencido ? 'text-rose-500 scale-110' : 'text-slate-500'
+          }`}
+        >
+          <div className={`p-3 rounded-2xl ${filterVencido ? 'bg-rose-500/20' : ''}`}>
+            <AlertTriangle className="w-5 h-5" />
+          </div>
+        </button>
+
+        {/* Espacio para más acciones futuras */}
+        <div className="w-[1px] h-8 bg-white/5 mx-2" />
+        
+        <button
+          onClick={() => setIsSyncModalOpen(true)}
+          className={`flex flex-col items-center gap-1 transition-all ${
+            syncStore.incidents.length > 0 ? 'text-rose-500 animate-pulse' : 'text-slate-500'
+          }`}
+        >
+          <div className={`p-3 rounded-2xl ${syncStore.incidents.length > 0 ? 'bg-rose-500/20' : ''}`}>
+             <RefreshCw className={`w-5 h-5 ${syncStore.isSyncing ? 'animate-spin' : ''}`} />
+          </div>
+        </button>
+      </div>
     </div>
+  );
+
+  const cameraArea = (
+    <AnimatePresence>
+      {isCameraActive && (
+        <motion.div 
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 260, opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          className="bg-black overflow-hidden border-b-2 border-blue-500/50 shadow-inner relative"
+        >
+          <CameraScanner 
+            onScan={(code) => { handleScan(code); }} 
+            onClose={() => setIsCameraActive(false)} 
+            inline={true}
+            isTriggered={true}
+          />
+          <ScannerTargetOverlay feedback={feedback} />
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 
   return (
@@ -371,6 +408,7 @@ export const ExpiryCapturePage: React.FC = () => {
       <CaptureLayout
         header={header}
         footer={mobileDock}
+        extra={cameraArea}
         inputValue={isSearchActive ? searchQuery : inputValue}
         onInputChange={isSearchActive ? setSearchQuery : setInputValue}
         onInputSubmit={handleManualSubmit}
@@ -413,26 +451,6 @@ export const ExpiryCapturePage: React.FC = () => {
           )
         }
       />
-
-      {/* PERSISTENT CAMERA SCANNER */}
-      <AnimatePresence>
-        {isCameraActive && (
-          <motion.div 
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 200, opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="fixed top-[80px] left-0 right-0 z-[100] bg-black overflow-hidden border-b-2 border-blue-500/50 shadow-[0_10px_40px_rgba(0,0,0,0.8)]"
-          >
-            <CameraScanner 
-              onScan={(code) => { handleScan(code); }} 
-              onClose={() => setIsCameraActive(false)} 
-              inline={true}
-              isTriggered={true}
-            />
-            <ScannerTargetOverlay feedback={feedback} />
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* DYNAMIC FORM MODAL - MOBILE OPTIMIZED DRAWER */}
       <AnimatePresence>

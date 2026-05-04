@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { 
   ChevronLeft, 
-  ScanLine, 
   Trash2, 
   X, 
   CornerDownLeft, 
@@ -12,18 +11,23 @@ import {
   Plus,
   Minus,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Home,
+  Search,
+  RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useToastStore } from '../../store/useToastStore';
 import { db } from '../../db';
 import { normalizeSku } from '../../services/utils';
 import { useEventDatabase } from './hooks/useEventDatabase';
-import { useHIDScanner } from '../../hooks/useHIDScanner';
+import { useCaptureSession } from '../../hooks/useCaptureSession';
 import { SoundFX } from '../../services/audio';
 import { useFeedbackSystem } from '../../hooks/useFeedbackSystem';
 import { CameraScanner } from '../../components/CameraScanner';
 import { ScannerTargetOverlay } from '../../shared/components/scanner/ScannerTargetOverlay';
+import { ModuleHeader } from '../../shared/components/layout/ModuleHeader';
+import { CaptureLayout } from '../../shared/components/layout/CaptureLayout';
 
 const EVENT_TYPES = [
   'DIF. PED.',
@@ -85,74 +89,6 @@ const EventItemRow = React.memo(({
   );
 });
 
-const ScannerInput = React.memo(({ 
-  onScan, 
-  isModalOpen,
-  onOpenScanner
-}: { 
-  onScan: (code: string) => void;
-  isModalOpen: boolean;
-  onOpenScanner: () => void;
-}) => {
-  const [value, setValue] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const focusInput = () => {
-      if (!isModalOpen && inputRef.current) {
-        inputRef.current.focus();
-      }
-    };
-    focusInput();
-    window.addEventListener('click', focusInput);
-    return () => window.removeEventListener('click', focusInput);
-  }, [isModalOpen]);
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      if (value.trim()) {
-        onScan(value.trim());
-        setValue('');
-      }
-    }
-  };
-
-  return (
-    <div className="relative flex items-center">
-      <button 
-        onClick={onOpenScanner}
-        className="absolute inset-y-0 left-0 pl-4 flex items-center z-10 active:scale-90 transition-transform"
-      >
-        <ScanLine className="w-6 h-6 text-blue-500" />
-      </button>
-      <input
-        ref={inputRef}
-        type="text"
-        inputMode="numeric"
-        pattern="[0-9]*"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder="Escanear o digitar..."
-        className="w-full pl-12 pr-14 py-4 bg-[#0a0a0a] border border-blue-900/30 rounded-2xl text-xl font-bold text-white placeholder-slate-600 focus:outline-none focus:border-blue-500/50 transition-all"
-        autoFocus
-      />
-      {value.length > 0 && (
-        <button
-          onClick={() => {
-            onScan(value.trim());
-            setValue('');
-          }}
-          className="absolute right-2 w-10 h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center active:bg-blue-700 transition-colors"
-        >
-          <CornerDownLeft className="w-5 h-5" />
-        </button>
-      )}
-    </div>
-  );
-});
-
 export const EventCapturePage: React.FC = () => {
   const navigate = useNavigate();
   const { addToast } = useToastStore.getState();
@@ -160,11 +96,13 @@ export const EventCapturePage: React.FC = () => {
   const { feedback, trigger } = useFeedbackSystem(400);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isCameraActive, setIsCameraActive] = useState(false);
   const [scannedBarcode, setScannedBarcode] = useState('');
   const [productName, setProductName] = useState('');
   const [providerName, setProviderName] = useState('');
   
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchActive, setIsSearchActive] = useState(false);
+
   // Form State
   const [selectedEvent, setSelectedEvent] = useState('DIF. PED.');
   const [quantity, setQuantity] = useState(1);
@@ -175,7 +113,14 @@ export const EventCapturePage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleScan = useCallback(async (code: string) => {
-    if (!code || isModalOpen) return;
+    if (!code) return;
+    
+    if (isSearchActive) {
+      setSearchQuery(code);
+      return;
+    }
+
+    if (isModalOpen) return;
 
     trigger('success');
     const normalizedCode = normalizeSku(code);
@@ -186,12 +131,19 @@ export const EventCapturePage: React.FC = () => {
     setProviderName(product?.supplier || 'N/A');
     
     setIsModalOpen(true);
-  }, [isModalOpen, trigger]);
+  }, [isModalOpen, trigger, isSearchActive]);
 
-  useHIDScanner({
+  const {
+    inputValue,
+    setInputValue,
+    isCameraActive,
+    setIsCameraActive,
+    isProcessing,
+    inputRef,
+    handleManualSubmit
+  } = useCaptureSession({
     onScan: handleScan,
-    isEnabled: !isModalOpen,
-    maxLatency: 50
+    isEnabled: !isModalOpen
   });
 
   const handleSubmit = async () => {
@@ -256,95 +208,161 @@ export const EventCapturePage: React.FC = () => {
       .slice(0, 50);
   }, [state.allItems]);
 
-  return (
-    <div className="h-screen w-full flex flex-col bg-[#050505] overflow-hidden font-mono text-white">
-      {/* HEADER */}
-      <div className="shrink-0 p-4 bg-[#050505] z-10 border-b border-white/5">
-        <div className="flex items-center gap-3 mb-4">
-          <button 
-            onClick={() => navigate('/')} 
-            className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl active:bg-white/10 transition-colors"
+  const header = (
+    <ModuleHeader 
+      title="Captura Eventos"
+      subtitle="Gestión de Diferencias"
+      hideTitleOnMobile={true}
+      hideBackButtonOnMobile={true}
+      onBack={() => navigate('/')}
+      actions={
+        <div className="hidden md:flex items-center gap-2">
+          <button
+            onClick={() => setIsSearchActive(!isSearchActive)}
+            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+              isSearchActive ? 'bg-blue-600 text-white' : 'bg-white/5 text-slate-400 active:bg-white/10'
+            }`}
           >
-            <ChevronLeft className="w-6 h-6 text-white" />
+            <Search className="w-5 h-5" />
           </button>
-          <h1 className="text-sm font-black uppercase tracking-widest text-slate-400">Captura de Eventos</h1>
         </div>
+      }
+    />
+  );
 
-        <ScannerInput 
-          onScan={handleScan} 
-          isModalOpen={isModalOpen || isCameraActive} 
-          onOpenScanner={() => setIsCameraActive(!isCameraActive)}
-        />
-      </div>
-
-      {/* CAMERA SCANNER */}
-      <AnimatePresence>
-        {isCameraActive && (
-          <motion.div 
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 200, opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="relative bg-black shrink-0 overflow-hidden border-b border-blue-500/30"
-          >
-            <CameraScanner 
-              onScan={handleScan} 
-              onClose={() => setIsCameraActive(false)} 
-              inline={true}
-              isTriggered={true}
-            />
-            <ScannerTargetOverlay feedback={feedback} />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* LIST */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar pb-32">
-        {sortedItems.map((item) => (
-          <EventItemRow 
-            key={item.id} 
-            item={item} 
-            onDelete={handleDelete} 
-          />
-        ))}
-        
-        {sortedItems.length === 0 && (
-          <div className="text-center py-12 text-slate-500 font-bold text-sm uppercase tracking-widest">
-            No hay eventos recientes
+  const mobileDock = (
+    <div className="md:hidden flex items-center bg-brand-surface/80 backdrop-blur-3xl border border-white/10 px-4 py-2 mb-[max(24px,env(safe-area-inset-bottom))] mx-6 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-x-auto no-scrollbar">
+      <div className="flex items-center gap-2 min-w-max mx-auto">
+        <button
+          onClick={() => navigate('/')}
+          className="flex flex-col items-center gap-1 text-slate-400 active:scale-125 transition-transform"
+        >
+          <div className="p-3">
+            <Home className="w-6 h-6" />
           </div>
-        )}
-      </div>
+        </button>
 
-      {/* SIMPLE MODAL */}
+        <div className="w-[1px] h-8 bg-white/5 mx-2" />
+
+        <button
+          onClick={() => setIsSearchActive(!isSearchActive)}
+          className={`flex flex-col items-center gap-1 transition-all ${
+            isSearchActive ? 'text-blue-400 scale-110' : 'text-slate-500'
+          }`}
+        >
+          <div className={`p-3 rounded-2xl ${isSearchActive ? 'bg-blue-500/20' : ''}`}>
+            <Search className="w-5 h-5" />
+          </div>
+        </button>
+
+        {/* Espacio para más acciones futuras */}
+        <div className="w-[1px] h-8 bg-white/5 mx-2" />
+        
+        <button
+          onClick={() => {}} // Placeholder or refresh
+          className="flex flex-col items-center gap-1 text-slate-500"
+        >
+          <div className="p-3">
+             <RefreshCw className="w-5 h-5" />
+          </div>
+        </button>
+      </div>
+    </div>
+  );
+
+  const cameraArea = (
+    <AnimatePresence>
+      {isCameraActive && (
+        <motion.div 
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 260, opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          className="bg-black overflow-hidden border-b-2 border-blue-500/50 shadow-inner relative"
+        >
+          <CameraScanner 
+            onScan={handleScan} 
+            onClose={() => setIsCameraActive(false)} 
+            inline={true}
+            isTriggered={true}
+          />
+          <ScannerTargetOverlay feedback={feedback} />
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
+  return (
+    <>
+      <CaptureLayout
+        header={header}
+        footer={mobileDock}
+        extra={cameraArea}
+        inputValue={isSearchActive ? searchQuery : inputValue}
+        onInputChange={isSearchActive ? setSearchQuery : setInputValue}
+        onInputSubmit={handleManualSubmit}
+        onCameraToggle={() => setIsCameraActive(!isCameraActive)}
+        inputPlaceholder={isSearchActive ? "Buscar..." : "Escanear o digitar..."}
+        inputRef={inputRef}
+        readOnly={isModalOpen}
+        list={
+          <div className="space-y-4">
+            {sortedItems.map((item) => (
+              <EventItemRow 
+                key={item.id} 
+                item={item} 
+                onDelete={handleDelete} 
+              />
+            ))}
+          </div>
+        }
+        emptyState={
+          sortedItems.length === 0 && (
+            <div className="text-center py-12 text-slate-500 font-bold text-sm uppercase tracking-widest">
+              No hay eventos recientes
+            </div>
+          )
+        }
+      />
+
+      {/* MODAL */}
       <AnimatePresence>
         {isModalOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/90 p-4"
-          >
+          <div className="fixed inset-0 z-[2000] flex items-end justify-center pointer-events-none">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsModalOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm pointer-events-auto"
+            />
+            
             <motion.div
-              initial={{ y: 100, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 100, opacity: 0 }}
-              className="w-full max-w-md bg-[#111] border border-white/10 rounded-3xl overflow-hidden flex flex-col max-h-[95vh]"
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="w-full max-w-2xl bg-slate-950 border-t border-white/10 rounded-t-[2.5rem] shadow-[0_-20px_60px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col max-h-[90vh] pointer-events-auto"
             >
-              <div className="p-4 border-b border-white/10 flex items-center justify-between bg-[#1a1a1a]">
-                <div>
-                  <h2 className="text-sm font-black uppercase tracking-widest text-white">Registrar Evento</h2>
-                  <p className="text-[10px] text-slate-400 mt-1 truncate max-w-[250px]">{productName}</p>
+              <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mt-3 mb-1 shrink-0" />
+
+              <div className="p-4 border-b border-white/5 flex items-center justify-between bg-slate-900/50">
+                <div className="flex-1 min-w-0 pr-4">
+                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-500">Evento</span>
+                  <p className="text-base font-black text-white truncate leading-tight mt-1 uppercase italic tracking-tighter tabular-nums">
+                    {scannedBarcode}
+                  </p>
+                  <p className="text-[11px] text-slate-500 mt-0.5 truncate uppercase font-bold">{productName}</p>
                 </div>
                 <button 
                   onClick={() => setIsModalOpen(false)}
-                  className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-slate-400"
+                  className="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center text-slate-400 active:bg-white/10 active:scale-95 transition-all"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-6 h-6" />
                 </button>
               </div>
 
-              <div className="p-4 overflow-y-auto no-scrollbar space-y-6">
-                {/* FRC & GUIA (Persistent-ish) */}
-                <div className="grid grid-cols-2 gap-3">
+              <div className="p-6 overflow-y-auto space-y-6 custom-scrollbar pb-10">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1 flex items-center gap-1">
                       <Hash className="w-3 h-3" /> FRC
@@ -353,7 +371,7 @@ export const EventCapturePage: React.FC = () => {
                       type="text"
                       value={frc}
                       onChange={(e) => setFrc(e.target.value.toUpperCase())}
-                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm font-bold text-white focus:border-blue-500 outline-none"
+                      className="w-full px-5 py-4 bg-white/5 border-2 border-white/5 rounded-2xl text-lg font-black text-white focus:border-blue-500 outline-none"
                       placeholder="Obligatorio"
                     />
                   </div>
@@ -365,14 +383,13 @@ export const EventCapturePage: React.FC = () => {
                       type="text"
                       value={nguia}
                       onChange={(e) => setNguia(e.target.value.toUpperCase())}
-                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm font-bold text-white focus:border-blue-500 outline-none"
+                      className="w-full px-5 py-4 bg-white/5 border-2 border-white/5 rounded-2xl text-lg font-black text-white focus:border-blue-500 outline-none"
                       placeholder="Obligatorio"
                     />
                   </div>
                 </div>
 
-                {/* TRASPASO & DESTINO */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1 flex items-center gap-1">
                       <Hash className="w-3 h-3" /> Traspaso
@@ -381,7 +398,7 @@ export const EventCapturePage: React.FC = () => {
                       type="text"
                       value={traspaso}
                       onChange={(e) => setTraspaso(e.target.value.toUpperCase())}
-                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm font-bold text-white focus:border-blue-500 outline-none"
+                      className="w-full px-5 py-4 bg-white/5 border-2 border-white/5 rounded-2xl text-lg font-black text-white focus:border-blue-500 outline-none"
                       placeholder="Opcional"
                     />
                   </div>
@@ -392,7 +409,7 @@ export const EventCapturePage: React.FC = () => {
                     <select
                       value={destino}
                       onChange={(e) => setDestino(e.target.value)}
-                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm font-bold text-white focus:border-blue-500 outline-none appearance-none"
+                      className="w-full px-5 py-4 bg-white/5 border-2 border-white/5 rounded-2xl text-lg font-black text-white focus:border-blue-500 outline-none appearance-none"
                     >
                       <option value="">Seleccionar...</option>
                       <option value="BOD. 37">BOD. 37</option>
@@ -405,10 +422,9 @@ export const EventCapturePage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* EVENT TYPE SELECTOR */}
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1">Tipo de Evento</label>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {EVENT_TYPES.map(type => (
                       <button
                         key={type}
@@ -416,10 +432,10 @@ export const EventCapturePage: React.FC = () => {
                           setSelectedEvent(type);
                           SoundFX.play('increment');
                         }}
-                        className={`py-3 px-2 rounded-xl text-[10px] font-black transition-all border-2 ${
+                        className={`py-3 px-3 rounded-xl text-[10px] font-black transition-all border-2 ${
                           selectedEvent === type 
-                            ? 'bg-blue-600 border-blue-400 text-white' 
-                            : 'bg-white/5 border-white/5 text-slate-500'
+                            ? 'bg-blue-600 border-blue-400 text-white shadow-lg' 
+                            : 'bg-white/5 border-white/5 text-slate-500 hover:bg-white/10'
                         }`}
                       >
                         {type}
@@ -428,59 +444,44 @@ export const EventCapturePage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* QUANTITY SELECTOR */}
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1">Cantidad</label>
                   <div className="flex items-center gap-4">
                     <button 
                       onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center active:scale-90 transition-transform"
+                      className="w-16 h-16 rounded-2xl bg-white/5 border-2 border-white/5 flex items-center justify-center active:scale-90 transition-transform"
                     >
-                      <Minus className="w-6 h-6 text-white" />
+                      <Minus className="w-8 h-8 text-white" />
                     </button>
-                    <div className="flex-1 h-14 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center">
-                      <span className="text-2xl font-black text-white">{quantity}</span>
+                    <div className="flex-1 h-16 bg-white/5 border-2 border-white/5 rounded-2xl flex items-center justify-center">
+                      <span className="text-3xl font-black text-white">{quantity}</span>
                     </div>
                     <button 
                       onClick={() => setQuantity(quantity + 1)}
-                      className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center active:scale-90 transition-transform"
+                      className="w-16 h-16 rounded-2xl bg-white/5 border-2 border-white/5 flex items-center justify-center active:scale-90 transition-transform"
                     >
-                      <Plus className="w-6 h-6 text-white" />
+                      <Plus className="w-8 h-8 text-white" />
                     </button>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[5, 10, 20].map(val => (
-                      <button
-                        key={val}
-                        onClick={() => setQuantity(val)}
-                        className="py-2 rounded-lg bg-white/5 text-[10px] font-bold text-slate-400 active:bg-white/10"
-                      >
-                        +{val}
-                      </button>
-                    ))}
                   </div>
                 </div>
 
-                {/* SUBMIT */}
-                <div className="pt-2">
-                  <button
-                    disabled={isSubmitting || !frc || !nguia}
-                    onClick={handleSubmit}
-                    className={`w-full py-5 rounded-2xl font-black text-lg uppercase tracking-widest flex items-center justify-center gap-3 transition-all ${
-                      isSubmitting || !frc || !nguia
-                        ? 'bg-white/5 text-white/10 border border-white/5 cursor-not-allowed'
-                        : 'bg-white text-black hover:bg-blue-50 shadow-lg'
-                    }`}
-                  >
-                    {isSubmitting ? 'Registrando...' : 'Registrar Evento'}
-                  </button>
-                </div>
+                <button
+                  disabled={isSubmitting || !frc || !nguia}
+                  onClick={handleSubmit}
+                  className={`w-full py-6 rounded-[1.5rem] font-black text-xl uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 shadow-2xl ${
+                    isSubmitting || !frc || !nguia
+                      ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
+                      : 'bg-white text-black hover:bg-blue-50'
+                  }`}
+                >
+                  {isSubmitting ? <RefreshCw className="w-6 h-6 animate-spin" /> : 'REGISTRAR EVENTO'}
+                </button>
               </div>
             </motion.div>
-          </motion.div>
+          </div>
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 };
 
