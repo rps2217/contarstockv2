@@ -81,7 +81,14 @@ export const useEventDatabase = () => {
 
   const baseProcessedData = useMemo(() => {
     const eventMapping = settings?.cloudConfig?.mappings?.events;
-    const items = localEvents || [];
+    
+    // MEMORY OPTIMIZATION: Sliding Window
+    // Si tenemos miles de registros, procesamos solo los 500 más recientes para la vista activa.
+    const windowSize = 500;
+    const items = (localEvents || []).length > windowSize
+      ? [...(localEvents || [])].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0)).slice(0, windowSize)
+      : (localEvents || []);
+      
     const result = [];
 
     for (let i = 0; i < items.length; i++) {

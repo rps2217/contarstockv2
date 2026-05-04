@@ -19,6 +19,8 @@ interface CaptureLayoutProps {
   scrollRef?: React.RefObject<HTMLDivElement>;
   readOnly?: boolean;
   extra?: React.ReactNode;
+  filters?: React.ReactNode;
+  modalForm?: React.ReactNode;
 }
 
 export const CaptureLayout: React.FC<CaptureLayoutProps> = ({
@@ -36,13 +38,22 @@ export const CaptureLayout: React.FC<CaptureLayoutProps> = ({
   inputRef,
   scrollRef,
   readOnly = false,
-  extra
+  extra,
+  filters,
+  modalForm
 }) => {
   return (
     <div className={`h-screen h-[100dvh] flex flex-col overflow-hidden ${theme === 'dark' ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'}`}>
       {header}
 
       <div className="flex-1 overflow-hidden flex flex-col max-w-6xl mx-auto w-full relative">
+        {/* FILTERS SECTION (Optional) */}
+        {filters && (
+          <div className="px-3 md:px-6 pt-4 pb-0 flex gap-2 overflow-x-auto no-scrollbar">
+            {filters}
+          </div>
+        )}
+
         {/* INPUT SECTION */}
         <div className="p-3 md:p-6 border-b border-white/5 bg-slate-950/50 backdrop-blur-md sticky top-0 z-10">
           {/* ... existing input code remains same ... */}
@@ -100,6 +111,8 @@ export const CaptureLayout: React.FC<CaptureLayoutProps> = ({
           </div>
         )}
       </div>
+      
+      {modalForm}
     </div>
   );
 };

@@ -116,7 +116,15 @@ export const useExpiryDatabase = () => {
     // Usar un Map para deduplicar por claveUnica
     const dedupMap = new Map<string, ExpiryItem>();
 
-    (localItems || []).forEach(record => {
+    // MEMORY OPTIMIZATION: Sliding Window
+    // Si tenemos miles de registros, procesamos solo los 500 más recientes para la vista activa.
+    // Los datos antiguos siguen en IndexedDB y accesible mediante filtros específicos.
+    const windowSize = 500;
+    const itemsToProcess = (localItems || []).length > windowSize 
+      ? [...(localItems || [])].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0)).slice(0, windowSize)
+      : (localItems || []);
+
+    itemsToProcess.forEach(record => {
         // NORMALIZACIÓN RÍGIDA: Único lugar de transformación
         const normalized = normalizeExpiryRecord(record, expiryMapping);
         

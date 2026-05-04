@@ -108,74 +108,28 @@ export const ReceptionCapturePage: React.FC = () => {
     />
   );
 
-  return (
+  const cameraArea = (
+    <AnimatePresence>
+      {isCameraActive && !state.pendingPhotoCode && (
+        <motion.div 
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 250, opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          className="bg-black overflow-hidden border-b border-blue-500/30 shadow-2xl"
+        >
+          <CameraScanner 
+            onScan={(code) => { actions.handleScan(code, state.currentErp); setIsCameraActive(false); }} 
+            onClose={() => setIsCameraActive(false)} 
+            inline={true}
+            isTriggered={true}
+          />
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
+  const modalForm = (
     <>
-      <CaptureLayout
-        header={header}
-        inputValue={inputValue}
-        onInputChange={setInputValue}
-        onInputSubmit={handleManualSubmit}
-        onCameraToggle={() => setIsCameraActive(!isCameraActive)}
-        inputPlaceholder="Escanear bulto..."
-        inputRef={inputRef}
-        list={
-          <div className="space-y-4 pb-32">
-            {sortedItems.map((item) => (
-              <ReceptionItemRow 
-                key={item.id} 
-                item={item} 
-                onDelete={actions.deleteDraft} 
-                onShowPhoto={setSelectedPhotoItem}
-              />
-            ))}
-          </div>
-        }
-        emptyState={
-          sortedItems.length === 0 && (
-            <div className="text-center py-12 text-slate-500 font-bold text-sm uppercase tracking-widest">
-              No hay bultos en esta sesión
-            </div>
-          )
-        }
-        footer={
-          state.draftCount > 0 && (
-            <div className="flex gap-3">
-              <button
-                onClick={actions.discardAll}
-                className="flex-1 py-4 bg-rose-500/10 text-rose-500 rounded-2xl font-black text-xs uppercase tracking-widest border border-rose-500/20 active:bg-rose-500/20 transition-all"
-              >
-                Descartar
-              </button>
-              <button
-                onClick={actions.finalizeReception}
-                className="flex-[2] py-4 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-900/40 active:scale-95 transition-all"
-              >
-                Finalizar Lote
-              </button>
-            </div>
-          )
-        }
-      />
-
-      {/* INLINE CAMERA FOR SCANNING */}
-      <AnimatePresence>
-        {isCameraActive && !state.pendingPhotoCode && (
-          <motion.div 
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 250, opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="fixed top-[180px] left-0 right-0 z-50 bg-black overflow-hidden border-b border-blue-500/30 shadow-2xl"
-          >
-            <CameraScanner 
-              onScan={(code) => { actions.handleScan(code, state.currentErp); setIsCameraActive(false); }} 
-              onClose={() => setIsCameraActive(false)} 
-              inline={true}
-              isTriggered={true}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* FULL SCREEN CAMERA FOR PHOTO CAPTURE */}
       <AnimatePresence>
         {state.pendingPhotoCode && (
@@ -262,6 +216,59 @@ export const ReceptionCapturePage: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+    </>
+  );
+
+  return (
+    <>
+      <CaptureLayout
+        header={header}
+        inputValue={inputValue}
+        onInputChange={setInputValue}
+        onInputSubmit={handleManualSubmit}
+        onCameraToggle={() => setIsCameraActive(!isCameraActive)}
+        inputPlaceholder="Escanear bulto..."
+        inputRef={inputRef}
+        extra={cameraArea}
+        modalForm={modalForm}
+        list={
+          <div className="space-y-4 pb-32">
+            {sortedItems.map((item) => (
+              <ReceptionItemRow 
+                key={item.id} 
+                item={item} 
+                onDelete={actions.deleteDraft} 
+                onShowPhoto={setSelectedPhotoItem}
+              />
+            ))}
+          </div>
+        }
+        emptyState={
+          sortedItems.length === 0 && (
+            <div className="text-center py-12 text-slate-500 font-bold text-sm uppercase tracking-widest">
+              No hay bultos en esta sesión
+            </div>
+          )
+        }
+        footer={
+          state.draftCount > 0 && (
+            <div className="flex gap-3">
+              <button
+                onClick={actions.discardAll}
+                className="flex-1 py-4 bg-rose-500/10 text-rose-500 rounded-2xl font-black text-xs uppercase tracking-widest border border-rose-500/20 active:bg-rose-500/20 transition-all"
+              >
+                Descartar
+              </button>
+              <button
+                onClick={actions.finalizeReception}
+                className="flex-[2] py-4 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-900/40 active:scale-95 transition-all"
+              >
+                Finalizar Lote
+              </button>
+            </div>
+          )
+        }
+      />
     </>
   );
 };

@@ -166,8 +166,7 @@ export const EventCapturePage: React.FC = () => {
 
   const sortedItems = useMemo(() => {
     return [...state.allItems]
-      .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
-      .slice(0, 50);
+      .sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
   }, [state.allItems]);
 
   const header = (
@@ -267,12 +266,181 @@ export const EventCapturePage: React.FC = () => {
     </AnimatePresence>
   );
 
+  const filters = (
+    <div className="flex gap-2">
+      <div className="px-4 py-2 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
+        Eventos Recientes
+      </div>
+    </div>
+  );
+
+  const modalForm = (
+    <AnimatePresence>
+      {engine.isModalOpen && (
+        <div className="fixed inset-0 z-[2000] flex items-end justify-center pointer-events-none">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => engine.setIsModalOpen(false)}
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm pointer-events-auto"
+          />
+          
+          <motion.div
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className="w-full max-w-2xl bg-slate-950 border-t border-white/10 rounded-t-[2.5rem] shadow-[0_-20px_60px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col max-h-[90vh] pointer-events-auto"
+          >
+            <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mt-3 mb-1 shrink-0" />
+
+            <div className="p-4 border-b border-white/5 flex items-center justify-between bg-slate-900/50">
+              <div className="flex-1 min-w-0 pr-4">
+                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-500">Evento</span>
+                <p className="text-base font-black text-white truncate leading-tight mt-1 uppercase italic tracking-tighter tabular-nums">
+                  {engine.scannedBarcode}
+                </p>
+                <p className="text-[11px] text-slate-500 mt-0.5 truncate uppercase font-bold">{engine.product?.name}</p>
+              </div>
+              <button 
+                onClick={() => engine.setIsModalOpen(false)}
+                className="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center text-slate-400 active:bg-white/10 active:scale-95 transition-all"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-6 custom-scrollbar pb-10">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1 flex items-center gap-1">
+                    <Hash className="w-3 h-3" /> FRC
+                  </label>
+                  <input
+                    type="text"
+                    value={frc}
+                    onChange={(e) => setFrc(e.target.value.toUpperCase())}
+                    className="w-full px-5 py-4 bg-white/5 border-2 border-white/5 rounded-2xl text-lg font-black text-white focus:border-blue-500 outline-none"
+                    placeholder="Obligatorio"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1 flex items-center gap-1">
+                    <Truck className="w-3 h-3" /> Guía
+                  </label>
+                  <input
+                    type="text"
+                    value={nguia}
+                    onChange={(e) => setNguia(e.target.value.toUpperCase())}
+                    className="w-full px-5 py-4 bg-white/5 border-2 border-white/5 rounded-2xl text-lg font-black text-white focus:border-blue-500 outline-none"
+                    placeholder="Obligatorio"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1 flex items-center gap-1">
+                    <Hash className="w-3 h-3" /> Traspaso
+                  </label>
+                  <input
+                    type="text"
+                    value={traspaso}
+                    onChange={(e) => setTraspaso(e.target.value.toUpperCase())}
+                    className="w-full px-5 py-4 bg-white/5 border-2 border-white/5 rounded-2xl text-lg font-black text-white focus:border-blue-500 outline-none"
+                    placeholder="Opcional"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1 flex items-center gap-1">
+                    <Truck className="w-3 h-3" /> Destino {traspaso.trim() && <span className="text-rose-500">*</span>}
+                  </label>
+                  <select
+                    value={destino}
+                    onChange={(e) => setDestino(e.target.value)}
+                    className="w-full px-5 py-4 bg-white/5 border-2 border-white/5 rounded-2xl text-lg font-black text-white focus:border-blue-500 outline-none appearance-none"
+                  >
+                    <option value="">Seleccionar...</option>
+                    <option value="BOD. 37">BOD. 37</option>
+                    <option value="BOD. 80">BOD. 80</option>
+                    <option value="BOD. 95">BOD. 95</option>
+                    <option value="BOD. 98">BOD. 98</option>
+                    <option value="BOD. 106">BOD. 106</option>
+                    <option value="BOD. 121">BOD. 121</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1">Tipo de Evento</label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {EVENT_TYPES.map(type => (
+                    <button
+                      key={type}
+                      onClick={() => {
+                        setSelectedEvent(type);
+                        SoundFX.play('increment');
+                      }}
+                      className={`py-3 px-3 rounded-xl text-[10px] font-black transition-all border-2 ${
+                        selectedEvent === type 
+                          ? 'bg-blue-600 border-blue-400 text-white shadow-lg' 
+                          : 'bg-white/5 border-white/5 text-slate-500 hover:bg-white/10'
+                      }`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1">Cantidad</label>
+                <div className="flex items-center gap-4">
+                  <button 
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    className="w-16 h-16 rounded-2xl bg-white/5 border-2 border-white/5 flex items-center justify-center active:scale-90 transition-transform"
+                  >
+                    <Minus className="w-8 h-8 text-white" />
+                  </button>
+                  <div className="flex-1 h-16 bg-white/5 border-2 border-white/5 rounded-2xl flex items-center justify-center">
+                    <span className="text-3xl font-black text-white">{quantity}</span>
+                  </div>
+                  <button 
+                    onClick={() => setQuantity(quantity + 1)}
+                    className="w-16 h-16 rounded-2xl bg-white/5 border-2 border-white/5 flex items-center justify-center active:scale-90 transition-transform"
+                  >
+                    <Plus className="w-8 h-8 text-white" />
+                  </button>
+                </div>
+              </div>
+
+              <button
+                disabled={isSubmitting || !frc || !nguia}
+                onClick={handleSubmit}
+                className={`w-full py-6 rounded-[1.5rem] font-black text-xl uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 shadow-2xl ${
+                  isSubmitting || !frc || !nguia
+                    ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
+                    : 'bg-white text-black hover:bg-blue-50'
+                }`}
+              >
+                {isSubmitting ? <RefreshCw className="w-6 h-6 animate-spin" /> : 'REGISTRAR EVENTO'}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+
   return (
     <>
       <CaptureLayout
         header={header}
         footer={mobileDock}
         extra={cameraArea}
+        filters={filters}
+        modalForm={modalForm}
         inputValue={engine.isSearchActive ? engine.searchQuery : engine.capture.inputValue}
         onInputChange={engine.isSearchActive ? engine.setSearchQuery : engine.capture.setInputValue}
         onInputSubmit={engine.capture.handleManualSubmit}
@@ -300,163 +468,6 @@ export const EventCapturePage: React.FC = () => {
         }
       />
 
-      {/* MODAL */}
-      <AnimatePresence>
-        {engine.isModalOpen && (
-          <div className="fixed inset-0 z-[2000] flex items-end justify-center pointer-events-none">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => engine.setIsModalOpen(false)}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm pointer-events-auto"
-            />
-            
-            <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="w-full max-w-2xl bg-slate-950 border-t border-white/10 rounded-t-[2.5rem] shadow-[0_-20px_60px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col max-h-[90vh] pointer-events-auto"
-            >
-              <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mt-3 mb-1 shrink-0" />
-
-              <div className="p-4 border-b border-white/5 flex items-center justify-between bg-slate-900/50">
-                <div className="flex-1 min-w-0 pr-4">
-                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-500">Evento</span>
-                  <p className="text-base font-black text-white truncate leading-tight mt-1 uppercase italic tracking-tighter tabular-nums">
-                    {engine.scannedBarcode}
-                  </p>
-                  <p className="text-[11px] text-slate-500 mt-0.5 truncate uppercase font-bold">{engine.product?.name}</p>
-                </div>
-                <button 
-                  onClick={() => engine.setIsModalOpen(false)}
-                  className="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center text-slate-400 active:bg-white/10 active:scale-95 transition-all"
-                >
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-
-              <div className="p-6 overflow-y-auto space-y-6 custom-scrollbar pb-10">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1 flex items-center gap-1">
-                      <Hash className="w-3 h-3" /> FRC
-                    </label>
-                    <input
-                      type="text"
-                      value={frc}
-                      onChange={(e) => setFrc(e.target.value.toUpperCase())}
-                      className="w-full px-5 py-4 bg-white/5 border-2 border-white/5 rounded-2xl text-lg font-black text-white focus:border-blue-500 outline-none"
-                      placeholder="Obligatorio"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1 flex items-center gap-1">
-                      <Truck className="w-3 h-3" /> Guía
-                    </label>
-                    <input
-                      type="text"
-                      value={nguia}
-                      onChange={(e) => setNguia(e.target.value.toUpperCase())}
-                      className="w-full px-5 py-4 bg-white/5 border-2 border-white/5 rounded-2xl text-lg font-black text-white focus:border-blue-500 outline-none"
-                      placeholder="Obligatorio"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1 flex items-center gap-1">
-                      <Hash className="w-3 h-3" /> Traspaso
-                    </label>
-                    <input
-                      type="text"
-                      value={traspaso}
-                      onChange={(e) => setTraspaso(e.target.value.toUpperCase())}
-                      className="w-full px-5 py-4 bg-white/5 border-2 border-white/5 rounded-2xl text-lg font-black text-white focus:border-blue-500 outline-none"
-                      placeholder="Opcional"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1 flex items-center gap-1">
-                      <Truck className="w-3 h-3" /> Destino {traspaso.trim() && <span className="text-rose-500">*</span>}
-                    </label>
-                    <select
-                      value={destino}
-                      onChange={(e) => setDestino(e.target.value)}
-                      className="w-full px-5 py-4 bg-white/5 border-2 border-white/5 rounded-2xl text-lg font-black text-white focus:border-blue-500 outline-none appearance-none"
-                    >
-                      <option value="">Seleccionar...</option>
-                      <option value="BOD. 37">BOD. 37</option>
-                      <option value="BOD. 80">BOD. 80</option>
-                      <option value="BOD. 95">BOD. 95</option>
-                      <option value="BOD. 98">BOD. 98</option>
-                      <option value="BOD. 106">BOD. 106</option>
-                      <option value="BOD. 121">BOD. 121</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1">Tipo de Evento</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {EVENT_TYPES.map(type => (
-                      <button
-                        key={type}
-                        onClick={() => {
-                          setSelectedEvent(type);
-                          SoundFX.play('increment');
-                        }}
-                        className={`py-3 px-3 rounded-xl text-[10px] font-black transition-all border-2 ${
-                          selectedEvent === type 
-                            ? 'bg-blue-600 border-blue-400 text-white shadow-lg' 
-                            : 'bg-white/5 border-white/5 text-slate-500 hover:bg-white/10'
-                        }`}
-                      >
-                        {type}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1">Cantidad</label>
-                  <div className="flex items-center gap-4">
-                    <button 
-                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      className="w-16 h-16 rounded-2xl bg-white/5 border-2 border-white/5 flex items-center justify-center active:scale-90 transition-transform"
-                    >
-                      <Minus className="w-8 h-8 text-white" />
-                    </button>
-                    <div className="flex-1 h-16 bg-white/5 border-2 border-white/5 rounded-2xl flex items-center justify-center">
-                      <span className="text-3xl font-black text-white">{quantity}</span>
-                    </div>
-                    <button 
-                      onClick={() => setQuantity(quantity + 1)}
-                      className="w-16 h-16 rounded-2xl bg-white/5 border-2 border-white/5 flex items-center justify-center active:scale-90 transition-transform"
-                    >
-                      <Plus className="w-8 h-8 text-white" />
-                    </button>
-                  </div>
-                </div>
-
-                <button
-                  disabled={isSubmitting || !frc || !nguia}
-                  onClick={handleSubmit}
-                  className={`w-full py-6 rounded-[1.5rem] font-black text-xl uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 shadow-2xl ${
-                    isSubmitting || !frc || !nguia
-                      ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
-                      : 'bg-white text-black hover:bg-blue-50'
-                  }`}
-                >
-                  {isSubmitting ? <RefreshCw className="w-6 h-6 animate-spin" /> : 'REGISTRAR EVENTO'}
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
       <SyncDiagnosticsPanel 
         isOpen={engine.isSyncModalOpen} 
         onClose={() => engine.setIsSyncModalOpen(false)} 
