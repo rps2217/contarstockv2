@@ -46,6 +46,26 @@ export class EventRepository {
     );
   }
 
+  async put(data: any, tableName?: string) {
+    // Método requerido para recibir payloads en tiempo real sin activar un re-upload a la nube infinito.
+    const id = data.id || data.ID;
+    if (!id) return;
+
+    // MULTI-USER CONCURRENCY FIX
+    const existing = await db.dynamic_data.get(String(id));
+    if (existing && existing.syncStatus === 'pending') {
+       return; // Preservar cambios locales no sincronizados
+    }
+
+    await db.dynamic_data.put({
+      id: String(id),
+      tableName: tableName || this.tableName,
+      data: data,
+      timestamp: data.timestamp || Date.now(),
+      syncStatus: 'synced' // Crucial: No lo enviamos de vuelta
+    });
+  }
+
   async save(event: Partial<EventRecord> & { id: string }) {
     const record: DynamicRecord = {
       id: event.id,

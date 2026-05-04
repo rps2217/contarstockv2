@@ -60,6 +60,14 @@ export class ExpiryRepository {
     const id = data.id || data.ID || data.claveUnica || data.CLAVE_UNICA;
     if (!id) return;
 
+    // MULTI-USER CONCURRENCY FIX: Avoid overwriting locally pending edits with real-time pushes
+    const existing = await db.dynamic_data.get(String(id));
+    if (existing && existing.syncStatus === 'pending') {
+       // Si hay un cambio local pendiente, ignoramos la llegada del socket porque
+       // la próxima vez que sincronicemos todo enviaremos el verdadero 'último' valor
+       return;
+    }
+
     await db.dynamic_data.put({
       id: String(id),
       tableName: tableName || this.tableName,

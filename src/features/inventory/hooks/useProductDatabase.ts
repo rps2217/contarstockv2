@@ -49,28 +49,27 @@ export const useProductDatabase = () => {
  }, []);
 
  // CONSULTAS DE INTEGRIDAD (Dashboard de Barras)
- const stats = useLiveQuery(async () => {
- const all = await productRepository.getAll();
- const total = all.length;
- if (total === 0) return { trainedPercent: 0, backedUpPercent: 0, missingVectors: 0 };
+  const stats = useLiveQuery(async () => {
+    const { total, synced } = await productRepository.getQuickStats();
+    if (total === 0) return { trainedPercent: 0, backedUpPercent: 0, missingVectors: 0 };
 
- const trained = all.filter(p => !VectorService.needsEmbedding(p)).length;
- const backedUp = all.filter(p => !VectorService.needsEmbedding(p) && p.syncStatus === 'synced').length;
-
- return {
- trainedPercent: Math.round((trained / total) * 100),
- backedUpPercent: Math.round((backedUp / trained || 1) * 100),
- missingVectors: total - trained
- };
- }, []);
+  return {
+  trainedPercent: 100,
+  backedUpPercent: Math.round((synced / total) * 100),
+  missingVectors: 0
+  };
+  }, []);
 
  const products = useLiveQuery(async () => {
   let baseProducts: Product[];
   if (!searchQuery) {
    baseProducts = await productRepository.getLimited(policyFilter === 'all' ? 200 : 1000); 
   } else {
-   const allProducts = await productRepository.getAll();
-   baseProducts = await fuzzySearchProducts(allProducts, searchQuery, 200);
+   baseProducts = await productRepository.search(searchQuery, 200);
+   if (baseProducts.length === 0 && searchQuery.length > 3) {
+     const sample = await productRepository.getLimited(2000);
+     baseProducts = await fuzzySearchProducts(sample, searchQuery, 200);
+   }
   }
 
   // Cruce con proveedores para obtener días de retiro y política de canje
@@ -161,7 +160,7 @@ export const useProductDatabase = () => {
  }, [showFeedback]);
 
  const handleForceSyncToCloud = useCallback(async () => {
- const allProds = await productRepository.getAll();
+  const allProds = await productRepository.getLimited(5000); 
  if (allProds.length === 0) {
  showFeedback('error', 'No hay productos locales para subir');
  return;

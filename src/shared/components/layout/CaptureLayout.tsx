@@ -16,6 +16,7 @@ interface CaptureLayoutProps {
   footer?: React.ReactNode;
   theme?: 'dark' | 'light';
   inputRef?: React.RefObject<HTMLInputElement>;
+  scrollRef?: React.RefObject<HTMLDivElement>;
   readOnly?: boolean;
 }
 
@@ -32,6 +33,7 @@ export const CaptureLayout: React.FC<CaptureLayoutProps> = ({
   footer,
   theme = 'dark',
   inputRef,
+  scrollRef,
   readOnly = false
 }) => {
   return (
@@ -41,6 +43,7 @@ export const CaptureLayout: React.FC<CaptureLayoutProps> = ({
       <div className="flex-1 overflow-hidden flex flex-col max-w-6xl mx-auto w-full">
         {/* INPUT SECTION */}
         <div className="p-6 border-b border-white/5 bg-slate-950/50 backdrop-blur-md sticky top-0 z-10">
+          {/* ... existing input code remains same ... */}
           <div className="relative group">
             <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
               <Search className={`w-5 h-5 ${isProcessing ? 'text-brand-warning animate-pulse' : 'text-slate-500'}`} />
@@ -77,7 +80,10 @@ export const CaptureLayout: React.FC<CaptureLayoutProps> = ({
         </div>
 
         {/* LIST SECTION */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar will-change-scroll transform-gpu">
+        <div 
+          ref={scrollRef}
+          className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar will-change-scroll transform-gpu"
+        >
           {list}
           {emptyState}
         </div>

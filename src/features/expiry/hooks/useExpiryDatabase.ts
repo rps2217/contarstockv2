@@ -130,8 +130,24 @@ export const useExpiryDatabase = () => {
         const key = processed.claveUnica || processed.id;
         const existing = dedupMap.get(key);
         
-        if (!existing || (processed.timestamp > (existing.timestamp || 0))) {
-          dedupMap.set(key, processed);
+        if (existing) {
+          // MULTI-USER MERGE: Sumamos cantidades si hay colisión concurrente (diferentes IDs con misma clave)
+          if (existing.id !== processed.id) {
+             existing.quantity += processed.quantity;
+             if (processed.observaciones && processed.observaciones !== existing.observaciones) {
+                 existing.observaciones = existing.observaciones ? `${existing.observaciones} | ${processed.observaciones}` : processed.observaciones;
+             }
+             if (processed.timestamp > (existing.timestamp || 0)) {
+               existing.timestamp = processed.timestamp;
+             }
+          } else {
+             if (processed.timestamp > (existing.timestamp || 0)) {
+               dedupMap.set(key, processed);
+             }
+          }
+        } else {
+          // Clone purely because we might mutate it in the lines above for grouping
+          dedupMap.set(key, { ...processed });
         }
       });
 
@@ -310,13 +326,14 @@ export const useExpiryDatabase = () => {
       const lastDay = new Date(data.yyyy, data.mm, 0).getDate();
       const ddPadded = String(lastDay).padStart(2, '0');
       const claveUnica = `${sanitizedBarcode}${yearStr}${mmPadded}${ddPadded}`;
+      const uniqueId = crypto.randomUUID();
 
       const now = new Date();
       
       // BUSCAR SI YA EXISTE PARA ACTUALIZAR (Por claveUnica o por ID)
       const existing = localItems.find(item => item.claveUnica === claveUnica || item.id === claveUnica);
       
-      // BLOQUEAR DUPLICADOS SEGÚN SOLICITUD DEL USUARIO
+      // BLOQUEAR DUPLICADOS LOGICOS CREADOS POR EL MISMO USUARIO
       if (existing) {
         addToast(`Ya existe un registro para ${data.productName} con vencimiento ${mmPadded}/${yearStr}. No se permiten duplicados.`, 'error');
         SoundFX.play('error');
@@ -324,7 +341,7 @@ export const useExpiryDatabase = () => {
       }
 
       const rowData: NormalizedExpiry = normalizeExpiryRecord({
-        id: claveUnica, 
+        id: uniqueId, 
         claveUnica: claveUnica,
         timestamp: now.getTime(), 
         barcode: sanitizedBarcode,
@@ -342,7 +359,7 @@ export const useExpiryDatabase = () => {
       await expiryRepository.save(rowData, tableName);
       
       // SINCRONIZACIÓN ASÍNCRONA CON LA NUBE
-      supabaseSyncService.pushChange(tableName, claveUnica, rowData).catch(err => {
+      supabaseSyncService.pushChange(tableName, uniqueId, rowData).catch(err => {
         console.error("[ExpiryCloudSync] Error:", err);
         expiryRepository.save({ ...rowData, syncStatus: 'pending' }, tableName);
       });
@@ -380,7 +397,7 @@ export const useExpiryDatabase = () => {
 
       const now = new Date();
       
-      // Si cambian campos que afectan a la claveUnica, debemos regenerar el ID
+      // Si cambian campos que afectan a la claveUnica, debemos regenerar la clave
       let newId = id;
       let newClaveUnica = existing.claveUnica || existing.id;
       
@@ -394,22 +411,27 @@ export const useExpiryDatabase = () => {
         const lastDay = new Date(Number(yyyy), Number(mm), 0).getDate();
         const ddPadded = String(lastDay).padStart(2, '0');
         newClaveUnica = `${sanitizedBarcode}${yyyy}${mmPadded}${ddPadded}`;
-        newId = newClaveUnica;
         
-        // Si el ID cambió, debemos eliminar el registro antiguo
-        if (newId !== id) {
-          logger.info('EXPIRY_DB', `Actualizando ID de registro por cambio en fecha/sku: ${id} -> ${newId}`);
-          await expiryRepository.delete(id);
-          supabaseSyncService.deleteRemote(tableName, id).catch(() => {});
-          
-          // Verificar si el nuevo ID ya existe (colisión) y decidir si sobreescribir o sumar
-          const collision = localItems.find(item => item.id === newId || item.claveUnica === newClaveUnica);
-          if (collision) {
-             // Si hay colisión, podríamos sumar cantidades o simplemente sobreescribir.
-             // Para consistencia con handleAddItem, usaremos la lógica de sobreescritura/merge parcial
-             updates.quantity = (updates.quantity || 0) + (collision.quantity || 0);
-          }
+        // Si la claveUnica cambió (y antes el ID era la clave única legacy)
+        if (newClaveUnica !== existing.claveUnica && id === existing.claveUnica) {
+           newId = crypto.randomUUID();
+           logger.info('EXPIRY_DB', `Actualizando clave única migrando a UUID: ${id} -> ${newId}`);
+           await expiryRepository.delete(id);
+           supabaseSyncService.deleteRemote(tableName, id).catch(() => {});
         }
+      }
+
+      // MULTI-USER CONSOLIDATION:
+      // Si la UI envía una edición total (ej. cantidad), debemos asegurarnos de que la actualización
+      // sea la cantidad FINAL consolidada, y eliminar los fragmentos concurrentes para evitar re-sumar.
+      const matchingFragments = localItems.filter(item => (item.claveUnica || item.id) === newClaveUnica);
+      if (matchingFragments.length > 1) {
+         for (const frag of matchingFragments) {
+            if (frag.id !== newId) {
+               await expiryRepository.delete(frag.id);
+               supabaseSyncService.deleteRemote(tableName, frag.id).catch(()=>{});
+            }
+         }
       }
 
       const updatedData = normalizeExpiryRecord({

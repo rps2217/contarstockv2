@@ -18,8 +18,14 @@ export class TemplateSyncService {
     this.unsubMensajes = supabaseSyncService.startSync(this.tableMensajes, {
       put: async (data: any) => {
         const local = await db.dynamic_data.get(data.id);
-        if (local?.syncStatus !== 'pending_delete') {
-          await MessageTemplateRepository.save({ ...data as MessageTemplate });
+        if (local?.syncStatus !== 'pending_delete' && local?.syncStatus !== 'pending') {
+          await db.dynamic_data.put({
+            id: data.id,
+            tableName: this.tableMensajes,
+            data: data,
+            timestamp: data.updatedAt || Date.now(),
+            syncStatus: 'synced'
+          });
         }
       },
       delete: async (id: string) => {
@@ -31,10 +37,14 @@ export class TemplateSyncService {
     this.unsubCorreos = supabaseSyncService.startSync(this.tableCorreos, {
       put: async (data: any) => {
         const local = await db.dynamic_data.get(data.id);
-        if (local?.syncStatus !== 'pending_delete') {
-           // We'll lazy load or just save via dynamic_data since we don't have cyclic imports maybe
-           const { EmailTemplateRepository } = await import('../repositories/EmailTemplateRepository');
-           await EmailTemplateRepository.save({ ...data });
+        if (local?.syncStatus !== 'pending_delete' && local?.syncStatus !== 'pending') {
+          await db.dynamic_data.put({
+            id: data.id,
+            tableName: this.tableCorreos,
+            data: data,
+            timestamp: data.updatedAt || Date.now(),
+            syncStatus: 'synced'
+          });
         }
       },
       delete: async (id: string) => {

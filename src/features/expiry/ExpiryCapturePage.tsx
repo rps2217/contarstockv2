@@ -1,7 +1,8 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldAlert, Download, Trash2, X, AlertTriangle, Search, CornerDownLeft, Loader2 } from 'lucide-react';
+import { ShieldAlert, Download, Trash2, X, AlertTriangle, Search, CornerDownLeft, Loader2, RefreshCw, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { useToastStore } from '../../store/useToastStore';
 import { db } from '../../db';
 import { normalizeSku } from '../../services/utils';
@@ -11,10 +12,12 @@ import { SoundFX } from '../../services/audio';
 import { differenceInDays, format } from 'date-fns';
 import { useFeedbackSystem } from '../../hooks/useFeedbackSystem';
 import { useAppStore } from '@/store/mainAppStore';
+import { useSyncStore } from '../../store/useSyncStore';
 import { CameraScanner } from '../../components/CameraScanner';
 import { ScannerTargetOverlay } from '../../shared/components/scanner/ScannerTargetOverlay';
 import { ModuleHeader } from '../../shared/components/layout/ModuleHeader';
 import { CaptureLayout } from '../../shared/components/layout/CaptureLayout';
+import { SyncDiagnosticsPanel } from '../sync/components/SyncDiagnosticsPanel';
 
 const getDaysUntilExpiry = (mm: number, yyyy: number) => {
   const expiryDate = new Date(yyyy, mm - 1, 1);
@@ -117,8 +120,12 @@ export const ExpiryCapturePage: React.FC = () => {
   const { addToast } = useToastStore.getState();
   const { state, actions } = useExpiryDatabase();
   const { feedback, trigger } = useFeedbackSystem(400);
+  const syncStore = useSyncStore();
+  
+  const parentRef = useRef<HTMLDivElement>(null);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [scannedBarcode, setScannedBarcode] = useState('');
   const [productName, setProductName] = useState('');
   const [providerName, setProviderName] = useState('');
@@ -244,10 +251,16 @@ export const ExpiryCapturePage: React.FC = () => {
       );
     }
 
-    return items
-      .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
-      .slice(0, 50);
+    return items.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
   }, [state.allItems, filterVencido, filterCritico, searchQuery, inputValue]);
+
+  // VIRTUALIZADOR DE ALTO RENDIMIENTO
+  const rowVirtualizer = useVirtualizer({
+    count: sortedItems.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 110,
+    overscan: 10
+  });
 
   const header = (
     <ModuleHeader 
@@ -256,6 +269,24 @@ export const ExpiryCapturePage: React.FC = () => {
       onBack={() => navigate('/')}
       actions={
         <div className="flex items-center gap-2">
+          {/* SYNC STATUS INDICATOR (Fase 3: UX Sincronización) - Simplificado */}
+          <button
+            onClick={() => setIsSyncModalOpen(true)}
+            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+              syncStore.incidents.length > 0 
+                ? 'bg-rose-500 text-white animate-pulse shadow-[0_0_15px_rgba(244,63,94,0.4)]' 
+                : syncStore.conflicts > 0 
+                  ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/20' 
+                  : 'text-slate-600 hover:text-slate-400 active:scale-90'
+            }`}
+          >
+            {syncStore.incidents.length > 0 ? (
+              <AlertCircle className="w-5 h-5" />
+            ) : (
+              <RefreshCw className={`w-4 h-4 ${syncStore.isSyncing ? 'animate-spin' : ''}`} />
+            )}
+          </button>
+
           <button
             onClick={() => setIsSearchActive(!isSearchActive)}
             className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
@@ -295,16 +326,32 @@ export const ExpiryCapturePage: React.FC = () => {
         onCameraToggle={() => setIsCameraActive(!isCameraActive)}
         inputPlaceholder={isSearchActive ? "Buscar..." : "Escanear o digitar..."}
         inputRef={inputRef}
+        scrollRef={parentRef}
         readOnly={isModalOpen}
         list={
-          <div className="space-y-4 pb-32">
-            {sortedItems.map((item) => (
-              <ExpiryItemRow 
-                key={item.id} 
-                item={item} 
-                onDelete={handleDelete} 
-              />
-            ))}
+          <div 
+            className="relative w-full"
+            style={{ height: `${rowVirtualizer.getTotalSize()}px` }}
+          >
+            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+              const item = sortedItems[virtualRow.index];
+              return (
+                <div
+                  key={item.id}
+                  className="absolute top-0 left-0 w-full"
+                  style={{
+                    height: `${virtualRow.size}px`,
+                    transform: `translateY(${virtualRow.start}px)`,
+                    paddingBottom: '16px' // Espaciado entre items
+                  }}
+                >
+                  <ExpiryItemRow 
+                    item={item} 
+                    onDelete={handleDelete} 
+                  />
+                </div>
+              );
+            })}
           </div>
         }
         emptyState={
@@ -460,6 +507,11 @@ export const ExpiryCapturePage: React.FC = () => {
           </div>
         )}
       </AnimatePresence>
+
+      <SyncDiagnosticsPanel 
+        isOpen={isSyncModalOpen} 
+        onClose={() => setIsSyncModalOpen(false)} 
+      />
     </>
   );
 };

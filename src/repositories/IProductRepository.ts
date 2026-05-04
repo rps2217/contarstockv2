@@ -12,6 +12,8 @@ export interface IProductRepository {
   getPendingSyncCount(): Promise<number>;
   getPendingSync(): Promise<Product[]>;
   markAsSynced(barcodes: string[]): Promise<void>;
+  search(query: string, limit?: number): Promise<Product[]>;
+  getQuickStats(): Promise<{ total: number; synced: number }>;
 }
 
 // Forced GitHub sync

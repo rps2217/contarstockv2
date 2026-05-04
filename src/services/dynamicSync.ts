@@ -2,6 +2,7 @@ import { db, DynamicRecord } from '../db';
 import { supabaseSyncService } from './supabaseSyncService';
 import { getSettings } from './settings';
 import { logger } from './logger';
+import { useSyncStore } from '../store/useSyncStore';
 
 export const dynamicSyncService = {
   /**
@@ -68,9 +69,26 @@ export const dynamicSyncService = {
     }
 
     const settings = getSettings();
+    
+    // TABLA DE PRIORIDADES (Fase 2: Joyería)
+    const tablePriority: Record<string, number> = {
+      [settings.cloudConfig?.inventoryRegistryTableName || 'EXPIRY']: 10,
+      'EXPIRY': 10,
+      [settings.cloudConfig?.countsTableName || 'COUNTS']: 9,
+      'COUNTS': 9,
+      [settings.cloudConfig?.productsTableName || 'PRODUCTS']: 5,
+      'CLIENTES': 4,
+      'EVENTOS': 1
+    };
 
-    for (const [tableName, records] of Object.entries(groups)) {
-      if (onProgress) onProgress(`Sincronizando ${records.length} registros de ${tableName}...`);
+    // Ordenar tablas por prioridad antes de procesar
+    const sortedTableNames = Object.keys(groups).sort((a, b) => 
+      (tablePriority[b] || 0) - (tablePriority[a] || 0)
+    );
+
+    for (const tableName of sortedTableNames) {
+      const records = groups[tableName];
+      if (onProgress) onProgress(`Sincronizando ${records.length} registros de ${tableName}... (Prioridad ${tablePriority[tableName] || 0})`);
       
       // BATCHING: Dividir en lotes de 200 registros para evitar payload muy grande y errores 429
       const BATCH_SIZE = 200;
@@ -121,12 +139,20 @@ export const dynamicSyncService = {
           const result = await supabaseSyncService.pushBatch(tableName, rows);
 
           if (result.success) {
-            const ids = batchRecords.map(r => r.id);
-            await db.dynamic_data.where('id').anyOf(ids).modify({ 
-              syncStatus: 'synced',
-              syncError: undefined,
-              retryCount: 0,
-              nextRetry: undefined
+            // MULTI-USER CONCURRENCY FIX: Only mark as synced if the local version hasn't been modified
+            // while the background upload was taking place. Verify timestamps match!
+            await db.transaction('rw', db.dynamic_data, async () => {
+              for (const r of batchRecords) {
+                const current = await db.dynamic_data.get(r.id);
+                if (current && current.timestamp === r.timestamp && current.syncStatus !== 'pending_delete') {
+                  await db.dynamic_data.update(r.id, { 
+                    syncStatus: 'synced',
+                    syncError: undefined,
+                    retryCount: 0,
+                    nextRetry: undefined
+                  });
+                }
+              }
             });
             totalSuccess += batchRecords.length;
             if (onProgress) onProgress(`✓ ${tableName}: ${batchRecords.length} sincronizados (Lote ${Math.floor(i/BATCH_SIZE)+1}).`);
@@ -137,6 +163,9 @@ export const dynamicSyncService = {
           totalFailed += batchRecords.length;
           logger.error('DYNAMIC_SYNC_FAIL', `Error sincronizando lote de ${tableName}: ${error.message}`);
           
+          // NOTIFICAR INCIDENTE (Joyeria UX)
+          useSyncStore.getState().addIncident(tableName, error.message);
+
           // EXPONENTIAL BACKOFF
           const ids = batchRecords.map(r => r.id);
           await db.transaction('rw', db.dynamic_data, async () => {
@@ -228,19 +257,35 @@ export const dynamicSyncService = {
               ? new Date(remoteRow['TIMESTAMP'] || remoteRow['FECHA_INGRESO'] || remoteRow['FECHA']).getTime() 
               : 0;
             
-            // Si el registro local ya está sincronizado, o si el remoto es más reciente que nuestra edición local pendiente
-            if (localRecord.syncStatus === 'synced' || remoteTimestamp > localRecord.timestamp) {
-              const newData = { ...localRecord.data, ...remoteRow };
-              recordsToPut.push({
-                id: remoteId,
-                tableName: tableName,
-                data: newData,
-                timestamp: remoteTimestamp || Date.now(),
-                syncStatus: 'synced',
-                retryCount: 0,
-                nextRetry: 0
-              });
-              updated++;
+            // FASE 3: SMART MERGE (Joyeria Técnica)
+            // Si el registro local tiene cambios pendientes, hacemos un merge campo por campo 
+            // preservando lo que el usuario está editando pero aceptando lo que otros enviaron.
+            if (localRecord.syncStatus !== 'synced') {
+               const mergedData = { ...remoteRow, ...localRecord.data };
+               
+               // NOTIFICAR CONFLICTO RESUELTO (Joyeria UX)
+               useSyncStore.getState().addConflict();
+               logger.info('SYNC_CONFLICT', `Conflicto fusionado para ${remoteId} en ${tableName}`);
+
+               // Solo actualizamos si el remoto es REALMENTE más nuevo o tiene info que no tenemos
+               recordsToPut.push({
+                 ...localRecord,
+                 data: mergedData,
+                 timestamp: Math.max(localRecord.timestamp, remoteTimestamp)
+               });
+               updated++;
+            } else if (remoteTimestamp > localRecord.timestamp) {
+               // Si estamos sincronizados y llega algo más nuevo, aceptamos
+               recordsToPut.push({
+                 id: remoteId,
+                 tableName: tableName,
+                 data: { ...localRecord.data, ...remoteRow },
+                 timestamp: remoteTimestamp,
+                 syncStatus: 'synced',
+                 retryCount: 0,
+                 nextRetry: 0
+               });
+               updated++;
             }
           } else {
             const remoteTimestamp = remoteRow['TIMESTAMP'] || remoteRow['FECHA_INGRESO'] || remoteRow['FECHA']

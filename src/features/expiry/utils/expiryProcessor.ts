@@ -33,13 +33,26 @@ export const processExpiryItem = (
   
   const supplierRut = product?.supplierRut ? normalizeIdentity(product.supplierRut) : null;
   const supplierName = product?.supplier ? normalizeIdentity(product.supplier) : null;
+  const itemSupplierName = item.providerName ? normalizeIdentity(item.providerName) : null;
+  const effectiveSupplierName = supplierName || itemSupplierName;
   
+  // MEMOIZED RESOLUTION: We use the providerMap more efficiently
   let provider = supplierRut ? providerMap.get(supplierRut) : null;
-  if (!provider && supplierName) {
-    for (const p of Array.from(providerMap.values())) {
-      if (p.name && normalizeIdentity(p.name) === supplierName) {
-        provider = p;
-        break;
+  
+  if (!provider && effectiveSupplierName) {
+    // Si no hay match por RUT, intentamos por nombre. 
+    // Para no iterar siempre, el llamador ya debería pasar un providerMap que incluya nombres como llaves
+    // o podemos buscarlo una vez.
+    provider = providerMap.get(effectiveSupplierName);
+    
+    // Fallback para nombres no exactamente iguales (normalización profunda)
+    if (!provider) {
+      const normalizedQuery = normalizeIdentity(effectiveSupplierName);
+      for (const p of Array.from(providerMap.values())) {
+        if (p.name && normalizeIdentity(p.name) === normalizedQuery) {
+          provider = p;
+          break;
+        }
       }
     }
   }

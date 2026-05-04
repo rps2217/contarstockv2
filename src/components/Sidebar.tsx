@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { motion } from 'motion/react';
-import { Home, Database, History, Container, Cloud, Box, Settings, Zap, FileText, Camera, Calendar, ChevronLeft, ChevronRight, AlertCircle, RefreshCw, Users } from 'lucide-react';
+import { Home, Database, History, Container, Cloud, Box, Settings, Zap, FileText, Camera, Calendar, ChevronLeft, ChevronRight, AlertCircle, RefreshCw, Users, ShieldCheck } from 'lucide-react';
 // Forced update to trigger GitHub sync for the components folder
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AppSettings, TableSchema } from '../types';
@@ -79,6 +79,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
         <NavItem path="/reception" activeKey="reception" label="Recepción" icon={Container} />
         <NavItem path="/reports" activeKey="reports" label="Auditoría" icon={History} />
         <NavItem path="/database" activeKey="database" label="Inventario" icon={Database} />
+        <NavItem path="/compliance" activeKey="compliance" label="Control Canjes" icon={ShieldCheck} />
         
         {!isCollapsed && <div className="text-[9px] font-black text-slate-700 uppercase tracking-[0.3em] px-4 mb-4 mt-8">Herramientas</div>}
         <NavItem path="/massive/BURST-MODE" activeKey="massive" label="Modo Hammer" icon={Zap} />

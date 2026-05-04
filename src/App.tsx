@@ -40,6 +40,7 @@ const ExpiryManagement = lazyWithRetry(() => import('@/features/expiry/ExpiryMan
 const EventManagement = lazyWithRetry(() => import('@/features/events/EventManagementPage'));
 const ExpiryCapturePage = lazyWithRetry(() => import('@/features/expiry/ExpiryCapturePage'));
 const EventCapturePage = lazyWithRetry(() => import('@/features/events/EventCapturePage'));
+const ComplianceDashboardPage = lazyWithRetry(() => import('@/features/compliance/ComplianceDashboardPage'));
 const DynamicManagement = lazyWithRetry(() => import('@/features/dynamic/DynamicManagementPage').then(m => ({ default: m.DynamicManagementPage })));
 const GlobalSyncQueue = lazyWithRetry(() => import('@/features/sync/GlobalSyncQueuePage'));
 const ProvidersPage = lazyWithRetry(() => import('@/features/suppliers/pages/ProvidersPage').then(m => ({ default: m.ProvidersPage })));
@@ -222,6 +223,7 @@ const AppContent = () => {
                     <Route path="/reception/capture" element={<ReceptionCapture />} />
                     <Route path="/expiry" element={<ExpiryManagement />} />
                     <Route path="/expiry/capture" element={<ExpiryCapturePage />} />
+                    <Route path="/compliance" element={<ComplianceDashboardPage />} />
                     <Route path="/events" element={<EventManagement />} />
                     <Route path="/events/capture" element={<EventCapturePage />} />
                     <Route path="/providers" element={<ProvidersPage />} />

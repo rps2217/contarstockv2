@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Home, Database, History, Cloud, Container, Settings, Zap, FileText, Camera, Calendar, RefreshCw } from 'lucide-react';
+import { Home, Database, History, Cloud, Container, Settings, Zap, FileText, Camera, Calendar, RefreshCw, ShieldCheck } from 'lucide-react';
 import { AppSettings, ViewState } from '../types';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ScanRepository } from '../repositories/ScanRepository';
@@ -26,6 +26,7 @@ export const BottomDock: React.FC<Props> = ({ currentView, settings }) => {
   'reception': { label: 'RECEPCIÓN', icon: Container, path: '/reception' },
   'reports': { label: 'HISTORIAL', icon: History, path: '/reports' },
   'database': { label: 'CATÁLOGO', icon: Database, path: '/database' },
+  'compliance': { label: 'RIESGO', icon: ShieldCheck, path: '/compliance' },
   'sync': { label: 'NUBE', icon: Cloud, path: '/sync' },
   'expiry': { label: 'VENCIMIENTOS', icon: Calendar, path: '/expiry' },
   'events': { label: 'EVENTOS', icon: FileText, path: '/events' },

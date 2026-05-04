@@ -16,10 +16,16 @@ export class CustomerSyncService {
     this.unsubscribe = supabaseSyncService.startSync(tableName, {
       put: async (data: any) => {
         const customer = data as Customer;
-        // Solo actualizamos si no tenemos una eliminación pendiente localmente
+        // Solo actualizamos si no tenemos una eliminación o edición pendiente localmente
         const local = await db.dynamic_data.get(customer.id);
-        if (local?.syncStatus !== 'pending_delete') {
-          await CustomerRepository.save({ ...customer, syncStatus: 'synced' });
+        if (local?.syncStatus !== 'pending_delete' && local?.syncStatus !== 'pending') {
+          await db.dynamic_data.put({
+            id: customer.id,
+            tableName: tableName,
+            data: customer,
+            timestamp: customer.updatedAt || Date.now(),
+            syncStatus: 'synced'
+          });
         }
       },
       delete: async (id: string) => {

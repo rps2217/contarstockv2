@@ -10,6 +10,8 @@ interface SyncState {
   latencyMs: number | null;
   isSupabaseConnected: boolean;
   syncError: string | null;
+  conflicts: number;
+  incidents: { table: string; error: string; time: number }[];
   setSyncing: (status: boolean) => void;
   setLastSyncTime: (time: number) => void;
   setTableSyncTime: (table: string, time: number) => void;
@@ -17,6 +19,9 @@ interface SyncState {
   setLatency: (ms: number | null) => void;
   setSupabaseConnected: (status: boolean) => void;
   setSyncError: (error: string | null) => void;
+  addConflict: () => void;
+  addIncident: (table: string, error: string) => void;
+  clearIncidents: () => void;
 }
 
 export const useSyncStore = create<SyncState>()(
@@ -29,6 +34,8 @@ export const useSyncStore = create<SyncState>()(
       latencyMs: null,
       isSupabaseConnected: true,
       syncError: null,
+      conflicts: 0,
+      incidents: [],
       setSyncing: (status) => set({ isSyncing: status }),
       setLastSyncTime: (time) => set({ lastSyncTime: time }),
       setTableSyncTime: (table, time) => set(state => ({ 
@@ -38,6 +45,11 @@ export const useSyncStore = create<SyncState>()(
       setLatency: (ms) => set({ latencyMs: ms }),
       setSupabaseConnected: (status) => set({ isSupabaseConnected: status }),
       setSyncError: (error) => set({ syncError: error }),
+      addConflict: () => set(state => ({ conflicts: state.conflicts + 1 })),
+      addIncident: (table, error) => set(state => ({ 
+        incidents: [{ table, error, time: Date.now() }, ...state.incidents].slice(0, 10) 
+      })),
+      clearIncidents: () => set({ incidents: [], conflicts: 0 }),
     }),
     {
       name: 'sync-storage',

@@ -101,7 +101,11 @@ export const dynamicDataService = {
 
       const response = await supabaseSyncService.pushBatch(record.tableName, [rowData]);
       if (response.success) {
-        await db.dynamic_data.update(id, { syncStatus: 'synced' });
+        // MULTI-USER CONCURRENCY FIX
+        const current = await db.dynamic_data.get(id);
+        if (current && current.timestamp === record.timestamp && current.syncStatus !== 'pending_delete') {
+            await db.dynamic_data.update(id, { syncStatus: 'synced' });
+        }
       } else {
         await db.dynamic_data.update(id, { syncStatus: 'error', syncError: response.error });
       }
@@ -112,78 +116,8 @@ export const dynamicDataService = {
   },
 
   async syncAllPending() {
-    const allPending = await db.dynamic_data
-      .where('syncStatus')
-      .anyOf(['pending', 'pending_delete', 'error'])
-      .toArray();
-
-    if (allPending.length === 0) return;
-
-    // Separar por tipo de acción
-    const toUpsert = allPending.filter(r => r.syncStatus === 'pending' || r.syncStatus === 'error');
-    const toDelete = allPending.filter(r => r.syncStatus === 'pending_delete');
-
-    // Procesar eliminaciones primero
-    for (const record of toDelete) {
-      await this.processDeletion(record.id).catch(() => {});
-    }
-
-    if (toUpsert.length === 0) return;
-
-    // Agrupar por tabla para batching (Upserts)
-    const groups: Record<string, DynamicRecord[]> = {};
-    for (const record of toUpsert) {
-      if (!groups[record.tableName]) groups[record.tableName] = [];
-      groups[record.tableName].push(record);
-    }
-
-    const settings = (await import('./settings')).getSettings();
-    const config = settings.cloudConfig;
-
-    for (const [tableName, records] of Object.entries(groups)) {
-      try {
-        const rowsToUpsert = records.map(record => {
-          const rowData = { ...record.data };
-          let idCol = 'ID';
-          let tsCol = 'TIMESTAMP';
-
-          if (config?.mappings) {
-            if (tableName === config.inventoryRegistryTableName) {
-              idCol = config.mappings.expiry?.id || 'ID';
-              tsCol = config.mappings.expiry?.timestamp || 'TIMESTAMP';
-            } else if (tableName === config.eventsTableName) {
-              idCol = config.mappings.events?.id || 'ID';
-              tsCol = config.mappings.events?.timestamp || 'TIMESTAMP';
-            } else if (tableName === config.productsTableName) {
-              idCol = config.mappings.products?.id || 'ID';
-            } else if (tableName === config.countsTableName) {
-              idCol = config.mappings.counts?.id || 'ID';
-              tsCol = config.mappings.counts?.timestamp || 'TIMESTAMP';
-            }
-          }
-
-          if (!rowData[idCol]) rowData[idCol] = record.id;
-          if (!rowData['id']) rowData['id'] = record.id;
-          if (!rowData[tsCol]) rowData[tsCol] = new Date(record.timestamp).toISOString();
-          
-          return rowData;
-        });
-
-        const response = await supabaseSyncService.pushBatch(tableName, rowsToUpsert);
-        
-        if (response.success) {
-          const ids = records.map(r => r.id);
-          await db.dynamic_data.where('id').anyOf(ids).modify({ syncStatus: 'synced' });
-        } else {
-          // Si falla el batch, intentamos uno por uno para no bloquear todo
-          for (const record of records) {
-            await this.syncRecord(record.id).catch(() => {});
-          }
-        }
-      } catch (error: any) {
-        logger.error('DYNAMIC_DATA', `Batch sync failed for table ${tableName}`, error.message);
-      }
-    }
+    const { dynamicSyncService } = await import('./dynamicSync');
+    await dynamicSyncService.syncAllPending(undefined);
   }
 };
 

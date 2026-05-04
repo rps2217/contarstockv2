@@ -541,11 +541,19 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
           const chunk = fullPayload.slice(i * UPLOAD_BATCH_SIZE, (i + 1) * UPLOAD_BATCH_SIZE);
           if (onProgress) onProgress(`Subiendo lote ${i + 1}/${totalBatches}...`);
           
-          const result = await supabaseSyncService.pushBatch(targetTable, chunk);
-          
-          if (!result.success) {
+          try {
+            const result = await supabaseSyncService.pushBatch(targetTable, chunk);
+            
+            if (!result.success) {
+              sessionSuccess = false;
+              logger.error("BATCH_UPLOAD_PARTIAL_FAIL", result.error);
+              useSyncStore.getState().addIncident(targetTable, result.error || "Fallo en lote parcial");
+              // No lanzamos error aquí para permitir que otros bultos o lotes intenten su suerte si son independientes
+            }
+          } catch (batchError: any) {
             sessionSuccess = false;
-            throw new Error(`Fallo en lote ${i+1}: ${result.error}`);
+            logger.error("BATCH_UPLOAD_CRITICAL_FAIL", batchError.message);
+            useSyncStore.getState().addIncident(targetTable, batchError.message);
           }
         }
 
@@ -553,6 +561,8 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
           await ScanRepository.markAsSynced(allScanIdsToMark);
           await SessionRepository.updateSyncTimestamp(sessionId);
           if (onProgress) onProgress(`✓ Bulto ${session.logisticsLabel} sincronizado.`);
+        } else {
+          if (onProgress) onProgress(`⚠ Bulto ${session.logisticsLabel} con errores. Se reintentará luego.`);
         }
       }
     }

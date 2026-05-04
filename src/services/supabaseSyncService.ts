@@ -10,6 +10,13 @@ export const supabaseSyncService = {
       .channel(tableName)
       .on('postgres_changes', { event: '*', schema: 'public', table: tableName }, async (payload) => {
         if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+          // MULTI-USER CONCURRENCY FIX
+          if (localTable.get) {
+             const existing = await localTable.get(payload.new.id);
+             if (existing && (existing.synced === 0 || existing.syncStatus === 'pending' || existing.syncStatus === 'pending_delete')) {
+                return; // Preservar cambios locales
+             }
+          }
           if (localTable.put) {
             await localTable.put(payload.new, tableName);
           } else if (localTable.save) {
@@ -43,6 +50,13 @@ export const supabaseSyncService = {
         },
         async (payload) => {
           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            // MULTI-USER CONCURRENCY FIX
+            if (localTable.get) {
+               const existing = await localTable.get(payload.new.id);
+               if (existing && (existing.synced === 0 || existing.syncStatus === 'pending' || existing.syncStatus === 'pending_delete')) {
+                  return; // Preservar cambios locales
+               }
+            }
             if (localTable.put) {
                 await localTable.put(payload.new, tableName);
             } else {
