@@ -172,7 +172,7 @@ const AppContent = () => {
   }
 
   return (
-    <div className={`w-full h-full flex flex-col transition-colors duration-700 ${currentThemeClass} font-sans selection:bg-blue-500/30`}>
+    <div className={`w-full h-full flex flex-col transition-colors duration-700 ${currentThemeClass} ${settings.theme === 'dark' ? 'dark' : ''} font-sans selection:bg-blue-500/30`}>
       <OnboardingOverlay />
       <OfflineBanner />
       <ToastContainer />

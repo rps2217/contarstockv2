@@ -84,6 +84,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
         {!isCollapsed && <div className="text-[9px] font-black text-slate-700 uppercase tracking-[0.3em] px-4 mb-4 mt-8">Herramientas</div>}
         <NavItem path="/massive/BURST-MODE" activeKey="massive" label="Modo Hammer" icon={Zap} />
         <NavItem path="/expiry" activeKey="expiry" label="Vencimientos" icon={Calendar} />
+        <NavItem path="/events" activeKey="events" label="Eventos" icon={FileText} />
         <NavItem path="/customers" activeKey="customers" label="Clientes" icon={Users} />
         <NavItem path="/providers" activeKey="providers" label="Proveedores" icon={Container} />
         
