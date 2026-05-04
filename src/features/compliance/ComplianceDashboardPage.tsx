@@ -24,7 +24,7 @@ const ComplianceDashboardPage: React.FC = () => {
   if (!stats) return null;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col overflow-hidden">
+    <div className="h-screen bg-slate-950 text-slate-100 flex flex-col overflow-hidden">
       {/* HEADER TÉCNICO */}
       <header className="p-6 border-b border-white/5 bg-slate-900/50 backdrop-blur-xl sticky top-0 z-20 shrink-0">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -50,7 +50,7 @@ const ComplianceDashboardPage: React.FC = () => {
         </div>
       </header>
 
-      <main className="flex-1 p-6 md:p-8 space-y-6 max-w-7xl mx-auto w-full flex flex-col min-h-0">
+      <main className="flex-1 p-6 md:p-8 space-y-6 max-w-7xl mx-auto w-full flex flex-col min-h-0 overflow-hidden">
         {/* CABECERA DE LA MATRIZ */}
         <div className="flex items-center justify-between px-2 shrink-0">
           <div className="flex items-center gap-3">
@@ -68,7 +68,7 @@ const ComplianceDashboardPage: React.FC = () => {
         </div>
 
         {/* LISTA DE ALERTAS - MAXIMA PRIORIDAD */}
-        <div className="flex-1 overflow-y-auto pr-2 space-y-3 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto pr-2 space-y-3 custom-scrollbar h-full min-h-0 pb-10">
           {stats.riskItems.length === 0 ? (
             <div className="p-20 bg-slate-900/30 rounded-[3rem] border border-dashed border-white/5 text-center flex flex-col items-center justify-center h-64">
               <div className="w-20 h-20 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6">
