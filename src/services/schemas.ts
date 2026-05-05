@@ -138,8 +138,7 @@ export const CloudProviderSchema = z.record(z.any()).transform((raw) => {
   const rawExchange = raw.has_exchange !== undefined ? raw.has_exchange :
                       raw.hasExchange !== undefined ? raw.hasExchange :
                       raw.CANJE !== undefined ? raw.CANJE :
-                      raw.TIENE_CANJE !== undefined ? raw.TIENE_CANJE :
-                      raw.EXCHANGE_POLICY !== undefined ? raw.EXCHANGE_POLICY : false;
+                      raw.TIENE_CANJE !== undefined ? raw.TIENE_CANJE : false;
   
   let hasExchange = false;
   if (rawExchange === true || rawExchange === 'true' || rawExchange === 1 || rawExchange === '1' || rawExchange === 'SI') {
@@ -151,17 +150,21 @@ export const CloudProviderSchema = z.record(z.any()).transform((raw) => {
     hasExchange = rawExchange;
   }
 
+  const exchangePolicy = raw.exchange_policy || raw.exchangePolicy || raw.EXCHANGE_POLICY || raw.POLITICA_CANJE || '';
+
   return {
     rut,
     name,
     withdrawalDays,
-    hasExchange
+    hasExchange,
+    exchangePolicy // Include exchangePolicy here
   };
 }).pipe(z.object({
   rut: z.string().min(1),
   name: z.string().min(1),
   withdrawalDays: z.number().default(0),
-  hasExchange: z.boolean().default(false)
+  hasExchange: z.boolean().default(false),
+  exchangePolicy: z.string().optional()
 }));
 
 export const CloudInventoryRowSchema = z.object({

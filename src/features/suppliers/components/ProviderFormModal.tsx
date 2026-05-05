@@ -166,6 +166,23 @@ export const ProviderFormModal: React.FC<Props> = ({ isOpen, onClose, onSave, in
                 <span className={`text-sm font-bold ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>Días antes de la fecha de caducidad</span>
               </div>
             </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">
+                Detalle Política (Opcional)
+              </label>
+              <textarea
+                rows={2}
+                value={formData.exchangePolicy || ''}
+                onChange={e => setFormData({ ...formData, exchangePolicy: e.target.value })}
+                placeholder="Ej: Solo se acepta canje presentando factura original."
+                className={`w-full px-4 py-3 rounded-xl outline-none transition-all font-medium border-2 resize-none ${
+                  theme === 'dark' 
+                    ? 'bg-brand-surface border-white/5 focus:border-brand-info text-white' 
+                    : 'bg-white border-slate-200 focus:border-indigo-500 text-slate-900'
+                }`}
+              />
+            </div>
           </div>
 
           <div className="pt-4 flex gap-3">

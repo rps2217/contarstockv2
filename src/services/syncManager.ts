@@ -448,7 +448,8 @@ export const importProvidersFromCloud = async (): Promise<number> => {
         }
         return result.success ? result.data : null;
       })
-      .filter((p): p is Provider => p !== null && !!p.rut && !!p.name);
+      .filter((p): p is Provider => p !== null && !!p.rut && !!p.name)
+      .map(p => ({ ...p, syncStatus: 'synced' as const }));
 
     if (providers.length > 0) {
       await db.providers.bulkPut(providers);

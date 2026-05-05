@@ -49,7 +49,8 @@ export const syncProvidersToCloud = async (providers: Provider[]): Promise<void>
    rut: p.rut,
    name: p.name,
    withdrawal_days: p.withdrawalDays,
-   has_exchange: p.hasExchange
+   has_exchange: p.hasExchange,
+   exchange_policy: p.exchangePolicy
  }));
  
  console.log(`[CloudSync] Subiendo lote Proveedores ${i+1}/${totalBatches}...`);
