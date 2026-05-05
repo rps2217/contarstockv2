@@ -92,7 +92,7 @@ export const NavigationSection: React.FC<Props> = ({ settings, updateSetting }) 
  </div>
  
  <div className="grid grid-cols-1 gap-3">
- {availableNavItems.filter(i => i.id !== 'reception').map(item => {
+ {availableNavItems.map(item => {
  const isActive = currentNav.includes(item.id);
  const Icon = item.icon;
  return (

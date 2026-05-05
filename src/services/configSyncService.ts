@@ -1,8 +1,8 @@
-import { db } from '../db';
+import { db, DynamicRecord } from '../db';
 import { supabaseSyncService } from './supabaseSyncService';
 import { getSettings, saveSettings } from './settings';
 import { logger } from './logger';
-import { AppSettings } from '../types';
+import { AppSettings, MessageTemplate } from '../types';
 
 const CONFIG_COLLECTION = 'APP_CONFIG';
 const CONFIG_DOC_ID = 'global_settings';
@@ -14,6 +14,12 @@ export const configSyncService = {
   async pushSettings(): Promise<void> {
     try {
       const settings = getSettings();
+      
+      // Obtener plantillas
+      const emailTemplateRecords = await db.dynamic_data.where('tableName').equals('PLANTILLAS_CORREOS').toArray();
+      const emailTemplates = emailTemplateRecords.map(r => r.data);
+      const messageTemplates = await db.messageTemplates.toArray();
+
       // Solo subimos lo que es relevante para la sincronización entre dispositivos
       // Evitamos subir configuraciones locales como impresora o modo espejo de cámara
       const syncableSettings = {
@@ -22,6 +28,8 @@ export const configSyncService = {
         schema: settings.schema,
         mobileNavConfig: settings.mobileNavConfig,
         defaultStartModule: settings.defaultStartModule,
+        emailTemplates,
+        messageTemplates,
         updatedAt: Date.now()
       };
 
@@ -69,6 +77,52 @@ export const configSyncService = {
       };
 
       await saveSettings(newSettings);
+
+      // Restaurar plantillas
+      if (Array.isArray(remoteConfig.emailTemplates) && remoteConfig.emailTemplates.length > 0) {
+        // Obtenemos las actuales para no duplicar incontrolablemente o limpiar y restaurar
+        const existingRecords = await db.dynamic_data.where('tableName').equals('PLANTILLAS_CORREOS').toArray();
+        const existingIds = new Set(existingRecords.map(r => r.id));
+        
+        const newRecords: DynamicRecord[] = [];
+        for (const tpl of remoteConfig.emailTemplates) {
+          if (!tpl.id) continue;
+          if (!existingIds.has(tpl.id)) {
+            newRecords.push({
+              id: tpl.id,
+              tableName: 'PLANTILLAS_CORREOS',
+              data: tpl,
+              timestamp: Date.now(),
+              syncStatus: 'synced'
+            });
+          } else {
+            // Actualizar existente
+            await db.dynamic_data.update(tpl.id, { data: tpl });
+          }
+        }
+        if (newRecords.length > 0) {
+          await db.dynamic_data.bulkPut(newRecords);
+        }
+      }
+
+      if (Array.isArray(remoteConfig.messageTemplates) && remoteConfig.messageTemplates.length > 0) {
+        const existingMessages = await db.messageTemplates.toArray();
+        const existingMIds = new Set(existingMessages.map(m => m.id));
+        
+        const newMessages: MessageTemplate[] = [];
+        for (const tpl of remoteConfig.messageTemplates) {
+          if (!tpl.id) continue;
+          if (!existingMIds.has(tpl.id)) {
+            newMessages.push({ ...tpl, syncStatus: 'synced' });
+          } else {
+            await db.messageTemplates.update(tpl.id, { ...tpl, syncStatus: 'synced' });
+          }
+        }
+        if (newMessages.length > 0) {
+          await db.messageTemplates.bulkPut(newMessages);
+        }
+      }
+
       logger.info('CONFIG_SYNC', 'Configuración sincronizada desde la nube');
       return true;
     } catch (error: any) {
