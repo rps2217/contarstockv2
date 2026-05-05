@@ -77,6 +77,14 @@ export const syncRegistry: Record<string, TableSyncMeta> = {
       withdrawal_days: p.withdrawalDays || 0,
       has_exchange: p.hasExchange || false,
       updated_at: new Date().toISOString()
+    }),
+    mapToLocal: (remote) => ({
+      rut: remote.rut,
+      name: remote.name,
+      withdrawalDays: remote.withdrawal_days != null && remote.withdrawal_days !== '' ? Number(remote.withdrawal_days) : undefined,
+      hasExchange: Boolean(remote.has_exchange),
+      syncStatus: 'synced',
+      updatedAt: remote.updated_at ? new Date(remote.updated_at).getTime() : Date.now()
     })
   },
   customers: {

@@ -62,7 +62,7 @@ export const evaluateExpiry = (
 
   const today = startOfDay(referenceDate);
   const daysLeft = differenceInDays(expiryDate, today);
-  const withdrawalDays = policy.withdrawalDays || 30;
+  const withdrawalDays = policy.withdrawalDays ?? 30;
   const withdrawalDate = addDays(expiryDate, -withdrawalDays);
 
   const riskScore = calculateRiskScore(daysLeft, quantity, policy.hasCanje);

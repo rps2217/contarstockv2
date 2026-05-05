@@ -16,7 +16,7 @@ export const ProviderFormModal: React.FC<Props> = ({ isOpen, onClose, onSave, in
     rut: '',
     name: '',
     hasExchange: true,
-    withdrawalDays: 90,
+    withdrawalDays: 30,
   });
 
   useEffect(() => {
@@ -28,7 +28,7 @@ export const ProviderFormModal: React.FC<Props> = ({ isOpen, onClose, onSave, in
           rut: '',
           name: '',
           hasExchange: true,
-          withdrawalDays: 90,
+          withdrawalDays: 30,
         });
       }
     }

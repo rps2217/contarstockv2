@@ -13,8 +13,8 @@ interface UseProductFormProps {
 }
 
 export const useProductForm = ({ initialData, onSaveSuccess, onClose }: UseProductFormProps) => {
-  const [formData, setFormData] = useState<Product & { withdrawalDays?: number; hasExchange?: boolean }>({ 
-    barcode: '', name: '', category: '', supplier: '', supplierRut: '', withdrawalDays: 0, hasExchange: false
+  const [formData, setFormData] = useState<Product & { withdrawalDays?: number | ''; hasExchange?: boolean }>({ 
+    barcode: '', name: '', category: '', supplier: '', supplierRut: '', withdrawalDays: '', hasExchange: false
   });
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [error, setError] = useState('');
@@ -42,7 +42,7 @@ export const useProductForm = ({ initialData, onSaveSuccess, onClose }: UseProdu
         });
         setIsDuplicating(false);
       } else {
-        setFormData({ barcode: '', name: '', category: '', supplier: '', supplierRut: '', withdrawalDays: 0, hasExchange: false });
+        setFormData({ barcode: '', name: '', category: '', supplier: '', supplierRut: '', withdrawalDays: '', hasExchange: false });
         setIsDuplicating(false);
       }
       setError('');
@@ -91,8 +91,8 @@ export const useProductForm = ({ initialData, onSaveSuccess, onClose }: UseProdu
         await ProviderRepository.save({
           rut: cleanRut,
           name: formData.supplier || 'PROVEEDOR N/A',
-          withdrawalDays: Number(withdrawalDays) || 0,
-          hasExchange: !!hasExchange,
+          withdrawalDays: withdrawalDays != null && withdrawalDays !== '' ? Number(withdrawalDays) : existingProvider?.withdrawalDays,
+          hasExchange: hasExchange !== undefined ? !!hasExchange : existingProvider?.hasExchange,
           exchangePolicy: existingProvider?.exchangePolicy || ''
         });
       }

@@ -101,6 +101,7 @@ export const useExpiryDatabase = () => {
 
   const baseProcessedData = useMemo(() => {
     const now = new Date();
+    const defaultWithdrawalDays = settings?.withdrawalDaysDefault ?? 30;
     
     // Usar un Map para deduplicar por claveUnica
     const dedupMap = new Map<string, ExpiryItem>();
@@ -121,7 +122,8 @@ export const useExpiryDatabase = () => {
           normalized, 
           productMap, 
           providerMap, 
-          now
+          now,
+          defaultWithdrawalDays
         );
 
         const key = processed.claveUnica || processed.id;

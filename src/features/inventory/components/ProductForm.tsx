@@ -122,8 +122,9 @@ export const ProductForm: React.FC<ProductFormProps> = ({ isOpen, onClose, initi
     <label className="text-[10px] font-black text-slate-500 uppercase ml-1">Días de Retiro</label>
     <input 
      type="number"
-     value={(formData as any).withdrawalDays || 0}
-     onChange={(e) => updateField('withdrawalDays', parseInt(e.target.value) || 0)}
+     placeholder="Defecto (30)"
+     value={(formData as any).withdrawalDays === '' ? '' : (formData as any).withdrawalDays}
+     onChange={(e) => updateField('withdrawalDays', e.target.value === '' ? '' : parseInt(e.target.value) || 0)}
      className="w-full h-11 px-4 bg-white dark:bg-slate-950 border border-indigo-200 dark:border-indigo-500/20 rounded-xl font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
     />
    </div>

@@ -10,7 +10,8 @@ export const processExpiryItem = (
   item: any, 
   productMap: Map<string, Product>, 
   providerMap: Map<string, Provider>, 
-  now: Date
+  now: Date,
+  defaultWithdrawalDays: number = 30
 ): ExpiryItem => {
   // 1. DETERMINACIÓN DE LA FECHA DE VENCIMIENTO
   let expiry: Date | null = null;
@@ -57,10 +58,26 @@ export const processExpiryItem = (
     }
   }
   
+  const getWithdrawalDays = () => {
+    if (provider) {
+      if (provider.withdrawalDays != null && provider.withdrawalDays !== '') return Number(provider.withdrawalDays);
+      if ((provider as any).withdrawal_days != null && (provider as any).withdrawal_days !== '') return Number((provider as any).withdrawal_days);
+    }
+    return defaultWithdrawalDays;
+  };
+
+  const getHasExchange = () => {
+    if (provider) {
+      if (provider.hasExchange !== undefined) return Boolean(provider.hasExchange);
+      if ((provider as any).has_exchange !== undefined) return Boolean((provider as any).has_exchange);
+    }
+    return false;
+  };
+
   // 3. APLICACIÓN DE POLÍTICAS DE NEGOCIO (DOMAIN ENGINE)
   const policy: ExpiryPolicy = {
-    withdrawalDays: provider?.withdrawalDays || 30,
-    hasCanje: provider?.hasExchange ?? false
+    withdrawalDays: getWithdrawalDays(),
+    hasCanje: getHasExchange()
   };
 
   const evaluation = evaluateExpiry(expiry, policy, now, item.quantity || 1);
