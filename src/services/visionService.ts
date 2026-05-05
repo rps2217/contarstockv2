@@ -98,4 +98,3 @@ export const visionService = {
   }
 };
 
-// Forced GitHub sync

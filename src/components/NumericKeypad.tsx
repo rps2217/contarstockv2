@@ -127,4 +127,3 @@ export const NumericKeypad: React.FC<NumericKeypadProps> = ({
  </div>
  );
 };
-// Forced GitHub sync

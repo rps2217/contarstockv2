@@ -216,4 +216,3 @@ class ThermalPrinterService {
 
 export const thermalPrinter = new ThermalPrinterService();
 
-// Forced GitHub sync

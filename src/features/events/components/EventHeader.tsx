@@ -94,4 +94,3 @@ export const EventHeader: React.FC<EventHeaderProps> = ({
   );
 };
 
-// Forced GitHub sync

@@ -19,4 +19,3 @@ export const useNetworkStatus = () => {
   return isOnline;
 };
 
-// Forced GitHub sync

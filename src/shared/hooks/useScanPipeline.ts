@@ -84,4 +84,3 @@ export const useScanPipeline = (defaultMultiplier = 1) => {
   };
 };
 
-// Forced GitHub sync

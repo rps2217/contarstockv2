@@ -181,4 +181,3 @@ export const Database: React.FC = () => {
 
 export default Database;
 
-// Forced GitHub sync

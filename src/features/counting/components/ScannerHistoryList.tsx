@@ -62,4 +62,3 @@ export const ScannerHistoryList: React.FC<Props> = memo(({ items, activeBarcode,
  );
 });
 
-// Forced GitHub sync

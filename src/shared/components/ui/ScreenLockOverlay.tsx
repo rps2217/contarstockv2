@@ -114,4 +114,3 @@ export const ScreenLockOverlay: React.FC<Props> = ({ isLocked, onUnlock }) => {
  );
 };
 
-// Forced GitHub sync

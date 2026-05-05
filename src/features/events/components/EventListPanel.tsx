@@ -149,4 +149,3 @@ export const EventListPanel: React.FC<EventListPanelProps> = ({
   );
 };
 
-// Forced GitHub sync

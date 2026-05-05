@@ -89,4 +89,3 @@ export const ScannerHeader: React.FC<ScannerHeaderProps> = ({
   );
 };
 
-// Forced GitHub sync

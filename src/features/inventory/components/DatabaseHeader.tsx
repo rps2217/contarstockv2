@@ -36,27 +36,26 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
  const isModelDisabled = props.brainStatus?.status === 'disabled';
 
  return (
- <div className="shrink-0 z-30 bg-white dark:bg-slate-900 py-3 px-4 border-b border-slate-200 dark:border-white/5 shadow-md">
- <div className="flex flex-col gap-3 max-w-6xl mx-auto">
- 
- {/* NIVEL 1: ACCIONES Y LOGO */}
- <div className="flex items-center justify-between">
- <div className="flex items-center gap-2">
- <button onClick={() => navigate('/dashboard')} className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl text-slate-600 dark:text-slate-400 transition-all active:scale-90">
- <ChevronLeft className="w-6 h-6 stroke-[3px]" />
- </button>
- <div className="flex flex-col">
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg sm:text-2xl font-black uppercase tracking-tighter italic text-slate-900 dark:text-white flex items-center gap-2 truncate">
-                  <Database className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500" />
-                  CATÁLOGO
-                </h1>
-                <span className="text-[8px] sm:text-[10px] font-mono text-slate-500 bg-slate-100 dark:bg-slate-900 px-2 py-0.5 rounded border border-slate-200 dark:border-white/5 uppercase tracking-widest">
-                  {props.usedMb} MB
-                </span>
-              </div>
-            </div>
- </div>
+  <div className="shrink-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md py-3 md:py-4 px-4 md:px-6 border-b border-slate-200 dark:border-white/5 shadow-sm sticky top-0">
+  <div className="flex flex-col gap-4 max-w-7xl mx-auto">
+  
+  {/* NIVEL 1: ACCIONES Y LOGO */}
+  <div className="flex items-center justify-between">
+  <div className="flex items-center gap-3">
+  <button onClick={() => navigate('/dashboard')} className="p-2 -ml-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl text-slate-600 dark:text-slate-400 transition-all active:scale-95">
+  <ChevronLeft className="w-6 h-6 stroke-[3px]" />
+  </button>
+  <div className="flex flex-col">
+               <div className="flex items-center gap-2">
+                 <h1 className="text-xl md:text-2xl font-black uppercase tracking-tight text-slate-900 dark:text-white flex items-center gap-2 truncate leading-none">
+                   CATÁLOGO
+                 </h1>
+                 <span className="text-[9px] md:text-[10px] font-black text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md uppercase tracking-widest hidden sm:inline-block">
+                   {props.usedMb} MB Usados
+                 </span>
+               </div>
+             </div>
+  </div>
  
  <div className="flex gap-2">
  {!isModelReady && !isModelDownloading && !isModelDisabled && (
@@ -79,17 +78,17 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
       }
     }}
     disabled={props.isSyncing}
-    className="bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all h-10"
+    className="bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95 border border-indigo-200 dark:border-indigo-500/20"
    >
-    {props.isSyncing ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+    {props.isSyncing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
     Forzar Nube
    </button>
    <button 
     onClick={props.onImport}
-    className="bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all h-10"
+    className="bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95 border border-emerald-200 dark:border-emerald-500/20"
    >
-    <FileSpreadsheet className="w-3 h-3" />
-    Importar
+    <FileSpreadsheet className="w-4 h-4" />
+    Importar CSV
    </button>
  </div>
 
@@ -155,10 +154,10 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
        
        <button 
          onClick={props.onImport} 
-         className="hidden sm:flex px-4 h-12 bg-emerald-600 text-white rounded-2xl items-center justify-center gap-2 shadow-lg hover:bg-emerald-500 transition-all border border-emerald-400/20 active:scale-95 group shrink-0"
+         className="hidden sm:flex px-4 h-12 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 rounded-2xl items-center justify-center gap-2 transition-all border border-emerald-200 dark:border-emerald-500/20 active:scale-95 group shrink-0"
          title="Importar desde Excel/CSV"
        >
-         <FileSpreadsheet className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+         <FileSpreadsheet className="w-5 h-5 group-hover:scale-110 transition-transform" />
          <span className="text-[10px] font-black uppercase tracking-widest">Importar CSV</span>
        </button>
      </div>

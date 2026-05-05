@@ -293,12 +293,17 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
         const session = await SessionRepository.getById(sessionId);
         if (!session) continue;
 
-        // RESPALDO DE FOTO EN STORAGE - NOTA: Supabase Storage podría requerir implementación distinta
+        // RESPALDO DE FOTO EN STORAGE
         if (session.labelPhoto && !session.photoUrl) {
           if (onProgress) onProgress(`Respaldando foto en la nube [${session.logisticsLabel}]...`);
           try {
-            // Mantenemos Firebase Storage por ahora o deshabilitamos si no hay Supabase Storage listo
-            if (onProgress) onProgress(`⚠ Salto de respaldo de foto (pendiente migración Storage)`);
+            const photoPath = `labels/${session.id}.jpg`;
+            const uploadResult = await supabaseSyncService.uploadPhoto(session.labelPhoto, photoPath);
+            
+            if (uploadResult.success && uploadResult.fileUrl) {
+              await SessionRepository.updatePhotoUrl(session.id, uploadResult.fileUrl);
+              if (onProgress) onProgress(`✓ Foto respaldada.`);
+            }
           } catch (photoError) {
             console.warn("Fallo al subir foto:", photoError);
           }
@@ -474,4 +479,3 @@ export const importCustomersAndTemplatesFromCloud = async (): Promise<void> => {
   }
 };
 
-// Forced GitHub sync

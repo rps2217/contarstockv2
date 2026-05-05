@@ -69,4 +69,3 @@ export const scannerReducer = (state: ScannerState, event: ScannerEvent): Scanne
  return state;
 };
 
-// Forced GitHub sync

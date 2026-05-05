@@ -80,4 +80,3 @@ export const VectorService = {
  }
 };
 
-// Forced GitHub sync

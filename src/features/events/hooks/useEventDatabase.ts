@@ -532,4 +532,3 @@ export const useEventDatabase = () => {
   };
 };
 
-// Forced GitHub sync

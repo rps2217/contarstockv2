@@ -88,4 +88,3 @@ export const ScannerFooter: React.FC<ScannerFooterProps> = ({
  );
 };
 
-// Forced GitHub sync

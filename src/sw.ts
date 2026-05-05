@@ -58,4 +58,3 @@ async function processBackgroundSync() {
   return;
 }
 
-// Forced GitHub sync

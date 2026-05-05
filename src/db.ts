@@ -59,13 +59,29 @@ export class LogiCountDB extends Dexie {
   customers!: Table<Customer>;
   messageTemplates!: Table<MessageTemplate>;
   dynamic_data!: Table<DynamicRecord>;
+  blindScans!: Table<{
+    id?: number;
+    batchId: string;
+    barcode: string;
+    quantity: number;
+    timestamp: number;
+    location?: string;
+  }>;
+  blindManifests!: Table<{
+    id?: number;
+    batchId: string;
+    barcode: string;
+    name?: string;
+    expectedQty: number;
+    loc?: string;
+  }>;
 
   constructor() {
     super('LogiCountDB');
-    this.version(40).stores({
+    this.version(42).stores({
       products: '&barcode, name, syncStatus', 
-      sessions: 'id, status, createdAt, erpOrder, logisticsLabel, sessionType, auditStatus, lastSyncTimestamp, mm, yyyy, batch, photoUrl, [erpOrder+createdAt], [status+lastSyncTimestamp]', 
-      scans: 'id, sessionId, barcode, logisticsLabel, timestamp, synced, isIncident, expiryDate, mm, yyyy, batch, quantity, [sessionId+synced], [sessionId+barcode], [sessionId+logisticsLabel], [sessionId+timestamp]',
+      sessions: 'id, status, createdAt, erpOrder, logisticsLabel, sessionType, auditStatus, lastSyncTimestamp, mm, yyyy, batch, photoUrl, syncStatus, [erpOrder+createdAt], [status+lastSyncTimestamp]', 
+      scans: 'id, sessionId, barcode, logisticsLabel, timestamp, synced, isIncident, expiryDate, mm, yyyy, batch, quantity, syncStatus, [sessionId+synced], [sessionId+barcode], [sessionId+logisticsLabel], [sessionId+timestamp]',
       expectedOrders: 'id, internalId',
       logs: '++id, level, module, timestamp',
       sync_logs: '++id, timestamp, action, tableName, status',
@@ -73,14 +89,16 @@ export class LogiCountDB extends Dexie {
       locations: '++id, &name, lastUsed',
       visualGuides: 'id, guideNumber, erpOrderId, status, createdAt',
       erpSessions: 'id, erpOrderId, status, createdAt',
-      providers: '&rut, name',
-      customers: 'id, firstName, lastName, phone',
-      messageTemplates: 'id, name',
-      dynamic_data: 'id, tableName, timestamp, syncStatus, [tableName+syncStatus]'
+      providers: '&rut, name, syncStatus',
+      customers: '&id, firstName, lastName, phone, syncStatus',
+      messageTemplates: 'id, name, syncStatus',
+      dynamic_data: 'id, tableName, timestamp, syncStatus, [tableName+syncStatus]',
+      blindScans: '++id, batchId, barcode, timestamp',
+      blindManifests: '++id, batchId, barcode'
     });
   }
 }
 
 export const db = new LogiCountDB();
+export const massiveDb = db; // Shortcut for transition
 
-// Forced GitHub sync

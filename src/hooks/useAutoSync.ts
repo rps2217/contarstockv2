@@ -5,9 +5,7 @@ import { useToastStore } from '../store/useToastStore';
 import { useSyncStore } from '../store/useSyncStore';
 import { erpService } from '../services/erpService';
 import { ExpectedOrderRepository } from '../repositories/ExpectedOrderRepository';
-import { dynamicSyncService } from '../services/dynamicSync';
-import { templateSyncService } from '../services/templateSyncService';
-import { customerSyncService } from '../services/customerSyncService';
+import { genericSyncEngine } from '../services/cloud/GenericSyncEngine';
 
 export const useAutoSync = () => {
   const addToast = useToastStore(state => state.addToast);
@@ -23,21 +21,42 @@ export const useAutoSync = () => {
     setSyncError(null);
 
     try {
-      // 0. Process Dynamic Data Sync
-      await dynamicSyncService.resetRetries();
-      const dynamicResult = await dynamicSyncService.syncAllPending();
-      if (dynamicResult.success > 0) {
-        addToast(`Sincronización dinámica: ${dynamicResult.success} registros enviados`, 'success');
+      // 0. Modern Incremental Sync (New Architecture)
+      const registryToSync = [
+        'sessions', 
+        'scans', 
+        'products', 
+        'providers', 
+        'customers', 
+        'messageTemplates', 
+        'emailTemplates', 
+        'expiry', 
+        'events'
+      ];
+      
+      let totalPushed = 0;
+      let totalPulled = 0;
+
+      for (const key of registryToSync) {
+        const res = await genericSyncEngine.sync(key);
+        if (res.success) {
+          totalPushed += (res.pushRes?.success || 0);
+          totalPulled += (res.pullRes?.added || 0) + (res.pullRes?.updated || 0);
+        }
+      }
+      
+      if (totalPushed > 0 || totalPulled > 0) {
+        addToast(`Sincronización completada: ↑${totalPushed} ↓${totalPulled}`, 'success');
       }
 
-      // 1. Upload pending counts
+      // 1. Upload pending counts (Lotes de inventario)
       const pendingGroups = await syncManager.getPendingUploadGroups();
       if (pendingGroups.length > 0) {
         addToast(`Sincronización automática iniciada (${pendingGroups.length} lotes)`, 'info');
         for (const group of pendingGroups) {
           await syncManager.performBatchUpload(group, () => {});
         }
-        addToast('Sincronización automática completada con éxito', 'success');
+        addToast('Sincronización automática de lotes completada', 'success');
       }
 
       // 2. Download pending orders for Detective IA
@@ -96,10 +115,9 @@ export const useAutoSync = () => {
 
     window.addEventListener('online', handleOnline);
     
-    // Sincronización periódica más frecuente si hay datos pendientes
+    // Sincronización periódica
     const intervalId = setInterval(() => {
       if (navigator.onLine) {
-        // Si hay datos pendientes, sincronizar cada minuto, si no, cada 5 minutos
         const pendingCount = useSyncStore.getState().pendingItems;
         if (pendingCount > 0) {
           console.log(`[AutoSync] Datos pendientes (${pendingCount}). Disparando sync...`);
@@ -113,17 +131,10 @@ export const useAutoSync = () => {
       triggerSync();
     }
 
-    // Start Real-time background syncs
-    templateSyncService.startSync();
-    customerSyncService.startSync();
-
     return () => {
       window.removeEventListener('online', handleOnline);
       clearInterval(intervalId);
-      templateSyncService.stopSync();
-      customerSyncService.stopSync();
     };
   }, []);
 };
 
-// Forced GitHub sync

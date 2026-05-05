@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { useAppStore } from '@/store/mainAppStore';
 import { useEventDatabase } from './useEventDatabase';
-import { dynamicSyncService } from '../../../services/dynamicSync';
+import { genericSyncEngine } from '../../../services/cloud/GenericSyncEngine';
 import { useManagementUI } from '../../../shared/hooks/useManagementUI';
 import { useTaskStore } from '@/store/useTaskStore';
 
@@ -93,8 +93,7 @@ export const useEventUI = () => {
   const handleSync = async () => {
     try {
       setIsSyncing(true);
-      const tableName = settings?.cloudConfig?.eventsTableName || 'EVENTOS';
-      const result = await dynamicSyncService.pullSync(tableName);
+      const result = await genericSyncEngine.pullRemoteChanges('events');
       toast.success(`Sincronización completada. ${result.added} añadidos, ${result.updated} actualizados.`);
     } catch (error: any) {
       toast.error(error.message || 'Error al sincronizar con la nube');

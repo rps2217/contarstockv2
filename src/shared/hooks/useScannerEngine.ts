@@ -72,4 +72,3 @@ export const useScannerEngine = (defaultMultiplier = 1) => {
  };
 };
 
-// Forced GitHub sync

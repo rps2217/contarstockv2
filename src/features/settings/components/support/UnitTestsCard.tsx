@@ -79,4 +79,3 @@ export const UnitTestsCard: React.FC = () => {
  );
 };
 
-// Forced GitHub sync

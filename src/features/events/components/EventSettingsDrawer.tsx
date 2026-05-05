@@ -202,4 +202,3 @@ export const EventSettingsDrawer: React.FC<EventSettingsDrawerProps> = ({
   );
 };
 
-// Forced GitHub sync

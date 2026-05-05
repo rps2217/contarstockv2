@@ -18,4 +18,3 @@ export const SessionRowSkeleton: React.FC<{ theme?: 'dark' | 'light' }> = ({ the
   );
 };
 
-// Forced GitHub sync

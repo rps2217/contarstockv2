@@ -1,4 +1,5 @@
-import { massiveDb, BlindScan } from '../db.massive';
+import { massiveDb } from '../db';
+import { BlindScan } from '../types';
 
 export class MassiveDbRepository {
   static async getBlindScansByBatch(batchId: string): Promise<BlindScan[]> {
@@ -95,4 +96,3 @@ export class MassiveDbRepository {
   }
 }
 
-// Forced GitHub sync

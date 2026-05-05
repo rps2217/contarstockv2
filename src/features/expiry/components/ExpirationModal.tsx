@@ -383,7 +383,3 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
   );
 };
 
-// Forced GitHub sync
-
-
-// Forced GitHub sync

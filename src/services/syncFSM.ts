@@ -125,4 +125,3 @@ class SyncStateMachine {
 
 export const syncFSM = new SyncStateMachine();
 
-// Forced GitHub sync

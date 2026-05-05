@@ -316,4 +316,3 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
   );
 });
 
-// Forced GitHub sync

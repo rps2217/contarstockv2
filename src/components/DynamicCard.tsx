@@ -148,4 +148,3 @@ export const DynamicCard: React.FC<DynamicCardProps> = ({
   );
 };
 
-// Forced GitHub sync

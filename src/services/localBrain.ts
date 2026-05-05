@@ -113,4 +113,3 @@ class LocalBrainService {
 
 export const localBrain = new LocalBrainService();
 
-// Forced GitHub sync

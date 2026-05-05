@@ -87,5 +87,3 @@ export const createProductsPayload = (products: Product[]) => {
     [CLOUD_COLUMNS.IA_SIGNATURE || "ia_signature"]: p.embedding ? JSON.stringify(p.embedding) : ""
   }));
 };
-
-// Forced GitHub sync

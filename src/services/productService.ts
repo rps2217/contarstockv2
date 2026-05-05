@@ -63,9 +63,11 @@ export const saveProduct = async (product: Product) => {
   // Preservar embedding si el nuevo no trae nada (aprendizaje local)
   const embedding = validatedData.embedding || existing?.embedding;
   
-  let syncStatus: 'add' | 'edit' | 'synced' = 'add';
-  if (existing) {
-    syncStatus = existing.syncStatus === 'add' ? 'add' : 'edit';
+  let syncStatus: 'pending' | 'synced' = 'pending';
+  // If it was already synced, we move it back to pending for the next cloud update
+  // UNLESS it's explicitly set to synced (e.g. during an initial fetch from cloud)
+  if (validatedData.syncStatus === 'synced') {
+    syncStatus = 'synced';
   }
 
   await productRepository.save({ 
@@ -119,17 +121,17 @@ export const markProductsAsSynced = async (barcodes: string[]) => {
 };
 
 export const createProductAlias = async (newBarcode: string, originalBarcode: string, fallbackName: string) => {
- const masterProduct = await getProductByBarcode(originalBarcode);
- const newProduct: Product = {
- barcode: newBarcode,
- name: masterProduct ? masterProduct.name : fallbackName,
- category: masterProduct?.category || 'ALIAS_DETECTADO',
- supplier: masterProduct?.supplier || '',
- supplierRut: masterProduct?.supplierRut || '',
- syncStatus: 'add',
- embedding: masterProduct?.embedding
- };
- await saveProduct(newProduct);
+  const masterProduct = await getProductByBarcode(originalBarcode);
+  const newProduct: Product = {
+    barcode: newBarcode,
+    name: masterProduct ? masterProduct.name : fallbackName,
+    category: masterProduct?.category || 'ALIAS_DETECTADO',
+    supplier: masterProduct?.supplier || '',
+    supplierRut: masterProduct?.supplierRut || '',
+    syncStatus: 'pending',
+    embedding: masterProduct?.embedding
+  };
+  await saveProduct(newProduct);
 };
 
 export const bulkImportProducts = async (csvText: string): Promise<number> => {
@@ -166,4 +168,3 @@ export const bulkImportProducts = async (csvText: string): Promise<number> => {
  });
  });
 };
-// Forced GitHub sync

@@ -184,4 +184,3 @@ export const Reports: React.FC = () => {
 
 export default Reports;
 
-// Forced GitHub sync

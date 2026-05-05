@@ -172,4 +172,3 @@ export const BulkEditModal: React.FC<Props> = ({ isOpen, onClose, onApply, theme
   );
 };
 
-// Forced GitHub sync

@@ -111,4 +111,3 @@ export const formatCurrency = (value: number): string => {
   }).format(value);
 };
 
-// Forced GitHub sync

@@ -17,8 +17,10 @@ interface Props {
 export const BottomDock: React.FC<Props> = ({ currentView, settings }) => {
  const navigate = useNavigate();
  const isOnline = useNetworkStatus();
- const pendingSync = useLiveQuery(() => ScanRepository.getPendingSyncCount(), [], 0);
- const dynamicStats = useLiveQuery(() => db.dynamic_data.where('syncStatus').anyOf(['pending', 'error']).count(), [], 0);
+ const pendingScans = useLiveQuery(() => ScanRepository.getPendingSyncCount(), [], 0);
+ const pendingSessions = useLiveQuery(() => db.sessions.where('syncStatus').equals('pending').count(), [], 0);
+ const pendingDynamic = useLiveQuery(() => db.dynamic_data.where('syncStatus').anyOf(['pending', 'error']).count(), [], 0);
+ const totalPending = pendingScans + pendingSessions + pendingDynamic;
  const alertCount = useExpiryStore(state => state.alertCount);
 
  const iconMap: Record<string, { label: string, icon: any, path: string }> = {
@@ -65,9 +67,9 @@ export const BottomDock: React.FC<Props> = ({ currentView, settings }) => {
  <div className="absolute -bottom-1 w-1 h-1 bg-blue-400 rounded-full shadow-[0_0_8px_#60a5fa] animate-pulse"></div>
  )}
 
- { key === 'sync' && (pendingSync > 0 || dynamicStats > 0) && (
+ { key === 'sync' && totalPending > 0 && (
  <span className="absolute -top-1 right-1 bg-amber-500 text-black text-[9px] font-black px-1.5 py-0.5 rounded-md border-2 border-slate-950 animate-bounce">
- {pendingSync + dynamicStats}
+ {totalPending}
  </span>
  )}
 
@@ -87,4 +89,3 @@ export const BottomDock: React.FC<Props> = ({ currentView, settings }) => {
  );
 };
 
-// Forced GitHub sync

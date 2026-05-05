@@ -318,17 +318,6 @@ export const dynamicSyncService = {
   },
 
   /**
-   * Obtiene estadísticas globales de sincronización.
-   */
-  async getSyncStats() {
-    const pending = await db.dynamic_data.where('syncStatus').equals('pending').count();
-    const errors = await db.dynamic_data.where('syncStatus').equals('error').count();
-    const synced = await db.dynamic_data.where('syncStatus').equals('synced').count();
-    
-    return { pending, errors, synced };
-  },
-
-  /**
    * Reinicia los contadores de reintento (útil cuando vuelve la conexión)
    */
   async resetRetries(): Promise<void> {
@@ -368,5 +357,3 @@ export const dynamicSyncService = {
     return this.syncAllPending(onProgress);
   }
 };
-
-// Forced GitHub sync

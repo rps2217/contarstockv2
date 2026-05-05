@@ -131,4 +131,3 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
   );
 };
 
-// Forced GitHub sync

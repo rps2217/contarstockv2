@@ -40,4 +40,3 @@ export const fuzzySearchProducts = (products: Product[], query: string, limit: n
  .slice(0, limit);
 };
 
-// Forced GitHub sync

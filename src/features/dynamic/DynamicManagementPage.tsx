@@ -410,4 +410,3 @@ export const DynamicManagementPage: React.FC<DynamicManagementPageProps> = ({
   );
 };
 
-// Forced GitHub sync

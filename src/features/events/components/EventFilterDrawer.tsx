@@ -219,4 +219,3 @@ export const EventFilterDrawer: React.FC<EventFilterDrawerProps> = ({
   );
 };
 
-// Forced GitHub sync

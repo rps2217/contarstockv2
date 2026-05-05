@@ -110,4 +110,3 @@ export const ScannerToolsSheet: React.FC<Props> = ({
  );
 };
 
-// Forced GitHub sync

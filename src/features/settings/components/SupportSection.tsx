@@ -62,4 +62,3 @@ export const SupportSection: React.FC = () => {
   );
 };
 
-// Forced GitHub sync

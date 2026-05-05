@@ -123,4 +123,3 @@ export const useProductForm = ({ initialData, onSaveSuccess, onClose }: UseProdu
   };
 };
 
-// Forced GitHub sync

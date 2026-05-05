@@ -246,4 +246,3 @@ export const DynamicList: React.FC<DynamicListProps> = ({
   );
 };
 
-// Forced GitHub sync

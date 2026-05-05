@@ -78,4 +78,3 @@ export const ScannerSearchBar: React.FC<ScannerSearchBarProps> = ({
   );
 };
 
-// Forced GitHub sync

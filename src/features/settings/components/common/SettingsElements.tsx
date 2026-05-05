@@ -97,4 +97,3 @@ export const SettingsButton = ({ onClick, label, icon: Icon, variant = 'primary'
  );
 };
 
-// Forced GitHub sync

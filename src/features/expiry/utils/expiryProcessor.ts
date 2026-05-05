@@ -257,4 +257,3 @@ export const calculateExpiryStats = (items: ExpiryItem[]) => {
   };
 };
 
-// Forced GitHub sync

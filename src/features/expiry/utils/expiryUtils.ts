@@ -459,4 +459,3 @@ export const handleSendEmail = (items: any[]) => {
   printWindow.document.close();
 };
 
-// Forced GitHub sync

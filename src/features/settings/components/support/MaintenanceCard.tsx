@@ -74,4 +74,3 @@ export const MaintenanceCard: React.FC = () => {
  );
 };
 
-// Forced GitHub sync

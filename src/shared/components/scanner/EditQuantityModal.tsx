@@ -69,4 +69,3 @@ export const EditQuantityModal: React.FC<EditQuantityModalProps> = ({
   );
 };
 
-// Forced GitHub sync

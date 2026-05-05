@@ -35,4 +35,3 @@ export const NetworkStatus: React.FC = () => {
   );
 };
 
-// Forced GitHub sync

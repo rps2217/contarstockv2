@@ -44,4 +44,3 @@ export const OrderRow = memo(({ order, onClick, onDelete }: OrderRowProps) => {
 
 OrderRow.displayName = 'OrderRow';
 
-// Forced GitHub sync

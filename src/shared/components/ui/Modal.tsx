@@ -88,4 +88,3 @@ export const Modal: React.FC<ModalProps> = ({
  );
 };
 
-// Forced GitHub sync

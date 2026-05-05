@@ -478,4 +478,3 @@ export const EventCapturePage: React.FC = () => {
 
 export default EventCapturePage;
 
-// Forced GitHub sync

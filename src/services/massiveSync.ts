@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { massiveDb } from '../db.massive';
+import { massiveDb } from '../db';
 import { createSession, updateSessionMetadata } from './sessionService';
 import { logger } from './logger';
 import { generateUUID, sanitizeBarcode } from './utils';
@@ -165,4 +165,3 @@ export const importManifestFromCloud = async (batchId: string): Promise<number> 
   }
 };
 
-// Forced GitHub sync

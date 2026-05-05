@@ -36,4 +36,3 @@ self.onmessage = (e: MessageEvent) => {
  self.postMessage(Object.values(aggregation));
 };
 
-// Forced GitHub sync

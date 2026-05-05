@@ -121,4 +121,3 @@ export const dynamicDataService = {
   }
 };
 
-// Forced GitHub sync

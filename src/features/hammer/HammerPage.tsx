@@ -115,4 +115,3 @@ export const HammerPage: React.FC = () => {
 
 export default HammerPage;
 
-// Forced GitHub sync

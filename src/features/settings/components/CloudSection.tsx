@@ -165,4 +165,3 @@ export const CloudSection: React.FC<Props> = ({ settings }) => {
   );
 };
 
-// Forced GitHub sync

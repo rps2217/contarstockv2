@@ -93,4 +93,3 @@ export const ScannedItemRow: React.FC<ScannedItemRowProps> = ({
   );
 };
 
-// Forced GitHub sync

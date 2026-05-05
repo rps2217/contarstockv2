@@ -42,4 +42,3 @@ export const ScannerTargetOverlay: React.FC<ScannerTargetOverlayProps> = ({ feed
   );
 };
 
-// Forced GitHub sync

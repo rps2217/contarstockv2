@@ -241,4 +241,3 @@ export const useSyncManager = () => {
   };
 };
 
-// Forced GitHub sync

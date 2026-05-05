@@ -270,4 +270,3 @@ export const IndustrialScannerLayout: React.FC<IndustrialScannerLayoutProps> = (
   );
 };
 
-// Forced GitHub sync

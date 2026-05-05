@@ -132,4 +132,3 @@ export const LocationSelectorModal: React.FC<Props> = ({ isOpen, onClose, curren
  );
 };
 
-// Forced GitHub sync

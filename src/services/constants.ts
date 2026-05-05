@@ -23,4 +23,3 @@ export const CLOUD_COLUMNS = {
 
 export const SYNC_ENGINE_VERSION = "7.1.1-AI-FIX";
 
-// Forced GitHub sync

@@ -161,4 +161,3 @@ export const useOpticalEngine = ({ onScan, isTriggered, scannerDomId }: UseOptic
   };
 };
 
-// Forced GitHub sync

@@ -39,4 +39,3 @@ export const useToastStore = create<ToastStore>((set) => ({
   },
 }));
 
-// Forced GitHub sync

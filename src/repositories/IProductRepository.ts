@@ -16,4 +16,3 @@ export interface IProductRepository {
   getQuickStats(): Promise<{ total: number; synced: number }>;
 }
 
-// Forced GitHub sync

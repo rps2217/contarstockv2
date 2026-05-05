@@ -1,9 +1,14 @@
 import { db } from '../db';
 import { CountingSession } from '../types';
+import { CountingSessionSchema } from '../schemas/database';
 
 export class SessionRepository {
   static async save(session: CountingSession): Promise<void> {
-    await db.sessions.put(session);
+    const record = CountingSessionSchema.parse({
+      ...session,
+      syncStatus: session.syncStatus || 'pending'
+    }) as CountingSession;
+    await db.sessions.put(record);
   }
 
   static async getById(id: string): Promise<CountingSession | undefined> {
@@ -42,8 +47,11 @@ export class SessionRepository {
   }
 
   static async getSyncedCount(): Promise<number> {
-    const sessions = await db.sessions.toArray();
-    return sessions.filter(s => !!s.lastSyncTimestamp).length;
+    return await db.sessions.where('syncStatus').equals('synced').count();
+  }
+
+  static async getPendingSyncCount(): Promise<number> {
+    return await db.sessions.where('syncStatus').equals('pending').count();
   }
 
   static async getReceptionHistory(
@@ -53,12 +61,6 @@ export class SessionRepository {
     endTime?: number
   ): Promise<CountingSession[]> {
     let collection = db.sessions.where('sessionType').equals('reception');
-    
-    if (startTime) {
-      // In IndexedDB we can't chain multiple wheres easily without compound indexes,
-      // so we filter the remainder below.
-      // But we CAN filter here if we don't have indexes. We'll use a JS filter.
-    }
     
     // We fetch and then filter to maintain index usage on sessionType
     let results = await collection.reverse().toArray();
@@ -83,15 +85,27 @@ export class SessionRepository {
   }
 
   static async updateSyncTimestamp(id: string, timestamp: number = Date.now()): Promise<void> {
-    await db.sessions.update(id, { lastSyncTimestamp: timestamp });
+    await db.sessions.update(id, { 
+      lastSyncTimestamp: timestamp,
+      syncStatus: 'synced'
+    });
   }
 
   static async delete(id: string): Promise<void> {
-    await db.sessions.delete(id);
+    const session = await db.sessions.get(id);
+    if (session) {
+      if (session.syncStatus === 'synced' || session.syncStatus === 'error') {
+        await db.sessions.update(id, { syncStatus: 'pending_delete' });
+      } else {
+        await db.sessions.delete(id);
+      }
+    }
   }
 
   static async deleteMany(ids: string[]): Promise<void> {
-    await db.sessions.bulkDelete(ids);
+    for (const id of ids) {
+      await this.delete(id);
+    }
   }
 
   static async deleteDraftReceptionSessions(): Promise<void> {
@@ -107,10 +121,24 @@ export class SessionRepository {
   }
 
   static async markAsCompleted(id: string): Promise<void> {
-    await db.sessions.update(id, { status: 'completed', lastSyncTimestamp: Date.now() });
+    await db.sessions.update(id, { 
+      status: 'completed', 
+      lastSyncTimestamp: Date.now(),
+      syncStatus: 'pending'
+    });
   }
 
   static async update(id: string, changes: Partial<CountingSession>): Promise<void> {
-    await db.sessions.update(id, changes);
+    await db.sessions.update(id, {
+      ...changes,
+      syncStatus: 'pending'
+    });
+  }
+
+  static async updatePhotoUrl(id: string, photoUrl: string): Promise<void> {
+    await db.sessions.update(id, { 
+      photoUrl,
+      syncStatus: 'pending'
+    });
   }
 }

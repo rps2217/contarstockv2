@@ -169,4 +169,3 @@ export const recoverFromEmergencySnapshot = async (): Promise<boolean> => {
   }
 };
 
-// Forced GitHub sync

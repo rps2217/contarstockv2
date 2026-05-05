@@ -251,4 +251,3 @@ export const useProductDatabase = () => {
  };
 };
 
-// Forced GitHub sync

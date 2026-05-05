@@ -123,4 +123,3 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
   );
 };
 
-// Forced GitHub sync

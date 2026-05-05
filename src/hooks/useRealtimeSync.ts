@@ -9,4 +9,3 @@ export const useRealtimeSync = (tableName: string, localTable: any) => {
   }, [tableName, localTable]);
 };
 
-// Forced GitHub sync

@@ -281,4 +281,3 @@ export const exportDiscrepancyPDF = async (match: MatchResult, sessionLabel: str
  // Save
  doc.save(`Discrepancias_${match.expectedOrder.internalId}.pdf`);
 };
-// Forced GitHub sync

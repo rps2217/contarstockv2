@@ -61,4 +61,3 @@ export const Input = memo(forwardRef<HTMLInputElement, InputProps>(({
 
 Input.displayName = 'Input';
 
-// Forced GitHub sync

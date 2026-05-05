@@ -74,4 +74,3 @@ export const useAutoLock = (delayMs?: number, enabled: boolean = true) => {
   };
 };
 
-// Forced GitHub sync

@@ -477,4 +477,3 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
   );
 };
 
-// Forced GitHub sync

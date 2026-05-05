@@ -32,4 +32,3 @@ export const LocationService = {
  }
 };
 
-// Forced GitHub sync

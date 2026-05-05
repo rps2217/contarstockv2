@@ -49,4 +49,3 @@ export const Card = memo(({ children, className = '', onClick, hoverable = false
 
 Card.displayName = 'Card';
 
-// Forced GitHub sync

@@ -102,4 +102,3 @@ export const useHIDScanner = ({
   }, [isEnabled, minChars, effectiveLatency]);
 };
 
-// Forced GitHub sync

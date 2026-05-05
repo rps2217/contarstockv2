@@ -113,4 +113,3 @@ export const useExpiryWatcher = () => {
   }, [tableName, settings, setAlerts, addToast]);
 };
 
-// Forced GitHub sync

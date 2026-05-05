@@ -58,4 +58,3 @@ export const Button = memo(({
 
 Button.displayName = 'Button';
 
-// Forced GitHub sync

@@ -96,4 +96,3 @@ export const ExpiryStats: React.FC<ExpiryStatsProps> = ({
   );
 };
 
-// Forced GitHub sync

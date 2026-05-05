@@ -60,4 +60,3 @@ const mapStatusToVibration = (status: FeedbackStatus) => {
  }
 };
 
-// Forced GitHub sync

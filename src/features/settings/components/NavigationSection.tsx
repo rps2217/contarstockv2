@@ -128,4 +128,3 @@ export const NavigationSection: React.FC<Props> = ({ settings, updateSetting }) 
  );
 };
 
-// Forced GitHub sync

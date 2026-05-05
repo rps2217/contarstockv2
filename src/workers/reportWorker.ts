@@ -29,4 +29,3 @@ self.onmessage = async (e: MessageEvent) => {
   }
 };
 
-// Forced GitHub sync

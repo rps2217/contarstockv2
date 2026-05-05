@@ -56,4 +56,3 @@ root.render(
  </React.StrictMode>
 );
 
-// Forced GitHub sync

@@ -89,4 +89,3 @@ export const ReportsHeader: React.FC<Props> = ({
   );
 };
 
-// Forced GitHub sync

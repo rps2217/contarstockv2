@@ -2,6 +2,7 @@
 import { db } from '../db';
 import { Product } from '../types';
 import { IProductRepository } from './IProductRepository';
+import { ProductSchema } from '../schemas/database';
 
 export class DexieProductRepository implements IProductRepository {
   async getById(barcode: string): Promise<Product | undefined> {
@@ -9,15 +10,30 @@ export class DexieProductRepository implements IProductRepository {
   }
 
   async save(product: Product): Promise<void> {
-    await db.products.put(product);
+    const record = ProductSchema.parse({
+      ...product,
+      syncStatus: product.syncStatus || 'pending'
+    }) as Product;
+    await db.products.put(record);
   }
 
   async saveBatch(products: Product[]): Promise<void> {
-    await db.products.bulkPut(products);
+    const records = products.map(p => ({
+      ...p,
+      syncStatus: p.syncStatus || 'pending'
+    }));
+    await db.products.bulkPut(records);
   }
 
   async delete(barcode: string): Promise<void> {
-    await db.products.delete(barcode);
+    const product = await db.products.get(barcode);
+    if (product) {
+      if (product.syncStatus === 'synced' || product.syncStatus === 'error') {
+        await db.products.update(barcode, { syncStatus: 'pending_delete' });
+      } else {
+        await db.products.delete(barcode);
+      }
+    }
   }
 
   async deleteAll(): Promise<void> {
@@ -85,4 +101,3 @@ export class DexieProductRepository implements IProductRepository {
 
 export const productRepository = new DexieProductRepository();
 
-// Forced GitHub sync

@@ -200,4 +200,3 @@ export const SystemStatus: React.FC = () => {
   );
 };
 
-// Forced GitHub sync

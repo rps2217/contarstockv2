@@ -58,4 +58,3 @@ export const useProductImporter = (onComplete: (count: number) => void) => {
  };
 };
 
-// Forced GitHub sync

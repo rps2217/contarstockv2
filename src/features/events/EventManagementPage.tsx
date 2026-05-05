@@ -350,4 +350,3 @@ const EventManagementPage: React.FC = () => {
 
 export default EventManagementPage;
 
-// Forced GitHub sync

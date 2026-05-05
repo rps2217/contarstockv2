@@ -65,4 +65,3 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
  );
 };
 
-// Forced GitHub sync

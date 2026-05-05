@@ -26,4 +26,3 @@ export const runScannerMachineTests = () => {
  return results;
 };
 
-// Forced GitHub sync

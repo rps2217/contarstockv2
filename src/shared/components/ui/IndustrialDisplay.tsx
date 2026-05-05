@@ -114,4 +114,3 @@ export const IndustrialDisplay: React.FC<IndustrialDisplayProps> = memo(({
  );
 });
 
-// Forced GitHub sync

@@ -64,4 +64,3 @@ self.onmessage = (e: MessageEvent) => {
 
  self.postMessage(results);
 };
-// Forced GitHub sync

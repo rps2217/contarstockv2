@@ -62,4 +62,3 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
   );
 };
 
-// Forced GitHub sync

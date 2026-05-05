@@ -60,7 +60,7 @@ class TelemetryService {
         METADATOS: JSON.stringify(e.metadata || {})
       }));
 
-      // Use a direct call to avoid circular logging via firebaseSyncService -> logger -> telemetry
+      // Use a direct call to avoid circular logging via supabase -> logger -> telemetry
       const { error } = await (await import('../lib/supabase')).supabase
         .from('TELEMETRIA')
         .insert(rows);
@@ -88,4 +88,3 @@ class TelemetryService {
 
 export const telemetry = new TelemetryService();
 
-// Forced GitHub sync

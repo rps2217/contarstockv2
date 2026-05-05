@@ -12,8 +12,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { productRepository } from '../../../repositories/DexieProductRepository';
 import { db } from '../../../db';
 import { expiryRepository } from '../../../repositories/ExpiryRepository';
-// import { expirySyncService } from '../../../services/expirySyncService'; // YA NO SE USA
-import { dynamicSyncService } from '../../../services/dynamicSync';
+import { genericSyncEngine } from '../../../services/cloud/GenericSyncEngine';
 import { useTaskStore } from '@/store/useTaskStore';
 import { logger } from '../../../services/logger';
 import { normalizeExpiryRecord, NormalizedExpiry } from '../../../services/normalizationService';
@@ -80,9 +79,9 @@ export const useExpiryDatabase = () => {
     const fetchInitialData = async () => {
       try {
         setIsSyncing(true);
-        const { added, updated } = await dynamicSyncService.pullSync(tableName);
+        const { added, updated } = await genericSyncEngine.pullRemoteChanges('expiry');
         if (added > 0 || updated > 0) {
-          logger.info('SYNC_INITIAL', `Sincronizados ${added + updated} registros de ${tableName}`);
+          logger.info('SYNC_INITIAL', `Sincronizados ${added + updated} registros de vencimientos`);
         }
       } catch (err) {
         logger.error('SYNC_INITIAL_FAIL', err);
@@ -506,4 +505,3 @@ export const useExpiryDatabase = () => {
   };
 };
 
-// Forced GitHub sync

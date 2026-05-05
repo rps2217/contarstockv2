@@ -22,4 +22,3 @@ export const Skeleton = memo(({ className = '', variant = 'rectangular' }: Skele
 
 Skeleton.displayName = 'Skeleton';
 
-// Forced GitHub sync

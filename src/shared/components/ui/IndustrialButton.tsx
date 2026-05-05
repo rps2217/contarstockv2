@@ -73,4 +73,3 @@ export const IndustrialButton: React.FC<IndustrialButtonProps> = memo(({
  </button>
  );
 });
-// Forced GitHub sync

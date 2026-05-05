@@ -112,4 +112,3 @@ export const OperationalSection: React.FC<Props> = ({ settings, updateSetting })
  );
 };
 
-// Forced GitHub sync

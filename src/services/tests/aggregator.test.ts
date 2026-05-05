@@ -38,4 +38,3 @@ export const runAggregatorTests = () => {
  return results;
 };
 
-// Forced GitHub sync

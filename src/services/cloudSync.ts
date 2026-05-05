@@ -62,4 +62,3 @@ export const syncProvidersToCloud = async (providers: Provider[]): Promise<void>
  }
 };
 
-// Forced GitHub sync

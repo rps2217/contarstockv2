@@ -81,4 +81,3 @@ export const ImportTools: React.FC<ImportToolsProps> = ({ isOpen, onClose, onImp
  );
 };
 
-// Forced GitHub sync

@@ -115,4 +115,3 @@ export const SessionRow = memo(({ index, style, data }: any) => {
   );
 });
 
-// Forced GitHub sync

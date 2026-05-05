@@ -280,4 +280,3 @@ export const ExpirySettingsDrawer: React.FC<ExpirySettingsDrawerProps> = ({
   );
 };
 
-// Forced GitHub sync

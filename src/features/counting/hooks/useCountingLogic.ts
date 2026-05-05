@@ -239,4 +239,3 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
   };
 };
 
-// Forced GitHub sync

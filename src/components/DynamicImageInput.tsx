@@ -150,4 +150,3 @@ export const DynamicImageInput: React.FC<DynamicImageInputProps> = ({
   );
 };
 
-// Forced GitHub sync

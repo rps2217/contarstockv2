@@ -13,51 +13,61 @@ export const SyncGroupCard: React.FC<Props> = ({ group, uiStatus, progress }) =>
   const isDynamic = group.type === 'dynamic';
   
   return (
-    <div className={`bg-white dark:bg-slate-900 p-6 rounded-[2rem] border-2 shadow-sm flex justify-between items-center transition-all ${
+    <div className={`bg-white dark:bg-slate-900 md:hover:shadow-md md:hover:scale-[1.01] p-4 md:p-5 rounded-2xl md:rounded-3xl border transition-all ${
       isOrphan ? 'border-amber-200 bg-amber-50/30' : 
       isDynamic ? 'border-indigo-100 dark:border-indigo-900/30' :
       (group.isHammer ? 'border-blue-100 dark:border-blue-900/30' : 'border-slate-100 dark:border-white/5')
     }`}>
-      <div className="flex items-center gap-5">
-        <div className={`p-4 rounded-2xl ${
+      <div className="flex items-center gap-4">
+        <div className={`p-3 md:p-4 rounded-xl md:rounded-2xl shrink-0 ${
           uiStatus === 'success' ? 'bg-emerald-100 text-emerald-600' : 
-          isOrphan ? 'bg-amber-500 text-white' : 
-          isDynamic ? 'bg-indigo-600 text-white' :
-          (group.isHammer ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400')
+          isOrphan ? 'bg-amber-500 text-white shadow-amber-500/20 shadow-lg' : 
+          isDynamic ? 'bg-indigo-600 text-white shadow-indigo-600/20 shadow-lg' :
+          (group.isHammer ? 'bg-blue-600 text-white shadow-blue-600/20 shadow-lg' : 'bg-slate-100 text-slate-500')
         }`}>
-          {isOrphan ? <AlertCircle className="w-6 h-6" /> : 
-           isDynamic ? <Database className="w-6 h-6" /> :
-           (group.isHammer ? <Zap className="w-6 h-6" /> : <Package className="w-6 h-6" />)}
+          {isOrphan ? <AlertCircle className="w-5 h-5 md:w-6 md:h-6" /> : 
+           isDynamic ? <Database className="w-5 h-5 md:w-6 md:h-6" /> :
+           (group.isHammer ? <Zap className="w-5 h-5 md:w-6 md:h-6" /> : <Package className="w-5 h-5 md:w-6 md:h-6" />)}
         </div>
-        <div>
-          <div className="font-black text-lg text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-2">
-            {isOrphan ? 'Registros Residuales' : group.erpOrder}
-            {group.isHammer && !isOrphan && <span className="text-[7px] font-black bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded uppercase">Martillo</span>}
-            {isDynamic && <span className="text-[7px] font-black bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded uppercase">Dinámico</span>}
+        
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-0.5">
+            <h3 className="font-bold md:font-black text-sm md:text-lg text-slate-900 dark:text-white uppercase tracking-tight truncate">
+              {isOrphan ? 'Registros Residuales' : group.erpOrder}
+            </h3>
+            {group.isHammer && !isOrphan && <span className="shrink-0 text-[8px] font-black bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded uppercase">Martillo</span>}
+            {isDynamic && <span className="shrink-0 text-[8px] font-black bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded uppercase">Dinámico</span>}
           </div>
-          <div className="text-[10px] text-slate-400 font-bold uppercase mt-1">
+          
+          <div className="flex items-center text-[10px] md:text-xs text-slate-500 dark:text-slate-400 font-medium uppercase truncate">
             {isOrphan ? 'Picks sin bulto asignado' : 
              isDynamic ? `Tabla: ${group.tableName}` :
-             `${group.sessionCount} Bultos`} • {group.totalUnits} Unidades
+             <span className="flex items-center gap-1.5">
+               <span className="font-bold">{group.sessionCount}</span> Bultos
+               <span className="w-1 h-1 bg-slate-300 dark:bg-slate-600 rounded-full" />
+               <span className="font-bold">{group.totalUnits}</span> Unidades
+             </span>
+            }
           </div>
-          {progress && <div className="text-[9px] text-blue-500 font-bold uppercase mt-1 truncate max-w-[200px]">{progress}</div>}
+          
+          {progress && <div className="text-[9px] text-blue-500 font-bold uppercase mt-1.5 truncate">{progress}</div>}
         </div>
-      </div>
-      <div>
-        {uiStatus === 'uploading' ? (
-          <Loader2 className="animate-spin text-blue-600 w-6 h-6" />
-        ) : uiStatus === 'success' ? (
-          <CheckCircle2 className="text-emerald-500 w-8 h-8" />
-        ) : (
-          <div className={`w-3 h-3 rounded-full animate-pulse ${
-            isOrphan ? 'bg-amber-500' : 
-            isDynamic ? 'bg-indigo-500' :
-            (group.isHammer ? 'bg-blue-500' : 'bg-slate-300')
-          }`}></div>
-        )}
+        
+        <div className="shrink-0 ml-2">
+          {uiStatus === 'uploading' ? (
+            <Loader2 className="animate-spin text-blue-600 w-5 h-5 md:w-6 md:h-6" />
+          ) : uiStatus === 'success' ? (
+            <CheckCircle2 className="text-emerald-500 w-6 h-6 md:w-8 md:h-8" />
+          ) : (
+            <div className={`w-2 h-2 md:w-3 md:h-3 rounded-full animate-pulse ${
+              isOrphan ? 'bg-amber-500' : 
+              isDynamic ? 'bg-indigo-500' :
+              (group.isHammer ? 'bg-blue-500' : 'bg-slate-300')
+            }`}></div>
+          )}
+        </div>
       </div>
     </div>
   );
 };
 
-// Forced GitHub sync

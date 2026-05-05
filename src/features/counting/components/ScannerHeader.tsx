@@ -57,4 +57,3 @@ export const ScannerHeader: React.FC<ScannerHeaderProps> = memo(({ erpOrder, loc
  );
 });
 
-// Forced GitHub sync

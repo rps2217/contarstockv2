@@ -68,4 +68,3 @@ export const aggregateScans = async (scans: ScanRecord[]): Promise<ConsolidatedI
   return aggregateScansSync(scans, productCache);
 };
 
-// Forced GitHub sync

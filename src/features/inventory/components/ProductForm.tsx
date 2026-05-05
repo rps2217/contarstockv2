@@ -170,4 +170,3 @@ export const ProductForm: React.FC<ProductFormProps> = ({ isOpen, onClose, initi
  );
 };
 
-// Forced GitHub sync

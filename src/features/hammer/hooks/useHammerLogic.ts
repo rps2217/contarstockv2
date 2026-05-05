@@ -214,4 +214,3 @@ export const useHammerLogic = (batchId: string) => {
   };
 };
 
-// Forced GitHub sync

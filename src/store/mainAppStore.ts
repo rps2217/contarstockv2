@@ -54,4 +54,3 @@ export const useAppStore = create<SettingsSlice & UISlice>((set) => ({
  ...createUISlice(set),
 }));
 
-// Forced GitHub sync

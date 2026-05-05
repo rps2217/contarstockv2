@@ -43,111 +43,99 @@ interface ProductListProps {
 
   if (isMobile) {
     return (
-      <div className="px-2 py-1 h-full font-sans">
-        <Card className={`h-full flex items-stretch overflow-hidden p-0 border shadow-sm active:bg-slate-50 dark:active:bg-white/5 transition-colors ${
-          isSelected ? 'border-indigo-500 bg-indigo-500/5' : 'border-slate-100 dark:border-white/5'
+      <div className="px-3 py-1.5 h-full w-full">
+        <div className={`h-full flex items-stretch bg-white dark:bg-slate-900 border rounded-2xl shadow-sm transition-all focus-within:ring-2 focus-within:ring-indigo-500/50 ${
+          isSelected ? 'border-indigo-500 ring-1 ring-indigo-500 bg-indigo-50/50 dark:bg-indigo-500/10' : 'border-slate-200 dark:border-white/10'
         }`}>
-          {/* Barra de Estado Lateral */}
-          <div className={`w-1.5 shrink-0 ${isSelected ? 'bg-indigo-500' : getSyncStatusColor(p.syncStatus)}`} />
+          <div className={`w-1.5 shrink-0 rounded-l-2xl ${getSyncStatusColor(p.syncStatus)}`} />
           
-          {/* Checkbox */}
           {onSelect && (
             <button 
-              onClick={() => onSelect(p.barcode)}
-              className={`w-9 flex items-center justify-center border-r border-slate-100 dark:border-white/5 ${
-                isSelected ? 'text-indigo-500' : 'text-slate-300 dark:text-slate-600'
+              onClick={(e) => { e.stopPropagation(); onSelect(p.barcode); }}
+              className={`w-12 shrink-0 flex items-center justify-center border-r border-slate-100 dark:border-white/5 active:bg-slate-50 dark:active:bg-white/5 transition-colors ${
+                isSelected ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-300 dark:text-slate-600'
               }`}
             >
-              {isSelected ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
+              {isSelected ? <CheckSquare className="w-6 h-6" /> : <Square className="w-6 h-6" />}
             </button>
           )}
 
-          {/* Info Utama */}
-          <div className="flex-1 min-w-0 p-2.5 flex flex-col justify-center">
-            <div className="flex items-center gap-1.5 mb-0.5 overflow-x-auto no-scrollbar">
-              <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded ${
-                p.syncStatus === 'synced' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+          <div 
+            className="flex-1 min-w-0 p-3 flex flex-col justify-center active:bg-slate-50 dark:active:bg-white/5 cursor-pointer"
+            onClick={() => onEdit(p)}
+          >
+            <div className="flex items-center gap-1.5 mb-1 no-scrollbar overflow-x-auto">
+              <span className={`shrink-0 text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                p.syncStatus === 'synced' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400'
               }`}>
                 {p.category || 'GRAL'}
               </span>
               {p.withdrawalDays !== undefined && (
-                <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded border whitespace-nowrap ${
+                <span className={`shrink-0 text-[8px] font-black uppercase px-1.5 py-0.5 rounded-md border whitespace-nowrap ${
                   p.hasExchange 
-                    ? 'bg-indigo-50 text-indigo-600 border-indigo-100' 
-                    : 'bg-slate-50 text-slate-500 border-slate-100'
+                    ? 'bg-indigo-50 text-indigo-600 border-indigo-200 dark:bg-indigo-500/10 dark:text-indigo-400 dark:border-indigo-500/20' 
+                    : 'bg-slate-50 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
                 }`}>
                   {p.withdrawalDays}D {p.hasExchange ? 'CANJE' : 'MERMA'}
                 </span>
               )}
             </div>
-            <h3 className="font-bold text-slate-900 dark:text-slate-100 text-xs uppercase leading-tight truncate">
+            <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm leading-tight truncate">
               {p.name}
             </h3>
-            <div className="mt-0.5 flex items-center gap-1 text-slate-400">
-              <span className="font-mono text-[10px] font-bold tracking-tight">
-                {p.barcode}
-              </span>
+            <div className="mt-0.5 font-mono text-[11px] font-bold text-slate-500 dark:text-slate-400 tracking-tight">
+              {p.barcode}
             </div>
           </div>
 
-          {/* Acciones */}
-          <div className="flex bg-slate-50/50 dark:bg-white/5 border-l border-slate-100 dark:border-white/5">
-            <button 
-              onClick={() => onPrint(p)} 
-              className="w-11 flex items-center justify-center text-amber-500 active:bg-amber-100 transition-colors border-r border-slate-100 dark:border-white/10"
-            >
-              <Printer className="w-4 h-4" />
-            </button>
-            <button 
-              onClick={() => onEdit(p)} 
-              className="w-11 flex items-center justify-center text-blue-500 active:bg-blue-100 transition-colors"
-            >
-              <Pencil className="w-4 h-4" />
-            </button>
-          </div>
-        </Card>
+          <button 
+            onClick={(e) => { e.stopPropagation(); onPrint(p); }} 
+            className="w-12 shrink-0 flex items-center justify-center text-amber-600 dark:text-amber-500 border-l border-slate-100 dark:border-white/10 active:bg-amber-50 dark:active:bg-amber-500/10 transition-colors rounded-r-2xl"
+          >
+            <Printer className="w-5 h-5" />
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className={`flex items-center border-b border-slate-100 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors px-6 text-sm h-full group ${
-      isSelected ? 'bg-indigo-500/5' : 'bg-white dark:bg-slate-900'
-    }`}>
+    <div className={`flex items-center border-b border-slate-200 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors px-6 text-sm h-full group cursor-pointer ${
+      isSelected ? 'bg-indigo-50/50 dark:bg-indigo-500/10' : 'bg-white dark:bg-slate-900'
+    }`} onClick={() => onEdit(p)}>
       {onSelect && (
         <button 
-          onClick={() => onSelect(p.barcode)}
-          className={`mr-4 transition-colors ${isSelected ? 'text-indigo-500' : 'text-slate-300 dark:text-slate-600 hover:text-slate-400'}`}
+          onClick={(e) => { e.stopPropagation(); onSelect(p.barcode); }}
+          className={`mr-4 shrink-0 transition-colors ${isSelected ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-300 dark:text-slate-600 hover:text-slate-400'}`}
         >
           {isSelected ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
         </button>
       )}
-      <div className="w-40 shrink-0 flex items-center gap-3 font-mono font-bold text-slate-600 dark:text-slate-400">
-        <div className={`w-2 h-2 rounded-full ${getSyncStatusColor(p.syncStatus)}`} />
+      <div className="w-44 shrink-0 flex items-center gap-3 font-mono font-bold text-slate-600 dark:text-slate-400">
+        <div className={`w-2 h-2 rounded-full shadow-sm ${getSyncStatusColor(p.syncStatus)}`} />
         {p.barcode}
       </div>
-      <div className="flex-1 font-black text-slate-800 dark:text-slate-200 truncate px-4">{p.name}</div>
+      <div className="flex-1 min-w-0 font-bold text-slate-800 dark:text-slate-200 truncate pr-6">{p.name}</div>
       <div className="w-32 shrink-0">
         <Badge variant={p.syncStatus === 'synced' ? 'neutral' : p.syncStatus === 'error' ? 'error' : 'info'}>{p.category || '-'}</Badge>
       </div>
-      <div className="w-32 shrink-0 flex flex-col justify-center">
+      <div className="w-36 shrink-0 flex flex-col justify-center">
         {p.withdrawalDays !== undefined ? (
           <div className="flex flex-col">
-            <span className={`text-[11px] font-black uppercase leading-tight ${p.hasExchange ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500'}`}>
-              {p.withdrawalDays} Días Retiro
+            <span className={`text-xs font-black uppercase tracking-tight ${p.hasExchange ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500'}`}>
+              {p.withdrawalDays} Días
             </span>
             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
-              {p.hasExchange ? 'Política de Canje' : 'Sin Canje / Merma'}
+              {p.hasExchange ? 'Con Canje' : 'Sin Canje'}
             </span>
           </div>
         ) : (
-          <span className="text-[10px] italic text-slate-400 uppercase tracking-widest font-bold">Sin Info</span>
+          <span className="text-[10px] italic text-slate-400 uppercase font-medium">No asig.</span>
         )}
       </div>
-      <div className="w-24 shrink-0 flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button onClick={() => onPrint(p)} className="p-2 hover:bg-amber-50 dark:hover:bg-amber-900/20 text-amber-600 rounded-lg" title="Imprimir Código de Barras"><Printer className="w-4 h-4" /></button>
-        <button onClick={() => onEdit(p)} className="p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 rounded-lg"><Pencil className="w-4 h-4" /></button>
-        <button onClick={() => onDelete(p.barcode)} className="p-2 hover:bg-rose-50 dark:hover:bg-rose-900/20 text-rose-600 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+      <div className="w-24 shrink-0 flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button onClick={(e) => { e.stopPropagation(); onPrint(p); }} className="p-2 hover:bg-amber-100 dark:hover:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-xl transition-colors shrink-0" title="Imprimir Código de Barras"><Printer className="w-5 h-5" /></button>
+        <button onClick={(e) => { e.stopPropagation(); onDelete(p.barcode); }} className="p-2 hover:bg-rose-100 dark:hover:bg-rose-900/30 text-rose-600 dark:text-rose-400 rounded-xl transition-colors shrink-0"><Trash2 className="w-5 h-5" /></button>
       </div>
     </div>
   );
@@ -165,38 +153,45 @@ export const ProductList: React.FC<ProductListProps> = memo(({ products, onEdit,
   }, []);
 
   const rowData = useMemo(() => ({ isMobile, onEdit, onDelete, onPrint, selectedIds, onSelect }), [isMobile, onEdit, onDelete, onPrint, selectedIds, onSelect]);
-  const itemHeight = isMobile ? 84 : 60;
+  const itemHeight = isMobile ? 96 : 64;
 
   if (!products || products.length === 0) {
     return (
-      <Card className="bg-white dark:bg-slate-900 border-4 border-slate-100 dark:border-white/5 p-12 text-center h-full flex flex-col items-center justify-center">
-        <Package className="w-16 h-16 mx-auto text-slate-100 dark:text-slate-800 mb-6" />
-        <p className="text-slate-400 font-black uppercase tracking-widest text-xs">{hasFilter ? 'Sin Resultados' : 'Base Vacía'}</p>
+      <div className="bg-white dark:bg-slate-900 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl p-10 md:p-12 text-center h-full flex flex-col items-center justify-center">
+        <div className="w-16 h-16 md:w-20 md:h-20 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4 md:mb-6 shadow-none">
+          <Package className="w-8 h-8 md:w-10 md:h-10 text-slate-300 dark:text-slate-600" />
+        </div>
+        <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-tight text-base md:text-lg">
+          {hasFilter ? 'No hay resultados' : 'Catálogo Vacío'}
+        </h3>
+        <p className="text-slate-500 font-medium text-xs md:text-sm mt-2 max-w-[250px]">
+          {hasFilter ? 'Intenta con otros términos de búsqueda.' : 'Aún no has agregado productos a tu catálogo.'}
+        </p>
         {!hasFilter && (
-          <Button variant="ghost" size="sm" onClick={onDeleteAll} className="mt-8 text-rose-500">
-            Resetear Local
+          <Button variant="ghost" size="sm" onClick={onDeleteAll} className="mt-6 md:mt-8 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10">
+            Resetear Base Local
           </Button>
         )}
-      </Card>
+      </div>
     );
   }
 
   return (
-    <div className="h-full flex flex-col bg-transparent md:bg-white md:dark:bg-slate-900 md:rounded-[2.5rem] md:border md:border-slate-200 md:dark:border-white/5 overflow-hidden">
-      <div className="hidden md:flex bg-slate-50 dark:bg-black/40 border-b border-slate-100 dark:border-white/5 px-8 py-4 shrink-0 items-center">
+    <div className="h-full flex flex-col bg-transparent md:bg-white md:dark:bg-slate-900 md:rounded-3xl md:border md:border-slate-200 md:dark:border-white/5 overflow-hidden md:shadow-sm">
+      <div className="hidden md:flex bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-white/5 px-6 py-4 shrink-0 items-center sticky top-0 z-10">
         {onSelectAll && (
           <button 
             onClick={onSelectAll}
-            className={`mr-4 transition-colors ${selectedIds?.size === products.length && products.length > 0 ? 'text-indigo-500' : 'text-slate-300 dark:text-slate-600 hover:text-slate-400'}`}
+            className={`mr-4 transition-colors ${selectedIds?.size === products.length && products.length > 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-300 dark:text-slate-600 hover:text-slate-400'}`}
           >
             {selectedIds?.size === products.length && products.length > 0 ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
           </button>
         )}
-        <div className="w-40 text-[9px] font-black text-slate-400 uppercase tracking-widest">EAN/SKU</div>
-        <div className="flex-1 text-[9px] font-black text-slate-400 uppercase tracking-widest px-4">DESCRIPCIÓN</div>
-        <div className="w-32 text-[9px] font-black text-slate-400 uppercase tracking-widest">FAMILIA</div>
-        <div className="w-32 text-[9px] font-black text-slate-400 uppercase tracking-widest">POLÍTICA</div>
-        <div className="w-24 text-right text-[9px] font-black text-slate-400 uppercase tracking-widest">ACCIÓN</div>
+        <div className="w-48 text-[9px] md:text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Código</div>
+        <div className="flex-1 text-[9px] md:text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Descripción del Producto</div>
+        <div className="w-32 text-[9px] md:text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Familia</div>
+        <div className="w-36 text-[9px] md:text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Política</div>
+        <div className="w-24 text-right text-[9px] md:text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest pr-4">Acción</div>
       </div>
 
       <div className="flex-1 min-h-0">
@@ -205,11 +200,10 @@ export const ProductList: React.FC<ProductListProps> = memo(({ products, onEdit,
           itemHeight={itemHeight}
           renderRow={Row}
           rowData={rowData}
-          className="no-scrollbar"
+          className="no-scrollbar md:scrollbar-thin"
         />
       </div>
     </div>
   );
 });
 
-// Forced GitHub sync

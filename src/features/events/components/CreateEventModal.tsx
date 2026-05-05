@@ -607,4 +607,3 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
   );
 };
 
-// Forced GitHub sync

@@ -70,4 +70,3 @@ export const shouldPromptForBatch = (
  return !existingPhysical;
 };
 
-// Forced GitHub sync

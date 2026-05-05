@@ -276,4 +276,3 @@ export const SyncLogsModal: React.FC<Props> = ({ isOpen, onClose }) => {
   );
 };
 
-// Forced GitHub sync

@@ -1,7 +1,6 @@
 
-import { z } from 'zod';
 import { logger } from './logger';
-import { ProductSchema, ScanRecordSchema } from './validator';
+import { ProductSchema, ScanRecordSchema } from '../schemas/database';
 
 /**
  * PROTECCIÓN ANTICORRUPCIÓN
@@ -35,4 +34,3 @@ export const IntegrityGuard = {
  }
 };
 
-// Forced GitHub sync

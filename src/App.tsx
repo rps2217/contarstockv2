@@ -39,7 +39,7 @@ const ExpiryCapturePage = lazyWithRetry(() => import('@/features/expiry/ExpiryCa
 const EventCapturePage = lazyWithRetry(() => import('@/features/events/EventCapturePage'));
 const ComplianceDashboardPage = lazyWithRetry(() => import('@/features/compliance/ComplianceDashboardPage'));
 const DynamicManagement = lazyWithRetry(() => import('@/features/dynamic/DynamicManagementPage').then(m => ({ default: m.DynamicManagementPage })));
-const GlobalSyncQueue = lazyWithRetry(() => import('@/features/sync/GlobalSyncQueuePage'));
+const GlobalSyncQueue = lazyWithRetry(() => import('@/features/sync/SyncCenterPage').then(m => ({ default: m.SyncCenterPage })));
 const ProvidersPage = lazyWithRetry(() => import('@/features/suppliers/pages/ProvidersPage').then(m => ({ default: m.ProvidersPage })));
 const CustomersPage = lazyWithRetry(() => import('@/features/customers/CustomersPage').then(m => ({ default: m.CustomersPage })));
 
@@ -257,4 +257,3 @@ const App = () => (
 
 export default App;
 
-// Forced GitHub sync

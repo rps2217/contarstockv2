@@ -81,4 +81,3 @@ export const DiagnosticsCard: React.FC = () => {
  );
 };
 
-// Forced GitHub sync

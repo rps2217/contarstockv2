@@ -150,4 +150,3 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = ({
   );
 };
 
-// Forced GitHub sync

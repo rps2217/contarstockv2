@@ -1,7 +1,7 @@
 import { db, DynamicRecord } from '../db';
 import { Customer } from '../types';
 import { dynamicDataService } from '../services/dynamicDataService';
-import { CustomerSchema } from '../services/validationService';
+import { CustomerSchema } from '../schemas/database';
 
 export class CustomerRepository {
   private static tableName = 'CLIENTES';

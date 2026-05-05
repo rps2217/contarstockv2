@@ -241,4 +241,3 @@ export const ReportDetail: React.FC<{ sessionId: string; onBack: () => void }> =
  );
 };
 
-// Forced GitHub sync

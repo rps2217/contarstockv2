@@ -559,4 +559,3 @@ export const ExpiryCapturePage: React.FC = () => {
 
 export default ExpiryCapturePage;
 
-// Forced GitHub sync

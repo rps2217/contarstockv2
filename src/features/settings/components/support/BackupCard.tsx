@@ -50,4 +50,3 @@ export const BackupCard: React.FC = () => {
  );
 };
 
-// Forced GitHub sync

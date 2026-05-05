@@ -30,4 +30,3 @@ export const useLocationManager = (storageKey: string = 'last_active_loc') => {
  };
 };
 
-// Forced GitHub sync

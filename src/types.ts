@@ -5,6 +5,7 @@ export interface Provider {
   exchangePolicy?: string;
   withdrawalDays?: number;
   hasExchange?: boolean;
+  syncStatus?: 'synced' | 'pending' | 'error' | 'pending_delete';
 }
 
 export interface Customer {
@@ -14,7 +15,7 @@ export interface Customer {
   phone: string;
   createdAt: number;
   updatedAt: number;
-  syncStatus?: 'synced' | 'pending' | 'error';
+  syncStatus?: 'synced' | 'pending' | 'error' | 'pending_delete';
 }
 
 export interface MessageTemplate {
@@ -23,18 +24,19 @@ export interface MessageTemplate {
   content: string;
   createdAt: number;
   updatedAt: number;
+  syncStatus?: 'synced' | 'pending' | 'error' | 'pending_delete';
 }
 
 export interface Product {
- barcode: string;
- name: string;
- category: string;
- supplier?: string;
- supplierRut?: string;
- price?: number;
- syncStatus?: 'synced' | 'add' | 'edit' | 'pending' | 'error';
- unitsPerBox?: number;
- embedding?: number[]; 
+  barcode: string;
+  name: string;
+  category: string;
+  supplier?: string;
+  supplierRut?: string;
+  price?: number;
+  syncStatus?: 'synced' | 'pending' | 'error' | 'pending_delete';
+  unitsPerBox?: number;
+  embedding?: number[]; 
 }
 
 export interface ExpectedItem {
@@ -110,6 +112,7 @@ export interface CountingSession {
  labelPhoto?: string;
  photoUrl?: string;
  isAutoLockEnabled?: boolean;
+ syncStatus?: 'synced' | 'pending' | 'error' | 'pending_delete';
 }
 
 export interface ScanRecord {
@@ -129,6 +132,7 @@ export interface ScanRecord {
  synced?: number;
  isIncident?: boolean;
  frc?: string;
+ syncStatus?: 'synced' | 'pending' | 'error' | 'pending_delete';
 }
 
 export interface ConsolidatedItem {
@@ -327,4 +331,21 @@ export interface CloudStorageConfig {
   schema?: AppSchema; // New dynamic schema
 }
 
-// Forced GitHub sync
+export interface BlindScan {
+  id?: number;
+  batchId: string;
+  barcode: string;
+  quantity: number;
+  timestamp: number;
+  location?: string;
+}
+
+export interface BlindManifest {
+  id?: number;
+  batchId: string;
+  barcode: string;
+  name?: string;
+  expectedQty: number;
+  loc?: string;
+}
+

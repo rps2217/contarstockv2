@@ -360,4 +360,3 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
   );
 });
 
-// Forced GitHub sync

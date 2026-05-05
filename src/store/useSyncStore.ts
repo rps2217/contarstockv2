@@ -62,4 +62,3 @@ export const useSyncStore = create<SyncState>()(
   )
 );
 
-// Forced GitHub sync

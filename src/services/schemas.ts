@@ -183,4 +183,3 @@ export const CloudReceptionRowSchema = z.object({
  "ESTADO": cleanString,
 });
 
-// Forced GitHub sync

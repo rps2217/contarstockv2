@@ -27,4 +27,3 @@ export const safetyHarden = (val: string): string => {
  return val.replace(/^[=+\-@\t\r]/g, "'$&");
 };
 
-// Forced GitHub sync

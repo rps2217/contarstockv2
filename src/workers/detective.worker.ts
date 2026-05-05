@@ -138,4 +138,3 @@ self.onmessage = (e: MessageEvent) => {
  }
 };
 
-// Forced GitHub sync
