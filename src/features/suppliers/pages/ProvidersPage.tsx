@@ -119,32 +119,33 @@ export const ProvidersPage: React.FC = () => {
   };
 
   const handleSyncToCloud = async () => {
+    const toastId = toast.loading('Subiendo proveedores a la nube...');
     try {
       const allProviders = await ProviderRepository.getAll();
       if (allProviders.length === 0) {
+        toast.dismiss(toastId);
         toast.info('No hay proveedores para sincronizar.');
         return;
       }
-      toast.loading('Subiendo proveedores a la nube...');
       await syncProvidersToCloud(allProviders);
-      toast.dismiss();
+      toast.dismiss(toastId);
       toast.success('Proveedores respaldados exitosamente.');
     } catch (e: any) {
-      toast.dismiss();
+      toast.dismiss(toastId);
       toast.error('Error al subir: ' + e.message);
     }
   };
 
   const handleDownloadFromCloud = async () => {
+    const toastId = toast.loading('Forzando descarga completa de políticas desde la nube...');
     try {
-      toast.loading('Forzando descarga completa de políticas desde la nube...');
       const { useSyncStore } = await import('../../../store/useSyncStore');
-      // Reset the sync timestamp specifically for providers and products so it fetches all of them
-      useSyncStore.getState().setTableSyncTime(settings.cloudConfig.providersTableName || 'PROVEEDORES', 0);
+      const tableName = settings?.cloudConfig?.providersTableName || 'PROVEEDORES';
+      useSyncStore.getState().setTableSyncTime(tableName, 0);
       
       const { importProvidersFromCloud } = await import('../../../services/syncManager');
       const count = await importProvidersFromCloud();
-      toast.dismiss();
+      toast.dismiss(toastId);
       if (count > 0) {
         toast.success(`${count} proveedores actualizados desde la nube.`);
         loadProviders();
@@ -152,8 +153,9 @@ export const ProvidersPage: React.FC = () => {
         toast.info('No se encontraron proveedores o no hay cambios.');
       }
     } catch (e: any) {
-      toast.dismiss();
+      toast.dismiss(toastId);
       toast.error('Error al descargar: ' + e.message);
+      console.error("Error downloading providers:", e);
     }
   };
 

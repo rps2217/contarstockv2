@@ -9,6 +9,7 @@ import { SystemStatus } from '@/components/SystemStatus';
 import { Box, Loader2, Database, WifiOff, Cpu, RefreshCw, Plus } from 'lucide-react';
 import { lazyWithRetry } from '@/services/lazyLoad';
 import { ToastContainer } from '@/shared/components/ui/ToastContainer';
+import { Toaster } from 'sonner';
 import { TaskProgressIndicator } from '@/shared/components/TaskProgressIndicator';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { useAutoSync } from '@/hooks/useAutoSync';
@@ -154,6 +155,7 @@ const AppContent = () => {
       <OnboardingOverlay />
       <OfflineBanner />
       <ToastContainer />
+      <Toaster position="bottom-center" />
       <TaskProgressIndicator />
       
       <div className="flex-1 flex overflow-hidden relative">
