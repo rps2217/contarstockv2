@@ -40,8 +40,13 @@ export const useComplianceData = () => {
     expiries.forEach(item => {
       const qty = item.quantity || 0;
       const providerName = item.providerName || '';
-      const provider = providerMap.get(providerName.toUpperCase()) || 
+      let provider = providerMap.get(providerName.toUpperCase()) || 
                        (providerName ? providerMap.get(providerName) : null);
+                       
+      if (!provider && providerName) {
+        const cleanReqName = providerName.toUpperCase().trim();
+        provider = providers.find(p => p.name.toUpperCase().includes(cleanReqName) || cleanReqName.includes(p.name.toUpperCase())) || null;
+      }
       
       const withdrawalDays = provider?.withdrawalDays ?? 0;
       const hasExchange = provider?.hasExchange ?? true;

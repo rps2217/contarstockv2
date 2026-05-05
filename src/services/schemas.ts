@@ -122,35 +122,48 @@ export const CloudOrderRowSchema = z.record(z.any()).transform((raw) => {
 }));
 
 export const CloudProviderSchema = z.record(z.any()).transform((raw) => {
-  const name = String(raw.name || raw.NOMBRE || raw.PROVEEDOR || 'PROVEEDOR SIN NOMBRE').trim().toUpperCase();
-  let rut = normalizeIdentity(String(raw.rut || raw.RUT || raw.ID || raw.id || raw.ID_RUT || raw.RUT_PROVEEDOR || ''));
+  const getVal = (possibleKeys: string[]) => {
+    const rawKeys = Object.keys(raw);
+    for (const rawKey of rawKeys) {
+      const cleanKey = rawKey.toUpperCase().replace(/_|\s|Á|É|Í|Ó|Ú/g, (match) => {
+        if (match === 'Á') return 'A';
+        if (match === 'É') return 'E';
+        if (match === 'Í') return 'I';
+        if (match === 'Ó') return 'O';
+        if (match === 'Ú') return 'U';
+        return '';
+      });
+      if (possibleKeys.includes(cleanKey)) {
+        return raw[rawKey];
+      }
+    }
+    return undefined;
+  };
+
+  const rawName = getVal(['NAME', 'NOMBRE', 'PROVEEDOR', 'RAZONSOCIAL', 'DESCRIPCION']) || 'PROVEEDOR SIN NOMBRE';
+  const name = String(rawName).trim().toUpperCase();
+
+  const rawRut = getVal(['RUT', 'ID', 'RUTPROVEEDOR', 'IDRUT', 'IDENTIFICACION']);
+  let rut = normalizeIdentity(String(rawRut || ''));
   if (!rut) {
     rut = 'RUT_NR_' + name.replace(/[^A-Z0-9]/g, '_').substring(0, 15);
   }
   
-  const rawWithdrawal = raw.withdrawal_days !== undefined ? raw.withdrawal_days :
-                        raw.withdrawalDays !== undefined ? raw.withdrawalDays :
-                        raw.DIAS_RETIRO !== undefined ? raw.DIAS_RETIRO :
-                        raw.DIAS_CANJE !== undefined ? raw.DIAS_CANJE :
-                        raw.DAYS !== undefined ? raw.DAYS : 0;
+  const rawWithdrawal = getVal(['WITHDRAWALDAYS', 'DIASRETIRO', 'DIASCANJE', 'DAYS', 'DIAS', 'PLAZO', 'TIEMPORETIRO', 'RETIRO']);
   const withdrawalDays = Number(rawWithdrawal) || 0;
 
-  const rawExchange = raw.has_exchange !== undefined ? raw.has_exchange :
-                      raw.hasExchange !== undefined ? raw.hasExchange :
-                      raw.CANJE !== undefined ? raw.CANJE :
-                      raw.TIENE_CANJE !== undefined ? raw.TIENE_CANJE : false;
-  
+  const rawExchange = getVal(['HASEXCHANGE', 'CANJE', 'TIENECANJE', 'ACEPTACANJE', 'APLICACANJE']);
   let hasExchange = false;
   if (rawExchange === true || rawExchange === 'true' || rawExchange === 1 || rawExchange === '1' || rawExchange === 'SI') {
     hasExchange = true;
   } else if (typeof rawExchange === 'string') {
-    const s = rawExchange.toUpperCase().trim();
+    const s = String(rawExchange).toUpperCase().trim();
     hasExchange = (s === 'TRUE' || s === '1' || s === 'SI' || s === 'CANJE' || s === 'ACTIVO' || s === 'YES');
   } else if (typeof rawExchange === 'boolean') {
     hasExchange = rawExchange;
   }
 
-  const exchangePolicy = raw.exchange_policy || raw.exchangePolicy || raw.EXCHANGE_POLICY || raw.POLITICA_CANJE || '';
+  const exchangePolicy = String(getVal(['EXCHANGEPOLICY', 'POLITICACANJE', 'POLITICA', 'OBSERVACIONES', 'DETALLE']) || '');
 
   return {
     rut,
