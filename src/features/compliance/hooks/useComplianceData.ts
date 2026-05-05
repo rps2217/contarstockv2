@@ -28,10 +28,15 @@ export const useComplianceData = () => {
     const expiries = await expiryRepository.getAll(tableName);
     const providers = await db.providers.toArray();
     
+    const normalizeSearch = (s: string) => s.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, "").trim();
+
     const providerMap = new Map<string, Provider>();
     providers.forEach(p => {
       providerMap.set(p.rut, p);
-      if (p.name) providerMap.set(p.name.toUpperCase(), p);
+      if (p.name) {
+        providerMap.set(p.name.toUpperCase(), p);
+        providerMap.set(normalizeSearch(p.name), p);
+      }
     });
 
     const now = new Date();
@@ -40,12 +45,17 @@ export const useComplianceData = () => {
     expiries.forEach(item => {
       const qty = item.quantity || 0;
       const providerName = item.providerName || '';
+      const normProviderName = normalizeSearch(providerName);
+
       let provider = providerMap.get(providerName.toUpperCase()) || 
+                       providerMap.get(normProviderName) ||
                        (providerName ? providerMap.get(providerName) : null);
                        
       if (!provider && providerName) {
-        const cleanReqName = providerName.toUpperCase().trim();
-        provider = providers.find(p => p.name.toUpperCase().includes(cleanReqName) || cleanReqName.includes(p.name.toUpperCase())) || null;
+        provider = providers.find(p => {
+          const pNorm = normalizeSearch(p.name);
+          return pNorm.includes(normProviderName) || normProviderName.includes(pNorm);
+        }) || null;
       }
       
       const withdrawalDays = provider?.withdrawalDays ?? 0;

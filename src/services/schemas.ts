@@ -137,6 +137,13 @@ export const CloudProviderSchema = z.record(z.any()).transform((raw) => {
         return raw[rawKey];
       }
     }
+    // Backup: Búsqueda por subcadena
+    for (const rawKey of rawKeys) {
+      const uk = rawKey.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (possibleKeys.some(pk => uk.includes(pk) || pk.includes(uk))) {
+        return raw[rawKey];
+      }
+    }
     return undefined;
   };
 

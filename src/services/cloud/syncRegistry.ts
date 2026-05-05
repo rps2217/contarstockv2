@@ -83,7 +83,7 @@ export const syncRegistry: Record<string, TableSyncMeta> = {
     localTable: 'dynamic_data',
     filterField: 'tableName',
     filterValue: 'CLIENTES',
-    remoteTable: 'CUSTOMERS',
+    remoteTable: 'CLIENTES',
     primaryKey: 'id',
     mapToRemote: (record) => ({
       ...record.data,
@@ -121,7 +121,7 @@ export const syncRegistry: Record<string, TableSyncMeta> = {
     localTable: 'dynamic_data',
     filterField: 'tableName',
     filterValue: 'PLANTILLAS_CORREOS',
-    remoteTable: 'EMAIL_TEMPLATES',
+    remoteTable: 'PLANTILLAS_CORREOS',
     primaryKey: 'id',
     mapToRemote: (record) => ({
       ...record.data,
@@ -140,7 +140,7 @@ export const syncRegistry: Record<string, TableSyncMeta> = {
     localTable: 'dynamic_data',
     filterField: 'tableName',
     filterValue: 'ALARMAS_VENCIMIENTO',
-    remoteTable: 'EXPIRY_ALERTS',
+    remoteTable: 'ALARMAS_VENCIMIENTO',
     primaryKey: 'id',
     mapToRemote: (record) => ({
       ...record.data,
@@ -159,7 +159,7 @@ export const syncRegistry: Record<string, TableSyncMeta> = {
     localTable: 'dynamic_data',
     filterField: 'tableName',
     filterValue: 'EVENTOS',
-    remoteTable: 'EVENTS',
+    remoteTable: 'EVENTOS',
     primaryKey: 'id',
     mapToRemote: (record) => ({
       ...record.data,

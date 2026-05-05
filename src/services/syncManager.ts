@@ -437,7 +437,12 @@ export const importProvidersFromCloud = async (): Promise<number> => {
 
     const response = await supabaseSyncService.pullBatch(tableName, lastSyncIso, 'updated_at'); 
     
-    if (!response.success || !response.rows) return 0;
+    if (!response.success || !response.rows) {
+      logger.info("FETCH_PROVIDERS", `No se recibieron datos de ${tableName} (Falla o vacío).`);
+      return 0;
+    }
+
+    logger.info("FETCH_PROVIDERS", `Recibidas ${response.rows.length} filas desde ${tableName}. Procesando...`);
 
     const providers: Provider[] = response.rows
       .filter((row: any) => row.id !== 'undefined')
@@ -445,6 +450,15 @@ export const importProvidersFromCloud = async (): Promise<number> => {
         const result = CloudProviderSchema.safeParse(row);
         if (!result.success) {
           console.warn("Provider validation failed:", row, (result as any).error);
+          // Intentar un mapeo crudo si falla el esquema estricto (Resiliencia)
+          if (row.rut || row.RUT) {
+            return {
+              rut: String(row.rut || row.RUT || row.id || ''),
+              name: String(row.name || row.NOMBRE || 'PROVEEDOR RECONOCIDO'),
+              withdrawalDays: Number(row.withdrawaldays || row.withdrawal_days || 0),
+              hasExchange: !!(row.hasexchange || row.has_exchange)
+            } as Provider;
+          }
         }
         return result.success ? result.data : null;
       })
@@ -452,7 +466,10 @@ export const importProvidersFromCloud = async (): Promise<number> => {
       .map(p => ({ ...p, syncStatus: 'synced' as const }));
 
     if (providers.length > 0) {
+      logger.info("FETCH_PROVIDERS", `Guardando ${providers.length} proveedores en base de datos local.`);
       await db.providers.bulkPut(providers);
+    } else {
+      logger.warn("FETCH_PROVIDERS", "No se encontraron proveedores válidos tras filtrado y validación.");
     }
 
     setTableSyncTime(tableName, Date.now());
