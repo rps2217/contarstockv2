@@ -73,7 +73,8 @@ export const processExpiryItem = (
   const providerName = (provider?.name || product?.supplier || item.providerName || 'N/A').trim().toUpperCase();
   const observaciones = item.observaciones || '';
 
-  const _searchIndex = `${item.barcode || ''} ${productName} ${providerName} ${item.batch || ''} ${item.frc || ''} ${observaciones}`.toLowerCase();
+  const normalizeText = (s: string) => (s || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  const _searchIndex = normalizeText(`${item.barcode || ''} ${productName} ${providerName} ${item.batch || ''} ${item.frc || ''} ${observaciones}`);
 
   return {
     ...item,
@@ -113,7 +114,8 @@ export const filterExpiryItems = (
   const { query, selectedCategories, selectedCanje, actionPeriod, customDateRange, creationDateRange } = filters;
   
   // Pre-procesar la query para búsqueda ultra-rápida una sola vez
-  const searchTerm = query.trim().toLowerCase();
+  const normalizeText = (s: string) => (s || '').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  const searchTerms = normalizeText(query).split(/\s+/).filter(Boolean);
   
   const now = new Date();
   const currentMonthStart = startOfMonth(now);
@@ -124,8 +126,9 @@ export const filterExpiryItems = (
 
   return items.filter(item => {
     // 1. Búsqueda Ultra-Rápida usando el índice pre-calculado
-    if (searchTerm && item._searchIndex && !item._searchIndex.includes(searchTerm)) {
-      return false;
+    if (searchTerms.length > 0 && item._searchIndex) {
+      const isMatch = searchTerms.every(term => item._searchIndex!.includes(term));
+      if (!isMatch) return false;
     }
 
     if (selectedCategories.length > 0 && !selectedCategories.includes(item.category)) {

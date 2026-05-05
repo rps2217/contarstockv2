@@ -9,6 +9,7 @@ import { eventRepository } from '../../../repositories/EventRepository';
 import { normalizeSku } from '../../../services/utils';
 import { Product } from '../../../types';
 import { logger } from '../../../services/logger';
+import { useGlobalSearch } from '../../../hooks/useGlobalSearch';
 
 export interface EventPreferences {
   compactView: boolean;
@@ -269,22 +270,23 @@ export const useEventDatabase = () => {
     localStorage.setItem('event_preferences', JSON.stringify({ ...preferences, ...newPrefs }));
   }, [preferences]);
 
+  const searchResults = useGlobalSearch(baseProcessedData, [
+    'productName',
+    'barcode',
+    'providerName',
+    'event',
+    'location',
+    'frc',
+    'nguia',
+    'destino',
+    'traspaso',
+    'observaciones',
+    'category'
+  ], searchQuery);
+
   const processedEvents = useMemo(() => {
-    let filtered = baseProcessedData;
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      const normalizedQ = normalizeSku(searchQuery);
-      
-      filtered = filtered.filter(e => 
-        String(e.productName || '').toLowerCase().includes(q) || 
-        String(e.barcode || '').toLowerCase().includes(q) ||
-        (normalizedQ && String(e.barcode || '').includes(normalizedQ)) ||
-        String(e.providerName || '').toLowerCase().includes(q) ||
-        String(e.frc || '').toLowerCase().includes(q) ||
-        String(e.destino || '').toLowerCase().includes(q) ||
-        String(e.traspaso || '').toLowerCase().includes(q)
-      );
-    }
+    let filtered = searchResults;
+
     if (selectedEvents.length > 0) {
       filtered = filtered.filter(e => selectedEvents.includes(e.event));
     }
@@ -301,7 +303,7 @@ export const useEventDatabase = () => {
       });
     }
     return filtered;
-  }, [baseProcessedData, searchQuery, selectedEvents, dateRange]);
+  }, [searchResults, selectedEvents, dateRange]);
 
   return {
     state: {

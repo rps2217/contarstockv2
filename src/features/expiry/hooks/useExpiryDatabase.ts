@@ -1,4 +1,5 @@
 
+import { useGlobalSearch } from '../../../hooks/useGlobalSearch';
 import { useMemo, useEffect, useCallback, useState } from 'react';
 import { supabaseSyncService } from '../../../services/supabaseSyncService';
 import { Product, Provider } from '../../../types';
@@ -40,7 +41,6 @@ export const useExpiryDatabase = () => {
     selectedIds, setSelectedIds
   } = useExpiryStore();
 
-  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   
   // Local data from Dexie - reactive to tableName
@@ -99,16 +99,6 @@ export const useExpiryDatabase = () => {
     };
   }, [tableName]);
 
-  // Debounce search query
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (debouncedSearch !== searchQuery) {
-        setDebouncedSearch(searchQuery);
-      }
-    }, 400); 
-    return () => clearTimeout(timer);
-  }, [searchQuery, debouncedSearch]);
-
   const baseProcessedData = useMemo(() => {
     const now = new Date();
     
@@ -161,6 +151,16 @@ export const useExpiryDatabase = () => {
     return Array.from(dedupMap.values());
   }, [localItems, settings?.cloudConfig?.mappings?.expiry, productMap, providerMap]);
 
+  // Fuse.js powerful search
+  const searchResults = useGlobalSearch(baseProcessedData, [
+    'barcode',
+    'productName',
+    'providerName',
+    'batch',
+    'frc',
+    'observaciones'
+  ], searchQuery);
+
   const categories = useMemo(() => {
     const cats = new Set<string>();
     baseProcessedData.forEach(item => {
@@ -170,15 +170,15 @@ export const useExpiryDatabase = () => {
   }, [baseProcessedData]);
 
   const contextFilteredData = useMemo(() => {
-    return filterExpiryItems(baseProcessedData, {
-      query: debouncedSearch.toLowerCase(),
+    return filterExpiryItems(searchResults, {
+      query: '', // We pass empty query because fuzzy search is already applied
       selectedCategories,
       selectedCanje,
       actionPeriod,
       customDateRange,
       creationDateRange
     });
-  }, [baseProcessedData, debouncedSearch, selectedCategories, selectedCanje, actionPeriod, customDateRange, creationDateRange]);
+  }, [searchResults, selectedCategories, selectedCanje, actionPeriod, customDateRange, creationDateRange]);
 
   const processedData = useMemo((): ExpiryItem[] => {
     const filtered = contextFilteredData.filter(item => {

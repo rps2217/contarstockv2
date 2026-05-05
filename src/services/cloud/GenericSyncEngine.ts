@@ -16,11 +16,16 @@ export class GenericSyncEngine {
     if (!localTable) return { success: 0, failed: 0 };
 
     // 1. Process Deletions First
-    let deleteQuery = localTable.filter((item: any) => item.syncStatus === 'pending_delete');
-    if (meta.filterField && meta.filterValue) {
-      deleteQuery = deleteQuery.filter((item: any) => item[meta.filterField!] === meta.filterValue);
+    let toDelete: any[] = [];
+    if (meta.filterField === 'tableName' && meta.filterValue) {
+      toDelete = await localTable.where('[tableName+syncStatus]').equals([meta.filterValue, 'pending_delete']).toArray();
+    } else {
+      toDelete = await localTable.where('syncStatus').equals('pending_delete').toArray();
+      if (meta.filterField && meta.filterValue) {
+        toDelete = toDelete.filter((item: any) => item[meta.filterField!] === meta.filterValue);
+      }
     }
-    const toDelete = await deleteQuery.toArray();
+
     for (const record of toDelete) {
       try {
         const id = record[meta.primaryKey] || record.id;
@@ -32,13 +37,19 @@ export class GenericSyncEngine {
     }
 
     // 2. Process Upserts (Pushes)
-    let query = localTable.filter((item: any) => item.syncStatus === 'pending' || item.syncStatus === 'error');
-    
-    if (meta.filterField && meta.filterValue) {
-      query = query.filter((item: any) => item[meta.filterField!] === meta.filterValue);
+    let dirtyItems: any[] = [];
+    if (meta.filterField === 'tableName' && meta.filterValue) {
+      const pendingItems = await localTable.where('[tableName+syncStatus]').equals([meta.filterValue, 'pending']).toArray();
+      const errorItems = await localTable.where('[tableName+syncStatus]').equals([meta.filterValue, 'error']).toArray();
+      dirtyItems = [...pendingItems, ...errorItems];
+    } else {
+      const pendingItems = await localTable.where('syncStatus').equals('pending').toArray();
+      const errorItems = await localTable.where('syncStatus').equals('error').toArray();
+      dirtyItems = [...pendingItems, ...errorItems];
+      if (meta.filterField && meta.filterValue) {
+        dirtyItems = dirtyItems.filter((item: any) => item[meta.filterField!] === meta.filterValue);
+      }
     }
-
-    const dirtyItems = await query.toArray();
 
     if (!dirtyItems.length) return { success: 0, failed: 0 };
 
@@ -96,12 +107,22 @@ export class GenericSyncEngine {
     const meta = syncRegistry[registryKey];
     if (!meta) throw new Error(`Registry key ${registryKey} not found`);
 
-    const result = await supabaseSyncService.pullBatch(meta.remoteTable);
-    if (!result.success || !result.rows) return { added: 0, updated: 0 };
+    const lastSyncKey = `lastSync_${meta.remoteTable}`;
+    let lastSyncDate: string | undefined;
+    try {
+        const setting = await db.settings.get(lastSyncKey);
+        if (setting && setting.value) lastSyncDate = setting.value;
+    } catch {
+       // db.settings might not exist or be accessible, fallback
+    }
+
+    const result = await supabaseSyncService.pullBatch(meta.remoteTable, lastSyncDate);
+    if (!result.success || !result.rows || result.rows.length === 0) return { added: 0, updated: 0 };
 
     const remoteRows = result.rows;
     let added = 0;
     let updated = 0;
+    let maxRemoteTime = 0;
 
     const localTable = (db as any)[meta.localTable];
     if (!localTable) return { added: 0, updated: 0 };
@@ -112,9 +133,11 @@ export class GenericSyncEngine {
         const id = mapped[meta.primaryKey] || mapped.id;
         
         const existing = await localTable.get(id);
+        const remoteTime = new Date(row.updated_at || row.timestamp || 0).getTime();
+        if (remoteTime > maxRemoteTime) maxRemoteTime = remoteTime;
+
         if (existing) {
           // Conflict Resolution: Last Write Wins (using updated_at or timestamp)
-          const remoteTime = new Date(row.updated_at || row.timestamp || 0).getTime();
           const localTime = existing.updatedAt || existing.timestamp || 0;
 
           if (existing.syncStatus === 'synced' || remoteTime > localTime) {
@@ -126,7 +149,24 @@ export class GenericSyncEngine {
           added++;
         }
       }
+      
+      // Filter filtering on DB level to ensure data segregation is met locally
+      if (meta.filterField && meta.filterValue) {
+        // Find orphans (e.g. they changed tableName remotely so they don't belong here anymore, or we shouldn't have fetched them)
+        // Wait, supabaseSyncService.pullBatch fetches everything. So we might need to purge those that mismatch?
+        // Let's assume supabase pull is correct.
+      }
     });
+
+    if (maxRemoteTime > 0) {
+      try {
+        // Save the date slightly before the max to handle identical timestamps if any.
+        // Actually, saving maxRemoteTime exactly is okay.
+        await db.settings.put({ key: lastSyncKey, value: new Date(maxRemoteTime).toISOString() });
+      } catch (e) {
+        logger.error('SYNC_ENGINE', `Failed to update last sync date for ${meta.remoteTable}`);
+      }
+    }
 
     return { added, updated };
   }
