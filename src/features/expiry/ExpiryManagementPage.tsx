@@ -88,17 +88,11 @@ const ExpiryManagementPage: React.FC = () => {
               <h1 className="text-xl md:text-2xl font-black uppercase tracking-tighter italic leading-none">
                 {settings.pharmacyName || 'L-121'}
               </h1>
-              <p className={`text-[8px] font-bold uppercase tracking-widest mt-0.5 flex items-center gap-1.5 ${
-                settings.theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
-              }`}>
-                <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                CONTROL DE VENCIMIENTOS
-              </p>
             </div>
           </div>
 
           {/* STATS SECTION (Now in-line) */}
-          <div className="hidden lg:block flex-1 max-w-2xl px-4">
+          <div className="hidden lg:block flex-1 px-4">
             <ExpiryStats 
               variant="compact"
               stats={state.stats} 
