@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Home, Database, History, Container, Cloud, Calendar, FileText, Settings, Play } from 'lucide-react';
+import { Home, Database, History, Container, Cloud, Calendar, FileText, Settings, Play, Users, ShieldCheck } from 'lucide-react';
 import { AppSettings, ViewState } from '../../../types';
 
 interface Props {
@@ -20,6 +20,8 @@ export const NavigationSection: React.FC<Props> = ({ settings, updateSetting }) 
  { id: 'sync', label: 'Nube', icon: Cloud },
  { id: 'settings', label: 'Ajustes', icon: Settings },
  { id: 'providers' as ViewState, label: 'Proveedores', icon: Container },
+    { id: 'customers' as ViewState, label: 'Clientes', icon: Users },
+    { id: 'compliance' as ViewState, label: 'Control Canjes', icon: ShieldCheck },
  ];
 
  const currentNav = settings.mobileNavConfig || ['dashboard', 'reports', 'sync'];

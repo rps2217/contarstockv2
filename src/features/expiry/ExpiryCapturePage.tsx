@@ -13,6 +13,7 @@ import { differenceInDays, format } from 'date-fns';
 import { useFeedbackSystem } from '../../hooks/useFeedbackSystem';
 import { useAppStore } from '@/store/mainAppStore';
 import { useSyncStore } from '../../store/useSyncStore';
+import { SmartDock } from '../../components/SmartDock';
 import { CameraScanner } from '../../components/CameraScanner';
 import { ScannerTargetOverlay } from '../../shared/components/scanner/ScannerTargetOverlay';
 import { ModuleHeader } from '../../shared/components/layout/ModuleHeader';
@@ -258,74 +259,53 @@ export const ExpiryCapturePage: React.FC = () => {
     />
   );
 
-  const mobileDock = (
-    <div className="flex items-center bg-brand-surface/95 backdrop-blur-3xl border border-white/10 px-2 py-2 mb-6 mx-6 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden">
-      <div className="flex items-center gap-1 overflow-x-auto no-scrollbar w-full px-2 py-1">
-        <button
-          onClick={() => navigate('/')}
-          className="flex flex-col items-center gap-1 text-slate-400 active:scale-125 transition-transform shrink-0"
-        >
-          <div className="p-3">
-            <Home className="w-6 h-6" />
-          </div>
-        </button>
+  const dockItems = [
+    {
+      id: 'home',
+      icon: Home,
+      onClick: () => navigate('/'),
+    },
+    {
+      id: 'search',
+      icon: Search,
+      onClick: () => engine.setIsSearchActive(!engine.isSearchActive),
+      isActive: engine.isSearchActive,
+      activeColor: 'text-blue-400',
+      activeBg: 'bg-blue-500/20'
+    },
+    {
+      id: 'critico',
+      icon: ShieldAlert,
+      onClick: () => {
+        setFilterCritico(!filterCritico);
+        if (filterVencido) setFilterVencido(false);
+      },
+      isActive: filterCritico,
+      activeColor: 'text-amber-500',
+      activeBg: 'bg-amber-500/20'
+    },
+    {
+      id: 'vencido',
+      icon: AlertTriangle,
+      onClick: () => {
+        setFilterVencido(!filterVencido);
+        if (filterCritico) setFilterCritico(false);
+      },
+      isActive: filterVencido,
+      activeColor: 'text-rose-500',
+      activeBg: 'bg-rose-500/20'
+    },
+    {
+      id: 'sync',
+      icon: RefreshCw,
+      onClick: () => engine.setIsSyncModalOpen(true),
+      isActive: syncStore.incidents.length > 0 || syncStore.isSyncing,
+      activeColor: syncStore.incidents.length > 0 ? 'text-rose-500' : 'text-blue-400',
+      activeBg: syncStore.incidents.length > 0 ? 'bg-rose-500/20' : 'bg-blue-500/20'
+    }
+  ];
 
-        <div className="w-[1px] h-6 bg-white/10 mx-1 shrink-0" />
-
-        <button
-          onClick={() => engine.setIsSearchActive(!engine.isSearchActive)}
-          className={`flex flex-col items-center gap-1 transition-all shrink-0 ${
-            engine.isSearchActive ? 'text-blue-400 scale-110' : 'text-slate-500 hover:text-slate-400'
-          }`}
-        >
-          <div className={`p-3 rounded-2xl ${engine.isSearchActive ? 'bg-blue-500/20' : ''}`}>
-            <Search className="w-5 h-5" />
-          </div>
-        </button>
-
-        <button
-          onClick={() => {
-            setFilterCritico(!filterCritico);
-            if (filterVencido) setFilterVencido(false);
-          }}
-          className={`flex flex-col items-center gap-1 transition-all shrink-0 ${
-            filterCritico ? 'text-amber-500 scale-110' : 'text-slate-500 hover:text-slate-400'
-          }`}
-        >
-          <div className={`p-3 rounded-2xl ${filterCritico ? 'bg-amber-500/20' : ''}`}>
-            <ShieldAlert className="w-5 h-5" />
-          </div>
-        </button>
-
-        <button
-          onClick={() => {
-            setFilterVencido(!filterVencido);
-            if (filterCritico) setFilterCritico(false);
-          }}
-          className={`flex flex-col items-center gap-1 transition-all shrink-0 ${
-            filterVencido ? 'text-rose-500 scale-110' : 'text-slate-500 hover:text-slate-400'
-          }`}
-        >
-          <div className={`p-3 rounded-2xl ${filterVencido ? 'bg-rose-500/20' : ''}`}>
-            <AlertTriangle className="w-5 h-5" />
-          </div>
-        </button>
-
-        <div className="w-[1px] h-6 bg-white/10 mx-1 shrink-0" />
-        
-        <button
-          onClick={() => engine.setIsSyncModalOpen(true)}
-          className={`flex flex-col items-center gap-1 transition-all shrink-0 ${
-            syncStore.incidents.length > 0 ? 'text-rose-500 animate-pulse' : 'text-slate-500 hover:text-slate-400'
-          }`}
-        >
-          <div className={`p-3 rounded-2xl ${syncStore.incidents.length > 0 ? 'bg-rose-500/20' : ''}`}>
-             <RefreshCw className={`w-5 h-5 ${syncStore.isSyncing ? 'animate-spin text-blue-400' : ''}`} />
-          </div>
-        </button>
-      </div>
-    </div>
-  );
+  const mobileDock = <SmartDock items={dockItems} variant="contextual" />;
 
   const cameraArea = (
     <AnimatePresence>
