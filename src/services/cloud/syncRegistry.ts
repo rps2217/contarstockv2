@@ -23,11 +23,22 @@ export const syncRegistry: Record<string, TableSyncMeta> = {
       barcode: p.barcode,
       name: p.name,
       category: p.category || 'GENERAL',
-      supplier: p.supplier || '',
-      supplier_rut: p.supplierRut || '',
-      price: p.price || 0,
-      units_per_box: p.unitsPerBox || 1,
+      supplier_rut: p.supplierRut || null,
+      supplier: p.supplier || '', // Cache for faster queries in Supabase
+      price: Number(p.price) || 0,
+      units_per_box: Number(p.unitsPerBox) || 1,
       updated_at: new Date().toISOString()
+    }),
+    mapToLocal: (remote) => ({
+      barcode: remote.barcode,
+      name: remote.name,
+      category: remote.category,
+      supplierRut: remote.supplier_rut || remote.supplierrut,
+      supplier: remote.supplier,
+      price: Number(remote.price) || 0,
+      unitsPerBox: Number(remote.units_per_box) || Number(remote.unitsPerBox) || 1,
+      syncStatus: 'synced',
+      updatedAt: (remote.updated_at || remote.updatedat) ? new Date(remote.updated_at || remote.updatedat).getTime() : Date.now()
     })
   },
   sessions: {
@@ -74,17 +85,19 @@ export const syncRegistry: Record<string, TableSyncMeta> = {
     mapToRemote: (p) => ({
       rut: p.rut,
       name: p.name,
-      withdrawal_days: p.withdrawalDays || 0,
-      has_exchange: p.hasExchange || false,
+      withdrawal_days: Number(p.withdrawalDays) || 30,
+      has_exchange: Boolean(p.hasExchange),
+      exchange_policy: p.exchangePolicy || '',
       updated_at: new Date().toISOString()
     }),
     mapToLocal: (remote) => ({
       rut: remote.rut,
       name: remote.name,
-      withdrawalDays: remote.withdrawal_days != null && remote.withdrawal_days !== '' ? Number(remote.withdrawal_days) : undefined,
-      hasExchange: Boolean(remote.has_exchange),
+      withdrawalDays: Number(remote.withdrawal_days || remote.withdrawaldays || remote.withdrawalDays || 30),
+      hasExchange: Boolean(remote.has_exchange || remote.hasexchange || remote.hasExchange),
+      exchangePolicy: remote.exchange_policy || remote.exchangepolicy || remote.exchangePolicy || '',
       syncStatus: 'synced',
-      updatedAt: remote.updated_at ? new Date(remote.updated_at).getTime() : Date.now()
+      updatedAt: (remote.updated_at || remote.updatedat) ? new Date(remote.updated_at || remote.updatedat).getTime() : Date.now()
     })
   },
   customers: {
