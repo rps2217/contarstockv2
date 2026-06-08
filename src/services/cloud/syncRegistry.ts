@@ -160,8 +160,8 @@ export const syncRegistry: Record<string, TableSyncMeta> = {
   expiry: {
     localTable: 'dynamic_data',
     filterField: 'tableName',
-    filterValue: 'ALARMAS_VENCIMIENTO',
-    remoteTable: 'ALARMAS_VENCIMIENTO',
+    filterValue: 'VENCIMIENTOS',
+    remoteTable: 'VENCIMIENTOS',
     primaryKey: 'id',
     mapToRemote: (record) => ({
       ...record.data,
@@ -170,7 +170,7 @@ export const syncRegistry: Record<string, TableSyncMeta> = {
     }),
     mapToLocal: (remote) => ({
       id: remote.id,
-      tableName: 'ALARMAS_VENCIMIENTO',
+      tableName: 'VENCIMIENTOS',
       data: remote,
       timestamp: remote.updated_at ? new Date(remote.updated_at).getTime() : Date.now(),
       syncStatus: 'synced'
