@@ -17,29 +17,29 @@ interface ProductListProps {
   onSelectAll?: () => void;
 }
 
-  const Row = memo(({ index, data }: any) => {
+const getSyncStatusColor = (status?: string) => {
+  switch (status) {
+    case 'synced': return 'bg-emerald-500';
+    case 'pending': return 'bg-sky-500';
+    case 'error': return 'bg-rose-500';
+    default: return 'bg-amber-500';
+  }
+};
+
+const getSyncStatusIcon = (status?: string) => {
+  switch (status) {
+    case 'synced': return <Cloud className="w-3 h-3 text-emerald-500/40" />;
+    case 'pending': return <Loader2 className="w-3 h-3 text-sky-500/40 animate-spin" />;
+    case 'error': return <AlertTriangle className="w-3 h-3 text-rose-500/40" />;
+    default: return <CloudOff className="w-3 h-3 text-amber-500/40" />;
+  }
+};
+
+const Row = memo(({ index, data }: any) => {
   const p = data.items[index];
   if (!p) return null;
   const { isMobile, onEdit, onDelete, onPrint, selectedIds, onSelect } = data;
   const isSelected = selectedIds?.has(p.barcode);
-
-  const getSyncStatusColor = (status?: string) => {
-    switch (status) {
-      case 'synced': return 'bg-emerald-500';
-      case 'pending': return 'bg-sky-500';
-      case 'error': return 'bg-rose-500';
-      default: return 'bg-amber-500';
-    }
-  };
-
-  const getSyncStatusIcon = (status?: string) => {
-    switch (status) {
-      case 'synced': return <Cloud className="w-3 h-3 text-emerald-500/40" />;
-      case 'pending': return <Loader2 className="w-3 h-3 text-sky-500/40 animate-spin" />;
-      case 'error': return <AlertTriangle className="w-3 h-3 text-rose-500/40" />;
-      default: return <CloudOff className="w-3 h-3 text-amber-500/40" />;
-    }
-  };
 
   if (isMobile) {
     return (

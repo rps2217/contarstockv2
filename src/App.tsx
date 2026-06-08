@@ -1,7 +1,8 @@
 
 import React, { Suspense, useEffect, useState } from 'react';
 import { HashRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
-import { useAppStore } from '@/store/mainAppStore'; // Vercel Cache Invalidation Ref: 20260404-03
+import { useAppStore } from '@/store/mainAppStore';
+import { isModuleEnabled } from './services/moduleManager';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Sidebar } from '@/components/Sidebar';
 import { BottomDock } from '@/components/BottomDock';
@@ -96,6 +97,10 @@ const AppContent = () => {
   }, [location.pathname]);
 
   const currentThemeClass = settings.theme === 'light' ? 'bg-slate-50 text-slate-900' : 'bg-slate-950 text-slate-100';
+
+  const ModuleRoute = ({ moduleKey, element }: { moduleKey: string, element: React.ReactNode }) => {
+    return isModuleEnabled(moduleKey) ? element : <Navigate to="/" replace />;
+  };
 
   if (bootState === 'initializing' && isAuthenticated !== false) {
     return (
@@ -195,23 +200,22 @@ const AppContent = () => {
                   <Routes location={location}>
                     <Route path="/" element={<Dashboard />} />
                     <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/reports" element={<Reports />} />
-                    <Route path="/database" element={<DatabaseView />} />
-                    <Route path="/sync" element={<Sync />} />
-                    <Route path="/sync/queue" element={<GlobalSyncQueue />} />
-                    <Route path="/settings" element={<Settings />} />
-                    <Route path="/reception" element={<ReceptionManagement />} />
-                    <Route path="/reception/capture" element={<ReceptionCapture />} />
-                    <Route path="/expiry" element={<ExpiryManagement />} />
-                    <Route path="/expiry/capture" element={<ExpiryCapturePage />} />
+                    <Route path="/reports" element={<ModuleRoute moduleKey="reports" element={<Reports />} />} />
+                    <Route path="/database" element={<ModuleRoute moduleKey="database" element={<DatabaseView />} />} />
+                    <Route path="/sync" element={<ModuleRoute moduleKey="sync" element={<Sync />} />} />
+                    <Route path="/settings" element={<ModuleRoute moduleKey="settings" element={<Settings />} />} />
+                    <Route path="/reception" element={<ModuleRoute moduleKey="reception" element={<ReceptionManagement />} />} />
+                    <Route path="/reception/capture" element={<ModuleRoute moduleKey="reception" element={<ReceptionCapture />} />} />
+                    <Route path="/expiry" element={<ModuleRoute moduleKey="expiry" element={<ExpiryManagement />} />} />
+                    <Route path="/expiry/capture" element={<ModuleRoute moduleKey="expiry" element={<ExpiryCapturePage />} />} />
+                    <Route path="/events" element={<ModuleRoute moduleKey="events" element={<EventManagement />} />} />
+                    <Route path="/events/capture" element={<ModuleRoute moduleKey="events" element={<EventCapturePage />} />} />
                     <Route path="/compliance" element={<ComplianceDashboardPage />} />
-                    <Route path="/events" element={<EventManagement />} />
-                    <Route path="/events/capture" element={<EventCapturePage />} />
                     <Route path="/providers" element={<ProvidersPage />} />
                     <Route path="/customers" element={<CustomersPage />} />
                     <Route path="/dynamic/:tableKey" element={<DynamicManagement />} />
-                    <Route path="/counting/:id" element={<CountingPage />} />
-                    <Route path="/massive/:batchId" element={<HammerPage />} />
+                    <Route path="/counting/:id" element={<ModuleRoute moduleKey="counting" element={<CountingPage />} />} />
+                    <Route path="/massive/:batchId" element={<ModuleRoute moduleKey="counting" element={<HammerPage />} />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                 </motion.div>

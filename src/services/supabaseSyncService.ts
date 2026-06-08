@@ -112,7 +112,8 @@ export const supabaseSyncService = {
     });
 
     let primaryKey = 'id';
-    if (tableName === 'PROVEEDORES') primaryKey = 'rut';
+    if (tableName === 'PROVEEDORES') primaryKey = 'tax_id';
+    if (tableName === 'VENCIMIENTOS') primaryKey = 'unique_key';
 
     const maxRetries = 12; // Un poco más para esquemas complejos
     let attempts = 0;
@@ -207,7 +208,7 @@ export const supabaseSyncService = {
   },
 
   async deleteRemote(tableName: string, id: string) {
-    const filters = [`id.eq.${id}`, `ID.eq.${id}`, `claveUnica.eq.${id}`];
+    const filters = [`id.eq.${id}`, `tax_id.eq.${id}`, `unique_key.eq.${id}`];
     let attempts = 0;
     let currentFilters = [...filters];
 

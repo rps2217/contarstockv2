@@ -11,6 +11,7 @@ import { useAppStore } from '@/store/mainAppStore';
 import { OperationalSection } from './components/OperationalSection';
 import { NavigationSection } from './components/NavigationSection';
 import { SupportSection } from './components/SupportSection';
+import { ModulesSection } from './components/ModulesSection';
 import { CloudSection } from './components/CloudSection';
 import { ThemeSection } from './components/ThemeSection';
 import { PrinterSection } from './components/PrinterSection';
@@ -127,7 +128,12 @@ export const Settings: React.FC = () => {
    </>
  )}
  {activeTab === 'nube' && <CloudSection settings={settings} updateSetting={updateSetting} />}
- {activeTab === 'sistema' && <SupportSection />}
+ {activeTab === 'sistema' && (
+   <>
+     <SupportSection />
+     <ModulesSection />
+   </>
+ )}
  </div>
 
  {/* Footer de versión */}

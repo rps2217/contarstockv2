@@ -1,9 +1,8 @@
 
 import React from 'react';
 import { motion } from 'motion/react';
-import { AlertTriangle, ShieldAlert, Download, Clock, CheckCircle2, CheckSquare, Trash2, Edit2 } from 'lucide-react';
+import { AlertTriangle, ShieldAlert, Download, Clock, CheckCircle2, CheckSquare, Trash2, Edit2, Copy } from 'lucide-react';
 import { format } from 'date-fns';
-import { es } from 'date-fns/locale/es';
 import { useToastStore } from '../../../store/useToastStore';
 
 interface ExpiryItemCardProps {
@@ -12,6 +11,7 @@ interface ExpiryItemCardProps {
   onToggleSelect: (id: string) => void;
   onRemove: (item: any) => void;
   onEdit?: (item: any) => void;
+  onOpenDetail?: (item: any) => void;
   onFilterProvider?: (provider: string) => void;
   onFilterEstado?: (estado: string) => void;
   onFilterFrc?: (frc: string) => void;
@@ -21,64 +21,15 @@ interface ExpiryItemCardProps {
 
 const STATUS_CONFIG: Record<string, {
   icon: React.ElementType;
-  label: (daysLeft: number) => string;
   colorClass: string;
   bgClass: string;
   borderClass: string;
-  shadowClass: string;
-  cardBorder: string;
-  cardBg: string;
 }> = {
-  expired: {
-    icon: AlertTriangle,
-    label: () => 'VENCIDO',
-    colorClass: 'text-rose-500',
-    bgClass: 'bg-rose-500/20',
-    borderClass: 'border-rose-500/30',
-    shadowClass: 'drop-shadow-[0_0_10px_rgba(244,63,94,0.3)]',
-    cardBorder: 'border-rose-500/30',
-    cardBg: 'bg-rose-500/5'
-  },
-  critical: {
-    icon: ShieldAlert,
-    label: (days) => `${days}D`,
-    colorClass: 'text-amber-500',
-    bgClass: 'bg-amber-500/20',
-    borderClass: 'border-amber-500/30',
-    shadowClass: 'drop-shadow-[0_0_10px_rgba(245,158,11,0.3)]',
-    cardBorder: 'border-amber-500/30',
-    cardBg: 'bg-amber-500/5'
-  },
-  withdrawal: {
-    icon: Download,
-    label: () => 'RETIRO',
-    colorClass: 'text-indigo-500',
-    bgClass: 'bg-indigo-500/20',
-    borderClass: 'border-indigo-500/30',
-    shadowClass: 'drop-shadow-[0_0_10px_rgba(99,102,241,0.3)]',
-    cardBorder: 'border-indigo-500/30',
-    cardBg: 'bg-indigo-500/5'
-  },
-  next_expiry: {
-    icon: Clock,
-    label: () => 'PRÓX',
-    colorClass: 'text-blue-500',
-    bgClass: 'bg-blue-500/20',
-    borderClass: 'border-blue-500/30',
-    shadowClass: '',
-    cardBorder: 'border-blue-500/30',
-    cardBg: 'bg-blue-500/5'
-  },
-  safe: {
-    icon: CheckCircle2,
-    label: () => 'OK',
-    colorClass: 'text-emerald-500',
-    bgClass: 'bg-emerald-500/20',
-    borderClass: 'border-emerald-500/30',
-    shadowClass: '',
-    cardBorder: '',
-    cardBg: ''
-  }
+  expired: { icon: AlertTriangle, colorClass: 'text-rose-500', bgClass: 'bg-rose-500/10', borderClass: 'border-rose-500/20' },
+  critical: { icon: ShieldAlert, colorClass: 'text-amber-500', bgClass: 'bg-amber-500/10', borderClass: 'border-amber-500/20' },
+  withdrawal: { icon: Download, colorClass: 'text-indigo-500', bgClass: 'bg-indigo-500/10', borderClass: 'border-indigo-500/20' },
+  next_expiry: { icon: Clock, colorClass: 'text-blue-500', bgClass: 'bg-blue-500/10', borderClass: 'border-blue-500/20' },
+  safe: { icon: CheckCircle2, colorClass: 'text-emerald-500', bgClass: 'bg-emerald-500/10', borderClass: 'border-emerald-500/20' }
 };
 
 export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
@@ -87,229 +38,134 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = React.memo(({
   onToggleSelect,
   onRemove,
   onEdit,
-  onFilterProvider,
-  onFilterEstado,
-  onFilterFrc,
+  onOpenDetail,
   theme = 'dark',
   isCompact = false
 }) => {
   const { addToast } = useToastStore.getState();
   const statusConfig = STATUS_CONFIG[item.status] || STATUS_CONFIG.safe;
   const StatusIcon = isSelected ? CheckSquare : statusConfig.icon;
-
-  const getCardStyles = () => {
-    let base = isCompact ? 'p-3 md:p-2' : 'p-4';
-    let themeBase = theme === 'dark' ? 'bg-brand-surface border-white/10 shadow-lg shadow-black/20' : 'bg-white shadow-md border-stone-200';
-    
-    if (isSelected) {
-      return `${base} border-indigo-500 bg-indigo-500/10`;
-    }
-    
-    return `${base} ${themeBase} ${statusConfig.cardBorder} ${statusConfig.cardBg}`;
-  };
+  const isDark = theme === 'dark';
 
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      id={`expiry-item-${item.id}`}
-      onClick={() => onEdit?.(item)}
-      className={`border rounded-2xl flex flex-col md:grid md:grid-cols-[80px_2fr_1fr_1fr_1.5fr_120px] items-start md:items-center gap-4 md:gap-6 group transition-all cursor-pointer ${getCardStyles()}`}
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className={`relative group rounded-xl border p-4 transition-all cursor-pointer ${
+        isSelected 
+          ? isDark ? 'bg-indigo-500/10 border-indigo-500/40' : 'bg-indigo-50 border-indigo-300'
+          : isDark ? 'bg-brand-surface border-white/10 hover:border-white/20' : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm'
+      }`}
+      onClick={() => onOpenDetail ? onOpenDetail(item) : onEdit?.(item)}
     >
-      <div className="flex w-full md:contents gap-4 items-start">
-        {/* COLUMN 1: ICON */}
-        <div className="flex flex-col items-center gap-2 shrink-0">
-          <div 
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleSelect(item.id);
-            }}
-            className={`w-12 h-12 rounded-2xl flex items-center justify-center cursor-pointer transition-all shadow-lg hover:scale-105 relative ${
-              isSelected 
-                ? 'bg-indigo-500 text-white' 
-                : `${statusConfig.bgClass} ${statusConfig.colorClass} border ${statusConfig.borderClass}`
-            }`}
-          >
-            <StatusIcon className="w-6 h-6" />
-            {item.riskScore && item.riskScore > 40 && !isSelected && (
-              <div className={`absolute -top-1 -right-1 w-5 h-5 text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-slate-900 shadow-lg ${
-                item.riskScore > 80 ? 'bg-rose-500' : 'bg-amber-500'
-              }`}>
-                {item.riskScore}
-              </div>
-            )}
-          </div>
+      <div className="flex items-start gap-3">
+        {/* Status Icon */}
+        <div 
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleSelect(item.id);
+          }}
+          className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+            isSelected 
+              ? 'bg-indigo-500 text-white' 
+              : `${statusConfig.bgClass} ${statusConfig.colorClass} border ${statusConfig.borderClass}`
+          }`}
+        >
+          <StatusIcon className="w-5 h-5" />
         </div>
 
-        {/* COLUMN 2: PRODUCT & PROVIDER */}
-        <div className="flex-1 min-w-0 flex flex-col gap-1.5">
-          <div className="flex items-center justify-between">
-            <h3 className={`text-lg font-black uppercase tracking-tighter italic truncate ${
-              theme === 'dark' ? 'text-white' : 'text-stone-900'
-            }`}>
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex justify-between gap-2">
+            <h3 className={`text-base font-semibold truncate ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
               {item.productName}
             </h3>
-            {item.observaciones && (
-              <p className={`text-[10px] font-bold uppercase italic tracking-tight leading-none mt-1 ${
-                theme === 'dark' ? 'text-amber-500/80' : 'text-amber-600'
-              }`}>
-                {item.observaciones}
-              </p>
-            )}
-            {item.frc && (
-              <span 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (onFilterFrc) {
-                    onFilterFrc(item.frc);
-                    addToast(`Filtrando por FRC: ${item.frc}`, 'info');
-                  }
-                }}
-                className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border cursor-pointer transition-all hover:scale-105 ${
-                  theme === 'dark' 
-                    ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30 hover:bg-indigo-500/30' 
-                    : 'bg-indigo-50 text-indigo-600 border-indigo-200 hover:bg-indigo-100'
-                }`}
-                title="Filtrar por este FRC"
+            
+            {/* Quick Actions (Hover) */}
+            <div className="hidden md:flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+               <button
+                onClick={(e) => { e.stopPropagation(); onEdit?.(item); }}
+                className={`p-1.5 rounded-md ${isDark ? 'text-slate-400 hover:text-white hover:bg-white/10' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
               >
-                FRC: {item.frc}
-              </span>
-            )}
+                <Edit2 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onRemove?.(item); }}
+                className={`p-1.5 rounded-md ${isDark ? 'text-slate-400 hover:text-rose-400 hover:bg-rose-500/10' : 'text-slate-500 hover:text-rose-600 hover:bg-rose-50'}`}
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 mt-1 whitespace-nowrap overflow-x-auto no-scrollbar">
             <span 
               onClick={(e) => {
                 e.stopPropagation();
                 navigator.clipboard.writeText(item.barcode);
-                addToast(`SKU ${item.barcode} copiado al portapapeles`, 'success');
+                addToast('SKU copiado', 'success');
               }}
-              className={`text-xs font-black px-2 py-1 rounded uppercase tracking-widest border cursor-pointer transition-colors ${
-              theme === 'dark' ? 'bg-brand-dark text-white border-white/20 hover:bg-slate-700' : 'bg-stone-100 text-stone-900 border-stone-300 hover:bg-stone-200'
-            }`}
-              title="Copiar SKU"
+              className={`flex items-center gap-1 text-xs font-mono px-1.5 py-0.5 rounded cursor-pointer ${
+                isDark ? 'bg-white/5 text-slate-300 hover:bg-white/10' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
             >
               {item.barcode}
             </span>
-            <span 
-              onClick={(e) => {
-                e.stopPropagation();
-                if (onFilterProvider) {
-                  onFilterProvider(item.providerName);
-                  addToast(`Filtrando por proveedor: ${item.providerName}`, 'info');
-                }
-              }}
-              className={`text-[10px] font-black uppercase tracking-widest truncate cursor-pointer transition-colors ${
-              theme === 'dark' ? 'text-slate-400 hover:text-indigo-400' : 'text-stone-500 hover:text-indigo-600'
-            }`}
-              title="Filtrar por este proveedor"
-            >
-              {item.providerName}
+            <span className={`text-xs truncate ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              {item.providerName || 'Sin Proveedor'}
             </span>
-            {item.withdrawalDays !== undefined && (
-              <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border shrink-0 ${
-                item.hasCanje 
-                  ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' 
-                  : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+            {item.observaciones && (
+              <span className={`text-[10px] px-1.5 py-0.5 rounded truncate max-w-[100px] ${
+                isDark ? 'bg-amber-500/10 text-amber-400' : 'bg-amber-100 text-amber-700'
               }`}>
-                {item.withdrawalDays}D {item.hasCanje ? 'Canje' : 'Merma'}
+                {item.observaciones}
               </span>
             )}
           </div>
         </div>
-
-        {/* MOBILE ACTIONS */}
-        <div className="md:hidden flex items-center justify-end shrink-0">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onRemove(item);
-            }}
-            className="w-10 h-10 bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white rounded-xl flex items-center justify-center transition-all border border-rose-500/20"
-            title="Retirar Producto"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
       </div>
 
-      <div className="flex w-full md:contents flex-wrap gap-4 items-center justify-between mt-2 md:mt-0 pt-2 md:pt-0 border-t md:border-t-0 border-white/5">
-        {/* COLUMN 3: ESTADO */}
-        <div className="flex items-center">
-          {item.hasCanje !== undefined && (
-            <div 
-              onClick={(e) => {
-                e.stopPropagation();
-                if (onFilterEstado) {
-                  onFilterEstado(item.hasCanje ? 'Canje' : 'Merma');
-                }
-              }}
-              className={`px-4 py-2 rounded-xl border-2 shadow-lg transition-all hover:scale-105 flex flex-col items-center justify-center cursor-pointer min-w-[120px] ${
+      {/* Dates Grid */}
+      <div className={`mt-4 grid grid-cols-2 gap-3 pt-3 border-t ${isDark ? 'border-white/5' : 'border-slate-100'}`}>
+        <div>
+          <div className={`text-[10px] uppercase mb-0.5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Retiro Previsto</div>
+          <div className="flex items-center gap-2">
+            <span className={`text-sm font-medium ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+               {item.withdrawalDate ? format(item.withdrawalDate, 'dd/MM/yy') : '--/--'}
+            </span>
+            {item.hasCanje !== undefined && (
+              <span className={`text-[9px] px-1.5 py-0.5 rounded ${
                 item.hasCanje 
-                  ? 'bg-indigo-600/10 border-indigo-500/40 text-indigo-400' 
-                  : 'bg-amber-600/10 border-amber-500/40 text-amber-500'
-              }`}
-            >
-              <span className="text-[10px] font-black uppercase tracking-widest leading-none">
+                  ? isDark ? 'bg-indigo-500/10 text-indigo-400' : 'bg-indigo-50 text-indigo-600'
+                  : isDark ? 'bg-rose-500/10 text-rose-400' : 'bg-rose-50 text-rose-600'
+              }`}>
                 {item.hasCanje ? 'Canje' : 'Merma'}
               </span>
-              <span className="text-[9px] font-black uppercase mt-1 opacity-80">
-                {item.withdrawalDate ? format(item.withdrawalDate, 'MMM yy', { locale: es }) : ''}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* COLUMN 4: STATUS (Policy Days) */}
-        <div className="flex items-center">
-          <div className="flex flex-col items-center px-3 py-1.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-500 shadow-indigo-500/5 shadow-inner">
-            <span className={`text-xl font-black leading-none italic ${statusConfig.shadowClass}`}>
-              {item.withdrawalDays}D
-            </span>
-            <span className="text-[7px] font-black uppercase tracking-tighter mt-0.5">Política</span>
+            )}
           </div>
         </div>
-
-        {/* COLUMN 5: DATES */}
-        <div className="flex gap-4 md:gap-8 min-w-0">
-          <div className="flex flex-col items-center gap-1 shrink-0">
-            <span className="text-[10px] font-black text-indigo-500/70 uppercase tracking-widest italic">RETIRO</span>
-            <span className="text-xl md:text-2xl font-black text-indigo-400 font-mono italic tabular-nums leading-none">
-              {item.withdrawalDate ? format(item.withdrawalDate, 'dd/MM/yy') : 'N/A'}
-            </span>
-          </div>
-          <div className="hidden md:flex flex-col items-center gap-1 border-l-2 border-white/10 pl-8 shrink-0">
-            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">VENC.</span>
-            <span className={`text-2xl font-black font-mono italic tabular-nums leading-none ${statusConfig.colorClass}`}>
-              {item.expiryDateObj ? format(item.expiryDateObj, 'dd/MM/yy') : 'N/A'}
-            </span>
+        <div>
+          <div className={`text-[10px] uppercase mb-0.5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Vencimiento</div>
+          <div className={`text-sm font-medium ${statusConfig.colorClass}`}>
+             {item.expiryDateObj ? format(item.expiryDateObj, 'dd/MM/yy') : '--/--'}
           </div>
         </div>
       </div>
-
-      {/* COLUMN 6: ACTIONS (Desktop) */}
-      <div className="hidden md:flex items-center justify-end gap-2">
+      
+      {/* Mobile only actions bottom row */}
+      <div className="md:hidden mt-3 flex items-center justify-end border-t pt-2 gap-2 border-transparent">
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onEdit?.(item);
-          }}
-          className="w-11 h-11 bg-blue-500/10 hover:bg-blue-500 text-blue-500 hover:text-white rounded-xl flex items-center justify-center transition-all border border-blue-500/20 group-hover:scale-110 shrink-0 shadow-lg"
-          title="Editar Registro"
+          onClick={(e) => { e.stopPropagation(); onEdit?.(item); }}
+          className={`flex-1 p-2 rounded-lg border text-xs font-medium ${isDark ? 'border-white/10 text-slate-300 bg-white/5' : 'border-slate-200 text-slate-600 bg-slate-50'}`}
         >
-          <Edit2 className="w-5 h-5" />
+          Editar
         </button>
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onRemove(item);
-          }}
-          className="w-11 h-11 bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white rounded-xl flex items-center justify-center transition-all border border-rose-500/20 group-hover:scale-110 shrink-0 shadow-lg hover:shadow-rose-500/20"
-          title="Retirar Producto"
+          onClick={(e) => { e.stopPropagation(); onRemove?.(item); }}
+          className={`flex-1 p-2 rounded-lg border text-xs font-medium ${isDark ? 'border-rose-500/20 text-rose-400 bg-rose-500/10' : 'border-rose-200 text-rose-600 bg-rose-50'}`}
         >
-          <Trash2 className="w-5 h-5" />
+          Retirar
         </button>
       </div>
     </motion.div>

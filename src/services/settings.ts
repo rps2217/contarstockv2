@@ -4,46 +4,46 @@ import { db } from '../db';
 export const DEFAULT_EXPIRY_SCHEMA: TableSchema = {
   tableName: 'VENCIMIENTOS',
   columns: {
-    barcode: { col: 'SKU', label: 'Código de Barras', type: 'barcode', required: true },
-    productName: { col: 'DESCRIPTOR', label: 'Descripción', type: 'string', required: true },
-    providerName: { col: 'PROVEEDOR', label: 'Proveedor', type: 'string', editable: false },
-    quantity: { col: 'CANTIDAD', label: 'Cantidad', type: 'number', required: true, defaultValue: 1 },
-    event: { col: 'EVENTO', label: 'Evento', type: 'enum', options: ['VENCIMIENTOS', 'MERMA', 'CANJE'], defaultValue: 'VENCIMIENTOS' },
-    mm: { col: 'MM', label: 'Mes', type: 'enum', options: ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], renderType: 'grid', required: true },
-    yyyy: { col: 'YYYY', label: 'Año', type: 'enum', options: ['2026', '2027', '2028', '2029'], renderType: 'segmented', required: true },
-    location: { col: 'BOD.', label: 'Bodega', type: 'string' },
-    frc: { col: 'FRC', label: 'FRC', type: 'string' },
-    erp: { col: 'ERP', label: 'ERP', type: 'string' },
-    traspaso: { col: 'DOC-TRAS-INTER', label: 'Traspaso', type: 'string' },
-    destino: { col: 'DESTINO', label: 'Destino', type: 'string' },
-    observaciones: { col: 'OBSERVACIONES', label: 'Observaciones', type: 'string' },
-    isAdjusted: { col: 'AJUSTADO', label: 'Ajustado', type: 'boolean', defaultValue: false }
+    barcode: { col: 'barcode', label: 'Código de Barras', type: 'barcode', required: true },
+    productName: { col: 'product_name', label: 'Descripción', type: 'string', required: true },
+    providerName: { col: 'supplier_name', label: 'Proveedor', type: 'string', editable: false },
+    quantity: { col: 'quantity', label: 'Cantidad', type: 'number', required: true, defaultValue: 1 },
+    event: { col: 'event_type', label: 'Evento', type: 'enum', options: ['VENCIMIENTOS', 'MERMA', 'CANJE'], defaultValue: 'VENCIMIENTOS' },
+    mm: { col: 'expiry_month', label: 'Mes', type: 'enum', options: ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], renderType: 'grid', required: true },
+    yyyy: { col: 'expiry_year', label: 'Año', type: 'enum', options: ['2026', '2027', '2028', '2029'], renderType: 'segmented', required: true },
+    location: { col: 'location', label: 'Bodega', type: 'string' },
+    frc: { col: 'frc_code', label: 'FRC', type: 'string' },
+    erp: { col: 'erp_code', label: 'ERP', type: 'string' },
+    traspaso: { col: 'transfer_doc', label: 'Traspaso', type: 'string' },
+    destino: { col: 'destination', label: 'Destino', type: 'string' },
+    observaciones: { col: 'notes', label: 'Observaciones', type: 'string' },
+    isAdjusted: { col: 'is_adjusted', label: 'Ajustado', type: 'boolean', defaultValue: false }
   }
 };
 
 const DEFAULT_PRODUCTS_SCHEMA: TableSchema = {
   tableName: 'PRODUCTOS',
   columns: {
-    barcode: { col: 'SKU', label: 'Código', type: 'barcode', required: true },
-    name: { col: 'DESCRIPTOR', label: 'Nombre', type: 'string', required: true },
-    category: { col: 'CATEGORIA', label: 'Categoría', type: 'string' },
-    supplier: { col: 'PROVEEDOR', label: 'Proveedor', type: 'string' },
-    supplierRut: { col: 'PROVEEDOR_RUT', label: 'RUT Proveedor', type: 'string' },
-    price: { col: 'PRECIO', label: 'Precio', type: 'number' },
-    unitsPerBox: { col: 'UNIDADES_CAJA', label: 'Unidades/Caja', type: 'number' }
+    barcode: { col: 'barcode', label: 'Código', type: 'barcode', required: true },
+    name: { col: 'name', label: 'Nombre', type: 'string', required: true },
+    category: { col: 'category', label: 'Categoría', type: 'string' },
+    supplier: { col: 'supplier_name', label: 'Proveedor', type: 'string' },
+    supplierRut: { col: 'supplier_tax_id', label: 'RUT Proveedor', type: 'string' },
+    price: { col: 'price', label: 'Precio', type: 'number' },
+    unitsPerBox: { col: 'units_per_box', label: 'Unidades/Caja', type: 'number' }
   }
 };
 
 const DEFAULT_COUNTS_SCHEMA: TableSchema = {
   tableName: 'CONTEOS',
   columns: {
-    barcode: { col: 'SKU', label: 'Código', type: 'barcode', required: true },
-    quantity: { col: 'CANTIDAD', label: 'Cantidad', type: 'number', required: true },
-    timestamp: { col: 'FECHA', label: 'Fecha', type: 'timestamp', required: true },
-    operatorId: { col: 'OPERADOR', label: 'Operador', type: 'string' },
-    location: { col: 'UBICACION', label: 'Ubicación', type: 'string' },
-    batch: { col: 'LOTE', label: 'Lote', type: 'string' },
-    expiry: { col: 'VENCIMIENTO', label: 'Vencimiento', type: 'date' }
+    barcode: { col: 'barcode', label: 'Código', type: 'barcode', required: true },
+    quantity: { col: 'quantity', label: 'Cantidad', type: 'number', required: true },
+    timestamp: { col: 'created_at', label: 'Fecha', type: 'timestamp', required: true },
+    operatorId: { col: 'operator_id', label: 'Operador', type: 'string' },
+    location: { col: 'location', label: 'Ubicación', type: 'string' },
+    batch: { col: 'batch_number', label: 'Lote', type: 'string' },
+    expiry: { col: 'expiry_date', label: 'Vencimiento', type: 'date' }
   }
 };
 
@@ -70,58 +70,59 @@ const DEFAULT_SETTINGS: AppSettings = {
     eventsTableName: 'EVENTOS',
     mappings: {
       expiry: {
-        barcode: 'COD_BARRAS',
-        productName: 'DESCRIPCION_PROD',
-        quantity: 'CANTIDAD',
-        event: 'EVENTO',
-        mm: 'MM',
-        yyyy: 'YYYY',
-        location: 'UBICACION',
-        supplier: 'PROVEEDOR',
-        id: 'ID_REGISTRO',
-        uniqueKey: 'CLAVE_UNICA',
-        timestamp: 'FECHA_INGRESO',
-        frc: 'FRC',
-        erp: 'ERP',
-        traspaso: 'DOC-TRAS-INTER',
-        destino: 'DESTINO',
-        observaciones: 'OBSERVACIONES',
-        isAdjusted: 'AJUSTADO'
+        barcode: 'barcode',
+        productName: 'product_name',
+        quantity: 'quantity',
+        event: 'event_type',
+        mm: 'expiry_month',
+        yyyy: 'expiry_year',
+        location: 'location',
+        supplier: 'supplier_name',
+        id: 'id',
+        uniqueKey: 'unique_key',
+        timestamp: 'created_at',
+        frc: 'frc_code',
+        erp: 'erp_code',
+        traspaso: 'transfer_doc',
+        destino: 'destination',
+        observaciones: 'notes',
+        isAdjusted: 'is_adjusted',
+        batch: 'batch_number'
       },
       events: {
-        barcode: 'SKU',
-        productName: 'DESCRIPTOR',
-        quantity: 'CANTIDAD',
-        event: 'EVENTO',
-        mm: 'MM',
-        yyyy: 'YYYY',
-        location: 'BOD.',
-        supplier: 'PROVEEDOR',
-        supplierRut: 'RUT_PROVEEDOR',
-        frc: 'FRC',
-        erp: 'ERP',
-        traspaso: 'DOC-TRAS-INTER',
-        destino: 'DESTINO',
-        observaciones: 'OBSERVACIONES',
-        isAdjusted: 'AJUSTADO'
+        barcode: 'barcode',
+        productName: 'product_name',
+        quantity: 'quantity',
+        event: 'event_type',
+        mm: 'expiry_month',
+        yyyy: 'expiry_year',
+        location: 'location',
+        supplier: 'supplier_name',
+        supplierRut: 'supplier_tax_id',
+        frc: 'frc_code',
+        erp: 'erp_code',
+        traspaso: 'transfer_doc',
+        destino: 'destination',
+        observaciones: 'notes',
+        isAdjusted: 'is_adjusted'
       },
       products: {
-        barcode: 'SKU',
-        name: 'DESCRIPTOR',
-        category: 'CATEGORIA',
-        supplier: 'PROVEEDOR',
-        supplierRut: 'PROVEEDOR_RUT',
-        price: 'PRECIO',
-        unitsPerBox: 'UNIDADES_CAJA'
+        barcode: 'barcode',
+        name: 'name',
+        category: 'category',
+        supplier: 'supplier_name',
+        supplierRut: 'supplier_tax_id',
+        price: 'price',
+        unitsPerBox: 'units_per_box'
       },
       counts: {
-        barcode: 'SKU',
-        quantity: 'CANTIDAD',
-        timestamp: 'FECHA',
-        operatorId: 'OPERADOR',
-        location: 'UBICACION',
-        batch: 'LOTE',
-        expiry: 'VENCIMIENTO'
+        barcode: 'barcode',
+        quantity: 'quantity',
+        timestamp: 'created_at',
+        operatorId: 'operator_id',
+        location: 'location',
+        batch: 'batch_number',
+        expiry: 'expiry_date'
       }
     },
     schema: {
@@ -131,20 +132,31 @@ const DEFAULT_SETTINGS: AppSettings = {
       events: DEFAULT_EXPIRY_SCHEMA
     },
     columnMapping: {
-      barcode: 'SKU',
-      productName: 'DESCRIPTOR',
-      quantity: 'CANTIDAD',
-      event: 'EVENTO',
-      mm: 'MM',
-      yyyy: 'YYYY',
-      location: 'BOD.',
-      frc: 'FRC',
-      erp: 'ERP',
-      traspaso: 'DOC-TRAS-INTER',
-      destino: 'DESTINO',
-      observaciones: 'OBSERVACIONES',
-      isAdjusted: 'AJUSTADO'
+      barcode: 'barcode',
+      productName: 'product_name',
+      quantity: 'quantity',
+      event: 'event_type',
+      mm: 'expiry_month',
+      yyyy: 'expiry_year',
+      location: 'location',
+      frc: 'frc_code',
+      erp: 'erp_code',
+      traspaso: 'transfer_doc',
+      destino: 'destination',
+      observaciones: 'notes',
+      isAdjusted: 'is_adjusted'
     }
+  },
+  modules: {
+    dashboard: { enabled: true, name: 'Dashboard' },
+    reception: { enabled: true, name: 'Recepción' },
+    counting: { enabled: true, name: 'Conteos' },
+    expiry: { enabled: true, name: 'Vencimientos' },
+    events: { enabled: true, name: 'Eventos' },
+    reports: { enabled: true, name: 'Reportes' },
+    sync: { enabled: true, name: 'Sincronización' },
+    database: { enabled: true, name: 'Base de Datos' },
+    settings: { enabled: true, name: 'Configuración' }
   },
   mobileNavConfig: ['dashboard', 'reception', 'reports', 'sync', 'database', 'settings'],
   pharmacyName: 'L-121',

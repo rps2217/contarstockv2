@@ -234,7 +234,7 @@ export const calculateExpiryStats = (items: ExpiryItem[]) => {
     }
 
     // 3. Agrupar para acciones sugeridas
-    const isUrgent = item.status === 'critical' || item.status === 'expired';
+    const isUrgent = item.status === 'critical' || item.status === 'expired' || item.status === 'withdrawal';
     const isNext = item.status === 'next_expiry';
 
     if (isUrgent) {

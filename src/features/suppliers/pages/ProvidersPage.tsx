@@ -1,175 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Truck, Search, Plus, ShieldAlert, AlertTriangle, CheckCircle2, ChevronRight, Edit2, Trash2, Wand2, UploadCloud, RefreshCw, ShieldCheck } from 'lucide-react';
-import { Provider } from '../../../types';
-import { ProviderRepository } from '../../../repositories/ProviderRepository';
-import { db } from '../../../db';
-import { toast } from 'sonner';
 import { ProviderFormModal } from '../components/ProviderFormModal';
-import { syncProvidersToCloud } from '../../../services/cloudSync';
 import { ManagementSearchBar } from '../../../shared/components/core/ManagementSearchBar';
 import { useAppStore } from '../../../store/mainAppStore';
+import { useProvidersDatabase } from '../hooks/useProvidersDatabase';
 
 export const ProvidersPage: React.FC = () => {
   const { settings } = useAppStore();
   const theme = settings.theme;
-  const [providers, setProviders] = useState<Provider[]>([]);
-  const [search, setSearch] = useState('');
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingProvider, setEditingProvider] = useState<Provider | undefined>(undefined);
-  const [filterMode, setFilterMode] = useState<'all' | 'withExchange' | 'withoutExchange'>('all');
-  const [showFilters, setShowFilters] = useState(false);
-
-  const loadProviders = async () => {
-    const data = await ProviderRepository.getAll();
-    // Sort by name
-    data.sort((a, b) => a.name.localeCompare(b.name));
-    setProviders(data);
-  };
-
-  useEffect(() => {
-    loadProviders();
-  }, []);
-
-  const handleEdit = (provider: Provider) => {
-    setEditingProvider(provider);
-    setIsFormOpen(true);
-  };
-
-  const handleDelete = async (rut: string) => {
-    if (confirm('¿Estás seguro de eliminar este proveedor? Esto afectará el cálculo de vencimientos de sus productos.')) {
-      await ProviderRepository.delete(rut);
-      toast.success('Proveedor eliminado');
-      loadProviders();
-    }
-  };
-
-  const handleSave = async (provider: Provider) => {
-    await ProviderRepository.save(provider);
-    toast.success('Proveedor guardado exitosamente');
-    setIsFormOpen(false);
-    loadProviders();
-  };
-
-  const handleAutoFill = async () => {
-    if (!confirm('¿Deseas extraer los proveedores de tu catálogo de productos actual? Se agregarán con la política por defecto (Canje: Sí, 90 días).')) return;
-    
-    const products = await db.products.toArray();
-    const existingProviders = await ProviderRepository.getAll();
-    const existingRuts = new Set(existingProviders.map(p => p.rut));
-    
-    const newProvidersMap = new Map<string, Provider>();
-    
-    products.forEach(p => {
-      if (p.supplier && p.supplier.trim() !== '' && p.supplier.trim().toUpperCase() !== 'N/A') {
-        const rut = p.supplierRut || `GEN-${p.supplier.substring(0, 8).toUpperCase().replace(/[^A-Z0-9]/g, '')}`;
-        if (!existingRuts.has(rut) && !newProvidersMap.has(rut)) {
-          newProvidersMap.set(rut, {
-            rut,
-            name: p.supplier.trim().toUpperCase(),
-            hasExchange: true,
-            withdrawalDays: 90
-          });
-        }
-      }
-    });
-    
-    const newProviders = Array.from(newProvidersMap.values());
-    if (newProviders.length > 0) {
-      await db.providers.bulkPut(newProviders);
-      toast.success(`Se agregaron ${newProviders.length} proveedores desde el catálogo.`);
-      loadProviders();
-    } else {
-      toast.info('No se encontraron proveedores nuevos en el catálogo.');
-    }
-  };
-
-  const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.name.endsWith('.csv')) {
-      toast.error('Por favor, selecciona un archivo CSV.');
-      return;
-    }
-
-    toast.loading('Importando políticas...');
-    const reader = new FileReader();
-
-    reader.onload = async (event) => {
-      try {
-        const csvText = event.target?.result as string;
-        const { bulkImportProviders } = await import('../../../services/providerImporter');
-        const count = await bulkImportProviders(csvText);
-        toast.dismiss();
-        toast.success(`¡Se importaron/actualizaron ${count} proveedores exitosamente!`);
-        loadProviders();
-      } catch (err: any) {
-        toast.dismiss();
-        toast.error('Error en formato CSV. Asegúrate de que tenga las columnas correctas.');
-      }
-    };
-    reader.onerror = () => {
-      toast.dismiss();
-      toast.error('Ocurrió un error al leer el archivo.');
-    };
-    reader.readAsText(file, 'UTF-8');
-    
-    if(e.target) e.target.value = '';
-  };
-
-  const handleSyncToCloud = async () => {
-    const toastId = toast.loading('Subiendo proveedores a la nube...');
-    try {
-      const allProviders = await ProviderRepository.getAll();
-      if (allProviders.length === 0) {
-        toast.dismiss(toastId);
-        toast.info('No hay proveedores para sincronizar.');
-        return;
-      }
-      await syncProvidersToCloud(allProviders);
-      toast.dismiss(toastId);
-      toast.success('Proveedores respaldados exitosamente.');
-    } catch (e: any) {
-      toast.dismiss(toastId);
-      toast.error('Error al subir: ' + e.message);
-    }
-  };
-
-  const handleDownloadFromCloud = async () => {
-    const toastId = toast.loading('Forzando descarga completa de políticas desde la nube...');
-    try {
-      const { useSyncStore } = await import('../../../store/useSyncStore');
-      const tableName = settings?.cloudConfig?.providersTableName || 'PROVEEDORES';
-      useSyncStore.getState().setTableSyncTime(tableName, 0);
-      
-      const { importProvidersFromCloud } = await import('../../../services/syncManager');
-      const count = await importProvidersFromCloud();
-      toast.dismiss(toastId);
-      if (count > 0) {
-        toast.success(`${count} proveedores actualizados desde la nube.`);
-        loadProviders();
-      } else {
-        toast.info('No se encontraron proveedores o no hay cambios.');
-      }
-    } catch (e: any) {
-      toast.dismiss(toastId);
-      toast.error('Error al descargar: ' + e.message);
-      console.error("Error downloading providers:", e);
-    }
-  };
-
-  const filteredProviders = providers.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || 
-                          p.rut.toLowerCase().includes(search.toLowerCase());
-    if (!matchesSearch) return false;
-    
-    if (filterMode === 'withExchange') return p.hasExchange === true;
-    if (filterMode === 'withoutExchange') return p.hasExchange === false;
-    return true;
-  });
-
-  const activeFiltersCount = (filterMode !== 'all' ? 1 : 0);
+  const tableName = settings?.cloudConfig?.providersTableName || 'PROVEEDORES';
+  
+  const { state, actions } = useProvidersDatabase(tableName);
 
   return (
     <div className={`h-full flex flex-col transition-colors duration-500 ${
@@ -197,29 +39,26 @@ export const ProvidersPage: React.FC = () => {
         </div>
 
         <ManagementSearchBar 
-          searchQuery={search}
-          setSearchQuery={setSearch}
-          onOpenFilters={() => setShowFilters(!showFilters)}
-          onOpenAdd={() => { setEditingProvider(undefined); setIsFormOpen(true); }}
-          onClearFilters={() => {
-            setSearch('');
-            setFilterMode('all');
-            setShowFilters(false);
-          }}
-          activeFiltersCount={activeFiltersCount}
+          searchQuery={state.search}
+          setSearchQuery={actions.setSearch}
+          onOpenFilters={() => actions.setShowFilters(!state.showFilters)}
+          onOpenAdd={actions.handleOpenAdd}
+          onClearFilters={actions.handleClearFilters}
+          activeFiltersCount={state.activeFiltersCount}
           placeholder="BUSCAR POR NOMBRE O RUT..."
           accentColor="indigo"
           theme={theme}
           extraActions={
             <div className="flex gap-2">
               <button
-                onClick={handleDownloadFromCloud}
+                onClick={actions.handleDownloadFromCloud}
+                disabled={state.isSyncing}
                 className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all border ${
                   theme === 'dark' ? 'bg-amber-500/10 border-amber-500/20 text-amber-500 hover:bg-amber-500/20' : 'bg-amber-50 border-amber-200 text-amber-600 hover:bg-amber-100'
-                }`}
+                } ${state.isSyncing ? 'opacity-50 cursor-not-allowed' : ''}`}
                 title="Descargar desde la Nube"
               >
-                <RefreshCw className="w-5 h-5" />
+                <RefreshCw className={`w-5 h-5 ${state.isSyncing ? 'animate-spin' : ''}`} />
               </button>
               <label
                 className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all border cursor-pointer ${
@@ -227,20 +66,21 @@ export const ProvidersPage: React.FC = () => {
                 }`}
                 title="Importar CSV"
               >
-                <input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} />
+                <input type="file" accept=".csv" className="hidden" onChange={actions.handleImportCSV} />
                 <UploadCloud className="w-5 h-5" />
               </label>
               <button
-                onClick={handleSyncToCloud}
+                onClick={actions.handleSyncToCloud}
+                disabled={state.isSyncing}
                 className={`hidden md:flex w-12 h-12 rounded-2xl items-center justify-center transition-all border ${
                   theme === 'dark' ? 'bg-brand-info/10 border-brand-info/20 text-brand-info hover:bg-brand-info/20' : 'bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100'
-                }`}
+                } ${state.isSyncing ? 'opacity-50 cursor-not-allowed' : ''}`}
                 title="Subir a la Nube (Respaldo)"
               >
-                <UploadCloud className="w-5 h-5" />
+                <UploadCloud className={`w-5 h-5 ${state.isSyncing ? 'animate-bounce' : ''}`} />
               </button>
               <button
-                onClick={handleAutoFill}
+                onClick={actions.handleAutoFill}
                 className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all border ${
                   theme === 'dark' ? 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10' : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
                 }`}
@@ -253,7 +93,7 @@ export const ProvidersPage: React.FC = () => {
         />
 
         <AnimatePresence>
-          {showFilters && (
+          {state.showFilters && (
             <motion.div
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
@@ -262,9 +102,9 @@ export const ProvidersPage: React.FC = () => {
             >
               <div className="pt-4 flex flex-wrap gap-2">
                 <button
-                  onClick={() => setFilterMode('all')}
+                  onClick={() => actions.setFilterMode('all')}
                   className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-                    filterMode === 'all'
+                    state.filterMode === 'all'
                       ? theme === 'dark' ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
                       : theme === 'dark' ? 'bg-white/5 text-slate-400 hover:bg-white/10' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
@@ -272,9 +112,9 @@ export const ProvidersPage: React.FC = () => {
                   Todos
                 </button>
                 <button
-                  onClick={() => setFilterMode('withExchange')}
+                  onClick={() => actions.setFilterMode('withExchange')}
                   className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-                    filterMode === 'withExchange'
+                    state.filterMode === 'withExchange'
                       ? theme === 'dark' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50' : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
                       : theme === 'dark' ? 'bg-white/5 text-slate-400 hover:bg-white/10' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
@@ -282,9 +122,9 @@ export const ProvidersPage: React.FC = () => {
                   Con Canje
                 </button>
                 <button
-                  onClick={() => setFilterMode('withoutExchange')}
+                  onClick={() => actions.setFilterMode('withoutExchange')}
                   className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-                    filterMode === 'withoutExchange'
+                    state.filterMode === 'withoutExchange'
                       ? theme === 'dark' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/50' : 'bg-rose-100 text-rose-700 border border-rose-200'
                       : theme === 'dark' ? 'bg-white/5 text-slate-400 hover:bg-white/10' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
@@ -301,7 +141,7 @@ export const ProvidersPage: React.FC = () => {
       <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <AnimatePresence>
-            {filteredProviders.map(provider => (
+            {state.filteredProviders.map(provider => (
               <motion.div
                 key={provider.rut}
                 initial={{ opacity: 0, scale: 0.95 }}
@@ -319,12 +159,12 @@ export const ProvidersPage: React.FC = () => {
                     <p className="text-xs font-bold text-slate-400 mt-1">RUT: {provider.rut}</p>
                   </div>
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => handleEdit(provider)} className={`p-2 rounded-lg transition-colors ${
+                    <button onClick={() => actions.handleEdit(provider)} className={`p-2 rounded-lg transition-colors ${
                       theme === 'dark' ? 'text-slate-400 hover:text-brand-info bg-brand-dark hover:bg-brand-info/10' : 'text-slate-400 hover:text-indigo-600 bg-slate-50 hover:bg-indigo-50'
                     }`}>
                       <Edit2 className="w-4 h-4" />
                     </button>
-                    <button onClick={() => handleDelete(provider.rut)} className={`p-2 rounded-lg transition-colors ${
+                    <button onClick={() => actions.handleDelete(provider.rut)} className={`p-2 rounded-lg transition-colors ${
                       theme === 'dark' ? 'text-slate-400 hover:text-rose-400 bg-brand-dark hover:bg-rose-400/10' : 'text-slate-400 hover:text-rose-600 bg-slate-50 hover:bg-rose-50'
                     }`}>
                       <Trash2 className="w-4 h-4" />
@@ -372,7 +212,7 @@ export const ProvidersPage: React.FC = () => {
             ))}
           </AnimatePresence>
 
-          {filteredProviders.length === 0 && (
+          {state.filteredProviders.length === 0 && (
             <div className="col-span-full py-12 flex flex-col items-center justify-center text-center">
               <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-4 ${
                 theme === 'dark' ? 'bg-brand-surface' : 'bg-slate-100'
@@ -389,12 +229,13 @@ export const ProvidersPage: React.FC = () => {
       </div>
 
       <ProviderFormModal
-        isOpen={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
-        onSave={handleSave}
-        initialData={editingProvider}
+        isOpen={state.isFormOpen}
+        onClose={actions.handleCloseForm}
+        onSave={actions.handleSave}
+        initialData={state.editingProvider}
         theme={theme}
       />
     </div>
   );
 };
+

@@ -1,138 +1,34 @@
 import { useState, useEffect, useRef, useCallback, useReducer, useMemo } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../../../db';
-import { supabaseSyncService } from '../../../services/supabaseSyncService';
-import * as sessionService from '../../../services/sessionService'; 
-import * as productService from '../../../services/productService';
-import { normalizeSku } from '../../../services/utils';
 import { getSettings } from '../../../services/settings';
-import { aggregateScans } from '../../../services/aggregator';
-import { shouldPromptForBatch } from '../../../services/uiLogic';
 import { scannerReducer } from '../../../services/scannerMachine';
-import { ConsolidatedItem, MatchResult } from '../../../types';
+import { ConsolidatedItem } from '../../../types';
 import { useScanPipeline } from '../../../shared/hooks/useScanPipeline';
 import { SessionRepository } from '../../../repositories/SessionRepository';
 import { ScanRepository } from '../../../repositories/ScanRepository';
-import { DetectiveService } from '../../../services/detectiveService';
-import { SoundFX } from '../../../services/audio';
+import * as sessionService from '../../../services/sessionService'; 
+import * as productService from '../../../services/productService';
+import { normalizeSku } from '../../../services/utils';
+import { shouldPromptForBatch } from '../../../services/uiLogic';
+
+// Lego Hooks
+import { useCountingSync } from './useCountingSync';
+import { useCountingQueries } from './useCountingQueries';
+import { useCountingAI } from './useCountingAI';
 
 export const useCountingLogic = (sessionId: string | undefined, onExit: () => void) => {
   const settings = getSettings();
-
-  // Sincronización en tiempo real para la sesión actual y sus escaneos
-  useEffect(() => {
-    if (!sessionId) return;
-    
-    const unsubSession = supabaseSyncService.startFilteredSync('SESSIONS', db.sessions, 'id', sessionId);
-    const unsubScans = supabaseSyncService.startFilteredSync('CONTEOS', db.scans, 'sessionId', sessionId);
-    
-    return () => {
-      unsubSession();
-      unsubScans();
-    };
-  }, [sessionId]);
+  const itemsRef = useRef<ConsolidatedItem[]>([]);
+  
+  const [currentLocation, setCurrentLocation] = useState(() => localStorage.getItem('last_loc') || 'BODEGA_GRAL'); 
+  useEffect(() => { localStorage.setItem('last_loc', currentLocation); }, [currentLocation]);
 
   const { engine, processScan } = useScanPipeline(1);
   const [machineState, dispatch] = useReducer(scannerReducer, 'IDLE');
-  
-  const [currentLocation, setCurrentLocation] = useState(() => localStorage.getItem('last_loc') || 'BODEGA_GRAL'); 
-  const [potentialMatch, setPotentialMatch] = useState<MatchResult | null>(null);
-  const itemsRef = useRef<ConsolidatedItem[]>([]);
-  
-  useEffect(() => { localStorage.setItem('last_loc', currentLocation); }, [currentLocation]);
 
-  const session = useLiveQuery(async () => {
-    if (!sessionId) return null;
-    return await SessionRepository.getById(sessionId);
-  }, [sessionId]);
-
-  const rawHistory = useLiveQuery(async () => {
-    if (!sessionId) return [];
-    const scans = await ScanRepository.getBySession(sessionId);
-    const pending = sessionService.getPendingBuffer().filter(s => s.sessionId === sessionId);
-    return await aggregateScans([...scans, ...pending]);
-  }, [sessionId]);
-
-  const consolidatedHistory = useMemo(() => {
-    if (!rawHistory) return [];
-    
-    const expectedItems = session?.expectedItems || [];
-    const expectedMap = new Map<string, number>(expectedItems.map(ei => [normalizeSku(ei.barcode), ei.expectedQty]));
-
-    const finalItems = rawHistory.map(pi => ({
-      ...pi,
-      expectedQuantity: expectedMap.get(normalizeSku(pi.barcode)) || 0
-    }));
-
-    if (session?.isVerifiedMode) {
-      const scannedBarcodes = new Set(rawHistory.map(pi => normalizeSku(pi.barcode)));
-      expectedItems.forEach(exp => {
-        if (!scannedBarcodes.has(normalizeSku(exp.barcode))) {
-          finalItems.push({
-            barcode: exp.barcode,
-            productName: exp.name,
-            totalQuantity: 0,
-            expectedQuantity: exp.expectedQty,
-            scans: 0,
-            location: 'GUÍA'
-          });
-        }
-      });
-    }
-
-    const sorted = finalItems.sort((a, b) => {
-      if (normalizeSku(a.barcode) === engine.activeBarcode) return -1;
-      return b.totalQuantity - a.totalQuantity;
-    });
-
-    itemsRef.current = sorted;
-    return sorted;
-  }, [rawHistory, session, engine.activeBarcode]);
-
-  // MOTOR DETECTIVE: Resuelve 'Productos Desconocidos' en segundo plano para el conteo
-  useEffect(() => {
-    if (!consolidatedHistory) return;
-
-    const unknownSkus = Array.from(new Set(
-      consolidatedHistory
-        .filter(item => (item.productName === 'Cargando...' || item.productName === 'Producto Desconocido' || !item.productName))
-        .map(item => normalizeSku(item.barcode))
-    )).slice(0, 10);
-
-    if (unknownSkus.length === 0) return;
-
-    const timer = setTimeout(() => {
-      productService.resolveUnknownProducts(unknownSkus, settings.cloudConfig);
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, [consolidatedHistory, settings]);
-
-  // LÓGICA DE INFERENCIA EN SEGUNDO PLANO (Inteligencia Proactiva)
-  useEffect(() => {
-    if (!session || session.isVerifiedMode || !consolidatedHistory?.length) return;
-    
-    // Solo ejecutar si tenemos al menos 3 items diferentes para tener confianza
-    if (consolidatedHistory.length < 3) return;
-
-    const runInference = async () => {
-      try {
-        const matches = await DetectiveService.findMatchingOrders(consolidatedHistory);
-        if (matches.length > 0 && matches[0].matchScore > 60) {
-          // Si encontramos un match de alta confianza que no teníamos antes
-          if (!potentialMatch || potentialMatch.expectedOrder.id !== matches[0].expectedOrder.id) {
-            setPotentialMatch(matches[0]);
-            // Feedback sutil para el operario
-            SoundFX.play('success'); 
-          }
-        }
-      } catch (e) {
-        console.error("Inference Error:", e);
-      }
-    };
-
-    const timer = setTimeout(runInference, 2000);
-    return () => clearTimeout(timer);
-  }, [consolidatedHistory, session, potentialMatch]);
+  // Composability
+  useCountingSync(sessionId);
+  const { session, consolidatedHistory } = useCountingQueries(sessionId, engine.activeBarcode, itemsRef);
+  const { potentialMatch, setPotentialMatch } = useCountingAI(consolidatedHistory, session, settings);
 
   const finalizeScanPipeline = useCallback(async (barcode: string, qty: number, mm?: number, yyyy?: number, batch?: string) => {
     if (!sessionId) return;
@@ -220,7 +116,7 @@ export const useCountingLogic = (sessionId: string | undefined, onExit: () => vo
       engine.actions.triggerFeedback('success');
     },
     dismissPotentialMatch: () => setPotentialMatch(null)
-  }), [engine.setMultiplier, setCurrentLocation, finalizeScanPipeline, resetSession, engine.actions, engine.activeBarcode, engine.multiplier, sessionId, session, potentialMatch]);
+  }), [engine.setMultiplier, setCurrentLocation, finalizeScanPipeline, resetSession, engine.actions, engine.activeBarcode, engine.multiplier, sessionId, session, potentialMatch, setPotentialMatch]);
 
   return {
     state: { 

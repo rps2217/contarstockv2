@@ -199,6 +199,13 @@ export interface TelemetryEvent {
   deviceInfo?: string;
 }
 
+export interface ModuleConfig {
+  enabled: boolean;
+  name: string;
+  description?: string;
+  icon?: string;
+}
+
 export interface AppSettings {
   theme: Theme;
   soundEnabled: boolean;
@@ -212,6 +219,7 @@ export interface AppSettings {
   withdrawalDaysDefault?: number; // Días por defecto si no hay proveedor
   cloudConfig?: CloudConfig;
   schema?: AppSchema;
+  modules?: Record<string, ModuleConfig>; 
   mobileNavConfig?: ViewState[]; 
   defaultStartModule?: ViewState;
   captureSettings?: {

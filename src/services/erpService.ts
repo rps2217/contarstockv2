@@ -3,6 +3,17 @@ import { supabaseSyncService } from './supabaseSyncService';
 import { CloudOrderRowSchema } from './schemas';
 import { getSettings } from './settings';
 
+/**
+ * Helpers para reducir duplicación de lógica (DRY)
+ */
+const getOrdersTableName = (): string => getSettings().cloudConfig?.ordersTableName || 'PEDIDOS';
+
+const calculateExpectedTrays = (rawRow: any, erpId: string): number => {
+  const normalized: any = {};
+  Object.keys(rawRow).forEach(k => normalized[k.trim().toUpperCase()] = rawRow[k]);
+  return Number(normalized["BANDEJAS"] || normalized["BULTOS"] || normalized["EXPECTED_TRAYS"] || 0);
+};
+
 export interface ErpManifest {
   id: string;
   expectedTrays: number;
@@ -20,12 +31,11 @@ export const erpService = {
    */
   async downloadManifest(manifestId: string): Promise<ErpManifest> {
     try {
-      const config = getSettings().cloudConfig;
-      const tableName = config?.ordersTableName || 'PEDIDOS';
+      const tableName = getOrdersTableName();
       const res = await supabaseSyncService.pullBatch(tableName);
       
-      if (!res.success || !res.rows) {
-        throw new Error(res.error || 'Error al conectar con la nube');
+      if (!res.success) {
+        throw new Error(res.isMissing ? `Tabla ${tableName} no encontrada.` : 'No se pudo conectar a la nube. Verifique su conexión.');
       }
 
       const erpId = String(manifestId || '').toUpperCase().trim();
@@ -45,37 +55,29 @@ export const erpService = {
         throw new Error(`No se encontró el ERP "${erpId}" en la nube.`);
       }
 
-      // Calculate total items and try to find a "Bandejas" or "Bultos" column if it exists in raw data
-      // Since CloudOrderRowSchema might strip extra columns, we look at the raw rows too
-      let expectedTrays = 0;
-      const rawMatch = res.rows.find(r => {
-        const normalized: any = {};
-        Object.keys(r).forEach(k => normalized[k.trim().toUpperCase()] = r[k]);
-        return normalized["ERP"] === erpId || normalized["ORDEN"] === erpId;
+      const rawMatch = res.rows.find((r: any) => {
+        const n: any = {};
+        Object.keys(r).forEach(k => n[k.trim().toUpperCase()] = r[k]);
+        return n["ERP"] === erpId || n["ORDEN"] === erpId;
       });
 
-      if (rawMatch) {
-        const normalized: any = {};
-        Object.keys(rawMatch).forEach(k => normalized[k.trim().toUpperCase()] = rawMatch[k]);
-        expectedTrays = Number(normalized["BANDEJAS"] || normalized["BULTOS"] || normalized["EXPECTED_TRAYS"] || 0);
-      }
-
-      // If no trays column, we use the number of unique SKUs as a fallback or a default
-      if (expectedTrays === 0) {
-        expectedTrays = rows.length;
-      }
+      const expectedTrays = rawMatch ? calculateExpectedTrays(rawMatch, erpId) : rows.length;
 
       return {
         id: erpId,
-        expectedTrays,
+        expectedTrays: expectedTrays || rows.length,
         description: `Pedido ERP: ${erpId} (${rows.length} items)`,
         status: 'pending',
         items: rows
       };
     } catch (error: any) {
-      const msg = error.message || (typeof error === 'object' ? JSON.stringify(error) : String(error));
-      console.error("ERP Download Error:", msg);
-      throw new Error(msg);
+      const msg = error.message || String(error);
+      if (msg.includes('Failed to fetch')) {
+        // Suppress network errors
+      } else {
+        console.error("ERP Download Error:", error);
+      }
+      throw new Error(`Error descargando manifest: ${msg}`);
     }
   },
 
@@ -113,22 +115,13 @@ export const erpService = {
 
       erpGroups.forEach((rows, erpId) => {
         // Find raw match for expected trays
-        let expectedTrays = 0;
         const rawMatch = res.rows.find((r: any) => {
           const normalized: any = {};
           Object.keys(r).forEach(k => normalized[k.trim().toUpperCase()] = r[k]);
           return normalized["ERP"] === erpId || normalized["ORDEN"] === erpId;
         });
 
-        if (rawMatch) {
-          const normalized: any = {};
-          Object.keys(rawMatch).forEach(k => normalized[k.trim().toUpperCase()] = rawMatch[k]);
-          expectedTrays = Number(normalized["BANDEJAS"] || normalized["BULTOS"] || normalized["EXPECTED_TRAYS"] || 0);
-        }
-
-        if (expectedTrays === 0) {
-          expectedTrays = rows.length;
-        }
+        const expectedTrays = rawMatch ? calculateExpectedTrays(rawMatch, erpId) : rows.length;
 
         manifests.push({
           id: erpId,
@@ -142,7 +135,11 @@ export const erpService = {
       return manifests;
     } catch (error: any) {
       const msg = error.message || (typeof error === 'object' ? JSON.stringify(error) : String(error));
-      console.error("ERP Download All Error:", msg);
+      if (msg.includes('Failed to fetch')) {
+        // Suppress network errors in logs
+      } else {
+        console.error("ERP Download All Error:", msg);
+      }
       throw new Error(msg);
     }
   }

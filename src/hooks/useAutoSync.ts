@@ -91,9 +91,20 @@ export const useAutoSync = () => {
       retryCount.current = 0; // Reset on success
     } catch (error: any) {
       const errorMsg = error.message || (typeof error === 'object' ? JSON.stringify(error) : String(error));
-      console.error('Auto-sync failed:', error);
+      
+      if (errorMsg.includes('Failed to fetch')) {
+        // Suppress network error in dev preview
+      } else {
+        console.error('Auto-sync failed:', error);
+      }
+      
       setSyncError(errorMsg);
       
+      if (errorMsg.includes('Failed to fetch')) {
+        // Abort retries if it's a fundamental network reachability issue
+        return;
+      }
+
       if (retryCount.current < MAX_RETRIES) {
         retryCount.current++;
         const delay = Math.pow(2, retryCount.current) * 1000;

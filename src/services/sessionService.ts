@@ -99,15 +99,7 @@ export const deleteSession = async (id: string) => {
   await SessionRepository.delete(id);
 };
 
-export const cleanSyncedSessions = async () => {
-  const sessions = await db.sessions.where('lastSyncTimestamp').above(0).toArray();
-  const ids = sessions.map(s => s.id);
-  if (ids.length > 0) {
-    await db.scans.where('sessionId').anyOf(ids).delete();
-    await SessionRepository.deleteMany(ids);
-  }
-  return ids.length;
-};
+export { cleanSyncedSessions } from './maintenance';
 
 export const checkLabelExists = async (labelId: string) => {
   const existing = await db.sessions.where('logisticsLabel').equals(labelId.toUpperCase()).toArray();

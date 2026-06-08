@@ -80,3 +80,13 @@ export const purgeOldData = async (days: number): Promise<number> => {
   
   return ids.length;
 };
+
+export const cleanSyncedSessions = async (): Promise<number> => {
+  const sessions = await db.sessions.where('lastSyncTimestamp').above(0).toArray();
+  const ids = sessions.map(s => s.id);
+  if (ids.length > 0) {
+    await db.scans.where('sessionId').anyOf(ids).delete();
+    await SessionRepository.deleteMany(ids);
+  }
+  return ids.length;
+};

@@ -1,4 +1,5 @@
 
+import { isModuleEnabled } from '../services/moduleManager';
 import React from 'react';
 import { motion } from 'motion/react';
 import { Home, Database, History, Container, Cloud, Box, Settings, Zap, FileText, Camera, Calendar, ChevronLeft, ChevronRight, AlertCircle, RefreshCw, Users, ShieldCheck } from 'lucide-react';
@@ -31,10 +32,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
     return stats;
   }, [], {});
   
-  const NavItem = ({ path, label, icon: Icon, badge, activeKey }: { path: string, label: string, icon: any, badge?: number, activeKey: string }) => {
+  const NavItem = ({ path, label, icon: Icon, badge, activeKey, moduleKey }: { path: string, label: string, icon: any, badge?: number, activeKey: string, moduleKey?: string }) => {
     const location = useLocation();
     const isActive = location.pathname === path || (path !== '/' && location.pathname.startsWith(path));
     
+    if (moduleKey && !isModuleEnabled(moduleKey)) return null;
+
     return (
       <button
         onClick={() => navigate(path)}
@@ -75,16 +78,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
 
       <nav className={`flex-1 ${isCollapsed ? 'px-3' : 'px-4'} space-y-1 overflow-y-auto no-scrollbar py-6`}>
         {!isCollapsed && <div className="text-[9px] font-black text-slate-700 uppercase tracking-[0.3em] px-4 mb-4">Core Operativo</div>}
-        <NavItem path="/dashboard" activeKey="dashboard" label="Panel Central" icon={Home} />
-        <NavItem path="/reception" activeKey="reception" label="Recepción" icon={Container} />
-        <NavItem path="/reports" activeKey="reports" label="Auditoría" icon={History} />
-        <NavItem path="/database" activeKey="database" label="Inventario" icon={Database} />
+        <NavItem path="/dashboard" activeKey="dashboard" label="Panel Central" icon={Home} moduleKey="dashboard" />
+        <NavItem path="/reception" activeKey="reception" label="Recepción" icon={Container} moduleKey="reception" />
+        <NavItem path="/reports" activeKey="reports" label="Auditoría" icon={History} moduleKey="reports" />
+        <NavItem path="/database" activeKey="database" label="Inventario" icon={Database} moduleKey="database" />
         <NavItem path="/compliance" activeKey="compliance" label="Control Canjes" icon={ShieldCheck} />
         
         {!isCollapsed && <div className="text-[9px] font-black text-slate-700 uppercase tracking-[0.3em] px-4 mb-4 mt-8">Herramientas</div>}
-        <NavItem path="/massive/BURST-MODE" activeKey="massive" label="Modo Hammer" icon={Zap} />
-        <NavItem path="/expiry" activeKey="expiry" label="Vencimientos" icon={Calendar} />
-        <NavItem path="/events" activeKey="events" label="Eventos" icon={FileText} />
+        <NavItem path="/massive/BURST-MODE" activeKey="massive" label="Modo Hammer" icon={Zap} moduleKey="counting" />
+        <NavItem path="/expiry" activeKey="expiry" label="Vencimientos" icon={Calendar} moduleKey="expiry" />
+        <NavItem path="/events" activeKey="events" label="Eventos" icon={FileText} moduleKey="events" />
         <NavItem path="/customers" activeKey="customers" label="Clientes" icon={Users} />
         <NavItem path="/providers" activeKey="providers" label="Proveedores" icon={Container} />
         
@@ -119,8 +122,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
       </nav>
 
       <div className={`p-4 mt-auto border-t border-white/5 bg-slate-900/20 backdrop-blur-md space-y-1`}>
-        <NavItem path="/sync" activeKey="sync" label="Cloud Center" icon={Cloud} badge={pendingItems} />
-        <NavItem path="/settings" activeKey="settings" label="Configuración" icon={Settings} />
+        <NavItem path="/sync" activeKey="sync" label="Cloud Center" icon={Cloud} badge={pendingItems} moduleKey="sync" />
+        <NavItem path="/settings" activeKey="settings" label="Configuración" icon={Settings} moduleKey="settings" />
         
         {!isCollapsed && (
           <div className="mt-4 px-4 py-3 bg-white/5 rounded-xl border border-white/5">

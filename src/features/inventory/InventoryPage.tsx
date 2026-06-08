@@ -1,18 +1,16 @@
 
 import React, { useState } from 'react';
 import { Product } from '../../types';
-import { CheckCircle2, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, Printer, Trash2 } from 'lucide-react';
 import { ProductList } from './components/ProductList';
-import { ProductForm } from './components/ProductForm';
-import { ImportTools } from './components/ImportTools';
 import { DatabaseHeader } from './components/DatabaseHeader';
+import { InventoryModals } from './components/InventoryModals';
 import { useProductDatabase } from './hooks/useProductDatabase';
-import { BarcodeLabelModal } from '../../shared/components/ui/BarcodeLabelModal';
 import { thermalPrinter } from '../../services/thermalPrinterService';
 import { handlePrintLabels } from '../expiry/utils/expiryUtils';
 import { toast } from 'sonner';
 import { MassActionsPanel } from '../../shared/components/ui/MassActionsPanel';
-import { Printer, Trash2 } from 'lucide-react';
+import { FeedbackMessage } from './components/FeedbackMessage';
 
 export const Database: React.FC = () => {
   const { state, actions } = useProductDatabase();
@@ -130,12 +128,7 @@ export const Database: React.FC = () => {
         onPolicyFilterChange={actions.setPolicyFilter}
       />
 
-      {state.feedback && (
-        <div className={`fixed top-24 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-full shadow-xl flex items-center gap-2 animate-in slide-in-from-top-4 fade-in duration-300 font-bold text-sm ${state.feedback.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
-          {state.feedback.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
-          {state.feedback.msg}
-        </div>
-      )}
+      <FeedbackMessage feedback={state.feedback} />
 
       <div className="flex-1 min-h-0 w-full max-w-6xl mx-auto px-4 py-4">
         <ProductList 
@@ -160,21 +153,21 @@ export const Database: React.FC = () => {
         ]}
       />
 
-      <ProductForm isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} initialData={editingProduct} onSaveSuccess={msg => actions.showFeedback('success', msg)} />
-      <ImportTools isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} onImportComplete={(count) => actions.showFeedback('success', `${count} productos importados`)} />
-      
-      {printingProduct && (
-        <BarcodeLabelModal 
-          isOpen={isLabelModalOpen}
-          onClose={() => setIsLabelModalOpen(false)}
-          barcode={printingProduct.barcode}
-          productName={printingProduct.name}
-          quantity={1}
-          isPrinting={isPrinting}
-          onPrintThermal={handlePrintThermal}
-          onPrintPDF={handlePrintPDF}
-        />
-      )}
+      <InventoryModals 
+        isFormOpen={isFormOpen}
+        setIsFormOpen={setIsFormOpen}
+        isImportOpen={isImportOpen}
+        setIsImportOpen={setIsImportOpen}
+        editingProduct={editingProduct}
+        onSaveSuccess={msg => actions.showFeedback('success', msg)}
+        onImportComplete={(count) => actions.showFeedback('success', `${count} productos importados`)}
+        printingProduct={printingProduct}
+        isLabelModalOpen={isLabelModalOpen}
+        setIsLabelModalOpen={setIsLabelModalOpen}
+        isPrinting={isPrinting}
+        onPrintThermal={handlePrintThermal}
+        onPrintPDF={handlePrintPDF}
+      />
     </div>
   );
 };

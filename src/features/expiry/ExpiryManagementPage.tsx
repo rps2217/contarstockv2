@@ -32,6 +32,7 @@ import { ExpirySettingsDrawer } from './components/ExpirySettingsDrawer';
 import { ManagementSearchBar } from '../../shared/components/core/ManagementSearchBar';
 import { ExpiryItemCard } from './components/ExpiryItemCard';
 import { ExpiryItemRow } from './components/ExpiryItemRow';
+import { ExpiryDetailDrawer } from './components/ExpiryDetailDrawer';
 import { ManagementBulkActions, BulkAction } from '../../shared/components/core/ManagementBulkActions';
 import { CheckSquare, Printer, Mail, Trash2, Plus } from 'lucide-react';
 import { ExpiryEmailModal } from './components/ExpiryEmailModal';
@@ -282,6 +283,7 @@ const ExpiryManagementPage: React.FC = () => {
                     isSelected={state.selectedIds.has(item.id)}
                     onToggleSelect={actions.handleToggleSelect}
                     onRemove={actions.confirmRemoveItem}
+                    onOpenDetail={actions.handleOpenDetail}
                     onEdit={actions.handleEdit}
                     theme={settings.theme}
                   />
@@ -291,6 +293,7 @@ const ExpiryManagementPage: React.FC = () => {
                     isSelected={state.selectedIds.has(item.id)}
                     onToggleSelect={actions.handleToggleSelect}
                     onRemove={actions.confirmRemoveItem}
+                    onOpenDetail={actions.handleOpenDetail}
                     onEdit={actions.handleEdit}
                     onFilterProvider={(provider) => dbActions.setSearchQuery(provider)}
                     onFilterEstado={(estado) => dbActions.setSearchQuery(estado)}
@@ -399,6 +402,24 @@ const ExpiryManagementPage: React.FC = () => {
         onFullRefresh={dbActions.handleFullRefresh}
         onClearLocalData={dbActions.clearLocalData}
         theme={settings.theme}
+      />
+
+      <ExpiryDetailDrawer
+        isOpen={!!ui.detailItem}
+        onClose={() => actions.setDetailItem(null)}
+        item={ui.detailItem}
+        theme={settings.theme}
+        onEdit={(item) => {
+          actions.setDetailItem(null);
+          actions.handleEdit(item);
+        }}
+        onDelete={(item) => {
+          actions.setDetailItem(null);
+          actions.confirmRemoveItem(item);
+        }}
+        onPrintCode={(item) => {
+          toast('Etiqueta impresa (simulado)');
+        }}
       />
 
       <ExpiryEmailModal

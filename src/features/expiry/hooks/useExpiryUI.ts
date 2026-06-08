@@ -6,6 +6,7 @@ import { useManagementUI } from '../../../shared/hooks/useManagementUI';
 export const useExpiryUI = () => {
   const { state, actions: dbActions } = useExpiryDatabase();
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [detailItem, setDetailItem] = useState<any>(null);
   
   const management = useManagementUI({
     featureName: 'Vencimientos',
@@ -30,6 +31,7 @@ export const useExpiryUI = () => {
     ui: {
       ...management.ui,
       editingItem,
+      detailItem,
       activeFiltersCount: state.selectedStatuses.length + 
                          state.selectedCategories.length + 
                          (state.selectedCanje !== 'all' ? 1 : 0) + 
@@ -41,6 +43,8 @@ export const useExpiryUI = () => {
       ...management.actions,
       handleClearFilters,
       setEditingItem,
+      setDetailItem,
+      handleOpenDetail: (item: any) => setDetailItem(item),
       handleEdit: (item: any) => setEditingItem(item),
       confirmBulkRemove: () => management.actions.confirmBulkRemove(dbActions.handleBulkRemove),
       confirmRemoveItem: (item: any) => management.actions.confirmRemoveItem(item, dbActions.handleRemoveItem),

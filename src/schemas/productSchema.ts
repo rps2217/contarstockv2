@@ -12,7 +12,9 @@ export const productSchema = z.object({
   category: z.string().max(50, 'La categoría es demasiado larga').optional().or(z.literal('')),
   supplier: z.string().max(100, 'El proveedor es demasiado largo').optional().or(z.literal('')),
   supplierRut: z.string()
-    .max(20, 'El RUT es demasiado largo')
+    .min(1, 'El RUT es obligatorio si se especifica proveedor')
+    .max(12, 'El RUT es demasiado largo')
+    .regex(/^\d{1,8}-[\dkK]$/, 'Formato RUT inválido (ej: 12345678-K)')
     .optional()
     .or(z.literal('')),
 });
