@@ -60,8 +60,8 @@ export const processExpiryItem = (
   
   const getWithdrawalDays = () => {
     if (provider) {
-      if (provider.withdrawalDays != null && provider.withdrawalDays !== '') return Number(provider.withdrawalDays);
-      if ((provider as any).withdrawal_days != null && (provider as any).withdrawal_days !== '') return Number((provider as any).withdrawal_days);
+      if (provider.withdrawalDays != null && String(provider.withdrawalDays) !== '') return Number(provider.withdrawalDays);
+      if ((provider as any).withdrawal_days != null && String((provider as any).withdrawal_days) !== '') return Number((provider as any).withdrawal_days);
     }
     return defaultWithdrawalDays;
   };

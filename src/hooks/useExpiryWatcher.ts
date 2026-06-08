@@ -30,6 +30,10 @@ export const useExpiryWatcher = () => {
 
     const runAnalysis = async () => {
       try {
+        if (!navigator.onLine) {
+          console.info("[ExpiryWatcher] Running offline. Skipping remote analysis.");
+          return;
+        }
         // 1. Get remote data from Supabase
         const { data: remoteRows, error } = await supabase
           .from(tableName)
@@ -103,12 +107,14 @@ export const useExpiryWatcher = () => {
     };
 
     // Subscribirse a cambios en tiempo real para re-ejecutar el análisis
-    channel = supabase
-      .channel('expiry_watcher_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: tableName }, () => {
-        runAnalysis();
-      })
-      .subscribe();
+    if (navigator.onLine) {
+      channel = supabase
+        .channel('expiry_watcher_changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: tableName }, () => {
+          runAnalysis();
+        })
+        .subscribe();
+    }
 
     // Ejecución inicial
     runAnalysis();

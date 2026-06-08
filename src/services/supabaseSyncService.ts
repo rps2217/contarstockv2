@@ -6,6 +6,7 @@ export const supabaseSyncService = {
    * Starts a real-time sync for a specific table.
    */
   startSync(tableName: string, localTable: any) {
+    if (!navigator.onLine) return () => {};
     const channel = supabase
       .channel(tableName)
       .on('postgres_changes', { event: '*', schema: 'public', table: tableName }, async (payload) => {
@@ -38,6 +39,7 @@ export const supabaseSyncService = {
    * Starts a real-time sync for a specific table with a filter.
    */
   startFilteredSync(tableName: string, localTable: any, field: string, value: any) {
+    if (!navigator.onLine) return () => {};
     const channel = supabase
       .channel(`${tableName}_${field}_${value}`)
       .on(
@@ -97,6 +99,9 @@ export const supabaseSyncService = {
    * Pushes a batch of changes to Supabase with automatic column-error recovery.
    */
   async pushBatch(tableName: string, rows: any[]) {
+    if (!navigator.onLine) {
+        return { success: false, error: 'Offline', isOffline: true };
+    }
     if (!rows.length) return { success: true, rows_written: 0 };
     
     // Lista de campos prohibidos conocidos o nulos que a veces causan ruido
@@ -176,7 +181,8 @@ export const supabaseSyncService = {
            }
         }
 
-        if (errMsg === 'Failed to fetch' || errMsg.includes('NetworkError') || errMsg.includes('net::ERR')) {
+        const fullErrMsg = e.message || (e.toString ? e.toString() : '');
+        if (fullErrMsg.includes('Failed to fetch') || fullErrMsg.includes('NetworkError') || fullErrMsg.includes('net::ERR')) {
           logger.info('SYNC', `Network unavailable for ${tableName}. Operating offline (push).`);
           return { success: false, error: 'Offline', isOffline: true };
         }
@@ -213,6 +219,9 @@ export const supabaseSyncService = {
   },
 
   async deleteRemote(tableName: string, id: string) {
+    if (!navigator.onLine) {
+        return { success: false, error: 'Offline', isOffline: true };
+    }
     const filters = [`id.eq.${id}`, `tax_id.eq.${id}`, `unique_key.eq.${id}`];
     let attempts = 0;
     let currentFilters = [...filters];
@@ -252,6 +261,7 @@ export const supabaseSyncService = {
   },
 
   async clearTable(tableName: string) {
+    if (!navigator.onLine) return { success: false, error: 'Offline', isOffline: true };
     try {
       // In Supabase/Postgrest, a delete without a filter matching everything clears the table
       // We use a filter that is always true for all records to bypass protection
@@ -274,6 +284,7 @@ export const supabaseSyncService = {
   },
 
   async query(tableName: string, field: string, value: any) {
+    if (!navigator.onLine) return { success: false, data: null, error: 'Offline', isOffline: true };
     try {
       const { data, error } = await supabase
         .from(tableName)
@@ -296,6 +307,9 @@ export const supabaseSyncService = {
   },
 
   async pullBatch(tableName: string, lastSyncDate?: string, timestampColumn: string = 'updated_at') {
+    if (!navigator.onLine) {
+        return { success: false, rows: [], error: 'Offline', isOffline: true };
+    }
     const fetchWithPagination = async (useLimit: boolean, fromDate?: string) => {
       let allData: any[] = [];
       let from = 0;
@@ -357,10 +371,10 @@ export const supabaseSyncService = {
         }
       }
     } catch (e: any) {
-      const errMsg = e.message || '';
+      const errMsg = e.message || (e.toString ? e.toString() : '');
       
       // Handle network errors gracefully
-      if (errMsg === 'Failed to fetch' || errMsg.includes('NetworkError') || errMsg.includes('net::ERR')) {
+      if (errMsg.includes('Failed to fetch') || errMsg.includes('NetworkError') || errMsg.includes('net::ERR')) {
           // Record it as info instead of error to avoid console spam / alert fatigue
           logger.info('SYNC', `Network unavailable for ${tableName}. Operating offline.`);
           return { success: false, rows: [], error: 'Cerrado por falta de red (offline)', isOffline: true };
@@ -376,6 +390,7 @@ export const supabaseSyncService = {
   },
 
   async uploadPhoto(base64: string, path: string) {
+    if (!navigator.onLine) return { success: false, url: null, error: 'Offline', isOffline: true };
     try {
       // Supabase Storage requiere un balde (bucket). Usaremos 'photos' por defecto.
       const bucketName = 'photos';

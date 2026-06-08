@@ -208,6 +208,10 @@ export const dynamicSyncService = {
         logger.info('SYNC', `Tabla ${tableName} no existe en el origen. Ignorando.`);
         return { added: 0, updated: 0 };
       }
+      if ((result as any).isOffline) {
+        logger.info('SYNC', `Sin conexión: omitiendo pull para ${tableName}`);
+        return { added: 0, updated: 0 };
+      }
       throw new Error(result.error || 'No se pudieron recuperar los datos de la nube');
     }
 

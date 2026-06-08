@@ -305,7 +305,7 @@ export const syncCatalogs = async (onProgress?: (msg: string) => void): Promise<
     if (e.message === 'Failed to fetch') {
       toast.error('Error de red: No se pudo conectar con el servidor.');
     } else {
-      toast.warn("CATALOG_SYNC_PARTIAL_FAIL", e.message);
+      logger.warn("CATALOG_SYNC_PARTIAL_FAIL", e.message);
     }
     throw e;
   }

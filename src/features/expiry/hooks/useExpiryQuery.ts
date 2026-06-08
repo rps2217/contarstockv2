@@ -112,7 +112,7 @@ export const useExpiryQuery = (
       query: '', 
       selectedCategories,
       selectedCanje,
-      actionPeriod,
+      actionPeriod: actionPeriod as any,
       customDateRange,
       creationDateRange
     });
