@@ -81,6 +81,10 @@ class TelemetryService {
         throw error;
       }
     } catch (err: any) {
+      if (err.message === 'Failed to fetch' || err.message?.includes('NetworkError') || err.message?.includes('net::ERR')) {
+          this.buffer = [...eventsToFlush, ...this.buffer].slice(0, 500); // keep max 500 in offline mode
+          return; // silent fallback 
+      }
       console.warn('[TelemetryService] Silent flush failure (prevents circular logging):', err.message);
     }
   }

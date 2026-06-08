@@ -36,10 +36,15 @@ export const SystemStatus: React.FC = () => {
       // 2. Medir Latencia
       const start = performance.now();
       try {
-        await supabaseSyncService.pullBatch('CONFIG_SISTEMA');
-        const end = performance.now();
-        setLatency(Math.round(end - start));
-        setSupabaseConnected(true);
+        const res: any = await supabaseSyncService.pullBatch('CONFIG_SISTEMA');
+        if (res.isOffline || res.success === false) {
+          setLatency(null);
+          setSupabaseConnected(false);
+        } else {
+          const end = performance.now();
+          setLatency(Math.round(end - start));
+          setSupabaseConnected(true);
+        }
       } catch (e) {
         setLatency(null);
         setSupabaseConnected(false);

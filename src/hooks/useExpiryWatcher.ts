@@ -37,7 +37,13 @@ export const useExpiryWatcher = () => {
           .order('timestamp', { ascending: false })
           .limit(500);
 
-        if (error) throw error;
+        if (error) {
+          if (error.message === 'Failed to fetch' || error.message?.includes('NetworkError') || error.message?.includes('net::ERR')) {
+            console.info("[ExpiryWatcher] Running offline. Skipping remote analysis.");
+            return;
+          }
+          throw error;
+        }
         if (!remoteRows) return;
 
         // 2. Get context data from local DB

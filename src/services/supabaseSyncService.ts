@@ -176,6 +176,11 @@ export const supabaseSyncService = {
            }
         }
 
+        if (errMsg === 'Failed to fetch' || errMsg.includes('NetworkError') || errMsg.includes('net::ERR')) {
+          logger.info('SYNC', `Network unavailable for ${tableName}. Operating offline (push).`);
+          return { success: false, error: 'Offline', isOffline: true };
+        }
+
         if (attempts >= maxRetries - 1) {
           logger.error(`SYNC_BATCH_PUSH_FAIL: ${tableName} (Tras ${attempts} reintentos)`, e);
           return { success: false, error: this.formatError(e) };
@@ -353,6 +358,14 @@ export const supabaseSyncService = {
       }
     } catch (e: any) {
       const errMsg = e.message || '';
+      
+      // Handle network errors gracefully
+      if (errMsg === 'Failed to fetch' || errMsg.includes('NetworkError') || errMsg.includes('net::ERR')) {
+          // Record it as info instead of error to avoid console spam / alert fatigue
+          logger.info('SYNC', `Network unavailable for ${tableName}. Operating offline.`);
+          return { success: false, rows: [], error: 'Cerrado por falta de red (offline)', isOffline: true };
+      }
+
       if (errMsg.includes("not find") && errMsg.includes("table")) {
         logger.info('SYNC', `Tabla ${tableName} no encontrada en Supabase. Omitiendo descarga.`);
         return { success: false, rows: [], error: 'Table not found', isMissing: true };
