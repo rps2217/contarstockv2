@@ -32,18 +32,34 @@ export const EditQuantityModal: React.FC<EditQuantityModalProps> = ({
         <div className="p-6 flex flex-col items-center gap-4 bg-slate-800">
           <button 
             onClick={() => setEditQty(q => q + 1)}
-            className="w-16 h-16 rounded-full bg-emerald-500/10 border-2 border-emerald-500/30 flex items-center justify-center active:bg-emerald-500/30 active:scale-95 transition-all"
+            className="w-16 h-16 rounded-full bg-emerald-500/10 border-2 border-emerald-500/30 flex items-center justify-center active:bg-emerald-500/30 active:scale-95 transition-all cursor-pointer"
           >
             <Plus className="w-8 h-8 text-emerald-400" />
           </button>
           
-          <div className="w-full bg-black/40 rounded-2xl py-4 border-2 border-slate-700 text-center shadow-inner">
-            <span className="text-5xl font-mono font-black text-white tracking-tighter">{editQty}</span>
+          <div className="w-full relative group">
+            <input 
+              type="number"
+              pattern="[0-9]*"
+              inputMode="numeric"
+              placeholder="0"
+              value={editQty === 0 ? '' : editQty}
+              onChange={(e) => {
+                const val = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
+                if (!isNaN(val) && val >= 0) {
+                  setEditQty(val);
+                }
+              }}
+              className="w-full bg-black/40 rounded-2xl py-4 border-2 border-slate-700 text-center text-5xl font-mono font-black text-white tracking-tighter shadow-inner focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-colors"
+            />
+            <span className="absolute right-3 bottom-1.5 text-[8px] font-black tracking-widest text-slate-500 uppercase pointer-events-none group-focus-within:text-rose-500 transition-colors">
+              EDITABLE
+            </span>
           </div>
           
           <button 
             onClick={() => setEditQty(q => Math.max(0, q - 1))}
-            className="w-16 h-16 rounded-full bg-rose-500/10 border-2 border-rose-500/30 flex items-center justify-center active:bg-rose-500/30 active:scale-95 transition-all"
+            className="w-16 h-16 rounded-full bg-rose-500/10 border-2 border-rose-500/30 flex items-center justify-center active:bg-rose-500/30 active:scale-95 transition-all cursor-pointer"
           >
             <Minus className="w-8 h-8 text-rose-400" />
           </button>

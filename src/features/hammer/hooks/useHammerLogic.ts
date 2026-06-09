@@ -115,10 +115,39 @@ export const useHammerLogic = (batchId: string) => {
     const ts = Date.now();
     const currentQty = existingItem?.totalQuantity || 0;
 
-    // Si es edición manual, usamos una transacción atómica en el repositorio
+    // Si es edición manual, la nueva cantidad absoluta es la cantidad actual más la diferencia (delta)
     if (isManualEdit) {
       try {
-        await MassiveDbRepository.updateScanQuantity(batchId, clean, delta, locationRef.current);
+        const finalQty = Math.max(0, currentQty + delta);
+        await MassiveDbRepository.updateScanQuantity(batchId, clean, finalQty, locationRef.current);
+        
+        // Actualizamos optimísticamente el estado inmediato para feedback instantáneo
+        setOptimisticItems(prev => {
+          const idx = prev.findIndex(i => i.barcode === clean);
+          if (idx !== -1) {
+            const updated = [...prev];
+            updated[idx] = {
+              ...updated[idx],
+              totalQuantity: finalQty,
+              lastTimestamp: ts,
+              loc: locationRef.current
+            };
+            return updated.sort((a, b) => b.lastTimestamp - a.lastTimestamp);
+          } else if (finalQty > 0) {
+            return [{
+              barcode: clean,
+              name: 'SKU_DESCONOCIDO',
+              totalQuantity: finalQty,
+              lastTimestamp: ts,
+              loc: locationRef.current
+            }, ...prev];
+          }
+          return prev;
+        });
+
+        // Sincronizamos con el motor para que el visor superior muestre el total correcto
+        const product = await productRepository.getById(clean);
+        engine.actions.updateActiveItem(clean, product || null, finalQty, 0);
         engine.actions.triggerFeedback('success');
       } catch (e) {
         engine.actions.triggerFeedback('error');
