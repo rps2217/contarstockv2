@@ -1,6 +1,16 @@
 import { supabase } from '../lib/supabase';
 import { logger } from './logger';
 
+const lastOfflineLogTime: Record<string, number> = {};
+const LOG_THROTTLE_MS = 60000;
+
+const logNetworkOffline = (tableName: string) => {
+  if (!lastOfflineLogTime[tableName] || Date.now() - lastOfflineLogTime[tableName] > LOG_THROTTLE_MS) {
+    logger.info('SYNC', `Network unavailable for ${tableName}. Operating offline.`);
+    lastOfflineLogTime[tableName] = Date.now();
+  }
+};
+
 export const supabaseSyncService = {
   /**
    * Starts a real-time sync for a specific table.
@@ -183,7 +193,7 @@ export const supabaseSyncService = {
 
         const fullErrMsg = e.message || (e.toString ? e.toString() : '');
         if (fullErrMsg.includes('Failed to fetch') || fullErrMsg.includes('NetworkError') || fullErrMsg.includes('net::ERR')) {
-          logger.info('SYNC', `Network unavailable for ${tableName}. Operating offline (push).`);
+          logNetworkOffline(tableName);
           return { success: false, error: 'Offline', isOffline: true };
         }
 
@@ -376,7 +386,7 @@ export const supabaseSyncService = {
       // Handle network errors gracefully
       if (errMsg.includes('Failed to fetch') || errMsg.includes('NetworkError') || errMsg.includes('net::ERR')) {
           // Record it as info instead of error to avoid console spam / alert fatigue
-          logger.info('SYNC', `Network unavailable for ${tableName}. Operating offline.`);
+          logNetworkOffline(tableName);
           return { success: false, rows: [], error: 'Cerrado por falta de red (offline)', isOffline: true };
       }
 
