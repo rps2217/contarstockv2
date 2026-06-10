@@ -72,7 +72,7 @@ export const erpService = {
       };
     } catch (error: any) {
       const msg = error.message || String(error);
-      if (msg.includes('Failed to fetch')) {
+      if (msg.includes('Failed to fetch') || msg.includes('Cerrado por falta de red') || msg.includes('offline')) {
         // Suppress network errors
       } else {
         console.error("ERP Download Error:", error);
@@ -135,7 +135,7 @@ export const erpService = {
       return manifests;
     } catch (error: any) {
       const msg = error.message || (typeof error === 'object' ? JSON.stringify(error) : String(error));
-      if (msg.includes('Failed to fetch')) {
+      if (msg.includes('Failed to fetch') || msg.includes('Cerrado por falta de red') || msg.includes('offline')) {
         // Suppress network errors in logs
       } else {
         console.error("ERP Download All Error:", msg);

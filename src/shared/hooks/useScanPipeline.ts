@@ -36,7 +36,10 @@ export const useScanPipeline = (defaultMultiplier = 1) => {
         onOptimisticUpdate(cleanBarcode, newQty);
       }
 
-      // 2. Búsqueda asíncrona y actualización del motor
+      // Feedback Inmediato: pre-render loop
+      engine.actions.updateActiveItem(cleanBarcode, null, currentQty, delta);
+
+      // 2. Búsqueda asíncrona para atributos secundarios (TTS / Name)
       getProductByBarcode(cleanBarcode).then(product => {
         const duration = performance.now() - startTime;
         telemetry.track('SCAN', 'SUCCESS', { 
@@ -46,6 +49,7 @@ export const useScanPipeline = (defaultMultiplier = 1) => {
           delta
         }, duration);
 
+        // Update with full product once loaded
         engine.actions.updateActiveItem(cleanBarcode, product || null, currentQty, delta);
         
         // 3. Feedback de audio (TTS)

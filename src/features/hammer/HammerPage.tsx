@@ -76,7 +76,6 @@ export const HammerPage: React.FC = () => {
  onChangeLocation={locManager.openModal}
  activeBarcode={state.activeBarcode}
  activeProduct={state.activeProduct}
- optimisticQty={state.optimisticQty}
  feedback={state.feedback}
  items={state.items}
  isVoiceEnabled={settings.ttsEnabled}

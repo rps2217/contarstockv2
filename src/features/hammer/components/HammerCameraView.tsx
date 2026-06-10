@@ -15,7 +15,6 @@ interface HammerCameraViewProps {
  onChangeLocation: () => void;
  activeBarcode: string | null;
  activeProduct: Product | null;
- optimisticQty: number | null;
  feedback: FeedbackStatus;
  items: HammerItem[];
  isVoiceEnabled?: boolean;
@@ -34,7 +33,6 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
  onChangeLocation,
  activeBarcode,
  activeProduct,
- optimisticQty,
  feedback,
  items,
  isVoiceEnabled = false,

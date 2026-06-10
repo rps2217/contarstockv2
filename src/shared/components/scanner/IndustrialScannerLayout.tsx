@@ -32,24 +32,28 @@ interface IndustrialScannerLayoutProps {
 
 import { VirtualList } from '../ui/VirtualList';
 
-const ScannedItemRowWrapper = React.memo(({ index, data }: any) => {
-  const item = data.items[index];
-  if (!item) return null;
-  const { activeBarcode, onScan, allowEditQuantity, setEditingItem, setEditQty } = data;
+const ScannedItemRowWrapper = React.memo(
+  ({ item, data }: any) => {
+    if (!item) return null;
+    const { activeBarcode, onScan, allowEditQuantity, setEditingItem, setEditQty } = data;
 
-  return (
-    <ScannedItemRow 
-      item={item}
-      index={index}
-      isActive={item.barcode === activeBarcode}
-      onScan={onScan}
-      onEditQty={allowEditQuantity ? (i) => {
-        setEditingItem(i);
-        setEditQty(i.totalQuantity);
-      } : undefined}
-    />
-  );
-});
+    return (
+      <ScannedItemRow 
+        item={item}
+        isActive={item.barcode === activeBarcode}
+        onScan={onScan}
+        onEditQty={allowEditQuantity ? (i: any) => {
+          setEditingItem(i);
+          setEditQty(i.totalQuantity);
+        } : undefined}
+      />
+    );
+  },
+  (prev, next) => {
+    // Only re-render wrapper if the item reference or data reference changes
+    return prev.item === next.item && prev.data === next.data;
+  }
+);
 
 export const IndustrialScannerLayout: React.FC<IndustrialScannerLayoutProps> = ({
   onBack,
@@ -229,13 +233,13 @@ export const IndustrialScannerLayout: React.FC<IndustrialScannerLayoutProps> = (
             items={filteredItems}
             itemHeight={68} // Approximate height of ScannedItemRow
             renderRow={ScannedItemRowWrapper}
-            rowData={{
+            rowData={React.useMemo(() => ({
               activeBarcode,
               onScan,
               allowEditQuantity,
               setEditingItem,
               setEditQty
-            }}
+            }), [activeBarcode, onScan, allowEditQuantity, setEditingItem, setEditQty])}
             emptyState={
               <>
                 <Box className="w-16 h-16 mb-4 text-slate-500" />

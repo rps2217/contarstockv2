@@ -92,7 +92,9 @@ export const useAutoSync = () => {
     } catch (error: any) {
       const errorMsg = error.message || (typeof error === 'object' ? JSON.stringify(error) : String(error));
       
-      if (errorMsg.includes('Failed to fetch')) {
+      const isNetworkError = errorMsg.includes('Failed to fetch') || errorMsg.includes('Cerrado por falta de red') || errorMsg.includes('offline');
+
+      if (isNetworkError) {
         // Suppress network error in dev preview
       } else {
         console.error('Auto-sync failed:', error);
@@ -100,7 +102,7 @@ export const useAutoSync = () => {
       
       setSyncError(errorMsg);
       
-      if (errorMsg.includes('Failed to fetch')) {
+      if (isNetworkError) {
         // Abort retries if it's a fundamental network reachability issue
         return;
       }

@@ -5,7 +5,7 @@ import { Package } from 'lucide-react';
 interface VirtualListProps<T> {
  items: T[];
  itemHeight: number;
- renderRow: React.ComponentType<{ index: number; data: any; style?: React.CSSProperties }>;
+ renderRow: React.ComponentType<{ index: number; item: T; data: any; style?: React.CSSProperties }>;
  rowData?: any;
  onEndReached?: () => void;
  endReachedThreshold?: number; 
@@ -127,7 +127,8 @@ export const VirtualList = <T,>({
  >
  <RowComponent 
  index={startIndex + localIndex} 
- data={{ items, ...rowData }} 
+ item={item}
+ data={rowData} 
  />
  </div>
  ))}

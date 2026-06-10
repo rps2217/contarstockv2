@@ -27,6 +27,7 @@ export const useHammerLogic = (batchId: string) => {
   
   const multiplierRef = useRef(1);
   const locationRef = useRef(currentLocation);
+  const instantaneousQtyRef = useRef(new Map<string, number>());
 
   useEffect(() => { multiplierRef.current = engine.multiplier; }, [engine.multiplier]);
   useEffect(() => { 
@@ -78,10 +79,18 @@ export const useHammerLogic = (batchId: string) => {
       }
     });
 
-    return Array.from(aggregation.values()).sort((a, b) => b.lastTimestamp - a.lastTimestamp);
+    const results = Array.from(aggregation.values()).sort((a, b) => b.lastTimestamp - a.lastTimestamp);
+    
+    // Sync the local instantaneous ref with DB truths
+    results.forEach(i => {
+      instantaneousQtyRef.current.set(i.barcode, i.totalQuantity);
+    });
+
+    return results;
   }, [batchId, engine.activeBarcode, engine.feedback]);
 
   useEffect(() => {
+    // Only update state if queue empty (no pending optimistic updates are running to DB)
     if (dbItems && writeQueue.current.length === 0) {
       setOptimisticItems(dbItems);
     }
@@ -93,9 +102,24 @@ export const useHammerLogic = (batchId: string) => {
       const batch = [...writeQueue.current];
       writeQueue.current = [];
       try {
-        await MassiveDbRepository.bulkAddBlindScans(batch.map(b => ({
-          batchId, barcode: b.barcode, quantity: b.qty, location: b.loc, timestamp: b.ts
-        })));
+        const aggregatedBatch = batch.reduce((acc, curr) => {
+          const key = `${curr.barcode}_${curr.loc}`;
+          if (!acc[key]) {
+            acc[key] = { ...curr };
+          } else {
+            acc[key].qty += curr.qty;
+            acc[key].ts = Math.max(acc[key].ts, curr.ts);
+          }
+          return acc;
+        }, {} as Record<string, {barcode: string, qty: number, loc: string, ts: number}>);
+
+        const mergedScans = Object.values(aggregatedBatch).filter(b => b.qty !== 0);
+
+        if (mergedScans.length > 0) {
+          await MassiveDbRepository.bulkAddBlindScans(mergedScans.map(b => ({
+            batchId, barcode: b.barcode, quantity: b.qty, location: b.loc, timestamp: b.ts
+          })));
+        }
       } catch (e) {
         console.error('[HammerLogic] Write failed, returning to queue', e);
         writeQueue.current = [...batch, ...writeQueue.current];
@@ -111,15 +135,14 @@ export const useHammerLogic = (batchId: string) => {
     const delta = qtyOverride ?? multiplierRef.current;
     const isManualEdit = qtyOverride !== undefined;
     
-    const existingItem = optimisticItems.find(i => i.barcode === clean);
     const ts = Date.now();
-    const currentQty = existingItem?.totalQuantity || 0;
+    const currentQty = instantaneousQtyRef.current.get(clean) || 0;
 
     // Si es edición manual, la nueva cantidad absoluta es la cantidad actual más la diferencia (delta)
     if (isManualEdit) {
       try {
         const finalQty = Math.max(0, currentQty + delta);
-        await MassiveDbRepository.updateScanQuantity(batchId, clean, finalQty, locationRef.current);
+        instantaneousQtyRef.current.set(clean, finalQty);
         
         // Actualizamos optimísticamente el estado inmediato para feedback instantáneo
         setOptimisticItems(prev => {
@@ -145,16 +168,23 @@ export const useHammerLogic = (batchId: string) => {
           return prev;
         });
 
+        engine.actions.updateActiveItem(clean, engine.activeProduct, finalQty, 0);
+        engine.actions.triggerFeedback('success');
+
+        await MassiveDbRepository.updateScanQuantity(batchId, clean, finalQty, locationRef.current);
+        
         // Sincronizamos con el motor para que el visor superior muestre el total correcto
         const product = await productRepository.getById(clean);
         engine.actions.updateActiveItem(clean, product || null, finalQty, 0);
-        engine.actions.triggerFeedback('success');
       } catch (e) {
         engine.actions.triggerFeedback('error');
         logger.error('HAMMER_EDIT_FAIL', `Error editando ${clean}`);
       }
       return;
     }
+
+    const nextQty = Math.max(0, currentQty + delta);
+    instantaneousQtyRef.current.set(clean, nextQty);
 
     processScan(
       clean,
@@ -193,7 +223,7 @@ export const useHammerLogic = (batchId: string) => {
         });
       }
     );
-  }, [processScan, optimisticItems, batchId]);
+  }, [processScan, batchId]);
 
   const syncToCloud = async () => {
     if (isSyncing) return;
