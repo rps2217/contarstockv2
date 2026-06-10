@@ -80,7 +80,7 @@ export const useScanPipeline = (defaultMultiplier = 1) => {
       if (onError) onError(error);
       return null;
     }
-  }, [engine]);
+  }, [engine.actions]);
 
   return {
     engine,

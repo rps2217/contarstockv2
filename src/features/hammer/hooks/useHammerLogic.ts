@@ -87,7 +87,7 @@ export const useHammerLogic = (batchId: string) => {
     });
 
     return results;
-  }, [batchId, engine.activeBarcode, engine.feedback]);
+  }, [batchId]);
 
   useEffect(() => {
     // Only update state if queue empty (no pending optimistic updates are running to DB)
@@ -148,14 +148,18 @@ export const useHammerLogic = (batchId: string) => {
         setOptimisticItems(prev => {
           const idx = prev.findIndex(i => i.barcode === clean);
           if (idx !== -1) {
-            const updated = [...prev];
-            updated[idx] = {
-              ...updated[idx],
+            const updatedItem = {
+              ...prev[idx],
               totalQuantity: finalQty,
               lastTimestamp: ts,
               loc: locationRef.current
             };
-            return updated.sort((a, b) => b.lastTimestamp - a.lastTimestamp);
+            if (idx === 0) {
+              const updated = [...prev];
+              updated[0] = updatedItem;
+              return updated;
+            }
+            return [updatedItem, ...prev.slice(0, idx), ...prev.slice(idx + 1)];
           } else if (finalQty > 0) {
             return [{
               barcode: clean,
@@ -168,7 +172,7 @@ export const useHammerLogic = (batchId: string) => {
           return prev;
         });
 
-        engine.actions.updateActiveItem(clean, engine.activeProduct, finalQty, 0);
+        engine.actions.updateActiveItem(clean, null, finalQty, 0);
         engine.actions.triggerFeedback('success');
 
         await MassiveDbRepository.updateScanQuantity(batchId, clean, finalQty, locationRef.current);
@@ -194,13 +198,17 @@ export const useHammerLogic = (batchId: string) => {
         setOptimisticItems(prev => {
           const existingIdx = prev.findIndex(i => i.barcode === cleanBarcode);
           if (existingIdx !== -1) {
-            const updated = [...prev];
-            updated[existingIdx] = { 
-              ...updated[existingIdx], 
+            const updatedItem = { 
+              ...prev[existingIdx], 
               totalQuantity: newQty, 
               lastTimestamp: ts 
             };
-            return updated.sort((a, b) => b.lastTimestamp - a.lastTimestamp);
+            if (existingIdx === 0) {
+              const updated = [...prev];
+              updated[0] = updatedItem;
+              return updated;
+            }
+            return [updatedItem, ...prev.slice(0, existingIdx), ...prev.slice(existingIdx + 1)];
           } else {
             return [{
               barcode: cleanBarcode,
@@ -223,7 +231,7 @@ export const useHammerLogic = (batchId: string) => {
         });
       }
     );
-  }, [processScan, batchId]);
+  }, [processScan, batchId, engine.actions]);
 
   const syncToCloud = async () => {
     if (isSyncing) return;

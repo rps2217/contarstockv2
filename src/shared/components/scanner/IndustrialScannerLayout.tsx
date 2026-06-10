@@ -50,8 +50,16 @@ const ScannedItemRowWrapper = React.memo(
     );
   },
   (prev, next) => {
-    // Only re-render wrapper if the item reference or data reference changes
-    return prev.item === next.item && prev.data === next.data;
+    // Only re-render wrapper if the item reference changes
+    if (prev.item !== next.item) return false;
+
+    // Or if its active status changed
+    const wasActive = prev.item.barcode === prev.data.activeBarcode;
+    const isActive = next.item.barcode === next.data.activeBarcode;
+    if (wasActive !== isActive) return false;
+
+    // The functions in data (onScan, setEditQty, etc.) are stable
+    return true;
   }
 );
 
@@ -96,10 +104,10 @@ export const IndustrialScannerLayout: React.FC<IndustrialScannerLayoutProps> = (
   const displayName = activeItemName || activeItem?.name || 'ESCANEA UN PRODUCTO';
 
   // Filter items
-  const filteredItems = items.filter(item => 
+  const filteredItems = React.useMemo(() => items.filter(item => 
     item.barcode.includes(searchQuery) || 
     item.name?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  ), [items, searchQuery]);
 
   // Voice logic
   useEffect(() => {
@@ -134,10 +142,12 @@ export const IndustrialScannerLayout: React.FC<IndustrialScannerLayoutProps> = (
     }
   };
 
-  const totalQuantity = items.reduce((acc, item) => acc + item.totalQuantity, 0);
-  const expectedTotalQuantity = items.some(i => i.expectedQty !== undefined) 
-    ? items.reduce((acc, item) => acc + (item.expectedQty || 0), 0)
-    : undefined;
+  const totalQuantity = React.useMemo(() => items.reduce((acc, item) => acc + item.totalQuantity, 0), [items]);
+  const expectedTotalQuantity = React.useMemo(() => 
+    items.some(i => i.expectedQty !== undefined) 
+      ? items.reduce((acc, item) => acc + (item.expectedQty || 0), 0)
+      : undefined
+  , [items]);
 
   return (
     <div className="flex-1 min-h-0 flex flex-col bg-black relative z-10">
