@@ -70,27 +70,6 @@ export const PreferencesSection: React.FC<Props> = ({ settings, updateSetting })
           onChange: (v: number) => updateSetting('autoLockTimeout', v)
         }
       ]
-    },
-    {
-      id: 'feedback',
-      title: 'Respuesta del Sistema',
-      icon: <Bell className="w-5 h-5 text-rose-500" />,
-      fields: [
-        {
-          label: 'Efectos de Sonido',
-          description: 'Sonidos al escanear o errores',
-          type: 'toggle',
-          value: settings.soundEnabled,
-          onChange: (v: boolean) => updateSetting('soundEnabled', v)
-        },
-        {
-          label: 'Vibración (Hápticos)',
-          description: 'Respuesta táctil en móviles',
-          type: 'toggle',
-          value: settings.hapticsEnabled,
-          onChange: (v: boolean) => updateSetting('hapticsEnabled', v)
-        }
-      ]
     }
   ];
 

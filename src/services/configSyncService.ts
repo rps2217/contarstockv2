@@ -18,7 +18,8 @@ export const configSyncService = {
       // Obtener plantillas
       const emailTemplateRecords = await db.dynamic_data.where('tableName').equals('PLANTILLAS_CORREOS').toArray();
       const emailTemplates = emailTemplateRecords.map(r => r.data);
-      const messageTemplates = await db.messageTemplates.toArray();
+      const messageTemplateRecords = await db.dynamic_data.where('tableName').equals('PLANTILLAS_MENSAJES').toArray();
+      const messageTemplates = messageTemplateRecords.map(r => r.data);
 
       // Solo subimos lo que es relevante para la sincronización entre dispositivos
       // Evitamos subir configuraciones locales como impresora o modo espejo de cámara
@@ -106,20 +107,26 @@ export const configSyncService = {
       }
 
       if (Array.isArray(remoteConfig.messageTemplates) && remoteConfig.messageTemplates.length > 0) {
-        const existingMessages = await db.messageTemplates.toArray();
+        const existingMessages = await db.dynamic_data.where('tableName').equals('PLANTILLAS_MENSAJES').toArray();
         const existingMIds = new Set(existingMessages.map(m => m.id));
         
-        const newMessages: MessageTemplate[] = [];
+        const newRecords: DynamicRecord[] = [];
         for (const tpl of remoteConfig.messageTemplates) {
           if (!tpl.id) continue;
           if (!existingMIds.has(tpl.id)) {
-            newMessages.push({ ...tpl, syncStatus: 'synced' });
+            newRecords.push({
+              id: tpl.id,
+              tableName: 'PLANTILLAS_MENSAJES',
+              data: tpl,
+              timestamp: Date.now(),
+              syncStatus: 'synced'
+            });
           } else {
-            await db.messageTemplates.update(tpl.id, { ...tpl, syncStatus: 'synced' });
+            await db.dynamic_data.update(tpl.id, { data: tpl });
           }
         }
-        if (newMessages.length > 0) {
-          await db.messageTemplates.bulkPut(newMessages);
+        if (newRecords.length > 0) {
+          await db.dynamic_data.bulkPut(newRecords);
         }
       }
 
