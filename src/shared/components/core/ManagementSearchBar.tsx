@@ -115,22 +115,22 @@ export const ManagementSearchBar: React.FC<ManagementSearchBarProps> = ({
         </div>
       </div>
       
-      <div className="flex gap-3">
+      <div className="flex items-center gap-2 md:gap-3 overflow-x-auto no-scrollbar max-w-full shrink-0">
         <button
           onClick={onOpenAdd}
-          className={`flex-1 md:flex-none px-3 md:px-6 py-3 md:py-0 rounded-2xl flex items-center justify-center gap-2 md:gap-3 transition-all border shadow-lg group ${
+          className={`h-12 md:h-14 px-4 md:px-6 rounded-2xl flex items-center justify-center gap-2 md:gap-3 transition-all border shadow-lg group shrink-0 ${
             theme === 'dark' 
-              ? `${colors.bg} border-white/10 text-black ${colors.hover}` 
+              ? `${colors.bg} border-white/10 text-slate-900 ${colors.hover}` 
               : `${colors.bg} border-white/10 text-white ${colors.hover} shadow-sm`
           }`}
         >
-          <Plus className="w-5 h-5" />
-          <span className="text-xs font-black uppercase tracking-widest">Nuevo</span>
+          <Plus className="w-5 h-5 shrink-0" />
+          <span className="text-xs font-black uppercase tracking-widest hidden sm:inline">Nuevo</span>
         </button>
 
         <button
           onClick={onOpenFilters}
-          className={`flex-1 md:flex-none px-3 md:px-6 py-3 md:py-0 rounded-2xl flex items-center justify-center gap-2 md:gap-3 transition-all border shadow-lg group ${
+          className={`h-12 md:h-14 px-4 md:px-6 rounded-2xl flex items-center justify-center gap-2 md:gap-3 transition-all border shadow-lg group shrink-0 ${
             activeFiltersCount > 0
               ? `${colors.bg} border-white/10 text-white`
               : theme === 'dark' 
@@ -138,10 +138,10 @@ export const ManagementSearchBar: React.FC<ManagementSearchBarProps> = ({
                 : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 shadow-sm'
           }`}
         >
-          <Filter className={`w-5 h-5 ${activeFiltersCount > 0 ? 'text-white' : 'text-slate-400'}`} />
-          <span className="text-xs font-black uppercase tracking-widest">Filtros</span>
+          <Filter className={`w-5 h-5 shrink-0 ${activeFiltersCount > 0 ? 'text-white' : 'text-slate-400'}`} />
+          <span className="text-xs font-black uppercase tracking-widest hidden sm:inline">Filtros</span>
           {activeFiltersCount > 0 && (
-            <span className={`${colors.badge} text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center`}>
+            <span className={`${colors.badge} text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shrink-0`}>
               {activeFiltersCount}
             </span>
           )}
@@ -149,7 +149,7 @@ export const ManagementSearchBar: React.FC<ManagementSearchBarProps> = ({
 
         <button
           onClick={onClearFilters}
-          className={`px-3 md:px-4 py-3 md:py-0 rounded-2xl flex items-center justify-center transition-all group shrink-0 border ${
+          className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center transition-all group shrink-0 border ${
             theme === 'dark' 
               ? 'bg-slate-900/50 border-white/10 hover:bg-slate-800' 
               : 'bg-white border-slate-200 hover:bg-slate-50 shadow-sm'
