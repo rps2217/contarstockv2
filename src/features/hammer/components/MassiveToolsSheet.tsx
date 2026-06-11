@@ -19,10 +19,13 @@ import { Modal } from '../../../shared/components/ui/Modal';
  onToggleCameraMode?: () => void;
  isVoiceEnabled?: boolean;
  onToggleVoice?: () => void;
+ autoSyncEnabled?: boolean;
+ onToggleAutoSync?: () => void;
 }
 
 export const MassiveToolsSheet: React.FC<Props> = ({ 
- isOpen, onClose, hasActiveItem, location, onChangeLocation, onShowLabel, onReset, onImport, onSync, isSyncing, onPrintSummary, onToggleCameraMode, isVoiceEnabled, onToggleVoice 
+ isOpen, onClose, hasActiveItem, location, onChangeLocation, onShowLabel, onReset, onImport, onSync, isSyncing, onPrintSummary, onToggleCameraMode, isVoiceEnabled, onToggleVoice,
+ autoSyncEnabled = true, onToggleAutoSync
 }) => {
  
  const ToolButton = ({ onClick, icon: Icon, label, color, disabled = false, sublabel, loading = false }: any) => (
@@ -59,6 +62,21 @@ export const MassiveToolsSheet: React.FC<Props> = ({
  <X className="w-5 h-5" />
  </button>
  </div>
+
+ {onToggleAutoSync && (
+ <div className="mb-6 p-4 bg-slate-900 border border-white/5 rounded-2xl flex items-center justify-between">
+ <div className="flex flex-col pr-4">
+ <span className="text-xs font-black uppercase text-indigo-400 tracking-wider">Autosincronizar al instante</span>
+ <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">Sube cada escaneo a la nube en tiempo real</span>
+ </div>
+ <button 
+ onClick={onToggleAutoSync}
+ className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${autoSyncEnabled ? 'bg-indigo-500' : 'bg-slate-700'}`}
+ >
+ <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${autoSyncEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+ </button>
+ </div>
+ )}
 
  <div className="grid grid-cols-2 gap-4">
  {onToggleCameraMode && (

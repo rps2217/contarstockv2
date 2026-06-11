@@ -20,6 +20,7 @@ interface HammerCameraViewProps {
  isVoiceEnabled?: boolean;
  onSync?: () => void;
  isSyncing?: boolean;
+ autoSyncEnabled?: boolean;
 }
 
 export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
@@ -37,7 +38,8 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
  items,
  isVoiceEnabled = false,
  onSync,
- isSyncing = false
+ isSyncing = false,
+ autoSyncEnabled = false
 }) => {
  const activeItemName = activeProduct?.name || items.find(i => i.barcode === activeBarcode)?.name;
 
@@ -59,6 +61,7 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
  allowEditQuantity={true}
  onSync={onSync}
  isSyncing={isSyncing}
+ autoSyncEnabled={autoSyncEnabled}
  />
  );
 };

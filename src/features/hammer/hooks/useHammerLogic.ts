@@ -22,6 +22,17 @@ export const useHammerLogic = (batchId: string) => {
   const [currentLocation, setCurrentLocation] = useState(() => localStorage.getItem('hammer_loc') || 'ZONA-A');
   const [isSyncing, setIsSyncing] = useState(false);
   
+  // Real-time Cloud Sync setting, defaults to true
+  const [autoSyncEnabled, setAutoSyncEnabled] = useState(() => {
+    return localStorage.getItem('hammer_auto_sync') !== 'false';
+  });
+  const autoSyncRef = useRef(autoSyncEnabled);
+
+  useEffect(() => {
+    autoSyncRef.current = autoSyncEnabled;
+    localStorage.setItem('hammer_auto_sync', autoSyncEnabled ? 'true' : 'false');
+  }, [autoSyncEnabled]);
+  
   const [optimisticItems, setOptimisticItems] = useState<HammerItem[]>([]);
   const writeQueue = useRef<{barcode: string, qty: number, loc: string, ts: number}[]>([]);
   
@@ -119,6 +130,13 @@ export const useHammerLogic = (batchId: string) => {
           await MassiveDbRepository.bulkAddBlindScans(mergedScans.map(b => ({
             batchId, barcode: b.barcode, quantity: b.qty, location: b.loc, timestamp: b.ts
           })));
+
+          // Trigger zero-latency cloud push if enabled
+          if (autoSyncRef.current) {
+            pushScansToCloud(batchId).catch((err) => {
+              console.warn('[HammerLogic] AutoSync background push failed:', err);
+            });
+          }
         }
       } catch (e) {
         console.error('[HammerLogic] Write failed, returning to queue', e);
@@ -176,6 +194,13 @@ export const useHammerLogic = (batchId: string) => {
         engine.actions.triggerFeedback('success');
 
         await MassiveDbRepository.updateScanQuantity(batchId, clean, finalQty, locationRef.current);
+        
+        // Background push manual edit immediately if enabled
+        if (autoSyncRef.current) {
+          pushScansToCloud(batchId).catch((err) => {
+            console.warn('[HammerLogic] AutoSync manual edit push failed:', err);
+          });
+        }
         
         // Sincronizamos con el motor para que el visor superior muestre el total correcto
         const product = await productRepository.getById(clean);
@@ -255,13 +280,15 @@ export const useHammerLogic = (batchId: string) => {
       multiplier: engine.multiplier,
       optimisticQty: engine.optimisticQty,
       currentLocation,
-      isSyncing
+      isSyncing,
+      autoSyncEnabled
     },
     actions: { 
       setMultiplier: engine.setMultiplier,
       setCurrentLocation, 
       registerScan, 
       syncToCloud,
+      toggleAutoSync: () => setAutoSyncEnabled(p => !p),
       removeItem: async (barcode: string) => {
         if (barcode === 'ALL') {
           await MassiveDbRepository.deleteBlindScansByBatch(batchId);
@@ -269,6 +296,10 @@ export const useHammerLogic = (batchId: string) => {
         } else {
           await MassiveDbRepository.deleteBlindScan(batchId, barcode);
           setOptimisticItems(prev => prev.filter(i => i.barcode !== barcode));
+          
+          if (autoSyncRef.current) {
+            pushScansToCloud(batchId).catch(() => {});
+          }
         }
         engine.actions.triggerFeedback('undo');
       },

@@ -28,6 +28,7 @@ interface IndustrialScannerLayoutProps {
   isSyncing?: boolean;
   bottomContent?: React.ReactNode; // For multiplier or other specific footers
   labelPhoto?: string;
+  autoSyncEnabled?: boolean;
 }
 
 import { VirtualList } from '../ui/VirtualList';
@@ -81,7 +82,8 @@ export const IndustrialScannerLayout: React.FC<IndustrialScannerLayoutProps> = (
   onSync,
   isSyncing = false,
   bottomContent,
-  labelPhoto
+  labelPhoto,
+  autoSyncEnabled
 }) => {
   const [isManualMode, setIsManualMode] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -184,6 +186,7 @@ export const IndustrialScannerLayout: React.FC<IndustrialScannerLayoutProps> = (
         onOpenTools={onOpenTools}
         onSync={onSync}
         isSyncing={isSyncing}
+        autoSyncEnabled={autoSyncEnabled}
       />
 
       {/* VISOR DE CÁMARA (20% Alto) */}

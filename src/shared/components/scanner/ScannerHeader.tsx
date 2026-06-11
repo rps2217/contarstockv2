@@ -12,6 +12,7 @@ interface ScannerHeaderProps {
   onOpenTools: () => void;
   onSync?: () => void;
   isSyncing?: boolean;
+  autoSyncEnabled?: boolean;
 }
 
 export const ScannerHeader: React.FC<ScannerHeaderProps> = ({
@@ -24,7 +25,8 @@ export const ScannerHeader: React.FC<ScannerHeaderProps> = ({
   onLock,
   onOpenTools,
   onSync,
-  isSyncing = false
+  isSyncing = false,
+  autoSyncEnabled = false
 }) => {
   return (
     <div className="h-14 bg-slate-900 border-b border-white/10 flex items-center justify-between px-2 shrink-0 z-50">
@@ -49,10 +51,13 @@ export const ScannerHeader: React.FC<ScannerHeaderProps> = ({
           <button 
             onClick={onSync}
             disabled={isSyncing}
-            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-95 ${isSyncing ? 'text-blue-400 animate-pulse' : 'text-white/70 active:bg-white/10'}`}
-            title="Sincronizar con la Nube"
+            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-95 relative ${isSyncing ? 'text-blue-400 animate-pulse' : 'text-white/70 active:bg-white/10'}`}
+            title={autoSyncEnabled ? "Autosincronización en Tiempo Real Activa" : "Sincronizar con la Nube"}
           >
             <Cloud className={`w-5 h-5 ${isSyncing ? 'animate-spin' : ''}`} />
+            {autoSyncEnabled && (
+              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.9)] animate-pulse" />
+            )}
           </button>
         )}
         <button 

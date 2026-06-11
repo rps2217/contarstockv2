@@ -81,6 +81,7 @@ export const HammerPage: React.FC = () => {
  isVoiceEnabled={settings.ttsEnabled}
  onSync={actions.syncToCloud}
  isSyncing={state.isSyncing}
+ autoSyncEnabled={state.autoSyncEnabled}
  />
 
  <MassiveToolsSheet 
@@ -94,6 +95,8 @@ export const HammerPage: React.FC = () => {
  onPrintSummary={() => {}}
  isVoiceEnabled={settings.ttsEnabled}
  onToggleVoice={() => updateSetting('ttsEnabled', !settings.ttsEnabled)}
+ autoSyncEnabled={state.autoSyncEnabled}
+ onToggleAutoSync={actions.toggleAutoSync}
  />
 
  <LocationSelectorModal 
