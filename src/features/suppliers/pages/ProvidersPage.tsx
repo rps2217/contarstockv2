@@ -50,114 +50,6 @@ export const ProvidersPage: React.FC = () => {
           placeholder="BUSCAR POR NOMBRE O RUT..."
           accentColor="indigo"
           theme={theme}
-          extraActions={
-            <div className="relative shrink-0">
-              <button
-                onClick={() => setShowExtraMenu(!showExtraMenu)}
-                className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center transition-all border shrink-0 ${
-                  showExtraMenu
-                    ? theme === 'dark' ? 'bg-indigo-500 border-indigo-400 text-white shadow-xl shadow-indigo-500/20' : 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-500/20'
-                    : theme === 'dark' ? 'bg-slate-900/50 border-white/10 text-slate-300 hover:bg-slate-800' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 shadow-sm'
-                }`}
-                title="Acciones Especiales"
-              >
-                <Wand2 className={`w-5 h-5 transition-transform duration-200 ${showExtraMenu ? 'rotate-45 text-white' : 'text-slate-400'}`} />
-              </button>
-
-              {showExtraMenu && (
-                <>
-                  <div className="fixed inset-0 z-30" onClick={() => setShowExtraMenu(false)} />
-                  <div className={`absolute right-0 mt-3 w-64 rounded-3xl border shadow-2xl p-2.5 z-40 animate-in fade-in slide-in-from-top-2 duration-150 origin-top-right ${
-                    theme === 'dark' ? 'bg-slate-900 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900 shadow-slate-200/50'
-                  }`}>
-                    <div className="px-3 py-2 border-b border-slate-100 dark:border-white/5 mb-1.5 flex items-center justify-between">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Operaciones de Nube</p>
-                      {state.isSyncing && (
-                        <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
-                      )}
-                    </div>
-
-                    <div className="space-y-1">
-                      {/* Descargar desde la Nube */}
-                      <button
-                        onClick={() => {
-                          setShowExtraMenu(false);
-                          actions.handleDownloadFromCloud();
-                        }}
-                        disabled={state.isSyncing}
-                        className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-left text-[11px] font-black uppercase tracking-wider transition-colors ${
-                          state.isSyncing ? 'opacity-50 cursor-not-allowed' : ''
-                        } ${
-                          theme === 'dark' 
-                            ? 'text-amber-400 hover:bg-amber-500/10' 
-                            : 'text-amber-600 hover:bg-amber-50'
-                        }`}
-                      >
-                        <RefreshCw className={`w-4.5 h-4.5 shrink-0 ${state.isSyncing ? 'animate-spin' : ''}`} />
-                        <span>Sincronizar Importación</span>
-                      </button>
-
-                      {/* Importar desde CSV */}
-                      <label 
-                        className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-left text-[11px] font-black uppercase tracking-wider transition-colors cursor-pointer ${
-                          theme === 'dark' 
-                            ? 'text-indigo-400 hover:bg-indigo-500/10' 
-                            : 'text-indigo-600 hover:bg-indigo-50'
-                        }`}
-                      >
-                        <input 
-                          type="file" 
-                          accept=".csv" 
-                          className="hidden" 
-                          onChange={(e) => {
-                            setShowExtraMenu(false);
-                            actions.handleImportCSV(e);
-                          }} 
-                        />
-                        <UploadCloud className="w-4.5 h-4.5 shrink-0 text-indigo-500" />
-                        <span>Importar Archivo CSV</span>
-                      </label>
-
-                      {/* Subir Respaldo a la Nube */}
-                      <button
-                        onClick={() => {
-                          setShowExtraMenu(false);
-                          actions.handleSyncToCloud();
-                        }}
-                        disabled={state.isSyncing}
-                        className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-left text-[11px] font-black uppercase tracking-wider transition-colors ${
-                          state.isSyncing ? 'opacity-50 cursor-not-allowed' : ''
-                        } ${
-                          theme === 'dark' 
-                            ? 'text-emerald-400 hover:bg-emerald-500/10' 
-                            : 'text-emerald-600 hover:bg-emerald-50'
-                        }`}
-                      >
-                        <UploadCloud className={`w-4.5 h-4.5 shrink-0 ${state.isSyncing ? 'animate-bounce' : ''}`} />
-                        <span>Respaldar en la Nube</span>
-                      </button>
-
-                      {/* Autocompletar */}
-                      <button
-                        onClick={() => {
-                          setShowExtraMenu(false);
-                          actions.handleAutoFill();
-                        }}
-                        className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-left text-[11px] font-black uppercase tracking-wider transition-colors ${
-                          theme === 'dark' 
-                            ? 'text-slate-300 hover:bg-white/5' 
-                            : 'text-slate-600 hover:bg-slate-50'
-                        }`}
-                      >
-                        <Wand2 className="w-4.5 h-4.5 shrink-0 text-slate-400 dark:text-slate-500" />
-                        <span>Autocompletar Catálogo</span>
-                      </button>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          }
         />
 
         <AnimatePresence>
@@ -166,39 +58,129 @@ export const ProvidersPage: React.FC = () => {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
               className="overflow-hidden"
             >
-              <div className="pt-4 flex flex-wrap gap-2">
-                <button
-                  onClick={() => actions.setFilterMode('all')}
-                  className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-                    state.filterMode === 'all'
-                      ? theme === 'dark' ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
-                      : theme === 'dark' ? 'bg-white/5 text-slate-400 hover:bg-white/10' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  Todos
-                </button>
-                <button
-                  onClick={() => actions.setFilterMode('withExchange')}
-                  className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-                    state.filterMode === 'withExchange'
-                      ? theme === 'dark' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50' : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
-                      : theme === 'dark' ? 'bg-white/5 text-slate-400 hover:bg-white/10' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  Con Canje
-                </button>
-                <button
-                  onClick={() => actions.setFilterMode('withoutExchange')}
-                  className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-                    state.filterMode === 'withoutExchange'
-                      ? theme === 'dark' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/50' : 'bg-rose-100 text-rose-700 border border-rose-200'
-                      : theme === 'dark' ? 'bg-white/5 text-slate-400 hover:bg-white/10' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  Sin Canje
-                </button>
+              <div className="pt-4 flex flex-col gap-4 border-t border-slate-100 dark:border-white/5 mt-4">
+                
+                {/* 1. Categorías de Filtro */}
+                <div className="flex flex-col gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500 dark:text-indigo-400">
+                    Filtros de Estado de Canje
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => actions.setFilterMode('all')}
+                      className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                        state.filterMode === 'all'
+                          ? theme === 'dark' ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+                          : theme === 'dark' ? 'bg-white/5 text-slate-400 hover:bg-white/10' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      Todos
+                    </button>
+                    <button
+                      onClick={() => actions.setFilterMode('withExchange')}
+                      className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                        state.filterMode === 'withExchange'
+                          ? theme === 'dark' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 hover:bg-emerald-500/30' : 'bg-emerald-100 text-emerald-700 border border-emerald-200 hover:bg-emerald-200'
+                          : theme === 'dark' ? 'bg-white/5 text-slate-400 hover:bg-white/10' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      Con Canje
+                    </button>
+                    <button
+                      onClick={() => actions.setFilterMode('withoutExchange')}
+                      className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                        state.filterMode === 'withoutExchange'
+                          ? theme === 'dark' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/50 hover:bg-rose-500/30' : 'bg-rose-100 text-rose-700 border border-rose-200 hover:bg-rose-200'
+                          : theme === 'dark' ? 'bg-white/5 text-slate-400 hover:bg-white/10' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      Sin Canje
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2. Operaciones Especiales y Nube */}
+                <div className="flex flex-col gap-2 border-t border-slate-100 dark:border-white/5 pt-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500 dark:text-indigo-400">
+                      Operaciones Especiales & Nube
+                    </span>
+                    {state.isSyncing && (
+                      <span className="text-[10px] font-bold text-amber-500 animate-pulse uppercase tracking-wider">
+                        Sincronizando...
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2">
+                    {/* Descargar desde la Nube */}
+                    <button
+                      onClick={actions.handleDownloadFromCloud}
+                      disabled={state.isSyncing}
+                      className={`flex items-center justify-center gap-2 px-3.5 py-3 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all ${
+                        theme === 'dark' 
+                          ? 'bg-amber-500/10 border-amber-500/20 text-amber-400 hover:bg-amber-500/20' 
+                          : 'bg-amber-50 border-amber-200 text-amber-600 hover:bg-amber-100'
+                      } ${state.isSyncing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      title="Sincronizar Importación"
+                    >
+                      <RefreshCw className={`w-4 h-4 shrink-0 ${state.isSyncing ? 'animate-spin' : ''}`} />
+                      <span className="truncate">Sincronizar Nube</span>
+                    </button>
+
+                    {/* Importar desde CSV */}
+                    <label 
+                      className={`flex items-center justify-center gap-2 px-3.5 py-3 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                        theme === 'dark' 
+                          ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-450 hover:bg-indigo-500/20' 
+                          : 'bg-indigo-50 border-indigo-200 text-indigo-600 hover:bg-indigo-100'
+                      }`}
+                      title="Importar Archivo CSV"
+                    >
+                      <input 
+                        type="file" 
+                        accept=".csv" 
+                        className="hidden" 
+                        onChange={actions.handleImportCSV} 
+                      />
+                      <UploadCloud className="w-4 h-4 shrink-0 text-indigo-500" />
+                      <span className="truncate">Importar CSV</span>
+                    </label>
+
+                    {/* Subir Respaldo a la Nube */}
+                    <button
+                      onClick={actions.handleSyncToCloud}
+                      disabled={state.isSyncing}
+                      className={`flex items-center justify-center gap-2 px-3.5 py-3 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all ${
+                        theme === 'dark' 
+                          ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20' 
+                          : 'bg-emerald-50 border-emerald-200 text-emerald-600 hover:bg-emerald-100'
+                      } ${state.isSyncing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      title="Subir a la Nube (Respaldo)"
+                    >
+                      <UploadCloud className={`w-4 h-4 shrink-0 ${state.isSyncing ? 'animate-bounce' : ''}`} />
+                      <span className="truncate">Respaldar Nube</span>
+                    </button>
+
+                    {/* Autocompletar */}
+                    <button
+                      onClick={actions.handleAutoFill}
+                      className={`flex items-center justify-center gap-2 px-3.5 py-3 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all ${
+                        theme === 'dark' 
+                          ? 'bg-white/5 border-white/10 text-slate-350 hover:bg-white/10' 
+                          : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
+                      }`}
+                      title="Autocompletar desde Catálogo"
+                    >
+                      <Wand2 className="w-4 h-4 shrink-0 text-slate-400 dark:text-slate-500" />
+                      <span className="truncate">Autocompletar</span>
+                    </button>
+                  </div>
+                </div>
+
               </div>
             </motion.div>
           )}
