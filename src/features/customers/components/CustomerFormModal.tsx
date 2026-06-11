@@ -25,9 +25,9 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       if (editingCustomer) {
-        setFirstName(editingCustomer.firstName);
-        setLastName(editingCustomer.lastName);
-        setPhone(editingCustomer.phone);
+        setFirstName(editingCustomer.firstName || '');
+        setLastName(editingCustomer.lastName || '');
+        setPhone(editingCustomer.phone || '');
       } else {
         setFirstName('');
         setLastName('');

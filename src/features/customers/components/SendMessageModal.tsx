@@ -42,8 +42,8 @@ export const SendMessageModal: React.FC<SendMessageModalProps> = ({
 
   const applyTemplate = (template: MessageTemplate, cust: Customer) => {
     let msg = template.content;
-    msg = msg.replace(/\{\{nombre\}\}/g, cust.firstName);
-    msg = msg.replace(/\{\{apellido\}\}/g, cust.lastName);
+    msg = msg.replace(/\{\{nombre\}\}/g, cust.firstName || '');
+    msg = msg.replace(/\{\{apellido\}\}/g, cust.lastName || '');
     setCustomMessage(msg);
   };
 
@@ -59,7 +59,7 @@ export const SendMessageModal: React.FC<SendMessageModalProps> = ({
   const handleSend = () => {
     if (!customer || !customMessage.trim()) return;
 
-    let phone = customer.phone.replace(/[\s-()]/g, '');
+    let phone = (customer.phone || '').replace(/[\s-()]/g, '');
     if (!phone.startsWith('+')) {
       if (phone.length === 9) phone = `+56${phone}`;
       else if (phone.length === 11 && phone.startsWith('56')) phone = `+${phone}`;
@@ -112,7 +112,7 @@ export const SendMessageModal: React.FC<SendMessageModalProps> = ({
               <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black ${
                 theme === 'dark' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-600'
               }`}>
-                {customer.firstName.charAt(0)}{customer.lastName.charAt(0)}
+                {(customer.firstName || '').charAt(0)}{(customer.lastName || '').charAt(0)}
               </div>
               <div>
                 <p className={`text-sm font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
