@@ -9,6 +9,7 @@ import { db } from '../db';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { useExpiryStore } from '../store/useExpiryStore';
 import { SmartDock, SmartDockItem } from './SmartDock';
+import { isModuleEnabled } from '../services/moduleManager';
 
 interface Props {
   currentView: string;
@@ -26,19 +27,42 @@ export const BottomDock: React.FC<Props> = ({ currentView, settings }) => {
 
   const iconMap: Record<string, { label: string, icon: any, path: string }> = {
     'dashboard': { label: 'INICIO', icon: Home, path: '/dashboard' },
-    'reception': { label: 'RECEPCIÓN', icon: Container, path: '/reception' },
-    'reports': { label: 'HISTORIAL', icon: History, path: '/reports' },
     'database': { label: 'CATÁLOGO', icon: Database, path: '/database' },
-    'compliance': { label: 'RIESGO', icon: ShieldCheck, path: '/compliance' },
-    'providers': { label: 'PROV.', icon: Container, path: '/providers' },
-    'customers': { label: 'CLIENTES', icon: Users, path: '/customers' },
-    'sync': { label: 'NUBE', icon: Cloud, path: '/sync' },
+    'reception': { label: 'RECEPCIÓN', icon: Container, path: '/reception' },
     'expiry': { label: 'VENCIMIENTOS', icon: Calendar, path: '/expiry' },
     'events': { label: 'EVENTOS', icon: FileText, path: '/events' },
+    'reports': { label: 'HISTORIAL', icon: History, path: '/reports' },
+    'compliance': { label: 'RIESGO', icon: ShieldCheck, path: '/compliance' },
+    'customers': { label: 'CLIENTES', icon: Users, path: '/customers' },
+    'providers': { label: 'PROV.', icon: Container, path: '/providers' },
+    'sync': { label: 'NUBE', icon: Cloud, path: '/sync' },
     'settings': { label: 'AJUSTES', icon: Settings, path: '/settings' }
   };
 
-  const activeNavKeys = (settings.mobileNavConfig || ['dashboard', 'sync', 'settings']).filter(k => k in iconMap);
+  // List all available modules in a logical order
+  const allNavKeys: string[] = [
+    'dashboard',
+    'database',
+    'reception',
+    'expiry',
+    'events',
+    'reports',
+    'compliance',
+    'customers',
+    'providers',
+    'sync',
+    'settings'
+  ];
+
+  // Filter keys based on module toggle
+  const activeNavKeys = allNavKeys.filter(key => {
+    // These keys are always enabled/not toggled by modules
+    if (key === 'dashboard' || key === 'compliance' || key === 'customers' || key === 'providers' || key === 'settings') {
+      return true;
+    }
+    // Check if the specific module is enabled
+    return isModuleEnabled(key);
+  });
 
   const dockItems: SmartDockItem[] = activeNavKeys.map(key => {
     const item = iconMap[key as ViewState];
