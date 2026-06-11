@@ -307,7 +307,7 @@ export const syncRegistry: Record<string, TableSyncMeta> = {
   messageTemplates: {
     localTable: 'dynamic_data',
     filterField: 'tableName',
-    filterValue: 'MESSAGE_TEMPLATES',
+    filterValue: 'PLANTILLAS_MENSAJES',
     remoteTable: 'MESSAGE_TEMPLATES',
     primaryKey: 'id',
     mapToRemote: (record) => ({
@@ -317,7 +317,7 @@ export const syncRegistry: Record<string, TableSyncMeta> = {
     }),
     mapToLocal: (remote) => ({
       id: remote.id,
-      tableName: 'MESSAGE_TEMPLATES',
+      tableName: 'PLANTILLAS_MENSAJES',
       data: remote,
       timestamp: remote.updated_at ? new Date(remote.updated_at).getTime() : Date.now(),
       syncStatus: 'synced'

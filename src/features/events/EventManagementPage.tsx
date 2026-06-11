@@ -1,69 +1,28 @@
-import React, { useState, useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { useAppStore } from '@/store/mainAppStore';
 import { 
-  ChevronRight, 
   AlertCircle,
   RefreshCw,
-  Sun,
-  Moon,
-  Settings2,
-  Plus,
-  Maximize2,
-  Minimize2,
-  Calendar,
   Truck
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { motion } from 'motion/react';
-import { format } from 'date-fns';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 // Hooks
-import { useEventDatabase } from './hooks/useEventDatabase';
+import { useEventUI } from './hooks/useEventUI';
 
 // Components
 import { EventHeader } from './components/EventHeader';
 import { EventListPanel } from './components/EventListPanel';
-import { ManagementBulkActions } from '../../shared/components/core/ManagementBulkActions';
-import { CheckSquare, Trash2, Printer, Mail, Search, Edit3 } from 'lucide-react';
-import { EventFilterDrawer } from './components/EventFilterDrawer';
-import { CreateEventModal } from './components/CreateEventModal';
-import { BulkEditModal } from './components/BulkEditModal';
-import { EventSettingsDrawer } from './components/EventSettingsDrawer';
+import { EventOverlays } from './components/EventOverlays';
 import { ManagementSearchBar } from '../../shared/components/core/ManagementSearchBar';
-import { EventEmailModal } from './components/EventEmailModal';
-import { AnimatePresence } from 'motion/react';
-import { Zap, ChevronUp, ChevronDown } from 'lucide-react';
 
-// Services
-import { dynamicSyncService } from '../../services/dynamicSync';
-import { dynamicDataService } from '../../services/dynamicDataService';
-
-import { useEventUI } from './hooks/useEventUI';
-
-const EventManagementPage: React.FC = () => {
+export const EventManagementPage: React.FC = () => {
   const { settings } = useAppStore();
   const { ui, actions: uiActions, db } = useEventUI();
   const { state, actions } = db;
   const navigate = useNavigate();
-
-  const handleSelectItemFromPriority = (id: string) => {
-    actions.setSearchQuery('');
-    uiActions.handleClearFilters();
-    // Small delay to allow filters to clear
-    setTimeout(() => {
-      const element = document.getElementById(`event-item-${id}`);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        element.classList.add('ring-2', 'ring-blue-500', 'ring-offset-2', 'ring-offset-slate-900');
-        setTimeout(() => {
-          element.classList.remove('ring-2', 'ring-blue-500', 'ring-offset-2', 'ring-offset-slate-900');
-        }, 3000);
-      }
-    }, 100);
-  };
 
   const pendingRef = useRef<HTMLDivElement>(null);
   const destinedRef = useRef<HTMLDivElement>(null);
@@ -107,13 +66,13 @@ const EventManagementPage: React.FC = () => {
     const confirm = window.confirm(`¿RETIRAR ${item.productName}? ESTA ACCIÓN ES IRREVERSIBLE.`);
     if (confirm) {
       try {
-        actions.setPendingOperations(p => p + 1);
+        actions.setPendingOperations((p: number) => p + 1);
         await actions.deleteEvent(item.id);
         toast.success('Registro eliminado correctamente');
       } catch (error: any) {
         toast.error(error.message || 'Error al eliminar registro');
       } finally {
-        actions.setPendingOperations(p => Math.max(0, p - 1));
+        actions.setPendingOperations((p: number) => Math.max(0, p - 1));
       }
     }
   };
@@ -132,20 +91,73 @@ const EventManagementPage: React.FC = () => {
         onToggleTheme={() => {}} // No longer needed
         onOpenSettings={() => uiActions.setIsSettingsDrawerOpen(true)}
       >
-        <ManagementSearchBar 
-          searchQuery={state.searchQuery}
-          setSearchQuery={actions.setSearchQuery}
-          onOpenFilters={() => uiActions.setIsFilterDrawerOpen(true)}
-          onOpenAdd={() => {
-            uiActions.setEditingItem(null);
-            uiActions.setIsCreateModalOpen(true);
-          }}
-          onClearFilters={uiActions.handleClearFilters}
-          activeFiltersCount={ui.activeFiltersCount}
-          placeholder="BUSCAR POR NOMBRE, SKU, EVENTO, FRC O ERP..."
-          accentColor="blue"
-          theme={settings.theme}
-        />
+        <div className="flex flex-col gap-3">
+          <ManagementSearchBar 
+            searchQuery={state.searchQuery}
+            setSearchQuery={actions.setSearchQuery}
+            onOpenFilters={() => uiActions.setIsFilterDrawerOpen(true)}
+            onOpenAdd={() => {
+              uiActions.setEditingItem(null);
+              uiActions.setIsCreateModalOpen(true);
+            }}
+            onClearFilters={uiActions.handleClearFilters}
+            activeFiltersCount={ui.activeFiltersCount}
+            placeholder="BUSCAR POR NOMBRE, SKU, EVENTO, FRC O ERP..."
+            accentColor="blue"
+            theme={settings.theme}
+          />
+
+          {/* MOBILE PREMIUM NAV SWITCHER TAB BAR */}
+          <div className={`md:hidden flex items-center p-1 rounded-2xl border transition-all ${
+            settings.theme === 'dark' 
+              ? 'bg-slate-950/40 border-white/5' 
+              : 'bg-white border-stone-200 shadow-sm'
+          }`}>
+            <button
+              onClick={() => uiActions.setExpandedPanel('dual')}
+              className={`flex-1 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all ${
+                ui.expandedPanel === 'dual' 
+                  ? settings.theme === 'dark' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/10' : 'bg-blue-500 text-white shadow-sm' 
+                  : settings.theme === 'dark' ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              Todos
+            </button>
+            <button
+              onClick={() => uiActions.setExpandedPanel('pending')}
+              className={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                ui.expandedPanel === 'pending' 
+                  ? 'bg-blue-600 text-white shadow-md' 
+                  : settings.theme === 'dark' ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0 ${ui.expandedPanel === 'pending' ? 'ring-2 ring-white/35 animate-ping' : ''}`} />
+              Pend ({state.pendingCount})
+            </button>
+            <button
+              onClick={() => uiActions.setExpandedPanel('destined')}
+              className={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                ui.expandedPanel === 'destined' 
+                  ? 'bg-indigo-600 text-white shadow-md' 
+                  : settings.theme === 'dark' ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0 ${ui.expandedPanel === 'destined' ? 'ring-2 ring-white/35 animate-ping' : ''}`} />
+              Dest ({state.destinedCount || 0})
+            </button>
+            <button
+              onClick={() => uiActions.setExpandedPanel('adjusted')}
+              className={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                ui.expandedPanel === 'adjusted' 
+                  ? 'bg-emerald-600 text-white shadow-md' 
+                  : settings.theme === 'dark' ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 ${ui.expandedPanel === 'adjusted' ? 'ring-2 ring-white/35 animate-ping' : ''}`} />
+              Ajust ({state.adjustedCount})
+            </button>
+          </div>
+        </div>
       </EventHeader>
 
       {/* DUAL PANELS */}
@@ -243,110 +255,16 @@ const EventManagementPage: React.FC = () => {
         )}
       </div>
 
-      {/* DRAWERS & MODALS */}
-      <EventFilterDrawer 
-        isOpen={ui.isFilterDrawerOpen}
-        onClose={() => uiActions.setIsFilterDrawerOpen(false)}
-        eventTypes={state.eventTypes}
-        selectedEvents={state.selectedEvents}
-        onToggleEvent={uiActions.handleToggleEvent}
-        onClearFilters={uiActions.handleClearFilters}
-        activeFiltersCount={ui.activeFiltersCount}
-        dateRange={ui.dateRange}
-        onSetDateRange={uiActions.setDateRange}
-        theme={settings.theme}
-      />
-
-      <ManagementBulkActions 
-        selectedCount={state.selectedIds.size}
-        onClearSelection={actions.clearSelection}
-        theme={settings.theme}
-        actions={[
-          {
-            label: "Seleccionar Todos los Visibles",
-            icon: CheckSquare,
-            onClick: actions.handleSelectAll,
-            variant: "primary"
-          },
-          {
-            label: "Retirar Seleccionados",
-            icon: Trash2,
-            onClick: uiActions.handleBulkRemove,
-            variant: "danger"
-          },
-          {
-            label: "Imprimir Etiquetas",
-            icon: Printer,
-            onClick: uiActions.handleBulkPrintLabels,
-            variant: "warning"
-          },
-          {
-            label: "Imprimir Reporte",
-            icon: Printer,
-            onClick: uiActions.handleBulkPrintSelected,
-            variant: "secondary"
-          },
-          {
-            label: "Enviar por Correo",
-            icon: Mail,
-            onClick: uiActions.handleBulkSendEmail,
-            variant: "success"
-          },
-          {
-            label: "Buscar Documento",
-            icon: Search,
-            onClick: uiActions.handleBulkSearchDocument,
-            variant: "info"
-          },
-          {
-            label: "Edición Masiva",
-            icon: Edit3,
-            onClick: () => uiActions.setIsBulkEditModalOpen(true),
-            variant: "primary"
-          }
-        ]}
-      />
-
-      <BulkEditModal
-        isOpen={ui.isBulkEditModalOpen}
-        onClose={() => uiActions.setIsBulkEditModalOpen(false)}
-        onApply={uiActions.handleBulkEdit}
-        theme={settings.theme}
-        selectedCount={state.selectedIds.size}
-      />
-
-      <EventSettingsDrawer 
-        isOpen={ui.isSettingsDrawerOpen}
-        onClose={() => uiActions.setIsSettingsDrawerOpen(false)}
-        preferences={state.preferences}
-        onUpdatePreferences={actions.togglePreference}
-        onFullRefresh={actions.handleFullRefresh}
-        onClearLocalData={actions.clearLocalData}
-        onBulkImport={actions.handleBulkImport}
-        onClearAllEvents={actions.handleClearAllEvents}
-        theme={settings.theme}
-      />
-
-      <CreateEventModal 
-        isOpen={ui.isCreateModalOpen}
-        onClose={() => {
-          uiActions.setIsCreateModalOpen(false);
-          uiActions.setEditingItem(null);
-        }}
-        onSubmit={uiActions.handleCreateOrUpdate}
-        editingItem={ui.editingItem}
-        theme={settings.theme}
-      />
-
-      <EventEmailModal
-        isOpen={ui.isEmailModalOpen}
-        onClose={() => uiActions.setIsEmailModalOpen(false)}
-        selectedItems={state.processedEvents.filter(item => state.selectedIds.has(item.id))}
-        theme={settings.theme}
+      {/* DRAWERS & MODALS DECOUPLED OVERLAYS */}
+      <EventOverlays 
+        ui={ui}
+        uiActions={uiActions}
+        state={state}
+        actions={actions}
+        settings={settings}
       />
     </div>
   );
 };
 
 export default EventManagementPage;
-

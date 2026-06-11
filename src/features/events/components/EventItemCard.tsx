@@ -109,7 +109,14 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
                 {item.productName}
               </h3>
             </div>
-            <div className="shrink-0">
+            <div className="shrink-0 flex items-center gap-1.5">
+              {item.isAdjusted && (
+                <span className={`text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md ${
+                  theme === 'dark' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/35' : 'bg-emerald-100 text-emerald-800'
+                }`}>
+                  Ajustado
+                </span>
+              )}
               {item.syncStatus === 'synced' && <span title="Sincronizado"><Cloud className="w-4 h-4 text-emerald-500" /></span>}
               {item.syncStatus === 'pending' && <span title="Pendiente"><RefreshCw className="w-4 h-4 text-amber-500 animate-spin" /></span>}
               {item.syncStatus === 'error' && <span title={item.syncError || 'Error de sincronización'}><CloudOff className="w-4 h-4 text-rose-500" /></span>}
@@ -150,6 +157,36 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
               </button>
             </div>
           </div>
+
+          {/* TRASPASOS & OBSERVACIONES MOBILE */}
+          {(item.traspaso || item.observaciones) && (
+            <div className="grid grid-cols-2 gap-2">
+              {item.traspaso && (
+                <div className={`p-2 rounded-xl border ${
+                  theme === 'dark' ? 'bg-brand-dark border-white/5' : 'bg-slate-50 border-slate-150'
+                }`}>
+                  <span className="font-black text-slate-500 uppercase tracking-widest block mb-0.5 text-[8px] md:text-[9px]">Documento Traspaso</span>
+                  <p className={`font-bold uppercase truncate text-xs ${
+                    theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+                  }`}>
+                    {item.traspaso}
+                  </p>
+                </div>
+              )}
+              {item.observaciones && (
+                <div className={`p-2 rounded-xl border ${
+                  theme === 'dark' ? 'bg-brand-dark border-white/5' : 'bg-slate-50 border-slate-150'
+                } ${!item.traspaso ? 'col-span-2' : ''}`}>
+                  <span className="font-black text-slate-500 uppercase tracking-widest block mb-0.5 text-[8px] md:text-[9px]">Notas Observadas</span>
+                  <p className={`font-bold uppercase truncate text-xs ${
+                    theme === 'dark' ? 'text-slate-300' : 'text-slate-600'
+                  }`}>
+                    {item.observaciones}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="flex flex-wrap items-center gap-2 mt-1">
             {item.frc && (
@@ -321,21 +358,42 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
       </div>
 
       {/* COLUMN 5: ACTIONS */}
-      <div className="flex items-center gap-1 w-full md:w-auto justify-end md:justify-center shrink-0">
+      <div className="flex items-center gap-2 w-full md:w-auto justify-end md:justify-center shrink-0">
+        {onUpdateStatus && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onUpdateStatus(item.id, !item.isAdjusted);
+            }}
+            className={`w-10 h-10 md:w-8 md:h-8 rounded-xl transition-all border flex items-center justify-center ${
+              item.isAdjusted
+                ? theme === 'dark' 
+                  ? 'bg-amber-500/10 border-amber-500/20 text-amber-500 hover:bg-amber-500 hover:text-white' 
+                  : 'bg-amber-50 border-amber-200 text-amber-600 hover:bg-amber-600 hover:text-white'
+                : theme === 'dark'
+                  ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500 hover:text-white'
+                  : 'bg-emerald-50 border-emerald-200 text-emerald-600 hover:bg-emerald-600 hover:text-white shadow-sm'
+            }`}
+            title={item.isAdjusted ? "Revertir a Pendiente" : "Marcar como Ajustado"}
+          >
+            {item.isAdjusted ? <Undo2 className="w-5 h-5 md:w-4 md:h-4" /> : <CheckCircle2 className="w-5 h-5 md:w-4 md:h-4" />}
+          </button>
+        )}
+
         {onEdit && (
           <button
             onClick={(e) => {
               e.stopPropagation();
               onEdit(item);
             }}
-            className={`w-8 h-8 rounded-lg transition-all border flex items-center justify-center ${
+            className={`w-10 h-10 md:w-8 md:h-8 rounded-xl transition-all border flex items-center justify-center ${
               theme === 'dark' 
                 ? 'bg-blue-500/10 border-blue-500/20 text-blue-500 hover:bg-blue-500 hover:text-white' 
-                : 'bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-600 hover:text-white'
+                : 'bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-600 hover:text-white shadow-sm'
             }`}
             title="Editar Registro"
           >
-            <MoreVertical className="w-3.5 h-3.5" />
+            <MoreVertical className="w-5 h-5 md:w-4 md:h-4" />
           </button>
         )}
         
@@ -345,14 +403,14 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
               e.stopPropagation();
               onRemove(item);
             }}
-            className={`w-8 h-8 rounded-lg transition-all border flex items-center justify-center ${
+            className={`w-10 h-10 md:w-8 md:h-8 rounded-xl transition-all border flex items-center justify-center ${
               theme === 'dark' 
                 ? 'bg-red-500/10 border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white' 
-                : 'bg-red-50 border-red-200 text-red-600 hover:bg-red-600 hover:text-white'
+                : 'bg-red-50 border-red-200 text-red-600 hover:bg-red-600 hover:text-white shadow-sm'
             }`}
             title="Eliminar Registro"
           >
-            <Trash2 className="w-3.5 h-3.5" />
+            <Trash2 className="w-5 h-5 md:w-4 md:h-4" />
           </button>
         )}
       </div>

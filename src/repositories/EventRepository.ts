@@ -1,5 +1,6 @@
 import { db, DynamicRecord } from '../db';
 import { liveQuery } from 'dexie';
+import { dynamicDataService } from '../services/dynamicDataService';
 
 export interface EventRecord {
   id: string;
@@ -67,14 +68,7 @@ export class EventRepository {
   }
 
   async save(event: Partial<EventRecord> & { id: string }) {
-    const record: DynamicRecord = {
-      id: event.id,
-      tableName: this.tableName,
-      data: event,
-      timestamp: event.timestamp || Date.now(),
-      syncStatus: event.syncStatus || 'pending'
-    };
-    await db.dynamic_data.put(record);
+    await dynamicDataService.saveRecord(this.tableName, event, event.id);
   }
 
   async bulkSave(events: EventRecord[]) {
@@ -89,11 +83,14 @@ export class EventRepository {
   }
 
   async delete(id: string) {
-    await db.dynamic_data.delete(id);
+    await dynamicDataService.deleteRecord(id);
   }
 
   async clear() {
-    await db.dynamic_data.where('tableName').equals(this.tableName).delete();
+    const records = await this.getAll();
+    for (const record of records) {
+      await this.delete(record.id);
+    }
   }
 
   private mapToEvent(record: DynamicRecord): EventRecord {
