@@ -115,6 +115,7 @@ export const Database: React.FC = () => {
         backedUpPercent={state.backedUpPercent}
         pendingChangesCount={state.pendingChangesCount}
         brainStatus={state.brainStatus}
+        searchQuery={state.searchQuery}
         onSearch={actions.setSearchQuery}
         onDownload={actions.handleDownloadFromCloud}
         onSync={actions.handleSyncToCloud}
