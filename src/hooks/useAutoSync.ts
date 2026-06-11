@@ -9,7 +9,7 @@ import { genericSyncEngine } from '../services/cloud/GenericSyncEngine';
 
 export const useAutoSync = () => {
   const addToast = useToastStore(state => state.addToast);
-  const { setSyncError } = useSyncStore();
+  const setSyncError = useSyncStore(state => state.setSyncError);
   const isSyncing = useRef(false);
   const retryCount = useRef(0);
   const MAX_RETRIES = 3;

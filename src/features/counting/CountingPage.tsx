@@ -11,6 +11,7 @@ import { useAutoLock } from '../../hooks/useAutoLock';
 import { useHIDScanner } from '../../hooks/useHIDScanner';
 import { useSyncStore } from '../../store/useSyncStore';
 import { LocationSelectorModal } from '../../shared/components/ui/LocationSelectorModal';
+import { SoundFX } from '../../services/audio';
 import * as sessionService from '../../services/sessionService';
 import * as syncManager from '../../services/syncManager';
 
@@ -24,6 +25,43 @@ export const CountingPage: React.FC = () => {
 
   const [isToolsOpen, setIsToolsOpen] = useState(false);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+
+  // Atajos de teclado para agilizar conteo en escritorio o terminales PDA con teclado físico grande
+  useEffect(() => {
+    if (isLocked || state.status === 'awaiting_pharma' || state.isLoading) return;
+
+    const handleShortcuts = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+
+      if (e.key === '1') {
+        e.preventDefault();
+        actions.setMultiplier(1);
+        SoundFX.play('increment');
+      } else if (e.key === '2') {
+        e.preventDefault();
+        actions.setMultiplier(6);
+        SoundFX.play('increment');
+      } else if (e.key === '3') {
+        e.preventDefault();
+        actions.setMultiplier(12);
+        SoundFX.play('increment');
+      } else if (e.key === '4') {
+        e.preventDefault();
+        actions.setMultiplier(24);
+        SoundFX.play('increment');
+      } else if (e.key.toLowerCase() === 'l' && e.altKey) {
+        e.preventDefault();
+        lock();
+      } else if (e.key.toLowerCase() === 't' && e.altKey) {
+        e.preventDefault();
+        setIsToolsOpen(prev => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleShortcuts);
+    return () => window.removeEventListener('keydown', handleShortcuts);
+  }, [isLocked, state.status, state.isLoading, actions, lock]);
 
   // Procesar escaneo inicial si viene de una redirección automática
   useEffect(() => {

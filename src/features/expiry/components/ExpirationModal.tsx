@@ -75,7 +75,8 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
           setProductName(name);
 
           // ESTRATEGIA LOCAL-FIRST: Guardar en DB local para que el siguiente escaneo sea instantáneo
-          const { db } = await import('../../../db');
+          const { productRepository } = await import('../../../repositories/DexieProductRepository');
+          const { ProviderRepository } = await import('../../../repositories/ProviderRepository');
           const supplierRut = normalizeSku(product.supplier_rut || product.supplierRut || product.PROVEEDOR_RUT || '');
           
           const newProduct = {
@@ -88,11 +89,11 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
             syncStatus: 'synced' as const
           };
           
-          await db.products.put(newProduct);
+          await productRepository.save(newProduct);
 
           // Si el proveedor no existe localmente, también lo traemos en caliente desde Supabase
           if (supplierRut) {
-            const localProvider = await db.providers.get(supplierRut);
+            const localProvider = await ProviderRepository.getByRut(supplierRut);
             if (!localProvider) {
               const providersTable = config?.providersTableName || 'PROVEEDORES';
               const rutCol = 'rut'; // Supabase usa 'rut'
@@ -102,11 +103,12 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
                 const p = provResponse.rows[0];
                 const withdrawalDays = p.withdrawal_days || p.withdrawalDays || 0;
 
-                await db.providers.put({
+                await ProviderRepository.save({
                   rut: supplierRut,
                   name: String(p.name || p.NOMBRE || 'N/A'),
                   withdrawalDays: Number(withdrawalDays),
-                  hasExchange: withdrawalDays > 0
+                  hasExchange: withdrawalDays > 0,
+                  syncStatus: 'synced'
                 });
               }
             }

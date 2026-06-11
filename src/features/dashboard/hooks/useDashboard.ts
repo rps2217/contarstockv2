@@ -6,6 +6,8 @@ import { ExpectedOrderRepository } from '../../../repositories/ExpectedOrderRepo
 import { db } from '../../../db';
 import { syncFSM, SyncStatus } from '../../../services/syncFSM';
 
+import { dynamicDataRepository } from '../../../repositories/DynamicDataRepository';
+
 export const useDashboard = () => {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>({ state: 'IDLE', pendingCount: 0 });
 
@@ -24,8 +26,8 @@ export const useDashboard = () => {
   }, [], { scansToday: 0, pendingSync: 0, history: [] });
 
   const dynamicStats = useLiveQuery(async () => {
-    const pending = await db.dynamic_data.where('syncStatus').equals('pending').count();
-    const error = await db.dynamic_data.where('syncStatus').equals('error').count();
+    const pending = await dynamicDataRepository.getPendingCount();
+    const error = await dynamicDataRepository.getErrorCount();
     return { pending, error };
   }, [], { pending: 0, error: 0 });
 

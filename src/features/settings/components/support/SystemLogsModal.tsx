@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Terminal, Trash2, Download, AlertCircle, ShieldCheck, Info } from 'lucide-react';
 import { db, SystemLog } from '../../../../db';
 import { logger } from '../../../../services/logger';
+import { systemLogRepository } from '../../../../repositories/SystemLogRepository';
 
 interface Props {
   isOpen: boolean;
@@ -16,8 +17,7 @@ export const SystemLogsModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const loadLogs = async () => {
     setIsLoading(true);
     try {
-      let query = db.logs.orderBy('timestamp').reverse();
-      const allLogs = await query.limit(500).toArray();
+      const allLogs = await systemLogRepository.getRecentLogs(500);
       setLogs(allLogs);
     } catch (e) {
       console.error("Error loading logs", e);

@@ -23,6 +23,7 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
 }) => {
   const { settings } = useAppStore();
   const [feedbackStatus, setFeedbackStatus] = useState<'success' | null>(null);
+  const [manualCode, setManualCode] = useState('');
   const isMirrored = settings.captureSettings?.cameraMirrorMode || false;
   
   const effectiveTrigger = inline ? isTriggered : true;
@@ -33,6 +34,14 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
     setFeedbackStatus('success');
     onScan(code);
     setTimeout(() => setFeedbackStatus(null), 250);
+  };
+
+  const handleManualSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (manualCode.trim()) {
+      handleScan(manualCode.trim());
+      setManualCode('');
+    }
   };
 
   const { videoRef, error, engineType } = useOpticalEngine({
@@ -89,7 +98,39 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({
 
       <div className="flex-1 relative bg-black flex flex-col justify-center h-full">
         {feedbackStatus === 'success' && <div className="absolute inset-0 z-[60] bg-emerald-600/40 flex items-center justify-center animate-in fade-in duration-75"><CheckCircle2 className="w-20 h-20 text-white" /></div>}
-        {error && <div className="absolute inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center p-6 text-center"><AlertTriangle className="w-12 h-12 text-rose-500 mb-4" /><h3 className="text-white font-black uppercase text-[10px] tracking-widest">{error}</h3><button onClick={onClose} className="mt-8 bg-white text-black px-10 py-4 font-black uppercase text-[10px] border-b-8 border-slate-300">Volver</button></div>}
+        {error && (
+          <div className="absolute inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
+            <AlertTriangle className="w-12 h-12 text-rose-500 mb-4 animate-bounce" />
+            <h3 className="text-white font-black uppercase text-xs tracking-widest mb-1">Cámara no disponible</h3>
+            <p className="text-slate-400 text-xs max-w-xs mb-6 px-4">{error}</p>
+            
+            <form onSubmit={handleManualSubmit} className="w-full max-w-xs mb-8 pointer-events-auto">
+              <label className="block text-slate-500 text-[9px] font-black uppercase tracking-widest mb-2 text-left">
+                Ingresar código de barra manualmente
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={manualCode}
+                  onChange={(e) => setManualCode(e.target.value)}
+                  placeholder="Ej. 7791234567890"
+                  className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500 font-mono"
+                  autoFocus
+                />
+                <button
+                  type="submit"
+                  className="bg-blue-600 hover:bg-blue-500 text-white font-black text-[10px] uppercase tracking-wider px-4 rounded-xl active:scale-95 transition-transform"
+                >
+                  Ok
+                </button>
+              </div>
+            </form>
+
+            <button onClick={onClose} className="bg-slate-900 hover:bg-slate-800 border border-white/10 text-white px-8 py-3 rounded-xl font-bold uppercase text-[10px] transition-colors pointer-events-auto">
+              Volver
+            </button>
+          </div>
+        )}
         <video 
           ref={videoRef} 
           className={`w-full h-full object-cover transition-all duration-150 ${engineType === 'native' ? 'block' : 'hidden'} ${effectiveTrigger ? 'opacity-100 scale-100' : 'opacity-10 scale-110 grayscale blur-sm'}`} 

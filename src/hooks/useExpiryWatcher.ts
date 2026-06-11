@@ -14,10 +14,15 @@ import { db as dexieDb } from '../db';
  * and updates a global badge count. It also triggers notifications for new critical items.
  */
 export const useExpiryWatcher = () => {
-  const { settings } = useAppStore();
-  const { setAlerts } = useExpiryStore();
+  const settings = useAppStore(state => state.settings);
+  const setAlerts = useExpiryStore(state => state.setAlerts);
   const addToast = useToastStore(state => state.addToast);
   const lastCount = useRef<number | null>(null);
+  
+  const settingsRef = useRef(settings);
+  useEffect(() => {
+    settingsRef.current = settings;
+  }, [settings]);
 
   const tableName = settings?.cloudConfig?.inventoryRegistryTableName || 
                     settings?.cloudConfig?.expiryTableName || 
@@ -47,7 +52,7 @@ export const useExpiryWatcher = () => {
             return;
           }
           throw error;
-        }
+         }
         if (!remoteRows) return;
 
         // 2. Get context data from local DB
@@ -69,7 +74,7 @@ export const useExpiryWatcher = () => {
         });
 
         const now = new Date();
-        const expiryMapping = settings?.cloudConfig?.mappings?.expiry;
+        const expiryMapping = settingsRef.current?.cloudConfig?.mappings?.expiry;
         const alertItems: any[] = [];
 
         // 3. Process items
@@ -122,6 +127,6 @@ export const useExpiryWatcher = () => {
     return () => {
       if (channel) supabase.removeChannel(channel);
     };
-  }, [tableName, settings, setAlerts, addToast]);
+  }, [tableName, setAlerts, addToast]);
 };
 

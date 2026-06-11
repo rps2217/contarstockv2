@@ -1,70 +1,16 @@
 
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Trash2, CheckCircle2, Cloud, X, Loader2 } from 'lucide-react';
+import { Cloud, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useReceptionLogic } from './hooks/useReceptionLogic';
 import { useCaptureSession } from '../../hooks/useCaptureSession';
 import { CameraScanner } from '../../components/CameraScanner';
-import { format } from 'date-fns';
 import { ModuleHeader } from '../../shared/components/layout/ModuleHeader';
 import { CaptureLayout } from '../../shared/components/layout/CaptureLayout';
-
-const ReceptionItemRow = React.memo(({ item, onDelete, onShowPhoto }: { item: any; onDelete: (id: string) => void; onShowPhoto: (item: any) => void }) => {
-  const isSynced = !!item.lastSyncTimestamp;
-  const hasPhoto = !!(item.labelPhoto || item.photoUrl);
-
-  return (
-    <div className={`flex items-center gap-4 p-4 rounded-2xl border ${
-      isSynced ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-blue-500/5 border-blue-500/20'
-    }`}>
-      <button 
-        onClick={() => hasPhoto && onShowPhoto(item)}
-        disabled={!hasPhoto}
-        className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border overflow-hidden active:scale-90 transition-transform ${
-        isSynced ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/20' : 'bg-blue-500/20 text-blue-500 border-blue-500/20'
-      }`}>
-        {item.labelPhoto || item.photoUrl ? (
-          <img 
-            src={item.labelPhoto || item.photoUrl} 
-            alt="Etiqueta" 
-            className="w-full h-full object-cover"
-            referrerPolicy="no-referrer"
-          />
-        ) : (
-          <Box className="w-6 h-6" />
-        )}
-      </button>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <h3 className={`text-sm font-black uppercase truncate ${isSynced ? 'text-emerald-400' : 'text-white'}`}>
-            {item.logisticsLabel}
-          </h3>
-          {isSynced && <CheckCircle2 className="w-3 h-3 text-emerald-500" />}
-        </div>
-        <div className="flex items-center gap-2 mt-1">
-          <span className="text-slate-500 text-[10px] font-bold uppercase">
-            {format(item.createdAt, 'HH:mm:ss')}
-          </span>
-          {item.erpOrder && item.erpOrder !== 'RECEPCION_BORRADOR' && (
-            <>
-              <span className="w-1 h-1 bg-slate-700 rounded-full"></span>
-              <span className="text-blue-500 text-[10px] font-black uppercase">ERP: {item.erpOrder}</span>
-            </>
-          )}
-        </div>
-      </div>
-      {!isSynced && (
-        <button
-          onClick={() => onDelete(item.id)}
-          className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500 active:bg-rose-500/20 transition-colors"
-        >
-          <Trash2 className="w-5 h-5" />
-        </button>
-      )}
-    </div>
-  );
-});
+import { ReceptionItemRow } from './components/ReceptionItemRow';
+import { ReceptionCameraOverlay } from './components/ReceptionCameraOverlay';
+import { ReceptionPhotoModal } from './components/ReceptionPhotoModal';
 
 export const ReceptionCapturePage: React.FC = () => {
   const navigate = useNavigate();
@@ -130,92 +76,16 @@ export const ReceptionCapturePage: React.FC = () => {
 
   const modalForm = (
     <>
-      {/* FULL SCREEN CAMERA FOR PHOTO CAPTURE */}
-      <AnimatePresence>
-        {state.pendingPhotoCode && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[2000] bg-black flex flex-col"
-          >
-            <div className="absolute top-0 left-0 right-0 p-6 z-[2110] flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent">
-              <div className="flex flex-col">
-                <span className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em]">Capturar Etiqueta</span>
-                <h2 className="text-xl font-black text-white uppercase tracking-tighter">{state.pendingPhotoCode}</h2>
-              </div>
-              <button 
-                onClick={() => actions.setPendingPhotoCode(null)}
-                className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center text-white active:bg-white/20 transition-colors"
-              >
-                <Trash2 className="w-6 h-6" />
-              </button>
-            </div>
+      <ReceptionCameraOverlay
+        pendingPhotoCode={state.pendingPhotoCode}
+        onClose={() => actions.setPendingPhotoCode(null)}
+        onCapture={(photo) => actions.completeReceptionWithPhoto(photo)}
+      />
 
-            <div className="flex-1 relative">
-              <CameraScanner 
-                onScan={() => {}} 
-                onClose={() => actions.setPendingPhotoCode(null)} 
-                inline={false}
-                mode="photo"
-                onCapture={(photo) => actions.completeReceptionWithPhoto(photo)}
-              />
-            </div>
-
-            <div className="p-8 bg-black flex flex-col items-center gap-4">
-              <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest text-center">
-                Encuadre la etiqueta y capture la imagen para finalizar el registro
-              </p>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* PHOTO VIEWER MODAL */}
-      <AnimatePresence>
-        {selectedPhotoItem && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setSelectedPhotoItem(null)}
-            className="fixed inset-0 z-[3000] bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-4"
-          >
-            <div className="absolute top-6 right-6">
-              <button className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center text-white">
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            
-            <div className="w-full max-w-lg bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-white/10" onClick={e => e.stopPropagation()}>
-              <div className="p-4 border-b border-white/5 flex items-center justify-between">
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Etiqueta Logística</span>
-                  <h3 className="text-lg font-black text-white uppercase">{selectedPhotoItem.logisticsLabel}</h3>
-                </div>
-              </div>
-              
-              <div className="aspect-square w-full bg-black flex items-center justify-center">
-                <img 
-                  src={selectedPhotoItem.photoUrl || selectedPhotoItem.labelPhoto} 
-                  alt="Etiqueta" 
-                  className="max-w-full max-h-full object-contain"
-                  referrerPolicy="no-referrer"
-                />
-              </div>
-              
-              <div className="p-6 flex justify-center">
-                <button 
-                  onClick={() => setSelectedPhotoItem(null)}
-                  className="w-full py-4 bg-white text-black rounded-2xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all"
-                >
-                  Cerrar
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <ReceptionPhotoModal
+        selectedPhotoItem={selectedPhotoItem}
+        onClose={() => setSelectedPhotoItem(null)}
+      />
     </>
   );
 

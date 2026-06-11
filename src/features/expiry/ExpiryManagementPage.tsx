@@ -1,46 +1,57 @@
-
 import React, { useRef } from 'react';
-import { 
-  FileText,
-  Calendar,
-  Sun,
-  Moon,
-  Settings2,
-  AlertCircle,
-  LayoutGrid,
-  List,
-  Cloud
-} from 'lucide-react';
-import { format, addMonths, startOfMonth, endOfMonth } from 'date-fns';
-import { es } from 'date-fns/locale';
-import { motion, AnimatePresence } from 'motion/react';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { Calendar } from 'lucide-react';
+import { format } from 'date-fns';
+import { VirtualList } from '../../shared/components/ui/VirtualList';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useAppStore } from '../../store/mainAppStore';
 import { productRepository } from '../../repositories/DexieProductRepository';
 
-// Hooks
-import { ExpiryStatus } from './hooks/useExpiryDatabase';
+// Hooks & state
 import { useExpiryUI } from './hooks/useExpiryUI';
 
-// Components
-import { ExpiryStats } from './components/ExpiryStats';
-import { ExpiryFilterDrawer } from './components/ExpiryFilterDrawer';
-import { ExpirySettingsDrawer } from './components/ExpirySettingsDrawer';
-import { ManagementSearchBar } from '../../shared/components/core/ManagementSearchBar';
+// Lego Components
 import { ExpiryItemCard } from './components/ExpiryItemCard';
 import { ExpiryItemRow } from './components/ExpiryItemRow';
-import { ExpiryDetailDrawer } from './components/ExpiryDetailDrawer';
-import { ManagementBulkActions, BulkAction } from '../../shared/components/core/ManagementBulkActions';
-import { CheckSquare, Printer, Mail, Trash2, Plus } from 'lucide-react';
-import { ExpiryEmailModal } from './components/ExpiryEmailModal';
-import { ExpirationModal } from './components/ExpirationModal';
+import { ExpiryHeader } from './components/ExpiryHeader';
+import { ExpiryOverlays } from './components/ExpiryOverlays';
 
 // Utils
-import { handlePrintExpirations, handleExportExpirationsCSV } from './utils/expiryUtils';
 import { normalizeSku } from '../../services/utils';
+
+const ExpiryManagementRow = React.memo(({ index, item, data }: any) => {
+  const { ui, state, actions, dbActions, settings } = data;
+  return (
+    <div className="h-full pb-3">
+      {ui.viewMode === 'table' ? (
+        <ExpiryItemRow 
+          item={item}
+          isSelected={state.selectedIds.has(item.id)}
+          onToggleSelect={actions.handleToggleSelect}
+          onRemove={actions.confirmRemoveItem}
+          onOpenDetail={actions.handleOpenDetail}
+          onEdit={actions.handleEdit}
+          theme={settings.theme}
+        />
+      ) : (
+        <ExpiryItemCard 
+          item={item}
+          isSelected={state.selectedIds.has(item.id)}
+          onToggleSelect={actions.handleToggleSelect}
+          onRemove={actions.confirmRemoveItem}
+          onOpenDetail={actions.handleOpenDetail}
+          onEdit={actions.handleEdit}
+          onFilterProvider={(provider: string) => dbActions.setSearchQuery(provider)}
+          onFilterEstado={(estado: string) => dbActions.setSearchQuery(estado)}
+          onFilterFrc={(frc: string) => dbActions.setSearchQuery(frc)}
+          theme={settings.theme}
+          isCompact={state.preferences.compactView}
+        />
+      )}
+    </div>
+  );
+});
+ExpiryManagementRow.displayName = 'ExpiryManagementRow';
 
 const ExpiryManagementPage: React.FC = () => {
   const { ui, actions, db } = useExpiryUI();
@@ -48,7 +59,7 @@ const ExpiryManagementPage: React.FC = () => {
   const { settings } = useAppStore();
   const navigate = useNavigate();
   
-  // MOTOR DE IDENTIFICACIÓN TOTAL
+  // Total identification engine
   const productMap = useLiveQuery(async () => {
     const allProducts = await productRepository.getAll();
     const map: Record<string, any> = {};
@@ -62,267 +73,49 @@ const ExpiryManagementPage: React.FC = () => {
   const parentRef = useRef<HTMLDivElement>(null);
   const allItems = state.processedScans;
   
-  const rowVirtualizer = useVirtualizer({
-    count: allItems.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => ui.viewMode === 'table' ? 48 : (state.preferences.compactView ? 80 : 120),
-    overscan: 5,
-  });
+  const rowData = React.useMemo(() => ({ ui, state, actions, dbActions, settings }), [ui.viewMode, state.selectedIds, state.preferences.compactView, actions, dbActions, settings.theme]);
+  const itemHeight = ui.viewMode === 'table' ? 60 : (state.preferences.compactView ? 92 : 132);
 
   return (
     <div className={`h-full flex flex-col overflow-hidden font-sans selection:bg-brand-warning/30 transition-colors duration-500 ${
       settings.theme === 'dark' ? 'bg-brand-dark text-white' : 'bg-stone-200/50 text-stone-900'
     }`}>
-      {/* HEADER */}
-      <div className={`p-3 md:p-4 pb-3 backdrop-blur-xl border-b shrink-0 transition-colors ${
-        settings.theme === 'dark' ? 'bg-slate-950/40 border-white/5' : 'bg-stone-50/80 border-stone-200 shadow-sm'
-      }`}>
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-          {/* TITLE SECTION */}
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center border shadow-md transition-colors shrink-0 ${
-              settings.theme === 'dark' ? 'bg-amber-500/10 border-amber-500/20 shadow-amber-500/5' : 'bg-amber-50 border-amber-200 shadow-amber-500/10'
-            }`}>
-              <Calendar className="w-5 h-5 text-amber-500" />
-            </div>
-            <div>
-              <h1 className="text-xl md:text-2xl font-black uppercase tracking-tighter italic leading-none">
-                {settings.pharmacyName || 'L-121'}
-              </h1>
-            </div>
-          </div>
+      {/* Decoupled Lego Header */}
+      <ExpiryHeader
+        ui={ui}
+        state={state}
+        actions={actions}
+        dbActions={dbActions}
+        settings={settings}
+        navigate={navigate}
+      />
 
-          {/* STATS SECTION (Now in-line) */}
-          <div className="hidden lg:block flex-1 px-4">
-            <ExpiryStats 
-              variant="compact"
-              stats={state.stats} 
-              selectedStatuses={state.selectedStatuses} 
-              onStatusClick={(status) => {
-                const expiryStatus = status as ExpiryStatus;
-                const newStatuses = state.selectedStatuses.includes(expiryStatus)
-                  ? state.selectedStatuses.filter(s => s !== expiryStatus)
-                  : [...state.selectedStatuses, expiryStatus];
-                dbActions.setSelectedStatuses(newStatuses);
-              }}
-              theme={settings.theme}
-            />
-          </div>
-
-          {/* ACTIONS SECTION */}
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 md:pb-0">
-            <button 
-              onClick={() => navigate('/events')}
-              className={`border px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all ${
-                settings.theme === 'dark' 
-                  ? 'bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/20 text-blue-500' 
-                  : 'bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-600 shadow-sm'
-              }`}
-            >
-              <AlertCircle className="w-3 h-3" />
-              Eventos
-            </button>
-
-            <button 
-              onClick={() => handlePrintExpirations(state.processedScans)}
-              className={`border px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all ${
-                settings.theme === 'dark' ? 'bg-white/5 hover:bg-white/10 border-white/10' : 'bg-slate-100 hover:bg-slate-200 border-slate-200'
-              }`}
-            >
-              <Printer className="w-3 h-3 text-slate-400" />
-              Imprimir
-            </button>
-            
-            <button 
-              onClick={() => actions.setIsSettingsDrawerOpen(true)}
-              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all border ${
-                settings.theme === 'dark' 
-                  ? 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10' 
-                  : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200 shadow-sm'
-              }`}
-            >
-              <Settings2 className="w-4 h-4" />
-            </button>
-
-            <div className={`flex items-center p-0.5 rounded-lg border ${
-              settings.theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-slate-100 border-slate-200'
-            }`}>
-              <button
-                onClick={() => actions.setViewMode('grid')}
-                className={`p-1 rounded-md transition-all ${
-                  ui.viewMode === 'grid' ? 'bg-amber-500 text-black shadow-sm' : 'text-slate-500 hover:text-slate-300'
-                }`}
-              >
-                <LayoutGrid className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={() => actions.setViewMode('table')}
-                className={`p-1 rounded-md transition-all ${
-                  ui.viewMode === 'table' ? 'bg-amber-500 text-black shadow-sm' : 'text-slate-500 hover:text-slate-300'
-                }`}
-              >
-                <List className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            <div className={`border px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all ${
-              state.isSyncing 
-                ? settings.theme === 'dark' ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' : 'bg-blue-50 border-blue-200 text-blue-600'
-                : settings.theme === 'dark' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-emerald-50 border-emerald-200 text-emerald-600 shadow-sm'
-            }`}>
-              <Cloud className={`w-3 h-3 ${state.isSyncing ? 'animate-bounce' : ''}`} />
-              <span className="hidden sm:inline">{state.isSyncing ? 'Sincronizando...' : 'Nube Sincronizada'}</span>
-            </div>
-
-            <button 
-              onClick={() => handleExportExpirationsCSV(state.processedScans)}
-              className={`border px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all ${
-                settings.theme === 'dark' ? 'bg-white/5 hover:bg-white/10 border-white/10' : 'bg-slate-100 hover:bg-slate-200 border-slate-200'
-              }`}
-            >
-              <FileText className="w-3 h-3 text-slate-400" />
-              Exportar
-            </button>
-          </div>
-        </div>
-
-        {/* MOBILE STATS (Visible on mobile where it can't fit in the top row) */}
-        <div className="lg:hidden mb-3">
-          <ExpiryStats 
-            variant="compact"
-            stats={state.stats} 
-            selectedStatuses={state.selectedStatuses} 
-            onStatusClick={(status) => {
-              const expiryStatus = status as ExpiryStatus;
-              const newStatuses = state.selectedStatuses.includes(expiryStatus)
-                ? state.selectedStatuses.filter(s => s !== expiryStatus)
-                : [...state.selectedStatuses, expiryStatus];
-              dbActions.setSelectedStatuses(newStatuses);
-            }}
-            theme={settings.theme}
-          />
-        </div>
-        
-        <div className="flex flex-col md:flex-row gap-2">
-          <div className="flex-1">
-            <ManagementSearchBar 
-              searchQuery={state.searchQuery}
-              setSearchQuery={dbActions.setSearchQuery}
-              onOpenFilters={() => actions.setIsFilterDrawerOpen(true)}
-              onOpenAdd={actions.handleOpenAdd}
-              onClearFilters={actions.handleClearFilters}
-              activeFiltersCount={ui.activeFiltersCount}
-              placeholder="BUSCAR SKU, NOMBRE O PROVEEDOR..."
-              accentColor="amber"
-              theme={settings.theme}
-            />
-          </div>
-
-          {/* QUICK FILTER PILLS (Now more integrated) */}
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar md:shrink-0">
-            {Array.from({ length: 4 }).map((_, i) => {
-              const date = addMonths(new Date(), i);
-              const monthName = format(date, 'MMM', { locale: es });
-              
-              return (
-                <button
-                  key={i}
-                  onClick={() => {
-                    actions.handleClearFilters();
-                    dbActions.setActionPeriod('custom');
-                    dbActions.setCustomDateRange({ start: startOfMonth(date), end: endOfMonth(date) });
-                  }}
-                  className={`px-2.5 py-1.5 rounded-lg border text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${
-                    state.actionPeriod === 'custom' && 
-                    state.customDateRange.start?.getMonth() === date.getMonth() &&
-                    state.customDateRange.start?.getFullYear() === date.getFullYear()
-                      ? 'bg-amber-500 border-amber-400 text-black'
-                      : settings.theme === 'dark'
-                        ? 'bg-white/5 border-white/10 text-slate-500 hover:text-white'
-                        : 'bg-white border-slate-200 text-slate-600'
-                  }`}
-                >
-                  {monthName}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* MAIN LIST */}
-      <div ref={parentRef} className={`flex-1 overflow-y-auto p-4 md:p-6 no-scrollbar pb-32 transition-colors ${
+      {/* Main Virtuallist Container */}
+      <div ref={parentRef} className={`flex-1 min-h-0 p-4 md:p-6 no-scrollbar pb-32 transition-colors ${
         settings.theme === 'dark' ? 'bg-slate-950/60' : 'bg-stone-100/80'
       }`}>
-        <div
-          style={{
-            height: `${rowVirtualizer.getTotalSize()}px`,
-            width: '100%',
-            position: 'relative',
-          }}
-        >
-          {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-            const item = allItems[virtualRow.index];
-            return (
-              <div
-                key={item.id}
-                ref={rowVirtualizer.measureElement}
-                data-index={virtualRow.index}
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  transform: `translateY(${virtualRow.start}px)`,
-                  paddingBottom: '12px', // space-y-3 equivalent
-                }}
-              >
-                {ui.viewMode === 'table' ? (
-                  <ExpiryItemRow 
-                    item={item}
-                    isSelected={state.selectedIds.has(item.id)}
-                    onToggleSelect={actions.handleToggleSelect}
-                    onRemove={actions.confirmRemoveItem}
-                    onOpenDetail={actions.handleOpenDetail}
-                    onEdit={actions.handleEdit}
-                    theme={settings.theme}
-                  />
-                ) : (
-                  <ExpiryItemCard 
-                    item={item}
-                    isSelected={state.selectedIds.has(item.id)}
-                    onToggleSelect={actions.handleToggleSelect}
-                    onRemove={actions.confirmRemoveItem}
-                    onOpenDetail={actions.handleOpenDetail}
-                    onEdit={actions.handleEdit}
-                    onFilterProvider={(provider) => dbActions.setSearchQuery(provider)}
-                    onFilterEstado={(estado) => dbActions.setSearchQuery(estado)}
-                    onFilterFrc={(frc) => dbActions.setSearchQuery(frc)}
-                    theme={settings.theme}
-                    isCompact={state.preferences.compactView}
-                  />
-                )}
+        <VirtualList
+          items={allItems}
+          itemHeight={itemHeight}
+          renderRow={ExpiryManagementRow}
+          rowData={rowData}
+          emptyState={
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-4 border transition-colors ${
+                settings.theme === 'dark' ? 'bg-white/5 border-white/5' : 'bg-slate-100 border-slate-200'
+              }`}>
+                <Calendar className={`w-10 h-10 ${settings.theme === 'dark' ? 'text-slate-700' : 'text-slate-300'}`} />
               </div>
-            );
-          })}
-        </div>
-
-        {state.processedScans.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-4 border transition-colors ${
-              settings.theme === 'dark' ? 'bg-white/5 border-white/5' : 'bg-slate-100 border-slate-200'
-            }`}>
-              <Calendar className={`w-10 h-10 ${settings.theme === 'dark' ? 'text-slate-700' : 'text-slate-300'}`} />
+              <h3 className={`text-lg font-black uppercase tracking-tighter italic ${settings.theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>Sin registros</h3>
+              <p className={`text-[10px] font-bold uppercase tracking-widest max-w-[200px] mt-2 ${settings.theme === 'dark' ? 'text-slate-600' : 'text-slate-400'}`}>
+                No se encontraron productos con fecha de vencimiento registrada.
+              </p>
             </div>
-            <h3 className={`text-lg font-black uppercase tracking-tighter italic ${settings.theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>Sin registros</h3>
-            <p className={`text-[10px] font-bold uppercase tracking-widest max-w-[200px] mt-2 ${settings.theme === 'dark' ? 'text-slate-600' : 'text-slate-400'}`}>
-              No se encontraron productos con fecha de vencimiento registrada.
-            </p>
-          </div>
-        )}
+          }
+        />
       </div>
 
-      {/* FOOTER INFO */}
+      {/* Footer Info bar */}
       <div className={`p-4 backdrop-blur-xl border-t flex justify-between items-center shrink-0 transition-colors ${
         settings.theme === 'dark' ? 'bg-brand-surface/80 border-white/5' : 'bg-white/90 border-slate-200 shadow-[0_-2px_10px_rgba(0,0,0,0.02)]'
       }`}>
@@ -336,154 +129,17 @@ const ExpiryManagementPage: React.FC = () => {
         </div>
       </div>
 
-      {/* OVERLAYS */}
-      <ExpiryFilterDrawer 
-        isOpen={ui.isFilterDrawerOpen}
-        onClose={() => actions.setIsFilterDrawerOpen(false)}
-        selectedStatuses={state.selectedStatuses}
-        setSelectedStatuses={dbActions.setSelectedStatuses}
-        selectedCanje={state.selectedCanje}
-        setSelectedCanje={dbActions.setSelectedCanje}
-        categories={state.categories}
-        selectedCategories={state.selectedCategories}
-        setSelectedCategories={dbActions.setSelectedCategories}
-        actionPeriod={state.actionPeriod}
-        setActionPeriod={dbActions.setActionPeriod}
-        customDateRange={state.customDateRange}
-        setCustomDateRange={dbActions.setCustomDateRange}
-        creationDateRange={state.creationDateRange}
-        setCreationDateRange={dbActions.setCreationDateRange}
-        theme={settings.theme}
+      {/* Decoupled Lego Overlays */}
+      <ExpiryOverlays
+        ui={ui}
+        actions={actions}
+        dbActions={dbActions}
+        state={state}
+        settings={settings}
+        productMap={productMap}
       />
-
-      <ManagementBulkActions 
-        selectedCount={state.selectedIds.size}
-        onClearSelection={() => dbActions.setSelectedIds(new Set())}
-        theme={settings.theme}
-        actions={[
-          {
-            label: "Seleccionar Todos los Visibles",
-            icon: CheckSquare,
-            onClick: actions.handleSelectAllVisible,
-            variant: "primary"
-          },
-          {
-            label: "Imprimir Seleccionados",
-            icon: Printer,
-            onClick: actions.handlePrintSelected,
-            variant: "secondary"
-          },
-          {
-            label: "Imprimir Etiquetas",
-            icon: Printer,
-            onClick: actions.handlePrintLabelsBulk,
-            variant: "warning"
-          },
-          {
-            label: "Enviar por Correo",
-            icon: Mail,
-            onClick: actions.handleSendEmailBulk,
-            variant: "success"
-          },
-          {
-            label: "Retirar Seleccionados",
-            icon: Trash2,
-            onClick: actions.confirmBulkRemove,
-            variant: "danger"
-          }
-        ]}
-      />
-
-      <ExpirySettingsDrawer 
-        isOpen={ui.isSettingsDrawerOpen}
-        onClose={() => actions.setIsSettingsDrawerOpen(false)}
-        preferences={state.preferences}
-        onUpdatePreferences={dbActions.handleUpdatePreferences}
-        onFullRefresh={dbActions.handleFullRefresh}
-        onClearLocalData={dbActions.clearLocalData}
-        theme={settings.theme}
-      />
-
-      <ExpiryDetailDrawer
-        isOpen={!!ui.detailItem}
-        onClose={() => actions.setDetailItem(null)}
-        item={ui.detailItem}
-        theme={settings.theme}
-        onEdit={(item) => {
-          actions.setDetailItem(null);
-          actions.handleEdit(item);
-        }}
-        onDelete={(item) => {
-          actions.setDetailItem(null);
-          actions.confirmRemoveItem(item);
-        }}
-        onPrintCode={(item) => {
-          toast('Etiqueta impresa (simulado)');
-        }}
-      />
-
-      <ExpiryEmailModal
-        isOpen={ui.isEmailModalOpen}
-        onClose={() => actions.setIsEmailModalOpen(false)}
-        selectedItems={state.allItems.filter(item => state.selectedIds.has(item.id))}
-        theme={settings.theme}
-      />
-
-      <AnimatePresence>
-        {ui.isDesktopAddModalOpen && (
-          <ExpirationModal 
-            productMap={productMap}
-            initialBarcode={ui.initialBarcode}
-            onCancel={() => {
-              actions.setIsDesktopAddModalOpen(false);
-              actions.setInitialBarcode('');
-            }}
-            onComplete={(data) => {
-              // CIERRE INMEDIATO PARA UI OPTIMISTA
-              actions.setIsDesktopAddModalOpen(false);
-              
-              dbActions.handleAddItem({
-                barcode: data.barcode,
-                productName: data.productName,
-                mm: data.mm,
-                yyyy: data.yyyy,
-                quantity: 1, // Default to 1 as requested
-                observaciones: data.observaciones,
-                fechaCC: `${String(data.mm).padStart(2, '0')}/${data.yyyy}`
-              });
-              
-              toast.success('Registrando vencimiento...');
-            }}
-          />
-        )}
-
-        {ui.editingItem && (
-          <ExpirationModal 
-            productMap={productMap}
-            title="EDITAR REGISTRO"
-            initialBarcode={ui.editingItem.barcode}
-            initialData={{
-              mm: ui.editingItem.mm,
-              yyyy: ui.editingItem.yyyy,
-              productName: ui.editingItem.productName,
-              observaciones: ui.editingItem.observaciones
-            }}
-            onCancel={() => actions.setEditingItem(null)}
-            onComplete={(data) => {
-              actions.setEditingItem(null);
-              dbActions.handleUpdateItem(ui.editingItem.id, {
-                mm: data.mm,
-                yyyy: data.yyyy,
-                productName: data.productName,
-                observaciones: data.observaciones
-              });
-            }}
-          />
-        )}
-      </AnimatePresence>
     </div>
   );
 };
 
 export default ExpiryManagementPage;
-

@@ -18,18 +18,26 @@ interface VirtualListProps<T> {
  * Optimizado para CPUs de bajo consumo y pantallas táctiles de PDA.
  */
 export const VirtualList = <T,>({ 
- items, 
- itemHeight, 
- renderRow: RowComponent, 
- rowData = {}, 
- onEndReached,
- endReachedThreshold = 5,
- className = "",
- emptyState
+	items, 
+	itemHeight, 
+	renderRow: RowComponent, 
+	rowData = {}, 
+	onEndReached,
+	endReachedThreshold = 5,
+	className = "",
+	emptyState
 }: VirtualListProps<T>) => {
- const containerRef = useRef<HTMLDivElement>(null);
- const [scrollTop, setScrollTop] = useState(0);
- const [containerHeight, setContainerHeight] = useState(0);
+	const containerRef = useRef<HTMLDivElement>(null);
+	const [scrollTop, setScrollTop] = useState(0);
+	const [containerHeight, setContainerHeight] = useState(0);
+
+	// Multi-compatible combined row data to support row components accessing items via index
+	const combinedRowData = useMemo(() => {
+		if (typeof rowData === 'object' && rowData !== null) {
+			return { ...rowData, items };
+		}
+		return { items };
+	}, [rowData, items]);
 
  // Ajuste de altura responsivo sin causar layouts pesados usando ResizeObserver
  useEffect(() => {
@@ -128,7 +136,7 @@ export const VirtualList = <T,>({
  <RowComponent 
  index={startIndex + localIndex} 
  item={item}
- data={rowData} 
+ data={combinedRowData} 
  />
  </div>
  ))}

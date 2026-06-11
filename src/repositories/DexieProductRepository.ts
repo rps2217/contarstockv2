@@ -3,62 +3,67 @@ import { db } from '../db';
 import { Product } from '../types';
 import { IProductRepository } from './IProductRepository';
 import { ProductSchema } from '../schemas/database';
+import { BaseDexieRepository } from './core/BaseDexieRepository';
 
-export class DexieProductRepository implements IProductRepository {
-  async getById(barcode: string): Promise<Product | undefined> {
-    return await db.products.get(barcode);
+export class DexieProductRepository extends BaseDexieRepository<Product> implements IProductRepository {
+  constructor() {
+    super(db.products);
   }
 
-  async save(product: Product): Promise<void> {
+  override async getById(barcode: string): Promise<Product | undefined> {
+    return await this.table.get(barcode);
+  }
+
+  override async save(product: Product): Promise<void> {
     const record = ProductSchema.parse({
       ...product,
       syncStatus: product.syncStatus || 'pending'
     }) as Product;
-    await db.products.put(record);
+    await this.table.put(record);
   }
 
-  async saveBatch(products: Product[]): Promise<void> {
+  override async saveBatch(products: Product[]): Promise<void> {
     const records = products.map(p => ({
       ...p,
       syncStatus: p.syncStatus || 'pending'
     }));
-    await db.products.bulkPut(records);
+    await this.table.bulkPut(records);
   }
 
-  async delete(barcode: string): Promise<void> {
-    const product = await db.products.get(barcode);
+  override async delete(barcode: string): Promise<void> {
+    const product = await this.table.get(barcode);
     if (product) {
       if (product.syncStatus === 'synced' || product.syncStatus === 'error') {
-        await db.products.update(barcode, { syncStatus: 'pending_delete' });
+        await this.table.update(barcode, { syncStatus: 'pending_delete' });
       } else {
-        await db.products.delete(barcode);
+        await this.table.delete(barcode);
       }
     }
   }
 
-  async deleteAll(): Promise<void> {
-    await db.products.clear();
+  override async deleteAll(): Promise<void> {
+    await this.table.clear();
   }
 
-  async getAll(): Promise<Product[]> {
-    return await db.products.toArray();
+  override async getAll(): Promise<Product[]> {
+    return await this.table.toArray();
   }
 
   async getLimited(limit: number): Promise<Product[]> {
-    return await db.products.limit(limit).toArray();
+    return await this.table.limit(limit).toArray();
   }
 
   async getPendingSyncCount(): Promise<number> {
-    return await db.products.where('syncStatus').equals('pending').count();
+    return await this.table.where('syncStatus').equals('pending').count();
   }
 
   async getPendingSync(): Promise<Product[]> {
-    return await db.products.where('syncStatus').equals('pending').toArray();
+    return await this.table.where('syncStatus').equals('pending').toArray();
   }
 
   async markAsSynced(barcodes: string[]): Promise<void> {
     if (barcodes.length === 0) return;
-    await db.products.where('barcode').anyOf(barcodes).modify({ syncStatus: 'synced' });
+    await this.table.where('barcode').anyOf(barcodes).modify({ syncStatus: 'synced' });
   }
 
   // SMART SEARCH: Optimización de Joyería para catálogos masivos
@@ -67,12 +72,12 @@ export class DexieProductRepository implements IProductRepository {
     if (!q) return this.getLimited(limit);
 
     // 1. Prioridad: Búsqueda exacta por código de barras (Instantánea)
-    const exactMatch = await db.products.get(q);
+    const exactMatch = await this.table.get(q);
     if (exactMatch) return [exactMatch];
 
     // 2. Si es numérico, buscar por prefijo de código de barras
     if (/^\d+$/.test(q)) {
-      return await db.products
+      return await this.table
         .where('barcode')
         .startsWith(q)
         .limit(limit)
@@ -80,7 +85,7 @@ export class DexieProductRepository implements IProductRepository {
     }
 
     // 3. Búsqueda por prefijo de nombre (Usa el índice 'name')
-    return await db.products
+    return await this.table
       .where('name')
       .startsWithIgnoreCase(q)
       .limit(limit)
@@ -89,10 +94,10 @@ export class DexieProductRepository implements IProductRepository {
 
   // OPTIMIZED STATS: Evitar toArray() masivo
   async getQuickStats() {
-    const total = await db.products.count();
+    const total = await this.table.count();
     if (total === 0) return { total: 0, trained: 0, synced: 0 };
 
-    const synced = await db.products.where('syncStatus').equals('synced').count();
+    const synced = await this.table.where('syncStatus').equals('synced').count();
     // Nota: El filtrado de 'trained' requiere recorrer o tener un índice de embeddings
     // Por ahora, usaremos una aproximación o un límite si no hay índice
     return { total, synced };

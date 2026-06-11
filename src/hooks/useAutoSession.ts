@@ -13,7 +13,7 @@ import { useAppStore } from '@/store/mainAppStore';
 export const useAutoSession = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { setStartSessionModalOpen } = useAppStore();
+  const setStartSessionModalOpen = useAppStore(state => state.setStartSessionModalOpen);
   const bufferRef = useRef<string>('');
   const lastKeyTimeRef = useRef<number>(0);
 

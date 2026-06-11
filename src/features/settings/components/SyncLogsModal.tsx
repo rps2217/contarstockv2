@@ -9,6 +9,8 @@ interface Props {
   onClose: () => void;
 }
 
+import { syncLogRepository } from '../../../repositories/SyncLogRepository';
+
 export const SyncLogsModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const [logs, setLogs] = useState<SyncLog[]>([]);
   const [expandedLogId, setExpandedLogId] = useState<number | null>(null);
@@ -18,20 +20,14 @@ export const SyncLogsModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
   const loadLogs = async () => {
     setIsLoading(true);
-    let query = db.sync_logs.orderBy('timestamp').reverse();
-    
-    let results = await query.limit(50).toArray();
-    
-    if (filter !== 'all') {
-      results = results.filter(l => l.status === filter);
-    }
+    let results = await syncLogRepository.getRecentLogs(50, filter);
     
     if (search) {
       const s = search.toLowerCase();
       results = results.filter(l => 
         l.tableName.toLowerCase().includes(s) || 
         l.action.toLowerCase().includes(s) ||
-        l.errorMessage?.toLowerCase().includes(s)
+        (l.errorMessage?.toLowerCase().includes(s) ?? false)
       );
     }
 
@@ -47,7 +43,7 @@ export const SyncLogsModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
   const clearLogs = async () => {
     if (confirm('¿Estás seguro de borrar todos los logs de diagnóstico?')) {
-      await db.sync_logs.clear();
+      await syncLogRepository.clearAllLogs();
       setLogs([]);
       toast.success('Logs borrados');
     }

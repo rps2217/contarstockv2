@@ -51,9 +51,15 @@ import { OnboardingOverlay } from '@/shared/components/core/OnboardingOverlay';
 import { useAppInit } from '@/hooks/useAppInit';
 import { motion, AnimatePresence } from 'motion/react';
 
+const ModuleRoute = ({ moduleKey, element }: { moduleKey: string, element: React.ReactNode }) => {
+  return isModuleEnabled(moduleKey) ? <React.Fragment>{element}</React.Fragment> : <Navigate to="/" replace />;
+};
+
 const AppContent = () => {
   const location = useLocation();
-  const { settings, isStartSessionModalOpen, setStartSessionModalOpen } = useAppStore();
+  const settings = useAppStore(state => state.settings);
+  const isStartSessionModalOpen = useAppStore(state => state.isStartSessionModalOpen);
+  const setStartSessionModalOpen = useAppStore(state => state.setStartSessionModalOpen);
   const { bootState, initStep, isAuthenticated, handleLoginSuccess } = useAppInit();
   
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
@@ -97,10 +103,6 @@ const AppContent = () => {
   }, [location.pathname]);
 
   const currentThemeClass = settings.theme === 'light' ? 'bg-slate-50 text-slate-900' : 'bg-slate-950 text-slate-100';
-
-  const ModuleRoute = ({ moduleKey, element }: { moduleKey: string, element: React.ReactNode }) => {
-    return isModuleEnabled(moduleKey) ? element : <Navigate to="/" replace />;
-  };
 
   if (bootState === 'initializing' && isAuthenticated !== false) {
     return (
@@ -173,7 +175,7 @@ const AppContent = () => {
           />
         )}
         
-        <main className={`flex-1 relative overflow-hidden transition-all duration-500 ${!isScanningMode ? (isSidebarCollapsed ? 'md:pl-20' : 'md:pl-64') : ''}`}>
+        <main className={`flex-1 relative overflow-hidden transition-[padding-left] duration-300 ease-in-out ${!isScanningMode ? (isSidebarCollapsed ? 'md:pl-20' : 'md:pl-64') : ''}`}>
           {/* Ocultar indicadores en móvil durante escaneo */}
           <div className={isScanningMode ? 'hidden sm:block' : ''}>
             <SystemStatus />

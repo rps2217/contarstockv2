@@ -18,6 +18,8 @@ import { thermalPrinter } from '../../services/thermalPrinterService';
 import { handlePrintLabels } from '../expiry/utils/expiryUtils';
 import { MassActionsPanel } from '../../shared/components/ui/MassActionsPanel';
 
+import { dynamicDataRepository } from '../../repositories/DynamicDataRepository';
+
 interface DynamicManagementPageProps {
   tableKey?: 'expiry' | 'products' | 'counts' | 'events';
   theme?: 'dark' | 'light';
@@ -50,11 +52,7 @@ export const DynamicManagementPage: React.FC<DynamicManagementPageProps> = ({
 
   // Fetch data from dynamic_data table for this specific tableName
   const records = useLiveQuery(
-    () => db.dynamic_data
-      .where('tableName')
-      .equals(schema?.tableName || '')
-      .reverse()
-      .sortBy('timestamp'),
+    () => dynamicDataRepository.getAllByTableName(schema?.tableName || ''),
     [schema?.tableName]
   );
 
@@ -82,7 +80,8 @@ export const DynamicManagementPage: React.FC<DynamicManagementPageProps> = ({
   const handleSubmit = async (values: any) => {
     try {
       if (isEditing && selectedItem) {
-        await db.dynamic_data.update(selectedItem.id, {
+        await dynamicDataRepository.save({
+          ...selectedItem,
           data: values,
           syncStatus: 'pending',
           syncError: undefined
@@ -102,7 +101,7 @@ export const DynamicManagementPage: React.FC<DynamicManagementPageProps> = ({
 
   const handleRemove = async (item: any) => {
     if (confirm('¿Estás seguro de eliminar este registro?')) {
-      await db.dynamic_data.delete(item.id);
+      await dynamicDataRepository.delete(item.id);
       toast.success('Registro eliminado');
       
       if (selectedIds.has(item.id)) {
@@ -117,7 +116,7 @@ export const DynamicManagementPage: React.FC<DynamicManagementPageProps> = ({
     setIsRetrying(true);
     const toastId = toast.loading(`Sincronizando...`);
     try {
-      await db.dynamic_data.update(item.id, { syncStatus: 'pending', syncError: undefined });
+      await dynamicDataRepository.retryPending(item.id);
       const result = await dynamicSyncService.syncAllPending(undefined, schema.tableName);
       if (result.success > 0) toast.success('Sincronización exitosa', { id: toastId });
       else toast.error('La sincronización falló', { id: toastId });
@@ -163,7 +162,7 @@ export const DynamicManagementPage: React.FC<DynamicManagementPageProps> = ({
   const handleMassDelete = async () => {
     if (!window.confirm(`¿Eliminar ${selectedIds.size} registros?`)) return;
     try {
-      await Promise.all(Array.from(selectedIds).map(id => db.dynamic_data.delete(id)));
+      await dynamicDataRepository.deleteMany(Array.from(selectedIds));
       toast.success('Registros eliminados');
       clearSelection();
     } catch (error) {
@@ -175,7 +174,7 @@ export const DynamicManagementPage: React.FC<DynamicManagementPageProps> = ({
     const toastId = toast.loading(`Sincronizando ${selectedIds.size} registros...`);
     try {
       await Promise.all(Array.from(selectedIds).map(id => 
-        db.dynamic_data.update(id, { syncStatus: 'pending', syncError: undefined })
+        dynamicDataRepository.retryPending(id)
       ));
       await dynamicSyncService.syncAllPending(undefined, schema.tableName);
       toast.success(`Sincronización completada`, { id: toastId });

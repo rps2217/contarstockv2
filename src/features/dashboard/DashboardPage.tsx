@@ -55,14 +55,18 @@ const Dashboard: React.FC = () => {
   const [scanInput, setScanInput] = useState("");
   const [isProcessingScan, setIsProcessingScan] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [isOrdersCollapsed, setIsOrdersCollapsed] = useState(true);
+  const [isOrdersCollapsed, setIsOrdersCollapsed] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const { settings } = useAppStore();
 
-  // Actividad simulada para el sparkline (telemetría visual)
-  const sparklineData = [
-    { v: 10 }, { v: 25 }, { v: 15 }, { v: 45 }, { v: 30 }, { v: 55 }, { v: 40 }, { v: 45 }, { v: 60 }
-  ];
+  // Histórico real para el sparkline
+  const sparklineData = React.useMemo(() => {
+    if (stats?.history && stats.history.length > 0) {
+      return stats.history.map(item => ({ v: item.v }));
+    }
+    // Fallback plano de 7 días si no hay histórico registrado aún
+    return Array.from({ length: 7 }, () => ({ v: 0 }));
+  }, [stats?.history]);
 
   useEffect(() => {
     const msg = (location.state as any)?.message;
@@ -176,13 +180,10 @@ const Dashboard: React.FC = () => {
         <div className="max-w-7xl mx-auto relative z-10">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 md:gap-8 mb-8 md:mb-12">
             <div>
-              <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="flex flex-wrap items-center gap-2 md:gap-3 mb-3 md:mb-4">
-                <div className="px-2.5 py-0.5 bg-blue-500/10 border border-blue-500/20 rounded-full">
-                  <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-blue-400">Enterprise Edition v3.1</span>
-                </div>
-                <div className="flex items-center gap-1.5 px-2 bg-slate-800/50 rounded-full py-0.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
-                  <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-slate-400">Cloud Live</span>
+              <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="flex flex-wrap items-center gap-2 mb-3">
+                <div className="px-3 py-1 bg-white/5 border border-white/10 rounded-full flex items-center gap-2">
+                  <span className="text-[10px] font-semibold text-slate-400">Operador:</span>
+                  <span className="text-[10px] font-bold text-blue-400">{operatorId}</span>
                 </div>
               </motion.div>
               <h1 className="text-4xl md:text-5xl font-black tracking-tighter leading-none italic uppercase">
@@ -199,7 +200,7 @@ const Dashboard: React.FC = () => {
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
-                <p className="text-[9px] font-bold text-center uppercase tracking-widest text-slate-600 mt-1">Actividad Real-Time</p>
+                <p className="text-[9px] font-bold text-center uppercase tracking-widest text-slate-600 mt-1">Actividad últimos 7 días</p>
               </div>
               <button
                 onClick={() => navigate("/settings")}
@@ -263,6 +264,16 @@ const Dashboard: React.FC = () => {
                   <Cloud className={`w-5 h-5 md:w-6 md:h-6 mb-1 ${isSyncNeeded ? 'text-amber-500 animate-pulse' : 'text-slate-600'}`} />
                 </div>
               </button>
+
+              <div className="surface-glass rounded-2xl md:rounded-3xl p-4 md:p-5 flex flex-col justify-center relative overflow-hidden text-left bg-slate-900/10 border border-white/5 transition-colors">
+                <p className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1 z-10 w-full truncate">Registros Hoy</p>
+                <div className="flex items-end gap-2 md:gap-3 z-10">
+                  <span className="text-3xl md:text-4xl font-black italic tracking-tighter leading-none text-white">
+                    {stats?.scansToday || 0}
+                  </span>
+                  <Activity className="w-5 h-5 md:w-6 md:h-6 mb-1 text-emerald-500" />
+                </div>
+              </div>
             </div>
           </div>
         </div>

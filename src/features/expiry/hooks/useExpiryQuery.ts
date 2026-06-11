@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { expiryRepository } from '../../../repositories/ExpiryRepository';
 import { productRepository } from '../../../repositories/DexieProductRepository';
+import { ProviderRepository } from '../../../repositories/ProviderRepository';
 import { db } from '../../../db';
 import { processExpiryItem, filterExpiryItems, calculateExpiryStats } from '../utils/expiryProcessor';
 import { useGlobalSearch } from '../../../hooks/useGlobalSearch';
@@ -24,7 +25,7 @@ export const useExpiryQuery = (
 ) => {
   const localItems = useLiveQuery(() => expiryRepository.getAll(tableName), [tableName]) || [];
   const allProducts = useLiveQuery(() => productRepository.getAll(), []) || [];
-  const allProviders = useLiveQuery(() => db.providers.toArray(), []) || [];
+  const allProviders = useLiveQuery(() => ProviderRepository.getAll(), []) || [];
   
   const productMap = useMemo(() => {
     if (!allProducts.length) return new Map();
