@@ -28,44 +28,6 @@ export const NavigationSection: React.FC<Props> = ({ settings, updateSetting }) 
   return (
     <section className="space-y-8 animate-in slide-in-from-bottom-2">
       
-      {/* MÓDULO DE INICIO POR DEFECTO */}
-      <div className="space-y-4">
-        <div className="flex justify-between items-center px-4">
-          <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Módulo de Inicio (Este Equipo)</h3>
-        </div>
-        
-        <div className="px-4">
-          <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-            Selecciona qué módulo debe abrirse automáticamente al iniciar la aplicación en este dispositivo. Ideal para puntos de venta o estaciones de trabajo específicas.
-          </p>
-          
-          <div className="grid grid-cols-2 gap-3">
-            {availableNavItems.map(item => {
-              const isStart = defaultStart === item.id;
-              const Icon = item.icon;
-              return (
-                <button
-                  key={`start-${item.id}`}
-                  onClick={() => updateSetting('defaultStartModule', item.id)}
-                  className={`
-                    p-4 rounded-[2rem] border-4 flex flex-col items-center justify-center gap-3 transition-all active:scale-[0.97]
-                    ${isStart 
-                      ? 'bg-amber-500 border-amber-400 text-white shadow-xl shadow-amber-900/20' 
-                      : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-white/5 opacity-80 text-slate-500 dark:text-slate-400'
-                    }
-                  `}
-                >
-                  <Icon className={`w-6 h-6 ${isStart ? 'stroke-[3px]' : 'stroke-[2px]'}`} />
-                  <span className={`text-[10px] font-black uppercase tracking-widest ${isStart ? 'text-white' : 'text-slate-900 dark:text-white'}`}>
-                    {item.label}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      </div>
-
       {/* NUEVO PANEL COMPAÑERO: EL MUELLE INTELIGENTE INFINITO */}
       <div className="space-y-4">
         <div className="flex justify-between items-center px-4">
