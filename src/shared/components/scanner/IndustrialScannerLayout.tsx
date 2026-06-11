@@ -83,11 +83,27 @@ export const IndustrialScannerLayout: React.FC<IndustrialScannerLayoutProps> = (
   bottomContent,
   labelPhoto
 }) => {
-  const [isManualMode, setIsManualMode] = useState(false);
+  const [isManualMode, setIsManualMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      // Default to manual mode on desktop to avoid automatic camera startup
+      return window.innerWidth >= 1024;
+    }
+    return false;
+  });
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [manualInput, setManualInput] = useState('');
   const manualInputRef = useRef<HTMLInputElement>(null);
   const lastSpokenRef = useRef<string>('');
+  
+  // Auto-focus manual input when enabled
+  useEffect(() => {
+    if (isManualMode) {
+      const timer = setTimeout(() => {
+        manualInputRef.current?.focus();
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [isManualMode]);
   
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -241,7 +257,7 @@ export const IndustrialScannerLayout: React.FC<IndustrialScannerLayoutProps> = (
         <div className={`flex-1 min-h-0 bg-slate-950 ${bottomContent ? 'pb-36' : 'pb-20'}`}>
           <VirtualList
             items={filteredItems}
-            itemHeight={68} // Approximate height of ScannedItemRow
+            itemHeight={86} // Larger, more readable row height (aligned with ScannedItemRow)
             renderRow={ScannedItemRowWrapper}
             rowData={React.useMemo(() => ({
               activeBarcode,
