@@ -5,6 +5,7 @@ import * as sessionService from "../../../services/sessionService";
 import { useLocation } from "react-router-dom";
 import { SessionRepository } from "../../../repositories/SessionRepository";
 import { ScanRepository } from "../../../repositories/ScanRepository";
+import { productRepository } from "../../../repositories/DexieProductRepository";
 import { useAppStore } from "@/store/mainAppStore";
 import { db } from "../../../db";
 
@@ -19,11 +20,15 @@ export const useReports = () => {
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [isPulling, setIsPulling] = useState(false);
 
-  const searchParams = new URLSearchParams(location.search);
-  const filterType = searchParams.get("type") || "standard";
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const initialFilterType = (searchParams.get("type") as 'all' | 'standard' | 'hammer' | 'reception') || "all";
+  const [filterType, setFilterType] = useState<'all' | 'standard' | 'hammer' | 'reception'>(initialFilterType);
 
   const [limit, setLimit] = useState(50);
+  const [liveConsolidated, setLiveConsolidated] = useState<any[]>([]);
+  const [isLiveLoading, setIsLiveLoading] = useState(false);
 
+  // Descarga y sincroniza del historial de cabeceras de bultos/sesiones
   const pullCloudData = useCallback(async () => {
     if (isPulling) return;
     setIsPulling(true);
@@ -138,9 +143,96 @@ export const useReports = () => {
     }
   }, [isPulling]);
 
-  // Pull cloud data on mount
+  // Consolidación en tiempo real: lee las lecturas brutas de las tablas de la nube
+  const fetchLiveConsolidatedData = useCallback(async () => {
+    setIsLiveLoading(true);
+    try {
+      const config = (await import("../../../services/settings")).getSettings().cloudConfig;
+      const countsTable = config?.countsTableName || "CONTEOS";
+      const consolidatedTable = config?.consolidatedTableName || "CONSOLIDADO";
+      const { supabaseSyncService } = await import("../../../services/supabaseSyncService");
+      
+      const [countsRes, consolRes] = await Promise.all([
+        supabaseSyncService.pullBatch(countsTable),
+        supabaseSyncService.pullBatch(consolidatedTable)
+      ]);
+
+      const aggregation: Record<string, {
+        barcode: string;
+        productName: string;
+        totalQuantity: number;
+        locations: Set<string>;
+        sources: Set<'Martillo' | 'Estándar'>;
+        lastUpdated: number;
+      }> = {};
+
+      const processRows = (rows: any[], source: 'Martillo' | 'Estándar') => {
+        for (const r of rows) {
+          const barcode = r.SKU || r.barcode || r.barcode_scanned || '';
+          if (!barcode) continue;
+
+          const quantity = Number(r.CANTIDAD || r.quantity || r.qty_scanned || r.CANT_FISICA || 1);
+          const locationVal = r.UBICACION || r.location || r.ETIQUETA || '';
+          const timestamp = r.timestamp || r.TIMESTAMP || r.FECHA || Date.now();
+
+          if (!aggregation[barcode]) {
+            aggregation[barcode] = {
+              barcode,
+              productName: 'Cargando...',
+              totalQuantity: 0,
+              locations: new Set<string>(),
+              sources: new Set<'Martillo' | 'Estándar'>(),
+              lastUpdated: isNaN(Date.parse(timestamp)) ? Date.now() : Date.parse(timestamp)
+            };
+          }
+
+          const entry = aggregation[barcode];
+          entry.totalQuantity += quantity;
+          if (locationVal) entry.locations.add(locationVal);
+          entry.sources.add(source);
+          entry.lastUpdated = Math.max(
+            entry.lastUpdated,
+            isNaN(Date.parse(timestamp)) ? Date.now() : Date.parse(timestamp)
+          );
+        }
+      };
+
+      if (countsRes.success && countsRes.rows) {
+        processRows(countsRes.rows, 'Martillo');
+      }
+      if (consolRes.success && consolRes.rows) {
+        processRows(consolRes.rows, 'Estándar');
+      }
+
+      const list = Object.values(aggregation);
+
+      const resolvedList = await Promise.all(list.map(async (item) => {
+        const prod = await productRepository.getById(item.barcode);
+        const sourceArr = Array.from(item.sources);
+        const sourceStr = sourceArr.length > 1 ? 'Mixto' : (sourceArr[0] || 'Desconocido');
+        return {
+          ...item,
+          productName: prod?.name || 'SKU Desconocido',
+          locationsList: Array.from(item.locations).join(', ') || 'N/A',
+          source: sourceStr
+        };
+      }));
+
+      // Sort by quantity desc
+      resolvedList.sort((a, b) => b.totalQuantity - a.totalQuantity);
+      setLiveConsolidated(resolvedList);
+    } catch (err) {
+      console.error("Error cargando consolidación:", err);
+      toast.error("No se pudo regenerar la consolidación de la nube");
+    } finally {
+      setIsLiveLoading(false);
+    }
+  }, []);
+
+  // Sync data initially
   useEffect(() => {
     pullCloudData();
+    fetchLiveConsolidatedData();
   }, []);
 
   const pendingSyncCount = useLiveQuery(
@@ -149,7 +241,6 @@ export const useReports = () => {
     0,
   );
 
-  // Mapa de ERPs para identificar multi-bulto
   const erpCounts = useLiveQuery(async () => {
     const allSessions = await SessionRepository.getAll();
     const counts: Record<string, number> = {};
@@ -164,10 +255,25 @@ export const useReports = () => {
   const sessions = useLiveQuery(
     async () => {
       const q = searchQuery.trim().toLowerCase();
-      return await SessionRepository.getSessionsByType(filterType, q, limit);
+      let results: any[];
+      if (filterType === 'all') {
+        results = await SessionRepository.getAll();
+        results.sort((a, b) => b.createdAt - a.createdAt);
+      } else {
+        results = await SessionRepository.getSessionsByType(filterType);
+      }
+      
+      if (q) {
+        results = results.filter((s) => 
+          s.id.toLowerCase().includes(q) || 
+          (s.erpOrder?.toLowerCase().includes(q) || false) || 
+          (s.logisticsLabel?.toLowerCase().includes(q) || false)
+        );
+      }
+      return results.slice(0, limit);
     },
     [searchQuery, limit, filterType],
-    undefined, // Cambiado a undefined para detectar carga
+    undefined,
   );
 
   const isLoading = sessions === undefined;
@@ -231,6 +337,8 @@ export const useReports = () => {
       handleMenuToggle,
       loadMore,
       pullCloudData,
+      fetchLiveConsolidatedData,
+      setFilterType,
     }),
     [
       setStartSessionModalOpen,
@@ -239,6 +347,7 @@ export const useReports = () => {
       handleMenuToggle,
       loadMore,
       pullCloudData,
+      fetchLiveConsolidatedData,
     ],
   );
 
@@ -247,6 +356,8 @@ export const useReports = () => {
       sessions,
       isLoading: isLoading || isPulling,
       isPulling,
+      liveConsolidated,
+      isLiveLoading,
       erpCounts: erpCounts || {},
       pendingSyncCount,
       syncedCount: syncedCount || 0,
@@ -261,4 +372,3 @@ export const useReports = () => {
     actions,
   };
 };
-

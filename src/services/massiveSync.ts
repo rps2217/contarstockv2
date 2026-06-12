@@ -55,6 +55,42 @@ export const migrateMassiveToMaster = async (batchId: string): Promise<string> =
     await massiveDb.blindScans.where('batchId').equals(batchId).delete();
     await massiveDb.blindManifests.where('batchId').equals(batchId).delete();
 
+    // AUTO-SYNC EN FIN_DE_PROCESO: Sincronizar de forma inmediata con Supabase para visibilidad multi-dispositivo
+    try {
+      const config = getSettings().cloudConfig;
+      const targetTable = config?.countsTableName || "CONTEOS";
+      const { aggregateScans } = await import('./aggregator');
+      const consolidatedItems = await aggregateScans(recordsToMigrate);
+      const { createInventoryPayload } = await import('./cloud/mappers');
+      const fullPayload = createInventoryPayload(session, consolidatedItems, 'manual');
+      
+      const uploadResult = await supabaseSyncService.pushBatch(targetTable, fullPayload);
+      if (uploadResult.success) {
+        const scanIds = recordsToMigrate.map(r => r.id);
+        await db.scans.where('id').anyOf(scanIds).modify({ synced: 1 });
+        await db.sessions.update(session.id, { 
+          lastSyncTimestamp: Date.now(),
+          syncStatus: 'synced'
+        });
+
+        const sessionPayload = {
+          id: session.id,
+          erpOrder: session.erpOrder,
+          logisticsLabel: session.logisticsLabel,
+          sessionType: session.sessionType,
+          status: 'completed',
+          createdAt: session.createdAt,
+          totalUnits: recordsToMigrate.reduce((sum, r) => sum + r.quantity, 0),
+          totalSKUs: new Set(recordsToMigrate.map(r => r.barcode)).size,
+          photoUrl: session.photoUrl || '',
+          lastSyncTimestamp: Date.now()
+        };
+        await supabaseSyncService.pushBatch('SESIONES_CONTEO', [sessionPayload]);
+      }
+    } catch (pushErr) {
+      console.warn("[migrateMassiveToMaster] Auto-push falló, se sincronizará luego:", pushErr);
+    }
+
     const duration = performance.now() - startTime;
     telemetry.track('SESSION', 'MIGRATE_SUCCESS', { batchId, scanCount: rawScans.length }, duration, batchId);
     
@@ -79,14 +115,18 @@ export const pushScansToCloud = async (batchId: string): Promise<void> => {
 
     logger.info('CLOUD_SYNC', `Sincronizando ${scans.length} registros para lote: ${batchId}`);
 
-    const payload = scans.map(s => ({
-      id: generateUUID(),
-      batchId: s.batchId,
-      barcode: s.barcode,
-      quantity: s.quantity,
-      location: s.location || '',
-      timestamp: new Date(s.timestamp).toISOString()
-    }));
+    const payload = scans.map(s => {
+      const locPart = s.location || 'ZONA-A';
+      const uniqueId = `HM_ACTIVE_${batchId}_${locPart}_${s.barcode}`;
+      return {
+        id: uniqueId,
+        batchId: s.batchId,
+        barcode: s.barcode,
+        quantity: s.quantity,
+        location: s.location || '',
+        timestamp: new Date(s.timestamp).toISOString()
+      };
+    });
 
     const config = getSettings().cloudConfig;
     const tableName = config?.countsTableName || 'CONTEOS';
