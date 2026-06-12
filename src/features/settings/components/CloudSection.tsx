@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Database, RefreshCw, Zap, Activity, Cloud, CheckCircle2, AlertCircle, UploadCloud, DownloadCloud } from 'lucide-react';
+import { Database, RefreshCw, Zap, Activity, Cloud, CheckCircle2, AlertCircle, UploadCloud, DownloadCloud, Server } from 'lucide-react';
 import { configSyncService } from '../../../services/configSyncService';
 import { motion } from 'motion/react';
 import { AppSettings } from '../../../types';
@@ -7,6 +7,7 @@ import { SettingsSection, SettingsCard, SettingsButton } from './common/Settings
 import { SoundFX } from '../../../services/audio';
 import { toast } from 'sonner';
 import { SyncLogsModal } from './SyncLogsModal';
+import { SupabaseAuditorModal } from './SupabaseAuditorModal';
 import { useSyncStore } from '../../../store/useSyncStore';
 
 interface Props {
@@ -16,6 +17,7 @@ interface Props {
 
 export const CloudSection: React.FC<Props> = ({ settings }) => {
   const [showLogs, setShowLogs] = useState(false);
+  const [showAuditor, setShowAuditor] = useState(false);
   const [isSyncingConfig, setIsSyncingConfig] = useState(false);
   
   const { latencyMs, pendingItems, isSupabaseConnected, isSyncing } = useSyncStore();
@@ -153,7 +155,14 @@ export const CloudSection: React.FC<Props> = ({ settings }) => {
                 label="Ver Logs de Sincronización"
                 icon={Activity}
                 variant="secondary"
-                className="bg-slate-800 border-indigo-500/20 text-indigo-400 h-14 md:col-span-2"
+                className="bg-slate-800 border-indigo-500/10 text-indigo-400 h-14"
+              />
+              <SettingsButton 
+                onClick={() => setShowAuditor(true)}
+                label="Auditar Esquemas y Tablas"
+                icon={Server}
+                variant="secondary"
+                className="bg-indigo-500/10 border-indigo-500/30 text-white h-14 font-black"
               />
             </div>
           </div>
@@ -161,6 +170,7 @@ export const CloudSection: React.FC<Props> = ({ settings }) => {
       </SettingsSection>
 
       <SyncLogsModal isOpen={showLogs} onClose={() => setShowLogs(false)} />
+      <SupabaseAuditorModal isOpen={showAuditor} onClose={() => setShowAuditor(false)} />
     </div>
   );
 };
