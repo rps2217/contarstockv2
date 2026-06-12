@@ -2,7 +2,7 @@
 import { isModuleEnabled } from '../services/moduleManager';
 import React from 'react';
 import { motion } from 'motion/react';
-import { Home, Database, History, Container, Cloud, Box, Settings, Zap, FileText, Camera, Calendar, ChevronLeft, ChevronRight, AlertCircle, RefreshCw, Users, ShieldCheck } from 'lucide-react';
+import { Home, Database, History, Container, Cloud, Box, Settings, Zap, FileText, Camera, Calendar, ChevronLeft, ChevronRight, AlertCircle, RefreshCw, Users, ShieldCheck, FileSpreadsheet } from 'lucide-react';
 // Forced update to trigger GitHub sync for the components folder
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AppSettings, TableSchema } from '../types';
@@ -93,6 +93,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
         <NavItem path="/reception" activeKey="reception" label="Recepción" icon={Container} moduleKey="reception" isCollapsed={isCollapsed} onNavigate={navigate} />
         <NavItem path="/reports" activeKey="reports" label="Auditoría" icon={History} moduleKey="reports" isCollapsed={isCollapsed} onNavigate={navigate} />
         <NavItem path="/database" activeKey="database" label="Inventario" icon={Database} moduleKey="database" isCollapsed={isCollapsed} onNavigate={navigate} />
+        <NavItem path="/expected-orders" activeKey="expected-orders" label="Carga Teórica" icon={FileSpreadsheet} isCollapsed={isCollapsed} onNavigate={navigate} />
         <NavItem path="/compliance" activeKey="compliance" label="Control Canjes" icon={ShieldCheck} isCollapsed={isCollapsed} onNavigate={navigate} />
         
         {!isCollapsed && <div className="text-[9px] font-black text-slate-700 uppercase tracking-[0.3em] px-4 mb-4 mt-8">Herramientas</div>}

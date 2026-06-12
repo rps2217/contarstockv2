@@ -44,6 +44,7 @@ const DynamicManagement = lazyWithRetry(() => import('@/features/dynamic/Dynamic
 const GlobalSyncQueue = lazyWithRetry(() => import('@/features/sync/SyncCenterPage').then(m => ({ default: m.SyncCenterPage })));
 const ProvidersPage = lazyWithRetry(() => import('@/features/suppliers/pages/ProvidersPage').then(m => ({ default: m.ProvidersPage })));
 const CustomersPage = lazyWithRetry(() => import('@/features/customers/CustomersPage').then(m => ({ default: m.CustomersPage })));
+const ExpectedOrdersPage = lazyWithRetry(() => import('@/features/expected-orders/ExpectedOrdersPage').then(m => ({ default: m.ExpectedOrdersPage })));
 
 import { OnboardingOverlay } from '@/shared/components/core/OnboardingOverlay';
 
@@ -213,6 +214,7 @@ const AppContent = () => {
                     <Route path="/compliance" element={<ComplianceDashboardPage />} />
                     <Route path="/providers" element={<ProvidersPage />} />
                     <Route path="/customers" element={<CustomersPage />} />
+                    <Route path="/expected-orders" element={<ExpectedOrdersPage />} />
                     <Route path="/dynamic/:tableKey" element={<DynamicManagement />} />
                     <Route path="/counting/:id" element={<ModuleRoute moduleKey="counting" element={<CountingPage />} />} />
                     <Route path="/massive/:batchId" element={<ModuleRoute moduleKey="counting" element={<HammerPage />} />} />

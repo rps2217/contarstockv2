@@ -12,12 +12,14 @@ interface Props {
 export const PrinterSection: React.FC<Props> = ({ settings, updateSetting }) => {
  const [isConnected, setIsConnected] = useState(thermalPrinter.isConnected());
  const [isConnecting, setIsConnecting] = useState(false);
+ const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
  const handleConnectUSB = async () => {
  setIsConnecting(true);
+ setErrorMessage(null);
+ try {
  const success = await thermalPrinter.connectUSB();
  setIsConnected(success);
- setIsConnecting(false);
  if (success) {
  updateSetting('thermalPrinter', { 
  ...settings.thermalPrinter, 
@@ -26,13 +28,21 @@ export const PrinterSection: React.FC<Props> = ({ settings, updateSetting }) => 
  deviceName: thermalPrinter.getDeviceName()
  });
  }
+ } catch (err: any) {
+ console.warn("Could not connect to USB printer:", err);
+ setErrorMessage(err?.message || "Ocurrió un error inesperado al conectar por USB.");
+ setIsConnected(false);
+ } finally {
+ setIsConnecting(false);
+ }
  };
 
  const handleConnectBT = async () => {
  setIsConnecting(true);
+ setErrorMessage(null);
+ try {
  const success = await thermalPrinter.connectBluetooth();
  setIsConnected(success);
- setIsConnecting(false);
  if (success) {
  updateSetting('thermalPrinter', { 
  ...settings.thermalPrinter, 
@@ -40,6 +50,13 @@ export const PrinterSection: React.FC<Props> = ({ settings, updateSetting }) => 
  type: 'bluetooth',
  deviceName: thermalPrinter.getDeviceName()
  });
+ }
+ } catch (err: any) {
+ console.warn("Could not connect to Bluetooth printer:", err);
+ setErrorMessage(err?.message || "Ocurrió un error inesperado al conectar por Bluetooth.");
+ setIsConnected(false);
+ } finally {
+ setIsConnecting(false);
  }
  };
 
@@ -108,6 +125,16 @@ export const PrinterSection: React.FC<Props> = ({ settings, updateSetting }) => 
  <p className="text-[9px] text-center text-slate-400 font-bold uppercase tracking-wide px-4">
  Nota: Android requiere permisos de Ubicación y Bluetooth para detectar la impresora.
  </p>
+
+ {errorMessage && (
+ <div className="bg-rose-50 border-2 border-rose-100 p-4 rounded-2xl flex gap-3 text-left animate-in fade-in slide-in-from-top-1">
+ <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+ <div className="space-y-1">
+ <p className="text-[10px] font-black text-rose-800 uppercase">Fallo de Permisos o Entorno</p>
+ <p className="text-[11px] text-rose-600 font-bold leading-normal">{errorMessage}</p>
+ </div>
+ </div>
+ )}
  </div>
  )}
  </div>

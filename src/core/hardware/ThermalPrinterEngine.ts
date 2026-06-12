@@ -38,6 +38,9 @@ export class ThermalPrinterEngine {
 
   async connectUSB(): Promise<boolean> {
     try {
+      if (!navigator || !('usb' in navigator)) {
+        throw new Error("WebUSB no es compatible con este navegador o entorno.");
+      }
       this.usbDevice = await (navigator as any).usb.requestDevice({ filters: [] });
       if (!this.usbDevice) return false;
       
@@ -49,14 +52,22 @@ export class ThermalPrinterEngine {
       if (!endpoint) throw new Error("No output channel found.");
       this.endpointOut = endpoint.endpointNumber;
       return true;
-    } catch (err) {
-      console.error("USB Connection Error:", err);
-      return false;
+    } catch (err: any) {
+      const isSecurity = err?.name === 'SecurityError' || String(err?.message || '').includes('permissions policy') || String(err?.message || '').includes('disallowed');
+      if (isSecurity) {
+        console.warn("[USB] Bloqueado por política de seguridad (iframe o permisos).");
+        throw new Error("El acceso USB está restringido por la directiva de seguridad del navegador. Abre la aplicación en una pestaña nueva para poder vincular la impresora.");
+      }
+      console.warn("[USB] Error de conexión:", err?.message || err);
+      throw err;
     }
   }
 
   async connectBluetooth(): Promise<boolean> {
     try {
+      if (!navigator || !('bluetooth' in navigator)) {
+        throw new Error("WebBluetooth no es compatible con este navegador o entorno.");
+      }
       const device = await (navigator as any).bluetooth.requestDevice({
         filters: [
           { namePrefix: 'SLK' },
@@ -79,9 +90,14 @@ export class ThermalPrinterEngine {
         }
       }
       return false;
-    } catch (err) {
-      console.error("Bluetooth Connection Error:", err);
-      return false;
+    } catch (err: any) {
+      const isSecurity = err?.name === 'SecurityError' || String(err?.message || '').includes('permissions policy') || String(err?.message || '').includes('disallowed');
+      if (isSecurity) {
+        console.warn("[Bluetooth] Bloqueado por política de seguridad (iframe o permisos).");
+        throw new Error("El acceso Bluetooth está restringido por la directiva de seguridad del navegador. Abre la aplicación en una pestaña nueva para poder vincular la impresora.");
+      }
+      console.warn("[Bluetooth] Error de conexión:", err?.message || err);
+      throw err;
     }
   }
 

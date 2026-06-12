@@ -16,7 +16,8 @@ import {
   LayoutDashboard,
   Plus,
   Radio,
-  FileCheck2
+  FileCheck2,
+  FileSpreadsheet
 } from "lucide-react";
 import { useDashboard } from "./hooks/useDashboard";
 import { useAppStore } from "@/store/mainAppStore";
@@ -142,6 +143,15 @@ const Dashboard: React.FC = () => {
               description="Ver y gestionar catálogo maestro de SKU" 
               color="amber" 
               onClick={() => navigate("/database")} 
+              isDark={isDark}
+            />
+
+            <BentoModule 
+              icon={<FileSpreadsheet />} 
+              label="Carga Teórica" 
+              description="Cargar facturas, remisiones o picking de control" 
+              color="blue" 
+              onClick={() => navigate("/expected-orders")} 
               isDark={isDark}
             />
 
