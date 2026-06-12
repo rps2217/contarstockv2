@@ -45,7 +45,6 @@ const GlobalSyncQueue = lazyWithRetry(() => import('@/features/sync/SyncCenterPa
 const ProvidersPage = lazyWithRetry(() => import('@/features/suppliers/pages/ProvidersPage').then(m => ({ default: m.ProvidersPage })));
 const CustomersPage = lazyWithRetry(() => import('@/features/customers/CustomersPage').then(m => ({ default: m.CustomersPage })));
 
-import { ExpiryAlertBanner } from '@/features/expiry/components/ExpiryAlertBanner';
 import { OnboardingOverlay } from '@/shared/components/core/OnboardingOverlay';
 
 import { useAppInit } from '@/hooks/useAppInit';
@@ -179,7 +178,6 @@ const AppContent = () => {
           {/* Ocultar indicadores en móvil durante escaneo */}
           <div className={isScanningMode ? 'hidden sm:block' : ''}>
             <SystemStatus />
-            <ExpiryAlertBanner theme={settings.theme} />
           </div>
           
           <ErrorBoundary>

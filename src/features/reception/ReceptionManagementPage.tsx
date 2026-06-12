@@ -176,7 +176,7 @@ const ReceptionManagementPage: React.FC = () => {
     onCapture: (code) => logicActions.handleScan(code, logicState.currentErp)
   });
   
-  const { isLocked, unlock, lock } = useAutoLock(settings.autoLockTimeout || 30000, !!settings.autoLockTimeout);
+  const { isLocked, unlock, lock } = useAutoLock(settings.autoLockTimeout || 30000, false);
   const location = useLocation();
 
   const isDark = settings.theme === 'dark';

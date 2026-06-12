@@ -41,8 +41,10 @@ const Dashboard: React.FC = () => {
     }
   }, [location, navigate]);
 
+  const isDark = settings?.theme !== 'light';
+
   return (
-    <div className="h-full w-full bg-slate-950 overflow-y-auto no-scrollbar pb-32 font-sans selection:bg-blue-500/30 relative">
+    <div className={`h-full w-full ${isDark ? "bg-slate-950 selection:bg-blue-500/30" : "bg-slate-50 selection:bg-blue-500/20"} overflow-y-auto no-scrollbar pb-32 font-sans relative`}>
       <AnimatePresence>
         {successMessage && (
           <motion.div 
@@ -66,27 +68,27 @@ const Dashboard: React.FC = () => {
       </AnimatePresence>
 
       {/* HEADER / COMMAND CENTER */}
-      <header className="px-4 md:px-6 pt-10 md:pt-16 pb-8 md:pb-12 bg-slate-900 border-b border-white/5 relative overflow-hidden shrink-0">
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-600/5 rounded-full blur-[120px] -mr-64 -mt-64" />
+      <header className={`px-4 md:px-6 pt-10 md:pt-16 pb-8 md:pb-12 ${isDark ? "bg-slate-900 border-white/5" : "bg-white border-slate-200/80"} border-b relative overflow-hidden shrink-0`}>
+        <div className={`absolute top-0 right-0 w-[500px] h-[500px] ${isDark ? "bg-blue-600/5" : "bg-blue-500/3"} rounded-full blur-[120px] -mr-64 -mt-64`} />
         
         <div className="max-w-7xl mx-auto relative z-10">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 md:gap-8">
             <div>
               <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="flex flex-wrap items-center gap-2 mb-3">
-                <div className="px-3 py-1 bg-white/5 border border-white/10 rounded-full flex items-center gap-2">
-                  <span className="text-[10px] font-semibold text-slate-400">Operador:</span>
-                  <span className="text-[10px] font-bold text-blue-400">{operatorId}</span>
+                <div className={`px-3 py-1 ${isDark ? "bg-white/5 border-white/10" : "bg-slate-100 border-slate-200"} border rounded-full flex items-center gap-2`}>
+                  <span className={`text-[10px] font-semibold ${isDark ? "text-slate-400" : "text-slate-500"}`}>Operador:</span>
+                  <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">{operatorId}</span>
                 </div>
               </motion.div>
               <h1 className="text-4xl md:text-5xl font-black tracking-tighter leading-none italic uppercase">
-                LOGI<span className="text-gradient-blue">COUNT</span><span className="text-white/10 ml-2 md:ml-3">PRO</span>
+                <span className={isDark ? "text-white" : "text-slate-900"}>LOGI</span><span className="text-gradient-blue">COUNT</span><span className={`${isDark ? "text-white/10" : "text-slate-300"} ml-2 md:ml-3`}>PRO</span>
               </h1>
             </div>
             
             <div className="flex items-center justify-end">
               <button
                 onClick={() => navigate("/settings")}
-                className="w-12 h-12 md:w-14 md:h-14 surface-glass rounded-xl md:rounded-2xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-all active:scale-95 group"
+                className={`w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-2xl flex items-center justify-center transition-all active:scale-95 group border ${isDark ? "surface-glass text-slate-400 border-white/5 hover:text-white hover:bg-slate-800" : "bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 border-slate-200"}`}
               >
                 <Settings className="w-5 h-5 md:w-6 md:h-6 group-hover:rotate-90 transition-transform duration-500" />
               </button>
@@ -99,8 +101,8 @@ const Dashboard: React.FC = () => {
         {/* MODULES SECTION */}
         <section>
           <div className="flex items-center gap-3 mb-6 px-2">
-            <LayoutDashboard className="w-4 h-4 md:w-5 md:h-5 text-slate-500" />
-            <h2 className="text-[10px] md:text-xs font-black uppercase tracking-[0.2em] md:tracking-[0.3em] text-slate-500">Módulos Operativos</h2>
+            <LayoutDashboard className={`w-4 h-4 md:w-5 md:h-5 ${isDark ? "text-slate-500" : "text-slate-400"}`} />
+            <h2 className={`text-[10px] md:text-xs font-black uppercase tracking-[0.2em] md:tracking-[0.3em] ${isDark ? "text-slate-500" : "text-slate-400"}`}>Módulos Operativos</h2>
           </div>
           
           {/* Bento-style Grid with responsive columns: 2 columns on mobile, 3 on tablet, 4 on desktop */}
@@ -113,6 +115,7 @@ const Dashboard: React.FC = () => {
               color="indigo" 
               onClick={() => setStartSessionModalOpen(true)}
               className="col-span-2"
+              isDark={isDark}
             />
 
             <BentoModule 
@@ -121,6 +124,7 @@ const Dashboard: React.FC = () => {
               description="Recepción y validación de mercadería logística" 
               color="emerald" 
               onClick={() => navigate("/reception")} 
+              isDark={isDark}
             />
 
             <BentoModule 
@@ -129,6 +133,7 @@ const Dashboard: React.FC = () => {
               description="Escaneo masivo ultra rápido asistido" 
               color="rose" 
               onClick={() => navigate("/massive/BURST-MODE")} 
+              isDark={isDark}
             />
 
             <BentoModule 
@@ -137,6 +142,7 @@ const Dashboard: React.FC = () => {
               description="Ver y gestionar catálogo maestro de SKU" 
               color="amber" 
               onClick={() => navigate("/database")} 
+              isDark={isDark}
             />
 
             <BentoModule 
@@ -145,6 +151,7 @@ const Dashboard: React.FC = () => {
               description="Control de lotes y fechas de vencimiento de bultos" 
               color="orange" 
               onClick={() => navigate("/expiry")} 
+              isDark={isDark}
             />
 
             <BentoModule 
@@ -153,6 +160,7 @@ const Dashboard: React.FC = () => {
               description="Asignación y tracking de cargas a clientes" 
               color="blue" 
               onClick={() => navigate("/customers")} 
+              isDark={isDark}
             />
 
             <BentoModule 
@@ -161,6 +169,7 @@ const Dashboard: React.FC = () => {
               description="Mermas, roturas y bitácora de incidencias" 
               color="purple" 
               onClick={() => navigate("/events")} 
+              isDark={isDark}
             />
 
             <BentoModule 
@@ -169,6 +178,7 @@ const Dashboard: React.FC = () => {
               description="Directorio de proveedores y auditorías" 
               color="cyan" 
               onClick={() => navigate("/providers")} 
+              isDark={isDark}
             />
 
             <BentoModule 
@@ -178,6 +188,7 @@ const Dashboard: React.FC = () => {
               color="teal" 
               onClick={() => navigate("/sync")} 
               className="col-span-2"
+              isDark={isDark}
             />
 
             <BentoModule 
@@ -186,6 +197,7 @@ const Dashboard: React.FC = () => {
               description="Informes, resúmenes y descargas CSV/PDF" 
               color="violet" 
               onClick={() => navigate("/reports")} 
+              isDark={isDark}
             />
 
           </div>
@@ -202,10 +214,11 @@ interface BentoModuleProps {
   color: 'emerald' | 'rose' | 'amber' | 'blue' | 'orange' | 'indigo' | 'purple' | 'violet' | 'cyan' | 'teal';
   onClick: () => void;
   className?: string;
+  isDark?: boolean;
 }
 
-const BentoModule: React.FC<BentoModuleProps> = ({ icon, label, description, color, onClick, className = "" }) => {
-  const colors = {
+const BentoModule: React.FC<BentoModuleProps> = ({ icon, label, description, color, onClick, className = "", isDark = true }) => {
+  const colors = isDark ? {
     emerald: 'bg-emerald-500/5 text-emerald-400 border-emerald-500/10 hover:bg-emerald-500/10 hover:border-emerald-500/20',
     rose: 'bg-rose-500/5 text-rose-400 border-rose-500/10 hover:bg-rose-500/10 hover:border-rose-500/20',
     amber: 'bg-amber-500/5 text-amber-400 border-amber-500/10 hover:bg-amber-500/10 hover:border-amber-500/20',
@@ -216,6 +229,17 @@ const BentoModule: React.FC<BentoModuleProps> = ({ icon, label, description, col
     violet: 'bg-violet-500/5 text-violet-400 border-violet-500/10 hover:bg-violet-500/10 hover:border-violet-500/20',
     cyan: 'bg-cyan-500/5 text-cyan-400 border-cyan-500/10 hover:bg-cyan-500/10 hover:border-cyan-500/20',
     teal: 'bg-teal-500/5 text-teal-400 border-teal-500/10 hover:bg-teal-500/10 hover:border-teal-500/20'
+  } : {
+    emerald: 'bg-white text-emerald-600 border-slate-200/90 hover:bg-emerald-50/20 hover:border-emerald-300 shadow-sm hover:shadow-md',
+    rose: 'bg-white text-rose-600 border-slate-200/90 hover:bg-rose-50/20 hover:border-rose-300 shadow-sm hover:shadow-md',
+    amber: 'bg-white text-amber-600 border-slate-200/90 hover:bg-amber-50/20 hover:border-amber-300 shadow-sm hover:shadow-md',
+    blue: 'bg-white text-blue-600 border-slate-200/90 hover:bg-blue-50/20 hover:border-blue-300 shadow-sm hover:shadow-md',
+    orange: 'bg-white text-orange-600 border-slate-200/90 hover:bg-orange-50/20 hover:border-orange-300 shadow-sm hover:shadow-md',
+    indigo: 'bg-white text-indigo-600 border-slate-200/90 hover:bg-indigo-50/20 hover:border-indigo-300 shadow-sm hover:shadow-md',
+    purple: 'bg-white text-purple-600 border-slate-200/90 hover:bg-purple-50/20 hover:border-purple-300 shadow-sm hover:shadow-md',
+    violet: 'bg-white text-violet-600 border-slate-200/90 hover:bg-violet-50/20 hover:border-violet-300 shadow-sm hover:shadow-md',
+    cyan: 'bg-white text-cyan-600 border-slate-200/90 hover:bg-cyan-50/20 hover:border-cyan-300 shadow-sm hover:shadow-md',
+    teal: 'bg-white text-teal-600 border-slate-200/90 hover:bg-teal-50/20 hover:border-teal-300 shadow-sm hover:shadow-md'
   };
 
   return (
@@ -223,15 +247,15 @@ const BentoModule: React.FC<BentoModuleProps> = ({ icon, label, description, col
       whileHover={{ y: -4, scale: 1.01 }} 
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
-      className={`p-6 md:p-8 rounded-[2rem] border border-white/5 transition-all flex flex-col items-start text-left justify-between h-48 group shadow-lg ${colors[color]} ${className}`}
+      className={`p-6 md:p-8 rounded-[2.5rem] border transition-all flex flex-col items-start text-left justify-between h-48 group ${isDark ? "border-white/5" : "border-slate-200/80"} ${colors[color]} ${className}`}
     >
-      <div className="p-3 bg-white/5 rounded-2xl group-hover:bg-white/10 transition-colors">
+      <div className={`p-3 rounded-2xl transition-colors ${isDark ? 'bg-white/5 group-hover:bg-white/10' : 'bg-slate-100 group-hover:bg-slate-200/70'}`}>
         {React.cloneElement(icon as React.ReactElement, { className: 'w-6 h-6 md:w-7 md:h-7' })}
       </div>
-      <div className="mt-4">
-        <span className="text-sm font-black uppercase tracking-[0.15em] block">{label}</span>
+      <div className="mt-4 w-full">
+        <span className={`text-sm font-black uppercase tracking-[0.12em] block ${isDark ? 'text-white' : 'text-slate-800'}`}>{label}</span>
         {description && (
-          <span className="text-[11px] md:text-xs text-slate-500 font-medium group-hover:text-slate-400 transition-colors mt-1.5 block leading-tight">
+          <span className={`text-[11px] md:text-xs font-medium transition-colors mt-1.5 block leading-tight ${isDark ? 'text-slate-500 group-hover:text-slate-400' : 'text-slate-400 group-hover:text-slate-600'}`}>
             {description}
           </span>
         )}
