@@ -1,11 +1,10 @@
 
 import React, { useState, useCallback, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../../../db';
+import { SessionRepository } from '../../../repositories/SessionRepository';
 import * as sessionService from '../../../services/sessionService';
 import { sanitizeBarcode } from '../../../services/utils';
 import { SoundFX } from '../../../services/audio';
-import { SessionRepository } from '../../../repositories/SessionRepository';
 import * as syncManager from '../../../services/syncManager';
 import { useToastStore } from '../../../store/useToastStore';
 
@@ -20,11 +19,7 @@ export const useReceptionLogic = () => {
   const { addToast } = useToastStore();
 
   const unsyncedDrafts = useLiveQuery(() => 
-    db.sessions
-      .where('erpOrder').equals('RECEPCION_BORRADOR')
-      .reverse()
-      .limit(50)
-      .toArray()
+    SessionRepository.getDraftReceptionSessions(50)
   , [], []);
 
   const draftCount = unsyncedDrafts?.filter(s => s.status === 'draft').length || 0;

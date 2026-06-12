@@ -11,7 +11,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { db } from '../../../db';
+import { productRepository } from '../../../repositories/DexieProductRepository';
 import { Product } from '../../../types';
 import { normalizeSku } from '../../../services/utils';
 import { toast } from 'sonner';
@@ -83,7 +83,7 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
       
       // Pre-load product info
       const loadProduct = async () => {
-        const found = await db.products.get(normalizeSku(editingItem.barcode));
+        const found = await productRepository.getById(normalizeSku(editingItem.barcode));
         if (found) setProduct(found);
         else {
           setProduct({
@@ -113,7 +113,7 @@ export const CreateEventModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, t
       const timer = setTimeout(async () => {
         setIsSearching(true);
         try {
-          const found = await db.products.get(normalizeSku(sku));
+          const found = await productRepository.getById(normalizeSku(sku));
           if (found) {
             setProduct(found);
           } else if (editingItem && sku === editingItem.barcode) {

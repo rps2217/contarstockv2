@@ -6,6 +6,7 @@ import { supabaseSyncService } from '../services/supabaseSyncService';
 import { useNavigate } from 'react-router-dom';
 import { SystemRepository } from '../repositories/SystemRepository';
 import { ScanRepository } from '../repositories/ScanRepository';
+import { getGlobalPendingCount } from '../services/syncManager';
 
 export const SystemStatus: React.FC = () => {
   const navigate = useNavigate();
@@ -50,10 +51,10 @@ export const SystemStatus: React.FC = () => {
         setSupabaseConnected(false);
       }
 
-      // 3. Contar Pendientes (Usando repositorios)
+      // 3. Contar Pendientes (Global de transacciones)
       try {
-        const unsyncedScans = await ScanRepository.getPendingSyncCount();
-        setPendingItems(unsyncedScans);
+        const totalPending = await getGlobalPendingCount();
+        setPendingItems(totalPending);
       } catch (e) {}
     };
 

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Home, Database, History, Cloud, Container, Settings, FileText, Calendar, ShieldCheck, Users } from 'lucide-react';
+import { Home, Database, History, Cloud, Container, Settings, FileText, Calendar, ShieldCheck, Users, Layers } from 'lucide-react';
 import { AppSettings, ViewState } from '../types';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ScanRepository } from '../repositories/ScanRepository';
@@ -35,6 +35,7 @@ export const BottomDock: React.FC<Props> = ({ currentView, settings }) => {
     'compliance': { label: 'RIESGO', icon: ShieldCheck, path: '/compliance' },
     'customers': { label: 'CLIENTES', icon: Users, path: '/customers' },
     'providers': { label: 'PROV.', icon: Container, path: '/providers' },
+    'slices': { label: 'VISTAS', icon: Layers, path: '/slices' },
     'sync': { label: 'NUBE', icon: Cloud, path: '/sync' },
     'settings': { label: 'AJUSTES', icon: Settings, path: '/settings' }
   };
@@ -50,6 +51,7 @@ export const BottomDock: React.FC<Props> = ({ currentView, settings }) => {
     'compliance',
     'customers',
     'providers',
+    'slices',
     'sync',
     'settings'
   ];
@@ -57,7 +59,7 @@ export const BottomDock: React.FC<Props> = ({ currentView, settings }) => {
   // Filter keys based on module toggle
   const activeNavKeys = allNavKeys.filter(key => {
     // These keys are always enabled/not toggled by modules
-    if (key === 'dashboard' || key === 'compliance' || key === 'customers' || key === 'providers' || key === 'settings') {
+    if (key === 'dashboard' || key === 'compliance' || key === 'customers' || key === 'providers' || key === 'settings' || key === 'slices') {
       return true;
     }
     // Check if the specific module is enabled

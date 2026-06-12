@@ -3,6 +3,7 @@ import { syncRegistry, TableSyncMeta } from './syncRegistry';
 import { db } from '../../db';
 import { logger } from '../logger';
 import { telemetry } from '../telemetryService';
+import { useSyncStore } from '../../store/useSyncStore';
 
 export class GenericSyncEngine {
   /**
@@ -159,10 +160,18 @@ export class GenericSyncEngine {
         if (remoteTime > maxRemoteTime) maxRemoteTime = remoteTime;
 
         if (existing) {
-          // Resolución de conflictos: Última escritura gana
           const localTime = existing.updatedAt || existing.timestamp || 0;
 
-          if (existing.syncStatus === 'synced' || remoteTime > localTime) {
+          if (existing.syncStatus === 'pending' || existing.syncStatus === 'error' || existing.syncStatus === 'pending_delete') {
+            // CONFLICT DETECTED: Local version is unsynced, remote version was updated.
+            // AppSheet-style: Preserve local version, register Conflict Incident in sync store
+            const store = useSyncStore.getState();
+            store.addConflict();
+            store.addIncident(
+              meta.remoteTable,
+              `Conflicto en registro (ID: ${id}): Modificado localmente y en la nube de forma independiente. Se conservó la versión local. (Nube: ${new Date(remoteTime).toISOString()} vs Local: ${new Date(localTime).toISOString()})`
+            );
+          } else if (remoteTime > localTime) {
             await localTable.update(id, { ...mapped, syncStatus: 'synced' });
             updated++;
           }

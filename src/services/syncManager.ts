@@ -443,3 +443,47 @@ export const importCustomersAndTemplatesFromCloud = async (): Promise<void> => {
   }
 };
 
+export const getGlobalPendingCount = async (): Promise<number> => {
+  try {
+    let count = 0;
+    
+    // 1. Pending scans (inventory/compliance/reception items)
+    const scanCount = await ScanRepository.getPendingSyncCount();
+    count += scanCount;
+    
+    // 2. Pending sessions
+    const sessionCount = await db.sessions
+      .where('syncStatus')
+      .anyOf(['pending', 'error', 'pending_delete'])
+      .count();
+    count += sessionCount;
+
+    // 3. Products
+    const productCount = await db.products
+      .where('syncStatus')
+      .anyOf(['pending', 'error', 'pending_delete'])
+      .count();
+    count += productCount;
+
+    // 4. Providers
+    const providerCount = await db.providers
+      .where('syncStatus')
+      .anyOf(['pending', 'error', 'pending_delete'])
+      .count();
+    count += providerCount;
+
+    // 5. Dynamic data (Expiry, Events, etc.)
+    const dynamicCount = await db.dynamic_data
+      .where('syncStatus')
+      .anyOf(['pending', 'error', 'pending_delete'])
+      .count();
+    count += dynamicCount;
+
+    return count;
+  } catch (error) {
+    console.error('[getGlobalPendingCount] Fail:', error);
+    return 0;
+  }
+};
+
+

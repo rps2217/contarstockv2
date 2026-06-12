@@ -7,7 +7,6 @@ import { SessionRepository } from "../../../repositories/SessionRepository";
 import { ScanRepository } from "../../../repositories/ScanRepository";
 import { productRepository } from "../../../repositories/DexieProductRepository";
 import { useAppStore } from "@/store/mainAppStore";
-import { db } from "../../../db";
 
 export const useReports = () => {
   const location = useLocation();
@@ -57,7 +56,7 @@ export const useReports = () => {
           }));
 
         if (sessionsToPut.length > 0) {
-          await db.sessions.bulkPut(sessionsToPut);
+          await SessionRepository.saveBatch(sessionsToPut);
         }
       }
 
@@ -98,7 +97,7 @@ export const useReports = () => {
         }).filter((item: any) => !!item.barcode && !!item.sessionId);
 
         if (scansToPut.length > 0) {
-          await db.scans.bulkPut(scansToPut);
+          await ScanRepository.saveBatch(scansToPut);
         }
       }
 
@@ -131,7 +130,7 @@ export const useReports = () => {
         }).filter((item: any) => !!item.barcode && !!item.sessionId);
 
         if (scansToPut.length > 0) {
-          await db.scans.bulkPut(scansToPut);
+          await ScanRepository.saveBatch(scansToPut);
         }
       }
       

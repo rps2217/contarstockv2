@@ -4,7 +4,6 @@ import { ShieldAlert, Download, Trash2, X, AlertTriangle, Search, CornerDownLeft
 import { motion, AnimatePresence } from 'motion/react';
 import { VirtualList } from '../../shared/components/ui/VirtualList';
 import { useToastStore } from '../../store/useToastStore';
-import { db } from '../../db';
 import { normalizeSku } from '../../services/utils';
 import { useExpiryDatabase, ExpiryItem } from './hooks/useExpiryDatabase';
 import { useScannerEngine } from '../../hooks/useScannerEngine';

@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import { ScanRepository } from '../../../repositories/ScanRepository';
 import { AnalyticService } from '../../../services/analyticService';
 import { ExpectedOrderRepository } from '../../../repositories/ExpectedOrderRepository';
-import { db } from '../../../db';
 import { syncFSM, SyncStatus } from '../../../services/syncFSM';
 
 import { dynamicDataRepository } from '../../../repositories/DynamicDataRepository';

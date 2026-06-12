@@ -2,7 +2,7 @@
 import { isModuleEnabled } from '../services/moduleManager';
 import React from 'react';
 import { motion } from 'motion/react';
-import { Home, Database, History, Container, Cloud, Box, Settings, Zap, FileText, Camera, Calendar, ChevronLeft, ChevronRight, AlertCircle, RefreshCw, Users, ShieldCheck, FileSpreadsheet } from 'lucide-react';
+import { Home, Database, History, Container, Cloud, Box, Settings, Zap, FileText, Camera, Calendar, ChevronLeft, ChevronRight, AlertCircle, RefreshCw, Users, ShieldCheck, FileSpreadsheet, Layers } from 'lucide-react';
 // Forced update to trigger GitHub sync for the components folder
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AppSettings, TableSchema } from '../types';
@@ -102,6 +102,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
         <NavItem path="/events" activeKey="events" label="Eventos" icon={FileText} moduleKey="events" isCollapsed={isCollapsed} onNavigate={navigate} />
         <NavItem path="/customers" activeKey="customers" label="Clientes" icon={Users} isCollapsed={isCollapsed} onNavigate={navigate} />
         <NavItem path="/providers" activeKey="providers" label="Proveedores" icon={Container} isCollapsed={isCollapsed} onNavigate={navigate} />
+        <NavItem path="/slices" activeKey="slices" label="Slices (Vistas)" icon={Layers} isCollapsed={isCollapsed} onNavigate={navigate} />
         
         {(() => {
           const schema = settings.cloudConfig?.schema || settings.schema;

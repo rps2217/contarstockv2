@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../../../db';
+import { ProviderRepository } from '../../../repositories/ProviderRepository';
 import { differenceInDays } from 'date-fns';
 import { Provider } from '../../../types';
 import { expiryRepository } from '../../../repositories/ExpiryRepository';
@@ -26,7 +26,7 @@ export const useComplianceData = () => {
 
   return useLiveQuery(async (): Promise<ComplianceStats> => {
     const expiries = await expiryRepository.getAll(tableName);
-    const providers = await db.providers.toArray();
+    const providers = await ProviderRepository.getAll();
     
     const normalizeSearch = (s: string) => s.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, "").trim();
 

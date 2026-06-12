@@ -11,6 +11,14 @@ export class SessionRepository {
     await db.sessions.put(record);
   }
 
+  static async saveBatch(sessions: CountingSession[]): Promise<void> {
+    const records = sessions.map(s => CountingSessionSchema.parse({
+      ...s,
+      syncStatus: s.syncStatus || 'pending'
+    })) as CountingSession[];
+    await db.sessions.bulkPut(records);
+  }
+
   static async getById(id: string): Promise<CountingSession | undefined> {
     return await db.sessions.get(id);
   }
@@ -118,6 +126,15 @@ export class SessionRepository {
     if (ids.length > 0) {
       await db.sessions.bulkDelete(ids);
     }
+  }
+
+  static async getDraftReceptionSessions(limit: number = 50): Promise<CountingSession[]> {
+    return await db.sessions
+      .where('erpOrder')
+      .equals('RECEPCION_BORRADOR')
+      .reverse()
+      .limit(limit)
+      .toArray();
   }
 
   static async markAsCompleted(id: string): Promise<void> {

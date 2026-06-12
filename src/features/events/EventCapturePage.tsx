@@ -18,7 +18,6 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useToastStore } from '../../store/useToastStore';
-import { db } from '../../db';
 import { normalizeSku } from '../../services/utils';
 import { useEventDatabase } from './hooks/useEventDatabase';
 import { useScannerEngine } from '../../hooks/useScannerEngine';

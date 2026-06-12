@@ -3,7 +3,6 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { expiryRepository } from '../../../repositories/ExpiryRepository';
 import { productRepository } from '../../../repositories/DexieProductRepository';
 import { ProviderRepository } from '../../../repositories/ProviderRepository';
-import { db } from '../../../db';
 import { processExpiryItem, filterExpiryItems, calculateExpiryStats } from '../utils/expiryProcessor';
 import { useGlobalSearch } from '../../../hooks/useGlobalSearch';
 import { normalizeSku, normalizeIdentity } from '../../../services/utils';

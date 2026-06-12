@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { productRepository } from '../../../repositories/DexieProductRepository';
-import { db } from '../../../db';
+import { ProviderRepository } from '../../../repositories/ProviderRepository';
 import { Product, Provider } from '../../../types';
 import { fuzzySearchProducts } from '../../../services/search';
 import { normalizeIdentity } from '../../../services/utils';
@@ -31,7 +31,7 @@ export const useProductQuery = (searchQuery: string, policyFilter: 'all' | 'exch
       }
     }
 
-    const providers = await db.providers.toArray();
+    const providers = await ProviderRepository.getAll();
     const providerMapByRut = new Map<string, Provider>();
     const providerMapByName = new Map<string, Provider>();
     

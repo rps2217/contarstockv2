@@ -23,8 +23,8 @@ const Login = lazyWithRetry(() => import('@/components/Login').then(m => ({ defa
 const StartSessionModal = lazyWithRetry(() => import('@/components/StartSessionModal').then(m => ({ default: m.StartSessionModal })));
 
 // --- VISTAS MAESTRAS ---
-// Forzamos un cambio para limpiar el caché de Vercel (intento 2)
-const Dashboard = lazyWithRetry(() => import('@/features/dashboard/DashboardPage'));
+// Forzamos un cambio para limpiar la caché del empaquetador Vite (compilación limpia)
+const Dashboard = lazyWithRetry(() => import('./features/dashboard/DashboardPage'));
 const Reports = lazyWithRetry(() => import('@/features/reports/ReportsPage'));
 const DatabaseView = lazyWithRetry(() => import('@/features/inventory/InventoryPage'));
 const Sync = lazyWithRetry(() => import('@/features/sync/SyncPage'));
@@ -42,6 +42,7 @@ const EventCapturePage = lazyWithRetry(() => import('@/features/events/EventCapt
 const ComplianceDashboardPage = lazyWithRetry(() => import('@/features/compliance/ComplianceDashboardPage'));
 const DynamicManagement = lazyWithRetry(() => import('@/features/dynamic/DynamicManagementPage').then(m => ({ default: m.DynamicManagementPage })));
 const GlobalSyncQueue = lazyWithRetry(() => import('@/features/sync/SyncCenterPage').then(m => ({ default: m.SyncCenterPage })));
+const SlicesPage = lazyWithRetry(() => import('@/features/slices/SlicesPage').then(m => ({ default: m.SlicesPage })));
 const ProvidersPage = lazyWithRetry(() => import('@/features/suppliers/pages/ProvidersPage').then(m => ({ default: m.ProvidersPage })));
 const CustomersPage = lazyWithRetry(() => import('@/features/customers/CustomersPage').then(m => ({ default: m.CustomersPage })));
 const ExpectedOrdersPage = lazyWithRetry(() => import('@/features/expected-orders/ExpectedOrdersPage').then(m => ({ default: m.ExpectedOrdersPage })));
@@ -204,6 +205,8 @@ const AppContent = () => {
                     <Route path="/reports" element={<ModuleRoute moduleKey="reports" element={<Reports />} />} />
                     <Route path="/database" element={<ModuleRoute moduleKey="database" element={<DatabaseView />} />} />
                     <Route path="/sync" element={<ModuleRoute moduleKey="sync" element={<Sync />} />} />
+                    <Route path="/sync/queue" element={<ModuleRoute moduleKey="sync" element={<GlobalSyncQueue />} />} />
+                    <Route path="/slices" element={<SlicesPage />} />
                     <Route path="/settings" element={<ModuleRoute moduleKey="settings" element={<Settings />} />} />
                     <Route path="/reception" element={<ModuleRoute moduleKey="reception" element={<ReceptionManagement />} />} />
                     <Route path="/reception/capture" element={<ModuleRoute moduleKey="reception" element={<ReceptionCapture />} />} />
