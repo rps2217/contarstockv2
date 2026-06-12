@@ -48,7 +48,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
             }
           );
         } catch (err) {
-          console.error("Error starting scanner", err);
+          console.warn("Error starting scanner (likely permission denied or unavailable):", err);
           setError("No se pudo acceder a la cámara. Verifique los permisos.");
         }
       };

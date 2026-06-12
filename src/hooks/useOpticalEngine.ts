@@ -129,7 +129,7 @@ export const useOpticalEngine = ({ onScan, isTriggered, scannerDomId }: UseOptic
         }
       }
     } catch (err: any) {
-      console.error("Legacy engine failed:", err);
+      console.warn("Legacy engine failed:", err);
       if (isComponentMounted.current) {
         setError(`OPTICAL_ENGINE_FAILURE: ${err.message || 'Camera access denied or unavailable'}`);
       }
