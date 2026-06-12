@@ -274,7 +274,27 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
         if (sessionSuccess) {
           await ScanRepository.markAsSynced(allScanIdsToMark);
           await SessionRepository.updateSyncTimestamp(sessionId);
-          if (onProgress) onProgress(`✓ Bulto ${session.logisticsLabel} sincronizado.`);
+
+          // RESPALDO DE LA SESIÓN EN SESIONES_CONTEO
+          try {
+            const sessionPayload = {
+              id: session.id,
+              erpOrder: session.erpOrder,
+              logisticsLabel: session.logisticsLabel,
+              sessionType: session.sessionType,
+              status: session.status || 'completed',
+              createdAt: session.createdAt,
+              totalUnits: session.totalUnits || 0,
+              totalSKUs: session.totalSKUs || 0,
+              photoUrl: session.photoUrl || '',
+              lastSyncTimestamp: Date.now()
+            };
+            await supabaseSyncService.pushBatch('SESIONES_CONTEO', [sessionPayload]);
+          } catch (sessionPushError) {
+             console.warn("Fallo al subir datos de sesion a SESIONES_CONTEO:", sessionPushError);
+          }
+
+          if (onProgress) onProgress(`✓ Bulto ${session.logisticsLabel} Sincronizado.`);
         } else {
           if (onProgress) onProgress(`⚠ Bulto ${session.logisticsLabel} con errores. Se reintentará luego.`);
         }

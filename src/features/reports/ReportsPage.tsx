@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useEffect } from "react";
-import { Archive, WifiOff, Zap, Package, History } from "lucide-react";
+import { Archive, WifiOff, Zap, Package, History, RefreshCw } from "lucide-react";
 import { StartSessionModal } from "../../components/StartSessionModal";
 import { ManagementSearchBar } from "../../shared/components/core/ManagementSearchBar";
 import { ReportDetail } from "./components/ReportDetail";
@@ -76,6 +76,18 @@ export const Reports: React.FC = () => {
           }`}>
             {isHammerArchive ? "Archivo Martillo" : "Historial de Carga"}
           </h1>
+          <button
+            onClick={() => actions.pullCloudData()}
+            disabled={state.isPulling}
+            className={`p-1.5 rounded-lg transition-all duration-300 flex items-center justify-center ${
+              state.isPulling ? "animate-spin opacity-50" : "hover:scale-110 active:scale-95"
+            } ${
+              theme === 'dark' ? "text-slate-400 hover:text-white bg-white/5 hover:bg-white/10" : "text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200"
+            }`}
+            title="Sincronizar historial con la nube"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
         </div>
         {isHammerArchive && (
           <button
