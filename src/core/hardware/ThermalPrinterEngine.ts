@@ -133,68 +133,345 @@ export class ThermalPrinterEngine {
   }
 
   async printSummaryReport(erp: string, label: string, items: any[]) {
-    const encoder = new TextEncoder();
-    const esc = {
-      init: [0x1b, 0x40],
-      alignCenter: [0x1b, 0x61, 1],
-      alignLeft: [0x1b, 0x61, 0],
-      boldOn: [0x1b, 0x45, 1],
-      boldOff: [0x1b, 0x45, 0],
-      sizeNormal: [0x1d, 0x21, 0x00],
-      feed: [0x0a, 0x0a, 0x0a, 0x0a],
-      cut: [0x1d, 0x56, 0x42, 0x00]
-    };
+    if (this.isConnected()) {
+      const encoder = new TextEncoder();
+      const esc = {
+        init: [0x1b, 0x40],
+        alignCenter: [0x1b, 0x61, 1],
+        alignLeft: [0x1b, 0x61, 0],
+        boldOn: [0x1b, 0x45, 1],
+        boldOff: [0x1b, 0x45, 0],
+        sizeNormal: [0x1d, 0x21, 0x00],
+        feed: [0x0a, 0x0a, 0x0a, 0x0a],
+        cut: [0x1d, 0x56, 0x42, 0x00]
+      };
 
-    let content = [
-      ...esc.init,
-      ...esc.alignCenter,
-      ...esc.boldOn,
-      ...encoder.encode("MANIFIESTO DE CARGA\\n"),
-      ...encoder.encode("LOGICOUNT PRO v4.5\\n"),
-      ...esc.boldOff,
-      ...encoder.encode("--------------------------------\\n"),
-      ...esc.alignLeft,
-      ...encoder.encode(`ORDEN ERP: ${erp}\\n`),
-      ...encoder.encode(`BULTOS : ${label}\\n`),
-      ...encoder.encode(`FECHA : ${new Date().toLocaleString()}\\n`),
-      ...encoder.encode("--------------------------------\\n"),
-      ...esc.boldOn,
-      ...encoder.encode("DESC | SKU\\n"),
-      ...encoder.encode("TEO REAL DIFF\\n"),
-      ...esc.boldOff,
-      ...encoder.encode("--------------------------------\\n")
-    ];
-
-    items.forEach(item => {
-      const sku = item.barcode.padEnd(20);
-      const name = (item.productName || 'SIN_DESC').substring(0, 32);
-      const theo = String(item.expectedQuantity || 0).padStart(5);
-      const real = String(item.totalQuantity || 0).padStart(7);
-      const diff = String(item.totalQuantity - (item.expectedQuantity || 0)).padStart(7);
-
-      const row = [
-        ...encoder.encode(`${name}\\n`),
-        ...encoder.encode(`${sku}\\n`),
-        ...encoder.encode(`${theo} ${real} ${diff}\\n`),
-        ...encoder.encode("- - - - - - - - - - - - - - - -\\n")
+      let content = [
+        ...esc.init,
+        ...esc.alignCenter,
+        ...esc.boldOn,
+        ...encoder.encode("MANIFIESTO DE CARGA\\n"),
+        ...encoder.encode("LOGICOUNT PRO v4.5\\n"),
+        ...esc.boldOff,
+        ...encoder.encode("--------------------------------\\n"),
+        ...esc.alignLeft,
+        ...encoder.encode(`ORDEN ERP: ${erp}\\n`),
+        ...encoder.encode(`BULTOS : ${label}\\n`),
+        ...encoder.encode(`FECHA : ${new Date().toLocaleString()}\\n`),
+        ...encoder.encode("--------------------------------\\n"),
+        ...esc.boldOn,
+        ...encoder.encode("DESC | SKU\\n"),
+        ...encoder.encode("TEO REAL DIFF\\n"),
+        ...esc.boldOff,
+        ...encoder.encode("--------------------------------\\n")
       ];
-      content.push(...row);
-    });
+
+      items.forEach(item => {
+        const sku = item.barcode.padEnd(20);
+        const name = (item.productName || 'SIN_DESC').substring(0, 32);
+        const theo = String(item.expectedQuantity || 0).padStart(5);
+        const real = String(item.totalQuantity || 0).padStart(7);
+        const diff = String(item.totalQuantity - (item.expectedQuantity || 0)).padStart(7);
+
+        const row = [
+          ...encoder.encode(`${name}\\n`),
+          ...encoder.encode(`${sku}\\n`),
+          ...encoder.encode(`${theo} ${real} ${diff}\\n`),
+          ...encoder.encode("- - - - - - - - - - - - - - - -\\n")
+        ];
+        content.push(...row);
+      });
+
+      const totalReal = items.reduce((acc, i) => acc + i.totalQuantity, 0);
+      const footer = [
+        ...esc.boldOn,
+        ...encoder.encode(`TOTAL UNIDADES: ${totalReal}\\n`),
+        ...esc.boldOff,
+        ...encoder.encode("--------------------------------\\n"),
+        ...encoder.encode("\\n\\n__________________________\\n"),
+        ...esc.alignCenter,
+        ...encoder.encode("FIRMA AUDITORIA\\n"),
+        ...esc.feed,
+        ...esc.cut
+      ];
+
+      await this.printRaw(new Uint8Array([...content, ...footer]));
+    } else {
+      // Formato rollo térmico de 80mm via iframe de impresión para inmunidad a popup-blockers
+      this.printViaIframe80mm(erp, label, items);
+    }
+  }
+
+  private printViaIframe80mm(erp: string, label: string, items: any[]) {
+    // 1. Quitar residuo previo
+    const oldIframe = document.getElementById('thermal-print-iframe');
+    if (oldIframe) {
+      oldIframe.parentNode?.removeChild(oldIframe);
+    }
+
+    // 2. Crear iframe invisible
+    const iframe = document.createElement('iframe');
+    iframe.id = 'thermal-print-iframe';
+    iframe.style.position = 'fixed';
+    iframe.style.bottom = '0';
+    iframe.style.right = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document || iframe.contentDocument;
+    if (!doc) {
+      console.error("No se pudo iniciar el canal de impresión nativa.");
+      return;
+    }
 
     const totalReal = items.reduce((acc, i) => acc + i.totalQuantity, 0);
-    const footer = [
-      ...esc.boldOn,
-      ...encoder.encode(`TOTAL UNIDADES: ${totalReal}\\n`),
-      ...esc.boldOff,
-      ...encoder.encode("--------------------------------\\n"),
-      ...encoder.encode("\\n\\n__________________________\\n"),
-      ...esc.alignCenter,
-      ...encoder.encode("FIRMA AUDITORIA\\n"),
-      ...esc.feed,
-      ...esc.cut
-    ];
+    const dateStr = new Date().toLocaleString('es-ES');
 
-    await this.printRaw(new Uint8Array([...content, ...footer]));
+    const rowsHtml = items.map(item => {
+      const diff = item.totalQuantity - (item.expectedQuantity || 0);
+      const diffSigned = diff > 0 ? `+${diff}` : String(diff);
+      const diffClass = diff === 0 ? '' : diff > 0 ? 'color: #059669; font-weight: bold;' : 'color: #dc2626; font-weight: bold;';
+      
+      return `
+        <tr class="item-row">
+          <td colspan="4" style="font-weight: bold; font-size: 11px; padding-top: 6px; padding-bottom: 2px;">
+            ${item.productName || 'SIN DESCRIPCIÓN'}
+          </td>
+        </tr>
+        <tr class="item-subrow" style="border-bottom: 1px dashed #ccc;">
+          <td style="font-size: 9px; font-family: monospace; color: #4b5563; padding-bottom: 6px;">
+            ${item.barcode}
+          </td>
+          <td class="text-right" style="font-size: 11px; padding-bottom: 6px; font-family: monospace;">
+            ${item.expectedQuantity || 0}
+          </td>
+          <td class="text-right" style="font-size: 11px; padding-bottom: 6px; font-weight: bold; font-family: monospace;">
+            ${item.totalQuantity || 0}
+          </td>
+          <td class="text-right" style="font-size: 11px; padding-bottom: 6px; ${diffClass} font-family: monospace;">
+            ${diffSigned}
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Manifiesto de Carga - Rollo 80mm</title>
+          <style>
+            @page {
+              size: 80mm auto;
+              margin: 0;
+            }
+            @media print {
+              body {
+                width: 72mm;
+                margin: 0;
+                padding: 10px 4mm;
+                background-color: white;
+                color: black;
+              }
+              .no-print {
+                display: none !important;
+              }
+            }
+            body {
+              width: 72mm;
+              margin: 0 auto;
+              padding: 15px;
+              font-family: 'Courier New', Courier, monospace;
+              font-size: 11px;
+              line-height: 1.35;
+              color: #000;
+              background: #fff;
+              box-sizing: border-box;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 12px;
+            }
+            .header h1 {
+              font-size: 13px;
+              font-weight: 900;
+              margin: 0 0 2px 0;
+              letter-spacing: 0.5px;
+              text-transform: uppercase;
+            }
+            .header h2 {
+              font-size: 11px;
+              font-weight: 800;
+              margin: 0 0 5px 0;
+              text-transform: uppercase;
+            }
+            .header p {
+              font-size: 9px;
+              margin: 0;
+              color: #4b5563;
+            }
+            .divider {
+              border-top: 1px dashed #000;
+              margin: 8px 0;
+              height: 0;
+            }
+            .double-divider {
+              border-top: 1px double #000;
+              margin: 8px 0;
+              height: 0;
+            }
+            .meta-section {
+              margin-bottom: 12px;
+              font-size: 10px;
+            }
+            .meta-row {
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 2px;
+            }
+            .meta-label {
+              font-weight: bold;
+              text-transform: uppercase;
+            }
+            .meta-value {
+              text-align: right;
+            }
+            .items-table {
+              width: 100%;
+              border-collapse: collapse;
+              font-size: 10px;
+            }
+            .items-table th {
+              font-weight: bold;
+              text-transform: uppercase;
+              font-size: 9px;
+              padding-bottom: 4px;
+              border-bottom: 1px solid #000;
+            }
+            .text-right {
+              text-align: right;
+            }
+            .text-left {
+              text-align: left;
+            }
+            .totals {
+              margin-top: 12px;
+              font-size: 11px;
+              font-weight: bold;
+            }
+            .totals-row {
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 3px;
+            }
+            .signature {
+              margin-top: 35px;
+              text-align: center;
+            }
+            .signature-line {
+              border-top: 1px solid #000;
+              width: 75%;
+              margin: 25px auto 5px auto;
+            }
+            .signature-label {
+              font-size: 9px;
+              text-transform: uppercase;
+              font-weight: bold;
+              letter-spacing: 0.5px;
+            }
+            .pos-notice {
+              margin-top: 20px;
+              font-size: 8px;
+              text-align: center;
+              color: #6b7280;
+              font-style: italic;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>LOGICOUNT PRO v4.5</h1>
+            <h2>Manifiesto de Carga</h2>
+            <p>Auditoría de Inventario</p>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="meta-section">
+            <div class="meta-row">
+              <span class="meta-label">ERP / ORDEN:</span>
+              <span class="meta-value" style="font-weight: bold;">${erp}</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">BULTOS:</span>
+              <span class="meta-value">${label}</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">FECHA:</span>
+              <span class="meta-value">${dateStr}</span>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th class="text-left" style="width: 55%;">DESC / SKU</th>
+                <th class="text-right" style="width: 15%;">TEO</th>
+                <th class="text-right" style="width: 15%;">REAL</th>
+                <th class="text-right" style="width: 15%;">DIF</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+
+          <div class="double-divider"></div>
+
+          <div class="totals">
+            <div class="totals-row">
+              <span>TOTAL SKUS:</span>
+              <span>${items.length}</span>
+            </div>
+            <div class="totals-row" style="font-size: 12px; font-weight: 900;">
+              <span>TOTAL UNIDADES:</span>
+              <span>${totalReal}</span>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="signature">
+            <div class="signature-line"></div>
+            <div class="signature-label">Firma Auditoría</div>
+            <div style="font-size: 8px; color: #4b5563; margin-top: 3px;">Operador Responsable</div>
+          </div>
+
+          <div class="pos-notice">
+            Ajustado para rollo estándar de 80mm
+          </div>
+
+          <script>
+            window.onload = function() {
+              window.print();
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    doc.open();
+    doc.write(htmlContent);
+    doc.close();
+
+    setTimeout(() => {
+      iframe.contentWindow?.focus();
+    }, 100);
   }
 
   isConnected(): boolean {
