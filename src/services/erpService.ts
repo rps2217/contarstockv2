@@ -92,6 +92,10 @@ export const erpService = {
       const res = await supabaseSyncService.pullBatch(tableName);
       
       if (!res.success || !res.rows) {
+        if (res.isMissing || (res.error && res.error.includes('Table not found'))) {
+          // Log as warning and return safe fallback empty array
+          return [];
+        }
         throw new Error(res.error || 'Error al conectar con la nube');
       }
 

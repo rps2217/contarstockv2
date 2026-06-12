@@ -93,9 +93,12 @@ export const useAutoSync = () => {
       const errorMsg = error.message || (typeof error === 'object' ? JSON.stringify(error) : String(error));
       
       const isNetworkError = errorMsg.includes('Failed to fetch') || errorMsg.includes('Cerrado por falta de red') || errorMsg.includes('offline');
+      const isMissingTable = errorMsg.includes('Table not found') || errorMsg.includes('does not exist');
 
       if (isNetworkError) {
         // Suppress network error in dev preview
+      } else if (isMissingTable) {
+        console.warn('Auto-sync table not provisioned on remote:', errorMsg);
       } else {
         console.error('Auto-sync failed:', error);
       }
