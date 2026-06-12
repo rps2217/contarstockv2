@@ -3,6 +3,9 @@
  * Soporte dual: WebUSB (PC) + Web Bluetooth (Android/Mobile)
  */
 
+// @ts-ignore
+import JsBarcode from 'jsbarcode';
+
 interface USBDevice {
   open(): Promise<void>;
   close(): Promise<void>;
@@ -234,6 +237,8 @@ export class ThermalPrinterEngine {
       const diffSigned = diff > 0 ? `+${diff}` : String(diff);
       const diffClass = diff === 0 ? '' : diff > 0 ? 'color: #059669; font-weight: bold;' : 'color: #dc2626; font-weight: bold;';
       
+      const barcodeDataUrl = this.getBarcodeDataUrl(item.barcode);
+      
       return `
         <tr class="item-row">
           <td colspan="4" style="font-weight: bold; font-size: 11px; padding-top: 6px; padding-bottom: 2px;">
@@ -241,16 +246,20 @@ export class ThermalPrinterEngine {
           </td>
         </tr>
         <tr class="item-subrow" style="border-bottom: 1px dashed #ccc;">
-          <td style="font-size: 9px; font-family: monospace; color: #4b5563; padding-bottom: 6px;">
-            ${item.barcode}
+          <td style="padding-bottom: 6px; vertical-align: middle;">
+            ${barcodeDataUrl ? `
+              <img src="${barcodeDataUrl}" alt="${item.barcode}" style="max-height: 42px; max-width: 145px; width: auto; height: auto; display: block; image-rendering: pixelated; image-rendering: crisp-edges; background: #ffffff;" />
+            ` : `
+              <span style="font-size: 9px; font-family: monospace; color: #4b5563;">${item.barcode}</span>
+            `}
           </td>
-          <td class="text-right" style="font-size: 11px; padding-bottom: 6px; font-family: monospace;">
+          <td class="text-right" style="font-size: 11px; padding-bottom: 6px; font-family: monospace; vertical-align: middle;">
             ${item.expectedQuantity || 0}
           </td>
-          <td class="text-right" style="font-size: 11px; padding-bottom: 6px; font-weight: bold; font-family: monospace;">
+          <td class="text-right" style="font-size: 11px; padding-bottom: 6px; font-weight: bold; font-family: monospace; vertical-align: middle;">
             ${item.totalQuantity || 0}
           </td>
-          <td class="text-right" style="font-size: 11px; padding-bottom: 6px; ${diffClass} font-family: monospace;">
+          <td class="text-right" style="font-size: 11px; padding-bottom: 6px; ${diffClass} font-family: monospace; vertical-align: middle;">
             ${diffSigned}
           </td>
         </tr>
@@ -472,6 +481,31 @@ export class ThermalPrinterEngine {
     setTimeout(() => {
       iframe.contentWindow?.focus();
     }, 100);
+  }
+
+  private getBarcodeDataUrl(barcode: string): string {
+    if (!barcode) return "";
+    try {
+      const canvas = document.createElement('canvas');
+      // @ts-ignore
+      JsBarcode(canvas, barcode, {
+        format: "CODE128",
+        width: 1.3,
+        height: 35,
+        displayValue: true,
+        fontSize: 10,
+        font: "monospace",
+        fontOptions: "bold",
+        textMargin: 3,
+        margin: 2,
+        background: "#ffffff",
+        lineColor: "#000000"
+      });
+      return canvas.toDataURL("image/png");
+    } catch (err) {
+      console.warn("Could not generate barcode with JSBarcode for:", barcode, err);
+      return "";
+    }
   }
 
   isConnected(): boolean {
