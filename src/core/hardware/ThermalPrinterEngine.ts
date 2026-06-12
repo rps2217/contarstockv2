@@ -490,8 +490,8 @@ export class ThermalPrinterEngine {
       // @ts-ignore
       JsBarcode(canvas, barcode, {
         format: "CODE128",
-        width: 1.3,
-        height: 35,
+        width: 2,
+        height: 45,
         displayValue: true,
         fontSize: 10,
         font: "monospace",
