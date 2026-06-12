@@ -5,7 +5,7 @@ import { logger } from './logger';
 import { generateUUID, sanitizeBarcode } from './utils';
 import { ScanRecord, ExpectedItem } from '../types';
 import { supabaseSyncService } from './supabaseSyncService';
-import { CloudStockSchema } from './schemas';
+import { CloudStockSchema, CloudOrderRowSchema } from './schemas';
 import { telemetry } from './telemetryService';
 import { getSettings } from './settings';
 
@@ -200,6 +200,61 @@ export const importManifestFromCloud = async (batchId: string): Promise<number> 
   } catch (e: any) {
     const duration = performance.now() - startTime;
     telemetry.track('SYNC', 'PULL_FAIL', { batchId, error: e.message }, duration, batchId);
+    logger.error('CLOUD_MANIFEST_FAIL', e.message);
+    throw e;
+  }
+};
+
+/**
+ * IMPORTAR CARGA TEÓRICA / PEDIDO ESPECÍFICO DESDE LA NUBE
+ */
+export const importExpectedOrderFromCloud = async (batchId: string, orderId: string): Promise<number> => {
+  const startTime = performance.now();
+  try {
+    logger.info('CLOUD_MANIFEST', `Solicitando descarga de CARGA TEÓRICA "${orderId}" para lote: ${batchId}`);
+    
+    const config = getSettings().cloudConfig;
+    const tableName = config?.ordersTableName || 'PEDIDOS';
+    const result = await supabaseSyncService.pullBatch(tableName);
+    
+    if (!result.success || !Array.isArray(result.rows)) {
+      throw new Error("El servidor devolvió un formato inválido o la tabla está vacía.");
+    }
+
+    const erpId = String(orderId || '').toUpperCase().trim();
+    const filteredRows = result.rows
+      .map((row: any) => {
+        const parsed = CloudOrderRowSchema.safeParse(row);
+        return parsed.success ? parsed.data : null;
+      })
+      .filter((p: any) => p !== null && String(p.erp || '').toUpperCase() === erpId);
+
+    if (filteredRows.length === 0) {
+      throw new Error(`La carga teórica "${orderId}" no se encuentra en el servidor.`);
+    }
+
+    const itemsToSave = filteredRows.map(item => ({
+      batchId,
+      barcode: sanitizeBarcode(item.barcode),
+      name: item.name,
+      expectedQty: item.qty,
+      loc: ''
+    }));
+
+    await (massiveDb as any).transaction('rw', massiveDb.blindManifests, async () => {
+      await massiveDb.blindManifests.where('batchId').equals(batchId).delete();
+      await massiveDb.blindManifests.bulkAdd(itemsToSave);
+    });
+
+    const duration = performance.now() - startTime;
+    telemetry.track('SYNC', 'PULL_SUCCESS', { batchId, count: itemsToSave.length, orderId }, duration, batchId);
+    
+    logger.success('CLOUD_MANIFEST', `Carga teórica "${orderId}" importada con éxito: ${itemsToSave.length} SKUs.`);
+    return itemsToSave.length;
+
+  } catch (e: any) {
+    const duration = performance.now() - startTime;
+    telemetry.track('SYNC', 'PULL_FAIL', { batchId, error: e.message, orderId }, duration, batchId);
     logger.error('CLOUD_MANIFEST_FAIL', e.message);
     throw e;
   }

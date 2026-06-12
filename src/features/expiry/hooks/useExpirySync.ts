@@ -75,8 +75,17 @@ export const useExpirySync = (tableName: string) => {
     }
   }, [tableName, addToast]);
 
-  const handleFullRefresh = useCallback(() => {
-    localStorage.removeItem(`last_sync_${tableName}`);
+  const handleFullRefresh = useCallback(async () => {
+    try {
+      localStorage.removeItem(`last_sync_${tableName}`);
+      localStorage.removeItem(`lastSync_${tableName}`);
+      
+      // El motor de sincronización de la nube guarda el checkpoint temporal en db.settings
+      const { db } = await import('../../../db');
+      await db.settings.delete(`lastSync_${tableName}`);
+    } catch (err) {
+      console.warn("No se pudo limpiar el checkpoint en IndexedDB:", err);
+    }
     window.location.reload();
   }, [tableName]);
 

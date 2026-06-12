@@ -107,7 +107,47 @@ export const checkLabelExists = async (labelId: string) => {
 };
 
 export const fetchExpectedItemsFromCloud = async (erpOrder: string): Promise<ExpectedOrder | null> => {
-   return await ExpectedOrderRepository.getById(erpOrder.toUpperCase()) || null;
+   const cleanId = erpOrder.toUpperCase().trim();
+   try {
+     // Intenta obtenerlo localmente primero
+     const local = await ExpectedOrderRepository.getById(cleanId);
+     if (local) return local;
+
+     // Si no está registrado en local, consulta en tiempo real en la nube usando erpService
+     if (navigator.onLine) {
+       const { erpService } = await import('./erpService');
+       const manifest = await erpService.downloadManifest(cleanId);
+       
+       if (manifest && manifest.items && manifest.items.length > 0) {
+         const mappedItems = manifest.items.map(item => ({
+           barcode: item.barcode,
+           name: item.name || `Producto ${item.barcode}`,
+           expectedQty: item.qty || 0
+         }));
+
+         const newExpectedOrder: ExpectedOrder = {
+           id: cleanId,
+           internalId: cleanId,
+           items: mappedItems,
+           totalExpectedUnits: mappedItems.reduce((acc, i) => acc + i.expectedQty, 0),
+           totalExpectedSKUs: mappedItems.length,
+           importedAt: Date.now(),
+           metadata: {
+             documentType: 'Picking List',
+             date: new Date().toLocaleDateString(),
+             orderNote: 'Generado desde consulta en la nube'
+           }
+         };
+
+         // Guardar automáticamente en el IndexedDB local
+         await ExpectedOrderRepository.save(newExpectedOrder);
+         return newExpectedOrder;
+       }
+     }
+   } catch (err) {
+     console.warn("[sessionService] Error al descargar teórico desde nube:", err);
+   }
+   return await ExpectedOrderRepository.getById(cleanId) || null;
 };
 
 export const markScansAsSynced = async (scanIds: string[]) => {

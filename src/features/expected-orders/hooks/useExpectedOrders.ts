@@ -202,7 +202,41 @@ export function useExpectedOrders() {
 
     try {
       await ExpectedOrderRepository.save(expectedOrder);
-      addToast(`Carga teórica "${cleanId}" guardada con éxito (${finalItems.length} SKUs)`, "success");
+      
+      // Sincronizar en tiempo real con la nube (Tabla PEDIDOS)
+      let cloudSynced = false;
+      let cloudError = '';
+      
+      if (navigator.onLine) {
+        try {
+          const cloudPayload = finalItems.map(item => ({
+            id: `${cleanId}_${item.barcode}`.toUpperCase(),
+            erp: cleanId,
+            barcode: item.barcode,
+            name: item.name,
+            qty: item.expectedQty
+          }));
+          
+          const { supabaseSyncService } = await import('../../../services/supabaseSyncService');
+          const uploadResult = await supabaseSyncService.pushBatch('PEDIDOS', cloudPayload);
+          if (uploadResult && uploadResult.success) {
+            cloudSynced = true;
+          } else {
+            cloudError = uploadResult?.error || 'Error desconocido';
+          }
+        } catch (syncErr: any) {
+          cloudError = syncErr.message || String(syncErr);
+        }
+      }
+
+      if (cloudSynced) {
+        addToast(`Carga teórica "${cleanId}" guardada y sincronizada con la nube con éxito (${finalItems.length} SKUs)`, "success");
+      } else if (navigator.onLine && cloudError) {
+        addToast(`Guardado localmente. Error al sincronizar con la nube: ${cloudError}`, "warning");
+      } else {
+        addToast(`Guardado en base de datos local (se sincronizará en el centro de control)`, "info");
+      }
+
       resetImporter();
       setActiveStep('list');
     } catch (err: any) {
@@ -213,7 +247,31 @@ export function useExpectedOrders() {
   const deleteOrder = useCallback(async (id: string) => {
     try {
       await ExpectedOrderRepository.delete(id);
-      addToast("Carga teórica eliminada de la base de datos", "success");
+      
+      // Eliminar también de la nube (Tabla PEDIDOS)
+      let cloudDeleted = false;
+      if (navigator.onLine) {
+        try {
+          const { supabase } = await import('../../../lib/supabase');
+          const { error } = await supabase
+            .from('PEDIDOS')
+            .delete()
+            .eq('erp', id.toUpperCase());
+          
+          if (!error) {
+            cloudDeleted = true;
+          }
+        } catch (syncErr) {
+          console.warn("No se pudo eliminar de la nube:", syncErr);
+        }
+      }
+
+      if (cloudDeleted) {
+        addToast("Carga teórica eliminada de la base de datos local y de la nube", "success");
+      } else {
+        addToast("Carga teórica eliminada localmente", "success");
+      }
+
       if (selectedSavedOrderId === id) {
         setSelectedSavedOrderId(null);
       }

@@ -117,27 +117,49 @@ export class GenericSyncEngine {
     }
 
     const result = await supabaseSyncService.pullBatch(meta.remoteTable, lastSyncDate);
-    if (!result.success || !result.rows || result.rows.length === 0) return { added: 0, updated: 0 };
+    if (!result.success) return { added: 0, updated: 0 };
 
-    const remoteRows = result.rows;
-    let added = 0;
-    let updated = 0;
-    let maxRemoteTime = 0;
+    const remoteRows = result.rows || [];
+    
+    // Si es una sincronización incremental y no hay registros nuevos, salimos temprano
+    if (remoteRows.length === 0 && lastSyncDate) {
+      return { added: 0, updated: 0 };
+    }
 
     const localTable = (db as any)[meta.localTable];
     if (!localTable) return { added: 0, updated: 0 };
 
+    let added = 0;
+    let updated = 0;
+    let maxRemoteTime = 0;
+
     await db.transaction('rw', localTable, async () => {
+      // 1. Obtener todos los registros locales cargados para este registry (solo si es full pull)
+      let localRecords: any[] = [];
+      if (!lastSyncDate) {
+        if (meta.filterField === 'tableName' && meta.filterValue) {
+          localRecords = await localTable.where('tableName').equals(meta.filterValue).toArray();
+        } else {
+          localRecords = await localTable.toArray();
+          if (meta.filterField && meta.filterValue) {
+            localRecords = localRecords.filter((item: any) => item[meta.filterField!] === meta.filterValue);
+          }
+        }
+      }
+
+      // 2. Procesar inserciones y actualizaciones remotas (Upsert remoto -> local)
+      const remoteIds = new Set<string>();
       for (const row of remoteRows) {
         const mapped = meta.mapToLocal ? meta.mapToLocal(row) : row;
         const id = mapped[meta.primaryKey] || mapped.id;
+        remoteIds.add(String(id));
         
         const existing = await localTable.get(id);
         const remoteTime = new Date(row.updated_at || row.timestamp || 0).getTime();
         if (remoteTime > maxRemoteTime) maxRemoteTime = remoteTime;
 
         if (existing) {
-          // Conflict Resolution: Last Write Wins (using updated_at or timestamp)
+          // Resolución de conflictos: Última escritura gana
           const localTime = existing.updatedAt || existing.timestamp || 0;
 
           if (existing.syncStatus === 'synced' || remoteTime > localTime) {
@@ -149,12 +171,18 @@ export class GenericSyncEngine {
           added++;
         }
       }
-      
-      // Filter filtering on DB level to ensure data segregation is met locally
-      if (meta.filterField && meta.filterValue) {
-        // Find orphans (e.g. they changed tableName remotely so they don't belong here anymore, or we shouldn't have fetched them)
-        // Wait, supabaseSyncService.pullBatch fetches everything. So we might need to purge those that mismatch?
-        // Let's assume supabase pull is correct.
+
+      // 3. Reconciliación total de eliminaciones (Solo en pull completo)
+      // Si un registro local está marcado como 'synced' (o 'error') pero NO está en las filas de la nube,
+      // significa que fue borrado en otro dispositivo/servidor y debe ser removido localmente.
+      if (!lastSyncDate && localRecords.length > 0) {
+        for (const localRec of localRecords) {
+          const localId = String(localRec[meta.primaryKey] || localRec.id || '');
+          if ((localRec.syncStatus === 'synced' || localRec.syncStatus === 'error') && !remoteIds.has(localId)) {
+            logger.info('SYNC_RECONCILE', `Eliminando registro huérfano local de ${meta.remoteTable}: ${localId}`);
+            await localTable.delete(localRec[meta.primaryKey] || localRec.id);
+          }
+        }
       }
     });
 
