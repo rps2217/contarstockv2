@@ -62,27 +62,87 @@ export function useExpectedOrders() {
         };
       }).filter(item => item.barcode !== '');
     } else {
-      // Paste mode parsing: tab-separated, comma-separated or semicolon-separated
+      // Paste mode parsing: intelligent tab-separated (including SAP multi-line copy-paste format), comma-separated or semicolon-separated
       if (!pasteText.trim()) return [];
       
       const lines = pasteText.split('\n');
-      return lines.map((line) => {
-        // split by tab first, then fall back to comma, then semicolon
-        let parts = line.split('\t');
-        if (parts.length < 2) parts = line.split(',');
-        if (parts.length < 2) parts = line.split(';');
+      const items: ExpectedItem[] = [];
+
+      for (const line of lines) {
+        const trimmedLine = line.trim();
+        if (!trimmedLine) continue;
+
+        // Skip headers
+        if (
+          trimmedLine.toLowerCase().includes('sku') && 
+          (trimmedLine.toLowerCase().includes('descrip') || trimmedLine.toLowerCase().includes('cant'))
+        ) {
+          continue;
+        }
+
+        // Try to split
+        let parts = trimmedLine.split('\t');
+        const isTabSeparated = parts.length >= 2;
         
+        if (!isTabSeparated) {
+          parts = trimmedLine.split(',');
+        }
+        if (parts.length < 2) {
+          parts = trimmedLine.split(';');
+        }
+
+        // If it doesn't split into columns, skip it (helps ignore SAP wrapped multi-line noise like lote, date, obs)
+        if (parts.length < 2) {
+          continue;
+        }
+
         const rawBarcode = String(parts[0] || '').trim();
-        const rawName = parts.length > 2 ? String(parts[1] || '').trim() : `SKU ${rawBarcode}`;
-        const rawQtyStr = parts.length > 2 ? parts[2] : (parts[1] || '0');
-        const rawQty = parseInt(String(rawQtyStr || '0').replace(/[^0-9]/g, ''), 10);
-        
-        return {
+
+        // Extra guard to filter out invalid barcodes or single digits or labels in SAP
+        if (!rawBarcode || rawBarcode.length < 3 || rawBarcode.includes('/') || ['und', 'unid', 'unidad', 'lote', 'fecha', 'observacion'].includes(rawBarcode.toLowerCase())) {
+          continue;
+        }
+
+        let rawName = `SKU ${rawBarcode}`;
+        let rawQty = 1;
+
+        if (isTabSeparated && parts.length >= 4) {
+          // SAP Clipboard: SKU (parts[0]), Descripción (parts[1]), U.Medida (parts[2]), Despachado (parts[3])
+          rawName = String(parts[1] || '').trim();
+          const p3 = String(parts[3] || '').trim();
+          const cleanQtyStr = p3.replace(/[^0-9.-]/g, '');
+          const parsedQty = parseInt(cleanQtyStr, 10);
+          if (!isNaN(parsedQty)) {
+            rawQty = parsedQty;
+          }
+        } else if (parts.length >= 3) {
+          // Regular Tab or Column based: Barcode, Name, Qty
+          rawName = String(parts[1] || '').trim();
+          const cleanQtyStr = String(parts[2] || '').replace(/[^0-9.-]/g, '');
+          const parsedQty = parseInt(cleanQtyStr, 10);
+          if (!isNaN(parsedQty)) {
+            rawQty = parsedQty;
+          }
+        } else if (parts.length === 2) {
+          // Barcode, Qty or Barcode, Name
+          const cleanQtyStr = String(parts[1] || '').replace(/[^0-9.-]/g, '');
+          const parsedQty = parseInt(cleanQtyStr, 10);
+          if (!isNaN(parsedQty)) {
+            rawQty = parsedQty;
+            rawName = `SKU ${rawBarcode}`;
+          } else {
+            rawName = String(parts[1] || '').trim();
+          }
+        }
+
+        items.push({
           barcode: rawBarcode,
           name: rawName || `SKU ${rawBarcode}`,
-          expectedQty: isNaN(rawQty) ? 1 : rawQty
-        };
-      }).filter(item => item.barcode !== '');
+          expectedQty: rawQty
+        });
+      }
+
+      return items;
     }
   }, [importMode, parsedRows, mappings, pasteText]);
 

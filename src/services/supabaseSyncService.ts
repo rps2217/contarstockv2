@@ -127,7 +127,22 @@ export const supabaseSyncService = {
     });
 
     let primaryKey = 'id';
-    if (tableName === 'PROVEEDORES') primaryKey = 'tax_id';
+    if (tableName === 'PROVEEDORES') {
+      const firstRow = currentRows[0];
+      if (firstRow) {
+        if ('rut' in firstRow && firstRow.rut) {
+          primaryKey = 'rut';
+        } else if ('tax_id' in firstRow && firstRow.tax_id) {
+          primaryKey = 'tax_id';
+        } else if ('id' in firstRow && firstRow.id) {
+          primaryKey = 'id';
+        } else {
+          primaryKey = 'rut';
+        }
+      } else {
+        primaryKey = 'rut';
+      }
+    }
     if (tableName === 'VENCIMIENTOS') primaryKey = 'unique_key';
 
     const maxRetries = 12; // Un poco más para esquemas complejos

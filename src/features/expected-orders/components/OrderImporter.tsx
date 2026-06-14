@@ -314,15 +314,18 @@ export const OrderImporter: React.FC<OrderImporterProps> = ({ state, actions, is
         <div className={`p-6 md:p-8 rounded-[2rem] border ${
           isDark ? 'bg-slate-900 border-white/5' : 'bg-white border-slate-200/80 shadow-sm'
         }`}>
-          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
             <div className="space-y-1">
-              <h4 className={`text-sm font-black ${isDark ? 'text-white' : 'text-slate-800'}`}>Copiar y Pegar Celdas desde Excel o Sheets</h4>
-              <p className={`text-[10px] font-semibold ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                Copia las columnas de tu hoja de cálculo y pégalas directamente debajo. Columnas sugeridas: [Código de Barra], [Nombre], [Cantidad]
+              <h4 className={`text-sm font-black ${isDark ? 'text-white' : 'text-slate-800'} flex items-center gap-2`}>
+                <Sparkles className="w-4 h-4 text-gradient-blue animate-pulse" />
+                Copiar y Pegar desde Excel, Google Sheets o SAP
+              </h4>
+              <p className={`text-[10px] font-semibold ${isDark ? 'text-slate-500' : 'text-slate-400'} max-w-2xl`}>
+                Soporta tabulado directo y está optimizado para SAP: copia las filas directamente de tu grilla de SAP y el sistema detectará inteligentemente el <strong className="text-blue-500">SKU (columna 1)</strong>, la <strong className="text-blue-500">Descripción (columna 2)</strong> y la <strong className="text-blue-500">Cantidad Despachada (columna 4)</strong>, descartando las filas de control sobrantes.
               </p>
             </div>
-            <div className={`px-3 py-1 text-[9px] font-black uppercase tracking-wider rounded-lg border ${isDark ? 'border-amber-500/10 bg-amber-500/5 text-amber-400' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
-              Soporta tabulado libre
+            <div className={`px-3 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg border shrink-0 ${isDark ? 'border-blue-500/20 bg-blue-500/10 text-blue-400' : 'border-blue-200 bg-blue-50 text-blue-700'}`}>
+              Soporta Copiado de SAP NATIVO 🚀
             </div>
           </div>
 

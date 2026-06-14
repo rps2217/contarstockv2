@@ -1,7 +1,7 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { db } from '../db';
-import { normalizeSku } from '../services/utils';
+import { normalizeSku, normalizeIdentity } from '../services/utils';
 import { useCaptureSession } from './useCaptureSession';
 import { useFeedbackSystem } from './useFeedbackSystem';
 import { SoundFX } from '../services/audio';
@@ -47,21 +47,44 @@ export const useScannerEngine = (options: ScannerEngineOptions = {}) => {
     
     // Resolución paralela de Producto y Política
     const foundProduct = await db.products.get(normalizedCode);
-    setProduct(foundProduct || { name: 'Producto Desconocido', barcode: normalizedCode });
+    const productRecord: any = foundProduct ? { ...foundProduct } : { name: 'Producto Desconocido', barcode: normalizedCode, supplier: 'N/A', supplierRut: '' };
+    
+    let provider: any = null;
 
-    if (foundProduct?.supplierRut) {
-      const provider = await db.providers.get(normalizeSku(foundProduct.supplierRut));
-      if (provider) {
-        setProviderPolicy({ 
-          days: provider.withdrawalDays || 0, 
-          hasCanje: provider.hasExchange || false 
-        });
-      } else {
-        setProviderPolicy(null);
+    if (productRecord.supplierRut) {
+      const cleanRut = normalizeIdentity(productRecord.supplierRut);
+      // 1. Intento por RUT normalizado
+      provider = await db.providers.get(cleanRut);
+      
+      // 2. Intento por RUT original con puntuación o barras
+      if (!provider) {
+        provider = await db.providers.get(productRecord.supplierRut);
       }
+    }
+
+    // 3. Intento por Nombre de Proveedor (si no hay match por RUT o no tiene RUT pero sí nombre)
+    if (!provider && productRecord.supplier && productRecord.supplier !== 'N/A') {
+      const targetName = productRecord.supplier.trim().toUpperCase();
+      const allProviders = await db.providers.toArray();
+      provider = allProviders.find(p => p.name && p.name.trim().toUpperCase() === targetName);
+    }
+
+    // Curación Dinámica de Datos (Self-Healing):
+    // Si encontramos el proveedor pero el producto no tiene asignado su nombre,
+    // o es genérico ('N/A'), lo sanamos con el nombre del proveedor real de la base de proveedores
+    if (provider) {
+      if (!productRecord.supplier || productRecord.supplier === 'N/A') {
+        productRecord.supplier = provider.name;
+      }
+      setProviderPolicy({ 
+        days: provider.withdrawalDays || 0, 
+        hasCanje: provider.hasExchange || false 
+      });
     } else {
       setProviderPolicy(null);
     }
+
+    setProduct(productRecord);
 
     if (options.autoOpenModal !== false) {
       setIsModalOpen(true);
