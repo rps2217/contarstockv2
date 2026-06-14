@@ -133,8 +133,8 @@ export const ExpiryDetailModal: React.FC<ExpiryDetailModalProps> = ({
                 <div className="bg-slate-800/50 rounded-2xl border border-slate-700/50 overflow-hidden divide-y divide-slate-700/50">
                   <DetailRow label="Proveedor" value={provider?.name || (item.providerName !== 'N/A' ? item.providerName : product?.supplier) || 'SIN PROVEEDOR'} />
                   {provider?.rut && <DetailRow label="RUT Proveedor" value={provider.rut} />}
-                  {(provider?.withdrawalDays ?? product?.withdrawalDays ?? item.withdrawalDays) !== undefined && (
-                     <DetailRow label="Política Maestra" value={`${provider?.withdrawalDays ?? product?.withdrawalDays ?? item.withdrawalDays} días (${(provider?.hasExchange ?? product?.hasExchange ?? item.hasCanje) ? 'CANJE' : 'MERMA'})`} />
+                  {((provider?.withdrawalDays ?? (product as any)?.withdrawalDays ?? (item as any).withdrawalDays) !== undefined) && (
+                     <DetailRow label="Política Maestra" value={`${provider?.withdrawalDays ?? (product as any)?.withdrawalDays ?? (item as any).withdrawalDays} días (${(provider?.hasExchange ?? (product as any)?.hasExchange ?? item.hasCanje) ? 'CANJE' : 'MERMA'})`} />
                   )}
                 </div>
               </section>

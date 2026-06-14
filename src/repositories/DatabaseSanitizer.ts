@@ -42,30 +42,31 @@ export class DatabaseSanitizer {
       }
     }
     
-    // 3. Sanitizar Expiry Records
-    const records = await db.expiry_records.toArray();
+    // 3. Sanitizar Expiry Records en dynamic_data
+    const records = await db.dynamic_data.where('tableName').equals('VENCIMIENTOS').toArray();
     const allProviders = await db.providers.toArray();
     
     for (const r of records) {
       let needsUpdate = false;
+      const expiryData = r.data || {};
       
-      const cleanBarcode = normalizeSku(r.barcode);
-      if (r.barcode !== cleanBarcode) {
-        r.barcode = cleanBarcode;
-        needsUpdate = true; // Wait! If primary key changed, we can't just put(). But id is a UUID, barcode is a field. So put() is fine.
+      const cleanBarcode = normalizeSku(expiryData.barcode || '');
+      if (expiryData.barcode !== cleanBarcode) {
+        expiryData.barcode = cleanBarcode;
+        needsUpdate = true; 
       }
       
       // Intentar forzar el cruce si falla
-      if (!r.providerName || r.providerName === 'N/A' || r.providerName === 'SIN PROVEEDOR') {
-        const prod = await db.products.get(r.barcode);
+      if (!expiryData.providerName || expiryData.providerName === 'N/A' || expiryData.providerName === 'SIN PROVEEDOR') {
+        const prod = await db.products.get(cleanBarcode);
         if (prod) {
           // Si el producto tiene RUT, buscamos por RUT
           if (prod.supplierRut) {
             const cleanRut = normalizeIdentity(prod.supplierRut);
             const prov = allProviders.find(pv => pv.rut === cleanRut);
             if (prov) {
-              r.providerName = prov.name;
-              (r as any).providerRut = prov.rut;
+              expiryData.providerName = prov.name;
+              expiryData.providerRut = prov.rut;
               needsUpdate = true;
             }
           } 
@@ -75,8 +76,8 @@ export class DatabaseSanitizer {
              const cleanName = normalizeIdentity(prod.supplier);
              const prov = allProviders.find(pv => pv.name && normalizeIdentity(pv.name) === cleanName);
              if (prov) {
-               r.providerName = prov.name;
-               (r as any).providerRut = prov.rut;
+               expiryData.providerName = prov.name;
+               expiryData.providerRut = prov.rut;
                needsUpdate = true;
                
                // Actualizar producto también para que en el futuro no falle
@@ -89,7 +90,8 @@ export class DatabaseSanitizer {
       }
       
       if (needsUpdate) {
-        await db.expiry_records.put(r);
+        r.data = expiryData;
+        await db.dynamic_data.put(r);
       }
     }
     
