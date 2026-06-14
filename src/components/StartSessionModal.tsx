@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { DownloadCloud, Loader2, AlertCircle, FileSearch, Sparkles, Database, Ghost, Camera, X, Box, FileText, ArrowRight, ScanLine, Lock, Unlock } from 'lucide-react';
 import { CountingSession, ExpectedOrder } from '../types';
 import * as sessionService from '../services/sessionService'; 
@@ -34,6 +34,15 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isCloudLoading, setIsCloudLoading] = useState(false);
   const [cloudOrder, setCloudOrder] = useState<ExpectedOrder | null>(null);
+  const [localSavedOrders, setLocalSavedOrders] = useState<ExpectedOrder[]>([]);
+
+  useEffect(() => {
+    if (isOpen && step === 'enter_erp') {
+      ExpectedOrderRepository.getAll().then((list) => {
+        setLocalSavedOrders(list || []);
+      });
+    }
+  }, [step, isOpen]);
 
   // Scanner de hardware integrado
   useHIDScanner({
@@ -350,6 +359,41 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
               {isCloudLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <DownloadCloud className="w-5 h-5" />}
               Validar y Descargar
             </button>
+
+            {localSavedOrders.length > 0 && (
+              <div className="space-y-2 pt-2 border-t border-white/5">
+                <div className="text-[8px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-1.5">
+                  <Database className="w-3 h-3 text-emerald-400" /> Cargas Teóricas Guardadas:
+                </div>
+                <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1 no-scrollbar-y">
+                  {localSavedOrders.map((order) => {
+                    const dispName = order.metadata?.internalGuide || order.metadata?.purchaseOrder || order.id;
+                    return (
+                      <button
+                        key={order.id}
+                        type="button"
+                        onClick={() => {
+                          setErpOrder(order.id);
+                          setCloudOrder(order);
+                          SoundFX.play('success');
+                          setStep('confirm');
+                        }}
+                        className="w-full text-left bg-slate-900/60 hover:bg-emerald-950/20 border border-white/5 hover:border-emerald-500/30 p-2.5 rounded-xl transition-all flex items-center justify-between text-xs font-mono font-bold"
+                      >
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-white truncate">{dispName}</span>
+                          <span className="text-[8px] text-slate-500 truncate">ID: {order.id}</span>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0 ml-2">
+                          <span className="px-1.5 py-0.5 bg-blue-500/10 rounded text-[7px] font-black text-blue-400">{order.items?.length || 0} SKUs</span>
+                          <ArrowRight className="w-3.5 h-3.5 text-slate-600" />
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             <button 
               onClick={() => setStep('take_photo')}

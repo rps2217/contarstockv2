@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useHammerLogic } from './hooks/useHammerLogic';
 import { useLocationManager } from '../../shared/hooks/useLocationManager';
-import { migrateMassiveToMaster, importManifestFromCloud, importExpectedOrderFromCloud } from '../../services/massiveSync';
+import { migrateMassiveToMaster, importManifestFromCloud, importExpectedOrderFromCloud, importLocalExpectedOrderToHammer } from '../../services/massiveSync';
 import { MassiveToolsSheet } from './components/MassiveToolsSheet';
 import { LoadTheoreticalModal } from './components/LoadTheoreticalModal';
 import { BarcodeLabelModal } from '../../shared/components/ui/BarcodeLabelModal';
@@ -53,6 +53,10 @@ export const HammerPage: React.FC = () => {
 
   const handleImportExpectedOrder = async (orderId: string) => {
     await importExpectedOrderFromCloud(batchId, orderId);
+  };
+
+  const handleImportLocalExpectedOrder = async (orderId: string) => {
+    await importLocalExpectedOrderToHammer(batchId, orderId);
   };
 
   const activeItem = state.items.find(i => i.barcode === state.activeBarcode);
@@ -110,6 +114,7 @@ export const HammerPage: React.FC = () => {
         onClose={() => setIsTheoreticalModalOpen(false)}
         onImportGeneralStock={handleImportGeneralStock}
         onImportExpectedOrder={handleImportExpectedOrder}
+        onImportLocalExpectedOrder={handleImportLocalExpectedOrder}
       />
     </div>
   );

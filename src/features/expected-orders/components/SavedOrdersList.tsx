@@ -1,8 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { FileText, Calendar, Trash2, Search, ArrowRight, Expand, ChevronDown, ChevronUp, Package, Layers, Info, Filter } from 'lucide-react';
+import { FileText, Calendar, Trash2, Printer, Search, ArrowRight, Expand, ChevronDown, ChevronUp, Package, Layers, Info, Filter } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ExpectedOrder, ExpectedItem } from '../../../types';
 import { VirtualList } from '../../../shared/components/ui/VirtualList';
+import { thermalPrinter } from '../../../core/hardware/ThermalPrinterEngine';
+import { SoundFX } from '../../../services/audio';
 
 interface SavedOrdersListProps {
   state: any;
@@ -198,6 +200,22 @@ export const SavedOrdersList: React.FC<SavedOrdersListProps> = ({ state, actions
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
+                          SoundFX.play('increment');
+                          thermalPrinter.printExpectedOrder(order);
+                        }}
+                        title="Imprimir ticket de carga teórica"
+                        className={`p-3 rounded-xl border transition-all hover:scale-105 active:scale-95 ${
+                          isDark 
+                            ? 'border-white/5 text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/5' 
+                            : 'border-slate-200 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50'
+                        }`}
+                      >
+                        <Printer className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
                           if (confirm(`¿Estás seguro/a de eliminar la carga teórica "${order.id}"? Esta acción no se puede deshacer.`)) {
                             actions.deleteOrder(order.id);
                           }
@@ -237,19 +255,37 @@ export const SavedOrdersList: React.FC<SavedOrdersListProps> = ({ state, actions
                           <span className={`text-[10px] font-black uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                             Desglose de SKUs en Documento
                           </span>
-                          <div className="relative max-w-xs w-full">
-                            <input
-                              type="text"
-                              placeholder="Filtro rápido..."
-                              value={itemQuery}
-                              onChange={(e) => setItemQuery(e.target.value)}
-                              className={`w-full pl-8 pr-3 py-1.5 rounded-lg text-[10px] font-bold transition-all border ${
+                          <div className="flex items-center gap-2 max-w-md w-full md:w-auto justify-end">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                SoundFX.play('increment');
+                                thermalPrinter.printExpectedOrder(order);
+                              }}
+                              className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all active:scale-95 border cursor-pointer ${
                                 isDark 
-                                  ? 'bg-slate-900 border-white/5 text-white' 
-                                  : 'bg-white border-slate-200 text-slate-700 shadow-sm'
+                                  ? 'bg-blue-600/10 border-blue-500/20 text-blue-400 hover:bg-blue-600/20' 
+                                  : 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100'
                               }`}
-                            />
-                            <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-2" />
+                            >
+                              <Printer className="w-3.5 h-3.5" />
+                              <span>Imprimir Ticket Térmico</span>
+                            </button>
+
+                            <div className="relative max-w-xs w-full">
+                              <input
+                                type="text"
+                                placeholder="Filtro rápido..."
+                                value={itemQuery}
+                                onChange={(e) => setItemQuery(e.target.value)}
+                                className={`w-full pl-8 pr-3 py-1.5 rounded-lg text-[10px] font-bold transition-all border ${
+                                  isDark 
+                                    ? 'bg-slate-900 border-white/5 text-white' 
+                                    : 'bg-white border-slate-200 text-slate-700 shadow-sm'
+                                }`}
+                              />
+                              <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-2" />
+                            </div>
                           </div>
                         </div>
 

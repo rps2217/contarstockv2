@@ -499,7 +499,245 @@ export class ThermalPrinterEngine {
     }, 100);
   }
 
-  private getBarcodeDataUrl(barcode: string): string {
+  public printExpectedOrder(order: any) {
+    // 1. Quitar residuo previo
+    const oldIframe = document.getElementById('thermal-print-iframe');
+    if (oldIframe) {
+      oldIframe.parentNode?.removeChild(oldIframe);
+    }
+
+    // 2. Crear iframe invisible
+    const iframe = document.createElement('iframe');
+    iframe.id = 'thermal-print-iframe';
+    iframe.style.position = 'fixed';
+    iframe.style.bottom = '0';
+    iframe.style.right = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document || iframe.contentDocument;
+    if (!doc) {
+      console.error("No se pudo iniciar el canal de impresión nativa.");
+      return;
+    }
+
+    const title = order.metadata?.documentType || "CARGA TEÓRICA";
+    const documentId = order.id;
+    const itemsCount = order.items?.length || 0;
+    const dateStr = order.metadata?.date || new Date(order.importedAt || Date.now()).toLocaleDateString('es-ES');
+    const timeStr = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    const currentFullDate = new Date().toLocaleDateString('es-ES') + " " + timeStr;
+
+    const itemsHtml = (order.items || []).map((item: any) => {
+      // Generate barcode without text underneath (displayValue: false)
+      const barcodeUrl = this.getBarcodeDataUrl(item.barcode, false);
+      
+      return `
+        <div class="item-block">
+          <div class="item-title">${item.name || 'SIN DESCRIPCIÓN'}</div>
+          
+          <div class="item-meta">
+            <div class="item-id-box">
+              ID: ${item.barcode}
+            </div>
+            <div class="item-qty-box">
+              CANT: ${item.expectedQty || 0}
+            </div>
+          </div>
+
+          ${barcodeUrl ? `
+            <div class="barcode-container">
+              <img src="${barcodeUrl}" alt="${item.barcode}" class="barcode-img" />
+            </div>
+          ` : `
+            <div style="text-align: center; font-size: 8px; font-family: monospace; color: #666; margin-top: 4px;">
+              [${item.barcode}]
+            </div>
+          `}
+          
+          <div class="item-divider"></div>
+        </div>
+      `;
+    }).join('');
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>${title} - ${documentId}</title>
+          <style>
+            @page {
+              size: 80mm auto;
+              margin: 0;
+            }
+            @media print {
+              body {
+                width: 72mm;
+                margin: 0;
+                padding: 10px 4mm;
+                background-color: white;
+                color: black;
+              }
+            }
+            body {
+              width: 72mm;
+              margin: 0 auto;
+              padding: 15px;
+              font-family: Arial, sans-serif;
+              font-size: 11px;
+              line-height: 1.4;
+              color: #000;
+              background: #fff;
+              box-sizing: border-box;
+            }
+            .header-print {
+              text-align: center;
+              margin-bottom: 8px;
+            }
+            .header-print h1 {
+              font-size: 16px;
+              font-weight: 900;
+              margin: 0 0 2px 0;
+              letter-spacing: 0.5px;
+              text-transform: uppercase;
+            }
+            .header-print h2 {
+              font-size: 12px;
+              font-weight: 800;
+              margin: 0 0 4px 0;
+              text-transform: uppercase;
+              letter-spacing: 0.2px;
+            }
+            .header-print .date {
+              font-size: 10px;
+              font-weight: bold;
+              margin: 0;
+              text-transform: uppercase;
+            }
+            .header-line {
+              border-top: 3px solid #000;
+              margin: 8px 0;
+              height: 0;
+            }
+            .item-block {
+              margin-bottom: 12px;
+              page-break-inside: avoid;
+            }
+            .item-title {
+              font-size: 12px;
+              font-weight: 900;
+              text-transform: uppercase;
+              margin-bottom: 4px;
+              word-wrap: break-word;
+            }
+            .item-meta {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 6px;
+              font-size: 10px;
+              font-weight: bold;
+            }
+            .item-id-box {
+              border: 1px solid #000;
+              padding: 2px 5px;
+              font-family: monospace;
+              text-transform: uppercase;
+            }
+            .item-qty-box {
+              font-size: 11px;
+              font-weight: 900;
+              text-transform: uppercase;
+            }
+            .barcode-container {
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              margin: 6px 0;
+            }
+            .barcode-img {
+              max-height: 48px;
+              max-width: 100%;
+              width: auto;
+              height: auto;
+              display: block;
+              image-rendering: pixelated;
+              image-rendering: crisp-edges;
+            }
+            .item-divider {
+              border-top: 1px solid #000;
+              margin-top: 10px;
+              height: 0;
+            }
+            .bottom-summary {
+              text-align: center;
+              margin-top: 20px;
+              font-weight: bold;
+              page-break-inside: avoid;
+            }
+            .summary-total {
+              font-size: 12px;
+              font-weight: 900;
+              text-transform: uppercase;
+              margin-bottom: 4px;
+            }
+            .summary-date {
+              font-size: 9px;
+              font-family: monospace;
+            }
+            .bottom-line {
+              border-top: 3px solid #000;
+              margin: 10px 0;
+              height: 0;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header-print">
+            <h1>LOGICOUNT PRO</h1>
+            <h2>REPORTE CARGA TEÓRICA</h2>
+            <div class="date">${dateStr}</div>
+          </div>
+          
+          <div class="header-line"></div>
+
+          <div class="meta-info" style="font-size: 10px; font-weight: bold; margin-bottom: 12px; font-family: monospace; text-transform: uppercase;">
+            DOCUMENTO: ${documentId}
+          </div>
+
+          <div class="items-container">
+            ${itemsHtml}
+          </div>
+
+          <div class="bottom-line"></div>
+
+          <div class="bottom-summary">
+            <div class="summary-total">TOTAL PRODUCTOS: ${itemsCount}</div>
+            <div class="summary-date">${currentFullDate}</div>
+          </div>
+
+          <script>
+            window.onload = function() {
+              window.print();
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    doc.open();
+    doc.write(htmlContent);
+    doc.close();
+
+    setTimeout(() => {
+      iframe.contentWindow?.focus();
+    }, 120);
+  }
+
+  public getBarcodeDataUrl(barcode: string, displayValue: boolean = true): string {
     if (!barcode) return "";
     try {
       const canvas = document.createElement('canvas');
@@ -508,7 +746,7 @@ export class ThermalPrinterEngine {
         format: "CODE128",
         width: 2,
         height: 45,
-        displayValue: true,
+        displayValue: displayValue,
         fontSize: 10,
         font: "monospace",
         fontOptions: "bold",

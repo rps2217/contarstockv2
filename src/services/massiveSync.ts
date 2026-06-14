@@ -260,3 +260,42 @@ export const importExpectedOrderFromCloud = async (batchId: string, orderId: str
   }
 };
 
+/**
+ * IMPORTAR CARGA TEÓRICA LOCAL AL SISTEMA MARTILLO
+ */
+export const importLocalExpectedOrderToHammer = async (batchId: string, orderId: string): Promise<number> => {
+  const startTime = performance.now();
+  try {
+    logger.info('CLOUD_MANIFEST', `Importando localmente CARGA TEÓRICA "${orderId}" para lote: ${batchId}`);
+    
+    const order = await db.expectedOrders.get(orderId);
+    if (!order) {
+      throw new Error(`La carga teórica local "${orderId}" no existe.`);
+    }
+
+    const itemsToSave = order.items.map(item => ({
+      batchId,
+      barcode: sanitizeBarcode(item.barcode),
+      name: item.name,
+      expectedQty: item.expectedQty,
+      loc: ''
+    }));
+
+    await (massiveDb as any).transaction('rw', massiveDb.blindManifests, async () => {
+      await massiveDb.blindManifests.where('batchId').equals(batchId).delete();
+      await massiveDb.blindManifests.bulkAdd(itemsToSave);
+    });
+
+    const duration = performance.now() - startTime;
+    telemetry.track('SYNC', 'LOCAL_IMPORT_SUCCESS', { batchId, count: itemsToSave.length, orderId }, duration, batchId);
+    
+    logger.success('CLOUD_MANIFEST', `Carga teórica local "${order?.metadata?.internalGuide || orderId}" importada con éxito: ${itemsToSave.length} SKUs.`);
+    return itemsToSave.length;
+  } catch (e: any) {
+    const duration = performance.now() - startTime;
+    telemetry.track('SYNC', 'LOCAL_IMPORT_FAIL', { batchId, error: e.message, orderId }, duration, batchId);
+    logger.error('CLOUD_MANIFEST_FAIL', e.message);
+    throw e;
+  }
+};
+
