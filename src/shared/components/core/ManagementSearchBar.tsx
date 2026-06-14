@@ -31,12 +31,12 @@ export const ManagementSearchBar: React.FC<ManagementSearchBarProps> = ({
   const [isFocused, setIsFocused] = useState(false);
   const isDark = theme === 'dark';
 
-  // Sincronizar localQuery con searchQuery cuando cambie externamente
+  // Synchronize local search text with global state
   useEffect(() => {
     setLocalQuery(searchQuery);
   }, [searchQuery]);
 
-  // Debounce interno
+  // Debounced search trigger for high performance
   useEffect(() => {
     const timer = setTimeout(() => {
       if (localQuery !== searchQuery) {
@@ -48,65 +48,70 @@ export const ManagementSearchBar: React.FC<ManagementSearchBarProps> = ({
 
   const colorClasses = {
     amber: {
-      border: 'border-amber-500/20 focus-within:border-amber-500 focus-within:ring-amber-500/10',
+      border: 'border-amber-500/10 focus-within:border-amber-500/40 focus-within:ring-amber-500/5',
       text: 'text-amber-500',
       badge: 'bg-amber-500 text-black',
-      glow: 'shadow-[0_0_20px_rgba(245,158,11,0.08)]',
-      btnBg: 'bg-amber-500 hover:bg-amber-400 text-black shadow-md shadow-amber-500/10',
-      iconColor: 'text-amber-500'
+      glow: 'shadow-[0_0_25px_rgba(245,158,11,0.06)]',
+      fabBg: 'bg-amber-500 hover:bg-amber-400 text-black shadow-lg shadow-amber-500/25 focus:ring-amber-400/50',
+      iconColor: 'text-amber-500 hover:bg-amber-500/10',
+      shimmer: 'from-amber-400/20 to-amber-500/30'
     },
     blue: {
-      border: 'border-blue-500/20 focus-within:border-blue-500 focus-within:ring-blue-500/10',
+      border: 'border-blue-500/10 focus-within:border-blue-500/40 focus-within:ring-blue-500/5',
       text: 'text-blue-500',
       badge: 'bg-blue-500 text-white',
-      glow: 'shadow-[0_0_20px_rgba(59,130,246,0.08)]',
-      btnBg: 'bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-500/20',
-      iconColor: 'text-blue-500'
+      glow: 'shadow-[0_0_25px_rgba(59,130,246,0.06)]',
+      fabBg: 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/25 focus:ring-blue-400/50',
+      iconColor: 'text-blue-500 hover:bg-blue-500/10',
+      shimmer: 'from-blue-400/20 to-blue-500/30'
     },
     emerald: {
-      border: 'border-emerald-500/20 focus-within:border-emerald-500 focus-within:ring-emerald-500/10',
+      border: 'border-emerald-500/10 focus-within:border-emerald-500/40 focus-within:ring-emerald-500/5',
       text: 'text-emerald-500',
       badge: 'bg-emerald-500 text-black',
-      glow: 'shadow-[0_0_20px_rgba(16,185,129,0.08)]',
-      btnBg: 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-500/20',
-      iconColor: 'text-emerald-500'
+      glow: 'shadow-[0_0_25px_rgba(16,185,129,0.06)]',
+      fabBg: 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/25 focus:ring-emerald-400/50',
+      iconColor: 'text-emerald-500 hover:bg-emerald-500/10',
+      shimmer: 'from-emerald-400/20 to-emerald-500/30'
     },
     rose: {
-      border: 'border-rose-500/20 focus-within:border-rose-500 focus-within:ring-rose-500/10',
+      border: 'border-rose-500/10 focus-within:border-rose-500/40 focus-within:ring-rose-500/5',
       text: 'text-rose-500',
       badge: 'bg-rose-500 text-white',
-      glow: 'shadow-[0_0_20px_rgba(244,63,94,0.08)]',
-      btnBg: 'bg-rose-600 hover:bg-rose-500 text-white shadow-md shadow-rose-500/20',
-      iconColor: 'text-rose-500'
+      glow: 'shadow-[0_0_25px_rgba(244,63,94,0.06)]',
+      fabBg: 'bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-500/25 focus:ring-rose-400/50',
+      iconColor: 'text-rose-500 hover:bg-rose-500/10',
+      shimmer: 'from-rose-400/20 to-rose-500/30'
     },
     indigo: {
-      border: 'border-indigo-500/25 focus-within:border-indigo-500 focus-within:ring-indigo-500/10',
+      border: 'border-indigo-500/15 focus-within:border-indigo-500/40 focus-within:ring-indigo-500/5',
       text: 'text-indigo-500',
       badge: 'bg-indigo-500 text-white',
-      glow: 'shadow-[0_0_20px_rgba(99,102,241,0.08)]',
-      btnBg: 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-500/20',
-      iconColor: 'text-indigo-500'
+      glow: 'shadow-[0_0_25px_rgba(99,102,241,0.06)]',
+      fabBg: 'bg-indigo-650 hover:bg-indigo-600 text-white shadow-lg shadow-indigo-600/25 focus:ring-indigo-400/50',
+      iconColor: 'text-indigo-500 hover:bg-indigo-500/10',
+      shimmer: 'from-indigo-400/20 to-indigo-500/30'
     }
   };
 
   const colors = colorClasses[accentColor];
 
   return (
-    <div className="flex flex-col md:flex-row gap-3 w-full max-w-7xl mx-auto">
-      {/* El Buscador Principal */}
-      <div className="relative flex-1 flex items-center min-w-0">
+    <>
+      {/* Master Search Bar - Elegant, compact, highly integrated */}
+      <div className="w-full max-w-7xl mx-auto px-1">
         <div 
-          className={`relative flex-1 flex items-center rounded-2xl border transition-all duration-300 ${
-            isFocused ? `${colors.glow} ring-2 ring-opacity-20` : ''
+          className={`flex items-center rounded-2xl border transition-all duration-300 px-3 pl-4 gap-2 ${
+            isFocused ? `${colors.glow} ring-4 ring-slate-400/5 dark:ring-white/5` : ''
           } ${
             isDark 
-              ? `bg-black/40 border-white/5` 
-              : `bg-white border-slate-200/80 shadow-sm`
+              ? 'bg-black/30 border-white/5' 
+              : 'bg-stone-50/70 border-slate-200/80 shadow-sm'
           } ${colors.border}`}
         >
-          {/* Lupa Animada con Color de Contexto */}
-          <Search className={`absolute left-4 w-5 h-5 transition-colors duration-300 ${
-            isFocused ? colors.iconColor : 'text-slate-400'
+          {/* Quiet Search Icon */}
+          <Search className={`w-4 h-4 transition-colors duration-300 shrink-0 ${
+            isFocused ? colors.text : 'text-slate-400 dark:text-slate-500'
           }`} />
           
           <input 
@@ -116,94 +121,114 @@ export const ManagementSearchBar: React.FC<ManagementSearchBarProps> = ({
             onChange={(e) => setLocalQuery(e.target.value)}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
-            className={`w-full py-3.5 md:py-4 pl-12 pr-28 text-sm font-bold bg-transparent outline-none transition-all placeholder-slate-400 dark:placeholder-slate-500 ${
+            className={`w-full py-3 md:py-3.5 text-xs font-black tracking-wide bg-transparent outline-none transition-all placeholder-slate-400 dark:placeholder-slate-600 uppercase ${
               isDark ? 'text-white' : 'text-slate-800'
             }`}
           />
           
-          {/* Botón Borrar Limpio en la Extrema Derecha del Input */}
-          <AnimatePresence>
-            {localQuery && (
-              <motion.button
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                onClick={() => {
-                  setLocalQuery('');
-                  setSearchQuery('');
-                }}
-                className={`absolute right-3 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1 transition-all ${
-                  isDark 
-                    ? 'bg-white/5 hover:bg-white/10 text-slate-300 border border-white/5' 
-                    : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200'
-                }`}
-              >
-                <X className="w-3 h-3" />
-                <span>Borrar</span>
-              </motion.button>
+          {/* Actions panel right inside the search box */}
+          <div className="flex items-center gap-1.5 shrink-0 pl-2">
+            {/* Clear querying search text */}
+            <AnimatePresence>
+              {localQuery && (
+                <motion.button
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  onClick={() => {
+                    setLocalQuery('');
+                    setSearchQuery('');
+                  }}
+                  className={`p-1.5 rounded-lg text-slate-400 transition-colors ${
+                    isDark ? 'hover:bg-white/5 hover:text-white' : 'hover:bg-slate-200 text-slate-600'
+                  }`}
+                  title="Borrar búsqueda"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </motion.button>
+              )}
+            </AnimatePresence>
+
+            {/* Vertical Divider line */}
+            <div className="w-px h-5 bg-slate-200 dark:bg-white/10 mx-0.5 shrink-0" />
+
+            {/* Integrated filter button */}
+            <button
+              onClick={onOpenFilters}
+              className={`p-2 rounded-xl transition-all relative shrink-0 flex items-center justify-center ${
+                activeFiltersCount > 0
+                  ? isDark
+                    ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
+                    : 'bg-amber-50 text-amber-800 border border-amber-200 shadow-sm'
+                  : isDark
+                    ? 'text-slate-400 hover:bg-white/5 hover:text-white border border-transparent'
+                    : 'text-slate-600 hover:bg-slate-200 border border-transparent'
+              }`}
+              title="Filtrar datos"
+            >
+              <Filter className="w-4 h-4" />
+              {activeFiltersCount > 0 && (
+                <span className="absolute -top-1.5 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black leading-none bg-amber-500 text-black shadow-sm shrink-0">
+                  {activeFiltersCount}
+                </span>
+              )}
+            </button>
+
+            {/* Fast reset filters pill/cross icon */}
+            <AnimatePresence>
+              {activeFiltersCount > 0 && (
+                <motion.button
+                  initial={{ opacity: 0, scale: 0.8, width: 0 }}
+                  animate={{ opacity: 1, scale: 1, width: 'auto' }}
+                  exit={{ opacity: 0, scale: 0.8, width: 0 }}
+                  onClick={onClearFilters}
+                  className={`p-1.5 rounded-lg text-rose-500 hover:bg-rose-500/10 hover:text-rose-400 transition-all shrink-0 border border-transparent hover:border-rose-500/10`}
+                  title="Limpiar filtros activos"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </motion.button>
+              )}
+            </AnimatePresence>
+
+            {/* Any context-specific actions (e.g. Export, CSV) rendered discreetly layout-wise */}
+            {extraActions && (
+              <>
+                <div className="w-px h-5 bg-slate-200 dark:bg-white/10 mx-0.5 shrink-0" />
+                <div className="flex items-center gap-1">
+                  {extraActions}
+                </div>
+              </>
             )}
-          </AnimatePresence>
+          </div>
         </div>
       </div>
-      
-      {/* Botones de Acciones Secundarias Agrupados */}
-      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar max-w-full shrink-0">
-        
-        {/* Crear Nuevo */}
-        <button
-          onClick={onOpenAdd}
-          className={`h-[48px] md:h-[54px] px-5 md:px-6 rounded-2xl flex items-center justify-center gap-2 transition-all font-black text-xs uppercase tracking-widest shrink-0 ${colors.btnBg}`}
-        >
-          <Plus className="w-4 h-4 shrink-0" />
-          <span>Nuevo</span>
-        </button>
 
-        {/* Filtrar desplegable */}
-        <button
-          onClick={onOpenFilters}
-          className={`h-[48px] md:h-[54px] px-5 md:px-6 rounded-2xl flex items-center justify-center gap-2.5 transition-all font-black text-xs uppercase tracking-widest shrink-0 border ${
-            activeFiltersCount > 0
-              ? isDark 
-                ? 'bg-amber-500/10 border-amber-500/40 text-amber-500 shadow-md shadow-amber-500/5' 
-                : 'bg-amber-100 border-amber-300 text-amber-800 shadow-sm'
-              : isDark 
-                ? 'bg-slate-900 border-white/5 text-slate-300 hover:bg-slate-800'
-                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-55 shadow-sm'
-          }`}
-        >
-          <Filter className={`w-4 h-4 shrink-0 ${activeFiltersCount > 0 ? (isDark ? 'text-amber-500' : 'text-amber-800') : 'text-slate-400'}`} />
-          <span>Filtros</span>
-          {activeFiltersCount > 0 && (
-            <span className={`text-[10px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center shrink-0 ${
-              isDark ? 'bg-amber-500 text-black' : 'bg-amber-100 text-amber-800'
-            }`}>
-              {activeFiltersCount}
-            </span>
-          )}
-        </button>
-
-        {/* Eliminar Filtros Activos de manera rápida */}
-        <AnimatePresence>
-          {activeFiltersCount > 0 && (
+      {/* High-Fidelity Floating Action Button (FAB) for adding new records */}
+      {/* Absolute centerpiece of the AppSheet-inspired sleek modern ergonomics */}
+      <AnimatePresence>
+        {onOpenAdd && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8, y: 15 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: 15 }}
+            transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+            className="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-50 pointer-events-auto"
+          >
             <motion.button
-              initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: 'auto' }}
-              exit={{ opacity: 0, width: 0 }}
-              onClick={onClearFilters}
-              className={`h-[48px] md:h-[54px] px-3.5 rounded-2xl flex items-center justify-center transition-all shrink-0 border ${
-                isDark 
-                  ? 'bg-slate-900 border-white/5 hover:bg-slate-800/80' 
-                  : 'bg-white border-slate-200 hover:bg-slate-50 shadow-sm'
-              }`}
-              title="Limpiar todos los filtros"
+              whileHover={{ scale: 1.08, translateY: -2 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={onOpenAdd}
+              className={`group flex items-center gap-2 h-14 px-5 rounded-full font-black text-xs uppercase tracking-widest cursor-pointer shadow-xl transition-all duration-300 ring-4 ring-transparent ${colors.fabBg}`}
+              title="Agregar nuevo registro"
             >
-              <X className="w-4.5 h-4.5 text-rose-500 hover:rotate-90 transition-transform" />
+              <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center group-hover:rotate-90 transition-transform duration-300">
+                <Plus className="w-4 h-4 shrink-0 stroke-[3]" />
+              </div>
+              <span className="pr-1 tracking-wider">Nuevo</span>
             </motion.button>
-          )}
-        </AnimatePresence>
-
-        {extraActions}
-      </div>
-    </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 };

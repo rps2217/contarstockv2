@@ -1,24 +1,18 @@
 import React, { useState, useEffect } from 'react';
+import { ManagementSearchBar } from '@/shared/components/core/ManagementSearchBar';
 import { 
   ChevronLeft, 
-  Upload, 
-  Loader2, 
   FileSpreadsheet, 
   RefreshCw, 
-  BrainCircuit, 
   Download, 
   Cpu, 
-  Cloud, 
   ShieldAlert, 
   BadgeCheck, 
-  Ghost, 
-  Search, 
-  Filter, 
-  Plus,
-  X 
+  Ghost
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
+import { useAppStore } from '@/store/mainAppStore';
 
 interface Props {
   usedMb: string;
@@ -55,8 +49,8 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
   const isModelDownloading = props.brainStatus?.status === 'downloading';
   const isModelReady = props.brainStatus?.status === 'ready';
   const isModelDisabled = props.brainStatus?.status === 'disabled';
-  const isDark = true; // We can assume theme is dark/adaptive, or read it if needed. Let's make it look pristine.
-
+  
+  const setSystemHubOpen = useAppStore(state => state.setSystemHubOpen);
 
   // Synchronize localQuery if props change
   useEffect(() => {
@@ -108,77 +102,30 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
                 <Download className="w-3.5 h-3.5" /> Instalar IA
               </button>
             )}
+
+            <button
+              onClick={() => setSystemHubOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-xl text-[10px] font-black uppercase tracking-widest border border-indigo-500/10 transition-all active:scale-95"
+            >
+              <Cpu className="w-4 h-4" />
+              <span>Nube y Motor</span>
+            </button>
           </div>
         </div>
 
-        {/* ROW 2: SEARCH INPUT HERO - Absolute Protagonist on both Mobile & Desktop */}
-        <div className="flex flex-col md:flex-row gap-3 w-full">
-          <div className="relative flex-1 flex items-center min-w-0">
-            <div 
-              className={`relative flex-1 flex flex-row items-center rounded-2xl border transition-all duration-300 ${
-                isFocused 
-                  ? 'shadow-[0_0_20px_rgba(99,102,241,0.08)] ring-2 ring-indigo-500/10 border-indigo-500' 
-                  : 'border-stone-200 dark:border-white/5'
-              } bg-stone-50 dark:bg-black`}
-            >
-              <Search className={`absolute left-4 w-5 h-5 transition-colors duration-300 ${
-                isFocused ? 'text-indigo-500' : 'text-slate-400'
-              }`} />
-              <input
-                type="text"
-                placeholder="SKU O NOMBRE DEL PRODUCTO..."
-                value={localQuery}
-                onChange={(e) => setLocalQuery(e.target.value)}
-                onFocus={() => setIsFocused(true)}
-                onBlur={() => setIsFocused(false)}
-                className="w-full py-3.5 md:py-4 pl-12 pr-28 text-sm font-bold bg-transparent outline-none transition-all placeholder-slate-400 dark:placeholder-slate-500 text-stone-900 dark:text-white"
-              />
-              <AnimatePresence>
-                {localQuery && (
-                  <motion.button
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    onClick={() => setLocalQuery('')}
-                    className="absolute right-3 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1 transition-all bg-stone-200/50 hover:bg-stone-300/50 dark:bg-white/5 dark:hover:bg-white/10 text-stone-600 dark:text-slate-300 border border-stone-300/40 dark:border-white/5"
-                    title="Limpiar búsqueda"
-                  >
-                    <X className="w-3 h-3" />
-                    <span>Borrar</span>
-                  </motion.button>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar max-w-full shrink-0">
-            {/* Collapsible Trigger */}
-            <button
-              onClick={() => setIsPanelOpen(!isPanelOpen)}
-              className={`h-[48px] md:h-[54px] px-5 rounded-2xl text-xs font-black uppercase tracking-wider border transition-all shrink-0 flex items-center justify-center gap-2 ${
-                isPanelOpen
-                  ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-500/20'
-                  : 'bg-stone-100 border-stone-200 text-stone-600 dark:bg-slate-900/60 dark:border-white/5 dark:text-stone-300 dark:hover:bg-slate-900/90 dark:hover:text-indigo-400'
-              }`}
-              title="Ver filtros y opciones avanzadas"
-            >
-              <Filter className="w-4.5 h-4.5" />
-              <span>Filtros</span>
-              {props.policyFilter !== 'all' && (
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              )}
-            </button>
-
-            {/* Add actions */}
-            <button
-              onClick={props.onCreate}
-              className="h-[48px] md:h-[54px] px-5 rounded-2xl bg-indigo-500 hover:bg-indigo-650 bg-indigo-600 text-white hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-500/10 text-xs font-black uppercase tracking-wider shrink-0 flex items-center justify-center gap-2"
-              title="Crear un nuevo registro"
-            >
-              <Plus className="w-4.5 h-4.5" />
-              <span>Nuevo</span>
-            </button>
-          </div>
+        {/* ROW 2: SEARCH INPUT HERO - Absolute Protagonist from ManagementSearchBar */}
+        <div className="w-full">
+          <ManagementSearchBar
+            searchQuery={props.searchQuery || ''}
+            setSearchQuery={props.onSearch}
+            onOpenFilters={() => setIsPanelOpen(!isPanelOpen)}
+            onOpenAdd={props.onCreate}
+            onClearFilters={() => props.onPolicyFilterChange('all')}
+            activeFiltersCount={props.policyFilter !== 'all' ? 1 : 0}
+            placeholder="SKU O NOMBRE DEL PRODUCTO..."
+            accentColor="indigo"
+            theme="dark"
+          />
         </div>
 
         {/* Collapsible Control Panel (for Mobile & Desktop) */}
@@ -265,132 +212,32 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
                   )}
                 </div>
 
-                {/* 2. System Status & IA Signals */}
-                <div className="flex flex-col gap-2.5 border-t border-stone-200 dark:border-white/5 pt-4">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500 dark:text-indigo-400">
-                    Estado de Integridad y Sincronizaciones IA
-                  </span>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* IA Engine status */}
-                    <div className="space-y-1">
-                      <div className={`flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${isModelDisabled ? 'text-stone-400' : 'text-blue-500'}`}>
-                        <span className="flex items-center gap-1 truncate"><Cpu className="w-3.5 h-3.5" /> Cerebro IA</span>
-                        <span>{isModelDisabled ? 'Inactivo' : (isModelReady ? 'Listo' : `${props.brainStatus?.progress || 0}%`)}</span>
-                      </div>
-                      <div className={`h-2 w-full rounded-full overflow-hidden ${isModelDisabled ? 'bg-stone-200 dark:bg-stone-800' : 'bg-blue-100 dark:bg-blue-950/30'}`}>
-                        <div 
-                          className={`h-full transition-all duration-500 ${isModelDisabled ? 'bg-stone-400' : 'bg-blue-600'} ${isModelDownloading ? 'animate-pulse' : ''}`} 
-                          style={{ width: `${isModelDisabled ? 0 : (isModelReady ? 100 : (props.brainStatus?.progress || 0))}%` }} 
-                        />
-                      </div>
-                    </div>
-
-                    {/* IA Vector Training */}
-                    <div className="space-y-1">
-                      <div className={`flex justify-between items-center text-[10px] font-black uppercase tracking-widest ${isModelDisabled ? 'text-stone-400' : 'text-amber-500'}`}>
-                        <span className="flex items-center gap-1 truncate"><BrainCircuit className="w-3.5 h-3.5" /> Entrenamiento</span>
-                        <span>{isModelDisabled ? 'N/A' : `${props.trainedPercent}%`}</span>
-                      </div>
-                      <div className={`h-2 w-full rounded-full overflow-hidden ${isModelDisabled ? 'bg-stone-200 dark:bg-stone-800' : 'bg-amber-100 dark:bg-amber-950/30'}`}>
-                        <div 
-                          className={`h-full transition-all duration-500 ${isModelDisabled ? 'bg-stone-400' : 'bg-amber-550 bg-amber-500'} ${props.isVectorizing && !isModelDisabled ? 'animate-pulse' : ''}`} 
-                          style={{ width: `${isModelDisabled ? 0 : props.trainedPercent}%` }} 
-                        />
-                      </div>
-                    </div>
-
-                    {/* Backed up status */}
-                    <div className="space-y-1">
-                      <div className="flex justify-between items-center text-[10px] font-black text-indigo-500 uppercase tracking-widest">
-                        <span className="flex items-center gap-1 truncate"><Cloud className="w-3.5 h-3.5" /> Respaldo Cloud</span>
-                        <span>{props.backedUpPercent}%</span>
-                      </div>
-                      <div className="h-2 w-full bg-indigo-100 dark:bg-indigo-950/30 rounded-full overflow-hidden">
-                        <div 
-                          className={`h-full bg-indigo-600 transition-all duration-500 ${props.isSyncing ? 'animate-pulse' : ''}`} 
-                          style={{ width: `${props.backedUpPercent}%` }} 
-                        />
-                      </div>
-                    </div>
+                {/* 2. Simplified Actions Section */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-stone-200 dark:border-white/5 pt-4">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500">
+                      Sincronización y Configuración
+                    </span>
+                    <span className="text-[9px] font-medium text-stone-500">
+                      Acceso rápido a herramientas de integridad de datos
+                    </span>
                   </div>
-                </div>
 
-                {/* 3. Core Database Sync Actions */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-t border-stone-200 dark:border-white/5 pt-4">
-                  <span className="text-[10px] font-black text-stone-500 dark:text-stone-400 uppercase tracking-widest">
-                    Operaciones de Archivo & Nube
-                  </span>
-
-                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                    {/* Vectorization Button */}
-                    {isModelReady && (
-                      <button 
-                        onClick={props.onVectorize} 
-                        disabled={props.isVectorizing || !props.missingVectorsCount}
-                        className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl transition-all border text-xs font-bold uppercase tracking-widest relative ${
-                          props.missingVectorsCount 
-                            ? 'bg-amber-500/10 border-amber-500/20 text-amber-500 hover:bg-amber-500/20 shadow-lg shadow-amber-500/10' 
-                            : 'bg-stone-200 dark:bg-white/5 border-stone-200 dark:border-white/5 text-stone-400 dark:text-stone-600 opacity-50 cursor-not-allowed'
-                        }`}
-                        title="Vectores de búsqueda"
-                      >
-                        {props.isVectorizing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <BrainCircuit className="w-4 h-4" />}
-                        <span>Vectorizar ({props.missingVectorsCount || 0})</span>
-                      </button>
-                    )}
-
-                    {/* Standard Cloud Sync Upload */}
-                    <button 
-                      onClick={props.onSync} 
-                      disabled={props.isSyncing}
-                      className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl transition-all border text-xs font-bold uppercase tracking-widest relative ${
-                        props.pendingChangesCount > 0 
-                          ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-500 dark:text-indigo-450 hover:bg-indigo-500/20 shadow-lg' 
-                          : 'bg-stone-200 dark:bg-white/5 border-stone-200 dark:border-white/5 text-stone-550 dark:text-stone-400 hover:bg-stone-300 dark:hover:bg-white/10'
-                      }`}
-                      title="Sincronizar cambios locales"
-                    >
-                      {props.isSyncing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                      <span>Subir Locales ({props.pendingChangesCount})</span>
-                    </button>
-
-                    {/* Standard Cloud Sync Download */}
-                    <button 
-                      onClick={props.onDownload} 
-                      disabled={props.isDownloading} 
-                      className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3 py-2.5 bg-stone-200 dark:bg-white/5 border border-stone-300 dark:border-white/5 rounded-xl text-stone-600 dark:text-stone-400 hover:bg-stone-300 dark:hover:bg-white/10 transition-all text-xs font-bold uppercase tracking-widest"
-                      title="Sincronizar catálogo"
-                    >
-                      {props.isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                      <span>Sync Cloud</span>
-                    </button>
-
-                    {/* Force Cloud Sync write */}
-                    {props.onForceSync && (
-                      <button 
-                        onClick={() => {
-                          if (confirm('¿Desea forzar la subida de TODO el catálogo local a la nube? Esto puede tomar tiempo.')) {
-                            props.onForceSync?.();
-                          }
-                        }}
-                        disabled={props.isSyncing}
-                        className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3 py-2.5 bg-indigo-550/10 border border-indigo-500/20 text-indigo-500 dark:text-indigo-400 rounded-xl hover:bg-indigo-500/20 transition-all text-xs font-bold uppercase tracking-widest"
-                        title="Sobreescribir catálogo en la nube con base de datos local"
-                      >
-                        <Upload className="w-4 h-4" />
-                        <span>Forzar Nube</span>
-                      </button>
-                    )}
-
-                    {/* CSV Importer */}
-                    <button 
-                      onClick={props.onImport} 
-                      className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3 py-2.5 bg-emerald-500/10 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400 rounded-xl hover:bg-emerald-500/20 transition-all text-xs font-bold uppercase tracking-widest"
-                      title="Importar CSV"
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <button
+                      onClick={props.onImport}
+                      className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl hover:bg-emerald-500/20 transition-all text-[10px] font-black uppercase tracking-widest"
                     >
                       <FileSpreadsheet className="w-4 h-4" />
-                      <span>Importar CSV</span>
+                      Importar CSV
+                    </button>
+                    
+                    <button
+                      onClick={() => setSystemHubOpen(true)}
+                      className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 rounded-xl hover:bg-indigo-500/20 transition-all text-[10px] font-black uppercase tracking-widest"
+                    >
+                      <Cpu className="w-4 h-4" />
+                      Consola de Sincronización
                     </button>
                   </div>
                 </div>
@@ -404,7 +251,7 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
         {isModelDownloading && (
           <div className="bg-blue-600 text-white p-2.5 rounded-xl flex items-center justify-between text-xs font-bold animate-in slide-in-from-top-2">
             <div className="flex items-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <RefreshCw className="w-4 h-4 animate-spin" />
               <span className="uppercase tracking-widest text-[10px]">Descargando cerebro IA...</span>
             </div>
             <span className="font-mono text-[10px]">{props.brainStatus?.details}</span>

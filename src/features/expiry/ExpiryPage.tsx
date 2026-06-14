@@ -38,7 +38,7 @@ const ExpiryListRow = React.memo(({ index, item, data }: any) => {
 });
 ExpiryListRow.displayName = 'ExpiryListRow';
 
-export const ExpiryCapturePage: React.FC = () => {
+export const ExpiryPage: React.FC = () => {
   const navigate = useNavigate();
   const { addToast } = useToastStore.getState();
   const { state, actions } = useExpiryDatabase();
@@ -386,5 +386,5 @@ export const ExpiryCapturePage: React.FC = () => {
   );
 };
 
-export default ExpiryCapturePage;
+export default ExpiryPage;
 

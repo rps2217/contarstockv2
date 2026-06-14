@@ -31,10 +31,12 @@ interface UISlice {
   activeView: ViewState;
   globalSearchQuery: string;
   isStartSessionModalOpen: boolean;
+  isSystemHubOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
   setActiveView: (view: ViewState) => void;
   setGlobalSearch: (q: string) => void;
   setStartSessionModalOpen: (open: boolean) => void;
+  setSystemHubOpen: (open: boolean) => void;
 }
 
 const createUISlice = (set: any): UISlice => ({
@@ -42,10 +44,12 @@ const createUISlice = (set: any): UISlice => ({
   activeView: 'dashboard',
   globalSearchQuery: '',
   isStartSessionModalOpen: false,
+  isSystemHubOpen: false,
   setSidebarOpen: (open) => set({ isSidebarOpen: open }),
   setActiveView: (view) => set({ activeView: view }),
   setGlobalSearch: (q) => set({ globalSearchQuery: q }),
   setStartSessionModalOpen: (open) => set({ isStartSessionModalOpen: open }),
+  setSystemHubOpen: (open) => set({ isSystemHubOpen: open }),
 });
 
 // --- COMBINED STORE ---

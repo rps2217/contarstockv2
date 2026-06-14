@@ -35,9 +35,8 @@ const ReceptionManagement = lazyWithRetry(() => import('@/features/reception/Rec
 const ReceptionCapture = lazyWithRetry(() => import('@/features/reception/ReceptionCapturePage'));
 const CountingPage = lazyWithRetry(() => import('@/features/counting/CountingPage'));
 const HammerPage = lazyWithRetry(() => import('@/features/hammer/HammerPage'));
-const ExpiryManagement = lazyWithRetry(() => import('@/features/expiry/ExpiryManagementPage'));
+const ExpiryPage = lazyWithRetry(() => import('@/features/expiry/ExpiryPage'));
 const EventManagement = lazyWithRetry(() => import('@/features/events/EventManagementPage'));
-const ExpiryCapturePage = lazyWithRetry(() => import('@/features/expiry/ExpiryCapturePage'));
 const EventCapturePage = lazyWithRetry(() => import('@/features/events/EventCapturePage'));
 const ComplianceDashboardPage = lazyWithRetry(() => import('@/features/compliance/ComplianceDashboardPage'));
 const DynamicManagement = lazyWithRetry(() => import('@/features/dynamic/DynamicManagementPage').then(m => ({ default: m.DynamicManagementPage })));
@@ -48,6 +47,7 @@ const CustomersPage = lazyWithRetry(() => import('@/features/customers/Customers
 const ExpectedOrdersPage = lazyWithRetry(() => import('@/features/expected-orders/ExpectedOrdersPage').then(m => ({ default: m.ExpectedOrdersPage })));
 
 import { OnboardingOverlay } from '@/shared/components/core/OnboardingOverlay';
+import { SystemOperationsDrawer } from '@/shared/components/core/SystemOperationsDrawer';
 
 import { useAppInit } from '@/hooks/useAppInit';
 import { motion, AnimatePresence } from 'motion/react';
@@ -161,6 +161,7 @@ const AppContent = () => {
   return (
     <div className={`w-full h-full flex flex-col transition-colors duration-700 ${currentThemeClass} ${settings.theme === 'dark' ? 'dark' : ''} font-sans selection:bg-blue-500/30`}>
       <OnboardingOverlay />
+      <SystemOperationsDrawer />
       <OfflineBanner />
       <ToastContainer />
       <Toaster position="bottom-center" />
@@ -177,10 +178,6 @@ const AppContent = () => {
         )}
         
         <main className={`flex-1 relative overflow-hidden transition-[padding-left] duration-300 ease-in-out ${!isScanningMode ? (isSidebarCollapsed ? 'md:pl-20' : 'md:pl-64') : ''}`}>
-          {/* Ocultar indicadores en móvil durante escaneo */}
-          <div className={isScanningMode ? 'hidden sm:block' : ''}>
-            <SystemStatus />
-          </div>
           
           <ErrorBoundary>
             <AnimatePresence mode="wait">
@@ -210,8 +207,8 @@ const AppContent = () => {
                     <Route path="/settings" element={<ModuleRoute moduleKey="settings" element={<Settings />} />} />
                     <Route path="/reception" element={<ModuleRoute moduleKey="reception" element={<ReceptionManagement />} />} />
                     <Route path="/reception/capture" element={<ModuleRoute moduleKey="reception" element={<ReceptionCapture />} />} />
-                    <Route path="/expiry" element={<ModuleRoute moduleKey="expiry" element={<ExpiryManagement />} />} />
-                    <Route path="/expiry/capture" element={<ModuleRoute moduleKey="expiry" element={<ExpiryCapturePage />} />} />
+                    <Route path="/expiry" element={<ModuleRoute moduleKey="expiry" element={<ExpiryPage />} />} />
+                    <Route path="/expiry/capture" element={<Navigate to="/expiry" replace />} />
                     <Route path="/events" element={<ModuleRoute moduleKey="events" element={<EventManagement />} />} />
                     <Route path="/events/capture" element={<ModuleRoute moduleKey="events" element={<EventCapturePage />} />} />
                     <Route path="/compliance" element={<ComplianceDashboardPage />} />
