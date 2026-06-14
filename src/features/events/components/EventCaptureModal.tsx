@@ -59,6 +59,8 @@ export const EventCaptureModal: React.FC<EventCaptureModalProps> = React.memo(({
   const [destino, setDestino] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const isDestinoRequiredButMissing = !!(traspaso.trim() && !destino.trim());
+
   // Sync initial fields if barcode changes
   useEffect(() => {
     if (isOpen) {
@@ -184,7 +186,9 @@ export const EventCaptureModal: React.FC<EventCaptureModalProps> = React.memo(({
                     type="text"
                     value={traspaso}
                     onChange={(e) => setTraspaso(e.target.value.toUpperCase())}
-                    className="w-full px-5 py-4 bg-white/5 border-2 border-white/5 rounded-2xl text-lg font-black text-white focus:border-blue-500 outline-none"
+                    className={`w-full px-5 py-4 bg-white/5 border-2 rounded-2xl text-lg font-black text-white focus:border-blue-500 outline-none transition-all ${
+                      traspaso.trim() ? 'border-indigo-500/30' : 'border-white/5'
+                    }`}
                     placeholder="Opcional"
                   />
                 </div>
@@ -195,7 +199,11 @@ export const EventCaptureModal: React.FC<EventCaptureModalProps> = React.memo(({
                   <select
                     value={destino}
                     onChange={(e) => setDestino(e.target.value)}
-                    className="w-full px-5 py-4 bg-white/5 border-2 border-white/5 rounded-2xl text-lg font-black text-white focus:border-blue-500 outline-none appearance-none"
+                    className={`w-full px-5 py-4 bg-white/5 border-2 rounded-2xl text-lg font-black text-white focus:border-blue-500 outline-none appearance-none transition-all ${
+                      isDestinoRequiredButMissing 
+                        ? 'border-rose-500/50 bg-rose-950/10 text-rose-400' 
+                        : 'border-white/5'
+                    }`}
                   >
                     <option value="">Seleccionar...</option>
                     <option value="BOD. 37">BOD. 37</option>
@@ -207,6 +215,21 @@ export const EventCaptureModal: React.FC<EventCaptureModalProps> = React.memo(({
                   </select>
                 </div>
               </div>
+
+              {/* REQUIRED_IF FEEDBACK (AppSheet Rule) */}
+              <AnimatePresence>
+                {isDestinoRequiredButMissing && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="p-3 bg-rose-500/10 border border-rose-500/25 text-rose-400 rounded-2xl text-[10px] font-bold uppercase tracking-wider flex items-center gap-2"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                    <span>Regla Req_If: Se requiere un Destino válido para justificar el número de traspaso.</span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               <div className="space-y-4">
                 <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1">Tipo de Evento</label>

@@ -42,24 +42,35 @@ export const useExpiryMutations = (
     });
 
     try {
+      // 1. BORRADO LOCAL OPTIMISTA: Eliminamos localmente de inmediato para feedback instantáneo en UI
+      await Promise.all(idArray.map(id => expiryRepository.delete(id)));
+      
+      // Limpiamos los checkboxes seleccionados de inmediato
+      setSelectedIds(new Set());
+      
       let successCount = 0;
-      for (let i = 0; i < idArray.length; i++) {
-        const id = idArray[i];
-        try {
-          // Delete locally first
-          await expiryRepository.delete(id);
-          
-          // Then delete remotely
-          await supabaseSyncService.deleteRemote(tableName, id);
-          successCount++;
-        } catch (e) {
-          console.error(`Error al eliminar ${id}:`, e);
-        }
-        updateTask(taskId, { progress: Math.round(((i + 1) / idArray.length) * 100) });
+      const chunkSize = 10;
+
+      // 2. BORRADO REMOTO POR LOTES PARALELOS: Evitamos el cuello de botella secuencial (operación de red ultra-veloz)
+      for (let i = 0; i < idArray.length; i += chunkSize) {
+        const chunk = idArray.slice(i, i + chunkSize);
+        
+        await Promise.all(
+          chunk.map(async (id) => {
+            try {
+              await supabaseSyncService.deleteRemote(tableName, id);
+              successCount++;
+            } catch (e) {
+              console.error(`Error al eliminar en la nube id: ${id}`, e);
+            }
+          })
+        );
+        
+        const nextProgress = Math.round((Math.min(i + chunkSize, idArray.length) / idArray.length) * 100);
+        updateTask(taskId, { progress: nextProgress });
       }
       
       updateTask(taskId, { status: 'completed', progress: 100 });
-      setSelectedIds(new Set());
       addToast(`${successCount} ítems retirados correctamente`, 'success');
     } catch (error) {
       updateTask(taskId, { status: 'error', error: 'Error en operación masiva' });

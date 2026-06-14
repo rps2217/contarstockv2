@@ -11,9 +11,10 @@ import {
 } from 'lucide-react';
 import { format, addMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { ExpiryStats } from './ExpiryStats';
 import { ManagementSearchBar } from '../../../shared/components/core/ManagementSearchBar';
+import { ExpiryFilterDrawer } from './ExpiryFilterDrawer';
 import { handlePrintExpirations, handleExportExpirationsCSV } from '../utils/expiryUtils';
 
 interface ExpiryHeaderProps {
@@ -166,7 +167,7 @@ export const ExpiryHeader: React.FC<ExpiryHeaderProps> = ({
           <ManagementSearchBar 
             searchQuery={state.searchQuery}
             setSearchQuery={dbActions.setSearchQuery}
-            onOpenFilters={() => actions.setIsFilterDrawerOpen(true)}
+            onOpenFilters={() => actions.setIsFilterDrawerOpen(!ui.isFilterDrawerOpen)}
             onOpenAdd={actions.handleOpenAdd}
             onClearFilters={actions.handleClearFilters}
             activeFiltersCount={ui.activeFiltersCount}
@@ -206,6 +207,29 @@ export const ExpiryHeader: React.FC<ExpiryHeaderProps> = ({
           })}
         </div>
       </div>
+
+      <AnimatePresence>
+        {ui.isFilterDrawerOpen && (
+          <ExpiryFilterDrawer 
+            isOpen={ui.isFilterDrawerOpen}
+            onClose={() => actions.setIsFilterDrawerOpen(false)}
+            selectedStatuses={state.selectedStatuses}
+            setSelectedStatuses={dbActions.setSelectedStatuses}
+            selectedCanje={state.selectedCanje}
+            setSelectedCanje={dbActions.setSelectedCanje}
+            categories={state.categories}
+            selectedCategories={state.selectedCategories}
+            setSelectedCategories={dbActions.setSelectedCategories}
+            actionPeriod={state.actionPeriod}
+            setActionPeriod={dbActions.setActionPeriod}
+            customDateRange={state.customDateRange}
+            setCustomDateRange={dbActions.setCustomDateRange}
+            creationDateRange={state.creationDateRange}
+            setCreationDateRange={dbActions.setCreationDateRange}
+            theme={settings.theme}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

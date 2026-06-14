@@ -30,6 +30,14 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
   onSubmit,
   isSubmitting
 }) => {
+  const isDateExpired = React.useMemo(() => {
+    if (!selectedMm || !selectedYyyy) return false;
+    const expiryDate = new Date(selectedYyyy, selectedMm - 1, 1);
+    expiryDate.setMonth(expiryDate.getMonth() + 1);
+    expiryDate.setDate(0); // Último día del mes ingresado
+    return expiryDate < new Date();
+  }, [selectedMm, selectedYyyy]);
+
   // Escucha de teclado para agilizar captura manual en escritorio / terminales con teclado físico
   React.useEffect(() => {
     if (!isOpen) return;
@@ -200,6 +208,21 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
                   ))}
                 </div>
               </div>
+
+              {/* VALID_IF FEEDBACK (AppSheet Rule) */}
+              <AnimatePresence>
+                {isDateExpired && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="p-4 bg-rose-500/10 border-2 border-rose-500/35 text-rose-400 rounded-3xl text-[11px] font-black uppercase tracking-wider flex items-center gap-3 shadow-lg shadow-rose-950/20"
+                  >
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping shrink-0" />
+                    <span>Regla Exp_Valid: Este producto ya se encuentra vencido o caducado.</span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* ACTION BUTTON */}
               <div className="pt-2">

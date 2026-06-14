@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 
 // Decoupled components
-import { EventFilterDrawer } from './EventFilterDrawer';
 import { ManagementBulkActions } from '../../../shared/components/core/ManagementBulkActions';
 import { BulkEditModal } from './BulkEditModal';
 import { EventSettingsDrawer } from './EventSettingsDrawer';
@@ -33,19 +32,6 @@ export const EventOverlays: React.FC<EventOverlaysProps> = ({
 }) => {
   return (
     <>
-      <EventFilterDrawer 
-        isOpen={ui.isFilterDrawerOpen}
-        onClose={() => uiActions.setIsFilterDrawerOpen(false)}
-        eventTypes={state.eventTypes}
-        selectedEvents={state.selectedEvents}
-        onToggleEvent={uiActions.handleToggleEvent}
-        onClearFilters={uiActions.handleClearFilters}
-        activeFiltersCount={ui.activeFiltersCount}
-        dateRange={ui.dateRange}
-        onSetDateRange={uiActions.setDateRange}
-        theme={settings.theme}
-      />
-
       <ManagementBulkActions 
         selectedCount={state.selectedIds?.size || 0}
         onClearSelection={actions.clearSelection}

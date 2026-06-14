@@ -187,16 +187,34 @@ export const useEventDatabase = () => {
   }, [tableName]);
 
   const handleBulkRemove = useCallback(async (ids: Set<string>) => {
+    const idArray = Array.from(ids);
     try {
-      for (const id of ids) {
-        // Delete locally first
-        await eventRepository.delete(id);
-        
-        // Then delete remotely
-        await supabaseSyncService.deleteRemote(tableName, id);
-      }
+      // 1. BORRADO LOCAL OPTIMISTA: feedback instantáneo
+      await Promise.all(idArray.map(id => eventRepository.delete(id)));
+      
+      // Limpiamos los checkboxes seleccionados de inmediato
       setSelectedIds(new Set());
-      addToast(`${ids.size} ítems retirados correctamente`, 'success');
+      
+      const chunkSize = 10;
+      let successCount = 0;
+
+      // 2. BORRADO REMOTO POR LOTES PARALELOS: Máxima velocidad de red
+      for (let i = 0; i < idArray.length; i += chunkSize) {
+        const chunk = idArray.slice(i, i + chunkSize);
+        
+        await Promise.all(
+          chunk.map(async (id) => {
+            try {
+              await supabaseSyncService.deleteRemote(tableName, id);
+              successCount++;
+            } catch (e) {
+              console.error(`Error al eliminar remoto de evento id: ${id}`, e);
+            }
+          })
+        );
+      }
+      
+      addToast(`${successCount} ítems retirados correctamente`, 'success');
     } catch (error) {
       addToast('Error al retirar los ítems', 'error');
     }

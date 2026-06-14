@@ -1,7 +1,9 @@
 
-import React from 'react';
-import { Search, CornerDownLeft, Camera, Loader2 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Search, CornerDownLeft, Camera, Loader2, WifiOff, RefreshCw, Database, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useSyncStore } from '@/store/useSyncStore';
+import { useNavigate } from 'react-router-dom';
 
 interface CaptureLayoutProps {
   header: React.ReactNode;
@@ -42,9 +44,69 @@ export const CaptureLayout: React.FC<CaptureLayoutProps> = ({
   filters,
   modalForm
 }) => {
+  const syncStore = useSyncStore();
+  const navigate = useNavigate();
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   return (
     <div className={`h-screen h-[100dvh] flex flex-col overflow-hidden ${theme === 'dark' ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'}`}>
       {header}
+
+      {/* COMPORTAMIENTO CLÁSICO DE APPSHEET: NUBE DE ESTADO FLOTANTE */}
+      <div className="absolute top-[1rem] right-4 z-[2001] flex items-center pointer-events-auto">
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => navigate('/sync')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-[10px] font-black uppercase tracking-wider backdrop-blur-md transition-all border shadow-[0_4px_20px_rgba(0,0,0,0.5)] ${
+            syncStore.isSyncing
+              ? 'bg-blue-600/30 border-blue-500/40 text-blue-400'
+              : syncStore.pendingItems > 0
+                ? 'bg-amber-600/30 border-amber-500/40 text-amber-400 animate-pulse'
+                : !isOnline
+                  ? 'bg-red-950/40 border-red-900/40 text-red-500'
+                  : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500'
+          }`}
+          title="Sincronizador Automático de Cambios"
+        >
+          {syncStore.isSyncing ? (
+            <RefreshCw className="w-3 h-3 animate-spin text-blue-400" />
+          ) : syncStore.pendingItems > 0 ? (
+            <Database className="w-3 h-3 animate-bounce text-amber-400" />
+          ) : !isOnline ? (
+            <WifiOff className="w-3 h-3 text-red-500" />
+          ) : (
+            <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+          )}
+
+          <span className="opacity-90 hidden sm:inline">
+            {syncStore.isSyncing 
+              ? 'Guardando' 
+              : syncStore.pendingItems > 0 
+                ? `${syncStore.pendingItems} Pendientes` 
+                : !isOnline 
+                  ? 'Sin Red (Local)' 
+                  : 'Sincronizado'}
+          </span>
+          
+          {syncStore.pendingItems > 0 && (
+            <span className="font-mono bg-amber-500 text-slate-950 px-1.5 py-0.5 rounded-lg text-[9px] font-black">
+              {syncStore.pendingItems}
+            </span>
+          )}
+        </motion.button>
+      </div>
 
       <div className="flex-1 overflow-hidden flex flex-col max-w-6xl mx-auto w-full relative">
         {/* FILTERS SECTION (Optional) */}

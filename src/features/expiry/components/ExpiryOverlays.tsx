@@ -4,7 +4,6 @@ import { toast } from 'sonner';
 import { CheckSquare, Printer, Mail, Trash2 } from 'lucide-react';
 
 // Overlays components
-import { ExpiryFilterDrawer } from './ExpiryFilterDrawer';
 import { ManagementBulkActions } from '../../../shared/components/core/ManagementBulkActions';
 import { ExpirySettingsDrawer } from './ExpirySettingsDrawer';
 import { ExpiryDetailDrawer } from './ExpiryDetailDrawer';
@@ -30,25 +29,6 @@ export const ExpiryOverlays: React.FC<ExpiryOverlaysProps> = ({
 }) => {
   return (
     <>
-      <ExpiryFilterDrawer 
-        isOpen={ui.isFilterDrawerOpen}
-        onClose={() => actions.setIsFilterDrawerOpen(false)}
-        selectedStatuses={state.selectedStatuses}
-        setSelectedStatuses={dbActions.setSelectedStatuses}
-        selectedCanje={state.selectedCanje}
-        setSelectedCanje={dbActions.setSelectedCanje}
-        categories={state.categories}
-        selectedCategories={state.selectedCategories}
-        setSelectedCategories={dbActions.setSelectedCategories}
-        actionPeriod={state.actionPeriod}
-        setActionPeriod={dbActions.setActionPeriod}
-        customDateRange={state.customDateRange}
-        setCustomDateRange={dbActions.setCustomDateRange}
-        creationDateRange={state.creationDateRange}
-        setCreationDateRange={dbActions.setCreationDateRange}
-        theme={settings.theme}
-      />
-
       <ManagementBulkActions 
         selectedCount={state.selectedIds.size}
         onClearSelection={() => dbActions.setSelectedIds(new Set())}

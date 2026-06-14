@@ -17,6 +17,8 @@ import { EventHeader } from './components/EventHeader';
 import { EventListPanel } from './components/EventListPanel';
 import { EventOverlays } from './components/EventOverlays';
 import { ManagementSearchBar } from '../../shared/components/core/ManagementSearchBar';
+import { EventFilterDrawer } from './components/EventFilterDrawer';
+import { AnimatePresence } from 'motion/react';
 
 export const EventManagementPage: React.FC = () => {
   const { settings } = useAppStore();
@@ -95,7 +97,7 @@ export const EventManagementPage: React.FC = () => {
           <ManagementSearchBar 
             searchQuery={state.searchQuery}
             setSearchQuery={actions.setSearchQuery}
-            onOpenFilters={() => uiActions.setIsFilterDrawerOpen(true)}
+            onOpenFilters={() => uiActions.setIsFilterDrawerOpen(!ui.isFilterDrawerOpen)}
             onOpenAdd={() => {
               uiActions.setEditingItem(null);
               uiActions.setIsCreateModalOpen(true);
@@ -106,6 +108,23 @@ export const EventManagementPage: React.FC = () => {
             accentColor="blue"
             theme={settings.theme}
           />
+
+          <AnimatePresence>
+            {ui.isFilterDrawerOpen && (
+              <EventFilterDrawer 
+                isOpen={ui.isFilterDrawerOpen}
+                onClose={() => uiActions.setIsFilterDrawerOpen(false)}
+                eventTypes={state.eventTypes}
+                selectedEvents={state.selectedEvents}
+                onToggleEvent={uiActions.handleToggleEvent}
+                onClearFilters={uiActions.handleClearFilters}
+                activeFiltersCount={ui.activeFiltersCount}
+                dateRange={ui.dateRange}
+                onSetDateRange={uiActions.setDateRange}
+                theme={settings.theme}
+              />
+            )}
+          </AnimatePresence>
 
           {/* MOBILE PREMIUM NAV SWITCHER TAB BAR */}
           <div className={`md:hidden flex items-center p-1 rounded-2xl border transition-all ${

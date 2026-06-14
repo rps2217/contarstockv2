@@ -1,8 +1,8 @@
 
 import React from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { Filter, X, AlertTriangle, ShieldAlert, Download, Clock, CheckCircle2, RefreshCw, Package, CheckSquare, Calendar } from 'lucide-react';
-import { format, parseISO, addMonths, startOfMonth, endOfMonth } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { ExpiryStatus } from '../hooks/useExpiryDatabase';
 
 interface ExpiryFilterDrawerProps {
@@ -42,356 +42,256 @@ export const ExpiryFilterDrawer: React.FC<ExpiryFilterDrawerProps> = ({
   setCreationDateRange,
   theme = 'dark'
 }) => {
+  const isDark = theme === 'dark';
+
+  if (!isOpen) return null;
+
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60]"
-          />
-          
-          <motion.div
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className={`fixed top-0 right-0 bottom-0 w-full max-w-md border-l shadow-2xl z-[70] flex flex-col transition-colors ${
-              theme === 'dark' ? 'bg-slate-900 border-white/10' : 'bg-white border-slate-200'
-            }`}
+    <motion.div
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: 'auto' }}
+      exit={{ opacity: 0, height: 0 }}
+      transition={{ duration: 0.25, ease: 'easeInOut' }}
+      className={`overflow-hidden mt-4 border rounded-[2rem] p-5 shadow-inner transition-colors flex flex-col ${
+        isDark ? 'bg-black/40 border-white/5 text-white' : 'bg-white border-slate-200 text-slate-800'
+      }`}
+    >
+      {/* Panel Header */}
+      <div className="flex items-center justify-between gap-4 mb-4 pb-3 border-b border-white/5">
+        <div className="flex items-center gap-2">
+          <Filter className="w-4 h-4 text-amber-500" />
+          <span className={`text-xs font-black uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            Filtros Avanzados de Vencimientos
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => {
+              setSelectedStatuses([]);
+              setSelectedCanje('all');
+              setSelectedCategories([]);
+              setActionPeriod('all');
+              setCustomDateRange({ start: null, end: null });
+              setCreationDateRange({ start: null, end: null });
+            }}
+            className="text-[10px] font-black uppercase text-amber-500 hover:text-amber-400 tracking-wider flex items-center gap-1 transition-colors"
           >
-            <div className={`p-6 border-b flex items-center justify-between ${
-              theme === 'dark' ? 'border-white/10' : 'border-slate-200'
-            }`}>
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                  theme === 'dark' ? 'bg-amber-500/10' : 'bg-amber-50'
-                }`}>
-                  <Filter className="w-5 h-5 text-amber-500" />
-                </div>
-                <div>
-                  <h2 className={`text-xl font-black uppercase tracking-tighter italic leading-none ${
-                    theme === 'dark' ? 'text-white' : 'text-slate-900'
-                  }`}>Filtros Avanzados</h2>
-                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Personaliza tu vista</p>
-                </div>
+            Limpiar Todo
+          </button>
+          <button
+            onClick={onClose}
+            className={`p-1.5 rounded-lg transition-all ${
+              isDark ? 'hover:bg-white/5 text-slate-400' : 'hover:bg-slate-100 text-slate-500'
+            }`}
+            title="Cerrar filtros"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Grid container with 4 responsive columns */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+        
+        {/* Column 1: Periodo Operativo & Creación */}
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-slate-400' : 'text-slate-700'} flex items-center gap-1.5`}>
+                <Calendar className="w-3.5 h-3.5 text-slate-500" /> Periodo Operativo
+              </span>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-1.5">
+              {[
+                { id: 'this_month', label: 'Este mes' },
+                { id: 'next_month', label: 'Próx mes' },
+                { id: 'next_3_months', label: 'En 3 meses' },
+                { id: 'custom', label: 'Rango...' }
+              ].map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => setActionPeriod(p.id as any)}
+                  className={`px-2 py-2 rounded-xl text-[9px] font-bold uppercase tracking-wide transition-all border ${
+                    actionPeriod === p.id
+                      ? 'bg-amber-500 border-amber-400 text-black shadow-md shadow-amber-500/20'
+                      : isDark
+                        ? 'bg-slate-900 border-white/5 text-slate-400 hover:text-white'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+
+            {actionPeriod === 'custom' && (
+              <div className="grid grid-cols-2 gap-1.5 pt-1.5">
+                <input
+                  type="date"
+                  value={customDateRange.start ? format(customDateRange.start, 'yyyy-MM-dd') : ''}
+                  onChange={(e) => setCustomDateRange({ ...customDateRange, start: e.target.value ? parseISO(e.target.value) : null })}
+                  className={`px-2 py-1.5 rounded-xl text-[10px] font-mono border transition-all ${
+                    isDark ? 'bg-slate-950 border-white/5 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                  }`}
+                />
+                <input
+                  type="date"
+                  value={customDateRange.end ? format(customDateRange.end, 'yyyy-MM-dd') : ''}
+                  onChange={(e) => setCustomDateRange({ ...customDateRange, end: e.target.value ? parseISO(e.target.value) : null })}
+                  className={`px-2 py-1.5 rounded-xl text-[10px] font-mono border transition-all ${
+                    isDark ? 'bg-slate-950 border-white/5 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                  }`}
+                />
               </div>
-              <button 
-                onClick={onClose}
-                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
-                  theme === 'dark' ? 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900'
+            )}
+          </div>
+
+          <div className="space-y-1.5 pt-2 border-t border-white/5">
+            <span className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-slate-400' : 'text-slate-700'} flex items-center gap-1.5`}>
+              <Calendar className="w-3.5 h-3.5 text-slate-500" /> Fecha Creación
+            </span>
+            <div className="grid grid-cols-2 gap-1.5">
+              <input
+                type="date"
+                value={creationDateRange.start ? format(creationDateRange.start, 'yyyy-MM-dd') : ''}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setCreationDateRange({ ...creationDateRange, start: val ? new Date(val + 'T00:00:00') : null });
+                }}
+                className={`px-2 py-1.5 rounded-xl text-[10px] font-mono border transition-all ${
+                  isDark ? 'bg-slate-950 border-white/5 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                }`}
+              />
+              <input
+                type="date"
+                value={creationDateRange.end ? format(creationDateRange.end, 'yyyy-MM-dd') : ''}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setCreationDateRange({ ...creationDateRange, end: val ? new Date(val + 'T00:00:00') : null });
+                }}
+                className={`px-2 py-1.5 rounded-xl text-[10px] font-mono border transition-all ${
+                  isDark ? 'bg-slate-950 border-white/5 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                }`}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Column 2: Estados Críticos */}
+        <div className="space-y-2">
+          <span className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-slate-400' : 'text-slate-700'} flex items-center gap-1.5`}>
+            <AlertTriangle className="w-3.5 h-3.5 text-slate-500" /> Estados Críticos
+          </span>
+          <div className="flex flex-col gap-1">
+            {([
+              { id: 'expired', label: 'Vencidos', icon: AlertTriangle, color: 'text-rose-500' },
+              { id: 'critical', label: 'Críticos', icon: ShieldAlert, color: 'text-amber-500' },
+              { id: 'withdrawal', label: 'Retiros', icon: Download, color: 'text-indigo-400' },
+              { id: 'next_expiry', label: 'Próximos', icon: Clock, color: 'text-blue-400' },
+              { id: 'safe', label: 'Vigentes', icon: CheckCircle2, color: 'text-emerald-500' }
+            ] as const).map(s => {
+              const isSel = selectedStatuses.includes(s.id);
+              const SIcon = s.icon;
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => {
+                    const next = selectedStatuses.includes(s.id)
+                      ? selectedStatuses.filter(x => x !== s.id)
+                      : [...selectedStatuses, s.id];
+                    setSelectedStatuses(next);
+                  }}
+                  className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border flex items-center justify-between ${
+                    isSel
+                      ? 'bg-amber-500 border-amber-400 text-black shadow-sm'
+                      : isDark
+                        ? 'bg-slate-900 border-white/5 text-slate-400 hover:text-white hover:bg-slate-900/80'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <SIcon className={`w-3.5 h-3.5 ${isSel ? 'text-black' : s.color}`} />
+                    <span>{s.label}</span>
+                  </div>
+                  <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center transition-all ${
+                    isSel ? 'bg-black border-black' : 'border-white/10'
+                  }`}>
+                    {isSel && <CheckSquare className="w-2.5 h-2.5 text-amber-500" />}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Column 3: Tipo de Retiro */}
+        <div className="space-y-2">
+          <span className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-slate-400' : 'text-slate-700'} flex items-center gap-1.5`}>
+            <RefreshCw className="w-3.5 h-3.5 text-slate-500" /> Tipo de Retiro
+          </span>
+          <div className="flex flex-col gap-1.5">
+            {[
+              { id: 'all', label: 'Todos los tipos' },
+              { id: 'canje', label: 'Con Canje' },
+              { id: 'markdown', label: 'Sin Canje (Markdown)' }
+            ].map(type => (
+              <button
+                key={type.id}
+                onClick={() => setSelectedCanje(type.id as any)}
+                className={`px-3 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border flex items-center justify-between ${
+                  selectedCanje === type.id
+                    ? 'bg-amber-500 border-amber-400 text-black shadow-sm'
+                    : isDark
+                      ? 'bg-slate-900 border-white/5 text-slate-400 hover:text-white hover:bg-slate-900/80'
+                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
-                <X className="w-5 h-5" />
+                <span>{type.label}</span>
+                <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center transition-all ${
+                  selectedCanje === type.id ? 'bg-black border-black' : 'border-white/10'
+                }`}>
+                  {selectedCanje === type.id && <CheckSquare className="w-2.5 h-2.5 text-amber-500" />}
+                </div>
               </button>
-            </div>
+            ))}
+          </div>
+        </div>
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-8 no-scrollbar">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-slate-500" />
-                    <span className={`text-xs font-black uppercase tracking-widest ${
-                      theme === 'dark' ? 'text-slate-300' : 'text-slate-600'
-                    }`}>Periodo Operativo</span>
-                  </div>
-                  {actionPeriod !== 'all' && (
-                    <button 
-                      onClick={() => setActionPeriod('all')}
-                      className="text-[10px] font-black text-amber-500 uppercase hover:underline"
-                    >
-                      Limpiar
-                    </button>
-                  )}
-                </div>
-                
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => setActionPeriod('this_month')}
-                    className={`px-3 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
-                      actionPeriod === 'this_month'
-                        ? 'bg-amber-500 border-amber-400 text-black shadow-lg shadow-amber-500/20'
-                        : theme === 'dark'
-                          ? 'bg-white/5 border-white/5 text-slate-400 hover:text-white hover:bg-white/10'
-                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
-                    }`}
-                  >
-                    Este Mes
-                  </button>
-                  <button
-                    onClick={() => setActionPeriod('next_month')}
-                    className={`px-3 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
-                      actionPeriod === 'next_month'
-                        ? 'bg-amber-500 border-amber-400 text-black shadow-lg shadow-amber-500/20'
-                        : theme === 'dark'
-                          ? 'bg-white/5 border-white/5 text-slate-400 hover:text-white hover:bg-white/10'
-                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
-                    }`}
-                  >
-                    Próximo Mes
-                  </button>
-                  <button
-                    onClick={() => setActionPeriod('next_3_months')}
-                    className={`px-3 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border col-span-2 ${
-                      actionPeriod === 'next_3_months'
-                        ? 'bg-amber-500 border-amber-400 text-black shadow-lg shadow-amber-500/20'
-                        : theme === 'dark'
-                          ? 'bg-white/5 border-white/5 text-slate-400 hover:text-white hover:bg-white/10'
-                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
-                    }`}
-                  >
-                    Próximos 3 Meses
-                  </button>
-                  <button
-                    onClick={() => setActionPeriod('custom')}
-                    className={`px-3 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border col-span-2 ${
-                      actionPeriod === 'custom'
-                        ? 'bg-amber-500 border-amber-400 text-black shadow-lg shadow-amber-500/20'
-                        : theme === 'dark'
-                          ? 'bg-white/5 border-white/5 text-slate-400 hover:text-white hover:bg-white/10'
-                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
-                    }`}
-                  >
-                    Rango Personalizado
-                  </button>
-                </div>
+        {/* Column 4: Mundos / Categorías */}
+        <div className="space-y-2">
+          <span className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-slate-400' : 'text-slate-700'} flex items-center gap-1.5`}>
+            <Package className="w-3.5 h-3.5 text-slate-500" /> Mundos / Categorías
+          </span>
+          <div className="grid grid-cols-2 gap-1.5 max-h-36 overflow-y-auto pr-1 no-scrollbar">
+            {categories.map(cat => {
+              const isSel = selectedCategories.includes(cat);
+              return (
+                <button
+                  key={cat}
+                  onClick={() => {
+                    const next = selectedCategories.includes(cat)
+                      ? selectedCategories.filter(x => x !== cat)
+                      : [...selectedCategories, cat];
+                    setSelectedCategories(next);
+                  }}
+                  className={`px-2 py-2 rounded-xl text-[9px] font-black uppercase tracking-wide transition-all border text-center ${
+                    isSel
+                      ? 'bg-amber-500 border-amber-400 text-black shadow-sm'
+                      : isDark
+                        ? 'bg-slate-900 border-white/5 text-slate-500 hover:text-white hover:bg-slate-900/80'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  {cat || 'N/A'}
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
-                {actionPeriod === 'custom' && (
-                  <motion.div 
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    className="grid grid-cols-2 gap-2 pt-2"
-                  >
-                    <input
-                      type="date"
-                      value={customDateRange.start ? format(customDateRange.start, 'yyyy-MM-dd') : ''}
-                      onChange={(e) => setCustomDateRange({ ...customDateRange, start: e.target.value ? parseISO(e.target.value) : null })}
-                      className={`px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${
-                        theme === 'dark' 
-                          ? 'bg-white/5 border-white/5 text-white' 
-                          : 'bg-slate-50 border-slate-200 text-slate-900'
-                      }`}
-                    />
-                    <input
-                      type="date"
-                      value={customDateRange.end ? format(customDateRange.end, 'yyyy-MM-dd') : ''}
-                      onChange={(e) => setCustomDateRange({ ...customDateRange, end: e.target.value ? parseISO(e.target.value) : null })}
-                      className={`px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${
-                        theme === 'dark' 
-                          ? 'bg-white/5 border-white/5 text-white' 
-                          : 'bg-slate-50 border-slate-200 text-slate-900'
-                      }`}
-                    />
-                  </motion.div>
-                )}
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-slate-500" />
-                    <span className={`text-xs font-black uppercase tracking-widest ${
-                      theme === 'dark' ? 'text-slate-300' : 'text-slate-600'
-                    }`}>Fecha de Creación</span>
-                  </div>
-                  {(creationDateRange.start || creationDateRange.end) && (
-                    <button 
-                      onClick={() => setCreationDateRange({ start: null, end: null })}
-                      className="text-[10px] font-black text-amber-500 uppercase hover:underline"
-                    >
-                      Limpiar
-                    </button>
-                  )}
-                </div>
-                
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="date"
-                    value={creationDateRange.start ? format(creationDateRange.start, 'yyyy-MM-dd') : ''}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setCreationDateRange({ 
-                        ...creationDateRange, 
-                        start: val ? new Date(val + 'T00:00:00') : null 
-                      });
-                    }}
-                    className={`px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${
-                      theme === 'dark' 
-                        ? 'bg-white/5 border-white/5 text-white' 
-                        : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                  <input
-                    type="date"
-                    value={creationDateRange.end ? format(creationDateRange.end, 'yyyy-MM-dd') : ''}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setCreationDateRange({ 
-                        ...creationDateRange, 
-                        end: val ? new Date(val + 'T00:00:00') : null 
-                      });
-                    }}
-                    className={`px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${
-                      theme === 'dark' 
-                        ? 'bg-white/5 border-white/5 text-white' 
-                        : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4 text-slate-500" />
-                    <span className={`text-xs font-black uppercase tracking-widest ${
-                      theme === 'dark' ? 'text-slate-300' : 'text-slate-600'
-                    }`}>Estados Críticos</span>
-                  </div>
-                  {selectedStatuses.length > 0 && (
-                    <button 
-                      onClick={() => setSelectedStatuses([])}
-                      className="text-[10px] font-black text-amber-500 uppercase hover:underline"
-                    >
-                      Limpiar
-                    </button>
-                  )}
-                </div>
-                <div className="grid grid-cols-1 gap-2">
-                  {(['expired', 'critical', 'withdrawal', 'next_expiry', 'safe'] as const).map(s => (
-                    <button
-                      key={s}
-                      onClick={() => {
-                        const newStatuses = selectedStatuses.includes(s)
-                          ? selectedStatuses.filter(x => x !== s)
-                          : [...selectedStatuses, s];
-                        setSelectedStatuses(newStatuses);
-                      }}
-                      className={`px-4 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all border flex items-center justify-between group ${
-                        selectedStatuses.includes(s)
-                          ? s === 'expired' ? 'bg-rose-600 border-rose-400 text-white shadow-[0_0_20px_rgba(225,29,72,0.3)]' :
-                            s === 'critical' ? 'bg-amber-600 border-amber-400 text-white shadow-[0_0_20px_rgba(217,119,6,0.3)]' :
-                            s === 'withdrawal' ? 'bg-indigo-600 border-indigo-400 text-white shadow-[0_0_20px_rgba(79,70,229,0.3)]' :
-                            s === 'next_expiry' ? 'bg-blue-600 border-blue-400 text-white shadow-[0_0_20px_rgba(37,99,235,0.3)]' :
-                            'bg-emerald-600 border-emerald-400 text-white shadow-[0_0_20px_rgba(5,150,105,0.3)]'
-                          : theme === 'dark' 
-                            ? 'bg-white/5 border-white/5 text-slate-500 hover:text-white hover:bg-white/10'
-                            : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        {s === 'expired' && <AlertTriangle className="w-4 h-4" />}
-                        {s === 'critical' && <ShieldAlert className="w-4 h-4" />}
-                        {s === 'withdrawal' && <Download className="w-4 h-4" />}
-                        {s === 'next_expiry' && <Clock className="w-4 h-4" />}
-                        {s === 'safe' && <CheckCircle2 className="w-4 h-4" />}
-                        <span>
-                          {s === 'expired' ? 'Vencidos' : 
-                           s === 'critical' ? 'Críticos' : 
-                           s === 'withdrawal' ? 'Retiros' :
-                           s === 'next_expiry' ? 'Próximos' : 'Vigentes'}
-                        </span>
-                      </div>
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                        selectedStatuses.includes(s) ? 'bg-white border-white' : 'border-white/10'
-                      }`}>
-                        {selectedStatuses.includes(s) && <CheckSquare className="w-3 h-3 text-black" />}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <RefreshCw className="w-4 h-4 text-slate-500" />
-                  <span className={`text-xs font-black uppercase tracking-widest ${
-                    theme === 'dark' ? 'text-slate-300' : 'text-slate-600'
-                  }`}>Tipo de Retiro</span>
-                </div>
-                <div className="grid grid-cols-1 gap-2">
-                  {(['all', 'canje', 'markdown'] as const).map(type => (
-                    <button
-                      key={type}
-                      onClick={() => setSelectedCanje(type)}
-                      className={`px-4 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all border flex items-center justify-between ${
-                        selectedCanje === type
-                          ? 'bg-indigo-600 border-indigo-400 text-white shadow-[0_0_20px_rgba(79,70,229,0.3)]'
-                          : theme === 'dark'
-                            ? 'bg-white/5 border-white/5 text-slate-500 hover:text-white hover:bg-white/10'
-                            : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
-                      }`}
-                    >
-                      <span>{type === 'all' ? 'Todos los tipos' : type === 'canje' ? 'Con Canje' : 'Sin Canje (Markdown)'}</span>
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                        selectedCanje === type ? 'bg-white border-white' : 'border-white/10'
-                      }`}>
-                        {selectedCanje === type && <CheckSquare className="w-3 h-3 text-black" />}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Package className="w-4 h-4 text-slate-500" />
-                    <span className={`text-xs font-black uppercase tracking-widest ${
-                      theme === 'dark' ? 'text-slate-300' : 'text-slate-600'
-                    }`}>Mundos / Categorías</span>
-                  </div>
-                  {selectedCategories.length > 0 && (
-                    <button 
-                      onClick={() => setSelectedCategories([])}
-                      className="text-[10px] font-black text-amber-500 uppercase hover:underline"
-                    >
-                      Limpiar
-                    </button>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {categories.map(cat => (
-                    <button
-                      key={cat}
-                      onClick={() => {
-                        const newCategories = selectedCategories.includes(cat)
-                          ? selectedCategories.filter(x => x !== cat)
-                          : [...selectedCategories, cat];
-                        setSelectedCategories(newCategories);
-                      }}
-                      className={`px-3 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border text-center ${
-                        selectedCategories.includes(cat)
-                          ? 'bg-amber-500 border-amber-400 text-black shadow-[0_0_15px_rgba(245,158,11,0.3)]'
-                          : theme === 'dark'
-                            ? 'bg-white/5 border-white/5 text-slate-500 hover:text-white hover:bg-white/10'
-                            : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
-                      }`}
-                    >
-                      {cat}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className={`p-6 border-t transition-colors ${
-              theme === 'dark' ? 'border-white/10 bg-black/20' : 'border-slate-200 bg-slate-50'
-            }`}>
-              <button
-                onClick={onClose}
-                className="w-full bg-amber-500 hover:bg-amber-400 text-black font-black py-4 rounded-2xl uppercase tracking-widest transition-all shadow-xl shadow-amber-500/20 active:scale-95"
-              >
-                Aplicar Filtros
-              </button>
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+      </div>
+    </motion.div>
   );
 };
 
