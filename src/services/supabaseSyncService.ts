@@ -106,6 +106,25 @@ export const supabaseSyncService = {
   },
 
   /**
+   * Extract key/column fields from database error messages.
+   * Supports both quoted format from PostgreSQL driver and plain table.column format.
+   */
+  extractColumnNameFromError(errMsg: string): string | null {
+    if (!errMsg) return null;
+    const matchWithQuotes = errMsg.match(/column\s+['"](.*?)['"]/i) || 
+                            errMsg.match(/['"](.*?)['"]\s+column/i);
+    if (matchWithQuotes) return matchWithQuotes[1];
+    
+    const matchPlainTableCol = errMsg.match(/column\s+[\w_]+\.([\w_]+)\s+does\s+not/i);
+    if (matchPlainTableCol) return matchPlainTableCol[1];
+
+    const matchPlainCol = errMsg.match(/column\s+([\w_]+)\s+does\s+not/i);
+    if (matchPlainCol) return matchPlainCol[1];
+
+    return null;
+  },
+
+  /**
    * Pushes a batch of changes to Supabase with automatic column-error recovery.
    */
   async pushBatch(tableName: string, rows: any[]) {
@@ -160,9 +179,7 @@ export const supabaseSyncService = {
           // 1. Detectar error de columna inexistente
           // Soporta: "column 'name' of", "the 'name' column", "'name' column does not exist", "Could not find the 'name' column"
           if (errMsg.includes("column") && (errMsg.includes("not find") || errMsg.includes("does not exist") || errMsg.includes("unknown"))) {
-            const match = errMsg.match(/column\s+['"](.*?)['"]/i) || 
-                          errMsg.match(/['"](.*?)['"]\s+column/i);
-            const missingColumn = match ? match[1] : null;
+            const missingColumn = this.extractColumnNameFromError(errMsg);
 
             if (missingColumn) {
               // Reducimos nivel de log a info interna para no asustar al usuario
@@ -192,8 +209,7 @@ export const supabaseSyncService = {
         
         // Si es un error de columna y no fue atrapado arriba
         if (errMsg.includes("column") && (errMsg.includes("not find") || errMsg.includes("does not exist") || errMsg.includes("unknown"))) {
-           const match = errMsg.match(/column\s+['"](.*?)['"]/i) || errMsg.match(/['"](.*?)['"]\s+column/i);
-           const missingCol = match ? match[1] : null;
+           const missingCol = this.extractColumnNameFromError(errMsg);
            if (missingCol && attempts < maxRetries) {
               logger.info('SYNC_RESILIENCE', `Ajustando esquema (catch): Tabla ${tableName} no tiene columna '${missingCol}'.`);
               currentRows = currentRows.map(row => {
@@ -261,8 +277,7 @@ export const supabaseSyncService = {
         if (error) {
            const errMsg = error.message || '';
            if (errMsg.includes("column") && (errMsg.includes("not find") || errMsg.includes("does not exist"))) {
-              const match = errMsg.match(/column\s+['"](.*?)['"]/i) || errMsg.match(/['"](.*?)['"]\s+column/i);
-              const missingCol = match ? match[1] : null;
+              const missingCol = this.extractColumnNameFromError(errMsg);
               
               if (missingCol) {
                 // Eliminar el filtro que causa problemas

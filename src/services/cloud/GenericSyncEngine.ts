@@ -156,20 +156,36 @@ export class GenericSyncEngine {
         remoteIds.add(String(id));
         
         const existing = await localTable.get(id);
-        const remoteTime = new Date(row.updated_at || row.timestamp || 0).getTime();
+        const rawRemoteTime = row.updated_at || row.timestamp || 0;
+        let remoteTime = 0;
+        if (rawRemoteTime) {
+          const parsedRemote = new Date(rawRemoteTime).getTime();
+          if (!isNaN(parsedRemote)) {
+            remoteTime = parsedRemote;
+          }
+        }
         if (remoteTime > maxRemoteTime) maxRemoteTime = remoteTime;
 
         if (existing) {
-          const localTime = existing.updatedAt || existing.timestamp || 0;
+          const rawLocalTime = existing.updatedAt || existing.timestamp || 0;
+          let localTime = 0;
+          if (rawLocalTime) {
+            const parsedLocal = new Date(rawLocalTime).getTime();
+            if (!isNaN(parsedLocal)) {
+              localTime = parsedLocal;
+            }
+          }
 
           if (existing.syncStatus === 'pending' || existing.syncStatus === 'error' || existing.syncStatus === 'pending_delete') {
             // CONFLICT DETECTED: Local version is unsynced, remote version was updated.
             // AppSheet-style: Preserve local version, register Conflict Incident in sync store
+            const remoteIso = remoteTime > 0 ? new Date(remoteTime).toISOString() : 'Desconocido';
+            const localIso = localTime > 0 ? new Date(localTime).toISOString() : 'Desconocido';
             const store = useSyncStore.getState();
             store.addConflict();
             store.addIncident(
               meta.remoteTable,
-              `Conflicto en registro (ID: ${id}): Modificado localmente y en la nube de forma independiente. Se conservó la versión local. (Nube: ${new Date(remoteTime).toISOString()} vs Local: ${new Date(localTime).toISOString()})`
+              `Conflicto en registro (ID: ${id}): Modificado localmente y en la nube de forma independiente. Se conservó la versión local. (Nube: ${remoteIso} vs Local: ${localIso})`
             );
           } else if (remoteTime > localTime) {
             await localTable.update(id, { ...mapped, syncStatus: 'synced' });

@@ -56,6 +56,12 @@ const mapExpiryToRemote = (record: any) => {
   return remote;
 };
 
+const getSafeTimestamp = (dateStr?: string): number => {
+  if (!dateStr) return Date.now();
+  const t = new Date(dateStr).getTime();
+  return isNaN(t) ? Date.now() : t;
+};
+
 // Helper to map remote snake_case database row back to local camelCase based on mappings
 const mapExpiryToLocal = (remote: any) => {
   const settings = getSettings();
@@ -67,7 +73,7 @@ const mapExpiryToLocal = (remote: any) => {
       id: String(id),
       tableName: 'VENCIMIENTOS',
       data: remote,
-      timestamp: remote.updated_at ? new Date(remote.updated_at).getTime() : Date.now(),
+      timestamp: getSafeTimestamp(remote.updated_at || remote.updatedat),
       syncStatus: 'synced' as const
     };
   }
@@ -99,7 +105,7 @@ const mapExpiryToLocal = (remote: any) => {
     id: String(id),
     tableName: 'VENCIMIENTOS',
     data: local,
-    timestamp: remote.updated_at ? new Date(remote.updated_at).getTime() : Date.now(),
+    timestamp: getSafeTimestamp(remote.updated_at || remote.updatedat),
     syncStatus: 'synced' as const
   };
 };
@@ -157,7 +163,7 @@ const mapEventToLocal = (remote: any) => {
       id: String(id),
       tableName: 'EVENTOS',
       data: remote,
-      timestamp: remote.updated_at ? new Date(remote.updated_at).getTime() : Date.now(),
+      timestamp: getSafeTimestamp(remote.updated_at || remote.updatedat),
       syncStatus: 'synced' as const
     };
   }
@@ -183,7 +189,7 @@ const mapEventToLocal = (remote: any) => {
     id: String(id),
     tableName: 'EVENTOS',
     data: local,
-    timestamp: remote.updated_at ? new Date(remote.updated_at).getTime() : Date.now(),
+    timestamp: getSafeTimestamp(remote.updated_at || remote.updatedat),
     syncStatus: 'synced' as const
   };
 };
