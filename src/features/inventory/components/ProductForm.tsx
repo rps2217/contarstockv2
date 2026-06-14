@@ -1,10 +1,11 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Product } from '../../../types';
 import { Pencil, Plus, Save, Box, ScanLine, Copy } from 'lucide-react';
 import { useProductForm } from '../hooks/useProductForm';
 import { Modal } from '../../../shared/components/ui/Modal';
 import { SettingsButton, SettingsInput } from '../../settings/components/common/SettingsElements';
+import { useProvidersQuery } from '../../suppliers/hooks/useProvidersQuery';
 
 interface ProductFormProps {
  isOpen: boolean;
@@ -17,6 +18,21 @@ export const ProductForm: React.FC<ProductFormProps> = ({ isOpen, onClose, initi
   const { formData, error, isSaving, isDuplicating, updateField, handleDuplicate, handleSave } = useProductForm({
     initialData, onSaveSuccess, onClose
   });
+
+  const { filteredProviders } = useProvidersQuery();
+
+  const handleProviderSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const rut = e.target.value;
+    const provider = filteredProviders.find(p => p.rut === rut);
+    if (provider) {
+      updateField('supplierRut', provider.rut);
+      updateField('supplier', provider.name);
+      if (provider.withdrawalDays) updateField('withdrawalDays', provider.withdrawalDays);
+      updateField('hasExchange', !!provider.hasExchange);
+    } else {
+      updateField('supplierRut', rut);
+    }
+  };
 
   const title = isDuplicating ? 'Duplicar Producto' : (initialData ? 'Editar SKU' : 'Nuevo SKU');
   const icon = isDuplicating ? <Copy className="w-6 h-6" /> : (initialData ? <Pencil className="w-6 h-6" /> : <Plus className="w-6 h-6" />);
@@ -87,28 +103,45 @@ export const ProductForm: React.FC<ProductFormProps> = ({ isOpen, onClose, initi
  />
  </div>
  <div className="space-y-1.5">
- <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Proveedor</label>
- <SettingsInput 
- value={formData.supplier} 
- onChange={(e: any) => updateField('supplier', e.target.value)} 
- placeholder="Nombre" 
- />
+ <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Proveedor Maestro</label>
+ <select
+   value={formData.supplierRut || ''}
+   onChange={handleProviderSelect}
+   className="w-full h-12 px-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-900 outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer"
+ >
+   <option value="">Seleccionar Proveedor Maestro...</option>
+   {filteredProviders.map(p => (
+     <option key={p.rut} value={p.rut}>
+       {p.name}
+     </option>
+   ))}
+ </select>
  </div>
  </div>
 
- <div className="space-y-1.5">
-  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">RUT del Proveedor (Vínculo Logístico)</label>
-  <div className="relative">
-   <input
-    value={formData.supplierRut || ''}
-    onChange={(e) => updateField('supplierRut', e.target.value)}
-    className="w-full h-12 px-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-900 outline-none focus:bg-white focus:border-blue-500 transition-all placeholder:text-slate-300"
-    placeholder="Ej: 12345678-9"
-   />
-   <div className="absolute right-4 top-1/2 -translate-y-1/2">
-    <span className="text-[8px] font-black bg-blue-100 text-blue-600 px-2 py-1 rounded-lg uppercase">ID LOG</span>
+ <div className="grid grid-cols-2 gap-4">
+   <div className="space-y-1.5">
+    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">RUT Proveedor</label>
+    <div className="relative">
+     <input
+      value={formData.supplierRut || ''}
+      onChange={(e) => updateField('supplierRut', e.target.value)}
+      className="w-full h-12 px-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-900 outline-none focus:bg-white focus:border-blue-500 transition-all placeholder:text-slate-300"
+      placeholder="Ej: 12345678-9"
+     />
+     <div className="absolute right-4 top-1/2 -translate-y-1/2">
+      <span className="text-[8px] font-black bg-blue-100 text-blue-600 px-2 py-1 rounded-lg uppercase">ID LOG</span>
+     </div>
+    </div>
    </div>
-  </div>
+   <div className="space-y-1.5">
+    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Razón Social</label>
+    <SettingsInput 
+     value={formData.supplier || ''}
+     onChange={(e: any) => updateField('supplier', e.target.value)}
+     placeholder="Nombre"
+    />
+   </div>
  </div>
 
  <div className="p-4 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100 dark:border-indigo-500/10 space-y-4">
