@@ -543,7 +543,7 @@ export class ThermalPrinterEngine {
               ID: ${item.barcode}
             </div>
             <div class="item-qty-box">
-              CANT: ${item.expectedQty || 0}
+              ${item.expectedQty || 0}
             </div>
           </div>
 
@@ -648,13 +648,13 @@ export class ThermalPrinterEngine {
               text-transform: uppercase;
             }
             .item-qty-box {
-              font-size: 16px;
+              font-size: 18px;
               font-weight: 900;
               text-transform: uppercase;
-              border: 2px solid #000;
+              border: 1.5px solid #888;
               padding: 2px 8px;
-              background-color: #000;
-              color: #fff;
+              background-color: #fff;
+              color: #000;
               border-radius: 4px;
             }
             .barcode-container {
