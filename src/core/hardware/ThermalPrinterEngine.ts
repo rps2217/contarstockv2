@@ -530,9 +530,17 @@ export class ThermalPrinterEngine {
     const timeStr = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
     const currentFullDate = new Date().toLocaleDateString('es-ES') + " " + timeStr;
 
+    const docType = order.metadata?.documentType || '';
+    const isGuiaDespacho = docType === 'Remisión' || docType.toLowerCase().includes('guía') || docType.toLowerCase().includes('guia') || docType.toLowerCase().includes('despacho');
+
     const itemsHtml = (order.items || []).map((item: any) => {
+      // If it's a Guía de Despacho, we encode the expected quantity and 7 tabs
+      const barcodeValue = isGuiaDespacho 
+        ? `${item.expectedQty || 0}\t\t\t\t\t\t\t` 
+        : item.barcode;
+
       // Generate barcode without text underneath (displayValue: false) and shorter height (28px)
-      const barcodeUrl = this.getBarcodeDataUrl(item.barcode, false, 28);
+      const barcodeUrl = this.getBarcodeDataUrl(barcodeValue, false, 28);
       
       return `
         <div class="item-block">
@@ -551,6 +559,11 @@ export class ThermalPrinterEngine {
             <div class="barcode-container">
               <img src="${barcodeUrl}" alt="${item.barcode}" class="barcode-img" />
             </div>
+            ${isGuiaDespacho ? `
+              <div style="text-align: center; font-size: 7px; font-family: monospace; color: #444; margin-top: -2px; font-weight: bold; text-transform: uppercase;">
+                [TECLADO RÁPIDO: CANT + 7 TABS]
+              </div>
+            ` : ''}
           ` : `
             <div style="text-align: center; font-size: 8px; font-family: monospace; color: #666; margin-top: 4px;">
               [${item.barcode}]
@@ -704,7 +717,12 @@ export class ThermalPrinterEngine {
         <body>
           <div class="header-print">
             <h1>LOGICOUNT PRO</h1>
-            <h2>REPORTE CARGA TEÓRICA</h2>
+            <h2>${isGuiaDespacho ? 'REPORTE GUÍA DESPACHO' : 'REPORTE CARGA TEÓRICA'}</h2>
+            ${isGuiaDespacho ? `
+              <div style="font-[7px] font-weight: bold; margin-bottom: 2px; text-transform: uppercase; color: #333;">
+                MODO TECLADO: CANT + 7 TABS
+              </div>
+            ` : ''}
             <div class="date">${dateStr}</div>
           </div>
           
