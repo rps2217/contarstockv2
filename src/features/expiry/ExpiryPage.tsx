@@ -20,6 +20,7 @@ import { CaptureLayout } from '../../shared/components/layout/CaptureLayout';
 import { ExpiryCaptureModal } from './components/ExpiryCaptureModal';
 import { SyncDiagnosticsPanel } from '../sync/components/SyncDiagnosticsPanel';
 import { ExpiryCaptureRow } from './components/ExpiryCaptureRow';
+import { ExpiryDetailModal } from './components/ExpiryDetailModal';
 
 const getDaysUntilExpiry = (mm: number, yyyy: number) => {
   const expiryDate = new Date(yyyy, mm - 1, 1);
@@ -29,10 +30,10 @@ const getDaysUntilExpiry = (mm: number, yyyy: number) => {
 };
 
 const ExpiryListRow = React.memo(({ index, item, data }: any) => {
-  const { onDelete } = data;
+  const { onDelete, onRowClick } = data;
   return (
     <div className="h-full pb-6">
-      <ExpiryCaptureRow item={item} onDelete={onDelete} />
+      <ExpiryCaptureRow item={item} onDelete={onDelete} onClick={onRowClick} />
     </div>
   );
 });
@@ -53,6 +54,8 @@ export const ExpiryPage: React.FC = () => {
 
   const [filterVencido, setFilterVencido] = useState(false);
   const [filterCritico, setFilterCritico] = useState(false);
+
+  const [selectedDetailItem, setSelectedDetailItem] = useState<ExpiryItem | null>(null);
 
   // Atajos de teclado para ultra-productividad en almacén/captura rápida de vencimientos
   useEffect(() => {
@@ -176,7 +179,10 @@ export const ExpiryPage: React.FC = () => {
     return items.sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
   }, [state.allItems, filterVencido, filterCritico, engine.isSearchActive, engine.searchQuery, engine.capture.inputValue]);
 
-  const rowData = useMemo(() => ({ onDelete: handleDelete }), [handleDelete]);
+  const rowData = useMemo(() => ({ 
+    onDelete: handleDelete, 
+    onRowClick: (item: ExpiryItem) => setSelectedDetailItem(item) 
+  }), [handleDelete]);
 
   const header = (
     <ModuleHeader 
@@ -382,6 +388,12 @@ export const ExpiryPage: React.FC = () => {
       <SyncDiagnosticsPanel 
         isOpen={engine.isSyncModalOpen} 
         onClose={() => engine.setIsSyncModalOpen(false)} 
+      />
+
+      <ExpiryDetailModal 
+        isOpen={!!selectedDetailItem}
+        onClose={() => setSelectedDetailItem(null)}
+        item={selectedDetailItem}
       />
     </>
   );

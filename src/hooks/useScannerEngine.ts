@@ -60,22 +60,29 @@ export const useScannerEngine = (options: ScannerEngineOptions = {}) => {
       if (!provider) {
         provider = await db.providers.get(productRecord.supplierRut);
       }
+      
+      // 3. Intento por escaneo completo normalizado (Sanación de formato)
+      if (!provider) {
+        const allProviders = await db.providers.toArray();
+        provider = allProviders.find(p => normalizeIdentity(p.rut) === cleanRut);
+      }
     }
 
-    // 3. Intento por Nombre de Proveedor (si no hay match por RUT o no tiene RUT pero sí nombre)
+    // 4. Intento por Nombre de Proveedor (si no hay match por RUT o no tiene RUT pero sí nombre)
     if (!provider && productRecord.supplier && productRecord.supplier !== 'N/A') {
-      const targetName = productRecord.supplier.trim().toUpperCase();
+      const targetName = normalizeIdentity(productRecord.supplier);
       const allProviders = await db.providers.toArray();
-      provider = allProviders.find(p => p.name && p.name.trim().toUpperCase() === targetName);
+      provider = allProviders.find(p => p.name && normalizeIdentity(p.name) === targetName);
     }
 
     // Curación Dinámica de Datos (Self-Healing):
-    // Si encontramos el proveedor pero el producto no tiene asignado su nombre,
-    // o es genérico ('N/A'), lo sanamos con el nombre del proveedor real de la base de proveedores
+    // Si encontramos el proveedor, sobreescribimos los campos del producto temporalmente
+    // con los datos oficiales del maestro para que los registros (vencimientos, conteos)
+    // queden perfectamente vinculados.
     if (provider) {
-      if (!productRecord.supplier || productRecord.supplier === 'N/A') {
-        productRecord.supplier = provider.name;
-      }
+      productRecord.supplier = provider.name;
+      productRecord.supplierRut = provider.rut;
+      
       setProviderPolicy({ 
         days: provider.withdrawalDays || 0, 
         hasCanje: provider.hasExchange || false 

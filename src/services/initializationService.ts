@@ -46,26 +46,8 @@ export const InitializationService = {
       // Tareas de saneamiento y carga inicial
       const sanitizeTask = async () => {
         try {
-          const allBarcodes = await db.products.toCollection().primaryKeys();
-          const CHUNK_SIZE = 500;
-          for (let i = 0; i < allBarcodes.length; i += CHUNK_SIZE) {
-            const chunk = allBarcodes.slice(i, i + CHUNK_SIZE);
-            const products = await db.products.where('barcode').anyOf(chunk).toArray();
-            const productUpdates = products
-              .filter(p => normalizeSku(p.barcode) !== p.barcode)
-              .map(p => ({ ...p, barcode: normalizeSku(p.barcode) }));
-
-            if (productUpdates.length > 0) {
-              const oldBarcodes = products
-                .filter(p => normalizeSku(p.barcode) !== p.barcode)
-                .map(p => p.barcode);
-                
-              await db.transaction('rw', db.products, async () => {
-                await db.products.bulkDelete(oldBarcodes);
-                await db.products.bulkPut(productUpdates);
-              });
-            }
-          }
+          const { DatabaseSanitizer } = await import('../repositories/DatabaseSanitizer');
+          await DatabaseSanitizer.runAuditAndSanitize();
         } catch (e) {
           logger.warn('INIT', 'Fallo saneamiento', e);
         }
@@ -128,13 +110,16 @@ export const InitializationService = {
   backgroundRefresh: async () => {
     try {
       // Refresco en paralelo y archivado automático
+      const { DatabaseSanitizer } = await import('../repositories/DatabaseSanitizer');
+      
       await Promise.all([
         InitializationService.syncConfig(),
         importProductsFromCloud(),
         importProvidersFromCloud(),
         importCustomersAndTemplatesFromCloud(),
         HydrationService.persist(),
-        purgeOldData(30) // Step 5: Archivado automático > 30 días
+        purgeOldData(30), // Step 5: Archivado automático > 30 días
+        DatabaseSanitizer.runAuditAndSanitize()
       ]);
     } catch (e) {
       logger.warn('INIT', 'Error en refresco de fondo', e);

@@ -11,6 +11,7 @@ import { ExpiryItem } from '../hooks/useExpiryDatabase';
 interface ExpiryCaptureRowProps {
   item: ExpiryItem;
   onDelete: (id: string) => void;
+  onClick?: (item: ExpiryItem) => void;
 }
 
 const getDaysUntilExpiry = (mm: number, yyyy: number) => {
@@ -22,7 +23,8 @@ const getDaysUntilExpiry = (mm: number, yyyy: number) => {
 
 export const ExpiryCaptureRow: React.FC<ExpiryCaptureRowProps> = React.memo(({ 
   item, 
-  onDelete 
+  onDelete,
+  onClick
 }) => {
   const isWarning = item.daysLeft <= 90;
   const isExpired = item.daysLeft <= 0;
@@ -30,7 +32,8 @@ export const ExpiryCaptureRow: React.FC<ExpiryCaptureRowProps> = React.memo(({
 
   return (
     <div
-      className={`flex items-center gap-4 p-4 rounded-2xl bg-slate-900/50 border ${
+      onClick={() => onClick?.(item)}
+      className={`flex items-center gap-4 p-4 rounded-2xl bg-slate-900/50 border cursor-pointer active:scale-[0.98] transition-transform ${
         isExpired ? 'border-rose-500/30' : isWarning ? 'border-amber-500/20' : 'border-indigo-500/20'
       }`}
     >
@@ -74,7 +77,7 @@ export const ExpiryCaptureRow: React.FC<ExpiryCaptureRowProps> = React.memo(({
             {item.barcode}
           </span>
           <span className="text-slate-500 text-[10px] font-bold uppercase truncate">
-            {item.providerName || 'SIN PROVEEDOR'}
+            {item.providerName === 'N/A' || !item.providerName ? 'SIN PROVEEDOR' : item.providerName}
           </span>
           {item.withdrawalDays !== undefined && (
             <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full border ${
@@ -96,7 +99,10 @@ export const ExpiryCaptureRow: React.FC<ExpiryCaptureRowProps> = React.memo(({
           {formattedWithdrawalDate}
         </span>
         <button
-          onClick={() => onDelete(item.id)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(item.id);
+          }}
           className="mt-2 w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500 active:bg-red-500/20 transition-colors"
         >
           <Trash2 className="w-5 h-5" />
