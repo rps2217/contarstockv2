@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, X, Plus } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface ManagementSearchBarProps {
   searchQuery: string;
@@ -27,6 +28,8 @@ export const ManagementSearchBar: React.FC<ManagementSearchBarProps> = ({
   extraActions
 }) => {
   const [localQuery, setLocalQuery] = useState(searchQuery);
+  const [isFocused, setIsFocused] = useState(false);
+  const isDark = theme === 'dark';
 
   // Sincronizar localQuery con searchQuery cuando cambie externamente
   useEffect(() => {
@@ -39,125 +42,165 @@ export const ManagementSearchBar: React.FC<ManagementSearchBarProps> = ({
       if (localQuery !== searchQuery) {
         setSearchQuery(localQuery);
       }
-    }, 300);
+    }, 250);
     return () => clearTimeout(timer);
   }, [localQuery, searchQuery, setSearchQuery]);
 
   const colorClasses = {
     amber: {
-      border: 'border-amber-500/50',
-      bg: 'bg-amber-500',
-      hover: 'hover:bg-amber-400',
+      border: 'border-amber-500/20 focus-within:border-amber-500 focus-within:ring-amber-500/10',
       text: 'text-amber-500',
-      badge: 'bg-black text-white'
+      badge: 'bg-amber-500 text-black',
+      glow: 'shadow-[0_0_20px_rgba(245,158,11,0.08)]',
+      btnBg: 'bg-amber-500 hover:bg-amber-400 text-black shadow-md shadow-amber-500/10',
+      iconColor: 'text-amber-500'
     },
     blue: {
-      border: 'border-blue-500/50',
-      bg: 'bg-blue-600',
-      hover: 'hover:bg-blue-500',
+      border: 'border-blue-500/20 focus-within:border-blue-500 focus-within:ring-blue-500/10',
       text: 'text-blue-500',
-      badge: 'bg-white text-blue-600'
+      badge: 'bg-blue-500 text-white',
+      glow: 'shadow-[0_0_20px_rgba(59,130,246,0.08)]',
+      btnBg: 'bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-500/20',
+      iconColor: 'text-blue-500'
     },
     emerald: {
-      border: 'border-emerald-500/50',
-      bg: 'bg-emerald-600',
-      hover: 'hover:bg-emerald-500',
+      border: 'border-emerald-500/20 focus-within:border-emerald-500 focus-within:ring-emerald-500/10',
       text: 'text-emerald-500',
-      badge: 'bg-white text-emerald-600'
+      badge: 'bg-emerald-500 text-black',
+      glow: 'shadow-[0_0_20px_rgba(16,185,129,0.08)]',
+      btnBg: 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-500/20',
+      iconColor: 'text-emerald-500'
     },
     rose: {
-      border: 'border-rose-500/50',
-      bg: 'bg-rose-600',
-      hover: 'hover:bg-rose-500',
+      border: 'border-rose-500/20 focus-within:border-rose-500 focus-within:ring-rose-500/10',
       text: 'text-rose-500',
-      badge: 'bg-white text-rose-600'
+      badge: 'bg-rose-500 text-white',
+      glow: 'shadow-[0_0_20px_rgba(244,63,94,0.08)]',
+      btnBg: 'bg-rose-600 hover:bg-rose-500 text-white shadow-md shadow-rose-500/20',
+      iconColor: 'text-rose-500'
     },
     indigo: {
-      border: 'border-indigo-500/50',
-      bg: 'bg-indigo-600',
-      hover: 'hover:bg-indigo-500',
+      border: 'border-indigo-500/25 focus-within:border-indigo-500 focus-within:ring-indigo-500/10',
       text: 'text-indigo-500',
-      badge: 'bg-white text-indigo-600'
+      badge: 'bg-indigo-500 text-white',
+      glow: 'shadow-[0_0_20px_rgba(99,102,241,0.08)]',
+      btnBg: 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-500/20',
+      iconColor: 'text-indigo-500'
     }
   };
 
   const colors = colorClasses[accentColor];
 
   return (
-    <div className="flex flex-col md:flex-row gap-3">
-      <div className="relative flex-1 flex items-center gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+    <div className="flex flex-col md:flex-row gap-3 w-full max-w-7xl mx-auto">
+      {/* El Buscador Principal */}
+      <div className="relative flex-1 flex items-center min-w-0">
+        <div 
+          className={`relative flex-1 flex items-center rounded-2xl border transition-all duration-300 ${
+            isFocused ? `${colors.glow} ring-2 ring-opacity-20` : ''
+          } ${
+            isDark 
+              ? `bg-black/40 border-white/5` 
+              : `bg-white border-slate-200/80 shadow-sm`
+          } ${colors.border}`}
+        >
+          {/* Lupa Animada con Color de Contexto */}
+          <Search className={`absolute left-4 w-5 h-5 transition-colors duration-300 ${
+            isFocused ? colors.iconColor : 'text-slate-400'
+          }`} />
+          
           <input 
             type="text"
             placeholder={placeholder}
             value={localQuery}
             onChange={(e) => setLocalQuery(e.target.value)}
-            className={`w-full border rounded-2xl py-3 md:py-4 pl-10 md:pl-12 pr-24 md:pr-28 text-sm font-bold focus:outline-none transition-all shadow-2xl ${
-              theme === 'dark' 
-                ? `bg-black ${colors.border} text-white` 
-                : `bg-white ${colors.border} text-slate-900 shadow-slate-200/50`
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            className={`w-full py-3.5 md:py-4 pl-12 pr-28 text-sm font-bold bg-transparent outline-none transition-all placeholder-slate-400 dark:placeholder-slate-500 ${
+              isDark ? 'text-white' : 'text-slate-800'
             }`}
           />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className={`absolute right-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all ${
-                theme === 'dark' 
-                  ? 'bg-white/10 hover:bg-white/20 text-slate-300' 
-                  : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
-              }`}
-            >
-              <X className="w-3.5 h-3.5" />
-              Limpiar
-            </button>
-          )}
+          
+          {/* Botón Borrar Limpio en la Extrema Derecha del Input */}
+          <AnimatePresence>
+            {localQuery && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                onClick={() => {
+                  setLocalQuery('');
+                  setSearchQuery('');
+                }}
+                className={`absolute right-3 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1 transition-all ${
+                  isDark 
+                    ? 'bg-white/5 hover:bg-white/10 text-slate-300 border border-white/5' 
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200'
+                }`}
+              >
+                <X className="w-3 h-3" />
+                <span>Borrar</span>
+              </motion.button>
+            )}
+          </AnimatePresence>
         </div>
       </div>
       
-      <div className="flex items-center gap-2 md:gap-3 overflow-x-auto no-scrollbar max-w-full shrink-0">
+      {/* Botones de Acciones Secundarias Agrupados */}
+      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar max-w-full shrink-0">
+        
+        {/* Crear Nuevo */}
         <button
           onClick={onOpenAdd}
-          className={`h-12 md:h-14 px-4 md:px-6 rounded-2xl flex items-center justify-center gap-2 md:gap-3 transition-all border shadow-lg group shrink-0 ${
-            theme === 'dark' 
-              ? `${colors.bg} border-white/10 text-slate-900 ${colors.hover}` 
-              : `${colors.bg} border-white/10 text-white ${colors.hover} shadow-sm`
-          }`}
+          className={`h-[48px] md:h-[54px] px-5 md:px-6 rounded-2xl flex items-center justify-center gap-2 transition-all font-black text-xs uppercase tracking-widest shrink-0 ${colors.btnBg}`}
         >
-          <Plus className="w-5 h-5 shrink-0" />
-          <span className="text-xs font-black uppercase tracking-widest hidden sm:inline">Nuevo</span>
+          <Plus className="w-4 h-4 shrink-0" />
+          <span>Nuevo</span>
         </button>
 
+        {/* Filtrar desplegable */}
         <button
           onClick={onOpenFilters}
-          className={`h-12 md:h-14 px-4 md:px-6 rounded-2xl flex items-center justify-center gap-2 md:gap-3 transition-all border shadow-lg group shrink-0 ${
+          className={`h-[48px] md:h-[54px] px-5 md:px-6 rounded-2xl flex items-center justify-center gap-2.5 transition-all font-black text-xs uppercase tracking-widest shrink-0 border ${
             activeFiltersCount > 0
-              ? `${colors.bg} border-white/10 text-white`
-              : theme === 'dark' 
-                ? 'bg-slate-900/50 border-white/10 text-white hover:bg-slate-800'
-                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 shadow-sm'
+              ? isDark 
+                ? 'bg-amber-500/10 border-amber-500/40 text-amber-500 shadow-md shadow-amber-500/5' 
+                : 'bg-amber-100 border-amber-300 text-amber-800 shadow-sm'
+              : isDark 
+                ? 'bg-slate-900 border-white/5 text-slate-300 hover:bg-slate-800'
+                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-55 shadow-sm'
           }`}
         >
-          <Filter className={`w-5 h-5 shrink-0 ${activeFiltersCount > 0 ? 'text-white' : 'text-slate-400'}`} />
-          <span className="text-xs font-black uppercase tracking-widest hidden sm:inline">Filtros</span>
+          <Filter className={`w-4 h-4 shrink-0 ${activeFiltersCount > 0 ? (isDark ? 'text-amber-500' : 'text-amber-800') : 'text-slate-400'}`} />
+          <span>Filtros</span>
           {activeFiltersCount > 0 && (
-            <span className={`${colors.badge} text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shrink-0`}>
+            <span className={`text-[10px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center shrink-0 ${
+              isDark ? 'bg-amber-500 text-black' : 'bg-amber-100 text-amber-800'
+            }`}>
               {activeFiltersCount}
             </span>
           )}
         </button>
 
-        <button
-          onClick={onClearFilters}
-          className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center transition-all group shrink-0 border ${
-            theme === 'dark' 
-              ? 'bg-slate-900/50 border-white/10 hover:bg-slate-800' 
-              : 'bg-white border-slate-200 hover:bg-slate-50 shadow-sm'
-          }`}
-          title="Limpiar Filtros"
-        >
-          <X className="w-5 h-5 text-slate-400 group-hover:rotate-90 transition-transform" />
-        </button>
+        {/* Eliminar Filtros Activos de manera rápida */}
+        <AnimatePresence>
+          {activeFiltersCount > 0 && (
+            <motion.button
+              initial={{ opacity: 0, width: 0 }}
+              animate={{ opacity: 1, width: 'auto' }}
+              exit={{ opacity: 0, width: 0 }}
+              onClick={onClearFilters}
+              className={`h-[48px] md:h-[54px] px-3.5 rounded-2xl flex items-center justify-center transition-all shrink-0 border ${
+                isDark 
+                  ? 'bg-slate-900 border-white/5 hover:bg-slate-800/80' 
+                  : 'bg-white border-slate-200 hover:bg-slate-50 shadow-sm'
+              }`}
+              title="Limpiar todos los filtros"
+            >
+              <X className="w-4.5 h-4.5 text-rose-500 hover:rotate-90 transition-transform" />
+            </motion.button>
+          )}
+        </AnimatePresence>
 
         {extraActions}
       </div>

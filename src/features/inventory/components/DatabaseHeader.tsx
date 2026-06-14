@@ -14,7 +14,8 @@ import {
   Ghost, 
   Search, 
   Filter, 
-  Plus 
+  Plus,
+  X 
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
@@ -49,10 +50,13 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
   const navigate = useNavigate();
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [localQuery, setLocalQuery] = useState(props.searchQuery || '');
+  const [isFocused, setIsFocused] = useState(false);
 
   const isModelDownloading = props.brainStatus?.status === 'downloading';
   const isModelReady = props.brainStatus?.status === 'ready';
   const isModelDisabled = props.brainStatus?.status === 'disabled';
+  const isDark = true; // We can assume theme is dark/adaptive, or read it if needed. Let's make it look pristine.
+
 
   // Synchronize localQuery if props change
   useEffect(() => {
@@ -108,53 +112,73 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
         </div>
 
         {/* ROW 2: SEARCH INPUT HERO - Absolute Protagonist on both Mobile & Desktop */}
-        <div className="flex items-center gap-2 md:gap-3 w-full">
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-500 dark:text-indigo-400" />
-            <input
-              type="text"
-              placeholder="SKU O NOMBRE DEL PRODUCTO..."
-              value={localQuery}
-              onChange={(e) => setLocalQuery(e.target.value)}
-              className="w-full pl-12 pr-12 py-3.5 md:py-4 rounded-2xl text-sm md:text-base font-bold border transition-all outline-none shadow-md bg-stone-50 border-stone-200 dark:bg-black dark:border-indigo-500/30 text-stone-900 dark:text-white placeholder-stone-400 dark:placeholder-stone-500 focus:bg-white dark:focus:bg-black/95 focus:border-indigo-500 dark:focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/10"
-            />
-            {localQuery && (
-              <button
-                onClick={() => setLocalQuery('')}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-500 hover:text-indigo-500 transition-colors text-xs font-black uppercase tracking-widest"
-                title="Limpiar búsqueda"
-              >
-                Borrar
-              </button>
-            )}
+        <div className="flex flex-col md:flex-row gap-3 w-full">
+          <div className="relative flex-1 flex items-center min-w-0">
+            <div 
+              className={`relative flex-1 flex flex-row items-center rounded-2xl border transition-all duration-300 ${
+                isFocused 
+                  ? 'shadow-[0_0_20px_rgba(99,102,241,0.08)] ring-2 ring-indigo-500/10 border-indigo-500' 
+                  : 'border-stone-200 dark:border-white/5'
+              } bg-stone-50 dark:bg-black`}
+            >
+              <Search className={`absolute left-4 w-5 h-5 transition-colors duration-300 ${
+                isFocused ? 'text-indigo-500' : 'text-slate-400'
+              }`} />
+              <input
+                type="text"
+                placeholder="SKU O NOMBRE DEL PRODUCTO..."
+                value={localQuery}
+                onChange={(e) => setLocalQuery(e.target.value)}
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => setIsFocused(false)}
+                className="w-full py-3.5 md:py-4 pl-12 pr-28 text-sm font-bold bg-transparent outline-none transition-all placeholder-slate-400 dark:placeholder-slate-500 text-stone-900 dark:text-white"
+              />
+              <AnimatePresence>
+                {localQuery && (
+                  <motion.button
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    onClick={() => setLocalQuery('')}
+                    className="absolute right-3 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1 transition-all bg-stone-200/50 hover:bg-stone-300/50 dark:bg-white/5 dark:hover:bg-white/10 text-stone-600 dark:text-slate-300 border border-stone-300/40 dark:border-white/5"
+                    title="Limpiar búsqueda"
+                  >
+                    <X className="w-3 h-3" />
+                    <span>Borrar</span>
+                  </motion.button>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
 
-          {/* Collapsible Trigger */}
-          <button
-            onClick={() => setIsPanelOpen(!isPanelOpen)}
-            className={`flex items-center justify-center gap-2 h-[48px] md:h-[56px] px-3 md:px-5 rounded-2xl text-xs font-black uppercase tracking-wider border transition-all shrink-0 ${
-              isPanelOpen
-                ? 'bg-indigo-505 bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-500/20'
-                : 'bg-stone-100 border-stone-200 text-stone-600 dark:bg-slate-900/60 dark:border-white/5 dark:text-stone-300 dark:hover:bg-slate-900/90 dark:hover:text-indigo-400'
-            }`}
-            title="Ver filtros y opciones avanzadas"
-          >
-            <Filter className="w-5 h-5" />
-            <span className="hidden sm:inline">Filtros</span>
-            {props.policyFilter !== 'all' && (
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            )}
-          </button>
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar max-w-full shrink-0">
+            {/* Collapsible Trigger */}
+            <button
+              onClick={() => setIsPanelOpen(!isPanelOpen)}
+              className={`h-[48px] md:h-[54px] px-5 rounded-2xl text-xs font-black uppercase tracking-wider border transition-all shrink-0 flex items-center justify-center gap-2 ${
+                isPanelOpen
+                  ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+                  : 'bg-stone-100 border-stone-200 text-stone-600 dark:bg-slate-900/60 dark:border-white/5 dark:text-stone-300 dark:hover:bg-slate-900/90 dark:hover:text-indigo-400'
+              }`}
+              title="Ver filtros y opciones avanzadas"
+            >
+              <Filter className="w-4.5 h-4.5" />
+              <span>Filtros</span>
+              {props.policyFilter !== 'all' && (
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              )}
+            </button>
 
-          {/* Add actions */}
-          <button
-            onClick={props.onCreate}
-            className="flex items-center justify-center gap-2 h-[48px] md:h-[56px] px-3 md:px-5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-2xl transition-all shadow-lg shadow-indigo-500/20 text-xs font-bold uppercase tracking-wider shrink-0"
-            title="Crear un nuevo registro"
-          >
-            <Plus className="w-5 h-5" />
-            <span className="hidden sm:inline">Nuevo</span>
-          </button>
+            {/* Add actions */}
+            <button
+              onClick={props.onCreate}
+              className="h-[48px] md:h-[54px] px-5 rounded-2xl bg-indigo-500 hover:bg-indigo-650 bg-indigo-600 text-white hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-500/10 text-xs font-black uppercase tracking-wider shrink-0 flex items-center justify-center gap-2"
+              title="Crear un nuevo registro"
+            >
+              <Plus className="w-4.5 h-4.5" />
+              <span>Nuevo</span>
+            </button>
+          </div>
         </div>
 
         {/* Collapsible Control Panel (for Mobile & Desktop) */}
