@@ -42,6 +42,9 @@ export const useExpiryQuery = (
     allProviders.forEach(p => {
       const rut = normalizeIdentity(p.rut);
       if (rut) map.set(rut, p);
+      if (p.name) {
+        map.set(normalizeIdentity(p.name), p);
+      }
     });
     return map;
   }, [allProviders]);

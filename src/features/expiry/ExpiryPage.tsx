@@ -122,6 +122,7 @@ export const ExpiryPage: React.FC = () => {
         barcode: engine.scannedBarcode,
         productName: engine.product?.name || 'Producto Desconocido',
         providerName: engine.product?.supplier || 'N/A',
+        providerRut: engine.product?.supplierRut || undefined,
         mm: selectedMm,
         yyyy: selectedYyyy,
         quantity: 1

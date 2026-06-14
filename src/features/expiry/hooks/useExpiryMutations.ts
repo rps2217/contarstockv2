@@ -82,6 +82,7 @@ export const useExpiryMutations = (
     barcode: string;
     productName: string;
     providerName?: string;
+    providerRut?: string;
     mm: number;
     yyyy: number;
     quantity: number;
@@ -143,6 +144,7 @@ export const useExpiryMutations = (
         barcode: sanitizedBarcode,
         productName: data.productName,
         providerName: data.providerName || 'N/A',
+        providerRut: data.providerRut,
         mm: data.mm,
         yyyy: data.yyyy,
         quantity: data.quantity,

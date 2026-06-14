@@ -22,7 +22,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ isOpen, onClose, initi
   const icon = isDuplicating ? <Copy className="w-6 h-6" /> : (initialData ? <Pencil className="w-6 h-6" /> : <Plus className="w-6 h-6" />);
 
   return (
-  <Modal isOpen={isOpen} onClose={onClose} className="md:max-w-md" showCloseButton={true}>
+  <Modal isOpen={isOpen} onClose={onClose} variant="side-drawer" className="md:max-w-md" showCloseButton={true}>
   <div className="px-8 pt-8 pb-4 flex items-center justify-between">
     <div className="flex items-center gap-4">
       <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shrink-0 border border-blue-100">

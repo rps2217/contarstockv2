@@ -23,6 +23,7 @@ export interface NormalizedExpiry {
   barcode: string;
   productName: string;
   providerName: string;
+  providerRut?: string;
   mm: number;
   yyyy: number;
   quantity: number;
@@ -106,6 +107,8 @@ export const normalizeExpiryRecord = (raw: any, userMappings?: any): NormalizedE
     'N/A'
   ).trim().toUpperCase();
 
+  const providerRut = raw.providerRut || raw.supplierRut || undefined;
+
   const mm = Number(getMappedValue(raw, 'mm', userMappings?.mm) || raw.mm || 0);
   const yyyy = Number(getMappedValue(raw, 'yyyy', userMappings?.yyyy) || raw.yyyy || 0);
   
@@ -120,6 +123,7 @@ export const normalizeExpiryRecord = (raw: any, userMappings?: any): NormalizedE
     barcode,
     productName,
     providerName,
+    providerRut,
     mm,
     yyyy,
     quantity: Number(getMappedValue(raw, 'quantity', userMappings?.quantity) || raw.quantity || 0),

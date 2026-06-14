@@ -116,27 +116,24 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[2000] flex items-end justify-center pointer-events-none">
+        <div className="fixed inset-0 z-[2000] flex justify-end pointer-events-none">
           {/* Backdrop sutil */}
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm pointer-events-auto"
+            className="absolute inset-0 bg-black/20 pointer-events-auto z-0"
           />
           
           <motion.div
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="w-full max-w-2xl bg-slate-950 border-t border-white/10 rounded-t-[2.5rem] shadow-[0_-20px_60px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col max-h-[85vh] pointer-events-auto"
+            className="relative z-10 w-full sm:w-[450px] h-full bg-slate-950 border-l border-white/10 shadow-[-20px_0_60px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col pointer-events-auto"
           >
-            {/* HANDLE INDICATOR */}
-            <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mt-3 mb-1 shrink-0" />
-
-            <div className="p-4 border-b border-white/5 flex items-center justify-between bg-slate-900/50">
+            <div className="p-4 border-b border-white/5 flex items-center justify-between bg-slate-900/50 mt-safe">
               <div className="flex-1 min-w-0 pr-4">
                 <span className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-warning">Escaneado</span>
                 <p className="text-base font-black text-white truncate leading-tight mt-1 uppercase italic tracking-tighter tabular-nums">
@@ -169,12 +166,12 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
                   <label className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em]">1. SELECCIONE MES</label>
                   {selectedMm && <span className="text-[10px] font-black text-brand-warning uppercase">MES {selectedMm}</span>}
                 </div>
-                <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
+                <div className="grid grid-cols-4 gap-2">
                   {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
                     <button
                       key={m}
                       onClick={() => { setSelectedMm(m); SoundFX.play('increment'); }}
-                      className={`h-14 rounded-2xl font-black text-xl transition-all border-2 active:scale-90 ${
+                      className={`h-12 rounded-xl font-black text-lg transition-all border-2 active:scale-90 ${
                         selectedMm === m 
                           ? 'bg-blue-600 border-blue-400 text-white shadow-[0_0_20px_rgba(37,99,235,0.4)] scale-105 z-10' 
                           : 'bg-white/5 border-white/5 text-slate-500 hover:bg-white/10'
@@ -192,12 +189,12 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
                   <label className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em]">2. SELECCIONE AÑO</label>
                   {selectedYyyy && <span className="text-[10px] font-black text-emerald-500 uppercase">AÑO {selectedYyyy}</span>}
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-3 gap-2">
                   {[2025, 2026, 2027, 2028, 2029, 2030].map(y => (
                     <button
                       key={y}
                       onClick={() => { setSelectedYyyy(y); SoundFX.play('increment'); }}
-                      className={`h-16 rounded-2xl font-black text-2xl transition-all border-2 flex items-center justify-center italic tracking-tighter active:scale-95 ${
+                      className={`h-14 rounded-xl font-black text-xl transition-all border-2 flex items-center justify-center italic tracking-tighter active:scale-95 ${
                         selectedYyyy === y 
                           ? 'bg-emerald-600 border-emerald-400 text-white shadow-[0_0_20px_rgba(5,150,105,0.4)] scale-105 z-10' 
                           : 'bg-white/5 border-white/5 text-slate-500 hover:bg-white/10'

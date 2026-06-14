@@ -32,7 +32,7 @@ export const processExpiryItem = (
   const recordName = (item.productName || item.DESCRIPTOR || item.DESCRIPCION || item.PRODUCTO || '').trim();
   const productName = (catalogueName || recordName || 'PRODUCTO SIN DESCRIPTOR').toUpperCase();
   
-  const supplierRut = product?.supplierRut ? normalizeIdentity(product.supplierRut) : null;
+  const supplierRut = (product?.supplierRut || (item as any).providerRut) ? normalizeIdentity(product?.supplierRut || (item as any).providerRut) : null;
   const supplierName = product?.supplier ? normalizeIdentity(product.supplier) : null;
   const itemSupplierName = item.providerName ? normalizeIdentity(item.providerName) : null;
   const effectiveSupplierName = supplierName || itemSupplierName;
