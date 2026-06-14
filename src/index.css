@@ -9,17 +9,23 @@
   /* Refined Professional Palette - Brand Identity Tokens */
   --color-brand-primary: #3b82f6;      /* Main Action Blue */
   --color-brand-secondary: #6366f1;    /* Accent Indigo */
-  --color-brand-surface: #1e293b;      /* Slate 900 (Cards) */
-  --color-brand-dark: #0f172a;         /* Slate 950 (Background) */
+  --color-brand-surface: #182035;      /* Slate 900 (Cards) */
+  --color-brand-dark: #0f1423;         /* Slate 950 (Background) */
   --color-brand-success: #10b981;      /* Emerald 500 */
   --color-brand-warning: #f59e0b;      /* Amber 500 */
   --color-brand-danger: #ef4444;       /* Rose 500 */
   --color-brand-info: #0ea5e9;         /* Sky 500 */
   
-  --color-black: #020617;
-  --color-slate-950: #020617;
-  --color-slate-900: #0f172a;
-  --color-slate-800: #1e293b;
+  /* Redefined Slate Neutrals for Enhanced Legibility and Softer Backgrounds */
+  --color-black: #0b0f19;
+  --color-slate-950: #0f1423;          /* Soft midnight slate (was #020617) */
+  --color-slate-900: #182035;          /* Cards background (was #0f172a) */
+  --color-slate-800: #25314e;          /* Borders/dividers (was #1e293b) */
+  --color-slate-700: #384970;          /* Secondary text background */
+  --color-slate-600: #546890;          /* Subtle labels (highly legible) */
+  --color-slate-500: #7e94bc;          /* Medium hierarchy labels (previously dark gray) */
+  --color-slate-400: #a4b7d7;          /* Metadata / labels */
+  --color-slate-300: #cbd7ed;          /* Highly luminous secondary elements */
   
   --animate-in: animate-in;
   --animate-out: animate-out;
@@ -31,7 +37,7 @@
     overscroll-behavior-y: none;
     touch-action: manipulation;
     font-family: var(--font-sans);
-    background-color: #0f172a;
+    background-color: #0f1423;
     -webkit-user-select: none;
     user-select: none;
     margin: 0;

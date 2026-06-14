@@ -531,8 +531,8 @@ export class ThermalPrinterEngine {
     const currentFullDate = new Date().toLocaleDateString('es-ES') + " " + timeStr;
 
     const itemsHtml = (order.items || []).map((item: any) => {
-      // Generate barcode without text underneath (displayValue: false)
-      const barcodeUrl = this.getBarcodeDataUrl(item.barcode, false);
+      // Generate barcode without text underneath (displayValue: false) and shorter height (28px)
+      const barcodeUrl = this.getBarcodeDataUrl(item.barcode, false, 28);
       
       return `
         <div class="item-block">
@@ -648,18 +648,24 @@ export class ThermalPrinterEngine {
               text-transform: uppercase;
             }
             .item-qty-box {
-              font-size: 11px;
+              font-size: 16px;
               font-weight: 900;
               text-transform: uppercase;
+              border: 2px solid #000;
+              padding: 2px 8px;
+              background-color: #000;
+              color: #fff;
+              border-radius: 4px;
             }
             .barcode-container {
               display: flex;
               justify-content: center;
               align-items: center;
-              margin: 6px 0;
+              margin: 4px 0;
             }
             .barcode-img {
-              max-height: 48px;
+              max-height: 300px;
+              max-height: 28px;
               max-width: 100%;
               width: auto;
               height: auto;
@@ -737,7 +743,7 @@ export class ThermalPrinterEngine {
     }, 120);
   }
 
-  public getBarcodeDataUrl(barcode: string, displayValue: boolean = true): string {
+  public getBarcodeDataUrl(barcode: string, displayValue: boolean = true, height: number = 45): string {
     if (!barcode) return "";
     try {
       const canvas = document.createElement('canvas');
@@ -745,7 +751,7 @@ export class ThermalPrinterEngine {
       JsBarcode(canvas, barcode, {
         format: "CODE128",
         width: 2,
-        height: 45,
+        height: height,
         displayValue: displayValue,
         fontSize: 10,
         font: "monospace",
