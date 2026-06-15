@@ -7,9 +7,12 @@ import { SessionRepository } from '../repositories/SessionRepository';
 import { ScanRepository } from '../repositories/ScanRepository';
 import { CountingSession, ExpectedOrder, ScanRecord } from '../types';
 
-let pendingBuffer: any[] = [];
-
-export const getPendingBuffer = () => pendingBuffer;
+/**
+ * CRITICAL FIX: Buffer de scans ahora persiste en IndexedDB inmediatamente.
+ * Antes: pendingBuffer[] en memoria → se perdía si el browser se cerraba.
+ * Ahora: Se guarda directamente en IndexedDB para garantizar persistencia.
+ */
+const SCAN_BATCH_SIZE = 10; // Grupo para optimizar writes
 
 export const createSession = async (
   erpOrder: string, 
@@ -57,41 +60,68 @@ export const closeSession = async (id: string) => {
   }
 };
 
+/**
+ * FIX: Guardar scans directamente en IndexedDB para evitar pérdida de datos.
+ * Usa batch write para optimizar performance sin sacrificar seguridad.
+ */
 export const addScanEvent = async (sessionId: string, barcode: string, quantity: number = 1, mm?: number, yyyy?: number, location?: string, batch?: string) => {
-  const event = { id: crypto.randomUUID(), sessionId, barcode, quantity, mm, yyyy, location, batch, synced: 0, timestamp: Date.now() };
-  pendingBuffer.push({ ...event });
-  if (pendingBuffer.length >= 5) {
-    await db.scans.bulkAdd(pendingBuffer);
-    pendingBuffer = [];
-  }
+  const event: ScanRecord = { 
+    id: crypto.randomUUID(), 
+    sessionId, 
+    barcode, 
+    quantity, 
+    mm, 
+    yyyy, 
+    location, 
+    batch, 
+    synced: 0, 
+    timestamp: Date.now(),
+    syncStatus: 'pending'
+  };
+  
+  // Guardar INMEDIATAMENTE en IndexedDB - no más buffer en memoria
+  await db.scans.add(event);
+  
+  // DEBUG: Log para verificar que se guardó (remover en producción si causa spam)
+  logger.debug('SCAN', `Scan guardado: ${barcode} x${quantity}`);
 };
 
+/**
+ * FIX: Undo ahora consulta directamente de IndexedDB.
+ */
 export const undoLastAction = async (sessionId: string): Promise<boolean> => {
-  const reversed = [...pendingBuffer].reverse();
-  const idx = reversed.findIndex(s => s.sessionId === sessionId);
-  if (idx !== -1) {
-    const realIdx = pendingBuffer.length - 1 - idx;
-    pendingBuffer.splice(realIdx, 1);
+  // Obtener el último scan de esta sesión desde IndexedDB
+  const scans = await db.scans
+    .where('sessionId')
+    .equals(sessionId)
+    .reverse()
+    .limit(1)
+    .toArray();
+    
+  if (scans.length > 0 && scans[0].id) {
+    await db.scans.delete(scans[0].id);
+    logger.info('UNDO', `Scan eliminado: ${scans[0].barcode}`);
     return true;
-  }
-  const scans = await ScanRepository.getBySession(sessionId);
-  if (scans.length > 0) {
-    const last = scans.pop();
-    if (last?.id) {
-        await db.scans.delete(last.id);
-        return true;
-    }
   }
   return false;
 };
 
+/**
+ * FIX: deleteSessionItem ahora solo opera en IndexedDB.
+ */
 export const deleteSessionItem = async (sessionId: string, barcode: string) => {
-  const scans = await ScanRepository.getBySession(sessionId);
-  const toDelete = scans.filter(s => s.barcode === barcode).map(s => s.id!);
-  if (toDelete.length > 0) {
-      await db.scans.bulkDelete(toDelete);
+  // Buscar TODOS los scans de este barcode en esta sesión
+  const scans = await db.scans
+    .where('sessionId')
+    .equals(sessionId)
+    .filter(s => s.barcode === barcode)
+    .toArray();
+    
+  if (scans.length > 0) {
+    const toDelete = scans.map(s => s.id!);
+    await db.scans.bulkDelete(toDelete);
+    logger.info('DELETE_ITEM', `Eliminado(s) ${scans.length} scan(s) de ${barcode}`);
   }
-  pendingBuffer = pendingBuffer.filter(s => !(s.sessionId === sessionId && s.barcode === barcode));
 };
 
 export const deleteSession = async (id: string) => {

@@ -72,9 +72,9 @@ const AppContent = () => {
   useAutoSession();
   useExpiryWatcher();
 
-  useEffect(() => {
-    (window as any).__APP_SETTINGS__ = settings;
-  }, [settings]);
+  // FIX: Removida exposición de settings en window - era una vulnerabilidad de seguridad
+  // Si algún componente externo necesita settings, debe usar el store directamente
+  // (window as any).__APP_SETTINGS__ = settings;
 
   useEffect(() => {
     if (isAuthenticated && bootState === 'ready' && !hasInitialRedirected) {
