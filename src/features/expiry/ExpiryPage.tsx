@@ -312,6 +312,24 @@ export const ExpiryPage: React.FC = () => {
   const filters = (
     <>
       <button
+        onClick={async () => {
+          if (window.confirm("¿Seguro que deseas limpiar y recargar todos los registros desde la nube?")) {
+            await actions.handleFullRefresh();
+            addToast("Base de datos sincronizada", "success");
+          }
+        }}
+        disabled={syncStore.isSyncing}
+        className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border flex items-center gap-2 shrink-0 ${
+          syncStore.isSyncing 
+            ? 'bg-indigo-500/50 text-white border-indigo-400 opacity-50 cursor-not-allowed' 
+            : 'bg-indigo-500 text-white border-indigo-400 active:bg-indigo-600'
+        }`}
+        title="Importar desde la nube / Limpiar y recargar"
+      >
+        <Download className={`w-3.5 h-3.5 ${syncStore.isSyncing ? 'animate-bounce' : ''}`} />
+        Limpiar Nube
+      </button>
+      <button
         onClick={() => setFilterCritico(!filterCritico)}
         className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border flex items-center gap-2 shrink-0 ${
           filterCritico 
