@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Mail, Copy, ExternalLink, Save, Trash2, Edit2, Plus } from 'lucide-react';
 import { format } from 'date-fns';
+import DOMPurify from 'dompurify';
 import { useToastStore } from '../../../store/useToastStore';
 import { EmailTemplate, EmailTemplateRepository } from '../../../repositories/EmailTemplateRepository';
 
@@ -213,19 +214,27 @@ export const EventEmailModal: React.FC<EventEmailModalProps> = ({
     const processedBody = processText(body);
     const parts = processedBody.split('[TABLA_PRODUCTOS]');
     
+    // Sanitizar el contenido de texto antes de insertar en HTML
+    const sanitizedParts = parts.map(part => DOMPurify.sanitize(part, { ALLOWED_TAGS: ['p', 'br', 'span', 'div'], ALLOWED_ATTR: ['style'] }));
+    
     let html = `<div style="font-family: Arial, sans-serif; color: #333; line-height: 1.5;">`;
     
     if (parts.length > 1) {
-      html += `<p style="white-space: pre-wrap; margin-bottom: 0;">${parts[0]}</p>`;
+      html += `<p style="white-space: pre-wrap; margin-bottom: 0;">${sanitizedParts[0]}</p>`;
       html += generateHtmlTable();
-      html += `<p style="white-space: pre-wrap; margin-top: 0;">${parts[1]}</p>`;
+      html += `<p style="white-space: pre-wrap; margin-top: 0;">${sanitizedParts[1]}</p>`;
     } else {
-      html += `<p style="white-space: pre-wrap;">${processedBody}</p>`;
+      html += `<p style="white-space: pre-wrap;">${sanitizedParts[0]}</p>`;
       html += generateHtmlTable();
     }
     
     html += `</div>`;
-    return html;
+    
+    // Sanitizar el HTML final para prevenir XSS
+    return DOMPurify.sanitize(html, {
+      ALLOWED_TAGS: ['p', 'div', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'span', 'br'],
+      ALLOWED_ATTR: ['style', 'class', 'align', 'border', 'cellpadding', 'cellspacing']
+    });
   };
 
   const handleCopyAndOpen = async () => {

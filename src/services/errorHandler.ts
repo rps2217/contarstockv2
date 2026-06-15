@@ -151,7 +151,12 @@ export const handleError = (
   }
 
   // 2. Log persistente (IndexedDB + Telemetry)
-  logger[severity === 'critical' ? 'error' : severity](
+  // Mapear severities a métodos del logger existentes
+  const loggerMethod = severity === 'critical' ? 'error' 
+    : severity === 'debug' ? 'info'
+    : severity === 'warning' ? 'warn'
+    : severity;
+  (logger as any)[loggerMethod](
     context.toUpperCase(),
     errorObj.message,
     {
