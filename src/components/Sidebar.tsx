@@ -11,6 +11,7 @@ import { ScanRepository } from '../repositories/ScanRepository';
 import { db } from '../db';
 
 import { useSyncStore } from '../store/useSyncStore';
+import { useAppStore } from '../store/mainAppStore';
 
 interface NavItemProps {
   path: string;
@@ -63,6 +64,7 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, onToggle }) => {
   const navigate = useNavigate();
   const { pendingItems, isSyncing, isSupabaseConnected } = useSyncStore();
+  const setSystemHubOpen = useAppStore(state => state.setSystemHubOpen);
   
   const dynamicTableStats = useLiveQuery(async () => {
     const records = await db.dynamic_data.where('syncStatus').anyOf(['pending', 'error']).toArray();
@@ -97,6 +99,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
         <NavItem path="/compliance" activeKey="compliance" label="Control Canjes" icon={ShieldCheck} isCollapsed={isCollapsed} onNavigate={navigate} />
         
         {!isCollapsed && <div className="text-[9px] font-black text-slate-700 uppercase tracking-[0.3em] px-4 mb-4 mt-8">Herramientas</div>}
+        <button
+          onClick={() => setSystemHubOpen(true)}
+          className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} py-3 rounded-xl transition-all duration-300 group relative text-slate-500 hover:bg-rose-500/10 hover:text-rose-400`}
+        >
+          <AlertCircle className="w-5 h-5 transition-transform group-hover:scale-110" />
+          {!isCollapsed && <span className="font-bold text-[11px] uppercase tracking-wider">Acciones Masivas</span>}
+        </button>
         <NavItem path="/massive/BURST-MODE" activeKey="massive" label="Modo Hammer" icon={Zap} moduleKey="counting" isCollapsed={isCollapsed} onNavigate={navigate} />
         <NavItem path="/expiry" activeKey="expiry" label="Vencimientos" icon={Calendar} moduleKey="expiry" isCollapsed={isCollapsed} onNavigate={navigate} />
         <NavItem path="/events" activeKey="events" label="Eventos" icon={FileText} moduleKey="events" isCollapsed={isCollapsed} onNavigate={navigate} />

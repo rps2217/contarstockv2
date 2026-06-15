@@ -153,7 +153,7 @@ export interface ConsolidatedItem {
 }
 
 export type ViewState = 'dashboard' | 'counting' | 'database' | 'reports' | 'settings' | 'reception' | 'sync' | 'massive' | 'documents' | 'visual-picking' | 'expiry' | 'events' | 'providers' | 'customers' | 'compliance';
-export type Theme = 'light' | 'dark';
+export type Theme = 'light' | 'dark' | 'high-contrast';
 
 export interface VisualGuideItem {
   barcode: string;

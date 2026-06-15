@@ -12,11 +12,12 @@ export const ThemeSection: React.FC<Props> = ({ settings, updateSetting }) => {
  const themes: {id: Theme, label: string, bg: string, accent: string, text: string, icon: any}[] = [
  { id: 'light', label: 'Día', bg: 'bg-white', accent: 'bg-blue-600', text: 'text-slate-900', icon: Sun },
  { id: 'dark', label: 'Noche', bg: 'bg-slate-900', accent: 'bg-blue-500', text: 'text-white', icon: Moon },
+ { id: 'high-contrast', label: 'Contraste', bg: 'bg-black', accent: 'bg-yellow-500', text: 'text-yellow-400', icon: Contrast },
  ];
 
  return (
  <section className="space-y-6 animate-in slide-in-from-bottom-2">
- <div className="grid grid-cols-2 gap-4">
+ <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
  {themes.map(t => {
  const isSelected = (settings.theme || 'dark') === t.id;
  const Icon = t.icon;

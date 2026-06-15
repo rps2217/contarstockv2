@@ -103,7 +103,13 @@ const AppContent = () => {
     };
   }, [location.pathname]);
 
-  const currentThemeClass = settings.theme === 'light' ? 'bg-slate-50 text-slate-900' : 'bg-slate-950 text-slate-100';
+  const currentThemeClass = 
+    settings.theme === 'high-contrast' ? 'bg-black text-yellow-400' :
+    settings.theme === 'light' ? 'bg-slate-50 text-slate-900' : 
+    'bg-slate-950 text-slate-100';
+
+  const isDarkMode = settings.theme === 'dark' || settings.theme === 'high-contrast';
+  const isHighContrast = settings.theme === 'high-contrast';
 
   if (bootState === 'initializing' && isAuthenticated !== false) {
     return (
@@ -159,7 +165,7 @@ const AppContent = () => {
   }
 
   return (
-    <div className={`w-full h-full flex flex-col transition-colors duration-700 ${currentThemeClass} ${settings.theme === 'dark' ? 'dark' : ''} font-sans selection:bg-blue-500/30`}>
+    <div className={`w-full h-full flex flex-col transition-colors duration-700 ${currentThemeClass} ${isDarkMode ? 'dark' : ''} ${isHighContrast ? 'high-contrast' : ''} font-sans selection:bg-blue-500/30`}>
       <OnboardingOverlay />
       <SystemOperationsDrawer />
       <OfflineBanner />

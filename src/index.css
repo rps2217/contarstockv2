@@ -37,11 +37,31 @@
     overscroll-behavior-y: none;
     touch-action: manipulation;
     font-family: var(--font-sans);
-    background-color: #0f1423;
+    background-color: var(--color-slate-950, #0f1423);
     -webkit-user-select: none;
     user-select: none;
     margin: 0;
     padding: 0;
+  }
+
+  .high-contrast {
+    --color-slate-950: #000000;
+    --color-slate-900: #1a1a1a;
+    --color-slate-800: #404040;
+    --color-slate-700: #525252;
+    --color-slate-600: #737373;
+    --color-slate-500: #a3a3a3;
+    --color-slate-400: #d4d4d4;
+    --color-slate-300: #e5e5e5;
+    --color-brand-surface: #1a1a1a;
+    --color-brand-dark: #000000;
+    --color-brand-primary: #ffff00;
+    --color-brand-secondary: #facc15;
+  }
+
+  .high-contrast .border-white\/5,
+  .high-contrast .border-white\/10 {
+    border-color: rgba(255, 255, 255, 0.3) !important;
   }
 }
 
