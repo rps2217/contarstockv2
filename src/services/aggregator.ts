@@ -36,28 +36,76 @@ const aggregateScansSync = (scans: ScanRecord[], productMap: Map<string, {name: 
 };
 
 /**
- * FIX: Cache de productos ahora tiene invalidación.
- * Antes: El cache nunca se invalidaba, mostrando nombres obsoletos.
- * Ahora: Se puede invalidar cuando los productos cambian.
+ * Cache de productos con invalidación y soporte cross-tab.
+ * FIX: Añadido soporte para invalidación entre tabs via storage events.
  */
 const productCache = new Map<string, {name: string, embedding?: number[], cachedAt: number}>();
 const MAX_CACHE_SIZE = 5000;
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos de TTL
 
+// Clave para comunicación cross-tab
+const CACHE_INVALIDATION_KEY = 'contarstock_cache_invalidation';
+
+/**
+ * Registra el listener para invalidación cross-tab.
+ * Debe llamarse una vez al inicializar la app.
+ */
+export const initCacheInvalidationListener = () => {
+  if (typeof window !== 'undefined') {
+    window.addEventListener('storage', (event) => {
+      // Escuchar cambios en localStorage para invalidar cache
+      if (event.key === CACHE_INVALIDATION_KEY && event.newValue) {
+        try {
+          const invalidation = JSON.parse(event.newValue);
+          if (invalidation.type === 'invalidate_all') {
+            productCache.clear();
+            console.debug('[Cache] Invalidación cross-tab received: clear all');
+          } else if (invalidation.type === 'invalidate_barcodes' && invalidation.barcodes) {
+            invalidation.barcodes.forEach((b: string) => productCache.delete(b));
+            console.debug('[Cache] Invalidación cross-tab received:', invalidation.barcodes.length, 'barcodes');
+          }
+        } catch (e) {
+          console.warn('[Cache] Error parsing invalidation event:', e);
+        }
+      }
+    });
+    console.debug('[Cache] Cross-tab invalidation listener registered');
+  }
+};
+
 export const clearProductCache = () => productCache.clear();
 
 /**
- * Invalida productos específicos del cache.
- * Debe llamarse cuando se actualiza o guarda un producto.
+ * Invalida productos específicos del cache y notifica a otras tabs.
  */
 export const invalidateProductCache = (barcodes: string[]) => {
   barcodes.forEach(b => productCache.delete(b));
+  // Notificar a otras tabs
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem(CACHE_INVALIDATION_KEY, JSON.stringify({
+      type: 'invalidate_barcodes',
+      barcodes,
+      timestamp: Date.now()
+    }));
+    // Limpiar para no disparar el propio listener
+    setTimeout(() => localStorage.removeItem(CACHE_INVALIDATION_KEY), 100);
+  }
 };
 
 /**
- * Invalida todo el cache de productos.
+ * Invalida todo el cache de productos y notifica a otras tabs.
  */
-export const invalidateAllProductCache = () => productCache.clear();
+export const invalidateAllProductCache = () => {
+  productCache.clear();
+  // Notificar a otras tabs
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem(CACHE_INVALIDATION_KEY, JSON.stringify({
+      type: 'invalidate_all',
+      timestamp: Date.now()
+    }));
+    setTimeout(() => localStorage.removeItem(CACHE_INVALIDATION_KEY), 100);
+  }
+};
 
 /**
  * Verifica si una entrada del cache es válida (no expirada).

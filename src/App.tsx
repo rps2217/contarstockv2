@@ -76,6 +76,13 @@ const AppContent = () => {
   // Si algún componente externo necesita settings, debe usar el store directamente
   // (window as any).__APP_SETTINGS__ = settings;
 
+  // FIX: Inicializar listener de invalidación cross-tab para el cache de productos
+  useEffect(() => {
+    import('./services/aggregator').then(({ initCacheInvalidationListener }) => {
+      initCacheInvalidationListener();
+    });
+  }, []);
+
   useEffect(() => {
     if (isAuthenticated && bootState === 'ready' && !hasInitialRedirected) {
       setHasInitialRedirected(true);
