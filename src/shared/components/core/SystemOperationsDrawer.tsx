@@ -19,8 +19,10 @@ import {
   CheckCircle,
   HelpCircle,
   Clock,
-  Trash2
+  Trash2,
+  Contrast
 } from 'lucide-react';
+import { parse } from 'papaparse';
 import { useAppStore } from '@/store/mainAppStore';
 import { useProductDatabase } from '@/features/inventory/hooks/useProductDatabase';
 import { useSyncStore } from '@/store/useSyncStore';
@@ -30,6 +32,9 @@ import { toast } from 'sonner';
 export const SystemOperationsDrawer: React.FC = () => {
   const isSystemHubOpen = useAppStore(state => state.isSystemHubOpen);
   const setSystemHubOpen = useAppStore(state => state.setSystemHubOpen);
+  const settings = useAppStore(state => state.settings);
+  const updateSetting = useAppStore(state => state.updateSetting);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   
   // Use core product database hooks inside the drawer for fully reactive tracking
   const { state, actions } = useProductDatabase();
@@ -324,6 +329,59 @@ export const SystemOperationsDrawer: React.FC = () => {
 
               <div className="p-4 rounded-xl border border-rose-500/10 bg-rose-500/5 space-y-3">
                 <button
+                  onClick={() => updateSetting('theme', settings.theme === 'high-contrast' ? 'dark' : 'high-contrast')}
+                  className={`w-full flex items-center justify-center gap-2 p-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors ${
+                    settings.theme === 'high-contrast' 
+                      ? 'bg-yellow-500/20 text-yellow-500' 
+                      : 'bg-slate-500/10 text-slate-600 dark:text-slate-400'
+                  }`}
+                >
+                  <Contrast className="w-4 h-4" />
+                  {settings.theme === 'high-contrast' ? 'Desactivar Alto Contraste' : 'Modo Alto Contraste'}
+                </button>
+                <input
+                  type="file"
+                  accept=".csv"
+                  className="hidden"
+                  ref={fileInputRef}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    
+                    const tId = toast.loading('Importando catalogo productos...');
+                    
+                    parse(file, {
+                      header: true,
+                      skipEmptyLines: true,
+                      complete: async (results) => {
+                        try {
+                          const { db } = await import('@/db');
+                          const products = (results.data as any[]).map((row: any) => ({
+                            barcode: String(row.barcode || row.BARCODE || '').trim(),
+                            name: String(row.name || row.NAME || row.description || row.DESCRIPTION || '').trim(),
+                            category: row.category || 'default',
+                            syncStatus: 'pending' as const
+                          })).filter(p => p.barcode !== '');
+                          
+                          await db.products.bulkPut(products);
+                          toast.success(`${products.length} productos importados.`, { id: tId });
+                          window.location.reload();
+                        } catch (err: any) {
+                          toast.error('Error: ' + err.message, { id: tId });
+                        }
+                      }
+                    });
+                  }}
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full flex items-center justify-center gap-2 p-2.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors mb-2"
+                >
+                  <Upload className="w-4 h-4" />
+                  Importar CSV de Productos
+                </button>
+
+                <button
                   onClick={async () => {
                     if (window.confirm("¿Estás 100% seguro de que deseas VACIAR todo el catálogo de PRODUCTOS y PROVEEDORES? Esto es irreversible localmente (aunque podrías recuperar desde la nube si hiciste respaldo).")) {
                       const tId = toast.loading('Vaciando maestras de productos y proveedores...');
@@ -333,7 +391,6 @@ export const SystemOperationsDrawer: React.FC = () => {
                         await ProviderRepository.clear();
                         await productRepository.deleteAll();
                         toast.success('Maestras locales vaciadas.', { id: tId });
-                        // Recargar la página o volver al dashboard puede ser util
                         window.location.reload();
                       } catch (error: any) {
                         toast.error('Error al vaciar maestras: ' + error.message, { id: tId });
