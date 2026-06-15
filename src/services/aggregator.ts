@@ -35,19 +35,48 @@ const aggregateScansSync = (scans: ScanRecord[], productMap: Map<string, {name: 
  return Object.values(aggregation);
 };
 
-// Cache simple de productos para evitar consultas repetitivas a IndexedDB
-const productCache = new Map<string, {name: string, embedding?: number[]}>();
+/**
+ * FIX: Cache de productos ahora tiene invalidación.
+ * Antes: El cache nunca se invalidaba, mostrando nombres obsoletos.
+ * Ahora: Se puede invalidar cuando los productos cambian.
+ */
+const productCache = new Map<string, {name: string, embedding?: number[], cachedAt: number}>();
 const MAX_CACHE_SIZE = 5000;
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos de TTL
 
 export const clearProductCache = () => productCache.clear();
+
+/**
+ * Invalida productos específicos del cache.
+ * Debe llamarse cuando se actualiza o guarda un producto.
+ */
+export const invalidateProductCache = (barcodes: string[]) => {
+  barcodes.forEach(b => productCache.delete(b));
+};
+
+/**
+ * Invalida todo el cache de productos.
+ */
+export const invalidateAllProductCache = () => productCache.clear();
+
+/**
+ * Verifica si una entrada del cache es válida (no expirada).
+ */
+const isCacheValid = (entry: { cachedAt: number } | undefined): boolean => {
+  if (!entry) return false;
+  return Date.now() - entry.cachedAt < CACHE_TTL_MS;
+};
 
 export const aggregateScans = async (scans: ScanRecord[]): Promise<ConsolidatedItem[]> => {
   if (scans.length === 0) return [];
   
   const uniqueBarcodes = Array.from(new Set(scans.map(s => s.barcode)));
   
-  // Identificar qué códigos no están en caché
-  const missingBarcodes = uniqueBarcodes.filter(b => !productCache.has(b));
+  // Identificar qué códigos no están en caché o están expirados
+  const missingBarcodes = uniqueBarcodes.filter(b => {
+    const cached = productCache.get(b);
+    return !isCacheValid(cached);
+  });
   
   if (missingBarcodes.length > 0) {
     const products = await db.products.where('barcode').anyOf(missingBarcodes).toArray();
@@ -61,7 +90,11 @@ export const aggregateScans = async (scans: ScanRecord[]): Promise<ConsolidatedI
     }
 
     products.forEach(p => { 
-      productCache.set(p.barcode, { name: p.name, embedding: p.embedding }); 
+      productCache.set(p.barcode, { 
+        name: p.name, 
+        embedding: p.embedding,
+        cachedAt: Date.now()
+      }); 
     });
   }
   

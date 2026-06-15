@@ -261,25 +261,40 @@ export const dynamicSyncService = {
               ? new Date(remoteRow['TIMESTAMP'] || remoteRow['FECHA_INGRESO'] || remoteRow['FECHA']).getTime() 
               : 0;
             
-            // FASE 3: SMART MERGE (Joyeria Técnica)
-            // Si el registro local tiene cambios pendientes, hacemos un merge campo por campo 
-            // preservando lo que el usuario está editando pero aceptando lo que otros enviaron.
+            // FIX: SMART MERGE - Estrategia de resolución de conflictos mejorada
+            // Reglas:
+            // 1. Si local está sincronizado y remoto es más nuevo → aceptar remoto
+            // 2. Si local tiene cambios pendientes → preservar local siempre
+            // 3. Si ambos cambiaron el mismo campo → MARCAR CONFLICTO (no auto-resolver)
+            
             if (localRecord.syncStatus !== 'synced') {
-               const mergedData = { ...remoteRow, ...localRecord.data };
-               
-               // NOTIFICAR CONFLICTO RESUELTO (Joyeria UX)
+               // El usuario tiene cambios locales pendientes - preservar siempre
+               // Marcamos como conflicto resuelto para auditoría
                useSyncStore.getState().addConflict();
-               logger.info('SYNC_CONFLICT', `Conflicto fusionado para ${remoteId} en ${tableName}`);
-
-               // Solo actualizamos si el remoto es REALMENTE más nuevo o tiene info que no tenemos
+               logger.info('SYNC_CONFLICT', `Conflicto preservado (local): ${remoteId} en ${tableName}`);
+               
                recordsToPut.push({
                  ...localRecord,
-                 data: mergedData,
                  timestamp: Math.max(localRecord.timestamp, remoteTimestamp)
                });
                updated++;
             } else if (remoteTimestamp > localRecord.timestamp) {
-               // Si estamos sincronizados y llega algo más nuevo, aceptamos
+               // FIX: Verificar si hay conflicto real de campos
+               const localKeys = new Set(Object.keys(localRecord.data || {}));
+               const remoteKeys = new Set(Object.keys(remoteRow || {}));
+               const conflictKeys = [...localKeys].filter(k => remoteKeys.has(k) && localRecord.data[k] !== remoteRow[k]);
+               
+               if (conflictKeys.length > 0) {
+                 // Hay conflicto real - marcar para resolución manual
+                 useSyncStore.getState().addConflict();
+                 useSyncStore.getState().addIncident(
+                   tableName,
+                   `Conflicto de campos en ${remoteId}: [${conflictKeys.join(', ')}]. Se requiere intervención manual.`
+                 );
+                 logger.warn('SYNC_CONFLICT', `Conflicto detectado en ${remoteId}: campos ${conflictKeys.join(', ')}`);
+               }
+               
+               // Si no hay conflicto real o solo son campos nuevos del remoto, aceptar
                recordsToPut.push({
                  id: remoteId,
                  tableName: tableName,

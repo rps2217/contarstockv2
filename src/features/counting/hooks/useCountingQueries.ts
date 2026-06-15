@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import * as sessionService from '../../../services/sessionService'; 
 import { aggregateScans } from '../../../services/aggregator';
 import { normalizeSku } from '../../../services/utils';
 import { ConsolidatedItem } from '../../../types';
@@ -13,11 +12,12 @@ export const useCountingQueries = (sessionId: string | undefined, activeBarcode:
     return await SessionRepository.getById(sessionId);
   }, [sessionId]);
 
+  // FIX: Ya no hay pendingBuffer - todos los scans se guardan directamente en IndexedDB
+  // useLiveQuery mantiene la query actualizada automáticamente
   const rawHistory = useLiveQuery(async () => {
     if (!sessionId) return [];
     const scans = await ScanRepository.getBySession(sessionId);
-    const pending = sessionService.getPendingBuffer().filter(s => s.sessionId === sessionId);
-    return await aggregateScans([...scans, ...pending]);
+    return await aggregateScans(scans);
   }, [sessionId]);
 
   const consolidatedHistory = useMemo(() => {
