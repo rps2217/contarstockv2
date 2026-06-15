@@ -18,7 +18,8 @@ import {
   FileSpreadsheet,
   CheckCircle,
   HelpCircle,
-  Clock
+  Clock,
+  Trash2
 } from 'lucide-react';
 import { useAppStore } from '@/store/mainAppStore';
 import { useProductDatabase } from '@/features/inventory/hooks/useProductDatabase';
@@ -309,6 +310,61 @@ export const SystemOperationsDrawer: React.FC = () => {
                     </button>
                   )}
                 </div>
+              </div>
+            </div>
+
+            {/* SECTION 5: LOCAL MASSIVE ACTIONS */}
+            <div className="space-y-3">
+              <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                <span>Mantenimiento Local (Acciones Masivas)</span>
+                <span className="flex items-center gap-1.5 bg-rose-500/10 text-rose-500 px-2 py-0.5 rounded-full text-[9px] font-black">
+                  <ShieldAlert className="w-3 h-3" /> ZONA CRÍTICA
+                </span>
+              </div>
+
+              <div className="p-4 rounded-xl border border-rose-500/10 bg-rose-500/5 space-y-3">
+                <button
+                  onClick={async () => {
+                    if (window.confirm("¿Estás 100% seguro de que deseas VACIAR todo el catálogo de PRODUCTOS y PROVEEDORES? Esto es irreversible localmente (aunque podrías recuperar desde la nube si hiciste respaldo).")) {
+                      const tId = toast.loading('Vaciando maestras de productos y proveedores...');
+                      try {
+                        const { productRepository } = await import('@/repositories/DexieProductRepository');
+                        const { ProviderRepository } = await import('@/repositories/ProviderRepository');
+                        await ProviderRepository.clear();
+                        await productRepository.deleteAll();
+                        toast.success('Maestras locales vaciadas.', { id: tId });
+                        // Recargar la página o volver al dashboard puede ser util
+                        window.location.reload();
+                      } catch (error: any) {
+                        toast.error('Error al vaciar maestras: ' + error.message, { id: tId });
+                      }
+                    }
+                  }}
+                  className="w-full flex items-center justify-center gap-2 p-2.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Vaciar Master de Productos y Proveedores
+                </button>
+
+                <button
+                  onClick={async () => {
+                    if (window.confirm("¿Estás seguro de que deseas VACIAR todos los REGISTROS DE VENCIMIENTO? Esta acción eliminará todo tu trabajo local de mermas y canjes.")) {
+                      const tId = toast.loading('Vaciando registros de vencimiento...');
+                      try {
+                        const { expiryRepository } = await import('@/repositories/ExpiryRepository');
+                        await expiryRepository.clear();
+                        toast.success('Registros de vencimiento vaciados correctamente.', { id: tId });
+                        window.location.reload();
+                      } catch (error: any) {
+                        toast.error('Error al vaciar vencimientos: ' + error.message, { id: tId });
+                      }
+                    }
+                  }}
+                  className="w-full flex items-center justify-center gap-2 p-2.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Vaciar Registros de Vencimiento
+                </button>
               </div>
             </div>
           </div>
