@@ -147,14 +147,14 @@ export const bulkImportProducts = async (csvText: string): Promise<number> => {
  const products: Product[] = [];
  for (const row of results.data as any[]) {
  const rawBarcode = row['COD PRODUCTO'] || row['CODIGO'] || row['SKU'] || row['EAN'];
- const name = row['DESCRIPCION'] || row['PRODUCTO'] || row['NOMBRE'];
+ const name = row['DESCRIPCION'] || row['PRODUCTO'] || row['NOMBRE'] || row['DESCRIPTOR'];
  
  if (rawBarcode && name) {
  products.push({
  barcode: String(rawBarcode),
  name: String(name),
- category: String(row['MUNDO'] || row['CATEGORIA'] || 'GENERAL'),
- supplier: String(row['PROVEEDOR'] || ''),
+ category: String(row['MUNDO'] || row['CATEGORIA'] || row['FAMILIA'] || 'GENERAL'),
+ supplier: String(row['PROVEEDOR'] || row['LABORATORIO'] || row['MARCA'] || row['LAB'] || ''),
  supplierRut: normalizeIdentity(String(row['RUT PROVEEDOR'] || row['RUT'] || row['PROVEEDOR_RUT'] || row['RUT_PROVEEDOR'] || '')),
  syncStatus: 'synced'
  });

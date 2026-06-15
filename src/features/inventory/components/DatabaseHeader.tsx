@@ -8,11 +8,13 @@ import {
   Cpu, 
   ShieldAlert, 
   BadgeCheck, 
-  Ghost
+  Ghost,
+  Upload
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '@/store/mainAppStore';
+import { toast } from 'sonner';
 
 interface Props {
   usedMb: string;
@@ -224,6 +226,24 @@ export const DatabaseHeader: React.FC<Props> = (props) => {
                   </div>
 
                   <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <button
+                      onClick={async () => {
+                        try {
+                          const { backupProductsToSupabase, backupProvidersToSupabase } = await import('../../../services/cloudBackupService');
+                          const tId = toast.loading('Subiendo maestro a la nube...');
+                          await backupProvidersToSupabase();
+                          await backupProductsToSupabase();
+                          toast.success('Maestro sincronizado en nube local y global.', { id: tId });
+                        } catch (e: any) {
+                          toast.error('Fallo sincronizando a la nube: ' + e.message);
+                        }
+                      }}
+                      className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-500/10 border border-blue-500/20 text-blue-500 dark:text-blue-400 rounded-xl hover:bg-blue-500/20 transition-all text-[10px] font-black uppercase tracking-widest"
+                    >
+                      <Upload className="w-4 h-4" />
+                      Subir a Nube
+                    </button>
+
                     <button
                       onClick={props.onImport}
                       className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl hover:bg-emerald-500/20 transition-all text-[10px] font-black uppercase tracking-widest"
