@@ -28,7 +28,7 @@ const mapExpiryToRemote = (record: any) => {
   
   // Map fields that are in mapping
   const localKeys = [
-    'barcode', 'productName', 'quantity', 'event', 'mm', 'yyyy', 
+    'barcode', 'productName', 'providerName', 'providerRut', 'quantity', 'event', 'mm', 'yyyy', 
     'location', 'supplier', 'timestamp', 'frc', 'erp', 'traspaso', 
     'destino', 'observaciones', 'isAdjusted', 'batch', 'uniqueKey', 'claveUnica'
   ];
@@ -96,6 +96,9 @@ const mapExpiryToLocal = (remote: any) => {
   // Ensure essential local keys exist
   local.id = String(id);
   local.barcode = local.barcode || remote.barcode || '';
+  local.productName = local.productName || remote.productName || remote.product_name || '';
+  local.providerName = local.providerName || remote.providerName || remote.provider_name || '';
+  local.providerRut = local.providerRut || remote.providerRut || remote.provider_rut || '';
   local.quantity = Number(local.quantity || remote.quantity || 0);
   local.mm = Number(local.mm || remote.mm || 0);
   local.yyyy = Number(local.yyyy || remote.yyyy || 0);
