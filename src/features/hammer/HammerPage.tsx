@@ -11,6 +11,7 @@ import { useHIDScanner } from '../../hooks/useHIDScanner';
 import { HammerCameraView } from './components/HammerCameraView';
 
 import { useAppStore } from '../../store/mainAppStore';
+import { exportHammerToExcel } from '../../services/export';
 
 export const HammerPage: React.FC = () => {
   const navigate = useNavigate();
@@ -94,6 +95,7 @@ export const HammerPage: React.FC = () => {
         onToggleVoice={() => updateSetting('ttsEnabled', !settings.ttsEnabled)}
         autoSyncEnabled={state.autoSyncEnabled}
         onToggleAutoSync={actions.toggleAutoSync}
+        onDownloadExcel={() => exportHammerToExcel(batchId, state.items)}
       />
 
       <LocationSelectorModal 

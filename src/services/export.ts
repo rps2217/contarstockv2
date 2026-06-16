@@ -18,6 +18,47 @@ export const exportToCSV = async (data: any[], fileName: string) => {
 };
 
 /**
+ * Generates and downloads an Excel file (.xlsx) containing the hammer/massive session data.
+ */
+export const exportHammerToExcel = async (batchId: string, items: any[]) => {
+  const XLSX = await import('xlsx');
+
+  // Prepare data
+  const data = items.map(item => ({
+    'Código/SKU': item.barcode,
+    'Descripción': item.name,
+    'Ubicación': item.loc || '',
+    'Cantidad Escaneada': item.totalQuantity,
+    'Cantidad Esperada (Teórica)': item.expectedQty ?? '',
+    'Diferencia': item.expectedQty !== undefined ? item.totalQuantity - item.expectedQty : '',
+    'Último Escaneo': item.lastTimestamp > 0 ? new Date(item.lastTimestamp).toLocaleString() : ''
+  }));
+
+  // Create worksheet
+  const worksheet = XLSX.utils.json_to_sheet(data);
+
+  // Auto-adjust column widths
+  const wscols = [
+    { wch: 20 }, // SKU
+    { wch: 45 }, // Description
+    { wch: 15 }, // Location
+    { wch: 18 }, // Scanned
+    { wch: 18 }, // Expected
+    { wch: 12 }, // Diff
+    { wch: 22 }, // Date
+  ];
+  worksheet['!cols'] = wscols;
+
+  // Create workbook and append
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Auditoría");
+
+  // Download
+  const fileName = `Hammer_Auditoria_${batchId}_${new Date().toISOString().substring(0, 10)}.xlsx`;
+  XLSX.writeFile(workbook, fileName);
+};
+
+/**
  * Generates and downloads an Excel file (.xlsx) containing the session data.
  * Optimized with Dynamic Import to reduce initial bundle size.
  */

@@ -12,7 +12,8 @@ import {
   Search, 
   SlidersHorizontal,
   Layers,
-  ArrowRight
+  ArrowRight,
+  FileSpreadsheet
 } from "lucide-react";
 import { StartSessionModal } from "../../components/StartSessionModal";
 import { ManagementSearchBar } from "../../shared/components/core/ManagementSearchBar";
@@ -30,8 +31,8 @@ export const Reports: React.FC = () => {
   const location = useLocation();
   const { settings } = useAppStore();
   const { state, actions } = useReports();
-  const theme = settings.theme;
-  const isDark = theme === 'dark';
+  const theme: 'light' | 'dark' = settings.theme === 'light' ? 'light' : 'dark';
+  const isDark = settings.theme !== 'light';
 
   const [activeTab, setActiveTab] = useState<'live' | 'sessions'>('live');
 
@@ -139,6 +140,36 @@ export const Reports: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          {activeTab === 'live' && (
+            <button
+              onClick={async () => {
+                const XLSX = await import('xlsx');
+                const data = filteredLiveConsolidated.map(item => ({
+                  'Código/SKU': item.barcode,
+                  'Descripción': item.productName,
+                  'Zonas': item.locationsList,
+                  'Cantidad Total': item.totalQuantity,
+                  'Origen de Datos': item.source
+                }));
+                const worksheet = XLSX.utils.json_to_sheet(data);
+                worksheet['!cols'] = [{ wch: 18 }, { wch: 45 }, { wch: 20 }, { wch: 15 }, { wch: 15 }];
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, "Consolidado");
+                XLSX.writeFile(workbook, `Consolidado_En_Vivo_${new Date().toISOString().substring(0, 10)}.xlsx`);
+              }}
+              disabled={filteredLiveConsolidated.length === 0}
+              className={`p-2.5 rounded-xl transition-all duration-300 flex items-center justify-center gap-1.5 border text-xs font-black uppercase tracking-wider ${
+                isDark 
+                  ? "text-emerald-400 border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/20" 
+                  : "text-emerald-700 border-emerald-200 bg-emerald-50 hover:bg-emerald-100"
+              }`}
+              title="Descargar consola de consolidación en formato Excel"
+            >
+              <FileSpreadsheet className="w-5 h-5 animate-pulse" />
+              <span className="hidden sm:inline">Exportar Excel</span>
+            </button>
+          )}
+
           <button
             onClick={handleRefreshAll}
             disabled={state.isPulling || state.isLiveLoading}

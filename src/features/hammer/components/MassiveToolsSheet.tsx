@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Barcode, RotateCcw, Download, X, MapPin, Printer, Camera, Volume2, VolumeX, Cloud } from 'lucide-react';
+import { Barcode, RotateCcw, Download, X, MapPin, Printer, Camera, Volume2, VolumeX, Cloud, FileSpreadsheet } from 'lucide-react';
 import { Modal } from '../../../shared/components/ui/Modal';
 
  interface Props {
@@ -21,11 +21,12 @@ import { Modal } from '../../../shared/components/ui/Modal';
  onToggleVoice?: () => void;
  autoSyncEnabled?: boolean;
  onToggleAutoSync?: () => void;
+ onDownloadExcel?: () => void;
 }
 
 export const MassiveToolsSheet: React.FC<Props> = ({ 
  isOpen, onClose, hasActiveItem, location, onChangeLocation, onShowLabel, onReset, onImport, onSync, isSyncing, onPrintSummary, onToggleCameraMode, isVoiceEnabled, onToggleVoice,
- autoSyncEnabled = true, onToggleAutoSync
+ autoSyncEnabled = true, onToggleAutoSync, onDownloadExcel
 }) => {
  
  const ToolButton = ({ onClick, icon: Icon, label, color, disabled = false, sublabel, loading = false }: any) => (
@@ -110,6 +111,14 @@ export const MassiveToolsSheet: React.FC<Props> = ({
  label="Imprimir Resumen" 
  color="text-emerald-400 border-emerald-500/20" 
  />
+ {onDownloadExcel && (
+ <ToolButton 
+ onClick={onDownloadExcel} 
+ icon={FileSpreadsheet} 
+ label="Descargar Excel" 
+ color="text-lime-400 border-lime-500/20" 
+ />
+ )}
  <ToolButton 
  disabled={!hasActiveItem}
  onClick={onShowLabel} 
