@@ -533,6 +533,23 @@ export class ThermalPrinterEngine {
     const docType = order.metadata?.documentType || '';
     const isGuiaDespacho = docType === 'Remisión' || docType.toLowerCase().includes('guía') || docType.toLowerCase().includes('guia') || docType.toLowerCase().includes('despacho');
 
+    const userDocType = order.metadata?.documentType || "CARGA TEÓRICA";
+    let mainHeading = "CARGA TEÓRICA";
+    
+    if (userDocType.toLowerCase().includes('factura')) {
+      mainHeading = "FACTURA";
+    } else if (userDocType.toLowerCase().includes('remisión') || userDocType.toLowerCase().includes('remision') || userDocType.toLowerCase().includes('guía') || userDocType.toLowerCase().includes('guia') || userDocType.toLowerCase().includes('despacho')) {
+      mainHeading = "GUÍA DE DESPACHO";
+    } else if (userDocType.toLowerCase().includes('picking')) {
+      mainHeading = "PICKING LIST";
+    } else if (userDocType.toLowerCase().includes('manifiesto')) {
+      mainHeading = "MANIFIESTO DE CARGA";
+    } else if (userDocType.toLowerCase().includes('inventario')) {
+      mainHeading = "INVENTARIO TEÓRICO";
+    } else {
+      mainHeading = userDocType.toUpperCase();
+    }
+
     const itemsHtml = (order.items || []).map((item: any) => {
       // If it's a Guía de Despacho, we encode the expected quantity and 7 tabs
       const barcodeValue = isGuiaDespacho 
@@ -716,8 +733,8 @@ export class ThermalPrinterEngine {
         </head>
         <body>
           <div class="header-print">
-            <h1>LOGICOUNT PRO</h1>
-            <h2>${isGuiaDespacho ? 'REPORTE GUÍA DESPACHO' : 'REPORTE CARGA TEÓRICA'}</h2>
+            <h1>${mainHeading}</h1>
+            <h2>Nº DOC: ${documentId}</h2>
             ${isGuiaDespacho ? `
               <div style="font-[7px] font-weight: bold; margin-bottom: 2px; text-transform: uppercase; color: #333;">
                 MODO TECLADO: CANT + 7 TABS
@@ -728,8 +745,9 @@ export class ThermalPrinterEngine {
           
           <div class="header-line"></div>
 
-          <div class="meta-info" style="font-size: 10px; font-weight: bold; margin-bottom: 12px; font-family: monospace; text-transform: uppercase;">
-            DOCUMENTO: ${documentId}
+          <div class="meta-info" style="font-size: 10px; font-weight: bold; margin-bottom: 12px; font-family: monospace; text-transform: uppercase; line-height: 1.4;">
+            ${order.metadata?.purchaseOrder ? `OC: ${order.metadata.purchaseOrder}<br/>` : ''}
+            ${order.metadata?.orderNote ? `NOTA: ${order.metadata.orderNote}<br/>` : ''}
           </div>
 
           <div class="items-container">

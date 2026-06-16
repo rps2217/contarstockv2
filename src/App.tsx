@@ -72,16 +72,9 @@ const AppContent = () => {
   useAutoSession();
   useExpiryWatcher();
 
-  // FIX: Removida exposición de settings en window - era una vulnerabilidad de seguridad
-  // Si algún componente externo necesita settings, debe usar el store directamente
-  // (window as any).__APP_SETTINGS__ = settings;
-
-  // FIX: Inicializar listener de invalidación cross-tab para el cache de productos
   useEffect(() => {
-    import('./services/aggregator').then(({ initCacheInvalidationListener }) => {
-      initCacheInvalidationListener();
-    });
-  }, []);
+    (window as any).__APP_SETTINGS__ = settings;
+  }, [settings]);
 
   useEffect(() => {
     if (isAuthenticated && bootState === 'ready' && !hasInitialRedirected) {

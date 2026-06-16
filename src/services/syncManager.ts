@@ -18,23 +18,12 @@ import { backupProductsToSupabase, backupProvidersToSupabase } from './cloudBack
 
 export { backupProductsToSupabase, backupProvidersToSupabase };
 
-/**
- * FIX: Eliminada variable global isSyncingInProgress.
- * Ahora usa useSyncStore que es thread-safe y sincronizado entre tabs via eventos.
- */
+let isSyncingInProgress = false;
 const UPLOAD_BATCH_SIZE = 500; 
 
-// Helper para verificar si hay sync en progreso usando el store
-const isSyncInProgress = (): boolean => useSyncStore.getState().isSyncing;
-
-// Helper para marcar inicio de sync
-const startSync = () => useSyncStore.getState().setSyncing(true);
-
-// Helper para marcar fin de sync
-const endSync = () => useSyncStore.getState().setSyncing(false);
-
 export const resetSyncLock = () => {
-  endSync();
+  isSyncingInProgress = false;
+  useSyncStore.getState().setSyncing(false);
 };
 
 export interface UploadGroup {
@@ -186,11 +175,11 @@ export const reconcileReception = async (onProgress?: (msg: string) => void): Pr
 };
 
 export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: string) => void): Promise<void> => {
-  // FIX: Usa el store en lugar de variable global para thread-safety
-  if (isSyncInProgress()) {
+  if (isSyncingInProgress) {
     throw new Error("Sincronización en progreso, por favor intente nuevamente en unos segundos.");
   }
-  startSync();
+  isSyncingInProgress = true;
+  useSyncStore.getState().setSyncing(true);
 
   try {
     const config = getSettings().cloudConfig;
@@ -316,7 +305,8 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
     logger.error("SYNC_FAIL", e.message);
     throw e;
   } finally {
-    endSync();
+    isSyncingInProgress = false;
+    useSyncStore.getState().setSyncing(false);
   }
 };
 

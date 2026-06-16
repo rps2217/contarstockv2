@@ -1,42 +1,32 @@
-/**
- * Legacy test exports for UnitTestsCard compatibility
- * These are placeholder functions that return empty test results.
- * The actual tests are now in tests/ directory and use Vitest.
- */
-export interface TestResult {
-  name: string;
-  passed: boolean;
-  error?: string;
-}
 
-export interface TestGroup {
-  title: string;
-  tests: TestResult[];
-}
+import { determineItemStatus } from '../uiLogic';
 
 /**
- * @deprecated Use Vitest tests in tests/ directory instead
+ * UNIT TEST: Correlación Lógica de Inventario
  */
-export const runUiLogicTests = (): TestResult[] => {
-  return [
-    { name: 'Legacy - use Vitest instead', passed: true }
-  ];
+export const runUiLogicTests = () => {
+ const results = [];
+
+ // Test 1: Calzado Perfecto
+ const t1 = determineItemStatus(10, 10);
+ results.push({ name: 'Veredicto: Calzado Perfecto (10/10)', passed: t1 === 'success' });
+
+ // Test 2: Excedente
+ const t2 = determineItemStatus(11, 10);
+ results.push({ name: 'Veredicto: Excedente Detectado (11/10)', passed: t2 === 'error' });
+
+ // Test 3: Faltante
+ const t3 = determineItemStatus(5, 10);
+ results.push({ name: 'Veredicto: Faltante Detectado (5/10)', passed: t3 === 'warning' });
+
+ // Test 4: Conteo Ciego (Sin meta)
+ const t4 = determineItemStatus(5, 0);
+ results.push({ name: 'Veredicto: Conteo Ciego (>0)', passed: t4 === 'info' });
+
+ // Test 5: Estado Neutro (Sin conteo)
+ const t5 = determineItemStatus(0, 10);
+ results.push({ name: 'Veredicto: Neutro (0/10)', passed: t5 === 'neutral' });
+
+ return results;
 };
 
-/**
- * @deprecated Use Vitest tests in tests/ directory instead
- */
-export const runScannerMachineTests = (): TestResult[] => {
-  return [
-    { name: 'Legacy - use Vitest instead', passed: true }
-  ];
-};
-
-/**
- * @deprecated Use Vitest tests in tests/ directory instead
- */
-export const runAggregatorTests = (): TestResult[] => {
-  return [
-    { name: 'Legacy - use Vitest instead', passed: true }
-  ];
-};

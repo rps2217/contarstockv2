@@ -6,7 +6,6 @@ import Papa from 'papaparse';
 import { sanitizeBarcode, normalizeIdentity } from './utils';
 import { validateProduct } from './validator';
 import { supabaseSyncService } from './supabaseSyncService';
-import { invalidateProductCache, invalidateAllProductCache } from './aggregator';
 
 export const getProductByBarcode = async (barcode: string): Promise<Product | undefined> => {
   return await productRepository.getById(sanitizeBarcode(barcode));
@@ -77,9 +76,6 @@ export const saveProduct = async (product: Product) => {
     embedding,
     syncStatus
   });
-
-  // FIX: Invalida el cache para este producto después de guardar
-  invalidateProductCache([sanitizedBarcode]);
 };
 
 export const saveProductBatch = async (products: Product[]) => {
@@ -110,22 +106,14 @@ export const saveProductBatch = async (products: Product[]) => {
   });
 
   await productRepository.saveBatch(mergedBatch);
-
-  // FIX: Invalida el cache para todos los productos del batch después de guardar
-  invalidateProductCache(barcodes);
 };
 
 export const deleteProduct = async (barcode: string) => {
-  const sanitizedBarcode = sanitizeBarcode(barcode);
-  await productRepository.delete(sanitizedBarcode);
-  // FIX: Invalida el cache después de eliminar
-  invalidateProductCache([sanitizedBarcode]);
+  await productRepository.delete(sanitizeBarcode(barcode));
 };
 
 export const deleteAllProducts = async () => {
   await productRepository.deleteAll();
-  // FIX: Invalida todo el cache después de eliminar todo
-  invalidateAllProductCache();
 };
 
 export const markProductsAsSynced = async (barcodes: string[]) => {
