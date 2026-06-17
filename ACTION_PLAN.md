@@ -2,7 +2,7 @@
 
 **Fecha:** 2026-06-17  
 **Versión:** 1.0  
-**Estado:** Pendiente de aprobación para comenzar
+**Estado:** Pendiente de aprobación para comenzar...
 
 ---
 
