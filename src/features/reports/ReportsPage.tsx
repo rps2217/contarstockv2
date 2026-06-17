@@ -62,6 +62,26 @@ export const Reports: React.FC = () => {
     );
   }, [state.liveConsolidated, state.searchQuery]);
 
+  // Helper para exportar consolidación en vivo a Excel
+  const handleExportLiveToExcel = useCallback(async (items: typeof filteredLiveConsolidated) => {
+    const XLSX = await import('xlsx');
+    const data = items.map(item => ({
+      'Código/SKU': item.barcode,
+      'Descripción': item.productName,
+      'Zonas': item.locationsList,
+      'Cantidad Total': item.totalQuantity,
+      'Origen de Datos': item.source
+    }));
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    worksheet['!cols'] = [
+      { wch: 18 }, { wch: 45 }, { wch: 20 }, { wch: 15 }, { wch: 15 }
+    ];
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Consolidado");
+    const dateStr = new Date().toISOString().substring(0, 10);
+    XLSX.writeFile(workbook, `Consolidado_En_Vivo_${dateStr}.xlsx`);
+  }, []);
+
   // Métricas generales de consolidación
   const liveStats = useMemo(() => {
     const items = state.liveConsolidated || [];
@@ -142,21 +162,7 @@ export const Reports: React.FC = () => {
         <div className="flex items-center gap-2">
           {activeTab === 'live' && (
             <button
-              onClick={async () => {
-                const XLSX = await import('xlsx');
-                const data = filteredLiveConsolidated.map(item => ({
-                  'Código/SKU': item.barcode,
-                  'Descripción': item.productName,
-                  'Zonas': item.locationsList,
-                  'Cantidad Total': item.totalQuantity,
-                  'Origen de Datos': item.source
-                }));
-                const worksheet = XLSX.utils.json_to_sheet(data);
-                worksheet['!cols'] = [{ wch: 18 }, { wch: 45 }, { wch: 20 }, { wch: 15 }, { wch: 15 }];
-                const workbook = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(workbook, worksheet, "Consolidado");
-                XLSX.writeFile(workbook, `Consolidado_En_Vivo_${new Date().toISOString().substring(0, 10)}.xlsx`);
-              }}
+              onClick={() => handleExportLiveToExcel(filteredLiveConsolidated)}
               disabled={filteredLiveConsolidated.length === 0}
               className={`p-2.5 rounded-xl transition-all duration-300 flex items-center justify-center gap-1.5 border text-xs font-black uppercase tracking-wider ${
                 isDark 

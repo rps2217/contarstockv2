@@ -1,5 +1,30 @@
 import { CountingSession, ConsolidatedItem, MatchResult } from '../types';
 
+export interface ExcelColumn {
+  header: string;
+  width: number;
+}
+
+export interface ExcelRow {
+  [key: string]: string | number | boolean | null | undefined;
+}
+
+/**
+ * Helper to create an Excel workbook with styled columns from data array.
+ */
+const createExcelWorkbook = async (
+  data: ExcelRow[],
+  sheetName: string,
+  columns: ExcelColumn[]
+): Promise<{ workbook: any; worksheet: any }> => {
+  const XLSX = await import('xlsx');
+  const worksheet = XLSX.utils.json_to_sheet(data);
+  worksheet['!cols'] = columns.map(col => ({ wch: col.width }));
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+  return { workbook, worksheet };
+};
+
 /**
  * Generates and downloads a CSV file containing the provided data.
  */
@@ -17,57 +42,57 @@ export const exportToCSV = async (data: any[], fileName: string) => {
   document.body.removeChild(link);
 };
 
+const HAMMER_COLUMNS: ExcelColumn[] = [
+  { header: 'Código/SKU', width: 20 },
+  { header: 'Descripción', width: 45 },
+  { header: 'Ubicación', width: 15 },
+  { header: 'Cantidad Escaneada', width: 18 },
+  { header: 'Cantidad Esperada (Teórica)', width: 18 },
+  { header: 'Diferencia', width: 12 },
+  { header: 'Último Escaneo', width: 22 },
+];
+
 /**
  * Generates and downloads an Excel file (.xlsx) containing the hammer/massive session data.
  */
 export const exportHammerToExcel = async (batchId: string, items: any[]) => {
-  const XLSX = await import('xlsx');
-
-  // Prepare data
-  const data = items.map(item => ({
+  const data: ExcelRow[] = items.map(item => ({
     'Código/SKU': item.barcode,
     'Descripción': item.name,
     'Ubicación': item.loc || '',
     'Cantidad Escaneada': item.totalQuantity,
     'Cantidad Esperada (Teórica)': item.expectedQty ?? '',
     'Diferencia': item.expectedQty !== undefined ? item.totalQuantity - item.expectedQty : '',
-    'Último Escaneo': item.lastTimestamp > 0 ? new Date(item.lastTimestamp).toLocaleString() : ''
+    'Último Escaneo': item.lastTimestamp > 0 
+      ? new Date(item.lastTimestamp).toLocaleString('es-DO', { 
+          year: 'numeric', month: '2-digit', day: '2-digit',
+          hour: '2-digit', minute: '2-digit' 
+        })
+      : ''
   }));
 
-  // Create worksheet
-  const worksheet = XLSX.utils.json_to_sheet(data);
-
-  // Auto-adjust column widths
-  const wscols = [
-    { wch: 20 }, // SKU
-    { wch: 45 }, // Description
-    { wch: 15 }, // Location
-    { wch: 18 }, // Scanned
-    { wch: 18 }, // Expected
-    { wch: 12 }, // Diff
-    { wch: 22 }, // Date
-  ];
-  worksheet['!cols'] = wscols;
-
-  // Create workbook and append
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Auditoría");
-
-  // Download
-  const fileName = `Hammer_Auditoria_${batchId}_${new Date().toISOString().substring(0, 10)}.xlsx`;
-  XLSX.writeFile(workbook, fileName);
+  const { workbook } = await createExcelWorkbook(data, 'Auditoría', HAMMER_COLUMNS);
+  const dateStr = new Date().toISOString().substring(0, 10);
+  const { writeFile } = await import('xlsx');
+  writeFile(workbook, `Hammer_Auditoria_${batchId}_${dateStr}.xlsx`);
 };
+
+const SESSION_COLUMNS: ExcelColumn[] = [
+  { header: 'Código/SKU', width: 20 },
+  { header: 'Descripción', width: 40 },
+  { header: 'Cantidad Total', width: 15 },
+  { header: 'Conteo de Escaneos', width: 15 },
+  { header: 'Esperado/ERP', width: 15 },
+  { header: 'Diferencia/Etiqueta', width: 15 },
+  { header: 'Fecha', width: 15 },
+];
 
 /**
  * Generates and downloads an Excel file (.xlsx) containing the session data.
  * Optimized with Dynamic Import to reduce initial bundle size.
  */
 export const exportToExcel = async (session: CountingSession, items: ConsolidatedItem[]) => {
-  // Dynamic Import
-  const XLSX = await import('xlsx');
-
-  // 1. Prepare Data Structure for Excel
-  const data = items.map(item => {
+  const data: ExcelRow[] = items.map(item => {
     const base = {
       'Código/SKU': item.barcode,
       'Descripción': item.productName,
@@ -80,41 +105,23 @@ export const exportToExcel = async (session: CountingSession, items: Consolidate
       const diff = item.totalQuantity - expected;
       return {
         ...base,
-        'Esperado': expected,
-        'Diferencia': diff > 0 ? `+${diff}` : diff
+        'Esperado/ERP': expected,
+        'Diferencia/Etiqueta': diff > 0 ? `+${diff}` : diff,
+        'Fecha': ''
       };
     }
 
     return {
       ...base,
-      'Orden ERP': session.erpOrder,
-      'Etiqueta Logística': session.logisticsLabel,
-      'Fecha Conteo': new Date(session.createdAt).toLocaleDateString()
+      'Esperado/ERP': session.erpOrder,
+      'Diferencia/Etiqueta': session.logisticsLabel,
+      'Fecha': new Date(session.createdAt).toLocaleDateString('es-DO')
     };
   });
 
-  // 2. Create Worksheet
-  const worksheet = XLSX.utils.json_to_sheet(data);
-  
-  // 3. Auto-adjust column width (heuristic)
-  const wscols = [
-    { wch: 20 }, // SKU
-    { wch: 40 }, // Desc
-    { wch: 15 }, // Qty
-    { wch: 15 }, // Scans
-    { wch: 15 }, // Expected/ERP
-    { wch: 15 }, // Diff/Label
-    { wch: 15 }, // Date
-  ];
-  worksheet['!cols'] = wscols;
-
-  // 4. Create Workbook and Append
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Conteo");
-
-  // 5. Download
-  const fileName = `Conteo_${session.erpOrder}_${session.logisticsLabel}.xlsx`;
-  XLSX.writeFile(workbook, fileName);
+  const { workbook } = await createExcelWorkbook(data, 'Conteo', SESSION_COLUMNS);
+  const { writeFile } = await import('xlsx');
+  writeFile(workbook, `Conteo_${session.erpOrder}_${session.logisticsLabel}.xlsx`);
 };
 
 /**
