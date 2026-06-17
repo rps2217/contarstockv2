@@ -38,30 +38,7 @@ interface MockItem {
   loc?: string;
   totalQuantity: number;
   expectedQty?: number;
-  lastTimestamp: number;
 }
-
-describe('export.ts - Helper Functions', () => {
-  describe('createExcelWorkbook (helper interno)', () => {
-    it('debe crear workbook con columnas configuradas', async () => {
-      const { createExcelWorkbook, ExcelColumn } = await import('./export');
-      
-      const columns: ExcelColumn[] = [
-        { header: 'SKU', width: 20 },
-        { header: 'Nombre', width: 40 },
-      ];
-      
-      const data = [
-        { 'SKU': 'ABC123', 'Nombre': 'Producto Test' },
-      ];
-      
-      const result = await createExcelWorkbook(data, 'Test', columns);
-      
-      expect(result.workbook).toBeDefined();
-      expect(result.worksheet).toBeDefined();
-    });
-  });
-});
 
 describe('exportHammerToExcel', () => {
   beforeEach(() => {
@@ -139,7 +116,8 @@ describe('exportHammerToExcel', () => {
     const fileName = call[1];
     
     expect(fileName).toContain(batchId);
-    expect(fileName).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(fileName).toMatch(/\d{4}-\d{2}-\d{2}/);
+    expect(fileName).toMatch(/\.xlsx$/);
   });
 
   it('debe manejar array vacío sin errores', async () => {

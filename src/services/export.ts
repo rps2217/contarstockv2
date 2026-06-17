@@ -1,5 +1,8 @@
 import { CountingSession, ConsolidatedItem, MatchResult } from '../types';
 
+// Tipo para datos de exportación
+export type ExportData = Record<string, string | number | boolean | null | undefined>;
+
 export interface ExcelColumn {
   header: string;
   width: number;
@@ -9,14 +12,24 @@ export interface ExcelRow {
   [key: string]: string | number | boolean | null | undefined;
 }
 
+// Tipo para workbook de xlsx
+interface XlsxWorkbook {
+  SheetNames: string[];
+  Sheets: Record<string, XlsxWorksheet>;
+}
+
+interface XlsxWorksheet {
+  [key: string]: unknown;
+}
+
 /**
  * Helper to create an Excel workbook with styled columns from data array.
  */
 const createExcelWorkbook = async (
-  data: ExcelRow[],
+  data: ExportData[],
   sheetName: string,
   columns: ExcelColumn[]
-): Promise<{ workbook: any; worksheet: any }> => {
+): Promise<{ workbook: XlsxWorkbook; worksheet: XlsxWorksheet }> => {
   const XLSX = await import('xlsx');
   const worksheet = XLSX.utils.json_to_sheet(data);
   worksheet['!cols'] = columns.map(col => ({ wch: col.width }));
@@ -28,7 +41,7 @@ const createExcelWorkbook = async (
 /**
  * Generates and downloads a CSV file containing the provided data.
  */
-export const exportToCSV = async (data: any[], fileName: string) => {
+export const exportToCSV = async (data: ExportData[], fileName: string) => {
   const Papa = await import('papaparse');
   const csv = Papa.unparse(data);
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
