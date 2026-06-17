@@ -12,7 +12,7 @@ interface FeedbackOptions {
 
 export const useFeedbackSystem = (defaultDuration = 300) => {
  const [feedback, setFeedback] = useState<FeedbackStatus>('idle');
- const timeoutRef = useRef<any>(null);
+ const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
  useEffect(() => {
  return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); };
@@ -37,7 +37,9 @@ export const useFeedbackSystem = (defaultDuration = 300) => {
  return { feedback, trigger };
 };
 
-const mapStatusToSound = (status: FeedbackStatus): any => {
+type SoundName = 'success' | 'success_new' | 'error' | 'error_critical' | 'delete' | 'increment' | 'scan' | 'not_found' | 'warning' | undefined;
+
+const mapStatusToSound = (status: FeedbackStatus): SoundName => {
  switch (status) {
  case 'success': return 'success';
  case 'unknown': return 'success_new';
