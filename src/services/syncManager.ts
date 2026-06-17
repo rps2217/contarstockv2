@@ -15,6 +15,7 @@ import { ScanRepository } from '../repositories/ScanRepository';
 import { SessionRepository } from '../repositories/SessionRepository';
 import { supabase } from '../lib/supabase';
 import { backupProductsToSupabase, backupProvidersToSupabase } from './cloudBackupService';
+import { handleError } from './types';
 
 export { backupProductsToSupabase, backupProvidersToSupabase };
 
@@ -168,8 +169,9 @@ export const reconcileReception = async (onProgress?: (msg: string) => void): Pr
     }
 
     return { deleted: 0 };
-  } catch (e: any) {
-    logger.error("RECONCILE_RECEPTION_FAIL", e.message);
+  } catch (err: unknown) {
+    const error = handleError(err);
+    logger.error("RECONCILE_RECEPTION_FAIL", error.message);
     return { deleted: 0 };
   }
 };
@@ -301,8 +303,9 @@ export const performBatchUpload = async (group: UploadGroup, onProgress?: (msg: 
       }
     }
     useSyncStore.getState().setLastSyncTime(Date.now());
-  } catch (e: any) {
-    logger.error("SYNC_FAIL", e.message);
+  } catch (err: unknown) {
+    const error = handleError(err);
+    logger.error("SYNC_FAIL", error.message);
     throw e;
   } finally {
     isSyncingInProgress = false;
@@ -321,11 +324,11 @@ export const syncCatalogs = async (onProgress?: (msg: string) => void): Promise<
     
     if (onProgress) onProgress(`✓ Catálogos actualizados: ${productsCount} productos, ${providersCount} proveedores.`);
     return { products: productsCount, providers: providersCount };
-  } catch (e: any) {
-    if (e.message === 'Failed to fetch') {
+  } catch (err: unknown) {
+    if (error.message === 'Failed to fetch') {
       toast.error('Error de red: No se pudo conectar con el servidor.');
     } else {
-      logger.warn("CATALOG_SYNC_PARTIAL_FAIL", e.message);
+      logger.warn("CATALOG_SYNC_PARTIAL_FAIL", error.message);
     }
     throw e;
   }
@@ -366,8 +369,8 @@ export const importProductsFromCloud = async (): Promise<number> => {
     setTableSyncTime(tableName, Date.now());
 
     return products.length;
-  } catch (e: any) {
-    logger.error("FETCH_PRODUCTS_FAIL", `Error en Cloud Sync: ${e.message}`);
+  } catch (err: unknown) {
+    logger.error("FETCH_PRODUCTS_FAIL", `Error en Cloud Sync: ${error.message}`);
     throw e;
   }
 };
@@ -421,8 +424,8 @@ export const importProvidersFromCloud = async (): Promise<number> => {
     setTableSyncTime(tableName, Date.now());
 
     return providers.length;
-  } catch (e: any) {
-    logger.error("FETCH_PROVIDERS_FAIL", `Error descargando proveedores: ${e.message}`);
+  } catch (err: unknown) {
+    logger.error("FETCH_PROVIDERS_FAIL", `Error descargando proveedores: ${error.message}`);
     throw e;
   }
 };
@@ -433,11 +436,11 @@ export const importCustomersAndTemplatesFromCloud = async (): Promise<void> => {
   for (const table of tables) {
     try {
       await dynamicSyncService.pullSync(table);
-    } catch (e: any) {
-      if (e.message?.includes('Table not found')) {
+    } catch (err: unknown) {
+      if (error.message?.includes('Table not found')) {
         logger.info("FETCH_CONFIG", `Módulo ${table} no disponible en esta instancia (Tabla no encontrada).`);
       } else {
-        logger.warn("FETCH_CONFIG_FAIL", `Error descargando ${table}: ${e.message}`);
+        logger.warn("FETCH_CONFIG_FAIL", `Error descargando ${table}: ${error.message}`);
       }
     }
   }

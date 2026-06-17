@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { logger } from './logger';
+import { handleError } from './types';
 
 // Tipo para filas de Supabase
 type SupabaseRow = Record<string, unknown>;
@@ -219,7 +220,7 @@ export const supabaseSyncService = {
         }
 
         return { success: true, rows_written: rows.length };
-      } catch (e: any) {
+      } catch (err: unknown) {
         const errMsg = (e as Error).message || '';
         
         // Si es un error de columna y no fue atrapado arriba
@@ -305,7 +306,7 @@ export const supabaseSyncService = {
            throw error;
         }
         return;
-      } catch (e: any) {
+      } catch (err: unknown) {
         if (attempts >= filters.length - 1) {
           logger.error(`SYNC_DELETE_FAIL: ${tableName}`, e);
           throw e;
@@ -412,7 +413,7 @@ export const supabaseSyncService = {
            return { success: false, rows: [], error: 'Table not found', isMissing: true };
         }
         return { success: true, rows: result as any[] };
-      } catch (e: any) {
+      } catch (err: unknown) {
         // Fallback: Si falla el filtrado por fecha, intentar traer todo sin filtro de forma segura
         if (lastSyncDate) {
             logger.warn('SYNC', `Incremental sync failed for ${tableName}, falling back to full sync. Reason: ${(e as Error).message}`);
@@ -425,7 +426,7 @@ export const supabaseSyncService = {
             throw e;
         }
       }
-    } catch (e: any) {
+    } catch (err: unknown) {
       const errMsg = (e as Error).message || (e.toString ? e.toString() : '');
       
       // Handle network errors gracefully

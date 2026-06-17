@@ -2,6 +2,7 @@ import { supabaseSyncService } from './supabaseSyncService';
 import { getSettings } from './settings';
 import { SystemRepository } from '../repositories/SystemRepository';
 import { logger } from './logger';
+import { handleError } from './types';
 
 export interface TestResult {
   step: string;
@@ -51,8 +52,9 @@ export const runSystemHealthCheck = async (): Promise<TestResult[]> => {
       status: 'ok', 
       message: `Local: ${stats.scans} escaneos / ${stats.sessions} bultos active.` 
     });
-  } catch (e: any) {
-    results.push({ step: 'DB_LOCAL', category: 'local', status: 'fail', message: `Fallo crítico IndexedDB: ${e.message}` });
+  } catch (err: unknown) {
+    const error = handleError(err, 'DB_LOCAL');
+    results.push({ step: 'DB_LOCAL', category: 'local', status: 'fail', message: `Fallo crítico IndexedDB: ${error.message}` });
   }
 
   // --- 3. CHEQUEOS CLOUD (CONECTIVIDAD) ---
@@ -69,14 +71,15 @@ export const runSystemHealthCheck = async (): Promise<TestResult[]> => {
       } else {
         throw new Error(response.error);
       }
-    } catch (e: any) {
-      results.push({ 
-        step: 'CLOUD_LINK', 
+    } catch (err: unknown) {
+      const error = handleError(err, 'CLOUD_LINK');
+      results.push({
+        step: 'CLOUD_LINK',
         category: 'cloud',
-        status: 'fail', 
-        message: `Error de enlace cloud: ${e.message}` 
+        status: 'fail',
+        message: `Error de enlace cloud: ${error.message}`
       });
-      logger.error('DIAGNOSTIC', 'Fallo de enlace cloud detectado en diagnóstico', e);
+      logger.error('DIAGNOSTIC', 'Fallo de enlace cloud detectado en diagnóstico');
     }
   } else if (!navigator.onLine) {
     results.push({ 

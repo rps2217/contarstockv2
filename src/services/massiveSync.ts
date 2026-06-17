@@ -2,6 +2,7 @@ import { db } from '../db';
 import { massiveDb } from '../db';
 import { createSession, updateSessionMetadata } from './sessionService';
 import { logger } from './logger';
+import { handleError } from './types';
 import { generateUUID, sanitizeBarcode } from './utils';
 import { ScanRecord, ExpectedItem } from '../types';
 import { supabaseSyncService } from './supabaseSyncService';
@@ -96,10 +97,11 @@ export const migrateMassiveToMaster = async (batchId: string): Promise<string> =
     
     logger.success('MASSIVE_MIGRATION', `Bulto [${batchId}] archivado.`);
     return session.id;
-  } catch (e: any) {
+  } catch (err: unknown) {
     const duration = performance.now() - startTime;
-    telemetry.track('SESSION', 'MIGRATE_FAIL', { batchId, error: e.message }, duration, batchId);
-    logger.error('MASSIVE_MIGRATION_FAIL', e.message);
+    telemetry.track('SESSION', 'MIGRATE_FAIL', { batchId, error: error.message }, duration, batchId);
+    const error = handleError(err);
+    logger.error('MASSIVE_MIGRATION_FAIL', error.message);
     throw e;
   }
 };
@@ -137,10 +139,11 @@ export const pushScansToCloud = async (batchId: string): Promise<void> => {
     telemetry.track('SYNC', 'PUSH_SUCCESS', { batchId, count: scans.length }, duration, batchId);
     
     logger.success('CLOUD_SYNC', `Sincronización exitosa para lote: ${batchId}`);
-  } catch (e: any) {
+  } catch (err: unknown) {
     const duration = performance.now() - startTime;
-    telemetry.track('SYNC', 'PUSH_FAIL', { batchId, error: e.message }, duration, batchId);
-    logger.error('CLOUD_SYNC_FAIL', e.message);
+    telemetry.track('SYNC', 'PUSH_FAIL', { batchId, error: error.message }, duration, batchId);
+    const error = handleError(err);
+    logger.error('CLOUD_SYNC_FAIL', error.message);
     throw e;
   }
 };
@@ -197,10 +200,11 @@ export const importManifestFromCloud = async (batchId: string): Promise<number> 
     logger.success('CLOUD_MANIFEST', `Descarga exitosa: ${itemsToSave.length} metas instaladas.`);
     return itemsToSave.length;
 
-  } catch (e: any) {
+  } catch (err: unknown) {
     const duration = performance.now() - startTime;
-    telemetry.track('SYNC', 'PULL_FAIL', { batchId, error: e.message }, duration, batchId);
-    logger.error('CLOUD_MANIFEST_FAIL', e.message);
+    telemetry.track('SYNC', 'PULL_FAIL', { batchId, error: error.message }, duration, batchId);
+    const error = handleError(err);
+    logger.error('CLOUD_MANIFEST_FAIL', error.message);
     throw e;
   }
 };
@@ -252,10 +256,11 @@ export const importExpectedOrderFromCloud = async (batchId: string, orderId: str
     logger.success('CLOUD_MANIFEST', `Carga teórica "${orderId}" importada con éxito: ${itemsToSave.length} SKUs.`);
     return itemsToSave.length;
 
-  } catch (e: any) {
+  } catch (err: unknown) {
     const duration = performance.now() - startTime;
-    telemetry.track('SYNC', 'PULL_FAIL', { batchId, error: e.message, orderId }, duration, batchId);
-    logger.error('CLOUD_MANIFEST_FAIL', e.message);
+    telemetry.track('SYNC', 'PULL_FAIL', { batchId, error: error.message, orderId }, duration, batchId);
+    const error = handleError(err);
+    logger.error('CLOUD_MANIFEST_FAIL', error.message);
     throw e;
   }
 };
@@ -291,10 +296,11 @@ export const importLocalExpectedOrderToHammer = async (batchId: string, orderId:
     
     logger.success('CLOUD_MANIFEST', `Carga teórica local "${order?.metadata?.internalGuide || orderId}" importada con éxito: ${itemsToSave.length} SKUs.`);
     return itemsToSave.length;
-  } catch (e: any) {
+  } catch (err: unknown) {
     const duration = performance.now() - startTime;
-    telemetry.track('SYNC', 'LOCAL_IMPORT_FAIL', { batchId, error: e.message, orderId }, duration, batchId);
-    logger.error('CLOUD_MANIFEST_FAIL', e.message);
+    telemetry.track('SYNC', 'LOCAL_IMPORT_FAIL', { batchId, error: error.message, orderId }, duration, batchId);
+    const error = handleError(err);
+    logger.error('CLOUD_MANIFEST_FAIL', error.message);
     throw e;
   }
 };

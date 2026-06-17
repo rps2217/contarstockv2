@@ -1,5 +1,6 @@
 
 import { pipeline, env } from '@xenova/transformers';
+import { handleError } from './types';
 import { getSettings } from './settings';
 
 // Configuración de entorno para máximo rendimiento local
@@ -75,10 +76,11 @@ class LocalBrainService {
  
  localStorage.setItem(this.STORAGE_KEY, 'true');
  this.updateStatus('ready', 100, 'IA Activa');
- } catch (e: any) {
- console.error("[LocalBrain] Init Failed:", e);
+ } catch (err: unknown) {
+ const error = handleError(err, 'LocalBrain_INIT');
+      console.error("[LocalBrain] Init Failed:", error.message);
  this.initPromise = null;
- if (!silent) this.updateStatus('error', 0, e.message);
+ if (!silent) this.updateStatus('error', 0, error.message);
  else this.status = 'idle';
  }
  })();
