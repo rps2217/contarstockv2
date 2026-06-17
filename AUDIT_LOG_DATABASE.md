@@ -1,4 +1,4 @@
-# Bitácora de Auditoría: Módulo de Base de Datos (Inventario)
+# Bitácora de Auditoría: Módulo de Base de Datos (Inventario)...
 
 Este documento registra los hallazgos de la auditoría técnica realizada al módulo de Inventario y las tareas de mejora planificadas para optimizar su rendimiento, mantenibilidad y robustez.
 
