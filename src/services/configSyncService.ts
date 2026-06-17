@@ -2,6 +2,7 @@ import { db, DynamicRecord } from '../db';
 import { supabaseSyncService } from './supabaseSyncService';
 import { getSettings, saveSettings } from './settings';
 import { logger } from './logger';
+import { handleError, ServiceError } from './types';
 import { AppSettings, MessageTemplate } from '../types';
 
 const CONFIG_COLLECTION = 'APP_CONFIG';
@@ -43,9 +44,10 @@ export const configSyncService = {
       }]);
       
       logger.info('CONFIG_SYNC', 'Configuración respaldada en la nube');
-    } catch (error: any) {
+    } catch (err: unknown) {
+      const error = handleError(err, 'CONFIG_SYNC_PUSH_FAIL');
       logger.error('CONFIG_SYNC_PUSH_FAIL', error.message);
-      throw error;
+      throw new ServiceError(error.message, 'CONFIG_SYNC_PUSH_FAIL');
     }
   },
 
@@ -135,7 +137,8 @@ export const configSyncService = {
 
       logger.info('CONFIG_SYNC', 'Configuración sincronizada desde la nube');
       return true;
-    } catch (error: any) {
+    } catch (err: unknown) {
+      const error = handleError(err, 'CONFIG_SYNC_PULL_FAIL');
       logger.error('CONFIG_SYNC_PULL_FAIL', error.message);
       return false;
     }

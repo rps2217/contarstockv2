@@ -1,5 +1,6 @@
 import { db } from '../db';
 import { logger } from './logger';
+import { handleError, ServiceError } from './types';
 import { getSettings } from './settings';
 import { supabaseSyncService } from './supabaseSyncService';
 
@@ -47,9 +48,10 @@ export const backupProductsToSupabase = async (onProgress?: (msg: string) => voi
     }
 
     return totalUploaded;
-  } catch (e: any) {
-    logger.error("BACKUP_PRODUCTS_FAIL", e.message);
-    throw e;
+  } catch (err: unknown) {
+    const error = handleError(err, 'BACKUP_PRODUCTS_FAIL');
+    logger.error("BACKUP_PRODUCTS_FAIL", error.message);
+    throw new ServiceError(error.message, 'BACKUP_PRODUCTS_FAIL');
   }
 };
 
@@ -82,8 +84,9 @@ export const backupProvidersToSupabase = async (onProgress?: (msg: string) => vo
     const result = await supabaseSyncService.pushBatch(tableName, rows);
     if (!result.success) throw new Error(result.error);
         return providers.length;
-  } catch (e: any) {
-    logger.error("BACKUP_PROVIDERS_FAIL", e.message);
-    throw e;
+  } catch (err: unknown) {
+    const error = handleError(err, 'BACKUP_PROVIDERS_FAIL');
+    logger.error("BACKUP_PROVIDERS_FAIL", error.message);
+    throw new ServiceError(error.message, 'BACKUP_PROVIDERS_FAIL');
   }
 };

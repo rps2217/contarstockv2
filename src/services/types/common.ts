@@ -37,9 +37,6 @@ export interface PendingSyncItem {
 }
 
 /**
- * Error con contexto adicional
+ * ServiceError está definido en utilityTypes.ts
+ * @see ./utilityTypes.ts
  */
-export interface ServiceError extends Error {
-  code?: string;
-  context?: Record<string, unknown>;
-}
