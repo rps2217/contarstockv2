@@ -3,6 +3,7 @@ import { supabaseSyncService } from './supabaseSyncService';
 import { getSettings } from './settings';
 import { logger } from './logger';
 import { useSyncStore } from '../store/useSyncStore';
+import { handleError } from './types';
 
 export const dynamicSyncService = {
   /**
@@ -50,8 +51,8 @@ export const dynamicSyncService = {
           await supabaseSyncService.deleteRemote(record.tableName, String(remoteId));
           await db.dynamic_data.delete(record.id);
           totalSuccess++;
-        } catch (e: any) {
-          logger.error('DYNAMIC_SYNC', `Error al eliminar remoto ${record.id}`, e.message);
+        } catch (err: unknown) {
+          logger.error('DYNAMIC_SYNC', `Error al eliminar remoto ${record.id}`, error.message);
           totalFailed++;
         }
       }

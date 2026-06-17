@@ -82,3 +82,26 @@ export interface SyncEvent {
   timestamp: number;
   details?: Record<string, unknown>;
 }
+
+// Ítem de la cola de sincronización
+export interface SyncQueueItem {
+  id: string;
+  key: string;
+  tableName: string;
+  displayName?: string;
+  status: 'pending' | 'pending_delete' | 'error' | 'synced';
+  timestamp?: number;
+  error?: string;
+  data?: Record<string, unknown>;
+}
+
+// Tipos de tab en SyncCenterPage
+export type SyncTabType = 'tables' | 'queue' | 'incidents';
+
+// Log de sync
+export interface SyncLogEntry {
+  table: string;
+  status: 'success' | 'error' | 'warning';
+  msg: string;
+  timestamp: number;
+}

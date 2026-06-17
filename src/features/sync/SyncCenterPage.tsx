@@ -42,9 +42,9 @@ export const SyncCenterPage: React.FC = () => {
   const navigate = useNavigate();
   const { addToast } = useToastStore();
   const [isSyncing, setIsSyncing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'tables' | 'queue' | 'incidents'>('queue');
-  const [syncLogs, setSyncLogs] = useState<{table: string, status: string, msg: string}[]>([]);
-  const [selectedQueueItem, setSelectedQueueItem] = useState<any | null>(null);
+  const [activeTab, setActiveTab] = useState<SyncTabType>('queue');
+  const [syncLogs, setSyncLogs] = useState<SyncLogEntry[]>([]);
+  const [selectedQueueItem, setSelectedQueueItem] = useState<SyncQueueItem | null>(null);
 
   const { incidents, lastSyncTime, isSupabaseConnected, syncError, clearIncidents, conflicts } = useSyncStore();
   const isOnline = navigator.onLine;
