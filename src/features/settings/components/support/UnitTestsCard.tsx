@@ -2,13 +2,22 @@
 import React, { useState } from 'react';
 import { Beaker, CheckCircle2, XCircle, Play, ShieldCheck } from 'lucide-react';
 import { SettingsCard, SettingsCardHeader, SettingsButton } from '../common/SettingsElements';
-import { runUiLogicTests } from '../../../../services/tests/uiLogic.test';
-import { runScannerMachineTests } from '../../../../services/tests/scannerMachine.test';
-import { runAggregatorTests } from '../../../../services/tests/aggregator.test';
+import { runUiLogicTests, runScannerMachineTests, runAggregatorTests } from '../../../../services/tests/legacyTests';
 import { SoundFX } from '../../../../services/audio';
 
+// Tipos para resultados de tests
+interface TestResult {
+  name: string;
+  passed: boolean;
+}
+
+interface TestGroup {
+  title: string;
+  tests: TestResult[];
+}
+
 export const UnitTestsCard: React.FC = () => {
- const [testGroups, setTestGroups] = useState<any[]>([]);
+ const [testGroups, setTestGroups] = useState<TestGroup[]>([]);
  const [isRunning, setIsRunning] = useState(false);
 
  const executeSuite = async () => {
@@ -19,10 +28,10 @@ export const UnitTestsCard: React.FC = () => {
  // Delay artificial para visualización industrial
  await new Promise(r => setTimeout(r, 600));
 
- const groups = [
- { title: 'Motor de Correlación (UI Logic)', tests: runUiLogicTests() },
- { title: 'Máquina de Estados (State Machine)', tests: runScannerMachineTests() },
- { title: 'Motor de Agregación (Data integrity)', tests: runAggregatorTests() }
+ const groups: TestGroup[] = [
+ { title: 'Motor de Correlación (UI Logic)', tests: runUiLogicTests().flatMap(g => g.tests) },
+ { title: 'Máquina de Estados (State Machine)', tests: runScannerMachineTests().flatMap(g => g.tests) },
+ { title: 'Motor de Agregación (Data integrity)', tests: runAggregatorTests().flatMap(g => g.tests) }
  ];
 
  setTestGroups(groups);
