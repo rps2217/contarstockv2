@@ -1,134 +1,103 @@
 /**
- * SyncQueue - Componente para mostrar cola de sincronización pendiente
+ * SyncQueue - Cola de sincronización con estilo visual de SyncCenterPage
  */
 
 import React from 'react';
-import { Clock, AlertCircle, CheckCircle, Trash2 } from 'lucide-react';
-import { SyncStatusBadge } from './SyncStatusBadge';
+import { motion } from 'framer-motion';
+import { CheckCircle2, ChevronRight } from 'lucide-react';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
-interface QueueItem {
+interface PendingQueueItem {
   id: string;
-  table: string;
-  action: 'pending' | 'pending_delete' | 'error';
-  data?: Record<string, unknown>;
-  timestamp: number;
-  retryCount?: number;
+  key: string;
+  displayName?: string;
+  status: 'pending' | 'pending_delete' | 'error' | 'synced';
+  timestamp?: number;
 }
 
 interface SyncQueueProps {
-  items: QueueItem[];
-  onRetry?: (item: QueueItem) => void;
-  onDelete?: (item: QueueItem) => void;
-  className?: string;
+  items: PendingQueueItem[];
+  selectedItem: PendingQueueItem | null;
+  onSelectItem: (item: PendingQueueItem | null) => void;
 }
 
 export const SyncQueue: React.FC<SyncQueueProps> = ({
   items,
-  onRetry,
-  onDelete,
-  className = '',
+  selectedItem,
+  onSelectItem,
 }) => {
-  const formatTime = (timestamp: number): string => {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString('es-ES', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
-  };
-
-  const getActionIcon = (action: string) => {
-    switch (action) {
-      case 'pending':
-        return <Clock className="w-4 h-4 text-yellow-500" />;
-      case 'pending_delete':
-        return <Trash2 className="w-4 h-4 text-red-500" />;
-      case 'error':
-        return <AlertCircle className="w-4 h-4 text-red-500" />;
-      default:
-        return <Clock className="w-4 h-4 text-gray-400" />;
-    }
-  };
-
-  const getActionLabel = (action: string): string => {
-    switch (action) {
-      case 'pending':
-        return 'Pendiente';
-      case 'pending_delete':
-        return 'Eliminar';
-      case 'error':
-        return 'Error';
-      default:
-        return action;
-    }
+  const getItemStatus = (item: PendingQueueItem) => {
+    if (item.status === 'error') return 'error';
+    if (item.status === 'pending_delete') return 'delete';
+    return 'pending';
   };
 
   if (items.length === 0) {
     return (
-      <div className={`text-center py-8 text-gray-500 ${className}`}>
-        <CheckCircle className="w-12 h-12 mx-auto mb-2 text-green-500 opacity-50" />
-        <p>No hay elementos pendientes</p>
+      <div className="bg-slate-950/40 border border-slate-900 rounded-3xl p-12 text-center">
+        <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto mb-4 animate-pulse" />
+        <h3 className="text-md font-black text-white uppercase">¡Bandeja de Salida Limpia!</h3>
+        <p className="text-xs text-slate-500 mt-2 max-w-sm mx-auto">
+          Todos tus cambios locales han sido totalmente persistidos y garantizados en el servidor de la nube.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className={`space-y-2 ${className}`}>
-      {items.map((item) => (
-        <div
-          key={item.id}
-          className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            {getActionIcon(item.action)}
-            <div>
-              <p className="font-medium text-gray-900 dark:text-white">
-                {item.table}
-              </p>
-              <div className="flex items-center gap-2 text-xs text-gray-500">
-                <span>{formatTime(item.timestamp)}</span>
-                <span>•</span>
-                <span className={`
-                  ${item.action === 'error' ? 'text-red-500' : ''}
-                  ${item.action === 'pending' ? 'text-yellow-500' : ''}
-                `}>
-                  {getActionLabel(item.action)}
+    <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+      {items.map((item) => {
+        const dateStr = item.timestamp 
+          ? format(new Date(item.timestamp), 'HH:mm:ss (dd/MM)', { locale: es })
+          : 'Sin fecha';
+        const statusType = getItemStatus(item);
+
+        return (
+          <motion.div
+            key={`${item.key}-${item.id}`}
+            onClick={() => onSelectItem(item)}
+            whileHover={{ x: 2 }}
+            className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
+              selectedItem?.id === item.id
+                ? 'bg-blue-600/10 border-blue-500'
+                : statusType === 'error'
+                  ? 'bg-rose-950/10 border-rose-900/50 hover:bg-rose-950/20'
+                  : statusType === 'delete'
+                    ? 'bg-amber-950/10 border-amber-900/50 hover:bg-amber-950/20'
+                    : 'bg-slate-900/30 border-slate-800 hover:bg-slate-900/50'
+            }`}
+          >
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div className={`w-2.5 h-2.5 rounded-full ${
+                statusType === 'error' ? 'bg-rose-500 animate-pulse' : 
+                statusType === 'delete' ? 'bg-amber-500' : 'bg-blue-500'
+              }`} />
+              <div className="min-w-0">
+                <span className="text-xs font-black text-slate-400 uppercase tracking-wide block">
+                  {item.key.toUpperCase()} • <span className="text-[10px] font-mono lowercase">
+                    {(item.displayName || '').substring(0, 30)}
+                  </span>
                 </span>
-                {item.retryCount !== undefined && item.retryCount > 0 && (
-                  <>
-                    <span>•</span>
-                    <span>{item.retryCount} reintentos</span>
-                  </>
-                )}
+                <span className="text-[10px] text-slate-500 font-mono mt-1 block">
+                  {dateStr}
+                </span>
               </div>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <SyncStatusBadge 
-              status={item.action === 'error' ? 'error' : 'pending'} 
-              size="sm" 
-              showLabel={false}
-            />
-            {item.action === 'error' && onRetry && (
-              <button
-                onClick={() => onRetry(item)}
-                className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded"
-                title="Reintentar"
-              >
-                <Clock className="w-4 h-4" />
-              </button>
-            )}
-            {onDelete && (
-              <button
-                onClick={() => onDelete(item)}
-                className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
-                title="Eliminar"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-        </div>
-      ))}
+
+            <div className="flex items-center gap-2">
+              <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${
+                statusType === 'error' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' :
+                statusType === 'delete' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
+                'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+              }`}>
+                {item.status}
+              </span>
+              <ChevronRight className="w-4 h-4 text-slate-600" />
+            </div>
+          </motion.div>
+        );
+      })}
     </div>
   );
 };
