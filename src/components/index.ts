@@ -2,6 +2,10 @@
  * Components - Índice de componentes compartidos
  */
 
+// UI Primitives
+export * from './ui';
+
+// Components
 export { CameraScanner } from './CameraScanner';
 export { NumericKeypad } from './NumericKeypad';
 export { BottomDock } from './BottomDock';

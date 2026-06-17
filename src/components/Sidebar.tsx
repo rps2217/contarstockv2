@@ -35,7 +35,7 @@ const NavItem: React.FC<NavItemProps> = React.memo(({ path, label, icon: Icon, b
       onClick={() => onNavigate(path)}
       className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} py-3 rounded-xl transition-all duration-300 group relative ${
         isActive 
-          ? 'bg-blue-600/10 text-blue-400 shadow-[inset_0_0_12px_rgba(59,130,246,0.1)]' 
+          ? 'bg-blue-600/10 text-blue-400 shadow-blue-500/20 dark:shadow-[inset_0_0_12px_rgba(59,130,246,0.1)]' 
           : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'
       }`}
     >
@@ -76,21 +76,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
   }, [], {});
 
   return (
-    <aside className={`hidden md:flex flex-col ${isCollapsed ? 'w-20' : 'w-64'} h-screen fixed left-0 top-0 bg-slate-950 border-r border-white/5 z-50 overflow-hidden transition-all duration-500 ease-[0.23,1,0.32,1]`}>
+    <aside className={`hidden md:flex flex-col ${isCollapsed ? 'w-20' : 'w-64'} h-screen fixed left-0 top-0 bg-slate-950 dark:bg-stone-50 border-r border-white/5 dark:border-stone-200 z-50 overflow-hidden transition-all duration-500 ease-[0.23,1,0.32,1]`}>
       <div className={`p-6 flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} h-20 border-b border-white/5`}>
         <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/20 shrink-0">
           <Box className="w-6 h-6 text-white" />
         </div>
         {!isCollapsed && (
           <div className="overflow-hidden">
-            <h1 className="text-white font-black text-lg leading-none uppercase tracking-tighter italic">LOGI<span className="text-blue-500">COUNT</span></h1>
-            <p className="text-slate-600 text-[8px] font-bold uppercase tracking-[0.3em] mt-1">E-EDITION v3.1</p>
+            <h1 className="text-stone-900 dark:text-white font-black text-lg leading-none uppercase tracking-tighter italic">LOGI<span className="text-blue-500">COUNT</span></h1>
+            <p className="text-stone-500 dark:text-slate-600 text-[8px] font-bold uppercase tracking-[0.3em] mt-1">E-EDITION v3.1</p>
           </div>
         )}
       </div>
 
       <nav className={`flex-1 ${isCollapsed ? 'px-3' : 'px-4'} space-y-1 overflow-y-auto no-scrollbar py-6`}>
-        {!isCollapsed && <div className="text-[9px] font-black text-slate-700 uppercase tracking-[0.3em] px-4 mb-4">Core Operativo</div>}
+        {!isCollapsed && <div className="text-[9px] font-black text-stone-400 dark:text-slate-700 uppercase tracking-[0.3em] px-4 mb-4">Core Operativo</div>}
         <NavItem path="/dashboard" activeKey="dashboard" label="Panel Central" icon={Home} moduleKey="dashboard" isCollapsed={isCollapsed} onNavigate={navigate} />
         <NavItem path="/reception" activeKey="reception" label="Recepción" icon={Container} moduleKey="reception" isCollapsed={isCollapsed} onNavigate={navigate} />
         <NavItem path="/reports" activeKey="reports" label="Auditoría" icon={History} moduleKey="reports" isCollapsed={isCollapsed} onNavigate={navigate} />
@@ -98,7 +98,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
         <NavItem path="/expected-orders" activeKey="expected-orders" label="Carga Teórica" icon={FileSpreadsheet} isCollapsed={isCollapsed} onNavigate={navigate} />
         <NavItem path="/compliance" activeKey="compliance" label="Control Canjes" icon={ShieldCheck} isCollapsed={isCollapsed} onNavigate={navigate} />
         
-        {!isCollapsed && <div className="text-[9px] font-black text-slate-700 uppercase tracking-[0.3em] px-4 mb-4 mt-8">Herramientas</div>}
+        {!isCollapsed && <div className="text-[9px] font-black text-stone-400 dark:text-slate-700 uppercase tracking-[0.3em] px-4 mb-4 mt-8">Herramientas</div>}
         <button
           onClick={() => setSystemHubOpen(true)}
           className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} py-3 rounded-xl transition-all duration-300 group relative text-slate-500 hover:bg-rose-500/10 hover:text-rose-400`}
@@ -124,7 +124,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
 
           return (
             <>
-              {!isCollapsed && <div className="text-[9px] font-black text-slate-700 uppercase tracking-[0.3em] px-4 mb-4 mt-8">Tablas Locales</div>}
+              {!isCollapsed && <div className="text-[9px] font-black text-stone-400 dark:text-slate-700 uppercase tracking-[0.3em] px-4 mb-4 mt-8">Tablas Locales</div>}
               {dynamicTables.map(([key, tableSchema]) => {
                   const schema = tableSchema as TableSchema;
                   return (
