@@ -8,7 +8,7 @@ interface SendMessageModalProps {
   isOpen: boolean;
   onClose: () => void;
   customer: Customer | null;
-  theme?: 'dark' | 'light';
+  theme?: 'dark' | 'light' | 'high-contrast';
 }
 
 export const SendMessageModal: React.FC<SendMessageModalProps> = ({

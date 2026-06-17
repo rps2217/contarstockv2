@@ -5,7 +5,7 @@ interface EventHeaderProps {
   totalCount: number;
   pendingOperations: number;
   isSyncing: boolean;
-  theme: 'dark' | 'light';
+  theme: 'dark' | 'light' | 'high-contrast';
   onNavigateExpiry: () => void;
   onToggleTheme: () => void;
   onOpenSettings: () => void;

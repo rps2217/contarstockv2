@@ -13,7 +13,7 @@ interface ManagementBulkActionsProps {
   selectedCount: number;
   onClearSelection: () => void;
   actions: BulkAction[];
-  theme?: 'dark' | 'light';
+  theme?: 'dark' | 'light' | 'high-contrast';
   title?: string;
 }
 

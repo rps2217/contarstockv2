@@ -8,7 +8,7 @@ interface DynamicCardProps {
   schema: TableSchema;
   onRemove?: (item: any) => void;
   onClick?: (item: any) => void;
-  theme?: 'dark' | 'light';
+  theme?: 'dark' | 'light' | 'high-contrast';
   isSelected?: boolean;
   onSelect?: (id: string) => void;
 }

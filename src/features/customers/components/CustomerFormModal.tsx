@@ -8,7 +8,7 @@ interface CustomerFormModalProps {
   onClose: () => void;
   onSave: (customer: Customer) => void;
   editingCustomer?: Customer;
-  theme?: 'dark' | 'light';
+  theme?: 'dark' | 'light' | 'high-contrast';
 }
 
 export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({

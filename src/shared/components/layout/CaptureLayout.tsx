@@ -16,7 +16,7 @@ interface CaptureLayoutProps {
   list: React.ReactNode;
   emptyState?: React.ReactNode;
   footer?: React.ReactNode;
-  theme?: 'dark' | 'light';
+  theme?: 'dark' | 'light' | 'high-contrast';
   inputRef?: React.RefObject<HTMLInputElement>;
   scrollRef?: React.RefObject<HTMLDivElement>;
   readOnly?: boolean;

@@ -6,7 +6,7 @@ import { EventItemCard } from './EventItemCard';
 interface EventListPanelProps {
   title: string;
   count: number;
-  theme: 'dark' | 'light';
+  theme: 'dark' | 'light' | 'high-contrast';
   virtualizer: any;
   groupedItems: any[];
   onTogglePanel: () => void;

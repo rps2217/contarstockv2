@@ -36,7 +36,7 @@ interface EventEmailModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedItems: any[];
-  theme?: 'dark' | 'light';
+  theme?: 'dark' | 'light' | 'high-contrast';
 }
 
 export const EventEmailModal: React.FC<EventEmailModalProps> = ({

@@ -10,7 +10,7 @@ interface DynamicFormProps {
   onSubmit: (values: Record<string, any>) => void;
   onCancel?: () => void;
   isLoading?: boolean;
-  theme?: 'dark' | 'light';
+  theme?: 'dark' | 'light' | 'high-contrast';
 }
 
 export const DynamicForm: React.FC<DynamicFormProps> = ({

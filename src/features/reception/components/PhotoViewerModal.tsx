@@ -6,7 +6,7 @@ import { format } from 'date-fns';
 interface Props {
   item: any | null;
   onClose: () => void;
-  theme: 'dark' | 'light';
+  theme: 'dark' | 'light' | 'high-contrast';
 }
 
 export const PhotoViewerModal: React.FC<Props> = ({ item, onClose, theme }) => {

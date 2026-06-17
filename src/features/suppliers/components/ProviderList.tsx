@@ -8,7 +8,7 @@ interface ProviderListProps {
   onEdit: (provider: Provider) => void;
   onDelete: (rut: string) => void;
   hasFilter: boolean;
-  theme?: 'dark' | 'light';
+  theme?: 'dark' | 'light' | 'high-contrast';
 }
 
 export const ProviderList: React.FC<ProviderListProps> = memo(({ 

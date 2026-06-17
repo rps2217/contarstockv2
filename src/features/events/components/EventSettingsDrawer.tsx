@@ -14,7 +14,7 @@ interface EventSettingsDrawerProps {
   onClearLocalData?: () => void;
   onBulkImport?: (items: any[]) => Promise<boolean>;
   onClearAllEvents?: () => Promise<void>;
-  theme?: 'dark' | 'light';
+  theme?: 'dark' | 'light' | 'high-contrast';
 }
 
 export const EventSettingsDrawer: React.FC<EventSettingsDrawerProps> = ({

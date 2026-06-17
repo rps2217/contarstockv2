@@ -7,7 +7,7 @@ interface DynamicImageInputProps {
   value?: string;
   onChange: (url: string) => void;
   label: string;
-  theme?: 'dark' | 'light';
+  theme?: 'dark' | 'light' | 'high-contrast';
   tableName: string;
 }
 

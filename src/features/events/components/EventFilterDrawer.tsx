@@ -13,7 +13,7 @@ interface EventFilterDrawerProps {
   activeFiltersCount: number;
   dateRange: { start: string | null; end: string | null };
   onSetDateRange: (range: { start: string | null; end: string | null }) => void;
-  theme?: 'dark' | 'light';
+  theme?: 'dark' | 'light' | 'high-contrast';
 }
 
 export const EventFilterDrawer: React.FC<EventFilterDrawerProps> = ({

@@ -8,7 +8,7 @@ interface Props {
   onClean: () => void;
   onStartNew: () => void;
   syncedCount: number;
-  theme?: 'dark' | 'light';
+  theme?: 'dark' | 'light' | 'high-contrast';
 }
 
 export const ReportsHeader: React.FC<Props> = ({

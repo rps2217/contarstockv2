@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 interface TemplateManagerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  theme?: 'dark' | 'light';
+  theme?: 'dark' | 'light' | 'high-contrast';
 }
 
 export const TemplateManagerModal: React.FC<TemplateManagerModalProps> = ({

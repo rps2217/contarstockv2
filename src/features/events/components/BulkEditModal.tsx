@@ -7,7 +7,7 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   onApply: (data: { destino: string; traspaso: string; observaciones: string }) => Promise<void>;
-  theme: 'dark' | 'light';
+  theme: 'dark' | 'light' | 'high-contrast';
   selectedCount: number;
 }
 

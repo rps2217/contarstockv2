@@ -16,7 +16,7 @@ interface Props {
   selectedErpFilter: string;
   setSelectedErpFilter: (v: string) => void;
   uniqueErps: string[];
-  theme: 'dark' | 'light';
+  theme: 'dark' | 'light' | 'high-contrast';
   onClear: () => void;
 }
 

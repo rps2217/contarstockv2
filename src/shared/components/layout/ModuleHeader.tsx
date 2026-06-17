@@ -10,7 +10,7 @@ interface ModuleHeaderProps {
   icon?: React.ReactNode;
   onBack?: () => void;
   actions?: React.ReactNode;
-  theme?: 'dark' | 'light';
+  theme?: 'dark' | 'light' | 'high-contrast';
   hideTitleOnMobile?: boolean;
   hideBackButtonOnMobile?: boolean;
 }

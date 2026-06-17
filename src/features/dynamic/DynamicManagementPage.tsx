@@ -22,7 +22,7 @@ import { dynamicDataRepository } from '../../repositories/DynamicDataRepository'
 
 interface DynamicManagementPageProps {
   tableKey?: 'expiry' | 'products' | 'counts' | 'events';
-  theme?: 'dark' | 'light';
+  theme?: 'dark' | 'light' | 'high-contrast';
 }
 
 export const DynamicManagementPage: React.FC<DynamicManagementPageProps> = ({

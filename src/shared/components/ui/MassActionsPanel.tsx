@@ -13,7 +13,7 @@ interface MassActionsPanelProps {
   selectedCount: number;
   onClear: () => void;
   actions: Action[];
-  theme?: 'dark' | 'light';
+  theme?: 'dark' | 'light' | 'high-contrast';
 }
 
 export const MassActionsPanel: React.FC<MassActionsPanelProps> = ({

@@ -9,7 +9,7 @@ interface Props {
     pending: number;
     today: number;
   };
-  theme: 'dark' | 'light';
+  theme: 'dark' | 'light' | 'high-contrast';
 }
 
 export const ReceptionStats: React.FC<Props> = ({ stats, theme }) => {

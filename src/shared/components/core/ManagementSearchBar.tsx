@@ -11,7 +11,7 @@ interface ManagementSearchBarProps {
   activeFiltersCount: number;
   placeholder?: string;
   accentColor?: 'amber' | 'blue' | 'emerald' | 'rose' | 'indigo';
-  theme?: 'dark' | 'light';
+  theme?: 'dark' | 'light' | 'high-contrast';
   extraActions?: React.ReactNode;
 }
 

@@ -8,7 +8,7 @@ interface Props {
   onClose: () => void;
   onSave: (provider: Provider) => void;
   initialData?: Provider;
-  theme?: 'dark' | 'light';
+  theme?: 'dark' | 'light' | 'high-contrast';
 }
 
 export const ProviderFormModal: React.FC<Props> = ({ isOpen, onClose, onSave, initialData, theme = 'dark' }) => {

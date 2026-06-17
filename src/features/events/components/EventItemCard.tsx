@@ -31,7 +31,7 @@ interface EventItemCardProps {
   onFrcClick?: (frc: string) => void;
   onEventClick?: (event: string) => void;
   onDestinoClick?: (destino: string) => void;
-  theme?: 'dark' | 'light';
+  theme?: 'dark' | 'light' | 'high-contrast';
   isCompact?: boolean;
   isExpanded?: boolean;
 }

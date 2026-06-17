@@ -16,7 +16,7 @@ interface DynamicListProps {
   onPullSync?: () => void;
   isPulling?: boolean;
   title?: string;
-  theme?: 'dark' | 'light';
+  theme?: 'dark' | 'light' | 'high-contrast';
   isLoading?: boolean;
   selectedIds?: Set<string>;
   onSelect?: (id: string) => void;
