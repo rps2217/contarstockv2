@@ -8,10 +8,31 @@ import { getSettings } from './settings';
  */
 const getOrdersTableName = (): string => getSettings().cloudConfig?.ordersTableName || 'PEDIDOS';
 
-const calculateExpectedTrays = (rawRow: any, erpId: string): number => {
-  const normalized: any = {};
+/**
+ * Tipo para representar un row de ERP normalizado
+ */
+type ErpRow = Record<string, unknown>;
+
+/**
+ * Normaliza las keys de un row a uppercase
+ */
+function normalizeRow(rawRow: Record<string, unknown>): ErpRow {
+  const normalized: ErpRow = {};
   Object.keys(rawRow).forEach(k => normalized[k.trim().toUpperCase()] = rawRow[k]);
-  return Number(normalized["BANDEJAS"] || normalized["BULTOS"] || normalized["EXPECTED_TRAYS"] || 0);
+  return normalized;
+}
+
+/**
+ * Calcula la cantidad esperada de bandejas/bultos
+ */
+const calculateExpectedTrays = (rawRow: Record<string, unknown>, erpId: string): number => {
+  const normalized = normalizeRow(rawRow);
+  return Number(
+    normalized["BANDEJAS"] || 
+    normalized["BULTOS"] || 
+    normalized["EXPECTED_TRAYS"] || 
+    0
+  );
 };
 
 export interface ErpManifest {
@@ -19,7 +40,7 @@ export interface ErpManifest {
   expectedTrays: number;
   description: string;
   status: 'pending' | 'completed';
-  items?: any[];
+  items?: ErpRow[];
 }
 
 /**
@@ -42,20 +63,20 @@ export const erpService = {
       
       // Filter rows for this ERP
       const rows = res.rows
-        .map((row: any) => {
+        .map((row: ErpRow) => {
           try {
             return CloudOrderRowSchema.parse(row);
           } catch (e) {
             return null;
           }
         })
-        .filter((p: any) => p !== null && String(p.erp || '').toUpperCase() === erpId);
+        .filter((p: ErpRow) => p !== null && String(p.erp || '').toUpperCase() === erpId);
 
       if (rows.length === 0) {
         throw new Error(`No se encontró el ERP "${erpId}" en la nube.`);
       }
 
-      const rawMatch = res.rows.find((r: any) => {
+      const rawMatch = res.rows.find((r: ErpRow) => {
         const n: any = {};
         Object.keys(r).forEach(k => n[k.trim().toUpperCase()] = r[k]);
         return n["ERP"] === erpId || n["ORDEN"] === erpId;
@@ -70,8 +91,8 @@ export const erpService = {
         status: 'pending',
         items: rows
       };
-    } catch (error: any) {
-      const msg = error.message || String(error);
+    } catch (error: unknown) {
+      const msg = (error as Error).message || String(error);
       if (msg.includes('Failed to fetch') || msg.includes('Cerrado por falta de red') || msg.includes('offline')) {
         // Suppress network errors
       } else {
@@ -102,7 +123,7 @@ export const erpService = {
       // Group rows by ERP
       const erpGroups = new Map<string, any[]>();
       
-      res.rows.forEach((row: any) => {
+      res.rows.forEach((row: ErpRow) => {
         try {
           const parsed = CloudOrderRowSchema.parse(row);
           const erpId = String(parsed.erp || '').toUpperCase().trim();
@@ -119,7 +140,7 @@ export const erpService = {
 
       erpGroups.forEach((rows, erpId) => {
         // Find raw match for expected trays
-        const rawMatch = res.rows.find((r: any) => {
+        const rawMatch = res.rows.find((r: ErpRow) => {
           const normalized: any = {};
           Object.keys(r).forEach(k => normalized[k.trim().toUpperCase()] = r[k]);
           return normalized["ERP"] === erpId || normalized["ORDEN"] === erpId;
@@ -137,8 +158,8 @@ export const erpService = {
       });
 
       return manifests;
-    } catch (error: any) {
-      const msg = error.message || (typeof error === 'object' ? JSON.stringify(error) : String(error));
+    } catch (error: unknown) {
+      const msg = (error as Error).message || (typeof error === 'object' ? JSON.stringify(error) : String(error));
       if (msg.includes('Failed to fetch') || msg.includes('Cerrado por falta de red') || msg.includes('offline')) {
         // Suppress network errors in logs
       } else {
