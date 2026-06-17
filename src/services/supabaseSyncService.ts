@@ -1,6 +1,17 @@
 import { supabase } from '../lib/supabase';
 import { logger } from './logger';
 
+// Tipo para filas de Supabase
+type SupabaseRow = Record<string, unknown>;
+
+// Interfaz para repositorios locales
+interface LocalTableRepository {
+  get?: (id: string) => Promise<SupabaseRow | undefined>;
+  put?: (row: SupabaseRow, tableName?: string) => Promise<void>;
+  save?: (row: SupabaseRow, tableName?: string) => Promise<void>;
+  delete?: (id: string, tableName?: string) => Promise<void>;
+}
+
 const lastOfflineLogTime: Record<string, number> = {};
 const LOG_THROTTLE_MS = 60000;
 
@@ -15,26 +26,28 @@ export const supabaseSyncService = {
   /**
    * Starts a real-time sync for a specific table.
    */
-  startSync(tableName: string, localTable: any) {
+  startSync(tableName: string, localTable: LocalTableRepository) {
     if (!navigator.onLine) return () => {};
     const channel = supabase
       .channel(tableName)
       .on('postgres_changes', { event: '*', schema: 'public', table: tableName }, async (payload) => {
         if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+          const newRow = payload.new as SupabaseRow;
           // MULTI-USER CONCURRENCY FIX
           if (localTable.get) {
-             const existing = await localTable.get(payload.new.id);
+             const existing = await localTable.get(newRow.id as string);
              if (existing && (existing.synced === 0 || existing.syncStatus === 'pending' || existing.syncStatus === 'pending_delete')) {
                 return; // Preservar cambios locales
              }
           }
           if (localTable.put) {
-            await localTable.put(payload.new, tableName);
+            await localTable.put(newRow, tableName);
           } else if (localTable.save) {
-            await localTable.save(payload.new, tableName);
+            await localTable.save(newRow, tableName);
           }
         } else if (payload.eventType === 'DELETE') {
-          await localTable.delete(payload.old.id, tableName);
+          const oldRow = payload.old as SupabaseRow;
+          await localTable.delete?.(oldRow.id as string, tableName);
         }
         logger.info('SYNC_REALTIME', `Supabase sync: ${tableName} updated`);
       })
@@ -48,10 +61,10 @@ export const supabaseSyncService = {
   /**
    * Starts a real-time sync for a specific table with a filter.
    */
-  startFilteredSync(tableName: string, localTable: any, field: string, value: any) {
+  startFilteredSync(tableName: string, localTable: LocalTableRepository, field: string, value: unknown) {
     if (!navigator.onLine) return () => {};
     const channel = supabase
-      .channel(`${tableName}_${field}_${value}`)
+      .channel(`${tableName}_${field}_${String(value)}`)
       .on(
         'postgres_changes',
         {
@@ -62,20 +75,22 @@ export const supabaseSyncService = {
         },
         async (payload) => {
           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            const newRow = payload.new as SupabaseRow;
             // MULTI-USER CONCURRENCY FIX
             if (localTable.get) {
-               const existing = await localTable.get(payload.new.id);
+               const existing = await localTable.get(newRow.id as string);
                if (existing && (existing.synced === 0 || existing.syncStatus === 'pending' || existing.syncStatus === 'pending_delete')) {
                   return; // Preservar cambios locales
                }
             }
             if (localTable.put) {
-                await localTable.put(payload.new, tableName);
+                await localTable.put(newRow, tableName);
             } else {
-                await localTable.save(payload.new);
+                await localTable.save?.(newRow);
             }
           } else if (payload.eventType === 'DELETE') {
-            await localTable.delete(payload.old.id, tableName);
+            const oldRow = payload.old as SupabaseRow;
+            await localTable.delete?.(oldRow.id as string, tableName);
           }
           logger.info('SYNC_REALTIME_FILTERED', `Supabase filtered sync: ${tableName} updated`);
         }
@@ -90,17 +105,17 @@ export const supabaseSyncService = {
   /**
    * Pushes a local change to Supabase with automatic column-error recovery.
    */
-  async pushChange(tableName: string, id: string, data: any) {
+  async pushChange(tableName: string, id: string, data: SupabaseRow) {
     return this.pushBatch(tableName, [{ ...data, id }]);
   },
 
   /**
    * Formats error objects for readable output.
    */
-  formatError(e: any): string {
+  formatError(e: unknown): string {
     if (!e) return 'Error desconocido';
-    if (typeof e === 'object' && e.message) {
-      return e.message;
+    if (typeof e === 'object' && (e as Error).message) {
+      return (e as Error).message;
     }
     return String(e);
   },
@@ -205,7 +220,7 @@ export const supabaseSyncService = {
 
         return { success: true, rows_written: rows.length };
       } catch (e: any) {
-        const errMsg = e.message || '';
+        const errMsg = (e as Error).message || '';
         
         // Si es un error de columna y no fue atrapado arriba
         if (errMsg.includes("column") && (errMsg.includes("not find") || errMsg.includes("does not exist") || errMsg.includes("unknown"))) {
@@ -222,7 +237,7 @@ export const supabaseSyncService = {
            }
         }
 
-        const fullErrMsg = e.message || (e.toString ? e.toString() : '');
+        const fullErrMsg = (e as Error).message || (e.toString ? e.toString() : '');
         if (fullErrMsg.includes('Failed to fetch') || fullErrMsg.includes('NetworkError') || fullErrMsg.includes('net::ERR')) {
           logNetworkOffline(tableName);
           return { success: false, error: 'Offline', isOffline: true };
@@ -400,7 +415,7 @@ export const supabaseSyncService = {
       } catch (e: any) {
         // Fallback: Si falla el filtrado por fecha, intentar traer todo sin filtro de forma segura
         if (lastSyncDate) {
-            logger.warn('SYNC', `Incremental sync failed for ${tableName}, falling back to full sync. Reason: ${e.message}`);
+            logger.warn('SYNC', `Incremental sync failed for ${tableName}, falling back to full sync. Reason: ${(e as Error).message}`);
             const data = await fetchWithPagination(true);
             if (typeof data === 'object' && 'isMissing' in data) {
                return { success: false, rows: [], error: 'Table not found', isMissing: true };
@@ -411,7 +426,7 @@ export const supabaseSyncService = {
         }
       }
     } catch (e: any) {
-      const errMsg = e.message || (e.toString ? e.toString() : '');
+      const errMsg = (e as Error).message || (e.toString ? e.toString() : '');
       
       // Handle network errors gracefully
       if (errMsg.includes('Failed to fetch') || errMsg.includes('NetworkError') || errMsg.includes('net::ERR')) {

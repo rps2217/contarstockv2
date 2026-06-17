@@ -26,6 +26,11 @@ import { useReports } from "./hooks/useReports";
 import { VirtualList } from "../../shared/components/ui/VirtualList";
 import { useAppStore } from "../../store/mainAppStore";
 
+
+// Re-export types and constants
+export * from './types/Report';
+export * from './constants/reportConstants';
+
 export const Reports: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
