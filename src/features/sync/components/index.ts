@@ -11,3 +11,5 @@ export { SyncProgress } from './SyncProgress';
 export { SyncStatusBadge } from './SyncStatusBadge';
 export { SyncGroupCard } from './SyncGroupCard';
 export { SyncDiagnosticsPanel } from './SyncDiagnosticsPanel';
+export { SyncStatusCards } from './SyncStatusCards';
+export { SyncQueueList } from './SyncQueueList';

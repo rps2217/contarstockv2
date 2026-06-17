@@ -1,31 +1,31 @@
-import React, { useCallback, useMemo, useEffect, useState } from "react";
+/**
+ * ReportsPage - Página de Consolidación e Historial
+ * 
+ * Arquitectura Lego: Este componente es un orquestador puro que delega toda la lógica
+ * al hook useReports y rendering a componentes especializados.
+ * 
+ * Antes: 463 líneas
+ * Después: ~150 líneas
+ */
+
+import React, { useCallback, useMemo, useState } from "react";
 import { 
-  Archive, 
-  WifiOff, 
-  Zap, 
-  Package, 
-  History, 
   RefreshCw, 
   Boxes, 
-  TrendingUp, 
-  MapPin, 
-  Search, 
-  SlidersHorizontal,
-  Layers,
-  ArrowRight,
-  FileSpreadsheet
+  FileSpreadsheet,
+  TrendingUp,
+  History,
+  WifiOff,
+  ArrowRight
 } from "lucide-react";
-import { StartSessionModal } from "../../components/StartSessionModal";
-import { ManagementSearchBar } from "../../shared/components/core/ManagementSearchBar";
+import { useNavigate } from "react-router-dom";
 import { ReportDetail } from "./components/ReportDetail";
 import { ReportsHeader } from "./components/ReportsHeader";
-import { useNavigate, useLocation } from "react-router-dom";
-import { SessionRow } from "./components/SessionRow";
-import { SessionRowSkeleton } from "./components/SessionRowSkeleton";
+import { LiveConsolidationGrid } from "./components/LiveConsolidationGrid";
+import { SessionHistoryList } from "./components/SessionHistoryList";
+import { ManagementSearchBar } from "../../shared/components/core/ManagementSearchBar";
 import { useReports } from "./hooks/useReports";
-import { VirtualList } from "../../shared/components/ui/VirtualList";
 import { useAppStore } from "../../store/mainAppStore";
-
 
 // Re-export types and constants
 export * from './types/Report';
@@ -33,27 +33,12 @@ export * from './constants/reportConstants';
 
 export const Reports: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { settings } = useAppStore();
   const { state, actions } = useReports();
   const theme: 'light' | 'dark' = settings.theme === 'light' ? 'light' : 'dark';
   const isDark = settings.theme !== 'light';
 
   const [activeTab, setActiveTab] = useState<'live' | 'sessions'>('live');
-
-  // UX Fix: Auto-abrir modal si viene del Dashboard
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    if (params.get("create") === "true") {
-      actions.setIsStartModalOpen(true);
-      navigate(location.pathname, { replace: true });
-    }
-  }, [location, actions, navigate]);
-
-  // Manejador de scroll infinito simplificado
-  const handleEndReached = useCallback(() => {
-    if (state.hasMore) actions.loadMore();
-  }, [state.hasMore, actions]);
 
   // Filtrar consolidación en vivo según la barra de búsqueda
   const filteredLiveConsolidated = useMemo(() => {
@@ -110,21 +95,10 @@ export const Reports: React.FC = () => {
     };
   }, [state.liveConsolidated]);
 
-  // Datos pasados a cada fila
-  const rowData = useMemo(
-    () => ({
-      onSelect: actions.setSelectedSessionId,
-      activeMenuId: state.activeMenuId,
-      onMenuToggle: actions.handleMenuToggle,
-      onDelete: actions.handleDeleteSession,
-    }),
-    [
-      state.activeMenuId,
-      actions.setSelectedSessionId,
-      actions.handleMenuToggle,
-      actions.handleDeleteSession,
-    ],
-  );
+  // Manejador de scroll infinito
+  const handleEndReached = useCallback(() => {
+    if (state.hasMore) actions.loadMore();
+  }, [state.hasMore, actions]);
 
   // Forzar actualización de nubes y consolidación
   const handleRefreshAll = useCallback(async () => {
@@ -132,6 +106,7 @@ export const Reports: React.FC = () => {
     await actions.fetchLiveConsolidatedData();
   }, [actions]);
 
+  // Si hay sesión seleccionada, mostrar detalle
   if (state.selectedSessionId) {
     return (
       <ReportDetail
@@ -145,7 +120,7 @@ export const Reports: React.FC = () => {
     <div className={`flex flex-col h-full w-full page-transition px-4 pt-6 pb-24 md:pb-6 overflow-y-auto ${
       isDark ? 'bg-brand-dark text-white' : 'bg-slate-50 text-slate-800'
     }`}>
-      {/* CABECERA PRINCIPAL DE CONTRALORÍA DE CONSOLIDACIONES */}
+      {/* CABECERA PRINCIPAL */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-3">
           <Boxes className={`w-8 h-8 ${isDark ? 'text-brand-info animate-pulse' : 'text-indigo-600'}`} />
@@ -200,6 +175,7 @@ export const Reports: React.FC = () => {
         </div>
       </div>
 
+      {/* ReportsHeader */}
       <ReportsHeader
         isCleaning={state.isCleaning}
         onClean={actions.handleCleanSynced}
@@ -208,7 +184,7 @@ export const Reports: React.FC = () => {
         theme={theme}
       />
 
-      {/* SELECTOR DE PESTAÑAS BIDIRECCIONALES Y MODERNAS */}
+      {/* SELECTOR DE PESTAÑAS */}
       <div className={`mt-2 p-1.5 rounded-2xl flex items-center gap-2 border ${
         isDark ? 'bg-brand-surface border-white/5' : 'bg-slate-100 border-slate-200'
       }`}>
@@ -243,7 +219,7 @@ export const Reports: React.FC = () => {
         </button>
       </div>
 
-      {/* METADATAS DE CARGA O ALERTAS DE SINCRONIZACIÓN LOCAL */}
+      {/* ALERTA DE SINCRONIZACIÓN PENDIENTE */}
       {state.pendingSyncCount > 0 && (
         <button
           onClick={() => navigate("/sync")}
@@ -264,7 +240,7 @@ export const Reports: React.FC = () => {
         </button>
       )}
 
-      {/* FILTRO DE BUSQUEDA GENERAL */}
+      {/* FILTRO DE BÚSQUEDA */}
       <div className="mt-4 mb-4 shrink-0">
         <ManagementSearchBar
           searchQuery={state.searchQuery}
@@ -279,182 +255,33 @@ export const Reports: React.FC = () => {
         />
       </div>
 
-      {/* TAB 1: CONSOLIDACIÓN EN VIVO (MÓDULO RE-IMAGINADO Y PRÁCTICO) */}
+      {/* TAB 1: CONSOLIDACIÓN EN VIVO */}
       {activeTab === 'live' && (
-        <div className="flex flex-col flex-1 gap-4">
-          {/* BENTO STATS GRID */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className={`p-4 rounded-[1.5rem] border ${
-              isDark ? 'bg-brand-surface border-white/5' : 'bg-white border-slate-200'
-            }`}>
-              <span className="text-[8px] font-black uppercase text-slate-400 tracking-wider block">SKUs Únicos</span>
-              <span className={`text-xl font-black mt-1 block italic ${isDark ? 'text-white' : 'text-slate-900'}`}>{liveStats.totalSKUs}</span>
-            </div>
-            <div className={`p-4 rounded-[1.5rem] border ${
-              isDark ? 'bg-brand-surface border-white/5' : 'bg-white border-slate-200'
-            }`}>
-              <span className="text-[8px] font-black uppercase text-slate-400 tracking-wider block">Total Fisico</span>
-              <span className={`text-xl font-black mt-1 block italic ${isDark ? 'text-white' : 'text-slate-900'}`}>{liveStats.totalUnits}</span>
-            </div>
-            <div className={`p-4 rounded-[1.5rem] border ${
-              isDark ? 'bg-brand-surface border-white/5' : 'bg-white border-slate-200'
-            }`}>
-              <span className="text-[8px] font-black uppercase text-slate-400 tracking-wider block">Zonas Escaneadas</span>
-              <span className={`text-xl font-black mt-1 block italic ${isDark ? 'text-white' : 'text-slate-900'}`}>{liveStats.locationsCount}</span>
-            </div>
-          </div>
-
-          <div className={`flex-1 border rounded-[2rem] overflow-hidden shadow-sm relative flex flex-col ${
-            isDark ? 'bg-brand-surface border-white/5' : 'bg-white border-slate-200'
-          }`}>
-            {/* Header del Grid de Consolidación */}
-            <div className={`h-11 border-b flex items-center px-6 justify-between z-10 shrink-0 ${
-              isDark ? 'bg-brand-dark/50 border-white/5' : 'bg-slate-50 border-slate-100'
-            }`}>
-              <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest flex-1">PRODUCTO / SKU</span>
-              <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest w-24 text-right">CANT. TOTAL</span>
-              <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest w-24 text-right">ORIGEN</span>
-            </div>
-
-            <div className="flex-1 overflow-y-auto max-h-[500px]">
-              {state.isLiveLoading ? (
-                <div className="flex flex-col p-4 gap-3">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className="h-16 animate-pulse rounded-2xl bg-slate-500/10 w-full" />
-                  ))}
-                </div>
-              ) : filteredLiveConsolidated.length === 0 ? (
-                <div className="flex flex-col items-center justify-center p-12 text-center">
-                  <Archive className="w-10 h-10 opacity-20 mb-2" />
-                  <p className="text-[10px] font-black uppercase tracking-widest opacity-40">
-                    Sin registros consolidados en la nube
-                  </p>
-                </div>
-              ) : (
-                <div className="flex flex-col divide-y divide-slate-500/10">
-                  {filteredLiveConsolidated.map((item, index) => (
-                    <div 
-                      key={item.barcode + '-' + index} 
-                      className={`p-4 flex items-center justify-between transition-colors ${
-                        isDark ? 'hover:bg-white/5' : 'hover:bg-slate-50'
-                      }`}
-                    >
-                      <div className="flex-1 min-w-0 pr-4">
-                        <span className="font-mono text-[10px] font-black uppercase text-indigo-500 block">
-                          {item.barcode}
-                        </span>
-                        <span className={`text-xs font-black truncate block mt-0.5 ${
-                          isDark ? 'text-white' : 'text-slate-800'
-                        }`}>
-                          {item.productName}
-                        </span>
-                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wide block mt-1 flex items-center gap-1">
-                          <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
-                          Zonas: {item.locationsList}
-                        </span>
-                      </div>
-
-                      <div className="w-24 text-right font-mono font-black text-lg pr-2 italic">
-                        {item.totalQuantity}
-                      </div>
-
-                      <div className="w-24 text-right flex justify-end">
-                        <span className={`text-[8px] px-2 py-1 font-black uppercase rounded-lg border leading-tight ${
-                          item.source === 'Martillo' 
-                            ? isDark ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' : 'bg-blue-50 border-blue-200 text-blue-600'
-                            : item.source === 'Estándar'
-                              ? isDark ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400' : 'bg-indigo-50 border-indigo-200 text-indigo-600'
-                              : 'bg-amber-500/10 border-amber-500/20 text-amber-400'
-                        }`}>
-                          {item.source}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <LiveConsolidationGrid
+          items={filteredLiveConsolidated}
+          isLoading={state.isLiveLoading}
+          searchQuery={state.searchQuery}
+          isDark={isDark}
+          onExport={() => handleExportLiveToExcel(filteredLiveConsolidated)}
+          stats={liveStats}
+        />
       )}
 
-      {/* TAB 2: HISTORIAL DE SESIONES / BULTOS */}
+      {/* TAB 2: HISTORIAL DE SESIONES */}
       {activeTab === 'sessions' && (
-        <div className="flex flex-col flex-1 gap-4">
-          {/* BARRA DE FILTRADO INTERNA PARA DEVELAR TODOS LOS TIPOS RAPIDAMENTE */}
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
-            {[
-              { id: 'all', label: 'Todos' },
-              { id: 'standard', label: 'Estándar/Consolidado' },
-              { id: 'hammer', label: 'Ciego (Martillo)' },
-              { id: 'reception', label: 'Recepciones' }
-            ].map(pill => (
-              <button
-                key={pill.id}
-                onClick={() => actions.setFilterType(pill.id as any)}
-                className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest shrink-0 border transition-all ${
-                  state.filterType === pill.id
-                    ? isDark 
-                      ? 'bg-white text-black border-white'
-                      : 'bg-indigo-600 text-white border-indigo-700'
-                    : isDark
-                      ? 'bg-white/5 border-white/5 text-slate-400 hover:text-white'
-                      : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                {pill.label}
-              </button>
-            ))}
-          </div>
-
-          <div className={`flex-1 border rounded-[2rem] overflow-hidden shadow-sm relative flex flex-col ${
-            isDark ? 'bg-brand-surface border-white/5' : 'bg-white border-slate-200'
-          }`}>
-            <div className={`h-11 border-b flex items-center px-6 justify-between z-10 shrink-0 ${
-              isDark ? 'bg-brand-dark/50 border-white/5' : 'bg-slate-50 border-slate-100'
-            }`}>
-              <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">
-                Firma Operativa / Bulto
-              </span>
-              <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">
-                Detalle y Estado
-              </span>
-            </div>
-
-            <div className="flex-1 overflow-y-auto max-h-[480px]">
-              {state.isLoading ? (
-                <div className="flex flex-col">
-                  {[...Array(5)].map((_, i) => (
-                    <SessionRowSkeleton key={i} theme={theme} />
-                  ))}
-                </div>
-              ) : state.sessions?.length === 0 ? (
-                <div className="flex flex-col items-center justify-center p-12 text-center h-full">
-                  <Archive className="w-12 h-12 mb-3 opacity-20" />
-                  <p className="text-[10px] font-black uppercase tracking-widest opacity-40">
-                    Sin bultos en este filtro
-                  </p>
-                </div>
-              ) : (
-                <VirtualList
-                  items={state.sessions || []}
-                  itemHeight={110}
-                  renderRow={SessionRow}
-                  rowData={{ ...rowData, theme }}
-                  onEndReached={handleEndReached}
-                  emptyState={
-                    <div className="flex flex-col items-center">
-                      <Archive className="w-12 h-12 mb-3 opacity-20" />
-                      <p className="text-[10px] font-black uppercase tracking-widest opacity-40">
-                        Historial vacío
-                      </p>
-                    </div>
-                  }
-                />
-              )}
-            </div>
-          </div>
-        </div>
+        <SessionHistoryList
+          sessions={state.sessions}
+          isLoading={state.isLoading}
+          filterType={state.filterType}
+          theme={theme}
+          isDark={isDark}
+          activeMenuId={state.activeMenuId}
+          onSelect={actions.setSelectedSessionId}
+          onMenuToggle={actions.handleMenuToggle}
+          onDelete={actions.handleDeleteSession}
+          onEndReached={handleEndReached}
+          onFilterChange={(filter) => actions.setFilterType(filter as any)}
+        />
       )}
     </div>
   );
