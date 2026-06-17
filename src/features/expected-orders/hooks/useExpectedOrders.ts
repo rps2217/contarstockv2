@@ -1,5 +1,9 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
+
+// Re-export importer modules
+export * from '../importer';
+
 import { ExpectedOrderRepository } from '../../../repositories/ExpectedOrderRepository';
 import { ExpectedOrder, ExpectedItem } from '../../../types';
 import { useToastStore } from '../../../store/useToastStore';
