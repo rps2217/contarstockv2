@@ -2,11 +2,15 @@
 import { db, SystemLog } from '../db';
 import { telemetry } from './telemetryService';
 
-const MAX_LOGS = 2000; 
+const MAX_LOGS = 2000;
 
-const safeStringify = (obj: any) => {
+// Tipos para el logger
+type LogLevel = SystemLog['level'];
+type LoggerDetails = Record<string, unknown> | string | number | boolean | null;
+
+const safeStringify = (obj: unknown): string => {
   const cache = new Set();
-  return JSON.stringify(obj, (key, value) => {
+  return JSON.stringify(obj, (_key, value) => {
     if (typeof value === 'object' && value !== null) {
       if (cache.has(value)) {
         return '[Circular]';
@@ -17,32 +21,34 @@ const safeStringify = (obj: any) => {
   });
 };
 
-const writeLog = async (level: SystemLog['level'], module: string, message: any, details?: any) => {
+const writeLog = async (level: LogLevel, module: string, message: string, details?: LoggerDetails) => {
   try {
     const timestamp = Date.now();
     let messageStr = String(message);
-    if (typeof message === 'object') {
+    if (typeof message === 'object' && message !== null) {
       try {
-        messageStr = message.message || safeStringify(message);
-      } catch (e) {
+        messageStr = (message as { message?: string }).message || safeStringify(message);
+      } catch {
         messageStr = '[Unstringifiable Object]';
       }
     }
     
     // Consola formateada para desarrollo
-    const style = level === 'error' ? 'color: #ff4d4d; font-weight: bold' : level === 'success' ? 'color: #2ecc71' : 'color: #3498db';
+    const style = level === 'error' ? 'color: #ff4d4d; font-weight: bold' 
+      : level === 'success' ? 'color: #2ecc71' 
+      : 'color: #3498db';
     console.log(`%c[${module}] [${level.toUpperCase()}] ${messageStr}`, style, details || '');
 
     if (level === 'error') {
       telemetry.track('ERROR', module, { message: messageStr, details });
     }
 
-    let detailsStr = undefined;
-    if (details) {
+    let detailsStr: string | undefined;
+    if (details !== undefined) {
       if (typeof details === 'object') {
         try {
           detailsStr = safeStringify(details);
-        } catch (e) {
+        } catch {
           detailsStr = '[Unstringifiable Details]';
         }
       } else {
@@ -66,25 +72,52 @@ const writeLog = async (level: SystemLog['level'], module: string, message: any,
         await db.logs.bulkDelete(keys);
       }
     }
-  } catch (e: any) {
+  } catch (e) {
     // Fallback silencioso si falla IndexedDB (ej. cuota excedida o bloqueo)
-    console.warn("Logger persistency failed:", e?.message || e);
+    const errorMessage = e instanceof Error ? e.message : String(e);
+    console.warn("Logger persistency failed:", errorMessage);
   }
 };
 
-export const logger = {
- info: (module: string, message: string, details?: any) => writeLog('info', module, message, details),
- warn: (module: string, message: string, details?: any) => writeLog('warn', module, message, details),
- error: (module: string, message: string, details?: any) => writeLog('error', module, message, details),
- success: (module: string, message: string, details?: any) => writeLog('success', module, message, details),
- 
- getRecent: async (limit = 200) => {
- return await db.logs.orderBy('timestamp').reverse().limit(limit).toArray();
- },
- 
- clear: async () => {
- await db.logs.clear();
- logger.info('System', 'Log de auditoría vaciado.');
- }
-};
+// Constantes de contexto para módulos
+export const LOG_CONTEXT = {
+  SYNC: 'SyncManager',
+  HAMMER: 'HammerLogic',
+  RECEPTION: 'ReceptionLogic',
+  EXPORT: 'ExportService',
+  AUTH: 'Authentication',
+  DATABASE: 'Database',
+  SETTINGS: 'Settings',
+  UI: 'UI',
+  SCANNER: 'Scanner',
+  PRINTER: 'Printer',
+  API: 'API',
+} as const;
 
+export type LogContext = typeof LOG_CONTEXT[keyof typeof LOG_CONTEXT];
+
+export const logger = {
+  info: (module: LogContext | string, message: string, details?: LoggerDetails) => 
+    writeLog('info', module, message, details),
+  
+  warn: (module: LogContext | string, message: string, details?: LoggerDetails) => 
+    writeLog('warn', module, message, details),
+  
+  error: (module: LogContext | string, message: string, details?: LoggerDetails) => 
+    writeLog('error', module, message, details),
+  
+  success: (module: LogContext | string, message: string, details?: LoggerDetails) => 
+    writeLog('success', module, message, details),
+  
+  debug: (module: LogContext | string, message: string, details?: LoggerDetails) => 
+    writeLog('info', module, `[DEBUG] ${message}`, details),
+  
+  getRecent: async (limit = 200): Promise<SystemLog[]> => {
+    return await db.logs.orderBy('timestamp').reverse().limit(limit).toArray();
+  },
+  
+  clear: async (): Promise<void> => {
+    await db.logs.clear();
+    logger.info('System', 'Log de auditoría vaciado.');
+  }
+};

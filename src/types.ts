@@ -288,6 +288,72 @@ export interface CountMapping {
 export type ColumnDataType = 'string' | 'number' | 'date' | 'barcode' | 'boolean' | 'enum' | 'email' | 'url' | 'image' | 'timestamp';
 export type ColumnRenderType = 'default' | 'grid' | 'list' | 'segmented';
 
+// =============================================================================
+// SYNC TYPES - Tipos centralizados para sincronización
+// =============================================================================
+
+export enum SyncStatus {
+  PENDING = 'pending',
+  SYNCED = 'synced',
+  ERROR = 'error',
+  PENDING_DELETE = 'pending_delete',
+  CONFLICT = 'conflict',
+}
+
+export type UploadGroupType = 'inventory' | 'reception' | 'products' | 'orphans' | 'dynamic';
+
+export interface UploadGroup {
+  erpOrder: string;
+  sessionCount: number;
+  totalUnits: number;
+  sessionIds: string[];
+  logisticsLabels: string[];
+  type: UploadGroupType;
+  isHammer: boolean;
+  tableName?: string;
+}
+
+export interface SyncResult {
+  success: boolean;
+  uploaded: number;
+  failed: number;
+  errors: string[];
+  timestamp: number;
+}
+
+export interface SyncSummary {
+  totalGroups: number;
+  totalUploaded: number;
+  totalFailed: number;
+  duration: number;
+  results: SyncResult[];
+}
+
+export interface TableSyncState {
+  tableName: string;
+  lastSyncTime: number | null;
+  pendingCount: number;
+  status: SyncStatus;
+}
+
+export interface SyncConflict {
+  id: string;
+  tableName: string;
+  localData: Record<string, unknown>;
+  remoteData: Record<string, unknown>;
+  conflictType: 'version' | 'deleted' | 'modified';
+  detectedAt: number;
+}
+
+// Helper functions for sync types
+export const isSyncError = (status: SyncStatus): boolean => {
+  return status === SyncStatus.ERROR || status === SyncStatus.PENDING_DELETE;
+};
+
+export const needsSync = (status: SyncStatus): boolean => {
+  return status === SyncStatus.PENDING || status === SyncStatus.ERROR || status === SyncStatus.PENDING_DELETE;
+};
+
 export interface ColumnSchema {
   col: string;
   label: string;

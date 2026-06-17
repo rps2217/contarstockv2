@@ -1,28 +1,28 @@
 
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { AppSettings, ViewState } from '../types';
 import { getSettings, saveSettings } from '../services/settings';
 
 // --- SLICE: SETTINGS ---
-// Forced update to trigger GitHub sync
 interface SettingsSlice {
- settings: AppSettings;
- updateSetting: (key: keyof AppSettings, value: any) => void;
- loadSettings: () => void;
+  settings: AppSettings;
+  updateSetting: <T extends keyof AppSettings>(key: T, value: AppSettings[T]) => void;
+  loadSettings: () => void;
 }
 
 const createSettingsSlice = (set: any): SettingsSlice => ({
- settings: getSettings(),
- updateSetting: (key, value) => {
- set((state: any) => {
- const newSettings = { ...state.settings, [key]: value };
- saveSettings(newSettings);
- return { settings: newSettings };
- });
- },
- loadSettings: () => {
- set({ settings: getSettings() });
- }
+  settings: getSettings(),
+  updateSetting: (key, value) => {
+    set((state: any) => {
+      const newSettings = { ...state.settings, [key]: value };
+      saveSettings(newSettings);
+      return { settings: newSettings };
+    });
+  },
+  loadSettings: () => {
+    set({ settings: getSettings() });
+  }
 });
 
 // --- SLICE: UI STATE ---
@@ -53,8 +53,19 @@ const createUISlice = (set: any): UISlice => ({
 });
 
 // --- COMBINED STORE ---
-export const useAppStore = create<SettingsSlice & UISlice>((set) => ({
- ...createSettingsSlice(set),
- ...createUISlice(set),
-}));
-
+export const useAppStore = create<SettingsSlice & UISlice>()(
+  persist(
+    (set) => ({
+      ...createSettingsSlice(set),
+      ...createUISlice(set),
+    }),
+    {
+      name: 'logicount_app_state',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        activeView: state.activeView,
+        isSidebarOpen: state.isSidebarOpen,
+      }),
+    }
+  )
+);
