@@ -7,6 +7,9 @@ import { AppSettings, MessageTemplate } from '../types';
 const CONFIG_COLLECTION = 'APP_CONFIG';
 const CONFIG_DOC_ID = 'global_settings';
 
+// Tipo para filas de respuesta de Supabase
+type SupabaseRow = Record<string, unknown>;
+
 export const configSyncService = {
   /**
    * Sube la configuración actual a la nube.
@@ -53,13 +56,13 @@ export const configSyncService = {
     try {
       const response = await supabaseSyncService.pullBatch(CONFIG_COLLECTION);
       if (!response.success || !response.rows || response.rows.length === 0) {
-        if ((response as any).isMissing) {
+        if ((response as { isMissing?: boolean }).isMissing) {
           logger.info('CONFIG_SYNC', 'Tabla APP_CONFIG no existe. Usando configuración local.');
         }
         return false;
       }
 
-      const remoteConfig = response.rows.find((r: any) => r.id === CONFIG_DOC_ID);
+      const remoteConfig = response.rows.find((r: SupabaseRow) => r.id === CONFIG_DOC_ID);
       if (!remoteConfig) return false;
 
       const currentSettings = getSettings();
