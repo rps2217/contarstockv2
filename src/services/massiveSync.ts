@@ -98,11 +98,11 @@ export const migrateMassiveToMaster = async (batchId: string): Promise<string> =
     logger.success('MASSIVE_MIGRATION', `Bulto [${batchId}] archivado.`);
     return session.id;
   } catch (err: unknown) {
+    const error = handleError(err);
     const duration = performance.now() - startTime;
     telemetry.track('SESSION', 'MIGRATE_FAIL', { batchId, error: error.message }, duration, batchId);
-    const error = handleError(err);
     logger.error('MASSIVE_MIGRATION_FAIL', error.message);
-    throw e;
+    throw err;
   }
 };
 
@@ -140,11 +140,11 @@ export const pushScansToCloud = async (batchId: string): Promise<void> => {
     
     logger.success('CLOUD_SYNC', `Sincronización exitosa para lote: ${batchId}`);
   } catch (err: unknown) {
+    const error = handleError(err);
     const duration = performance.now() - startTime;
     telemetry.track('SYNC', 'PUSH_FAIL', { batchId, error: error.message }, duration, batchId);
-    const error = handleError(err);
     logger.error('CLOUD_SYNC_FAIL', error.message);
-    throw e;
+    throw err;
   }
 };
 
@@ -201,11 +201,11 @@ export const importManifestFromCloud = async (batchId: string): Promise<number> 
     return itemsToSave.length;
 
   } catch (err: unknown) {
+    const error = handleError(err);
     const duration = performance.now() - startTime;
     telemetry.track('SYNC', 'PULL_FAIL', { batchId, error: error.message }, duration, batchId);
-    const error = handleError(err);
     logger.error('CLOUD_MANIFEST_FAIL', error.message);
-    throw e;
+    throw err;
   }
 };
 
@@ -257,11 +257,11 @@ export const importExpectedOrderFromCloud = async (batchId: string, orderId: str
     return itemsToSave.length;
 
   } catch (err: unknown) {
+    const error = handleError(err);
     const duration = performance.now() - startTime;
     telemetry.track('SYNC', 'PULL_FAIL', { batchId, error: error.message, orderId }, duration, batchId);
-    const error = handleError(err);
     logger.error('CLOUD_MANIFEST_FAIL', error.message);
-    throw e;
+    throw err;
   }
 };
 
@@ -297,11 +297,11 @@ export const importLocalExpectedOrderToHammer = async (batchId: string, orderId:
     logger.success('CLOUD_MANIFEST', `Carga teórica local "${order?.metadata?.internalGuide || orderId}" importada con éxito: ${itemsToSave.length} SKUs.`);
     return itemsToSave.length;
   } catch (err: unknown) {
+    const error = handleError(err);
     const duration = performance.now() - startTime;
     telemetry.track('SYNC', 'LOCAL_IMPORT_FAIL', { batchId, error: error.message, orderId }, duration, batchId);
-    const error = handleError(err);
     logger.error('CLOUD_MANIFEST_FAIL', error.message);
-    throw e;
+    throw err;
   }
 };
 

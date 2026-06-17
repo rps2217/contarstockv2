@@ -93,7 +93,7 @@ class PreferencesServiceClass {
    * Obtiene el timestamp de la última sincronización para una tabla
    */
   getLastSyncTime(tableName: string): number | null {
-    const data = this.get<Record<string, number>>(PREFERENCES_KEYS.SYNC_LAST, {});
+    const data = this.get<Record<string, number>>('SYNC_LAST', {});
     return data[tableName] ?? null;
   }
 
@@ -101,9 +101,9 @@ class PreferencesServiceClass {
    * Actualiza el timestamp de sincronización para una tabla
    */
   setLastSyncTime(tableName: string, timestamp: number = Date.now()): void {
-    const data = this.get<Record<string, number>>(PREFERENCES_KEYS.SYNC_LAST, {});
+    const data = this.get<Record<string, number>>('SYNC_LAST', {});
     data[tableName] = timestamp;
-    this.set(PREFERENCES_KEYS.SYNC_LAST, data);
+    this.set('SYNC_LAST', data);
   }
 }
 

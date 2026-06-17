@@ -1,11 +1,8 @@
 import React, { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 
-// Re-export types and constants
-export * from './types/Sync';
-export * from './constants/syncConstants';
-
 import { db } from '../../db';
+import type { SyncTabType, SyncLogEntry, SyncQueueItem } from './types/Sync';
 import { genericSyncEngine } from '../../services/cloud/GenericSyncEngine';
 import { syncRegistry } from '../../services/cloud/syncRegistry';
 import { useSyncStore } from '../../store/useSyncStore';
