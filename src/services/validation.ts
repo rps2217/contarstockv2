@@ -79,10 +79,10 @@ export const ValidationService = {
   // =============================================================================
 
   /**
-   * Valida si una cantidad es válida
+   * Valida si una cantidad es válida (debe ser entero positivo)
    */
   isValidQuantity(qty: number): boolean {
-    return Number.isInteger(qty) && qty >= 0;
+    return Number.isInteger(qty) && qty > 0;
   },
 
   /**
@@ -100,11 +100,7 @@ export const ValidationService = {
       errors.push('La cantidad debe ser un número entero');
     }
     
-    if (qty < 0) {
-      errors.push('La cantidad no puede ser negativa');
-    }
-    
-    if (qty === 0) {
+    if (qty <= 0) {
       errors.push('La cantidad debe ser mayor a cero');
     }
     
