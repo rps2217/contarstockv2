@@ -22,6 +22,16 @@ interface XlsxWorksheet {
   [key: string]: unknown;
 }
 
+// Tipos para items de exportación
+export interface HammerExportItem {
+  barcode: string;
+  name: string;
+  loc?: string;
+  totalQuantity: number;
+  expectedQty?: number;
+  lastTimestamp: number;
+}
+
 /**
  * Helper to create an Excel workbook with styled columns from data array.
  */
@@ -68,7 +78,7 @@ const HAMMER_COLUMNS: ExcelColumn[] = [
 /**
  * Generates and downloads an Excel file (.xlsx) containing the hammer/massive session data.
  */
-export const exportHammerToExcel = async (batchId: string, items: any[]) => {
+export const exportHammerToExcel = async (batchId: string, items: HammerExportItem[]) => {
   const data: ExcelRow[] = items.map(item => ({
     'Código/SKU': item.barcode,
     'Descripción': item.name,

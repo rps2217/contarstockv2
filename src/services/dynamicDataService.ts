@@ -2,6 +2,9 @@ import { db, DynamicRecord } from '../db';
 import { supabaseSyncService } from './supabaseSyncService';
 import { logger } from './logger';
 
+// Tipo genérico para datos dinámicos
+type RecordData = Record<string, unknown>;
+
 export const dynamicDataService = {
   async getRecordsByTable(tableName: string) {
     return await db.dynamic_data
@@ -10,7 +13,7 @@ export const dynamicDataService = {
       .toArray();
   },
 
-  async saveRecord(tableName: string, data: any, id?: string) {
+  async saveRecord(tableName: string, data: RecordData, id?: string) {
     const recordId = id || crypto.randomUUID();
     const record: DynamicRecord = {
       id: recordId,
