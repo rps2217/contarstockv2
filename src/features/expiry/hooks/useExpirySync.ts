@@ -4,7 +4,6 @@ import { genericSyncEngine } from '../../../services/cloud/GenericSyncEngine';
 import { expiryRepository } from '../../../repositories/ExpiryRepository';
 import { logger } from '../../../services/logger';
 import { useToastStore } from '../../../store/useToastStore';
-import { SoundFX } from '../../../services/audio';
 
 export const useExpirySync = (tableName: string) => {
   const [isSyncing, setIsSyncing] = useState(false);
@@ -63,13 +62,13 @@ export const useExpirySync = (tableName: string) => {
         // Actualizar estado local a synced
         await expiryRepository.bulkSave(items.map(i => ({ ...i, syncStatus: 'synced' })), tableName);
         addToast(`Sincronización completa: ${items.length} registros subidos.`, 'success');
-        SoundFX.play('success');
+        
       } else {
         throw new Error(result.error);
       }
     } catch (error: any) {
       addToast(`Error al sincronizar: ${error.message}`, 'error');
-      SoundFX.play('error');
+      
     } finally {
       setIsSyncing(false);
     }

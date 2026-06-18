@@ -3,7 +3,6 @@ import { expiryRepository } from '../../../repositories/ExpiryRepository';
 import { supabaseSyncService } from '../../../services/supabaseSyncService';
 import { useToastStore } from '../../../store/useToastStore';
 import { useTaskStore } from '@/store/useTaskStore';
-import { SoundFX } from '../../../services/audio';
 import { normalizeExpiryRecord, NormalizedExpiry } from '../../../services/normalizationService';
 import { normalizeSku } from '../../../services/utils';
 import { logger } from '../../../services/logger';
@@ -131,7 +130,7 @@ export const useExpiryMutations = (
         });
 
         addToast(`Se agregaron ${data.quantity} unidades al registro existente (${newQuantity} total).`, 'success');
-        SoundFX.play('success');
+        
         return claveUnica;
       }
 
@@ -163,12 +162,12 @@ export const useExpiryMutations = (
       });
       
       addToast('Guardado correctamente.', 'success');
-      SoundFX.play('success');
+      
       return claveUnica;
 
     } catch (error: any) {
       addToast(`Error crítico al registrar: ${error.message}`, 'error');
-      SoundFX.play('error');
+      
     }
   }, [tableName, localItems, addToast, expiryMapping]);
 
