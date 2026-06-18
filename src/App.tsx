@@ -26,9 +26,10 @@ const StartSessionModal = lazyWithRetry(() => import('@/components/StartSessionM
 // Forzamos un cambio para limpiar la caché del empaquetador Vite (compilación limpia)
 const Dashboard = lazyWithRetry(() => import('./features/dashboard/DashboardPage'));
 const Reports = lazyWithRetry(() => import('@/features/reports/ReportsPage'));
-const DatabaseView = lazyWithRetry(() => import('@/features/inventory/InventoryPage'));
+// DatabaseView era un alias de InventoryPage - eliminado
 const Sync = lazyWithRetry(() => import('@/features/sync/SyncPage'));
 const Settings = lazyWithRetry(() => import('@/features/settings/SettingsPage'));
+const InventoryPage = lazyWithRetry(() => import('@/features/inventory/InventoryPage'));
 
 // --- MÓDULOS OPERATIVOS (FEATURES) ---
 const ReceptionManagement = lazyWithRetry(() => import('@/features/reception/ReceptionManagementPage'));
@@ -206,7 +207,7 @@ const AppContent = () => {
                     <Route path="/" element={<Dashboard />} />
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/reports" element={<ModuleRoute moduleKey="reports" element={<Reports />} />} />
-                    <Route path="/database" element={<ModuleRoute moduleKey="database" element={<DatabaseView />} />} />
+                    <Route path="/database" element={<ModuleRoute moduleKey="database" element={<InventoryPage />} />} />
                     <Route path="/sync" element={<ModuleRoute moduleKey="sync" element={<Sync />} />} />
                     <Route path="/sync/queue" element={<ModuleRoute moduleKey="sync" element={<GlobalSyncQueue />} />} />
                     <Route path="/slices" element={<SlicesPage />} />
