@@ -2,9 +2,26 @@
  * Session Types - Tipos para sesiones de conteo
  */
 
+// ============================================
+// SESSION TYPES (unified with sessions/constants)
+// ============================================
+
 // Tipos de sesion de conteo
 export type SessionType = 'standard' | 'hammer' | 'reception';
 export type SessionStatus = 'pending' | 'in_progress' | 'completed' | 'paused' | 'cancelled';
+
+// Tipos de sesion del ERP (de sessions/constants)
+export type {
+  SessionMode,
+  SessionStep,
+  SessionType as SessionTypeERP,
+} from '../constants/sessionConstants';
+
+export {
+  SESSION_TYPES,
+  SESSION_TYPE_LABELS,
+  SESSION_TYPE_ICONS,
+} from '../constants/sessionConstants';
 
 export interface SessionMetrics {
   totalScans: number;
