@@ -1,7 +1,6 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useHIDScanner } from './useHIDScanner';
-import { SoundFX } from '../services/audio';
 
 interface UseCaptureSessionOptions {
   onScan: (code: string) => void;

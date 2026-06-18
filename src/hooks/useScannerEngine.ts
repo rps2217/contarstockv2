@@ -4,7 +4,6 @@ import { db } from '../db';
 import { normalizeSku, normalizeIdentity } from '../services/utils';
 import { useCaptureSession } from './useCaptureSession';
 import { useFeedbackSystem } from './useFeedbackSystem';
-import { SoundFX } from '../services/audio';
 
 interface ScannerEngineOptions {
   onScanSuccess?: (product: any, code: string) => void;
