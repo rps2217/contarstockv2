@@ -1,25 +1,156 @@
-# 🎯 PLAN DE ACCIÓN COMPLETO - Corrección de ContarStock v2
+# 🎯 PLAN DE ACCIÓN COMPLETO - ContarStock v2
 
-**Fecha:** 2026-06-17  
-**Versión:** 1.0  
-**Estado:** Pendiente de aprobación para comenzar......
+**Fecha Creación:** 2026-06-17  
+**Última Actualización:** 2026-06-18
+**Versión:** 2.0  
+**Estado:** Post-FASE 10-16 completado ✅
 
 ---
 
+## ✅ COMPLETADO (2026-06-17)
+
+### FASE 0-9: Refactorización Mayor
+
+- [x] SlicesPage, ReportsPage, SyncCenterPage refactorizados
+- [x] CreateEventModal, SupabaseAuditorModal extraídos
+- [x] TypeScript types centralizados en src/types/global/
+- [x] Hooks divididos: useEventQueries, useEventMutations, useEventFilters
+- [x] Logger centralizado con niveles
+- [x] SyncFacade creado
+- [x] PreferencesService implementado
+
+### FASE 10-16: Cleanup (2026-06-18)
+
+- [x] FASE-10: Cleanup Settings module
+- [x] FASE-11: Deep cleanup Settings
+- [x] FASE-12: Clean up Inventory module
+- [x] FASE-13: Remove SoundFX from Expiry
+- [x] FASE-14: Session module cleanup
+- [x] FASE-15: Remove SoundFX from Events
+- [x] FASE-16: Clean up imports and document root modules
+- [x] PR #8 mergeado a main
+
+---
+
+## 🔴 PENDIENTE - CI FAILING
+
+**Fecha:** 2026-06-18  
+**PR:** #8 fusionado pero CI checks fallan
+
+```
+Problema: npm ci falla en GitHub Actions
+Error: package-lock.json desincronizado
+
+Solución:
+  1. git checkout main
+  2. rm package-lock.json
+  3. npm install --legacy-peer-deps
+  4. git add package-lock.json
+  5. git commit -m "fix: Regenerate lock file"
+  6. git push origin main
+```
+
+**Comando rápido:**
+
+```bash
+git checkout main && rm package-lock.json && npm install --legacy-peer-deps && git add package-lock.json && git commit -m "fix: Regenerate lock file for CI" && git push origin main
+```
+
+---
+
+## 🟡 PRÓXIMOS PASOS RECOMENDADOS
+
+### 1. Fix CI (CRÍTICO)
+
+```bash
+git checkout main && rm package-lock.json && npm install --legacy-peer-deps && git add package-lock.json && git commit -m "fix: Regenerate lock file for CI" && git push origin main
+```
+
+### 2. Coverage Improvement (MEDIA)
+
+- **Objetivo:** >60% coverage (actual ~30%)
+- **Prioridad archivos:**
+  - `src/services/supabaseSyncService.ts` (3.84% coverage)
+  - `src/services/validation.ts` (46% coverage)
+  - `src/services/export.ts` (29% coverage)
+
+### 3. ESLint/Prettier Setup (MEDIA)
+
+- Agregar `.eslintrc.json` y `.prettierrc`
+- Configurar pre-commit hooks
+
+### 4. Performance Audit (BAJA)
+
+- Analizar bundle size
+- Considerar code-splitting
+
+### 5. Documentación (BAJA)
+
+- README actualizado
+- Architecture guide
+
+---
+
+## 🎯 MÉTRICAS OBJETIVO
+
+| Métrica           | Actual  | Meta    |
+| ----------------- | ------- | ------- |
+| CI Status         | ❌ FAIL | ✅ PASS |
+| Test Coverage     | ~30%    | >60%    |
+| TypeScript Errors | 0       | 0       |
+| ESLint Errors     | N/A     | 0       |
+
+---
+
+## 📝 NOTAS PARA CONTINUAR
+
+### Mañana desde otro dispositivo:
+
+```bash
+# 1. Clonar repositorio
+git clone https://github.com/rps2217/contarstockv2.git
+cd contarstockv2
+
+# 2. Instalar dependencias
+npm install
+
+# 3. Regenerar lock si CI falla
+rm package-lock.json && npm install --legacy-peer-deps
+
+# 4. Ver estado
+npm run test:run  # Debe pasar 151 tests
+npm run lint      # Debe ser 0 errores TS
+```
+
+### Para crear PR con mejoras:
+
+```bash
+git checkout -b feature/improve-coverage
+# hacer cambios
+git push origin feature/improve-coverage
+gh pr create --title "test: Improve test coverage" --body "..."
+```
+
+---
+
+_Última actualización: 2026-06-18 04:59 UTC_  
+_Creado por: OpenHands AI Agent_
+
 ## 📊 RESUMEN DE PROBLEMAS
 
-| Severidad | Cantidad | Líneas Afectadas |
-|-----------|----------|------------------|
-| 🔴 CRÍTICO | 3 | ~1,968 |
-| 🟡 IMPORTANTE | 7 | ~2,200 |
-| 🟢 MEDIO | 5 | ~800 |
-| 🔵 MENOR | 4 | ~300 |
+| Severidad     | Cantidad | Líneas Afectadas |
+| ------------- | -------- | ---------------- |
+| 🔴 CRÍTICO    | 3        | ~1,968           |
+| 🟡 IMPORTANTE | 7        | ~2,200           |
+| 🟢 MEDIO      | 5        | ~800             |
+| 🔵 MENOR      | 4        | ~300             |
 
 ---
 
 ## 🔴 FASE 1: CRÍTICO - Componentes que Violan Arquitectura
 
 ### Regla AGENTS.md:
+
 > "Do NOT merge components; split them when they exceed 150-200 lines if feasible"
 
 ### 1.1 SlicesPage.tsx (826 líneas → 200 líneas)
@@ -27,6 +158,7 @@
 **Archivo actual:** `src/features/slices/SlicesPage.tsx`
 
 **Componentes a extraer:**
+
 ```
 src/features/slices/
 ├── SlicesPage.tsx                    [826 líneas] → [150 líneas]
@@ -43,6 +175,7 @@ src/features/slices/
 ```
 
 **Cambios específicos:**
+
 - [ ] Mover `DEFAULT_SLICES` a `constants/defaultSlices.ts`
 - [ ] Mover `AppSheetSlice` interface a `types/Slice.ts`
 - [ ] Crear `SliceList.tsx` - Extraer lógica de renderizado de lista
@@ -58,6 +191,7 @@ src/features/slices/
 **Archivo actual:** `src/features/reports/ReportsPage.tsx`
 
 **Componentes a extraer:**
+
 ```
 src/features/reports/
 ├── ReportsPage.tsx                   [458 líneas] → [180 líneas]
@@ -74,6 +208,7 @@ src/features/reports/
 ```
 
 **Cambios específicos:**
+
 - [ ] Extraer `ReportsHeader` a su propio componente
 - [ ] Extraer grid de consolidación a `LiveConsolidationGrid.tsx`
 - [ ] Extraer lista de sesiones a `SessionHistoryList.tsx`
@@ -87,6 +222,7 @@ src/features/reports/
 **Archivo actual:** `src/features/sync/SyncCenterPage.tsx`
 
 **Componentes a extraer:**
+
 ```
 src/features/sync/
 ├── SyncCenterPage.tsx                [684 líneas] → [180 líneas]
@@ -109,6 +245,7 @@ src/features/sync/
 **Archivo actual:** `src/features/events/components/CreateEventModal.tsx`
 
 **Componentes a extraer:**
+
 ```
 src/features/events/components/
 ├── CreateEventModal.tsx              [609 líneas] → [180 líneas]
@@ -125,6 +262,7 @@ src/features/events/components/
 **Archivo actual:** `src/features/settings/components/SupabaseAuditorModal.tsx`
 
 **Componentes a extraer:**
+
 ```
 src/features/settings/components/
 ├── SupabaseAuditorModal.tsx         [467 líneas] → [150 líneas]
@@ -140,6 +278,7 @@ src/features/settings/components/
 ### 2.1 Análisis de los 555 `any`
 
 **Distribución:**
+
 ```
 useSyncStore.ts              1 any     (Línea ~17 - onConflict)
 mainAppStore.ts             3 any     (Líneas ~10, 17, 18 - set/update)
@@ -152,6 +291,7 @@ Total crítico               ~56 any   (deben arreglarse primero)
 ### 2.2 Plan de Tipado
 
 **Crear archivo de tipos globales:**
+
 ```
 src/types/
 ├── api.ts                  - Tipos para respuestas de API
@@ -182,17 +322,20 @@ const config: CloudConfig = getSettings().cloudConfig;
 ### 2.3 Cambios Específicos
 
 **Prioridad 1 - Interfaces Críticas (56 any):**
+
 - [ ] `mainAppStore.ts` - Tipar `set` y `updateSetting`
 - [ ] `useSyncStore.ts` - Tipar callbacks
 - [ ] `export.ts` - Tipar `workbook`, `worksheet`, `data`
 - [ ] `useReports.ts` - Tipar respuestas de Supabase
 
 **Prioridad 2 - Hooks y Services (~200 any):**
+
 - [ ] Tipar todos los `useCallback` con tipos explícitos
 - [ ] Tipar respuestas de `supabase.*` queries
 - [ ] Tipar `db.*` operaciones de Dexie
 
 **Prioridad 3 - Componentes (~300 any):**
+
 - [ ] Tipar `onClick`, `onChange` handlers
 - [ ] Tipar `e: any` en event handlers → `e: React.ChangeEvent<HTMLInputElement>`
 
@@ -205,6 +348,7 @@ const config: CloudConfig = getSettings().cloudConfig;
 **Hook actual:** `src/features/events/hooks/useEventDatabase.ts`
 
 **División propuesta:**
+
 ```
 src/features/events/hooks/
 ├── useEventDatabase.ts               [554 líneas] → [150 líneas] (ORCHESTRATION)
@@ -215,6 +359,7 @@ src/features/events/hooks/
 ```
 
 **Cambios específicos:**
+
 - [ ] Extraer `getEventStats()` a `useEventQueries.ts`
 - [ ] Extraer `createEvent()`, `updateEvent()`, `deleteEvent()` a `useEventMutations.ts`
 - [ ] Extraer lógica de sync a `useEventSync.ts`
@@ -225,6 +370,7 @@ src/features/events/hooks/
 ### 3.2 useExpectedOrders.ts (383 líneas)
 
 **División propuesta:**
+
 ```
 src/features/expected-orders/hooks/
 ├── useExpectedOrders.ts              [383 líneas] → [150 líneas]
@@ -238,6 +384,7 @@ src/features/expected-orders/hooks/
 ### 3.3 useReports.ts (373 líneas)
 
 **División propuesta:**
+
 ```
 src/features/reports/hooks/
 ├── useReports.ts                    [373 líneas] → [150 líneas]
@@ -251,6 +398,7 @@ src/features/reports/hooks/
 ### 3.4 useHammerLogic.ts (314 líneas)
 
 **División propuesta:**
+
 ```
 src/features/hammer/hooks/
 ├── useHammerLogic.ts                [314 líneas] → [150 líneas]
@@ -272,6 +420,7 @@ Este hook está dentro del límite de 200 líneas, solo agregar JSDoc y tipos.
 ### 4.1 syncManager.ts (489 líneas)
 
 **División propuesta:**
+
 ```
 src/services/
 ├── syncManager.ts                    [489 líneas] → [150 líneas]
@@ -288,6 +437,7 @@ src/services/
 ### 4.2 supabaseSyncService.ts (466 líneas)
 
 **División propuesta:**
+
 ```
 src/services/
 ├── supabaseSyncService.ts            [466 líneas] → [150 líneas]
@@ -304,6 +454,7 @@ src/services/
 ### 4.3 dynamicSync.ts (363 líneas)
 
 **División propuesta:**
+
 ```
 src/services/
 ├── dynamicSync.ts                    [363 líneas] → [150 líneas]
@@ -318,6 +469,7 @@ src/services/
 ### 4.4 syncRegistry.ts (372 líneas)
 
 **División propuesta:**
+
 ```
 src/services/cloud/
 ├── syncRegistry.ts                   [372 líneas] → [150 líneas]
@@ -361,6 +513,7 @@ src/services/cloud/
 ### 5.2 Plan de Unificación
 
 **Paso 1: Crear PreferencesService centralizado**
+
 ```typescript
 // src/services/PreferencesService.ts
 export class PreferencesService {
@@ -371,7 +524,7 @@ export class PreferencesService {
     OPERATOR: 'logicount_operator_id',
     AUTH: 'logicount_auth',
   };
-  
+
   static get<T>(key: keyof typeof KEYS, defaultValue: T): T { ... }
   static set<T>(key: keyof typeof KEYS, value: T): void { ... }
   static remove(key: keyof typeof KEYS): void { ... }
@@ -379,6 +532,7 @@ export class PreferencesService {
 ```
 
 **Paso 2: Migrar mainAppStore a Zustand persist**
+
 ```typescript
 // src/store/mainAppStore.ts
 export const useAppStore = create<SettingsSlice & UISlice>()(
@@ -393,21 +547,20 @@ export const useAppStore = create<SettingsSlice & UISlice>()(
 ```
 
 **Paso 3: Reemplazar usos directos de localStorage**
+
 - [ ] `SlicesPage.tsx` → usar PreferencesService
-- [ ] `useEventDatabase.ts` → usar PreferencesService  
+- [ ] `useEventDatabase.ts` → usar PreferencesService
 - [ ] `useDashboard.ts` → usar PreferencesService
 
 **Paso 4: Limpiar claves huérfanas**
+
 ```typescript
 // src/services/MigrationService.ts
 export class MigrationService {
   static cleanup(): void {
     // Limpiar claves antiguas no usadas
-    const oldKeys = [
-      'logicount_old_key_1',
-      'temp_sync_data',
-    ];
-    oldKeys.forEach(key => localStorage.removeItem(key));
+    const oldKeys = ["logicount_old_key_1", "temp_sync_data"];
+    oldKeys.forEach((key) => localStorage.removeItem(key));
   }
 }
 ```
@@ -467,6 +620,7 @@ export const logger = {
 ```
 
 **Reemplazar:**
+
 - [ ] `console.error()` → `logger.error()`
 - [ ] `console.warn()` → `logger.warn()`
 - [ ] `console.log()` → `logger.debug()` o `logger.info()`
@@ -476,6 +630,7 @@ export const logger = {
 **Ya existe:** `src/services/export.ts` (refactorizado en PR#3)
 
 **Mejoras pendientes:**
+
 - [ ] Unificar `exportHammerToExcel` y `exportToExcel` usando helper
 - [ ] Crear `exportLiveConsolidation()` para ReportsPage
 - [ ] Mover helper a función exportable
@@ -515,9 +670,9 @@ export class ValidationService {
 
 ```typescript
 // useExpiryWatcher.ts:45
-const settings = getSettings();  // Línea 45
+const settings = getSettings(); // Línea 45
 // ... 100 líneas ...
-const settings = getSettings();  // Línea 145 - DUPLICADO
+const settings = getSettings(); // Línea 145 - DUPLICADO
 // ACTION: Guardar en variable y reutilizar
 ```
 
@@ -529,6 +684,7 @@ grep -rn "import.*from" src --include="*.ts" --include="*.tsx" | sort | uniq -c 
 ```
 
 **Limpieza:**
+
 - [ ] Remover imports no utilizados
 - [ ] Remover variables declaradas sin usar
 - [ ] Remover funciones exportadas sin usar
@@ -539,41 +695,42 @@ grep -rn "import.*from" src --include="*.ts" --include="*.tsx" | sort | uniq -c 
 
 ### 9.1 Variables de Identificación
 
-| Actual | Propuesto | Ubicación |
-|--------|-----------|-----------|
-| `erpOrder` | `orderId` o `erpOrderId` | Consistente |
-| `batchId` | `batchId` | Consistente ✓ |
-| `sessionId` | `sessionId` | Consistente ✓ |
-| `groupId` | `uploadGroupId` | En syncManager |
+| Actual      | Propuesto                | Ubicación      |
+| ----------- | ------------------------ | -------------- |
+| `erpOrder`  | `orderId` o `erpOrderId` | Consistente    |
+| `batchId`   | `batchId`                | Consistente ✓  |
+| `sessionId` | `sessionId`              | Consistente ✓  |
+| `groupId`   | `uploadGroupId`          | En syncManager |
 
 ### 9.2 Estados de Sincronización
 
-| Actual | Propuesto |
-|--------|-----------|
-| `'pending'` | `SyncStatus.PENDING` |
-| `'synced'` | `SyncStatus.SYNCED` |
-| `'error'` | `SyncStatus.ERROR` |
+| Actual             | Propuesto                   |
+| ------------------ | --------------------------- |
+| `'pending'`        | `SyncStatus.PENDING`        |
+| `'synced'`         | `SyncStatus.SYNCED`         |
+| `'error'`          | `SyncStatus.ERROR`          |
 | `'pending_delete'` | `SyncStatus.PENDING_DELETE` |
 
 **Crear:**
+
 ```typescript
 // src/types/sync.ts
 export enum SyncStatus {
-  PENDING = 'pending',
-  SYNCED = 'synced',
-  ERROR = 'error',
-  PENDING_DELETE = 'pending_delete',
+  PENDING = "pending",
+  SYNCED = "synced",
+  ERROR = "error",
+  PENDING_DELETE = "pending_delete",
 }
 ```
 
 ### 9.3 Acciones de Sincronización
 
-| Actual | Propuesto |
-|--------|-----------|
-| `syncToCloud()` | `syncToCloud()` ✓ Consistente |
-| `pushScansToCloud()` | `pushScans()` |
-| `performBatchUpload()` | `uploadBatch()` |
-| `reconcileReception()` | `reconcile()` ✓ |
+| Actual                 | Propuesto                     |
+| ---------------------- | ----------------------------- |
+| `syncToCloud()`        | `syncToCloud()` ✓ Consistente |
+| `pushScansToCloud()`   | `pushScans()`                 |
+| `performBatchUpload()` | `uploadBatch()`               |
+| `reconcileReception()` | `reconcile()` ✓               |
 
 ---
 
@@ -596,11 +753,11 @@ npm install -D vitest @vitejs/plugin-react jsdom @testing-library/react
 
 ### 10.3 Coverage Target
 
-| Fase | Coverage |
-|------|----------|
-| Servicios críticos | 80% |
-| Hooks | 60% |
-| Componentes UI | 40% |
+| Fase               | Coverage |
+| ------------------ | -------- |
+| Servicios críticos | 80%      |
+| Hooks              | 60%      |
+| Componentes UI     | 40%      |
 
 ---
 
@@ -653,36 +810,39 @@ npm install -D vitest @vitejs/plugin-react jsdom @testing-library/react
 
 ## 📊 TIEMPO ESTIMADO
 
-| Fase | Complejidad | Estimado |
-|------|-------------|----------|
-| FASE 1: Componentes | Alta | 8-10 horas |
-| FASE 2: TypeScript | Media | 4-6 horas |
-| FASE 3: Hooks | Alta | 6-8 horas |
-| FASE 4: Services | Alta | 6-8 horas |
-| FASE 5: Persistencia | Media | 3-4 horas |
-| FASE 6: Sync Facade | Alta | 4-6 horas |
-| FASE 7: Servicios | Baja | 2-3 horas |
-| FASE 8: Cleanup | Baja | 1-2 horas |
-| FASE 9: Naming | Baja | 1 hora |
-| FASE 10: Testing | Media | 4-6 horas |
-| **TOTAL** | | **39-53 horas** |
+| Fase                 | Complejidad | Estimado        |
+| -------------------- | ----------- | --------------- |
+| FASE 1: Componentes  | Alta        | 8-10 horas      |
+| FASE 2: TypeScript   | Media       | 4-6 horas       |
+| FASE 3: Hooks        | Alta        | 6-8 horas       |
+| FASE 4: Services     | Alta        | 6-8 horas       |
+| FASE 5: Persistencia | Media       | 3-4 horas       |
+| FASE 6: Sync Facade  | Alta        | 4-6 horas       |
+| FASE 7: Servicios    | Baja        | 2-3 horas       |
+| FASE 8: Cleanup      | Baja        | 1-2 horas       |
+| FASE 9: Naming       | Baja        | 1 hora          |
+| FASE 10: Testing     | Media       | 4-6 horas       |
+| **TOTAL**            |             | **39-53 horas** |
 
 ---
 
 ## ✅ CHECKLIST DE VERIFICACIÓN
 
 ### Antes de Comenzar:
+
 - [ ] Aprobación del plan por el usuario
 - [ ] Branch `refactor/codebase-cleanup` creado
 - [ ] Backup de estado actual (si aplica)
 
 ### Después de cada fase:
+
 - [ ] Tests pasan
 - [ ] No hay nuevos warnings de TypeScript
 - [ ] Build exitoso
 - [ ] Revisión visual de UI
 
 ### Al completar todo:
+
 - [ ] 0 компонентов > 200 líneas
 - [ ] < 50 any en total
 - [ ] 0 TODOs sin implementar
@@ -700,4 +860,3 @@ npm install -D vitest @vitejs/plugin-react jsdom @testing-library/react
 2. **"Sí, comienza con FASE 5"** - Empezar con persistencia (foundation)
 3. **"Sí, ejecuta TODO el plan"** - Ejecutar todo en orden
 4. **"Ejecuta solo FASE X"** - Ejecutar una fase específica
-
