@@ -54,8 +54,8 @@ describe('useUIStore', () => {
     it('should set active view', () => {
       const { setActiveView } = useUIStore.getState();
       
-      setActiveView('products');
-      expect(useUIStore.getState().activeView).toBe('products');
+      setActiveView('database');
+      expect(useUIStore.getState().activeView).toBe('database');
       
       setActiveView('reports');
       expect(useUIStore.getState().activeView).toBe('reports');
