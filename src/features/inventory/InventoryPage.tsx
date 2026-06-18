@@ -4,13 +4,14 @@ import { Product } from '../../types';
 import { CheckCircle2, AlertTriangle, Printer, Trash2 } from 'lucide-react';
 import { ProductList } from './components/ProductList';
 import { DatabaseHeader } from './components/DatabaseHeader';
-import { InventoryModals } from './components/InventoryModals';
+import { ProductForm } from './components/ProductForm';
+import { ImportTools } from './components/ImportTools';
+import { BarcodeLabelModal } from '../../shared/components/ui/BarcodeLabelModal';
 import { useProductDatabase } from './hooks/useProductDatabase';
 import { thermalPrinter } from '../../services/thermalPrinterService';
 import { handlePrintLabels } from '../expiry/utils/expiryUtils';
 import { toast } from 'sonner';
 import { MassActionsPanel } from '../../shared/components/ui/MassActionsPanel';
-import { FeedbackMessage } from './components/FeedbackMessage';
 
 export const Database: React.FC = () => {
   const { state, actions } = useProductDatabase();
@@ -129,7 +130,6 @@ export const Database: React.FC = () => {
         onPolicyFilterChange={actions.setPolicyFilter}
       />
 
-      <FeedbackMessage feedback={state.feedback} />
 
       <div className="flex-1 min-h-0 w-full max-w-6xl mx-auto px-4 py-4">
         <ProductList 
@@ -154,21 +154,31 @@ export const Database: React.FC = () => {
         ]}
       />
 
-      <InventoryModals 
-        isFormOpen={isFormOpen}
-        setIsFormOpen={setIsFormOpen}
-        isImportOpen={isImportOpen}
-        setIsImportOpen={setIsImportOpen}
-        editingProduct={editingProduct}
-        onSaveSuccess={msg => actions.showFeedback('success', msg)}
-        onImportComplete={(count) => actions.showFeedback('success', `${count} productos importados`)}
-        printingProduct={printingProduct}
-        isLabelModalOpen={isLabelModalOpen}
-        setIsLabelModalOpen={setIsLabelModalOpen}
-        isPrinting={isPrinting}
-        onPrintThermal={handlePrintThermal}
-        onPrintPDF={handlePrintPDF}
+      <ProductForm
+        isOpen={isFormOpen}
+        onClose={() => setIsFormOpen(false)}
+        initialData={editingProduct}
+        onSaveSuccess={(msg) => toast.success(msg)}
       />
+
+      <ImportTools
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        onImportComplete={(count) => toast.success(`${count} productos importados`)}
+      />
+
+      {printingProduct && (
+        <BarcodeLabelModal
+          isOpen={isLabelModalOpen}
+          onClose={() => setIsLabelModalOpen(false)}
+          barcode={printingProduct.barcode}
+          productName={printingProduct.name}
+          quantity={1}
+          isPrinting={isPrinting}
+          onPrintThermal={handlePrintThermal}
+          onPrintPDF={handlePrintPDF}
+        />
+      )}
     </div>
   );
 };

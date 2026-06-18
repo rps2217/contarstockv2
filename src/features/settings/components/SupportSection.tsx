@@ -5,7 +5,6 @@ import { SettingsSection, SettingsButton } from './common/SettingsElements';
 import { DiagnosticsCard } from './support/DiagnosticsCard';
 import { MaintenanceCard } from './support/MaintenanceCard';
 import { BackupCard } from './support/BackupCard';
-import { UnitTestsCard } from './support/UnitTestsCard';
 import { KernelSystemCard } from './support/KernelSystemCard';
 import { SystemLogsModal } from './support/SystemLogsModal';
 
@@ -29,7 +28,6 @@ export const SupportSection: React.FC = () => {
   return (
     <SettingsSection title="Kernel & Soporte">
       <DiagnosticsCard />
-      <UnitTestsCard />
       <MaintenanceCard />
       <KernelSystemCard />
       <BackupCard />

@@ -7,7 +7,6 @@ import { useToastStore } from '../../store/useToastStore';
 import { normalizeSku } from '../../services/utils';
 import { useExpiryDatabase, ExpiryItem } from './hooks/useExpiryDatabase';
 import { useScannerEngine } from '../../hooks/useScannerEngine';
-import { SoundFX } from '../../services/audio';
 import { differenceInDays, format } from 'date-fns';
 import { useFeedbackSystem } from '../../hooks/useFeedbackSystem';
 import { useAppStore } from '@/store/mainAppStore';
@@ -81,7 +80,7 @@ export const ExpiryPage: React.FC = () => {
       if (e.altKey && e.key.toLowerCase() === 'c') {
         e.preventDefault();
         engine.capture.setIsCameraActive(prev => !prev);
-        SoundFX.play('increment');
+        
         return;
       }
 
@@ -90,7 +89,7 @@ export const ExpiryPage: React.FC = () => {
         e.preventDefault();
         setFilterCritico(prev => !prev);
         if (filterVencido) setFilterVencido(false);
-        SoundFX.play('increment');
+        
         return;
       }
 
@@ -99,7 +98,7 @@ export const ExpiryPage: React.FC = () => {
         e.preventDefault();
         setFilterVencido(prev => !prev);
         if (filterCritico) setFilterCritico(false);
-        SoundFX.play('increment');
+        
         return;
       }
 
@@ -131,12 +130,12 @@ export const ExpiryPage: React.FC = () => {
         quantity: 1
       });
       
-      SoundFX.play('success');
+      
       addToast(navigator.onLine ? 'Vencimiento registrado' : 'Guardado en cola', navigator.onLine ? 'success' : 'info');
       engine.resetScanner();
       setSelectedMm(null);
     } catch (error) {
-      SoundFX.play('error');
+      
       addToast('Error al guardar', 'error');
     } finally {
       setIsSubmitting(false);
@@ -148,7 +147,7 @@ export const ExpiryPage: React.FC = () => {
       const itemToDelete = state.allItems.find(i => i.id === id);
       if (itemToDelete) {
         await actions.handleRemoveItem(itemToDelete);
-        SoundFX.play('delete');
+        
       }
     }
   }, [state.allItems, actions]);

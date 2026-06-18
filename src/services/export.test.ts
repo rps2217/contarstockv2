@@ -17,13 +17,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock de xlsx
+const mockWriteFile = vi.fn();
 vi.mock('xlsx', () => ({
   utils: {
     json_to_sheet: vi.fn(() => ({ '!cols': [] })),
     book_new: vi.fn(() => ({})),
     book_append_sheet: vi.fn(),
   },
-  writeFile: vi.fn(),
+  writeFile: mockWriteFile,
 }));
 
 // Mock de papaparse
@@ -31,14 +32,15 @@ vi.mock('papaparse', () => ({
   unparse: vi.fn(() => 'mock,csv,data'),
 }));
 
-// Tipos de prueba
-interface MockItem {
+// Tipos de prueba - debe coincidir con HammerExportItem
+type MockItem = {
   barcode: string;
   name: string;
   loc?: string;
   totalQuantity: number;
   expectedQty?: number;
-}
+  lastTimestamp: number;
+};
 
 describe('exportHammerToExcel', () => {
   beforeEach(() => {
@@ -61,9 +63,8 @@ describe('exportHammerToExcel', () => {
 
     await exportHammerToExcel('BATCH-001', mockItems);
     
-    // Verificar que XLSX.writeFile fue llamado
-    const XLSX = await import('xlsx');
-    expect(XLSX.writeFile).toHaveBeenCalled();
+    // Verificar que writeFile fue llamado
+    expect(mockWriteFile).toHaveBeenCalled();
   });
 
   it('debe manejar items sin expectedQty', async () => {
@@ -74,14 +75,13 @@ describe('exportHammerToExcel', () => {
         barcode: 'SKU002',
         name: 'Producto B',
         totalQuantity: 5,
-        lastTimestamp: 0, // Sin timestamp
+        lastTimestamp: Date.now(),
       },
     ];
 
     await exportHammerToExcel('BATCH-002', mockItems);
     
-    const XLSX = await import('xlsx');
-    expect(XLSX.writeFile).toHaveBeenCalled();
+    expect(mockWriteFile).toHaveBeenCalled();
   });
 
   it('debe calcular diferencia correctamente', async () => {
@@ -100,8 +100,7 @@ describe('exportHammerToExcel', () => {
     await exportHammerToExcel('BATCH-003', mockItems);
     
     // Diferencia esperada: 15 - 10 = 5
-    const XLSX = await import('xlsx');
-    const call = XLSX.writeFile.mock.calls[0];
+    const call = mockWriteFile.mock.calls[0];
     expect(call).toBeDefined();
   });
 
@@ -111,8 +110,7 @@ describe('exportHammerToExcel', () => {
     const batchId = 'TEST-BATCH-123';
     await exportHammerToExcel(batchId, []);
     
-    const XLSX = await import('xlsx');
-    const call = XLSX.writeFile.mock.calls[0];
+    const call = mockWriteFile.mock.calls[0];
     const fileName = call[1];
     
     expect(fileName).toContain(batchId);

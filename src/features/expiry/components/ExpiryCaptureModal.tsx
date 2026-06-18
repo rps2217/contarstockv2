@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CornerDownLeft, Loader2, X } from 'lucide-react';
-import { SoundFX } from '../../../services/audio';
 
 interface ExpiryCaptureModalProps {
   isOpen: boolean;
@@ -76,7 +75,7 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
         if (yearAccumulator.length === 4) {
           if (matchedYear >= 2025 && matchedYear <= 2035) {
             setSelectedYyyy(matchedYear);
-            SoundFX.play('increment');
+            
             yearAccumulator = '';
           } else {
             yearAccumulator = yearAccumulator.slice(-1);
@@ -88,14 +87,14 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
         if (monthAccumulator.length === 2) {
           if (matchedMonth >= 1 && matchedMonth <= 12) {
             setSelectedMm(matchedMonth);
-            SoundFX.play('increment');
+            
             monthAccumulator = '';
           } else {
             monthAccumulator = monthAccumulator.slice(-1);
             const singleDigitMonth = parseInt(monthAccumulator);
             if (singleDigitMonth >= 1 && singleDigitMonth <= 9) {
               setSelectedMm(singleDigitMonth);
-              SoundFX.play('increment');
+              
             }
           }
         } else if (monthAccumulator.length === 1) {
@@ -170,7 +169,7 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
                   {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
                     <button
                       key={m}
-                      onClick={() => { setSelectedMm(m); SoundFX.play('increment'); }}
+                      onClick={() => { setSelectedMm(m);  }}
                       className={`h-12 rounded-xl font-black text-lg transition-all border-2 active:scale-90 ${
                         selectedMm === m 
                           ? 'bg-blue-600 border-blue-400 text-white shadow-[0_0_20px_rgba(37,99,235,0.4)] scale-105 z-10' 
@@ -193,7 +192,7 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
                   {[2025, 2026, 2027, 2028, 2029, 2030].map(y => (
                     <button
                       key={y}
-                      onClick={() => { setSelectedYyyy(y); SoundFX.play('increment'); }}
+                      onClick={() => { setSelectedYyyy(y);  }}
                       className={`h-14 rounded-xl font-black text-xl transition-all border-2 flex items-center justify-center italic tracking-tighter active:scale-95 ${
                         selectedYyyy === y 
                           ? 'bg-emerald-600 border-emerald-400 text-white shadow-[0_0_20px_rgba(5,150,105,0.4)] scale-105 z-10' 

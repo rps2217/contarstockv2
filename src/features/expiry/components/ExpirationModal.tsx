@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Check, Barcode, Calendar, Zap, AlertCircle, RefreshCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { SoundFX } from '../../../services/audio';
 import { normalizeSku } from '../../../services/utils';
 
 interface ExpirationModalProps {
@@ -148,7 +147,7 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
   const handleSave = async () => {
     if (barcode && selectedMm && selectedYyyy && !isSubmitting) {
       setIsSubmitting(true);
-      SoundFX.play('success');
+      
       try {
         await onComplete({
           barcode,
@@ -172,7 +171,7 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
         setIsSubmitting(false);
       }
     } else if (!isSubmitting) {
-      SoundFX.play('error');
+      
     }
   };
 
@@ -297,7 +296,7 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
                     key={m}
                     onClick={() => {
                       setSelectedMm(m);
-                      SoundFX.play('increment');
+                      
                     }}
                     className={`h-14 rounded-xl font-black text-xl transition-all border-2 ${
                       selectedMm === m 
@@ -320,7 +319,7 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
                     key={y}
                     onClick={() => {
                       setSelectedYyyy(y);
-                      SoundFX.play('increment');
+                      
                     }}
                     className={`h-20 rounded-2xl font-black text-2xl transition-all border-2 flex items-center justify-center italic tracking-tighter ${
                       selectedYyyy === y 
