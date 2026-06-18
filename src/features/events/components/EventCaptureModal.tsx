@@ -8,7 +8,6 @@ import {
   RefreshCw 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { SoundFX } from '../../../services/audio';
 import { useToastStore } from '../../../store/useToastStore';
 import { Product } from '../../../types';
 
@@ -101,11 +100,11 @@ export const EventCaptureModal: React.FC<EventCaptureModalProps> = React.memo(({
         timestamp: new Date().toISOString()
       });
       
-      SoundFX.play('success');
+      
       addToast('Evento registrado correctamente', 'success');
       onClose();
     } catch (error) {
-      SoundFX.play('error');
+      
       addToast('Error al guardar el evento', 'error');
     } finally {
       setIsSubmitting(false);
@@ -239,7 +238,7 @@ export const EventCaptureModal: React.FC<EventCaptureModalProps> = React.memo(({
                       key={type}
                       onClick={() => {
                         setSelectedEvent(type);
-                        SoundFX.play('increment');
+                        
                       }}
                       type="button"
                       className={`py-3 px-3 rounded-xl text-[10px] font-black transition-all border-2 ${

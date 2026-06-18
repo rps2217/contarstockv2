@@ -21,7 +21,6 @@ import { useToastStore } from '../../store/useToastStore';
 import { normalizeSku } from '../../services/utils';
 import { useEventDatabase } from './hooks/useEventDatabase';
 import { useScannerEngine } from '../../hooks/useScannerEngine';
-import { SoundFX } from '../../services/audio';
 import { useSyncStore } from '../../store/useSyncStore';
 import { SmartDock } from '../../components/SmartDock';
 import { CameraScanner } from '../../components/CameraScanner';
@@ -50,7 +49,7 @@ export const EventCapturePage: React.FC = () => {
       const itemToDelete = db.processedEvents.find(i => i.id === id);
       if (itemToDelete) {
         await db.actions.handleRemoveItem(itemToDelete);
-        SoundFX.play('delete');
+        
       }
     }
   }, [db.processedEvents, db.actions]);
