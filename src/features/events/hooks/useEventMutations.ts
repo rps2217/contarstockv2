@@ -183,7 +183,7 @@ export function useEventMutations({
         await eventRepository.delete(id);
       }
 
-      await eventRepository.save({ ...finalData, id: newId, syncStatus: 'synced' });
+      await eventRepository.save({ ...finalData, id: newId, syncStatus: 'synced' } as any);
       await supabaseSyncService.pushChange(tableName, newId, finalData);
       addToast('Evento actualizado correctamente', 'success');
     } catch (error) {
@@ -209,7 +209,7 @@ export function useEventMutations({
     try {
       const item = baseProcessedData.find(e => e.id === id);
       if (item) {
-        await eventRepository.save({ ...item, isAdjusted, syncStatus: 'synced' });
+        await eventRepository.save({ ...item, isAdjusted, syncStatus: 'synced' } as any);
       }
       await supabaseSyncService.pushChange(tableName, id, { isAdjusted });
       addToast('Estado actualizado', 'success');
@@ -224,7 +224,7 @@ export function useEventMutations({
     try {
       const item = baseProcessedData.find(e => e.id === id);
       if (item) {
-        await eventRepository.save({ ...item, destino, syncStatus: 'synced' });
+        await eventRepository.save({ ...item, destino, syncStatus: 'synced' } as any);
       }
       await supabaseSyncService.pushChange(tableName, id, { destino });
       addToast('Destino actualizado', 'success');
@@ -261,7 +261,7 @@ export function useEventMutations({
         };
       });
 
-      await eventRepository.bulkSave(processed);
+      await eventRepository.bulkSave(processed as any);
 
       const BATCH_SIZE = 50;
       for (let i = 0; i < processed.length; i += BATCH_SIZE) {
@@ -303,7 +303,7 @@ export function useEventMutations({
       for (const id of ids) {
         const item = baseProcessedData.find(e => e.id === id);
         if (item) {
-          await eventRepository.save({ ...item, ...updates, syncStatus: 'synced' });
+          await eventRepository.save({ ...item, ...updates, syncStatus: 'synced' } as any);
           await supabaseSyncService.pushChange(tableName, id, finalData);
         }
       }

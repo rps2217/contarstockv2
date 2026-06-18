@@ -4,10 +4,11 @@
 
 import React from 'react';
 import { SYNC_STATUS_COLORS, SYNC_STATUS_LABELS } from '../constants/syncConstants';
-import { SyncState } from '../types/Sync';
+
+type SyncStatusValue = 'synced' | 'pending' | 'error' | 'never' | 'syncing';
 
 interface SyncStatusBadgeProps {
-  status: SyncState | 'synced' | 'pending' | 'error' | 'never' | 'syncing';
+  status: SyncStatusValue;
   showLabel?: boolean;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
@@ -19,8 +20,8 @@ export const SyncStatusBadge: React.FC<SyncStatusBadgeProps> = ({
   size = 'md',
   className = '',
 }) => {
-  const colorClass = SYNC_STATUS_COLORS[status] || 'bg-gray-400';
-  const label = SYNC_STATUS_LABELS[status] || status;
+  const colorClass = (SYNC_STATUS_COLORS as Record<string, string>)[status] || 'bg-gray-400';
+  const label = (SYNC_STATUS_LABELS as Record<string, string>)[status] || status;
 
   const sizeClasses = {
     sm: 'w-2 h-2',

@@ -2,7 +2,12 @@ import { db } from '../db';
 import { CountingSession } from '../types';
 import { CountingSessionSchema } from '../schemas/database';
 
+/**
+ * Repository para CountingSession
+ * Maneja sesiones de conteo/inventario
+ */
 export class SessionRepository {
+  // Metodos estaticos para compatibilidad hacia atras
   static async save(session: CountingSession): Promise<void> {
     const record = CountingSessionSchema.parse({
       ...session,
@@ -31,6 +36,10 @@ export class SessionRepository {
     return await db.sessions.toArray();
   }
 
+  static async get(id: string): Promise<CountingSession | null> {
+    return (await db.sessions.get(id)) ?? null;
+  }
+
   static async getByType(type: string): Promise<CountingSession[]> {
     return await db.sessions.where('sessionType').equals(type).toArray();
   }
@@ -38,16 +47,16 @@ export class SessionRepository {
   static async getSessionsByType(type: string, query: string = '', limitOptions?: number): Promise<CountingSession[]> {
     let collection = db.sessions.where('sessionType').equals(type);
     let results = await collection.reverse().toArray();
-    
+
     if (query) {
       const q = query.toLowerCase();
-      results = results.filter(s => 
-        s.id.toLowerCase().includes(q) || 
-        (s.erpOrder?.toLowerCase().includes(q) || false) || 
+      results = results.filter(s =>
+        s.id.toLowerCase().includes(q) ||
+        (s.erpOrder?.toLowerCase().includes(q) || false) ||
         (s.logisticsLabel?.toLowerCase().includes(q) || false)
       );
     }
-    
+
     if (limitOptions) {
       return results.slice(0, limitOptions);
     }
@@ -69,8 +78,6 @@ export class SessionRepository {
     endTime?: number
   ): Promise<CountingSession[]> {
     let collection = db.sessions.where('sessionType').equals('reception');
-    
-    // We fetch and then filter to maintain index usage on sessionType
     let results = await collection.reverse().toArray();
 
     if (startTime || endTime || searchQuery) {
@@ -93,7 +100,7 @@ export class SessionRepository {
   }
 
   static async updateSyncTimestamp(id: string, timestamp: number = Date.now()): Promise<void> {
-    await db.sessions.update(id, { 
+    await db.sessions.update(id, {
       lastSyncTimestamp: timestamp,
       syncStatus: 'synced'
     });
@@ -138,8 +145,8 @@ export class SessionRepository {
   }
 
   static async markAsCompleted(id: string): Promise<void> {
-    await db.sessions.update(id, { 
-      status: 'completed', 
+    await db.sessions.update(id, {
+      status: 'completed',
       lastSyncTimestamp: Date.now(),
       syncStatus: 'pending'
     });
@@ -153,9 +160,73 @@ export class SessionRepository {
   }
 
   static async updatePhotoUrl(id: string, photoUrl: string): Promise<void> {
-    await db.sessions.update(id, { 
+    await db.sessions.update(id, {
       photoUrl,
       syncStatus: 'pending'
     });
   }
+
+  static async getActive(): Promise<CountingSession[]> {
+    return await db.sessions.where('status').equals('active').toArray();
+  }
+
+  static async getByStatus(status: CountingSession['status']): Promise<CountingSession[]> {
+    return await db.sessions.where('status').equals(status).toArray();
+  }
+
+  static async getByOperator(operatorId: string): Promise<CountingSession[]> {
+    return await db.sessions.where('operatorId').equals(operatorId).toArray();
+  }
+
+  static async getRecent(limit: number = 50): Promise<CountingSession[]> {
+    return await db.sessions.orderBy('createdAt').reverse().limit(limit).toArray();
+  }
+
+  static async getByDateRange(startDate: number, endDate: number): Promise<CountingSession[]> {
+    return await db.sessions
+      .filter(s => s.createdAt >= startDate && s.createdAt <= endDate)
+      .toArray();
+  }
+
+  static async updateAudit(id: string, auditStatus: CountingSession['auditStatus'], score: number): Promise<void> {
+    await db.sessions.update(id, {
+      auditStatus,
+      auditScore: score,
+      auditTimestamp: Date.now()
+    });
+  }
+
+  static async markSynced(id: string): Promise<void> {
+    await db.sessions.update(id, { lastSyncTimestamp: Date.now(), syncStatus: 'synced' });
+  }
 }
+
+// Singleton para nuevo codigo
+export const sessionRepository = {
+  save: SessionRepository.save,
+  saveBatch: SessionRepository.saveBatch,
+  getById: SessionRepository.getById,
+  getByIds: SessionRepository.getByIds,
+  getAll: SessionRepository.getAll,
+  get: SessionRepository.get,
+  getByType: SessionRepository.getByType,
+  getSessionsByType: SessionRepository.getSessionsByType,
+  getSyncedCount: SessionRepository.getSyncedCount,
+  getPendingSyncCount: SessionRepository.getPendingSyncCount,
+  getReceptionHistory: SessionRepository.getReceptionHistory,
+  updateSyncTimestamp: SessionRepository.updateSyncTimestamp,
+  delete: SessionRepository.delete,
+  deleteMany: SessionRepository.deleteMany,
+  deleteDraftReceptionSessions: SessionRepository.deleteDraftReceptionSessions,
+  getDraftReceptionSessions: SessionRepository.getDraftReceptionSessions,
+  markAsCompleted: SessionRepository.markAsCompleted,
+  update: SessionRepository.update,
+  updatePhotoUrl: SessionRepository.updatePhotoUrl,
+  getActive: SessionRepository.getActive,
+  getByStatus: SessionRepository.getByStatus,
+  getByOperator: SessionRepository.getByOperator,
+  getRecent: SessionRepository.getRecent,
+  getByDateRange: SessionRepository.getByDateRange,
+  updateAudit: SessionRepository.updateAudit,
+  markSynced: SessionRepository.markSynced,
+};

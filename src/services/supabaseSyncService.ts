@@ -6,7 +6,7 @@ import { handleError } from './types';
 type SupabaseRow = Record<string, unknown>;
 
 // Interfaz para repositorios locales
-interface LocalTableRepository {
+export interface LocalTableRepository {
   get?: (id: string) => Promise<SupabaseRow | undefined>;
   put?: (row: SupabaseRow, tableName?: string) => Promise<void>;
   save?: (row: SupabaseRow, tableName?: string) => Promise<void>;
@@ -143,7 +143,7 @@ export const supabaseSyncService = {
   /**
    * Pushes a batch of changes to Supabase with automatic column-error recovery.
    */
-  async pushBatch(tableName: string, rows: any[]) {
+  async pushBatch<T extends object>(tableName: string, rows: T[]) {
     if (!navigator.onLine) {
         return { success: false, error: 'Offline', isOffline: true };
     }
@@ -221,7 +221,7 @@ export const supabaseSyncService = {
 
         return { success: true, rows_written: rows.length };
       } catch (err: unknown) {
-        const errMsg = (e as Error).message || '';
+        const errMsg = (err as Error).message || '';
         
         // Si es un error de columna y no fue atrapado arriba
         if (errMsg.includes("column") && (errMsg.includes("not find") || errMsg.includes("does not exist") || errMsg.includes("unknown"))) {
@@ -238,15 +238,15 @@ export const supabaseSyncService = {
            }
         }
 
-        const fullErrMsg = (e as Error).message || (e.toString ? e.toString() : '');
+const fullErrMsg = (err as Error).message || String(err);
         if (fullErrMsg.includes('Failed to fetch') || fullErrMsg.includes('NetworkError') || fullErrMsg.includes('net::ERR')) {
           logNetworkOffline(tableName);
           return { success: false, error: 'Offline', isOffline: true };
         }
 
         if (attempts >= maxRetries - 1) {
-          logger.error(`SYNC_BATCH_PUSH_FAIL: ${tableName} (Tras ${attempts} reintentos)`, e);
-          return { success: false, error: this.formatError(e) };
+          logger.error(`SYNC_BATCH_PUSH_FAIL: ${tableName} (Tras ${attempts} reintentos)`, String(err));
+          return { success: false, error: this.formatError(err) };
         }
         
         // Error genérico: esperar un poco y reintentar si no es un error de esquema
@@ -260,7 +260,7 @@ export const supabaseSyncService = {
   /**
    * Removes undefined fields from object for Supabase/PostgreSQL compatibility.
    */
-  sanitizeData(data: any): any {
+  sanitizeData(data: SupabaseRow): SupabaseRow {
     if (!data || typeof data !== 'object') return data;
     const result = { ...data };
     
@@ -308,8 +308,8 @@ export const supabaseSyncService = {
         return;
       } catch (err: unknown) {
         if (attempts >= filters.length - 1) {
-          logger.error(`SYNC_DELETE_FAIL: ${tableName}`, e);
-          throw e;
+          logger.error(`SYNC_DELETE_FAIL: ${tableName}`, String(err));
+          throw err;
         }
         attempts++;
       }
@@ -333,13 +333,13 @@ export const supabaseSyncService = {
         if (error2) throw error2;
       }
       return { success: true };
-    } catch (e) {
-      logger.error(`CLEAR_TABLE_FAIL: ${tableName}`, e);
-      throw e;
+    } catch (err: unknown) {
+      logger.error(`CLEAR_TABLE_FAIL: ${tableName}`, String(err));
+      throw err;
     }
   },
 
-  async query(tableName: string, field: string, value: any) {
+  async query(tableName: string, field: string, value: string | number) {
     if (!navigator.onLine) return { success: false, data: null, error: 'Offline', isOffline: true };
     try {
       const { data, error } = await supabase
@@ -356,9 +356,9 @@ export const supabaseSyncService = {
         throw error;
       }
       return { success: true, rows: data || [] };
-    } catch (e) {
-      logger.error(`SYNC_QUERY_FAIL: ${tableName}`, e);
-      return { success: false, rows: [], error: this.formatError(e) };
+    } catch (err: unknown) {
+      logger.error(`SYNC_QUERY_FAIL: ${tableName}`, String(err));
+      return { success: false, rows: [], error: this.formatError(err) };
     }
   },
 
@@ -367,7 +367,7 @@ export const supabaseSyncService = {
         return { success: false, rows: [], error: 'Offline', isOffline: true };
     }
     const fetchWithPagination = async (useLimit: boolean, fromDate?: string) => {
-      let allData: any[] = [];
+      let allData: SupabaseRow[] = [];
       let from = 0;
       const step = 1000;
       let hasMore = true;
@@ -416,18 +416,18 @@ export const supabaseSyncService = {
       } catch (err: unknown) {
         // Fallback: Si falla el filtrado por fecha, intentar traer todo sin filtro de forma segura
         if (lastSyncDate) {
-            logger.warn('SYNC', `Incremental sync failed for ${tableName}, falling back to full sync. Reason: ${(e as Error).message}`);
+            logger.warn('SYNC', `Incremental sync failed for ${tableName}, falling back to full sync. Reason: ${(err as Error).message}`);
             const data = await fetchWithPagination(true);
             if (typeof data === 'object' && 'isMissing' in data) {
                return { success: false, rows: [], error: 'Table not found', isMissing: true };
             }
             return { success: true, rows: data as any[] };
         } else {
-            throw e;
+            throw err;
         }
       }
     } catch (err: unknown) {
-      const errMsg = (e as Error).message || (e.toString ? e.toString() : '');
+const errMsg = (err as Error).message || String(err);
       
       // Handle network errors gracefully
       if (errMsg.includes('Failed to fetch') || errMsg.includes('NetworkError') || errMsg.includes('net::ERR')) {
@@ -440,8 +440,8 @@ export const supabaseSyncService = {
         logger.info('SYNC', `Tabla ${tableName} no encontrada en Supabase. Omitiendo descarga.`);
         return { success: false, rows: [], error: 'Table not found', isMissing: true };
       }
-      logger.error(`SYNC_PULL_FAIL: ${tableName}`, e);
-      return { success: false, rows: [], error: this.formatError(e) };
+      logger.error(`SYNC_PULL_FAIL: ${tableName}`, String(err));
+      return { success: false, rows: [], error: this.formatError(err) };
     }
   },
 
@@ -474,9 +474,9 @@ export const supabaseSyncService = {
         .getPublicUrl(path);
 
       return { success: true, fileUrl: publicUrl };
-    } catch (e) {
-      logger.error('PHOTO_UPLOAD_FAIL', e);
-      return { success: false, error: this.formatError(e) };
+    } catch (err: unknown) {
+      logger.error('PHOTO_UPLOAD_FAIL', String(err));
+      return { success: false, error: this.formatError(err) };
     }
   }
 };

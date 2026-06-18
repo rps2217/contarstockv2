@@ -8,7 +8,7 @@ import { SoundFX } from '../../../services/audio';
 import { toast } from 'sonner';
 import { SyncLogsModal } from './SyncLogsModal';
 import { SupabaseAuditorModal } from './SupabaseAuditorModal';
-import { useSyncStore } from '../../../store/useSyncStore';
+import { useSyncStore } from '../../sync/store/useSyncStore';
 
 interface Props {
   settings: AppSettings;

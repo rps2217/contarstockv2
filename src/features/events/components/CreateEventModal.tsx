@@ -225,7 +225,7 @@ export const CreateEventModal: React.FC<Props> = ({
 
 interface ItemsListProps {
   items: Array<{ barcode: string; productName: string; providerName?: string; quantity: number }>;
-  onRemove: (barcode: string) => void;
+  onRemove: (index: number) => void;
   theme: 'dark' | 'light' | 'high-contrast';
   isEditing: boolean;
 }
@@ -236,7 +236,7 @@ const ItemsList: React.FC<ItemsListProps> = ({ items, onRemove, theme, isEditing
       Productos en este registro
     </h3>
     <div className="grid grid-cols-1 gap-2">
-      {items.map((item) => (
+      {items.map((item, itemIndex) => (
         <motion.div
           layout
           key={item.barcode}
@@ -259,7 +259,7 @@ const ItemsList: React.FC<ItemsListProps> = ({ items, onRemove, theme, isEditing
           {!isEditing && (
             <button
               type="button"
-              onClick={() => onRemove(item.barcode)}
+              onClick={() => onRemove(itemIndex)}
               className="w-8 h-8 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-500 hover:bg-rose-500 hover:text-white transition-all opacity-0 group-hover:opacity-100"
             >
               <X className="w-4 h-4" />

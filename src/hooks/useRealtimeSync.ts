@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
 import { supabaseSyncService } from '../services/supabaseSyncService';
-import type { Table } from 'dexie';
+import type { LocalTableRepository } from '../services/supabaseSyncService';
 
-export const useRealtimeSync = (tableName: string, localTable: Table<unknown>) => {
+export const useRealtimeSync = (tableName: string, localTable: LocalTableRepository) => {
   useEffect(() => {
     const unsubscribe = supabaseSyncService.startSync(tableName, localTable);
     return () => unsubscribe();

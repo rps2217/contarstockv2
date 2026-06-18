@@ -23,7 +23,6 @@ import { AnimatePresence } from 'motion/react';
 export const EventManagementPage: React.FC = () => {
   const { settings } = useAppStore();
   const { ui, actions: uiActions, db } = useEventUI();
-  const { state, actions } = db;
   const navigate = useNavigate();
 
   const pendingRef = useRef<HTMLDivElement>(null);
@@ -35,7 +34,7 @@ export const EventManagementPage: React.FC = () => {
     getScrollElement: () => pendingRef.current,
     estimateSize: (index) => {
       if (ui.pendingGrouped[index].type === 'header') return 60;
-      const baseHeight = state.preferences.compactView ? 100 : 160;
+      const baseHeight = db.preferences.compactView ? 100 : 160;
       return ui.expandedPanel === 'pending' ? baseHeight * 1.2 : baseHeight;
     },
     overscan: 5,
@@ -46,7 +45,7 @@ export const EventManagementPage: React.FC = () => {
     getScrollElement: () => destinedRef.current,
     estimateSize: (index) => {
       if (ui.destinedGrouped[index].type === 'header') return 60;
-      const baseHeight = state.preferences.compactView ? 100 : 160;
+      const baseHeight = db.preferences.compactView ? 100 : 160;
       return ui.expandedPanel === 'destined' ? baseHeight * 1.2 : baseHeight;
     },
     overscan: 5,
@@ -57,7 +56,7 @@ export const EventManagementPage: React.FC = () => {
     getScrollElement: () => adjustedRef.current,
     estimateSize: (index) => {
       if (ui.adjustedGrouped[index].type === 'header') return 60;
-      const baseHeight = state.preferences.compactView ? 100 : 160;
+      const baseHeight = db.preferences.compactView ? 100 : 160;
       return ui.expandedPanel === 'adjusted' ? baseHeight * 1.2 : baseHeight;
     },
     overscan: 5,
@@ -68,13 +67,10 @@ export const EventManagementPage: React.FC = () => {
     const confirm = window.confirm(`¿RETIRAR ${item.productName}? ESTA ACCIÓN ES IRREVERSIBLE.`);
     if (confirm) {
       try {
-        actions.setPendingOperations((p: number) => p + 1);
-        await actions.deleteEvent(item.id);
+        await db.actions.deleteEvent(item.id);
         toast.success('Registro eliminado correctamente');
       } catch (error: any) {
         toast.error(error.message || 'Error al eliminar registro');
-      } finally {
-        actions.setPendingOperations((p: number) => Math.max(0, p - 1));
       }
     }
   };
@@ -85,8 +81,8 @@ export const EventManagementPage: React.FC = () => {
     }`}>
       {/* HEADER */}
       <EventHeader 
-        totalCount={state.totalCount}
-        pendingOperations={state.pendingOperations}
+        totalCount={db.totalCount}
+        pendingOperations={db.pendingOperations}
         isSyncing={ui.isSyncing}
         theme={settings.theme}
         onNavigateExpiry={() => navigate('/expiry')}
@@ -95,8 +91,8 @@ export const EventManagementPage: React.FC = () => {
       >
         <div className="flex flex-col gap-3">
           <ManagementSearchBar 
-            searchQuery={state.searchQuery}
-            setSearchQuery={actions.setSearchQuery}
+            searchQuery={db.searchQuery}
+            setSearchQuery={db.actions.setSearchQuery}
             onOpenFilters={() => uiActions.setIsFilterDrawerOpen(!ui.isFilterDrawerOpen)}
             onOpenAdd={() => {
               uiActions.setEditingItem(null);
@@ -114,8 +110,8 @@ export const EventManagementPage: React.FC = () => {
               <EventFilterDrawer 
                 isOpen={ui.isFilterDrawerOpen}
                 onClose={() => uiActions.setIsFilterDrawerOpen(false)}
-                eventTypes={state.eventTypes}
-                selectedEvents={state.selectedEvents}
+                eventTypes={db.eventTypes}
+                selectedEvents={db.selectedEvents}
                 onToggleEvent={uiActions.handleToggleEvent}
                 onClearFilters={uiActions.handleClearFilters}
                 activeFiltersCount={ui.activeFiltersCount}
@@ -151,7 +147,7 @@ export const EventManagementPage: React.FC = () => {
               }`}
             >
               <span className={`w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0 ${ui.expandedPanel === 'pending' ? 'ring-2 ring-white/35 animate-ping' : ''}`} />
-              Pend ({state.pendingCount})
+              Pend ({db.pendingCount})
             </button>
             <button
               onClick={() => uiActions.setExpandedPanel('destined')}
@@ -162,7 +158,7 @@ export const EventManagementPage: React.FC = () => {
               }`}
             >
               <span className={`w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0 ${ui.expandedPanel === 'destined' ? 'ring-2 ring-white/35 animate-ping' : ''}`} />
-              Dest ({state.destinedCount || 0})
+              Dest ({db.destinedCount || 0})
             </button>
             <button
               onClick={() => uiActions.setExpandedPanel('adjusted')}
@@ -173,7 +169,7 @@ export const EventManagementPage: React.FC = () => {
               }`}
             >
               <span className={`w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 ${ui.expandedPanel === 'adjusted' ? 'ring-2 ring-white/35 animate-ping' : ''}`} />
-              Ajust ({state.adjustedCount})
+              Ajust ({db.adjustedCount})
             </button>
           </div>
         </div>
@@ -187,7 +183,7 @@ export const EventManagementPage: React.FC = () => {
         {(ui.expandedPanel === 'dual' || ui.expandedPanel === 'pending') && (
           <EventListPanel
             title="Pendientes"
-            count={state.pendingCount}
+            count={db.pendingCount}
             theme={settings.theme}
             virtualizer={pendingVirtualizer}
             groupedItems={ui.pendingGrouped}
@@ -204,9 +200,9 @@ export const EventManagementPage: React.FC = () => {
             onFrcClick={uiActions.handleFrcClick}
             onEventClick={uiActions.handleEventClick}
             onDestinoClick={uiActions.handleDestinoClick}
-            isCompact={state.preferences.compactView}
-            selectedIds={state.selectedIds}
-            onToggleSelect={actions.handleToggleSelect}
+            isCompact={db.preferences.compactView}
+            selectedIds={db.selectedIds}
+            onToggleSelect={db.actions.handleToggleSelect}
             emptyIcon={<AlertCircle className="w-10 h-10 mb-4" />}
             emptyText="Sin pendientes"
             scrollRef={pendingRef}
@@ -217,7 +213,7 @@ export const EventManagementPage: React.FC = () => {
         {(ui.expandedPanel === 'dual' || ui.expandedPanel === 'destined') && (
           <EventListPanel
             title="Destinados"
-            count={state.destinedCount || 0}
+            count={db.destinedCount || 0}
             theme={settings.theme}
             virtualizer={destinedVirtualizer}
             groupedItems={ui.destinedGrouped || []}
@@ -234,9 +230,9 @@ export const EventManagementPage: React.FC = () => {
             onFrcClick={uiActions.handleFrcClick}
             onEventClick={uiActions.handleEventClick}
             onDestinoClick={uiActions.handleDestinoClick}
-            isCompact={state.preferences.compactView}
-            selectedIds={state.selectedIds}
-            onToggleSelect={actions.handleToggleSelect}
+            isCompact={db.preferences.compactView}
+            selectedIds={db.selectedIds}
+            onToggleSelect={db.actions.handleToggleSelect}
             emptyIcon={<Truck className="w-10 h-10 mb-4" />}
             emptyText="Sin destinos"
             scrollRef={destinedRef}
@@ -247,7 +243,7 @@ export const EventManagementPage: React.FC = () => {
         {(ui.expandedPanel === 'dual' || ui.expandedPanel === 'adjusted') && (
           <EventListPanel
             title="Ajustados"
-            count={state.adjustedCount}
+            count={db.adjustedCount}
             theme={settings.theme}
             virtualizer={adjustedVirtualizer}
             groupedItems={ui.adjustedGrouped}
@@ -264,9 +260,9 @@ export const EventManagementPage: React.FC = () => {
             onFrcClick={uiActions.handleFrcClick}
             onEventClick={uiActions.handleEventClick}
             onDestinoClick={uiActions.handleDestinoClick}
-            isCompact={state.preferences.compactView}
-            selectedIds={state.selectedIds}
-            onToggleSelect={actions.handleToggleSelect}
+            isCompact={db.preferences.compactView}
+            selectedIds={db.selectedIds}
+            onToggleSelect={db.actions.handleToggleSelect}
             emptyIcon={<RefreshCw className="w-10 h-10 mb-4" />}
             emptyText="Sin ajustados"
             scrollRef={adjustedRef}
@@ -278,8 +274,8 @@ export const EventManagementPage: React.FC = () => {
       <EventOverlays 
         ui={ui}
         uiActions={uiActions}
-        state={state}
-        actions={actions}
+        db={db}
+        actions={db.actions}
         settings={settings}
       />
     </div>

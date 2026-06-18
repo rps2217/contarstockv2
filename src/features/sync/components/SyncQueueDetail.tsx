@@ -18,6 +18,7 @@ interface SyncQueueDetailProps {
   item: QueueDetailItem | null;
   onForceSync?: (tableKey: string) => void;
   onForceComplete?: () => void;
+  onDiscard?: () => void;
   onClose?: () => void;
 }
 

@@ -1,16 +1,15 @@
 import { useState, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { useAppStore } from '@/store/mainAppStore';
 import { useEventDatabase } from './useEventDatabase';
 import { genericSyncEngine } from '../../../services/cloud/GenericSyncEngine';
-import { useManagementUI } from '../../../shared/hooks/useManagementUI';
 import { useTaskStore } from '@/store/useTaskStore';
 
 export const useEventUI = () => {
-  const { settings } = useAppStore();
   const { addTask, updateTask } = useTaskStore();
-  const { state, actions: dbActions } = useEventDatabase();
+  
+  // Flat structure from useEventDatabase
+  const db = useEventDatabase();
   
   const [isSyncing, setIsSyncing] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -18,15 +17,8 @@ export const useEventUI = () => {
   const [editingItem, setEditingItem] = useState<any>(null);
   const [expandedPanel, setExpandedPanel] = useState<'pending' | 'destined' | 'adjusted' | 'dual'>('dual');
 
-  const management = useManagementUI({
-    featureName: 'Eventos',
-    capturePath: '/events/capture',
-    dbState: state,
-    dbActions
-  });
-
   const handleBulkEdit = async (data: { destino: string; traspaso: string; observaciones: string }) => {
-    const selectedIds = Array.from(state.selectedIds);
+    const selectedIds = Array.from(db.selectedIds);
     if (selectedIds.length === 0) return;
 
     const taskId = `bulk-edit-${Date.now()}`;
@@ -44,12 +36,12 @@ export const useEventUI = () => {
       if (data.observaciones) updates.observaciones = data.observaciones;
       
       if (Object.keys(updates).length > 0) {
-        await dbActions.updateEventBulkFieldsMany(selectedIds, updates);
+        await db.actions.updateEventBulkFieldsMany(selectedIds, updates);
       }
 
       updateTask(taskId, { status: 'completed', progress: 100 });
       toast.success(`${selectedIds.length} registros actualizados`);
-      dbActions.clearSelection();
+      db.actions.clearSelection();
     } catch (error) {
       updateTask(taskId, { status: 'error', error: 'Error al actualizar registros' });
       toast.error('Error al actualizar registros masivamente');
@@ -57,10 +49,10 @@ export const useEventUI = () => {
   };
 
   const handleBulkSearchDocument = () => {
-    const selectedIds = Array.from(state.selectedIds);
+    const selectedIds = Array.from(db.selectedIds);
     if (selectedIds.length === 0) return;
 
-    const item = state.processedEvents.find(e => e.id === selectedIds[0]);
+    const item = db.processedEvents.find(e => e.id === selectedIds[0]);
     
     if (item && item.barcode && item.nguia) {
       const query = `${item.barcode} ${item.nguia}`;
@@ -75,17 +67,17 @@ export const useEventUI = () => {
     const items = Array.isArray(data) ? data : [data];
     
     if (editingItem) {
-      await dbActions.updateEvent(editingItem.id, items[0]);
+      await db.actions.updateEvent(editingItem.id, items[0]);
     } else {
       for (const item of items) {
-        const isDuplicate = state.processedEvents.some(
+        const isDuplicate = db.processedEvents.some(
           (event) => event.barcode === item.barcode && event.frc === item.frc
         );
         if (isDuplicate) {
           toast.error(`Ya existe un evento para ${item.productName} con el mismo FRC`);
           continue;
         }
-        await dbActions.createEvent(item);
+        await db.actions.createEvent(item);
       }
     }
   };
@@ -103,21 +95,21 @@ export const useEventUI = () => {
   };
 
   const handleClearFilters = () => {
-    dbActions.setSelectedEvents([]);
-    dbActions.setSearchQuery('');
-    dbActions.setDateRange({ start: null, end: null });
+    db.actions.setSelectedEvents([]);
+    db.actions.setSearchQuery('');
+    db.actions.setDateRange({ start: null, end: null });
   };
 
   const handleToggleEvent = (event: string) => {
-    const next = state.selectedEvents.includes(event)
-      ? state.selectedEvents.filter(e => e !== event)
-      : [...state.selectedEvents, event];
-    dbActions.setSelectedEvents(next);
+    const next = db.selectedEvents.includes(event)
+      ? db.selectedEvents.filter(e => e !== event)
+      : [...db.selectedEvents, event];
+    db.actions.setSelectedEvents(next);
   };
 
   const handleUpdateStatus = async (id: string, isAdjusted: boolean) => {
     try {
-      await dbActions.updateEventStatus(id, isAdjusted);
+      await db.actions.updateEventStatus(id, isAdjusted);
       toast.success(isAdjusted ? 'Evento marcado como ajustado' : 'Evento revertido a pendiente');
     } catch (error: any) {
       toast.error('Error al actualizar estado');
@@ -125,7 +117,7 @@ export const useEventUI = () => {
   };
 
   const handleBulkRemove = async () => {
-    const selectedItems = state.processedEvents.filter(item => state.selectedIds.has(item.id));
+    const selectedItems = db.processedEvents.filter(item => db.selectedIds.has(item.id));
     if (selectedItems.length === 0) return;
 
     const confirm = window.confirm(`¿RETIRAR ${selectedItems.length} REGISTROS? ESTA ACCIÓN ES IRREVERSIBLE.`);
@@ -142,13 +134,11 @@ export const useEventUI = () => {
     let successCount = 0;
     const failedItems: string[] = [];
 
-    dbActions.setPendingOperations(p => p + selectedItems.length);
-    
     try {
       for (let i = 0; i < selectedItems.length; i++) {
         const item = selectedItems[i];
         try {
-          await dbActions.deleteEvent(item.id);
+          await db.actions.deleteEvent(item.id);
           successCount++;
         } catch (e) {
           failedItems.push(item.barcode || 'Desconocido');
@@ -162,13 +152,12 @@ export const useEventUI = () => {
     } catch (error) {
       updateTask(taskId, { status: 'error', error: 'Error crítico en operación masiva' });
     } finally {
-      dbActions.setPendingOperations(p => Math.max(0, p - selectedItems.length));
-      dbActions.clearSelection();
+      db.actions.clearSelection();
     }
   };
 
   const handleBulkPrintLabels = () => {
-    const selectedItems = state.processedEvents.filter(item => state.selectedIds.has(item.id));
+    const selectedItems = db.processedEvents.filter(item => db.selectedIds.has(item.id));
     if (selectedItems.length === 0) return;
     
     import('../../expiry/utils/expiryUtils').then(utils => {
@@ -178,7 +167,7 @@ export const useEventUI = () => {
   };
 
   const handleBulkPrintSelected = () => {
-    const selectedItems = state.processedEvents.filter(item => state.selectedIds.has(item.id));
+    const selectedItems = db.processedEvents.filter(item => db.selectedIds.has(item.id));
     if (selectedItems.length === 0) return;
     
     import('../../expiry/utils/expiryUtils').then(utils => {
@@ -188,24 +177,23 @@ export const useEventUI = () => {
   };
 
   const handleFrcClick = (frc: string) => {
-    dbActions.setSearchQuery(frc);
+    db.actions.setSearchQuery(frc);
     toast.info(`Filtrando por FRC: ${frc}`);
   };
 
   const handleEventClick = (event: string) => {
-    dbActions.setSelectedEvents([event]);
+    db.actions.setSelectedEvents([event]);
     toast.info(`Filtrando por evento: ${event}`);
   };
 
   const handleDestinoClick = (destino: string) => {
-    dbActions.setSearchQuery(destino);
+    db.actions.setSearchQuery(destino);
     toast.info(`Filtrando por destino: ${destino}`);
   };
 
   const getGroupedItems = useCallback((events: any[]) => {
     const groups: { [key: string]: any[] } = {};
     events.forEach(event => {
-      // Safe date parsing to avoid "Invalid time value"
       let dateObj: Date;
       try {
         if (!event.timestamp) {
@@ -246,31 +234,34 @@ export const useEventUI = () => {
     return flattened;
   }, []);
 
-  const pendingGrouped = useMemo(() => getGroupedItems(state.pendingEvents), [state.pendingEvents, getGroupedItems]);
-  const destinedGrouped = useMemo(() => getGroupedItems(state.destinedEvents), [state.destinedEvents, getGroupedItems]);
-  const adjustedGrouped = useMemo(() => getGroupedItems(state.adjustedEvents), [state.adjustedEvents, getGroupedItems]);
+  const pendingGrouped = useMemo(() => getGroupedItems(db.pendingEvents), [db.pendingEvents, getGroupedItems]);
+  const destinedGrouped = useMemo(() => getGroupedItems(db.destinedEvents), [db.destinedEvents, getGroupedItems]);
+  const adjustedGrouped = useMemo(() => getGroupedItems(db.adjustedEvents), [db.adjustedEvents, getGroupedItems]);
 
   return {
     ui: {
-      ...management.ui,
       isSyncing,
       isCreateModalOpen,
       isBulkEditModalOpen,
       editingItem,
       expandedPanel,
-      activeFiltersCount: state.selectedEvents.length + (state.dateRange.start || state.dateRange.end ? 1 : 0),
+      activeFiltersCount: db.selectedEvents.length + (db.dateRange.start || db.dateRange.end ? 1 : 0),
       pendingGrouped,
       destinedGrouped,
       adjustedGrouped,
-      dateRange: state.dateRange
+      dateRange: db.dateRange,
+      // From useManagementUI
+      isSettingsDrawerOpen: false,
+      isFilterDrawerOpen: false,
     },
     actions: {
-      ...management.actions,
       setIsCreateModalOpen,
       setIsBulkEditModalOpen,
       setEditingItem,
       setExpandedPanel,
-      setDateRange: dbActions.setDateRange,
+      setDateRange: db.actions.setDateRange,
+      setIsSettingsDrawerOpen: (open?: boolean) => { /* TODO: Implement */ },
+      setIsFilterDrawerOpen: (open?: boolean | ((prev: boolean) => boolean)) => { /* TODO: Implement */ },
       handleBulkEdit,
       handleBulkSearchDocument,
       handleCreateOrUpdate,
@@ -281,14 +272,10 @@ export const useEventUI = () => {
       handleBulkRemove,
       handleBulkPrintLabels,
       handleBulkPrintSelected,
-      handleBulkSendEmail: () => management.actions.setIsEmailModalOpen(true),
       handleFrcClick,
       handleEventClick,
       handleDestinoClick
     },
-    db: {
-      state,
-      actions: dbActions
-    }
+    db
   };
 };

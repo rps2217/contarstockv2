@@ -9,7 +9,7 @@ import { syncRegistry } from "../../../services/cloud/syncRegistry";
 import { genericSyncEngine } from "../../../services/cloud/GenericSyncEngine";
 import { useSyncStore } from "../../../store/useSyncStore";
 import { useToastStore } from "../../../store/useToastStore";
-import type { SyncTabType, SyncLogEntry, SyncQueueItem } from "../types/Sync";
+import type { SyncTabType, SyncLogEntry, SyncQueueItem } from "@/types/global/sync";
 import type { SyncStatus } from "../../../types/global/common";
 
 interface GenericDexieTable {
@@ -146,7 +146,7 @@ export function useSyncCenter(): UseSyncCenterReturn {
           status: (r.syncStatus as SyncStatus) || "pending",
           timestamp: (r.timestamp as number) || (r.updatedAt as number) || Date.now(),
           displayName: visualName,
-          rawData: r
+          rawData: r as unknown as Record<string, unknown>
         });
       }
     }
