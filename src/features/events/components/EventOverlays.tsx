@@ -18,7 +18,7 @@ import { EventEmailModal } from './EventEmailModal';
 interface EventOverlaysProps {
   ui: any;
   uiActions: any;
-  state: any;
+  db: any;
   actions: any;
   settings: any;
 }
@@ -26,14 +26,14 @@ interface EventOverlaysProps {
 export const EventOverlays: React.FC<EventOverlaysProps> = ({
   ui,
   uiActions,
-  state,
+  db,
   actions,
   settings
 }) => {
   return (
     <>
       <ManagementBulkActions 
-        selectedCount={state.selectedIds?.size || 0}
+        selectedCount={db.selectedIds?.size || 0}
         onClearSelection={actions.clearSelection}
         theme={settings.theme}
         actions={[
@@ -87,13 +87,13 @@ export const EventOverlays: React.FC<EventOverlaysProps> = ({
         onClose={() => uiActions.setIsBulkEditModalOpen(false)}
         onApply={uiActions.handleBulkEdit}
         theme={settings.theme}
-        selectedCount={state.selectedIds?.size || 0}
+        selectedCount={db.selectedIds?.size || 0}
       />
 
       <EventSettingsDrawer 
         isOpen={ui.isSettingsDrawerOpen}
         onClose={() => uiActions.setIsSettingsDrawerOpen(false)}
-        preferences={state.preferences}
+        preferences={db.preferences}
         onUpdatePreferences={actions.togglePreference}
         onFullRefresh={actions.handleFullRefresh}
         onClearLocalData={actions.clearLocalData}
@@ -116,7 +116,7 @@ export const EventOverlays: React.FC<EventOverlaysProps> = ({
       <EventEmailModal
         isOpen={ui.isEmailModalOpen}
         onClose={() => uiActions.setIsEmailModalOpen(false)}
-        selectedItems={state.processedEvents?.filter((item: any) => state.selectedIds?.has(item.id)) || []}
+        selectedItems={db.processedEvents?.filter((item: any) => db.selectedIds?.has(item.id)) || []}
         theme={settings.theme}
       />
     </>

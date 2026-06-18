@@ -12,13 +12,30 @@ export {
   getUploadBatchSize,
 } from './UploadGroupBuilder';
 
-// Re-export desde syncManager original
+export type { UploadGroup } from './UploadGroupBuilder';
+
+// Batch uploader
 export {
-  resetSyncLock,
-  reconcileReception,
+  performBatchUpload,
+  resetUploadLock,
+  getBatchSize,
+  isUploadInProgress,
+} from './BatchUploader';
+
+// Catalog importer
+export {
   syncCatalogs,
   importProductsFromCloud,
   importProvidersFromCloud,
-  importCustomersAndTemplatesFromCloud,
+} from './CatalogImporter';
+
+// Reconciliation
+export {
+  reconcileReception,
   getGlobalPendingCount,
+} from './Reconciliation';
+
+// Re-export desde syncManager original
+export {
+  resetSyncLock,
 } from '../syncManager';

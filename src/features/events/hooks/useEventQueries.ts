@@ -100,7 +100,7 @@ export function useEventQueries(): UseEventQueriesReturn {
           await eventRepository.bulkSave(rows.map((item: Record<string, unknown>) => ({ 
             ...item, 
             syncStatus: 'synced' 
-          })));
+          }) as any));
           logger.info('SYNC_INITIAL_EVENTS', `Cargados ${rows.length} eventos desde Supabase`);
         }
       } catch (err) {
@@ -190,10 +190,10 @@ export function useEventQueries(): UseEventQueriesReturn {
         traspaso: traspasoValue as string,
         observaciones: observacionesValue as string,
         timestamp: record.timestamp || Date.now(),
-        claveUnica: (exp as Record<string, unknown>).claveUnica as string || record.id,
+        claveUnica: (exp as unknown as Record<string, unknown>).claveUnica as string || record.id,
         category: product?.category || 'GENERAL',
         isAdjusted: hasTraspaso,
-        syncStatus: (record as Record<string, unknown>).syncStatus as string || 'synced',
+        syncStatus: (record as unknown as Record<string, unknown>).syncStatus as string || 'synced',
       });
     }
 

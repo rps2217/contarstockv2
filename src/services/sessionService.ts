@@ -119,10 +119,10 @@ export const fetchExpectedItemsFromCloud = async (erpOrder: string): Promise<Exp
        const manifest = await erpService.downloadManifest(cleanId);
        
        if (manifest && manifest.items && manifest.items.length > 0) {
-         const mappedItems = manifest.items.map(item => ({
-           barcode: item.barcode,
-           name: item.name || `Producto ${item.barcode}`,
-           expectedQty: item.qty || 0
+         const mappedItems: Array<{ barcode: string; name: string; expectedQty: number }> = manifest.items.map((item: { barcode: unknown; name?: unknown; qty?: unknown }) => ({
+           barcode: String(item.barcode),
+           name: String(item.name || "") || `Producto ${item.barcode}`,
+           expectedQty: (item.qty as number) || 0
          }));
 
          const newExpectedOrder: ExpectedOrder = {

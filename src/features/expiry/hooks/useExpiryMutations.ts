@@ -126,7 +126,7 @@ export const useExpiryMutations = (
 
         await expiryRepository.save(updatedData, tableName);
         
-        supabaseSyncService.pushChange(tableName, existing.id, updatedData).catch(err => {
+        supabaseSyncService.pushChange(tableName, existing.id, updatedData as unknown as Record<string, unknown>).catch(() => {
           expiryRepository.save({ ...updatedData, syncStatus: 'pending' }, tableName);
         });
 
@@ -157,7 +157,7 @@ export const useExpiryMutations = (
       await expiryRepository.save(rowData, tableName);
       
       // SINCRONIZACIÓN ASÍNCRONA CON LA NUBE
-      supabaseSyncService.pushChange(tableName, uniqueId, rowData).catch(err => {
+      supabaseSyncService.pushChange(tableName, uniqueId, rowData as unknown as Record<string, unknown>).catch(err => {
         console.error("[ExpiryCloudSync] Error:", err);
         expiryRepository.save({ ...rowData, syncStatus: 'pending' }, tableName);
       });
@@ -217,7 +217,7 @@ export const useExpiryMutations = (
 
           // 1. Guardar el otro (que ya tiene la clave correcta)
           await expiryRepository.save(mergedData, tableName);
-          await supabaseSyncService.pushChange(tableName, otherExisting.id, mergedData);
+          await supabaseSyncService.pushChange(tableName, otherExisting.id, mergedData as unknown as Record<string, unknown>);
 
           // 2. Borrar el actual (que era el que queríamos mover)
           await expiryRepository.delete(id);
@@ -249,7 +249,7 @@ export const useExpiryMutations = (
       await expiryRepository.save(updatedData, tableName);
 
       // 2. Cloud update (silent)
-      supabaseSyncService.pushChange(tableName, newId, updatedData).catch(err => {
+      supabaseSyncService.pushChange(tableName, newId, updatedData as unknown as Record<string, unknown>).catch(err => {
         expiryRepository.save({ ...updatedData, syncStatus: 'pending' }, tableName);
       });
 

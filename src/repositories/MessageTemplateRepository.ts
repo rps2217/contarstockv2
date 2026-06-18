@@ -24,7 +24,7 @@ export class MessageTemplateRepository {
   }
 
   static async save(template: MessageTemplate): Promise<void> {
-    await dynamicDataService.saveRecord(this.tableName, template, template.id);
+    await dynamicDataService.saveRecord(this.tableName, template as unknown as Record<string, unknown>, template.id);
   }
 
   static async delete(id: string): Promise<void> {

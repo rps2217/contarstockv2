@@ -277,8 +277,8 @@ export const Reports: React.FC = () => {
           isDark={isDark}
           activeMenuId={state.activeMenuId}
           onSelect={actions.setSelectedSessionId}
-          onMenuToggle={actions.handleMenuToggle}
-          onDelete={actions.handleDeleteSession}
+          onMenuToggle={(id) => actions.handleMenuToggle(undefined as unknown as React.MouseEvent, id)}
+          onDelete={(id) => actions.handleDeleteSession(undefined as unknown as React.MouseEvent, id)}
           onEndReached={handleEndReached}
           onFilterChange={(filter) => actions.setFilterType(filter as any)}
         />

@@ -22,7 +22,7 @@ export class EmailTemplateRepository {
   }
 
   static async save(template: EmailTemplate): Promise<void> {
-    await dynamicDataService.saveRecord(this.tableName, template, template.id);
+    await dynamicDataService.saveRecord(this.tableName, template as unknown as Record<string, unknown>, template.id);
   }
 
   static async delete(id: string): Promise<void> {

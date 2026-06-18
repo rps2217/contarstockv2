@@ -5,7 +5,8 @@ import {
  Zap, LayoutTemplate, ShieldCheck, Printer, Check, Info
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAppStore } from '@/store/mainAppStore';
+import { useSettingsStore } from './store/useSettingsStore';
+import { useUIStore } from '../app/store/useUIStore';
 
 // Módulos
 import { OperationalSection } from './components/OperationalSection';
@@ -22,7 +23,7 @@ type TabId = 'general' | 'nube' | 'sistema';
 export const Settings: React.FC = () => {
  const navigate = useNavigate();
  const location = useLocation();
- const { settings, updateSetting } = useAppStore(); 
+ const { settings, updateSetting } = useSettingsStore(); 
  const [activeTab, setActiveTab] = useState<TabId>('general');
  const [copied, setCopied] = useState(false);
 

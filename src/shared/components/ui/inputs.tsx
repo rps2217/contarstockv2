@@ -7,7 +7,7 @@ import React from 'react';
 type InputSize = 'sm' | 'md' | 'lg';
 type InputVariant = 'default' | 'filled' | 'minimal';
 
-interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
   label?: string;
   error?: string;
   helperText?: string;

@@ -34,31 +34,31 @@ import { EventCaptureModal } from './components/EventCaptureModal';
 
 export const EventCapturePage: React.FC = () => {
   const navigate = useNavigate();
-  const { state, actions } = useEventDatabase();
+  const db = useEventDatabase();
   const syncStore = useSyncStore();
   const engine = useScannerEngine();
 
   const handleAddItem = useCallback(async (data: any) => {
-    const result = await actions.handleAddItem(data);
+    const result = await db.actions.handleAddItem(data);
     if (result) {
       engine.resetScanner();
     }
-  }, [actions, engine]);
+  }, [db.actions, engine]);
 
   const handleDelete = useCallback(async (id: string) => {
     if (window.confirm('¿Eliminar este registro?')) {
-      const itemToDelete = state.allItems.find(i => i.id === id);
+      const itemToDelete = db.processedEvents.find(i => i.id === id);
       if (itemToDelete) {
-        await actions.handleRemoveItem(itemToDelete);
+        await db.actions.handleRemoveItem(itemToDelete);
         SoundFX.play('delete');
       }
     }
-  }, [state.allItems, actions]);
+  }, [db.processedEvents, db.actions]);
 
   const sortedItems = useMemo(() => {
-    return [...state.allItems]
+    return [...db.processedEvents]
       .sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
-  }, [state.allItems]);
+  }, [db.processedEvents]);
 
   const header = (
     <ModuleHeader 

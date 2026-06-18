@@ -7,18 +7,7 @@ import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ChevronRight, Clock, CheckCircle2 } from 'lucide-react';
-
-interface SyncQueueItem {
-  id: string;
-  key: string;
-  localTable: string;
-  remoteTable: string;
-  primaryKey: string;
-  status: string;
-  timestamp: number;
-  displayName: string;
-  rawData: any;
-}
+import { SyncQueueItem } from '@/features/sync/types';
 
 interface Props {
   items: SyncQueueItem[] | undefined;

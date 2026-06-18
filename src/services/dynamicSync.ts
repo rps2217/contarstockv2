@@ -52,7 +52,8 @@ export const dynamicSyncService = {
           await db.dynamic_data.delete(record.id);
           totalSuccess++;
         } catch (err: unknown) {
-          logger.error('DYNAMIC_SYNC', `Error al eliminar remoto ${record.id}`, error.message);
+          const errorMsg = err instanceof Error ? err.message : String(err);
+          logger.error('DYNAMIC_SYNC', `Error al eliminar remoto ${record.id}`, errorMsg);
           totalFailed++;
         }
       }
