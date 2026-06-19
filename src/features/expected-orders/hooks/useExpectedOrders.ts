@@ -267,26 +267,17 @@ export function useExpectedOrders() {
     try {
       await ExpectedOrderRepository.save(expectedOrder);
       
-      // Sincronizar en tiempo real con la nube (Tabla PEDIDOS)
+      // Sincronizar con la nube (Tabla PEDIDOS)
       let cloudSynced = false;
       let cloudError = '';
       
       if (navigator.onLine) {
         try {
-          const cloudPayload = finalItems.map(item => ({
-            id: `${cleanId}_${item.barcode}`.toUpperCase(),
-            erp: cleanId,
-            barcode: item.barcode,
-            name: item.name,
-            qty: item.expectedQty
-          }));
-          
-          const { supabaseSyncService } = await import('../../../services/supabaseSyncService');
-          const uploadResult = await supabaseSyncService.pushBatch('PEDIDOS', cloudPayload);
-          if (uploadResult && uploadResult.success) {
+          const result = await ExpectedOrderRepository.uploadToCloud(expectedOrder);
+          if (result.success) {
             cloudSynced = true;
           } else {
-            cloudError = uploadResult?.error || 'Error desconocido';
+            cloudError = result.error || 'Error desconocido';
           }
         } catch (syncErr: any) {
           cloudError = syncErr.message || String(syncErr);
@@ -294,11 +285,11 @@ export function useExpectedOrders() {
       }
 
       if (cloudSynced) {
-        addToast(`Carga teórica "${cleanId}" guardada y sincronizada con la nube con éxito (${finalItems.length} SKUs)`, "success");
+        addToast(`Carga teórica "${cleanId}" guardada y sincronizada con la nube (${finalItems.length} SKUs)`, "success");
       } else if (navigator.onLine && cloudError) {
-        addToast(`Guardado localmente. Error al sincronizar con la nube: ${cloudError}`, "warning");
+        addToast(`Guardado localmente. Error al sincronizar: ${cloudError}`, "warning");
       } else {
-        addToast(`Guardado en base de datos local (se sincronizará en el centro de control)`, "info");
+        addToast(`Guardado en base de datos local (sin conexión)`, "info");
       }
 
       resetImporter();
