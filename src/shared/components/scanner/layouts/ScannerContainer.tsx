@@ -1,0 +1,267 @@
+/**
+ * ScannerContainer - Wrapper principal para layouts de escaneo
+ * 
+ * Responsabilidades:
+ * - Manejar estado global del scanner (manual/cámara)
+ * - Feedback visual overlay
+ * - Renderizar children en slots correctos
+ */
+
+import React, { useState, useRef, useEffect } from 'react';
+import { Box } from 'lucide-react';
+import { FeedbackStatus } from '../../../../hooks/useFeedbackSystem';
+import { ScannerHeader } from '../ScannerHeader';
+import { VirtualList } from '../../ui/VirtualList';
+import { ScannerSearchBar } from '../ScannerSearchBar';
+import { ManualEntryForm } from '../ManualEntryForm';
+import { ScannedItemRow, ScannedItemProps } from '../ScannedItemRow';
+import { EditQuantityModal } from '../EditQuantityModal';
+
+interface ScannerContainerProps {
+  // Header
+  location: string;
+  onChangeLocation: () => void;
+  onBack: () => void;
+  isManualMode: boolean;
+  onToggleManualMode: () => void;
+  onFinalize: () => void;
+  onLock?: () => void;
+  onOpenTools: () => void;
+  onSync?: () => void;
+  isSyncing?: boolean;
+  autoSyncEnabled?: boolean;
+  
+  // Content
+  activeBarcode: string | null;
+  items: ScannedItemProps[];
+  feedback: FeedbackStatus;
+  allowEditQuantity?: boolean;
+  onScan: (code: string, qtyOverride?: number) => void;
+  
+  // Optional sections
+  cameraSection?: React.ReactNode;
+  bottomContent?: React.ReactNode;
+  labelPhoto?: string;
+}
+
+const ScannedItemRowWrapper = React.memo(
+  ({ item, data }: { item: ScannedItemProps; data: any }) => {
+    if (!item) return null;
+    const { activeBarcode, onScan, allowEditQuantity, setEditingItem, setEditQty } = data;
+
+    return (
+      <ScannedItemRow 
+        item={item}
+        isActive={item.barcode === activeBarcode}
+        onScan={onScan}
+        onEditQty={allowEditQuantity ? () => {
+          setEditingItem(item);
+          setEditQty(item.totalQuantity);
+        } : undefined}
+      />
+    );
+  },
+  (prev, next) => {
+    if (prev.item !== next.item) return false;
+    const wasActive = prev.item.barcode === prev.data.activeBarcode;
+    const isActive = next.item.barcode === next.data.activeBarcode;
+    if (wasActive !== isActive) return false;
+    return true;
+  }
+);
+
+export const ScannerContainer: React.FC<ScannerContainerProps> = ({
+  location,
+  onChangeLocation,
+  onBack,
+  isManualMode,
+  onToggleManualMode,
+  onFinalize,
+  onLock,
+  onOpenTools,
+  onSync,
+  isSyncing,
+  autoSyncEnabled,
+  activeBarcode,
+  items,
+  feedback,
+  allowEditQuantity = false,
+  onScan,
+  cameraSection,
+  bottomContent,
+  labelPhoto,
+}) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchActive, setIsSearchActive] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [editingItem, setEditingItem] = useState<ScannedItemProps | null>(null);
+  const [editQty, setEditQty] = useState(0);
+  const [manualInput, setManualInput] = useState('');
+  const manualInputRef = useRef<HTMLInputElement>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  // Auto-focus manual input
+  useEffect(() => {
+    if (isManualMode) {
+      const timer = setTimeout(() => manualInputRef.current?.focus(), 150);
+      return () => clearTimeout(timer);
+    }
+  }, [isManualMode]);
+
+  // Filter items by search
+  const filteredItems = React.useMemo(() => items.filter(item => 
+    item.barcode.includes(searchQuery) || 
+    item.name?.toLowerCase().includes(searchQuery.toLowerCase())
+  ), [items, searchQuery]);
+
+  // Calculate totals
+  const totalQuantity = React.useMemo(() => 
+    items.reduce((acc, item) => acc + item.totalQuantity, 0), [items]);
+  const expectedTotalQuantity = React.useMemo(() => 
+    items.some(i => i.expectedQty !== undefined) 
+      ? items.reduce((acc, item) => acc + (item.expectedQty || 0), 0)
+      : undefined
+  , [items]);
+
+  // Save edited quantity
+  const handleEditQtySave = () => {
+    if (editingItem) {
+      const delta = editQty - editingItem.totalQuantity;
+      if (delta !== 0) onScan(editingItem.barcode, delta);
+      setEditingItem(null);
+    }
+  };
+
+  // Memoized row data
+  const rowData = React.useMemo(() => ({
+    activeBarcode,
+    onScan,
+    allowEditQuantity,
+    setEditingItem,
+    setEditQty
+  }), [activeBarcode, onScan, allowEditQuantity]);
+
+  return (
+    <div className="flex-1 min-h-0 flex flex-col bg-black relative z-10">
+      {/* FEEDBACK OVERLAY */}
+      {feedback === 'success' && <div className="fixed inset-0 bg-emerald-500/40 z-[200] pointer-events-none animate-in fade-in duration-100" />}
+      {feedback === 'error' && <div className="fixed inset-0 bg-rose-600/60 z-[200] pointer-events-none animate-in fade-in duration-100" />}
+      {feedback === 'unknown' && <div className="fixed inset-0 bg-amber-500/40 z-[200] pointer-events-none animate-in fade-in duration-100" />}
+      {feedback === 'undo' && <div className="fixed inset-0 bg-blue-500/40 z-[200] pointer-events-none animate-in fade-in duration-100" />}
+
+      {/* HEADER */}
+      <ScannerHeader 
+        onBack={onBack}
+        location={location}
+        onChangeLocation={onChangeLocation}
+        isManualMode={isManualMode}
+        onToggleManualMode={onToggleManualMode}
+        onFinalize={onFinalize}
+        onLock={onLock}
+        onOpenTools={onOpenTools}
+        onSync={onSync}
+        isSyncing={isSyncing}
+        autoSyncEnabled={autoSyncEnabled}
+      />
+
+      {/* CAMERA SECTION (si se provee) */}
+      {cameraSection && (
+        <div className="h-[20%] relative bg-black shrink-0">
+          {cameraSection}
+          {labelPhoto && (
+            <button 
+              onClick={() => setIsPreviewOpen(true)}
+              className="absolute bottom-2 right-2 z-40 w-10 h-10 bg-black/60 border border-white/20 rounded-xl flex items-center justify-center text-white active:scale-95 transition-all"
+            >
+              <Box className="w-5 h-5" />
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* LABEL PREVIEW MODAL */}
+      {isPreviewOpen && labelPhoto && (
+        <div className="fixed inset-0 z-[300] bg-black/90 flex flex-col items-center justify-center p-6 animate-in fade-in">
+          <div className="w-full max-w-lg bg-slate-900 rounded-3xl overflow-hidden border border-white/10 shadow-2xl">
+            <div className="p-4 border-b border-white/10 flex justify-between items-center bg-slate-800">
+              <h3 className="text-xs font-black uppercase tracking-widest text-white">Etiqueta Física</h3>
+              <button onClick={() => setIsPreviewOpen(false)} className="p-2 bg-white/5 rounded-full text-slate-400">
+                <Box className="w-5 h-5 rotate-45" />
+              </button>
+            </div>
+            <div className="aspect-video bg-black">
+              <img src={labelPhoto} alt="Label" className="w-full h-full object-contain" />
+            </div>
+            <div className="p-4 bg-slate-800 text-center">
+              <button 
+                onClick={() => setIsPreviewOpen(false)}
+                className="w-full py-3 bg-white text-black font-black uppercase text-[10px] rounded-xl"
+              >
+                Cerrar Vista
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* LIST SECTION */}
+      <div className="flex-1 min-h-0 bg-slate-950 flex flex-col relative z-10 border-t border-rose-500/30">
+        <ScannerSearchBar 
+          isSearchActive={isSearchActive}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          setIsSearchActive={setIsSearchActive}
+          searchInputRef={searchInputRef}
+          totalItems={items.length}
+          totalQuantity={totalQuantity}
+          expectedTotalQuantity={expectedTotalQuantity}
+        />
+
+        {isManualMode && (
+          <ManualEntryForm 
+            manualInput={manualInput}
+            setManualInput={setManualInput}
+            onSubmit={onScan}
+            inputRef={manualInputRef}
+          />
+        )}
+
+        <div className={`flex-1 min-h-0 bg-slate-950 ${bottomContent ? 'pb-36' : 'pb-20'}`}>
+          <VirtualList
+            items={filteredItems}
+            itemHeight={86}
+            renderRow={ScannedItemRowWrapper}
+            rowData={rowData}
+            emptyState={
+              <>
+                <Box className="w-16 h-16 mb-4 text-slate-500" />
+                <span className="text-sm font-black uppercase tracking-widest text-slate-400">
+                  {searchQuery ? 'No hay resultados' : 'Escanea para comenzar'}
+                </span>
+              </>
+            }
+          />
+        </div>
+      </div>
+
+      {/* FOOTER SLOT */}
+      {bottomContent}
+
+      {/* EDIT QUANTITY MODAL */}
+      {allowEditQuantity && editingItem && (
+        <EditQuantityModal 
+          editingItem={editingItem}
+          editQty={editQty}
+          setEditQty={setEditQty}
+          onClose={() => setEditingItem(null)}
+          onSave={handleEditQtySave}
+        />
+      )}
+
+      <style>{`
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
+    </div>
+  );
+};

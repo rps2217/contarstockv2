@@ -1,7 +1,8 @@
 import React from 'react';
 import { Product, ConsolidatedItem, MatchResult } from '../../../types';
 import { FeedbackStatus } from '../../../hooks/useFeedbackSystem';
-import { IndustrialScannerLayout } from '../../../shared/components/scanner/IndustrialScannerLayout';
+import { ScannerContainer } from '../../../shared/components/scanner/layouts';
+import { ScannerCameraSection } from '../../../shared/components/scanner/layouts';
 import { Zap, X, Check } from 'lucide-react';
 
 interface CountingCameraViewProps {
@@ -59,6 +60,12 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = ({
     expectedQty: item.expectedQuantity && item.expectedQuantity > 0 ? item.expectedQuantity : undefined
   }));
 
+  // Camera section content
+  const cameraSection = (
+    <ScannerCameraSection onScan={onScan} feedback={feedback} />
+  );
+
+  // Footer with multiplier
   const bottomContent = (
     <div className="absolute bottom-0 left-0 right-0 bg-slate-900 border-t border-white/10 flex flex-col z-50">
       <div className="h-14 flex items-center px-4 justify-between border-b border-white/5">
@@ -91,21 +98,23 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = ({
 
   return (
     <div className="relative h-full w-full">
-      <IndustrialScannerLayout
-        onBack={onBack}
-        onScan={(code, qtyOverride) => onScan(code, qtyOverride ?? multiplier)}
-        onFinalize={onFinalize}
-        onOpenTools={onOpenTools}
-        onLock={onLock}
-        onSync={onSync}
-        isSyncing={isSyncing}
+      <ScannerContainer
         location={location}
         onChangeLocation={onChangeLocation}
+        onBack={onBack}
+        isManualMode={false}
+        onToggleManualMode={() => {}}
+        onFinalize={onFinalize}
+        onLock={onLock}
+        onOpenTools={onOpenTools}
+        onSync={onSync}
+        isSyncing={isSyncing}
         activeBarcode={activeBarcode}
-        activeItemName={activeItemName}
-        feedback={feedback}
         items={mappedItems}
-        allowEditQuantity={false} // Counting uses multiplier, not edit modal
+        feedback={feedback}
+        allowEditQuantity={false}
+        onScan={(code, qtyOverride) => onScan(code, qtyOverride ?? multiplier)}
+        cameraSection={cameraSection}
         bottomContent={bottomContent}
         labelPhoto={labelPhoto}
       />
