@@ -26,8 +26,7 @@ interface Props {
   sessions: Session[] | undefined;
   isLoading?: boolean;
   filterType: string;
-  theme: 'light' | 'dark';
-  isDark?: boolean;
+  theme?: 'light' | 'dark' | 'high-contrast';
   activeMenuId: string | null;
   onSelect: (id: string) => void;
   onMenuToggle: (id: string) => void;
@@ -40,8 +39,7 @@ export const SessionHistoryList: React.FC<Props> = ({
   sessions,
   isLoading = false,
   filterType,
-  theme,
-  isDark = true,
+  theme = 'dark',
   activeMenuId,
   onSelect,
   onMenuToggle,
@@ -49,6 +47,29 @@ export const SessionHistoryList: React.FC<Props> = ({
   onEndReached,
   onFilterChange,
 }) => {
+  const isDark = theme === 'dark';
+  const isLight = theme === 'light';
+  const isHighContrast = theme === 'high-contrast';
+
+  // Clases según tema
+  const containerBg = isHighContrast ? 'bg-black' : isLight ? 'bg-white' : 'bg-brand-surface';
+  const containerBorder = isHighContrast ? 'border-yellow-400' : isLight ? 'border-slate-200' : 'border-white/5';
+  const headerBg = isHighContrast ? 'bg-yellow-950/30' : isLight ? 'bg-slate-50' : 'bg-brand-dark/50';
+  const headerBorder = isHighContrast ? 'border-yellow-400/30' : isLight ? 'border-slate-100' : 'border-white/5';
+  const headerText = isHighContrast ? 'text-yellow-400' : isLight ? 'text-slate-500' : 'text-slate-400';
+
+  const getPillActiveClass = () => {
+    if (isHighContrast) return 'bg-yellow-400 text-black border-yellow-400';
+    if (isLight) return 'bg-indigo-600 text-white border-indigo-700';
+    return 'bg-white text-black border-white';
+  };
+
+  const getPillInactiveClass = () => {
+    if (isHighContrast) return 'bg-yellow-900/20 border-yellow-400/30 text-yellow-400 hover:bg-yellow-900/30';
+    if (isLight) return 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200';
+    return 'bg-white/5 border-white/5 text-slate-400 hover:text-white';
+  };
+
   const rowData = {
     onSelect,
     activeMenuId,
@@ -72,12 +93,8 @@ export const SessionHistoryList: React.FC<Props> = ({
             onClick={() => onFilterChange(pill.id)}
             className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest shrink-0 border transition-all ${
               filterType === pill.id
-                ? isDark 
-                  ? 'bg-white text-black border-white'
-                  : 'bg-indigo-600 text-white border-indigo-700'
-                : isDark
-                  ? 'bg-white/5 border-white/5 text-slate-400 hover:text-white'
-                  : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
+                ? getPillActiveClass()
+                : getPillInactiveClass()
             }`}
           >
             {pill.label}
@@ -86,17 +103,13 @@ export const SessionHistoryList: React.FC<Props> = ({
       </div>
 
       {/* Sessions Grid */}
-      <div className={`flex-1 border rounded-[2rem] overflow-hidden shadow-sm relative flex flex-col ${
-        isDark ? 'bg-brand-surface border-white/5' : 'bg-white border-slate-200'
-      }`}>
+      <div className={`flex-1 border rounded-[2rem] overflow-hidden shadow-sm relative flex flex-col ${containerBg} ${containerBorder}`}>
         {/* Header */}
-        <div className={`h-11 border-b flex items-center px-6 justify-between z-10 shrink-0 ${
-          isDark ? 'bg-brand-dark/50 border-white/5' : 'bg-slate-50 border-slate-100'
-        }`}>
-          <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">
+        <div className={`h-11 border-b flex items-center px-6 justify-between z-10 shrink-0 ${headerBg} ${headerBorder}`}>
+          <span className={`text-[8px] font-black uppercase tracking-[0.2em] ${headerText}`}>
             Firma Operativa / Bulto
           </span>
-          <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">
+          <span className={`text-[8px] font-black uppercase tracking-[0.2em] ${headerText}`}>
             Detalle y Estado
           </span>
         </div>
@@ -111,8 +124,8 @@ export const SessionHistoryList: React.FC<Props> = ({
             </div>
           ) : sessions?.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-12 text-center h-full">
-              <Archive className="w-12 h-12 mb-3 opacity-20" />
-              <p className="text-[10px] font-black uppercase tracking-widest opacity-40">
+              <Archive className={`w-12 h-12 mb-3 opacity-20 ${isHighContrast ? 'text-yellow-400' : ''}`} />
+              <p className={`text-[10px] font-black uppercase tracking-widest opacity-40 ${isHighContrast ? 'text-yellow-400' : ''}`}>
                 Sin bultos en este filtro
               </p>
             </div>
@@ -125,8 +138,8 @@ export const SessionHistoryList: React.FC<Props> = ({
               onEndReached={onEndReached}
               emptyState={
                 <div className="flex flex-col items-center">
-                  <Archive className="w-12 h-12 mb-3 opacity-20" />
-                  <p className="text-[10px] font-black uppercase tracking-widest opacity-40">
+                  <Archive className={`w-12 h-12 mb-3 opacity-20 ${isHighContrast ? 'text-yellow-400' : ''}`} />
+                  <p className={`text-[10px] font-black uppercase tracking-widest opacity-40 ${isHighContrast ? 'text-yellow-400' : ''}`}>
                     Historial vacío
                   </p>
                 </div>
