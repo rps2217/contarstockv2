@@ -63,6 +63,8 @@ export interface ExpectedOrder {
    orderNote?: string;
    internalGuide?: string;
  };
+ /** @deprecated Used internally to track sync status */
+ _syncedFromCloud?: boolean;
 }
 
 export interface AliasSuggestion {

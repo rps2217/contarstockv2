@@ -12,6 +12,7 @@ export function ExpectedOrdersPage() {
   const navigate = useNavigate();
   const { settings } = useAppStore();
   const isDark = settings?.theme !== 'light';
+  const theme = settings?.theme || 'dark';
   
   const { state, actions } = useExpectedOrders();
 
@@ -79,7 +80,7 @@ export function ExpectedOrdersPage() {
               exit={{ opacity: 0, y: -15 }}
               transition={{ duration: 0.2 }}
             >
-              <SavedOrdersList state={state} actions={actions} isDark={isDark} />
+              <SavedOrdersList state={state} actions={actions} isDark={isDark} theme={theme} />
             </motion.div>
           ) : (
             <motion.div

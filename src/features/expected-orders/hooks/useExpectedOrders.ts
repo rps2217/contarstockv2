@@ -316,15 +316,8 @@ export function useExpectedOrders() {
       let cloudDeleted = false;
       if (navigator.onLine) {
         try {
-          const { supabase } = await import('../../../lib/supabase');
-          const { error } = await supabase
-            .from('PEDIDOS')
-            .delete()
-            .eq('erp', id.toUpperCase());
-          
-          if (!error) {
-            cloudDeleted = true;
-          }
+          const result = await ExpectedOrderRepository.deleteFromCloud(id);
+          cloudDeleted = result.success;
         } catch (syncErr) {
           console.warn("No se pudo eliminar de la nube:", syncErr);
         }
@@ -343,6 +336,93 @@ export function useExpectedOrders() {
       addToast(`Error al borrar: ${err.message}`, "error");
     }
   }, [selectedSavedOrderId, addToast]);
+
+  // Sync states
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<number | null>(null);
+
+  // Download orders from cloud
+  const downloadFromCloud = useCallback(async () => {
+    if (!navigator.onLine) {
+      addToast("Sin conexión a internet. No se pueden descargar pedidos desde la nube.", "warning");
+      return;
+    }
+
+    setIsSyncing(true);
+    try {
+      const result = await ExpectedOrderRepository.downloadFromCloud();
+      
+      if (result.success) {
+        setLastSyncTime(Date.now());
+        if (result.orders.length === 0) {
+          addToast("No hay pedidos en la nube para descargar.", "info");
+        } else {
+          addToast(`Se descargaron ${result.orders.length} cargas teóricas desde la nube.`, "success");
+        }
+      } else {
+        addToast(`Error al descargar desde la nube: ${result.error}`, "error");
+      }
+    } catch (err: any) {
+      addToast(`Error de conexión: ${err.message}`, "error");
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [addToast]);
+
+  // Upload a single order to cloud
+  const uploadOrderToCloud = useCallback(async (order: ExpectedOrder) => {
+    if (!navigator.onLine) {
+      addToast("Sin conexión a internet. El pedido se guardará localmente.", "warning");
+      return false;
+    }
+
+    try {
+      const result = await ExpectedOrderRepository.uploadToCloud(order);
+      if (result.success) {
+        return true;
+      } else {
+        addToast(`Error al subir a la nube: ${result.error}`, "warning");
+        return false;
+      }
+    } catch (err: any) {
+      addToast(`Error de conexión: ${err.message}`, "warning");
+      return false;
+    }
+  }, [addToast]);
+
+  // Sync all local orders to cloud
+  const syncAllToCloud = useCallback(async () => {
+    if (!navigator.onLine) {
+      addToast("Sin conexión a internet. No se pueden sincronizar pedidos.", "warning");
+      return;
+    }
+
+    setIsSyncing(true);
+    try {
+      let uploadedCount = 0;
+      let errorCount = 0;
+
+      for (const order of savedOrders) {
+        const result = await ExpectedOrderRepository.uploadToCloud(order);
+        if (result.success) {
+          uploadedCount++;
+        } else {
+          errorCount++;
+        }
+      }
+
+      if (errorCount === 0) {
+        addToast(`Se sincronizaron ${uploadedCount} cargas teóricas a la nube.`, "success");
+        setLastSyncTime(Date.now());
+      } else {
+        addToast(`Sincronizados ${uploadedCount}, errores: ${errorCount}`, "warning");
+      }
+    } catch (err: any) {
+      addToast(`Error de sincronización: ${err.message}`, "error");
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [savedOrders, addToast]);
 
   const selectedSavedOrder = useMemo(() => {
     if (!selectedSavedOrderId) return null;
@@ -366,7 +446,9 @@ export function useExpectedOrders() {
       previewItems,
       previewStats,
       selectedSavedOrderId,
-      selectedSavedOrder
+      selectedSavedOrder,
+      isSyncing,
+      lastSyncTime,
     },
     actions: {
       setActiveStep,
@@ -381,7 +463,10 @@ export function useExpectedOrders() {
       saveOrder,
       deleteOrder,
       setSelectedSavedOrderId,
-      resetImporter
+      resetImporter,
+      downloadFromCloud,
+      uploadOrderToCloud,
+      syncAllToCloud,
     }
   };
 }

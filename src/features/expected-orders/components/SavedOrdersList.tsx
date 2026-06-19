@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { FileText, Calendar, Trash2, Printer, Search, ArrowRight, Expand, ChevronDown, ChevronUp, Package, Layers, Info, Filter } from 'lucide-react';
+import { FileText, Calendar, Trash2, Printer, Search, ArrowRight, Expand, ChevronDown, ChevronUp, Package, Layers, Info, Filter, RefreshCw, Download, Upload, Cloud } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ExpectedOrder, ExpectedItem } from '../../../types';
 import { VirtualList } from '../../../shared/components/ui/VirtualList';
@@ -10,6 +10,7 @@ interface SavedOrdersListProps {
   state: any;
   actions: any;
   isDark: boolean;
+  theme?: 'dark' | 'light' | 'high-contrast';
 }
 
 // Sub-row component for list expansion
@@ -43,11 +44,19 @@ const ExpandedItemRow: React.FC<{ index: number; item: ExpectedItem; data: any; 
 
 ExpandedItemRow.displayName = 'SavedOrderExpandedItemRow';
 
-export const SavedOrdersList: React.FC<SavedOrdersListProps> = ({ state, actions, isDark }) => {
-  const { savedOrders } = state;
+export const SavedOrdersList: React.FC<SavedOrdersListProps> = ({ state, actions, isDark, theme = 'dark' }) => {
+  const { savedOrders, isSyncing, lastSyncTime } = state;
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [itemQuery, setItemQuery] = useState('');
+
+  const isHighContrast = theme === 'high-contrast';
+  const isLight = theme === 'light';
+
+  // Format last sync time
+  const lastSyncLabel = lastSyncTime 
+    ? `Última sync: ${new Date(lastSyncTime).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}`
+    : 'Nunca sincronizado';
 
   // Filter orders by ID or metadata
   const filteredOrders = useMemo(() => {
@@ -104,14 +113,69 @@ export const SavedOrdersList: React.FC<SavedOrdersListProps> = ({ state, actions
           <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
         </div>
 
-        {/* Action Button */}
-        <button
-          onClick={() => actions.setActiveStep('import')}
-          className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-blue-500/10 active:scale-95 transition-all"
-        >
-          <span>Nueva Carga Teórica</span>
-          <ArrowRight className="w-4 h-4" />
-        </button>
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2">
+          {/* Sync Status Badge */}
+          <div className={`hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-bold ${
+            isHighContrast 
+              ? 'bg-yellow-900/20 text-yellow-400 border border-yellow-400/30' 
+              : isLight 
+                ? 'bg-slate-100 text-slate-500 border border-slate-200' 
+                : 'bg-slate-800 text-slate-400 border border-white/5'
+          }`}>
+            <Cloud className="w-4 h-4" />
+            <span>{lastSyncLabel}</span>
+          </div>
+
+          {/* Download from Cloud Button */}
+          <button
+            onClick={() => actions.downloadFromCloud()}
+            disabled={isSyncing}
+            className={`px-4 py-3 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all disabled:opacity-50 ${
+              isHighContrast 
+                ? 'bg-yellow-400 text-black hover:bg-yellow-300 shadow-lg shadow-yellow-400/20' 
+                : isLight 
+                  ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-200 shadow-sm' 
+                  : 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-lg shadow-emerald-600/20'
+            } ${isSyncing ? 'animate-pulse' : ''}`}
+            title="Descargar cargas teóricas desde la nube"
+          >
+            {isSyncing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            <span className="hidden sm:inline">Desde Nube</span>
+          </button>
+
+          {/* Upload All to Cloud Button */}
+          <button
+            onClick={() => actions.syncAllToCloud()}
+            disabled={isSyncing || savedOrders.length === 0}
+            className={`px-4 py-3 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+              isHighContrast 
+                ? 'bg-yellow-900/30 text-yellow-400 border border-yellow-400/30 hover:bg-yellow-900/50' 
+                : isLight 
+                  ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-200' 
+                  : 'bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-600/20'
+            }`}
+            title="Subir todas las cargas teóricas a la nube"
+          >
+            <Upload className="w-4 h-4" />
+            <span className="hidden sm:inline">A Nube ({savedOrders.length})</span>
+          </button>
+
+          {/* New Order Button */}
+          <button
+            onClick={() => actions.setActiveStep('import')}
+            className={`px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 ${
+              isHighContrast 
+                ? 'bg-yellow-400 text-black hover:bg-yellow-300' 
+                : isLight 
+                  ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-600/10' 
+                  : 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-500/10'
+            }`}
+          >
+            <span>Nueva</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* ORDERS LISTGRID */}
