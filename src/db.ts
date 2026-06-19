@@ -45,6 +45,20 @@ export interface SyncLog {
   errorMessage?: string;
 }
 
+export interface ProductProvider {
+  id?: number;
+  productBarcode: string;
+  providerRut: string;
+  isPrimary: boolean;
+  hasExchange?: boolean | null;
+  withdrawalDays?: number | null;
+  exchangePolicy?: string | null;
+  mundo?: string;
+  marca?: string;
+  createdAt?: number;
+  updatedAt?: number;
+}
+
 export class LogiCountDB extends Dexie {
   products!: Table<Product>;
   sessions!: Table<CountingSession>;
@@ -60,6 +74,7 @@ export class LogiCountDB extends Dexie {
   customers!: Table<Customer>;
   messageTemplates!: Table<MessageTemplate>;
   dynamic_data!: Table<DynamicRecord>;
+  productProviders!: Table<ProductProvider>;
   blindScans!: Table<{
     id?: number;
     batchId: string;

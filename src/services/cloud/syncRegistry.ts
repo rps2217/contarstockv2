@@ -368,5 +368,36 @@ export const syncRegistry: Record<string, TableSyncMeta> = {
     primaryKey: 'id',
     mapToRemote: mapEventToRemote,
     mapToLocal: mapEventToLocal
+  },
+  productProviders: {
+    localTable: 'productProviders',
+    remoteTable: 'PRODUCTO_PROVEEDOR',
+    primaryKey: 'id',
+    mapToRemote: (pp) => ({
+      id: pp.id,
+      product_barcode: pp.productBarcode,
+      provider_rut: pp.providerRut,
+      is_primary: Boolean(pp.isPrimary),
+      has_exchange: pp.hasExchange,
+      withdrawal_days: pp.withdrawalDays,
+      exchange_policy: pp.exchangePolicy || null,
+      mundo: pp.mundo || null,
+      marca: pp.marca || null,
+      created_at: pp.createdAt ? new Date(pp.createdAt).toISOString() : new Date().toISOString(),
+      updated_at: pp.updatedAt ? new Date(pp.updatedAt).toISOString() : new Date().toISOString()
+    }),
+    mapToLocal: (remote) => ({
+      id: remote.id,
+      productBarcode: remote.product_barcode,
+      providerRut: remote.provider_rut,
+      isPrimary: Boolean(remote.is_primary),
+      hasExchange: remote.has_exchange,
+      withdrawalDays: remote.withdrawal_days,
+      exchangePolicy: remote.exchange_policy,
+      mundo: remote.mundo,
+      marca: remote.marca,
+      createdAt: remote.created_at ? new Date(remote.created_at).getTime() : Date.now(),
+      updatedAt: remote.updated_at ? new Date(remote.updated_at).getTime() : Date.now()
+    })
   }
 };
