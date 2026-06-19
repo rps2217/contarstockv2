@@ -8,7 +8,11 @@ import { BackupCard } from './support/BackupCard';
 import { KernelSystemCard } from './support/KernelSystemCard';
 import { SystemLogsModal } from './support/SystemLogsModal';
 
-export const SupportSection: React.FC = () => {
+interface Props {
+  theme?: 'dark' | 'light' | 'high-contrast';
+}
+
+export const SupportSection: React.FC<Props> = ({ theme = 'dark' }) => {
   const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
   
   const handleLogout = () => {
@@ -26,11 +30,11 @@ export const SupportSection: React.FC = () => {
   };
 
   return (
-    <SettingsSection title="Kernel & Soporte">
-      <DiagnosticsCard />
-      <MaintenanceCard />
-      <KernelSystemCard />
-      <BackupCard />
+    <SettingsSection title="Kernel & Soporte" theme={theme}>
+      <DiagnosticsCard theme={theme} />
+      <MaintenanceCard theme={theme} />
+      <KernelSystemCard theme={theme} />
+      <BackupCard theme={theme} />
 
       <div className="space-y-3">
         <SettingsButton 
@@ -38,6 +42,7 @@ export const SupportSection: React.FC = () => {
           label="Ver Logs del Sistema" 
           icon={Terminal} 
           variant="outline" 
+          theme={theme}
         />
         
         <div className="grid grid-cols-2 gap-3">
@@ -46,17 +51,18 @@ export const SupportSection: React.FC = () => {
             label="Cerrar Sesión" 
             icon={LogOut} 
             variant="outline" 
+            theme={theme}
           />
           <SettingsButton 
             onClick={handleMasterReset} 
             label="Master Reset" 
             icon={Trash2} 
             variant="danger" 
+            theme={theme}
           />
         </div>
       </div>
-      <SystemLogsModal isOpen={isLogsModalOpen} onClose={() => setIsLogsModalOpen(false)} />
+      <SystemLogsModal isOpen={isLogsModalOpen} onClose={() => setIsLogsModalOpen(false)} theme={theme} />
     </SettingsSection>
   );
 };
-

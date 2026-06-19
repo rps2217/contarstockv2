@@ -4,11 +4,15 @@ import { Trash2, Database } from 'lucide-react';
 import { SettingsCard, SettingsCardHeader, SettingsButton } from '../common/SettingsElements';
 import { toast } from 'sonner';
 
+interface Props {
+  theme?: 'dark' | 'light' | 'high-contrast';
+}
+
 /**
  * KernelSystemCard - Solo contiene "Limpiar Datos Locales"
  * Las demás funciones (sync, export) están en SyncCenter y Reports
  */
-export const KernelSystemCard: React.FC = () => {
+export const KernelSystemCard: React.FC<Props> = ({ theme = 'dark' }) => {
   const handleClearLocalData = () => {
     if (confirm("⚠️ ADVERTENCIA ⚠️\n\nEsto eliminará todos los registros locales (Vencimientos y Eventos). Se volverán a descargar desde la nube en la próxima sincronización.\n\n¿Estás seguro de continuar?")) {
       localStorage.removeItem('logicount_expiry_data');
@@ -19,12 +23,13 @@ export const KernelSystemCard: React.FC = () => {
   };
 
   return (
-    <SettingsCard className="border-4 border-slate-100 dark:border-white/5 bg-white dark:bg-slate-900">
+    <SettingsCard className="border-4" theme={theme}>
       <SettingsCardHeader 
         icon={Database} 
         title="Gestión de Datos & Kernel" 
         subtitle="Operaciones críticas de sincronización"
         color="bg-indigo-500"
+        theme={theme}
       />
 
       <div className="space-y-3">
@@ -33,6 +38,7 @@ export const KernelSystemCard: React.FC = () => {
           label="Limpiar Datos Locales"
           icon={Trash2}
           variant="danger"
+          theme={theme}
         />
       </div>
     </SettingsCard>
