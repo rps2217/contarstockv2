@@ -121,3 +121,42 @@ npm run test         # vitest (watch mode)
 - `4d6f5f0b` - fix: Soporte theme en Settings components
 - `fb0fb63f` - fix: Soporte theme en Settings support cards y modals
 - `7cf727f2` - fix: Soporte theme en Events y Compliance
+
+---
+
+## PRODUCTO_PROVEEDOR - Relación Many-to-Many (2026-06-19)
+
+### Estructura de la Tabla
+```
+┌─────────────────┐     ┌────────────────────────┐     ┌─────────────────┐
+│  PRODUCTOS       │     │   PRODUCTO_PROVEEDOR    │     │  PROVEEDORES    │
+├─────────────────┤     ├────────────────────────┤     ├─────────────────┤
+│ barcode (PK)    │◄────│ product_barcode (FK)   │────►│ rut (PK)        │
+│ supplierRut     │     │ provider_rut (FK)       │     │ exchangePolicy   │
+└─────────────────┘     │ is_primary (boolean)    │     │ withdrawalDays   │
+                         │ has_exchange (nullable) │     │ hasExchange     │
+                         │ withdrawal_days (nullable)│    └─────────────────┘
+                         └────────────────────────┘
+```
+
+### Archivos de Migración
+| Archivo | Descripción |
+|---------|-------------|
+| `docs/migrations/001_create_producto_proveedor.sql` | Schema + vistas |
+| `docs/migrations/import_producto_proveedor.py` | Script reutilizable |
+| `docs/migrations/migrate_BCM_2026-06-19.sql` | 3,263 registros listos |
+
+### Código Frontend
+- `src/repositories/ProductProviderRepository.ts` - Repository con sync
+- `src/db.ts` - Interfaz ProductProvider + tabla productProviders
+- `src/db/migrations/DbMigrator.ts` - Migración v48
+- `src/services/cloud/syncRegistry.ts` - Sync bidireccional
+
+### Estadísticas
+- Total filas Excel: 3,263
+- Proveedores únicos: 193
+- Productos únicos: 3,204
+
+### Commits
+- `b3dcdd40` - feat: Scripts de migración para PRODUCTO_PROVEEDOR
+- `d3389c9b` - feat: Agregar tabla PRODUCTO_PROVEEDOR al código frontend
