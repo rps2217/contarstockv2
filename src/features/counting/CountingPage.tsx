@@ -2,8 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Navigate, useLocation } from 'react-router-dom';
 import { useCountingLogic } from './hooks/useCountingLogic';
+import { useProductivity } from './hooks/useProductivity';
+import { useTurboMode } from './hooks/useTurboMode';
 import { CountingCameraView } from './components/CountingCameraView';
 import { ScannerToolsSheet } from './components/ScannerToolsSheet';
+import { ProductivityDashboard } from './components/ProductivityDashboard';
+import { TurboModeOverlay } from './components/TurboModeOverlay';
 import { ScreenLockOverlay } from '../../shared/components/ui/ScreenLockOverlay';
 import { ExpirationModal } from '../expiry/components/ExpirationModal';
 import { Loader2 } from 'lucide-react';
@@ -22,6 +26,13 @@ export const CountingPage: React.FC = () => {
   const { isSyncing } = useSyncStore();
   const { state, actions, sessionData } = useCountingLogic(id, () => navigate('/reports'));
   const { isLocked, unlock, lock } = useAutoLock(4000, sessionData.session?.isAutoLockEnabled ?? true);
+
+  // Productivity tracking
+  const [isProductivityVisible, setIsProductivityVisible] = useState(false);
+  const { stats, formattedDuration } = useProductivity(sessionData.history);
+
+  // Turbo mode
+  const turbo = useTurboMode();
 
   const [isToolsOpen, setIsToolsOpen] = useState(false);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
@@ -56,12 +67,18 @@ export const CountingPage: React.FC = () => {
       } else if (e.key.toLowerCase() === 't' && e.altKey) {
         e.preventDefault();
         setIsToolsOpen(prev => !prev);
+      } else if (e.key.toLowerCase() === 'p' && e.altKey) {
+        e.preventDefault();
+        setIsProductivityVisible(prev => !prev);
+      } else if (e.key.toLowerCase() === 't' && e.altKey && e.shiftKey) {
+        e.preventDefault();
+        turbo.toggle();
       }
     };
 
     window.addEventListener('keydown', handleShortcuts);
     return () => window.removeEventListener('keydown', handleShortcuts);
-  }, [isLocked, state.status, state.isLoading, actions, lock]);
+  }, [isLocked, state.status, state.isLoading, actions, lock, turbo]);
 
   // Procesar escaneo inicial si viene de una redirección automática
   useEffect(() => {
@@ -158,6 +175,23 @@ export const CountingPage: React.FC = () => {
  )}
  
  <ScreenLockOverlay isLocked={isLocked} onUnlock={unlock} />
+
+ {/* PRODUCTIVITY DASHBOARD */}
+ <ProductivityDashboard 
+   stats={stats}
+   formattedDuration={formattedDuration}
+   isVisible={isProductivityVisible}
+   onToggle={() => setIsProductivityVisible(prev => !prev)}
+ />
+
+ {/* TURBO MODE OVERLAY */}
+ <TurboModeOverlay
+   isActive={turbo.isActive}
+   lastQuantity={turbo.lastQuantity}
+   scanCount={turbo.scanCount}
+   productName={sessionData.history.find(i => i.barcode === turbo.lastScannedBarcode)?.productName}
+ />
+
  </div>
  );
 };

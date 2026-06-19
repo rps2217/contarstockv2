@@ -6,3 +6,5 @@
 
 export { ScannerContainer } from './ScannerContainer';
 export { ScannerCameraSection } from './ScannerCameraSection';
+export { ScannerFeedbackOverlay } from './ScannerFeedbackOverlay';
+export { LabelPreviewModal } from './LabelPreviewModal';
