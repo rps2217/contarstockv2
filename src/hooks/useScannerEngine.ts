@@ -74,6 +74,16 @@ export const useScannerEngine = (options: ScannerEngineOptions = {}) => {
       provider = allProviders.find(p => p.name && normalizeIdentity(p.name) === targetName);
     }
 
+    // 5. PRODUCTO_PROVEEDOR: Buscar políticas específicas por producto-proveedor
+    let ppRelation = null;
+    try {
+      const ppRelations = await db.table('productProviders').where('productBarcode').equals(normalizedCode).toArray();
+      // Priorizar proveedor principal o el primero que tenga datos específicos
+      ppRelation = ppRelations.find(p => p.isPrimary) || ppRelations[0] || null;
+    } catch {
+      // Tabla puede no existir aún
+    }
+
     // Curación Dinámica de Datos (Self-Healing):
     // Si encontramos el proveedor, sobreescribimos los campos del producto temporalmente
     // con los datos oficiales del maestro para que los registros (vencimientos, conteos)
@@ -81,10 +91,22 @@ export const useScannerEngine = (options: ScannerEngineOptions = {}) => {
     if (provider) {
       productRecord.supplier = provider.name;
       productRecord.supplierRut = provider.rut;
-      
-      setProviderPolicy({ 
-        days: provider.withdrawalDays || 0, 
-        hasCanje: provider.hasExchange || false 
+
+      // Usar políticas específicas del PRODUCTO_PROVEEDOR si existen, sino las del proveedor
+      setProviderPolicy({
+        days: ppRelation?.withdrawalDays ?? provider.withdrawalDays ?? 0,
+        hasCanje: ppRelation?.hasExchange ?? provider.hasExchange ?? false
+      });
+    } else if (ppRelation) {
+      // Si solo tenemos relación PP pero no proveedor maestro, buscamos el proveedor
+      provider = await db.providers.get(ppRelation.providerRut);
+      if (provider) {
+        productRecord.supplier = provider.name;
+        productRecord.supplierRut = provider.rut;
+      }
+      setProviderPolicy({
+        days: ppRelation.withdrawalDays ?? 0,
+        hasCanje: ppRelation.hasExchange ?? false
       });
     } else {
       setProviderPolicy(null);
