@@ -2,8 +2,13 @@
  * Sync Components - Índice de componentes para el módulo de sincronización
  */
 
+// Componentes nuevos (preferidos)
+export { SyncQueuePanel } from './SyncQueuePanel';
+
+// Componentes legacy (deprecated - usar SyncQueuePanel)
 export { SyncQueue } from './SyncQueue';
 export { SyncQueueDetail } from './SyncQueueDetail';
+export { SyncQueueList } from './SyncQueueList';
 export { SyncIncidents } from './SyncIncidents';
 export { SyncHistory } from './SyncHistory';
 export { SyncPanel } from './SyncPanel';
@@ -12,4 +17,3 @@ export { SyncStatusBadge } from './SyncStatusBadge';
 export { SyncGroupCard } from './SyncGroupCard';
 export { SyncDiagnosticsPanel } from './SyncDiagnosticsPanel';
 export { SyncStatusCards } from './SyncStatusCards';
-export { SyncQueueList } from './SyncQueueList';

@@ -29,7 +29,7 @@ import { es } from 'date-fns/locale';
 import { useSyncStore } from '@/stores';
 import { syncRegistry } from '../../services/cloud/syncRegistry';
 import { useSyncCenter } from './hooks/useSyncCenter';
-import { SyncStatusCards, SyncQueueList, SyncQueueDetail } from './components';
+import { SyncStatusCards, SyncQueuePanel } from './components';
 
 export const SyncCenterPage: React.FC = () => {
   const navigate = useNavigate();
@@ -154,28 +154,19 @@ export const SyncCenterPage: React.FC = () => {
 
       {/* TAB 1: OUTPUT QUEUE */}
       {activeTab === 'queue' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main List */}
-          <div className="lg:col-span-2 space-y-3">
-            <div className="flex justify-between items-center px-1">
-              <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                <Clock className="w-3.5 h-3.5 text-blue-500" />
-                Cola Secuencial (Cambios No Sometidos)
-              </h2>
-              <span className="text-[10px] text-slate-400 font-mono">FIFO Orden de Transacciones</span>
-            </div>
-
-            <SyncQueueList
-              items={pendingQueueItems}
-              selectedItem={selectedQueueItem}
-              onSelect={setSelectedQueueItem}
-            />
+        <div className="space-y-3">
+          <div className="flex justify-between items-center px-1">
+            <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+              <Clock className="w-3.5 h-3.5 text-blue-500" />
+              Cola Secuencial (Cambios No Sometidos)
+            </h2>
+            <span className="text-[10px] text-slate-400 font-mono">FIFO Orden de Transacciones</span>
           </div>
 
-          {/* Detail Sidebar */}
-          <SyncQueueDetail
-            item={selectedQueueItem}
-            onClose={() => setSelectedQueueItem(null)}
+          <SyncQueuePanel
+            items={pendingQueueItems}
+            selectedItem={selectedQueueItem}
+            onSelectItem={setSelectedQueueItem}
             onForceSync={handleSingleTableSync}
             onForceComplete={() => selectedQueueItem && handleForceComplete(selectedQueueItem)}
             onDiscard={() => selectedQueueItem && handleDiscardItem(selectedQueueItem)}
