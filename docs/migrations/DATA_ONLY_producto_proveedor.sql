@@ -1,3 +1,50 @@
+
+INSERT INTO PROVEEDORES (rut, name, has_exchange, withdrawal_days, exchange_policy) VALUES
+
+  ('10377777', 'SUSANA MAGNA GUTIERREZ', TRUE, 30, 'Política no definida'),
+  ('12226663', 'ANTONIO AGUILAR VALDES', TRUE, 30, 'Política no definida'),
+  ('17107960', 'DARIO VERGARA LARA', TRUE, 30, 'Política no definida'),
+  ('3', 'SERVICIOS', TRUE, 30, 'Política no definida'),
+  ('31', 'HIMALAYA WELLNESS USA LTD', TRUE, 30, 'Política no definida'),
+  ('4892782', 'ENRIQUETA POSECK ROLOFF', TRUE, 30, 'Política no definida'),
+  ('5056407', 'BENIGNO SUAREZ PAREDES', TRUE, 30, 'Política no definida'),
+  ('5057786', 'JOSÉ JAIME MEZA MUÑOZ', TRUE, 30, 'Política no definida'),
+  ('5170511', 'LAURA XIMENA POLANCO GONZALEZ', TRUE, 30, 'Política no definida'),
+  ('59090380', 'SALUS FLORADIX CHILE', TRUE, 30, 'Política no definida'),
+  ('6509583', 'GISELA MELITA ELLER SOMMER', TRUE, 30, 'Política no definida'),
+  ('6664351', 'MARIA ANGELES GONZALES BUSTAMANTE', TRUE, 30, 'Política no definida'),
+  ('76012926', 'COMERC. SERGIO ROMERO CASTILLO E.I.R.L.', TRUE, 30, 'Política no definida'),
+  ('76013800', 'NUTRALINE LTDA', TRUE, 30, 'Política no definida'),
+  ('76024780', 'ECOSMETIC LIMITADA', TRUE, 30, 'Política no definida'),
+  ('76033037', 'PIQUE Y COMPANIA SPA', TRUE, 30, 'Política no definida'),
+  ('76043435', 'SIMAIOS CHILE COMERCIAL LTDA', TRUE, 30, 'Política no definida'),
+  ('76045001', 'PARIS PROVENCE SPA', TRUE, 30, 'Política no definida'),
+  ('76047495', 'RENZO BIANCHETTI GONZALEZ, ALIMENT Y DIST EIRL', TRUE, 30, 'Política no definida'),
+  ('76067896', 'LA BOTICA DEL ALMA S.A', TRUE, 30, 'Política no definida'),
+  ('76101945', 'VIVENAT SPA', TRUE, 30, 'Política no definida'),
+  ('76113829', 'SOCIEDAD COSMETICA Y BIOTECNOLOGICA DE CHILE LTDA', TRUE, 30, 'Política no definida'),
+  ('76116217', 'VAICO SPA', TRUE, 30, 'Política no definida'),
+  ('76118052', 'ISLA NATURA EXPORTADORA LTDA', TRUE, 30, 'Política no definida'),
+  ('76121304', 'ELAB Y COMERCIALIZADORA DE ESENCIAS FLORALES LTDA', TRUE, 30, 'Política no definida'),
+  ('76121816', 'PROIMEX SPA', TRUE, 30, 'Política no definida'),
+  ('76128495', 'COMERCIALIZADORA VIDA ORGANICA LTDA', TRUE, 30, 'Política no definida'),
+  ('76149554', 'THE NATURE FACTORY SPA', TRUE, 30, 'Política no definida'),
+  ('76154602', 'NATURALLY S.A.', TRUE, 30, 'Política no definida'),
+  ('76160163', 'LABORATORIO NATURAL FUCHSLOCHER LIMITADA', TRUE, 30, 'Política no definida'),
+  ('76160357', 'COM DE PROD. ENERG. Y SUP. INTEGRAL NUTRITION LTDA', TRUE, 30, 'Política no definida'),
+  ('76175402', 'COMERCIALIZADORA VANIA PERRET NEILSON EIRL', TRUE, 30, 'Política no definida'),
+  ('76203687', 'COMERCIAL Y DEPORTES TUROK VILLACURA CARTER EIRL', TRUE, 30, 'Política no definida'),
+  ('76210354', 'ASESORIAS Y COMERCIALIZADORA DP LTDA', TRUE, 30, 'Política no definida'),
+  ('76214347', 'BENEXIA S.A.', TRUE, 30, 'Política no definida'),
+  ('76231804', 'IMPORTADORA Y COMERCIALIZADORA BIOFOODS LTDA', TRUE, 30, 'Política no definida'),
+  ('76232017', 'SOCIEDAD COMERCIAL DOMO LTDA', TRUE, 30, 'Política no definida'),
+  ('76233433', 'INV. WELLNESS TECHNOLOGIES LTDA', TRUE, 30, 'Política no definida'),
+  ('76236457', 'EMPRESAS IDA SPA', TRUE, 30, 'Política no definida'),
+  ('76259425', 'IMPORTADORA BE ORGANICS SPA', TRUE, 30, 'Política no definida'),
+  ('76267832', 'SOCIEDAD COMERCIAL Y AGRÍCOLA PROMAUKA LIMITADA', TRUE, 30, 'Política no definida'),
+  ('76276266', 'EXPERIENCIA MONOI S.A', TRUE, 30, 'Política no definida'),
+  ('76285343', 'FRAILE CASTRUCCIO YUTE LIMITADA', TRUE, 30, 'Política no definida'),
+  ('76352606', 'VICTORIA SPA', TRUE, 30, 'Política no definida'),
   ('76352658', 'LUZ MARÍA GONZALEZ DIAZ SABORES SIN CULPA ALI EIRL', TRUE, 30, 'Política no definida'),
   ('76353639', 'ANDES NUTRACLINIC SPA', TRUE, 30, 'Política no definida'),
   ('76368039', 'COMERCIAL E INVERSIONES SONRRISOS SPA', TRUE, 30, 'Política no definida'),
@@ -148,11 +195,7 @@
   ('99592830', 'COMERCIAL NUEVO HOGAR  SPA', TRUE, 30, 'Política no definida')
 ;
 
--- -----------------------------------------------------------
--- 2. INSERTAR PRODUCTOS (upsert)
--- -----------------------------------------------------------
 
--- Insertando 3204 registros en PRODUCTOS
 
 INSERT INTO PRODUCTOS (barcode, name, supplier, supplier_rut, category) VALUES
 
@@ -3362,11 +3405,7 @@ INSERT INTO PRODUCTOS (barcode, name, supplier, supplier_rut, category) VALUES
   ('9999444455556', 'SHOTS 10 UND CALAF-ARAND-MOSQ-MAQUI 15MLAUSTRALOX', 'AGROINDUSTRIA AYC SPA', '76950321', 'ALMACEN')
 ;
 
--- -----------------------------------------------------------
--- 3. INSERTAR RELACIONES PRODUCTO_PROVEEDOR
--- -----------------------------------------------------------
 
--- Insertando 3263 registros en PRODUCTO_PROVEEDOR
 
 INSERT INTO PRODUCTO_PROVEEDOR (product_barcode, provider_rut, is_primary, mundo, marca, has_exchange, withdrawal_days, exchange_policy) VALUES
 
@@ -6629,133 +6668,3 @@ INSERT INTO PRODUCTO_PROVEEDOR (product_barcode, provider_rut, is_primary, mundo
   ('4260426838755', '76564426', TRUE, 'ALI', 'B', NULL, NULL, NULL),
   ('4260648130798', '76564426', TRUE, 'ALI', 'B', NULL, NULL, NULL),
   ('850006004201', '76564426', TRUE, 'ALI', 'B', NULL, NULL, NULL),
-  ('850006004218', '76564426', TRUE, 'ALI', 'B', NULL, NULL, NULL),
-  ('850006004225', '76564426', TRUE, 'ALI', 'B', NULL, NULL, NULL),
-  ('7803504003422', '77205416', TRUE, 'ALI', 'C', NULL, NULL, NULL),
-  ('7803504004160', '77205416', TRUE, 'ALI', 'C', NULL, NULL, NULL)
-;
-
--- ============================================================
--- QUERIES DE DIAGNÓSTICO POST-IMPORTACIÓN
--- ============================================================
-
--- 1. Verificar conteos
-SELECT 'PRODUCTO_PROVEEDOR' AS tabla, COUNT(*) AS total FROM PRODUCTO_PROVEEDOR
-UNION ALL
-SELECT 'PRODUCTOS' AS tabla, COUNT(*) AS total FROM PRODUCTOS
-UNION ALL
-SELECT 'PROVEEDORES' AS tabla, COUNT(*) AS total FROM PROVEEDORES;
-
--- 2. Verificar proveedores principales por producto
-SELECT 
-    product_barcode,
-    COUNT(*) AS total_proveedores,
-    COUNT(*) FILTER (WHERE is_primary = TRUE) AS tiene_principal
-FROM PRODUCTO_PROVEEDOR
-GROUP BY product_barcode
-HAVING COUNT(*) FILTER (WHERE is_primary = TRUE) != 1
-LIMIT 10;
-
--- 3. Verificar integridad referencial
-SELECT 
-    pp.product_barcode,
-    p.name AS product_name,
-    CASE WHEN p.barcode IS NULL THEN '❌ Producto no existe' ELSE '✅ OK' END AS status
-FROM PRODUCTO_PROVEEDOR pp
-LEFT JOIN PRODUCTOS p ON pp.product_barcode = p.barcode
-WHERE p.barcode IS NULL
-LIMIT 10;
-
-SELECT 
-    pp.provider_rut,
-    pr.name AS provider_name,
-    CASE WHEN pr.rut IS NULL THEN '❌ Proveedor no existe' ELSE '✅ OK' END AS status
-FROM PRODUCTO_PROVEEDOR pp
-LEFT JOIN PROVEEDORES pr ON pp.provider_rut = pr.rut
-WHERE pr.rut IS NULL
-LIMIT 10;
-
--- 4. Resumen por proveedor
-SELECT 
-    pr.name AS proveedor,
-    pr.rut,
-    COUNT(pp.product_barcode) AS productos_asociados,
-    COUNT(pp.product_barcode) FILTER (WHERE pp.is_primary = TRUE) AS productos_principales
-FROM PROVEEDORES pr
-LEFT JOIN PRODUCTO_PROVEEDOR pp ON pr.rut = pp.provider_rut
-GROUP BY pr.rut, pr.name
-ORDER BY productos_asociados DESC
-LIMIT 20;
-
--- 5. Resumen por MUNDO
-SELECT 
-    mundo,
-    COUNT(*) AS registros,
-    COUNT(DISTINCT product_barcode) AS productos
-FROM PRODUCTO_PROVEEDOR
-WHERE mundo != ''
-GROUP BY mundo
-ORDER BY registros DESC;
-
--- 6. Resumen por MARCA
-SELECT 
-    marca,
-    COUNT(*) AS registros,
-    COUNT(DISTINCT product_barcode) AS productos
-FROM PRODUCTO_PROVEEDOR
-WHERE marca != ''
-GROUP BY marca
-ORDER BY registros DESC;
-
-
--- ============================================================
--- SECCIÓN 3: CREAR VISTAS (después de insertar datos)
--- ============================================================
-
--- 4. VISTA PARA OBTENER PROVEEDOR PRINCIPAL DE CADA PRODUCTO
-CREATE OR REPLACE VIEW "VIEW_PRODUCTO_PRINCIPAL" AS
-SELECT 
-    pp.product_barcode,
-    pp.provider_rut,
-    pr.name AS provider_name,
-    pr.has_exchange AS provider_has_exchange,
-    pr.withdrawal_days AS provider_withdrawal_days,
-    COALESCE(pp.has_exchange, pr.has_exchange) AS effective_has_exchange,
-    COALESCE(pp.withdrawal_days, pr.withdrawal_days, 30) AS effective_withdrawal_days,
-    pp.mundo,
-    pp.marca
-FROM "PRODUCTO_PROVEEDOR" pp
-JOIN "PROVEEDORES" pr ON pp.provider_rut = pr.rut
-WHERE pp.is_primary = TRUE;
-
--- 5. VISTA PARA CUMPLIMIENTO CON POLÍTICAS RESUELTAS
-CREATE OR REPLACE VIEW "VIEW_CUMPLIMIENTO_POLITICAS" AS
-SELECT 
-    v.barcode,
-    v.mm,
-    v.yyyy,
-    v.quantity,
-    p.name AS product_name,
-    pr.name AS provider_name,
-    pr.rut AS provider_rut,
-    COALESCE(pp.has_exchange, pr.has_exchange) AS has_exchange,
-    COALESCE(pp.withdrawal_days, pr.withdrawal_days, 30) AS withdrawal_days,
-    pr.exchange_policy,
-    DATE(
-        MAKE_DATE(v.yyyy, v.mm, 1) - INTERVAL '1 day' * COALESCE(pp.withdrawal_days, pr.withdrawal_days, 30)
-    ) AS withdrawal_date,
-    DATE(
-        MAKE_DATE(v.yyyy, v.mm, 1) - INTERVAL '1 day' * COALESCE(pp.withdrawal_days, pr.withdrawal_days, 30)
-    ) - CURRENT_DATE AS days_remaining
-FROM "VENCIMIENTOS" v
-JOIN "PRODUCTOS" p ON v.barcode = p.barcode
-LEFT JOIN "PRODUCTO_PROVEEDOR" pp ON p.barcode = pp.product_barcode AND pp.is_primary = TRUE
-LEFT JOIN "PROVEEDORES" pr ON COALESCE(pp.provider_rut, p.supplier_rut) = pr.rut;
-
--- 6. COMENTARIOS
-COMMENT ON TABLE "PRODUCTO_PROVEEDOR" IS 'Relación many-to-many entre productos y proveedores con políticas específicas';
-COMMENT ON COLUMN "PRODUCTO_PROVEEDOR".product_barcode IS 'Código del producto (FK a PRODUCTOS.barcode)';
-COMMENT ON COLUMN "PRODUCTO_PROVEEDOR".provider_rut IS 'RUT del proveedor (FK a PROVEEDORES.rut)';
-COMMENT ON COLUMN "PRODUCTO_PROVEEDOR".is_primary IS 'Indica si este es el proveedor principal del producto';
-COMMENT ON COLUMN "PRODUCTO_PROVEEDOR".has_exchange IS 'Política de canje (NULL = hereda del proveedor)';
-COMMENT ON COLUMN "PRODUCTO_PROVEEDOR".withdrawal_days IS 'Días de retiro (NULL = hereda del proveedor, default 30)';
