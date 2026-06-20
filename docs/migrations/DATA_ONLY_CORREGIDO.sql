@@ -1,6 +1,4 @@
--- ============================================================
 -- PROVEEDORES (192 registros) - Columnas de tu Supabase
--- ============================================================
 INSERT INTO "PROVEEDORES" (rut, name, has_exchange, withdrawal_days, exchangePolicy, withdrawalDays, hasExchange, updated_at) VALUES
 ('10377777', 'SUSANA MAGNA GUTIERREZ', TRUE, 30, 'Política no definida', 30, TRUE, NOW()),
 ('12226663', 'ANTONIO AGUILAR VALDES', TRUE, 30, 'Política no definida', 30, TRUE, NOW()),
@@ -147,9 +145,7 @@ INSERT INTO "PROVEEDORES" (rut, name, has_exchange, withdrawal_days, exchangePol
 ('77620056', 'NB NONBEES SPA', TRUE, 30, 'Política no definida', 30, TRUE, NOW()),
 ('78292680', 'SOCIEDAD COMERCIAL DRAKE LTDA', TRUE, 30, 'Política no definida', 30, TRUE, NOW());
 
--- ============================================================
 -- CREAR TABLA PRODUCTO_PROVEEDOR
--- ============================================================
 CREATE TABLE IF NOT EXISTS "PRODUCTO_PROVEEDOR" (
     id SERIAL PRIMARY KEY,
     product_barcode VARCHAR(50) NOT NULL,
@@ -169,10 +165,8 @@ CREATE INDEX idx_pp_producto ON "PRODUCTO_PROVEEDOR"(product_barcode);
 CREATE INDEX idx_pp_proveedor ON "PRODUCTO_PROVEEDOR"(provider_rut);
 CREATE INDEX idx_pp_principal ON "PRODUCTO_PROVEEDOR"(product_barcode) WHERE is_primary = TRUE;
 
--- ============================================================
 -- RELACIONES PRODUCTO_PROVEEDOR (3263 registros)
 -- Columnas: product_barcode, provider_rut, is_primary, mundo, marca, has_exchange, withdrawal_days, exchange_policy
--- ============================================================
 INSERT INTO "PRODUCTO_PROVEEDOR" (product_barcode, provider_rut, is_primary, mundo, marca, has_exchange, withdrawal_days, exchange_policy) VALUES
   ('850052000000', 'INFUSION FLOR DE JAMAICA 3 G X20 BOLSAS FNL', 'LABORATORIO NATURAL FUCHSLOCHER LIMITADA', '76160163', 'ALMACEN'),
   ('850060000000', 'VITAMINA C LIPOSOMAL X90 CÁPSULAS FNL', 'LABORATORIO NATURAL FUCHSLOCHER LIMITADA', '76160163', 'ALI'),
@@ -246,13 +240,6 @@ INSERT INTO "PRODUCTO_PROVEEDOR" (product_barcode, provider_rut, is_primary, mun
   ('9999444455556', 'SHOTS 10 UND CALAF-ARAND-MOSQ-MAQUI 15MLAUSTRALOX', 'AGROINDUSTRIA AYC SPA', '76950321', 'ALMACEN')
 ;
 
--- -----------------------------------------------------------
--- 3. INSERTAR RELACIONES PRODUCTO_PROVEEDOR
--- -----------------------------------------------------------
-
--- Insertando 3263 registros en PRODUCTO_PROVEEDOR
-
-INSERT INTO PRODUCTO_PROVEEDOR (product_barcode, provider_rut, is_primary, mundo, marca, has_exchange, withdrawal_days, exchange_policy) VALUES
 
   ('1020101010202', '76937323', TRUE, 'ALMACEN', 'C', NULL, NULL, NULL),
   ('1020101010707', '76937323', TRUE, 'ALMACEN', 'C', NULL, NULL, NULL),
@@ -3519,127 +3506,4 @@ INSERT INTO PRODUCTO_PROVEEDOR (product_barcode, provider_rut, is_primary, mundo
   ('7803504004160', '77205416', TRUE, 'ALI', 'C', NULL, NULL, NULL)
 ;
 
--- ============================================================
--- QUERIES DE DIAGNÓSTICO POST-IMPORTACIÓN
--- ============================================================
 
--- 1. Verificar conteos
-SELECT 'PRODUCTO_PROVEEDOR' AS tabla, COUNT(*) AS total FROM PRODUCTO_PROVEEDOR
-UNION ALL
-SELECT 'PRODUCTOS' AS tabla, COUNT(*) AS total FROM PRODUCTOS
-UNION ALL
-SELECT 'PROVEEDORES' AS tabla, COUNT(*) AS total FROM PROVEEDORES;
-
--- 2. Verificar proveedores principales por producto
-SELECT 
-    product_barcode,
-    COUNT(*) AS total_proveedores,
-    COUNT(*) FILTER (WHERE is_primary = TRUE) AS tiene_principal
-FROM PRODUCTO_PROVEEDOR
-GROUP BY product_barcode
-HAVING COUNT(*) FILTER (WHERE is_primary = TRUE) != 1
-LIMIT 10;
-
--- 3. Verificar integridad referencial
-SELECT 
-    pp.product_barcode,
-    p.name AS product_name,
-    CASE WHEN p.barcode IS NULL THEN '❌ Producto no existe' ELSE '✅ OK' END AS status
-FROM PRODUCTO_PROVEEDOR pp
-LEFT JOIN PRODUCTOS p ON pp.product_barcode = p.barcode
-WHERE p.barcode IS NULL
-LIMIT 10;
-
-SELECT 
-    pp.provider_rut,
-    pr.name AS provider_name,
-    CASE WHEN pr.rut IS NULL THEN '❌ Proveedor no existe' ELSE '✅ OK' END AS status
-FROM PRODUCTO_PROVEEDOR pp
-LEFT JOIN PROVEEDORES pr ON pp.provider_rut = pr.rut
-WHERE pr.rut IS NULL
-LIMIT 10;
-
--- 4. Resumen por proveedor
-SELECT 
-    pr.name AS proveedor,
-    pr.rut,
-    COUNT(pp.product_barcode) AS productos_asociados,
-    COUNT(pp.product_barcode) FILTER (WHERE pp.is_primary = TRUE) AS productos_principales
-FROM PROVEEDORES pr
-LEFT JOIN PRODUCTO_PROVEEDOR pp ON pr.rut = pp.provider_rut
-GROUP BY pr.rut, pr.name
-ORDER BY productos_asociados DESC
-LIMIT 20;
-
--- 5. Resumen por MUNDO
-SELECT 
-    mundo,
-    COUNT(*) AS registros,
-    COUNT(DISTINCT product_barcode) AS productos
-FROM PRODUCTO_PROVEEDOR
-WHERE mundo != ''
-GROUP BY mundo
-ORDER BY registros DESC;
-
--- 6. Resumen por MARCA
-SELECT 
-    marca,
-    COUNT(*) AS registros,
-    COUNT(DISTINCT product_barcode) AS productos
-FROM PRODUCTO_PROVEEDOR
-WHERE marca != ''
-GROUP BY marca
-ORDER BY registros DESC;
-
-
--- ============================================================
--- SECCIÓN 3: CREAR VISTAS (después de insertar datos)
--- ============================================================
-
--- 4. VISTA PARA OBTENER PROVEEDOR PRINCIPAL DE CADA PRODUCTO
-CREATE OR REPLACE VIEW "VIEW_PRODUCTO_PRINCIPAL" AS
-SELECT 
-    pp.product_barcode,
-    pp.provider_rut,
-    pr.name AS provider_name,
-    pr.has_exchange AS provider_has_exchange,
-    pr.withdrawal_days AS provider_withdrawal_days,
-    COALESCE(pp.has_exchange, pr.has_exchange) AS effective_has_exchange,
-    COALESCE(pp.withdrawal_days, pr.withdrawal_days, 30) AS effective_withdrawal_days,
-    pp.mundo,
-    pp.marca
-FROM "PRODUCTO_PROVEEDOR" pp
-JOIN "PROVEEDORES" pr ON pp.provider_rut = pr.rut
-WHERE pp.is_primary = TRUE;
-
--- 5. VISTA PARA CUMPLIMIENTO CON POLÍTICAS RESUELTAS
-CREATE OR REPLACE VIEW "VIEW_CUMPLIMIENTO_POLITICAS" AS
-SELECT 
-    v.barcode,
-    v.mm,
-    v.yyyy,
-    v.quantity,
-    p.name AS product_name,
-    pr.name AS provider_name,
-    pr.rut AS provider_rut,
-    COALESCE(pp.has_exchange, pr.has_exchange) AS has_exchange,
-    COALESCE(pp.withdrawal_days, pr.withdrawal_days, 30) AS withdrawal_days,
-    pr.exchange_policy,
-    DATE(
-        MAKE_DATE(v.yyyy, v.mm, 1) - INTERVAL '1 day' * COALESCE(pp.withdrawal_days, pr.withdrawal_days, 30)
-    ) AS withdrawal_date,
-    DATE(
-        MAKE_DATE(v.yyyy, v.mm, 1) - INTERVAL '1 day' * COALESCE(pp.withdrawal_days, pr.withdrawal_days, 30)
-    ) - CURRENT_DATE AS days_remaining
-FROM "VENCIMIENTOS" v
-JOIN "PRODUCTOS" p ON v.barcode = p.barcode
-LEFT JOIN "PRODUCTO_PROVEEDOR" pp ON p.barcode = pp.product_barcode AND pp.is_primary = TRUE
-LEFT JOIN "PROVEEDORES" pr ON COALESCE(pp.provider_rut, p.supplier_rut) = pr.rut;
-
--- 6. COMENTARIOS
-COMMENT ON TABLE "PRODUCTO_PROVEEDOR" IS 'Relación many-to-many entre productos y proveedores con políticas específicas';
-COMMENT ON COLUMN "PRODUCTO_PROVEEDOR".product_barcode IS 'Código del producto (FK a PRODUCTOS.barcode)';
-COMMENT ON COLUMN "PRODUCTO_PROVEEDOR".provider_rut IS 'RUT del proveedor (FK a PROVEEDORES.rut)';
-COMMENT ON COLUMN "PRODUCTO_PROVEEDOR".is_primary IS 'Indica si este es el proveedor principal del producto';
-COMMENT ON COLUMN "PRODUCTO_PROVEEDOR".has_exchange IS 'Política de canje (NULL = hereda del proveedor)';
-COMMENT ON COLUMN "PRODUCTO_PROVEEDOR".withdrawal_days IS 'Días de retiro (NULL = hereda del proveedor, default 30)';
