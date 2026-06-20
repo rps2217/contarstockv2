@@ -158,7 +158,7 @@ const Row = memo(({ index, data }: any) => {
 
 Row.displayName = 'ProductRow';
 
-export const ProductList: React.FC<ProductListProps> = memo(({ products, onEdit, onDelete, onDeleteAll, onPrint, hasFilter, selectedIds, onSelect, onSelectAll }) => {
+export const ProductList: React.FC<ProductListProps> = memo(({ products, onEdit, onDelete, onDeleteAll, onPrint, onViewDetail, hasFilter, selectedIds, onSelect, onSelectAll }) => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
