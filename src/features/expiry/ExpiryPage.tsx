@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldAlert, Download, Trash2, X, AlertTriangle, Search, CornerDownLeft, Loader2, RefreshCw, AlertCircle, Home } from 'lucide-react';
+import { ShieldAlert, Download, Trash2, X, AlertTriangle, Search, LayoutGrid, CornerDownLeft, Loader2, RefreshCw, AlertCircle, Home } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { VirtualList } from '../../shared/components/ui/VirtualList';
 import { useToastStore } from '../../store/useToastStore';
@@ -21,6 +21,7 @@ import { SyncDiagnosticsPanel } from '../sync/components/SyncDiagnosticsPanel';
 import { ExpiryCaptureRow } from './components/ExpiryCaptureRow';
 import { ExpiryDetailModal } from './components/ExpiryDetailModal';
 import { ExpiryMetricsCards } from './components/ExpiryMetricsCards';
+import { ExpiryKanbanView } from './components/ExpiryKanbanView';
 
 const getDaysUntilExpiry = (mm: number, yyyy: number) => {
   const expiryDate = new Date(yyyy, mm - 1, 1);
@@ -53,6 +54,7 @@ export const ExpiryPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [filterVencido, setFilterVencido] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [filterCritico, setFilterCritico] = useState(false);
 
   const [selectedDetailItem, setSelectedDetailItem] = useState<ExpiryItem | null>(null);
@@ -238,6 +240,15 @@ export const ExpiryPage: React.FC = () => {
           >
             <AlertTriangle className="w-5 h-5" />
           </button>
+          <button
+            onClick={() => setViewMode(v => v === 'list' ? 'kanban' : 'list')}
+            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+              viewMode === 'kanban' ? 'bg-indigo-600 text-white' : 'bg-white/5 text-slate-400 active:bg-white/10'
+            }`}
+            title="Cambiar vista"
+          >
+            <LayoutGrid className="w-5 h-5" />
+          </button>
         </div>
       }
     />
@@ -391,12 +402,19 @@ export const ExpiryPage: React.FC = () => {
         scrollRef={parentRef}
         readOnly={engine.isModalOpen}
         list={
-          <VirtualList
-            items={sortedItems}
-            itemHeight={154} // 130 + 24 spacing
-            renderRow={ExpiryListRow}
-            rowData={rowData}
-          />
+          viewMode === 'kanban' ? (
+            <ExpiryKanbanView
+              items={sortedItems}
+              onItemClick={(item) => setSelectedDetailItem(item)}
+            />
+          ) : (
+            <VirtualList
+              items={sortedItems}
+              itemHeight={130}
+              renderRow={ExpiryListRow}
+              rowData={rowData}
+            />
+          )
         }
         emptyState={
           sortedItems.length === 0 && (
