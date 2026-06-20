@@ -241,3 +241,35 @@ npm run test         # vitest (watch mode)
 - `2179b67a` - refactor: Migrar Hammer a ScannerContainer
 - `a8776f25` - feat: Agregar dashboard de productividad a EventCapture
 - `d35cdcd4` - fix: Corregir nombres de tabla a minusculas en scripts SQL
+
+---
+
+## UI Sync Simplification + Migración GenericSyncEngine (2026-06-20)
+
+### Componentes UI Unificados:
+
+| Componente | Líneas | Reemplaza |
+|------------|--------|-----------|
+| **SyncQueuePanel** | 224 | SyncQueue + SyncQueueList + SyncQueueDetail |
+| **SyncActivity** | 220 | Logs inline + Incidents inline |
+
+### hooks Migrados a GenericSyncEngine:
+
+| Hook | Antes | Después |
+|------|-------|---------|
+| useProductSync | cloudSync.ts | GenericSyncEngine.pushIncremental |
+| useProvidersSync | cloudSync.ts | GenericSyncEngine.pushIncremental |
+
+### Archivos Eliminados/Deprecados:
+- `cloudSync.ts` - Marcado como deprecated (vacío)
+- `supabaseSyncService.ts` - Wrapper deprecated (usado internamente)
+
+### Commits UI Sync:
+- `ae78a1c4` - feat: Crear SyncQueuePanel unificado
+- `fd0d9205` - feat: Crear SyncActivity unificado
+- `xxxxxxx` - refactor: Migrar hooks a GenericSyncEngine
+
+### Métricas:
+- SyncCenterPage: 349 → 256 líneas (-93)
+- Componentes sync: más cohesivos
+- Tests: 149 pasando ✅

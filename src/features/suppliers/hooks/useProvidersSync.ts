@@ -1,7 +1,18 @@
+/**
+ * @deprecated Usar useGenericSync con registryKey: 'providers'
+ * 
+ * useProvidersSync - Hook para sincronización de proveedores
+ * 
+ * Migrado a GenericSyncEngine.
+ */
+
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { syncProvidersToCloud } from '../../../services/cloudSync';
+import { genericSyncEngine } from '../../../services/cloud/GenericSyncEngine';
 import { ProviderRepository } from '../../../repositories/ProviderRepository';
+import { logger } from '../../../services/logger';
+
+const BATCH_SIZE = 50;
 
 export const useProvidersSync = (
   tableName: string, 
@@ -19,12 +30,22 @@ export const useProvidersSync = (
         toast.info('No hay proveedores para sincronizar.');
         return;
       }
-      await syncProvidersToCloud(allProviders);
+
+      // Usar GenericSyncEngine para sync incremental (solo pending)
+      const result = await genericSyncEngine.pushIncremental('providers');
+      
       toast.dismiss(toastId);
-      toast.success('Proveedores respaldados exitosamente.');
+      if (result.success > 0) {
+        toast.success(`${result.success} proveedores sincronizados.`);
+      } else if (result.failed > 0) {
+        toast.error(`${result.failed} proveedores fallaron.`);
+      } else {
+        toast.info('No hay proveedores pendientes.');
+      }
     } catch (e: any) {
       toast.dismiss(toastId);
       toast.error('Error al subir: ' + e.message);
+      logger.error('PROVIDERS_SYNC', 'Sync to cloud failed', e.message);
     } finally {
       setIsSyncing(false);
     }

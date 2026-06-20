@@ -154,11 +154,11 @@ SyncCenterPage (~200 líneas)
 
 ## Orden de Implementación
 
-1. 🔲 Mejorar SystemStatus con conflictos/incidentes
-2. 🔲 Crear SyncQueue unificado
-3. 🔲 Crear SyncActivity
-4. 🔲 Simplificar SyncCenterPage
-5. 🔲 Eliminar componentes redundantes
+1. ✅ Mejorar SystemStatus con conflictos/incidentes
+2. ✅ Crear SyncQueue unificado (SyncQueuePanel)
+3. ✅ Crear SyncActivity
+4. 🔲 Simplificar SyncCenterPage (en progreso)
+5. 🔲 Eliminar componentes redundantes (pendiente)
 
 ---
 
