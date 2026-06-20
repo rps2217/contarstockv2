@@ -198,15 +198,17 @@ npm run test         # vitest (watch mode)
 - `d2b22d94` - Dead Code Cleanup (~1,583 líneas eliminadas)
 - `28e5f922` - FSM integrada para sincronización (12 tests)
 - `cdd28716` - Domain Stores centralizados + docs UI
+- `378bf621` - Actualizar AGENTS.md
+- `c577ad26` - Consolidar tipos Sync + tests logger
 
 ### Métricas:
 - syncManager.ts: 37 líneas ✅
 - Sync modules: 4 archivos modulares ✅
-- Tests: 142 pasando ✅
-- Coverage: 37% statements, 30% branches
+- Tests: 149 pasando ✅
+- Coverage: 40% statements (logger: 73%)
 - Bundle: ~4,476 KB
 
 ### Pendientes:
 - Aumentar coverage de tests (meta: 60%)
+- Tests para Repositories (ScanRepository, SessionRepository)
 - Storybook para компоненты UI
-- Type ownership cleanup
