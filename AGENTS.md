@@ -212,3 +212,32 @@ npm run test         # vitest (watch mode)
 - Aumentar coverage de tests (meta: 60%)
 - Tests para Repositories (ScanRepository, SessionRepository)
 - Storybook para компоненты UI
+
+---
+
+## Productividad Dashboard - Lego Architecture (2026-06-20)
+
+### Completado:
+- **Dashboard Productividad** - Metricas en tiempo real para Counting
+- **Modo Turbo** - Conteo rapido sin animaciones
+- **Hammer migrado** - Usa ScannerContainer
+- **EventCapture actualizado** - Con productividad
+
+### Componentes Compartidos:
+- `src/features/counting/hooks/useProductivity.ts`
+- `src/features/counting/hooks/useTurboMode.ts`
+- `src/features/counting/components/ProductivityDashboard.tsx`
+- `src/features/counting/components/TurboModeOverlay.tsx`
+- `src/shared/components/scanner/layouts/ScannerContainer.tsx`
+- `src/shared/components/scanner/layouts/ScannerCameraSection.tsx`
+- `src/shared/components/scanner/layouts/ScannerFeedbackOverlay.tsx`
+- `src/shared/components/scanner/layouts/LabelPreviewModal.tsx`
+
+### Atajos de Teclado:
+- `Alt+P` - Toggle dashboard productividad
+- `Alt+Shift+T` - Toggle modo turbo
+
+### Commits:
+- `2179b67a` - refactor: Migrar Hammer a ScannerContainer
+- `a8776f25` - feat: Agregar dashboard de productividad a EventCapture
+- `d35cdcd4` - fix: Corregir nombres de tabla a minusculas en scripts SQL
