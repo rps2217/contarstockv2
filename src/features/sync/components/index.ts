@@ -4,8 +4,9 @@
 
 // Componentes nuevos (preferidos)
 export { SyncQueuePanel } from './SyncQueuePanel';
+export { SyncActivity } from './SyncActivity';
 
-// Componentes legacy (deprecated - usar SyncQueuePanel)
+// Componentes legacy (deprecated)
 export { SyncQueue } from './SyncQueue';
 export { SyncQueueDetail } from './SyncQueueDetail';
 export { SyncQueueList } from './SyncQueueList';
