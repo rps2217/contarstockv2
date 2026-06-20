@@ -14,7 +14,8 @@ import {
   AlertCircle,
   Home,
   Search,
-  RefreshCw
+  RefreshCw,
+  Zap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useToastStore } from '../../store/useToastStore';
@@ -30,12 +31,39 @@ import { CaptureLayout } from '../../shared/components/layout/CaptureLayout';
 import { SyncDiagnosticsPanel } from '../sync/components/SyncDiagnosticsPanel';
 import { EventItemRow } from './components/EventItemRow';
 import { EventCaptureModal } from './components/EventCaptureModal';
+import { ProductivityDashboard } from '../counting/components/ProductivityDashboard';
+import { useProductivity } from '../counting/hooks/useProductivity';
 
 export const EventCapturePage: React.FC = () => {
   const navigate = useNavigate();
   const db = useEventDatabase();
   const syncStore = useSyncStore();
   const engine = useScannerEngine();
+
+  // Productivity tracking
+  const [isProductivityVisible, setIsProductivityVisible] = useState(false);
+  const { stats, formattedDuration } = useProductivity(
+    db.processedEvents.map(e => ({ 
+      barcode: e.barcode || `event-${e.id}`, 
+      totalQuantity: 1 
+    }))
+  );
+
+  // Atajos de teclado
+  useEffect(() => {
+    const handleShortcuts = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+
+      if (e.key.toLowerCase() === 'p' && e.altKey) {
+        e.preventDefault();
+        setIsProductivityVisible(prev => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleShortcuts);
+    return () => window.removeEventListener('keydown', handleShortcuts);
+  }, []);
 
   const handleAddItem = useCallback(async (data: any) => {
     const result = await db.actions.handleAddItem(data);
@@ -68,6 +96,19 @@ export const EventCapturePage: React.FC = () => {
       onBack={() => navigate('/')}
       actions={
         <div className="hidden md:flex items-center gap-2">
+          {/* PRODUCTIVITY BUTTON */}
+          <button
+            onClick={() => setIsProductivityVisible(prev => !prev)}
+            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+              isProductivityVisible 
+                ? 'bg-amber-500 text-black' 
+                : 'bg-white/5 text-slate-400 hover:bg-white/10'
+            }`}
+            title="Productividad (Alt+P)"
+          >
+            <Zap className="w-5 h-5" />
+          </button>
+
           {/* SYNC STATUS INDICATOR - Desktop */}
           <button
             onClick={() => engine.setIsSyncModalOpen(true)}
@@ -197,6 +238,14 @@ export const EventCapturePage: React.FC = () => {
       <SyncDiagnosticsPanel 
         isOpen={engine.isSyncModalOpen} 
         onClose={() => engine.setIsSyncModalOpen(false)} 
+      />
+
+      {/* PRODUCTIVITY DASHBOARD */}
+      <ProductivityDashboard 
+        stats={stats}
+        formattedDuration={formattedDuration}
+        isVisible={isProductivityVisible}
+        onToggle={() => setIsProductivityVisible(prev => !prev)}
       />
     </>
   );
