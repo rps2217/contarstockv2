@@ -143,3 +143,22 @@ export const syncCatalogs = async (onProgress?: (msg: string) => void): Promise<
     throw err;
   }
 };
+
+/**
+ * Importa clientes y plantillas desde la nube
+ */
+export const importCustomersAndTemplatesFromCloud = async (): Promise<void> => {
+  const { dynamicSyncService } = await import('../dynamicSync');
+  const { logger } = await import('../logger');
+  const { handleError } = await import('../types');
+
+  for (const table of ['CLIENTES', 'PLANTILLAS_MENSAJES', 'PLANTILLAS_CORREOS']) {
+    try { 
+      await dynamicSyncService.pullSync(table); 
+    }
+    catch (err: unknown) {
+      const msg = handleError(err).message;
+      if (!msg.includes('Table not found')) logger.warn("FETCH_CONFIG", msg);
+    }
+  }
+};

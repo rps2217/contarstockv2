@@ -25,6 +25,9 @@ export const resetUploadLock = () => {
   useSyncStore.getState().setSyncing(false);
 };
 
+// Alias for backwards compatibility
+export const resetSyncLock = resetUploadLock;
+
 /**
  * Sube un grupo de datos al servidor
  */

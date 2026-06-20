@@ -38,4 +38,4 @@ export {
 // Re-export desde syncManager original
 export {
   resetSyncLock,
-} from '../syncManager';
+} from './BatchUploader';
