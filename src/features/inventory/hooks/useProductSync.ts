@@ -1,48 +1,39 @@
 /**
- * @deprecated Usar useGenericSync con registryKey: 'products'
- * 
  * useProductSync - Hook para sincronización de productos
  * 
- * Migrado parcialmente a GenericSyncEngine.
- * handleForceSyncToCloud aún usa lógica legacy para lotes de 50 (embeddings IA).
+ * Usa useGenericSync como motor central para operaciones estándar.
+ * Mantiene lógica especial para force sync con lotes IA (embeddings).
+ * 
+ * @deprecated Verificar si puede reemplazarse completamente por useGenericSync
+ * con registryKey: 'products' en futuras versiones.
  */
 
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { productRepository } from '../../../repositories/DexieProductRepository';
-import { genericSyncEngine } from '../../../services/cloud/GenericSyncEngine';
 import { pushBatch } from '../../../services/cloud/BatchSyncService';
-import { importProductsFromCloud, importProvidersFromCloud } from '../../../services/syncManager';
-import { useAppStore } from '@/stores';
+import { genericSyncEngine } from '../../../services/cloud/GenericSyncEngine';
+import { useGenericSync } from '../../../hooks/useGenericSync';
 import { getSettings } from '../../../services/settings';
 import { logger } from '../../../services/logger';
 
 const BATCH_SIZE_AI = 50; // Lotes pequeños para embeddings IA
 
 export const useProductSync = (showFeedback: (type: 'success' | 'error', msg: string) => void) => {
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
+  // Usar GenericSyncEngine para operaciones estándar
+  const { push, pull, sync, isSyncing } = useGenericSync({
+    registryKey: 'products',
+    tableName: 'PRODUCTOS',
+    onSuccess: (msg) => showFeedback('success', msg),
+    onError: (msg) => showFeedback('error', msg),
+  });
 
-  // Sync productos pending (usa GenericSyncEngine)
+  // Sync productos pending (usa GenericSyncEngine via useGenericSync)
   const handleSyncToCloud = useCallback(async () => {
-    setIsSyncing(true);
-    try {
-      const result = await genericSyncEngine.pushIncremental('products');
-      if (result.success > 0) {
-        showFeedback('success', `${result.success} productos sincronizados`);
-      } else if (result.failed > 0) {
-        showFeedback('error', `${result.failed} productos fallaron`);
-      } else {
-        showFeedback('success', 'No hay productos pendientes');
-      }
-    } catch (err: any) {
-      logger.error('PRODUCT_SYNC', 'Sync to cloud failed', err.message);
-      showFeedback('error', err.message);
-    } finally {
-      setIsSyncing(false);
-    }
-  }, [showFeedback]);
+    await push();
+  }, [push]);
 
   // Force sync todos los productos (usa lotes pequeños para embeddings IA)
+  // NOTA: Esta lógica es específica para embeddings y no puede usar GenericSyncEngine
   const handleForceSyncToCloud = useCallback(async () => {
     const allProds = await productRepository.getLimited(5000); 
     if (allProds.length === 0) {
@@ -50,7 +41,6 @@ export const useProductSync = (showFeedback: (type: 'success' | 'error', msg: st
       return;
     }
     
-    setIsSyncing(true);
     try {
       const config = getSettings().cloudConfig;
       const tableName = config?.productsTableName || 'PRODUCTOS';
@@ -84,44 +74,30 @@ export const useProductSync = (showFeedback: (type: 'success' | 'error', msg: st
     } catch (err: any) {
       logger.error('FORCE_SYNC', 'Force sync failed', err.message);
       showFeedback('error', err.message);
-    } finally {
-      setIsSyncing(false);
     }
   }, [showFeedback]);
 
-  // Download desde la nube
+  // Download desde la nube (force full refresh)
   const handleDownloadFromCloud = useCallback(async () => {
-    setIsDownloading(true);
-    try {
-      const { useSyncStore } = await import('../../../store/useSyncStore');
-      const settings = useAppStore.getState().settings;
-      useSyncStore.getState().setTableSyncTime(settings.cloudConfig.productsTableName || 'PRODUCTOS', 0);
-      useSyncStore.getState().setTableSyncTime(settings.cloudConfig.providersTableName || 'PROVEEDORES', 0);
-      const count = await importProductsFromCloud();
-      showFeedback('success', `${count} productos y políticas actualizados`);
-    } catch (err: any) {
-      showFeedback('error', err.message === 'Failed to fetch' ? 'Error de red en descarga Cloud' : 'Error en descarga Cloud');
-    } finally {
-      setIsDownloading(false);
-    }
-  }, [showFeedback]);
+    await pull(true); // forceFullRefresh = true
+  }, [pull]);
 
-  // Sync proveedores
+  // Sync proveedores (usa el mismo registry pero tabla diferente)
   const handleSyncProviders = useCallback(async () => {
-    setIsDownloading(true);
     try {
-      const count = await importProvidersFromCloud();
-      showFeedback('success', `${count} políticas logísticas actualizadas`);
+      const result = await genericSyncEngine.sync('providers');
+      if (result.success) {
+        showFeedback('success', 'Políticas logísticas sincronizadas');
+      } else {
+        showFeedback('error', result.error || 'Error en sync');
+      }
     } catch (err: any) {
-      showFeedback('error', 'Error al sincronizar políticas');
-    } finally {
-      setIsDownloading(false);
+      showFeedback('error', err.message);
     }
   }, [showFeedback]);
 
   return {
     isSyncing,
-    isDownloading,
     handleSyncToCloud,
     handleForceSyncToCloud,
     handleDownloadFromCloud,

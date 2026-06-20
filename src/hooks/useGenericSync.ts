@@ -6,9 +6,22 @@
  * 
  * @example
  * ```tsx
- * const { push, pull, isSyncing, pendingCount } = useGenericSync({
- *   tableName: 'CONTEOS',
- *   registryKey: 'counts',
+ * const { push, pull, sync, isSyncing } = useGenericSync({
+ *   registryKey: 'products',
+ *   tableName: 'PRODUCTOS',
+ * });
+ * ```
+ * 
+ * @example Con callbacks de feedback
+ * ```tsx
+ * const showFeedback = (type, msg) => {
+ *   if (type === 'success') toast.success(msg);
+ *   else toast.error(msg);
+ * };
+ * const { push } = useGenericSync({
+ *   registryKey: 'products',
+ *   onSuccess: (msg) => showFeedback('success', msg),
+ *   onError: (msg) => showFeedback('error', msg),
  * });
  * ```
  */
@@ -20,12 +33,15 @@ import { useToastStore } from '@/stores';
 import { db } from '../db';
 import { logger } from '../services/logger';
 
-// Tipos
+// =============================================================================
+// TIPOS
+// =============================================================================
+
 export interface GenericSyncConfig {
-  /** Nombre de la tabla en Supabase */
-  tableName: string;
-  /** Clave del registry para GenericSyncEngine (opcional) */
-  registryKey?: string;
+  /** Clave del registry para GenericSyncEngine (requerido) */
+  registryKey: string;
+  /** Nombre de la tabla en Supabase (para logging) */
+  tableName?: string;
   /** Usar realtime sync (default: true) */
   useRealtime?: boolean;
   /** Repositorio local para realtime sync */
@@ -34,29 +50,49 @@ export interface GenericSyncConfig {
     put: (row: unknown) => Promise<void>;
     delete: (id: string) => Promise<void>;
   };
+  /** Callback opcional cuando sync es exitoso */
+  onSuccess?: (message: string) => void;
+  /** Callback opcional cuando hay error */
+  onError?: (message: string) => void;
+  /** Callback opcional para cada operación individual */
+  onProgress?: (operation: 'push' | 'pull', count: number) => void;
 }
 
 export interface GenericSyncReturn {
   /** Si está sincronizando actualmente */
   isSyncing: boolean;
   /** Subir cambios pendientes a la nube */
-  push: () => Promise<void>;
+  push: () => Promise<{ success: number; failed: number }>;
   /** Descargar cambios desde la nube */
-  pull: () => Promise<void>;
+  pull: (forceFullRefresh?: boolean) => Promise<{ added: number; updated: number }>;
   /** Sincronización bidireccional completa */
-  sync: () => Promise<void>;
+  sync: () => Promise<{ success: boolean; error?: string }>;
 }
 
+// =============================================================================
+// HOOK
+// =============================================================================
+
 /**
- * Hook genérico para sincronización
+ * Hook genérico para sincronización bidireccional.
+ * 
+ * Usa GenericSyncEngine como motor central y syncRegistry para configuración.
  */
 export function useGenericSync(config: GenericSyncConfig): GenericSyncReturn {
   const [isSyncing, setIsSyncing] = useState(false);
   const { addToast } = useToastStore.getState();
 
-  const { tableName, registryKey, useRealtime = true, localRepository } = config;
+  const { 
+    registryKey, 
+    tableName,
+    useRealtime = false, // Por defecto desactivado para evitar duplicación
+    localRepository,
+    onSuccess,
+    onError,
+    onProgress
+  } = config;
 
-  // Realtime subscription
+  // Realtime subscription (opcional)
   useEffect(() => {
     if (!useRealtime || !localRepository || !tableName) return;
 
@@ -66,11 +102,23 @@ export function useGenericSync(config: GenericSyncConfig): GenericSyncReturn {
     };
   }, [tableName, useRealtime, localRepository]);
 
+  // Helper para notificar éxito/error
+  const notifySuccess = useCallback((msg: string) => {
+    if (onSuccess) onSuccess(msg);
+    else addToast(msg, 'success');
+  }, [onSuccess, addToast]);
+
+  const notifyError = useCallback((msg: string) => {
+    if (onError) onError(msg);
+    else addToast(msg, 'error');
+  }, [onError, addToast]);
+
   // Push: Subir cambios locales a la nube
   const push = useCallback(async () => {
     if (!registryKey) {
-      addToast('Push no configurado sin registryKey', 'warning');
-      return;
+      const msg = 'Push no configurado sin registryKey';
+      notifyError(msg);
+      return { success: 0, failed: 0 };
     }
 
     setIsSyncing(true);
@@ -78,50 +126,71 @@ export function useGenericSync(config: GenericSyncConfig): GenericSyncReturn {
       const result = await genericSyncEngine.pushIncremental(registryKey);
       
       if (result.success > 0) {
-        addToast(`${result.success} registros subidos`, 'success');
+        const msg = `${result.success} registros subidos`;
+        notifySuccess(msg);
+        onProgress?.('push', result.success);
       }
       if (result.failed > 0) {
-        addToast(`${result.failed} registros fallaron`, 'error');
+        const msg = `${result.failed} registros fallaron`;
+        notifyError(msg);
       }
       if (result.success === 0 && result.failed === 0) {
-        addToast(`No hay cambios pendientes`, 'info');
+        notifySuccess('No hay cambios pendientes');
       }
+      
+      return result;
     } catch (err: any) {
-      logger.error('GEN_SYNC_PUSH', `Error pushing to ${tableName}`, err.message);
-      addToast(`Error al subir: ${err.message}`, 'error');
+      logger.error('GEN_SYNC_PUSH', `Error pushing ${registryKey}`, err.message);
+      notifyError(`Error al subir: ${err.message}`);
+      return { success: 0, failed: 1 };
     } finally {
       setIsSyncing(false);
     }
-  }, [tableName, registryKey, addToast]);
+  }, [registryKey, notifySuccess, notifyError, onProgress]);
 
   // Pull: Descargar cambios desde la nube
-  const pull = useCallback(async () => {
+  const pull = useCallback(async (forceFullRefresh = false) => {
     if (!registryKey) {
-      addToast('Pull no configurado sin registryKey', 'warning');
-      return;
+      const msg = 'Pull no configurado sin registryKey';
+      notifyError(msg);
+      return { added: 0, updated: 0 };
     }
 
     setIsSyncing(true);
     try {
-      // Limpiar checkpoint para forzar refresh completo
-      await db.settings.delete(`lastSync_${tableName}`);
-      localStorage.removeItem(`last_sync_${tableName}`);
+      // Limpiar checkpoint para forzar refresh completo si se solicita
+      if (forceFullRefresh && tableName) {
+        await db.settings.delete(`lastSync_${tableName}`);
+        localStorage.removeItem(`last_sync_${tableName}`);
+      }
 
       const result = await genericSyncEngine.pullRemoteChanges(registryKey);
-      addToast(`${result.added + result.updated} registros descargados`, 'success');
+      const total = result.added + result.updated;
+      
+      if (total > 0) {
+        const msg = `${total} registros descargados`;
+        notifySuccess(msg);
+        onProgress?.('pull', total);
+      } else {
+        notifySuccess('No hay cambios nuevos');
+      }
+      
+      return result;
     } catch (err: any) {
-      logger.error('GEN_SYNC_PULL', `Error pulling from ${tableName}`, err.message);
-      addToast(`Error al descargar: ${err.message}`, 'error');
+      logger.error('GEN_SYNC_PULL', `Error pulling ${registryKey}`, err.message);
+      notifyError(`Error al descargar: ${err.message}`);
+      return { added: 0, updated: 0 };
     } finally {
       setIsSyncing(false);
     }
-  }, [tableName, registryKey, addToast]);
+  }, [registryKey, tableName, notifySuccess, notifyError, onProgress]);
 
   // Sync: Sincronización bidireccional
   const sync = useCallback(async () => {
     if (!registryKey) {
-      addToast('Sync no configurado sin registryKey', 'warning');
-      return;
+      const msg = 'Sync no configurado sin registryKey';
+      notifyError(msg);
+      return { success: false, error: msg };
     }
 
     setIsSyncing(true);
@@ -130,20 +199,24 @@ export function useGenericSync(config: GenericSyncConfig): GenericSyncReturn {
       
       if (result.success) {
         const { pullRes, pushRes } = result;
-        addToast(
-          `Sincronización completa: ${pullRes?.added + pullRes?.updated} descargados, ${pushRes?.success} subidos`,
-          'success'
-        );
+        const totalPull = pullRes?.added + pullRes?.updated || 0;
+        const totalPush = pushRes?.success || 0;
+        
+        const msg = `Sync: ${totalPull}↓ ${totalPush}↑`;
+        notifySuccess(msg);
       } else {
         throw new Error(result.error);
       }
+      
+      return result;
     } catch (err: any) {
-      logger.error('GEN_SYNC', `Error syncing ${tableName}`, err.message);
-      addToast(`Error en sincronización: ${err.message}`, 'error');
+      logger.error('GEN_SYNC', `Error syncing ${registryKey}`, err.message);
+      notifyError(`Error en sync: ${err.message}`);
+      return { success: false, error: err.message };
     } finally {
       setIsSyncing(false);
     }
-  }, [tableName, registryKey, addToast]);
+  }, [registryKey, notifySuccess, notifyError]);
 
   return {
     isSyncing,
