@@ -1,5 +1,5 @@
 /**
  * Sync FSM - Exports
  */
-export { syncFSM } from './SyncFSM';
-export type { SyncState, SyncEvent, SyncContext } from './types';
+export { syncFSM, legacySyncWrapper } from './SyncFSM';
+export type { SyncState, SyncEvent, SyncContext, LegacySyncStatus } from './SyncFSM';

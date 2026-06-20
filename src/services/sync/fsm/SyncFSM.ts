@@ -154,3 +154,67 @@ class SyncFSMClass {
 }
 
 export const syncFSM = new SyncFSMClass();
+
+// ============================================================
+// COMPATIBILIDAD LEGACY - Wrapper para syncFSM.ts antiguo
+// ============================================================
+
+export interface LegacySyncStatus {
+  state: 'IDLE' | 'SYNCING' | 'ERROR' | 'SUCCESS';
+  lastSync?: number;
+  error?: string;
+  pendingCount: number;
+}
+
+/**
+ * Wrapper de compatibilidad para código que usa el viejo syncFSM
+ * Convierte la nueva FSM a la API legacy
+ */
+export const legacySyncWrapper = {
+  subscribe(listener: (status: LegacySyncStatus) => void): () => void {
+    return syncFSM.subscribe((state, context) => {
+      // Mapear estados nuevos a legacy
+      let legacyState: LegacySyncStatus['state'];
+      switch (state) {
+        case 'idle':
+        case 'success':
+          legacyState = 'IDLE';
+          break;
+        case 'preparing':
+        case 'uploading':
+        case 'waiting':
+        case 'processing':
+        case 'retrying':
+          legacyState = 'SYNCING';
+          break;
+        case 'error':
+          legacyState = 'ERROR';
+          break;
+        default:
+          legacyState = 'IDLE';
+      }
+
+      listener({
+        state: legacyState,
+        error: context.error,
+        lastSync: context.lastUpdate || 0,
+        pendingCount: 0, // Se calcula por separado
+      });
+    });
+  },
+
+  async runSync(onProgress?: (msg: string) => void): Promise<void> {
+    // La lógica real de sync está en BatchUploader
+    const { performBatchUpload } = await import('../BatchUploader');
+    return syncFSM.execute(async () => {
+      await performBatchUpload();
+    }, onProgress);
+  },
+
+  getState(): LegacySyncStatus['state'] {
+    const state = syncFSM.getState();
+    if (state === 'idle' || state === 'success') return 'IDLE';
+    if (state === 'error') return 'ERROR';
+    return 'SYNCING';
+  },
+};

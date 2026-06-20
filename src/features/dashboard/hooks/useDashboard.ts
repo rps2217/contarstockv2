@@ -3,15 +3,15 @@ import { useState, useEffect } from 'react';
 import { ScanRepository } from '../../../repositories/ScanRepository';
 import { AnalyticService } from '../../../services/analyticService';
 import { ExpectedOrderRepository } from '../../../repositories/ExpectedOrderRepository';
-import { syncFSM, SyncStatus } from '../../../services/syncFSM';
+import { legacySyncWrapper, LegacySyncStatus } from '../../../services/sync/fsm';
 
 import { dynamicDataRepository } from '../../../repositories/DynamicDataRepository';
 
 export const useDashboard = () => {
-  const [syncStatus, setSyncStatus] = useState<SyncStatus>({ state: 'IDLE', pendingCount: 0 });
+  const [syncStatus, setSyncStatus] = useState<LegacySyncStatus>({ state: 'IDLE', pendingCount: 0 });
 
   useEffect(() => {
-    return syncFSM.subscribe(setSyncStatus);
+    return legacySyncWrapper.subscribe(setSyncStatus);
   }, []);
   
   const stats = useLiveQuery(async () => {
@@ -42,7 +42,7 @@ export const useDashboard = () => {
     isSyncNeeded,
     syncStatus,
     pendingOrders,
-    triggerSync: () => syncFSM.runSync()
+    triggerSync: () => legacySyncWrapper.runSync()
   };
 };
 
