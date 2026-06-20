@@ -184,14 +184,29 @@ npm run test         # vitest (watch mode)
   - `SyncFSM.ts` - Clase FSM con transiciones
   - `types.ts` - SyncState, SyncEvent, SyncContext
   - `useSyncFSM.ts` - Hook de React
-  - `SyncFSM.test.ts` - Tests unitarios
+  - `SyncFSM.test.ts` - Tests unitarios (12 tests)
 
-### Commits:
-- `d2b22d94` - refactor: Eliminar dead code
-- `xxxxxx` - feat: Nueva FSM integrada para Sync
+### Domain Stores Centralizados:
+- `src/stores/index.ts` - Exports centralizados
+- 71 archivos actualizados para usar `@/stores`
+- Stores: useSyncStore, useToastStore, useTaskStore, useExpiryStore, useAppStore, useUIStore, useSettingsStore
+
+### Documentación UI:
+- `src/shared/components/ui/docs/COMPONENTS.md` - Docs de componentes
+
+### Commits (2026-06-20):
+- `d2b22d94` - Dead Code Cleanup (~1,583 líneas eliminadas)
+- `28e5f922` - FSM integrada para sincronización (12 tests)
+- `cdd28716` - Domain Stores centralizados + docs UI
 
 ### Métricas:
 - syncManager.ts: 37 líneas ✅
 - Sync modules: 4 archivos modulares ✅
 - Tests: 142 pasando ✅
-- Bundle: 4,475 KB
+- Coverage: 37% statements, 30% branches
+- Bundle: ~4,476 KB
+
+### Pendientes:
+- Aumentar coverage de tests (meta: 60%)
+- Storybook para компоненты UI
+- Type ownership cleanup
