@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, BookOpen, Layers, Sparkles, FileSpreadsheet } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -7,6 +7,8 @@ import { useExpectedOrders } from './hooks/useExpectedOrders';
 import { OrderImporter } from './components/OrderImporter';
 import { OrderPreviewList } from './components/OrderPreviewList';
 import { SavedOrdersList } from './components/SavedOrdersList';
+import { OrderDetailModal } from './components/OrderDetailModal';
+import { ExpectedOrder } from '@/types';
 
 export function ExpectedOrdersPage() {
   const navigate = useNavigate();
@@ -15,6 +17,16 @@ export function ExpectedOrdersPage() {
   const theme = settings?.theme || 'dark';
   
   const { state, actions } = useExpectedOrders();
+
+  // State for detail modal
+  const [selectedOrder, setSelectedOrder] = useState<ExpectedOrder | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+  // Handler para ver detalle de orden
+  const handleViewOrderDetail = (order: ExpectedOrder) => {
+    setSelectedOrder(order);
+    setIsDetailModalOpen(true);
+  };
 
   return (
     <div className={`h-full w-full ${isDark ? "bg-slate-950 selection:bg-blue-500/30" : "bg-slate-50 selection:bg-blue-500/20"} overflow-y-auto no-scrollbar pb-32 font-sans relative`}>
@@ -80,7 +92,13 @@ export function ExpectedOrdersPage() {
               exit={{ opacity: 0, y: -15 }}
               transition={{ duration: 0.2 }}
             >
-              <SavedOrdersList state={state} actions={actions} isDark={isDark} theme={theme} />
+              <SavedOrdersList 
+                state={state} 
+                actions={actions} 
+                isDark={isDark} 
+                theme={theme}
+                onViewDetail={handleViewOrderDetail}
+              />
             </motion.div>
           ) : (
             <motion.div
@@ -137,6 +155,25 @@ export function ExpectedOrdersPage() {
           )}
         </AnimatePresence>
       </main>
+
+      {/* ORDER DETAIL MODAL */}
+      <OrderDetailModal
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        order={selectedOrder}
+        onEdit={() => {
+          // TODO: Implementar edición de orden
+          setIsDetailModalOpen(false);
+        }}
+        onDelete={() => {
+          if (selectedOrder) {
+            if (confirm(`¿Eliminar la carga teórica "${selectedOrder.id}"?`)) {
+              actions.deleteOrder(selectedOrder.id);
+              setIsDetailModalOpen(false);
+            }
+          }
+        }}
+      />
     </div>
   );
 }

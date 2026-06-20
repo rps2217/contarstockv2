@@ -17,25 +17,12 @@ import {
 } from 'lucide-react';
 import { RecordDetailView } from '@/shared/components/ui/RecordDetailView';
 import { useAudit } from '@/hooks/useAudit';
+import { ExpectedOrder } from '@/types';
 
 interface OrderDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
-  order: {
-    id: string;
-    erpOrderId?: string;
-    providerName?: string;
-    status?: string;
-    totalItems?: number;
-    receivedItems?: number;
-    expectedDate?: number;
-    createdAt?: number;
-    observaciones?: string;
-    mm?: number;
-    yyyy?: number;
-    syncStatus?: 'synced' | 'pending' | 'error';
-    lastSyncTimestamp?: number;
-  } | null;
+  order: ExpectedOrder | null;
   onEdit?: () => void;
   onDelete?: () => void;
 }
@@ -56,15 +43,6 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     return format(new Date(ts), "dd MMM yyyy, HH:mm", { locale: es });
   };
 
-  // Determinar estado
-  const statusConfig: Record<string, { status: 'success' | 'warning' | 'error' | 'info'; label: string }> = {
-    'received': { status: 'success', label: 'Recibido' },
-    'partial': { status: 'warning', label: 'Parcial' },
-    'pending': { status: 'info', label: 'Pendiente' },
-    'cancelled': { status: 'error', label: 'Cancelado' },
-  };
-  const config = statusConfig[order.status || 'pending'] || { status: 'info', label: order.status || 'N/A' };
-
   // Construir secciones
   const sections = [
     {
@@ -72,9 +50,9 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
       title: 'Información General',
       icon: <ShoppingCart className="w-4 h-4" />,
       rows: [
-        { label: 'Orden ERP', value: order.erpOrderId || 'Sin número', copyable: !!order.erpOrderId },
-        { label: 'Estado', value: config.label },
-        { label: 'Proveedor', value: order.providerName || 'Sin proveedor' },
+        { label: 'ID Documento', value: order.id, copyable: true },
+        { label: 'Tipo', value: order.metadata?.documentType || 'Picking' },
+        { label: 'Orden Compra', value: order.metadata?.purchaseOrder || 'Sin O.C.', copyable: !!order.metadata?.purchaseOrder },
       ]
     },
     {
@@ -82,26 +60,24 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
       title: 'Items',
       icon: <Package className="w-4 h-4" />,
       rows: [
-        { label: 'Total Items', value: `${order.totalItems || 0}` },
-        { label: 'Recibidos', value: `${order.receivedItems || 0}` },
-        { label: 'Pendientes', value: `${(order.totalItems || 0) - (order.receivedItems || 0)}` },
+        { label: 'Total SKUs', value: `${order.totalExpectedSKUs || order.items.length}` },
+        { label: 'Unidades Totales', value: `${order.totalExpectedUnits || 0}` },
       ]
     },
     {
-      id: 'time',
-      title: 'Tiempo',
+      id: 'dates',
+      title: 'Fechas',
       icon: <Calendar className="w-4 h-4" />,
       rows: [
-        { label: 'Fecha Esperada', value: formatDate(order.expectedDate) },
-        { label: 'Fecha Creación', value: formatDate(order.createdAt) },
-        { label: 'Período', value: `${order.mm || '?'}/${order.yyyy || '?'}` },
+        { label: 'Fecha Documento', value: order.metadata?.date || formatDate(order.importedAt) },
+        { label: 'Fecha Importación', value: formatDate(order.importedAt) },
       ]
     }
   ];
 
   // Metadata
   const metadata = [
-    { label: 'Creada', value: formatDate(order.createdAt), icon: <Clock className="w-3 h-3" /> },
+    { label: 'Importado', value: formatDate(order.importedAt), icon: <Clock className="w-3 h-3" /> },
   ];
 
   return (
@@ -125,18 +101,15 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
             className="fixed inset-4 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-2xl md:max-h-[90vh] z-50 flex flex-col"
           >
             <RecordDetailView
-              title={`Pedido ${order.erpOrderId || order.id.slice(0, 8)}`}
-              subtitle={order.providerName || 'Sin proveedor'}
+              title={order.metadata?.documentType || 'Carga Teórica'}
+              subtitle={`${order.id}`}
               icon={<ShoppingCart className="w-5 h-5" />}
-              status={config.status}
-              statusLabel={config.label}
+              status="default"
               sections={sections}
               tabs={['detail', 'history']}
               recordId={order.id}
               tableName="EXPECTED_ORDERS"
               metadata={metadata}
-              syncStatus={order.syncStatus === 'synced' ? 'synced' : order.syncStatus === 'pending' ? 'pending' : 'error'}
-              lastSyncTime={order.lastSyncTimestamp}
               onEdit={onEdit}
               onDelete={onDelete}
               onClose={onClose}

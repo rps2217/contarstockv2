@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { useAppStore } from '@/stores';
 import { 
   AlertCircle,
@@ -19,11 +19,16 @@ import { EventOverlays } from './components/EventOverlays';
 import { ManagementSearchBar } from '../../shared/components/core/ManagementSearchBar';
 import { EventFilterDrawer } from './components/EventFilterDrawer';
 import { AnimatePresence } from 'motion/react';
+import { EventDetailModal } from './components/EventDetailModal';
 
 export const EventManagementPage: React.FC = () => {
   const { settings } = useAppStore();
   const { ui, actions: uiActions, db } = useEventUI();
   const navigate = useNavigate();
+
+  // State for detail modal
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   const pendingRef = useRef<HTMLDivElement>(null);
   const destinedRef = useRef<HTMLDivElement>(null);
@@ -73,6 +78,12 @@ export const EventManagementPage: React.FC = () => {
         toast.error(error.message || 'Error al eliminar registro');
       }
     }
+  };
+
+  // Handler para ver detalle de evento
+  const handleViewDetail = (item: any) => {
+    setSelectedEvent(item);
+    setIsDetailModalOpen(true);
   };
 
   return (
@@ -200,6 +211,7 @@ export const EventManagementPage: React.FC = () => {
             onFrcClick={uiActions.handleFrcClick}
             onEventClick={uiActions.handleEventClick}
             onDestinoClick={uiActions.handleDestinoClick}
+            onViewDetail={handleViewDetail}
             isCompact={db.preferences.compactView}
             selectedIds={db.selectedIds}
             onToggleSelect={db.actions.handleToggleSelect}
@@ -230,6 +242,7 @@ export const EventManagementPage: React.FC = () => {
             onFrcClick={uiActions.handleFrcClick}
             onEventClick={uiActions.handleEventClick}
             onDestinoClick={uiActions.handleDestinoClick}
+            onViewDetail={handleViewDetail}
             isCompact={db.preferences.compactView}
             selectedIds={db.selectedIds}
             onToggleSelect={db.actions.handleToggleSelect}
@@ -260,6 +273,7 @@ export const EventManagementPage: React.FC = () => {
             onFrcClick={uiActions.handleFrcClick}
             onEventClick={uiActions.handleEventClick}
             onDestinoClick={uiActions.handleDestinoClick}
+            onViewDetail={handleViewDetail}
             isCompact={db.preferences.compactView}
             selectedIds={db.selectedIds}
             onToggleSelect={db.actions.handleToggleSelect}
@@ -277,6 +291,32 @@ export const EventManagementPage: React.FC = () => {
         db={db}
         actions={db.actions}
         settings={settings}
+      />
+
+      {/* EVENT DETAIL MODAL */}
+      <EventDetailModal
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        event={selectedEvent}
+        onEdit={() => {
+          if (selectedEvent) {
+            setIsDetailModalOpen(false);
+            uiActions.setEditingItem(selectedEvent);
+            uiActions.setIsCreateModalOpen(true);
+          }
+        }}
+        onDelete={() => {
+          if (selectedEvent) {
+            handleSingleRemove(selectedEvent);
+            setIsDetailModalOpen(false);
+          }
+        }}
+        onMarkAdjusted={() => {
+          if (selectedEvent) {
+            uiActions.handleUpdateStatus(selectedEvent.id, !selectedEvent.isAdjusted);
+            setIsDetailModalOpen(false);
+          }
+        }}
       />
     </div>
   );

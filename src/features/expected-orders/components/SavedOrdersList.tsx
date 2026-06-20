@@ -11,6 +11,7 @@ interface SavedOrdersListProps {
   actions: any;
   isDark: boolean;
   theme?: 'dark' | 'light' | 'high-contrast';
+  onViewDetail?: (order: ExpectedOrder) => void;
 }
 
 // Sub-row component for list expansion
@@ -44,7 +45,7 @@ const ExpandedItemRow: React.FC<{ index: number; item: ExpectedItem; data: any; 
 
 ExpandedItemRow.displayName = 'SavedOrderExpandedItemRow';
 
-export const SavedOrdersList: React.FC<SavedOrdersListProps> = ({ state, actions, isDark, theme = 'dark' }) => {
+export const SavedOrdersList: React.FC<SavedOrdersListProps> = ({ state, actions, isDark, theme = 'dark', onViewDetail }) => {
   const { savedOrders, isSyncing, lastSyncTime } = state;
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
@@ -276,6 +277,24 @@ export const SavedOrdersList: React.FC<SavedOrdersListProps> = ({ state, actions
                       >
                         <Printer className="w-4 h-4" />
                       </button>
+
+                      {/* Ver Detalle Button */}
+                      {onViewDetail && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onViewDetail(order);
+                          }}
+                          title="Ver detalle"
+                          className={`p-3 rounded-xl border transition-all hover:scale-105 active:scale-95 ${
+                            isDark 
+                              ? 'border-purple-500/20 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10' 
+                              : 'border-purple-200 text-purple-600 hover:text-purple-700 hover:bg-purple-50'
+                          }`}
+                        >
+                          <Expand className="w-4 h-4" />
+                        </button>
+                      )}
 
                       <button
                         onClick={(e) => {
