@@ -127,7 +127,10 @@ export const ExpiryPage: React.FC = () => {
         providerRut: engine.product?.supplierRut || undefined,
         mm: selectedMm,
         yyyy: selectedYyyy,
-        quantity: 1
+        quantity: 1,
+        // PRODUCTO_PROVEEDOR: políticas específicas si existen
+        withdrawalDays: engine.providerPolicy?.days,
+        hasExchange: engine.providerPolicy?.hasCanje
       });
       
       

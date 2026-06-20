@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { addDays, startOfDay } from 'date-fns';
 import { expiryRepository } from '../../../repositories/ExpiryRepository';
 import { supabaseSyncService } from '../../../services/supabaseSyncService';
 import { useToastStore } from '../../../store/useToastStore';
@@ -88,6 +89,9 @@ export const useExpiryMutations = (
     location?: string;
     observaciones?: string;
     fechaCC?: string;
+    // PRODUCTO_PROVEEDOR fields
+    withdrawalDays?: number;
+    hasExchange?: boolean;
   }) => {
     try {
       const sanitizedBarcode = normalizeSku(data.barcode);
@@ -106,6 +110,11 @@ export const useExpiryMutations = (
       const now = new Date();
       
       // BUSCAR SI YA EXISTE PARA SUMAR (Por claveUnica o por ID legacy)
+
+      // Calcular withdrawalDate basado en withdrawalDays (PRODUCTO_PROVEEDOR)
+      const expiryDate = new Date(data.yyyy, data.mm - 1, lastDay);
+      const effectiveWithdrawalDays = data.withdrawalDays ?? 30;
+      const withdrawalDate = addDays(startOfDay(expiryDate), -effectiveWithdrawalDays);
       const existing = localItems.find(item => item.claveUnica === claveUnica || item.id === claveUnica);
       
       if (existing) {
@@ -149,7 +158,10 @@ export const useExpiryMutations = (
         quantity: data.quantity,
         location: data.location || '',
         observaciones: data.observaciones || '',
-        syncStatus: 'synced'
+        syncStatus: 'synced',
+        withdrawalDays: effectiveWithdrawalDays,
+        hasExchange: data.hasExchange ?? false,
+        withdrawalDate,
       }, expiryMapping);
 
       // GUARDADO LOCAL INMEDIATO
@@ -177,8 +189,6 @@ export const useExpiryMutations = (
       if (!existing) throw new Error("Producto no encontrado");
 
       const now = new Date();
-      
-      // Si cambian campos que afectan a la claveUnica, debemos regenerar la clave
       let newId = id;
       let newClaveUnica = existing.claveUnica || existing.id;
       
@@ -241,7 +251,10 @@ export const useExpiryMutations = (
         id: newId,
         claveUnica: newClaveUnica,
         timestamp: now.getTime(),
-        syncStatus: 'synced'
+        syncStatus: 'synced',
+        withdrawalDays: updates.withdrawalDays ?? existing.withdrawalDays ?? 30,
+        hasExchange: updates.hasExchange ?? existing.hasExchange ?? false,
+        withdrawalDate: updates.withdrawalDate ?? existing.withdrawalDate,
       }, expiryMapping);
 
       // 1. Local update

@@ -33,6 +33,10 @@ export interface NormalizedExpiry {
   timestamp: number;
   syncStatus: 'synced' | 'pending' | 'error';
   claveUnica: string;
+  // PRODUCTO_PROVEEDOR fields
+  withdrawalDays?: number;
+  hasExchange?: boolean;
+  withdrawalDate?: Date | null;
 }
 
 const ALIASES = {
