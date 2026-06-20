@@ -1,12 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
-import { Wifi, WifiOff, Battery, BatteryWarning, HardDrive, Cloud, RefreshCw, Zap, Database, Activity, AlertTriangle } from 'lucide-react';
+import { Wifi, WifiOff, Battery, BatteryWarning, HardDrive, Cloud, RefreshCw, Zap, Database, Activity, AlertTriangle, AlertCircle, DatabaseZap } from 'lucide-react';
 import { useSyncStore } from '@/stores';
-import { supabaseSyncService } from '../services/supabaseSyncService';
+import { pullBatch } from '../services/cloud/BatchSyncService';
 import { useNavigate } from 'react-router-dom';
 import { SystemRepository } from '../repositories/SystemRepository';
-import { ScanRepository } from '../repositories/ScanRepository';
-import { getGlobalPendingCount } from '../services/syncManager';
 
 export const SystemStatus: React.FC = () => {
   const navigate = useNavigate();
@@ -18,7 +16,20 @@ export const SystemStatus: React.FC = () => {
   const [integrityAlert, setIntegrityAlert] = useState(false);
   const [anomalyCount, setAnomalyCount] = useState(0);
   
-  const { isSyncing, latencyMs, pendingItems, setLatency, setPendingItems, setSupabaseConnected, isSupabaseConnected, syncError } = useSyncStore();
+  const { 
+    isSyncing, 
+    latencyMs, 
+    pendingItems, 
+    setLatency, 
+    setPendingItems, 
+    setSupabaseConnected, 
+    isSupabaseConnected, 
+    syncError,
+    conflicts,
+    incidents,
+    getAllIncidents,
+    setPendingCount 
+  } = useSyncStore();
 
   useEffect(() => {
     const checkMetrics = async () => {
@@ -37,7 +48,7 @@ export const SystemStatus: React.FC = () => {
       // 2. Medir Latencia
       const start = performance.now();
       try {
-        const res: any = await supabaseSyncService.pullBatch('CONFIG_SISTEMA');
+        const res: any = await pullBatch('CONFIG_SISTEMA');
         if (res.isOffline || res.success === false) {
           setLatency(null);
           setSupabaseConnected(false);
@@ -53,9 +64,10 @@ export const SystemStatus: React.FC = () => {
 
       // 3. Contar Pendientes (Global de transacciones)
       try {
+        const { getGlobalPendingCount } = await import('../services/syncManager');
         const totalPending = await getGlobalPendingCount();
         setPendingItems(totalPending);
-      } catch (e) {}
+      } catch {}
     };
 
     checkMetrics();
