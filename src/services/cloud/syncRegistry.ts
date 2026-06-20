@@ -208,6 +208,21 @@ export interface TableSyncMeta {
   mapToLocal?: (remote: any) => any;
 }
 
+// Mappers para audit_logs
+const mapAuditToRemote = (entry: any) => ({
+  id: entry.id,
+  table_name: entry.tableName,
+  record_id: entry.recordId,
+  action: entry.action,
+  field_name: entry.fieldName || null,
+  old_value: entry.oldValue || null,
+  new_value: entry.newValue || null,
+  user_id: entry.userId || null,
+  device_info: entry.deviceInfo || null,
+  timestamp: new Date(entry.timestamp).toISOString(),
+  synced: true
+});
+
 export const syncRegistry: Record<string, TableSyncMeta> = {
   products: {
     localTable: 'products',
@@ -399,5 +414,13 @@ export const syncRegistry: Record<string, TableSyncMeta> = {
       createdAt: remote.created_at ? new Date(remote.created_at).getTime() : Date.now(),
       updatedAt: remote.updated_at ? new Date(remote.updated_at).getTime() : Date.now()
     })
+  },
+  auditLogs: {
+    localTable: 'audit_logs',
+    remoteTable: 'AUDIT_LOGS',
+    primaryKey: 'id',
+    mapToRemote: mapAuditToRemote,
+    // Audit logs no se descargan de la nube (son solo locales)
+    mapToLocal: () => null
   }
 };

@@ -20,7 +20,8 @@ import {
   Database,
   Filter,
   RefreshCw,
-  Download
+  Download,
+  Upload
 } from 'lucide-react';
 import type { AuditLogEntry } from '@/db';
 
@@ -35,6 +36,12 @@ interface AuditPanelProps {
   title?: string;
   /** Límite de entradas a mostrar */
   limit?: number;
+  /** Callback cuando se selecciona ver detalle de registro */
+  onViewRecord?: (recordId: string, tableName: string) => void;
+  /** Función para sincronizar a la nube */
+  onSyncToCloud?: () => Promise<{ synced: number; failed: number }>;
+  /** Número de entradas pendientes de sincronizar */
+  pendingCount?: number;
 }
 
 const ACTION_CONFIG = {
@@ -55,12 +62,16 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({
   loadHistory,
   title = 'Historial de Cambios',
   limit = 50,
+  onViewRecord,
+  onSyncToCloud,
+  pendingCount = 0,
 }) => {
   const [entries, setEntries] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [filterTable, setFilterTable] = useState<string>(tableName || '');
   const [showAll, setShowAll] = useState(!recordId);
+  const [syncing, setSyncing] = useState(false);
 
   // Obtener tablas únicas
   const tables = [...new Set(entries.map(e => e.tableName))];
@@ -88,7 +99,22 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({
 
   useEffect(() => {
     fetchHistory();
-  }, [recordId, tableName, filterTable, showAll]);
+  }, [recordId, tableName, filterTable, showAll, loadHistory, limit]);
+
+  // Sincronizar a la nube
+  const handleSync = async () => {
+    if (!onSyncToCloud || syncing) return;
+    
+    setSyncing(true);
+    try {
+      const result = await onSyncToCloud();
+      if (result.synced > 0) {
+        await fetchHistory(); // Refresh
+      }
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const formatTimestamp = (ts: number) => {
     return format(new Date(ts), "dd MMM, HH:mm:ss", { locale: es });
@@ -172,13 +198,23 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({
             >
               <div className="px-4 pb-4 pt-0 space-y-3 border-t border-slate-900">
                 {/* Record ID */}
-                <div>
-                  <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-widest">
-                    ID Registro
-                  </span>
-                  <p className="text-xs font-mono text-slate-300 bg-slate-900 px-2.5 py-1.5 rounded-lg mt-1">
-                    {entry.recordId}
-                  </p>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-widest">
+                      ID Registro
+                    </span>
+                    <p className="text-xs font-mono text-slate-300 bg-slate-900 px-2.5 py-1.5 rounded-lg mt-1">
+                      {entry.recordId}
+                    </p>
+                  </div>
+                  {onViewRecord && (
+                    <button
+                      onClick={() => onViewRecord(entry.recordId, entry.tableName)}
+                      className="px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-[10px] font-bold rounded-lg border border-blue-500/20 uppercase transition-colors"
+                    >
+                      Ver Detalle →
+                    </button>
+                  )}
                 </div>
 
                 {/* Values */}
@@ -229,6 +265,11 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({
         <h3 className="text-sm font-black text-slate-300 flex items-center gap-2">
           <History className="w-4 h-4 text-blue-400" />
           {title}
+          {pendingCount > 0 && (
+            <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 text-[10px] font-bold rounded-full">
+              {pendingCount} pendientes
+            </span>
+          )}
         </h3>
         
         <div className="flex items-center gap-2">
@@ -243,6 +284,21 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({
                 <option key={t} value={t}>{t}</option>
               ))}
             </select>
+          )}
+          
+          {onSyncToCloud && (
+            <button
+              onClick={handleSync}
+              disabled={syncing || pendingCount === 0}
+              className={`p-1.5 rounded-lg transition-colors ${
+                pendingCount > 0 
+                  ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400' 
+                  : 'bg-slate-900 text-slate-500 cursor-not-allowed'
+              }`}
+              title="Sincronizar a la nube"
+            >
+              <Upload className={`w-3.5 h-3.5 ${syncing ? 'animate-pulse' : ''}`} />
+            </button>
           )}
           
           <button

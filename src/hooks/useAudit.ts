@@ -28,6 +28,8 @@
 import { useCallback } from 'react';
 import { db, type AuditLogEntry } from '@/db';
 import { useAppStore } from '@/stores';
+import { supabaseSyncService } from '@/services/supabaseSyncService';
+import { logger } from '@/services/logger';
 
 // Device info helper
 const getDeviceInfo = (): string => {
@@ -146,6 +148,62 @@ export function useAudit(): UseAuditReturn {
     return ids.length;
   }, []);
 
+  // Sincronizar logs pendientes a la nube
+  const syncToCloud = useCallback(async (): Promise<{ synced: number; failed: number }> => {
+    const pending = await getPendingSync();
+    
+    if (pending.length === 0) {
+      return { synced: 0, failed: 0 };
+    }
+
+    let synced = 0;
+    let failed = 0;
+    const syncedIds: number[] = [];
+
+    // Sincronizar en lotes pequeños
+    const BATCH_SIZE = 20;
+    for (let i = 0; i < pending.length; i += BATCH_SIZE) {
+      const batch = pending.slice(i, i + BATCH_SIZE);
+      const rows = batch.map(entry => ({
+        id: entry.id,
+        table_name: entry.tableName,
+        record_id: entry.recordId,
+        action: entry.action,
+        field_name: entry.fieldName || null,
+        old_value: entry.oldValue || null,
+        new_value: entry.newValue || null,
+        user_id: entry.userId || null,
+        device_info: entry.deviceInfo || null,
+        timestamp: new Date(entry.timestamp).toISOString(),
+        synced: true
+      }));
+
+      try {
+        const result = await supabaseSyncService.pushBatch('AUDIT_LOGS', rows);
+        
+        if (result?.success) {
+          batch.forEach(entry => {
+            if (entry.id) syncedIds.push(entry.id);
+          });
+          synced += batch.length;
+        } else {
+          failed += batch.length;
+          logger.error('AUDIT_SYNC', result?.error || 'Unknown error');
+        }
+      } catch (err) {
+        failed += batch.length;
+        logger.error('AUDIT_SYNC', String(err));
+      }
+    }
+
+    // Marcar como sincronizados
+    if (syncedIds.length > 0) {
+      await markSynced(syncedIds);
+    }
+
+    return { synced, failed };
+  }, [getPendingSync, markSynced]);
+
   return {
     log,
     getRecordHistory,
@@ -154,6 +212,7 @@ export function useAudit(): UseAuditReturn {
     getPendingSync,
     markSynced,
     purgeOld,
+    syncToCloud,
   };
 }
 
@@ -192,6 +251,69 @@ export const auditService = {
       .limit(limit)
       .toArray();
   },
+
+  async getPendingSync(): Promise<AuditLogEntry[]> {
+    return db.audit_logs
+      .where('synced')
+      .equals(0)
+      .toArray();
+  },
+
+  async syncToCloud(): Promise<{ synced: number; failed: number }> {
+    const pending = await this.getPendingSync();
+    
+    if (pending.length === 0) {
+      return { synced: 0, failed: 0 };
+    }
+
+    let synced = 0;
+    let failed = 0;
+    const syncedIds: number[] = [];
+    const BATCH_SIZE = 20;
+
+    for (let i = 0; i < pending.length; i += BATCH_SIZE) {
+      const batch = pending.slice(i, i + BATCH_SIZE);
+      const rows = batch.map(entry => ({
+        id: entry.id,
+        table_name: entry.tableName,
+        record_id: entry.recordId,
+        action: entry.action,
+        field_name: entry.fieldName || null,
+        old_value: entry.oldValue || null,
+        new_value: entry.newValue || null,
+        user_id: entry.userId || null,
+        device_info: entry.deviceInfo || null,
+        timestamp: new Date(entry.timestamp).toISOString(),
+        synced: true
+      }));
+
+      try {
+        const result = await supabaseSyncService.pushBatch('AUDIT_LOGS', rows);
+        
+        if (result?.success) {
+          batch.forEach(entry => {
+            if (entry.id) syncedIds.push(entry.id);
+          });
+          synced += batch.length;
+        } else {
+          failed += batch.length;
+          logger.error('AUDIT_SYNC', result?.error || 'Unknown error');
+        }
+      } catch (err) {
+        failed += batch.length;
+        logger.error('AUDIT_SYNC', String(err));
+      }
+    }
+
+    if (syncedIds.length > 0) {
+      await db.audit_logs
+        .where('id!')
+        .anyOf(syncedIds)
+        .modify({ synced: true });
+    }
+
+    return { synced, failed };
+  }
 };
 
 export default useAudit;

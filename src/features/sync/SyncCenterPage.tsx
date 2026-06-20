@@ -8,7 +8,7 @@
  * Después: ~180 líneas
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -34,7 +34,13 @@ import { SyncStatusCards, SyncQueuePanel, SyncActivity } from './components';
 export const SyncCenterPage: React.FC = () => {
   const navigate = useNavigate();
   const { incidents, lastSyncTime, isSupabaseConnected, conflicts, clearIncidents } = useSyncStore();
-  const { getTableHistory } = useAudit();
+  const { getTableHistory, getPendingSync, syncToCloud } = useAudit();
+  const [pendingAuditCount, setPendingAuditCount] = useState(0);
+
+  // Cargar count de pendientes
+  useEffect(() => {
+    getPendingSync().then(pending => setPendingAuditCount(pending.length));
+  }, [getPendingSync]);
   
   const {
     isSyncing,
@@ -257,6 +263,8 @@ export const SyncCenterPage: React.FC = () => {
           loadHistory={getTableHistory}
           title="Registro de Auditoría"
           limit={100}
+          onSyncToCloud={syncToCloud}
+          pendingCount={pendingAuditCount}
         />
       )}
 
