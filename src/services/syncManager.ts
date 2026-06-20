@@ -1,11 +1,20 @@
 /**
  * SyncManager - Wrapper de compatibilidad para sincronización
  * 
- * La lógica principal está en:
- * - src/services/sync/ - Servicios modulares
+ * TODA la lógica ahora usa GenericSyncEngine como motor central.
+ * Este archivo solo re-exporta para compatibilidad.
+ * 
+ * ARQUITECTURA:
+ * 
+ *   componentes → syncManager → sync/ → CatalogImporter → GenericSyncEngine
+ *                                              ↓
+ *                                         supabaseSyncService
+ * 
+ * Para nuevo código, usar directamente:
+ * - useGenericSync (hooks React)
+ * - genericSyncEngine (servicios)
  */
 
-// Re-export desde servicios modulares
 export {
   getPendingUploadGroups,
   performBatchUpload,
@@ -23,13 +32,11 @@ export {
   isUploadInProgress,
 } from './sync/BatchUploader';
 
-// Re-export desde cloudBackupService
 export {
   backupProductsToSupabase,
   backupProvidersToSupabase,
 } from './cloudBackupService';
 
-// Re-export desde CatalogImporter
 export {
   importCustomersAndTemplatesFromCloud,
 } from './sync/CatalogImporter';
