@@ -1,12 +1,13 @@
 import React, { useState, useEffect, memo } from 'react';
 import { Provider } from '../../../types';
-import { Pencil, Trash2, Truck, CheckCircle2, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { Pencil, Trash2, Truck, CheckCircle2, AlertTriangle, ShieldCheck, Package } from 'lucide-react';
 import { Badge, Button } from '../../../shared/components/ui';
 
 interface ProviderListProps {
   providers?: Provider[];
   onEdit: (provider: Provider) => void;
   onDelete: (rut: string) => void;
+  onShowProducts?: (provider: Provider) => void;
   hasFilter: boolean;
   theme?: 'dark' | 'light' | 'high-contrast';
 }
@@ -16,6 +17,7 @@ export const ProviderList: React.FC<ProviderListProps> = memo(({
   onEdit, 
   onDelete, 
   hasFilter,
+  onShowProducts,
   theme = 'dark'
 }) => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -107,6 +109,15 @@ export const ProviderList: React.FC<ProviderListProps> = memo(({
 
                   {/* Buttons Panel on the direct Right side */}
                   <div className="flex items-center border-l border-slate-100 dark:border-white/10 shrink-0">
+                    {onShowProducts && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onShowProducts(p); }}
+                        className="w-12 h-full flex items-center justify-center text-emerald-600 dark:text-emerald-400 active:bg-emerald-50 dark:active:bg-emerald-500/10 transition-colors"
+                        title="Ver Productos"
+                      >
+                        <Package className="w-4.5 h-4.5" />
+                      </button>
+                    )}
                     <button 
                       onClick={(e) => { e.stopPropagation(); onEdit(p); }} 
                       className="w-12 h-full flex items-center justify-center text-indigo-600 dark:text-indigo-400 active:bg-indigo-50 dark:active:bg-indigo-500/10 transition-colors"
@@ -183,6 +194,15 @@ export const ProviderList: React.FC<ProviderListProps> = memo(({
 
                 {/* Inline Hover Action Buttons */}
                 <div className="w-24 shrink-0 flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {onShowProducts && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onShowProducts(p); }}
+                      className="p-2.5 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl transition-colors shrink-0"
+                      title="Ver Productos"
+                    >
+                      <Package className="w-4.5 h-4.5" />
+                    </button>
+                  )}
                   <button 
                     onClick={(e) => { e.stopPropagation(); onEdit(p); }} 
                     className="p-2.5 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl transition-colors shrink-0"

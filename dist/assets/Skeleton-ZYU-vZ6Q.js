@@ -1,0 +1,1 @@
+import{j as a}from"./vendor-ui-YRnpWsSf.js";import{r as o}from"./vendor-react-CPSFPLP-.js";const s=o.memo(({className:r="",variant:e="rectangular"})=>{const t={text:"h-3 w-full rounded",circular:"rounded-full",rectangular:"rounded-2xl"};return a.jsx("div",{className:`bg-white/5 animate-pulse ${t[e]} ${r}`})});s.displayName="Skeleton";export{s as S};

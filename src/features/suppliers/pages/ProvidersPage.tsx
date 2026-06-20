@@ -3,9 +3,11 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Truck, Search, Plus, ShieldAlert, AlertTriangle, CheckCircle2, ChevronRight, Edit2, Trash2, Wand2, UploadCloud, RefreshCw, ShieldCheck } from 'lucide-react';
 import { ProviderFormModal } from '../components/ProviderFormModal';
 import { ProviderList } from '../components/ProviderList';
+import { ProviderProductsModal } from '../components/ProviderProductsModal';
 import { ManagementSearchBar } from '../../../shared/components/core/ManagementSearchBar';
 import { useAppStore } from '../../../store/mainAppStore';
 import { useProvidersDatabase } from '../hooks/useProvidersDatabase';
+import { Provider } from '../../../types';
 
 export const ProvidersPage: React.FC = () => {
   const { settings } = useAppStore();
@@ -14,6 +16,20 @@ export const ProvidersPage: React.FC = () => {
   
   const { state, actions } = useProvidersDatabase(tableName);
   const [showExtraMenu, setShowExtraMenu] = useState(false);
+
+  // Product-Provider modal
+  const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
+  const [isProductsModalOpen, setIsProductsModalOpen] = useState(false);
+
+  const handleShowProducts = (provider: Provider) => {
+    setSelectedProvider(provider);
+    setIsProductsModalOpen(true);
+  };
+
+  const handleCloseProductsModal = () => {
+    setIsProductsModalOpen(false);
+    setSelectedProvider(null);
+  };
 
   return (
     <div className={`h-full flex flex-col transition-colors duration-500 ${
@@ -193,6 +209,7 @@ export const ProvidersPage: React.FC = () => {
           providers={state.filteredProviders}
           onEdit={actions.handleEdit}
           onDelete={actions.handleDelete}
+          onShowProducts={handleShowProducts}
           hasFilter={!!state.search}
           theme={theme}
         />
@@ -205,6 +222,15 @@ export const ProvidersPage: React.FC = () => {
         initialData={state.editingProvider}
         theme={theme}
       />
+
+      {selectedProvider && (
+        <ProviderProductsModal
+          isOpen={isProductsModalOpen}
+          onClose={handleCloseProductsModal}
+          providerRut={selectedProvider.rut}
+          providerName={selectedProvider.name}
+        />
+      )}
     </div>
   );
 };
