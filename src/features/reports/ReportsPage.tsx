@@ -16,7 +16,9 @@ import {
   TrendingUp,
   History,
   WifiOff,
-  ArrowRight
+  ArrowRight,
+  LayoutGrid,
+  List
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ReportDetail } from "./components/ReportDetail";
@@ -26,6 +28,8 @@ import { SessionHistoryList } from "./components/SessionHistoryList";
 import { ManagementSearchBar } from "../../shared/components/core/ManagementSearchBar";
 import { useReports } from "./hooks/useReports";
 import { useAppStore } from "../../store/mainAppStore";
+import { CountingMetricsCards } from "../counting/components/CountingMetricsCards";
+import { CountingKanbanView } from "../counting/components/CountingKanbanView";
 
 // Re-export types and constants
 export * from './types/Report';
@@ -39,6 +43,7 @@ export const Reports: React.FC = () => {
   const isDark = settings.theme !== 'light';
 
   const [activeTab, setActiveTab] = useState<'live' | 'sessions'>('live');
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
 
   // Filtrar consolidación en vivo según la barra de búsqueda
   const filteredLiveConsolidated = useMemo(() => {
@@ -268,18 +273,56 @@ export const Reports: React.FC = () => {
 
       {/* TAB 2: HISTORIAL DE SESIONES */}
       {activeTab === 'sessions' && (
-        <SessionHistoryList
-          sessions={state.sessions}
-          isLoading={state.isLoading}
-          filterType={state.filterType}
-          theme={theme}
-          activeMenuId={state.activeMenuId}
-          onSelect={actions.setSelectedSessionId}
-          onMenuToggle={(id) => actions.handleMenuToggle(undefined as unknown as React.MouseEvent, id)}
-          onDelete={(id) => actions.handleDeleteSession(undefined as unknown as React.MouseEvent, id)}
-          onEndReached={handleEndReached}
-          onFilterChange={(filter) => actions.setFilterType(filter as any)}
-        />
+        <>
+          {/* Metrics Cards */}
+          <CountingMetricsCards sessions={state.sessions || []} theme={theme} />
+          
+          {/* View Toggle */}
+          <div className="flex justify-end">
+            <div className={`flex gap-1 p-1 rounded-xl ${isDark ? 'bg-white/5' : 'bg-slate-100'}`}>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-2 rounded-lg transition-colors ${
+                  viewMode === 'list' ? 'bg-white text-black' : isDark ? 'text-slate-400 hover:bg-white/10' : 'text-slate-600 hover:bg-white'
+                }`}
+                title="Vista Lista"
+              >
+                <List className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('kanban')}
+                className={`p-2 rounded-lg transition-colors ${
+                  viewMode === 'kanban' ? 'bg-white text-black' : isDark ? 'text-slate-400 hover:bg-white/10' : 'text-slate-600 hover:bg-white'
+                }`}
+                title="Vista Kanban"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+          
+          {/* List or Kanban View */}
+          {viewMode === 'kanban' ? (
+            <CountingKanbanView 
+              sessions={state.sessions || []} 
+              theme={theme}
+              onItemClick={(s) => actions.setSelectedSessionId(s.id)}
+            />
+          ) : (
+            <SessionHistoryList
+              sessions={state.sessions}
+              isLoading={state.isLoading}
+              filterType={state.filterType}
+              theme={theme}
+              activeMenuId={state.activeMenuId}
+              onSelect={actions.setSelectedSessionId}
+              onMenuToggle={(id) => actions.handleMenuToggle(undefined as unknown as React.MouseEvent, id)}
+              onDelete={(id) => actions.handleDeleteSession(undefined as unknown as React.MouseEvent, id)}
+              onEndReached={handleEndReached}
+              onFilterChange={(filter) => actions.setFilterType(filter as any)}
+            />
+          )}
+        </>
       )}
     </div>
   );

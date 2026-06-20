@@ -238,7 +238,7 @@ export const InventoryKanbanView: React.FC<InventoryKanbanViewProps> = ({
               {/* Content */}
               {isExpanded && (
                 <div className="p-2 space-y-2 max-h-[350px] overflow-y-auto">
-                  {(col as any).items?.slice(0, 15).map((p: Product) => (
+                  {(col as any).items?.slice(0, 15).map((p: ProductWithPolicy) => (
                     <KanbanCard 
                       key={p.barcode} 
                       product={p} 
