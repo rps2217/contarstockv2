@@ -48,7 +48,7 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
  const mappedItems = items.map(item => ({
    barcode: item.barcode,
    name: item.name,
-   totalQuantity: item.quantity,
+   totalQuantity: item.totalQuantity,
  }));
 
  // Footer with edit mode indicator

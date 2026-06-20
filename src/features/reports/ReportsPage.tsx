@@ -261,7 +261,6 @@ export const Reports: React.FC = () => {
           items={filteredLiveConsolidated}
           isLoading={state.isLiveLoading}
           searchQuery={state.searchQuery}
-          isDark={isDark}
           onExport={() => handleExportLiveToExcel(filteredLiveConsolidated)}
           stats={liveStats}
         />
@@ -274,7 +273,6 @@ export const Reports: React.FC = () => {
           isLoading={state.isLoading}
           filterType={state.filterType}
           theme={theme}
-          isDark={isDark}
           activeMenuId={state.activeMenuId}
           onSelect={actions.setSelectedSessionId}
           onMenuToggle={(id) => actions.handleMenuToggle(undefined as unknown as React.MouseEvent, id)}

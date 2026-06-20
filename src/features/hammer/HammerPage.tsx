@@ -25,7 +25,7 @@ export const HammerPage: React.FC = () => {
 
   // Productivity tracking
   const [isProductivityVisible, setIsProductivityVisible] = useState(false);
-  const { stats, formattedDuration } = useProductivity(state.items.map(i => ({ barcode: i.barcode, totalQuantity: i.quantity })));
+  const { stats, formattedDuration } = useProductivity(state.items.map(i => ({ barcode: i.barcode, totalQuantity: i.totalQuantity })));
 
   // Turbo mode
   const turbo = useTurboMode();
