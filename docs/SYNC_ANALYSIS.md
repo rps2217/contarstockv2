@@ -211,6 +211,42 @@ cloudSync.ts tiene lógica especializada (embeddings IA, lotes de 50) que no est
  */
 ```
 
+## Progreso Fase 3
+
+### Completed:
+- ✅ Analizado hooks existentes (useExpirySync, useProductSync, useProvidersSync, useCountingSync)
+- ✅ Creado `useGenericSync` en `src/hooks/useGenericSync.ts` (154 líneas)
+
+### Hook Creado:
+```typescript
+// Uso simple
+const { isSyncing, push, pull, sync } = useGenericSync({
+  tableName: 'CONTEOS',
+  registryKey: 'counts',
+});
+
+// Push a la nube
+await push();
+
+// Pull desde la nube
+await pull();
+
+// Sync bidireccional
+await sync();
+```
+
+### API:
+- `useGenericSync(config)` - Hook principal
+- `config.tableName` - Nombre tabla Supabase
+- `config.registryKey` - Clave para GenericSyncEngine
+- `config.useRealtime` - Habilitar realtime (default: true)
+- `config.localRepository` - Repositorio para realtime
+
+### Estado Actual:
+- Hook creado y funcional
+- Build pasando
+- Tests pasando (149)
+
 ---
 
 ## Impacto Esperado
