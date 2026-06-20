@@ -2,15 +2,26 @@
 import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import { Package } from 'lucide-react';
 
+/**
+ * Props para el componente de fila
+ */
+export interface VirtualRowProps<T> {
+  index: number;
+  item: T;
+  data: any;
+  style?: React.CSSProperties;
+}
+
 interface VirtualListProps<T> {
- items: T[];
- itemHeight: number;
- renderRow: React.ComponentType<{ index: number; item: T; data: any; style?: React.CSSProperties }>;
- rowData?: any;
- onEndReached?: () => void;
- endReachedThreshold?: number; 
- className?: string;
- emptyState?: React.ReactNode;
+  items: T[];
+  itemHeight: number;
+  renderRow: React.ComponentType<VirtualRowProps<T>>;
+  rowData?: any;
+  onEndReached?: () => void;
+  endReachedThreshold?: number; 
+  className?: string;
+  emptyState?: React.ReactNode;
+  getItemKey?: (item: T, index: number) => string | number;
 }
 
 /**
@@ -21,23 +32,30 @@ export const VirtualList = <T,>({
 	items, 
 	itemHeight, 
 	renderRow: RowComponent, 
-	rowData = {}, 
+	rowData, 
 	onEndReached,
 	endReachedThreshold = 5,
 	className = "",
-	emptyState
+	emptyState,
+	getItemKey
 }: VirtualListProps<T>) => {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const [scrollTop, setScrollTop] = useState(0);
 	const [containerHeight, setContainerHeight] = useState(0);
 
-	// Multi-compatible combined row data to support row components accessing items via index
+	// Combine rowData with items for row components that need both
 	const combinedRowData = useMemo(() => {
-		if (typeof rowData === 'object' && rowData !== null) {
-			return { ...rowData, items };
-		}
-		return { items };
+		return rowData !== undefined 
+			? { ...rowData, items }
+			: { items };
 	}, [rowData, items]);
+
+	// Memoized key extractor
+	const getKey = useCallback((item: T, index: number) => {
+		if (getItemKey) return getItemKey(item, index);
+		// Fallback to common id fields
+		return (item as any).id || (item as any).barcode || index;
+	}, [getItemKey]);
 
  // Ajuste de altura responsivo sin causar layouts pesados usando ResizeObserver
  useEffect(() => {
@@ -127,19 +145,22 @@ export const VirtualList = <T,>({
  contain: 'content'
  }}
  >
- {visibleItems.map((item, localIndex) => (
+ {visibleItems.map((item, localIndex) => {
+ const globalIndex = startIndex + localIndex;
+ return (
  <div 
- key={(item as any).id || (item as any).barcode || (startIndex + localIndex)} 
+ key={getKey(item, globalIndex)}
  style={{ height: itemHeight, overflow: 'hidden' }}
  className="contain-content"
  >
  <RowComponent 
- index={startIndex + localIndex} 
+ index={globalIndex} 
  item={item}
  data={combinedRowData} 
  />
  </div>
- ))}
+ );
+ })}
  </div>
  </div>
  );
