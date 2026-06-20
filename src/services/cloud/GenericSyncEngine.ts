@@ -4,6 +4,12 @@ import { db } from '../../db';
 import { logger } from '../logger';
 import { telemetry } from '../telemetryService';
 import { useSyncStore } from '@/stores';
+import { 
+  getConfiguredStrategy, 
+  applyStrategy, 
+  type ConflictStrategy,
+  type ConflictResolution 
+} from './ConflictResolution';
 
 export class GenericSyncEngine {
   /**
@@ -178,15 +184,32 @@ export class GenericSyncEngine {
 
           if (existing.syncStatus === 'pending' || existing.syncStatus === 'error' || existing.syncStatus === 'pending_delete') {
             // CONFLICT DETECTED: Local version is unsynced, remote version was updated.
-            // AppSheet-style: Preserve local version, register Conflict Incident in sync store
-            const remoteIso = remoteTime > 0 ? new Date(remoteTime).toISOString() : 'Desconocido';
-            const localIso = localTime > 0 ? new Date(localTime).toISOString() : 'Desconocido';
-            const store = useSyncStore.getState();
-            store.addConflict();
-            store.addIncident(
-              meta.remoteTable,
-              `Conflicto en registro (ID: ${id}): Modificado localmente y en la nube de forma independiente. Se conservó la versión local. (Nube: ${remoteIso} vs Local: ${localIso})`
+            // Apply conflict resolution strategy
+            const strategy = getConfiguredStrategy();
+            const resolution = applyStrategy(strategy, 
+              { data: existing, timestamp: localTime },
+              { data: mapped, timestamp: remoteTime }
             );
+            
+            const store = useSyncStore.getState();
+            
+            if (!resolution.resolved) {
+              // Manual: Register conflict for user decision
+              store.addConflict();
+              store.addIncident(
+                meta.remoteTable,
+                `Conflicto requiere decisión manual (ID: ${id}): ${resolution.reason}`
+              );
+              logger.warn('SYNC_CONFLICT', `Conflicto manual detectado para ${id}`);
+            } else if (resolution.useLocal) {
+              // Client wins: Keep local version
+              logger.info('SYNC_CONFLICT', `Conflicto resuelto (client_wins) para ${id}: ${resolution.reason}`);
+            } else {
+              // Server wins: Apply remote version
+              await localTable.update(id, { ...resolution.resolvedData, syncStatus: 'synced' });
+              updated++;
+              logger.info('SYNC_CONFLICT', `Conflicto resuelto (server_wins) para ${id}: ${resolution.reason}`);
+            }
           } else if (remoteTime > localTime) {
             await localTable.update(id, { ...mapped, syncStatus: 'synced' });
             updated++;

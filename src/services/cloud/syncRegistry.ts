@@ -1,37 +1,97 @@
 import { getSettings } from '../settings';
 
 /**
- * Registry for all tables that participate in synchronization.
- * Define primary keys and local/remote mappings here.
+ * =============================================================================
+ * SYNC REGISTRY - Registro Centralizado de Tablas de Sincronización
+ * =============================================================================
+ * 
+ * Este archivo define TODAS las tablas que participan en la sincronización
+ * bidireccional entre IndexedDB local y Supabase remoto.
+ * 
+ * ARQUITECTURA:
+ * ┌──────────────────┐     syncRegistry      ┌──────────────────┐
+ * │   IndexedDB      │ ◄─────────────────► │    Supabase      │
+ * │   (LOCAL)        │                     │    (REMOTE)      │
+ * │                  │  TablaRegistry      │                  │
+ * │  products ───────┼─────────────────────┼─► PRODUCTOS      │
+ * │  sessions ───────┼─────────────────────┼─► SESSIONS       │
+ * │  scans ──────────┼─────────────────────┼─► SCANS          │
+ * │  providers ───────┼─────────────────────┼─► PROVEEDORES   │
+ * │  dynamic_data ────┼─────────────────────┼─► VENCIMIENTOS   │
+ * │  dynamic_data ────┼─────────────────────┼─► EVENTOS        │
+ * │  audit_logs ──────┼─────────────────────┼─► AUDIT_LOGS     │
+ * └──────────────────┘                     └──────────────────┘
+ * 
+ * CADA ENTRADA INCLUYE:
+ * - localTable: Nombre de tabla en IndexedDB (Dexie)
+ * - remoteTable: Nombre de tabla en Supabase (PostgreSQL)
+ * - primaryKey: Clave primaria para actualizaciones/eliminaciones
+ * - filterField/filterValue: Filtro para tablas dinámicas (dynamic_data)
+ * - mapToRemote: Función para transformar registro local → remoto
+ * - mapToLocal: Función para transformar registro remoto → local
+ * 
+ * TIPOS DE SINCRONIZACIÓN:
+ * - Normal: Tabla local tiene nombre fijo (products, sessions, etc.)
+ * - Dinámica: Todos los registros en dynamic_data con filtro por tableName
+ * 
+ * @module syncRegistry
+ * @version 1.0.0
+ * @author ContarStock Team
  */
 
-// Helper to map local record to remote snake_case database row based on user-defined mappings
-const mapExpiryToRemote = (record: any) => {
-  const settings = getSettings();
-  const mapping = settings?.cloudConfig?.mappings?.expiry || settings?.cloudConfig?.columnMapping;
-  const data = record.data || {};
+// =============================================================================
+// HELPERS UTILITARIOS
+// =============================================================================
+
+/**
+ * Convierte una fecha en string ISO a timestamp Unix de forma segura.
+ * Maneja valores nulos, inválidos y diferentes formatos de fecha.
+ * 
+ * @param dateStr - Fecha en formato ISO string o undefined
+ * @returns Timestamp Unix en milisegundos
+ * 
+ * @example
+ * getSafeTimestamp('2024-01-15T10:30:00Z') // 1705315800000
+ * getSafeTimestamp(undefined)              // Date.now()
+ * getSafeTimestamp('invalid')              // Date.now()
+ */
+const getSafeTimestamp = (dateStr?: string): number => {
+  if (!dateStr) return Date.now();
+  const t = new Date(dateStr).getTime();
+  return isNaN(t) ? Date.now() : t;
+};
+
+/**
+ * Transforma un registro local a formato remoto (camelCase → snake_case).
+ * Aplica mapeo configurable desde settings.
+ * 
+ * @param data - Datos del registro local
+ * @param mapping - Mapeo de columnas configurado
+ * @param id - ID del registro
+ * @param timestamp - Timestamp del registro
+ * @returns Objeto en formato remoto
+ */
+const applyRemoteMapping = (
+  data: Record<string, any>,
+  mapping: Record<string, string> | undefined,
+  id: string,
+  timestamp: number
+): Record<string, any> => {
+  const remote: Record<string, any> = {};
   
   if (!mapping) {
-    return {
-      ...data,
-      id: record.id,
-      updated_at: new Date(record.timestamp).toISOString()
-    };
+    return { ...data, id, updated_at: new Date(timestamp).toISOString() };
   }
 
-  // Create remote object
-  const remote: any = {};
-  
-  // Set ID column mapping
-  const idCol = mapping.id || 'id';
-  remote[idCol] = record.id;
-  
-  // Map fields that are in mapping
+  // Mapear columnas configuradas
   const localKeys = [
-    'barcode', 'productName', 'providerName', 'providerRut', 'quantity', 'event', 'mm', 'yyyy', 
-    'location', 'supplier', 'timestamp', 'frc', 'erp', 'traspaso', 
+    'barcode', 'productName', 'providerName', 'providerRut', 'quantity', 'event', 
+    'mm', 'yyyy', 'location', 'supplier', 'timestamp', 'frc', 'erp', 'traspaso',
     'destino', 'observaciones', 'isAdjusted', 'batch', 'uniqueKey', 'claveUnica'
   ];
+
+  const idCol = mapping.id || 'id';
+  remote[idCol] = id;
 
   localKeys.forEach(key => {
     let remoteCol = mapping[key];
@@ -40,9 +100,7 @@ const mapExpiryToRemote = (record: any) => {
     }
     if (remoteCol && data[key] !== undefined) {
       remoteCol = String(remoteCol);
-      if (key === 'quantity') {
-        remote[remoteCol] = Number(data[key]);
-      } else if (key === 'mm' || key === 'yyyy') {
+      if (key === 'quantity' || key === 'mm' || key === 'yyyy') {
         remote[remoteCol] = Number(data[key]);
       } else {
         remote[remoteCol] = data[key];
@@ -50,40 +108,36 @@ const mapExpiryToRemote = (record: any) => {
     }
   });
 
-  // Ensure updated_at is always set or mapped
-  remote.updated_at = new Date(record.timestamp).toISOString();
-
+  remote.updated_at = new Date(timestamp).toISOString();
   return remote;
 };
 
-const getSafeTimestamp = (dateStr?: string): number => {
-  if (!dateStr) return Date.now();
-  const t = new Date(dateStr).getTime();
-  return isNaN(t) ? Date.now() : t;
-};
-
-// Helper to map remote snake_case database row back to local camelCase based on mappings
-const mapExpiryToLocal = (remote: any) => {
-  const settings = getSettings();
-  const mapping = settings?.cloudConfig?.mappings?.expiry || settings?.cloudConfig?.columnMapping;
-  const id = remote.id || remote.ID || (mapping?.id ? remote[mapping.id] : undefined) || 'unknown';
-
+/**
+ * Transforma un registro remoto a formato local (snake_case → camelCase).
+ * Aplica mapeo inverso configurable desde settings.
+ * 
+ * @param remote - Datos del registro remoto
+ * @param mapping - Mapeo inverso de columnas
+ * @param id - ID del registro
+ * @param timestamp - Timestamp del registro
+ * @param tableName - Nombre de tabla para dynamic_data
+ * @returns Objeto en formato local
+ */
+const applyLocalMapping = (
+  remote: Record<string, any>,
+  mapping: Record<string, string> | undefined,
+  id: string,
+  timestamp: number,
+  tableName: string
+): Record<string, any> => {
+  const local: Record<string, any> = {};
+  
   if (!mapping) {
-    return {
-      id: String(id),
-      tableName: 'VENCIMIENTOS',
-      data: remote,
-      timestamp: getSafeTimestamp(remote.updated_at || remote.updatedat),
-      syncStatus: 'synced' as const
-    };
+    return { id: String(id), tableName, data: remote, timestamp, syncStatus: 'synced' as const };
   }
 
-  // Inverse mapping: remote columns -> local keys
-  const local: any = {};
-  const mappingEntries = Object.entries(mapping);
-  
-  // Fill local keys based on remote columns
-  mappingEntries.forEach(([localKey, remoteCol]) => {
+  // Aplicar mapeo inverso
+  Object.entries(mapping).forEach(([localKey, remoteCol]) => {
     if (remoteCol && remote[remoteCol as string] !== undefined && remote[remoteCol as string] !== null) {
       if (localKey === 'quantity' || localKey === 'mm' || localKey === 'yyyy') {
         local[localKey] = Number(remote[remoteCol as string]);
@@ -93,7 +147,7 @@ const mapExpiryToLocal = (remote: any) => {
     }
   });
 
-  // Ensure essential local keys exist
+  // Asegurar campos esenciales
   local.id = String(id);
   local.barcode = local.barcode || remote.barcode || '';
   local.productName = local.productName || remote.productName || remote.product_name || '';
@@ -104,112 +158,53 @@ const mapExpiryToLocal = (remote: any) => {
   local.yyyy = Number(local.yyyy || remote.yyyy || 0);
   local.claveUnica = local.claveUnica || local.uniqueKey || remote.unique_key || remote.claveUnica || remote.clave_unica || id;
 
-  return {
-    id: String(id),
-    tableName: 'VENCIMIENTOS',
-    data: local,
-    timestamp: getSafeTimestamp(remote.updated_at || remote.updatedat),
-    syncStatus: 'synced' as const
+  return { id: String(id), tableName, data: local, timestamp, syncStatus: 'synced' as const };
+};
+
+// =============================================================================
+// FACTORY DE MAPPERS PARA TABLAS DINÁMICAS
+// =============================================================================
+
+/**
+ * Crea un par de mappers (toRemote/toLocal) para tablas dinámicas.
+ * Las tablas dinámicas usan dynamic_data con un tableName específico.
+ * 
+ * @param tableName - Nombre de la tabla (ej: 'VENCIMIENTOS', 'EVENTOS')
+ * @param mappingKey - Clave en settings.cloudConfig.mappings (ej: 'expiry', 'events')
+ * @returns Objeto con mapToRemote y mapToLocal
+ * 
+ * @example
+ * const mappers = createDynamicTableMappers('VENCIMIENTOS', 'expiry');
+ */
+const createDynamicTableMappers = (tableName: string, mappingKey: keyof typeof getSettings extends () => infer R ? R['cloudConfig']['mappings'] extends Record<string, any> ? mappingKey : never : never) => {
+  const mapToRemote = (record: any): Record<string, any> => {
+    const settings = getSettings();
+    const mapping = settings?.cloudConfig?.mappings?.[mappingKey] || settings?.cloudConfig?.columnMapping;
+    const data = record.data || {};
+    return applyRemoteMapping(data, mapping, record.id, record.timestamp);
   };
-};
 
-const mapEventToRemote = (record: any) => {
-  const settings = getSettings();
-  const mapping = settings?.cloudConfig?.mappings?.events || settings?.cloudConfig?.columnMapping;
-  const data = record.data || {};
-  
-  if (!mapping) {
-    return {
-      ...data,
-      id: record.id,
-      updated_at: new Date(record.timestamp).toISOString()
-    };
-  }
-
-  // Create remote object
-  const remote: any = {};
-  
-  // Set ID column mapping
-  const idCol = mapping.id || 'id';
-  remote[idCol] = record.id;
-  
-  // Map fields that are in mapping
-  const localKeys = [
-    'barcode', 'productName', 'quantity', 'event', 'mm', 'yyyy', 
-    'location', 'supplier', 'supplierRut', 'timestamp', 'frc', 'erp', 'traspaso', 
-    'destino', 'observaciones', 'isAdjusted', 'batch'
-  ];
-
-  localKeys.forEach(key => {
-    const remoteCol = mapping[key];
-    if (remoteCol && data[key] !== undefined) {
-      if (key === 'quantity') {
-        remote[String(remoteCol)] = Number(data[key]);
-      } else {
-        remote[String(remoteCol)] = data[key];
-      }
-    }
-  });
-
-  remote.updated_at = new Date(record.timestamp).toISOString();
-
-  return remote;
-};
-
-const mapEventToLocal = (remote: any) => {
-  const settings = getSettings();
-  const mapping = settings?.cloudConfig?.mappings?.events || settings?.cloudConfig?.columnMapping;
-  const id = remote.id || remote.ID || (mapping?.id ? remote[mapping.id] : undefined) || 'unknown';
-
-  if (!mapping) {
-    return {
-      id: String(id),
-      tableName: 'EVENTOS',
-      data: remote,
-      timestamp: getSafeTimestamp(remote.updated_at || remote.updatedat),
-      syncStatus: 'synced' as const
-    };
-  }
-
-  const local: any = {};
-  const mappingEntries = Object.entries(mapping);
-  
-  mappingEntries.forEach(([localKey, remoteCol]) => {
-    if (remoteCol && remote[remoteCol as string] !== undefined && remote[remoteCol as string] !== null) {
-      if (localKey === 'quantity') {
-        local[localKey] = Number(remote[remoteCol as string]);
-      } else {
-        local[localKey] = remote[remoteCol as string];
-      }
-    }
-  });
-
-  local.id = String(id);
-  local.barcode = local.barcode || remote.barcode || '';
-  local.quantity = Number(local.quantity || remote.quantity || 0);
-
-  return {
-    id: String(id),
-    tableName: 'EVENTOS',
-    data: local,
-    timestamp: getSafeTimestamp(remote.updated_at || remote.updatedat),
-    syncStatus: 'synced' as const
+  const mapToLocal = (remote: any) => {
+    const settings = getSettings();
+    const mapping = settings?.cloudConfig?.mappings?.[mappingKey] || settings?.cloudConfig?.columnMapping;
+    const id = remote.id || remote.ID || (mapping?.id ? remote[mapping.id] : undefined) || 'unknown';
+    return applyLocalMapping(remote, mapping, id, getSafeTimestamp(remote.updated_at || remote.updatedat), tableName);
   };
+
+  return { mapToRemote, mapToLocal };
 };
 
-export interface TableSyncMeta {
-  localTable: string;
-  remoteTable: string;
-  primaryKey: string;
-  filterField?: string;
-  filterValue?: string;
-  isDynamic?: boolean;
-  mapToRemote?: (local: any) => any;
-  mapToLocal?: (remote: any) => any;
-}
+/**
+ * Mappers pre-configurados para tablas dinámicas.
+ */
+const expiryMappers = createDynamicTableMappers('VENCIMIENTOS', 'expiry');
+const eventMappers = createDynamicTableMappers('EVENTOS', 'events');
 
-// Mappers para audit_logs
-const mapAuditToRemote = (entry: any) => ({
+/**
+ * Mapper para AUDIT_LOGS
+ * Registros de auditoría (solo-subida, no se descargan).
+ */
+const mapAuditToRemote = (entry: any): Record<string, any> => ({
   id: entry.id,
   table_name: entry.tableName,
   record_id: entry.recordId,
@@ -222,6 +217,29 @@ const mapAuditToRemote = (entry: any) => ({
   timestamp: new Date(entry.timestamp).toISOString(),
   synced: true
 });
+
+// =============================================================================
+// REGISTRY DE TABLAS
+// =============================================================================
+
+export interface TableSyncMeta {
+  /** Nombre de tabla en IndexedDB (Dexie) */
+  localTable: string;
+  /** Nombre de tabla en Supabase (PostgreSQL) */
+  remoteTable: string;
+  /** Clave primaria para actualizaciones/eliminaciones */
+  primaryKey: string;
+  /** Campo para filtrar en tablas dinámicas (dynamic_data) */
+  filterField?: string;
+  /** Valor del filtro para tablas dinámicas */
+  filterValue?: string;
+  /** Indica si es tabla dinámica */
+  isDynamic?: boolean;
+  /** Función para transformar registro local → remoto */
+  mapToRemote?: (local: any) => any;
+  /** Función para transformar registro remoto → local */
+  mapToLocal?: (remote: any) => any;
+}
 
 export const syncRegistry: Record<string, TableSyncMeta> = {
   products: {
@@ -372,8 +390,7 @@ export const syncRegistry: Record<string, TableSyncMeta> = {
     filterValue: 'VENCIMIENTOS',
     remoteTable: 'VENCIMIENTOS',
     primaryKey: 'id',
-    mapToRemote: mapExpiryToRemote,
-    mapToLocal: mapExpiryToLocal
+    ...expiryMappers
   },
   events: {
     localTable: 'dynamic_data',
@@ -381,8 +398,7 @@ export const syncRegistry: Record<string, TableSyncMeta> = {
     filterValue: 'EVENTOS',
     remoteTable: 'EVENTOS',
     primaryKey: 'id',
-    mapToRemote: mapEventToRemote,
-    mapToLocal: mapEventToLocal
+    ...eventMappers
   },
   productProviders: {
     localTable: 'productProviders',
