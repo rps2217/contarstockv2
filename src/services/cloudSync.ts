@@ -8,8 +8,12 @@ import { supabaseSyncService } from "./supabaseSyncService";
 import { createProductsPayload } from "./cloud/mappers";
 
 /**
+ * @deprecated Usar GenericSyncEngine en su lugar
+ * 
  * RESPALDO DE INTELIGENCIA COLECTIVA (UPSERT)
  * Envía el catálogo con firmas IA en lotes pequeños para evitar Timeouts.
+ * 
+ * @deprecated Desde 2026-06-20 - Migrar a GenericSyncEngine
  */
 export const syncProductsToCloud = async (products: Product[]): Promise<void> => {
  const config = getSettings().cloudConfig;

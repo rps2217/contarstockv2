@@ -175,7 +175,7 @@ Contiene:
 
 1. ✅ Análisis (actual)
 2. ✅ Eliminar syncFSM.ts legacy (migrado a legacySyncWrapper)
-3. 🔲 Verificar y eliminar cloudSync.ts
+3. ✅ Marcar cloudSync.ts como deprecated (migración posterior)
 4. 🔲 Consolidar hooks en useSyncQueue
 5. 🔲 Dividir supabaseSyncService.ts
 6. 🔲 Tests para nueva arquitectura
@@ -188,10 +188,28 @@ Contiene:
 - ✅ Actualizado `useDashboard.ts` para usar wrapper
 - ✅ Eliminado `src/services/syncFSM.ts` (127 líneas)
 
-### Métricas:
+### Métricas Fase 1:
 - Líneas eliminadas: 127
 - Líneas añadidas (wrapper): ~60
 - Net: -67 líneas
+
+## Progreso Fase 2
+
+### Completed:
+- ✅ Analizado `cloudSync.ts` (65 líneas)
+- ✅ Funcionalidad especializada para embeddings IA (lotes de 50)
+- ✅ Marcado como `@deprecated` con referencia a GenericSyncEngine
+
+### Decisión:
+cloudSync.ts tiene lógica especializada (embeddings IA, lotes de 50) que no está en GenericSyncEngine. Mantener temporalmente para no romper producción. Migrar en fase posterior.
+
+### Documentación JSDoc:
+```typescript
+/**
+ * @deprecated Usar GenericSyncEngine en su lugar
+ * @deprecated Desde 2026-06-20 - Migrar a GenericSyncEngine
+ */
+```
 
 ---
 
