@@ -91,6 +91,17 @@ export class LogiCountDB extends Dexie {
     expectedQty: number;
     loc?: string;
   }>;
+  syncQueue!: Table<{
+    id?: number;
+    tableName: string;
+    operation: 'create' | 'update' | 'delete';
+    recordId: string;
+    data: Record<string, unknown>;
+    timestamp: number;
+    retries: number;
+    lastError?: string;
+    priority: 'high' | 'normal' | 'low';
+  }>;
 
   constructor() {
     super('LogiCountDB');
