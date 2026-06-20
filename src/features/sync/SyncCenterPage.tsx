@@ -21,7 +21,10 @@ import {
   CheckCircle2,
   Play,
   Clock,
-  History
+  History,
+  Settings,
+  Activity,
+  Shield
 } from 'lucide-react';
 
 import { useSyncStore } from '@/stores';
@@ -29,13 +32,31 @@ import { syncRegistry } from '../../services/cloud/syncRegistry';
 import { useSyncCenter } from './hooks/useSyncCenter';
 import { useAudit } from '@/hooks/useAudit';
 import { AuditPanel } from '@/shared/components/ui/AuditPanel';
-import { SyncStatusCards, SyncQueuePanel, SyncActivity } from './components';
+import { 
+  SyncStatusCards, 
+  SyncQueuePanel, 
+  SyncActivity,
+  ConflictStrategyPanel,
+  SyncMetricsDashboard
+} from './components';
+import { syncMetrics } from '@/services/cloud/SyncMetrics';
+import { useSyncHealthAlert } from './hooks/useSyncHealthAlert';
 
 export const SyncCenterPage: React.FC = () => {
   const navigate = useNavigate();
   const { incidents, lastSyncTime, isSupabaseConnected, conflicts, clearIncidents } = useSyncStore();
   const { getTableHistory, getPendingSync, syncToCloud } = useAudit();
   const [pendingAuditCount, setPendingAuditCount] = useState(0);
+  
+  // Estados para nuevos componentes
+  const [isStrategyPanelOpen, setIsStrategyPanelOpen] = useState(false);
+  const [isMetricsOpen, setIsMetricsOpen] = useState(false);
+  
+  // Health alert hook
+  const { isHealthy } = useSyncHealthAlert(true, (health) => {
+    // Abrir automáticamente el panel de métricas si hay problemas
+    setIsMetricsOpen(true);
+  });
 
   // Cargar count de pendientes
   useEffect(() => {
@@ -73,17 +94,43 @@ export const SyncCenterPage: React.FC = () => {
           </button>
           <div>
             <h1 className="text-2xl md:text-3xl font-black uppercase italic tracking-tighter leading-none flex items-center gap-2">
-              <Cloud className="w-8 h-8 text-amber-400" />
+              <Cloud className={`w-8 h-8 ${isHealthy ? 'text-amber-400' : 'text-rose-400 animate-pulse'}`} />
               Sincronización AppSheet <span className="text-blue-500 text-xs tracking-widest uppercase italic font-normal py-1 px-2.5 bg-blue-500/10 rounded-full border border-blue-500/20">ROBUSTA</span>
+              {!isHealthy && (
+                <span className="text-rose-400 text-xs tracking-widest uppercase italic font-normal py-1 px-2.5 bg-rose-500/10 rounded-full border border-rose-500/20 animate-pulse">
+                  ⚠️ ALERTA
+                </span>
+              )}
             </h1>
             <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1.5 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className={`w-2 h-2 rounded-full ${isHealthy ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
               Bandeja de Salida Transaccional & Motor Desacoplado
             </p>
           </div>
         </div>
         
         <div className="flex items-center gap-2 shrink-0">
+          {/* Botón Métricas */}
+          <button
+            onClick={() => setIsMetricsOpen(true)}
+            className="flex items-center gap-2 px-4 py-3.5 rounded-2xl font-bold text-xs uppercase tracking-wider bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700 transition-all active:scale-95"
+            title="Ver Métricas"
+          >
+            <Activity className="w-4 h-4" />
+            <span className="hidden md:inline">Métricas</span>
+          </button>
+
+          {/* Botón Configuración de Conflictos */}
+          <button
+            onClick={() => setIsStrategyPanelOpen(true)}
+            className="flex items-center gap-2 px-4 py-3.5 rounded-2xl font-bold text-xs uppercase tracking-wider bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 transition-all active:scale-95"
+            title="Configurar Estrategia de Conflictos"
+          >
+            <Shield className="w-4 h-4" />
+            <span className="hidden md:inline">Conflictos</span>
+          </button>
+
+          {/* Botón Sincronizar */}
           <button
             onClick={handleFullSync}
             disabled={isSyncing}
@@ -94,7 +141,7 @@ export const SyncCenterPage: React.FC = () => {
             }`}
           >
             <RefreshCcw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-            {isSyncing ? 'Sincronizando...' : 'Sincronizar Cola AppSheet'}
+            {isSyncing ? 'Sincronizando...' : 'Sincronizar'}
           </button>
         </div>
       </div>
@@ -276,6 +323,22 @@ export const SyncCenterPage: React.FC = () => {
           Inspirándonos en el motor de AppSheet, cada alteración que relices en modo local u offline se registra en una bandeja de salida en orden estrictamente temporal (FIFO).
         </div>
       </div>
+
+      {/* MODALS */}
+      <ConflictStrategyPanel
+        isOpen={isStrategyPanelOpen}
+        onClose={() => setIsStrategyPanelOpen(false)}
+      />
+      
+      <AnimatePresence>
+        {isMetricsOpen && (
+          <SyncMetricsDashboard
+            isOpen={isMetricsOpen}
+            onClose={() => setIsMetricsOpen(false)}
+            onRefresh={() => syncMetrics.getStats()}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

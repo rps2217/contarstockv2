@@ -5,6 +5,8 @@
 // Componentes nuevos (preferidos)
 export { SyncQueuePanel } from './SyncQueuePanel';
 export { SyncActivity } from './SyncActivity';
+export { ConflictStrategyPanel } from './ConflictStrategyPanel';
+export { SyncMetricsDashboard } from './SyncMetricsDashboard';
 
 // Componentes legacy (deprecated)
 export { SyncQueue } from './SyncQueue';
