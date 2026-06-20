@@ -9,7 +9,10 @@ import { BarcodeLabelModal } from '../../shared/components/ui/BarcodeLabelModal'
 import { LocationSelectorModal } from '../../shared/components/ui/LocationSelectorModal';
 import { useHIDScanner } from '../../hooks/useHIDScanner';
 import { HammerCameraView } from './components/HammerCameraView';
-
+import { useProductivity } from '../counting/hooks/useProductivity';
+import { useTurboMode } from '../counting/hooks/useTurboMode';
+import { ProductivityDashboard } from '../counting/components/ProductivityDashboard';
+import { TurboModeOverlay } from '../counting/components/TurboModeOverlay';
 import { useAppStore } from '../../store/mainAppStore';
 import { exportHammerToExcel } from '../../services/export';
 
@@ -20,6 +23,13 @@ export const HammerPage: React.FC = () => {
   const { settings, updateSetting } = useAppStore();
   const locManager = useLocationManager(`hammer_loc_${batchId}`);
 
+  // Productivity tracking
+  const [isProductivityVisible, setIsProductivityVisible] = useState(false);
+  const { stats, formattedDuration } = useProductivity(state.items.map(i => ({ barcode: i.barcode, totalQuantity: i.quantity })));
+
+  // Turbo mode
+  const turbo = useTurboMode();
+
   const [isToolsOpen, setIsToolsOpen] = useState(false);
   const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
   const [isTheoreticalModalOpen, setIsTheoreticalModalOpen] = useState(false);
@@ -27,10 +37,34 @@ export const HammerPage: React.FC = () => {
 
   // ESCUCHA DE HARDWARE (HID LASER)
   useHIDScanner({
-    onScan: actions.registerScan,
+    onScan: (barcode) => {
+      actions.registerScan(barcode);
+      if (turbo.isActive) {
+        turbo.registerScan(barcode, 1);
+      }
+    },
     isEnabled: !isMigrating && !isToolsOpen && !isTheoreticalModalOpen,
     maxLatency: 40 // Más estricto para ráfagas industriales
   });
+
+  // Atajos de teclado
+  useEffect(() => {
+    const handleShortcuts = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+
+      if (e.key.toLowerCase() === 'p' && e.altKey) {
+        e.preventDefault();
+        setIsProductivityVisible(prev => !prev);
+      } else if (e.key.toLowerCase() === 't' && e.altKey && e.shiftKey) {
+        e.preventDefault();
+        turbo.toggle();
+      }
+    };
+
+    window.addEventListener('keydown', handleShortcuts);
+    return () => window.removeEventListener('keydown', handleShortcuts);
+  }, [turbo]);
 
   useEffect(() => {
     actions.setCurrentLocation(locManager.location);
@@ -117,6 +151,22 @@ export const HammerPage: React.FC = () => {
         onImportGeneralStock={handleImportGeneralStock}
         onImportExpectedOrder={handleImportExpectedOrder}
         onImportLocalExpectedOrder={handleImportLocalExpectedOrder}
+      />
+
+      {/* PRODUCTIVITY DASHBOARD */}
+      <ProductivityDashboard 
+        stats={stats}
+        formattedDuration={formattedDuration}
+        isVisible={isProductivityVisible}
+        onToggle={() => setIsProductivityVisible(prev => !prev)}
+      />
+
+      {/* TURBO MODE OVERLAY */}
+      <TurboModeOverlay
+        isActive={turbo.isActive}
+        lastQuantity={turbo.lastQuantity}
+        scanCount={turbo.scanCount}
+        productName={state.items.find(i => i.barcode === turbo.lastScannedBarcode)?.name}
       />
     </div>
   );
