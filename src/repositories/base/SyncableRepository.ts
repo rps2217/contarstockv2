@@ -1,9 +1,14 @@
 import type { Table, IndexableType } from 'dexie';
+import type { SyncStatus } from '@/types/global/sync';
 
 /**
- * Tipo para estado de sincronizacion
+ * Repository base para entidades sincronizables
+ * 
+ * Usa SyncStatus centralizado desde @/types/global/sync
  */
-export type SyncStatus = 'synced' | 'pending' | 'error' | 'pending_delete';
+
+// Re-export para backwards compatibility
+export type { SyncStatus } from '@/types/global/sync';
 
 /**
  * Entidad base con estado de sincronizacion
@@ -20,68 +25,32 @@ export interface SyncableEntity {
  * Clase abstracta para extender en repositorios especificos
  */
 export abstract class SyncableRepository<T extends SyncableEntity> {
-  protected constructor(
-    protected readonly table: Table<T>
-  ) {}
+  protected abstract getTable(): Table<T>;
 
-  /**
-   * Obtener elementos pendientes de sincronizar
-   */
-  async getPendingSync(): Promise<T[]> {
-    return await this.table
-      .filter(item => item.syncStatus === 'pending' || item.synced === 0)
-      .toArray();
+  async getByStatus(status: SyncStatus): Promise<T[]> {
+    return this.getTable().where('syncStatus').equals(status).toArray();
   }
 
-  /**
-   * Marcar como sincronizado
-   */
-  async markSynced(id: string | number): Promise<void> {
-    await this.table.update(id as IndexableType, { syncStatus: 'synced', synced: 1 } as Partial<T>);
+  async getPending(): Promise<T[]> {
+    return this.getByStatus('pending');
   }
 
-  /**
-   * Marcar como error de sincronizacion
-   */
-  async markSyncError(id: string | number, error: string): Promise<void> {
-    await this.table.update(id as IndexableType, { syncStatus: 'error', syncError: error } as Partial<T>);
+  async getSynced(): Promise<T[]> {
+    return this.getByStatus('synced');
   }
 
-  /**
-   * Obtener contador de pendientes
-   */
-  async getPendingCount(): Promise<number> {
-    return await this.table
-      .filter(item => item.syncStatus === 'pending' || item.synced === 0)
-      .count();
+  async markAsSynced(ids: (string | number | IndexableType)[]): Promise<void> {
+    await this.getTable().where('id').anyOf(ids).modify({ syncStatus: 'synced' });
   }
 
-  /**
-   * Marcar multiples como sincronizados
-   */
-  async markManySynced(ids: (string | number)[]): Promise<void> {
-    if (ids.length === 0) return;
-    await Promise.all(
-      ids.map(id => this.table.update(id as IndexableType, { syncStatus: 'synced', synced: 1 } as Partial<T>))
-    );
+  async markAsError(ids: (string | number | IndexableType)[], error: string): Promise<void> {
+    await this.getTable().where('id').anyOf(ids).modify({ 
+      syncStatus: 'error',
+      syncError: error 
+    });
   }
 
-  /**
-   * Obtener elementos con error de sync
-   */
-  async getSyncErrors(): Promise<T[]> {
-    return await this.table
-      .filter(item => item.syncStatus === 'error')
-      .toArray();
-  }
-
-  /**
-   * Reintentar sync de elementos con error
-   */
-  async retrySync(ids: (string | number)[]): Promise<void> {
-    if (ids.length === 0) return;
-    await Promise.all(
-      ids.map(id => this.table.update(id as IndexableType, { syncStatus: 'pending', syncError: undefined } as Partial<T>))
-    );
+  async deletePermanently(ids: (string | number | IndexableType)[]): Promise<void> {
+    await this.getTable().where('id').anyOf(ids).delete();
   }
 }

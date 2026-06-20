@@ -1,8 +1,15 @@
 /**
  * Sync Types - Tipos para el módulo de sincronización
+ * 
+ * Este archivo centraliza TODOS los tipos relacionados con sincronización.
+ * Usa SyncStatus desde ./common.ts
  */
 
-import { SyncStatus } from './common';
+// Importar para usar localmente
+import type { SyncStatus } from './common';
+
+// Re-export para uso global
+export type { SyncStatus };
 
 // Resultado de sincronización
 export interface SyncResult {

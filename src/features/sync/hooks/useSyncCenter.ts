@@ -10,7 +10,7 @@ import { genericSyncEngine } from "../../../services/cloud/GenericSyncEngine";
 import { useSyncStore } from "../../../store/useSyncStore";
 import { useToastStore } from "../../../store/useToastStore";
 import type { SyncTabType, SyncLogEntry, SyncQueueItem } from "@/types/global/sync";
-import type { SyncStatus } from "../../../types/global/common";
+import type { SyncStatus } from "@/types/global/sync";
 
 interface GenericDexieTable {
   count(): Promise<number>;
