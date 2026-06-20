@@ -38,6 +38,12 @@ export interface Product {
   updatedAt?: number;
 }
 
+// Producto con políticas (de PRODUCTO_PROVEEDOR)
+export interface ProductWithPolicy extends Product {
+  withdrawalDays?: number;
+  hasExchange?: boolean;
+}
+
 // ============================================
 // PRODUCT FILTERS
 // ============================================

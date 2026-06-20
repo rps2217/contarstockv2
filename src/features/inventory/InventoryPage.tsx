@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Product } from '../../types';
-import { CheckCircle2, AlertTriangle, Printer, Trash2 } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, Printer, Trash2, LayoutGrid, List } from 'lucide-react';
 import { ProductList } from './components/ProductList';
 import { DatabaseHeader } from './components/DatabaseHeader';
 import { ProductForm } from './components/ProductForm';
@@ -12,6 +12,9 @@ import { thermalPrinter } from '../../services/thermalPrinterService';
 import { handlePrintLabels } from '../expiry/utils/expiryUtils';
 import { toast } from 'sonner';
 import { MassActionsPanel } from '../../shared/components/ui/MassActionsPanel';
+import { InventoryMetricsCards } from './components/InventoryMetricsCards';
+import { InventoryKanbanView } from './components/InventoryKanbanView';
+import { ProductWithPolicy } from '../product/types';
 
 export const Database: React.FC = () => {
   const { state, actions } = useProductDatabase();
@@ -22,6 +25,7 @@ export const Database: React.FC = () => {
   const [printingProduct, setPrintingProduct] = useState<Product | null>(null);
   const [isPrinting, setIsPrinting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
 
   const usagePercent = state.storageUsage ? Math.min(100, (state.storageUsage.used / state.storageUsage.quota) * 100) : 0;
   const usedMb = state.storageUsage ? (state.storageUsage.used / 1024 / 1024).toFixed(1) : '0';
@@ -132,17 +136,24 @@ export const Database: React.FC = () => {
 
 
       <div className="flex-1 min-h-0 w-full max-w-6xl mx-auto px-4 py-4">
-        <ProductList 
-          products={state.products} 
-          onEdit={handleOpenEdit} 
-          onDelete={actions.handleDelete} 
-          onDeleteAll={actions.handleDeleteAll} 
-          onPrint={handleOpenPrint}
-          selectedIds={selectedIds}
-          onSelect={toggleSelection}
-          onSelectAll={handleSelectAll}
-          hasFilter={!!state.searchQuery} 
-        />
+        {viewMode === 'kanban' ? (
+          <InventoryKanbanView 
+            products={state.products as ProductWithPolicy[]}
+            onItemClick={handleOpenEdit}
+          />
+        ) : (
+          <ProductList 
+            products={state.products} 
+            onEdit={handleOpenEdit} 
+            onDelete={actions.handleDelete} 
+            onDeleteAll={actions.handleDeleteAll} 
+            onPrint={handleOpenPrint}
+            selectedIds={selectedIds}
+            onSelect={toggleSelection}
+            onSelectAll={handleSelectAll}
+            hasFilter={!!state.searchQuery} 
+          />
+        )}
       </div>
 
       <MassActionsPanel 
