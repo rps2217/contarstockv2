@@ -49,6 +49,7 @@ import { ReceptionStats } from './components/ReceptionStats';
 import { ReceptionFiltersDrawer } from './components/ReceptionFiltersDrawer';
 import { PhotoViewerModal } from './components/PhotoViewerModal';
 import { ReceptionItemCard } from './components/ReceptionItemCard';
+import { ReceptionDetailModal } from './components/ReceptionDetailModal';
 
 const ReceptionManagementPage: React.FC = () => {
   const navigate = useNavigate();
@@ -64,6 +65,16 @@ const ReceptionManagementPage: React.FC = () => {
   const [photoFilter, setPhotoFilter] = useState<'all' | 'with_photo' | 'without_photo'>('all');
   const [selectedErpFilter, setSelectedErpFilter] = useState<string>('all');
   const [selectedPhotoItem, setSelectedPhotoItem] = useState<any>(null);
+  
+  // State for detail modal
+  const [selectedReceptionItem, setSelectedReceptionItem] = useState<any>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+  // Handler para ver detalle de recepción
+  const handleViewReceptionDetail = (item: any) => {
+    setSelectedReceptionItem(item);
+    setIsDetailModalOpen(true);
+  };
   
   const capture = useCaptureHub({
     onCapture: (code) => logicActions.handleScan(code, logicState.currentErp)
@@ -394,6 +405,7 @@ const ReceptionManagementPage: React.FC = () => {
                     item={item.data}
                     onDelete={logicActions.deleteDraft}
                     onShowPhoto={setSelectedPhotoItem}
+                    onViewDetail={handleViewReceptionDetail}
                     isCompact={false}
                   />
                 ) : (
@@ -513,6 +525,24 @@ const ReceptionManagementPage: React.FC = () => {
       />
 
       <ScreenLockOverlay isLocked={isLocked} onUnlock={unlock} />
+
+      {/* RECEPTION DETAIL MODAL */}
+      <ReceptionDetailModal
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        item={selectedReceptionItem}
+        onShowPhoto={(item) => {
+          setSelectedReceptionItem(null);
+          setIsDetailModalOpen(false);
+          setSelectedPhotoItem(item);
+        }}
+        onDelete={() => {
+          if (selectedReceptionItem) {
+            logicActions.deleteDraft(selectedReceptionItem.id);
+            setIsDetailModalOpen(false);
+          }
+        }}
+      />
     </div>
   );
 };

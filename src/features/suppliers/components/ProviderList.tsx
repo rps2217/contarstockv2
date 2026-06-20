@@ -1,6 +1,6 @@
 import React, { useState, useEffect, memo } from 'react';
 import { Provider } from '../../../types';
-import { Pencil, Trash2, Truck, CheckCircle2, AlertTriangle, ShieldCheck, Package } from 'lucide-react';
+import { Pencil, Trash2, Truck, CheckCircle2, AlertTriangle, ShieldCheck, Package, Expand } from 'lucide-react';
 import { Badge, Button } from '../../../shared/components/ui';
 
 interface ProviderListProps {
@@ -8,6 +8,7 @@ interface ProviderListProps {
   onEdit: (provider: Provider) => void;
   onDelete: (rut: string) => void;
   onShowProducts?: (provider: Provider) => void;
+  onViewDetail?: (provider: Provider) => void;
   hasFilter: boolean;
   theme?: 'dark' | 'light' | 'high-contrast';
 }
@@ -18,6 +19,7 @@ export const ProviderList: React.FC<ProviderListProps> = memo(({
   onDelete, 
   hasFilter,
   onShowProducts,
+  onViewDetail,
   theme = 'dark'
 }) => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -118,6 +120,15 @@ export const ProviderList: React.FC<ProviderListProps> = memo(({
                         <Package className="w-4.5 h-4.5" />
                       </button>
                     )}
+                    {onViewDetail && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onViewDetail(p); }}
+                        className="w-12 h-full flex items-center justify-center text-purple-600 dark:text-purple-400 active:bg-purple-50 dark:active:bg-purple-500/10 transition-colors border-l border-slate-100 dark:border-white/5"
+                        title="Ver Detalle"
+                      >
+                        <Expand className="w-4.5 h-4.5" />
+                      </button>
+                    )}
                     <button 
                       onClick={(e) => { e.stopPropagation(); onEdit(p); }} 
                       className="w-12 h-full flex items-center justify-center text-indigo-600 dark:text-indigo-400 active:bg-indigo-50 dark:active:bg-indigo-500/10 transition-colors"
@@ -201,6 +212,15 @@ export const ProviderList: React.FC<ProviderListProps> = memo(({
                       title="Ver Productos"
                     >
                       <Package className="w-4.5 h-4.5" />
+                    </button>
+                  )}
+                  {onViewDetail && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onViewDetail(p); }}
+                      className="p-2.5 hover:bg-purple-100 dark:hover:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-xl transition-colors shrink-0"
+                      title="Ver Detalle"
+                    >
+                      <Expand className="w-4.5 h-4.5" />
                     </button>
                   )}
                   <button 

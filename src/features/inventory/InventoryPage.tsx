@@ -7,6 +7,7 @@ import { DatabaseHeader } from './components/DatabaseHeader';
 import { ProductForm } from './components/ProductForm';
 import { ImportTools } from './components/ImportTools';
 import { BarcodeLabelModal } from '../../shared/components/ui/BarcodeLabelModal';
+import { ProductDetailModal } from './components/ProductDetailModal';
 import { useProductDatabase } from './hooks/useProductDatabase';
 import { thermalPrinter } from '../../services/thermalPrinterService';
 import { handlePrintLabels } from '../expiry/utils/expiryUtils';
@@ -26,6 +27,16 @@ export const Database: React.FC = () => {
   const [isPrinting, setIsPrinting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+  
+  // State for detail modal
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+  // Handler para ver detalle de producto
+  const handleViewProductDetail = (product: Product) => {
+    setSelectedProduct(product);
+    setIsDetailModalOpen(true);
+  };
 
   const usagePercent = state.storageUsage ? Math.min(100, (state.storageUsage.used / state.storageUsage.quota) * 100) : 0;
   const usedMb = state.storageUsage ? (state.storageUsage.used / 1024 / 1024).toFixed(1) : '0';
@@ -148,6 +159,7 @@ export const Database: React.FC = () => {
             onDelete={actions.handleDelete} 
             onDeleteAll={actions.handleDeleteAll} 
             onPrint={handleOpenPrint}
+            onViewDetail={handleViewProductDetail}
             selectedIds={selectedIds}
             onSelect={toggleSelection}
             onSelectAll={handleSelectAll}
@@ -190,6 +202,31 @@ export const Database: React.FC = () => {
           onPrintPDF={handlePrintPDF}
         />
       )}
+
+      {/* PRODUCT DETAIL MODAL */}
+      <ProductDetailModal
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        product={selectedProduct}
+        onEdit={() => {
+          if (selectedProduct) {
+            setIsDetailModalOpen(false);
+            handleOpenEdit(selectedProduct);
+          }
+        }}
+        onDelete={() => {
+          if (selectedProduct) {
+            actions.handleDelete(selectedProduct.barcode);
+            setIsDetailModalOpen(false);
+          }
+        }}
+        onPrint={() => {
+          if (selectedProduct) {
+            handleOpenPrint(selectedProduct);
+            setIsDetailModalOpen(false);
+          }
+        }}
+      />
     </div>
   );
 };

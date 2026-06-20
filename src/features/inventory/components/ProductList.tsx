@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, memo, useMemo } from 'react';
 import { Product } from '../../../types';
-import { Pencil, Trash2, Package, Cloud, CloudOff, Tag, Loader2, AlertTriangle, Printer, CheckSquare, Square } from 'lucide-react';
+import { Pencil, Trash2, Package, Cloud, CloudOff, Tag, Loader2, AlertTriangle, Printer, CheckSquare, Square, Expand } from 'lucide-react';
 import { VirtualList } from '../../../shared/components/ui/VirtualList';
 import { Badge, Card, Button } from '../../../shared/components/ui';
 
@@ -11,6 +11,7 @@ interface ProductListProps {
   onDelete: (barcode: string) => void;
   onDeleteAll: () => void;
   onPrint: (product: Product) => void;
+  onViewDetail?: (product: Product) => void;
   hasFilter: boolean;
   selectedIds?: Set<string>;
   onSelect?: (barcode: string) => void;
@@ -38,7 +39,7 @@ const getSyncStatusIcon = (status?: string) => {
 const Row = memo(({ index, data }: any) => {
   const p = data.items[index];
   if (!p) return null;
-  const { isMobile, onEdit, onDelete, onPrint, selectedIds, onSelect } = data;
+  const { isMobile, onEdit, onDelete, onPrint, onViewDetail, selectedIds, onSelect } = data;
   const isSelected = selectedIds?.has(p.barcode);
 
   if (isMobile) {
@@ -90,10 +91,19 @@ const Row = memo(({ index, data }: any) => {
 
           <button 
             onClick={(e) => { e.stopPropagation(); onPrint(p); }} 
-            className="w-12 shrink-0 flex items-center justify-center text-amber-600 dark:text-amber-500 border-l border-slate-100 dark:border-white/10 active:bg-amber-50 dark:active:bg-amber-500/10 transition-colors rounded-r-2xl"
+            className="w-12 shrink-0 flex items-center justify-center text-amber-600 dark:text-amber-500 border-l border-slate-100 dark:border-white/10 active:bg-amber-50 dark:active:bg-amber-500/10 transition-colors"
           >
             <Printer className="w-5 h-5" />
           </button>
+          {onViewDetail && (
+            <button 
+              onClick={(e) => { e.stopPropagation(); onViewDetail(p); }} 
+              className="w-12 shrink-0 flex items-center justify-center text-purple-600 dark:text-purple-400 border-l border-slate-100 dark:border-white/10 active:bg-purple-50 dark:active:bg-purple-500/10 transition-colors rounded-r-2xl"
+              title="Ver Detalle"
+            >
+              <Expand className="w-5 h-5" />
+            </button>
+          )}
         </div>
       </div>
     );
@@ -134,6 +144,11 @@ const Row = memo(({ index, data }: any) => {
         )}
       </div>
       <div className="w-24 shrink-0 flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        {onViewDetail && (
+          <button onClick={(e) => { e.stopPropagation(); onViewDetail(p); }} className="p-2 hover:bg-purple-100 dark:hover:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-xl transition-colors shrink-0" title="Ver Detalle">
+            <Expand className="w-5 h-5" />
+          </button>
+        )}
         <button onClick={(e) => { e.stopPropagation(); onPrint(p); }} className="p-2 hover:bg-amber-100 dark:hover:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-xl transition-colors shrink-0" title="Imprimir Código de Barras"><Printer className="w-5 h-5" /></button>
         <button onClick={(e) => { e.stopPropagation(); onDelete(p.barcode); }} className="p-2 hover:bg-rose-100 dark:hover:bg-rose-900/30 text-rose-600 dark:text-rose-400 rounded-xl transition-colors shrink-0"><Trash2 className="w-5 h-5" /></button>
       </div>
@@ -152,7 +167,7 @@ export const ProductList: React.FC<ProductListProps> = memo(({ products, onEdit,
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const rowData = useMemo(() => ({ isMobile, onEdit, onDelete, onPrint, selectedIds, onSelect }), [isMobile, onEdit, onDelete, onPrint, selectedIds, onSelect]);
+  const rowData = useMemo(() => ({ isMobile, onEdit, onDelete, onPrint, onViewDetail, selectedIds, onSelect }), [isMobile, onEdit, onDelete, onPrint, onViewDetail, selectedIds, onSelect]);
   const itemHeight = isMobile ? 96 : 64;
 
   if (!products || products.length === 0) {

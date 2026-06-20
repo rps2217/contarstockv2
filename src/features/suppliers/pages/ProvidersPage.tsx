@@ -4,6 +4,7 @@ import { Truck, Search, Plus, ShieldAlert, AlertTriangle, CheckCircle2, ChevronR
 import { ProviderFormModal } from '../components/ProviderFormModal';
 import { ProviderList } from '../components/ProviderList';
 import { ProviderProductsModal } from '../components/ProviderProductsModal';
+import { ProviderDetailModal } from '../components/ProviderDetailModal';
 import { ManagementSearchBar } from '../../../shared/components/core/ManagementSearchBar';
 import { useAppStore } from '@/stores';
 import { useProvidersDatabase } from '../hooks/useProvidersDatabase';
@@ -21,6 +22,10 @@ export const ProvidersPage: React.FC = () => {
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
   const [isProductsModalOpen, setIsProductsModalOpen] = useState(false);
 
+  // Detail modal state
+  const [selectedProviderDetail, setSelectedProviderDetail] = useState<Provider | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
   const handleShowProducts = (provider: Provider) => {
     setSelectedProvider(provider);
     setIsProductsModalOpen(true);
@@ -29,6 +34,12 @@ export const ProvidersPage: React.FC = () => {
   const handleCloseProductsModal = () => {
     setIsProductsModalOpen(false);
     setSelectedProvider(null);
+  };
+
+  // Handler para ver detalle de proveedor
+  const handleViewProviderDetail = (provider: Provider) => {
+    setSelectedProviderDetail(provider);
+    setIsDetailModalOpen(true);
   };
 
   return (
@@ -210,6 +221,7 @@ export const ProvidersPage: React.FC = () => {
           onEdit={actions.handleEdit}
           onDelete={actions.handleDelete}
           onShowProducts={handleShowProducts}
+          onViewDetail={handleViewProviderDetail}
           hasFilter={!!state.search}
           theme={theme}
         />
@@ -231,6 +243,25 @@ export const ProvidersPage: React.FC = () => {
           providerName={selectedProvider.name}
         />
       )}
+
+      {/* PROVIDER DETAIL MODAL */}
+      <ProviderDetailModal
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        provider={selectedProviderDetail}
+        onEdit={() => {
+          if (selectedProviderDetail) {
+            setIsDetailModalOpen(false);
+            actions.handleEdit(selectedProviderDetail);
+          }
+        }}
+        onDelete={() => {
+          if (selectedProviderDetail) {
+            actions.handleDelete(selectedProviderDetail.rut);
+            setIsDetailModalOpen(false);
+          }
+        }}
+      />
     </div>
   );
 };

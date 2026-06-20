@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Calendar, Trash2 } from 'lucide-react';
+import { Box, Calendar, Trash2, Expand } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion } from 'motion/react';
 import { useAppStore } from '@/stores';
@@ -8,10 +8,11 @@ interface ReceptionItemCardProps {
   item: any;
   onDelete: (id: string | number) => void;
   onShowPhoto: (item: any) => void;
+  onViewDetail?: (item: any) => void;
   isCompact?: boolean;
 }
 
-export const ReceptionItemCard = React.memo(({ item, onDelete, onShowPhoto, isCompact }: ReceptionItemCardProps) => {
+export const ReceptionItemCard = React.memo(({ item, onDelete, onShowPhoto, onViewDetail, isCompact }: ReceptionItemCardProps) => {
   const { settings } = useAppStore();
   const isSynced = !!item.lastSyncTimestamp;
   const isDraft = item.status === 'draft';
@@ -103,6 +104,18 @@ export const ReceptionItemCard = React.memo(({ item, onDelete, onShowPhoto, isCo
             </div>
           </div>
         </div>
+
+        {/* Ver Detalle Button */}
+        {onViewDetail && (
+          <button 
+            type="button"
+            onClick={() => onViewDetail(item)}
+            className="w-11 h-11 flex items-center justify-center shrink-0 text-purple-500 hover:text-purple-400 hover:bg-purple-500/10 rounded-2xl transition-all border border-purple-500/20 active:scale-95"
+            title="Ver Detalle"
+          >
+            <Expand className="w-5 h-5" />
+          </button>
+        )}
 
         {!isSynced && (
           <button 
