@@ -75,7 +75,7 @@ export interface SyncIncident {
 }
 
 // Tipos de tab en el centro de sincronización
-export type SyncTabType = 'queue' | 'tables' | 'incidents';
+export type SyncTabType = 'queue' | 'tables' | 'incidents' | 'audit';
 
 // Estado del store de sincronización
 export interface SyncState {

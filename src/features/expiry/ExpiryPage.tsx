@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldAlert, Download, Trash2, X, AlertTriangle, Search, LayoutGrid, CornerDownLeft, Loader2, RefreshCw, AlertCircle, Home } from 'lucide-react';
+import { ShieldAlert, Download, Trash2, X, AlertTriangle, Search, LayoutGrid, CornerDownLeft, Loader2, RefreshCw, AlertCircle, Home, History } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { VirtualList } from '../../shared/components/ui/VirtualList';
 import { useToastStore } from '@/stores';
@@ -22,6 +22,8 @@ import { ExpiryCaptureRow } from './components/ExpiryCaptureRow';
 import { ExpiryDetailModal } from './components/ExpiryDetailModal';
 import { ExpiryMetricsCards } from './components/ExpiryMetricsCards';
 import { ExpiryKanbanView } from './components/ExpiryKanbanView';
+import { useAudit } from '@/hooks/useAudit';
+import { AuditPanel } from '@/shared/components/ui/AuditPanel';
 
 const getDaysUntilExpiry = (mm: number, yyyy: number) => {
   const expiryDate = new Date(yyyy, mm - 1, 1);
@@ -58,6 +60,8 @@ export const ExpiryPage: React.FC = () => {
   const [filterCritico, setFilterCritico] = useState(false);
 
   const [selectedDetailItem, setSelectedDetailItem] = useState<ExpiryItem | null>(null);
+  const [showAuditPanel, setShowAuditPanel] = useState(false);
+  const { getRecordHistory } = useAudit();
 
   // Atajos de teclado para ultra-productividad en almacén/captura rápida de vencimientos
   useEffect(() => {
@@ -249,6 +253,13 @@ export const ExpiryPage: React.FC = () => {
           >
             <LayoutGrid className="w-5 h-5" />
           </button>
+          <button
+            onClick={() => setShowAuditPanel(true)}
+            className="w-10 h-10 rounded-xl flex items-center justify-center bg-white/5 text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
+            title="Ver historial de cambios"
+          >
+            <History className="w-5 h-5" />
+          </button>
         </div>
       }
     />
@@ -297,6 +308,13 @@ export const ExpiryPage: React.FC = () => {
       isActive: syncStore.incidents.length > 0 || syncStore.isSyncing,
       activeColor: syncStore.incidents.length > 0 ? 'text-rose-500' : 'text-blue-400',
       activeBg: syncStore.incidents.length > 0 ? 'bg-rose-500/20' : 'bg-blue-500/20'
+    },
+    {
+      id: 'audit',
+      icon: History,
+      onClick: () => setShowAuditPanel(true),
+      activeColor: 'text-emerald-400',
+      activeBg: 'bg-emerald-500/20'
     }
   ];
 
@@ -435,6 +453,45 @@ export const ExpiryPage: React.FC = () => {
         onClose={() => setSelectedDetailItem(null)}
         item={selectedDetailItem}
       />
+
+      {/* Audit Panel Modal */}
+      <AnimatePresence>
+        {showAuditPanel && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowAuditPanel(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-black text-white uppercase">Historial de Cambios</h2>
+                <button
+                  onClick={() => setShowAuditPanel(false)}
+                  className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-auto">
+                <AuditPanel
+                  tableName="VENCIMIENTOS"
+                  loadHistory={getRecordHistory}
+                  title="Cambios en Vencimientos"
+                  limit={50}
+                />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 };

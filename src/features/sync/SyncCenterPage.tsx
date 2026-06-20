@@ -18,22 +18,23 @@ import {
   AlertTriangle,
   ArrowUpCircle,
   Database,
-  
-  
   CheckCircle2,
   Play,
-  Clock
+  Clock,
+  History
 } from 'lucide-react';
 
-import { es } from 'date-fns/locale';
 import { useSyncStore } from '@/stores';
 import { syncRegistry } from '../../services/cloud/syncRegistry';
 import { useSyncCenter } from './hooks/useSyncCenter';
+import { useAudit } from '@/hooks/useAudit';
+import { AuditPanel } from '@/shared/components/ui/AuditPanel';
 import { SyncStatusCards, SyncQueuePanel, SyncActivity } from './components';
 
 export const SyncCenterPage: React.FC = () => {
   const navigate = useNavigate();
   const { incidents, lastSyncTime, isSupabaseConnected, conflicts, clearIncidents } = useSyncStore();
+  const { getTableHistory } = useAudit();
   
   const {
     isSyncing,
@@ -139,7 +140,7 @@ export const SyncCenterPage: React.FC = () => {
           }`}
         >
           <Database className="w-4 h-4" />
-          Esquemas de Reconciliación
+          Esquemas
         </button>
         <button
           onClick={() => setActiveTab('incidents')}
@@ -147,8 +148,17 @@ export const SyncCenterPage: React.FC = () => {
             activeTab === 'incidents' ? 'bg-slate-900 text-white shadow-xl border border-white/5' : 'text-slate-500 hover:text-slate-300'
           }`}
         >
-          <AlertCircle className="w-4 h-4" />
+          <AlertTriangle className="w-4 h-4" />
           Incidentes ({incidents?.length || 0})
+        </button>
+        <button
+          onClick={() => setActiveTab('audit')}
+          className={`flex-1 py-3 text-center text-xs font-black uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-2 ${
+            activeTab === 'audit' ? 'bg-slate-900 text-white shadow-xl border border-white/5' : 'text-slate-500 hover:text-slate-300'
+          }`}
+        >
+          <History className="w-4 h-4" />
+          Auditoría
         </button>
       </div>
 
@@ -238,6 +248,15 @@ export const SyncCenterPage: React.FC = () => {
           logs={syncLogs}
           lastSyncTime={lastSyncTime}
           onClearIncidents={clearIncidents}
+        />
+      )}
+
+      {/* TAB 4: AUDIT LOG */}
+      {activeTab === 'audit' && (
+        <AuditPanel
+          loadHistory={getTableHistory}
+          title="Registro de Auditoría"
+          limit={100}
         />
       )}
 
