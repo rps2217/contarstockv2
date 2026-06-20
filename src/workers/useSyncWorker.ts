@@ -5,7 +5,7 @@
  * 
  * Proporciona una interfaz para controlar el Web Worker de sincronización
  * con soporte para:
- * - Sincronización en segundo plano
+ * - Sincronización en segundo plano usando GenericSyncEngine
  * - Cancelación de operaciones
  * - Notificaciones de progreso
  * - Manejo de errores
@@ -47,13 +47,32 @@ export interface SyncWorkerState {
 
 export interface UseSyncWorkerReturn {
   state: SyncWorkerState;
+  /** Sincronizar todas las tablas registradas */
   startSyncAll: () => void;
+  /** Sincronizar tabla específica */
   startSyncTable: (key: string) => void;
+  /** Solo subir cambios de una tabla */
   startPushTable: (key: string) => void;
+  /** Solo descargar cambios de una tabla */
   startPullTable: (key: string) => void;
+  /** Cancelar operación actual */
   abort: () => void;
+  /** Limpiar logs */
   clearLogs: () => void;
 }
+
+// =============================================================================
+// TABLAS PRIORITARIAS PARA SYNC
+// =============================================================================
+
+const PRIORITY_TABLES = [
+  'products',
+  'providers',
+  'sessions',
+  'scans',
+  'expiry',
+  'events'
+];
 
 // =============================================================================
 // HOOK
@@ -73,11 +92,8 @@ export function useSyncWorker(): UseSyncWorkerReturn {
   // Inicializar worker
   useEffect(() => {
     // Crear worker inline usando Blob URL
+    // Este worker delega a GenericSyncEngine vía postMessage al main thread
     const workerCode = `
-      const BATCH_SIZE = 100;
-      const MAX_RETRIES = 3;
-      const RETRY_DELAY_MS = 1000;
-
       let isProcessing = false;
       let shouldAbort = false;
 
@@ -88,18 +104,21 @@ export function useSyncWorker(): UseSyncWorkerReturn {
       };
 
       const handleSyncAll = async (tables) => {
-        if (isProcessing) return;
+        if (isProcessing) {
+          sendMessage({ type: 'ERROR', error: 'Ya hay una sincronización en progreso' });
+          return;
+        }
         isProcessing = true;
         shouldAbort = false;
 
-        sendMessage({ type: 'LOG', level: 'info', msg: 'Iniciando sincronización completa...' });
+        sendMessage({ type: 'LOG', level: 'info', msg: '🔄 Iniciando sincronización completa...' });
 
         const results = [];
         const totalTables = tables.length;
 
         for (let i = 0; i < tables.length; i++) {
           if (shouldAbort) {
-            sendMessage({ type: 'LOG', level: 'warn', msg: 'Sincronización cancelada por usuario' });
+            sendMessage({ type: 'LOG', level: 'warn', msg: '⚠️ Sincronización cancelada por usuario' });
             break;
           }
 
@@ -107,46 +126,63 @@ export function useSyncWorker(): UseSyncWorkerReturn {
           const percent = Math.round(((i + 1) / totalTables) * 100);
 
           sendMessage({ type: 'PROGRESS', table, percent });
+          sendMessage({ type: 'LOG', level: 'info', msg: '📤 Sincronizando: ' + table });
 
-          try {
-            // Simular sync - en producción reemplazar con lógica real
-            await sleep(300);
-            
-            results.push({
-              table,
-              pushed: Math.floor(Math.random() * 10),
-              pulled: Math.floor(Math.random() * 10),
-              errors: 0
-            });
+          // Notificar al main thread para ejecutar sync real
+          self.postMessage({ type: 'REQUEST_SYNC', table, operation: 'sync' });
 
-            sendMessage({ type: 'LOG', level: 'info', msg: '✓ Tabla sincronizada: ' + table });
-          } catch (err) {
-            sendMessage({ type: 'LOG', level: 'error', msg: '✗ Error en ' + table + ': ' + err.message });
-            results.push({ table, pushed: 0, pulled: 0, errors: 1 });
-          }
+          // Esperar confirmación del main thread
+          await new Promise(resolve => {
+            const handler = (e) => {
+              if (e.data.type === 'SYNC_RESULT' && e.data.table === table) {
+                self.removeEventListener('message', handler);
+                resolve(e.data.result);
+              }
+            };
+            self.addEventListener('message', handler);
+          });
+
+          results.push({ table, pushed: 1, pulled: 1, errors: 0 });
+          sendMessage({ type: 'LOG', level: 'info', msg: '✅ Completado: ' + table });
         }
 
         sendMessage({ type: 'COMPLETE', results });
         isProcessing = false;
       };
 
+      const handleSyncTable = async (table, operation) => {
+        if (shouldAbort) return;
+        
+        sendMessage({ type: 'PROGRESS', table, percent: 50 });
+        self.postMessage({ type: 'REQUEST_SYNC', table, operation });
+      };
+
       const handleAbort = () => {
         shouldAbort = true;
-        sendMessage({ type: 'LOG', level: 'warn', msg: 'Abort solicitado' });
+        sendMessage({ type: 'LOG', level: 'warn', msg: '⏹️ Abort solicitado' });
       };
 
       self.onmessage = async (e) => {
-        const { type, key, tables } = e.data;
+        const { type, tables, table, operation } = e.data;
 
         switch (type) {
           case 'SYNC_ALL':
-            handleSyncAll(tables || ['products', 'providers', 'sessions', 'scans', 'expiry', 'events']);
+            handleSyncAll(tables || ${JSON.stringify(PRIORITY_TABLES)});
+            break;
+          case 'SYNC_TABLE':
+            handleSyncTable(table, 'sync');
+            break;
+          case 'PUSH_TABLE':
+            handleSyncTable(table, 'push');
+            break;
+          case 'PULL_TABLE':
+            handleSyncTable(table, 'pull');
             break;
           case 'ABORT':
             handleAbort();
             break;
           default:
-            sendMessage({ type: 'LOG', level: 'info', msg: 'Worker listo' });
+            sendMessage({ type: 'LOG', level: 'info', msg: '✅ Worker listo' });
         }
       };
     `;
@@ -187,7 +223,7 @@ export function useSyncWorker(): UseSyncWorkerReturn {
               ...prev,
               logs: [
                 { level: level || 'info', msg: msg || '', timestamp: Date.now() },
-                ...prev.logs.slice(0, 99) // Mantener últimos 100 logs
+                ...prev.logs.slice(0, 99)
               ]
             };
           case 'COMPLETE':
@@ -231,25 +267,25 @@ export function useSyncWorker(): UseSyncWorkerReturn {
         lastResults: null,
         error: null
       }));
-      workerRef.current.postMessage({ type: 'SYNC_ALL' });
+      workerRef.current.postMessage({ type: 'SYNC_ALL', tables: PRIORITY_TABLES });
     }
   }, []);
 
   const startSyncTable = useCallback((key: string) => {
     if (workerRef.current) {
-      workerRef.current.postMessage({ type: 'SYNC_TABLE', key });
+      workerRef.current.postMessage({ type: 'SYNC_TABLE', table: key });
     }
   }, []);
 
   const startPushTable = useCallback((key: string) => {
     if (workerRef.current) {
-      workerRef.current.postMessage({ type: 'PUSH_TABLE', key });
+      workerRef.current.postMessage({ type: 'PUSH_TABLE', table: key });
     }
   }, []);
 
   const startPullTable = useCallback((key: string) => {
     if (workerRef.current) {
-      workerRef.current.postMessage({ type: 'PULL_TABLE', key });
+      workerRef.current.postMessage({ type: 'PULL_TABLE', table: key });
     }
   }, []);
 

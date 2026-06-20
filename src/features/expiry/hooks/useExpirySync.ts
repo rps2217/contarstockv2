@@ -1,92 +1,76 @@
-import { useState, useEffect, useCallback } from 'react';
+/**
+ * useExpirySync - Hook para sincronización de vencimientos
+ * 
+ * Usa useGenericSync como motor central para push/pull.
+ * Mantiene realtime subscription para cambios en tiempo real.
+ */
+
+import { useEffect, useCallback } from 'react';
 import { supabaseSyncService } from '../../../services/supabaseSyncService';
 import { genericSyncEngine } from '../../../services/cloud/GenericSyncEngine';
 import { expiryRepository } from '../../../repositories/ExpiryRepository';
 import { logger } from '../../../services/logger';
-import { useToastStore } from '@/stores';
+import { useGenericSync } from '../../../hooks/useGenericSync';
+import { db } from '../../../db';
 
 export const useExpirySync = (tableName: string) => {
-  const [isSyncing, setIsSyncing] = useState(false);
-  const { addToast } = useToastStore.getState();
+  // Usar GenericSyncEngine via useGenericSync
+  const { push, pull, isSyncing } = useGenericSync({
+    registryKey: 'expiry',
+    tableName: tableName || 'VENCIMIENTOS',
+    // Realtime ya manejado en este hook
+  });
 
-  // Start real-time sync with Supabase
+  // Sincronizar nombre de tabla en el repositorio
   useEffect(() => {
-    if (!tableName) return;
+    if (tableName) {
+      expiryRepository.setTableName(tableName);
+    }
+  }, [tableName]);
 
-    // Sincronizar nombre de tabla en el repositorio
-    expiryRepository.setTableName(tableName);
-
-    // 1. Initial Pull - Fetch existing data using the robust sync service
+  // Initial Pull - Fetch existing data
+  useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        setIsSyncing(true);
         const { added, updated } = await genericSyncEngine.pullRemoteChanges('expiry');
         if (added > 0 || updated > 0) {
           logger.info('SYNC_INITIAL', `Sincronizados ${added + updated} registros de vencimientos`);
         }
       } catch (err) {
         logger.error('SYNC_INITIAL_FAIL', err);
-      } finally {
-        setIsSyncing(false);
       }
     };
 
     fetchInitialData();
+  }, [tableName]);
 
-    // 2. Real-time Subscription
+  // Realtime Subscription
+  useEffect(() => {
+    if (!tableName) return;
+
     const unsubscribe = supabaseSyncService.startSync(tableName, expiryRepository);
     return () => {
       unsubscribe();
     };
   }, [tableName]);
 
+  // Sync vencimientos pending a la nube
   const handleSyncExpirations = useCallback(async () => {
-    try {
-      setIsSyncing(true);
-      const items = await expiryRepository.getAll(tableName);
-      if (items.length === 0) {
-        addToast('No hay registros locales para sincronizar.', 'info');
-        return;
-      }
+    await push();
+  }, [push]);
 
-      // Preparar el lote para Supabase
-      const rows = items.map(item => ({
-        id: item.id,
-        ...item,
-        syncStatus: 'synced'
-      }));
-
-      const result = await supabaseSyncService.pushBatch(tableName, rows);
-      
-      if (result.success) {
-        // Actualizar estado local a synced
-        await expiryRepository.bulkSave(items.map(i => ({ ...i, syncStatus: 'synced' })), tableName);
-        addToast(`Sincronización completa: ${items.length} registros subidos.`, 'success');
-        
-      } else {
-        throw new Error(result.error);
-      }
-    } catch (error: any) {
-      addToast(`Error al sincronizar: ${error.message}`, 'error');
-      
-    } finally {
-      setIsSyncing(false);
-    }
-  }, [tableName, addToast]);
-
+  // Full refresh - limpia checkpoints y hace pull completo
   const handleFullRefresh = useCallback(async () => {
     try {
       localStorage.removeItem(`last_sync_${tableName}`);
       localStorage.removeItem(`lastSync_${tableName}`);
-      
-      // El motor de sincronización de la nube guarda el checkpoint temporal en db.settings
-      const { db } = await import('../../../db');
       await db.settings.delete(`lastSync_${tableName}`);
     } catch (err) {
-      console.warn("No se pudo limpiar el checkpoint en IndexedDB:", err);
+      console.warn("No se pudo limpiar el checkpoint:", err);
     }
-    window.location.reload();
-  }, [tableName]);
+    // Hacer pull completo
+    await pull(true);
+  }, [tableName, pull]);
 
   return {
     isSyncing,
