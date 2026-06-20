@@ -5,7 +5,7 @@ import { ChevronLeft, Users, MessageCircle, Edit2, Trash2, UserPlus, FileText, C
 import { toast } from 'sonner';
 import { Customer } from '../../types';
 import { CustomerRepository } from '../../repositories/CustomerRepository';
-import { useAppStore } from '../../store/mainAppStore';
+import { useAppStore } from '@/stores';
 import { ManagementSearchBar } from '../../shared/components/core/ManagementSearchBar';
 import { CustomerFormModal } from './components/CustomerFormModal';
 import { SendMessageModal } from './components/SendMessageModal';

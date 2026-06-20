@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { useEventDatabase } from './useEventDatabase';
 import { genericSyncEngine } from '../../../services/cloud/GenericSyncEngine';
-import { useTaskStore } from '@/store/useTaskStore';
+import { useTaskStore } from '@/stores';
 
 export const useEventUI = () => {
   const { addTask, updateTask } = useTaskStore();

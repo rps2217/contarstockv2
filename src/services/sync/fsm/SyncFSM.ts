@@ -5,7 +5,7 @@
  */
 
 import type { SyncState, SyncEvent, SyncContext } from './types';
-import { useSyncStore } from '@/store/useSyncStore';
+import { useSyncStore } from '@/stores';
 
 const MAX_RETRIES = 3;
 

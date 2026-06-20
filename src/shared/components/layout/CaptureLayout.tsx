@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Search, CornerDownLeft, Camera, Loader2, WifiOff, RefreshCw, Database, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useSyncStore } from '@/store/useSyncStore';
+import { useSyncStore } from '@/stores';
 import { useNavigate } from 'react-router-dom';
 
 interface CaptureLayoutProps {

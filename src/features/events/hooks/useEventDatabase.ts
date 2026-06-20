@@ -7,7 +7,7 @@
  * @module features/events/hooks
  */
 
-import { useAppStore } from '@/store/mainAppStore';
+import { useAppStore } from '@/stores';
 import { useEventQueries } from './useEventQueries';
 import { useEventFilters } from './useEventFilters';
 import { useEventMutations } from './useEventMutations';

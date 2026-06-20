@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTaskStore } from '../../store/useTaskStore';
+import { useTaskStore } from '@/stores';
 import { motion, AnimatePresence } from 'motion/react';
 import { Loader2, CheckCircle2, AlertCircle, X } from 'lucide-react';
 

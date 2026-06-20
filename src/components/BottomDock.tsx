@@ -7,7 +7,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { ScanRepository } from '../repositories/ScanRepository';
 import { db } from '../db';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
-import { useExpiryStore } from '../store/useExpiryStore';
+import { useExpiryStore } from '@/stores';
 import { SmartDock, SmartDockItem } from './SmartDock';
 import { isModuleEnabled } from '../services/moduleManager';
 

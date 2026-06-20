@@ -10,8 +10,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { ScanRepository } from '../repositories/ScanRepository';
 import { db } from '../db';
 
-import { useSyncStore } from '../store/useSyncStore';
-import { useAppStore } from '../store/mainAppStore';
+import { useSyncStore } from '@/stores';
+import { useAppStore } from '@/stores';
 
 interface NavItemProps {
   path: string;

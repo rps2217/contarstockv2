@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Mail, Copy, ExternalLink, Save, Trash2, Edit2, Plus } from 'lucide-react';
 import { format } from 'date-fns';
-import { useToastStore } from '../../../store/useToastStore';
+import { useToastStore } from '@/stores';
 import { EmailTemplate, EmailTemplateRepository } from '../../../repositories/EmailTemplateRepository';
 
 const DEFAULT_TEMPLATES: EmailTemplate[] = [

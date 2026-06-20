@@ -1,5 +1,5 @@
 import { getSettings, saveSettings } from './settings';
-import { useAppStore } from '../store/mainAppStore';
+import { useAppStore } from '@/stores';
 
 export const isModuleEnabled = (moduleKey: string): boolean => {
   const settings = getSettings();

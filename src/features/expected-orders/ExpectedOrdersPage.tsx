@@ -2,7 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, BookOpen, Layers, Sparkles, FileSpreadsheet } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useAppStore } from '@/store/mainAppStore';
+import { useAppStore } from '@/stores';
 import { useExpectedOrders } from './hooks/useExpectedOrders';
 import { OrderImporter } from './components/OrderImporter';
 import { OrderPreviewList } from './components/OrderPreviewList';

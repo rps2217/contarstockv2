@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Calendar, Package, Factory, ShieldAlert, Barcode, CalendarDays, Clock, FileWarning, HelpCircle } from 'lucide-react';
 import { format } from 'date-fns';
-import { ExpiryItem } from '../../../store/useExpiryStore';
+import { ExpiryItem } from '@/stores';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { productRepository } from '../../../repositories/DexieProductRepository';
 import { ProviderRepository } from '../../../repositories/ProviderRepository';

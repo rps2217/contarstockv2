@@ -1,8 +1,8 @@
 
 import { useEffect, useRef } from 'react';
 import * as syncManager from '../services/syncManager';
-import { useToastStore } from '../store/useToastStore';
-import { useSyncStore } from '../store/useSyncStore';
+import { useToastStore } from '@/stores';
+import { useSyncStore } from '@/stores';
 import { erpService } from '../services/erpService';
 import { ExpectedOrderRepository } from '../repositories/ExpectedOrderRepository';
 import { genericSyncEngine } from '../services/cloud/GenericSyncEngine';

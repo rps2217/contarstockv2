@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useToastStore, ToastType } from '../../../store/useToastStore';
+import { useToastStore, ToastType } from '@/stores';
 import { CheckCircle2, AlertCircle, Info, AlertTriangle, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 

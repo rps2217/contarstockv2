@@ -5,7 +5,7 @@ import { ProviderFormModal } from '../components/ProviderFormModal';
 import { ProviderList } from '../components/ProviderList';
 import { ProviderProductsModal } from '../components/ProviderProductsModal';
 import { ManagementSearchBar } from '../../../shared/components/core/ManagementSearchBar';
-import { useAppStore } from '../../../store/mainAppStore';
+import { useAppStore } from '@/stores';
 import { useProvidersDatabase } from '../hooks/useProvidersDatabase';
 import { Provider } from '../../../types';
 

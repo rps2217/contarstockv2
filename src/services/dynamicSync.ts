@@ -2,7 +2,7 @@ import { db, DynamicRecord } from '../db';
 import { supabaseSyncService } from './supabaseSyncService';
 import { getSettings } from './settings';
 import { logger } from './logger';
-import { useSyncStore } from '../store/useSyncStore';
+import { useSyncStore } from '@/stores';
 import { handleError } from './types';
 
 export const dynamicSyncService = {

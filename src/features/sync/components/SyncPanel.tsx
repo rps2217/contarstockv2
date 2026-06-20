@@ -9,7 +9,7 @@ import {
   Cloud, RefreshCw, CheckCircle2, AlertCircle, 
   Wifi, WifiOff, Clock, Database, Trash2
 } from 'lucide-react';
-import { useSyncStore } from '../../../store/useSyncStore';
+import { useSyncStore } from '@/stores';
 import { SyncStatusBadge } from './SyncStatusBadge';
 
 interface SyncPanelProps {

@@ -7,7 +7,7 @@
 import { useCallback } from 'react';
 import { supabaseSyncService } from '../../../services/supabaseSyncService';
 import { eventRepository } from '../../../repositories/EventRepository';
-import { useToastStore } from '../../../store/useToastStore';
+import { useToastStore } from '@/stores';
 import { normalizeSku } from '../../../services/utils';
 
 interface EventData {

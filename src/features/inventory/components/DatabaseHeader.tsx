@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { useAppStore } from '@/store/mainAppStore';
+import { useAppStore } from '@/stores';
 import { toast } from 'sonner';
 
 interface Props {

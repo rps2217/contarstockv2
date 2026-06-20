@@ -13,7 +13,7 @@ import { ExpirationModal } from '../expiry/components/ExpirationModal';
 import { Loader2 } from 'lucide-react';
 import { useAutoLock } from '../../hooks/useAutoLock';
 import { useHIDScanner } from '../../hooks/useHIDScanner';
-import { useSyncStore } from '../../store/useSyncStore';
+import { useSyncStore } from '@/stores';
 import { LocationSelectorModal } from '../../shared/components/ui/LocationSelectorModal';
 import { SoundFX } from '../../services/audio';
 import * as sessionService from '../../services/sessionService';

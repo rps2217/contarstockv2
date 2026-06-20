@@ -2,7 +2,7 @@
 import { useEffect, useRef } from 'react';
 import { sanitizeBarcode } from '../services/utils';
 import { telemetry } from '../services/telemetryService';
-import { useAppStore } from '@/store/mainAppStore';
+import { useAppStore } from '@/stores';
 
 interface HIDScannerOptions {
   onScan: (barcode: string) => void;

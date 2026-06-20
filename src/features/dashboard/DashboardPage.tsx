@@ -20,7 +20,7 @@ import {
   FileSpreadsheet
 } from "lucide-react";
 import { useDashboard } from "./hooks/useDashboard";
-import { useAppStore } from "@/store/mainAppStore";
+import { useAppStore } from '@/stores';
 import { SoundFX } from "../../services/audio";
 
 const Dashboard: React.FC = () => {

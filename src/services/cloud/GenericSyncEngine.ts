@@ -3,7 +3,7 @@ import { syncRegistry, TableSyncMeta } from './syncRegistry';
 import { db } from '../../db';
 import { logger } from '../logger';
 import { telemetry } from '../telemetryService';
-import { useSyncStore } from '../../store/useSyncStore';
+import { useSyncStore } from '@/stores';
 
 export class GenericSyncEngine {
   /**

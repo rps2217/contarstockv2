@@ -6,7 +6,7 @@ import * as sessionService from '../../../services/sessionService';
 import { sanitizeBarcode } from '../../../services/utils';
 import { SoundFX } from '../../../services/audio';
 import * as syncManager from '../../../services/syncManager';
-import { useToastStore } from '../../../store/useToastStore';
+import { useToastStore } from '@/stores';
 
 export const useReceptionLogic = () => {
   const [lastAction, setLastAction] = useState<{type: 'success' | 'duplicate', label: string} | null>(null);

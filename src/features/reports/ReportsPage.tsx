@@ -27,7 +27,7 @@ import { LiveConsolidationGrid } from "./components/LiveConsolidationGrid";
 import { SessionHistoryList } from "./components/SessionHistoryList";
 import { ManagementSearchBar } from "../../shared/components/core/ManagementSearchBar";
 import { useReports } from "./hooks/useReports";
-import { useAppStore } from "../../store/mainAppStore";
+import { useAppStore } from '@/stores';
 import { CountingMetricsCards } from "../counting/components/CountingMetricsCards";
 import { CountingKanbanView } from "../counting/components/CountingKanbanView";
 

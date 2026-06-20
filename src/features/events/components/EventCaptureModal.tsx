@@ -8,7 +8,7 @@ import {
   RefreshCw 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useToastStore } from '../../../store/useToastStore';
+import { useToastStore } from '@/stores';
 import { Product } from '../../../types';
 
 interface EventCaptureModalProps {

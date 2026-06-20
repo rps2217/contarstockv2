@@ -7,7 +7,7 @@ import { processExpiryItem, filterExpiryItems, calculateExpiryStats } from '../u
 import { useGlobalSearch } from '../../../hooks/useGlobalSearch';
 import { normalizeSku, normalizeIdentity } from '../../../services/utils';
 import { normalizeExpiryRecord } from '../../../services/normalizationService';
-import { ExpiryItem } from '../../../store/useExpiryStore';
+import { ExpiryItem } from '@/stores';
 
 export const useExpiryQuery = (
   tableName: string,

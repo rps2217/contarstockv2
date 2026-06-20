@@ -6,7 +6,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../../db';
-import { useToastStore } from '../../../store/useToastStore';
+import { useToastStore } from '@/stores';
 import { AppSheetSlice, SourceTable, FilterOperator } from '../types/Slice';
 import { DEFAULT_SLICES, TABLE_FIELDS, SLICE_STORAGE_KEY } from '../constants/defaultSlices';
 

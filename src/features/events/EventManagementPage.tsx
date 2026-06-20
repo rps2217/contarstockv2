@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { useAppStore } from '@/store/mainAppStore';
+import { useAppStore } from '@/stores';
 import { 
   AlertCircle,
   RefreshCw,

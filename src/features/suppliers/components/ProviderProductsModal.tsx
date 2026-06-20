@@ -9,7 +9,7 @@ import { X, Package, Star, Truck, Hash, Tag } from 'lucide-react';
 import { Modal } from '../../../shared/components/ui/Modal';
 import { Button } from '../../../shared/components/ui';
 import { useProductProviderLink, ProductWithDetails } from '../hooks/useProductProviderLink';
-import { useAppStore } from '../../../store/mainAppStore';
+import { useAppStore } from '@/stores';
 
 interface ProviderProductsModalProps {
   providerRut: string;

@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AlertCircle, CheckCircle2, History, Trash2, X, RefreshCw, Layers } from 'lucide-react';
-import { useSyncStore } from '../../../store/useSyncStore';
+import { useSyncStore } from '@/stores';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale/es';
 

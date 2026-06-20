@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useAppStore } from '../store/mainAppStore';
+import { useAppStore } from '@/stores';
 
 /**
  * HOOK: AUTO-BLOQUEO INDUSTRIAL v3.2

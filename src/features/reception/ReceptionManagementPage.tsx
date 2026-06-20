@@ -33,7 +33,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useReceptionLogic } from './hooks/useReceptionLogic';
 import { useReceptionHistory } from './hooks/useReceptionHistory';
 import { useHIDScanner } from '../../hooks/useHIDScanner';
-import { useAppStore } from '../../store/mainAppStore';
+import { useAppStore } from '@/stores';
 import { useCaptureHub } from '../../shared/hooks/useCaptureHub';
 
 // Components

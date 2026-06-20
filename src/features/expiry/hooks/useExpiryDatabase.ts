@@ -1,7 +1,7 @@
 
 import { useCallback } from 'react';
-import { useAppStore } from '@/store/mainAppStore';
-import { useExpiryStore, ExpiryItem, ExpiryStatus, ExpiryPreferences } from '../../../store/useExpiryStore';
+import { useAppStore } from '@/stores';
+import { useExpiryStore, ExpiryItem, ExpiryStatus, ExpiryPreferences } from '@/stores';
 
 // Lego Hooks
 import { useExpirySync } from './useExpirySync';

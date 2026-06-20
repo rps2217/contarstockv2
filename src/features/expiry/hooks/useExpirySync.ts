@@ -3,7 +3,7 @@ import { supabaseSyncService } from '../../../services/supabaseSyncService';
 import { genericSyncEngine } from '../../../services/cloud/GenericSyncEngine';
 import { expiryRepository } from '../../../repositories/ExpiryRepository';
 import { logger } from '../../../services/logger';
-import { useToastStore } from '../../../store/useToastStore';
+import { useToastStore } from '@/stores';
 
 export const useExpirySync = (tableName: string) => {
   const [isSyncing, setIsSyncing] = useState(false);

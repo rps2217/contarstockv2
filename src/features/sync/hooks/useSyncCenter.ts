@@ -7,8 +7,8 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "../../../db";
 import { syncRegistry } from "../../../services/cloud/syncRegistry";
 import { genericSyncEngine } from "../../../services/cloud/GenericSyncEngine";
-import { useSyncStore } from "../../../store/useSyncStore";
-import { useToastStore } from "../../../store/useToastStore";
+import { useSyncStore } from '@/stores';
+import { useToastStore } from '@/stores';
 import type { SyncTabType, SyncLogEntry, SyncQueueItem } from "@/types/global/sync";
 import type { SyncStatus } from "@/types/global/sync";
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Calendar, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion } from 'motion/react';
-import { useAppStore } from '../../../store/mainAppStore';
+import { useAppStore } from '@/stores';
 
 interface ReceptionItemCardProps {
   item: any;

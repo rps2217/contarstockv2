@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { productRepository } from '../../../repositories/DexieProductRepository';
 import { syncProductsToCloud } from '../../../services/cloudSync';
 import { importProductsFromCloud, importProvidersFromCloud } from '../../../services/syncManager';
-import { useAppStore } from '../../../store/mainAppStore';
+import { useAppStore } from '@/stores';
 
 export const useProductSync = (showFeedback: (type: 'success' | 'error', msg: string) => void) => {
   const [isSyncing, setIsSyncing] = useState(false);

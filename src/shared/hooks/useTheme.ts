@@ -6,7 +6,7 @@
  */
 
 import { useMemo } from 'react';
-import { useAppStore } from '@/store/mainAppStore';
+import { useAppStore } from '@/stores';
 
 export type Theme = 'dark' | 'light' | 'high-contrast';
 

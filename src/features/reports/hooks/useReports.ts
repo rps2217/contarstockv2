@@ -6,7 +6,7 @@ import { useLocation } from "react-router-dom";
 import { SessionRepository } from "../../../repositories/SessionRepository";
 import { ScanRepository } from "../../../repositories/ScanRepository";
 import { productRepository } from "../../../repositories/DexieProductRepository";
-import { useAppStore } from "@/store/mainAppStore";
+import { useAppStore } from '@/stores';
 
 export const useReports = () => {
   const location = useLocation();

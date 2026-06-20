@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Wifi, WifiOff, Battery, BatteryWarning, HardDrive, Cloud, RefreshCw, Zap, Database, Activity, AlertTriangle } from 'lucide-react';
-import { useSyncStore } from '../store/useSyncStore';
+import { useSyncStore } from '@/stores';
 import { supabaseSyncService } from '../services/supabaseSyncService';
 import { useNavigate } from 'react-router-dom';
 import { SystemRepository } from '../repositories/SystemRepository';

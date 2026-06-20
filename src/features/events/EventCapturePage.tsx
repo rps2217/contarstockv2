@@ -18,11 +18,11 @@ import {
   Zap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useToastStore } from '../../store/useToastStore';
+import { useToastStore } from '@/stores';
 import { normalizeSku } from '../../services/utils';
 import { useEventDatabase } from './hooks/useEventDatabase';
 import { useScannerEngine } from '../../hooks/useScannerEngine';
-import { useSyncStore } from '../../store/useSyncStore';
+import { useSyncStore } from '@/stores';
 import { SmartDock } from '../../components/SmartDock';
 import { CameraScanner } from '../../components/CameraScanner';
 import { ScannerTargetOverlay } from '../../shared/components/scanner/ScannerTargetOverlay';

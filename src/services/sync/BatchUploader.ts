@@ -4,7 +4,7 @@
  * Usa SyncFSM para control de flujo robusto.
  */
 
-import { useSyncStore } from '../../store/useSyncStore';
+import { useSyncStore } from '@/stores';
 import { logger } from '../logger';
 import { supabaseSyncService } from '../supabaseSyncService';
 import { dynamicSyncService } from '../dynamicSync';

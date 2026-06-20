@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Target, Zap, Activity, X, Camera } from 'lucide-react';
 import { useOpticalEngine } from '../hooks/useOpticalEngine';
-import { useAppStore } from '@/store/mainAppStore';
+import { useAppStore } from '@/stores';
 
 interface CameraScannerProps {
   onScan: (code: string) => void;

@@ -7,7 +7,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { supabaseSyncService } from '../../../services/supabaseSyncService';
-import { useAppStore } from '@/store/mainAppStore';
+import { useAppStore } from '@/stores';
 import { productRepository } from '../../../repositories/DexieProductRepository';
 import { eventRepository } from '../../../repositories/EventRepository';
 import { normalizeSku } from '../../../services/utils';

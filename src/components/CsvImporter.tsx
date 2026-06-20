@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Upload, FileText, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
-import { useToastStore } from '../store/useToastStore';
+import { useToastStore } from '@/stores';
 import { db } from '../db';
 import { parse } from 'papaparse';
 

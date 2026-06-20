@@ -2,7 +2,7 @@
 import { parseISO, endOfMonth, format, startOfMonth, addMonths, isWithinInterval, isPast } from 'date-fns';
 import { es } from 'date-fns/locale/es';
 import { Product, Provider } from '../../../types';
-import { ExpiryItem } from '../../../store/useExpiryStore';
+import { ExpiryItem } from '@/stores';
 import { normalizeSku, normalizeIdentity } from '../../../services/utils';
 import { evaluateExpiry, ExpiryPolicy } from '../domain/expiryEngine';
 

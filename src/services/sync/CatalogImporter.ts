@@ -13,7 +13,7 @@ import { supabaseSyncService } from '../supabaseSyncService';
 import { CloudProductSchema, CloudProviderSchema } from '../schemas';
 import { getSettings } from '../settings';
 import { saveProductBatch } from '../productService';
-import { useSyncStore } from '../../store/useSyncStore';
+import { useSyncStore } from '@/stores';
 
 /**
  * Importa productos desde la nube (sincronización incremental)

@@ -3,7 +3,7 @@ import { ProviderRepository } from '../../../repositories/ProviderRepository';
 import { differenceInDays } from 'date-fns';
 import { Provider } from '../../../types';
 import { expiryRepository } from '../../../repositories/ExpiryRepository';
-import { useAppStore } from '../../../store/mainAppStore';
+import { useAppStore } from '@/stores';
 
 export interface ComplianceStats {
   riskItems: {

@@ -1,9 +1,9 @@
 
 import { useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { useAppStore } from '../store/mainAppStore';
-import { useExpiryStore } from '../store/useExpiryStore';
-import { useToastStore } from '../store/useToastStore';
+import { useAppStore } from '@/stores';
+import { useExpiryStore } from '@/stores';
+import { useToastStore } from '@/stores';
 import { processExpiryItem } from '../features/expiry/utils/expiryProcessor';
 import { productRepository } from '../repositories/DexieProductRepository';
 import { normalizeSku } from '../services/utils';

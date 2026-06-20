@@ -13,7 +13,7 @@ import { ScanRepository } from '../../../repositories/ScanRepository';
 import { DetectiveService } from '../../../services/detectiveService';
 import { MatchResult } from '../../../types';
 
-import { useAppStore } from '../../../store/mainAppStore';
+import { useAppStore } from '@/stores';
 
 export const ReportDetail: React.FC<{ sessionId: string; onBack: () => void }> = ({ sessionId, onBack }) => {
   const { settings } = useAppStore();

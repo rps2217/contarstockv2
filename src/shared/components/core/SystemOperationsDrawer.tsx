@@ -23,9 +23,9 @@ import {
   Contrast
 } from 'lucide-react';
 import { parse } from 'papaparse';
-import { useAppStore } from '@/store/mainAppStore';
+import { useAppStore } from '@/stores';
 import { useProductDatabase } from '@/features/inventory/hooks/useProductDatabase';
-import { useSyncStore } from '@/store/useSyncStore';
+import { useSyncStore } from '@/stores';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { toast } from 'sonner';
 

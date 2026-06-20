@@ -3,7 +3,7 @@ import { Product, Provider } from '../../../types';
 import * as productService from '../../../services/productService';
 import { sanitizeBarcode, normalizeIdentity } from '../../../services/utils';
 import { productSchema } from '../../../schemas/productSchema';
-import { useToastStore } from '../../../store/useToastStore';
+import { useToastStore } from '@/stores';
 import { ProviderRepository } from '../../../repositories/ProviderRepository';
 
 interface UseProductFormProps {

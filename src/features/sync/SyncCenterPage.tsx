@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { useSyncStore } from '../../store/useSyncStore';
+import { useSyncStore } from '@/stores';
 import { syncRegistry } from '../../services/cloud/syncRegistry';
 import { useSyncCenter } from './hooks/useSyncCenter';
 import { SyncStatusCards, SyncQueueList, SyncQueueDetail } from './components';

@@ -13,7 +13,7 @@ import { useProductivity } from '../counting/hooks/useProductivity';
 import { useTurboMode } from '../counting/hooks/useTurboMode';
 import { ProductivityDashboard } from '../counting/components/ProductivityDashboard';
 import { TurboModeOverlay } from '../counting/components/TurboModeOverlay';
-import { useAppStore } from '../../store/mainAppStore';
+import { useAppStore } from '@/stores';
 import { exportHammerToExcel } from '../../services/export';
 
 export const HammerPage: React.FC = () => {

@@ -13,7 +13,7 @@ import { Plus, Layers } from 'lucide-react';
 import { useSlicesLogic } from './hooks/useSlicesLogic';
 import { SlicesSidebar, SliceFilters, SlicePreview, CreateSliceModal } from './components';
 import { useThemeClasses } from '@/shared/hooks/useTheme';
-import { useAppStore } from '@/store/mainAppStore';
+import { useAppStore } from '@/stores';
 
 export const SlicesPage: React.FC = () => {
   const { settings } = useAppStore();
