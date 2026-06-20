@@ -81,7 +81,7 @@ export const createProductsPayload = (products: Product[]) => {
     [mapping?.name || "name"]: p.name,
     [mapping?.category || "category"]: p.category,
     [mapping?.supplier || "supplier"]: p.supplier,
-    [mapping?.supplierRut || "supplier_rut"]: p.supplierRut || "",
+    [mapping?.supplierRut || "supplierRut"]: p.supplierRut || "",
     [mapping?.price || "price"]: p.price || 0,
     [mapping?.unitsPerBox || "units_per_box"]: p.unitsPerBox || 1,
     [CLOUD_COLUMNS.IA_SIGNATURE || "ia_signature"]: p.embedding ? JSON.stringify(p.embedding) : ""

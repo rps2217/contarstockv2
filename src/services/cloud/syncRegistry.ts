@@ -217,7 +217,7 @@ export const syncRegistry: Record<string, TableSyncMeta> = {
       barcode: p.barcode,
       name: p.name,
       category: p.category || 'GENERAL',
-      supplier_rut: p.supplierRut || null,
+      "supplierRut": p.supplierRut || null,
       supplier: p.supplier || '', // Cache for faster queries in Supabase
       price: Number(p.price) || 0,
       units_per_box: Number(p.unitsPerBox) || 1,
@@ -227,7 +227,7 @@ export const syncRegistry: Record<string, TableSyncMeta> = {
       barcode: remote.barcode,
       name: remote.name,
       category: remote.category,
-      supplierRut: remote.supplier_rut || remote.supplierrut,
+      supplierRut: remote.supplierRut,
       supplier: remote.supplier,
       price: Number(remote.price) || 0,
       unitsPerBox: Number(remote.units_per_box) || Number(remote.unitsPerBox) || 1,

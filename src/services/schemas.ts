@@ -38,7 +38,7 @@ export const CloudProductSchema = z.record(z.any()).transform((raw) => {
  const name = getVal([mapping?.name || '', "name", "DESCRIPCION", "PRODUCTO", "NOMBRE", "DESCRIPTOR", "DESC", "DESCRIP", "ITEM", "DESCRIPCION_PROD", "DETALLE", "ITEM_NAME"]) || "PRODUCTO DESCONOCIDO";
  const category = getVal([mapping?.category || '', "category", "MUNDO", "CATEGORIA", "CATEGORY"]) || "GENERAL";
  const supplier = getVal([mapping?.supplier || '', "supplier", "PROVEEDOR", "SUPPLIER", "PROVIDER", "LABORATORIO", "LAB", "MARCA"]);
- const supplierRut = getVal([mapping?.supplierRut || '', "supplier_rut", "supplierrut", "RUT PROVEEDOR", "RUT", "PROVEEDOR_RUT", "RUT_PROVEEDOR", "RUT_PROV"]);
+ const supplierRut = getVal([mapping?.supplierRut || '', "supplierRut", "supplier_rut", "supplierrut", "RUT PROVEEDOR", "RUT", "PROVEEDOR_RUT", "RUT_PROVEEDOR", "RUT_PROV"]);
  const priceRaw = getVal([mapping?.price || '', "price", "PRECIO", "PRICE"]);
  const unitsPerBoxRaw = getVal([mapping?.unitsPerBox || '', "units_per_box", "unitsperbox", "UNIDADES POR CAJA", "UNIDADES", "UNITS"]);
 

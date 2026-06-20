@@ -36,7 +36,7 @@ export const backupProductsToSupabase = async (onProgress?: (msg: string) => voi
         name: p.name,
         category: p.category || 'GENERAL',
         supplier: p.supplier || '',
-        supplier_rut: p.supplierRut || '',
+        "supplierRut": p.supplierRut || '',
         price: p.price || 0,
         units_per_box: p.unitsPerBox || 1,
         timestamp: new Date().toISOString()
