@@ -21,7 +21,6 @@ CREATE INDEX IF NOT EXISTS idx_pp_principal ON "PRODUCTO_PROVEEDOR"(product_barc
 
 -- INSERT CON ON CONFLICT (ignora duplicados)
 INSERT INTO "PRODUCTO_PROVEEDOR" (product_barcode, provider_rut, is_primary, mundo, marca, has_exchange, withdrawal_days, exchange_policy) VALUES
-INSERT INTO "PRODUCTO_PROVEEDOR" (product_barcode, provider_rut, is_primary, mundo, marca, has_exchange, withdrawal_days, exchange_policy) VALUES
 
   ('1020101010202', '76937323', TRUE, 'ALMACEN', 'C', NULL, NULL, NULL),
   ('1020101010707', '76937323', TRUE, 'ALMACEN', 'C', NULL, NULL, NULL),
