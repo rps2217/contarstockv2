@@ -16,7 +16,8 @@ import {
   ShoppingCart,
   Cloud,
   CloudOff,
-  RefreshCw
+  RefreshCw,
+  Eye
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -31,6 +32,7 @@ interface EventItemCardProps {
   onFrcClick?: (frc: string) => void;
   onEventClick?: (event: string) => void;
   onDestinoClick?: (destino: string) => void;
+  onViewDetail?: (item: any) => void;
   theme?: 'dark' | 'light' | 'high-contrast';
   isCompact?: boolean;
   isExpanded?: boolean;
@@ -46,6 +48,7 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
   onFrcClick,
   onEventClick,
   onDestinoClick,
+  onViewDetail,
   theme = 'dark',
   isCompact = false,
   isExpanded = false
@@ -359,6 +362,23 @@ export const EventItemCard: React.FC<EventItemCardProps> = React.memo(({
 
       {/* COLUMN 5: ACTIONS */}
       <div className="flex items-center gap-2 w-full md:w-auto justify-end md:justify-center shrink-0">
+        {onViewDetail && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onViewDetail(item);
+            }}
+            className={`w-10 h-10 md:w-8 md:h-8 rounded-xl transition-all border flex items-center justify-center ${
+              theme === 'dark' 
+                ? 'bg-purple-500/10 border-purple-500/20 text-purple-500 hover:bg-purple-500 hover:text-white' 
+                : 'bg-purple-50 border-purple-200 text-purple-600 hover:bg-purple-600 hover:text-white shadow-sm'
+            }`}
+            title="Ver Detalle"
+          >
+            <Eye className="w-5 h-5 md:w-4 md:h-4" />
+          </button>
+        )}
+
         {onUpdateStatus && (
           <button
             onClick={(e) => {
