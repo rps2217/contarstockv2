@@ -18,9 +18,6 @@ CREATE TABLE IF NOT EXISTS "PRODUCTO_PROVEEDOR" (
 CREATE INDEX IF NOT EXISTS idx_pp_producto ON "PRODUCTO_PROVEEDOR"(product_barcode);
 CREATE INDEX IF NOT EXISTS idx_pp_proveedor ON "PRODUCTO_PROVEEDOR"(provider_rut);
 CREATE INDEX IF NOT EXISTS idx_pp_principal ON "PRODUCTO_PROVEEDOR"(product_barcode) WHERE is_primary = TRUE;
-
--- INSERT CON ON CONFLICT (ignora duplicados)
-INSERT INTO "PRODUCTO_PROVEEDOR" (product_barcode, provider_rut, is_primary, mundo, marca, has_exchange, withdrawal_days, exchange_policy) VALUES
 INSERT INTO "PRODUCTO_PROVEEDOR" (product_barcode, provider_rut, is_primary, mundo, marca, has_exchange, withdrawal_days, exchange_policy) VALUES
 
   ('1020101010202', '76937323', TRUE, 'ALMACEN', 'C', NULL, NULL, NULL),
