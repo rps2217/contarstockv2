@@ -1,7 +1,7 @@
 /**
  * BatchUploader - Sube datos al servidor en lotes
- * 
- * Extraído de syncManager.ts para reducir complejidad.
+ *
+ * Usa SyncFSM para control de flujo robusto.
  */
 
 import { useSyncStore } from '../../store/useSyncStore';
@@ -11,39 +11,35 @@ import { dynamicSyncService } from '../dynamicSync';
 import { SessionRepository } from '../../repositories/SessionRepository';
 import { ScanRepository } from '../../repositories/ScanRepository';
 import { getSettings } from '../settings';
+import { syncFSM } from './fsm';
 import { UploadGroup } from './UploadGroupBuilder';
 
-let isSyncingInProgress = false;
 const UPLOAD_BATCH_SIZE = 500;
 
 export const getBatchSize = (): number => UPLOAD_BATCH_SIZE;
 
-export const isUploadInProgress = (): boolean => isSyncingInProgress;
+export const isUploadInProgress = (): boolean => syncFSM.isRunning();
 
 export const resetUploadLock = () => {
-  isSyncingInProgress = false;
-  useSyncStore.getState().setSyncing(false);
+  syncFSM.reset();
 };
 
-// Alias for backwards compatibility
 export const resetSyncLock = resetUploadLock;
 
 /**
  * Sube un grupo de datos al servidor
  */
 export const performBatchUpload = async (
-  group: UploadGroup, 
+  group: UploadGroup,
   onProgress?: (msg: string) => void
 ): Promise<void> => {
-  if (isSyncingInProgress) {
+  if (syncFSM.isRunning()) {
     throw new Error("Sincronización en progreso, por favor intente nuevamente en unos segundos.");
   }
-  isSyncingInProgress = true;
-  useSyncStore.getState().setSyncing(true);
 
-  try {
+  await syncFSM.execute(async () => {
     const config = getSettings().cloudConfig;
-    
+
     if (group.type === 'dynamic' && 'tableName' in group && (group as any).tableName) {
       await dynamicSyncService.syncAllPending(onProgress, (group as any).tableName);
     } else if (group.erpOrder === 'REGISTROS_HUERFANOS') {
@@ -81,12 +77,10 @@ export const performBatchUpload = async (
           continue;
         }
 
-        // Get scans for this session
         const scans = await ScanRepository.getBySession(sessionId);
         const allScanIdsToMark: string[] = scans.map(s => s.id);
         let sessionSuccess = true;
 
-        // Process by warehouse/location
         const locations = new Set<string>();
         scans.forEach(s => {
           if (s.location) locations.add(s.location);
@@ -106,9 +100,9 @@ export const performBatchUpload = async (
             totalUnits: locationScans.reduce((sum, s) => sum + s.quantity, 0)
           };
 
-          const targetTable = "INVENTARIO"; // Default table name
+          const targetTable = "INVENTARIO";
           const result = await supabaseSyncService.pushBatch(targetTable, [payload]);
-          
+
           if (!result.success) {
             sessionSuccess = false;
             useSyncStore.getState().addIncident(targetTable, result.error || 'Unknown error');
@@ -119,7 +113,6 @@ export const performBatchUpload = async (
           await ScanRepository.markAsSynced(allScanIdsToMark);
           await SessionRepository.updateSyncTimestamp(sessionId);
 
-          // RESPALDO DE LA SESIÓN EN SESIONES_CONTEO
           try {
             const sessionPayload = {
               id: session.id,
@@ -135,22 +128,15 @@ export const performBatchUpload = async (
             };
             await supabaseSyncService.pushBatch('SESIONES_CONTEO', [sessionPayload]);
           } catch (sessionPushError) {
-             console.warn("Fallo al subir datos de sesion a SESIONES_CONTEO:", sessionPushError);
+            console.warn("Fallo al subir datos de sesion a SESIONES_CONTEO:", sessionPushError);
           }
 
           if (onProgress) onProgress(`✓ Bulto ${session.logisticsLabel} Sincronizado.`);
         } else {
-          if (onProgress) onProgress(`⚠ Bulto ${session.logisticsLabel} con errores. Se reintentará luego.`);
+          if (onProgress) onProgress(`⚠ Bulto ${session.logisticsLabel} con errores.`);
         }
       }
     }
     useSyncStore.getState().setLastSyncTime(Date.now());
-  } catch (err: unknown) {
-    const error = err instanceof Error ? err : new Error(String(err));
-    logger.error("SYNC_FAIL", error.message);
-    throw err;
-  } finally {
-    isSyncingInProgress = false;
-    useSyncStore.getState().setSyncing(false);
-  }
+  }, onProgress);
 };

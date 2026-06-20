@@ -39,3 +39,8 @@ export {
 export {
   resetSyncLock,
 } from './BatchUploader';
+
+// FSM para control de flujo
+export { syncFSM } from './fsm';
+export { useSyncFSM } from './fsm/useSyncFSM';
+export type { SyncState, SyncEvent, SyncContext } from './fsm/types';

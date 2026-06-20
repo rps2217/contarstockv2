@@ -160,3 +160,38 @@ npm run test         # vitest (watch mode)
 ### Commits
 - `b3dcdd40` - feat: Scripts de migración para PRODUCTO_PROVEEDOR
 - `d3389c9b` - feat: Agregar tabla PRODUCTO_PROVEEDOR al código frontend
+
+---
+
+## Refactoring Progreso (2026-06-20)
+
+### Completado:
+- FASE 0: Setup DX ✅
+- FASE 1: Repository Pattern Base ✅
+- FASE 2: Repository Pattern por Dominios ✅
+- **FASE 3: FSM para Sync** ✅ (nueva implementación integrada)
+- **FASE 8: Testing** ✅ (142 tests pasando)
+
+### Dead Code Eliminado:
+- Commands (SyncOrchestrator, CatalogSyncCommand, etc.) - 622 líneas
+- FSM legacy (no integrada) - 464 líneas
+- Test huérfano - 186 líneas
+- Store duplicado - 64 líneas
+- **Total: ~1,583 líneas**
+
+### Nueva FSM Integrada:
+- `src/services/sync/fsm/` (nuevo)
+  - `SyncFSM.ts` - Clase FSM con transiciones
+  - `types.ts` - SyncState, SyncEvent, SyncContext
+  - `useSyncFSM.ts` - Hook de React
+  - `SyncFSM.test.ts` - Tests unitarios
+
+### Commits:
+- `d2b22d94` - refactor: Eliminar dead code
+- `xxxxxx` - feat: Nueva FSM integrada para Sync
+
+### Métricas:
+- syncManager.ts: 37 líneas ✅
+- Sync modules: 4 archivos modulares ✅
+- Tests: 142 pasando ✅
+- Bundle: 4,475 KB
