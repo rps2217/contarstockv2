@@ -12,7 +12,7 @@ export class DbMigrator {
     // db.version(2).stores({ ... }).upgrade(tx => { ... });
     
     // Catch-all robust current schema mapping
-    db.version(49).stores({
+    db.version(50).stores({
       products: '&barcode, name, syncStatus', 
       sessions: 'id, status, createdAt, erpOrder, logisticsLabel, sessionType, auditStatus, lastSyncTimestamp, mm, yyyy, batch, photoUrl, syncStatus, [erpOrder+createdAt], [status+lastSyncTimestamp]', 
       scans: 'id, sessionId, barcode, logisticsLabel, timestamp, synced, isIncident, expiryDate, mm, yyyy, batch, quantity, syncStatus, [sessionId+synced], [sessionId+barcode], [sessionId+logisticsLabel], [sessionId+timestamp], [synced+mm+yyyy]',
@@ -29,10 +29,12 @@ export class DbMigrator {
       dynamic_data: 'id, tableName, timestamp, syncStatus, [tableName+syncStatus]',
       productProviders: '++id, &productBarcode, &providerRut, isPrimary, [productBarcode+providerRut]',
       blindScans: '++id, batchId, barcode, timestamp',
-      blindManifests: '++id, batchId, barcode'
+      blindManifests: '++id, batchId, barcode',
+      // Audit Log - Sistema de trazabilidad estilo AppSheet
+      audit_logs: '++id, tableName, recordId, action, userId, timestamp, synced, [tableName+recordId], [userId+timestamp]'
     }).upgrade(tx => {
       // Enterprise migration log
-      console.log('Database migrated to v49 - Added composite index for scans sync optimization');
+      console.log('Database migrated to v50 - Added Audit Log for change tracking');
     });
   }
 }

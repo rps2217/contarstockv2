@@ -45,6 +45,21 @@ export interface SyncLog {
   errorMessage?: string;
 }
 
+// Audit Log - Registro de cambios para trazabilidad (estilo AppSheet)
+export interface AuditLogEntry {
+  id?: number;
+  tableName: string;      // 'events', 'sessions', 'products', etc.
+  recordId: string;      // ID del registro afectado
+  action: 'CREATE' | 'UPDATE' | 'DELETE';
+  fieldName?: string;    // Campo específico modificado (opcional)
+  oldValue?: string;     // Valor anterior (JSON stringified)
+  newValue?: string;     // Valor nuevo (JSON stringified)
+  userId?: string;       // ID del usuario
+  deviceInfo?: string;   // Info del dispositivo
+  timestamp: number;
+  synced: boolean;        // Si ya fue sincronizado a la nube
+}
+
 export interface ProductProvider {
   id?: number;
   productBarcode: string;
@@ -102,6 +117,7 @@ export class LogiCountDB extends Dexie {
     lastError?: string;
     priority: 'high' | 'normal' | 'low';
   }>;
+  audit_logs!: Table<AuditLogEntry>;
 
   constructor() {
     super('LogiCountDB');

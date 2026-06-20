@@ -31,6 +31,10 @@ export abstract class BaseRepository<T extends { id?: ID }, ID = string> impleme
     return await this.table.bulkPut(entities) as unknown as ID[];
   }
 
+  async update(id: ID, data: Partial<T>): Promise<void> {
+    await this.table.update(id, data);
+  }
+
   async delete(id: ID): Promise<void> {
     await this.table.delete(id);
   }

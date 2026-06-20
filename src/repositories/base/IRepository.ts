@@ -15,6 +15,9 @@ export interface IRepository<T, ID = string> {
   /** Guardar múltiples elementos */
   saveMany?(entities: T[]): Promise<ID[]>;
   
+  /** Actualizar parcialmente un elemento */
+  update?(id: ID, data: Partial<T>): Promise<void>;
+  
   /** Eliminar un elemento por ID */
   delete(id: ID): Promise<void>;
   
