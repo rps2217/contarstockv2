@@ -16,6 +16,7 @@ export interface ExpiryItem {
   barcode: string;
   productName: string;
   providerName: string;
+  providerRut?: string;
   category: string;
   mm?: number;
   yyyy?: number;
@@ -39,6 +40,8 @@ export interface ExpiryItem {
   syncStatus?: 'synced' | 'pending' | 'error';
   observaciones?: string;
   _searchIndex?: string;
+  // Campos calculados
+  price?: number;
 }
 
 interface ExpiryState {

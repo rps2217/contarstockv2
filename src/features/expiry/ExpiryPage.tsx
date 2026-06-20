@@ -20,6 +20,7 @@ import { ExpiryCaptureModal } from './components/ExpiryCaptureModal';
 import { SyncDiagnosticsPanel } from '../sync/components/SyncDiagnosticsPanel';
 import { ExpiryCaptureRow } from './components/ExpiryCaptureRow';
 import { ExpiryDetailModal } from './components/ExpiryDetailModal';
+import { ExpiryMetricsCards } from './components/ExpiryMetricsCards';
 
 const getDaysUntilExpiry = (mm: number, yyyy: number) => {
   const expiryDate = new Date(yyyy, mm - 1, 1);
@@ -379,6 +380,7 @@ export const ExpiryPage: React.FC = () => {
         footer={mobileDock}
         extra={cameraArea}
         filters={filters}
+        metrics={<ExpiryMetricsCards items={sortedItems} />}
         modalForm={modalForm}
         inputValue={engine.isSearchActive ? engine.searchQuery : engine.capture.inputValue}
         onInputChange={engine.isSearchActive ? engine.setSearchQuery : engine.capture.setInputValue}

@@ -42,8 +42,6 @@ export const processExpiryItem = (
   
   if (!provider && effectiveSupplierName) {
     // Si no hay match por RUT, intentamos por nombre. 
-    // Para no iterar siempre, el llamador ya debería pasar un providerMap que incluya nombres como llaves
-    // o podemos buscarlo una vez.
     provider = providerMap.get(effectiveSupplierName);
     
     // Fallback para nombres no exactamente iguales (normalización profunda)
@@ -58,34 +56,17 @@ export const processExpiryItem = (
     }
   }
   
-  const getWithdrawalDays = () => {
-    if (provider) {
-      if (provider.withdrawalDays != null && String(provider.withdrawalDays) !== '') return Number(provider.withdrawalDays);
-      if ((provider as any).withdrawal_days != null && String((provider as any).withdrawal_days) !== '') return Number((provider as any).withdrawal_days);
-    }
-    return defaultWithdrawalDays;
-  };
+  // 3. OBTENER POLÍTICAS (del item guardado o del proveedor genérico)
+  // Las políticas ya vienen en el item (guardadas desde PRODUCTO_PROVEEDOR en handleAddItem)
+  const withdrawalDays = item.withdrawalDays ?? provider?.withdrawalDays ?? defaultWithdrawalDays;
+  const hasExchange = item.hasExchange ?? provider?.hasExchange ?? false;
 
-  const getHasExchange = () => {
-    if (provider) {
-      if (provider.hasExchange !== undefined) return Boolean(provider.hasExchange);
-      if ((provider as any).has_exchange !== undefined) return Boolean((provider as any).has_exchange);
-    }
-    return false;
-  };
-
-  // 3. APLICACIÓN DE POLÍTICAS DE NEGOCIO (DOMAIN ENGINE)
-  const policy: ExpiryPolicy = {
-    withdrawalDays: getWithdrawalDays(),
-    hasCanje: getHasExchange()
-  };
-
-  const evaluation = evaluateExpiry(expiry, policy, now, item.quantity || 1);
+  const evaluation = evaluateExpiry(expiry, { withdrawalDays, hasCanje: hasExchange }, now, item.quantity || 1);
 
   // 4. CONSTRUCCIÓN DEL OBJETO DE INTERFAZ
   const estado = !evaluation.withdrawalDate 
     ? "" 
-    : `${policy.hasCanje ? "Canje" : "Merma"} ${format(evaluation.withdrawalDate, 'MMM yyyy', { locale: es })}`;
+    : `${hasExchange ? "Canje" : "Merma"} ${format(evaluation.withdrawalDate, 'MMM yyyy', { locale: es })}`;
 
   const providerName = (provider?.name || product?.supplier || item.providerName || 'N/A').trim().toUpperCase();
   const observaciones = item.observaciones || '';
@@ -97,10 +78,11 @@ export const processExpiryItem = (
     ...item,
     productName,
     providerName,
+    providerRut: provider?.rut || item.providerRut,
     observaciones,
     category: product?.category || 'GENERAL',
-    withdrawalDays: policy.withdrawalDays,
-    hasCanje: policy.hasCanje,
+    withdrawalDays,
+    hasCanje: hasExchange,
     status: evaluation.status,
     daysLeft: evaluation.daysLeft,
     expiryDateObj: expiry,

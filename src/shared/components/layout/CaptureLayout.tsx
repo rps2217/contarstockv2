@@ -23,6 +23,7 @@ interface CaptureLayoutProps {
   extra?: React.ReactNode;
   filters?: React.ReactNode;
   modalForm?: React.ReactNode;
+  metrics?: React.ReactNode;
 }
 
 export const CaptureLayout: React.FC<CaptureLayoutProps> = ({
@@ -42,7 +43,8 @@ export const CaptureLayout: React.FC<CaptureLayoutProps> = ({
   readOnly = false,
   extra,
   filters,
-  modalForm
+  modalForm,
+  metrics
 }) => {
   const syncStore = useSyncStore();
   const navigate = useNavigate();
@@ -116,6 +118,12 @@ export const CaptureLayout: React.FC<CaptureLayoutProps> = ({
           </div>
         )}
 
+        {/* METRICS SECTION (Optional) */}
+        {metrics && (
+          <div className="px-3 md:px-6 pt-2 pb-0">
+            {metrics}
+          </div>
+        )}
         {/* INPUT SECTION */}
         <div className="p-3 md:p-6 border-b border-white/5 bg-slate-950/50 backdrop-blur-md sticky top-0 z-10">
           {/* ... existing input code remains same ... */}
