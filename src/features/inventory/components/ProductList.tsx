@@ -117,7 +117,7 @@ const Row = memo(({ index, data }: any) => {
       </div>
       <div className="flex-1 min-w-0 font-bold text-slate-800 dark:text-slate-200 truncate pr-6">{p.name}</div>
       <div className="w-32 shrink-0">
-        <Badge variant={p.syncStatus === 'synced' ? 'neutral' : p.syncStatus === 'error' ? 'error' : 'info'}>{p.category || '-'}</Badge>
+        <Badge variant={p.syncStatus === 'synced' ? 'muted' : p.syncStatus === 'error' ? 'danger' : 'info'}>{p.category || '-'}</Badge>
       </div>
       <div className="w-36 shrink-0 flex flex-col justify-center">
         {p.withdrawalDays !== undefined ? (
