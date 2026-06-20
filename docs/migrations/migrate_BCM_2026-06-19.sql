@@ -11,7 +11,7 @@
 
 -- Insertando 192 registros en PROVEEDORES
 
-INSERT INTO PROVEEDORES (rut, name, has_exchange, withdrawal_days, exchange_policy) VALUES
+INSERT INTO proveedores (rut, name, has_exchange, withdrawal_days, exchange_policy) VALUES
 
   ('10377777', 'SUSANA MAGNA GUTIERREZ', TRUE, 30, 'Política no definida'),
   ('12226663', 'ANTONIO AGUILAR VALDES', TRUE, 30, 'Política no definida'),
@@ -213,7 +213,7 @@ INSERT INTO PROVEEDORES (rut, name, has_exchange, withdrawal_days, exchange_poli
 
 -- Insertando 3204 registros en PRODUCTOS
 
-INSERT INTO PRODUCTOS (barcode, name, supplier, supplier_rut, category) VALUES
+INSERT INTO productos (barcode, name, supplier, supplier_rut, category) VALUES
 
   ('1020101010202', 'HELADO LECHE SIN GLUTEN PISTACHO 66 G ANHELADO', 'DISTRIBUIDORA Y COMERCIALIZADORA PRIMOS SPA', '76937323', 'ALMACEN'),
   ('1020101010707', 'HELADO LECHE SIN GLUTEN CAPUCHINO 66 G ANHELADO', 'DISTRIBUIDORA Y COMERCIALIZADORA PRIMOS SPA', '76937323', 'ALMACEN'),
@@ -6701,9 +6701,9 @@ INSERT INTO PRODUCTO_PROVEEDOR (product_barcode, provider_rut, is_primary, mundo
 -- 1. Verificar conteos
 SELECT 'PRODUCTO_PROVEEDOR' AS tabla, COUNT(*) AS total FROM PRODUCTO_PROVEEDOR
 UNION ALL
-SELECT 'PRODUCTOS' AS tabla, COUNT(*) AS total FROM PRODUCTOS
+SELECT 'PRODUCTOS' AS tabla, COUNT(*) AS total FROM productos
 UNION ALL
-SELECT 'PROVEEDORES' AS tabla, COUNT(*) AS total FROM PROVEEDORES;
+SELECT 'PROVEEDORES' AS tabla, COUNT(*) AS total FROM proveedores;
 
 -- 2. Verificar proveedores principales por producto
 SELECT 
@@ -6721,7 +6721,7 @@ SELECT
     p.name AS product_name,
     CASE WHEN p.barcode IS NULL THEN '❌ Producto no existe' ELSE '✅ OK' END AS status
 FROM PRODUCTO_PROVEEDOR pp
-LEFT JOIN PRODUCTOS p ON pp.product_barcode = p.barcode
+LEFT JOIN productos p ON pp.product_barcode = p.barcode
 WHERE p.barcode IS NULL
 LIMIT 10;
 
@@ -6730,7 +6730,7 @@ SELECT
     pr.name AS provider_name,
     CASE WHEN pr.rut IS NULL THEN '❌ Proveedor no existe' ELSE '✅ OK' END AS status
 FROM PRODUCTO_PROVEEDOR pp
-LEFT JOIN PROVEEDORES pr ON pp.provider_rut = pr.rut
+LEFT JOIN proveedores pr ON pp.provider_rut = pr.rut
 WHERE pr.rut IS NULL
 LIMIT 10;
 
@@ -6740,7 +6740,7 @@ SELECT
     pr.rut,
     COUNT(pp.product_barcode) AS productos_asociados,
     COUNT(pp.product_barcode) FILTER (WHERE pp.is_primary = TRUE) AS productos_principales
-FROM PROVEEDORES pr
+FROM proveedores pr
 LEFT JOIN PRODUCTO_PROVEEDOR pp ON pr.rut = pp.provider_rut
 GROUP BY pr.rut, pr.name
 ORDER BY productos_asociados DESC
