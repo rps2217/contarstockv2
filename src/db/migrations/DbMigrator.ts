@@ -12,10 +12,10 @@ export class DbMigrator {
     // db.version(2).stores({ ... }).upgrade(tx => { ... });
     
     // Catch-all robust current schema mapping
-    db.version(48).stores({
+    db.version(49).stores({
       products: '&barcode, name, syncStatus', 
       sessions: 'id, status, createdAt, erpOrder, logisticsLabel, sessionType, auditStatus, lastSyncTimestamp, mm, yyyy, batch, photoUrl, syncStatus, [erpOrder+createdAt], [status+lastSyncTimestamp]', 
-      scans: 'id, sessionId, barcode, logisticsLabel, timestamp, synced, isIncident, expiryDate, mm, yyyy, batch, quantity, syncStatus, [sessionId+synced], [sessionId+barcode], [sessionId+logisticsLabel], [sessionId+timestamp]',
+      scans: 'id, sessionId, barcode, logisticsLabel, timestamp, synced, isIncident, expiryDate, mm, yyyy, batch, quantity, syncStatus, [sessionId+synced], [sessionId+barcode], [sessionId+logisticsLabel], [sessionId+timestamp], [synced+mm+yyyy]',
       expectedOrders: 'id, internalId',
       logs: '++id, level, module, timestamp',
       sync_logs: '++id, timestamp, action, tableName, status',
@@ -32,7 +32,7 @@ export class DbMigrator {
       blindManifests: '++id, batchId, barcode'
     }).upgrade(tx => {
       // Enterprise migration log
-      console.log('Database migrated to v48 - Added productProviders table');
+      console.log('Database migrated to v49 - Added composite index for scans sync optimization');
     });
   }
 }
