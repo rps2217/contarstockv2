@@ -21,10 +21,10 @@ import {
   RefreshCw,
   Copy,
   X,
-  ExternalLink
+  ExternalLink,
+  Trash2
 } from 'lucide-react';
 import { RecordDetailView } from '@/shared/components/ui/RecordDetailView';
-import { useAudit } from '@/hooks/useAudit';
 
 interface EventDetailModalProps {
   isOpen: boolean;
@@ -54,6 +54,7 @@ interface EventDetailModalProps {
   onEdit?: () => void;
   onDelete?: () => void;
   onMarkAdjusted?: () => void;
+  onSync?: () => void;
 }
 
 export const EventDetailModal: React.FC<EventDetailModalProps> = ({
@@ -63,8 +64,8 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
   onEdit,
   onDelete,
   onMarkAdjusted,
+  onSync,
 }) => {
-  const { getRecordHistory } = useAudit();
 
   if (!event) return null;
 
@@ -157,16 +158,18 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
       variant: 'primary' as const,
     },
     {
-      id: 'view-frc',
-      label: 'Ver documento FRC',
-      icon: <ExternalLink className="w-4 h-4" />,
-      onClick: () => {
-        if (event.frc) {
-          // Aquí podrías abrir el FRC en una nueva pestaña o modal
-          window.open(`https://www.google.com/search?q=FRC+${event.frc}`, '_blank');
-        }
-      },
+      id: 'sync',
+      label: 'Sincronizar',
+      icon: <RefreshCw className="w-4 h-4" />,
+      onClick: () => onSync?.(),
       variant: 'secondary' as const,
+    },
+    {
+      id: 'delete',
+      label: 'Eliminar',
+      icon: <Trash2 className="w-4 h-4" />,
+      onClick: () => onDelete?.(),
+      variant: 'danger' as const,
     }
   ];
 
@@ -191,9 +194,9 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
           
           {/* Modal */}
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
             className="fixed inset-4 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-2xl md:max-h-[90vh] z-50 flex flex-col"
           >
             <RecordDetailView

@@ -8,43 +8,63 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { CalendarDays, Package, Factory, Clock, AlertTriangle, Copy } from 'lucide-react';
+import { 
+  CalendarDays, 
+  Package, 
+  Factory, 
+  Clock, 
+  MapPin, 
+  RefreshCw,
+  Cloud,
+  CloudOff,
+  AlertCircle,
+  CheckCircle2,
+  Trash2,
+  Pencil
+} from 'lucide-react';
 import { RecordDetailView } from '@/shared/components/ui/RecordDetailView';
-import { useAudit } from '@/hooks/useAudit';
-import { ExpiryItem } from '../hooks/useExpiryDatabase';
+import type { ExpiryRecord } from '../hooks/useExpiry';
+import { getStatusLabel } from '../hooks/useExpiry';
 
 interface ExpiryDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
-  item?: ExpiryItem | null;
-  record?: ExpiryItem | null;
+  record: ExpiryRecord | null;
   onEdit?: () => void;
   onDelete?: () => void;
+  onSync?: () => void;
 }
 
 export const ExpiryDetailModal: React.FC<ExpiryDetailModalProps> = ({
   isOpen,
   onClose,
-  item,
   record,
   onEdit,
   onDelete,
+  onSync,
 }) => {
-  const { getRecordHistory } = useAudit();
-  
-  const data = item || record;
-  if (!data) return null;
+  if (!record) return null;
 
-  const isWarning = data.daysLeft <= 90;
-  const isExpired = data.daysLeft <= 0;
+  const isWarning = record.daysLeft <= 90;
+  const isExpired = record.daysLeft <= 0;
+  
   const formatDate = (ts?: number) => {
     if (!ts) return 'N/A';
     return format(new Date(ts), "dd MMM yyyy, HH:mm", { locale: es });
   };
 
+  const formatMonth = (mm: number, yyyy: number) => {
+    const date = new Date(yyyy, mm - 1, 1);
+    return format(date, 'MMMM yyyy', { locale: es });
+  };
+
   // Determinar estado para badge
   const status = isExpired ? 'error' : isWarning ? 'warning' : 'success';
-  const statusLabel = isExpired ? 'VENCIDO' : isWarning ? `${data.daysLeft} días` : 'Óptimo';
+  const statusLabel = isExpired ? 'VENCIDO' : getStatusLabel(record.status);
+
+  // Sync status
+  const syncStatus = record.syncStatus === 'synced' ? 'synced' :
+                     record.syncStatus === 'pending' ? 'pending' : 'error';
 
   // Construir secciones
   const sections = [
@@ -53,9 +73,9 @@ export const ExpiryDetailModal: React.FC<ExpiryDetailModalProps> = ({
       title: 'Producto',
       icon: <Package className="w-4 h-4" />,
       rows: [
-        { label: 'Nombre', value: data.productName, copyable: true },
-        { label: 'Barcode', value: data.barcode, copyable: true },
-        { label: 'Categoría', value: data.category || 'Sin categoría' },
+        { label: 'Nombre', value: record.productName, copyable: true },
+        { label: 'Barcode', value: record.barcode, copyable: true },
+        { label: 'Categoría', value: record.category || 'Sin categoría' },
       ]
     },
     {
@@ -63,9 +83,10 @@ export const ExpiryDetailModal: React.FC<ExpiryDetailModalProps> = ({
       title: 'Vencimiento',
       icon: <CalendarDays className="w-4 h-4" />,
       rows: [
-        { label: 'Fecha Vencimiento', value: data.expiryDateObj ? format(data.expiryDateObj, 'MMMM yyyy', { locale: es }) : `${data.mm}/${data.yyyy}` },
-        { label: 'Días Restantes', value: data.daysLeft > 0 ? `${data.daysLeft} días` : 'VENCIDO' },
-        { label: 'Fecha Retiro Sugerida', value: data.withdrawalDate ? format(data.withdrawalDate, 'dd/MM/yyyy') : 'N/A' },
+        { label: 'Fecha Vencimiento', value: formatMonth(record.mm, record.yyyy) },
+        { label: 'Días Restantes', value: record.daysLeft > 0 ? `${record.daysLeft} días` : 'VENCIDO' },
+        { label: 'Fecha Retiro Sugerida', value: record.withdrawalDate ? format(record.withdrawalDate, 'dd/MM/yyyy') : 'N/A' },
+        { label: 'Política', value: record.hasCanje ? 'CANJE' : 'MERMA' },
       ]
     },
     {
@@ -73,8 +94,9 @@ export const ExpiryDetailModal: React.FC<ExpiryDetailModalProps> = ({
       title: 'Proveedor',
       icon: <Factory className="w-4 h-4" />,
       rows: [
-        { label: 'Nombre', value: data.providerName || 'Sin proveedor' },
-        { label: 'RUT', value: data.providerRut || 'N/A', copyable: !!data.providerRut },
+        { label: 'Nombre', value: record.providerName || 'Sin proveedor' },
+        { label: 'RUT', value: record.providerRut || 'N/A', copyable: !!record.providerRut },
+        { label: 'Días Retiro', value: `${record.withdrawalDays} días` },
       ]
     },
     {
@@ -82,15 +104,40 @@ export const ExpiryDetailModal: React.FC<ExpiryDetailModalProps> = ({
       title: 'Captura',
       icon: <Clock className="w-4 h-4" />,
       rows: [
-        { label: 'Fecha Captura', value: formatDate(data.timestamp) },
-        { label: 'Ubicación', value: data.location || 'N/A' },
+        { label: 'Fecha Captura', value: formatDate(record.timestamp) },
+        { label: 'Ubicación', value: record.location || 'N/A' },
+        { label: 'Cantidad', value: `${record.quantity} unidades` },
+        { label: 'Observaciones', value: record.observaciones || 'Sin observaciones' },
       ]
+    }
+  ];
+
+  // Acciones
+  const actions = [
+    {
+      id: 'sync',
+      label: 'Sincronizar',
+      icon: <RefreshCw className="w-4 h-4" />,
+      onClick: () => onSync?.(),
+      variant: 'secondary' as const,
+    },
+    {
+      id: 'delete',
+      label: 'Eliminar',
+      icon: <Trash2 className="w-4 h-4" />,
+      onClick: () => onDelete?.(),
+      variant: 'danger' as const,
     }
   ];
 
   // Metadata
   const metadata = [
-    { label: 'Creado', value: formatDate(data.timestamp), icon: <Clock className="w-3 h-3" /> },
+    { label: 'Creado', value: formatDate(record.timestamp), icon: <Clock className="w-3 h-3" /> },
+    { 
+      label: 'Sync', 
+      value: record.syncStatus === 'synced' ? 'Sincronizado' : record.syncStatus === 'pending' ? 'Pendiente' : 'Error', 
+      icon: record.syncStatus === 'synced' ? <Cloud className="w-3 h-3" /> : record.syncStatus === 'pending' ? <RefreshCw className="w-3 h-3" /> : <CloudOff className="w-3 h-3" /> 
+    },
   ];
 
   return (
@@ -108,22 +155,24 @@ export const ExpiryDetailModal: React.FC<ExpiryDetailModalProps> = ({
           
           {/* Modal */}
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
             className="fixed inset-4 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-2xl md:max-h-[90vh] z-50 flex flex-col"
           >
             <RecordDetailView
-              title={data.productName}
-              subtitle={data.barcode}
+              title={record.productName}
+              subtitle={`${record.barcode} • ${record.quantity} unidades`}
               icon={<CalendarDays className="w-5 h-5" />}
               status={status}
               statusLabel={statusLabel}
               sections={sections}
-              tabs={['detail', 'history']}
-              recordId={data.id}
+              tabs={['detail', 'history', 'actions']}
+              recordId={record.id}
               tableName="VENCIMIENTOS"
+              actions={actions}
               metadata={metadata}
+              syncStatus={syncStatus}
               onEdit={onEdit}
               onDelete={onDelete}
               onClose={onClose}

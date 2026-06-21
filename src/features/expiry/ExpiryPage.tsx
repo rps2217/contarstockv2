@@ -424,6 +424,15 @@ export const ExpiryPage: React.FC = () => {
         record={selectedRecord}
         isOpen={isDetailModalOpen}
         onClose={() => actions.setIsDetailModalOpen(false)}
+        onDelete={async () => {
+          if (selectedRecord) {
+            if (window.confirm('¿Eliminar este registro de vencimiento?')) {
+              await actions.deleteRecord(selectedRecord.id);
+              actions.setIsDetailModalOpen(false);
+            }
+          }
+        }}
+        onSync={() => actions.syncRecords()}
       />
 
       {/* Capture Modal */}
