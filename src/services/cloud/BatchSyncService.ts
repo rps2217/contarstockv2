@@ -292,7 +292,12 @@ export async function pullBatch(
       
       if (error) {
         const errMsg = error.message || '';
-        if (errMsg.includes("not find") && errMsg.includes("table")) {
+        const errCode = error.code || '';
+        
+        // Check for table not found (various formats)
+        if (errMsg.includes("not find") && errMsg.includes("table") ||
+            errMsg.includes("does not exist") ||
+            errCode === '42P01') {
           return { isMissing: true, error: errMsg };
         }
         throw error;
@@ -325,6 +330,12 @@ export async function pullBatch(
     }
 
     if (errMsg.includes("not find") && errMsg.includes("table")) {
+      return { success: false, rows: [], error: 'Table not found', isMissing: true };
+    }
+
+    // PostgreSQL error code 42P01 = "relation does not exist"
+    if ((err as any).code === '42P01' || errMsg.includes('42P01') || errMsg.includes('does not exist')) {
+      logger.info('SYNC', `Tabla ${tableName} no existe en Supabase (código 42P01). Omitiendo descarga.`);
       return { success: false, rows: [], error: 'Table not found', isMissing: true };
     }
     

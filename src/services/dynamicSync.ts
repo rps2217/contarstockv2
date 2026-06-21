@@ -138,9 +138,20 @@ export const dynamicSyncService = {
             return row;
           });
 
-          const result = await supabaseSyncService.pushBatch(tableName, rows);
+          let result;
+          try {
+            result = await supabaseSyncService.pushBatch(tableName, rows);
+          } catch (syncError: any) {
+            // Handle "relation does not exist" error gracefully
+            if (syncError?.code === '42P01' || syncError?.message?.includes('does not exist')) {
+              logger.warn('DYNAMIC_SYNC', `Tabla ${tableName} no existe en Supabase. Ignorando ${rows.length} registros.`);
+              totalFailed += rows.length;
+              continue;
+            }
+            throw syncError;
+          }
 
-          if (result.success) {
+          if (result?.success) {
             // MULTI-USER CONCURRENCY FIX: Only mark as synced if the local version hasn't been modified
             // while the background upload was taking place. Verify timestamps match!
             await db.transaction('rw', db.dynamic_data, async () => {
