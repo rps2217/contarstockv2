@@ -432,7 +432,7 @@ export const ExpiryPage: React.FC = () => {
         onClose={() => setShowCaptureModal(false)}
         onSubmit={async (data) => {
           try {
-            // Crear registro usando el hook
+            // Crear registro usando el hook con políticas del proveedor
             await actions.createRecord({
               barcode: data.barcode,
               productName: data.productName,
@@ -443,6 +443,8 @@ export const ExpiryPage: React.FC = () => {
               observaciones: data.observaciones,
               providerName: data.providerName,
               providerRut: data.providerRut,
+              hasCanje: data.hasCanje,
+              withdrawalDays: data.withdrawalDays,
             });
             toast.success('Vencimiento registrado exitosamente');
             setShowCaptureModal(false);

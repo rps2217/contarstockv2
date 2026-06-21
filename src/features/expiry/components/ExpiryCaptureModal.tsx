@@ -18,7 +18,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { CornerDownLeft, Loader2, X, Package, AlertTriangle, MapPin } from 'lucide-react';
 import { ProductSearchInput } from '@/shared/features/inventory/components/ProductSearchInput';
 import { QuantityInput } from '@/shared/features/inventory/components/QuantityInput';
-import type { ProductInfo, ProviderPolicy } from '@/shared/features/inventory/hooks';
+import type { ProductInfo } from '@/shared/features/inventory/components';
 
 interface ExpiryCaptureModalProps {
   isOpen: boolean;
@@ -38,6 +38,8 @@ export interface ExpiryFormData {
   observaciones: string;
   providerName?: string;
   providerRut?: string;
+  hasCanje?: boolean;
+  withdrawalDays?: number;
 }
 
 const MESES = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
@@ -124,6 +126,8 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
         observaciones,
         providerName: product.supplierName,
         providerRut: product.supplierRut,
+        hasCanje: product.providerPolicy?.hasExchange,
+        withdrawalDays: product.providerPolicy?.withdrawalDays,
       });
       onClose();
     } catch {
@@ -178,16 +182,30 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
                   </p>
                 </div>
               </div>
-              <button 
-                onClick={onClose}
-                className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all active:scale-95 ${
-                  isDark 
-                    ? 'bg-white/5 text-slate-400 active:bg-white/10' 
-                    : 'bg-slate-200 text-slate-500 active:bg-slate-300'
-                }`}
-              >
-                <X className="w-5 h-5" />
-              </button>
+              
+              {/* Proveedor y Políticas */}
+              <div className="flex items-center gap-2">
+                {product?.providerPolicy && (
+                  <div className={`px-3 py-1.5 rounded-xl border-2 text-[10px] font-black uppercase tracking-tighter flex flex-col items-center leading-none ${
+                    product.providerPolicy.hasExchange 
+                      ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30' 
+                      : 'bg-amber-500/10 text-amber-500 border-amber-500/30'
+                  }`}>
+                    <span className="mb-1">{product.providerPolicy.hasExchange ? 'CANJE' : 'MERMA'}</span>
+                    <span className="text-xs">{product.providerPolicy.withdrawalDays}D</span>
+                  </div>
+                )}
+                <button 
+                  onClick={onClose}
+                  className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all active:scale-95 ${
+                    isDark 
+                      ? 'bg-white/5 text-slate-400 active:bg-white/10' 
+                      : 'bg-slate-200 text-slate-500 active:bg-slate-300'
+                  }`}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* CONTENT */}

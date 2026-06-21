@@ -78,6 +78,9 @@ export interface CreateExpiryData {
   observaciones: string;
   providerName?: string;
   providerRut?: string;
+  // Políticas del proveedor
+  hasCanje?: boolean;
+  withdrawalDays?: number;
 }
 
 interface UseExpiryReturn {
@@ -351,9 +354,12 @@ export const useExpiry = (): UseExpiryReturn => {
       // Crear fecha de vencimiento
       const expiryDateObj = new Date(data.yyyy, data.mm - 1, lastDay);
       const daysLeft = Math.ceil((expiryDateObj.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-      const withdrawalDays = 30;
       
-      // Calcular estado basado en días restantes
+      // Usar políticas del proveedor o valores por defecto
+      const withdrawalDays = data.withdrawalDays ?? 30;
+      const hasCanje = data.hasCanje ?? false;
+      
+      // Calcular estado basado en días restantes y días de retiro
       let status: ExpiryStatus;
       if (daysLeft < 0) {
         status = ExpiryStatus.EXPIRED;
@@ -381,7 +387,7 @@ export const useExpiry = (): UseExpiryReturn => {
         observaciones: data.observaciones,
         claveUnica,
         withdrawalDays,
-        hasCanje: false,
+        hasCanje,
         timestamp,
         syncStatus: 'pending',
         status,

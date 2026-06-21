@@ -4,14 +4,14 @@
  * Características:
  * - Búsqueda por SKU/barcode en IndexedDB
  * - Autocompletado de nombre de producto
- * - Validación de producto encontrado
+ * - Obtiene políticas de proveedor desde PRODUCTO_PROVEEDOR
  * - Soporte para múltiples temas
  * 
  * Usado en: Expiry, Events, Reports
  */
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Search, Package, Loader2, AlertCircle } from 'lucide-react';
+import { Search, Package, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { db } from '@/db';
 
 export interface ProductInfo {
@@ -21,6 +21,12 @@ export interface ProductInfo {
   supplierName?: string;
   supplierRut?: string;
   unitsPerBox?: number;
+  // Políticas del proveedor (desde PRODUCTO_PROVEEDOR)
+  providerPolicy?: {
+    hasExchange: boolean;
+    withdrawalDays: number;
+    isPrimary: boolean;
+  };
 }
 
 interface ProductSearchInputProps {
@@ -61,11 +67,48 @@ export const ProductSearchInput: React.FC<ProductSearchInputProps> = ({
     setIsSearching(true);
     
     try {
-      // Buscar en la tabla products de IndexedDB
+      // 1. Buscar el producto en la tabla products
       const foundProduct = await db.products.get(barcode);
       
       if (foundProduct) {
-        // Mapear campos del producto al formato esperado
+        // 2. Buscar políticas del proveedor en PRODUCTO_PROVEEDOR
+        let providerPolicy: ProductInfo['providerPolicy'] = undefined;
+        
+        try {
+          // Buscar por productBarcode (IndexedDB usa camelCase)
+          const productProviders = await db.table('productProviders')
+            .where('productBarcode')
+            .equals(barcode)
+            .toArray();
+          
+          if (productProviders && productProviders.length > 0) {
+            // Obtener el proveedor primario o el primero
+            const pp = productProviders.find(p => p.isPrimary) || productProviders[0];
+            
+            // También buscar info del proveedor
+            const provider = await db.table('providers').get(pp.providerRut);
+            
+            providerPolicy = {
+              hasExchange: pp.hasExchange ?? pp.has_exchange ?? provider?.hasExchange ?? false,
+              withdrawalDays: pp.withdrawalDays ?? pp.withdrawal_days ?? provider?.withdrawalDays ?? 30,
+              isPrimary: pp.isPrimary ?? false,
+            };
+          } else {
+            // Fallback: buscar solo en providers
+            const provider = await db.table('providers').get(foundProduct.supplierRut);
+            if (provider) {
+              providerPolicy = {
+                hasExchange: provider.hasExchange ?? false,
+                withdrawalDays: provider.withdrawalDays ?? 30,
+                isPrimary: true,
+              };
+            }
+          }
+        } catch (ppError) {
+          console.warn('No se pudo obtener políticas del proveedor:', ppError);
+        }
+
+        // 3. Mapear campos del producto al formato esperado
         const productInfo: ProductInfo = {
           barcode: foundProduct.barcode,
           name: foundProduct.name,
@@ -73,7 +116,9 @@ export const ProductSearchInput: React.FC<ProductSearchInputProps> = ({
           supplierName: foundProduct.supplier,
           supplierRut: foundProduct.supplierRut,
           unitsPerBox: foundProduct.unitsPerBox,
+          providerPolicy,
         };
+        
         setProduct(productInfo);
         onProductFound?.(productInfo);
       } else {
@@ -101,12 +146,6 @@ export const ProductSearchInput: React.FC<ProductSearchInputProps> = ({
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [value, searchProduct]);
-
-  // Limpiar producto cuando el valor cambiaexternamente
-  useEffect(() => {
-    // El producto se mantiene si coincide con el valor actual
-    // o se limpia si el usuario borra el input
-  }, [value]);
 
   // Focus en autoFocus
   useEffect(() => {
