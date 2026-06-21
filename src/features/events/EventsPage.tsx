@@ -1,476 +1,427 @@
 /**
- * EventsPage - Página unificada de gestión de eventos
+ * EventsPage - Módulo de Gestión de Eventos
  * 
- * Combina EventManagementPage y EventCapturePage en una sola vista
- * con tabs para alternar entre historial y captura.
+ * Arquitectura simplificada v2.0
  */
 
-import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '@/stores';
-import { useToastStore } from '@/stores';
 import { 
   RefreshCw, 
-  Plus, 
+  Trash2, 
+  CheckCircle2, 
+  AlertCircle, 
+  Truck,
   Search,
-  Home,
-  Zap,
-  ChevronLeft,
-  Trash2,
-  CheckCircle2,
-  AlertCircle,
-  Truck
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { format } from 'date-fns';
 
-// Hooks
-import { useEventUI } from './hooks/useEventUI';
-import { useEventDatabase } from './hooks/useEventDatabase';
-import { useScannerEngine } from '../../hooks/useScannerEngine';
-import { useProductivity } from '../counting/hooks/useProductivity';
-import { useSyncStore } from '@/stores';
-
-// Components
-import { EventHeader } from './components/EventHeader';
-import { EventListPanel } from './components/EventListPanel';
-import { EventOverlays } from './components/EventOverlays';
-import { EventFilterDrawer } from './components/EventFilterDrawer';
+import { useEvents, EventRecord } from './hooks/useEvents';
+import { ModuleHeader } from '@/shared/components/layout/ModuleHeader';
 import { EventDetailModal } from './components/EventDetailModal';
-import { SmartDock } from '../../components/SmartDock';
-import { CameraScanner } from '../../components/CameraScanner';
-import { ScannerTargetOverlay } from '../../shared/components/scanner/ScannerTargetOverlay';
-import { ModuleHeader } from '../../shared/components/layout/ModuleHeader';
-import { CaptureLayout } from '../../shared/components/layout/CaptureLayout';
-import { SyncDiagnosticsPanel } from '../sync/components/SyncDiagnosticsPanel';
-import { EventItemRow } from './components/EventItemRow';
-import { EventCaptureModal } from './components/EventCaptureModal';
-import { ProductivityDashboard } from '../counting/components/ProductivityDashboard';
 
-type PageMode = 'management' | 'capture';
+// ============================================================================
+// COMPONENTE: EventItemCard
+// ============================================================================
+interface EventItemCardProps {
+  event: EventRecord;
+  onDelete: (id: string) => void;
+  onSelect: (id: string) => void;
+  onViewDetail: (event: EventRecord) => void;
+  isSelected: boolean;
+}
 
-export const EventsPage: React.FC = () => {
-  const navigate = useNavigate();
-  const { settings } = useAppStore();
-  const syncStore = useSyncStore();
+const EventItemCard: React.FC<EventItemCardProps> = ({
+  event,
+  onDelete,
+  onSelect,
+  onViewDetail,
+  isSelected
+}) => {
+  const isAdjusted = event.isAdjusted;
+  const isDestined = !!event.destino;
+  const isPending = !isAdjusted && !isDestined;
 
-  // Estado de modo (management vs capture)
-  const [pageMode, setPageMode] = useState<PageMode>('management');
-
-  // ==================== MANAGEMENT STATE ====================
-  const { ui, actions, db } = useEventUI();
+  const statusColor = isAdjusted ? 'bg-emerald-500' : 
+                      isDestined ? 'bg-amber-500' : 'bg-slate-500';
   
-  const [selectedEvent, setSelectedEvent] = useState<any>(null);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-
-  // Virtualizers
-  const pendingRef = useRef<HTMLDivElement>(null);
-  const destinedRef = useRef<HTMLDivElement>(null);
-  const adjustedRef = useRef<HTMLDivElement>(null);
-
-  const pendingVirtualizer = useVirtualizer({
-    count: (ui.pendingGrouped?.length) || 0,
-    getScrollElement: () => pendingRef.current,
-    estimateSize: (index) => {
-      if (ui.pendingGrouped?.[index]?.type === 'header') return 60;
-      const baseHeight = db.preferences.compactView ? 100 : 160;
-      return ui.expandedPanel === 'pending' ? baseHeight * 1.2 : baseHeight;
-    },
-    overscan: 5,
-  });
-
-  const destinedVirtualizer = useVirtualizer({
-    count: ui.destinedGrouped?.length || 0,
-    getScrollElement: () => destinedRef.current,
-    estimateSize: (index) => {
-      if (ui.destinedGrouped?.[index]?.type === 'header') return 60;
-      const baseHeight = db.preferences.compactView ? 100 : 160;
-      return ui.expandedPanel === 'destined' ? baseHeight * 1.2 : baseHeight;
-    },
-    overscan: 5,
-  });
-
-  const adjustedVirtualizer = useVirtualizer({
-    count: (ui.adjustedGrouped?.length) || 0,
-    getScrollElement: () => adjustedRef.current,
-    estimateSize: (index) => {
-      if (ui.adjustedGrouped?.[index]?.type === 'header') return 60;
-      const baseHeight = db.preferences.compactView ? 100 : 160;
-      return ui.expandedPanel === 'adjusted' ? baseHeight * 1.2 : baseHeight;
-    },
-    overscan: 5,
-  });
-
-  // ==================== CAPTURE STATE ====================
-  const eventDb = useEventDatabase();
-  const engine = useScannerEngine();
-  
-  const [isProductivityVisible, setIsProductivityVisible] = useState(false);
-  const { stats, formattedDuration } = useProductivity(
-    eventDb.processedEvents.map(e => ({ 
-      barcode: e.barcode || `event-${e.id}`, 
-      totalQuantity: 1 
-    }))
-  );
-
-  // Atajos de teclado
-  useEffect(() => {
-    const handleShortcuts = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
-      if (e.key.toLowerCase() === 'p' && e.altKey) {
-        e.preventDefault();
-        setIsProductivityVisible(prev => !prev);
-      }
-    };
-    window.addEventListener('keydown', handleShortcuts);
-    return () => window.removeEventListener('keydown', handleShortcuts);
-  }, []);
-
-  // ==================== HANDLERS ====================
-
-  const handleSingleRemove = useCallback(async (item: any) => {
-    const confirm = window.confirm(`¿RETIRAR ${item.productName}? ESTA ACCIÓN ES IRREVERSIBLE.`);
-    if (confirm) {
-      try {
-        await db.actions.deleteEvent(item.id);
-        toast.success('Registro eliminado correctamente');
-      } catch (error: any) {
-        toast.error(error.message || 'Error al eliminar registro');
-      }
-    }
-  }, [db.actions]);
-
-  const handleViewDetail = useCallback((item: any) => {
-    setSelectedEvent(item);
-    setIsDetailModalOpen(true);
-  }, []);
-
-  const handleAddItem = useCallback(async (data: any) => {
-    const result = await eventDb.actions.handleAddItem(data);
-    if (result) {
-      engine.resetScanner();
-    }
-  }, [eventDb.actions, engine]);
-
-  const handleDelete = useCallback(async (id: string) => {
-    if (window.confirm('¿Eliminar este registro?')) {
-      const itemToDelete = eventDb.processedEvents.find(i => i.id === id);
-      if (itemToDelete) {
-        await eventDb.actions.handleRemoveItem(itemToDelete);
-      }
-    }
-  }, [eventDb.processedEvents, eventDb.actions]);
-
-  // ==================== RENDER HELPERS ====================
-
-  const sortedItems = useMemo(() => {
-    return [...eventDb.processedEvents]
-      .sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
-  }, [eventDb.processedEvents]);
-
-  // ==================== CAPTURE MODE COMPONENTS ====================
-
-  const captureHeader = (
-    <ModuleHeader 
-      title="Captura Eventos"
-      subtitle="Gestión de Diferencias"
-      hideTitleOnMobile={true}
-      hideBackButtonOnMobile={true}
-      onBack={() => setPageMode('management')}
-      actions={
-        <div className="hidden md:flex items-center gap-2">
-          <button
-            onClick={() => setIsProductivityVisible(prev => !prev)}
-            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
-              isProductivityVisible 
-                ? 'bg-amber-500 text-black' 
-                : 'bg-white/5 text-slate-400 hover:bg-white/10'
-            }`}
-            title="Productividad (Alt+P)"
-          >
-            <Zap className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => engine.setIsSyncModalOpen(true)}
-            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
-              syncStore.incidents.length > 0 
-                ? 'bg-rose-500 text-white animate-pulse shadow-[0_0_15px_rgba(244,63,94,0.4)]' 
-                : 'bg-white/5 text-slate-400 hover:bg-white/10'
-            }`}
-            title="Sincronización"
-          >
-             <RefreshCw className={`w-5 h-5 ${syncStore.isSyncing ? 'animate-spin' : ''}`} />
-          </button>
-          <button
-            onClick={() => engine.setIsSearchActive(!engine.isSearchActive)}
-            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-              engine.isSearchActive ? 'bg-blue-600 text-white' : 'bg-white/5 text-slate-400 active:bg-white/10'
-            }`}
-          >
-            <Search className="w-5 h-5" />
-          </button>
-        </div>
-      }
-    />
-  );
-
-  const mobileDock = (
-    <SmartDock 
-      items={[
-        { id: 'home', icon: Home, onClick: () => setPageMode('management') },
-        { 
-          id: 'search', 
-          icon: Search, 
-          onClick: () => engine.setIsSearchActive(!engine.isSearchActive),
-          isActive: engine.isSearchActive,
-          activeColor: 'text-blue-400',
-          activeBg: 'bg-blue-500/20'
-        },
-        {
-          id: 'sync',
-          icon: RefreshCw,
-          onClick: () => engine.setIsSyncModalOpen(true),
-          isActive: syncStore.incidents.length > 0 || syncStore.isSyncing,
-          activeColor: syncStore.incidents.length > 0 ? 'text-rose-500' : 'text-blue-400',
-          activeBg: syncStore.incidents.length > 0 ? 'bg-rose-500/20' : 'bg-blue-500/20'
-        }
-      ]} 
-      variant="contextual" 
-    />
-  );
-
-  const cameraArea = (
-    <AnimatePresence>
-      {engine.capture.isCameraActive && (
-        <motion.div 
-          initial={{ height: 0, opacity: 0 }}
-          animate={{ height: 260, opacity: 1 }}
-          exit={{ height: 0, opacity: 0 }}
-          className="bg-black overflow-hidden border-b-2 border-blue-500/50 shadow-inner relative"
-        >
-          <CameraScanner 
-            onScan={engine.handleScan} 
-            onClose={() => engine.capture.setIsCameraActive(false)} 
-            inline={true}
-            isTriggered={true}
-          />
-          <ScannerTargetOverlay feedback={engine.feedback} />
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-
-  const modalForm = (
-    <EventCaptureModal
-      isOpen={engine.isModalOpen}
-      onClose={() => engine.setIsModalOpen(false)}
-      scannedBarcode={engine.scannedBarcode}
-      product={engine.product}
-      onAddItem={handleAddItem}
-    />
-  );
-
-  // ==================== MAIN RENDER ====================
+  const statusLabel = isAdjusted ? 'Ajustado' : 
+                      isDestined ? 'Destinado' : 'Pendiente';
 
   return (
-    <div className={`h-full flex flex-col overflow-hidden font-sans selection:bg-brand-warning/30 transition-colors duration-500 ${
-      settings.theme === 'dark' ? 'bg-brand-dark text-white' : 'bg-stone-200/50 text-slate-900'
-    }`}>
-      {/* Page Header con Tabs */}
-      <div className="px-4 pt-4">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold">
-            {pageMode === 'management' ? 'Eventos' : 'Captura'}
-          </h1>
-          {pageMode === 'management' && (
+    <div 
+      className={`
+        relative p-4 rounded-2xl border transition-all cursor-pointer
+        ${isSelected 
+          ? 'bg-blue-500/10 border-blue-500/30' 
+          : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
+        }
+      `}
+      onClick={() => onSelect(event.id)}
+    >
+      {/* Header */}
+      <div className="flex items-start justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <span className={`w-2 h-2 rounded-full ${statusColor}`} />
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+            {statusLabel}
+          </span>
+        </div>
+        <span className="text-[9px] font-mono text-slate-500">
+          {format(new Date(event.timestamp), 'HH:mm')}
+        </span>
+      </div>
+
+      {/* Content */}
+      <div className="space-y-1">
+        <p className="text-sm font-black uppercase tracking-tight">
+          {event.productName || 'Sin producto'}
+        </p>
+        <p className="text-xs font-mono text-slate-400">
+          {event.barcode}
+        </p>
+        
+        {event.frc && (
+          <p className="text-[10px] font-mono text-amber-400">
+            FRC: {event.frc}
+          </p>
+        )}
+        
+        {event.destino && (
+          <p className="text-[10px] font-bold text-blue-400">
+            {event.destino}
+            {event.traspaso && ` (${event.traspaso})`}
+          </p>
+        )}
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-2 mt-3 pt-3 border-t border-white/5">
+        <button
+          onClick={(e) => { e.stopPropagation(); onViewDetail(event); }}
+          className="flex-1 py-1.5 text-[10px] font-bold uppercase tracking-wider bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
+        >
+          Ver Detalle
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete(event.id); }}
+          className="p-1.5 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================================
+// COMPONENTE: EventSection
+// ============================================================================
+interface EventSectionProps {
+  title: string;
+  icon: React.ElementType;
+  events: EventRecord[];
+  isExpanded: boolean;
+  onToggle: () => void;
+  onDelete: (id: string) => void;
+  onSelect: (id: string) => void;
+  onViewDetail: (event: EventRecord) => void;
+  selectedIds: Set<string>;
+  theme: 'dark' | 'light' | 'high-contrast';
+}
+
+const EventSection: React.FC<EventSectionProps> = ({
+  title,
+  icon: Icon,
+  events,
+  isExpanded,
+  onToggle,
+  onDelete,
+  onSelect,
+  onViewDetail,
+  selectedIds,
+  theme
+}) => {
+  const isDark = theme === 'dark';
+  
+  return (
+    <div className="rounded-2xl border border-white/10 overflow-hidden">
+      {/* Section Header */}
+      <button
+        onClick={onToggle}
+        className={`
+          w-full px-4 py-3 flex items-center justify-between
+          ${isDark ? 'bg-white/5' : 'bg-slate-100'}
+        `}
+      >
+        <div className="flex items-center gap-3">
+          <div className={`p-2 rounded-lg ${isDark ? 'bg-white/10' : 'bg-slate-200'}`}>
+            <Icon className="w-4 h-4" />
+          </div>
+          <div className="text-left">
+            <span className="text-xs font-black uppercase tracking-wider">{title}</span>
+            <span className="ml-2 text-[10px] font-mono text-slate-400">
+              {events.length} registros
+            </span>
+          </div>
+        </div>
+        {isExpanded ? (
+          <ChevronUp className="w-4 h-4 text-slate-400" />
+        ) : (
+          <ChevronDown className="w-4 h-4 text-slate-400" />
+        )}
+      </button>
+
+      {/* Section Content */}
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0 }}
+            animate={{ height: 'auto' }}
+            exit={{ height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="p-4 space-y-3 max-h-[400px] overflow-y-auto">
+              {events.length === 0 ? (
+                <div className="text-center py-8 text-slate-500">
+                  <p className="text-xs font-bold uppercase tracking-widest">
+                    No hay registros
+                  </p>
+                </div>
+              ) : (
+                events.map(evt => (
+                  <EventItemCard
+                    key={evt.id}
+                    event={evt}
+                    onDelete={onDelete}
+                    onSelect={onSelect}
+                    onViewDetail={onViewDetail}
+                    isSelected={selectedIds.has(evt.id)}
+                  />
+                ))
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+// ============================================================================
+// COMPONENTE PRINCIPAL: EventsPage
+// ============================================================================
+export const EventsPage: React.FC = () => {
+  const settings = useAppStore(state => state.settings);
+  const theme = (settings.theme as 'dark' | 'light' | 'high-contrast') || 'dark';
+  const isDark = theme === 'dark';
+
+  const {
+    pendingEvents,
+    destinedEvents,
+    adjustedEvents,
+    filters,
+    isLoading,
+    isSyncing,
+    selectedIds,
+    isDetailModalOpen,
+    selectedEvent,
+    actions
+  } = useEvents();
+
+  const [expandedSections, setExpandedSections] = useState({
+    pending: true,
+    destined: true,
+    adjusted: false
+  });
+
+  const toggleSection = (section: 'pending' | 'destined' | 'adjusted') => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
+  const handleDelete = useCallback(async (id: string) => {
+    if (window.confirm('Eliminar este evento?')) {
+      try {
+        await actions.deleteEvent(id);
+      } catch {
+        toast.error('Error al eliminar');
+      }
+    }
+  }, [actions]);
+
+  const handleBulkDelete = useCallback(async () => {
+    if (selectedIds.size === 0) return;
+    if (window.confirm(`Eliminar ${selectedIds.size} eventos?`)) {
+      try {
+        await actions.bulkDelete(Array.from(selectedIds));
+      } catch {
+        toast.error('Error al eliminar');
+      }
+    }
+  }, [selectedIds, actions]);
+
+  const handleViewDetail = useCallback((event: EventRecord) => {
+    actions.setSelectedEvent(event);
+    actions.setIsDetailModalOpen(true);
+  }, [actions]);
+
+  const totalCount = pendingEvents.length + destinedEvents.length + adjustedEvents.length;
+
+  return (
+    <div className={`h-full flex flex-col overflow-hidden ${isDark ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'}`}>
+      {/* Header */}
+      <ModuleHeader
+        title="Eventos"
+        subtitle={`${totalCount} registros`}
+        hideTitleOnMobile={false}
+        hideBackButtonOnMobile={true}
+        actions={
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => setPageMode('capture')}
-              className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-black rounded-xl font-bold text-sm"
+              onClick={() => actions.syncEvents()}
+              disabled={isSyncing}
+              className="w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors disabled:opacity-50"
+              title="Sincronizar"
             >
-              <Plus className="w-4 h-4" />
-              Nuevo
+              <RefreshCw className={`w-5 h-5 ${isSyncing ? 'animate-spin' : ''}`} />
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              disabled={selectedIds.size === 0}
+              className="w-10 h-10 rounded-xl bg-red-500/10 hover:bg-red-500/20 flex items-center justify-center transition-colors disabled:opacity-50"
+              title="Eliminar seleccionados"
+            >
+              <Trash2 className="w-5 h-5 text-red-400" />
+            </button>
+          </div>
+        }
+      />
+
+      {/* Search & Filters */}
+      <div className="px-4 py-3 space-y-3">
+        <div className={`
+          flex items-center gap-3 px-4 py-3 rounded-2xl border
+          ${isDark ? 'bg-white/5 border-white/10' : 'bg-white border-slate-200'}
+        `}>
+          <Search className="w-5 h-5 text-slate-400 shrink-0" />
+          <input
+            type="text"
+            placeholder="Buscar por producto, barcode, destino..."
+            value={filters.searchQuery}
+            onChange={(e) => actions.setSearchQuery(e.target.value)}
+            className={`
+              flex-1 bg-transparent outline-none text-sm font-medium
+              ${isDark ? 'placeholder:text-slate-500 text-white' : 'placeholder:text-slate-400 text-slate-900'}
+            `}
+          />
+          {filters.searchQuery && (
+            <button
+              onClick={() => actions.setSearchQuery('')}
+              className="text-slate-400 hover:text-white"
+            >
+              x
             </button>
           )}
         </div>
 
-        {/* Mode Tabs */}
-        <div className="flex gap-2">
-          <button
-            onClick={() => setPageMode('management')}
-            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
-              pageMode === 'management'
-                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                : 'bg-white/5 text-slate-400 border border-white/10'
-            }`}
-          >
-            Historial
-          </button>
-          <button
-            onClick={() => setPageMode('capture')}
-            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
-              pageMode === 'capture'
-                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                : 'bg-white/5 text-slate-400 border border-white/10'
-            }`}
-          >
-            Captura
-          </button>
+        {/* Filter chips */}
+        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+          {[
+            { label: 'Todos', key: [] },
+            { label: 'Pendientes', key: ['pending'] },
+            { label: 'Destinados', key: ['destined'] },
+            { label: 'Ajustados', key: ['adjusted'] },
+          ].map(filter => (
+            <button
+              key={filter.label}
+              onClick={() => actions.setSelectedEvents(filter.key)}
+              className={`
+                px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider whitespace-nowrap transition-colors
+                ${filters.selectedEvents.length === 0 && filter.key.length === 0
+                  ? 'bg-amber-500 text-black'
+                  : isDark 
+                    ? 'bg-white/5 text-slate-400 hover:bg-white/10' 
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }
+              `}
+            >
+              {filter.label}
+            </button>
+          ))}
         </div>
       </div>
 
+      {/* Selection info */}
+      {selectedIds.size > 0 && (
+        <div className="px-4 py-2 bg-blue-500/10 border-y border-blue-500/20">
+          <p className="text-xs font-bold text-blue-400">
+            {selectedIds.size} seleccionado(s)
+          </p>
+        </div>
+      )}
+
       {/* Content */}
-      <div className="flex-1 overflow-hidden">
-        <AnimatePresence mode="wait">
-          {pageMode === 'management' ? (
-            <motion.div
-              key="management"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              className="h-full"
-            >
-              {/* HEADER */}
-              <EventHeader 
-                totalCount={db.totalCount}
-                pendingOperations={db.pendingOperations || 0}
-                isSyncing={ui.isSyncing}
-                theme={(settings.theme as 'dark' | 'light' | 'high-contrast') || 'dark'}
-                onNavigateExpiry={() => navigate('/expiry')}
-                onToggleTheme={() => {}}
-                onOpenSettings={() => actions.setIsFilterDrawerOpen(true)}
-              />
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <RefreshCw className="w-8 h-8 animate-spin text-slate-400" />
+          </div>
+        ) : (
+          <>
+            <EventSection
+              title="En Espera"
+              icon={AlertCircle}
+              events={pendingEvents}
+              isExpanded={expandedSections.pending}
+              onToggle={() => toggleSection('pending')}
+              onDelete={handleDelete}
+              onSelect={actions.toggleSelection}
+              onViewDetail={handleViewDetail}
+              selectedIds={selectedIds}
+              theme={theme}
+            />
 
-              {/* FILTERS */}
-              <EventOverlays
-                ui={ui}
-                actions={actions}
-                db={db}
-                settings={settings}
-              />
+            <EventSection
+              title="Destinados"
+              icon={Truck}
+              events={destinedEvents}
+              isExpanded={expandedSections.destined}
+              onToggle={() => toggleSection('destined')}
+              onDelete={handleDelete}
+              onSelect={actions.toggleSelection}
+              onViewDetail={handleViewDetail}
+              selectedIds={selectedIds}
+              theme={theme}
+            />
 
-              {/* PANELS */}
-              <div className="flex-1 overflow-auto p-4 space-y-4">
-                <EventListPanel
-                  title="En Espera"
-                  icon={AlertCircle}
-                  grouped={ui.pendingGrouped}
-                  virtualizer={pendingVirtualizer}
-                  scrollRef={pendingRef}
-                  expandedPanel={ui.expandedPanel}
-                  onTogglePanel={() => actions.togglePanel('pending')}
-                  onViewDetail={handleViewDetail}
-                  onRemove={handleSingleRemove}
-                />
-                
-                <EventListPanel
-                  title="Destinados"
-                  icon={Truck}
-                  grouped={ui.destinedGrouped}
-                  virtualizer={destinedVirtualizer}
-                  scrollRef={destinedRef}
-                  expandedPanel={ui.expandedPanel}
-                  onTogglePanel={() => actions.togglePanel('destined')}
-                  onViewDetail={handleViewDetail}
-                  onRemove={handleSingleRemove}
-                />
-                
-                <EventListPanel
-                  title="Ajustados"
-                  icon={CheckCircle2}
-                  grouped={ui.adjustedGrouped}
-                  virtualizer={adjustedVirtualizer}
-                  scrollRef={adjustedRef}
-                  expandedPanel={ui.expandedPanel}
-                  onTogglePanel={() => actions.togglePanel('adjusted')}
-                  onViewDetail={handleViewDetail}
-                  onRemove={handleSingleRemove}
-                />
-              </div>
-
-              {/* FILTER DRAWER */}
-              <EventFilterDrawer
-                isOpen={ui.isFilterDrawerOpen}
-                onClose={actions.closeFilterDrawer}
-                eventTypes={db.eventTypes || []}
-                selectedEvents={db.selectedEvents}
-                onToggleEvent={actions.handleToggleEvent}
-                onClearFilters={actions.clearFilters}
-                activeFiltersCount={ui.activeFiltersCount}
-                dateRange={ui.dateRange}
-                onSetDateRange={actions.setDateRange}
-                theme={(settings.theme as 'dark' | 'light' | 'high-contrast') || 'dark'}
-              />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="capture"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="h-full"
-            >
-              <CaptureLayout
-                header={captureHeader}
-                footer={mobileDock}
-                extra={cameraArea}
-                filters={
-                  <div className="flex gap-2">
-                    <div className="px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
-                      Eventos Recientes
-                    </div>
-                  </div>
-                }
-                modalForm={modalForm}
-                inputValue={engine.isSearchActive ? engine.searchQuery : engine.capture.inputValue}
-                onInputChange={engine.isSearchActive ? engine.setSearchQuery : engine.capture.setInputValue}
-                onInputSubmit={engine.capture.handleManualSubmit}
-                onCameraToggle={() => engine.capture.setIsCameraActive(!engine.capture.isCameraActive)}
-                inputPlaceholder={engine.isSearchActive ? "Buscar..." : "Escanear o digitar..."}
-                inputRef={engine.capture.inputRef}
-                readOnly={engine.isModalOpen}
-                list={
-                  <div className="space-y-4">
-                    {sortedItems.map((item) => (
-                      <EventItemRow 
-                        key={item.id} 
-                        item={item} 
-                        onDelete={handleDelete} 
-                      />
-                    ))}
-                  </div>
-                }
-                emptyState={
-                  sortedItems.length === 0 && (
-                    <div className="text-center py-12 text-slate-500 font-bold text-sm uppercase tracking-widest">
-                      No hay eventos recientes
-                    </div>
-                  )
-                }
-              />
-
-              <SyncDiagnosticsPanel 
-                isOpen={engine.isSyncModalOpen} 
-                onClose={() => engine.setIsSyncModalOpen(false)} 
-              />
-
-              <ProductivityDashboard 
-                stats={stats}
-                formattedDuration={formattedDuration}
-                isVisible={isProductivityVisible}
-                onToggle={() => setIsProductivityVisible(prev => !prev)}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+            <EventSection
+              title="Ajustados"
+              icon={CheckCircle2}
+              events={adjustedEvents}
+              isExpanded={expandedSections.adjusted}
+              onToggle={() => toggleSection('adjusted')}
+              onDelete={handleDelete}
+              onSelect={actions.toggleSelection}
+              onViewDetail={handleViewDetail}
+              selectedIds={selectedIds}
+              theme={theme}
+            />
+          </>
+        )}
       </div>
 
       {/* Detail Modal */}
       <EventDetailModal
         event={selectedEvent}
         isOpen={isDetailModalOpen}
-        onClose={() => setIsDetailModalOpen(false)}
+        onClose={() => actions.setIsDetailModalOpen(false)}
       />
     </div>
   );
