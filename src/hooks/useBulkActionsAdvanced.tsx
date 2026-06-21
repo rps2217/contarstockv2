@@ -6,6 +6,9 @@
  * - Atajos de teclado globales
  * - Sistema de deshacer (undo)
  * - Historial de acciones masivas
+ * - Notificaciones de escritorio
+ * - Exportación a CSV
+ * - Dry-run mode
  */
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
@@ -14,7 +17,7 @@ import { db } from '@/db';
 import { useBulkActions, BulkAction, BulkEditConfig, BulkActionBar, BulkEditModal } from './useBulkActions';
 import { useTaskStore } from '@/stores';
 import { toast } from 'sonner';
-import { Undo2, Clock, Eye, EyeOff, ArrowUpDown } from 'lucide-react';
+import { Undo2, Clock, Eye, EyeOff, ArrowUpDown, Download, Play, Pause, FileText } from 'lucide-react';
 
 // ============================================================
 // TIPOS
@@ -278,6 +281,170 @@ export function useBulkActionsAdvanced<T = any>(
   // Deshacer
   const canUndo = undoContext !== null && history.length > 0 && history[0]?.canUndo;
 
+  // ============================================================
+  // NOTIFICACIONES DE ESCRITORIO
+  // ============================================================
+  
+  const requestNotificationPermission = useCallback(async () => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      const permission = await Notification.requestPermission();
+      return permission === 'granted';
+    }
+    return Notification.permission === 'granted';
+  }, []);
+
+  const sendNotification = useCallback((title: string, options?: NotificationOptions) => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      const notification = new Notification(title, {
+        icon: '/favicon.ico',
+        badge: '/favicon.ico',
+        ...options
+      });
+      setTimeout(() => notification.close(), 5000);
+      return notification;
+    }
+    return null;
+  }, []);
+
+  // ============================================================
+  // EXPORTACIÓN A CSV
+  // ============================================================
+  
+  const exportHistoryToCSV = useCallback((entries: BulkHistoryEntry[]) => {
+    const headers = ['Fecha', 'Módulo', 'Acción', 'Ítems', 'Deshecho', 'Estado'];
+    const rows = entries.map(entry => [
+      new Date(entry.timestamp).toLocaleString(),
+      entry.module,
+      entry.actionLabel,
+      entry.itemCount.toString(),
+      entry.undone ? 'Sí' : 'No',
+      entry.canUndo && !entry.undone ? 'Reversible' : 'Finalizado'
+    ]);
+
+    const csv = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `bulk_history_${Date.now()}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success('Historial exportado a CSV');
+    return csv;
+  }, []);
+
+  const exportItemsToCSV = useCallback((items: T[], filename?: string) => {
+    if (items.length === 0) {
+      toast.error('No hay elementos para exportar');
+      return;
+    }
+
+    const keys = new Set<string>();
+    items.forEach(item => {
+      Object.keys(item as object).forEach(key => keys.add(key));
+    });
+    const keyArray = Array.from(keys);
+
+    const headers = keyArray;
+    const rows = items.map(item => {
+      const obj = item as Record<string, any>;
+      return keyArray.map(key => {
+        const value = obj[key];
+        if (value === null || value === undefined) return '';
+        if (typeof value === 'object') return JSON.stringify(value);
+        return String(value);
+      });
+    });
+
+    const csv = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename || `export_${config.module}_${Date.now()}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success(`${items.length} elementos exportados`);
+    return csv;
+  }, [config.module]);
+
+  // ============================================================
+  // DRY-RUN MODE
+  // ============================================================
+  
+  const [isDryRunMode, setIsDryRunMode] = useState(false);
+  const [dryRunResults, setDryRunResults] = useState<{
+    actionId: string;
+    affected: number;
+    errors: string[];
+    preview: Record<string, any>[];
+  } | null>(null);
+
+  const performDryRun = useCallback((actionId: string, items: T[]) => {
+    const action = config.actions.find(a => a.id === actionId);
+    if (!action) {
+      toast.error('Acción no encontrada');
+      return;
+    }
+
+    const preview = items.map((item) => ({
+      id: config.getItemId(item),
+      status: 'would_change' as const,
+      changes: actionId === 'delete' ? { action: 'delete' } :
+               actionId === 'edit' ? { action: 'update', fields: {} } :
+               { action: action.label }
+    }));
+
+    setDryRunResults({ actionId, affected: items.length, errors: [], preview });
+    setIsDryRunMode(true);
+    toast.info(`Dry-run: ${action.label} afectaría ${items.length} elementos`);
+  }, [config.actions, config.getItemId]);
+
+  const executeDryRun = useCallback(async (actionId: string, items: T[]) => {
+    setIsDryRunMode(false);
+    setDryRunResults(null);
+    await executeBulkActionWithHistory(actionId, items);
+  }, [executeBulkActionWithHistory]);
+
+  const cancelDryRun = useCallback(() => {
+    setIsDryRunMode(false);
+    setDryRunResults(null);
+  }, []);
+
+  // ============================================================
+  // INTEGRACIÓN CON AUDIT LOGS
+  // ============================================================
+  
+  const logToAudit = useCallback(async (
+    action: 'CREATE' | 'UPDATE' | 'DELETE',
+    tableName: string,
+    recordId: string,
+    oldValue?: any,
+    newValue?: any
+  ) => {
+    try {
+      await db.audit_logs.add({
+        tableName,
+        recordId,
+        action,
+        oldValue: oldValue ? JSON.stringify(oldValue) : undefined,
+        newValue: newValue ? JSON.stringify(newValue) : undefined,
+        timestamp: Date.now(),
+        synced: false
+      });
+    } catch (e) {
+      console.error('Error logging to audit:', e);
+    }
+  }, []);
+
   const performUndo = useCallback(async () => {
     if (!undoContext || !config.onUndoAction) {
       toast.error('No se puede deshacer esta acción');
@@ -414,6 +581,24 @@ export function useBulkActionsAdvanced<T = any>(
     performUndo,
     clearHistory,
     
+    // Notificaciones
+    requestNotificationPermission,
+    sendNotification,
+    
+    // Exportación
+    exportHistoryToCSV,
+    exportItemsToCSV,
+    
+    // Dry-run
+    isDryRunMode,
+    dryRunResults,
+    performDryRun,
+    executeDryRun,
+    cancelDryRun,
+    
+    // Audit logs
+    logToAudit,
+    
     // Atajos
     keyboardHint,
     
@@ -509,6 +694,134 @@ export const BulkHistoryPanel: React.FC<BulkHistoryPanelProps> = ({
             )}
           </div>
         ))}
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// COMPONENTE: DryRunModal
+// ============================================================
+
+export interface DryRunModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  results: {
+    actionId: string;
+    affected: number;
+    errors: string[];
+    preview: Record<string, any>[];
+  } | null;
+  theme?: 'dark' | 'light' | 'high-contrast';
+}
+
+export const DryRunModal: React.FC<DryRunModalProps> = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  results,
+  theme = 'dark'
+}) => {
+  if (!isOpen || !results) return null;
+
+  const bgClass = theme === 'dark' ? 'bg-slate-900' : 'bg-white';
+  const textClass = theme === 'dark' ? 'text-white' : 'text-slate-900';
+  const mutedClass = theme === 'dark' ? 'text-slate-400' : 'text-slate-500';
+  const inputBgClass = theme === 'dark' ? 'bg-black/40 border-white/10' : 'bg-slate-50 border-slate-200';
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      
+      <div className={`relative w-full max-w-lg rounded-[2rem] shadow-2xl overflow-hidden border-4 border-blue-500 ${bgClass}`}>
+        <div className="bg-blue-600 p-6 border-b-4 border-black">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+              <FileText className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-black uppercase tracking-tighter italic leading-none text-white">
+                Preview de Cambios
+              </h2>
+              <p className="text-[10px] text-blue-200 font-bold uppercase tracking-widest mt-1">
+                Modo Dry-Run
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-8 space-y-6">
+          {/* Resumen */}
+          <div className={`p-4 rounded-xl border ${theme === 'dark' ? 'bg-blue-900/20 border-blue-500/20' : 'bg-blue-50 border-blue-200'}`}>
+            <div className="flex items-center justify-between">
+              <span className={`text-sm font-bold ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`}>
+                Elementos afectados
+              </span>
+              <span className="text-2xl font-black text-blue-500">{results.affected}</span>
+            </div>
+          </div>
+
+          {/* Preview de cambios */}
+          <div className="space-y-2">
+            <label className={`text-[10px] font-black uppercase tracking-widest ${mutedClass}`}>
+              Cambios que se aplicarán:
+            </label>
+            <div className={`rounded-xl border ${inputBgClass} max-h-48 overflow-y-auto`}>
+              {results.preview.slice(0, 10).map((item, idx) => (
+                <div key={idx} className={`p-3 border-b last:border-b-0 ${theme === 'dark' ? 'border-white/5' : 'border-slate-200'}`}>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-xs font-mono truncate flex-1 ${textClass}`}>
+                      {item.id}
+                    </span>
+                    <span className="text-xs font-bold text-blue-500 ml-2">
+                      {item.changes?.action || 'update'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              {results.preview.length > 10 && (
+                <div className={`p-3 text-center ${mutedClass}`}>
+                  <span className="text-xs">+{results.preview.length - 10} más...</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Errores */}
+          {results.errors.length > 0 && (
+            <div className="space-y-2">
+              <label className={`text-[10px] font-black uppercase tracking-widest text-red-500`}>
+                Errores detectados:
+              </label>
+              <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-4">
+                {results.errors.map((err, idx) => (
+                  <div key={idx} className="text-xs text-red-400">{err}</div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Acciones */}
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className={`flex-1 py-4 rounded-xl font-black uppercase tracking-widest text-xs transition-all ${
+                theme === 'dark' 
+                  ? 'bg-white/10 text-white hover:bg-white/20' 
+                  : 'bg-slate-100 text-slate-900 hover:bg-slate-200'
+              }`}
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={onConfirm}
+              className="flex-1 py-4 rounded-xl font-black uppercase tracking-widest text-xs bg-blue-600 hover:bg-blue-700 text-white shadow-xl transition-all active:scale-95"
+            >
+              Aplicar Cambios
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

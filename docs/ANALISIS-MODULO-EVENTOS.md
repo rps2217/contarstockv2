@@ -281,4 +281,58 @@ src/features/events/
 
 ---
 
+## 🚀 Mejoras Opcionales Implementadas ✅
+
+| Mejora | API | Descripción |
+|--------|-----|-------------|
+| Notificaciones | `requestNotificationPermission()`, `sendNotification()` | Notificaciones de escritorio para undo |
+| Exportar CSV | `exportHistoryToCSV()`, `exportItemsToCSV()` | Exportar historial o items seleccionados |
+| Audit Logs | `logToAudit()` | Integración con sistema de audit existente |
+| Dry-run | `performDryRun()`, `DryRunModal` | Preview de cambios antes de aplicar |
+
+### Uso de Notificaciones
+```tsx
+// Solicitar permiso
+const hasPermission = await bulk.requestNotificationPermission();
+
+// Enviar notificación
+bulk.sendNotification('Acción completada', {
+  body: `${count} elementos actualizados`,
+  tag: 'bulk-action'
+});
+```
+
+### Uso de Exportación
+```tsx
+// Exportar items seleccionados
+bulk.exportItemsToCSV(selectedItems, 'mi_reporte.csv');
+
+// Exportar historial
+bulk.exportHistoryToCSV(bulk.history);
+```
+
+### Uso de Dry-run
+```tsx
+// Preview antes de ejecutar
+bulk.performDryRun('delete', selectedItems);
+
+// En el render
+{bulk.isDryRunMode && (
+  <DryRunModal
+    isOpen={bulk.isDryRunMode}
+    results={bulk.dryRunResults}
+    onConfirm={() => bulk.executeDryRun('delete', selectedItems)}
+    onClose={bulk.cancelDryRun}
+  />
+)}
+```
+
+### Uso de Audit Logs
+```tsx
+// Registrar en audit log
+await bulk.logToAudit('DELETE', 'events', itemId, oldItem);
+```
+
+---
+
 *Documento generado: $(date +%Y-%m-%d)*
