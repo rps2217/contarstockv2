@@ -430,10 +430,29 @@ export const ExpiryPage: React.FC = () => {
       <ExpiryCaptureModal
         isOpen={showCaptureModal}
         onClose={() => setShowCaptureModal(false)}
-        onSuccess={() => {
-          setShowCaptureModal(false);
-          actions.clearFilters();
+        onSubmit={async (data) => {
+          try {
+            // Crear registro usando el hook
+            await actions.createRecord({
+              barcode: data.barcode,
+              productName: data.productName,
+              mm: data.mm,
+              yyyy: data.yyyy,
+              quantity: data.quantity,
+              location: data.location,
+              observaciones: data.observaciones,
+              providerName: data.providerName,
+              providerRut: data.providerRut,
+            });
+            toast.success('Vencimiento registrado exitosamente');
+            setShowCaptureModal(false);
+            actions.clearFilters();
+          } catch (error) {
+            toast.error('Error al registrar vencimiento');
+            throw error;
+          }
         }}
+        theme={theme}
       />
     </div>
   );

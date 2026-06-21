@@ -67,6 +67,19 @@ export interface ExpiryStats {
   safe: number;
 }
 
+/** Datos de entrada para crear un nuevo vencimiento (campos del formulario) */
+export interface CreateExpiryData {
+  barcode: string;
+  productName: string;
+  mm: number;
+  yyyy: number;
+  quantity: number;
+  location: string;
+  observaciones: string;
+  providerName?: string;
+  providerRut?: string;
+}
+
 interface UseExpiryReturn {
   records: ExpiryRecord[];
   filteredRecords: ExpiryRecord[];
@@ -90,7 +103,7 @@ interface UseExpiryReturn {
     deleteRecord: (id: string) => Promise<void>;
     bulkDelete: (ids: string[]) => Promise<void>;
     updateRecord: (id: string, data: Partial<ExpiryRecord>) => Promise<void>;
-    createRecord: (data: Omit<ExpiryRecord, 'id'>) => Promise<string | null>;
+    createRecord: (data: CreateExpiryData) => Promise<string | null>;
     syncRecords: () => Promise<void>;
     setIsDetailModalOpen: (open: boolean) => void;
     setSelectedRecord: (record: ExpiryRecord | null) => void;
@@ -328,18 +341,57 @@ export const useExpiry = (): UseExpiryReturn => {
     }
   }, []);
 
-  const createRecord = useCallback(async (data: Omit<ExpiryRecord, 'id'>): Promise<string | null> => {
+  const createRecord = useCallback(async (data: CreateExpiryData): Promise<string | null> => {
     try {
       const lastDay = new Date(data.yyyy, data.mm, 0).getDate();
       const claveUnica = `${data.barcode}${data.yyyy}${String(data.mm).padStart(2, '0')}${String(lastDay).padStart(2, '0')}`;
       const id = crypto.randomUUID();
-
-      const record = {
-        ...data,
+      const timestamp = Date.now();
+      
+      // Crear fecha de vencimiento
+      const expiryDateObj = new Date(data.yyyy, data.mm - 1, lastDay);
+      const daysLeft = Math.ceil((expiryDateObj.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+      const withdrawalDays = 30;
+      
+      // Calcular estado basado en días restantes
+      let status: ExpiryStatus;
+      if (daysLeft < 0) {
+        status = ExpiryStatus.EXPIRED;
+      } else if (daysLeft <= 15) {
+        status = ExpiryStatus.CRITICAL;
+      } else if (daysLeft <= withdrawalDays) {
+        status = ExpiryStatus.WITHDRAWAL;
+      } else if (daysLeft <= 90) {
+        status = ExpiryStatus.NEXT_EXPIRY;
+      } else {
+        status = ExpiryStatus.SAFE;
+      }
+      
+      // Valores por defecto
+      const record: ExpiryRecord = {
         id,
+        barcode: data.barcode,
+        productName: data.productName,
+        providerName: data.providerName || 'SIN PROVEEDOR',
+        providerRut: data.providerRut,
+        mm: data.mm,
+        yyyy: data.yyyy,
+        quantity: data.quantity,
+        location: data.location,
+        observaciones: data.observaciones,
         claveUnica,
-        timestamp: Date.now(),
-        syncStatus: 'pending' as const
+        withdrawalDays,
+        hasCanje: false,
+        timestamp,
+        syncStatus: 'pending',
+        status,
+        daysLeft,
+        expiryDate: format(expiryDateObj, 'yyyy-MM-dd'),
+        expiryDateObj,
+        withdrawalDate: new Date(expiryDateObj.getTime() - withdrawalDays * 24 * 60 * 60 * 1000),
+        category: 'OTRO',
+        estado: status,
+        type: 'Individual',
       };
 
       await db.table('expirations').add(record);
