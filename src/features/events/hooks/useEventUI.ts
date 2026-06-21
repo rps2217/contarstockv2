@@ -360,6 +360,13 @@ export const useEventUI = () => {
   const destinedGrouped = useMemo(() => getGroupedItems(db.destinedEvents || []), [db.destinedEvents, getGroupedItems]);
   const adjustedGrouped = useMemo(() => getGroupedItems(db.adjustedEvents || []), [db.adjustedEvents, getGroupedItems]);
 
+  // Missing modal states
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+
+  const handleBulkSendEmail = () => {
+    setIsEmailModalOpen(true);
+  };
+
   return {
     ui: {
       isSyncing,
@@ -379,6 +386,7 @@ export const useEventUI = () => {
       bulkActions: bulk,
       selectedIds: bulk.selectedIds,
       selectedCount: bulk.selectedCount,
+      isEmailModalOpen,
       filterState: {
         searchQuery: db.searchQuery,
         selectedEvents: db.selectedEvents,
@@ -413,6 +421,8 @@ export const useEventUI = () => {
       handleBulkRemove,
       handleBulkPrintLabels,
       handleBulkPrintSelected,
+      handleBulkSendEmail,
+      setIsEmailModalOpen,
       handleFrcClick,
       handleEventClick,
       handleDestinoClick,
@@ -430,6 +440,7 @@ export const useEventUI = () => {
     // Alias para compatibilidad con EventOverlays
     uiActions: {
       handleBulkRemove,
+      setIsEmailModalOpen,
       setIsFilterDrawerOpen: (open?: boolean | ((prev: boolean) => boolean)) => {
         if (typeof open === 'function') {
           setIsFilterDrawerOpen(open(isFilterDrawerOpen));

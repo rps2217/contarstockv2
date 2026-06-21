@@ -1,11 +1,11 @@
 import React from 'react';
-import { 
-  CheckSquare, 
-  Trash2, 
-  Printer, 
-  Mail, 
-  Search, 
-  Edit3 
+import {
+  CheckSquare,
+  Trash2,
+  Printer,
+  Mail,
+  Search,
+  Edit3
 } from 'lucide-react';
 
 // Decoupled components
@@ -17,66 +17,58 @@ import { EventEmailModal } from './EventEmailModal';
 
 interface EventOverlaysProps {
   ui: any;
-  uiActions: any;
-  db: any;
   actions: any;
+  db: any;
   settings: any;
 }
 
 export const EventOverlays: React.FC<EventOverlaysProps> = ({
   ui,
-  uiActions,
-  db,
   actions,
+  db,
   settings
 }) => {
   return (
     <>
-      <ManagementBulkActions 
+      <ManagementBulkActions
         selectedCount={db.selectedIds?.size || 0}
-        onClearSelection={actions.clearSelection}
+        onClearSelection={() => actions.clearSelection?.()}
         theme={settings.theme}
         actions={[
           {
-            label: "Seleccionar Todos los Visibles",
+            label: "Seleccionar Todos",
             icon: CheckSquare,
-            onClick: actions.handleSelectAll,
+            onClick: () => actions.handleSelectAll?.(db.processedEvents || []),
             variant: "primary"
           },
           {
             label: "Retirar Seleccionados",
             icon: Trash2,
-            onClick: uiActions.handleBulkRemove,
+            onClick: () => actions.handleBulkRemove?.(),
             variant: "danger"
           },
           {
             label: "Imprimir Etiquetas",
             icon: Printer,
-            onClick: uiActions.handleBulkPrintLabels,
+            onClick: () => actions.handleBulkPrintLabels?.(),
             variant: "warning"
           },
           {
             label: "Imprimir Reporte",
             icon: Printer,
-            onClick: uiActions.handleBulkPrintSelected,
+            onClick: () => actions.handleBulkPrintSelected?.(),
             variant: "secondary"
           },
           {
             label: "Enviar por Correo",
             icon: Mail,
-            onClick: uiActions.handleBulkSendEmail,
+            onClick: () => actions.handleBulkSendEmail?.(),
             variant: "success"
-          },
-          {
-            label: "Buscar Documento",
-            icon: Search,
-            onClick: uiActions.handleBulkSearchDocument,
-            variant: "info"
           },
           {
             label: "Edición Masiva",
             icon: Edit3,
-            onClick: () => uiActions.setIsBulkEditModalOpen(true),
+            onClick: () => actions.handleBulkEdit?.(),
             variant: "primary"
           }
         ]}
@@ -84,15 +76,15 @@ export const EventOverlays: React.FC<EventOverlaysProps> = ({
 
       <BulkEditModal
         isOpen={ui.isBulkEditModalOpen}
-        onClose={() => uiActions.setIsBulkEditModalOpen(false)}
-        onApply={uiActions.handleBulkEdit}
+        onClose={() => actions.setIsBulkEditModalOpen?.(false)}
+        onApply={actions.handleBulkEdit}
         theme={settings.theme}
         selectedCount={db.selectedIds?.size || 0}
       />
 
-      <EventSettingsDrawer 
+      <EventSettingsDrawer
         isOpen={ui.isSettingsDrawerOpen}
-        onClose={() => uiActions.setIsSettingsDrawerOpen(false)}
+        onClose={() => actions.setIsSettingsDrawerOpen?.(false)}
         preferences={db.preferences}
         onUpdatePreferences={actions.togglePreference}
         onFullRefresh={actions.handleFullRefresh}
@@ -102,20 +94,20 @@ export const EventOverlays: React.FC<EventOverlaysProps> = ({
         theme={settings.theme}
       />
 
-      <CreateEventModal 
+      <CreateEventModal
         isOpen={ui.isCreateModalOpen}
         onClose={() => {
-          uiActions.setIsCreateModalOpen(false);
-          uiActions.setEditingItem(null);
+          actions.setIsCreateModalOpen?.(false);
+          actions.setEditingItem?.(null);
         }}
-        onSubmit={uiActions.handleCreateOrUpdate}
+        onSubmit={actions.handleCreateOrUpdate}
         editingItem={ui.editingItem}
         theme={settings.theme}
       />
 
       <EventEmailModal
         isOpen={ui.isEmailModalOpen}
-        onClose={() => uiActions.setIsEmailModalOpen(false)}
+        onClose={() => actions.setIsEmailModalOpen?.(false)}
         selectedItems={db.processedEvents?.filter((item: any) => db.selectedIds?.has(item.id)) || []}
         theme={settings.theme}
       />
