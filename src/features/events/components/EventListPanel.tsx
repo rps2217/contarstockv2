@@ -179,7 +179,7 @@ export const EventListPanel: React.FC<EventListPanelProps> = ({
             );
           })}
         </div>
-        {groupedItems.length === 0 && (
+        {items.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 text-center opacity-50">
             {emptyIcon}
             <p className="text-xs font-black uppercase tracking-widest mt-4">{emptyText}</p>
