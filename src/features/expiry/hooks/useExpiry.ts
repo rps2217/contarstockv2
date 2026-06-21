@@ -348,6 +348,18 @@ export const useExpiry = (): UseExpiryReturn => {
     try {
       const lastDay = new Date(data.yyyy, data.mm, 0).getDate();
       const claveUnica = `${data.barcode}${data.yyyy}${String(data.mm).padStart(2, '0')}${String(lastDay).padStart(2, '0')}`;
+      
+      // Verificar si ya existe un registro con la misma clave única
+      const existingRecord = await db.table('expirations')
+        .where('claveUnica')
+        .equals(claveUnica)
+        .first();
+      
+      if (existingRecord) {
+        toast.error('Ya existe un vencimiento para este producto y fecha');
+        return null;
+      }
+      
       const id = crypto.randomUUID();
       const timestamp = Date.now();
       
