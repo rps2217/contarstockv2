@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { WifiOff, Wifi, RefreshCw, Cloud, CloudOff, AlertTriangle, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -13,25 +13,78 @@ type BannerStatus = 'offline' | 'syncing' | 'synced' | 'pending' | 'error';
 export const EnhancedOfflineBanner: React.FC = () => {
   const isOnline = useNetworkStatus();
   const { isSyncing, lastSyncTime, pendingItems, syncError } = useSyncStore();
-  
+  const [dismissedPending, setDismissedPending] = useState(false);
+  const [pendingStartTime, setPendingStartTime] = useState<number | null>(null);
+  const prevPendingCountRef = useRef<number>(0);
+
   // Contar items pendientes de sync
   const pendingCount = useLiveQuery(async () => {
-    const scans = await db.scans.where('syncStatus').equals('pending').count();
-    const sessions = await db.sessions.where('syncStatus').equals('pending').count();
-    const dynamic = await db.dynamic_data.where('syncStatus').anyOf(['pending', 'error']).count();
-    return scans + sessions + dynamic;
+    try {
+      const scans = await db.scans.where('syncStatus').equals('pending').count();
+      const sessions = await db.sessions.where('syncStatus').equals('pending').count();
+      const dynamic = await db.dynamic_data.where('syncStatus').anyOf(['pending', 'error']).count();
+      return scans + sessions + dynamic;
+    } catch {
+      return 0;
+    }
   }, [], 0);
+
+  // Detectar cuando aparecen nuevos cambios pendientes
+  useEffect(() => {
+    if (pendingCount > 0 && prevPendingCountRef.current === 0) {
+      // Nuevos cambios pendientes detectados - mostrar banner
+      setDismissedPending(false);
+      setPendingStartTime(Date.now());
+    } else if (pendingCount === 0) {
+      // No hay pendientes - resetear estado
+      setDismissedPending(false);
+      setPendingStartTime(null);
+    }
+    prevPendingCountRef.current = pendingCount;
+  }, [pendingCount]);
+
+  // Auto-dismiss del banner pending después de 8 segundos
+  useEffect(() => {
+    if (pendingStartTime && !dismissedPending) {
+      const timer = setTimeout(() => {
+        setDismissedPending(true);
+      }, 8000);
+      return () => clearTimeout(timer);
+    }
+  }, [pendingStartTime, dismissedPending]);
 
   // Determinar estado del banner
   const getStatus = (): BannerStatus => {
     if (!isOnline) return 'offline';
     if (syncError) return 'error';
     if (isSyncing) return 'syncing';
-    if (pendingCount > 0) return 'pending';
+    if (pendingCount > 0 && !dismissedPending) return 'pending';
     return 'synced';
   };
 
   const status = getStatus();
+
+  // No renderizar si está synced y ya mostró el pending
+  if (status === 'synced' && dismissedPending && pendingCount > 0) {
+    // Mostrar indicador sutil en lugar del banner completo
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="fixed top-0 right-4 z-[2000] py-1 px-2"
+      >
+        <div className="flex items-center gap-1.5 bg-amber-500/20 backdrop-blur-sm rounded-full px-3 py-1 border border-amber-500/30">
+          <Cloud className="w-3 h-3 text-amber-400" />
+          <span className="text-[10px] font-bold text-amber-400">{pendingCount}</span>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // No mostrar nada si está synced y no hay pendientes
+  if (status === 'synced' && pendingCount === 0) {
+    return null;
+  }
 
   // Configuración por estado
   const config = {
@@ -40,7 +93,7 @@ export const EnhancedOfflineBanner: React.FC = () => {
       icon: WifiOff,
       iconColor: 'text-white',
       label: 'Modo Offline',
-      sublabel: `${pendingCount} cambios pendientes`,
+      sublabel: pendingCount > 0 ? `${pendingCount} cambios pendientes` : 'Sin conexión',
       animate: true
     },
     syncing: {
@@ -56,7 +109,7 @@ export const EnhancedOfflineBanner: React.FC = () => {
       icon: CheckCircle,
       iconColor: 'text-white',
       label: 'Sincronizado',
-      sublabel: lastSyncTime 
+      sublabel: lastSyncTime
         ? `Última sync: hace ${formatDistanceToNow(lastSyncTime, { addSuffix: true, locale: es })}`
         : 'Todo al día',
       animate: false
@@ -67,7 +120,7 @@ export const EnhancedOfflineBanner: React.FC = () => {
       iconColor: 'text-white',
       label: 'Cambios Pendientes',
       sublabel: `${pendingCount} elementos por sincronizar`,
-      animate: false
+      animate: true
     },
     error: {
       bg: 'bg-rose-600',
@@ -110,6 +163,17 @@ export const EnhancedOfflineBanner: React.FC = () => {
                 <Cloud className="w-3 h-3" />
                 <span className="text-[10px] font-bold">{pendingCount}</span>
               </div>
+            )}
+
+            {/* Dismiss button for pending */}
+            {status === 'pending' && (
+              <button
+                onClick={() => setDismissedPending(true)}
+                className="w-6 h-6 flex items-center justify-center bg-white/20 hover:bg-white/30 rounded-full transition-colors"
+                title="Ocultar notificación"
+              >
+                <span className="text-white text-xs font-bold">×</span>
+              </button>
             )}
 
             {/* Online/Offline indicator */}
