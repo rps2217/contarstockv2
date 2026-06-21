@@ -60,7 +60,6 @@ export const ProductSearchInput: React.FC<ProductSearchInputProps> = ({
   const searchProduct = useCallback(async (barcode: string) => {
     if (!barcode || barcode.length < 5) {
       setProduct(null);
-      onProductFound?.(null);
       return;
     }
 
@@ -132,7 +131,7 @@ export const ProductSearchInput: React.FC<ProductSearchInputProps> = ({
     } finally {
       setIsSearching(false);
     }
-  }, [onProductFound]);
+  }, []); // Sin dependencias - usa refs para callbacks
 
   // Debounce de búsqueda
   useEffect(() => {

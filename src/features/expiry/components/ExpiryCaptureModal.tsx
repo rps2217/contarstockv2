@@ -15,7 +15,7 @@
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { CornerDownLeft, Loader2, X, Package, AlertTriangle, MapPin } from 'lucide-react';
+import { CornerDownLeft, Loader2, X, Package, AlertTriangle, MapPin, CheckCircle2 } from 'lucide-react';
 import { ProductSearchInput } from '@/shared/features/inventory/components/ProductSearchInput';
 import { QuantityInput } from '@/shared/features/inventory/components/QuantityInput';
 import type { ProductInfo } from '@/shared/features/inventory/components';
@@ -107,27 +107,30 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
   // Auto-detectar fecha del teclado
   useKeyboardDateDetection(selectedMm, selectedYyyy, setSelectedMm, setSelectedYyyy, isOpen);
 
-  // ¿Se puede enviar?
+  // ¿Se puede enviar? (requiere barcode, mes y año)
   const canSubmit = barcode.length >= 8 && selectedMm && selectedYyyy && !isSubmitting;
+
+  // ¿El producto fue encontrado en la BD?
+  const productFound = product !== null;
 
   // Handler de submit
   const handleSubmit = async () => {
-    if (!canSubmit || !product) return;
+    if (!canSubmit) return;
 
     setIsSubmitting(true);
     try {
       await onSubmit?.({
         barcode,
-        productName: product.name,
+        productName: product?.name || barcode, // Usar barcode como nombre si no se encontró
         quantity,
         mm: selectedMm!,
         yyyy: selectedYyyy!,
         location,
         observaciones,
-        providerName: product.supplierName,
-        providerRut: product.supplierRut,
-        hasCanje: product.providerPolicy?.hasExchange,
-        withdrawalDays: product.providerPolicy?.withdrawalDays,
+        providerName: product?.supplierName,
+        providerRut: product?.supplierRut,
+        hasCanje: product?.providerPolicy?.hasExchange,
+        withdrawalDays: product?.providerPolicy?.withdrawalDays,
       });
       onClose();
     } catch {
@@ -185,6 +188,27 @@ export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
               
               {/* Proveedor y Políticas */}
               <div className="flex items-center gap-2">
+                {/* Indicador de producto encontrado */}
+                {barcode.length >= 8 && (
+                  <div className={`px-2 py-1.5 rounded-xl border-2 text-[10px] font-black uppercase tracking-tighter flex items-center gap-1 ${
+                    productFound
+                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                      : 'bg-slate-500/10 text-slate-400 border-slate-500/30'
+                  }`}>
+                    {productFound ? (
+                      <>
+                        <CheckCircle2 className="w-3 h-3" />
+                        <span>BD</span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertTriangle className="w-3 h-3" />
+                        <span>NUEVO</span>
+                      </>
+                    )}
+                  </div>
+                )}
+                
                 {product?.providerPolicy && (
                   <div className={`px-3 py-1.5 rounded-xl border-2 text-[10px] font-black uppercase tracking-tighter flex flex-col items-center leading-none ${
                     product.providerPolicy.hasExchange 
