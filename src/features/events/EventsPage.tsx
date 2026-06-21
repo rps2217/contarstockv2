@@ -334,17 +334,21 @@ export const EventsPage: React.FC = () => {
               {/* HEADER */}
               <EventHeader 
                 totalCount={db.totalCount}
-                pendingOperations={db.pendingOperations}
+                pendingOperations={db.pendingOperations || 0}
                 isSyncing={ui.isSyncing}
-                theme={settings.theme}
+                theme={(settings.theme as 'dark' | 'light' | 'high-contrast') || 'dark'}
                 onNavigateExpiry={() => navigate('/expiry')}
                 onToggleTheme={() => {}}
+                onOpenSettings={() => uiActions.setIsFilterDrawerOpen(true)}
               />
 
               {/* FILTERS */}
               <EventOverlays 
                 ui={ui}
                 actions={uiActions}
+                uiActions={uiActions}
+                db={db}
+                settings={settings}
               />
 
               {/* PANELS */}
@@ -356,7 +360,7 @@ export const EventsPage: React.FC = () => {
                   virtualizer={pendingVirtualizer}
                   scrollRef={pendingRef}
                   expandedPanel={ui.expandedPanel}
-                  onTogglePanel={(panel) => uiActions.togglePanel(panel)}
+                  onTogglePanel={() => uiActions.togglePanel('pending')}
                   onViewDetail={handleViewDetail}
                   onRemove={handleSingleRemove}
                 />
@@ -368,7 +372,7 @@ export const EventsPage: React.FC = () => {
                   virtualizer={destinedVirtualizer}
                   scrollRef={destinedRef}
                   expandedPanel={ui.expandedPanel}
-                  onTogglePanel={(panel) => uiActions.togglePanel(panel)}
+                  onTogglePanel={() => uiActions.togglePanel('destined')}
                   onViewDetail={handleViewDetail}
                   onRemove={handleSingleRemove}
                 />
@@ -380,7 +384,7 @@ export const EventsPage: React.FC = () => {
                   virtualizer={adjustedVirtualizer}
                   scrollRef={adjustedRef}
                   expandedPanel={ui.expandedPanel}
-                  onTogglePanel={(panel) => uiActions.togglePanel(panel)}
+                  onTogglePanel={() => uiActions.togglePanel('adjusted')}
                   onViewDetail={handleViewDetail}
                   onRemove={handleSingleRemove}
                 />
@@ -390,9 +394,14 @@ export const EventsPage: React.FC = () => {
               <EventFilterDrawer
                 isOpen={ui.isFilterDrawerOpen}
                 onClose={uiActions.closeFilterDrawer}
-                filterState={ui.filterState}
-                onFilterChange={uiActions.setFilter}
+                eventTypes={db.eventTypes || []}
+                selectedEvents={db.selectedEvents}
+                onToggleEvent={uiActions.handleToggleEvent}
                 onClearFilters={uiActions.clearFilters}
+                activeFiltersCount={ui.activeFiltersCount}
+                dateRange={ui.dateRange}
+                onSetDateRange={uiActions.setDateRange}
+                theme={(settings.theme as 'dark' | 'light' | 'high-contrast') || 'dark'}
               />
             </motion.div>
           ) : (

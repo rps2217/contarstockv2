@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { useEventDatabase } from './useEventDatabase';
 import { genericSyncEngine } from '../../../services/cloud/GenericSyncEngine';
-import { useTaskStore } from '@/stores';
+import { useTaskStore, useAppStore } from '@/stores';
 import { useBulkActions, BulkAction, BulkEditConfig } from '@/hooks/useBulkActions';
 import { Trash2, Edit3, Download, Search, Printer } from 'lucide-react';
 
@@ -114,6 +114,7 @@ export const EVENT_BULK_EDIT_CONFIG: BulkEditConfig = {
 
 export const useEventUI = () => {
   const { addTask, updateTask } = useTaskStore();
+  const { settings } = useAppStore();
   
   // Flat structure from useEventDatabase
   const db = useEventDatabase();
@@ -122,6 +123,7 @@ export const useEventUI = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [expandedPanel, setExpandedPanel] = useState<'pending' | 'destined' | 'adjusted' | 'dual'>('dual');
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
 
   // Sistema global de acciones masivas
   const bulk = useBulkActions({
@@ -300,6 +302,17 @@ export const useEventUI = () => {
     toast.info(`Filtrando por destino: ${destino}`);
   };
 
+  const togglePanel = (panel?: 'pending' | 'destined' | 'adjusted' | 'dual') => {
+    if (panel) {
+      setExpandedPanel(prev => prev === panel ? 'dual' : panel);
+    } else {
+      // Toggle all panels
+      setExpandedPanel(prev => prev === 'dual' ? 'pending' : 'dual');
+    }
+  };
+
+  const closeFilterDrawer = () => setIsFilterDrawerOpen(false);
+
   const getGroupedItems = useCallback((events: any[]) => {
     const groups: { [key: string]: any[] } = {};
     events.forEach(event => {
@@ -361,11 +374,16 @@ export const useEventUI = () => {
       dateRange: db.dateRange,
       // From useManagementUI
       isSettingsDrawerOpen: false,
-      isFilterDrawerOpen: false,
+      isFilterDrawerOpen,
       // Bulk actions
       bulkActions: bulk,
       selectedIds: bulk.selectedIds,
       selectedCount: bulk.selectedCount,
+      filterState: {
+        searchQuery: db.searchQuery,
+        selectedEvents: db.selectedEvents,
+        dateRange: db.dateRange,
+      },
     },
     actions: {
       setIsCreateModalOpen,
@@ -374,7 +392,17 @@ export const useEventUI = () => {
       setExpandedPanel,
       setDateRange: db.actions.setDateRange,
       setIsSettingsDrawerOpen: (open?: boolean) => { /* TODO: Implement */ },
-      setIsFilterDrawerOpen: (open?: boolean | ((prev: boolean) => boolean)) => { /* TODO: Implement */ },
+      setIsFilterDrawerOpen: (open?: boolean | ((prev: boolean) => boolean)) => {
+        if (typeof open === 'function') {
+          setIsFilterDrawerOpen(open(isFilterDrawerOpen));
+        } else if (open !== undefined) {
+          setIsFilterDrawerOpen(open);
+        } else {
+          setIsFilterDrawerOpen(!isFilterDrawerOpen);
+        }
+      },
+      togglePanel,
+      closeFilterDrawer,
       handleBulkEdit,
       handleBulkSearchDocument,
       handleCreateOrUpdate,
@@ -392,8 +420,28 @@ export const useEventUI = () => {
       executeBulkAction: bulk.executeBulkAction,
       clearSelection: bulk.clearSelection,
       toggleSelection: bulk.toggleSelection,
+      setFilter: (filter: any) => {
+        if (filter.searchQuery !== undefined) db.actions.setSearchQuery(filter.searchQuery);
+        if (filter.selectedEvents !== undefined) db.actions.setSelectedEvents(filter.selectedEvents);
+        if (filter.dateRange !== undefined) db.actions.setDateRange(filter.dateRange);
+      },
+      clearFilters: handleClearFilters,
+    },
+    // Alias para compatibilidad con EventOverlays
+    uiActions: {
+      handleBulkRemove,
+      setIsFilterDrawerOpen: (open?: boolean | ((prev: boolean) => boolean)) => {
+        if (typeof open === 'function') {
+          setIsFilterDrawerOpen(open(isFilterDrawerOpen));
+        } else if (open !== undefined) {
+          setIsFilterDrawerOpen(open);
+        } else {
+          setIsFilterDrawerOpen(!isFilterDrawerOpen);
+        }
+      },
     },
     db,
+    settings,
     bulk // Exponer bulk completo para uso directo
   };
 };
