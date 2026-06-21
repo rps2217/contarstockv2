@@ -70,10 +70,10 @@ export const EventsPage: React.FC = () => {
   const adjustedRef = useRef<HTMLDivElement>(null);
 
   const pendingVirtualizer = useVirtualizer({
-    count: ui.pendingGrouped.length,
+    count: (ui.pendingGrouped?.length) || 0,
     getScrollElement: () => pendingRef.current,
     estimateSize: (index) => {
-      if (ui.pendingGrouped[index].type === 'header') return 60;
+      if (ui.pendingGrouped?.[index]?.type === 'header') return 60;
       const baseHeight = db.preferences.compactView ? 100 : 160;
       return ui.expandedPanel === 'pending' ? baseHeight * 1.2 : baseHeight;
     },
@@ -84,7 +84,7 @@ export const EventsPage: React.FC = () => {
     count: ui.destinedGrouped?.length || 0,
     getScrollElement: () => destinedRef.current,
     estimateSize: (index) => {
-      if (ui.destinedGrouped[index].type === 'header') return 60;
+      if (ui.destinedGrouped?.[index]?.type === 'header') return 60;
       const baseHeight = db.preferences.compactView ? 100 : 160;
       return ui.expandedPanel === 'destined' ? baseHeight * 1.2 : baseHeight;
     },
@@ -92,10 +92,10 @@ export const EventsPage: React.FC = () => {
   });
 
   const adjustedVirtualizer = useVirtualizer({
-    count: ui.adjustedGrouped.length,
+    count: (ui.adjustedGrouped?.length) || 0,
     getScrollElement: () => adjustedRef.current,
     estimateSize: (index) => {
-      if (ui.adjustedGrouped[index].type === 'header') return 60;
+      if (ui.adjustedGrouped?.[index]?.type === 'header') return 60;
       const baseHeight = db.preferences.compactView ? 100 : 160;
       return ui.expandedPanel === 'adjusted' ? baseHeight * 1.2 : baseHeight;
     },

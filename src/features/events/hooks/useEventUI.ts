@@ -356,9 +356,9 @@ export const useEventUI = () => {
     return flattened;
   }, []);
 
-  const pendingGrouped = useMemo(() => getGroupedItems(db.pendingEvents), [db.pendingEvents, getGroupedItems]);
-  const destinedGrouped = useMemo(() => getGroupedItems(db.destinedEvents), [db.destinedEvents, getGroupedItems]);
-  const adjustedGrouped = useMemo(() => getGroupedItems(db.adjustedEvents), [db.adjustedEvents, getGroupedItems]);
+  const pendingGrouped = useMemo(() => getGroupedItems(db.pendingEvents || []), [db.pendingEvents, getGroupedItems]);
+  const destinedGrouped = useMemo(() => getGroupedItems(db.destinedEvents || []), [db.destinedEvents, getGroupedItems]);
+  const adjustedGrouped = useMemo(() => getGroupedItems(db.adjustedEvents || []), [db.adjustedEvents, getGroupedItems]);
 
   return {
     ui: {
@@ -367,7 +367,7 @@ export const useEventUI = () => {
       isBulkEditModalOpen: bulk.isBulkEditModalOpen,
       editingItem,
       expandedPanel,
-      activeFiltersCount: db.selectedEvents.length + (db.dateRange.start || db.dateRange.end ? 1 : 0),
+      activeFiltersCount: (db.selectedEvents?.length || 0) + (db.dateRange?.start || db.dateRange?.end ? 1 : 0),
       pendingGrouped,
       destinedGrouped,
       adjustedGrouped,
