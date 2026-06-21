@@ -1,10 +1,18 @@
 
 export interface Provider {
+  id?: string;
   rut: string;
   name: string;
+  businessName?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  deliveryTime?: number;
   exchangePolicy?: string;
   withdrawalDays?: number;
   hasExchange?: boolean;
+  createdAt?: number;
+  updatedAt?: number;
   syncStatus?: 'synced' | 'pending' | 'error' | 'pending_delete';
 }
 
@@ -28,12 +36,20 @@ export interface MessageTemplate {
 }
 
 export interface Product {
+  id?: string;
   barcode: string;
   name: string;
   category: string;
   supplier?: string;
   supplierRut?: string;
   price?: number;
+  sku?: string;
+  productType?: string;
+  minStock?: number;
+  stock?: number;
+  withdrawalDays?: number;
+  createdAt?: number;
+  updatedAt?: number;
   syncStatus?: 'synced' | 'pending' | 'error' | 'pending_delete';
   unitsPerBox?: number;
   embedding?: number[]; 

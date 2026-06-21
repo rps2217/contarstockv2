@@ -350,7 +350,8 @@ import { getSettings, saveSettings } from '../settings';
 export const getConfiguredStrategy = (): ConflictStrategy => {
   try {
     const settings = getSettings();
-    return (settings?.syncConfig?.conflictStrategy as ConflictStrategy) || 'last_write_wins';
+    const syncConfig = settings?.cloudConfig as any;
+    return (syncConfig?.conflictStrategy as ConflictStrategy) || 'last_write_wins';
   } catch {
     return 'last_write_wins';
   }
@@ -362,10 +363,11 @@ export const getConfiguredStrategy = (): ConflictStrategy => {
 export const setConfiguredStrategy = async (strategy: ConflictStrategy): Promise<void> => {
   try {
     const settings = getSettings();
+    const currentSyncConfig = settings?.cloudConfig as any || {};
     await saveSettings({
       ...settings,
-      syncConfig: {
-        ...settings.syncConfig,
+      cloudConfig: {
+        ...currentSyncConfig,
         conflictStrategy: strategy
       }
     });

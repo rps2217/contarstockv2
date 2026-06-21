@@ -8,6 +8,18 @@ import { ScanRepository } from "../../../repositories/ScanRepository";
 import { productRepository } from "../../../repositories/DexieProductRepository";
 import { useAppStore } from '@/stores';
 
+// Tipo para item consolidado en reportes
+export interface ConsolidatedItem {
+  barcode: string;
+  productName: string;
+  totalQuantity: number;
+  locations: Set<string>;
+  sources: Set<string>;
+  locationsList: string;
+  source: string;
+  lastUpdated: number;
+}
+
 export const useReports = () => {
   const location = useLocation();
   const { isStartSessionModalOpen, setStartSessionModalOpen } = useAppStore();
@@ -24,7 +36,7 @@ export const useReports = () => {
   const [filterType, setFilterType] = useState<'all' | 'standard' | 'hammer' | 'reception'>(initialFilterType);
 
   const [limit, setLimit] = useState(50);
-  const [liveConsolidated, setLiveConsolidated] = useState<any[]>([]);
+  const [liveConsolidated, setLiveConsolidated] = useState<ConsolidatedItem[]>([]);
   const [isLiveLoading, setIsLiveLoading] = useState(false);
 
   // Descarga y sincroniza del historial de cabeceras de bultos/sesiones

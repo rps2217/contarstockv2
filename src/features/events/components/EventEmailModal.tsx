@@ -2,8 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Mail, Copy, ExternalLink, Save, Trash2, Edit2, Plus } from 'lucide-react';
 import { format } from 'date-fns';
+import DOMPurify from 'dompurify';
 import { useToastStore } from '@/stores';
 import { EmailTemplate, EmailTemplateRepository } from '../../../repositories/EmailTemplateRepository';
+
+// Helper para sanitizar valores antes de insertar en HTML
+const sanitize = (value: unknown): string => {
+  if (value === null || value === undefined) return '';
+  return DOMPurify.sanitize(String(value), { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
+};
 
 const DEFAULT_TEMPLATES: EmailTemplate[] = [
   {
@@ -182,11 +189,11 @@ export const EventEmailModal: React.FC<EventEmailModalProps> = ({
     const rows = selectedItems.map(item => {
       return `
         <tr>
-          <td style="padding: 8px; border: 1px solid #ddd; font-family: monospace;">${item.barcode || 'N/A'}</td>
-          <td style="padding: 8px; border: 1px solid #ddd;">${item.productName || 'N/A'}</td>
-          <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.event || 'N/A'}</td>
-          <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${item.frc || 'N/A'}</td>
-          <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">${item.quantity || 1}</td>
+          <td style="padding: 8px; border: 1px solid #ddd; font-family: monospace;">${sanitize(item.barcode) || 'N/A'}</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">${sanitize(item.productName) || 'N/A'}</td>
+          <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${sanitize(item.event) || 'N/A'}</td>
+          <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${sanitize(item.frc) || 'N/A'}</td>
+          <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">${sanitize(item.quantity) || 1}</td>
         </tr>
       `;
     }).join('');
@@ -216,11 +223,11 @@ export const EventEmailModal: React.FC<EventEmailModalProps> = ({
     let html = `<div style="font-family: Arial, sans-serif; color: #333; line-height: 1.5;">`;
     
     if (parts.length > 1) {
-      html += `<p style="white-space: pre-wrap; margin-bottom: 0;">${parts[0]}</p>`;
+      html += `<p style="white-space: pre-wrap; margin-bottom: 0;">${sanitize(parts[0])}</p>`;
       html += generateHtmlTable();
-      html += `<p style="white-space: pre-wrap; margin-top: 0;">${parts[1]}</p>`;
+      html += `<p style="white-space: pre-wrap; margin-top: 0;">${sanitize(parts[1])}</p>`;
     } else {
-      html += `<p style="white-space: pre-wrap;">${processedBody}</p>`;
+      html += `<p style="white-space: pre-wrap;">${sanitize(processedBody)}</p>`;
       html += generateHtmlTable();
     }
     

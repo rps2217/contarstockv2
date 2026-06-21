@@ -8,10 +8,12 @@ import { legacySyncWrapper, LegacySyncStatus } from '../../../services/sync/fsm'
 import { dynamicDataRepository } from '../../../repositories/DynamicDataRepository';
 
 export const useDashboard = () => {
-  const [syncStatus, setSyncStatus] = useState<LegacySyncStatus>({ state: 'IDLE', pendingCount: 0 });
+  const [syncStatus, setSyncStatus] = useState<LegacySyncStatus>({ state: 'IDLE', pendingCount: 0, lastSync: 0 });
 
   useEffect(() => {
-    return legacySyncWrapper.subscribe(setSyncStatus);
+    return legacySyncWrapper.subscribe((newStatus: LegacySyncStatus) => {
+      setSyncStatus(newStatus);
+    });
   }, []);
   
   const stats = useLiveQuery(async () => {

@@ -61,7 +61,7 @@ export const ExpiryPage: React.FC = () => {
 
   const [selectedDetailItem, setSelectedDetailItem] = useState<ExpiryItem | null>(null);
   const [showAuditPanel, setShowAuditPanel] = useState(false);
-  const { getRecordHistory } = useAudit();
+  const { getTableHistory } = useAudit();
 
   // Atajos de teclado para ultra-productividad en almacén/captura rápida de vencimientos
   useEffect(() => {
@@ -483,7 +483,7 @@ export const ExpiryPage: React.FC = () => {
               <div className="flex-1 overflow-auto">
                 <AuditPanel
                   tableName="VENCIMIENTOS"
-                  loadHistory={getRecordHistory}
+                  loadHistory={getTableHistory}
                   title="Cambios en Vencimientos"
                   limit={50}
                 />

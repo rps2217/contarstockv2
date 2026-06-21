@@ -15,6 +15,11 @@ export interface ColumnMappings {
   qtyCol: string;
 }
 
+// Tipo para filas parseadas de CSV (antes de mapping)
+export interface CSVRow {
+  [key: string]: string | number | undefined;
+}
+
 export function useExpectedOrders() {
   const { addToast } = useToastStore();
   
@@ -28,7 +33,7 @@ export function useExpectedOrders() {
   const [documentType, setDocumentType] = useState('Picking List');
   
   // File parsing states
-  const [parsedRows, setParsedRows] = useState<any[]>([]);
+  const [parsedRows, setParsedRows] = useState<CSVRow[]>([]);
   const [headers, setHeaders] = useState<string[]>([]);
   const [fileName, setFileName] = useState('');
   

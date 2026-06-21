@@ -11,7 +11,7 @@ import { es } from 'date-fns/locale';
 import { CalendarDays, Package, Factory, Clock, AlertTriangle, Copy } from 'lucide-react';
 import { RecordDetailView } from '@/shared/components/ui/RecordDetailView';
 import { useAudit } from '@/hooks/useAudit';
-import { ExpiryItem } from './hooks/useExpiryDatabase';
+import { ExpiryItem } from '../hooks/useExpiryDatabase';
 
 interface ExpiryDetailModalProps {
   isOpen: boolean;

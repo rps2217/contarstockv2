@@ -30,3 +30,14 @@ export interface SyncContext {
   retryCount: number;
   lastUpdate?: number;
 }
+
+/**
+ * Legacy sync status compatible con la API anterior
+ */
+export interface LegacySyncStatus {
+  state: 'IDLE' | 'SYNCING' | 'ERROR';
+  lastSync: number;
+  pendingCount: number;
+  currentOperation?: string;
+  error?: string;
+}

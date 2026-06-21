@@ -30,8 +30,8 @@ interface AuditPanelProps {
   recordId?: string;
   /** Nombre de la tabla */
   tableName?: string;
-  /** Función para cargar historial */
-  loadHistory: (tableName: string, recordId?: string) => Promise<AuditLogEntry[]>;
+  /** Función para cargar historial de tabla (con límite) */
+  loadHistory: (tableName: string, limit?: number) => Promise<AuditLogEntry[]>;
   /** Título personalizado */
   title?: string;
   /** Límite de entradas a mostrar */
@@ -72,29 +72,43 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({
   const [filterTable, setFilterTable] = useState<string>(tableName || '');
   const [showAll, setShowAll] = useState(!recordId);
   const [syncing, setSyncing] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const PAGE_SIZE = limit || 50;
 
   // Obtener tablas únicas
   const tables = [...new Set(entries.map(e => e.tableName))];
 
-  // Cargar historial
-  const fetchHistory = async () => {
+  // Cargar historial con offset para paginación
+  const fetchHistory = async (offset = 0) => {
     setLoading(true);
     try {
       const targetTable = showAll ? filterTable : (tableName || '');
-      const targetId = showAll ? undefined : recordId;
       
-      if (!targetTable && showAll) {
+      if (!targetTable) {
         setEntries([]);
         return;
       }
 
-      const history = await loadHistory(targetTable, targetId);
-      setEntries(history.slice(0, limit));
+      // Cargar PAGE_SIZE + 1 para verificar si hay más
+      const history = await loadHistory(targetTable, PAGE_SIZE + 1);
+      const hasMoreResults = history.length > PAGE_SIZE;
+      const items = hasMoreResults ? history.slice(0, PAGE_SIZE) : history;
+      
+      if (offset === 0) {
+        setEntries(items);
+      } else {
+        setEntries(prev => [...prev, ...items]);
+      }
+      setHasMore(hasMoreResults);
     } catch (err) {
       console.error('Error loading audit history:', err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadMore = () => {
+    fetchHistory(entries.length);
   };
 
   useEffect(() => {
@@ -302,7 +316,7 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({
           )}
           
           <button
-            onClick={fetchHistory}
+            onClick={() => fetchHistory()}
             className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 transition-colors"
             title="Actualizar"
           >
@@ -365,9 +379,13 @@ export const AuditPanel: React.FC<AuditPanelProps> = ({
       {entries.length > 0 && (
         <div className="flex justify-between items-center text-[10px] text-slate-500 pt-2">
           <span>{entries.length} entradas</span>
-          {!recordId && entries.length >= limit && (
-            <button className="text-blue-400 hover:text-blue-300 font-bold">
-              Ver más →
+          {hasMore && (
+            <button 
+              onClick={loadMore} 
+              disabled={loading}
+              className="text-blue-400 hover:text-blue-300 font-bold disabled:opacity-50"
+            >
+              {loading ? 'Cargando...' : 'Ver más →'}
             </button>
           )}
         </div>

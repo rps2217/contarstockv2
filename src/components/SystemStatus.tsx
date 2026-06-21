@@ -26,9 +26,7 @@ export const SystemStatus: React.FC = () => {
     isSupabaseConnected, 
     syncError,
     conflicts,
-    incidents,
-    getAllIncidents,
-    setPendingCount 
+    incidents 
   } = useSyncStore();
 
   useEffect(() => {

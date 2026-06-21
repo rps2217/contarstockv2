@@ -4,17 +4,10 @@
 
 import React from 'react';
 import { Archive, MapPin } from 'lucide-react';
-
-interface consolidatedItem {
-  barcode: string;
-  productName: string;
-  locationsList: string;
-  totalQuantity: number;
-  source: 'Martillo' | 'Estándar' | 'Recepción';
-}
+import type { ConsolidatedItem } from '../hooks/useReports';
 
 interface Props {
-  items: consolidatedItem[];
+  items: ConsolidatedItem[];
   isLoading?: boolean;
   searchQuery: string;
   theme?: 'dark' | 'light' | 'high-contrast';

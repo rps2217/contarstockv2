@@ -7,17 +7,31 @@ import { ExpectedOrderRepository } from '../../../repositories/ExpectedOrderRepo
 import { supabaseSyncService } from '../../../services/supabaseSyncService';
 import { getSettings } from '../../../services/settings';
 import { ScanRepository } from '../../../repositories/ScanRepository';
-
 import { configSyncService } from '../../../services/configSyncService';
+import type { UploadGroup } from '../../../services/sync/UploadGroupBuilder';
+
+// Tipo para entradas de log
+export interface LogEntry {
+  time: string;
+  msg: string;
+  type: 'info' | 'error' | 'success';
+}
+
+// UI Group con estado de la UI extendido
+export interface SyncUIGroup extends UploadGroup {
+  uiStatus: 'idle' | 'uploading' | 'syncing' | 'error' | 'success';
+  progress?: string | number;
+  tableName?: string;
+}
 
 export const useSyncManager = () => {
-  const [uiGroups, setUiGroups] = useState<any[]>([]);
+  const [uiGroups, setUiGroups] = useState<SyncUIGroup[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [logs, setLogs] = useState<{time: string, msg: string, type: 'info'|'error'|'success'}[]>([]);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
   
-  const addLog = useCallback((msg: any, type: 'info'|'error'|'success' = 'info') => {
+  const addLog = useCallback((msg: string | object, type: 'info' | 'error' | 'success' = 'info') => {
     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    const safeStringify = (obj: any) => {
+    const safeStringify = (obj: object) => {
       const cache = new Set();
       return JSON.stringify(obj, (key, value) => {
         if (typeof value === 'object' && value !== null) {

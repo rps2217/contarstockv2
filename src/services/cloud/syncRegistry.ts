@@ -176,7 +176,7 @@ const applyLocalMapping = (
  * @example
  * const mappers = createDynamicTableMappers('VENCIMIENTOS', 'expiry');
  */
-const createDynamicTableMappers = (tableName: string, mappingKey: keyof typeof getSettings extends () => infer R ? R['cloudConfig']['mappings'] extends Record<string, any> ? mappingKey : never : never) => {
+const createDynamicTableMappers = (tableName: string, mappingKey: string) => {
   const mapToRemote = (record: any): Record<string, any> => {
     const settings = getSettings();
     const mapping = settings?.cloudConfig?.mappings?.[mappingKey] || settings?.cloudConfig?.columnMapping;

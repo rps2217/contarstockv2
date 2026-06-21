@@ -1,6 +1,7 @@
 /**
  * Tests para ConflictResolution
  */
+/// <reference types="vitest/globals" />
 
 import { 
   resolveClientWins, 

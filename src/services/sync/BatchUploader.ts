@@ -30,9 +30,11 @@ export const resetSyncLock = resetUploadLock;
  * Sube un grupo de datos al servidor
  */
 export const performBatchUpload = async (
-  group: UploadGroup,
+  group?: UploadGroup,
   onProgress?: (msg: string) => void
 ): Promise<void> => {
+  // Si no se pasa grupo, usar grupo vacío que hace sync general
+  const effectiveGroup = group || { type: 'generic' as const, name: 'sync' };
   if (syncFSM.isRunning()) {
     throw new Error("Sincronización en progreso, por favor intente nuevamente en unos segundos.");
   }
@@ -40,28 +42,28 @@ export const performBatchUpload = async (
   await syncFSM.execute(async () => {
     const config = getSettings().cloudConfig;
 
-    if (group.type === 'dynamic' && 'tableName' in group && (group as any).tableName) {
-      await dynamicSyncService.syncAllPending(onProgress, (group as any).tableName);
-    } else if (group.erpOrder === 'REGISTROS_HUERFANOS') {
+    if (effectiveGroup.type === 'dynamic' && 'tableName' in effectiveGroup && (effectiveGroup as any).tableName) {
+      await dynamicSyncService.syncAllPending(onProgress, (effectiveGroup as any).tableName);
+    } else if ('erpOrder' in effectiveGroup && effectiveGroup.erpOrder === 'REGISTROS_HUERFANOS') {
       if (onProgress) onProgress("Purgando registros residuales...");
       const unsynced = await ScanRepository.getUnsynced();
       const orphanIds = unsynced.filter(s => !s.sessionId || s.sessionId === 'ORPHAN').map(s => s.id);
       for (const id of orphanIds) {
         await ScanRepository.markAsSynced([id]);
       }
-    } else if (group.type === 'reception') {
-      if (onProgress) onProgress(`Subiendo registro de ${group.sessionCount} bultos...`);
-      const rows = group.sessionIds.map((id, idx) => ({
+    } else if (effectiveGroup.type === 'reception') {
+      if (onProgress) onProgress(`Subiendo registro de ${effectiveGroup.sessionCount} bultos...`);
+      const rows = effectiveGroup.sessionIds.map((id, idx) => ({
         "id": id,
         "ID_RECEPCION": id,
         "FECHA_HORA": new Date().toISOString(),
-        "ETIQUETA": group.logisticsLabels[idx],
+        "ETIQUETA": effectiveGroup.logisticsLabels[idx],
         "ESTADO": "INGRESADO"
       }));
       const targetTable = config?.receptionTableName || "RECEPCION_BULTOS";
       const result = await supabaseSyncService.pushBatch(targetTable, rows);
       if (result.success) {
-        for (const id of group.sessionIds) {
+        for (const id of effectiveGroup.sessionIds) {
           await SessionRepository.updateSyncTimestamp(id);
         }
         if (onProgress) onProgress(`✓ Recepción sincronizada.`);
@@ -69,8 +71,15 @@ export const performBatchUpload = async (
         throw new Error(result.error);
       }
     } else {
-      // Inventory / Hammer sessions
-      for (const sessionId of group.sessionIds) {
+      // Inventory / Hammer sessions - verificar si tenemos sessionIds
+      const sessionIds = 'sessionIds' in effectiveGroup ? effectiveGroup.sessionIds : [];
+      
+      if (sessionIds.length === 0) {
+        if (onProgress) onProgress("No hay sesiones para sincronizar.");
+        return;
+      }
+      
+      for (const sessionId of sessionIds) {
         const session = await SessionRepository.getById(sessionId);
         if (!session) {
           if (onProgress) onProgress(`⚠ Sesión ${sessionId} no encontrada.`);

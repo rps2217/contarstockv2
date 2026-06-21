@@ -69,17 +69,17 @@ export const configSyncService = {
 
       const currentSettings = getSettings();
       
-      // Fusionar configuraciones
+      // Fusionar configuraciones con type assertions apropiados
       const newSettings: AppSettings = {
         ...currentSettings,
-        pharmacyName: remoteConfig.pharmacyName || currentSettings.pharmacyName,
+        pharmacyName: (remoteConfig.pharmacyName as string) || currentSettings.pharmacyName,
         cloudConfig: {
           ...currentSettings.cloudConfig,
-          ...(remoteConfig.cloudConfig || {})
+          ...(remoteConfig.cloudConfig as any)
         },
-        schema: remoteConfig.schema || currentSettings.schema,
-        mobileNavConfig: remoteConfig.mobileNavConfig || currentSettings.mobileNavConfig,
-        defaultStartModule: remoteConfig.defaultStartModule || currentSettings.defaultStartModule
+        schema: (remoteConfig.schema as AppSettings['schema']) || currentSettings.schema,
+        mobileNavConfig: (remoteConfig.mobileNavConfig as AppSettings['mobileNavConfig']) || currentSettings.mobileNavConfig,
+        defaultStartModule: (remoteConfig.defaultStartModule as AppSettings['defaultStartModule']) || currentSettings.defaultStartModule
       };
 
       await saveSettings(newSettings);

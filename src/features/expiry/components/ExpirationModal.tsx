@@ -69,22 +69,22 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
         if (!isMounted) return;
 
         if (response.success && response.rows && response.rows.length > 0) {
-          const product = response.rows[0];
+          const product = response.rows[0] as Record<string, unknown>;
           const name = product[nameCol] || product.name || product.DESCRIPTOR || 'PRODUCTO ENCONTRADO';
-          setProductName(name);
+          setProductName(String(name));
 
           // ESTRATEGIA LOCAL-FIRST: Guardar en DB local para que el siguiente escaneo sea instantáneo
           const { productRepository } = await import('../../../repositories/DexieProductRepository');
           const { ProviderRepository } = await import('../../../repositories/ProviderRepository');
-          const supplierRut = normalizeSku(product.supplier_rut || product.supplierRut || product.PROVEEDOR_RUT || '');
+          const supplierRut = normalizeSku(String(product.supplier_rut || product.supplierRut || product.PROVEEDOR_RUT || ''));
           
           const newProduct = {
             barcode: sku,
-            name: name,
-            category: product.category || product.CATEGORIA || 'GENERAL',
-            supplier: product.supplier || product.PROVEEDOR || 'N/A',
+            name: String(name),
+            category: String(product.category || product.CATEGORIA || 'GENERAL'),
+            supplier: String(product.supplier || product.PROVEEDOR || 'N/A'),
             supplierRut: supplierRut,
-            price: parseFloat(product.price || product.PRECIO || 0),
+            price: parseFloat(String(product.price || product.PRECIO || 0)),
             syncStatus: 'synced' as const
           };
           
@@ -99,8 +99,8 @@ export const ExpirationModal: React.FC<ExpirationModalProps> = ({
               const provResponse = await supabaseSyncService.query(providersTable, rutCol, supplierRut);
               
               if (provResponse.success && provResponse.rows && provResponse.rows.length > 0) {
-                const p = provResponse.rows[0];
-                const withdrawalDays = p.withdrawal_days || p.withdrawalDays || 0;
+                const p = provResponse.rows[0] as Record<string, unknown>;
+                const withdrawalDays = Number(p.withdrawal_days || p.withdrawalDays || 0);
 
                 await ProviderRepository.save({
                   rut: supplierRut,

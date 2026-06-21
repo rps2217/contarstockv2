@@ -41,7 +41,9 @@ const getDeviceInfo = (): string => {
 // Current user helper (integrate with your auth system)
 const getCurrentUserId = (): string => {
   try {
-    return useAppStore.getState().settings?.userId || 'anonymous';
+    const settings = useAppStore.getState().settings;
+    // userId no existe en AppSettings, usar deviceId o anonymous
+    return (settings as any)?.userId || (settings as any)?.deviceId || 'anonymous';
   } catch {
     return 'anonymous';
   }
@@ -72,6 +74,8 @@ export interface UseAuditReturn {
   markSynced: (ids: number[]) => Promise<void>;
   /** Limpiar logs antiguos */
   purgeOld: (beforeTimestamp: number) => Promise<number>;
+  /** Sincronizar logs pendientes a la nube */
+  syncToCloud: () => Promise<{ synced: number; failed: number }>;
 }
 
 /**

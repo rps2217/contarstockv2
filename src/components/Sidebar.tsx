@@ -2,51 +2,55 @@
 import { isModuleEnabled } from '../services/moduleManager';
 import React from 'react';
 import { motion } from 'motion/react';
-import { Home, Database, History, Container, Cloud, Box, Settings, Zap, FileText, Camera, Calendar, ChevronLeft, ChevronRight, AlertCircle, RefreshCw, Users, ShieldCheck, FileSpreadsheet, Layers } from 'lucide-react';
-// Forced update to trigger GitHub sync for the components folder
+import { 
+  Home, 
+  Scan, 
+  Database, 
+  History, 
+  Cloud, 
+  Settings, 
+  ChevronLeft, 
+  ChevronRight,
+  FileText,
+  Users,
+  Truck,
+  Container
+} from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { AppSettings, TableSchema } from '../types';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { ScanRepository } from '../repositories/ScanRepository';
-import { db } from '../db';
-
+import { AppSettings } from '../types';
 import { useSyncStore } from '@/stores';
-import { useAppStore } from '@/stores';
 
 interface NavItemProps {
   path: string;
   label: string;
-  icon: any;
+  icon: React.ElementType;
   badge?: number;
   activeKey: string;
-  moduleKey?: string;
   isCollapsed: boolean;
   onNavigate: (path: string) => void;
 }
 
-const NavItem: React.FC<NavItemProps> = React.memo(({ path, label, icon: Icon, badge, activeKey, moduleKey, isCollapsed, onNavigate }) => {
+const NavItem: React.FC<NavItemProps> = React.memo(({ path, label, icon: Icon, badge, activeKey, isCollapsed, onNavigate }) => {
   const location = useLocation();
   const isActive = location.pathname === path || (path !== '/' && location.pathname.startsWith(path));
-  
-  if (moduleKey && !isModuleEnabled(moduleKey)) return null;
 
   return (
     <button
       onClick={() => onNavigate(path)}
       className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} py-3 rounded-xl transition-all duration-300 group relative ${
         isActive 
-          ? 'bg-blue-600/10 text-blue-400 shadow-blue-500/20 dark:shadow-[inset_0_0_12px_rgba(59,130,246,0.1)]' 
+          ? 'bg-blue-600/10 text-blue-400' 
           : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'
       }`}
     >
       {isActive && !isCollapsed && (
         <motion.div layoutId="activeNav" className="absolute left-0 w-1 h-6 bg-blue-500 rounded-r-full" />
       )}
-      <Icon className={`w-5 h-5 transition-transform group-hover:scale-110 group-active:scale-90 ${isActive ? 'text-blue-500' : 'text-slate-600 group-hover:text-slate-400'}`} />
+      <Icon className={`w-5 h-5 ${isActive ? 'text-blue-500' : 'text-slate-600 group-hover:text-slate-400'}`} />
       {!isCollapsed && <span className="font-bold text-[11px] uppercase tracking-wider">{label}</span>}
       
       {(badge || 0) > 0 && (
-        <span className={`absolute ${isCollapsed ? 'top-1 right-1' : 'right-3'} bg-blue-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-md shadow-lg shadow-blue-900/40`}>
+        <span className={`absolute ${isCollapsed ? 'top-1 right-1' : 'right-3'} bg-blue-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-md`}>
           {badge}
         </span>
       )}
@@ -61,96 +65,76 @@ interface SidebarProps {
   onToggle: () => void;
 }
 
+// Navegación simplificada estilo AppSheet (5 items)
+const MAIN_NAV_ITEMS = [
+  { key: 'dashboard', label: 'Panel', icon: Home, path: '/' },
+  { key: 'capture', label: 'Capturar', icon: Scan, path: '/capture' },
+  { key: 'data', label: 'Datos', icon: Database, path: '/data' },
+  { key: 'reports', label: 'Reportes', icon: History, path: '/reports' },
+  { key: 'sync', label: 'Sync', icon: Cloud, path: '/sync' },
+  { key: 'settings', label: 'Ajustes', icon: Settings, path: '/settings' },
+];
+
 export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, onToggle }) => {
   const navigate = useNavigate();
   const { pendingItems, isSyncing, isSupabaseConnected } = useSyncStore();
-  const setSystemHubOpen = useAppStore(state => state.setSystemHubOpen);
-  
-  const dynamicTableStats = useLiveQuery(async () => {
-    const records = await db.dynamic_data.where('syncStatus').anyOf(['pending', 'error']).toArray();
-    const stats: Record<string, number> = {};
-    records.forEach(r => {
-      stats[r.tableName] = (stats[r.tableName] || 0) + 1;
-    });
-    return stats;
-  }, [], {});
 
   return (
     <aside className={`hidden md:flex flex-col ${isCollapsed ? 'w-20' : 'w-64'} h-screen fixed left-0 top-0 bg-slate-950 dark:bg-stone-50 border-r border-white/5 dark:border-stone-200 z-50 overflow-hidden transition-all duration-500 ease-[0.23,1,0.32,1]`}>
+      {/* Logo */}
       <div className={`p-6 flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} h-20 border-b border-white/5`}>
         <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/20 shrink-0">
-          <Box className="w-6 h-6 text-white" />
+          <Database className="w-6 h-6 text-white" />
         </div>
         {!isCollapsed && (
           <div className="overflow-hidden">
             <h1 className="text-stone-900 dark:text-white font-black text-lg leading-none uppercase tracking-tighter italic">LOGI<span className="text-blue-500">COUNT</span></h1>
-            <p className="text-stone-500 dark:text-slate-600 text-[8px] font-bold uppercase tracking-[0.3em] mt-1">E-EDITION v3.1</p>
+            <p className="text-stone-500 dark:text-slate-600 text-[8px] font-bold uppercase tracking-[0.3em] mt-1">E-EDITION v3.2</p>
           </div>
         )}
       </div>
 
+      {/* Navegación Principal Simplificada */}
       <nav className={`flex-1 ${isCollapsed ? 'px-3' : 'px-4'} space-y-1 overflow-y-auto no-scrollbar py-6`}>
-        {!isCollapsed && <div className="text-[9px] font-black text-stone-400 dark:text-slate-700 uppercase tracking-[0.3em] px-4 mb-4">Core Operativo</div>}
-        <NavItem path="/dashboard" activeKey="dashboard" label="Panel Central" icon={Home} moduleKey="dashboard" isCollapsed={isCollapsed} onNavigate={navigate} />
-        <NavItem path="/reception" activeKey="reception" label="Recepción" icon={Container} moduleKey="reception" isCollapsed={isCollapsed} onNavigate={navigate} />
-        <NavItem path="/reports" activeKey="reports" label="Auditoría" icon={History} moduleKey="reports" isCollapsed={isCollapsed} onNavigate={navigate} />
-        <NavItem path="/database" activeKey="database" label="Inventario" icon={Database} moduleKey="database" isCollapsed={isCollapsed} onNavigate={navigate} />
-        <NavItem path="/expected-orders" activeKey="expected-orders" label="Carga Teórica" icon={FileSpreadsheet} isCollapsed={isCollapsed} onNavigate={navigate} />
-        <NavItem path="/compliance" activeKey="compliance" label="Control Canjes" icon={ShieldCheck} isCollapsed={isCollapsed} onNavigate={navigate} />
+        {!isCollapsed && (
+          <div className="text-[9px] font-black text-stone-400 dark:text-slate-700 uppercase tracking-[0.3em] px-4 mb-4">
+            Navegación
+          </div>
+        )}
         
-        {!isCollapsed && <div className="text-[9px] font-black text-stone-400 dark:text-slate-700 uppercase tracking-[0.3em] px-4 mb-4 mt-8">Herramientas</div>}
-        <button
-          onClick={() => setSystemHubOpen(true)}
-          className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} py-3 rounded-xl transition-all duration-300 group relative text-slate-500 hover:bg-rose-500/10 hover:text-rose-400`}
-        >
-          <AlertCircle className="w-5 h-5 transition-transform group-hover:scale-110" />
-          {!isCollapsed && <span className="font-bold text-[11px] uppercase tracking-wider">Acciones Masivas</span>}
-        </button>
-        <NavItem path="/massive/BURST-MODE" activeKey="massive" label="Modo Hammer" icon={Zap} moduleKey="counting" isCollapsed={isCollapsed} onNavigate={navigate} />
-        <NavItem path="/expiry" activeKey="expiry" label="Vencimientos" icon={Calendar} moduleKey="expiry" isCollapsed={isCollapsed} onNavigate={navigate} />
-        <NavItem path="/events" activeKey="events" label="Eventos" icon={FileText} moduleKey="events" isCollapsed={isCollapsed} onNavigate={navigate} />
-        <NavItem path="/customers" activeKey="customers" label="Clientes" icon={Users} isCollapsed={isCollapsed} onNavigate={navigate} />
-        <NavItem path="/providers" activeKey="providers" label="Proveedores" icon={Container} isCollapsed={isCollapsed} onNavigate={navigate} />
-        <NavItem path="/slices" activeKey="slices" label="Slices (Vistas)" icon={Layers} isCollapsed={isCollapsed} onNavigate={navigate} />
-        
-        {(() => {
-          const schema = settings.cloudConfig?.schema || settings.schema;
-          if (!schema || Object.keys(schema).length === 0) return null;
-          
-          const dynamicTables = Object.entries(schema)
-            .filter(([key]) => key !== 'expiry' && key !== 'events' && key !== 'products' && key !== 'counts');
-            
-          if (dynamicTables.length === 0) return null;
+        {MAIN_NAV_ITEMS.map((item) => (
+          <NavItem 
+            key={item.key}
+            path={item.path}
+            activeKey={item.key}
+            label={item.label}
+            icon={item.icon}
+            badge={item.key === 'sync' ? pendingItems : undefined}
+            isCollapsed={isCollapsed}
+            onNavigate={navigate}
+          />
+        ))}
 
-          return (
+        {/* Toggle collapsed */}
+        <button
+          onClick={onToggle}
+          className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} py-3 mt-4 rounded-xl transition-all duration-300 text-slate-600 hover:bg-white/5 hover:text-slate-400`}
+        >
+          {isCollapsed ? (
+            <ChevronRight className="w-5 h-5" />
+          ) : (
             <>
-              {!isCollapsed && <div className="text-[9px] font-black text-stone-400 dark:text-slate-700 uppercase tracking-[0.3em] px-4 mb-4 mt-8">Tablas Locales</div>}
-              {dynamicTables.map(([key, tableSchema]) => {
-                  const schema = tableSchema as TableSchema;
-                  return (
-                    <NavItem 
-                      key={key} 
-                      path={`/dynamic/${key}`} 
-                      activeKey={`dynamic/${key}`} 
-                      label={schema.tableName} 
-                      icon={Database} 
-                      badge={dynamicTableStats?.[schema.tableName] || 0}
-                      isCollapsed={isCollapsed}
-                      onNavigate={navigate}
-                    />
-                  );
-                })}
+              <ChevronLeft className="w-5 h-5" />
+              <span className="font-bold text-[11px] uppercase tracking-wider">Colapsar</span>
             </>
-          );
-        })()}
+          )}
+        </button>
       </nav>
 
-      <div className={`p-4 mt-auto border-t border-white/5 bg-slate-900/20 backdrop-blur-md space-y-1`}>
-        <NavItem path="/sync" activeKey="sync" label="Cloud Center" icon={Cloud} badge={pendingItems} moduleKey="sync" isCollapsed={isCollapsed} onNavigate={navigate} />
-        <NavItem path="/settings" activeKey="settings" label="Configuración" icon={Settings} moduleKey="settings" isCollapsed={isCollapsed} onNavigate={navigate} />
-        
+      {/* Status Footer */}
+      <div className={`p-4 mt-auto border-t border-white/5 bg-slate-900/20 backdrop-blur-md`}>
         {!isCollapsed && (
-          <div className="mt-4 px-4 py-3 bg-white/5 rounded-xl border border-white/5">
+          <div className="px-4 py-3 bg-white/5 rounded-xl border border-white/5">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Estado Nube</span>
               <div className={`w-1.5 h-1.5 rounded-full ${isSupabaseConnected ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
@@ -169,5 +153,4 @@ export const Sidebar: React.FC<SidebarProps> = ({ view, settings, isCollapsed, o
     </aside>
   );
 };
-
 

@@ -26,6 +26,9 @@ if (typeof window !== 'undefined') {
  argv: []
  };
  }
+ 
+ // === APLICAR TEMA APPSTEAM DARK ===
+ document.body.classList.add('appsheet-dark');
 }
 
 // Importar App DESPUÉS de establecer los polyfills

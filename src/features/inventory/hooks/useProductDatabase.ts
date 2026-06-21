@@ -37,7 +37,7 @@ export const useProductDatabase = () => {
       trainedPercent: queries.stats?.trainedPercent || 0,
       backedUpPercent: queries.stats?.backedUpPercent || 0,
       isSyncing: syncModule.isSyncing, 
-      isDownloading: syncModule.isDownloading, 
+      isDownloading: false,
       isVectorizing: aiModule.isVectorizing, 
       vectorProgress: aiModule.vectorProgress, 
       storageUsage, 

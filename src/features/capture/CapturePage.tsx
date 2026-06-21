@@ -1,62 +1,76 @@
 /**
- * ReportsPage - Página unificada de reportes estilo AppSheet
+ * CapturePage - Página unificada de captura estilo AppSheet
  * 
- * Agrupa: Auditoría, Compliance, Slices
- * en una sola vista con tabs para alternar entre tipos de reportes.
+ * Optimizada para móvil: tabs compactos, layout full-height
  */
 
 import React, { useState, Suspense, lazy } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  History,
-  Shield,
-  Layers,
+  Scan, 
+  Container,
+  FileText, 
+  Calendar,
+  Zap,
   Loader2
 } from 'lucide-react';
 
 // Lazy imports de las páginas existentes
-const AuditPage = lazy(() => import('./AuditPage').then(m => ({ default: m.AuditPage })));
-const CompliancePage = lazy(() => import('../compliance/ComplianceDashboardPage').then(m => ({ default: m.ComplianceDashboardPage })));
-const SlicesPage = lazy(() => import('../slices/SlicesPage').then(m => ({ default: m.SlicesPage })));
+const CountingPage = lazy(() => import('../counting/CountingPage'));
+const ReceptionPage = lazy(() => import('../reception/ReceptionPage'));
+const EventsPage = lazy(() => import('../events/EventsPage'));
+const ExpiryPage = lazy(() => import('../expiry/ExpiryPage'));
+const HammerPage = lazy(() => import('../hammer/HammerPage'));
 
-// Hook para obtener count de compliance
-import { useComplianceData } from '../compliance/hooks/useComplianceData';
-
-type ReportTab = 'audit' | 'compliance' | 'slices';
+type CaptureTab = 'counting' | 'reception' | 'events' | 'expiry' | 'hammer';
 
 interface TabConfig {
-  key: ReportTab;
+  key: CaptureTab;
   label: string;
-  shortLabel: string;
+  shortLabel: string; // Para móvil
   icon: React.ElementType;
   color: string;
   activeBg: string;
-  badge?: number;
-  badgeStyle?: 'error' | 'warning';
 }
 
 const TABS: TabConfig[] = [
   { 
-    key: 'audit', 
-    label: 'Auditoría', 
-    shortLabel: 'Aud.',
-    icon: History, 
+    key: 'counting', 
+    label: 'Conteo', 
+    shortLabel: 'Conteo',
+    icon: Scan, 
     color: 'text-blue-400',
     activeBg: 'bg-blue-500/20'
   },
   { 
-    key: 'compliance', 
-    label: 'Compliance', 
-    shortLabel: 'Comp.',
-    icon: Shield, 
+    key: 'reception', 
+    label: 'Recepción', 
+    shortLabel: 'Recep.',
+    icon: Container, 
     color: 'text-emerald-400',
     activeBg: 'bg-emerald-500/20'
   },
   { 
-    key: 'slices', 
-    label: 'Slices', 
-    shortLabel: 'Slc.',
-    icon: Layers, 
+    key: 'events', 
+    label: 'Eventos', 
+    shortLabel: 'Eventos',
+    icon: FileText, 
+    color: 'text-amber-400',
+    activeBg: 'bg-amber-500/20'
+  },
+  { 
+    key: 'expiry', 
+    label: 'Vencimiento', 
+    shortLabel: 'Vence.',
+    icon: Calendar, 
+    color: 'text-rose-400',
+    activeBg: 'bg-rose-500/20'
+  },
+  { 
+    key: 'hammer', 
+    label: 'Masivo', 
+    shortLabel: 'Masivo',
+    icon: Zap, 
     color: 'text-purple-400',
     activeBg: 'bg-purple-500/20'
   },
@@ -69,7 +83,7 @@ const TabLoader = () => (
   </div>
 );
 
-// Error boundary simple por tab
+// Error boundary simple
 class TabErrorBoundary extends React.Component<
   { children: React.ReactNode; fallback: React.ReactNode },
   { hasError: boolean }
@@ -78,46 +92,19 @@ class TabErrorBoundary extends React.Component<
     super(props);
     this.state = { hasError: false };
   }
-
-  static getDerivedStateFromError() {
-    return { hasError: true };
-  }
-
+  static getDerivedStateFromError() { return { hasError: true }; }
   render() {
-    if (this.state.hasError) {
-      return this.props.fallback;
-    }
+    if (this.state.hasError) return this.props.fallback;
     return this.props.children;
   }
 }
 
-export const ReportsPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<ReportTab>('audit');
-  
-  // Obtener stats de compliance para el badge
-  const complianceStats = useComplianceData();
-  
-  // Construir tabs con badges
-  const tabsWithBadges = TABS.map(tab => {
-    if (tab.key === 'compliance') {
-      const criticalCount = complianceStats?.criticalCount || 0;
-      const warningCount = complianceStats?.warningCount || 0;
-      return {
-        ...tab,
-        badge: criticalCount > 0 ? criticalCount : warningCount > 0 ? warningCount : undefined,
-        badgeStyle: criticalCount > 0 ? 'error' as const : 'warning' as const
-      };
-    }
-    return tab;
-  });
-
-  const handleTabChange = (tab: ReportTab) => {
-    setActiveTab(tab);
-  };
+export const CapturePage: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<CaptureTab>('counting');
 
   const renderContent = () => {
     const fallback = (
-      <div className="h-full flex flex-col items-center justify-center text-slate-500">
+      <div className="h-full flex flex-col items-center justify-center text-slate-500 p-4">
         <p className="text-sm font-medium">Error cargando módulo</p>
         <button 
           onClick={() => setActiveTab(activeTab)}
@@ -131,9 +118,11 @@ export const ReportsPage: React.FC = () => {
     return (
       <TabErrorBoundary fallback={fallback}>
         <Suspense fallback={<TabLoader />}>
-          {activeTab === 'audit' && <AuditPage />}
-          {activeTab === 'compliance' && <CompliancePage />}
-          {activeTab === 'slices' && <SlicesPage />}
+          {activeTab === 'counting' && <CountingPage />}
+          {activeTab === 'reception' && <ReceptionPage initialMode="capture" />}
+          {activeTab === 'events' && <EventsPage />}
+          {activeTab === 'expiry' && <ExpiryPage />}
+          {activeTab === 'hammer' && <HammerPage />}
         </Suspense>
       </TabErrorBoundary>
     );
@@ -141,24 +130,24 @@ export const ReportsPage: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col bg-slate-950 text-white overflow-hidden">
-      {/* Header */}
+      {/* Header - Más compacto en móvil */}
       <div className="px-3 pt-3 pb-2 shrink-0 bg-slate-900/50">
         <h1 className="text-base font-black uppercase tracking-tight flex items-center gap-2">
-          <History className="w-4 h-4 text-blue-400" />
-          Reportes
+          <Scan className="w-4 h-4 text-blue-400" />
+          Capturar
         </h1>
       </div>
 
-      {/* Tabs con badges */}
+      {/* Tabs - Compactos y scrollables */}
       <div className="flex gap-1 px-2 py-2 overflow-x-auto no-scrollbar bg-slate-900/30 border-b border-white/5 shrink-0">
-        {tabsWithBadges.map((tab) => {
+        {TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.key;
           
           return (
             <button
               key={tab.key}
-              onClick={() => handleTabChange(tab.key)}
+              onClick={() => setActiveTab(tab.key)}
               className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all shrink-0 ${
                 isActive
                   ? `${tab.activeBg} ${tab.color}`
@@ -166,25 +155,15 @@ export const ReportsPage: React.FC = () => {
               }`}
             >
               <Icon className="w-3 h-3" />
+              {/* Usa etiqueta corta en pantallas pequeñas */}
               <span className="hidden sm:inline">{tab.label}</span>
               <span className="sm:hidden">{tab.shortLabel}</span>
-              
-              {/* Badge */}
-              {tab.badge !== undefined && tab.badge > 0 && (
-                <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[9px] font-black ${
-                  tab.badgeStyle === 'error' 
-                    ? 'bg-rose-500 text-white' 
-                    : 'bg-amber-500 text-black'
-                }`}>
-                  {tab.badge}
-                </span>
-              )}
             </button>
           );
         })}
       </div>
 
-      {/* Content */}
+      {/* Content - Ocupa todo el espacio restante */}
       <div className="flex-1 overflow-hidden relative">
         <AnimatePresence mode="wait">
           <motion.div
@@ -203,4 +182,4 @@ export const ReportsPage: React.FC = () => {
   );
 };
 
-export default ReportsPage;
+export default CapturePage;

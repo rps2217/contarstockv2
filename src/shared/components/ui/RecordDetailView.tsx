@@ -247,7 +247,7 @@ export const RecordDetailView: React.FC<RecordDetailViewProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'detail' | 'history' | 'actions'>(defaultTab);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
-  const { getRecordHistory } = useAudit();
+  const { getTableHistory } = useAudit();
 
   // Reset tab when recordId changes
   useEffect(() => {
@@ -440,8 +440,7 @@ export const RecordDetailView: React.FC<RecordDetailViewProps> = ({
               {recordId && tableName ? (
                 <AuditPanel
                   tableName={tableName}
-                  recordId={recordId}
-                  loadHistory={getRecordHistory}
+                  loadHistory={getTableHistory}
                   title="Historial de Cambios"
                   limit={50}
                 />

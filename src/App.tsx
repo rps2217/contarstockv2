@@ -22,33 +22,34 @@ import { useNavigate } from 'react-router-dom';
 const Login = lazyWithRetry(() => import('@/components/Login').then(m => ({ default: m.Login })));
 const StartSessionModal = lazyWithRetry(() => import('@/components/StartSessionModal').then(m => ({ default: m.StartSessionModal })));
 
-// --- VISTAS MAESTRAS ---
-// Forzamos un cambio para limpiar la caché del empaquetador Vite (compilación limpia)
+// --- VISTAS PRINCIPALES (AppSheet-style) ---
 const Dashboard = lazyWithRetry(() => import('./features/dashboard/DashboardPage'));
-const Reports = lazyWithRetry(() => import('@/features/reports/ReportsPage'));
-// DatabaseView era un alias de InventoryPage - eliminado
-const Sync = lazyWithRetry(() => import('@/features/sync/SyncPage'));
-const Settings = lazyWithRetry(() => import('@/features/settings/SettingsPage'));
-const InventoryPage = lazyWithRetry(() => import('@/features/inventory/InventoryPage'));
+const CapturePage = lazyWithRetry(() => import('./features/capture/CapturePage'));
+const DataPage = lazyWithRetry(() => import('./features/data/DataPage'));
+const SyncPage = lazyWithRetry(() => import('./features/sync/SyncPage'));
+const SettingsPage = lazyWithRetry(() => import('./features/settings/SettingsPage'));
 
-// --- MÓDULOS OPERATIVOS (FEATURES) ---
-const ReceptionManagement = lazyWithRetry(() => import('@/features/reception/ReceptionManagementPage'));
-const ReceptionCapture = lazyWithRetry(() => import('@/features/reception/ReceptionCapturePage'));
-const CountingPage = lazyWithRetry(() => import('@/features/counting/CountingPage'));
-const HammerPage = lazyWithRetry(() => import('@/features/hammer/HammerPage'));
-const ExpiryPage = lazyWithRetry(() => import('@/features/expiry/ExpiryPage'));
-const EventManagement = lazyWithRetry(() => import('@/features/events/EventManagementPage'));
-const EventCapturePage = lazyWithRetry(() => import('@/features/events/EventCapturePage'));
-const ComplianceDashboardPage = lazyWithRetry(() => import('@/features/compliance/ComplianceDashboardPage'));
-const DynamicManagement = lazyWithRetry(() => import('@/features/dynamic/DynamicManagementPage').then(m => ({ default: m.DynamicManagementPage })));
-const GlobalSyncQueue = lazyWithRetry(() => import('@/features/sync/SyncCenterPage').then(m => ({ default: m.SyncCenterPage })));
-const SlicesPage = lazyWithRetry(() => import('@/features/slices/SlicesPage').then(m => ({ default: m.SlicesPage })));
-const ProvidersPage = lazyWithRetry(() => import('@/features/suppliers/pages/ProvidersPage').then(m => ({ default: m.ProvidersPage })));
-const CustomersPage = lazyWithRetry(() => import('@/features/customers/CustomersPage').then(m => ({ default: m.CustomersPage })));
-const ExpectedOrdersPage = lazyWithRetry(() => import('@/features/expected-orders/ExpectedOrdersPage').then(m => ({ default: m.ExpectedOrdersPage })));
+// --- RUTAS LEGACY (mantener para compatibilidad temporal) ---
+const ReportsLegacy = lazyWithRetry(() => import('@/features/reports/ReportsPage'));
+const ReceptionLegacy = lazyWithRetry(() => import('@/features/reception/ReceptionPage'));
+const CountingLegacy = lazyWithRetry(() => import('@/features/counting/CountingPage'));
+const HammerLegacy = lazyWithRetry(() => import('@/features/hammer/HammerPage'));
+const ExpiryLegacy = lazyWithRetry(() => import('@/features/expiry/ExpiryPage'));
+const EventsLegacy = lazyWithRetry(() => import('@/features/events/EventsPage'));
+const InventoryLegacy = lazyWithRetry(() => import('@/features/inventory/InventoryPage'));
+const ComplianceLegacy = lazyWithRetry(() => import('@/features/compliance/ComplianceDashboardPage'));
+const DynamicLegacy = lazyWithRetry(() => import('@/features/dynamic/DynamicManagementPage').then(m => ({ default: m.DynamicManagementPage })));
+const SlicesLegacy = lazyWithRetry(() => import('@/features/slices/SlicesPage').then(m => ({ default: m.SlicesPage })));
+const ProvidersLegacy = lazyWithRetry(() => import('@/features/suppliers/pages/ProvidersPage').then(m => ({ default: m.ProvidersPage })));
+const CustomersLegacy = lazyWithRetry(() => import('@/features/customers/CustomersPage').then(m => ({ default: m.CustomersPage })));
+const ExpectedOrdersLegacy = lazyWithRetry(() => import('@/features/expected-orders/ExpectedOrdersPage').then(m => ({ default: m.ExpectedOrdersPage })));
 
 import { OnboardingOverlay } from '@/shared/components/core/OnboardingOverlay';
 import { SystemOperationsDrawer } from '@/shared/components/core/SystemOperationsDrawer';
+import { ThemeDemo } from '@/shared/components/ui/ThemeDemo';
+
+// Wrapper para ThemeDemo (evita problemas con lazy)
+const ThemeDemoPage = () => <ThemeDemo />;
 
 import { useAppInit } from '@/hooks/useAppInit';
 import { motion, AnimatePresence } from 'motion/react';
@@ -204,27 +205,46 @@ const AppContent = () => {
                   className="h-full w-full"
                 >
                   <Routes location={location}>
+                    {/* RUTAS PRINCIPALES (AppSheet-style) */}
                     <Route path="/" element={<Dashboard />} />
                     <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/reports" element={<ModuleRoute moduleKey="reports" element={<Reports />} />} />
-                    <Route path="/database" element={<ModuleRoute moduleKey="database" element={<InventoryPage />} />} />
-                    <Route path="/sync" element={<ModuleRoute moduleKey="sync" element={<Sync />} />} />
-                    <Route path="/sync/queue" element={<ModuleRoute moduleKey="sync" element={<GlobalSyncQueue />} />} />
-                    <Route path="/slices" element={<SlicesPage />} />
-                    <Route path="/settings" element={<ModuleRoute moduleKey="settings" element={<Settings />} />} />
-                    <Route path="/reception" element={<ModuleRoute moduleKey="reception" element={<ReceptionManagement />} />} />
-                    <Route path="/reception/capture" element={<ModuleRoute moduleKey="reception" element={<ReceptionCapture />} />} />
-                    <Route path="/expiry" element={<ModuleRoute moduleKey="expiry" element={<ExpiryPage />} />} />
-                    <Route path="/expiry/capture" element={<Navigate to="/expiry" replace />} />
-                    <Route path="/events" element={<ModuleRoute moduleKey="events" element={<EventManagement />} />} />
-                    <Route path="/events/capture" element={<ModuleRoute moduleKey="events" element={<EventCapturePage />} />} />
-                    <Route path="/compliance" element={<ComplianceDashboardPage />} />
-                    <Route path="/providers" element={<ProvidersPage />} />
-                    <Route path="/customers" element={<CustomersPage />} />
-                    <Route path="/expected-orders" element={<ExpectedOrdersPage />} />
-                    <Route path="/dynamic/:tableKey" element={<DynamicManagement />} />
-                    <Route path="/counting/:id" element={<ModuleRoute moduleKey="counting" element={<CountingPage />} />} />
-                    <Route path="/massive/:batchId" element={<ModuleRoute moduleKey="counting" element={<HammerPage />} />} />
+                    <Route path="/capture" element={<CapturePage />} />
+                    <Route path="/capture/:tab" element={<CapturePage />} />
+                    <Route path="/data" element={<DataPage />} />
+                    <Route path="/data/:table" element={<DataPage />} />
+                    <Route path="/data/:table/:id" element={<DataPage />} />
+                    <Route path="/sync" element={<SyncPage />} />
+                    <Route path="/sync/:tab" element={<SyncPage />} />
+                    <Route path="/reports" element={<ReportsLegacy />} />
+                    <Route path="/reports/:tab" element={<ReportsLegacy />} />
+                    <Route path="/settings" element={<SettingsPage />} />
+
+                    {/* DEEP LINKS - Abrir app en registro específico */}
+                    <Route path="/session/:id" element={<ReportsLegacy />} />
+                    <Route path="/reception/:id" element={<CapturePage />} />
+                    <Route path="/product/:barcode" element={<DataPage />} />
+
+                    {/* TEMA DEMO - Página de demostración del tema AppSheet */}
+                    <Route path="/theme-demo" element={<ThemeDemoPage />} />
+
+                    {/* RUTAS LEGACY (redirigir a nuevas) */}
+                    <Route path="/reception" element={<Navigate to="/capture" replace />} />
+                    <Route path="/reception/capture" element={<Navigate to="/capture" replace />} />
+                    <Route path="/events" element={<Navigate to="/capture" replace />} />
+                    <Route path="/events/capture" element={<Navigate to="/capture" replace />} />
+                    <Route path="/expiry" element={<Navigate to="/capture" replace />} />
+                    <Route path="/expiry/capture" element={<Navigate to="/capture" replace />} />
+                    <Route path="/counting/:id" element={<Navigate to="/capture" replace />} />
+                    <Route path="/massive/:batchId" element={<Navigate to="/capture" replace />} />
+                    <Route path="/database" element={<Navigate to="/data" replace />} />
+                    <Route path="/customers" element={<Navigate to="/data" replace />} />
+                    <Route path="/providers" element={<Navigate to="/data" replace />} />
+                    <Route path="/expected-orders" element={<Navigate to="/data" replace />} />
+                    <Route path="/compliance" element={<Navigate to="/reports" replace />} />
+                    <Route path="/slices" element={<Navigate to="/reports" replace />} />
+                    <Route path="/dynamic/:tableKey" element={<Navigate to="/data" replace />} />
+
+                    {/* Fallback */}
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                 </motion.div>

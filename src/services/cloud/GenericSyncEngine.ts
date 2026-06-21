@@ -165,7 +165,7 @@ export class GenericSyncEngine {
         const rawRemoteTime = row.updated_at || row.timestamp || 0;
         let remoteTime = 0;
         if (rawRemoteTime) {
-          const parsedRemote = new Date(rawRemoteTime).getTime();
+          const parsedRemote = new Date(rawRemoteTime as string | number).getTime();
           if (!isNaN(parsedRemote)) {
             remoteTime = parsedRemote;
           }

@@ -1,15 +1,24 @@
 
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Home, Database, History, Cloud, Container, Settings, FileText, Calendar, ShieldCheck, Users, Layers } from 'lucide-react';
-import { AppSettings, ViewState } from '../types';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Home, Scan, Database, History, Cloud, Settings } from 'lucide-react';
+import { AppSettings } from '../types';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ScanRepository } from '../repositories/ScanRepository';
 import { db } from '../db';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
-import { useExpiryStore } from '@/stores';
+import { useSyncStore } from '@/stores';
 import { SmartDock, SmartDockItem } from './SmartDock';
-import { isModuleEnabled } from '../services/moduleManager';
+
+// Navegación simplificada estilo AppSheet (5 items para móvil)
+const MOBILE_NAV = [
+  { id: 'dashboard', label: 'Panel', icon: Home, path: '/' },
+  { id: 'capture', label: 'Capturar', icon: Scan, path: '/capture' },
+  { id: 'data', label: 'Datos', icon: Database, path: '/data' },
+  { id: 'reports', label: 'Reportes', icon: History, path: '/reports' },
+  { id: 'sync', label: 'Sync', icon: Cloud, path: '/sync' },
+  { id: 'settings', label: 'Ajustes', icon: Settings, path: '/settings' },
+];
 
 interface Props {
   currentView: string;
@@ -18,71 +27,43 @@ interface Props {
 
 export const BottomDock: React.FC<Props> = ({ currentView, settings }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const isOnline = useNetworkStatus();
+  const { pendingItems } = useSyncStore();
+  
+  // Calcular items pendientes de sincronización
   const pendingScans = useLiveQuery(() => ScanRepository.getPendingSyncCount(), [], 0);
   const pendingSessions = useLiveQuery(() => db.sessions.where('syncStatus').equals('pending').count(), [], 0);
   const pendingDynamic = useLiveQuery(() => db.dynamic_data.where('syncStatus').anyOf(['pending', 'error']).count(), [], 0);
   const totalPending = pendingScans + pendingSessions + pendingDynamic;
-  const alertCount = useExpiryStore(state => state.alertCount);
 
-  const iconMap: Record<string, { label: string, icon: any, path: string }> = {
-    'dashboard': { label: 'INICIO', icon: Home, path: '/dashboard' },
-    'database': { label: 'CATÁLOGO', icon: Database, path: '/database' },
-    'reception': { label: 'RECEPCIÓN', icon: Container, path: '/reception' },
-    'expiry': { label: 'VENCIMIENTOS', icon: Calendar, path: '/expiry' },
-    'events': { label: 'EVENTOS', icon: FileText, path: '/events' },
-    'reports': { label: 'HISTORIAL', icon: History, path: '/reports' },
-    'compliance': { label: 'RIESGO', icon: ShieldCheck, path: '/compliance' },
-    'customers': { label: 'CLIENTES', icon: Users, path: '/customers' },
-    'providers': { label: 'PROV.', icon: Container, path: '/providers' },
-    'slices': { label: 'VISTAS', icon: Layers, path: '/slices' },
-    'sync': { label: 'NUBE', icon: Cloud, path: '/sync' },
-    'settings': { label: 'AJUSTES', icon: Settings, path: '/settings' }
+  // Determinar qué item está activo basándose en la ruta actual
+  const getActiveId = () => {
+    const path = location.pathname;
+    if (path === '/' || path === '/dashboard') return 'dashboard';
+    if (path.startsWith('/capture')) return 'capture';
+    if (path.startsWith('/data')) return 'data';
+    if (path.startsWith('/reports')) return 'reports';
+    if (path.startsWith('/sync')) return 'sync';
+    if (path.startsWith('/settings')) return 'settings';
+    return 'dashboard';
   };
 
-  // List all available modules in a logical order
-  const allNavKeys: string[] = [
-    'dashboard',
-    'database',
-    'reception',
-    'expiry',
-    'events',
-    'reports',
-    'compliance',
-    'customers',
-    'providers',
-    'slices',
-    'sync',
-    'settings'
-  ];
+  const activeId = getActiveId();
 
-  // Filter keys based on module toggle
-  const activeNavKeys = allNavKeys.filter(key => {
-    // These keys are always enabled/not toggled by modules
-    if (key === 'dashboard' || key === 'compliance' || key === 'customers' || key === 'providers' || key === 'settings' || key === 'slices') {
-      return true;
-    }
-    // Check if the specific module is enabled
-    return isModuleEnabled(key);
-  });
+  const dockItems: SmartDockItem[] = MOBILE_NAV.map(item => {
+    const isActive = activeId === item.id;
 
-  const dockItems: SmartDockItem[] = activeNavKeys.map(key => {
-    const item = iconMap[key as ViewState];
-    const isActive = currentView === key;
-
+    // Badge para sync
     let badge = 0;
     let badgeStyle: 'default' | 'error' | 'warning' = 'default';
-
-    if (key === 'sync' && totalPending > 0) {
+    if (item.id === 'sync' && totalPending > 0) {
       badge = totalPending;
       badgeStyle = 'warning';
-    } else if (key === 'expiry' && alertCount > 0) {
-      badge = alertCount;
-      badgeStyle = 'error';
     }
 
     return {
-      id: key,
+      id: item.id,
       label: item.label,
       icon: item.icon,
       onClick: () => navigate(item.path),
@@ -100,4 +81,3 @@ export const BottomDock: React.FC<Props> = ({ currentView, settings }) => {
     </div>
   );
 };
-

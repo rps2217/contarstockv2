@@ -49,7 +49,12 @@ class SyncQueueService {
         this.processQueue();
       }
     } catch (err) {
-      logger.error('SYNC_QUEUE', 'Error al encolar operación', handleError(err));
+      const errorInfo = handleError(err);
+      logger.error('SYNC_QUEUE', 'Error al encolar operación', {
+        message: errorInfo.message,
+        code: errorInfo.code,
+        context: errorInfo.context
+      });
     }
   }
 
@@ -78,7 +83,12 @@ class SyncQueueService {
         byTable
       };
     } catch (err) {
-      logger.error('SYNC_QUEUE', 'Error al obtener stats', handleError(err));
+      const errorInfo = handleError(err);
+      logger.error('SYNC_QUEUE', 'Error al obtener stats', {
+        message: errorInfo.message,
+        code: errorInfo.code,
+        context: errorInfo.context
+      });
       return { total: 0, pending: 0, failed: 0, byTable: {} };
     }
   }

@@ -2,6 +2,7 @@
 import { db } from "../db";
 import { Product } from "../types";
 import { localBrain } from "./localBrain";
+import { logger } from "./logger";
 
 export const VectorService = {
  /**
@@ -33,15 +34,15 @@ export const VectorService = {
  const missing = allProducts.filter(p => VectorService.needsEmbedding(p));
  const total = missing.length;
 
- console.log(`[VectorService] Pendientes de vectorización local: ${total}`);
+ logger.debug('vector', `Pendientes de vectorización local: ${total}`);
 
  if (total === 0) return 0;
 
  // Check if localBrain is disabled (lowEndMode)
  const testVector = await localBrain.embed("test");
  if (testVector === null) {
- console.log("[VectorService] Motor IA deshabilitado. Abortando vectorización.");
- return 0;
+   logger.info('vector', 'Motor IA deshabilitado. Abortando vectorización.');
+   return 0;
  }
 
  let processed = 0;

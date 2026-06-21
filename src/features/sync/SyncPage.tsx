@@ -1,160 +1,460 @@
+/**
+ * SyncPage - Página unificada de sincronización
+ * 
+ * Combina SyncPage (subida de inventario) y SyncCenterPage (centro de control)
+ * en una sola vista con tabs para alternar entre diferentes funciones.
+ */
 
-import React from 'react';
-import { Cloud, ChevronLeft, Loader2, ArrowUpCircle, Info, DownloadCloud, Database, RefreshCw, ShieldCheck, UploadCloud } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'motion/react';
+import { 
+  Cloud, 
+  RefreshCw,
+  ChevronLeft,
+  AlertTriangle,
+  ArrowUpCircle,
+  Database,
+  CheckCircle2,
+  Play,
+  Clock,
+  History,
+  Activity,
+  DownloadCloud,
+  UploadCloud,
+  ShieldCheck,
+  Info,
+  Loader2
+} from 'lucide-react';
+
+import { useSyncStore } from '@/stores';
+import { syncRegistry } from '../../services/cloud/syncRegistry';
+import { useSyncCenter } from './hooks/useSyncCenter';
+import { useAudit } from '@/hooks/useAudit';
+import { AuditPanel } from '@/shared/components/ui/AuditPanel';
 import { useSyncManager } from './hooks/useSyncManager';
 import { SyncGroupCard } from './components/SyncGroupCard';
+import { 
+  SyncStatusCards, 
+  SyncQueuePanel, 
+  SyncActivity,
+  ConflictStrategyPanel,
+  SyncMetricsDashboard
+} from './components';
+import { syncMetrics } from '@/services/cloud/SyncMetrics';
+import { useSyncHealthAlert } from './hooks/useSyncHealthAlert';
 
-export const SyncManagerUI: React.FC = () => {
+type TabType = 'upload' | 'queue' | 'tables' | 'incidents' | 'audit';
+
+export const SyncPage: React.FC = () => {
   const navigate = useNavigate();
+  
+  // ==================== SHARED STATE ====================
+  const { incidents, lastSyncTime, isSupabaseConnected, conflicts, clearIncidents } = useSyncStore();
+  const { getTableHistory, getPendingSync, syncToCloud } = useAudit();
+  const { isHealthy } = useSyncHealthAlert(true);
+  
+  const [activeTab, setActiveTab] = useState<TabType>('upload');
+  const [pendingAuditCount, setPendingAuditCount] = useState(0);
+  const [isStrategyPanelOpen, setIsStrategyPanelOpen] = useState(false);
+  const [isMetricsOpen, setIsMetricsOpen] = useState(false);
+
+  // ==================== SYNC CENTER STATE ====================
+  const {
+    isSyncing,
+    syncLogs,
+    selectedQueueItem,
+    stats,
+    pendingQueueItems,
+    totalPending,
+    isOnline,
+    setSelectedQueueItem,
+    handleFullSync,
+    handleSingleTableSync,
+    handleDiscardItem,
+    handleForceComplete,
+  } = useSyncCenter();
+
+  // ==================== SYNC MANAGER STATE ====================
   const { state, actions } = useSyncManager();
 
+  // Load pending audit count
+  useEffect(() => {
+    getPendingSync().then(pending => setPendingAuditCount(pending.length));
+  }, [getPendingSync]);
+
   return (
-    <div className="flex flex-col h-[calc(100dvh-6rem)] md:h-screen bg-slate-50/50 dark:bg-black text-slate-900 dark:text-white overflow-hidden font-sans">
-      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-white/5 px-4 md:px-8 py-4 md:py-6 flex items-center justify-between shrink-0 shadow-sm z-10">
-        <div className="flex items-center gap-3 md:gap-5">
-          <button onClick={() => navigate('/dashboard')} className="p-2 md:p-2.5 -ml-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 rounded-xl text-slate-600 dark:text-slate-300 transition-colors active:scale-95">
-            <ChevronLeft className="w-5 h-5 md:w-6 md:h-6 stroke-[3px]" />
-          </button>
-          <div>
-            <h1 className="text-lg md:text-2xl font-black uppercase tracking-tight text-slate-900 dark:text-white leading-none flex items-center gap-2">
-              Gestor de Subida
-            </h1>
-            <div className="flex items-center gap-2 mt-1.5">
-              <span className={`flex items-center gap-1.5 text-[9px] md:text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-widest ${navigator.onLine ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 dark:text-emerald-400' : 'text-rose-600 bg-rose-50 dark:bg-rose-500/10 dark:text-rose-400'}`}>
-                <div className={`w-1.5 h-1.5 rounded-full ${navigator.onLine ? 'bg-emerald-500' : 'bg-rose-500'} animate-pulse`} />
-                {navigator.onLine ? 'En Línea' : 'Offline'}
-              </span>
+    <div className="h-full flex flex-col overflow-hidden bg-slate-950 text-white font-sans">
+      {/* Header */}
+      <div className="bg-slate-900 border-b border-white/5 px-4 py-4 shrink-0">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => navigate('/dashboard')} 
+              className="p-2 bg-white/5 rounded-xl text-slate-400 hover:text-white transition-colors"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <div>
+              <h1 className="text-xl font-black uppercase tracking-tight flex items-center gap-2">
+                <Cloud className={`w-6 h-6 ${isHealthy ? 'text-amber-400' : 'text-rose-400'}`} />
+                Sincronización
+              </h1>
+              <div className="flex items-center gap-2 mt-1">
+                <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-rose-500'} animate-pulse`} />
+                <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
+                  {isOnline ? 'En línea' : 'Offline'}
+                </span>
+              </div>
             </div>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsMetricsOpen(true)}
+              className="p-2.5 bg-white/5 rounded-xl text-slate-400 hover:text-white transition-colors"
+              title="Métricas"
+            >
+              <Activity className="w-5 h-5" />
+            </button>
+            <button
+              onClick={handleFullSync}
+              disabled={isSyncing}
+              className="px-4 py-2.5 bg-blue-600 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-blue-500 transition-colors disabled:opacity-50"
+            >
+              {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              Sincronizar
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden max-w-7xl mx-auto w-full">
-        {/* Sidebar Actions (Desktop) / Top Actions (Mobile) */}
-        <div className="shrink-0 md:w-80 p-4 md:p-6 md:border-r border-slate-200 dark:border-white/5 flex flex-col gap-4 overflow-y-auto no-scrollbar">
-          <div className="bg-blue-50/80 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30 p-4 rounded-2xl flex gap-3">
-            <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0" />
-            <p className="text-[10px] text-blue-800 dark:text-blue-300 font-medium leading-relaxed">
-              Esta pantalla gestiona los <span className="font-bold">Movimientos de Inventario</span> (picks) y <span className="font-bold">Tablas Dinámicas</span>. 
-              La sincronización de nombres de productos se hace en el menú Catálogo.
-            </p>
-          </div>
+      {/* Tabs */}
+      <div className="flex border-b border-white/5 bg-slate-900/50 p-1 gap-1 overflow-x-auto shrink-0">
+        <TabButton 
+          active={activeTab === 'upload'} 
+          onClick={() => setActiveTab('upload')}
+          icon={<ArrowUpCircle className="w-4 h-4" />}
+        >
+          Subida
+        </TabButton>
+        <TabButton 
+          active={activeTab === 'queue'} 
+          onClick={() => setActiveTab('queue')}
+          icon={<Clock className="w-4 h-4" />}
+          badge={pendingQueueItems?.length}
+        >
+          Cola
+        </TabButton>
+        <TabButton 
+          active={activeTab === 'tables'} 
+          onClick={() => setActiveTab('tables')}
+          icon={<Database className="w-4 h-4" />}
+        >
+          Esquemas
+        </TabButton>
+        <TabButton 
+          active={activeTab === 'incidents'} 
+          onClick={() => setActiveTab('incidents')}
+          icon={<AlertTriangle className="w-4 h-4" />}
+          badge={incidents?.length}
+          alert={conflicts > 0}
+        >
+          Incidentes
+        </TabButton>
+        <TabButton 
+          active={activeTab === 'audit'} 
+          onClick={() => setActiveTab('audit')}
+          icon={<History className="w-4 h-4" />}
+        >
+          Auditoría
+        </TabButton>
+      </div>
 
-          <button 
-            onClick={() => navigate('/sync/queue')}
-            className="w-full p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl flex items-center justify-between group hover:border-amber-400 dark:hover:border-amber-500/50 hover:shadow-md transition-all"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-500">
-                <Database className="w-5 h-5" />
-              </div>
-              <div className="text-left font-sans">
-                <span className="text-[11px] font-black uppercase tracking-wide text-slate-800 dark:text-slate-200 block">Ver Cola de Datos</span>
-                <span className="text-[9px] font-bold text-slate-500">Registros pendientes</span>
-              </div>
-            </div>
-            <RefreshCw className="w-4 h-4 text-slate-400 group-hover:text-amber-500 group-hover:rotate-180 transition-all duration-500" />
-          </button>
-
-          <div className="grid grid-cols-2 gap-2">
-            <button 
-              onClick={actions.handlePushConfig}
-              disabled={state.isProcessing}
-              className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl flex flex-col items-center justify-center gap-2 group hover:border-blue-400 transition-all text-center"
-              title="Respaldar Plantillas y Esquemas"
+      {/* Content */}
+      <div className="flex-1 overflow-auto p-4">
+        <AnimatePresence mode="wait">
+          {/* ==================== UPLOAD TAB ==================== */}
+          {activeTab === 'upload' && (
+            <motion.div
+              key="upload"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-4 max-w-5xl mx-auto"
             >
-              <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
-                <UploadCloud className="w-4 h-4" />
+              {/* Info Card */}
+              <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-2xl flex gap-3">
+                <Info className="w-5 h-5 text-blue-400 shrink-0" />
+                <p className="text-xs text-blue-300">
+                  Gestiona <strong>Movimientos de Inventario</strong> (picks) y <strong>Tablas Dinámicas</strong>.
+                  La sincronización de productos se hace en el Catálogo.
+                </p>
               </div>
-              <div>
-                <span className="text-[9px] font-black uppercase tracking-wide text-slate-700 dark:text-slate-300 block">Respaldar</span>
-                <span className="text-[8px] text-slate-500">Configuración</span>
-              </div>
-            </button>
 
-            <button 
-              onClick={actions.handlePullConfig}
-              disabled={state.isProcessing}
-              className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl flex flex-col items-center justify-center gap-2 group hover:border-emerald-400 transition-all text-center"
-              title="Restaurar Plantillas y Esquemas"
-            >
-              <div className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
-                <DownloadCloud className="w-4 h-4" />
-              </div>
-              <div>
-                <span className="text-[9px] font-black uppercase tracking-wide text-slate-700 dark:text-slate-300 block">Restaurar</span>
-                <span className="text-[8px] text-slate-500">Configuración</span>
-              </div>
-            </button>
-          </div>
-        </div>
-
-        {/* Main Content Area */}
-        <div className="flex-1 flex flex-col overflow-hidden bg-slate-50/50 dark:bg-black relative">
-          <div className="flex-1 overflow-y-auto px-4 md:px-8 py-4 md:py-6 space-y-3">
-            {state.uiGroups.length === 0 ? (
-              <div className="h-full min-h-[40vh] flex flex-col items-center justify-center text-center opacity-50">
-                <Cloud className="w-16 h-16 md:w-20 md:h-20 mb-4 md:mb-6 text-slate-400 stroke-1" />
-                <h3 className="text-lg md:text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Cielo Despejado</h3>
-                <p className="text-xs md:text-sm mt-2 font-medium max-w-[250px]">No hay datos pendientes de sincronización local.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 md:gap-4 content-start">
-                {state.uiGroups.map(g => (
-                  <SyncGroupCard key={g.erpOrder} group={g} uiStatus={g.uiStatus} progress={g.progress} />
-                ))}
-              </div>
-            )}
-            
-            {state.logs.length > 0 && (
-              <div className="mt-8 bg-slate-900 rounded-2xl p-4 font-mono text-[10px] text-slate-300 space-y-2 max-h-48 overflow-y-auto border border-slate-800 shadow-inner">
-                {state.logs.map((log, i) => (
-                  <div key={i} className={`flex gap-3 ${log.type === 'error' ? 'text-rose-400' : log.type === 'success' ? 'text-emerald-400' : ''}`}>
-                    <span className="opacity-40 shrink-0 select-none">[{log.time}]</span>
-                    <span className="break-all">{log.msg}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Bottom Action Footer */}
-          <div className="p-4 md:p-6 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-white/5 shrink-0 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)]">
-            <div className="flex flex-col sm:flex-row gap-3 max-w-4xl mx-auto">
-              <div className="flex gap-3 sm:w-1/2">
-                <button 
+              {/* Quick Actions */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <ActionButton
+                  icon={<UploadCloud className="w-5 h-5" />}
+                  label="Respaldar"
+                  sublabel="Configuración"
+                  onClick={actions.handlePushConfig}
+                  disabled={state.isProcessing}
+                />
+                <ActionButton
+                  icon={<DownloadCloud className="w-5 h-5" />}
+                  label="Restaurar"
+                  sublabel="Configuración"
+                  onClick={actions.handlePullConfig}
+                  disabled={state.isProcessing}
+                />
+                <ActionButton
+                  icon={<DownloadCloud className="w-5 h-5" />}
+                  label="Descargar"
+                  sublabel="Órdenes ERP"
                   onClick={actions.handleDownloadOrders}
                   disabled={state.isProcessing}
-                  className="flex-1 bg-slate-100 hover:bg-slate-200 disabled:bg-slate-50 dark:bg-white/5 dark:hover:bg-white/10 dark:disabled:bg-transparent disabled:text-slate-400 text-slate-700 dark:text-slate-300 font-bold py-3.5 md:py-4 rounded-xl flex items-center justify-center gap-2 md:gap-3 transition-colors active:scale-[0.98] text-[10px] md:text-xs tracking-wider uppercase border border-slate-200 dark:border-white/10"
-                >
-                  {state.isProcessing ? <Loader2 className="animate-spin w-4 h-4 md:w-5 md:h-5"/> : <DownloadCloud className="w-4 h-4 md:w-5 md:h-5" />}
-                  Bajar Órdenes
-                </button>
-                <button 
+                />
+                <ActionButton
+                  icon={<ShieldCheck className="w-5 h-5" />}
+                  label="Auditar"
+                  sublabel="Integridad"
                   onClick={actions.handleVerifyIntegrity}
                   disabled={state.isProcessing}
-                  className="flex-1 bg-emerald-50 hover:bg-emerald-100 disabled:bg-slate-50 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 dark:disabled:bg-transparent disabled:text-slate-400 text-emerald-700 dark:text-emerald-400 font-bold py-3.5 md:py-4 rounded-xl flex items-center justify-center gap-2 md:gap-3 transition-colors active:scale-[0.98] text-[10px] md:text-xs tracking-wider uppercase border border-emerald-200 dark:border-emerald-500/20"
-                >
-                  {state.isProcessing ? <Loader2 className="animate-spin w-4 h-4 md:w-5 md:h-5"/> : <ShieldCheck className="w-4 h-4 md:w-5 md:h-5" />}
-                  Auditar
-                </button>
+                />
               </div>
-              <button 
+
+              {/* Upload Groups */}
+              {state.uiGroups.length === 0 ? (
+                <div className="text-center py-16 text-slate-500">
+                  <Cloud className="w-16 h-16 mx-auto mb-4 opacity-30" />
+                  <p className="font-medium">No hay datos pendientes de sincronización</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+                  {state.uiGroups.map(g => (
+                    <SyncGroupCard key={g.erpOrder} group={g} uiStatus={g.uiStatus} progress={g.progress} />
+                  ))}
+                </div>
+              )}
+
+              {/* Sync Button */}
+              <button
                 onClick={actions.handleSyncAll}
                 disabled={state.isProcessing || state.uiGroups.length === 0}
-                className="w-full sm:w-1/2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 dark:disabled:bg-slate-800 disabled:text-slate-400 text-white font-black py-4 md:py-0 rounded-xl shadow-lg shadow-blue-500/25 flex items-center justify-center gap-3 transition-all active:scale-[0.98] uppercase tracking-widest text-xs md:text-sm border border-transparent"
+                className="w-full py-4 bg-blue-600 rounded-2xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-3 hover:bg-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {state.isProcessing ? <Loader2 className="animate-spin w-5 h-5 md:w-6 md:h-6"/> : <ArrowUpCircle className="w-5 h-5 md:w-6 md:h-6" />}
-                {state.isProcessing ? 'Sincronizando...' : 'Subir Cambios Ahora'}
+                {state.isProcessing ? (
+                  <><Loader2 className="w-5 h-5 animate-spin" /> Sincronizando...</>
+                ) : (
+                  <><ArrowUpCircle className="w-5 h-5" /> Subir Cambios Ahora</>
+                )}
               </button>
-            </div>
-          </div>
-        </div>
+
+              {/* Logs */}
+              {state.logs.length > 0 && (
+                <div className="bg-slate-900 rounded-2xl p-4 font-mono text-[10px] text-slate-400 space-y-1 max-h-48 overflow-auto">
+                  {state.logs.map((log, i) => (
+                    <div key={i} className={log.type === 'error' ? 'text-rose-400' : log.type === 'success' ? 'text-emerald-400' : ''}>
+                      [{log.time}] {log.msg}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {/* ==================== QUEUE TAB ==================== */}
+          {activeTab === 'queue' && (
+            <motion.div
+              key="queue"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-4 max-w-5xl mx-auto"
+            >
+              <SyncStatusCards
+                isOnline={isOnline}
+                isSupabaseConnected={isSupabaseConnected}
+                totalPending={totalPending}
+                lastSyncTime={lastSyncTime}
+              />
+
+              {conflicts > 0 && (
+                <div className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-2xl flex items-center gap-3">
+                  <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
+                  <div>
+                    <p className="text-xs font-bold text-amber-400">{conflicts} conflictos detectados</p>
+                    <p className="text-[10px] text-slate-400 mt-1">Algunos registros fueron modificados localmente y remotamente.</p>
+                  </div>
+                </div>
+              )}
+
+              <SyncQueuePanel
+                items={pendingQueueItems}
+                selectedItem={selectedQueueItem}
+                onSelectItem={setSelectedQueueItem}
+                onForceSync={handleSingleTableSync}
+                onForceComplete={() => selectedQueueItem && handleForceComplete(selectedQueueItem)}
+                onDiscard={() => selectedQueueItem && handleDiscardItem(selectedQueueItem)}
+              />
+            </motion.div>
+          )}
+
+          {/* ==================== TABLES TAB ==================== */}
+          {activeTab === 'tables' && (
+            <motion.div
+              key="tables"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="max-w-5xl mx-auto"
+            >
+              <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden">
+                <div className="p-4 border-b border-slate-800 flex justify-between items-center">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Esquemas</span>
+                  <span className="text-[10px] text-blue-400 font-mono">BIDIRECCIONAL</span>
+                </div>
+                <div className="divide-y divide-slate-800">
+                  {Object.entries(syncRegistry).map(([key, meta]) => {
+                    const tableStat = stats?.[key] || { total: 0, pending: 0 };
+                    return (
+                      <div key={key} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-slate-800/50">
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2.5 rounded-xl ${tableStat.pending > 0 ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-slate-800'}`}>
+                            <Database className={`w-4 h-4 ${tableStat.pending > 0 ? 'text-amber-500' : 'text-slate-400'}`} />
+                          </div>
+                          <div>
+                            <p className="font-bold text-sm capitalize">{key}</p>
+                            <p className="text-[10px] text-slate-500 font-mono">{tableStat.total} filas</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {tableStat.pending > 0 ? (
+                            <span className="text-[10px] text-amber-400 font-bold">{tableStat.pending} pendientes</span>
+                          ) : (
+                            <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3" /> OK
+                            </span>
+                          )}
+                          <button
+                            onClick={() => handleSingleTableSync(key)}
+                            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-[10px] font-bold flex items-center gap-1.5"
+                          >
+                            <Play className="w-3 h-3" /> Sync
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ==================== INCIDENTS TAB ==================== */}
+          {activeTab === 'incidents' && (
+            <motion.div
+              key="incidents"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="max-w-5xl mx-auto"
+            >
+              <SyncActivity
+                incidents={incidents || []}
+                logs={syncLogs}
+                lastSyncTime={lastSyncTime}
+                onClearIncidents={clearIncidents}
+              />
+            </motion.div>
+          )}
+
+          {/* ==================== AUDIT TAB ==================== */}
+          {activeTab === 'audit' && (
+            <motion.div
+              key="audit"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="max-w-5xl mx-auto"
+            >
+              <AuditPanel
+                loadHistory={getTableHistory}
+                title="Registro de Auditoría"
+                limit={100}
+                onSyncToCloud={syncToCloud}
+                pendingCount={pendingAuditCount}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
+
+      {/* Modals */}
+      <ConflictStrategyPanel
+        isOpen={isStrategyPanelOpen}
+        onClose={() => setIsStrategyPanelOpen(false)}
+      />
+      
+      <AnimatePresence>
+        {isMetricsOpen && (
+          <SyncMetricsDashboard
+            isOpen={isMetricsOpen}
+            onClose={() => setIsMetricsOpen(false)}
+            onRefresh={() => syncMetrics.getStats()}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };
 
-export default SyncManagerUI;
+// ==================== HELPER COMPONENTS ====================
 
+const TabButton: React.FC<{
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+  badge?: number;
+  alert?: boolean;
+}> = ({ active, onClick, icon, children, badge, alert }) => (
+  <button
+    onClick={onClick}
+    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+      active 
+        ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' 
+        : 'text-slate-400 hover:text-white hover:bg-white/5'
+    }`}
+  >
+    {icon}
+    {children}
+    {badge !== undefined && badge > 0 && (
+      <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${alert ? 'bg-rose-500 text-white' : 'bg-slate-700'}`}>
+        {badge}
+      </span>
+    )}
+  </button>
+);
+
+const ActionButton: React.FC<{
+  icon: React.ReactNode;
+  label: string;
+  sublabel: string;
+  onClick: () => void;
+  disabled?: boolean;
+}> = ({ icon, label, sublabel, onClick, disabled }) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    className="p-4 bg-slate-800/50 hover:bg-slate-800 border border-slate-700 rounded-2xl flex flex-col items-center gap-2 text-center transition-colors disabled:opacity-50"
+  >
+    <div className="text-blue-400">{icon}</div>
+    <span className="text-xs font-bold">{label}</span>
+    <span className="text-[10px] text-slate-500">{sublabel}</span>
+  </button>
+);
+
+export default SyncPage;
