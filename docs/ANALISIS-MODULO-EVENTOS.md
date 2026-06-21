@@ -224,23 +224,26 @@ const bulk = useBulkActions({
 
 ## 🔄 Plan de Migración
 
-### Fase 1: Hook Global (Ya completado ✅)
-- [x] Crear `useBulkActions.ts`
+### Fase 1: Hook Global ✅
+- [x] Crear `useBulkActions.tsx`
 - [x] Crear `BulkActionBar`
 - [x] Crear `BulkEditModal`
 - [x] Crear `createStandardBulkActions`
+- Commit: `8083a7fd`
 
-### Fase 2: Migrar Módulo Eventos
-- [ ] Reemplazar estado local con `useBulkActions`
-- [ ] Usar `BulkActionBar` en lugar de panel custom
-- [ ] Usar `BulkEditModal` genérico
-- [ ] Eliminar código duplicado
+### Fase 2: Migrar Módulo Eventos ✅
+- [x] Reemplazar estado local con `useBulkActions`
+- [x] Usar `BulkActionBar` en lugar de panel custom
+- [x] Usar `BulkEditModal` genérico
+- [x] Eliminar código duplicado
+- Commit: `eb3559a4`
 
-### Fase 3: Migrar Otros Módulos
-- [ ] Expiry - Vencimientos
-- [ ] Reception - Recepciones
-- [ ] Inventory - Inventario
-- [ ] DynamicData - Datos dinámicos
+### Fase 3: Migrar Otros Módulos ✅
+- [x] Expiry - Vencimientos (`EXPIRY_BULK_ACTIONS`)
+- [x] Reception - Recepciones (`RECEPTION_BULK_ACTIONS`)
+- [x] Inventory - Inventario (`INVENTORY_BULK_ACTIONS`)
+- [x] MassActionsPanel - Wrapper para usar con hook global
+- Commit: `15d001cd`
 
 ### Fase 4: Features Avanzadas
 - [ ] Persistencia de preferencias de vista

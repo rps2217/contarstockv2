@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Printer, Trash2 } from 'lucide-react';
+import { X, Printer, Trash2, Edit3, Download } from 'lucide-react';
+import { BulkAction, BulkActionBar } from '@/hooks/useBulkActions';
 
 interface Action {
   label: string;
@@ -14,14 +15,33 @@ interface MassActionsPanelProps {
   onClear: () => void;
   actions: Action[];
   theme?: 'dark' | 'light' | 'high-contrast';
+  // Props para usar con useBulkActions
+  bulkActions?: BulkAction[];
+  onExecute?: (actionId: string) => void;
 }
 
 export const MassActionsPanel: React.FC<MassActionsPanelProps> = ({
   selectedCount,
   onClear,
   actions,
-  theme = 'dark'
+  theme = 'dark',
+  bulkActions,
+  onExecute
 }) => {
+  // Si hay bulkActions, usar BulkActionBar del hook global
+  if (bulkActions && onExecute) {
+    return (
+      <BulkActionBar
+        selectedCount={selectedCount}
+        actions={bulkActions}
+        onExecute={onExecute}
+        onClear={onClear}
+        theme={theme}
+      />
+    );
+  }
+
+  // Comportamiento legacy
   if (selectedCount === 0) return null;
 
   const variantClasses = {
@@ -90,3 +110,8 @@ export const MassActionsPanel: React.FC<MassActionsPanelProps> = ({
     </AnimatePresence>
   );
 };
+
+// Helper para crear acciones estándar para MassActionsPanel
+export const createMassActions = (
+  actions: { id: string; label: string; icon: any; variant?: 'primary' | 'danger' | 'warning' | 'info'; onClick: () => void }[]
+): Action[] => actions;
