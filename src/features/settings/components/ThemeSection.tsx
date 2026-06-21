@@ -1,18 +1,18 @@
-
 import React from 'react';
-import { Palette, Check, Sun, Moon, Contrast } from 'lucide-react';
+import { Palette, Check, Sun, Moon, Contrast, Sparkles } from 'lucide-react';
 import { AppSettings, Theme } from '../../../types';
 
 interface Props {
   settings: AppSettings;
   updateSetting: (key: keyof AppSettings, value: any) => void;
-  theme?: 'dark' | 'light' | 'high-contrast';
+  theme?: 'dark' | 'light' | 'high-contrast' | 'appsheet-dark';
 }
 
 export const ThemeSection: React.FC<Props> = ({ settings, updateSetting, theme = 'dark' }) => {
   const isDark = theme === 'dark';
   const isLight = theme === 'light';
   const isHighContrast = theme === 'high-contrast';
+  const isAppSheetDark = theme === 'appsheet-dark';
 
   const themes: {id: Theme, label: string, bg: string, accent: string, text: string, icon: any}[] = [
     { 
@@ -39,28 +39,43 @@ export const ThemeSection: React.FC<Props> = ({ settings, updateSetting, theme =
       text: 'text-yellow-400', 
       icon: Contrast 
     },
+    { 
+      id: 'appsheet-dark', 
+      label: 'AppSheet', 
+      bg: 'bg-[#0f0f1a]', 
+      accent: 'bg-[#818cf8]', 
+      text: 'text-white', 
+      icon: Sparkles 
+    },
   ];
 
-  // Clases según tema del contenedor info
   const infoBg = isHighContrast ? 'bg-yellow-900/20 border-yellow-400' : isLight ? 'bg-indigo-50 border-indigo-100' : 'bg-indigo-950/20 border-indigo-900/30';
   const infoIcon = isHighContrast ? 'text-yellow-400' : isLight ? 'text-indigo-500' : 'text-indigo-400';
   const infoText = isHighContrast ? 'text-yellow-400' : isLight ? 'text-indigo-900' : 'text-indigo-400';
 
+  const handleThemeChange = (themeId: Theme) => {
+    if (navigator.vibrate) navigator.vibrate(15);
+    updateSetting('theme', themeId);
+    
+    if (themeId === 'appsheet-dark') {
+      document.body.classList.add('appsheet-dark');
+    } else {
+      document.body.classList.remove('appsheet-dark');
+    }
+  };
+
   return (
     <section className="space-y-6 animate-in slide-in-from-bottom-2">
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         {themes.map(t => {
           const isSelected = (settings.theme || 'dark') === t.id;
           const Icon = t.icon;
           return (
             <button 
               key={t.id}
-              onClick={() => {
-                if (navigator.vibrate) navigator.vibrate(15);
-                updateSetting('theme', t.id);
-              }}
+              onClick={() => handleThemeChange(t.id)}
               className={`
-                relative p-6 rounded-[2.5rem] border-4 flex flex-col items-center gap-4 transition-all active:scale-95 overflow-hidden
+                relative p-3 md:p-5 rounded-2xl border-4 flex flex-col items-center gap-2 md:gap-3 transition-all active:scale-95 overflow-hidden
                 ${isSelected 
                   ? `border-blue-600 shadow-2xl shadow-blue-500/20 z-10 ${t.bg}` 
                   : isHighContrast 
@@ -69,20 +84,19 @@ export const ThemeSection: React.FC<Props> = ({ settings, updateSetting, theme =
                 }
               `}
             >
-              {/* Previsualización de color */}
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${t.accent} ${isSelected ? 'animate-bounce' : ''}`}>
-                <Icon className="w-6 h-6 text-white" />
+              <div className={`w-9 h-9 md:w-11 md:h-11 rounded-xl flex items-center justify-center shadow-lg ${t.accent} ${isSelected ? 'animate-bounce' : ''}`}>
+                <Icon className="w-4 h-4 md:w-5 md:h-5 text-white" />
               </div>
 
-              <span className={`text-[11px] font-black uppercase tracking-widest ${t.text}`}>
+              <span className={`text-[9px] md:text-[10px] font-black uppercase tracking-wide ${t.text}`}>
                 {t.label}
               </span>
-
+            
               {isSelected && (
-                <div className={`absolute top-4 right-4 rounded-full p-1 shadow-md border-2 ${
+                <div className={`absolute top-2 right-2 rounded-full p-0.5 md:p-1 shadow-md border-2 ${
                   isHighContrast ? 'bg-yellow-400 border-black' : 'bg-blue-600 border-white'
                 }`}>
-                  <Check className="w-3 h-3 text-white stroke-[4px]" />
+                  <Check className="w-2 md:w-2.5 h-2 md:h-2.5 text-white stroke-[4px]" />
                 </div>
               )}
             </button>
@@ -90,10 +104,10 @@ export const ThemeSection: React.FC<Props> = ({ settings, updateSetting, theme =
         })}
       </div>
 
-      <div className={`border-4 rounded-[2rem] p-6 flex gap-4 ${infoBg}`}>
-        <Palette className={`w-8 h-8 shrink-0 ${infoIcon}`} />
-        <p className={`text-[10px] font-bold uppercase leading-relaxed ${infoText}`}>
-          Cambiar el tema afecta a toda la aplicación de inmediato, optimizando la visibilidad según las condiciones de luz de la bodega.
+      <div className={`border-4 rounded-[2rem] p-4 md:p-6 flex gap-3 md:gap-4 ${infoBg}`}>
+        <Palette className={`w-5 h-5 md:w-7 md:h-7 shrink-0 ${infoIcon}`} />
+        <p className={`text-[9px] md:text-[10px] font-bold uppercase leading-relaxed ${infoText}`}>
+          Cambiar el tema afecta a toda la aplicación de inmediato. AppSheet ofrece un estilo sobrio con colores azulados fácil de leer.
         </p>
       </div>
     </section>
