@@ -230,7 +230,7 @@ const AppContent = () => {
                     {/* RUTAS LEGACY (redirigir a nuevas) */}
                     <Route path="/reception" element={<Navigate to="/capture" replace />} />
                     <Route path="/reception/capture" element={<Navigate to="/capture" replace />} />
-                    <Route path="/events" element={<Navigate to="/capture" replace />} />
+                    <Route path="/events" element={<EventsLegacy />} />
                     <Route path="/events/capture" element={<Navigate to="/capture" replace />} />
                     <Route path="/expiry" element={<Navigate to="/capture" replace />} />
                     <Route path="/expiry/capture" element={<Navigate to="/capture" replace />} />
