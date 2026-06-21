@@ -43,7 +43,7 @@ export interface ExpiryFormData {
 }
 
 const MESES = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
-const AÑOS = [2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032];
+const AÑOS = [2025, 2026, 2027, 2028];
 
 export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({
   isOpen,
