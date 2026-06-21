@@ -41,7 +41,7 @@ LIMIT 20;
 -- PASO 3: CREAR ÍNDICE ÚNICO
 -- ============================================================================
 
-CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS idx_vencimientos_claveunica 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_vencimientos_claveunica 
 ON "VENCIMIENTOS"(claveUnica) 
 WHERE claveUnica IS NOT NULL AND claveUnica != '';
 
