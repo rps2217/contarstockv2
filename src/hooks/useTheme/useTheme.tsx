@@ -14,7 +14,7 @@ import { useState, useEffect, useCallback, createContext, useContext, ReactNode 
 // TIPOS
 // ============================================================
 
-export type ThemeName = 'dark' | 'light' | 'high-contrast';
+export type ThemeName = 'dark' | 'light' | 'high-contrast' | 'appsheet-dark';
 export type ThemePreset = 'default' | 'corporate' | 'ocean' | 'forest' | 'sunset';
 
 export interface Theme {
@@ -287,4 +287,3 @@ export function useTheme() {
 // ============================================================
 
 export { THEMES, PRESETS };
-export type { Theme, CustomTheme };

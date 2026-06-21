@@ -76,7 +76,7 @@ export const ProvidersPage: React.FC = () => {
           activeFiltersCount={state.activeFiltersCount}
           placeholder="BUSCAR POR NOMBRE O RUT..."
           accentColor="indigo"
-          theme={theme}
+          theme={theme as 'dark' | 'light' | 'high-contrast'}
         />
 
         <AnimatePresence>
@@ -223,7 +223,7 @@ export const ProvidersPage: React.FC = () => {
           onShowProducts={handleShowProducts}
           onViewDetail={handleViewProviderDetail}
           hasFilter={!!state.search}
-          theme={theme}
+          theme={theme as 'dark' | 'light' | 'high-contrast'}
         />
       </div>
 
@@ -232,7 +232,7 @@ export const ProvidersPage: React.FC = () => {
         onClose={actions.handleCloseForm}
         onSave={actions.handleSave}
         initialData={state.editingProvider}
-        theme={theme}
+        theme={theme as 'dark' | 'light' | 'high-contrast'}
       />
 
       {selectedProvider && (

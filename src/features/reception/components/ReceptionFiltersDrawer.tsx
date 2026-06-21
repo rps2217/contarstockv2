@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 
 interface Props {
   isOpen: boolean;
+  onClose: () => void;
   startDate: string;
   setStartDate: (v: string) => void;
   endDate: string;
@@ -22,6 +23,7 @@ interface Props {
 
 export const ReceptionFiltersDrawer: React.FC<Props> = ({
   isOpen,
+  onClose,
   startDate,
   setStartDate,
   endDate,

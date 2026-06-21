@@ -235,17 +235,17 @@ const AppContent = () => {
                     <Route path="/reception/capture" element={<Navigate to="/capture" replace />} />
                     <Route path="/events" element={<EventsLegacy />} />
                     <Route path="/events/capture" element={<Navigate to="/capture" replace />} />
-                    <Route path="/expiry" element={<Navigate to="/capture" replace />} />
+                    <Route path="/expiry" element={<ExpiryLegacy />} />
                     <Route path="/expiry/capture" element={<Navigate to="/capture" replace />} />
-                    <Route path="/counting/:id" element={<Navigate to="/capture" replace />} />
-                    <Route path="/massive/:batchId" element={<Navigate to="/capture" replace />} />
+                    <Route path="/counting/:id" element={<CountingLegacy />} />
+                    <Route path="/massive/:batchId" element={<HammerLegacy />} />
                     <Route path="/database" element={<Navigate to="/data" replace />} />
-                    <Route path="/customers" element={<Navigate to="/data" replace />} />
-                    <Route path="/providers" element={<Navigate to="/data" replace />} />
-                    <Route path="/expected-orders" element={<Navigate to="/data" replace />} />
-                    <Route path="/compliance" element={<Navigate to="/reports" replace />} />
-                    <Route path="/slices" element={<Navigate to="/reports" replace />} />
-                    <Route path="/dynamic/:tableKey" element={<Navigate to="/data" replace />} />
+                    <Route path="/customers" element={<CustomersLegacy />} />
+                    <Route path="/providers" element={<ProvidersLegacy />} />
+                    <Route path="/expected-orders" element={<ExpectedOrdersLegacy />} />
+                    <Route path="/compliance" element={<ComplianceLegacy />} />
+                    <Route path="/slices" element={<SlicesLegacy />} />
+                    <Route path="/dynamic/:tableKey" element={<DynamicLegacy />} />
 
                     {/* Fallback */}
                     <Route path="*" element={<Navigate to="/" replace />} />

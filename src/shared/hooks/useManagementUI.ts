@@ -2,23 +2,37 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 
-interface ManagementUIOptions {
-  featureName: string;
-  capturePath: string;
-  dbState: any;
-  dbActions: any;
-  onPrintSelected?: (items: any[]) => void;
-  onPrintLabels?: (items: any[]) => void;
+export interface BaseEntity {
+  id?: string | number;
+  [key: string]: unknown;
 }
 
-export const useManagementUI = ({
+export interface DbState {
+  selectedIds: Set<string>;
+  allItems: BaseEntity[];
+}
+
+export interface DbActions {
+  setSelectedIds: (ids: Set<string>) => void;
+}
+
+export interface ManagementUIOptions<T extends BaseEntity = BaseEntity> {
+  featureName: string;
+  capturePath: string;
+  dbState: DbState;
+  dbActions: DbActions;
+  onPrintSelected?: (items: T[]) => void;
+  onPrintLabels?: (items: T[]) => void;
+}
+
+export const useManagementUI = <T extends BaseEntity = BaseEntity>({
   featureName,
   capturePath,
   dbState,
   dbActions,
   onPrintSelected,
   onPrintLabels
-}: ManagementUIOptions) => {
+}: ManagementUIOptions<T>) => {
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isSettingsDrawerOpen, setIsSettingsDrawerOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
@@ -29,24 +43,21 @@ export const useManagementUI = ({
   const navigate = useNavigate();
   const location = useLocation();
 
-  const handleOpenAdd = useCallback((barcode: any = '') => {
-    const finalBarcode = typeof barcode === 'string' ? barcode : '';
+  const handleOpenAdd = useCallback((barcode: string = '') => {
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
     if (isMobile) {
       navigate(capturePath);
     } else {
-      setInitialBarcode(finalBarcode);
+      setInitialBarcode(barcode);
       setIsDesktopAddModalOpen(true);
     }
   }, [navigate, capturePath]);
 
-  // Global scanner listener (HID)
   useEffect(() => {
     let buffer = '';
     let lastKeyTime = Date.now();
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't capture if a modal is open or user is typing in an input
       if (isDesktopAddModalOpen || e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         return;
       }
@@ -71,10 +82,9 @@ export const useManagementUI = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isDesktopAddModalOpen, handleOpenAdd]);
 
-  // Mobile auto-redirect
   useEffect(() => {
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
-    const preventRedirect = (location.state as any)?.preventAutoRedirect;
+    const preventRedirect = (location.state as { preventAutoRedirect?: boolean } | null)?.preventAutoRedirect;
     
     if (isMobile && !preventRedirect) {
       navigate(capturePath, { replace: true });
@@ -91,9 +101,11 @@ export const useManagementUI = ({
     dbActions.setSelectedIds(newSelected);
   };
 
-  const handleSelectAllVisible = (items: any[]) => {
+  const handleSelectAllVisible = (items: T[]) => {
     const newSelected = new Set(dbState.selectedIds);
-    items.forEach(item => newSelected.add(item.id));
+    items.forEach(item => {
+      if (item.id) newSelected.add(String(item.id));
+    });
     dbActions.setSelectedIds(newSelected);
   };
 
@@ -101,32 +113,33 @@ export const useManagementUI = ({
     const count = dbState.selectedIds.size;
     if (count === 0) return;
     
-    const confirm = window.confirm(`¿ESTÁS SEGURO DE RETIRAR ${count} ÍTEMS SELECCIONADOS? ESTA ACCIÓN NO SE PUEDE DESHACER.`);
-    if (confirm) {
+    const confirmed = window.confirm(`¿ESTÁS SEGURO DE RETIRAR ${count} ÍTEMS SELECCIONADOS? ESTA ACCIÓN NO SE PUEDE DESHACER.`);
+    if (confirmed) {
       onConfirm(dbState.selectedIds);
     }
   };
 
-  const confirmRemoveItem = (item: any, onConfirm: (item: any) => void) => {
-    const confirm = window.confirm(`¿RETIRAR ${item.productName || 'ESTE ÍTEM'}? ESTA ACCIÓN ES IRREVERSIBLE.`);
-    if (confirm) {
+  const confirmRemoveItem = (item: T, onConfirm: (item: T) => void) => {
+    const productName = (item as Record<string, unknown>).productName as string | undefined;
+    const confirmed = window.confirm(`¿RETIRAR ${productName || 'ESTE ÍTEM'}? ESTA ACCIÓN ES IRREVERSIBLE.`);
+    if (confirmed) {
       onConfirm(item);
     }
   };
 
   const handlePrintSelectedAction = () => {
-    const selectedItems = dbState.allItems.filter((item: any) => dbState.selectedIds.has(item.id));
+    const selectedItems = dbState.allItems.filter((item) => dbState.selectedIds.has(String(item.id)));
     if (selectedItems.length > 0 && onPrintSelected) {
-      onPrintSelected(selectedItems);
+      onPrintSelected(selectedItems as T[]);
     } else if (selectedItems.length === 0) {
       toast.error('No hay ítems seleccionados para imprimir');
     }
   };
 
   const handlePrintLabelsAction = () => {
-    const selectedItems = dbState.allItems.filter((item: any) => dbState.selectedIds.has(item.id));
+    const selectedItems = dbState.allItems.filter((item) => dbState.selectedIds.has(String(item.id)));
     if (selectedItems.length > 0 && onPrintLabels) {
-      onPrintLabels(selectedItems);
+      onPrintLabels(selectedItems as T[]);
     } else if (selectedItems.length === 0) {
       toast.error('No hay ítems seleccionados para imprimir etiquetas');
     }

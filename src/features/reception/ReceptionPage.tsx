@@ -70,7 +70,7 @@ export const ReceptionPage: React.FC<ReceptionPageProps> = ({ initialMode = 'man
     handleManualSubmit
   } = useCaptureSession({
     onScan: (code) => logicActions.handleScan(code, logicState.currentErp),
-    isEnabled: !state.pendingPhotoCode && pageMode === 'capture'
+    isEnabled: !logicState.pendingPhotoCode && pageMode === 'capture'
   });
 
   // ==================== MANAGEMENT MODE ====================
@@ -132,6 +132,16 @@ export const ReceptionPage: React.FC<ReceptionPageProps> = ({ initialMode = 'man
   }, [allItems, statusFilter, photoFilter, selectedErpFilter]);
 
   // Handlers
+  const handleDeleteItem = useCallback((id: string | number) => {
+    historyActions.deleteSession(id);
+    toast.success('Recepción eliminada');
+  }, [historyActions]);
+
+  const handleShowPhoto = useCallback((item: any) => {
+    // TODO: Implementar visualización de foto
+    toast.info('Mostrar foto');
+  }, []);
+
   const handleViewDetail = useCallback((item: any) => {
     setSelectedReceptionItem(item);
     setIsDetailModalOpen(true);
@@ -159,7 +169,7 @@ export const ReceptionPage: React.FC<ReceptionPageProps> = ({ initialMode = 'man
   const managementHeader = (
     <div className="space-y-4">
       {/* Stats */}
-      <ReceptionStats stats={stats} />
+      <ReceptionStats stats={stats} theme={isDark ? 'dark' : 'light'} />
 
       {/* Search & Filters Bar */}
       <div className="flex gap-2">
@@ -326,6 +336,8 @@ export const ReceptionPage: React.FC<ReceptionPageProps> = ({ initialMode = 'man
                       key={item.id}
                       item={item}
                       onViewDetail={handleViewDetail}
+                      onDelete={handleDeleteItem}
+                      onShowPhoto={handleShowPhoto}
                     />
                   ))}
                 </div>
@@ -336,7 +348,9 @@ export const ReceptionPage: React.FC<ReceptionPageProps> = ({ initialMode = 'man
                       key={item.id}
                       item={item}
                       onViewDetail={handleViewDetail}
-                      compact
+                      onDelete={handleDeleteItem}
+                      onShowPhoto={handleShowPhoto}
+                      isCompact
                     />
                   ))}
                 </div>
@@ -412,12 +426,13 @@ export const ReceptionPage: React.FC<ReceptionPageProps> = ({ initialMode = 'man
         setPhotoFilter={setPhotoFilter}
         selectedErpFilter={selectedErpFilter}
         setSelectedErpFilter={setSelectedErpFilter}
-        erpOptions={uniqueErps}
+        uniqueErps={uniqueErps}
         startDate={historyState.startDate}
         endDate={historyState.endDate}
         setStartDate={historyActions.setStartDate}
         setEndDate={historyActions.setEndDate}
-        onClearAll={handleClearFilters}
+        onClear={handleClearFilters}
+        theme={isDark ? 'dark' : 'light'}
       />
 
       {/* Detail Modal */}

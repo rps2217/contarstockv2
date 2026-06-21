@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { SessionRepository } from '../../../repositories/SessionRepository';
 import { ScanRepository } from '../../../repositories/ScanRepository';
 import { CountingSession } from '../../../types';
+import { db } from '../../../db';
 import Papa from 'papaparse';
 import { format } from 'date-fns';
 
@@ -96,6 +97,23 @@ export const useReceptionHistory = () => {
     }
   }, [sessions]);
 
+  // Eliminar sesión
+  const deleteSession = useCallback(async (id: string | number) => {
+    await SessionRepository.delete(String(id));
+  }, []);
+
+  // Limpiar todas las sesiones de recepción
+  const clearAll = useCallback(async () => {
+    const sessionsToDelete = await db.sessions
+      .where('sessionType')
+      .equals('reception')
+      .toArray();
+    const ids = sessionsToDelete.map(s => s.id);
+    if (ids.length > 0) {
+      await db.sessions.bulkDelete(ids);
+    }
+  }, []);
+
   return {
     state: {
       sessions,
@@ -110,7 +128,9 @@ export const useReceptionHistory = () => {
       setStartDate,
       setEndDate,
       loadMore,
-      exportToCSV
+      exportToCSV,
+      deleteSession,
+      clearAll
     }
   };
 };

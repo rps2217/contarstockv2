@@ -137,7 +137,7 @@ export const CustomersPage: React.FC = () => {
           activeFiltersCount={0}
           placeholder="BUSCAR POR NOMBRE, APELLIDO O TELÉFONO..."
           accentColor="blue"
-          theme={theme}
+          theme={theme as 'dark' | 'light' | 'high-contrast'}
         />
       </div>
 
@@ -263,7 +263,7 @@ export const CustomersPage: React.FC = () => {
         onClose={() => setIsFormOpen(false)}
         onSave={handleSave}
         editingCustomer={editingCustomer}
-        theme={theme}
+        theme={theme as 'dark' | 'light' | 'high-contrast'}
       />
 
       <SendMessageModal
@@ -273,13 +273,13 @@ export const CustomersPage: React.FC = () => {
           setSelectedCustomerForMessage(null);
         }}
         customer={selectedCustomerForMessage}
-        theme={theme}
+        theme={theme as 'dark' | 'light' | 'high-contrast'}
       />
 
       <TemplateManagerModal
         isOpen={isTemplateManagerOpen}
         onClose={() => setIsTemplateManagerOpen(false)}
-        theme={theme}
+        theme={theme as 'dark' | 'light' | 'high-contrast'}
       />
     </div>
   );

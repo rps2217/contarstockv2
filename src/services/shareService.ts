@@ -5,7 +5,7 @@
  */
 
 import { db } from '../db';
-import { Session, Scan, Product } from '../types';
+import { CountingSession as Session, ScanRecord as Scan, Product } from '../types';
 
 export type ExportFormat = 'csv' | 'json' | 'clipboard';
 export type ShareMethod = 'web-share' | 'download' | 'clipboard' | 'email';
@@ -21,13 +21,13 @@ interface ShareOptions {
 // Generar CSV desde array de objetos
 const generateCSV = <T extends Record<string, any>>(
   data: T[],
-  headers?: Record<keyof T, string>
+  headers?: Record<string, string>
 ): string => {
   if (data.length === 0) return '';
   
   const keys = Object.keys(data[0]);
   const headerRow = headers
-    ? keys.map(k => headers[k as keyof T] || k).join(',')
+    ? keys.map(k => headers[k] || k).join(',')
     : keys.join(',');
   
   const rows = data.map(item =>

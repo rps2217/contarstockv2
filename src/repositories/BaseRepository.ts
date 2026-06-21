@@ -48,7 +48,9 @@ export interface BulkOperationResult {
 // ============================================================
 
 export abstract class BaseRepository<T extends BaseEntity> {
-  protected abstract get table(): Table<T>;
+  protected get table(): Table<T> {
+    throw new Error('table property must be implemented');
+  }
 
   /**
    * Obtener todos los registros
@@ -116,14 +118,12 @@ export abstract class BaseRepository<T extends BaseEntity> {
    */
   async updateMany(ids: (string | number)[], data: Partial<T>): Promise<number> {
     const updates = ids.map(id => ({
-      key: id,
-      changes: {
-        ...data,
-        updatedAt: Date.now(),
-      },
-    }));
+      ...data,
+      id,
+      updatedAt: Date.now(),
+    } as T));
 
-    await this.table.bulkUpdate(updates);
+    await Promise.all(updates.map(u => this.table.put(u)));
     return ids.length;
   }
 
@@ -174,7 +174,7 @@ export abstract class BaseRepository<T extends BaseEntity> {
    */
   async count(filter?: Partial<T>): Promise<number> {
     if (filter) {
-      return this.table.where(filter as any).count();
+      return this.table.where(Object.keys(filter)[0]).equals(filter[Object.keys(filter)[0]]).toArray().then(arr => arr.length);
     }
     return this.table.count();
   }

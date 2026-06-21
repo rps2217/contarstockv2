@@ -343,4 +343,5 @@ const RiskItemRow: React.FC<RiskItemRowProps> = ({ item, theme = 'dark' }) => {
   );
 };
 
+export { ComplianceDashboardPage };
 export default ComplianceDashboardPage;

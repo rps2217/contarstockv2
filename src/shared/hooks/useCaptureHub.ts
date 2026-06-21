@@ -1,7 +1,15 @@
 import { useState, useCallback } from 'react';
 
+export interface CaptureMetadata {
+  timestamp?: number;
+  source?: 'camera' | 'keyboard' | 'hid' | 'manual';
+  productId?: string;
+  sessionId?: string;
+  [key: string]: unknown;
+}
+
 interface CaptureHubOptions {
-  onCapture: (code: string, metadata?: any) => void;
+  onCapture: (code: string, metadata?: CaptureMetadata) => void;
 }
 
 export const useCaptureHub = ({ onCapture }: CaptureHubOptions) => {
@@ -25,7 +33,7 @@ export const useCaptureHub = ({ onCapture }: CaptureHubOptions) => {
     setInitialBarcode('');
   }, []);
 
-  const handleCapture = useCallback((code: string, metadata?: any) => {
+  const handleCapture = useCallback((code: string, metadata?: CaptureMetadata) => {
     onCapture(code, metadata);
     setIsCameraOpen(false);
     setIsKeypadOpen(false);

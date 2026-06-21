@@ -230,9 +230,10 @@ export interface UseBulkActionsAdvancedReturn<T> {
   selectAll: (items: T[]) => void;
   clearSelection: () => void;
   executeBulkAction: (actionId: string, allItems: T[]) => Promise<void>;
+  executeBulkActionWithHistory: (actionId: string, allItems: T[]) => Promise<void>;
   openBulkEditModal: () => void;
   closeBulkEditModal: () => void;
-  
+
   // Features avanzadas
   preferences: ViewPreferences;
   toggleCompactView: () => void;
@@ -240,20 +241,40 @@ export interface UseBulkActionsAdvancedReturn<T> {
   toggleSortOrder: () => void;
   togglePanel: (panelId: string) => void;
   isPanelExpanded: (panelId: string) => boolean;
-  
+
   history: BulkHistoryEntry[];
   undoContext: BulkUndoContext | null;
   canUndo: boolean;
   performUndo: () => Promise<void>;
   clearHistory: () => void;
-  
+
+  // Dry run
+  isDryRunMode: boolean;
+  dryRunResults: any | null;
+  performDryRun: (actionId: string, items: T[]) => void;
+  executeDryRun: (actionId: string, items: T[]) => Promise<void>;
+  cancelDryRun: () => void;
+
+  // Notificaciones
+  requestNotificationPermission: () => Promise<void>;
+  sendNotification: (title: string, options?: NotificationOptions) => Notification | null;
+  canNotify: boolean;
+
   // Atajos de teclado
   keyboardHint: string;
   
   // UI
   renderActionBar: (theme?: 'dark' | 'light' | 'high-contrast') => React.ReactNode;
   renderBulkEditModal: (allItems: T[], theme?: 'dark' | 'light' | 'high-contrast') => React.ReactNode;
+  
+  // Audit
+  // Exportación
+  exportHistoryToCSV: (entries: BulkHistoryEntry[]) => void;
+  exportItemsToCSV: (items: T[], filename?: string) => void;
+
+  logToAudit: (action: 'CREATE' | 'UPDATE' | 'DELETE', tableName: string, recordId: string, oldValue?: any, newValue?: any) => Promise<void>;
 }
+
 
 export function useBulkActionsAdvanced<T = any>(
   config: BulkActionsAdvancedConfig<T>
@@ -284,13 +305,12 @@ export function useBulkActionsAdvanced<T = any>(
   // ============================================================
   // NOTIFICACIONES DE ESCRITORIO
   // ============================================================
+  const canNotify = typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted';
   
   const requestNotificationPermission = useCallback(async () => {
     if ('Notification' in window && Notification.permission === 'default') {
-      const permission = await Notification.requestPermission();
-      return permission === 'granted';
+      await Notification.requestPermission();
     }
-    return Notification.permission === 'granted';
   }, []);
 
   const sendNotification = useCallback((title: string, options?: NotificationOptions) => {
@@ -408,12 +428,6 @@ export function useBulkActionsAdvanced<T = any>(
     toast.info(`Dry-run: ${action.label} afectaría ${items.length} elementos`);
   }, [config.actions, config.getItemId]);
 
-  const executeDryRun = useCallback(async (actionId: string, items: T[]) => {
-    setIsDryRunMode(false);
-    setDryRunResults(null);
-    await executeBulkActionWithHistory(actionId, items);
-  }, [executeBulkActionWithHistory]);
-
   const cancelDryRun = useCallback(() => {
     setIsDryRunMode(false);
     setDryRunResults(null);
@@ -473,7 +487,8 @@ export function useBulkActionsAdvanced<T = any>(
       previousState: selectedItems.reduce((acc, item) => {
         acc[config.getItemId(item)] = { ...item };
         return acc;
-      }, {} as Record<string, any>)
+      }, {} as Record<string, any>),
+      undoTimeout: UNDO_TIMEOUT
     });
 
     if (entry) {
@@ -490,6 +505,12 @@ export function useBulkActionsAdvanced<T = any>(
 
     await bulk.executeBulkAction(actionId, allItems);
   }, [bulk, config, addEntry]);
+
+  const executeDryRun = useCallback(async (actionId: string, items: T[]) => {
+    setIsDryRunMode(false);
+    setDryRunResults(null);
+    await executeBulkActionWithHistory(actionId, items);
+  }, [executeBulkActionWithHistory]);
 
   // Atajos de teclado
   useEffect(() => {
@@ -567,6 +588,7 @@ export function useBulkActionsAdvanced<T = any>(
     ...bulk,
     
     // Preferencias de vista
+    executeBulkActionWithHistory,
     preferences,
     toggleCompactView,
     setSortBy,
@@ -584,6 +606,7 @@ export function useBulkActionsAdvanced<T = any>(
     // Notificaciones
     requestNotificationPermission,
     sendNotification,
+    canNotify,
     
     // Exportación
     exportHistoryToCSV,

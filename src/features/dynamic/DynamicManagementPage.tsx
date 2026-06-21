@@ -255,7 +255,7 @@ export const DynamicManagementPage: React.FC<DynamicManagementPageProps> = ({
           { label: 'Sync', icon: Cloud, onClick: handleMassSync, variant: 'info' },
           { label: 'Borrar', icon: Trash2, onClick: handleMassDelete, variant: 'danger' }
         ]}
-        theme={settings.theme}
+        theme={settings.theme as "dark" | "light" | "high-contrast"}
       />
 
       <div className="flex-1 overflow-hidden p-4">
@@ -270,7 +270,7 @@ export const DynamicManagementPage: React.FC<DynamicManagementPageProps> = ({
           onRemove={handleRemove}
           onClick={setSelectedItem}
           onBack={() => navigate(-1)}
-          theme={theme}
+          theme={theme as 'dark' | 'light' | 'high-contrast'}
           title={schema.tableName}
           onPullSync={handlePullSync}
           isPulling={isPulling}
@@ -322,7 +322,7 @@ export const DynamicManagementPage: React.FC<DynamicManagementPageProps> = ({
                       setIsEditing(false);
                       if (isEditing) setSelectedItem(selectedItem);
                     }}
-                    theme={theme}
+                    theme={theme as 'dark' | 'light' | 'high-contrast'}
                   />
                 ) : (
                   <div className="flex flex-col gap-6">

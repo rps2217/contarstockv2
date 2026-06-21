@@ -96,7 +96,7 @@ export function ExpectedOrdersPage() {
                 state={state} 
                 actions={actions} 
                 isDark={isDark} 
-                theme={theme}
+                theme={theme as 'dark' | 'light' | 'high-contrast'}
                 onViewDetail={handleViewOrderDetail}
               />
             </motion.div>

@@ -53,6 +53,7 @@ export interface Product {
   syncStatus?: 'synced' | 'pending' | 'error' | 'pending_delete';
   unitsPerBox?: number;
   embedding?: number[]; 
+  location?: string;
 }
 
 export interface ExpectedItem {
@@ -63,6 +64,7 @@ export interface ExpectedItem {
  batch?: string;
  expiry?: string;
  embedding?: number[]; 
+  location?: string;
 }
 
 export interface ExpectedOrder {
@@ -171,7 +173,9 @@ export interface ConsolidatedItem {
 }
 
 export type ViewState = 'dashboard' | 'counting' | 'database' | 'reports' | 'settings' | 'reception' | 'sync' | 'massive' | 'documents' | 'visual-picking' | 'expiry' | 'events' | 'providers' | 'customers' | 'compliance';
-export type Theme = 'light' | 'dark' | 'high-contrast' | 'appsheet-dark';
+// ThemeName (re-exportado desde useTheme)
+export type ThemeName = 'light' | 'dark' | 'high-contrast' | 'appsheet-dark';
+export type Theme = ThemeName;
 
 export interface VisualGuideItem {
   barcode: string;
@@ -225,7 +229,7 @@ export interface ModuleConfig {
 }
 
 export interface AppSettings {
-  theme: Theme;
+  theme: ThemeName;
   soundEnabled: boolean;
   hapticsEnabled: boolean;
   ttsEnabled: boolean; 
