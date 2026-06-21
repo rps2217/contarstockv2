@@ -2,7 +2,7 @@
  * ProductSearchInput - Componente compartido para búsqueda de productos
  * 
  * Características:
- * - Búsqueda por SKU/barcode
+ * - Búsqueda por SKU/barcode en IndexedDB
  * - Autocompletado de nombre de producto
  * - Validación de producto encontrado
  * - Soporte para múltiples temas
@@ -12,6 +12,7 @@
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Search, Package, Loader2, AlertCircle } from 'lucide-react';
+import { db } from '@/db';
 
 export interface ProductInfo {
   barcode: string;
@@ -33,13 +34,6 @@ interface ProductSearchInputProps {
   className?: string;
 }
 
-// Mock de búsqueda - reemplazar con llamada real a la base de datos
-const mockProducts: Record<string, ProductInfo> = {
-  '7804660750175': { barcode: '7804660750175', name: 'XALURON PROCTO SUPOSITORIOS X 10 UND', category: 'MED', supplierName: 'SOC. FARMACÉUTICA TERVIS PHARMA LTDA', supplierRut: '76481561' },
-  '7800000000001': { barcode: '7800000000001', name: 'PARACETAMOL 500MG COMPRIMIDOS', category: 'ALI', supplierName: 'LABORATORIO CHILE', supplierRut: '76123456' },
-  '7801234567890': { barcode: '7801234567890', name: 'Ibuprofeno 400MG COMPRIMIDOS X 20', category: 'MED', supplierName: 'BAYER', supplierRut: '78901234' },
-};
-
 export const ProductSearchInput: React.FC<ProductSearchInputProps> = ({
   value,
   onChange,
@@ -56,7 +50,7 @@ export const ProductSearchInput: React.FC<ProductSearchInputProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Búsqueda simulada con debounce
+  // Búsqueda en IndexedDB real
   const searchProduct = useCallback(async (barcode: string) => {
     if (!barcode || barcode.length < 5) {
       setProduct(null);
@@ -66,14 +60,33 @@ export const ProductSearchInput: React.FC<ProductSearchInputProps> = ({
 
     setIsSearching(true);
     
-    // Simular delay de red
-    await new Promise(resolve => setTimeout(resolve, 200));
-
-    // Buscar en mock o marcar como nuevo
-    const found = mockProducts[barcode] || null;
-    setProduct(found);
-    onProductFound?.(found);
-    setIsSearching(false);
+    try {
+      // Buscar en la tabla products de IndexedDB
+      const foundProduct = await db.products.get(barcode);
+      
+      if (foundProduct) {
+        // Mapear campos del producto al formato esperado
+        const productInfo: ProductInfo = {
+          barcode: foundProduct.barcode,
+          name: foundProduct.name,
+          category: foundProduct.category,
+          supplierName: foundProduct.supplier,
+          supplierRut: foundProduct.supplierRut,
+          unitsPerBox: foundProduct.unitsPerBox,
+        };
+        setProduct(productInfo);
+        onProductFound?.(productInfo);
+      } else {
+        setProduct(null);
+        onProductFound?.(null);
+      }
+    } catch (error) {
+      console.error('Error searching product:', error);
+      setProduct(null);
+      onProductFound?.(null);
+    } finally {
+      setIsSearching(false);
+    }
   }, [onProductFound]);
 
   // Debounce de búsqueda
@@ -88,6 +101,12 @@ export const ProductSearchInput: React.FC<ProductSearchInputProps> = ({
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [value, searchProduct]);
+
+  // Limpiar producto cuando el valor cambiaexternamente
+  useEffect(() => {
+    // El producto se mantiene si coincide con el valor actual
+    // o se limpia si el usuario borra el input
+  }, [value]);
 
   // Focus en autoFocus
   useEffect(() => {
