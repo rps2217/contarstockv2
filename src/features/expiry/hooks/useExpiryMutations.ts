@@ -7,6 +7,60 @@ import { useTaskStore } from '@/stores';
 import { normalizeExpiryRecord, NormalizedExpiry } from '../../../services/normalizationService';
 import { normalizeSku } from '../../../services/utils';
 import { logger } from '../../../services/logger';
+import { useBulkActions, BulkAction, BulkEditConfig } from '@/hooks/useBulkActions';
+import { Trash2, Edit3, Download, Calendar } from 'lucide-react';
+
+// Configuración de acciones masivas para Expiry
+export const EXPIRY_BULK_ACTIONS = (
+  onDelete: (items: any[]) => Promise<void>,
+  onEdit: () => void,
+  onExport: (items: any[]) => Promise<void>
+): BulkAction[] => [
+  {
+    id: 'edit',
+    label: 'Editar',
+    icon: Edit3,
+    variant: 'primary',
+    onClick: onEdit
+  },
+  {
+    id: 'export',
+    label: 'Exportar',
+    icon: Download,
+    variant: 'default',
+    onClick: onExport
+  },
+  {
+    id: 'delete',
+    label: 'Eliminar',
+    icon: Trash2,
+    variant: 'danger',
+    requiresConfirmation: true,
+    confirmMessage: '¿Eliminar los elementos seleccionados? Esta acción es irreversible.',
+    onClick: onDelete
+  }
+];
+
+// Configuración de edición masiva para Expiry
+export const EXPIRY_BULK_EDIT_CONFIG = (
+  onApply: (ids: string[], values: Record<string, any>, items: any[]) => Promise<void>
+): BulkEditConfig => ({
+  title: 'Actualizar Caducidades',
+  description: 'Modificar la fecha de caducidad o estado de los productos seleccionados.',
+  fields: [
+    {
+      key: 'location',
+      label: 'Ubicación',
+      type: 'text'
+    },
+    {
+      key: 'observaciones',
+      label: 'Observaciones',
+      type: 'textarea'
+    }
+  ],
+  onApply
+});
 
 export const useExpiryMutations = (
   tableName: string, 

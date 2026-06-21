@@ -7,6 +7,53 @@ import { sanitizeBarcode } from '../../../services/utils';
 import { SoundFX } from '../../../services/audio';
 import * as syncManager from '../../../services/syncManager';
 import { useToastStore } from '@/stores';
+import { BulkAction, BulkEditConfig } from '@/hooks/useBulkActions';
+import { Trash2, Download, CheckCircle, Send } from 'lucide-react';
+
+// Configuración de acciones masivas para Reception
+export const RECEPTION_BULK_ACTIONS = (
+  onDelete: (items: any[]) => Promise<void>,
+  onExport: (items: any[]) => Promise<void>
+): BulkAction[] => [
+  {
+    id: 'finalize',
+    label: 'Finalizar',
+    icon: CheckCircle,
+    variant: 'success',
+    requiresConfirmation: true,
+    confirmMessage: '¿Finalizar las recepciones seleccionadas?',
+    onClick: async (items) => {
+      for (const item of items) {
+        await SessionRepository.markAsCompleted(item.id);
+      }
+      SoundFX.play('success');
+    }
+  },
+  {
+    id: 'export',
+    label: 'Exportar',
+    icon: Download,
+    variant: 'default',
+    onClick: onExport
+  },
+  {
+    id: 'delete',
+    label: 'Eliminar',
+    icon: Trash2,
+    variant: 'danger',
+    requiresConfirmation: true,
+    confirmMessage: '¿Eliminar las recepciones seleccionadas? Esta acción es irreversible.',
+    onClick: onDelete
+  }
+];
+
+// Configuración de edición masiva para Reception
+export const RECEPTION_BULK_EDIT_CONFIG: BulkEditConfig = {
+  title: 'Actualizar Recepciones',
+  description: 'Modificar el estado o información de las recepciones seleccionadas.',
+  fields: [],
+  onApply: async () => {}
+};
 
 export const useReceptionLogic = () => {
   const [lastAction, setLastAction] = useState<{type: 'success' | 'duplicate', label: string} | null>(null);
