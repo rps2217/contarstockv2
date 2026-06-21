@@ -5,15 +5,16 @@ import { CornerDownLeft, Loader2, X } from 'lucide-react';
 interface ExpiryCaptureModalProps {
   isOpen: boolean;
   onClose: () => void;
-  scannedBarcode: string | null;
+  scannedBarcode?: string | null;
   productName?: string;
   providerPolicy?: { hasCanje: boolean; days: number } | null;
-  selectedMm: number | null;
-  setSelectedMm: (mm: number | null) => void;
-  selectedYyyy: number | null;
-  setSelectedYyyy: (yyyy: number | null) => void;
-  onSubmit: () => void;
-  isSubmitting: boolean;
+  selectedMm?: number | null;
+  setSelectedMm?: (mm: number | null) => void;
+  selectedYyyy?: number | null;
+  setSelectedYyyy?: (yyyy: number | null) => void;
+  onSubmit?: () => void;
+  isSubmitting?: boolean;
+  onSuccess?: () => void;
 }
 
 export const ExpiryCaptureModal: React.FC<ExpiryCaptureModalProps> = ({

@@ -273,3 +273,56 @@ npm run test         # vitest (watch mode)
 - SyncCenterPage: 349 → 256 líneas (-93)
 - Componentes sync: más cohesivos
 - Tests: 149 pasando ✅
+
+---
+
+## Refactoring Módulo Expiry v2 (2026-06-21)
+
+### Arquitectura Simplificada (Similar a Events)
+
+```
+src/features/expiry/
+├── ExpiryPage.tsx           # Componente principal (simplificado)
+├── domain/
+│   └── expiryDomain.ts       # Lógica de negocio pura (evaluación, helpers)
+├── hooks/
+│   └── useExpiry.ts         # Hook centralizado (estado unificado)
+├── components/
+│   ├── ExpiryItemCard.tsx   # Card de vencimiento
+│   ├── ExpiryStatsBar.tsx   # Barra de estadísticas
+│   ├── ExpiryDetailModal.tsx
+│   └── ExpiryCaptureModal.tsx
+└── (legacy hooks/ components/ utils/)  # Pendiente cleanup
+```
+
+### Hook Centralizado: useExpiry
+
+```typescript
+const {
+  filteredRecords,
+  stats,
+  filters,
+  isLoading,
+  isSyncing,
+  selectedIds,
+  actions
+} = useExpiry();
+```
+
+### Estados de Vencimiento
+
+| Estado | Descripción | Color |
+|--------|-------------|-------|
+| EXPIRED | Vencido | 🔴 Rojo |
+| CRITICAL | Crítico (<días retiro) | 🟠 Naranja |
+| WITHDRAWAL | Por retirar | 🟡 Amarillo |
+| NEXT_EXPIRY | Próximo (<90 días) | 🟡 Amarillo claro |
+| SAFE | Vigente | 🟢 Verde |
+
+### Commits:
+- `xxxxxxx` - refactor: Reescribir módulo Expiry con arquitectura simplificada v2
+
+### Pendientes:
+- Limpiar código legacy (hooks/, utils/ القديمة)
+- Agregar tests para expiryDomain
+- Integrar con scanner para captura rápida

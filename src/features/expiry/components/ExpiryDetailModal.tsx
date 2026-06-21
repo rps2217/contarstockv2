@@ -16,7 +16,8 @@ import { ExpiryItem } from '../hooks/useExpiryDatabase';
 interface ExpiryDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
-  item: ExpiryItem | null;
+  item?: ExpiryItem | null;
+  record?: ExpiryItem | null;
   onEdit?: () => void;
   onDelete?: () => void;
 }
@@ -25,15 +26,17 @@ export const ExpiryDetailModal: React.FC<ExpiryDetailModalProps> = ({
   isOpen,
   onClose,
   item,
+  record,
   onEdit,
   onDelete,
 }) => {
   const { getRecordHistory } = useAudit();
+  
+  const data = item || record;
+  if (!data) return null;
 
-  if (!item) return null;
-
-  const isWarning = item.daysLeft <= 90;
-  const isExpired = item.daysLeft <= 0;
+  const isWarning = data.daysLeft <= 90;
+  const isExpired = data.daysLeft <= 0;
   const formatDate = (ts?: number) => {
     if (!ts) return 'N/A';
     return format(new Date(ts), "dd MMM yyyy, HH:mm", { locale: es });
@@ -41,7 +44,7 @@ export const ExpiryDetailModal: React.FC<ExpiryDetailModalProps> = ({
 
   // Determinar estado para badge
   const status = isExpired ? 'error' : isWarning ? 'warning' : 'success';
-  const statusLabel = isExpired ? 'VENCIDO' : isWarning ? `${item.daysLeft} días` : 'Óptimo';
+  const statusLabel = isExpired ? 'VENCIDO' : isWarning ? `${data.daysLeft} días` : 'Óptimo';
 
   // Construir secciones
   const sections = [
@@ -50,9 +53,9 @@ export const ExpiryDetailModal: React.FC<ExpiryDetailModalProps> = ({
       title: 'Producto',
       icon: <Package className="w-4 h-4" />,
       rows: [
-        { label: 'Nombre', value: item.productName, copyable: true },
-        { label: 'Barcode', value: item.barcode, copyable: true },
-        { label: 'Categoría', value: item.category || 'Sin categoría' },
+        { label: 'Nombre', value: data.productName, copyable: true },
+        { label: 'Barcode', value: data.barcode, copyable: true },
+        { label: 'Categoría', value: data.category || 'Sin categoría' },
       ]
     },
     {
@@ -60,9 +63,9 @@ export const ExpiryDetailModal: React.FC<ExpiryDetailModalProps> = ({
       title: 'Vencimiento',
       icon: <CalendarDays className="w-4 h-4" />,
       rows: [
-        { label: 'Fecha Vencimiento', value: item.expiryDateObj ? format(item.expiryDateObj, 'MMMM yyyy', { locale: es }) : `${item.mm}/${item.yyyy}` },
-        { label: 'Días Restantes', value: item.daysLeft > 0 ? `${item.daysLeft} días` : 'VENCIDO' },
-        { label: 'Fecha Retiro Sugerida', value: item.withdrawalDate ? format(item.withdrawalDate, 'dd/MM/yyyy') : 'N/A' },
+        { label: 'Fecha Vencimiento', value: data.expiryDateObj ? format(data.expiryDateObj, 'MMMM yyyy', { locale: es }) : `${data.mm}/${data.yyyy}` },
+        { label: 'Días Restantes', value: data.daysLeft > 0 ? `${data.daysLeft} días` : 'VENCIDO' },
+        { label: 'Fecha Retiro Sugerida', value: data.withdrawalDate ? format(data.withdrawalDate, 'dd/MM/yyyy') : 'N/A' },
       ]
     },
     {
@@ -70,8 +73,8 @@ export const ExpiryDetailModal: React.FC<ExpiryDetailModalProps> = ({
       title: 'Proveedor',
       icon: <Factory className="w-4 h-4" />,
       rows: [
-        { label: 'Nombre', value: item.providerName || 'Sin proveedor' },
-        { label: 'RUT', value: item.providerRut || 'N/A', copyable: !!item.providerRut },
+        { label: 'Nombre', value: data.providerName || 'Sin proveedor' },
+        { label: 'RUT', value: data.providerRut || 'N/A', copyable: !!data.providerRut },
       ]
     },
     {
@@ -79,15 +82,15 @@ export const ExpiryDetailModal: React.FC<ExpiryDetailModalProps> = ({
       title: 'Captura',
       icon: <Clock className="w-4 h-4" />,
       rows: [
-        { label: 'Fecha Captura', value: formatDate(item.timestamp) },
-        { label: 'Ubicación', value: item.location || 'N/A' },
+        { label: 'Fecha Captura', value: formatDate(data.timestamp) },
+        { label: 'Ubicación', value: data.location || 'N/A' },
       ]
     }
   ];
 
   // Metadata
   const metadata = [
-    { label: 'Creado', value: formatDate(item.timestamp), icon: <Clock className="w-3 h-3" /> },
+    { label: 'Creado', value: formatDate(data.timestamp), icon: <Clock className="w-3 h-3" /> },
   ];
 
   return (
@@ -111,14 +114,14 @@ export const ExpiryDetailModal: React.FC<ExpiryDetailModalProps> = ({
             className="fixed inset-4 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-2xl md:max-h-[90vh] z-50 flex flex-col"
           >
             <RecordDetailView
-              title={item.productName}
-              subtitle={item.barcode}
+              title={data.productName}
+              subtitle={data.barcode}
               icon={<CalendarDays className="w-5 h-5" />}
               status={status}
               statusLabel={statusLabel}
               sections={sections}
               tabs={['detail', 'history']}
-              recordId={item.id}
+              recordId={data.id}
               tableName="VENCIMIENTOS"
               metadata={metadata}
               onEdit={onEdit}

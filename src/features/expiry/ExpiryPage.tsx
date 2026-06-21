@@ -1,500 +1,442 @@
-import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ShieldAlert, Download, Trash2, X, AlertTriangle, Search, LayoutGrid, CornerDownLeft, Loader2, RefreshCw, AlertCircle, Home, History } from 'lucide-react';
+/**
+ * ExpiryPage - Módulo de Vencimientos v2
+ * 
+ * Arquitectura simplificada - Un solo hook centralizado
+ */
+
+import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { VirtualList } from '../../shared/components/ui/VirtualList';
-import { useToastStore } from '@/stores';
-import { normalizeSku } from '../../services/utils';
-import { useExpiryDatabase, ExpiryItem } from './hooks/useExpiryDatabase';
-import { useScannerEngine } from '../../hooks/useScannerEngine';
-import { differenceInDays, format } from 'date-fns';
-import { useFeedbackSystem } from '../../hooks/useFeedbackSystem';
+import { 
+  RefreshCw, 
+  Trash2, 
+  Search, 
+  ChevronDown,
+  ChevronUp,
+  Plus,
+  ShieldAlert,
+  AlertTriangle,
+  Clock,
+  CheckCircle2,
+  X
+} from 'lucide-react';
+import { toast } from 'sonner';
 import { useAppStore } from '@/stores';
-import { useSyncStore } from '@/stores';
-import { SmartDock } from '../../components/SmartDock';
-import { CameraScanner } from '../../components/CameraScanner';
-import { ScannerTargetOverlay } from '../../shared/components/scanner/ScannerTargetOverlay';
-import { ModuleHeader } from '../../shared/components/layout/ModuleHeader';
-import { CaptureLayout } from '../../shared/components/layout/CaptureLayout';
-import { ExpiryCaptureModal } from './components/ExpiryCaptureModal';
-import { SyncDiagnosticsPanel } from '../sync/components/SyncDiagnosticsPanel';
-import { ExpiryCaptureRow } from './components/ExpiryCaptureRow';
+import { useExpiry, ExpiryRecord, ExpiryStatus } from './hooks/useExpiry';
+import { ModuleHeader } from '@/shared/components/layout/ModuleHeader';
+import { ExpiryItemCard } from './components/ExpiryItemCard';
+import { ExpiryStatsBar } from './components/ExpiryStatsBar';
 import { ExpiryDetailModal } from './components/ExpiryDetailModal';
-import { ExpiryMetricsCards } from './components/ExpiryMetricsCards';
-import { ExpiryKanbanView } from './components/ExpiryKanbanView';
-import { useAudit } from '@/hooks/useAudit';
-import { AuditPanel } from '@/shared/components/ui/AuditPanel';
+import { ExpiryCaptureModal } from './components/ExpiryCaptureModal';
 
-const getDaysUntilExpiry = (mm: number, yyyy: number) => {
-  const expiryDate = new Date(yyyy, mm - 1, 1);
-  expiryDate.setMonth(expiryDate.getMonth() + 1);
-  expiryDate.setDate(0);
-  return differenceInDays(expiryDate, new Date());
-};
+// ============================================================================
+// COMPONENTE: ExpirySection
+// ============================================================================
+interface ExpirySectionProps {
+  title: string;
+  icon: React.ElementType;
+  records: ExpiryRecord[];
+  isExpanded: boolean;
+  onToggle: () => void;
+  onDelete: (id: string) => void;
+  onSelect: (id: string) => void;
+  onViewDetail: (record: ExpiryRecord) => void;
+  selectedIds: Set<string>;
+  theme: 'dark' | 'light' | 'high-contrast';
+  colorClass: string;
+}
 
-const ExpiryListRow = React.memo(({ index, item, data }: any) => {
-  const { onDelete, onRowClick } = data;
+const ExpirySection: React.FC<ExpirySectionProps> = ({
+  title,
+  icon: Icon,
+  records,
+  isExpanded,
+  onToggle,
+  onDelete,
+  onSelect,
+  onViewDetail,
+  selectedIds,
+  theme,
+  colorClass
+}) => {
+  const isDark = theme === 'dark';
+  
   return (
-    <div className="h-full pb-6">
-      <ExpiryCaptureRow item={item} onDelete={onDelete} onClick={onRowClick} />
+    <div className={`rounded-2xl border overflow-hidden ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
+      {/* Section Header */}
+      <button
+        onClick={onToggle}
+        className={`
+          w-full px-4 py-3 flex items-center justify-between
+          ${isDark ? 'bg-white/5' : 'bg-slate-100'}
+        `}
+      >
+        <div className="flex items-center gap-3">
+          <div className={`p-2 rounded-lg ${colorClass}`}>
+            <Icon className="w-4 h-4" />
+          </div>
+          <div className="text-left">
+            <span className={`text-xs font-black uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}`}>{title}</span>
+            <span className="ml-2 text-[10px] font-mono text-slate-400">
+              {records.length} registros
+            </span>
+          </div>
+        </div>
+        {isExpanded ? (
+          <ChevronUp className="w-4 h-4 text-slate-400" />
+        ) : (
+          <ChevronDown className="w-4 h-4 text-slate-400" />
+        )}
+      </button>
+
+      {/* Section Content */}
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0 }}
+            animate={{ height: 'auto' }}
+            exit={{ height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="p-4 space-y-3 max-h-[500px] overflow-y-auto">
+              {records.length === 0 ? (
+                <div className="text-center py-8 text-slate-500">
+                  <p className="text-xs font-bold uppercase tracking-widest">
+                    No hay registros
+                  </p>
+                </div>
+              ) : (
+                records.map(record => (
+                  <ExpiryItemCard
+                    key={record.id}
+                    record={record}
+                    onDelete={onDelete}
+                    onSelect={onSelect}
+                    onViewDetail={onViewDetail}
+                    isSelected={selectedIds.has(record.id)}
+                  />
+                ))
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
-});
-ExpiryListRow.displayName = 'ExpiryListRow';
+};
 
+// ============================================================================
+// COMPONENTE PRINCIPAL: ExpiryPage
+// ============================================================================
 export const ExpiryPage: React.FC = () => {
-  const navigate = useNavigate();
-  const { addToast } = useToastStore.getState();
-  const { state, actions } = useExpiryDatabase();
-  const syncStore = useSyncStore();
-  const engine = useScannerEngine();
-  
-  const parentRef = useRef<HTMLDivElement>(null);
-  
-  const [selectedMm, setSelectedMm] = useState<number | null>(null);
-  const [selectedYyyy, setSelectedYyyy] = useState<number | null>(new Date().getFullYear() + 1); 
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const settings = useAppStore(state => state.settings);
+  const theme = (settings?.theme as 'dark' | 'light' | 'high-contrast') || 'dark';
+  const isDark = theme === 'dark';
 
-  const [filterVencido, setFilterVencido] = useState(false);
-  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
-  const [filterCritico, setFilterCritico] = useState(false);
+  const {
+    filteredRecords,
+    stats,
+    filters,
+    isLoading,
+    isSyncing,
+    selectedIds,
+    isDetailModalOpen,
+    selectedRecord,
+    actions
+  } = useExpiry();
 
-  const [selectedDetailItem, setSelectedDetailItem] = useState<ExpiryItem | null>(null);
-  const [showAuditPanel, setShowAuditPanel] = useState(false);
-  const { getTableHistory } = useAudit();
+  const [expandedSections, setExpandedSections] = useState({
+    expired: true,
+    critical: true,
+    withdrawal: false,
+    nextExpiry: false,
+    safe: false
+  });
 
-  // Atajos de teclado para ultra-productividad en almacén/captura rápida de vencimientos
+  const [showCaptureModal, setShowCaptureModal] = useState(false);
+
+  // Atajos de teclado
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Si el modal de ingreso de fecha está abierto, no interferir con su propio teclado numérico
-      if (engine.isModalOpen) return;
-
       const target = e.target as HTMLElement;
-      const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
-
-      // Escape: Quitar foco del input de escaneo y/o limpiar entrada de texto
-      if (e.key === 'Escape') {
-         if (isInput) {
-            target.blur();
-         }
-         if (engine.capture.inputValue) {
-           engine.capture.setInputValue('');
-         }
-         return;
+      const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
+      
+      // Escape: Limpiar búsqueda
+      if (e.key === 'Escape' && isInput) {
+        target.blur();
+        actions.setSearchQuery('');
+        return;
       }
 
-      // Alt + C: Activar o desactivar visualizador de cámara
+      // Alt + N: Nuevo registro
+      if (e.altKey && e.key.toLowerCase() === 'n') {
+        e.preventDefault();
+        setShowCaptureModal(true);
+        return;
+      }
+      
+      // Alt + C: Críticos
       if (e.altKey && e.key.toLowerCase() === 'c') {
         e.preventDefault();
-        engine.capture.setIsCameraActive(prev => !prev);
-        
+        actions.setSelectedStatuses(
+          filters.selectedStatuses.includes(ExpiryStatus.CRITICAL)
+            ? filters.selectedStatuses.filter(s => s !== ExpiryStatus.CRITICAL)
+            : [...filters.selectedStatuses, ExpiryStatus.CRITICAL]
+        );
         return;
       }
-
-      // Alt + K: Alternar filtro de vencimientos críticos (<= 90 días)
-      if (e.altKey && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        setFilterCritico(prev => !prev);
-        if (filterVencido) setFilterVencido(false);
-        
-        return;
-      }
-
-      // Alt + V: Alternar filtro de vencidos
+      
+      // Alt + V: Vencidos
       if (e.altKey && e.key.toLowerCase() === 'v') {
         e.preventDefault();
-        setFilterVencido(prev => !prev);
-        if (filterCritico) setFilterCritico(false);
-        
+        actions.setSelectedStatuses(
+          filters.selectedStatuses.includes(ExpiryStatus.EXPIRED)
+            ? filters.selectedStatuses.filter(s => s !== ExpiryStatus.EXPIRED)
+            : [...filters.selectedStatuses, ExpiryStatus.EXPIRED]
+        );
         return;
       }
-
-      // Tecla "/" para enfocar rápidamente el buscador o campo de escaneo manual
+      
+      // /
       if (e.key === '/' && !isInput) {
         e.preventDefault();
-        engine.capture.inputRef.current?.focus();
-        return;
+        document.querySelector<HTMLInputElement>('input[type="text"]')?.focus();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [engine.isModalOpen, engine.capture, filterCritico, filterVencido]);
+  }, [filters.selectedStatuses, actions]);
 
-  const handleSimpleSubmit = async () => {
-    if (!engine.scannedBarcode || !selectedMm || !selectedYyyy || isSubmitting) return;
-    
-    try {
-      setIsSubmitting(true);
-      
-      await actions.handleAddItem({
-        barcode: engine.scannedBarcode,
-        productName: engine.product?.name || 'Producto Desconocido',
-        providerName: engine.product?.supplier || 'N/A',
-        providerRut: engine.product?.supplierRut || undefined,
-        mm: selectedMm,
-        yyyy: selectedYyyy,
-        quantity: 1,
-        // PRODUCTO_PROVEEDOR: políticas específicas si existen
-        withdrawalDays: engine.providerPolicy?.days,
-        hasExchange: engine.providerPolicy?.hasCanje
-      });
-      
-      
-      addToast(navigator.onLine ? 'Vencimiento registrado' : 'Guardado en cola', navigator.onLine ? 'success' : 'info');
-      engine.resetScanner();
-      setSelectedMm(null);
-    } catch (error) {
-      
-      addToast('Error al guardar', 'error');
-    } finally {
-      setIsSubmitting(false);
-    }
+  const toggleSection = (section: keyof typeof expandedSections) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
   };
 
   const handleDelete = useCallback(async (id: string) => {
-    if (window.confirm('¿Eliminar este registro?')) {
-      const itemToDelete = state.allItems.find(i => i.id === id);
-      if (itemToDelete) {
-        await actions.handleRemoveItem(itemToDelete);
-        
+    if (window.confirm('¿Eliminar este registro de vencimiento?')) {
+      try {
+        await actions.deleteRecord(id);
+      } catch {
+        toast.error('Error al eliminar');
       }
     }
-  }, [state.allItems, actions]);
+  }, [actions]);
 
-  const sortedItems = useMemo(() => {
-    let items = [...state.allItems];
-
-    if (filterVencido || filterCritico) {
-      items = items.filter(item => {
-        const days = getDaysUntilExpiry(Number(item.mm) || 0, Number(item.yyyy) || 0);
-        const isVencido = days <= 0;
-        const isCritico = days > 0 && days <= 90;
-        if (filterVencido && filterCritico) return isVencido || isCritico;
-        if (filterVencido) return isVencido;
-        if (filterCritico) return isCritico;
-        return true;
-      });
-    }
-
-    const q = (engine.isSearchActive ? engine.searchQuery : engine.capture.inputValue).toLowerCase();
-    if (q) {
-      items = items.filter(item => 
-        item.barcode.toLowerCase().includes(q) || 
-        (item.productName && item.productName.toLowerCase().includes(q))
-      );
-    }
-
-    return items.sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
-  }, [state.allItems, filterVencido, filterCritico, engine.isSearchActive, engine.searchQuery, engine.capture.inputValue]);
-
-  const rowData = useMemo(() => ({ 
-    onDelete: handleDelete, 
-    onRowClick: (item: ExpiryItem) => setSelectedDetailItem(item) 
-  }), [handleDelete]);
-
-  const header = (
-    <ModuleHeader 
-      title="Captura Rápida"
-      subtitle="Control de Vencimientos"
-      hideTitleOnMobile={true}
-      hideBackButtonOnMobile={true}
-      onBack={() => navigate('/')}
-      actions={
-        <div className="hidden md:flex items-center gap-2">
-          {/* SYNC STATUS INDICATOR - Desktop */}
-          <button
-            onClick={() => engine.setIsSyncModalOpen(true)}
-            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
-              syncStore.incidents.length > 0 
-                ? 'bg-rose-500 text-white animate-pulse shadow-[0_0_15px_rgba(244,63,94,0.4)]' 
-                : syncStore.conflicts > 0 
-                  ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/20' 
-                  : 'bg-white/5 text-slate-500 hover:text-slate-400 active:scale-90'
-            }`}
-          >
-            {syncStore.incidents.length > 0 ? (
-              <AlertCircle className="w-5 h-5" />
-            ) : (
-              <RefreshCw className={`w-4 h-4 ${syncStore.isSyncing ? 'animate-spin' : ''}`} />
-            )}
-          </button>
-
-          <button
-            onClick={() => engine.setIsSearchActive(!engine.isSearchActive)}
-            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-              engine.isSearchActive ? 'bg-blue-600 text-white' : 'bg-white/5 text-slate-400 active:bg-white/10'
-            }`}
-          >
-            <Search className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => setFilterCritico(!filterCritico)}
-            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-              filterCritico ? 'bg-amber-500 text-black' : 'bg-white/5 text-slate-400 active:bg-white/10'
-            }`}
-          >
-            <ShieldAlert className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => setFilterVencido(!filterVencido)}
-            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-              filterVencido ? 'bg-rose-500 text-white' : 'bg-white/5 text-slate-400 active:bg-white/10'
-            }`}
-          >
-            <AlertTriangle className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => setViewMode(v => v === 'list' ? 'kanban' : 'list')}
-            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-              viewMode === 'kanban' ? 'bg-indigo-600 text-white' : 'bg-white/5 text-slate-400 active:bg-white/10'
-            }`}
-            title="Cambiar vista"
-          >
-            <LayoutGrid className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => setShowAuditPanel(true)}
-            className="w-10 h-10 rounded-xl flex items-center justify-center bg-white/5 text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
-            title="Ver historial de cambios"
-          >
-            <History className="w-5 h-5" />
-          </button>
-        </div>
+  const handleBulkDelete = useCallback(async () => {
+    if (selectedIds.size === 0) return;
+    if (window.confirm(`¿Eliminar ${selectedIds.size} registros?`)) {
+      try {
+        await actions.bulkDelete(Array.from(selectedIds));
+      } catch {
+        toast.error('Error al eliminar');
       }
-    />
-  );
-
-  const dockItems = [
-    {
-      id: 'home',
-      icon: Home,
-      onClick: () => navigate('/'),
-    },
-    {
-      id: 'search',
-      icon: Search,
-      onClick: () => engine.setIsSearchActive(!engine.isSearchActive),
-      isActive: engine.isSearchActive,
-      activeColor: 'text-blue-400',
-      activeBg: 'bg-blue-500/20'
-    },
-    {
-      id: 'critico',
-      icon: ShieldAlert,
-      onClick: () => {
-        setFilterCritico(!filterCritico);
-        if (filterVencido) setFilterVencido(false);
-      },
-      isActive: filterCritico,
-      activeColor: 'text-amber-500',
-      activeBg: 'bg-amber-500/20'
-    },
-    {
-      id: 'vencido',
-      icon: AlertTriangle,
-      onClick: () => {
-        setFilterVencido(!filterVencido);
-        if (filterCritico) setFilterCritico(false);
-      },
-      isActive: filterVencido,
-      activeColor: 'text-rose-500',
-      activeBg: 'bg-rose-500/20'
-    },
-    {
-      id: 'sync',
-      icon: RefreshCw,
-      onClick: () => engine.setIsSyncModalOpen(true),
-      isActive: syncStore.incidents.length > 0 || syncStore.isSyncing,
-      activeColor: syncStore.incidents.length > 0 ? 'text-rose-500' : 'text-blue-400',
-      activeBg: syncStore.incidents.length > 0 ? 'bg-rose-500/20' : 'bg-blue-500/20'
-    },
-    {
-      id: 'audit',
-      icon: History,
-      onClick: () => setShowAuditPanel(true),
-      activeColor: 'text-emerald-400',
-      activeBg: 'bg-emerald-500/20'
     }
-  ];
+  }, [selectedIds, actions]);
 
-  const mobileDock = <SmartDock items={dockItems} variant="contextual" />;
+  const handleViewDetail = useCallback((record: ExpiryRecord) => {
+    actions.setSelectedRecord(record);
+    actions.setIsDetailModalOpen(true);
+  }, [actions]);
 
-  const cameraArea = (
-    <AnimatePresence>
-      {engine.capture.isCameraActive && (
-        <motion.div 
-          initial={{ height: 0, opacity: 0 }}
-          animate={{ height: 260, opacity: 1 }}
-          exit={{ height: 0, opacity: 0 }}
-          className="bg-black overflow-hidden border-b-2 border-blue-500/50 shadow-inner relative"
-        >
-          <CameraScanner 
-            onScan={(code) => { engine.handleScan(code); }} 
-            onClose={() => engine.capture.setIsCameraActive(false)} 
-            inline={true}
-            isTriggered={true}
-          />
-          <ScannerTargetOverlay feedback={engine.feedback} />
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
+  // Agrupar registros por estado
+  const expiredRecords = filteredRecords.filter(r => r.status === ExpiryStatus.EXPIRED);
+  const criticalRecords = filteredRecords.filter(r => r.status === ExpiryStatus.CRITICAL);
+  const withdrawalRecords = filteredRecords.filter(r => r.status === ExpiryStatus.WITHDRAWAL);
+  const nextExpiryRecords = filteredRecords.filter(r => r.status === ExpiryStatus.NEXT_EXPIRY);
+  const safeRecords = filteredRecords.filter(r => r.status === ExpiryStatus.SAFE);
 
-  const filters = (
-    <>
-      <button
-        onClick={async () => {
-          if (window.confirm("¿Seguro que deseas limpiar y recargar todos los registros desde la nube?")) {
-            await actions.handleFullRefresh();
-            addToast("Base de datos sincronizada", "success");
-          }
-        }}
-        disabled={syncStore.isSyncing}
-        className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border flex items-center gap-2 shrink-0 ${
-          syncStore.isSyncing 
-            ? 'bg-indigo-500/50 text-white border-indigo-400 opacity-50 cursor-not-allowed' 
-            : 'bg-indigo-500 text-white border-indigo-400 active:bg-indigo-600'
-        }`}
-        title="Importar desde la nube / Limpiar y recargar"
-      >
-        <Download className={`w-3.5 h-3.5 ${syncStore.isSyncing ? 'animate-bounce' : ''}`} />
-        Limpiar Nube
-      </button>
-      <button
-        onClick={() => setFilterCritico(!filterCritico)}
-        className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border flex items-center gap-2 shrink-0 ${
-          filterCritico 
-            ? 'bg-amber-500 text-black border-amber-400' 
-            : 'bg-white/5 text-slate-500 border-white/5 active:bg-white/10'
-        }`}
-      >
-        <ShieldAlert className="w-3.5 h-3.5" />
-        Crítico
-      </button>
-      <button
-        onClick={() => setFilterVencido(!filterVencido)}
-        className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border flex items-center gap-2 shrink-0 ${
-          filterVencido 
-            ? 'bg-rose-500 text-white border-rose-400' 
-            : 'bg-white/5 text-slate-500 border-white/5 active:bg-white/10'
-        }`}
-      >
-        <AlertTriangle className="w-3.5 h-3.5" />
-        Vencido
-      </button>
-    </>
-  );
-
-  const modalForm = (
-    <ExpiryCaptureModal
-      isOpen={engine.isModalOpen}
-      onClose={() => engine.setIsModalOpen(false)}
-      scannedBarcode={engine.scannedBarcode}
-      productName={engine.product?.name}
-      providerPolicy={engine.providerPolicy}
-      selectedMm={selectedMm}
-      setSelectedMm={setSelectedMm}
-      selectedYyyy={selectedYyyy}
-      setSelectedYyyy={setSelectedYyyy}
-      onSubmit={handleSimpleSubmit}
-      isSubmitting={isSubmitting}
-    />
-  );
+  const totalCount = filteredRecords.length;
 
   return (
-    <>
-      <CaptureLayout
-        header={header}
-        footer={mobileDock}
-        extra={cameraArea}
-        filters={filters}
-        metrics={<ExpiryMetricsCards items={sortedItems} />}
-        modalForm={modalForm}
-        inputValue={engine.isSearchActive ? engine.searchQuery : engine.capture.inputValue}
-        onInputChange={engine.isSearchActive ? engine.setSearchQuery : engine.capture.setInputValue}
-        onInputSubmit={engine.capture.handleManualSubmit}
-        onCameraToggle={() => engine.capture.setIsCameraActive(!engine.capture.isCameraActive)}
-        inputPlaceholder={engine.isSearchActive ? "Buscar..." : "Escanear o digitar..."}
-        inputRef={engine.capture.inputRef}
-        scrollRef={parentRef}
-        readOnly={engine.isModalOpen}
-        list={
-          viewMode === 'kanban' ? (
-            <ExpiryKanbanView
-              items={sortedItems}
-              onItemClick={(item) => setSelectedDetailItem(item)}
-            />
-          ) : (
-            <VirtualList
-              items={sortedItems}
-              itemHeight={130}
-              renderRow={ExpiryListRow}
-              rowData={rowData}
-            />
-          )
-        }
-        emptyState={
-          sortedItems.length === 0 && (
-            <div className="text-center py-12 text-slate-500 font-bold text-sm uppercase tracking-widest">
-              No hay registros que coincidan
-            </div>
-          )
-        }
-      />
-
-      <SyncDiagnosticsPanel 
-        isOpen={engine.isSyncModalOpen} 
-        onClose={() => engine.setIsSyncModalOpen(false)} 
-      />
-
-      <ExpiryDetailModal 
-        isOpen={!!selectedDetailItem}
-        onClose={() => setSelectedDetailItem(null)}
-        item={selectedDetailItem}
-      />
-
-      {/* Audit Panel Modal */}
-      <AnimatePresence>
-        {showAuditPanel && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={() => setShowAuditPanel(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col"
-              onClick={(e) => e.stopPropagation()}
+    <div className={`h-full flex flex-col overflow-hidden ${isDark ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'}`}>
+      {/* Header */}
+      <ModuleHeader
+        title="Vencimientos"
+        subtitle={`${totalCount} registros`}
+        hideTitleOnMobile={false}
+        hideBackButtonOnMobile={true}
+        actions={
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowCaptureModal(true)}
+              className="w-10 h-10 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 flex items-center justify-center transition-colors"
+              title="Nuevo vencimiento (Alt+N)"
             >
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-black text-white uppercase">Historial de Cambios</h2>
-                <button
-                  onClick={() => setShowAuditPanel(false)}
-                  className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="flex-1 overflow-auto">
-                <AuditPanel
-                  tableName="VENCIMIENTOS"
-                  loadHistory={getTableHistory}
-                  title="Cambios en Vencimientos"
-                  limit={50}
-                />
-              </div>
-            </motion.div>
-          </motion.div>
+              <Plus className="w-5 h-5 text-emerald-400" />
+            </button>
+            <button
+              onClick={() => actions.syncRecords()}
+              disabled={isSyncing}
+              className="w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors disabled:opacity-50"
+              title="Sincronizar"
+            >
+              <RefreshCw className={`w-5 h-5 ${isSyncing ? 'animate-spin' : ''}`} />
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              disabled={selectedIds.size === 0}
+              className="w-10 h-10 rounded-xl bg-red-500/10 hover:bg-red-500/20 flex items-center justify-center transition-colors disabled:opacity-50"
+              title="Eliminar seleccionados"
+            >
+              <Trash2 className="w-5 h-5 text-red-400" />
+            </button>
+          </div>
+        }
+      />
+
+      {/* Search & Filters */}
+      <div className="px-4 py-3 space-y-3">
+        <div className={`
+          flex items-center gap-3 px-4 py-3 rounded-2xl border
+          ${isDark ? 'bg-white/5 border-white/10' : 'bg-white border-slate-200'}
+        `}>
+          <Search className="w-5 h-5 text-slate-400 shrink-0" />
+          <input
+            type="text"
+            placeholder="Buscar por producto, barcode, ubicación... (presiona /)"
+            value={filters.searchQuery}
+            onChange={(e) => actions.setSearchQuery(e.target.value)}
+            className={`
+              flex-1 bg-transparent outline-none text-sm font-medium
+              ${isDark ? 'placeholder:text-slate-500 text-white' : 'placeholder:text-slate-400 text-slate-900'}
+            `}
+          />
+          {filters.searchQuery && (
+            <button
+              onClick={() => actions.setSearchQuery('')}
+              className="text-slate-400 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Stats Bar */}
+        <ExpiryStatsBar
+          stats={stats}
+          selectedStatuses={filters.selectedStatuses}
+          onStatusFilter={actions.setSelectedStatuses}
+        />
+      </div>
+
+      {/* Selection info */}
+      {selectedIds.size > 0 && (
+        <div className="px-4 py-2 bg-blue-500/10 border-y border-blue-500/20">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold text-blue-400">
+              {selectedIds.size} seleccionado(s)
+            </p>
+            <button
+              onClick={actions.clearSelection}
+              className="text-xs text-blue-400 hover:text-blue-300"
+            >
+              Limpiar selección
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <RefreshCw className="w-8 h-8 animate-spin text-slate-400" />
+          </div>
+        ) : (
+          <>
+            <ExpirySection
+              title="Vencidos"
+              icon={AlertTriangle}
+              records={expiredRecords}
+              isExpanded={expandedSections.expired}
+              onToggle={() => toggleSection('expired')}
+              onDelete={handleDelete}
+              onSelect={actions.toggleSelection}
+              onViewDetail={handleViewDetail}
+              selectedIds={selectedIds}
+              theme={theme}
+              colorClass="bg-red-500/20 text-red-400"
+            />
+
+            <ExpirySection
+              title="Críticos"
+              icon={ShieldAlert}
+              records={criticalRecords}
+              isExpanded={expandedSections.critical}
+              onToggle={() => toggleSection('critical')}
+              onDelete={handleDelete}
+              onSelect={actions.toggleSelection}
+              onViewDetail={handleViewDetail}
+              selectedIds={selectedIds}
+              theme={theme}
+              colorClass="bg-amber-500/20 text-amber-400"
+            />
+
+            <ExpirySection
+              title="Por Retirar"
+              icon={Clock}
+              records={withdrawalRecords}
+              isExpanded={expandedSections.withdrawal}
+              onToggle={() => toggleSection('withdrawal')}
+              onDelete={handleDelete}
+              onSelect={actions.toggleSelection}
+              onViewDetail={handleViewDetail}
+              selectedIds={selectedIds}
+              theme={theme}
+              colorClass="bg-orange-500/20 text-orange-400"
+            />
+
+            <ExpirySection
+              title="Próximos"
+              icon={Clock}
+              records={nextExpiryRecords}
+              isExpanded={expandedSections.nextExpiry}
+              onToggle={() => toggleSection('nextExpiry')}
+              onDelete={handleDelete}
+              onSelect={actions.toggleSelection}
+              onViewDetail={handleViewDetail}
+              selectedIds={selectedIds}
+              theme={theme}
+              colorClass="bg-yellow-500/20 text-yellow-400"
+            />
+
+            <ExpirySection
+              title="Vigentes"
+              icon={CheckCircle2}
+              records={safeRecords}
+              isExpanded={expandedSections.safe}
+              onToggle={() => toggleSection('safe')}
+              onDelete={handleDelete}
+              onSelect={actions.toggleSelection}
+              onViewDetail={handleViewDetail}
+              selectedIds={selectedIds}
+              theme={theme}
+              colorClass="bg-emerald-500/20 text-emerald-400"
+            />
+          </>
         )}
-      </AnimatePresence>
-    </>
+      </div>
+
+      {/* Detail Modal */}
+      <ExpiryDetailModal
+        record={selectedRecord}
+        isOpen={isDetailModalOpen}
+        onClose={() => actions.setIsDetailModalOpen(false)}
+      />
+
+      {/* Capture Modal */}
+      <ExpiryCaptureModal
+        isOpen={showCaptureModal}
+        onClose={() => setShowCaptureModal(false)}
+        onSuccess={() => {
+          setShowCaptureModal(false);
+          actions.clearFilters();
+        }}
+      />
+    </div>
   );
 };
 
 export default ExpiryPage;
-
