@@ -22,6 +22,12 @@ export class GenericSyncEngine {
     const localTable = (db as any)[meta.localTable];
     if (!localTable) return { success: 0, failed: 0 };
 
+    // Skip optional tables that don't exist
+    if (meta.optional) {
+      logger.info('SYNC_ENGINE', `Skipping optional table ${meta.remoteTable} (table may not exist)`);
+      return { success: 0, failed: 0 };
+    }
+
     // 1. Process Deletions First
     let toDelete: any[] = [];
     if (meta.filterField === 'tableName' && meta.filterValue) {
@@ -113,6 +119,12 @@ export class GenericSyncEngine {
   async pullRemoteChanges(registryKey: string): Promise<{ added: number; updated: number }> {
     const meta = syncRegistry[registryKey];
     if (!meta) throw new Error(`Registry key ${registryKey} not found`);
+
+    // Skip optional tables that don't exist
+    if (meta.optional) {
+      logger.info('SYNC_ENGINE', `Skipping optional table ${meta.remoteTable} (table may not exist)`);
+      return { added: 0, updated: 0 };
+    }
 
     const lastSyncKey = `lastSync_${meta.remoteTable}`;
     let lastSyncDate: string | undefined;

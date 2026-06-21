@@ -235,6 +235,8 @@ export interface TableSyncMeta {
   filterValue?: string;
   /** Indica si es tabla dinámica */
   isDynamic?: boolean;
+  /** Indica si la tabla es opcional (puede no existir en Supabase) */
+  optional?: boolean;
   /** Función para transformar registro local → remoto */
   mapToRemote?: (local: any) => any;
   /** Función para transformar registro remoto → local */
@@ -291,6 +293,7 @@ export const syncRegistry: Record<string, TableSyncMeta> = {
     localTable: 'scans',
     remoteTable: 'SCANS',
     primaryKey: 'id',
+    optional: true,
     mapToRemote: (s) => ({
       id: s.id,
       session_id: s.sessionId,
@@ -352,6 +355,7 @@ export const syncRegistry: Record<string, TableSyncMeta> = {
     filterValue: 'PLANTILLAS_MENSAJES',
     remoteTable: 'MESSAGE_TEMPLATES',
     primaryKey: 'id',
+    optional: true,
     mapToRemote: (record) => ({
       ...record.data,
       id: record.id,
@@ -371,6 +375,7 @@ export const syncRegistry: Record<string, TableSyncMeta> = {
     filterValue: 'PLANTILLAS_CORREOS',
     remoteTable: 'PLANTILLAS_CORREOS',
     primaryKey: 'id',
+    optional: true,
     mapToRemote: (record) => ({
       ...record.data,
       id: record.id,
