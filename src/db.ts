@@ -74,6 +74,32 @@ export interface ProductProvider {
   updatedAt?: number;
 }
 
+// View Preferences - Para persistir preferencias de vista por módulo
+export interface ViewPreferences {
+  module: string;
+  compactView: boolean;
+  sortBy: 'date' | 'name' | 'status';
+  sortOrder: 'asc' | 'desc';
+  expandedPanels: Record<string, boolean>;
+  lastUpdated: number;
+}
+
+// Bulk History - Registro de acciones masivas para undo/history
+export interface BulkHistoryEntry {
+  id: string;
+  module: string;
+  action: string;
+  actionLabel: string;
+  itemCount: number;
+  itemIds: string[];
+  previousState?: Record<string, any>;
+  newState?: Record<string, any>;
+  timestamp: number;
+  undone: boolean;
+  canUndo: boolean;
+  undoTimeout: number;
+}
+
 export class LogiCountDB extends Dexie {
   products!: Table<Product>;
   sessions!: Table<CountingSession>;
@@ -118,6 +144,8 @@ export class LogiCountDB extends Dexie {
     priority: 'high' | 'normal' | 'low';
   }>;
   audit_logs!: Table<AuditLogEntry>;
+  viewPreferences!: Table<ViewPreferences>;
+  bulkHistory!: Table<BulkHistoryEntry>;
 
   constructor() {
     super('LogiCountDB');

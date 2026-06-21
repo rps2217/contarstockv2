@@ -245,11 +245,11 @@ const bulk = useBulkActions({
 - [x] MassActionsPanel - Wrapper para usar con hook global
 - Commit: `15d001cd`
 
-### Fase 4: Features Avanzadas
-- [ ] Persistencia de preferencias de vista
-- [ ] Atajos de teclado globales
-- [ ] Deshacer acciones masivas
-- [ ] Historial de acciones masivas
+### Fase 4: Features Avanzadas ✅
+- [x] Persistencia de preferencias de vista (`useViewPreferences`)
+- [x] Atajos de teclado globales (Ctrl+A, Escape, Delete, Ctrl+Z)
+- [x] Deshacer acciones masivas (`useBulkHistory`, `performUndo`)
+- [x] Historial de acciones masivas (`BulkHistoryPanel`)
 
 ---
 
