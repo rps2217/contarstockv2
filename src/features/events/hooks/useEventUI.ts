@@ -4,6 +4,113 @@ import { format } from 'date-fns';
 import { useEventDatabase } from './useEventDatabase';
 import { genericSyncEngine } from '../../../services/cloud/GenericSyncEngine';
 import { useTaskStore } from '@/stores';
+import { useBulkActions, BulkAction, BulkEditConfig } from '@/hooks/useBulkActions';
+import { Trash2, Edit3, Download, Search, Printer } from 'lucide-react';
+
+// Destinos disponibles
+const DESTINOS = [
+  { value: 'BOD. 37', label: 'BOD. 37' },
+  { value: 'BOD. 80', label: 'BOD. 80' },
+  { value: 'BOD. 95', label: 'BOD. 95' },
+  { value: 'BOD. 98', label: 'BOD. 98' },
+  { value: 'BOD. 106', label: 'BOD. 106' },
+  { value: 'BOD. 121', label: 'BOD. 121' },
+];
+
+// Acciones masivas configurables
+export const EVENT_BULK_ACTIONS: BulkAction[] = [
+  {
+    id: 'edit',
+    label: 'Editar',
+    icon: Edit3,
+    variant: 'primary',
+    onClick: () => {} // Se ejecuta desde el modal
+  },
+  {
+    id: 'search',
+    label: 'Buscar',
+    icon: Search,
+    variant: 'default',
+    onClick: (items) => {
+      const item = items[0];
+      if (item?.barcode && item?.nguia) {
+        const query = `${item.barcode} ${item.nguia}`;
+        window.open(`https://mail.google.com/mail/u/0/#search/${encodeURIComponent(query)}`, '_blank');
+      } else {
+        toast.error('No se pudo obtener SKU o Guía para la búsqueda');
+      }
+    }
+  },
+  {
+    id: 'print',
+    label: 'Imprimir',
+    icon: Printer,
+    variant: 'default',
+    onClick: (items) => {
+      import('../../expiry/utils/expiryUtils').then(utils => {
+        utils.handlePrintSelectedEvents(items);
+        toast.success(`Generando etiquetas para ${items.length} productos`);
+      });
+    }
+  },
+  {
+    id: 'export',
+    label: 'Exportar',
+    icon: Download,
+    variant: 'default',
+    onClick: (items) => {
+      const csv = [
+        'Barcode,Producto,FRC,Destino,Traspaso,Estado',
+        ...items.map(i => `${i.barcode || ''},${i.productName || ''},${i.frc || ''},${i.destino || ''},${i.traspaso || ''},${i.isAdjusted ? 'Ajustado' : 'Pendiente'}`)
+      ].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `eventos_${Date.now()}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`${items.length} registros exportados`);
+    }
+  },
+  {
+    id: 'delete',
+    label: 'Eliminar',
+    icon: Trash2,
+    variant: 'danger',
+    requiresConfirmation: true,
+    confirmMessage: '¿Eliminar los elementos seleccionados? Esta acción es irreversible.',
+    onClick: () => {} // Se ejecuta desde el hook
+  }
+];
+
+// Configuración de edición masiva
+export const EVENT_BULK_EDIT_CONFIG: BulkEditConfig = {
+  title: 'Edición Masiva',
+  description: 'Actualizar destino y traspaso de los eventos seleccionados.',
+  fields: [
+    {
+      key: 'destino',
+      label: 'Destino',
+      type: 'select',
+      options: DESTINOS
+    },
+    {
+      key: 'traspaso',
+      label: 'N° Traspaso',
+      type: 'text'
+    },
+    {
+      key: 'observaciones',
+      label: 'Observaciones',
+      type: 'textarea'
+    }
+  ],
+  onApply: async (ids, values, items) => {
+    // Esta función se reemplaza en el hook
+    return Promise.resolve();
+  }
+};
 
 export const useEventUI = () => {
   const { addTask, updateTask } = useTaskStore();
@@ -13,54 +120,91 @@ export const useEventUI = () => {
   
   const [isSyncing, setIsSyncing] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [expandedPanel, setExpandedPanel] = useState<'pending' | 'destined' | 'adjusted' | 'dual'>('dual');
 
-  const handleBulkEdit = async (data: { destino: string; traspaso: string; observaciones: string }) => {
-    const selectedIds = Array.from(db.selectedIds);
-    if (selectedIds.length === 0) return;
-
-    const taskId = `bulk-edit-${Date.now()}`;
-    addTask({
-      id: taskId,
-      name: `Actualizando ${selectedIds.length} registros`,
-      progress: 0,
-      status: 'running'
-    });
-
-    try {
-      const updates: any = {};
-      if (data.destino) updates.destino = data.destino;
-      if (data.traspaso) updates.traspaso = data.traspaso;
-      if (data.observaciones) updates.observaciones = data.observaciones;
-      
-      if (Object.keys(updates).length > 0) {
-        await db.actions.updateEventBulkFieldsMany(selectedIds, updates);
+  // Sistema global de acciones masivas
+  const bulk = useBulkActions({
+    module: 'events',
+    getItemId: (item: any) => item.id,
+    actions: EVENT_BULK_ACTIONS.map(action => {
+      // Wrapped actions con acceso a db
+      if (action.id === 'delete') {
+        return {
+          ...action,
+          onClick: async (items: any[]) => {
+            const taskId = `bulk-delete-${Date.now()}`;
+            addTask({
+              id: taskId,
+              name: `Eliminando ${items.length} registros`,
+              progress: 0,
+              status: 'running'
+            });
+            
+            let success = 0;
+            for (let i = 0; i < items.length; i++) {
+              try {
+                await db.actions.deleteEvent(items[i].id);
+                success++;
+              } catch (e) {
+                console.error('Error deleting:', e);
+              }
+              updateTask(taskId, { progress: Math.round(((i + 1) / items.length) * 100) });
+            }
+            
+            updateTask(taskId, { status: 'completed', progress: 100 });
+            toast.success(`${success} registros eliminados`);
+          }
+        };
       }
+      if (action.id === 'edit') {
+        return {
+          ...action,
+          onClick: () => bulk.openBulkEditModal()
+        };
+      }
+      return action;
+    }),
+    bulkEdit: {
+      ...EVENT_BULK_EDIT_CONFIG,
+      onApply: async (ids, values, items) => {
+        const taskId = `bulk-edit-${Date.now()}`;
+        addTask({
+          id: taskId,
+          name: `Actualizando ${ids.length} registros`,
+          progress: 0,
+          status: 'running'
+        });
 
-      updateTask(taskId, { status: 'completed', progress: 100 });
-      toast.success(`${selectedIds.length} registros actualizados`);
-      db.actions.clearSelection();
-    } catch (error) {
-      updateTask(taskId, { status: 'error', error: 'Error al actualizar registros' });
-      toast.error('Error al actualizar registros masivamente');
+        try {
+          const updates: any = {};
+          if (values.destino) updates.destino = values.destino;
+          if (values.traspaso) updates.traspaso = values.traspaso;
+          if (values.observaciones) updates.observaciones = values.observaciones;
+          
+          if (Object.keys(updates).length > 0) {
+            await db.actions.updateEventBulkFieldsMany(ids, updates);
+          }
+
+          updateTask(taskId, { status: 'completed', progress: 100 });
+          toast.success(`${ids.length} registros actualizados`);
+        } catch (error) {
+          updateTask(taskId, { status: 'error', error: 'Error al actualizar registros' });
+          toast.error('Error al actualizar registros masivamente');
+          throw error;
+        }
+      }
     }
+  });
+
+  const handleBulkEdit = async (data: { destino: string; traspaso: string; observaciones: string }) => {
+    // Delegado al sistema de useBulkActions
+    bulk.openBulkEditModal();
   };
 
   const handleBulkSearchDocument = () => {
-    const selectedIds = Array.from(db.selectedIds);
-    if (selectedIds.length === 0) return;
-
-    const item = db.processedEvents.find(e => e.id === selectedIds[0]);
-    
-    if (item && item.barcode && item.nguia) {
-      const query = `${item.barcode} ${item.nguia}`;
-      const url = `https://mail.google.com/mail/u/0/#search/${encodeURIComponent(query)}`;
-      window.open(url, '_blank');
-    } else {
-      toast.error('No se pudo obtener SKU o Guía para la búsqueda');
-    }
+    // Delegado al sistema de useBulkActions
+    bulk.executeBulkAction('search', db.processedEvents);
   };
 
   const handleCreateOrUpdate = async (data: any | any[]) => {
@@ -117,43 +261,8 @@ export const useEventUI = () => {
   };
 
   const handleBulkRemove = async () => {
-    const selectedItems = db.processedEvents.filter(item => db.selectedIds.has(item.id));
-    if (selectedItems.length === 0) return;
-
-    const confirm = window.confirm(`¿RETIRAR ${selectedItems.length} REGISTROS? ESTA ACCIÓN ES IRREVERSIBLE.`);
-    if (!confirm) return;
-
-    const taskId = `bulk-remove-${Date.now()}`;
-    addTask({
-      id: taskId,
-      name: `Eliminando ${selectedItems.length} registros`,
-      progress: 0,
-      status: 'running'
-    });
-
-    let successCount = 0;
-    const failedItems: string[] = [];
-
-    try {
-      for (let i = 0; i < selectedItems.length; i++) {
-        const item = selectedItems[i];
-        try {
-          await db.actions.deleteEvent(item.id);
-          successCount++;
-        } catch (e) {
-          failedItems.push(item.barcode || 'Desconocido');
-        }
-        updateTask(taskId, { progress: Math.round(((i + 1) / selectedItems.length) * 100) });
-      }
-
-      updateTask(taskId, { status: 'completed', progress: 100 });
-      if (successCount > 0) toast.success(`${successCount} registros eliminados`);
-      if (failedItems.length > 0) toast.error(`Error al eliminar: ${failedItems.join(', ')}`);
-    } catch (error) {
-      updateTask(taskId, { status: 'error', error: 'Error crítico en operación masiva' });
-    } finally {
-      db.actions.clearSelection();
-    }
+    // Delegado al sistema de useBulkActions
+    bulk.executeBulkAction('delete', db.processedEvents);
   };
 
   const handleBulkPrintLabels = () => {
@@ -242,7 +351,7 @@ export const useEventUI = () => {
     ui: {
       isSyncing,
       isCreateModalOpen,
-      isBulkEditModalOpen,
+      isBulkEditModalOpen: bulk.isBulkEditModalOpen,
       editingItem,
       expandedPanel,
       activeFiltersCount: db.selectedEvents.length + (db.dateRange.start || db.dateRange.end ? 1 : 0),
@@ -253,10 +362,14 @@ export const useEventUI = () => {
       // From useManagementUI
       isSettingsDrawerOpen: false,
       isFilterDrawerOpen: false,
+      // Bulk actions
+      bulkActions: bulk,
+      selectedIds: bulk.selectedIds,
+      selectedCount: bulk.selectedCount,
     },
     actions: {
       setIsCreateModalOpen,
-      setIsBulkEditModalOpen,
+      setIsBulkEditModalOpen: bulk.closeBulkEditModal,
       setEditingItem,
       setExpandedPanel,
       setDateRange: db.actions.setDateRange,
@@ -274,8 +387,13 @@ export const useEventUI = () => {
       handleBulkPrintSelected,
       handleFrcClick,
       handleEventClick,
-      handleDestinoClick
+      handleDestinoClick,
+      // Bulk actions
+      executeBulkAction: bulk.executeBulkAction,
+      clearSelection: bulk.clearSelection,
+      toggleSelection: bulk.toggleSelection,
     },
-    db
+    db,
+    bulk // Exponer bulk completo para uso directo
   };
 };
