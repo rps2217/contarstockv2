@@ -17,6 +17,9 @@ import { useAutoSync } from '@/hooks/useAutoSync';
 import { useAutoSession } from '@/hooks/useAutoSession';
 import { useExpiryWatcher } from '@/hooks/useExpiryWatcher';
 import { useNavigate } from 'react-router-dom';
+import { CommandMenuProvider } from '@/components/GlobalSearch/CommandMenu';
+import { NotificationCenterProvider } from '@/components/NotificationCenter/NotificationCenter';
+import { ThemeProvider } from '@/hooks/useTheme/useTheme';
 
 // --- COMPONENTES DIFERIDOS ---
 const Login = lazyWithRetry(() => import('@/components/Login').then(m => ({ default: m.Login })));
@@ -286,7 +289,13 @@ const AppContent = () => {
 
 const App = () => (
   <Router>
-    <AppContent />
+    <ThemeProvider>
+      <NotificationCenterProvider>
+        <CommandMenuProvider>
+          <AppContent />
+        </CommandMenuProvider>
+      </NotificationCenterProvider>
+    </ThemeProvider>
   </Router>
 );
 
