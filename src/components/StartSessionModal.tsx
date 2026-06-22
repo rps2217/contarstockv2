@@ -17,8 +17,8 @@ interface StartSessionModalProps {
  onSessionStart: (session: CountingSession) => void;
 }
 
-type Mode = 'select' | 'guided' | 'blind';
-type Step = 'select' | 'scan_label' | 'take_photo' | 'enter_erp' | 'confirm';
+type Mode = 'select' | 'guided' | 'blind' | 'test';
+type Step = 'select' | 'scan_label' | 'take_photo' | 'enter_erp' | 'select_order' | 'confirm';
 
 export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, onClose, onSessionStart }) => {
   const navigate = useNavigate();
@@ -36,13 +36,18 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
   const [cloudOrder, setCloudOrder] = useState<ExpectedOrder | null>(null);
   const [localSavedOrders, setLocalSavedOrders] = useState<ExpectedOrder[]>([]);
 
+  // Cargar órdenes guardadas cuando se necesita
+  const loadSavedOrders = useCallback(() => {
+    ExpectedOrderRepository.getAll().then((list) => {
+      setLocalSavedOrders(list || []);
+    });
+  }, []);
+
   useEffect(() => {
-    if (isOpen && step === 'enter_erp') {
-      ExpectedOrderRepository.getAll().then((list) => {
-        setLocalSavedOrders(list || []);
-      });
+    if (isOpen && (step === 'enter_erp' || step === 'select_order')) {
+      loadSavedOrders();
     }
-  }, [step, isOpen]);
+  }, [step, isOpen, loadSavedOrders]);
 
   // Scanner de hardware integrado
   useHIDScanner({
@@ -80,6 +85,9 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
     SoundFX.play('success');
     if (mode === 'guided') {
       setStep('enter_erp');
+    } else if (mode === 'test') {
+      // Modo prueba: ir directo a seleccionar orden guardada
+      setStep('select_order');
     } else {
       setStep('confirm');
     }
@@ -188,6 +196,20 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
         </div>
         <ArrowRight className="w-5 h-5 text-orange-500 opacity-50 group-hover:opacity-100 transition-opacity" />
       </button>
+
+      <button 
+        onClick={() => { setMode('test'); setStep('scan_label'); setError(''); }}
+        className="w-full bg-purple-600/10 border-2 border-purple-500/30 p-4 rounded-2xl flex items-center gap-4 active:scale-95 transition-all text-left group hover:bg-purple-600/20"
+      >
+        <div className="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center shrink-0">
+          <Box className="w-6 h-6 text-purple-400" />
+        </div>
+        <div className="flex-1">
+          <h4 className="text-sm font-black text-white uppercase tracking-wider">Modo Prueba</h4>
+          <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">Seleccionar carga teórica guardada</p>
+        </div>
+        <ArrowRight className="w-5 h-5 text-purple-500 opacity-50 group-hover:opacity-100 transition-opacity" />
+      </button>
     </div>
   );
 
@@ -203,7 +225,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
           </button>
           <div className="flex-1 min-w-0">
             <h3 className="text-lg md:text-xl font-black uppercase italic tracking-tight text-white truncate">
-              {mode === 'guided' ? 'Con Orden ERP' : 'Conteo Ciego'}
+              {mode === 'guided' ? 'Con Orden ERP' : mode === 'test' ? 'Modo Prueba' : 'Conteo Ciego'}
             </h3>
             <div className="flex gap-1.5 mt-1.5">
               {[1, 2, 3, 4].map((s) => {
@@ -312,7 +334,11 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
               </button>
               <button 
                 disabled={!labelPhoto}
-                onClick={() => mode === 'guided' ? setStep('enter_erp') : setStep('confirm')}
+                onClick={() => {
+                  if (mode === 'guided') setStep('enter_erp');
+                  else if (mode === 'test') setStep('select_order');
+                  else setStep('confirm');
+                }}
                 className="flex-[2] h-14 bg-amber-600 text-white font-black rounded-2xl uppercase tracking-widest disabled:opacity-50"
               >
                 Siguiente Paso
@@ -404,6 +430,72 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
           </div>
         )}
 
+        {/* STEP 3B: SELECT SAVED ORDER (Modo Prueba) */}
+        {step === 'select_order' && (
+          <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
+            <div className="text-center py-4">
+              <div className="w-20 h-20 bg-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-purple-500/30">
+                <Database className="w-10 h-10 text-purple-400" />
+              </div>
+              <h4 className="text-white font-black uppercase tracking-wider">Paso 3: Carga Teórica</h4>
+              <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Selecciona una carga guardada localmente</p>
+            </div>
+
+            {localSavedOrders.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <FileText className="w-8 h-8 text-slate-600" />
+                </div>
+                <p className="text-slate-500 text-sm font-bold">No hay cargas teóricas guardadas</p>
+                <p className="text-slate-600 text-[10px] mt-2">Ve al módulo de cargas teóricas para importar una</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="text-[8px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-1.5 mb-3">
+                  <Database className="w-3 h-3 text-purple-400" /> Cargas Teóricas Disponibles:
+                </div>
+                <div className="max-h-60 overflow-y-auto space-y-2 pr-1 no-scrollbar-y">
+                  {localSavedOrders.map((order) => {
+                    const dispName = order.metadata?.internalGuide || order.metadata?.purchaseOrder || order.id;
+                    return (
+                      <button
+                        key={order.id}
+                        type="button"
+                        onClick={() => {
+                          setErpOrder(order.id);
+                          setCloudOrder(order);
+                          SoundFX.play('success');
+                          setStep('confirm');
+                        }}
+                        className="w-full text-left bg-slate-900/60 hover:bg-purple-950/20 border border-white/5 hover:border-purple-500/30 p-3 rounded-xl transition-all flex items-center justify-between text-xs font-mono font-bold active:scale-[0.98]"
+                      >
+                        <div className="flex flex-col min-w-0 flex-1">
+                          <span className="text-white truncate">{dispName}</span>
+                          <span className="text-[8px] text-slate-500 truncate">ID: {order.id}</span>
+                          {(order.metadata as any)?.providerName && (
+                            <span className="text-[8px] text-slate-600 truncate">📦 {(order.metadata as any).providerName}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0 ml-2">
+                          <span className="px-1.5 py-0.5 bg-purple-500/10 rounded text-[7px] font-black text-purple-400">{order.items?.length || 0} SKUs</span>
+                          <ArrowRight className="w-4 h-4 text-purple-500" />
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <button 
+              onClick={() => setStep('take_photo')}
+              className="w-full h-10 text-slate-500 font-black uppercase text-[10px] tracking-widest"
+            >
+              Atrás
+            </button>
+          </div>
+        )}
+
         {/* STEP 4: CONFIRM */}
         {step === 'confirm' && (
           <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
@@ -472,7 +564,11 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
             </button>
 
             <button 
-              onClick={() => mode === 'guided' ? setStep('enter_erp') : setStep('take_photo')}
+              onClick={() => {
+                if (mode === 'guided') setStep('enter_erp');
+                else if (mode === 'test') setStep('select_order');
+                else setStep('take_photo');
+              }}
               className="w-full h-10 text-slate-500 font-black uppercase text-[10px] tracking-widest"
             >
               Atrás
