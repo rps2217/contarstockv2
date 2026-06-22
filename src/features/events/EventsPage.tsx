@@ -16,7 +16,8 @@ import {
   Search,
   ChevronDown,
   ChevronUp,
-  Plus
+  Plus,
+  Pencil
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -34,6 +35,7 @@ interface EventItemCardProps {
   onDelete: (id: string) => void;
   onSelect: (id: string) => void;
   onViewDetail: (event: EventRecord) => void;
+  onEdit: (event: EventRecord) => void;
   isSelected: boolean;
 }
 
@@ -42,6 +44,7 @@ const EventItemCard: React.FC<EventItemCardProps> = ({
   onDelete,
   onSelect,
   onViewDetail,
+  onEdit,
   isSelected
 }) => {
   const isAdjusted = event.isAdjusted;
@@ -104,6 +107,13 @@ const EventItemCard: React.FC<EventItemCardProps> = ({
       {/* Actions */}
       <div className="flex gap-2 mt-3 pt-3 border-t border-white/5">
         <button
+          onClick={(e) => { e.stopPropagation(); onEdit(event); }}
+          className="flex-1 py-1.5 text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg transition-colors"
+        >
+          <Pencil className="w-3 h-3 inline mr-1" />
+          Editar
+        </button>
+        <button
           onClick={(e) => { e.stopPropagation(); onViewDetail(event); }}
           className="flex-1 py-1.5 text-[10px] font-bold uppercase tracking-wider bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
         >
@@ -132,6 +142,7 @@ interface EventSectionProps {
   onDelete: (id: string) => void;
   onSelect: (id: string) => void;
   onViewDetail: (event: EventRecord) => void;
+  onEdit: (event: EventRecord) => void;
   selectedIds: Set<string>;
   theme: 'dark' | 'light' | 'high-contrast';
 }
@@ -145,6 +156,7 @@ const EventSection: React.FC<EventSectionProps> = ({
   onDelete,
   onSelect,
   onViewDetail,
+  onEdit,
   selectedIds,
   theme
 }) => {
@@ -202,6 +214,7 @@ const EventSection: React.FC<EventSectionProps> = ({
                     onDelete={onDelete}
                     onSelect={onSelect}
                     onViewDetail={onViewDetail}
+                    onEdit={onEdit}
                     isSelected={selectedIds.has(evt.id)}
                   />
                 ))
@@ -232,6 +245,7 @@ export const EventsPage: React.FC = () => {
     selectedIds,
     isDetailModalOpen,
     isCreateModalOpen,
+    isEditModalOpen,
     selectedEvent,
     actions
   } = useEvents();
@@ -273,6 +287,11 @@ export const EventsPage: React.FC = () => {
   const handleViewDetail = useCallback((event: EventRecord) => {
     actions.setSelectedEvent(event);
     actions.setIsDetailModalOpen(true);
+  }, [actions]);
+
+  const handleEdit = useCallback((event: EventRecord) => {
+    actions.setSelectedEvent(event);
+    actions.setIsEditModalOpen(true);
   }, [actions]);
 
   const totalCount = pendingEvents.length + destinedEvents.length + adjustedEvents.length;
@@ -395,6 +414,7 @@ export const EventsPage: React.FC = () => {
               onDelete={handleDelete}
               onSelect={actions.toggleSelection}
               onViewDetail={handleViewDetail}
+              onEdit={handleEdit}
               selectedIds={selectedIds}
               theme={theme}
             />
@@ -408,6 +428,7 @@ export const EventsPage: React.FC = () => {
               onDelete={handleDelete}
               onSelect={actions.toggleSelection}
               onViewDetail={handleViewDetail}
+              onEdit={handleEdit}
               selectedIds={selectedIds}
               theme={theme}
             />
@@ -421,6 +442,7 @@ export const EventsPage: React.FC = () => {
               onDelete={handleDelete}
               onSelect={actions.toggleSelection}
               onViewDetail={handleViewDetail}
+              onEdit={handleEdit}
               selectedIds={selectedIds}
               theme={theme}
             />
@@ -455,6 +477,39 @@ export const EventsPage: React.FC = () => {
           actions.setIsCreateModalOpen(false);
         }}
         theme={theme}
+      />
+
+      {/* Edit Event Modal */}
+      <CreateEventModal
+        isOpen={isEditModalOpen}
+        onClose={() => actions.setIsEditModalOpen(false)}
+        onSubmit={async (data) => {
+          if (selectedEvent && data.length > 0) {
+            const item = data[0];
+            await actions.updateEvent(selectedEvent.id, {
+              barcode: item.barcode,
+              productName: item.productName,
+              destino: item.destino,
+              traspaso: item.traspaso,
+              observaciones: item.observaciones,
+              frc: item.frc,
+            });
+          }
+          actions.setIsEditModalOpen(false);
+        }}
+        theme={theme}
+        editingItem={selectedEvent ? {
+          barcode: selectedEvent.barcode,
+          productName: selectedEvent.productName,
+          providerName: undefined,
+          event: 'AJUSTE',
+          quantity: 1,
+          frc: selectedEvent.frc,
+          nguia: '',
+          destino: selectedEvent.destino,
+          traspaso: selectedEvent.traspaso,
+          observaciones: selectedEvent.observaciones,
+        } : null}
       />
     </div>
   );
