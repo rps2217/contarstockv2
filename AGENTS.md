@@ -82,17 +82,190 @@ npm run test         # vitest (watch mode)
 Este documento contiene todos los patrones de UI/UX implementados para replicar la experiencia visual de AppSheet en los módulos de ContarStock.
 
 ## Tabla de Contenidos
-1. [Tokens CSS - AppSheet Theme](#tokens-css---appsheet-theme)
-2. [State Layers (MD3)](#state-layers-md3)
-3. [Vista Dual (Master-Detail)](#vista-dual-master-detail)
-4. [Splitter Redimensionable](#splitter-redimensionable)
-5. [SearchBar Estilo AppSheet](#searchbar-estilo-appsheet)
-6. [Filter Chips](#filter-chips)
-7. [List Items](#list-items)
-8. [Detail Panel](#detail-panel)
-9. [Action Menu (3 puntos)](#action-menu-3-puntos)
-10. [FAB (Floating Action Button)](#fab-floating-action-button)
-11. [Tipografías](#tipografías)
+1. [Componente DualView](#componente-dualview) ⭐
+2. [Tokens CSS - AppSheet Theme](#tokens-css---appsheet-theme)
+3. [State Layers (MD3)](#state-layers-md3)
+4. [Vista Dual (Master-Detail)](#vista-dual-master-detail)
+5. [Splitter Redimensionable](#splitter-redimensionable)
+6. [SearchBar Estilo AppSheet](#searchbar-estilo-appsheet)
+7. [Filter Chips](#filter-chips)
+8. [List Items](#list-items)
+9. [Detail Panel](#detail-panel)
+10. [Action Menu (3 puntos)](#action-menu-3-puntos)
+11. [FAB (Floating Action Button)](#fab-floating-action-button)
+12. [Tipografías](#tipografías)
+
+---
+
+## Componente DualView ⭐
+
+### Ubicación
+`src/shared/components/layout/DualView.tsx`
+
+### Concepto
+Componente robusto y reutilizable que encapsula toda la funcionalidad de la vista dual (master-detail) con splitter redimensionable. Elimina la necesidad de replicar lógica en cada módulo.
+
+### Sub-componentes incluidos
+- **DualView**: Contenedor principal con splitter
+- **Splitter**: Barra divisoria independiente (opcional)
+- **DetailPanel**: Panel de detalle estilizado
+- **Section**: Sección con título e icono
+- **Row**: Fila de datos
+
+### API Completa
+```tsx
+import { DualView, DetailPanel, Section, Row } from '@/shared/components/layout';
+
+// Uso básico
+<DualView
+  selectedItem={selectedEvent}
+  onSelectItem={setSelectedEvent}
+  initialLeftWidth={50}
+  minLeftWidth={25}
+  maxLeftWidth={75}
+  listPanel={
+    events.map(event => (
+      <ListItem
+        key={event.id}
+        onClick={() => setSelectedEvent(event)}
+        isSelected={selectedEvent?.id === event.id}
+        // ...props
+      />
+    ))
+  }
+  detailPanel={
+    <DetailPanel
+      title={selectedEvent.name}
+      subtitle={selectedEvent.barcode}
+      onClose={() => setSelectedEvent(null)}
+      actions={[
+        { label: 'Editar', onClick: handleEdit, variant: 'primary' },
+        { label: 'Eliminar', onClick: handleDelete, variant: 'danger' }
+      ]}
+    >
+      <Section title="Producto" icon={<Package />}>
+        <Row label="Nombre" value={selectedEvent.name} />
+        <Row label="Barcode" value={selectedEvent.barcode} />
+      </Section>
+    </DetailPanel>
+  }
+/>
+```
+
+### Props de DualView
+| Prop | Tipo | Default | Descripción |
+|------|------|---------|-------------|
+| `listPanel` | ReactNode | - | Panel izquierdo (lista) |
+| `detailPanel` | ReactNode | - | Panel derecho (detalle) |
+| `selectedItem` | any | null | Item seleccionado |
+| `onSelectItem` | function | - | Callback al seleccionar |
+| `initialLeftWidth` | number | 50 | Ancho inicial (%) |
+| `minLeftWidth` | number | 25 | Ancho mínimo (%) |
+| `maxLeftWidth` | number | 75 | Ancho máximo (%) |
+| `enableSplitter` | boolean | true | Habilitar drag |
+| `animateDetail` | boolean | true | Animación slide |
+| `showSplitterHint` | boolean | true | Indicador visual |
+
+### Props de DetailPanel
+| Prop | Tipo | Descripción |
+|------|------|-------------|
+| `title` | string | Título del panel |
+| `subtitle` | string? | Subtítulo |
+| `icon` | ReactNode? | Ícono del título |
+| `status` | {label, variant}? | Badge de estado |
+| `onClose` | function | Callback cerrar |
+| `actions` | Action[]? | Botones de acción |
+| `children` | ReactNode | Contenido |
+
+### Props de Section
+| Prop | Tipo | Descripción |
+|------|------|-------------|
+| `title` | string? | Título de sección |
+| `icon` | ReactNode? | Ícono del título |
+| `children` | ReactNode | Contenido (Rows) |
+
+### Props de Row
+| Prop | Tipo | Descripción |
+|------|------|-------------|
+| `label` | string | Label superior |
+| `value` | string \| ReactNode | Valor |
+| `className` | string? | Clases adicionales |
+
+### Ejemplo Completo
+```tsx
+import { DualView, DetailPanel, Section, Row } from '@/shared/components/layout';
+import { Package, FileText, MapPin, Clock } from 'lucide-react';
+
+function MyModule() {
+  const [selectedItem, setSelectedItem] = useState(null);
+
+  return (
+    <DualView
+      selectedItem={selectedItem}
+      onSelectItem={setSelectedItem}
+      initialLeftWidth={50}
+      minLeftWidth={30}
+      maxLeftWidth={70}
+      listPanel={
+        <div className="h-full overflow-y-auto">
+          {items.map(item => (
+            <ListItem
+              key={item.id}
+              title={item.name}
+              onClick={() => setSelectedItem(item)}
+              isSelected={selectedItem?.id === item.id}
+            />
+          ))}
+        </div>
+      }
+      detailPanel={
+        selectedItem && (
+          <DetailPanel
+            title={selectedItem.name}
+            subtitle={selectedItem.code}
+            status={{ label: selectedItem.status, variant: 'success' }}
+            onClose={() => setSelectedItem(null)}
+            actions={[
+              { label: 'Editar', onClick: () => edit(selectedItem), variant: 'primary' },
+              { label: 'Eliminar', onClick: () => remove(selectedItem.id), variant: 'danger' }
+            ]}
+          >
+            <Section title="Información" icon={<Package />}>
+              <Row label="Nombre" value={selectedItem.name} />
+              <Row label="Código" value={selectedItem.code} />
+            </Section>
+            
+            <Section title="Documento" icon={<FileText />}>
+              <Row label="FRC" value={selectedItem.frc} />
+            </Section>
+            
+            <Section title="Ubicación" icon={<MapPin />}>
+              <Row label="Destino" value={selectedItem.destino} />
+            </Section>
+            
+            <Section title="Tiempo" icon={<Clock />}>
+              <Row label="Creado" value={formatDate(selectedItem.createdAt)} />
+            </Section>
+          </DetailPanel>
+        )
+      }
+    />
+  );
+}
+```
+
+### Checklist de Implementación
+
+Al replicar en un nuevo módulo:
+
+- [ ] Importar `{ DualView, DetailPanel, Section, Row }` de `@/shared/components/layout`
+- [ ] Crear estado `const [selectedItem, setSelectedItem] = useState(null)`
+- [ ] Renderizar lista con `onClick={() => setSelectedItem(item)}`
+- [ ] Renderizar `DualView` con `listPanel` y `detailPanel`
+- [ ] Usar `DetailPanel` para el panel de detalle
+- [ ] Usar `Section` con `icon` para grupos de datos
+- [ ] Usar `Row` para cada fila de datos
+- [ ] Ocultar FAB cuando hay item seleccionado
 
 ---
 
