@@ -1127,7 +1127,10 @@ src/features/expiry/
 │   ├── ExpiryStatsBar.tsx   # Barra de estadísticas
 │   ├── ExpiryDetailModal.tsx
 │   └── ExpiryCaptureModal.tsx
-└── (legacy hooks/ components/ utils/)  # Pendiente cleanup
+├── utils/
+│   ├── expiryUtils.ts       # Servicios de impresión (CRÍTICO - mantener)
+│   └── expiryProcessor.ts    # Procesamiento para watcher (CRÍTICO)
+└── (legacy services/)       # Mantenidos por compatibilidad
 ```
 
 ### Hook Centralizado: useExpiry
@@ -1158,9 +1161,9 @@ const {
 - `xxxxxxx` - refactor: Reescribir módulo Expiry con arquitectura simplificada v2
 
 ### Pendientes:
-- Limpiar código legacy (hooks/, utils/ القديمة)
-- Agregar tests para expiryDomain
-- Integrar con scanner para captura rápida
+- [x] ~~Limpiar código legacy~~ (Parcialmente - mantenido expiryUtils y expiryProcessor por servicios críticos)
+- [ ] Agregar tests para expiryDomain
+- [ ] Integrar con scanner para captura rápida
 
 ---
 
