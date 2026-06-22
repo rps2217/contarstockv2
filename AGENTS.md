@@ -1231,3 +1231,52 @@ const {
 - Búsqueda con normalización de texto
 - Soporte multi-tema (dark/light/high-contrast)
 - Atajos de teclado (Alt+N para nuevo, / para buscar)
+
+---
+
+## Refactoring Módulo Inventory/Products (2026-06-22)
+
+### Arquitectura Simplificada
+
+```
+src/features/inventory/
+├── InventoryPage.tsx         # Página principal (legacy - en refactor)
+├── domain/
+│   ├── productsDomain.ts     # ✅ Lógica de negocio pura
+│   └── productsDomain.test.ts # ✅ Tests (34 tests)
+├── hooks/
+│   └── useProductDatabase.ts  # Hook centralizado existente
+├── components/
+│   ├── ProductStatsBar.tsx   # ✅ Barra de estadísticas
+│   ├── ProductCard.tsx       # ✅ Card de producto
+│   ├── ProductList.tsx        # Lista legacy
+│   ├── ProductForm.tsx        # Formulario legacy
+│   ├── ProductDetailModal.tsx
+│   ├── InventoryMetricsCards.tsx  # Legacy - métricas
+│   └── InventoryKanbanView.tsx    # Legacy - vista kanban
+└── (legacy hooks/)           # Mantenidos por compatibilidad
+```
+
+### Domain: productsDomain.ts
+
+```typescript
+// Estados
+enum ProductPolicyStatus { EXCHANGE, LOSS, NO_INFO, ALL }
+enum StockStatus { NORMAL, LOW, CRITICAL, EXCESS }
+
+// Funciones
+evaluateProductPolicy(product): ProductPolicyStatus
+evaluateStockStatus(product): StockStatus
+calculateProductStats(products, pendingChanges): ProductStats
+productMatchesSearch(product, query): boolean
+filterByPolicy(products, filter): Product[]
+sortProducts(products, field, order): Product[]
+```
+
+### Commits:
+- `1c532a07` - feat: Agregar domain y componentes para Products
+
+### Pendientes:
+- [ ] Integrar ProductStatsBar y ProductCard en InventoryPage
+- [ ] Refactorizar InventoryMetricsCards a usar ProductStats
+- [ ] Agregar tests para ProductCard y ProductStatsBar
