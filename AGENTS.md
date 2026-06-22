@@ -1058,6 +1058,13 @@ Al replicar en un nuevo módulo:
 - **Hammer migrado** - Usa ScannerContainer
 - **EventCapture actualizado** - Con productividad
 
+### Mejoras (2026-06-22):
+- **bestPace** - Mejor ritmo de items/min registrado
+- **fatigueLevel** - Indicador de energía del operador
+  - `fresh` (verde) - Acelerando con >10% mejora
+  - `normal` (azul) - Ritmo estable
+  - `tired` (ámbar) - Desacelerando por >2 min
+
 ### Componentes Compartidos:
 - `src/features/counting/hooks/useProductivity.ts`
 - `src/features/counting/hooks/useTurboMode.ts`
@@ -1073,6 +1080,7 @@ Al replicar en un nuevo módulo:
 - `Alt+Shift+T` - Toggle modo turbo
 
 ### Commits:
+- `009ef5a1` - feat: Mejoras en Productivity Dashboard
 - `2179b67a` - refactor: Migrar Hammer a ScannerContainer
 - `a8776f25` - feat: Agregar dashboard de productividad a EventCapture
 - `d35cdcd4` - fix: Corregir nombres de tabla a minusculas en scripts SQL
