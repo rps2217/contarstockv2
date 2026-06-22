@@ -154,6 +154,78 @@ const FilterChips: React.FC<FilterChipsProps> = ({ filters, selected, onChange }
 );
 
 // ============================================================================
+// SPLITTER - Divisor redimensionable para vista dual estilo AppSheet
+// ============================================================================
+interface SplitterProps {
+  onResize: (leftWidth: number) => void;
+  minLeftWidth?: number;
+  maxLeftWidth?: number;
+}
+
+const Splitter: React.FC<SplitterProps> = ({ 
+  onResize, 
+  minLeftWidth = 30, 
+  maxLeftWidth = 70 
+}) => {
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+
+    const startX = e.clientX;
+    const container = (e.target as HTMLElement).parentElement;
+    if (!container) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const startWidth = ((containerRect.right - startX) / containerRect.width) * 100;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const containerNewRect = container.getBoundingClientRect();
+      const newWidth = ((containerNewRect.right - moveEvent.clientX) / containerNewRect.width) * 100;
+      
+      // Clamp between min and max
+      const clampedWidth = Math.min(Math.max(newWidth, minLeftWidth), maxLeftWidth);
+      onResize(clampedWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, [onResize, minLeftWidth, maxLeftWidth]);
+
+  return (
+    <div
+      onMouseDown={handleMouseDown}
+      className={cn(
+        'w-1 cursor-col-resize flex-shrink-0 group relative transition-colors duration-150',
+        isDragging 
+          ? 'bg-[var(--appsheet-primary)]' 
+          : 'bg-transparent hover:bg-[var(--appsheet-border-default)]'
+      )}
+    >
+      {/* Indicador visual del splitter */}
+      <div className={cn(
+        'absolute inset-y-0 -left-1 -right-1 flex items-center justify-center transition-opacity duration-150',
+        isDragging ? 'opacity-100' : 'group-hover:opacity-100 opacity-0'
+      )}>
+        <div className={cn(
+          'w-1 h-16 rounded-full transition-colors duration-150',
+          isDragging 
+            ? 'bg-[var(--appsheet-primary)]' 
+            : 'bg-[var(--appsheet-text-tertiary)]'
+        )} />
+      </div>
+    </div>
+  );
+};
+
+// ============================================================================
 // ACTION MENU - Menú de 3 puntos con animaciones Material Design
 // ============================================================================
 interface ActionMenuProps {
@@ -533,6 +605,7 @@ export const EventsPage: React.FC = () => {
   } = useEvents();
 
   const [detailEvent, setDetailEvent] = useState<EventRecord | null>(null);
+  const [leftPanelWidth, setLeftPanelWidth] = useState(60); // Porcentaje del panel izquierdo
 
   const handleViewDetail = useCallback((event: EventRecord) => setDetailEvent(event), []);
   const handleCloseDetail = useCallback(() => setDetailEvent(null), []);
@@ -597,10 +670,13 @@ export const EventsPage: React.FC = () => {
         onChange={actions.setSelectedEvents}
       />
 
-      {/* Content - Vista Dual: Lista + Panel Detalle */}
+      {/* Content - Vista Dual: Lista + Panel Detalle + Splitter */}
       <div className="flex-1 flex overflow-hidden">
         {/* Lista de eventos (panel izquierdo) */}
-        <div className={`flex-1 overflow-y-auto transition-all duration-300 ${detailEvent ? 'max-w-[60%]' : 'max-w-full'}`}>
+        <div 
+          style={{ width: detailEvent ? `${leftPanelWidth}%` : '100%' }}
+          className="overflow-y-auto transition-all duration-200 ease-out"
+        >
           {isLoading ? (
             <div className="flex items-center justify-center py-16">
               <RefreshCw className="w-8 h-8 animate-spin text-[var(--appsheet-text-tertiary)]" />
@@ -636,58 +712,69 @@ export const EventsPage: React.FC = () => {
           )}
         </div>
 
+        {/* Splitter - Solo visible cuando hay detalle */}
+        {detailEvent && (
+          <Splitter 
+            onResize={setLeftPanelWidth} 
+            minLeftWidth={25}
+            maxLeftWidth={75}
+          />
+        )}
+
         {/* Panel de Detalle (panel derecho) - estilo AppSheet */}
         <AnimatePresence>
           {detailEvent && (
-            <DetailViewPanel
-              title={detailEvent.productName || 'Evento'}
-              subtitle={detailEvent.barcode}
-              icon={<Package className="w-5 h-5" />}
-              status={getStatus(detailEvent)}
-              sections={[
-                {
-                  title: 'Producto',
-                  icon: <Package className="w-4 h-4" />,
-                  rows: [
-                    { label: 'Nombre', value: detailEvent.productName || 'N/A' },
-                    { label: 'Barcode', value: detailEvent.barcode },
-                    { label: 'Cantidad', value: '1 unidad' }
-                  ]
-                },
-                {
-                  title: 'Documento',
-                  icon: <FileText className="w-4 h-4" />,
-                  rows: [
-                    { label: 'FRC', value: detailEvent.frc || 'Sin FRC' },
-                    { label: 'Traspaso', value: detailEvent.traspaso || 'N/A' }
-                  ]
-                },
-                {
-                  title: 'Ubicación',
-                  icon: <MapPin className="w-4 h-4" />,
-                  rows: [
-                    { label: 'Destino', value: detailEvent.destino || 'Sin destino' }
-                  ]
-                },
-                {
-                  title: 'Tiempo',
-                  icon: <Clock className="w-4 h-4" />,
-                  rows: [
-                    { label: 'Creado', value: formatDate(detailEvent.timestamp) }
-                  ]
-                },
-                ...(detailEvent.observaciones ? [{
-                  title: 'Notas',
-                  icon: <FileText className="w-4 h-4" />,
-                  rows: [{ label: 'Observaciones', value: detailEvent.observaciones }]
-                }] : [])
-              ]}
-              onClose={handleCloseDetail}
-              actions={[
-                { label: 'Editar', onClick: () => handleEdit(detailEvent), variant: 'primary' },
-                { label: 'Eliminar', onClick: () => handleDelete(detailEvent.id), variant: 'danger' }
-              ]}
-            />
+            <div style={{ width: `${100 - leftPanelWidth}%` }} className="flex-shrink-0">
+              <DetailViewPanel
+                title={detailEvent.productName || 'Evento'}
+                subtitle={detailEvent.barcode}
+                icon={<Package className="w-5 h-5" />}
+                status={getStatus(detailEvent)}
+                sections={[
+                  {
+                    title: 'Producto',
+                    icon: <Package className="w-4 h-4" />,
+                    rows: [
+                      { label: 'Nombre', value: detailEvent.productName || 'N/A' },
+                      { label: 'Barcode', value: detailEvent.barcode },
+                      { label: 'Cantidad', value: '1 unidad' }
+                    ]
+                  },
+                  {
+                    title: 'Documento',
+                    icon: <FileText className="w-4 h-4" />,
+                    rows: [
+                      { label: 'FRC', value: detailEvent.frc || 'Sin FRC' },
+                      { label: 'Traspaso', value: detailEvent.traspaso || 'N/A' }
+                    ]
+                  },
+                  {
+                    title: 'Ubicación',
+                    icon: <MapPin className="w-4 h-4" />,
+                    rows: [
+                      { label: 'Destino', value: detailEvent.destino || 'Sin destino' }
+                    ]
+                  },
+                  {
+                    title: 'Tiempo',
+                    icon: <Clock className="w-4 h-4" />,
+                    rows: [
+                      { label: 'Creado', value: formatDate(detailEvent.timestamp) }
+                    ]
+                  },
+                  ...(detailEvent.observaciones ? [{
+                    title: 'Notas',
+                    icon: <FileText className="w-4 h-4" />,
+                    rows: [{ label: 'Observaciones', value: detailEvent.observaciones }]
+                  }] : [])
+                ]}
+                onClose={handleCloseDetail}
+                actions={[
+                  { label: 'Editar', onClick: () => handleEdit(detailEvent), variant: 'primary' },
+                  { label: 'Eliminar', onClick: () => handleDelete(detailEvent.id), variant: 'danger' }
+                ]}
+              />
+            </div>
           )}
         </AnimatePresence>
       </div>
