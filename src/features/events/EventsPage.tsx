@@ -34,6 +34,7 @@ import { format } from 'date-fns';
 
 import { useEvents, EventRecord } from './hooks/useEvents';
 import { CreateEventModal } from './components/CreateEventModal';
+import { DualView, DetailPanel, Section, Row } from '@/shared/components/layout';
 
 // ============================================================================
 // UTILIDADES
@@ -152,78 +153,6 @@ const FilterChips: React.FC<FilterChipsProps> = ({ filters, selected, onChange }
     })}
   </div>
 );
-
-// ============================================================================
-// SPLITTER - Divisor redimensionable para vista dual estilo AppSheet
-// ============================================================================
-interface SplitterProps {
-  onResize: (leftWidth: number) => void;
-  minLeftWidth?: number;
-  maxLeftWidth?: number;
-}
-
-const Splitter: React.FC<SplitterProps> = ({ 
-  onResize, 
-  minLeftWidth = 30, 
-  maxLeftWidth = 70 
-}) => {
-  const [isDragging, setIsDragging] = useState(false);
-
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-
-    const startX = e.clientX;
-    const container = (e.target as HTMLElement).parentElement;
-    if (!container) return;
-
-    const containerRect = container.getBoundingClientRect();
-    const startWidth = ((containerRect.right - startX) / containerRect.width) * 100;
-
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const containerNewRect = container.getBoundingClientRect();
-      const newWidth = ((containerNewRect.right - moveEvent.clientX) / containerNewRect.width) * 100;
-      
-      // Clamp between min and max
-      const clampedWidth = Math.min(Math.max(newWidth, minLeftWidth), maxLeftWidth);
-      onResize(clampedWidth);
-    };
-
-    const handleMouseUp = () => {
-      setIsDragging(false);
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  }, [onResize, minLeftWidth, maxLeftWidth]);
-
-  return (
-    <div
-      onMouseDown={handleMouseDown}
-      className={cn(
-        'w-1 cursor-col-resize flex-shrink-0 group relative transition-colors duration-150',
-        isDragging 
-          ? 'bg-[var(--appsheet-primary)]' 
-          : 'bg-transparent hover:bg-[var(--appsheet-border-default)]'
-      )}
-    >
-      {/* Indicador visual del splitter */}
-      <div className={cn(
-        'absolute inset-y-0 -left-1 -right-1 flex items-center justify-center transition-opacity duration-150',
-        isDragging ? 'opacity-100' : 'group-hover:opacity-100 opacity-0'
-      )}>
-        <div className={cn(
-          'w-1 h-16 rounded-full transition-colors duration-150',
-          isDragging 
-            ? 'bg-[var(--appsheet-primary)]' 
-            : 'bg-[var(--appsheet-text-tertiary)]'
-        )} />
-      </div>
-    </div>
-  );
-};
 
 // ============================================================================
 // ACTION MENU - Menú de 3 puntos con animaciones Material Design
@@ -422,124 +351,6 @@ const ListItem: React.FC<ListItemProps> = ({ title, subtitle, status, meta, onCl
 };
 
 // ============================================================================
-// DETAIL VIEW PANEL - Panel lateral estilo AppSheet (sin overlay)
-// ============================================================================
-interface DetailViewPanelProps {
-  title: string;
-  subtitle?: string;
-  icon?: React.ReactNode;
-  status?: { label: string; variant: 'success' | 'warning' | 'error' | 'info' };
-  sections: Array<{
-    title?: string;
-    icon?: React.ReactNode;
-    rows: Array<{ label: string; value: string }>;
-  }>;
-  onClose: () => void;
-  actions?: Array<{
-    label: string;
-    onClick: () => void;
-    variant?: 'primary' | 'danger';
-  }>;
-}
-
-const DetailViewPanel: React.FC<DetailViewPanelProps> = ({ title, subtitle, icon, status, sections, onClose, actions }) => {
-  const statusBadge = {
-    success: 'bg-[var(--appsheet-success-subtle)] text-[var(--appsheet-success)] border-[var(--appsheet-success)]',
-    warning: 'bg-[var(--appsheet-warning-subtle)] text-[var(--appsheet-warning)] border-[var(--appsheet-warning)]',
-    error: 'bg-[var(--appsheet-error-subtle)] text-[var(--appsheet-error)] border-[var(--appsheet-error)]',
-    info: 'bg-[var(--appsheet-info-subtle)] text-[var(--appsheet-info)] border-[var(--appsheet-info)]'
-  };
-
-  return (
-    <motion.div
-      initial={{ x: '100%' }}
-      animate={{ x: 0 }}
-      exit={{ x: '100%' }}
-      transition={{
-        type: 'spring',
-        damping: 30,
-        stiffness: 350,
-        mass: 0.8
-      }}
-      className="h-full w-full max-w-md bg-[var(--appsheet-bg-surface)] border-l border-[var(--appsheet-border-subtle)] flex flex-col"
-    >
-      {/* Header */}
-      <div className="flex items-center h-14 px-4 gap-3 border-b border-[var(--appsheet-border-subtle)]">
-        <button 
-          onClick={onClose}
-          className="p-2 -ml-2 rounded-full hover:bg-[var(--appsheet-bg-hover)] active:bg-[var(--appsheet-bg-active)]"
-        >
-          <X className="w-5 h-5" />
-        </button>
-        <div className="flex-1 min-w-0">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            {icon}
-            <span className="truncate">{title}</span>
-          </h2>
-          {subtitle && (
-            <p className="text-sm text-[var(--appsheet-text-tertiary)] truncate">{subtitle}</p>
-          )}
-        </div>
-        {status && (
-          <span className={cn('px-3 py-1 text-xs font-semibold rounded-full border shrink-0', statusBadge[status.variant])}>
-            {status.label}
-          </span>
-        )}
-      </div>
-
-      {/* Content con scroll */}
-      <div className="flex-1 overflow-y-auto">
-        {sections.map((section, i) => (
-          <div key={i} className="border-b border-[var(--appsheet-border-subtle)]">
-            {section.title && (
-              <div className="flex items-center gap-2 px-4 py-3 bg-[var(--appsheet-bg-elevated)]">
-                {section.icon && <span className="text-[var(--appsheet-primary)]">{section.icon}</span>}
-                <span className="text-sm font-semibold uppercase tracking-wider text-[var(--appsheet-text-secondary)]">
-                  {section.title}
-                </span>
-              </div>
-            )}
-            {section.rows.map((row, j) => (
-              <div 
-                key={j} 
-                className="detail-row flex items-center gap-3 px-4 py-4 transition-colors duration-150"
-              >
-                <div className="flex-1">
-                  <p className="text-sm text-[var(--appsheet-text-tertiary)] uppercase tracking-wider">{row.label}</p>
-                  <p className="text-base font-medium mt-0.5">{row.value}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
-
-      {/* Actions */}
-      {actions && actions.length > 0 && (
-        <div className="p-4 border-t border-[var(--appsheet-border-subtle)] flex gap-3">
-          {actions.map((action, i) => (
-            <button
-              key={i}
-              onClick={action.onClick}
-              className={cn(
-                'flex-1 h-12 rounded-xl text-base font-semibold transition-all',
-                action.variant === 'primary'
-                  ? 'bg-[var(--appsheet-primary)] text-black hover:brightness-110'
-                  : action.variant === 'danger'
-                  ? 'bg-[var(--appsheet-error-subtle)] text-[var(--appsheet-error)] hover:bg-[var(--appsheet-error)] hover:text-white'
-                  : 'bg-[var(--appsheet-bg-elevated)] hover:bg-[var(--appsheet-bg-hover)]'
-              )}
-            >
-              {action.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </motion.div>
-  );
-};
-
-// ============================================================================
 // EMPTY STATE - Estado vacío
 // ============================================================================
 interface EmptyStateProps {
@@ -605,7 +416,6 @@ export const EventsPage: React.FC = () => {
   } = useEvents();
 
   const [detailEvent, setDetailEvent] = useState<EventRecord | null>(null);
-  const [leftPanelWidth, setLeftPanelWidth] = useState(60); // Porcentaje del panel izquierdo
 
   const handleViewDetail = useCallback((event: EventRecord) => setDetailEvent(event), []);
   const handleCloseDetail = useCallback(() => setDetailEvent(null), []);
@@ -633,6 +443,46 @@ export const EventsPage: React.FC = () => {
   };
 
   const formatDate = (ts: number) => format(new Date(ts), 'dd MMM yyyy, HH:mm');
+
+  // Renderizar el panel de detalle
+  const renderDetailPanel = () => (
+    <DetailPanel
+      title={detailEvent.productName || 'Evento'}
+      subtitle={detailEvent.barcode}
+      icon={<Package className="w-5 h-5" />}
+      status={getStatus(detailEvent)}
+      onClose={handleCloseDetail}
+      actions={[
+        { label: 'Editar', onClick: () => handleEdit(detailEvent), variant: 'primary' },
+        { label: 'Eliminar', onClick: () => handleDelete(detailEvent.id), variant: 'danger' }
+      ]}
+    >
+      <Section title="Producto" icon={<Package className="w-4 h-4" />}>
+        <Row label="Nombre" value={detailEvent.productName || 'N/A'} />
+        <Row label="Barcode" value={detailEvent.barcode} />
+        <Row label="Cantidad" value="1 unidad" />
+      </Section>
+      
+      <Section title="Documento" icon={<FileText className="w-4 h-4" />}>
+        <Row label="FRC" value={detailEvent.frc || 'Sin FRC'} />
+        <Row label="Traspaso" value={detailEvent.traspaso || 'N/A'} />
+      </Section>
+      
+      <Section title="Ubicación" icon={<MapPin className="w-4 h-4" />}>
+        <Row label="Destino" value={detailEvent.destino || 'Sin destino'} />
+      </Section>
+      
+      <Section title="Tiempo" icon={<Clock className="w-4 h-4" />}>
+        <Row label="Creado" value={formatDate(detailEvent.timestamp)} />
+      </Section>
+      
+      {detailEvent.observaciones && (
+        <Section title="Notas" icon={<FileText className="w-4 h-4" />}>
+          <Row label="Observaciones" value={detailEvent.observaciones} />
+        </Section>
+      )}
+    </DetailPanel>
+  );
 
   return (
     <div className="h-full flex flex-col bg-[var(--appsheet-bg-base)] appsheet-dark">
@@ -670,14 +520,15 @@ export const EventsPage: React.FC = () => {
         onChange={actions.setSelectedEvents}
       />
 
-      {/* Content - Vista Dual: Lista + Panel Detalle + Splitter */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Lista de eventos (panel izquierdo) */}
-        <div 
-          style={{ width: detailEvent ? `${leftPanelWidth}%` : '100%' }}
-          className="overflow-y-auto transition-all duration-200 ease-out"
-        >
-          {isLoading ? (
+      {/* Vista Dual */}
+      <DualView
+        selectedItem={detailEvent}
+        onSelectItem={setDetailEvent}
+        initialLeftWidth={50}
+        minLeftWidth={25}
+        maxLeftWidth={75}
+        listPanel={
+          isLoading ? (
             <div className="flex items-center justify-center py-16">
               <RefreshCw className="w-8 h-8 animate-spin text-[var(--appsheet-text-tertiary)]" />
             </div>
@@ -709,75 +560,10 @@ export const EventsPage: React.FC = () => {
                 ]}
               />
             ))
-          )}
-        </div>
-
-        {/* Splitter - Solo visible cuando hay detalle */}
-        {detailEvent && (
-          <Splitter 
-            onResize={setLeftPanelWidth} 
-            minLeftWidth={25}
-            maxLeftWidth={75}
-          />
-        )}
-
-        {/* Panel de Detalle (panel derecho) - estilo AppSheet */}
-        <AnimatePresence>
-          {detailEvent && (
-            <div style={{ width: `${100 - leftPanelWidth}%` }} className="flex-shrink-0">
-              <DetailViewPanel
-                title={detailEvent.productName || 'Evento'}
-                subtitle={detailEvent.barcode}
-                icon={<Package className="w-5 h-5" />}
-                status={getStatus(detailEvent)}
-                sections={[
-                  {
-                    title: 'Producto',
-                    icon: <Package className="w-4 h-4" />,
-                    rows: [
-                      { label: 'Nombre', value: detailEvent.productName || 'N/A' },
-                      { label: 'Barcode', value: detailEvent.barcode },
-                      { label: 'Cantidad', value: '1 unidad' }
-                    ]
-                  },
-                  {
-                    title: 'Documento',
-                    icon: <FileText className="w-4 h-4" />,
-                    rows: [
-                      { label: 'FRC', value: detailEvent.frc || 'Sin FRC' },
-                      { label: 'Traspaso', value: detailEvent.traspaso || 'N/A' }
-                    ]
-                  },
-                  {
-                    title: 'Ubicación',
-                    icon: <MapPin className="w-4 h-4" />,
-                    rows: [
-                      { label: 'Destino', value: detailEvent.destino || 'Sin destino' }
-                    ]
-                  },
-                  {
-                    title: 'Tiempo',
-                    icon: <Clock className="w-4 h-4" />,
-                    rows: [
-                      { label: 'Creado', value: formatDate(detailEvent.timestamp) }
-                    ]
-                  },
-                  ...(detailEvent.observaciones ? [{
-                    title: 'Notas',
-                    icon: <FileText className="w-4 h-4" />,
-                    rows: [{ label: 'Observaciones', value: detailEvent.observaciones }]
-                  }] : [])
-                ]}
-                onClose={handleCloseDetail}
-                actions={[
-                  { label: 'Editar', onClick: () => handleEdit(detailEvent), variant: 'primary' },
-                  { label: 'Eliminar', onClick: () => handleDelete(detailEvent.id), variant: 'danger' }
-                ]}
-              />
-            </div>
-          )}
-        </AnimatePresence>
-      </div>
+          )
+        }
+        detailPanel={detailEvent ? renderDetailPanel() : undefined}
+      />
 
       {/* FAB - Solo visible cuando no hay detalle abierto */}
       {!detailEvent && (
