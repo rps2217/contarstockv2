@@ -283,7 +283,7 @@ const ActionMenu: React.FC<ActionMenuProps> = ({ actions }) => {
 };
 
 // ============================================================================
-// LIST ITEM - Item de lista denso estilo MD3
+// LIST ITEM - Item de lista denso estilo MD3 con State Layers
 // ============================================================================
 interface ListItemProps {
   title: string;
@@ -310,9 +310,11 @@ const ListItem: React.FC<ListItemProps> = ({ title, subtitle, status, meta, onCl
   };
 
   return (
-    <div 
+    <motion.div 
       onClick={onClick}
-      className="bg-[var(--appsheet-bg-surface)] border-b border-[var(--appsheet-border-subtle)] last:border-b-0"
+      whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.04)' }}
+      whileTap={{ backgroundColor: 'rgba(255, 255, 255, 0.08)' }}
+      className="bg-[var(--appsheet-bg-surface)] border-b border-[var(--appsheet-border-subtle)] last:border-b-0 cursor-pointer"
     >
       <div className="flex items-center min-h-[72px] px-4 py-3">
         {/* Status dot */}
@@ -345,7 +347,7 @@ const ListItem: React.FC<ListItemProps> = ({ title, subtitle, status, meta, onCl
         {/* Actions */}
         {actions && <ActionMenu actions={actions} />}
       </div>
-    </div>
+    </motion.div>
   );
 };
 
@@ -468,7 +470,9 @@ const DetailView: React.FC<DetailViewProps> = ({ title, subtitle, icon, status, 
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.15 + i * 0.05 + j * 0.03 }}
-                  className="flex items-center gap-3 px-4 py-3 hover:bg-[var(--appsheet-bg-hover)] transition-colors"
+                  whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.04)' }}
+                  whileTap={{ backgroundColor: 'rgba(255, 255, 255, 0.08)' }}
+                  className="flex items-center gap-3 px-4 py-3 cursor-pointer"
                 >
                   <div className="flex-1">
                     <p className="text-[11px] text-[var(--appsheet-text-tertiary)] uppercase tracking-wider">{row.label}</p>

@@ -132,6 +132,13 @@
   --md3-duration-extra-long2: 800ms;
   --md3-duration-extra-long3: 900ms;
   --md3-duration-extra-long4: 1000ms;
+  
+  /* MD3 State Layer Opacities */
+  --md3-state-hover: rgba(255, 255, 255, 0.08);
+  --md3-state-focus: rgba(255, 255, 255, 0.10);
+  --md3-state-pressed: rgba(255, 255, 255, 0.10);
+  --md3-state-dragged: rgba(255, 255, 255, 0.16);
+  --md3-state-disabled: rgba(255, 255, 255, 0.38);
 }
 
 /* Base transitions using MD3 tokens */
@@ -141,6 +148,36 @@
     background-color var(--md3-duration-medium1) var(--md3-easing-standard),
     border-color var(--md3-duration-short2) var(--md3-easing-standard),
     color var(--md3-duration-short2) var(--md3-easing-standard);
+}
+
+/* ========================
+   STATE LAYERS (MD3)
+   ======================== */
+
+/* Hover state - 8% opacity overlay */
+.md3-hover {
+  transition: background-color var(--md3-duration-short2) var(--md3-easing-standard);
+}
+
+.md3-hover:hover {
+  background-color: var(--md3-state-hover);
+}
+
+/* Pressed/Focus state - 10% opacity overlay */
+.md3-pressed,
+.md3-focus:focus {
+  background-color: var(--md3-state-pressed);
+}
+
+/* Draggable state - 16% opacity overlay */
+.md3-drag {
+  background-color: var(--md3-state-dragged);
+}
+
+/* Disabled state - 38% opacity overlay */
+.md3-disabled {
+  opacity: 0.38;
+  pointer-events: none;
 }
 
 /* ========================
