@@ -101,7 +101,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ value, onChange, placeholder }) =
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full h-10 pl-10 pr-10 rounded-lg bg-[var(--appsheet-bg-elevated)] border border-[var(--appsheet-border-subtle)] text-sm placeholder:text-[var(--appsheet-text-tertiary)] focus:outline-none focus:border-[var(--appsheet-primary-primary)] transition-colors"
+        className="w-full h-10 pl-10 pr-10 rounded-lg bg-[var(--appsheet-bg-elevated)] border border-[var(--appsheet-border-subtle)] text-sm placeholder:text-[var(--appsheet-text-tertiary)] focus:outline-none focus:border-[var(--appsheet-primary)] transition-colors"
       />
       {value && (
         <button
@@ -136,7 +136,7 @@ const FilterChips: React.FC<FilterChipsProps> = ({ filters, selected, onChange }
           className={cn(
             'h-8 px-3 rounded-full text-xs font-medium whitespace-nowrap transition-all',
             isActive
-              ? 'bg-[var(--appsheet-primary-primary)] text-white'
+              ? 'bg-[var(--appsheet-primary)] text-white'
               : 'bg-[var(--appsheet-bg-elevated)] text-[var(--appsheet-text-secondary)] hover:bg-[var(--appsheet-bg-hover)]'
           )}
         >
@@ -148,7 +148,7 @@ const FilterChips: React.FC<FilterChipsProps> = ({ filters, selected, onChange }
 );
 
 // ============================================================================
-// ACTION MENU - Menú de 3 puntos
+// ACTION MENU - Menú de 3 puntos con animaciones Material Design
 // ============================================================================
 interface ActionMenuProps {
   actions: Array<{
@@ -161,50 +161,115 @@ interface ActionMenuProps {
 
 const ActionMenu: React.FC<ActionMenuProps> = ({ actions }) => {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [buttonRef, setButtonRef] = useState<HTMLButtonElement | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+      if (
+        menuRef.current && !menuRef.current.contains(e.target as Node) &&
+        buttonRef && !buttonRef.contains(e.target as Node)
+      ) {
         setOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
+  }, [buttonRef]);
+
+  // Calculate position based on button
+  const getMenuStyle = () => {
+    if (!buttonRef) return {};
+    const rect = buttonRef.getBoundingClientRect();
+    return {
+      position: 'fixed' as const,
+      right: `${window.innerWidth - rect.right + 8}px`,
+      top: `${rect.bottom + 4}px`,
+    };
+  };
 
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative">
       <button
+        ref={setButtonRef}
         onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
-        className="p-2 rounded-full hover:bg-[var(--appsheet-bg-hover)] active:bg-[var(--appsheet-bg-active)]"
+        className="p-2 rounded-full hover:bg-[var(--appsheet-bg-hover)] active:bg-[var(--appsheet-bg-active)] transition-colors duration-150"
       >
         <MoreVertical className="w-5 h-5" />
       </button>
+      
       <AnimatePresence>
         {open && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, originY: 0 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="absolute right-2 top-full mt-1 w-52 bg-[var(--appsheet-bg-card)] border border-[var(--appsheet-border-default)] rounded-xl shadow-lg overflow-hidden z-50"
-          >
-            {actions.map((action, i) => (
-              <button
-                key={i}
-                onClick={(e) => { e.stopPropagation(); action.onClick(); setOpen(false); }}
-                className={cn(
-                  'w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors',
-                  action.danger
-                    ? 'text-[var(--appsheet-error)] hover:bg-[var(--appsheet-error-subtle)]'
-                    : 'text-[var(--appsheet-text-primary)] hover:bg-[var(--appsheet-bg-hover)]'
-                )}
-              >
-                {action.icon}
-                {action.label}
-              </button>
-            ))}
-          </motion.div>
+          <>
+            {/* Backdrop para cerrar */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="fixed inset-0 z-40"
+              onClick={() => setOpen(false)}
+            />
+            
+            {/* Menú animado desde el centro del botón */}
+            <motion.div
+              ref={menuRef}
+              initial={{ 
+                opacity: 0, 
+                scale: 0.85,
+                y: -8
+              }}
+              animate={{ 
+                opacity: 1, 
+                scale: 1,
+                y: 0
+              }}
+              exit={{ 
+                opacity: 0, 
+                scale: 0.85,
+                y: -8
+              }}
+              transition={{
+                duration: 0.2,
+                ease: [0.32, 0.72, 0, 1] // MD3 Emphasized decelerate
+              }}
+              style={getMenuStyle()}
+              className="w-56 bg-[var(--appsheet-bg-card)] border border-[var(--appsheet-border-default)] rounded-xl shadow-2xl overflow-hidden z-50"
+            >
+              {/* Elevation overlay */}
+              <div className="absolute inset-0 bg-gradient-to-b from-white/[0.03] to-transparent pointer-events-none" />
+              
+              {actions.map((action, i) => (
+                <motion.button
+                  key={i}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: i * 0.03 }}
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    action.onClick(); 
+                    setOpen(false); 
+                  }}
+                  className={cn(
+                    'w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors relative overflow-hidden',
+                    action.danger
+                      ? 'text-[var(--appsheet-error)] hover:bg-[var(--appsheet-error-subtle)]'
+                      : 'text-[var(--appsheet-text-primary)] hover:bg-[var(--appsheet-bg-hover)]'
+                  )}
+                  // Ripple effect on click
+                  whileTap={{ scale: 0.98 }}
+                >
+                  {/* Ripple element */}
+                  <span className={cn(
+                    'absolute inset-0 opacity-0 transition-opacity duration-300',
+                    action.danger ? 'bg-[var(--appsheet-error)]' : 'bg-white'
+                  )} style={{ opacity: 0 }} />
+                  {action.icon}
+                  <span className="relative z-10">{action.label}</span>
+                </motion.button>
+              ))}
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </div>
@@ -279,7 +344,8 @@ const ListItem: React.FC<ListItemProps> = ({ title, subtitle, status, meta, onCl
 };
 
 // ============================================================================
-// DETAIL VIEW - Vista de detalle (slide-in desde la derecha)
+// ============================================================================
+// DETAIL VIEW - Vista de detalle con animaciones Material Design
 // ============================================================================
 interface DetailViewProps {
   title: string;
@@ -308,23 +374,45 @@ const DetailView: React.FC<DetailViewProps> = ({ title, subtitle, icon, status, 
   };
 
   return (
-    <motion.div
-      initial={{ x: '100%' }}
-      animate={{ x: 0 }}
-      exit={{ x: '100%' }}
-      transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-      className="fixed inset-0 z-50 bg-[var(--appsheet-bg-base)] flex flex-col"
-    >
-      {/* AppBar */}
-      <div className="bg-[var(--appsheet-bg-surface)] border-b border-[var(--appsheet-border-subtle)]">
-        <div className="flex items-center h-14 px-4 gap-3">
-          <button 
+    <>
+      {/* Backdrop con fade */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        className="fixed inset-0 bg-black/50 z-50"
+        onClick={onClose}
+      />
+      
+      {/* Panel deslizante desde la derecha */}
+      <motion.div
+        initial={{ x: '100%' }}
+        animate={{ x: 0 }}
+        exit={{ x: '100%' }}
+        transition={{
+          type: 'spring',
+          damping: 30,
+          stiffness: 350,
+          mass: 0.8
+        }}
+        className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-[var(--appsheet-bg-surface)] z-50 flex flex-col"
+      >
+        {/* AppBar */}
+        <div className="flex items-center h-14 px-4 gap-3 border-b border-[var(--appsheet-border-subtle)]">
+          <motion.button 
+            whileTap={{ scale: 0.9 }}
             onClick={onClose}
-            className="p-2 -ml-2 rounded-full hover:bg-[var(--appsheet-bg-hover)]"
+            className="p-2 -ml-2 rounded-full hover:bg-[var(--appsheet-bg-hover)] active:bg-[var(--appsheet-bg-active)]"
           >
             <X className="w-6 h-6" />
-          </button>
-          <div className="flex-1 min-w-0">
+          </motion.button>
+          <motion.div 
+            className="flex-1 min-w-0"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 }}
+          >
             <h2 className="text-base font-semibold flex items-center gap-2">
               {icon}
               <span className="truncate">{title}</span>
@@ -332,61 +420,92 @@ const DetailView: React.FC<DetailViewProps> = ({ title, subtitle, icon, status, 
             {subtitle && (
               <p className="text-xs text-[var(--appsheet-text-tertiary)]">{subtitle}</p>
             )}
-          </div>
+          </motion.div>
           {status && (
-            <span className={cn('px-3 py-1 text-xs font-semibold rounded-full border', statusBadge[status.variant])}>
+            <motion.span 
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.15 }}
+              className={cn('px-3 py-1 text-xs font-semibold rounded-full border', statusBadge[status.variant])}
+            >
               {status.label}
-            </span>
+            </motion.span>
           )}
         </div>
-      </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto">
-        {sections.map((section, i) => (
-          <div key={i} className="bg-[var(--appsheet-bg-surface)] border-b border-[var(--appsheet-border-subtle)]">
-            {section.title && (
-              <div className="flex items-center gap-2 px-4 py-2 bg-[var(--appsheet-bg-elevated)]">
-                {section.icon && <span className="text-[var(--appsheet-primary-primary)]">{section.icon}</span>}
-                <span className="text-xs font-semibold uppercase tracking-wider text-[var(--appsheet-text-secondary)]">
-                  {section.title}
-                </span>
-              </div>
-            )}
-            {section.rows.map((row, j) => (
-              <div key={j} className="flex items-center gap-3 px-4 py-3">
-                <div className="flex-1">
-                  <p className="text-[11px] text-[var(--appsheet-text-tertiary)] uppercase tracking-wider">{row.label}</p>
-                  <p className="text-sm font-medium">{row.value}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
-
-      {/* Actions */}
-      {actions && actions.length > 0 && (
-        <div className="p-4 bg-[var(--appsheet-bg-surface)] border-t border-[var(--appsheet-border-subtle)] flex gap-3">
-          {actions.map((action, i) => (
-            <button
-              key={i}
-              onClick={action.onClick}
-              className={cn(
-                'flex-1 h-11 rounded-lg text-sm font-semibold transition-colors',
-                action.variant === 'primary'
-                  ? 'bg-[var(--appsheet-primary-primary)] text-white hover:opacity-90'
-                  : action.variant === 'danger'
-                  ? 'bg-[var(--appsheet-error-subtle)] text-[var(--appsheet-error)] hover:bg-[var(--appsheet-error)] hover:text-white'
-                  : 'bg-[var(--appsheet-bg-elevated)] hover:bg-[var(--appsheet-bg-hover)]'
-              )}
+        {/* Content con scroll */}
+        <motion.div 
+          className="flex-1 overflow-y-auto"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.15 }}
+        >
+          {sections.map((section, i) => (
+            <motion.div 
+              key={i} 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 + i * 0.05 }}
+              className="border-b border-[var(--appsheet-border-subtle)]"
             >
-              {action.label}
-            </button>
+              {section.title && (
+                <div className="flex items-center gap-2 px-4 py-2 bg-[var(--appsheet-bg-elevated)]">
+                  {section.icon && <span className="text-[var(--appsheet-primary)]">{section.icon}</span>}
+                  <span className="text-xs font-semibold uppercase tracking-wider text-[var(--appsheet-text-secondary)]">
+                    {section.title}
+                  </span>
+                </div>
+              )}
+              {section.rows.map((row, j) => (
+                <motion.div 
+                  key={j} 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.15 + i * 0.05 + j * 0.03 }}
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-[var(--appsheet-bg-hover)] transition-colors"
+                >
+                  <div className="flex-1">
+                    <p className="text-[11px] text-[var(--appsheet-text-tertiary)] uppercase tracking-wider">{row.label}</p>
+                    <p className="text-sm font-medium mt-0.5">{row.value}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </motion.div>
           ))}
-        </div>
-      )}
-    </motion.div>
+        </motion.div>
+
+        {/* Actions con botones animados */}
+        {actions && actions.length > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="p-4 border-t border-[var(--appsheet-border-subtle)] flex gap-3"
+          >
+            {actions.map((action, i) => (
+              <motion.button
+                key={i}
+                whileTap={{ scale: 0.97 }}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.25 + i * 0.05 }}
+                onClick={action.onClick}
+                className={cn(
+                  'flex-1 h-11 rounded-lg text-sm font-semibold transition-all',
+                  action.variant === 'primary'
+                    ? 'bg-[var(--appsheet-primary)] text-black hover:brightness-110'
+                    : action.variant === 'danger'
+                    ? 'bg-[var(--appsheet-error-subtle)] text-[var(--appsheet-error)] hover:bg-[var(--appsheet-error)] hover:text-white'
+                    : 'bg-[var(--appsheet-bg-elevated)] hover:bg-[var(--appsheet-bg-hover)]'
+                )}
+              >
+                {action.label}
+              </motion.button>
+            ))}
+          </motion.div>
+        )}
+      </motion.div>
+    </>
   );
 };
 
@@ -408,7 +527,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({ icon, title, description, actio
     {action && (
       <button
         onClick={action.onClick}
-        className="mt-4 h-10 px-5 rounded-full bg-[var(--appsheet-primary-primary)] text-white text-sm font-medium"
+        className="mt-4 h-10 px-5 rounded-full bg-[var(--appsheet-primary)] text-white text-sm font-medium"
       >
         {action.label}
       </button>
@@ -429,7 +548,7 @@ const FAB: React.FC<FABProps> = ({ onClick, icon }) => (
     initial={{ scale: 0 }}
     animate={{ scale: 1 }}
     onClick={onClick}
-    className="fixed right-4 bottom-4 w-14 h-14 rounded-2xl bg-[var(--appsheet-primary-primary)] text-white shadow-lg flex items-center justify-center active:scale-95 transition-transform"
+    className="fixed right-4 bottom-4 w-14 h-14 rounded-2xl bg-[var(--appsheet-primary)] text-white shadow-lg flex items-center justify-center active:scale-95 transition-transform"
     style={{ boxShadow: '0 4px 12px rgba(129, 140, 248, 0.4)' }}
   >
     {icon || <Plus className="w-6 h-6" />}

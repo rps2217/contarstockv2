@@ -99,6 +99,74 @@
 }
 
 /* ========================
+   MOTION & ANIMATIONS
+   ======================== */
+
+/* Material Design 3 Easing */
+:root {
+  /* Standard easing */
+  --md3-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+  --md3-easing-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --md3-easing-emphasized-decelerate: cubic-bezier(0.32, 0.72, 0, 1);
+  --md3-easing-emphasized-accelerate: cubic-bezier(0.32, 0, 0, 1);
+  --md3-easing-linear: cubic-bezier(0, 0, 1, 1);
+  
+  /* Durations MD3 */
+  --md3-duration-none: 0ms;
+  --md3-duration-short1: 50ms;
+  --md3-duration-short2: 100ms;
+  --md3-duration-short3: 150ms;
+  --md3-duration-short4: 200ms;
+  --md3-duration-medium1: 250ms;
+  --md3-duration-medium2: 300ms;
+  --md3-duration-medium3: 350ms;
+  --md3-duration-medium4: 400ms;
+  --md3-duration-long1: 450ms;
+  --md3-duration-long2: 500ms;
+  --md3-duration-long3: 550ms;
+  --md3-duration-long4: 600ms;
+  --md3-duration-extra-long1: 700ms;
+  --md3-duration-extra-long2: 800ms;
+  --md3-duration-extra-long3: 900ms;
+  --md3-duration-extra-long4: 1000ms;
+}
+
+/* Base transitions using MD3 tokens */
+.appsheet-dark,
+.appsheet-light {
+  transition: 
+    background-color var(--md3-duration-medium1) var(--md3-easing-standard),
+    border-color var(--md3-duration-short2) var(--md3-easing-standard),
+    color var(--md3-duration-short2) var(--md3-easing-standard);
+}
+
+/* ========================
+   RIPPLE EFFECT
+   ======================== */
+.appsheet-ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.appsheet-ripple::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, currentColor 10%, transparent 10%);
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0;
+  transform: scale(0);
+  transition: transform 0.4s, opacity 0.4s;
+}
+
+.appsheet-ripple:active::after {
+  transform: scale(2);
+  opacity: 0.1;
+  transition: 0s;
+}
+
+/* ========================
    BASE STYLES
    ======================== */
 .appsheet-dark {
