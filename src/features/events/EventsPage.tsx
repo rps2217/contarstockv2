@@ -283,7 +283,7 @@ const ActionMenu: React.FC<ActionMenuProps> = ({ actions }) => {
 };
 
 // ============================================================================
-// LIST ITEM - Item de lista denso estilo MD3 con State Layers
+// LIST ITEM - Item de lista denso estilo MD3 con State Layers sutiles
 // ============================================================================
 interface ListItemProps {
   title: string;
@@ -310,11 +310,9 @@ const ListItem: React.FC<ListItemProps> = ({ title, subtitle, status, meta, onCl
   };
 
   return (
-    <motion.div 
+    <div 
       onClick={onClick}
-      whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.04)' }}
-      whileTap={{ backgroundColor: 'rgba(255, 255, 255, 0.08)' }}
-      className="bg-[var(--appsheet-bg-surface)] border-b border-[var(--appsheet-border-subtle)] last:border-b-0 cursor-pointer"
+      className="list-item bg-[var(--appsheet-bg-surface)] border-b border-[var(--appsheet-border-subtle)] last:border-b-0 cursor-pointer transition-colors duration-150"
     >
       <div className="flex items-center min-h-[72px] px-4 py-3">
         {/* Status dot */}
@@ -347,7 +345,7 @@ const ListItem: React.FC<ListItemProps> = ({ title, subtitle, status, meta, onCl
         {/* Actions */}
         {actions && <ActionMenu actions={actions} />}
       </div>
-    </motion.div>
+    </div>
   );
 };
 
@@ -465,20 +463,15 @@ const DetailView: React.FC<DetailViewProps> = ({ title, subtitle, icon, status, 
                 </div>
               )}
               {section.rows.map((row, j) => (
-                <motion.div 
+                <div 
                   key={j} 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.15 + i * 0.05 + j * 0.03 }}
-                  whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.04)' }}
-                  whileTap={{ backgroundColor: 'rgba(255, 255, 255, 0.08)' }}
-                  className="flex items-center gap-3 px-4 py-3 cursor-pointer"
+                  className="detail-row flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors duration-150"
                 >
                   <div className="flex-1">
                     <p className="text-[11px] text-[var(--appsheet-text-tertiary)] uppercase tracking-wider">{row.label}</p>
                     <p className="text-sm font-medium mt-0.5">{row.value}</p>
                   </div>
-                </motion.div>
+                </div>
               ))}
             </motion.div>
           ))}

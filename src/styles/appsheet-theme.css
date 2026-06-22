@@ -151,30 +151,53 @@
 }
 
 /* ========================
-   STATE LAYERS (MD3)
+   STATE LAYERS (MD3) - Transiciones suaves y naturales
    ======================== */
 
-/* Hover state - 8% opacity overlay */
+/* List Items - Hover sutil con transición CSS nativa */
+.list-item {
+  background-color: var(--appsheet-bg-surface);
+}
+
+.list-item:hover {
+  background-color: var(--appsheet-bg-elevated);
+}
+
+.list-item:active {
+  background-color: var(--appsheet-bg-card);
+}
+
+/* Detail Rows - Hover sutil */
+.detail-row {
+  background-color: transparent;
+}
+
+.detail-row:hover {
+  background-color: var(--appsheet-bg-elevated);
+}
+
+.detail-row:active {
+  background-color: var(--appsheet-bg-hover);
+}
+
+/* Generic state layer classes */
 .md3-hover {
-  transition: background-color var(--md3-duration-short2) var(--md3-easing-standard);
+  transition: background-color 150ms var(--md3-easing-standard);
 }
 
 .md3-hover:hover {
   background-color: var(--md3-state-hover);
 }
 
-/* Pressed/Focus state - 10% opacity overlay */
 .md3-pressed,
 .md3-focus:focus {
   background-color: var(--md3-state-pressed);
 }
 
-/* Draggable state - 16% opacity overlay */
 .md3-drag {
   background-color: var(--md3-state-dragged);
 }
 
-/* Disabled state - 38% opacity overlay */
 .md3-disabled {
   opacity: 0.38;
   pointer-events: none;
