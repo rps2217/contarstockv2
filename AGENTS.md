@@ -1285,8 +1285,10 @@ sortProducts(products, field, order): Product[]
 ### Commits:
 - `1c532a07` - feat: Agregar domain y componentes para Products
 - `707c7f92` - test: Agregar tests para expiryDomain
+- `b9f37b09` - feat: useProductsStats hook para estadísticas centralizadas
 
 ### Pendientes:
 - [ ] Integrar ProductStatsBar y ProductCard en InventoryPage
 - [ ] Refactorizar InventoryMetricsCards a usar ProductStats
 - [x] ~~Agregar tests para productsDomain~~ ✅ (34 tests)
+- [x] ~~Crear useProductsStats hook~~ ✅ (6 tests)
