@@ -1,4 +1,4 @@
-# ContarStock v2 - Agente de Desarrollo...xxx
+# ContarStock v2 - Agente de Desarrollo.
 
 ## Estructura del Proyecto
 
