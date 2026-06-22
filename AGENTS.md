@@ -75,6 +75,689 @@ npm run test:run     # vitest (single run)
 npm run test         # vitest (watch mode)
 ```
 
+---
+
+# 🎨 Patrones UI AppSheet - Guía de Implementación
+
+Este documento contiene todos los patrones de UI/UX implementados para replicar la experiencia visual de AppSheet en los módulos de ContarStock.
+
+## Tabla de Contenidos
+1. [Tokens CSS - AppSheet Theme](#tokens-css---appsheet-theme)
+2. [State Layers (MD3)](#state-layers-md3)
+3. [Vista Dual (Master-Detail)](#vista-dual-master-detail)
+4. [Splitter Redimensionable](#splitter-redimensionable)
+5. [SearchBar Estilo AppSheet](#searchbar-estilo-appsheet)
+6. [Filter Chips](#filter-chips)
+7. [List Items](#list-items)
+8. [Detail Panel](#detail-panel)
+9. [Action Menu (3 puntos)](#action-menu-3-puntos)
+10. [FAB (Floating Action Button)](#fab-floating-action-button)
+11. [Tipografías](#tipografías)
+
+---
+
+## Tokens CSS - AppSheet Theme
+
+### Ubicación
+`src/styles/appsheet-theme.css`
+
+### Backgrounds - Sistema de elevación MD3
+```css
+--appsheet-bg-base: #121212;        /* Surface container lowest */
+--appsheet-bg-elevated: #1e1e1e;    /* Surface container low */
+--appsheet-bg-surface: #252525;     /* Surface container */
+--appsheet-bg-card: #2d2d2d;        /* Surface container high */
+--appsheet-bg-hover: rgba(255, 255, 255, 0.06);
+--appsheet-bg-active: rgba(255, 255, 255, 0.10);
+```
+
+### Primary - Azul AppSheet
+```css
+--appsheet-primary: #8AB4F8;        /* Google Blue accent */
+--appsheet-primary-hover: #AECBFA;
+--appsheet-primary-pressed: #669DF6;
+--appsheet-on-primary: #000000;
+--appsheet-primary-subtle: rgba(138, 180, 248, 0.12);
+```
+
+### Search Bar
+```css
+--appsheet-bg-search: #353535;      /* Fondo más claro para input */
+```
+
+### State Layer Opacities (MD3)
+```css
+--md3-state-hover: rgba(255, 255, 255, 0.08);    /* 8% */
+--md3-state-focus: rgba(255, 255, 255, 0.10);     /* 10% */
+--md3-state-pressed: rgba(255, 255, 255, 0.10);  /* 10% */
+--md3-state-dragged: rgba(255, 255, 255, 0.16);   /* 16% */
+--md3-state-disabled: rgba(255, 255, 255, 0.38);  /* 38% */
+```
+
+### Clases CSS Utilitarias
+```css
+.md3-hover   /* Hover 8% */
+.md3-pressed  /* Pressed 10% */
+.md3-focus    /* Focus 10% */
+.md3-drag     /* Dragged 16% */
+.md3-disabled /* Disabled 38% */
+```
+
+---
+
+## State Layers (MD3)
+
+### Concepto
+State layers son overlays semitransparentes que indican el estado de interacción de un elemento. Usan opacidades fijas según Material Design 3.
+
+### Especificación MD3
+| Estado | Opacidad | Uso |
+|--------|----------|-----|
+| Hover | 8% | Cursor sobre elemento |
+| Focus | 10% | Navegación por teclado |
+| Pressed | 10% | Click/tap |
+| Dragged | 16% | Arrastrar |
+| Disabled | 38% | Elementos inoperables |
+
+### Implementación CSS
+```css
+.list-item {
+  background-color: var(--appsheet-bg-surface);
+  transition: background-color 150ms ease;
+}
+
+.list-item:hover {
+  background-color: var(--appsheet-bg-elevated);
+}
+
+.list-item:active {
+  background-color: var(--appsheet-bg-card);
+}
+```
+
+### En React con Clases
+```tsx
+<div className="list-item md3-hover">
+  {/* contenido */}
+</div>
+```
+
+---
+
+## Vista Dual (Master-Detail)
+
+### Concepto
+La vista divide el espacio en dos paneles:
+1. **Lista** (izquierda) - Mantiene la lista completa de items
+2. **Panel Detalle** (derecha) - Muestra detalles del item seleccionado
+
+### Estructura React
+```tsx
+const [detailEvent, setDetailEvent] = useState<EventRecord | null>(null);
+const [leftPanelWidth, setLeftPanelWidth] = useState(60);
+
+<div className="flex-1 flex overflow-hidden">
+  {/* Panel izquierdo - Lista */}
+  <div style={{ width: detailEvent ? `${leftPanelWidth}%` : '100%' }}>
+    {events.map(event => (
+      <ListItem
+        key={event.id}
+        onClick={() => setDetailEvent(event)}
+        isSelected={detailEvent?.id === event.id}
+        // ...props
+      />
+    ))}
+  </div>
+
+  {/* Splitter */}
+  {detailEvent && (
+    <Splitter onResize={setLeftPanelWidth} minLeftWidth={25} maxLeftWidth={75} />
+  )}
+
+  {/* Panel derecho - Detalle */}
+  {detailEvent && (
+    <div style={{ width: `${100 - leftPanelWidth}%` }}>
+      <DetailViewPanel
+        title={detailEvent.productName}
+        onClose={() => setDetailEvent(null)}
+        // ...props
+      />
+    </div>
+  )}
+</div>
+```
+
+### Flujo de Usuario
+```
+1. Ver lista completa (100%)
+   ↓ Click en item
+2. Panel detalle aparece (slide-in desde derecha)
+   Lista se reduce (60%), Detalle (40%)
+   ↓ Click Editar
+3. Modal supersede el panel de detalle
+   ↓ Cerrar modal
+4. Panel detalle sigue visible (actualizado)
+   ↓ Click X en panel
+5. Panel detalle se cierra, lista vuelve al 100%
+```
+
+---
+
+## Splitter Redimensionable
+
+### Concepto
+Barra divisoria que permite redimensionar los paneles arrastrando el mouse.
+
+### Implementación Componente
+```tsx
+interface SplitterProps {
+  onResize: (leftWidth: number) => void;
+  minLeftWidth?: number;
+  maxLeftWidth?: number;
+}
+
+const Splitter: React.FC<SplitterProps> = ({ 
+  onResize, 
+  minLeftWidth = 30, 
+  maxLeftWidth = 70 
+}) => {
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const container = (e.target as HTMLElement).parentElement;
+      if (!container) return;
+      
+      const containerRect = container.getBoundingClientRect();
+      const newWidth = ((containerRect.right - moveEvent.clientX) / containerRect.width) * 100;
+      const clampedWidth = Math.min(Math.max(newWidth, minLeftWidth), maxLeftWidth);
+      onResize(clampedWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, [onResize, minLeftWidth, maxLeftWidth]);
+
+  return (
+    <div
+      onMouseDown={handleMouseDown}
+      className="w-1 cursor-col-resize flex-shrink-0 group"
+    >
+      {/* Indicador visual */}
+      <div className="absolute inset-y-0 -left-1 -right-1 flex items-center justify-center">
+        <div className="w-1 h-16 rounded-full bg-transparent group-hover:bg-[var(--appsheet-text-tertiary)]" />
+      </div>
+    </div>
+  );
+};
+```
+
+### Características
+- Cursor `col-resize` al pasar
+- Indicador visual con hover (barra gris)
+- Indicador azul cuando está arrastrando
+- Límites configurables (min/max porcentaje)
+
+---
+
+## SearchBar Estilo AppSheet
+
+### Diseño
+- Centrado (max-w-md mx-auto)
+- Padding lateral px-6
+- Fondo: `var(--appsheet-bg-search)` (#353535)
+- Forma: rounded-full (pill)
+- Sin borde visible
+
+### Implementación
+```tsx
+const SearchBar: React.FC<SearchBarProps> = ({ value, onChange, placeholder }) => (
+  <div className="px-6 pb-3">
+    <div className="relative max-w-md mx-auto">
+      <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--appsheet-text-secondary)]" />
+      
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full h-12 pl-11 pr-10 rounded-full 
+                   bg-[var(--appsheet-bg-search)] 
+                   text-base 
+                   text-[var(--appsheet-text-primary)]
+                   placeholder:text-[var(--appsheet-text-secondary)]
+                   border-none
+                   focus:outline-none
+                   focus:bg-[var(--appsheet-bg-elevated)]
+                   transition-all"
+      />
+      
+      {value && (
+        <button
+          onClick={() => onChange('')}
+          className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-[var(--appsheet-bg-elevated)]"
+        >
+          <X className="w-4 h-4 text-[var(--appsheet-text-secondary)]" />
+        </button>
+      )}
+    </div>
+  </div>
+);
+```
+
+### Tokens
+```css
+--appsheet-bg-search: #353535;
+```
+
+---
+
+## Filter Chips
+
+### Diseño
+- Pills horizontales con scroll
+- Estado activo: fondo primary con texto negro
+- Estado inactivo: fondo elevated con texto secondary
+- Hover: fondo hover sutil
+
+### Implementación
+```tsx
+const FilterChips: React.FC<FilterChipsProps> = ({ filters, selected, onChange }) => (
+  <div className="px-4 pb-3 flex gap-2 overflow-x-auto scrollbar-hide">
+    {filters.map(filter => {
+      const isActive = /* condición */;
+      return (
+        <button
+          key={filter.label}
+          onClick={() => onChange(filter.key)}
+          className={cn(
+            'h-9 px-4 rounded-full text-sm font-medium whitespace-nowrap transition-all',
+            isActive
+              ? 'bg-[var(--appsheet-primary)] text-black'
+              : 'bg-[var(--appsheet-bg-elevated)] text-[var(--appsheet-text-secondary)] hover:bg-[var(--appsheet-bg-hover)]'
+          )}
+        >
+          {filter.label}
+        </button>
+      );
+    })}
+  </div>
+);
+```
+
+### Estados
+```
+[ Todos ] [ Pendientes ] [ Destinados ] [ Ajustados ]
+  ↑Activo      ↑Inactivo       ↑Inactivo      ↑Inactivo
+```
+
+---
+
+## List Items
+
+### Diseño
+- Altura mínima: 76px
+- Dot de estado (2.5px)
+- Título con texto base
+- Subtítulo con texto secondary
+- Metadatos opcionales
+- Border bottom sutil
+
+### Implementación
+```tsx
+interface ListItemProps {
+  title: string;
+  subtitle?: string;
+  status?: { label: string; variant: 'success' | 'warning' | 'error' | 'info' };
+  meta?: Array<{ label: string; value: string }>;
+  onClick?: () => void;
+  isSelected?: boolean;
+  actions?: ActionMenuProps['actions'];
+}
+
+const ListItem: React.FC<ListItemProps> = ({ title, subtitle, status, meta, onClick, isSelected, actions }) => (
+  <div 
+    onClick={onClick}
+    className={cn(
+      'list-item border-b border-[var(--appsheet-border-subtle)] cursor-pointer transition-colors duration-150',
+      isSelected 
+        ? 'bg-[var(--appsheet-primary-subtle)] border-l-4 border-l-[var(--appsheet-primary)]' 
+        : 'bg-[var(--appsheet-bg-surface)] hover:bg-[var(--appsheet-bg-elevated)]'
+    )}
+  >
+    <div className="flex items-center min-h-[76px] px-4 py-3">
+      {/* Status dot */}
+      <div className={cn('w-2.5 h-2.5 rounded-full shrink-0 mr-3', 
+        status?.variant === 'success' ? 'bg-[var(--appsheet-success)]' :
+        status?.variant === 'warning' ? 'bg-[var(--appsheet-warning)]' :
+        status?.variant === 'error' ? 'bg-[var(--appsheet-error)]' :
+        status?.variant === 'info' ? 'bg-[var(--appsheet-info)]' :
+        'bg-[var(--appsheet-text-disabled)]'
+      )} />
+      
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <p className={cn('text-base font-medium truncate', 
+            isSelected && 'text-[var(--appsheet-primary)]'
+          )}>{title}</p>
+          {status && (
+            <span className={cn('px-2.5 py-1 text-xs font-semibold rounded-full',
+              status.variant === 'success' ? 'bg-[var(--appsheet-success-subtle)] text-[var(--appsheet-success)]' :
+              // ...otros status
+            )}>
+              {status.label}
+            </span>
+          )}
+        </div>
+        {subtitle && (
+          <p className="text-sm text-[var(--appsheet-text-tertiary)] truncate">{subtitle}</p>
+        )}
+        {meta && meta.length > 0 && (
+          <div className="flex gap-4 mt-1.5">
+            {meta.slice(0, 3).map((m, i) => (
+              <span key={i} className="text-sm text-[var(--appsheet-text-disabled)]">
+                <span className="uppercase font-medium">{m.label}:</span> {m.value}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {actions && <ActionMenu actions={actions} />}
+    </div>
+  </div>
+);
+```
+
+### Item Seleccionado
+```
+┌─────────────────────────────────────────────────────────┐
+│ ▌● Producto Ejemplo                              [⋮]  │
+│ ▌  7701234567890                                      │
+│ ▌  FRC: 12345  Destino: BOD.37                       │
+└─────────────────────────────────────────────────────────┘
+ ↑
+ Borde azul izq (4px) + Fondo primary-subtle
+```
+
+---
+
+## Detail Panel
+
+### Diseño
+- Slide-in desde la derecha (spring animation)
+- Sin backdrop (panel transparente)
+- Header con título y status
+- Secciones con iconos
+- Footer con acciones
+
+### Implementación
+```tsx
+const DetailViewPanel: React.FC<DetailViewPanelProps> = ({ 
+  title, subtitle, icon, status, sections, onClose, actions 
+}) => (
+  <motion.div
+    initial={{ x: '100%' }}
+    animate={{ x: 0 }}
+    exit={{ x: '100%' }}
+    transition={{ type: 'spring', damping: 30, stiffness: 350, mass: 0.8 }}
+    className="h-full w-full max-w-md bg-[var(--appsheet-bg-surface)] border-l border-[var(--appsheet-border-subtle)] flex flex-col"
+  >
+    {/* Header */}
+    <div className="flex items-center h-14 px-4 gap-3 border-b">
+      <button onClick={onClose} className="p-2 rounded-full hover:bg-[var(--appsheet-bg-hover)]">
+        <X className="w-5 h-5" />
+      </button>
+      <div className="flex-1 min-w-0">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          {icon}
+          <span className="truncate">{title}</span>
+        </h2>
+        {subtitle && (
+          <p className="text-sm text-[var(--appsheet-text-tertiary)] truncate">{subtitle}</p>
+        )}
+      </div>
+      {status && (
+        <span className={cn('px-3 py-1 text-xs font-semibold rounded-full border', 
+          // status variant classes
+        )}>
+          {status.label}
+        </span>
+      )}
+    </div>
+
+    {/* Content */}
+    <div className="flex-1 overflow-y-auto">
+      {sections.map((section, i) => (
+        <div key={i} className="border-b border-[var(--appsheet-border-subtle)]">
+          {section.title && (
+            <div className="flex items-center gap-2 px-4 py-3 bg-[var(--appsheet-bg-elevated)]">
+              {section.icon && <span className="text-[var(--appsheet-primary)]">{section.icon}</span>}
+              <span className="text-sm font-semibold uppercase tracking-wider text-[var(--appsheet-text-secondary)]">
+                {section.title}
+              </span>
+            </div>
+          )}
+          {section.rows.map((row, j) => (
+            <div key={j} className="detail-row flex items-center gap-3 px-4 py-4 transition-colors duration-150">
+              <div className="flex-1">
+                <p className="text-sm text-[var(--appsheet-text-tertiary)] uppercase tracking-wider">{row.label}</p>
+                <p className="text-base font-medium mt-0.5">{row.value}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+
+    {/* Actions */}
+    {actions && actions.length > 0 && (
+      <div className="p-4 border-t border-[var(--appsheet-border-subtle)] flex gap-3">
+        {actions.map((action, i) => (
+          <button
+            key={i}
+            onClick={action.onClick}
+            className={cn(
+              'flex-1 h-12 rounded-xl text-base font-semibold transition-all',
+              action.variant === 'primary'
+                ? 'bg-[var(--appsheet-primary)] text-black hover:brightness-110'
+                : action.variant === 'danger'
+                ? 'bg-[var(--appsheet-error-subtle)] text-[var(--appsheet-error)] hover:bg-[var(--appsheet-error)] hover:text-white'
+                : 'bg-[var(--appsheet-bg-elevated)] hover:bg-[var(--appsheet-bg-hover)]'
+            )}
+          >
+            {action.label}
+          </button>
+        ))}
+      </div>
+    )}
+  </motion.div>
+);
+```
+
+### Animación
+```tsx
+transition={{
+  type: 'spring',
+  damping: 30,      // Amortiguamiento suave
+  stiffness: 350,    // Rigidez moderada
+  mass: 0.8         // Masa ligera para respuesta rápida
+}}
+```
+
+---
+
+## Action Menu (3 puntos)
+
+### Diseño
+- Botón con icono MoreVertical
+- Menú desplegable animado
+- Items con icono y label
+- Opción danger para acciones destructivas
+
+### Implementación
+```tsx
+const ActionMenu: React.FC<ActionMenuProps> = ({ actions }) => {
+  const [open, setOpen] = useState(false);
+  const [buttonRef, setButtonRef] = useState<HTMLButtonElement | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node) &&
+          buttonRef && !buttonRef.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [buttonRef]);
+
+  return (
+    <div className="relative">
+      <button
+        ref={setButtonRef}
+        onClick={() => setOpen(!open)}
+        className="p-2 rounded-full hover:bg-[var(--appsheet-bg-hover)]"
+      >
+        <MoreVertical className="w-5 h-5" />
+      </button>
+      
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            ref={menuRef}
+            initial={{ opacity: 0, scale: 0.95, y: -10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: -10 }}
+            className="absolute right-0 top-full mt-1 min-w-[180px] bg-[var(--appsheet-bg-card)] rounded-xl shadow-lg border border-[var(--appsheet-border-subtle)] overflow-hidden z-50"
+          >
+            <div className="absolute inset-0 bg-gradient-to-b from-white/[0.03] to-transparent pointer-events-none" />
+            {actions.map((action, i) => (
+              <button
+                key={i}
+                onClick={() => { action.onClick(); setOpen(false); }}
+                className={cn(
+                  'w-full flex items-center gap-3 px-4 py-3 text-base transition-colors relative',
+                  action.danger
+                    ? 'text-[var(--appsheet-error)] hover:bg-[var(--appsheet-error-subtle)]'
+                    : 'text-[var(--appsheet-text-primary)] hover:bg-[var(--appsheet-bg-hover)]'
+                )}
+              >
+                {action.icon}
+                <span>{action.label}</span>
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+```
+
+---
+
+## FAB (Floating Action Button)
+
+### Diseño
+- Posición: bottom-right
+- Color: primary
+- Icono: Plus
+- Sombra con glow sutil
+- Solo visible cuando no hay detalle abierto
+
+### Implementación
+```tsx
+const FAB: React.FC<{ onClick: () => void }> = ({ onClick }) => (
+  <motion.button
+    onClick={onClick}
+    initial={{ scale: 0, rotate: -180 }}
+    animate={{ scale: 1, rotate: 0 }}
+    whileTap={{ scale: 0.9 }}
+    className="fixed bottom-6 right-6 w-14 h-14 rounded-full 
+               bg-[var(--appsheet-primary)] text-black
+               flex items-center justify-center
+               shadow-lg hover:shadow-xl hover:brightness-110
+               transition-all z-40"
+    style={{ boxShadow: '0 4px 12px rgba(138, 180, 248, 0.4)' }}
+  >
+    <Plus className="w-6 h-6" />
+  </motion.button>
+);
+```
+
+---
+
+## Tipografías
+
+### Escala Recomendada
+| Elemento | Tamaño | Peso | Uso |
+|-----------|--------|------|-----|
+| AppBar título | text-lg | font-semibold | Títulos principales |
+| AppBar subtítulo | text-sm | normal | Metadatos secundarios |
+| Search input | text-base | normal | Inputs de texto |
+| Filter chips | text-sm | font-medium | Pills de filtro |
+| List título | text-base | font-medium | Títulos de item |
+| List subtítulo | text-sm | normal | Subtítulos de item |
+| List meta | text-sm | normal | Metadatos |
+| Detail label | text-sm | normal | Labels de detalle |
+| Detail value | text-base | font-medium | Valores de detalle |
+| Menu items | text-base | normal | Items de menú |
+| Botones | text-base | font-semibold | CTA principales |
+| Empty state título | text-base | font-medium | Mensajes de estado vacío |
+| Empty state desc | text-sm | normal | Descripciones |
+
+### Tokens
+```css
+--appsheet-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+```
+
+---
+
+## Checklist de Implementación
+
+Al replicar en un nuevo módulo:
+
+- [ ] Importar tokens CSS de `appsheet-theme.css`
+- [ ] Implementar SearchBar con tokens correctos
+- [ ] Implementar FilterChips con estados
+- [ ] Implementar ListItem con isSelected y state layers
+- [ ] Implementar ActionMenu
+- [ ] Implementar Vista Dual con Splitter
+- [ ] Implementar DetailViewPanel
+- [ ] Implementar FAB (oculto con detalle abierto)
+- [ ] Usar tipografías correctas según escala
+- [ ] Verificar transiciones CSS suaves
+- [ ] Testear redimensionamiento del splitter
+
+---
+
+## Commits Relacionados
+
+| Commit | Descripción |
+|--------|-------------|
+| `aee2e3e9` | feat: Splitter redimensionable para vista dual |
+| `57a5eeae` | Merge branch con vista dual |
+| `1901755a` | feat: Vista dual (Master-Detail) estilo AppSheet |
+| `0f909e6f` | feat: Aumentar tipografías y aclarar fondo search bar |
+| `f04e8117` | fix: Transiciones CSS nativas para state layers |
+| `36096117` | feat: State Layers MD3 en lista y detalle |
+| `c597f24c` | feat: SearchBar estilo AppSheet (centrado y discreto) |
+| `205c4c5e` | feat: Animaciones Material Design 3 |
+
+---
+
 ## Refactoring Progress (2024-06-18)
 
 ### Completado:
