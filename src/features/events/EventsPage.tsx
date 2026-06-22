@@ -84,7 +84,7 @@ const AppBar: React.FC<AppBarProps> = ({
 );
 
 // ============================================================================
-// SEARCH BAR - Barra de búsqueda Material Design
+// SEARCH BAR - Barra de búsqueda estilo AppSheet (centrado, discreto)
 // ============================================================================
 interface SearchBarProps {
   value: string;
@@ -93,23 +93,29 @@ interface SearchBarProps {
 }
 
 const SearchBar: React.FC<SearchBarProps> = ({ value, onChange, placeholder }) => (
-  <div className="px-4 pb-3">
-    <div className="relative">
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--appsheet-text-tertiary)]" />
+  <div className="px-6 pb-3">
+    <div className="relative max-w-md mx-auto">
+      {/* Icono de búsqueda */}
+      <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--appsheet-text-secondary)]" />
+      
       <input
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full h-10 pl-10 pr-10 rounded-lg bg-[var(--appsheet-bg-elevated)] border border-[var(--appsheet-border-subtle)] text-sm placeholder:text-[var(--appsheet-text-tertiary)] focus:outline-none focus:border-[var(--appsheet-primary)] transition-colors"
+        className="w-full h-11 pl-11 pr-10 rounded-full bg-[var(--appsheet-surface-tertiary)] border-none text-sm text-[var(--appsheet-text-primary)] placeholder:text-[var(--appsheet-text-secondary)] focus:outline-none focus:bg-[var(--appsheet-bg-elevated)] transition-all"
       />
+      
+      {/* Botón clear */}
       {value && (
-        <button
+        <motion.button
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
           onClick={() => onChange('')}
-          className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-[var(--appsheet-bg-hover)]"
+          className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-[var(--appsheet-bg-elevated)] hover:bg-[var(--appsheet-bg-hover)]"
         >
-          <X className="w-4 h-4 text-[var(--appsheet-text-tertiary)]" />
-        </button>
+          <X className="w-4 h-4 text-[var(--appsheet-text-secondary)]" />
+        </motion.button>
       )}
     </div>
   </div>

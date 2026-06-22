@@ -19,6 +19,9 @@
   --appsheet-bg-hover: rgba(255, 255, 255, 0.06);
   --appsheet-bg-active: rgba(255, 255, 255, 0.10);
   
+  /* Surface tertiary - Fondo discreto para search bar */
+  --appsheet-surface-tertiary: #2a2a2a;  /* Más claro que elevated, para inputs */
+  
   /* Primary - Azul característico de Google/AppSheet */
   --appsheet-primary: #8AB4F8;        /* Google Blue accent */
   --appsheet-primary-hover: #AECBFA;
