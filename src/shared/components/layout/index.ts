@@ -4,4 +4,4 @@
 
 export { CaptureLayout } from './CaptureLayout';
 export { ModuleHeader } from './ModuleHeader';
-export { DualView, Splitter, DetailPanel, Section, Row } from './DualView';
+export { DualView, DetailPanel, Section, Row } from './DualView';

@@ -524,9 +524,8 @@ export const EventsPage: React.FC = () => {
       <DualView
         selectedItem={detailEvent}
         onSelectItem={setDetailEvent}
-        initialLeftWidth={50}
-        minLeftWidth={25}
-        maxLeftWidth={75}
+        minLeftWidth={200}
+        maxLeftWidth={800}
         listPanel={
           isLoading ? (
             <div className="flex items-center justify-center py-16">

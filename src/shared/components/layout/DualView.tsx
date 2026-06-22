@@ -1,21 +1,28 @@
 /**
  * DualView - Vista Dual Reutilizable Estilo AppSheet
  * 
- * Componente robusto para crear vistas master-detail con splitter redimensionable.
- * Patrón implementado para replicar la experiencia de AppSheet.
+ * Implementación robusta basada en el patrón de VS Code, Figma, AppSheet.
+ * SIN animaciones de slide - los paneles siempre están pegados a sus bordes.
  * 
- * Características:
- * - Vista dual con splitter draggable
- * - Estados: full-list | split | full-detail
- * - Animaciones suaves con framer-motion
- * - Preservación del ancho del splitter
- * - Responsive y reutilizable
+ * Patrón de Layout:
+ * ┌────────────────┬────────────────┐
+ * │                │                │
+ * │     LISTA      │    DETALLE     │
+ * │                │                │
+ * │   (izquierda) │   (derecha)    │
+ * │                │                │
+ * └────┬──────────┴────────────────┘
+ *      │
+ *      ▼
+ * ┌────────────────┐
+ * │   SPLITTER     │
+ * │   (draggable)  │
+ * └────────────────┘
  */
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 
-// Utility function for conditional classes
+// Utility Function for conditional classes
 function cn(...classes: (string | boolean | undefined | null)[]): string {
   return classes.filter(Boolean).join(' ');
 }
@@ -31,22 +38,14 @@ interface DualViewProps {
   onSelectItem?: (item: any | null) => void;
   /** Callback al cerrar el detalle */
   onCloseDetail?: () => void;
-  /** Ancho inicial del panel izquierdo en porcentaje (default: 50) */
-  initialLeftWidth?: number;
-  /** Ancho mínimo del panel izquierdo en porcentaje (default: 25) */
+  /** Ancho mínimo del panel izquierdo en pixels (default: 200) */
   minLeftWidth?: number;
-  /** Ancho máximo del panel izquierdo en porcentaje (default: 75) */
+  /** Ancho máximo del panel izquierdo en pixels (default: 800) */
   maxLeftWidth?: number;
   /** Si el splitter está habilitado (default: true) */
   enableSplitter?: boolean;
-  /** Si debe usar animación de slide para el panel detalle (default: true) */
-  animateDetail?: boolean;
-  /** Callback cuando cambia el ancho del splitter */
-  onWidthChange?: (width: number) => void;
   /** Clase CSS adicional para el contenedor */
   className?: string;
-  /** Mostrar indicador de splitter en hover */
-  showSplitterHint?: boolean;
 }
 
 export function DualView({
@@ -55,24 +54,30 @@ export function DualView({
   selectedItem,
   onSelectItem,
   onCloseDetail,
-  initialLeftWidth = 50,
-  minLeftWidth = 25,
-  maxLeftWidth = 75,
+  minLeftWidth = 200,
+  maxLeftWidth = 800,
   enableSplitter = true,
-  animateDetail = true,
-  onWidthChange,
   className,
-  showSplitterHint = true,
 }: DualViewProps) {
-  // Estado del ancho del panel izquierdo
-  const [leftWidth, setLeftWidth] = useState(initialLeftWidth);
+  // Estado del ancho del panel izquierdo en pixels
+  const [leftWidth, setLeftWidth] = useState(minLeftWidth);
   // Estado de arrastre del splitter
   const [isDragging, setIsDragging] = useState(false);
-  // Referencia al contenedor para calcular posiciones
+  // Referencia al contenedor
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Verificar si hay un item seleccionado
   const hasDetail = !!selectedItem && !!detailPanel;
+
+  // Efecto para inicializar el ancho cuando aparece el detalle
+  useEffect(() => {
+    if (hasDetail && containerRef.current) {
+      const containerWidth = containerRef.current.offsetWidth;
+      // Inicializar en 50% del contenedor, pero dentro de los límites
+      const initialWidth = Math.min(Math.max(containerWidth * 0.5, minLeftWidth), maxLeftWidth);
+      setLeftWidth(initialWidth);
+    }
+  }, [hasDetail, minLeftWidth, maxLeftWidth]);
 
   // Manejar el cierre del detalle
   const handleClose = useCallback(() => {
@@ -84,23 +89,21 @@ export function DualView({
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (!enableSplitter) return;
     e.preventDefault();
+    e.stopPropagation();
     setIsDragging(true);
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
       if (!containerRef.current) return;
       
-      const rect = containerRef.current.getBoundingClientRect();
-      const containerWidth = rect.width;
-      const mouseX = moveEvent.clientX - rect.left;
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const mouseX = moveEvent.clientX - containerRect.left;
       
-      // Calcular nuevo ancho como porcentaje
-      let newWidth = (mouseX / containerWidth) * 100;
-      
-      // Limitar entre min y max
-      newWidth = Math.min(Math.max(newWidth, minLeftWidth), maxLeftWidth);
+      // Calcular nuevo ancho en pixels, limitado por min/max
+      let newWidth = Math.max(minLeftWidth, mouseX);
+      newWidth = Math.min(newWidth, containerRect.width - minLeftWidth);
+      newWidth = Math.min(newWidth, maxLeftWidth);
       
       setLeftWidth(newWidth);
-      onWidthChange?.(newWidth);
     };
 
     const handleMouseUp = () => {
@@ -111,183 +114,69 @@ export function DualView({
 
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
-  }, [enableSplitter, minLeftWidth, maxLeftWidth, onWidthChange]);
-
-  // Preservar el ancho cuando se cierra el detalle
-  useEffect(() => {
-    if (!hasDetail) {
-      // Cuando se cierra el detalle, mantener el último ancho
-      // para cuando se vuelva a abrir
-    }
-  }, [hasDetail]);
-
-  // Determinar el ancho de cada panel
-  const listWidth = hasDetail ? leftWidth : 100;
-  const detailWidth = hasDetail ? 100 - leftWidth : 0;
+  }, [enableSplitter, minLeftWidth, maxLeftWidth]);
 
   return (
     <div 
       ref={containerRef}
       className={cn(
         'dual-view h-full w-full flex overflow-hidden',
-        isDragging && 'select-none',
+        isDragging && 'select-none cursor-col-resize',
         className
       )}
     >
       {/* Panel Izquierdo - Lista */}
-      <motion.div
-        animate={{ width: `${listWidth}%` }}
-        transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+      {/* SIEMPRE ocupa el espacio disponible hasta leftWidth */}
+      <div
+        style={{ 
+          width: hasDetail ? leftWidth : '100%',
+          flexShrink: 0,
+          minWidth: hasDetail ? leftWidth : undefined,
+          maxWidth: hasDetail ? leftWidth : '100%'
+        }}
         className={cn(
-          'dual-view-list h-full overflow-hidden',
+          'dual-view-list h-full overflow-hidden bg-[var(--appsheet-bg-base)]',
           hasDetail && 'border-r border-[var(--appsheet-border-subtle)]'
         )}
       >
         {listPanel}
-      </motion.div>
+      </div>
 
-      {/* Splitter */}
-      <AnimatePresence>
-        {hasDetail && enableSplitter && (
-          <motion.div
-            initial={{ opacity: 0, scaleY: 0 }}
-            animate={{ opacity: 1, scaleY: 1 }}
-            exit={{ opacity: 0, scaleY: 0 }}
-            transition={{ duration: 0.15 }}
-            onMouseDown={handleMouseDown}
+      {/* Splitter - Solo visible cuando hay detalle */}
+      {hasDetail && enableSplitter && (
+        <div
+          onMouseDown={handleMouseDown}
+          className={cn(
+            'dual-view-splitter group relative flex-shrink-0 w-1 cursor-col-resize',
+            'flex items-center justify-center',
+            'hover:bg-[var(--appsheet-primary)]',
+            isDragging && 'bg-[var(--appsheet-primary)]'
+          )}
+          style={{ height: '100%' }}
+        >
+          {/* Indicador visual - solo visible en hover/drag */}
+          <div
             className={cn(
-              'dual-view-splitter group relative flex-shrink-0 w-2 cursor-col-resize',
-              'flex items-center justify-center',
-              'hover:bg-[var(--appsheet-border-default)]',
-              isDragging && 'bg-[var(--appsheet-primary)]'
+              'absolute inset-y-0 w-0.5 rounded-full transition-opacity duration-150',
+              'opacity-0 group-hover:opacity-100',
+              isDragging ? 'opacity-100 bg-white' : 'opacity-100 bg-[var(--appsheet-text-tertiary)]'
             )}
-            style={{ height: '100%' }}
-          >
-            {/* Indicador visual del splitter */}
-            {showSplitterHint && (
-              <div
-                className={cn(
-                  'absolute inset-y-0 w-1 rounded-full transition-all duration-150',
-                  'opacity-0 group-hover:opacity-100',
-                  isDragging ? 'opacity-100 bg-[var(--appsheet-primary)]' : 'bg-[var(--appsheet-text-tertiary)]'
-                )}
-              />
-            )}
-            
-            {/* Indicador de drag activo */}
-            {isDragging && (
-              <div className="absolute inset-0 bg-[var(--appsheet-primary)] opacity-50" />
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
+          />
+        </div>
+      )}
 
       {/* Panel Derecho - Detalle */}
-      <AnimatePresence>
-        {hasDetail && detailPanel && (
-          <motion.div
-            initial={animateDetail ? { x: '100%', width: `${detailWidth}%` } : { width: `${detailWidth}%` }}
-            animate={{ width: `${detailWidth}%`, x: 0 }}
-            exit={animateDetail ? { x: '100%' } : { x: 0 }}
-            transition={{ 
-              type: animateDetail ? 'spring' : 'tween',
-              damping: animateDetail ? 30 : 0,
-              stiffness: animateDetail ? 350 : 0,
-              mass: animateDetail ? 0.8 : 0,
-              duration: animateDetail ? undefined : 0.2
-            }}
-            className={cn(
-              'dual-view-detail h-full overflow-hidden flex-shrink-0',
-              'bg-[var(--appsheet-bg-surface)]'
-            )}
-          >
-            {detailPanel}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-// ============================================================================
-// SPLITTER SEPARADO - Por si se necesita usar independientemente
-// ============================================================================
-
-interface SplitterProps {
-  /** Callback cuando cambia el ancho */
-  onResize: (width: number) => void;
-  /** Ancho actual del panel izquierdo en porcentaje */
-  currentWidth: number;
-  /** Ancho mínimo del panel izquierdo en porcentaje (default: 25) */
-  minWidth?: number;
-  /** Ancho máximo del panel izquierdo en porcentaje (default: 75) */
-  maxWidth?: number;
-  /** Mostrar indicador de splitter en hover (default: true) */
-  showHint?: boolean;
-  /** Altura del splitter (default: 100%) */
-  height?: string;
-}
-
-export function Splitter({
-  onResize,
-  currentWidth,
-  minWidth = 25,
-  maxWidth = 75,
-  showHint = true,
-  height = '100%',
-}: SplitterProps) {
-  const [isDragging, setIsDragging] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      if (!containerRef.current) return;
-      
-      const parent = containerRef.current.parentElement;
-      if (!parent) return;
-      
-      const rect = parent.getBoundingClientRect();
-      const mouseX = moveEvent.clientX - rect.left;
-      let newWidth = (mouseX / rect.width) * 100;
-      newWidth = Math.min(Math.max(newWidth, minWidth), maxWidth);
-      
-      onResize(newWidth);
-    };
-
-    const handleMouseUp = () => {
-      setIsDragging(false);
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  }, [onResize, minWidth, maxWidth]);
-
-  return (
-    <div
-      ref={containerRef}
-      onMouseDown={handleMouseDown}
-      style={{ height }}
-      className={cn(
-        'splitter relative flex-shrink-0 w-2 cursor-col-resize',
-        'flex items-center justify-center',
-        'hover:bg-[var(--appsheet-border-default)]',
-        isDragging && 'bg-[var(--appsheet-primary)]'
-      )}
-    >
-      {showHint && (
-        <div
-          className={cn(
-            'absolute inset-y-0 w-1 rounded-full transition-all duration-150',
-            'opacity-0 group-hover:opacity-100',
-            isDragging ? 'opacity-100 bg-[var(--appsheet-primary)]' : 'bg-[var(--appsheet-text-tertiary)]'
-          )}
-        />
-      )}
+      {/* SIEMPRE está pegado al borde derecho */}
+      {/* Crece para ocupar todo el espacio restante */}
+      <div
+        style={{
+          flex: 1,
+          minWidth: 0
+        }}
+        className="dual-view-detail h-full flex-shrink-0 bg-[var(--appsheet-bg-surface)]"
+      >
+        {hasDetail && detailPanel}
+      </div>
     </div>
   );
 }
@@ -388,7 +277,7 @@ export function DetailPanel({
                 'flex-1 h-12 rounded-xl text-base font-semibold transition-all',
                 action.variant === 'primary' && 'bg-[var(--appsheet-primary)] text-black hover:brightness-110',
                 action.variant === 'danger' && 'bg-[var(--appsheet-error-subtle)] text-[var(--appsheet-error)] hover:bg-[var(--appsheet-error)] hover:text-white',
-                action.variant === 'default' || !action.variant && 'bg-[var(--appsheet-bg-elevated)] hover:bg-[var(--appsheet-bg-hover)]'
+                (action.variant === 'default' || !action.variant) && 'bg-[var(--appsheet-bg-elevated)] hover:bg-[var(--appsheet-bg-hover)]'
               )}
             >
               {action.label}
