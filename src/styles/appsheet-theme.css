@@ -261,6 +261,26 @@
   background: #ef4444;
 }
 
+/* Success Button */
+.appsheet-btn--success {
+  background: var(--appsheet-success);
+  color: var(--appsheet-bg-base);
+}
+
+.appsheet-btn--success:hover:not(:disabled) {
+  background: #4ade80;
+}
+
+/* Warning Button */
+.appsheet-btn--warning {
+  background: var(--appsheet-warning);
+  color: var(--appsheet-bg-base);
+}
+
+.appsheet-btn--warning:hover:not(:disabled) {
+  background: #fcd34d;
+}
+
 /* Button Sizes */
 .appsheet-btn--sm {
   padding: var(--appsheet-space-1) var(--appsheet-space-3);
@@ -562,4 +582,301 @@
 .appsheet-focus-ring:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--appsheet-bg-base), 0 0 0 4px var(--appsheet-accent-primary);
+}
+
+/* ========================
+   TYPOGRAPHY UTILITIES
+   ======================== */
+.appsheet-label {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--appsheet-text-secondary);
+  margin-bottom: 0.25rem;
+}
+
+.appsheet-hint {
+  font-size: 0.75rem;
+  color: var(--appsheet-text-tertiary);
+  margin-top: 0.25rem;
+}
+
+.appsheet-hint--error {
+  font-size: 0.75rem;
+  color: var(--appsheet-error);
+  margin-top: 0.25rem;
+}
+
+/* ========================
+   TEXTAREA
+   ======================== */
+.appsheet-textarea {
+  min-height: 100px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+/* ========================
+   SELECT
+   ======================== */
+.appsheet-select {
+  appearance: none;
+  cursor: pointer;
+  padding-right: 2.5rem;
+}
+
+/* ========================
+   SKELETON VARIANTS
+   ======================== */
+.appsheet-skeleton--text {
+  border-radius: 4px;
+  height: 1em;
+}
+
+.appsheet-skeleton--circular {
+  border-radius: 9999px;
+}
+
+.appsheet-skeleton--rectangular {
+  border-radius: var(--appsheet-radius-md);
+}
+
+/* ========================
+   LIST INTERACTIVE
+   ======================== */
+.appsheet-list--interactive .appsheet-list-item {
+  cursor: pointer;
+}
+
+.appsheet-list-item--selected {
+  background: var(--appsheet-accent-subtle) !important;
+}
+
+.appsheet-list-item--selected:hover {
+  background: var(--appsheet-accent-subtle) !important;
+}
+
+/* ========================
+   SWITCH / TOGGLE
+   ======================== */
+.appsheet-switch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  background: var(--appsheet-bg-card);
+  border: 1px solid var(--appsheet-border-default);
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all var(--appsheet-transition-normal);
+}
+
+.appsheet-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  background: white;
+  border-radius: 9999px;
+  transition: transform var(--appsheet-transition-normal);
+}
+
+.appsheet-switch--checked {
+  background: var(--appsheet-accent-primary);
+  border-color: var(--appsheet-accent-primary);
+}
+
+.appsheet-switch--checked::after {
+  transform: translateX(20px);
+}
+
+/* ========================
+   CHECKBOX
+   ======================== */
+.appsheet-checkbox {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--appsheet-border-default);
+  border-radius: 4px;
+  cursor: pointer;
+  appearance: none;
+  background: transparent;
+  transition: all var(--appsheet-transition-fast);
+}
+
+.appsheet-checkbox:checked {
+  background: var(--appsheet-accent-primary);
+  border-color: var(--appsheet-accent-primary);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white' stroke-width='3'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M5 13l4 4L19 7'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* ========================
+   PROGRESS
+   ======================== */
+.appsheet-progress {
+  width: 100%;
+  height: 8px;
+  background: var(--appsheet-bg-elevated);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.appsheet-progress-bar {
+  height: 100%;
+  background: var(--appsheet-accent-primary);
+  border-radius: 9999px;
+  transition: width var(--appsheet-transition-slow);
+}
+
+/* ========================
+   AVATAR
+   ======================== */
+.appsheet-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: var(--appsheet-accent-subtle);
+  color: var(--appsheet-accent-primary);
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.appsheet-avatar--sm {
+  width: 32px;
+  height: 32px;
+  font-size: 0.75rem;
+}
+
+.appsheet-avatar--md {
+  width: 40px;
+  height: 40px;
+}
+
+.appsheet-avatar--lg {
+  width: 56px;
+  height: 56px;
+  font-size: 1.25rem;
+}
+
+/* ========================
+   TOOLTIP
+   ======================== */
+.appsheet-tooltip {
+  position: relative;
+}
+
+.appsheet-tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 12px;
+  background: var(--appsheet-bg-card);
+  color: var(--appsheet-text-primary);
+  font-size: 0.75rem;
+  border-radius: var(--appsheet-radius-md);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--appsheet-transition-fast);
+  box-shadow: var(--appsheet-shadow-md);
+  z-index: 100;
+}
+
+.appsheet-tooltip:hover::after {
+  opacity: 1;
+}
+
+/* ========================
+   EMPTY STATE
+   ======================== */
+.appsheet-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--appsheet-space-8);
+  text-align: center;
+}
+
+.appsheet-empty-icon {
+  width: 64px;
+  height: 64px;
+  margin-bottom: var(--appsheet-space-4);
+  color: var(--appsheet-text-disabled);
+}
+
+.appsheet-empty-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--appsheet-text-secondary);
+  margin-bottom: var(--appsheet-space-2);
+}
+
+.appsheet-empty-description {
+  font-size: 0.875rem;
+  color: var(--appsheet-text-tertiary);
+  max-width: 300px;
+}
+
+/* ========================
+   NAVIGATION
+   ======================== */
+.appsheet-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--appsheet-space-3);
+  padding: var(--appsheet-space-3) var(--appsheet-space-4);
+  color: var(--appsheet-text-secondary);
+  border-radius: var(--appsheet-radius-md);
+  transition: all var(--appsheet-transition-fast);
+}
+
+.appsheet-nav-item:hover {
+  background: var(--appsheet-bg-hover);
+  color: var(--appsheet-text-primary);
+}
+
+.appsheet-nav-item--active {
+  background: var(--appsheet-accent-subtle);
+  color: var(--appsheet-accent-primary);
+}
+
+/* ========================
+   ALERT / BANNER
+   ======================== */
+.appsheet-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--appsheet-space-3);
+  padding: var(--appsheet-space-4);
+  border-radius: var(--appsheet-radius-lg);
+  font-size: 0.875rem;
+}
+
+.appsheet-alert--info {
+  background: var(--appsheet-info-subtle);
+  color: var(--appsheet-info);
+}
+
+.appsheet-alert--success {
+  background: var(--appsheet-success-subtle);
+  color: var(--appsheet-success);
+}
+
+.appsheet-alert--warning {
+  background: var(--appsheet-warning-subtle);
+  color: var(--appsheet-warning);
+}
+
+.appsheet-alert--error {
+  background: var(--appsheet-error-subtle);
+  color: var(--appsheet-error);
 }
