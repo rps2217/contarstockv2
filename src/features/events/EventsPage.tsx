@@ -15,7 +15,8 @@ import {
   Truck,
   Search,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Plus
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -23,6 +24,7 @@ import { format } from 'date-fns';
 import { useEvents, EventRecord } from './hooks/useEvents';
 import { ModuleHeader } from '@/shared/components/layout/ModuleHeader';
 import { EventDetailModal } from './components/EventDetailModal';
+import { CreateEventModal } from './components/CreateEventModal';
 
 // ============================================================================
 // COMPONENTE: EventItemCard
@@ -229,6 +231,7 @@ export const EventsPage: React.FC = () => {
     isSyncing,
     selectedIds,
     isDetailModalOpen,
+    isCreateModalOpen,
     selectedEvent,
     actions
   } = useEvents();
@@ -284,6 +287,14 @@ export const EventsPage: React.FC = () => {
         hideBackButtonOnMobile={true}
         actions={
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => actions.setIsCreateModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider transition-colors"
+              title="Nuevo Evento"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Nuevo</span>
+            </button>
             <button
               onClick={() => actions.syncEvents()}
               disabled={isSyncing}
@@ -422,6 +433,28 @@ export const EventsPage: React.FC = () => {
         event={selectedEvent}
         isOpen={isDetailModalOpen}
         onClose={() => actions.setIsDetailModalOpen(false)}
+      />
+
+      {/* Create Event Modal */}
+      <CreateEventModal
+        isOpen={isCreateModalOpen}
+        onClose={() => actions.setIsCreateModalOpen(false)}
+        onSubmit={async (data) => {
+          for (const item of data) {
+            await actions.createEvent({
+              barcode: item.barcode,
+              productName: item.productName,
+              destino: item.destino,
+              traspaso: item.traspaso,
+              observaciones: item.observaciones,
+              frc: item.frc,
+              isAdjusted: false,
+              timestamp: Date.now()
+            });
+          }
+          actions.setIsCreateModalOpen(false);
+        }}
+        theme={theme}
       />
     </div>
   );

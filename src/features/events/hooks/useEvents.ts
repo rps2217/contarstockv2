@@ -41,6 +41,7 @@ interface UseEventsReturn {
   isSyncing: boolean;
   selectedIds: Set<string>;
   isDetailModalOpen: boolean;
+  isCreateModalOpen: boolean;
   selectedEvent: EventRecord | null;
   actions: {
     setSearchQuery: (query: string) => void;
@@ -55,6 +56,7 @@ interface UseEventsReturn {
     createEvent: (data: Omit<EventRecord, 'id'>) => Promise<void>;
     syncEvents: () => Promise<void>;
     setIsDetailModalOpen: (open: boolean) => void;
+    setIsCreateModalOpen: (open: boolean) => void;
     setSelectedEvent: (event: EventRecord | null) => void;
   };
 }
@@ -68,6 +70,7 @@ export const useEvents = (): UseEventsReturn => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<EventRecord | null>(null);
 
   const [filters, setFilters] = useState<EventFilters>({
@@ -279,6 +282,7 @@ export const useEvents = (): UseEventsReturn => {
     isSyncing,
     selectedIds,
     isDetailModalOpen,
+    isCreateModalOpen,
     selectedEvent,
     actions: {
       setSearchQuery,
@@ -293,6 +297,7 @@ export const useEvents = (): UseEventsReturn => {
       createEvent,
       syncEvents,
       setIsDetailModalOpen,
+      setIsCreateModalOpen,
       setSelectedEvent
     }
   };
