@@ -18,7 +18,7 @@ interface StartSessionModalProps {
 }
 
 type Mode = 'select' | 'guided' | 'blind' | 'test';
-type Step = 'select' | 'scan_label' | 'take_photo' | 'enter_erp' | 'select_order' | 'confirm';
+type Step = 'select' | 'scan_label' | 'take_photo' | 'enter_erp' | 'select_order' | 'confirm' | 'select_test_order';
 
 export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, onClose, onSessionStart }) => {
   const navigate = useNavigate();
@@ -125,9 +125,14 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
   };
 
   const handleStart = async () => {
-    if (!labelId.trim()) { 
+    // Validaciones por modo
+    if (mode !== 'test' && !labelId.trim()) { 
       setError('Ingrese ID de Bulto'); 
       return; 
+    }
+    if (mode === 'test' && !cloudOrder) {
+      setError('Seleccione una carga teórica');
+      return;
     }
     if (mode === 'guided' && !erpOrder.trim()) {
       setError('Ingrese ERP para modo manual');
@@ -135,14 +140,17 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
     }
 
     try {
-      const erpLabel = mode === 'blind' ? 'CONTEO_CIEGO' : erpOrder;
+      // Modo test usa el ID de la carga guardada
+      const erpLabel = mode === 'blind' ? 'CONTEO_CIEGO' : mode === 'test' ? cloudOrder?.id || 'TEST' : erpOrder;
+      // Para modo test, generamos un label temporal basado en la fecha
+      const testLabel = mode === 'test' ? `TEST_${Date.now()}` : labelId;
 
       const session = await sessionService.createSession(
         erpLabel, 
-        labelId, 
+        testLabel, 
         'standard', 
         cloudOrder || undefined,
-        labelPhoto || undefined,
+        undefined, // Sin foto para modo test
         isAutoLockEnabled
       );
       onSessionStart(session);
@@ -198,7 +206,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
       </button>
 
       <button 
-        onClick={() => { setMode('test'); setStep('scan_label'); setError(''); }}
+        onClick={() => { setMode('test'); setStep('select_test_order'); setError(''); }}
         className="w-full bg-purple-600/10 border-2 border-purple-500/30 p-4 rounded-2xl flex items-center gap-4 active:scale-95 transition-all text-left group hover:bg-purple-600/20"
       >
         <div className="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center shrink-0">
@@ -206,7 +214,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
         </div>
         <div className="flex-1">
           <h4 className="text-sm font-black text-white uppercase tracking-wider">Modo Prueba</h4>
-          <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">Seleccionar carga teórica guardada</p>
+          <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">Solo con documento teórico local</p>
         </div>
         <ArrowRight className="w-5 h-5 text-purple-500 opacity-50 group-hover:opacity-100 transition-opacity" />
       </button>
@@ -214,6 +222,31 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
   );
 
   const renderWizard = () => {
+    // Determinar los pasos según el modo
+    const getSteps = () => {
+      if (mode === 'blind') return ['scan_label', 'take_photo', 'confirm'];
+      if (mode === 'test') return ['select_test_order', 'confirm'];
+      if (mode === 'guided') return ['scan_label', 'take_photo', 'enter_erp', 'confirm'];
+      return ['scan_label', 'take_photo', 'confirm'];
+    };
+    
+    const getModeTitle = () => {
+      if (mode === 'guided') return 'Con Orden ERP';
+      if (mode === 'test') return 'Modo Prueba';
+      return 'Conteo Ciego';
+    };
+    
+    const getModeColor = () => {
+      if (mode === 'guided') return 'blue';
+      if (mode === 'test') return 'purple';
+      if (mode === 'blind') return 'orange';
+      return 'blue';
+    };
+    
+    const steps = getSteps();
+    const currentStepIdx = steps.indexOf(step);
+    const modeColor = getModeColor();
+    
     return (
       <div className="space-y-6 md:space-y-8">
         <div className="flex items-center gap-4 mb-2">
@@ -225,21 +258,22 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
           </button>
           <div className="flex-1 min-w-0">
             <h3 className="text-lg md:text-xl font-black uppercase italic tracking-tight text-white truncate">
-              {mode === 'guided' ? 'Con Orden ERP' : mode === 'test' ? 'Modo Prueba' : 'Conteo Ciego'}
+              {getModeTitle()}
             </h3>
             <div className="flex gap-1.5 mt-1.5">
-              {[1, 2, 3, 4].map((s) => {
-                const currentStepIdx = ['scan_label', 'take_photo', 'enter_erp', 'confirm'].indexOf(step) + 1;
-                const isCompleted = ['scan_label', 'take_photo', 'enter_erp', 'confirm'].indexOf(step) + 1 > s;
-                const isActive = ['scan_label', 'take_photo', 'enter_erp', 'confirm'].indexOf(step) + 1 === s;
+              {steps.map((s, idx) => {
+                const isCompleted = currentStepIdx > idx;
+                const isActive = currentStepIdx === idx;
+                const activeColor = modeColor === 'purple' ? 'bg-purple-500' : modeColor === 'orange' ? 'bg-orange-500' : 'bg-blue-500';
                 
-                // Skip step 3 for blind mode
-                if (mode === 'blind' && s === 3) return null;
-
                 return (
                   <div 
                     key={s} 
-                    className={`h-1.5 rounded-full transition-all duration-500 ${isCompleted ? 'bg-emerald-500 w-6' : isActive ? 'bg-blue-500 w-10' : 'bg-white/10 w-4'}`} 
+                    className={`h-1.5 rounded-full transition-all duration-500 ${
+                      isCompleted ? 'bg-emerald-500 w-6' : 
+                      isActive ? `${activeColor} w-10` : 
+                      'bg-white/10 w-4'
+                    }`} 
                   />
                 );
               })}
@@ -431,13 +465,15 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
         )}
 
         {/* STEP 3B: SELECT SAVED ORDER (Modo Prueba) */}
-        {step === 'select_order' && (
+        {(step === 'select_order' || step === 'select_test_order') && (
           <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
             <div className="text-center py-4">
               <div className="w-20 h-20 bg-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-purple-500/30">
                 <Database className="w-10 h-10 text-purple-400" />
               </div>
-              <h4 className="text-white font-black uppercase tracking-wider">Paso 3: Carga Teórica</h4>
+              <h4 className="text-white font-black uppercase tracking-wider">
+                {step === 'select_test_order' ? 'Seleccionar Documento Teórico' : 'Paso 3: Carga Teórica'}
+              </h4>
               <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Selecciona una carga guardada localmente</p>
             </div>
 
@@ -488,7 +524,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
             )}
 
             <button 
-              onClick={() => setStep('take_photo')}
+              onClick={() => setStep(step === 'select_test_order' ? 'select' : 'take_photo')}
               className="w-full h-10 text-slate-500 font-black uppercase text-[10px] tracking-widest"
             >
               Atrás
@@ -566,7 +602,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
             <button 
               onClick={() => {
                 if (mode === 'guided') setStep('enter_erp');
-                else if (mode === 'test') setStep('select_order');
+                else if (mode === 'test') setStep('select_test_order');
                 else setStep('take_photo');
               }}
               className="w-full h-10 text-slate-500 font-black uppercase text-[10px] tracking-widest"
