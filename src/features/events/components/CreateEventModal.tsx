@@ -2,19 +2,15 @@
  * CreateEventModal - Modal para crear/editar eventos
  * 
  * Arquitectura Lego: Delega toda la lógica al hook useEventForm
- * y rendering a componentes especializados.
- * 
- * Antes: ~600 líneas
- * Después: ~300 líneas
  */
 
 import React, { useState } from 'react';
-import { X, Loader2 } from 'lucide-react';
+import { X, Loader2, Plus, Package, AlertTriangle, FileText, Truck, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useEventForm } from '../hooks/useEventForm';
-import { EventFormHeader } from './EventFormHeader';
-import { EventMainFields } from './EventMainFields';
 import { ProductSearchInput } from './ProductSearchInput';
+import { ItemList } from '@/shared/components/ui/ItemList';
+import { FormField } from '@/shared/components/ui/FormField';
 
 interface EventFormData {
   barcode: string;
@@ -44,7 +40,7 @@ export const CreateEventModal: React.FC<Props> = ({
   theme, 
   editingItem 
 }) => {
-  const [showAdditional, setShowAdditional] = useState(false);
+  const isDark = theme === 'dark';
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const {
@@ -89,6 +85,23 @@ export const CreateEventModal: React.FC<Props> = ({
     }
   };
 
+  // Tipos de evento disponibles
+  const EVENT_TYPES = [
+    { value: 'CANJE', label: 'Canje', icon: '🔄', color: 'blue' },
+    { value: 'MERMA', label: 'Merma', icon: '📉', color: 'rose' },
+    { value: 'DIF. PED.', label: 'Dif. Pedido', icon: '⚠️', color: 'amber' },
+    { value: 'AJUSTE', label: 'Ajuste', icon: '📊', color: 'emerald' },
+    { value: 'DEVOLUCION', label: 'Devolución', icon: '↩️', color: 'blue' },
+    { value: 'TRASPASO', label: 'Traspaso', icon: '🚚', color: 'amber' },
+  ];
+
+  // Opciones de destino
+  const DESTINOS = [
+    'BOD. 37', 'BOD. 80', 'BOD. 95', 'BOD. 98', 'BOD. 106', 'BOD. 121'
+  ];
+
+  const isValid = (product || items.length > 0) && frc && nguia;
+
   if (!isOpen) return null;
 
   return (
@@ -106,263 +119,224 @@ export const CreateEventModal: React.FC<Props> = ({
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className={`relative w-full max-w-4xl rounded-[2.5rem] shadow-2xl overflow-hidden border-4 border-black flex flex-col ${
-            theme === 'dark' ? 'bg-slate-900' : 'bg-white'
+          className={`relative w-full max-w-3xl rounded-[2rem] shadow-2xl overflow-hidden border-4 ${
+            isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
           }`}
+          style={{ maxHeight: '90vh' }}
         >
           {/* HEADER */}
-          <EventFormHeader 
-            isEditing={!!editingItem} 
-            onClose={onClose} 
-            theme={theme} 
-          />
+          <div className={`p-6 border-b-4 ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                  isDark ? 'bg-blue-500/20' : 'bg-blue-100'
+                }`}>
+                  <Plus className={`w-6 h-6 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
+                </div>
+                <div>
+                  <h2 className={`text-lg font-black uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                    {editingItem ? 'Editar Evento' : 'Nuevo Evento'}
+                  </h2>
+                  <p className={`text-[10px] font-bold uppercase tracking-widest ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                    registrar producto(s) con evento
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={onClose}
+                className={`p-3 rounded-xl transition-colors ${isDark ? 'hover:bg-white/10' : 'hover:bg-slate-100'}`}
+              >
+                <X className={`w-5 h-5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`} />
+              </button>
+            </div>
+          </div>
 
           {/* CONTENT */}
-          <div className="flex flex-col md:flex-row overflow-hidden min-h-[500px] max-h-[85vh]">
-            {/* LEFT PANEL - MAIN INFO */}
-            <div className={`flex-1 overflow-y-auto no-scrollbar p-6 md:p-8 ${showAdditional ? 'md:border-r-4 border-black' : ''}`}>
-              <div className="space-y-6">
-                {/* SHARED HEADER INFO */}
-                <EventMainFields
-                  frc={frc}
-                  onFrcChange={setFrc}
-                  nguia={nguia}
-                  onNguiaChange={setNguia}
-                  eventType={eventType}
-                  onEventTypeChange={setEventType}
+          <div className={`overflow-y-auto p-6 space-y-6`} style={{ maxHeight: 'calc(90vh - 200px)' }}>
+            
+            {/* DOCUMENT INFO */}
+            <div className={`p-4 rounded-2xl border ${isDark ? 'bg-slate-800/50 border-white/5' : 'bg-slate-50 border-slate-200'}`}>
+              <div className="flex items-center gap-2 mb-4">
+                <FileText className={`w-4 h-4 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
+                <h3 className={`text-[11px] font-black uppercase tracking-widest ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  Información del Documento
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  label="FRC"
+                  placeholder="Ej. FRC-12345"
+                  value={frc}
+                  onChange={setFrc}
+                  icon={<span className="text-sm">📋</span>}
+                  uppercase
                   theme={theme}
                 />
-
-                {/* ITEM BUILDER / SKU INPUT */}
-                <ProductSearchInput
-                  sku={sku}
-                  onSkuChange={setSku}
-                  product={product}
-                  isSearching={isSearching}
-                  quantity={quantity}
-                  onQuantityChange={setQuantity}
-                  onAdd={addItem}
+                <FormField
+                  label="N° Documento"
+                  placeholder="Ej. 001-23456"
+                  value={nguia}
+                  onChange={setNguia}
+                  icon={<span className="text-sm">🔢</span>}
+                  uppercase
                   theme={theme}
-                  isEditing={!!editingItem}
                 />
-
-                {/* ITEMS LIST */}
-                {items.length > 0 && (
-                  <ItemsList 
-                    items={items} 
-                    onRemove={removeItem} 
-                    theme={theme}
-                    isEditing={!!editingItem}
-                  />
-                )}
+                <FormField
+                  label="Tipo de Evento"
+                  value={eventType}
+                  onChange={setEventType}
+                  icon={<AlertTriangle className={`w-4 h-4 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} />}
+                  options={EVENT_TYPES.map(e => ({ value: e.value, label: `${e.icon} ${e.label}` }))}
+                  theme={theme}
+                />
               </div>
             </div>
 
-            {/* DESKTOP RIGHT PANEL - ADDITIONAL INFO */}
-            <AnimatePresence>
-              {showAdditional && (
-                <motion.div
-                  initial={{ width: 0, opacity: 0 }}
-                  animate={{ width: 384, opacity: 1 }}
-                  exit={{ width: 0, opacity: 0 }}
-                  className="hidden md:flex flex-col bg-black/5 overflow-y-auto no-scrollbar shrink-0"
-                >
-                  <AdditionalFieldsPanel
-                    destino={destino}
-                    onDestinoChange={setDestino}
-                    traspaso={traspaso}
-                    onTraspasoChange={setTraspaso}
-                    observaciones={observaciones}
-                    onObservacionesChange={setObservaciones}
-                    onClose={() => setShowAdditional(false)}
+            {/* PRODUCTO */}
+            <div className={`p-4 rounded-2xl border ${isDark ? 'bg-slate-800/50 border-white/5' : 'bg-slate-50 border-slate-200'}`}>
+              <div className="flex items-center gap-2 mb-4">
+                <Package className={`w-4 h-4 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
+                <h3 className={`text-[11px] font-black uppercase tracking-widest ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  Agregar Producto
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="md:col-span-2">
+                  <ProductSearchInput
+                    sku={sku}
+                    onSkuChange={setSku}
+                    product={product}
+                    isSearching={isSearching}
+                    quantity={quantity}
+                    onQuantityChange={setQuantity}
+                    onAdd={addItem}
                     theme={theme}
+                    isEditing={!!editingItem}
                   />
-                </motion.div>
-              )}
-            </AnimatePresence>
+                </div>
+                <div className="flex items-end">
+                  <button
+                    type="button"
+                    onClick={addItem}
+                    disabled={!product || quantity === 0}
+                    className={`w-full py-4 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center justify-center gap-2 ${
+                      !product || quantity === 0
+                        ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                        : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                    }`}
+                  >
+                    <Plus className="w-4 h-4" />
+                    Agregar
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* LISTA DE PRODUCTOS */}
+            {items.length > 0 && (
+              <div className={`p-4 rounded-2xl border ${isDark ? 'bg-slate-800/30 border-white/5' : 'bg-white border-slate-200'}`}>
+                <ItemList
+                  items={items.map(i => ({
+                    barcode: i.barcode,
+                    productName: i.productName,
+                    quantity: i.quantity,
+                    providerName: i.providerName,
+                  }))}
+                  onRemove={removeItem}
+                  editable={false}
+                  removable={!editingItem}
+                  showTotals
+                  theme={theme}
+                  title="Productos en este Evento"
+                />
+              </div>
+            )}
+
+            {/* DESTINO Y TRASPASO */}
+            <div className={`p-4 rounded-2xl border ${isDark ? 'bg-slate-800/50 border-white/5' : 'bg-slate-50 border-slate-200'}`}>
+              <div className="flex items-center gap-2 mb-4">
+                <Truck className={`w-4 h-4 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} />
+                <h3 className={`text-[11px] font-black uppercase tracking-widest ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  Destino y Traspaso
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  label="Destino"
+                  value={destino}
+                  onChange={setDestino}
+                  icon={<span className="text-sm">🏭</span>}
+                  options={DESTINOS.map(d => ({ value: d, label: d }))}
+                  theme={theme}
+                />
+                <FormField
+                  label="N° Traspaso"
+                  placeholder="Ej. TRASP-789"
+                  value={traspaso}
+                  onChange={setTraspaso}
+                  icon={<span className="text-sm">🚚</span>}
+                  uppercase
+                  theme={theme}
+                />
+              </div>
+            </div>
+
+            {/* OBSERVACIONES */}
+            <div className={`p-4 rounded-2xl border ${isDark ? 'bg-slate-800/50 border-white/5' : 'bg-slate-50 border-slate-200'}`}>
+              <FormField
+                label="Observaciones"
+                placeholder="Ej. Producto en mal estado por humedad..."
+                value={observaciones}
+                onChange={setObservaciones}
+                icon={<FileText className={`w-4 h-4 ${isDark ? 'text-slate-400' : 'text-slate-500'}`} />}
+                type="textarea"
+                rows={3}
+                theme={theme}
+              />
+            </div>
           </div>
 
           {/* FOOTER */}
-          <div className={`p-6 border-t-4 border-black flex flex-col-reverse md:flex-row items-center justify-between gap-4 shrink-0 ${theme === 'dark' ? 'bg-slate-900' : 'bg-slate-50'}`}>
-            <button
-              type="button"
-              onClick={() => setShowAdditional(!showAdditional)}
-              className={`w-full md:w-auto text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 px-4 py-4 md:py-3 rounded-xl transition-colors ${
-                theme === 'dark' ? 'hover:bg-white/5 text-slate-400' : 'hover:bg-slate-200 text-slate-500'
-              }`}
-            >
-              {showAdditional ? 'Ocultar detalles adicionales' : 'Mostrar detalles adicionales'}
-            </button>
-
-            <button
-              onClick={handleSubmit}
-              disabled={isSubmitting || (!product && items.length === 0) || !frc || !nguia}
-              className={`w-full md:w-auto px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 transition-all shadow-xl active:scale-95 ${
-                isSubmitting || (!product && items.length === 0) || !frc || !nguia
-                  ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20'
-              }`}
-            >
-              {isSubmitting ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <>
-                  {editingItem ? '💾' : '+'}
-                  {editingItem ? 'Guardar Cambios' : `Registrar ${items.length + (product ? 1 : 0)} Productos`}
-                </>
-              )}
-            </button>
+          <div className={`p-6 border-t-4 ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className={`flex-1 py-4 rounded-xl font-black uppercase tracking-wider text-xs transition-colors ${
+                  isDark 
+                    ? 'bg-white/5 hover:bg-white/10 text-slate-400' 
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                }`}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={isSubmitting || !isValid}
+                className={`flex-[2] py-4 rounded-xl font-black uppercase tracking-wider text-xs transition-all flex items-center justify-center gap-2 ${
+                  isSubmitting || !isValid
+                    ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
+              >
+                {isSubmitting ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <>
+                    {editingItem ? '💾' : '+'}
+                    {editingItem ? 'Guardar Cambios' : (
+                      <>
+                        <span>Registrar {items.length + (product ? 1 : 0)} Producto(s)</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </motion.div>
       </div>
     </AnimatePresence>
   );
 };
-
-// ─────────────────────────────────────────────────────────────
-// SUB-COMPONENTS
-// ─────────────────────────────────────────────────────────────
-
-interface ItemsListProps {
-  items: Array<{ barcode: string; productName: string; providerName?: string; quantity: number }>;
-  onRemove: (index: number) => void;
-  theme: 'dark' | 'light' | 'high-contrast';
-  isEditing: boolean;
-}
-
-const ItemsList: React.FC<ItemsListProps> = ({ items, onRemove, theme, isEditing }) => (
-  <div className="space-y-3">
-    <h3 className={`text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
-      Productos en este registro
-    </h3>
-    <div className="grid grid-cols-1 gap-2">
-      {items.map((item, itemIndex) => (
-        <motion.div
-          layout
-          key={item.barcode}
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className={`group flex items-center gap-3 p-3 rounded-xl border-2 ${
-            theme === 'dark' 
-              ? 'bg-black/20 border-white/5' 
-              : 'bg-white border-slate-200'
-          }`}
-        >
-          <div className="flex-1 min-w-0">
-            <p className={`text-[10px] font-black uppercase truncate ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
-              {item.productName}
-            </p>
-            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">
-              {item.barcode} • {item.providerName || 'N/A'} • <span className="text-blue-500">{item.quantity} UNID</span>
-            </p>
-          </div>
-          {!isEditing && (
-            <button
-              type="button"
-              onClick={() => onRemove(itemIndex)}
-              className="w-8 h-8 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-500 hover:bg-rose-500 hover:text-white transition-all opacity-0 group-hover:opacity-100"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </motion.div>
-      ))}
-    </div>
-  </div>
-);
-
-interface AdditionalFieldsPanelProps {
-  destino: string;
-  onDestinoChange: (value: string) => void;
-  traspaso: string;
-  onTraspasoChange: (value: string) => void;
-  observaciones: string;
-  onObservacionesChange: (value: string) => void;
-  onClose: () => void;
-  theme: 'dark' | 'light' | 'high-contrast';
-}
-
-const DESTINOS_OPTIONS = [
-  'BOD. 37', 'BOD. 80', 'BOD. 95', 'BOD. 98', 'BOD. 106', 'BOD. 121'
-];
-
-const AdditionalFieldsPanel: React.FC<AdditionalFieldsPanelProps> = ({
-  destino,
-  onDestinoChange,
-  traspaso,
-  onTraspasoChange,
-  observaciones,
-  onObservacionesChange,
-  onClose,
-  theme,
-}) => (
-  <div className="p-8 space-y-6 w-96">
-    <div className="flex items-center justify-between mb-2">
-      <h3 className={`text-sm font-black uppercase tracking-widest ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
-        Detalles Adicionales
-      </h3>
-      <button
-        type="button"
-        onClick={onClose}
-        className={`p-2 rounded-lg transition-colors ${theme === 'dark' ? 'hover:bg-white/10 text-slate-400' : 'hover:bg-black/5 text-slate-500'}`}
-      >
-        <X className="w-4 h-4" />
-      </button>
-    </div>
-
-    {/* Destino */}
-    <div className="space-y-2">
-      <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
-        🏭 Destino {traspaso && <span className="text-rose-500">*</span>}
-      </label>
-      <select
-        value={destino}
-        onChange={(e) => onDestinoChange(e.target.value)}
-        className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none appearance-none ${
-          theme === 'dark'
-            ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
-            : 'bg-slate-50 border-slate-200 focus:border-blue-500 text-slate-900'
-        }`}
-      >
-        <option value="">Seleccionar destino...</option>
-        {DESTINOS_OPTIONS.map(d => (
-          <option key={d} value={d}>{d}</option>
-        ))}
-      </select>
-    </div>
-
-    {/* Traspaso */}
-    <div className="space-y-2">
-      <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
-        #️⃣ Número de Traspaso
-      </label>
-      <input
-        type="text"
-        value={traspaso}
-        onChange={(e) => onTraspasoChange(e.target.value.toUpperCase())}
-        className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none ${
-          theme === 'dark'
-            ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
-            : 'bg-slate-50 border-slate-200 focus:border-blue-500 text-slate-900'
-        }`}
-      />
-    </div>
-
-    {/* Observaciones */}
-    <div className="space-y-2">
-      <label className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
-        📝 Observaciones
-      </label>
-      <textarea
-        value={observaciones}
-        onChange={(e) => onObservacionesChange(e.target.value)}
-        className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border-2 transition-all outline-none ${
-          theme === 'dark'
-            ? 'bg-black/40 border-white/10 focus:border-blue-500 text-white'
-            : 'bg-slate-50 border-slate-200 focus:border-blue-500 text-slate-900'
-        }`}
-        rows={5}
-      />
-    </div>
-  </div>
-);
