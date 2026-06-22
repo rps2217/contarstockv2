@@ -1,31 +1,19 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { 
   Package, 
   Tags, 
   Building2, 
   RotateCcw, 
   AlertTriangle,
-  TrendingUp,
-  Database,
   Wifi,
-  WifiOff,
-  Clock
+  WifiOff
 } from 'lucide-react';
-
-interface Product {
-  barcode: string;
-  name: string;
-  category?: string;
-  supplier?: string;
-  supplierRut?: string;
-  withdrawalDays?: number;
-  hasExchange?: boolean;
-  syncStatus?: 'synced' | 'pending' | 'error';
-  price?: number;
-}
+import { Product } from '@/types';
+import { useProductsStats } from '../hooks/useProductsStats';
 
 interface InventoryMetricsCardsProps {
   products: Product[];
+  pendingChangesCount?: number;
 }
 
 interface MetricCard {
@@ -38,133 +26,81 @@ interface MetricCard {
 }
 
 export const InventoryMetricsCards: React.FC<InventoryMetricsCardsProps> = ({ 
-  products 
+  products,
+  pendingChangesCount = 0
 }) => {
-  const metrics = useMemo(() => {
-    if (!products || products.length === 0) {
-      return {
-        total: 0,
-        withPolicy: 0,
-        withoutPolicy: 0,
-        canje: 0,
-        merma: 0,
-        synced: 0,
-        pending: 0,
-        errors: 0,
-        categories: new Map<string, number>(),
-        providers: new Map<string, number>(),
-        avgWithdrawalDays: 0,
-      };
-    }
+  const { stats, byPolicy, alerts } = useProductsStats({
+    products,
+    pendingChangesCount
+  });
 
-    let withPolicy = 0;
-    let withoutPolicy = 0;
-    let canje = 0;
-    let merma = 0;
-    let synced = 0;
-    let pending = 0;
-    let errors = 0;
-    let totalDays = 0;
-    let daysCount = 0;
+  // Calcular categorías y proveedores (lógica que no está en productsDomain)
+  const { topCategories, topProviders } = React.useMemo(() => {
     const categories = new Map<string, number>();
     const providers = new Map<string, number>();
 
     products.forEach(p => {
-      // Políticas
-      if (p.withdrawalDays !== undefined) {
-        withPolicy++;
-        totalDays += p.withdrawalDays;
-        daysCount++;
-        if (p.hasExchange) canje++;
-        else merma++;
-      } else {
-        withoutPolicy++;
-      }
-
-      // Sync status
-      if (p.syncStatus === 'synced') synced++;
-      else if (p.syncStatus === 'pending') pending++;
-      else if (p.syncStatus === 'error') errors++;
-
-      // Categorías
-      const cat = p.category || 'SIN CATEGORÍA';
+      const cat = (p as any).category || 'SIN CATEGORÍA';
       categories.set(cat, (categories.get(cat) || 0) + 1);
 
-      // Proveedores
-      const prov = p.supplier || 'SIN PROVEEDOR';
+      const prov = (p as any).supplier || 'SIN PROVEEDOR';
       providers.set(prov, (providers.get(prov) || 0) + 1);
     });
 
-    // Top categorías
-    const topCategories = Array.from(categories.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5);
-
-    // Top proveedores
-    const topProviders = Array.from(providers.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5);
-
     return {
-      total: products.length,
-      withPolicy,
-      withoutPolicy,
-      canje,
-      merma,
-      synced,
-      pending,
-      errors,
-      categories,
-      providers,
-      topCategories,
-      topProviders,
-      avgWithdrawalDays: daysCount > 0 ? Math.round(totalDays / daysCount) : 0,
+      topCategories: Array.from(categories.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5),
+      topProviders: Array.from(providers.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5)
     };
   }, [products]);
+
+  // Métricas derivadas
+  const synced = stats.total - alerts.syncing;
+  const pending = alerts.syncing;
+  const withPolicy = byPolicy.exchange + byPolicy.loss;
 
   const cards: MetricCard[] = [
     {
       id: 'total',
       title: 'Total',
-      value: metrics.total,
+      value: stats.total,
       icon: <Package className="w-4 h-4" />,
       color: 'bg-blue-500/10 border-blue-500/30 text-blue-400',
     },
     {
       id: 'conPolitica',
       title: 'Con Política',
-      value: metrics.withPolicy,
-      subtitle: `${metrics.avgWithdrawalDays}D promedio`,
+      value: withPolicy,
+      subtitle: `${Math.round(withPolicy / Math.max(stats.total, 1) * 100)}% del total`,
       icon: <Tags className="w-4 h-4" />,
       color: 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400',
     },
     {
       id: 'canje',
       title: 'Con Canje',
-      value: metrics.canje,
-      subtitle: `${metrics.merma} sin canje`,
+      value: byPolicy.exchange,
+      subtitle: `${byPolicy.loss} sin canje`,
       icon: <RotateCcw className="w-4 h-4" />,
       color: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400',
     },
     {
       id: 'sinPolitica',
       title: 'Sin Política',
-      value: metrics.withoutPolicy,
+      value: byPolicy.noInfo,
       icon: <AlertTriangle className="w-4 h-4" />,
       color: 'bg-amber-500/10 border-amber-500/30 text-amber-400',
     },
     {
       id: 'sync',
       title: 'Sincronizados',
-      value: metrics.synced,
-      subtitle: `${metrics.pending} pendientes`,
+      value: synced,
+      subtitle: `${pending} pendientes`,
       icon: <Wifi className="w-4 h-4" />,
       color: 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400',
     },
     {
       id: 'errors',
       title: 'Errores',
-      value: metrics.errors,
+      value: alerts.pendingChanges,
       icon: <WifiOff className="w-4 h-4" />,
       color: 'bg-rose-500/10 border-rose-500/30 text-rose-400',
     },
@@ -203,7 +139,7 @@ export const InventoryMetricsCards: React.FC<InventoryMetricsCardsProps> = ({
             <span className="text-[8px] font-black uppercase text-slate-500 tracking-widest">Categorías</span>
           </div>
           <div className="space-y-1">
-            {metrics.topCategories.slice(0, 3).map(([name, count]) => (
+            {topCategories.slice(0, 3).map(([name, count]) => (
               <div key={name} className="flex items-center justify-between text-[9px]">
                 <span className="text-slate-400 truncate max-w-[80px]">{name.slice(0, 10)}</span>
                 <span className="text-slate-300 font-bold ml-2">{count}</span>
@@ -219,7 +155,7 @@ export const InventoryMetricsCards: React.FC<InventoryMetricsCardsProps> = ({
             <span className="text-[8px] font-black uppercase text-slate-500 tracking-widest">Proveedores</span>
           </div>
           <div className="space-y-1">
-            {metrics.topProviders.slice(0, 3).map(([name, count]) => (
+            {topProviders.slice(0, 3).map(([name, count]) => (
               <div key={name} className="flex items-center justify-between text-[9px]">
                 <span className="text-slate-400 truncate max-w-[80px]">{name.slice(0, 10)}</span>
                 <span className="text-slate-300 font-bold ml-2">{count}</span>
