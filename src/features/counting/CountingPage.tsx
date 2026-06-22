@@ -18,6 +18,7 @@ import { LocationSelectorModal } from '../../shared/components/ui/LocationSelect
 import { SoundFX } from '../../services/audio';
 import * as sessionService from '../../services/sessionService';
 import * as syncManager from '../../services/syncManager';
+import { logger } from '../../services/logger';
 
 export const CountingPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -111,7 +112,7 @@ export const CountingPage: React.FC = () => {
         await syncManager.performBatchUpload(sessionGroup);
       }
     } catch (e) {
-      console.error("Manual sync failed", e);
+      logger.error('CountingPage', 'Manual sync failed', String(e));
     }
   };
 

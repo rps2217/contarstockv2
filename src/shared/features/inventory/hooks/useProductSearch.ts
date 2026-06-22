@@ -12,6 +12,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { db } from '@/db';
+import { logger } from '@/services/logger';
 
 export interface ProductInfo {
   barcode: string;
@@ -79,7 +80,7 @@ export function useProductSearch(options?: {
         setProduct(null);
       }
     } catch (err) {
-      console.error('Error searching product:', err);
+      logger.error('useProductSearch', 'Error searching product', String(err));
       setError('Error al buscar producto');
       setProduct(null);
     } finally {

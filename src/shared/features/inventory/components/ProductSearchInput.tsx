@@ -13,6 +13,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Search, Package, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { db } from '@/db';
+import { logger } from '@/services/logger';
 
 export interface ProductInfo {
   barcode: string;
@@ -104,7 +105,7 @@ export const ProductSearchInput: React.FC<ProductSearchInputProps> = ({
             }
           }
         } catch (ppError) {
-          console.warn('No se pudo obtener políticas del proveedor:', ppError);
+          logger.warn('ProductSearchInput', 'No se pudo obtener políticas del proveedor', String(ppError));
         }
 
         // 3. Mapear campos del producto al formato esperado
@@ -125,7 +126,7 @@ export const ProductSearchInput: React.FC<ProductSearchInputProps> = ({
         onProductFound?.(null);
       }
     } catch (error) {
-      console.error('Error searching product:', error);
+      logger.error('ProductSearchInput', 'Error searching product', String(error));
       setProduct(null);
       onProductFound?.(null);
     } finally {
