@@ -72,9 +72,9 @@ const AppBar: React.FC<AppBarProps> = ({
         </button>
       )}
       <div className="flex-1 min-w-0">
-        <h1 className="text-base font-semibold truncate">{title}</h1>
+        <h1 className="text-lg font-semibold truncate">{title}</h1>
         {subtitle && (
-          <p className="text-xs text-[var(--appsheet-text-tertiary)]">{subtitle}</p>
+          <p className="text-sm text-[var(--appsheet-text-tertiary)]">{subtitle}</p>
         )}
       </div>
       {actions}
@@ -103,7 +103,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ value, onChange, placeholder }) =
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full h-11 pl-11 pr-10 rounded-full bg-[var(--appsheet-surface-tertiary)] border-none text-sm text-[var(--appsheet-text-primary)] placeholder:text-[var(--appsheet-text-secondary)] focus:outline-none focus:bg-[var(--appsheet-bg-elevated)] transition-all"
+        className="w-full h-12 pl-11 pr-10 rounded-full bg-[var(--appsheet-bg-search)] border-none text-base text-[var(--appsheet-text-primary)] placeholder:text-[var(--appsheet-text-secondary)] focus:outline-none focus:bg-[var(--appsheet-bg-elevated)] transition-all"
       />
       
       {/* Botón clear */}
@@ -140,9 +140,9 @@ const FilterChips: React.FC<FilterChipsProps> = ({ filters, selected, onChange }
           key={filter.label}
           onClick={() => onChange(filter.key)}
           className={cn(
-            'h-8 px-3 rounded-full text-xs font-medium whitespace-nowrap transition-all',
+            'h-9 px-4 rounded-full text-sm font-medium whitespace-nowrap transition-all',
             isActive
-              ? 'bg-[var(--appsheet-primary)] text-white'
+              ? 'bg-[var(--appsheet-primary)] text-black'
               : 'bg-[var(--appsheet-bg-elevated)] text-[var(--appsheet-text-secondary)] hover:bg-[var(--appsheet-bg-hover)]'
           )}
         >
@@ -257,21 +257,15 @@ const ActionMenu: React.FC<ActionMenuProps> = ({ actions }) => {
                     setOpen(false); 
                   }}
                   className={cn(
-                    'w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors relative overflow-hidden',
+                    'w-full flex items-center gap-3 px-4 py-3 text-base transition-colors relative overflow-hidden',
                     action.danger
                       ? 'text-[var(--appsheet-error)] hover:bg-[var(--appsheet-error-subtle)]'
                       : 'text-[var(--appsheet-text-primary)] hover:bg-[var(--appsheet-bg-hover)]'
                   )}
-                  // Ripple effect on click
                   whileTap={{ scale: 0.98 }}
                 >
-                  {/* Ripple element */}
-                  <span className={cn(
-                    'absolute inset-0 opacity-0 transition-opacity duration-300',
-                    action.danger ? 'bg-[var(--appsheet-error)]' : 'bg-white'
-                  )} style={{ opacity: 0 }} />
                   {action.icon}
-                  <span className="relative z-10">{action.label}</span>
+                  <span>{action.label}</span>
                 </motion.button>
               ))}
             </motion.div>
@@ -314,27 +308,27 @@ const ListItem: React.FC<ListItemProps> = ({ title, subtitle, status, meta, onCl
       onClick={onClick}
       className="list-item bg-[var(--appsheet-bg-surface)] border-b border-[var(--appsheet-border-subtle)] last:border-b-0 cursor-pointer transition-colors duration-150"
     >
-      <div className="flex items-center min-h-[72px] px-4 py-3">
+      <div className="flex items-center min-h-[76px] px-4 py-3">
         {/* Status dot */}
-        <div className={cn('w-2 h-2 rounded-full shrink-0 mr-3', status ? statusBg[status.variant] : 'bg-[var(--appsheet-text-disabled)]')} />
+        <div className={cn('w-2.5 h-2.5 rounded-full shrink-0 mr-3', status ? statusBg[status.variant] : 'bg-[var(--appsheet-text-disabled)]')} />
         
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <p className="text-sm font-medium truncate">{title}</p>
+            <p className="text-base font-medium truncate">{title}</p>
             {status && (
-              <span className={cn('px-2 py-0.5 text-[10px] font-semibold rounded-full shrink-0', statusBadge[status.variant])}>
+              <span className={cn('px-2.5 py-1 text-xs font-semibold rounded-full shrink-0', statusBadge[status.variant])}>
                 {status.label}
               </span>
             )}
           </div>
           {subtitle && (
-            <p className="text-xs text-[var(--appsheet-text-tertiary)] truncate">{subtitle}</p>
+            <p className="text-sm text-[var(--appsheet-text-tertiary)] truncate">{subtitle}</p>
           )}
           {meta && meta.length > 0 && (
-            <div className="flex gap-4 mt-1">
+            <div className="flex gap-4 mt-1.5">
               {meta.slice(0, 3).map((m, i) => (
-                <span key={i} className="text-[11px] text-[var(--appsheet-text-disabled)]">
+                <span key={i} className="text-sm text-[var(--appsheet-text-disabled)]">
                   <span className="uppercase font-medium">{m.label}:</span> {m.value}
                 </span>
               ))}
@@ -419,12 +413,12 @@ const DetailView: React.FC<DetailViewProps> = ({ title, subtitle, icon, status, 
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <h2 className="text-base font-semibold flex items-center gap-2">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
               {icon}
               <span className="truncate">{title}</span>
             </h2>
             {subtitle && (
-              <p className="text-xs text-[var(--appsheet-text-tertiary)]">{subtitle}</p>
+              <p className="text-sm text-[var(--appsheet-text-tertiary)]">{subtitle}</p>
             )}
           </motion.div>
           {status && (
@@ -432,7 +426,7 @@ const DetailView: React.FC<DetailViewProps> = ({ title, subtitle, icon, status, 
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.15 }}
-              className={cn('px-3 py-1 text-xs font-semibold rounded-full border', statusBadge[status.variant])}
+              className={cn('px-3 py-1 text-sm font-semibold rounded-full border', statusBadge[status.variant])}
             >
               {status.label}
             </motion.span>
@@ -455,9 +449,9 @@ const DetailView: React.FC<DetailViewProps> = ({ title, subtitle, icon, status, 
               className="border-b border-[var(--appsheet-border-subtle)]"
             >
               {section.title && (
-                <div className="flex items-center gap-2 px-4 py-2 bg-[var(--appsheet-bg-elevated)]">
+                <div className="flex items-center gap-2 px-4 py-3 bg-[var(--appsheet-bg-elevated)]">
                   {section.icon && <span className="text-[var(--appsheet-primary)]">{section.icon}</span>}
-                  <span className="text-xs font-semibold uppercase tracking-wider text-[var(--appsheet-text-secondary)]">
+                  <span className="text-sm font-semibold uppercase tracking-wider text-[var(--appsheet-text-secondary)]">
                     {section.title}
                   </span>
                 </div>
@@ -465,11 +459,11 @@ const DetailView: React.FC<DetailViewProps> = ({ title, subtitle, icon, status, 
               {section.rows.map((row, j) => (
                 <div 
                   key={j} 
-                  className="detail-row flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors duration-150"
+                  className="detail-row flex items-center gap-3 px-4 py-4 cursor-pointer transition-colors duration-150"
                 >
                   <div className="flex-1">
-                    <p className="text-[11px] text-[var(--appsheet-text-tertiary)] uppercase tracking-wider">{row.label}</p>
-                    <p className="text-sm font-medium mt-0.5">{row.value}</p>
+                    <p className="text-sm text-[var(--appsheet-text-tertiary)] uppercase tracking-wider">{row.label}</p>
+                    <p className="text-base font-medium mt-0.5">{row.value}</p>
                   </div>
                 </div>
               ))}
@@ -494,7 +488,7 @@ const DetailView: React.FC<DetailViewProps> = ({ title, subtitle, icon, status, 
                 transition={{ delay: 0.25 + i * 0.05 }}
                 onClick={action.onClick}
                 className={cn(
-                  'flex-1 h-11 rounded-lg text-sm font-semibold transition-all',
+                  'flex-1 h-12 rounded-xl text-base font-semibold transition-all',
                   action.variant === 'primary'
                     ? 'bg-[var(--appsheet-primary)] text-black hover:brightness-110'
                     : action.variant === 'danger'
@@ -525,12 +519,12 @@ interface EmptyStateProps {
 const EmptyState: React.FC<EmptyStateProps> = ({ icon, title, description, action }) => (
   <div className="flex flex-col items-center justify-center flex-1 py-16 px-8 text-center">
     {icon && <div className="text-[var(--appsheet-text-disabled)] mb-4">{icon}</div>}
-    <p className="text-sm font-medium text-[var(--appsheet-text-secondary)]">{title}</p>
-    {description && <p className="text-xs text-[var(--appsheet-text-tertiary)] mt-1">{description}</p>}
+    <p className="text-base font-medium text-[var(--appsheet-text-secondary)]">{title}</p>
+    {description && <p className="text-sm text-[var(--appsheet-text-tertiary)] mt-1">{description}</p>}
     {action && (
       <button
         onClick={action.onClick}
-        className="mt-4 h-10 px-5 rounded-full bg-[var(--appsheet-primary)] text-white text-sm font-medium"
+        className="mt-5 h-11 px-6 rounded-full bg-[var(--appsheet-primary)] text-black text-sm font-semibold"
       >
         {action.label}
       </button>
