@@ -557,229 +557,6 @@ const FAB: React.FC<FABProps> = ({ onClick, icon }) => (
 );
 
 // ============================================================================
-// EDIT FORM - Bottom Sheet para editar registro (estilo AppSheet)
-// ============================================================================
-interface EditFormProps {
-  event: EventRecord | null;
-  isOpen: boolean;
-  onClose: () => void;
-  onSave: (data: Partial<EventRecord>) => void;
-}
-
-const EditForm: React.FC<EditFormProps> = ({ event, isOpen, onClose, onSave }) => {
-  const [formData, setFormData] = useState({
-    barcode: '',
-    productName: '',
-    frc: '',
-    destino: '',
-    traspaso: '',
-    observaciones: ''
-  });
-  const [hasChanges, setHasChanges] = useState(false);
-
-  // Pre-llenar cuando cambia el evento
-  useEffect(() => {
-    if (event) {
-      setFormData({
-        barcode: event.barcode || '',
-        productName: event.productName || '',
-        frc: event.frc || '',
-        destino: event.destino || '',
-        traspaso: event.traspaso || '',
-        observaciones: event.observaciones || ''
-      });
-      setHasChanges(false);
-    }
-  }, [event]);
-
-  const handleChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    setHasChanges(true);
-  };
-
-  const handleSave = () => {
-    onSave(formData);
-    onClose();
-  };
-
-  const handleClose = () => {
-    if (hasChanges) {
-      if (window.confirm('¿Descartar cambios?')) {
-        onClose();
-      }
-    } else {
-      onClose();
-    }
-  };
-
-  if (!event) return null;
-
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black/50 z-50"
-            onClick={handleClose}
-          />
-          
-          {/* Bottom Sheet */}
-          <motion.div
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{
-              type: 'spring',
-              damping: 30,
-              stiffness: 350,
-              mass: 0.8
-            }}
-            className="fixed left-0 right-0 bottom-0 max-h-[90vh] bg-[var(--appsheet-bg-surface)] rounded-t-2xl z-50 flex flex-col"
-          >
-            {/* Handle */}
-            <div className="flex justify-center pt-3 pb-2">
-              <div className="w-10 h-1 rounded-full bg-[var(--appsheet-border-default)]" />
-            </div>
-            
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 pb-3 border-b border-[var(--appsheet-border-subtle)]">
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={handleClose}
-                className="px-3 py-1.5 text-sm text-[var(--appsheet-text-secondary)] hover:text-[var(--appsheet-text-primary)]"
-              >
-                Cancelar
-              </motion.button>
-              <h2 className="text-base font-semibold">Editar Evento</h2>
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={handleSave}
-                className="px-3 py-1.5 text-sm font-semibold text-[var(--appsheet-primary)]"
-              >
-                Guardar
-              </motion.button>
-            </div>
-            
-            {/* Form Content */}
-            <motion.div 
-              className="flex-1 overflow-y-auto p-4 space-y-4"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.1 }}
-            >
-              {/* Producto */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-[var(--appsheet-text-secondary)] uppercase tracking-wider">
-                  Producto
-                </label>
-                <input
-                  type="text"
-                  value={formData.productName}
-                  onChange={(e) => handleChange('productName', e.target.value)}
-                  placeholder="Nombre del producto"
-                  className="w-full h-11 px-3 rounded-lg bg-[var(--appsheet-bg-elevated)] border border-[var(--appsheet-border-default)] text-sm placeholder:text-[var(--appsheet-text-tertiary)] focus:outline-none focus:border-[var(--appsheet-primary)] transition-colors"
-                />
-              </div>
-              
-              {/* Barcode */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-[var(--appsheet-text-secondary)] uppercase tracking-wider">
-                  Barcode
-                </label>
-                <input
-                  type="text"
-                  value={formData.barcode}
-                  onChange={(e) => handleChange('barcode', e.target.value)}
-                  placeholder="Código de barras"
-                  className="w-full h-11 px-3 rounded-lg bg-[var(--appsheet-bg-elevated)] border border-[var(--appsheet-border-default)] text-sm font-mono placeholder:text-[var(--appsheet-text-tertiary)] focus:outline-none focus:border-[var(--appsheet-primary)] transition-colors"
-                />
-              </div>
-              
-              {/* FRC */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-[var(--appsheet-text-secondary)] uppercase tracking-wider">
-                  FRC (Folio Remisión Cliente)
-                </label>
-                <input
-                  type="text"
-                  value={formData.frc}
-                  onChange={(e) => handleChange('frc', e.target.value)}
-                  placeholder="Número de FRC"
-                  className="w-full h-11 px-3 rounded-lg bg-[var(--appsheet-bg-elevated)] border border-[var(--appsheet-border-default)] text-sm font-mono placeholder:text-[var(--appsheet-text-tertiary)] focus:outline-none focus:border-[var(--appsheet-primary)] transition-colors"
-                />
-              </div>
-              
-              {/* Destino */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-[var(--appsheet-text-secondary)] uppercase tracking-wider">
-                  Destino
-                </label>
-                <input
-                  type="text"
-                  value={formData.destino}
-                  onChange={(e) => handleChange('destino', e.target.value)}
-                  placeholder="Ubicación de destino"
-                  className="w-full h-11 px-3 rounded-lg bg-[var(--appsheet-bg-elevated)] border border-[var(--appsheet-border-default)] text-sm placeholder:text-[var(--appsheet-text-tertiary)] focus:outline-none focus:border-[var(--appsheet-primary)] transition-colors"
-                />
-              </div>
-              
-              {/* Traspaso */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-[var(--appsheet-text-secondary)] uppercase tracking-wider">
-                  Traspaso
-                </label>
-                <input
-                  type="text"
-                  value={formData.traspaso}
-                  onChange={(e) => handleChange('traspaso', e.target.value)}
-                  placeholder="Número de traspaso"
-                  className="w-full h-11 px-3 rounded-lg bg-[var(--appsheet-bg-elevated)] border border-[var(--appsheet-border-default)] text-sm font-mono placeholder:text-[var(--appsheet-text-tertiary)] focus:outline-none focus:border-[var(--appsheet-primary)] transition-colors"
-                />
-              </div>
-              
-              {/* Observaciones */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-[var(--appsheet-text-secondary)] uppercase tracking-wider">
-                  Observaciones
-                </label>
-                <textarea
-                  value={formData.observaciones}
-                  onChange={(e) => handleChange('observaciones', e.target.value)}
-                  placeholder="Notas adicionales..."
-                  rows={3}
-                  className="w-full px-3 py-2 rounded-lg bg-[var(--appsheet-bg-elevated)] border border-[var(--appsheet-border-default)] text-sm placeholder:text-[var(--appsheet-text-tertiary)] focus:outline-none focus:border-[var(--appsheet-primary)] transition-colors resize-none"
-                />
-              </div>
-            </motion.div>
-            
-            {/* Save Button */}
-            <motion.div 
-              className="p-4 border-t border-[var(--appsheet-border-subtle)]"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15 }}
-            >
-              <motion.button
-                whileTap={{ scale: 0.98 }}
-                onClick={handleSave}
-                className="w-full h-12 rounded-xl bg-[var(--appsheet-primary)] text-black font-semibold text-sm"
-              >
-                Guardar Cambios
-              </motion.button>
-            </motion.div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
-  );
-};
-
-// ============================================================================
 // COMPONENTE PRINCIPAL
 // ============================================================================
 export const EventsPage: React.FC = () => {
@@ -813,6 +590,7 @@ export const EventsPage: React.FC = () => {
     }
   }, [actions, detailEvent]);
 
+  // Handle editar - usa el CreateEventModal existente con lógica de negocio
   const handleEdit = useCallback((event: EventRecord) => {
     actions.setSelectedEvent(event);
     actions.setIsEditModalOpen(true);
@@ -956,7 +734,7 @@ export const EventsPage: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Modals */}
+      {/* Create Event Modal */}
       <CreateEventModal
         isOpen={isCreateModalOpen}
         onClose={() => actions.setIsCreateModalOpen(false)}
@@ -978,25 +756,57 @@ export const EventsPage: React.FC = () => {
         theme={theme}
       />
 
-      {/* Edit Form - Bottom Sheet estilo AppSheet */}
-      <EditForm
-        event={selectedEvent}
+      {/* Edit Event Modal - usa el mismo CreateEventModal con editingItem */}
+      {/* La lógica de negocio ya está en useEventForm: */}
+      {/* - SKU editable → busca producto en BD */}
+      {/* - productName auto-rellenado desde BD (no editable) */}
+      {/* - Si producto no existe, usa el nombre original del evento */}
+      <CreateEventModal
         isOpen={isEditModalOpen}
         onClose={() => actions.setIsEditModalOpen(false)}
-        onSave={async (data) => {
-          if (selectedEvent) {
+        onSubmit={async (data) => {
+          if (selectedEvent && data.length > 0) {
+            const item = data[0];
             try {
-              await actions.updateEvent(selectedEvent.id, data);
+              await actions.updateEvent(selectedEvent.id, {
+                barcode: item.barcode,
+                productName: item.productName,
+                destino: item.destino,
+                traspaso: item.traspaso,
+                observaciones: item.observaciones,
+                frc: item.frc,
+              });
               toast.success('Evento actualizado');
               // Refrescar el detalle si está abierto
               if (detailEvent?.id === selectedEvent.id) {
-                setDetailEvent({ ...detailEvent, ...data });
+                setDetailEvent({
+                  ...detailEvent,
+                  barcode: item.barcode,
+                  productName: item.productName,
+                  destino: item.destino,
+                  traspaso: item.traspaso,
+                  observaciones: item.observaciones,
+                  frc: item.frc,
+                });
               }
             } catch {
               toast.error('Error al actualizar');
             }
           }
         }}
+        theme={theme}
+        editingItem={selectedEvent ? {
+          barcode: selectedEvent.barcode,
+          productName: selectedEvent.productName,
+          providerName: undefined,
+          event: 'AJUSTE',
+          quantity: 1,
+          frc: selectedEvent.frc,
+          nguia: '',
+          destino: selectedEvent.destino,
+          traspaso: selectedEvent.traspaso,
+          observaciones: selectedEvent.observaciones,
+        } : null}
       />
     </div>
   );
