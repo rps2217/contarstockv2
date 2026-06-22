@@ -25,7 +25,7 @@ export class AudioEngine implements IAudioEngine {
       }
     }
     if (this.ctx && this.ctx.state === 'suspended') {
-      this.ctx.resume().catch(console.error);
+      this.ctx.resume().catch(() => {/* Audio resume failed silently */});
     }
     return this.ctx;
   }
@@ -136,7 +136,7 @@ export class AudioEngine implements IAudioEngine {
           break;
       }
     } catch (e) {
-      console.warn("Audio error", e);
+      // Audio playback error - silently fail (device may not support audio)
     }
   }
 }

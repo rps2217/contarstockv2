@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 import { db } from '@/db';
 import { useAppStore } from '@/stores';
 import { genericSyncEngine } from '@/services/cloud/GenericSyncEngine';
+import { logger } from '@/services/logger';
 import { 
   EventStatus, 
   EventStats, 
@@ -144,7 +145,7 @@ export const useEvents = (): UseEventsReturn => {
 
       setEvents(mapped);
     } catch (error) {
-      console.error('Error loading events:', error);
+      logger.error('useEvents', 'Error loading events', String(error));
       toast.error('Error al cargar eventos');
     } finally {
       setIsLoading(false);
@@ -249,7 +250,7 @@ export const useEvents = (): UseEventsReturn => {
       setEvents(prev => prev.filter(e => e.id !== id));
       toast.success('Evento eliminado');
     } catch (error) {
-      console.error('Error deleting event:', error);
+      logger.error('useEvents', 'Error deleting event', String(error));
       toast.error('Error al eliminar evento');
       throw error;
     }
@@ -262,7 +263,7 @@ export const useEvents = (): UseEventsReturn => {
       setSelectedIds(new Set());
       toast.success(`${ids.length} eventos eliminados`);
     } catch (error) {
-      console.error('Error bulk deleting:', error);
+      logger.error('useEvents', 'Error bulk deleting', String(error));
       toast.error('Error al eliminar eventos');
       throw error;
     }
@@ -289,7 +290,7 @@ export const useEvents = (): UseEventsReturn => {
       ));
       toast.success('Evento actualizado');
     } catch (error) {
-      console.error('Error updating event:', error);
+      logger.error('useEvents', 'Error updating event', String(error));
       toast.error('Error al actualizar evento');
       throw error;
     }
@@ -309,7 +310,7 @@ export const useEvents = (): UseEventsReturn => {
       setEvents(prev => [...prev, { ...data, id }]);
       toast.success('Evento creado');
     } catch (error) {
-      console.error('Error creating event:', error);
+      logger.error('useEvents', 'Error creating event', String(error));
       toast.error('Error al crear evento');
       throw error;
     }
@@ -322,7 +323,7 @@ export const useEvents = (): UseEventsReturn => {
       await loadEvents();
       toast.success('Sincronización completada');
     } catch (error: any) {
-      console.error('Sync error:', error);
+      logger.error('useEvents', 'Sync error', String(error));
       toast.error(error.message || 'Error al sincronizar');
     } finally {
       setIsSyncing(false);

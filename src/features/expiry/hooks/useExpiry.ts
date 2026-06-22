@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { db } from '@/db';
 import { useAppStore } from '@/stores';
 import { genericSyncEngine } from '@/services/cloud/GenericSyncEngine';
+import { logger } from '@/services/logger';
 import { ExpiryStatus, evaluateExpiry } from '../domain/expiryDomain';
 import { formatExpiryDate, getStatusLabel } from '../domain/expiryDomain';
 import { format } from 'date-fns';
@@ -198,7 +199,6 @@ export const useExpiry = (): UseExpiryReturn => {
 
       setRecords(processed);
     } catch (error) {
-      console.error('Error loading expirations:', error);
       toast.error('Error al cargar vencimientos');
     } finally {
       setIsLoading(false);
@@ -325,7 +325,7 @@ export const useExpiry = (): UseExpiryReturn => {
       setRecords(prev => prev.filter(r => r.id !== id));
       toast.success('Registro eliminado');
     } catch (error) {
-      console.error('Error deleting record:', error);
+      logger.error('useExpiry', 'Error deleting record', String(error));
       toast.error('Error al eliminar registro');
       throw error;
     }
@@ -338,7 +338,7 @@ export const useExpiry = (): UseExpiryReturn => {
       setSelectedIds(new Set());
       toast.success(`${ids.length} registros eliminados`);
     } catch (error) {
-      console.error('Error bulk deleting:', error);
+      logger.error('useExpiry', 'Error bulk deleting', String(error));
       toast.error('Error al eliminar registros');
       throw error;
     }
@@ -417,7 +417,7 @@ export const useExpiry = (): UseExpiryReturn => {
       toast.success('Vencimiento registrado');
       return id;
     } catch (error) {
-      console.error('Error creating record:', error);
+      logger.error('useExpiry', 'Error creating record', String(error));
       toast.error('Error al crear registro');
       return null;
     }
@@ -439,7 +439,7 @@ export const useExpiry = (): UseExpiryReturn => {
       setRecords(prev => prev.map(r => r.id === id ? { ...r, ...data } : r));
       toast.success('Registro actualizado');
     } catch (error) {
-      console.error('Error updating record:', error);
+      logger.error('useExpiry', 'Error updating record', String(error));
       toast.error('Error al actualizar registro');
       throw error;
     }
@@ -452,7 +452,7 @@ export const useExpiry = (): UseExpiryReturn => {
       await loadRecords();
       toast.success('Sincronización completada');
     } catch (error: any) {
-      console.error('Sync error:', error);
+      logger.error('useExpiry', 'Sync error', error.message || String(error));
       toast.error(error.message || 'Error al sincronizar');
     } finally {
       setIsSyncing(false);
