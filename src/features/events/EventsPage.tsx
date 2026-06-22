@@ -101,7 +101,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ value, onChange, placeholder }) =
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full h-10 pl-10 pr-10 rounded-lg bg-[var(--appsheet-bg-elevated)] border border-[var(--appsheet-border-subtle)] text-sm placeholder:text-[var(--appsheet-text-tertiary)] focus:outline-none focus:border-[var(--appsheet-accent-primary)] transition-colors"
+        className="w-full h-10 pl-10 pr-10 rounded-lg bg-[var(--appsheet-bg-elevated)] border border-[var(--appsheet-border-subtle)] text-sm placeholder:text-[var(--appsheet-text-tertiary)] focus:outline-none focus:border-[var(--appsheet-primary-primary)] transition-colors"
       />
       {value && (
         <button
@@ -136,7 +136,7 @@ const FilterChips: React.FC<FilterChipsProps> = ({ filters, selected, onChange }
           className={cn(
             'h-8 px-3 rounded-full text-xs font-medium whitespace-nowrap transition-all',
             isActive
-              ? 'bg-[var(--appsheet-accent-primary)] text-white'
+              ? 'bg-[var(--appsheet-primary-primary)] text-white'
               : 'bg-[var(--appsheet-bg-elevated)] text-[var(--appsheet-text-secondary)] hover:bg-[var(--appsheet-bg-hover)]'
           )}
         >
@@ -347,7 +347,7 @@ const DetailView: React.FC<DetailViewProps> = ({ title, subtitle, icon, status, 
           <div key={i} className="bg-[var(--appsheet-bg-surface)] border-b border-[var(--appsheet-border-subtle)]">
             {section.title && (
               <div className="flex items-center gap-2 px-4 py-2 bg-[var(--appsheet-bg-elevated)]">
-                {section.icon && <span className="text-[var(--appsheet-accent-primary)]">{section.icon}</span>}
+                {section.icon && <span className="text-[var(--appsheet-primary-primary)]">{section.icon}</span>}
                 <span className="text-xs font-semibold uppercase tracking-wider text-[var(--appsheet-text-secondary)]">
                   {section.title}
                 </span>
@@ -375,7 +375,7 @@ const DetailView: React.FC<DetailViewProps> = ({ title, subtitle, icon, status, 
               className={cn(
                 'flex-1 h-11 rounded-lg text-sm font-semibold transition-colors',
                 action.variant === 'primary'
-                  ? 'bg-[var(--appsheet-accent-primary)] text-white hover:opacity-90'
+                  ? 'bg-[var(--appsheet-primary-primary)] text-white hover:opacity-90'
                   : action.variant === 'danger'
                   ? 'bg-[var(--appsheet-error-subtle)] text-[var(--appsheet-error)] hover:bg-[var(--appsheet-error)] hover:text-white'
                   : 'bg-[var(--appsheet-bg-elevated)] hover:bg-[var(--appsheet-bg-hover)]'
@@ -408,7 +408,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({ icon, title, description, actio
     {action && (
       <button
         onClick={action.onClick}
-        className="mt-4 h-10 px-5 rounded-full bg-[var(--appsheet-accent-primary)] text-white text-sm font-medium"
+        className="mt-4 h-10 px-5 rounded-full bg-[var(--appsheet-primary-primary)] text-white text-sm font-medium"
       >
         {action.label}
       </button>
@@ -429,7 +429,7 @@ const FAB: React.FC<FABProps> = ({ onClick, icon }) => (
     initial={{ scale: 0 }}
     animate={{ scale: 1 }}
     onClick={onClick}
-    className="fixed right-4 bottom-4 w-14 h-14 rounded-2xl bg-[var(--appsheet-accent-primary)] text-white shadow-lg flex items-center justify-center active:scale-95 transition-transform"
+    className="fixed right-4 bottom-4 w-14 h-14 rounded-2xl bg-[var(--appsheet-primary-primary)] text-white shadow-lg flex items-center justify-center active:scale-95 transition-transform"
     style={{ boxShadow: '0 4px 12px rgba(129, 140, 248, 0.4)' }}
   >
     {icon || <Plus className="w-6 h-6" />}

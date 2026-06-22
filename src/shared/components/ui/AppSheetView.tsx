@@ -334,7 +334,7 @@ export const AppSheetDetailView: React.FC<AppSheetDetailViewProps> = ({
           <div key={i} className="bg-[var(--appsheet-bg-surface)] border-b border-[var(--appsheet-border-subtle)]">
             {section.title && (
               <div className="flex items-center gap-2 px-4 py-2 bg-[var(--appsheet-bg-elevated)]">
-                {section.icon && <span className="text-[var(--appsheet-accent-primary)]">{section.icon}</span>}
+                {section.icon && <span className="text-[var(--appsheet-primary-primary)]">{section.icon}</span>}
                 <span className="text-xs font-semibold uppercase tracking-wide text-[var(--appsheet-text-secondary)]">
                   {section.title}
                 </span>
@@ -357,7 +357,7 @@ export const AppSheetDetailView: React.FC<AppSheetDetailViewProps> = ({
                 onClick={action.onClick}
                 className={`flex-1 py-3 rounded-lg text-sm font-semibold transition-colors ${
                   action.variant === 'primary' 
-                    ? 'bg-[var(--appsheet-accent-primary)] text-[var(--appsheet-text-inverse)] hover:opacity-90' :
+                    ? 'bg-[var(--appsheet-primary-primary)] text-[var(--appsheet-text-inverse)] hover:opacity-90' :
                   action.variant === 'danger'
                     ? 'bg-[var(--appsheet-error-subtle)] text-[var(--appsheet-error)] hover:bg-[var(--appsheet-error)] hover:text-white' :
                     'bg-[var(--appsheet-bg-elevated)] text-[var(--appsheet-text-primary)] hover:bg-[var(--appsheet-bg-hover)]'
@@ -401,7 +401,7 @@ export const AppSheetEmptyState: React.FC<AppSheetEmptyStateProps> = ({
     {action && (
       <button
         onClick={action.onClick}
-        className="mt-4 px-4 py-2 rounded-lg bg-[var(--appsheet-accent-primary)] text-white text-sm font-medium"
+        className="mt-4 px-4 py-2 rounded-lg bg-[var(--appsheet-primary-primary)] text-white text-sm font-medium"
       >
         {action.label}
       </button>
@@ -436,7 +436,7 @@ export const AppSheetFilterChips: React.FC<AppSheetFilterChipsProps> = ({
           onClick={() => onChange(filter.key)}
           className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
             isSelected
-              ? 'bg-[var(--appsheet-accent-primary)] text-[var(--appsheet-text-inverse)]'
+              ? 'bg-[var(--appsheet-primary-primary)] text-[var(--appsheet-text-inverse)]'
               : 'bg-[var(--appsheet-bg-elevated)] text-[var(--appsheet-text-secondary)] hover:bg-[var(--appsheet-bg-hover)]'
           }`}
         >
