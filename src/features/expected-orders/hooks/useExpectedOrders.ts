@@ -15,9 +15,25 @@ export interface ColumnMappings {
   qtyCol: string;
 }
 
+// Mapeo de columnas para pegado
+export interface PasteColumnMappings {
+  enabled: boolean;
+  skuCol: string;    // Índice de columna para SKU
+  nameCol: string;  // Índice de columna para nombre
+  qtyCol: string;   // Índice de columna para cantidad
+  folioCol: string; // Índice de columna para folio/guía (parcelación)
+}
+
 // Tipo para filas parseadas de CSV (antes de mapping)
 export interface CSVRow {
   [key: string]: string | number | undefined;
+}
+
+// Orden parcelada para preview
+interface ParceledOrderPreview {
+  id: string;
+  items: ExpectedItem[];
+  totalUnits: number;
 }
 
 export function useExpectedOrders() {
@@ -44,6 +60,18 @@ export function useExpectedOrders() {
     qtyCol: ''
   });
 
+  // Paste column mappings (nuevo)
+  const [pasteMappings, setPasteMappings] = useState<PasteColumnMappings>({
+    enabled: false,
+    skuCol: '',
+    nameCol: '',
+    qtyCol: '',
+    folioCol: ''
+  });
+
+  // Órdenes parceladas (nuevo)
+  const [parceledOrders, setParceledOrders] = useState<ParceledOrderPreview[]>([]);
+
   // Manual paste entry state
   const [pasteText, setPasteText] = useState('');
   
@@ -54,7 +82,79 @@ export function useExpectedOrders() {
   // Load selection
   const [selectedSavedOrderId, setSelectedSavedOrderId] = useState<string | null>(null);
 
-  // Computed preview of products being parsed/mapped
+  // Toggle para modo mapeo de columnas
+  const togglePasteMapping = useCallback((enabled: boolean) => {
+    setPasteMappings(prev => ({ ...prev, enabled }));
+    if (!enabled) {
+      setParceledOrders([]);
+    }
+  }, []);
+
+  // Remover una orden parcelada
+  const removeParceledOrder = useCallback((index: number) => {
+    setParceledOrders(prev => prev.filter((_, i) => i !== index));
+  }, []);
+
+  // Helper para reset completo
+  const doFullReset = useCallback(() => {
+    setDocId('');
+    setPurchaseOrder('');
+    setOrderNote('');
+    setParsedRows([]);
+    setHeaders([]);
+    setFileName('');
+    setPasteText('');
+    setMappings({ barcodeCol: '', nameCol: '', qtyCol: '' });
+    setPasteMappings({ enabled: false, skuCol: '', nameCol: '', qtyCol: '', folioCol: '' });
+    setParceledOrders([]);
+    setActiveStep('list');
+  }, []);
+
+  // Guardar todas las órdenes parceladas
+  const saveAllParceledOrders = useCallback(async () => {
+    if (parceledOrders.length === 0) {
+      addToast("No hay importaciones para guardar", "warning");
+      return;
+    }
+
+    let savedCount = 0;
+    let errorCount = 0;
+
+    for (const parcel of parceledOrders) {
+      try {
+        const expectedOrder: ExpectedOrder = {
+          id: parcel.id,
+          internalId: parcel.id,
+          items: parcel.items,
+          totalExpectedUnits: parcel.totalUnits,
+          totalExpectedSKUs: parcel.items.length,
+          importedAt: Date.now(),
+          metadata: {
+            documentType: documentType || 'Picking List',
+            date: new Date().toLocaleDateString(),
+            purchaseOrder: purchaseOrder.trim(),
+            orderNote: orderNote.trim()
+          }
+        };
+
+        await ExpectedOrderRepository.save(expectedOrder);
+        savedCount++;
+      } catch (err) {
+        errorCount++;
+        console.error(`Error guardando ${parcel.id}:`, err);
+      }
+    }
+
+    if (errorCount === 0) {
+      addToast(`${savedCount} importaciones guardadas exitosamente`, "success");
+    } else {
+      addToast(`Guardadas: ${savedCount}, Errores: ${errorCount}`, "warning");
+    }
+
+    doFullReset();
+  }, [parceledOrders, documentType, purchaseOrder, orderNote, addToast, doFullReset]);
+
+  // Computed preview de productos parseados (incluye parcelación)
   const previewItems = useMemo<ExpectedItem[]>(() => {
     if (importMode === 'csv') {
       if (parsedRows.length === 0 || !mappings.barcodeCol || !mappings.qtyCol) return [];
@@ -71,10 +171,77 @@ export function useExpectedOrders() {
         };
       }).filter(item => item.barcode !== '');
     } else {
-      // Paste mode parsing: intelligent tab-separated (including SAP multi-line copy-paste format), comma-separated or semicolon-separated
+      // Paste mode parsing
       if (!pasteText.trim()) return [];
       
       const lines = pasteText.split('\n');
+      
+      // Si está habilitado el mapeo de columnas
+      if (pasteMappings.enabled && pasteMappings.skuCol !== '' && pasteMappings.qtyCol !== '') {
+        const skuIdx = parseInt(pasteMappings.skuCol);
+        const nameIdx = pasteMappings.nameCol ? parseInt(pasteMappings.nameCol) : -1;
+        const qtyIdx = parseInt(pasteMappings.qtyCol);
+        const folioIdx = pasteMappings.folioCol ? parseInt(pasteMappings.folioCol) : -1;
+        
+        const ordersMap = new Map<string, ExpectedItem[]>();
+        let currentFolio = 'Sin Folio';
+        
+        for (const line of lines) {
+          const trimmedLine = line.trim();
+          if (!trimmedLine) continue;
+          
+          // Skip headers
+          if (trimmedLine.toLowerCase().includes('sku') || trimmedLine.toLowerCase().includes('folio')) continue;
+          
+          const parts = trimmedLine.split('\t');
+          if (parts.length <= Math.max(skuIdx, qtyIdx, nameIdx, folioIdx)) continue;
+          
+          const folio = folioIdx >= 0 ? String(parts[folioIdx] || '').trim() : currentFolio;
+          if (folio && folio !== currentFolio && folioIdx >= 0) {
+            currentFolio = folio;
+          }
+          
+          const barcode = String(parts[skuIdx] || '').trim();
+          if (!barcode || barcode.length < 3) continue;
+          
+          const name = nameIdx >= 0 ? String(parts[nameIdx] || '').trim() : `SKU ${barcode}`;
+          const qtyStr = String(parts[qtyIdx] || '0').replace(/[^0-9.-]/g, '');
+          const qty = parseInt(qtyStr) || 0;
+          
+          if (!ordersMap.has(currentFolio)) {
+            ordersMap.set(currentFolio, []);
+          }
+          ordersMap.get(currentFolio)!.push({ barcode, name, expectedQty: qty });
+        }
+        
+        // Generar preview parcelado
+        const parcels: ParceledOrderPreview[] = [];
+        ordersMap.forEach((items, folio) => {
+          const mergedMap = new Map<string, ExpectedItem>();
+          items.forEach(item => {
+            if (mergedMap.has(item.barcode)) {
+              mergedMap.get(item.barcode)!.expectedQty += item.expectedQty;
+            } else {
+              mergedMap.set(item.barcode, { ...item });
+            }
+          });
+          const mergedItems = Array.from(mergedMap.values());
+          parcels.push({
+            id: folio,
+            items: mergedItems,
+            totalUnits: mergedItems.reduce((acc, i) => acc + i.expectedQty, 0)
+          });
+        });
+        
+        setParceledOrders(parcels);
+        
+        // Preview muestra todos los items combinados
+        const allItems: ExpectedItem[] = [];
+        parcels.forEach(p => allItems.push(...p.items));
+        return allItems;
+      }
+      
+      // Modo simple (sin parcelación)
       const items: ExpectedItem[] = [];
 
       for (const line of lines) {
@@ -100,14 +267,10 @@ export function useExpectedOrders() {
           parts = trimmedLine.split(';');
         }
 
-        // If it doesn't split into columns, skip it (helps ignore SAP wrapped multi-line noise like lote, date, obs)
-        if (parts.length < 2) {
-          continue;
-        }
+        if (parts.length < 2) continue;
 
         const rawBarcode = String(parts[0] || '').trim();
 
-        // Extra guard to filter out invalid barcodes or single digits or labels in SAP
         if (!rawBarcode || rawBarcode.length < 3 || rawBarcode.includes('/') || ['und', 'unid', 'unidad', 'lote', 'fecha', 'observacion'].includes(rawBarcode.toLowerCase())) {
           continue;
         }
@@ -116,24 +279,17 @@ export function useExpectedOrders() {
         let rawQty = 1;
 
         if (isTabSeparated && parts.length >= 4) {
-          // SAP Clipboard: SKU (parts[0]), Descripción (parts[1]), U.Medida (parts[2]), Despachado (parts[3])
           rawName = String(parts[1] || '').trim();
           const p3 = String(parts[3] || '').trim();
           const cleanQtyStr = p3.replace(/[^0-9.-]/g, '');
           const parsedQty = parseInt(cleanQtyStr, 10);
-          if (!isNaN(parsedQty)) {
-            rawQty = parsedQty;
-          }
+          if (!isNaN(parsedQty)) rawQty = parsedQty;
         } else if (parts.length >= 3) {
-          // Regular Tab or Column based: Barcode, Name, Qty
           rawName = String(parts[1] || '').trim();
           const cleanQtyStr = String(parts[2] || '').replace(/[^0-9.-]/g, '');
           const parsedQty = parseInt(cleanQtyStr, 10);
-          if (!isNaN(parsedQty)) {
-            rawQty = parsedQty;
-          }
+          if (!isNaN(parsedQty)) rawQty = parsedQty;
         } else if (parts.length === 2) {
-          // Barcode, Qty or Barcode, Name
           const cleanQtyStr = String(parts[1] || '').replace(/[^0-9.-]/g, '');
           const parsedQty = parseInt(cleanQtyStr, 10);
           if (!isNaN(parsedQty)) {
@@ -151,9 +307,14 @@ export function useExpectedOrders() {
         });
       }
 
+      // Limpiar parceledOrders si estamos en modo simple
+      if (parceledOrders.length > 0) {
+        setParceledOrders([]);
+      }
+
       return items;
     }
-  }, [importMode, parsedRows, mappings, pasteText]);
+  }, [importMode, parsedRows, mappings, pasteText, pasteMappings]);
 
   // Totals for active preview
   const previewStats = useMemo(() => {
@@ -178,6 +339,14 @@ export function useExpectedOrders() {
       nameCol: '',
       qtyCol: ''
     });
+    setPasteMappings({
+      enabled: false,
+      skuCol: '',
+      nameCol: '',
+      qtyCol: '',
+      folioCol: ''
+    });
+    setParceledOrders([]);
   }, []);
 
   // Handle uploaded CSV file
@@ -438,7 +607,9 @@ export function useExpectedOrders() {
       headers,
       fileName,
       mappings,
+      pasteMappings,
       pasteText,
+      parceledOrders,
       previewItems,
       previewStats,
       selectedSavedOrderId,
@@ -454,6 +625,7 @@ export function useExpectedOrders() {
       setOrderNote,
       setDocumentType,
       setMappings,
+      setPasteMappings,
       setPasteText,
       handleCsvFile,
       saveOrder,
@@ -463,6 +635,9 @@ export function useExpectedOrders() {
       downloadFromCloud,
       uploadOrderToCloud,
       syncAllToCloud,
+      togglePasteMapping,
+      removeParceledOrder,
+      saveAllParceledOrders,
     }
   };
 }
