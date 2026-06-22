@@ -103,11 +103,36 @@ Este documento contiene todos los patrones de UI/UX implementados para replicar 
 `src/shared/components/layout/DualView.tsx`
 
 ### Concepto
-Componente robusto y reutilizable que encapsula toda la funcionalidad de la vista dual (master-detail) con splitter redimensionable. Elimina la necesidad de replicar lógica en cada módulo.
+Componente robusto y reutilizable que encapsula toda la funcionalidad de la vista dual (master-detail) con splitter redimensionable. Implementación basada en el patrón de VS Code, Figma y AppSheet.
+
+### ⚠️ Importante: Sin Animaciones
+```
+Este componente NO usa animaciones de slide.
+Los paneles SIEMPRE están pegados a sus bordes.
+El splitter redimensiona en tiempo real sin efectos visuales.
+```
+
+### Patrón de Layout
+```
+┌─────────────────┬─────────────────┐
+│                 │                 │
+│     LISTA       │    DETALLE     │
+│                 │                 │
+│   (izquierda)   │   (derecha)    │
+│                 │                 │
+│    width:px     │    flex: 1     │
+│    flexShrink:0 │    minWidth:0  │
+└────────┬────────┴─────────────────┘
+         │
+         ▼
+┌─────────────────┐
+│    SPLITTER      │ ← 1px draggable
+│   (draggable)   │
+└─────────────────┘
+```
 
 ### Sub-componentes incluidos
 - **DualView**: Contenedor principal con splitter
-- **Splitter**: Barra divisoria independiente (opcional)
 - **DetailPanel**: Panel de detalle estilizado
 - **Section**: Sección con título e icono
 - **Row**: Fila de datos
@@ -120,9 +145,8 @@ import { DualView, DetailPanel, Section, Row } from '@/shared/components/layout'
 <DualView
   selectedItem={selectedEvent}
   onSelectItem={setSelectedEvent}
-  initialLeftWidth={50}
-  minLeftWidth={25}
-  maxLeftWidth={75}
+  minLeftWidth={200}      // Ancho mínimo en pixels
+  maxLeftWidth={800}      // Ancho máximo en pixels
   listPanel={
     events.map(event => (
       <ListItem
@@ -159,12 +183,10 @@ import { DualView, DetailPanel, Section, Row } from '@/shared/components/layout'
 | `detailPanel` | ReactNode | - | Panel derecho (detalle) |
 | `selectedItem` | any | null | Item seleccionado |
 | `onSelectItem` | function | - | Callback al seleccionar |
-| `initialLeftWidth` | number | 50 | Ancho inicial (%) |
-| `minLeftWidth` | number | 25 | Ancho mínimo (%) |
-| `maxLeftWidth` | number | 75 | Ancho máximo (%) |
+| `minLeftWidth` | number | 200 | Ancho mínimo (px) |
+| `maxLeftWidth` | number | 800 | Ancho máximo (px) |
 | `enableSplitter` | boolean | true | Habilitar drag |
-| `animateDetail` | boolean | true | Animación slide |
-| `showSplitterHint` | boolean | true | Indicador visual |
+| `className` | string | - | Clases CSS adicionales |
 
 ### Props de DetailPanel
 | Prop | Tipo | Descripción |
@@ -203,11 +225,10 @@ function MyModule() {
     <DualView
       selectedItem={selectedItem}
       onSelectItem={setSelectedItem}
-      initialLeftWidth={50}
-      minLeftWidth={30}
-      maxLeftWidth={70}
+      minLeftWidth={200}
+      maxLeftWidth={800}
       listPanel={
-        <div className="h-full overflow-y-auto">
+        <div className="h-full overflow-y-auto bg-[var(--appsheet-bg-base)]">
           {items.map(item => (
             <ListItem
               key={item.id}
@@ -253,6 +274,31 @@ function MyModule() {
   );
 }
 ```
+
+### Detalles Técnicos Importantes
+
+#### Layout CSS
+```tsx
+// Panel izquierdo - SIEMPRE pegado a la izquierda
+<div style={{ 
+  width: hasDetail ? leftWidth : '100%',
+  flexShrink: 0,
+  minWidth: hasDetail ? leftWidth : undefined,
+  maxWidth: hasDetail ? leftWidth : '100%'
+}}>
+
+// Panel derecho - SIEMPRE pegado a la derecha
+<div style={{
+  flex: 1,
+  minWidth: 0
+}}>
+```
+
+#### Splitter
+- **1px de ancho** (w-1)
+- **Indicador visual** solo visible en hover/drag
+- **Resize en pixels** (no porcentaje)
+- **Sin animaciones** de entrada/salida
 
 ### Checklist de Implementación
 
@@ -364,48 +410,15 @@ La vista divide el espacio en dos paneles:
 1. **Lista** (izquierda) - Mantiene la lista completa de items
 2. **Panel Detalle** (derecha) - Muestra detalles del item seleccionado
 
-### Estructura React
-```tsx
-const [detailEvent, setDetailEvent] = useState<EventRecord | null>(null);
-const [leftPanelWidth, setLeftPanelWidth] = useState(60);
-
-<div className="flex-1 flex overflow-hidden">
-  {/* Panel izquierdo - Lista */}
-  <div style={{ width: detailEvent ? `${leftPanelWidth}%` : '100%' }}>
-    {events.map(event => (
-      <ListItem
-        key={event.id}
-        onClick={() => setDetailEvent(event)}
-        isSelected={detailEvent?.id === event.id}
-        // ...props
-      />
-    ))}
-  </div>
-
-  {/* Splitter */}
-  {detailEvent && (
-    <Splitter onResize={setLeftPanelWidth} minLeftWidth={25} maxLeftWidth={75} />
-  )}
-
-  {/* Panel derecho - Detalle */}
-  {detailEvent && (
-    <div style={{ width: `${100 - leftPanelWidth}%` }}>
-      <DetailViewPanel
-        title={detailEvent.productName}
-        onClose={() => setDetailEvent(null)}
-        // ...props
-      />
-    </div>
-  )}
-</div>
-```
+### Implementación Recomendada
+**Usar el componente `DualView`** (ver sección anterior) en lugar de implementar la lógica manualmente.
 
 ### Flujo de Usuario
 ```
 1. Ver lista completa (100%)
    ↓ Click en item
-2. Panel detalle aparece (slide-in desde derecha)
-   Lista se reduce (60%), Detalle (40%)
+2. Panel detalle aparece
+   Lista ocupa ~50%, Detalle el resto
    ↓ Click Editar
 3. Modal supersede el panel de detalle
    ↓ Cerrar modal
@@ -414,71 +427,35 @@ const [leftPanelWidth, setLeftPanelWidth] = useState(60);
 5. Panel detalle se cierra, lista vuelve al 100%
 ```
 
----
-
-## Splitter Redimensionable
-
-### Concepto
-Barra divisoria que permite redimensionar los paneles arrastrando el mouse.
-
-### Implementación Componente
-```tsx
-interface SplitterProps {
-  onResize: (leftWidth: number) => void;
-  minLeftWidth?: number;
-  maxLeftWidth?: number;
+### Patrón CSS Clave
+```css
+/* Contenedor principal */
+.dual-view {
+  display: flex;
+  height: 100%;
+  overflow: hidden;
 }
 
-const Splitter: React.FC<SplitterProps> = ({ 
-  onResize, 
-  minLeftWidth = 30, 
-  maxLeftWidth = 70 
-}) => {
-  const [isDragging, setIsDragging] = useState(false);
+/* Panel izquierdo */
+.dual-view-list {
+  flex-shrink: 0; /* NO se encoge */
+  overflow: hidden;
+}
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
+/* Splitter */
+.dual-view-splitter {
+  width: 1px;
+  cursor: col-resize;
+  flex-shrink: 0;
+}
 
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const container = (e.target as HTMLElement).parentElement;
-      if (!container) return;
-      
-      const containerRect = container.getBoundingClientRect();
-      const newWidth = ((containerRect.right - moveEvent.clientX) / containerRect.width) * 100;
-      const clampedWidth = Math.min(Math.max(newWidth, minLeftWidth), maxLeftWidth);
-      onResize(clampedWidth);
-    };
-
-    const handleMouseUp = () => {
-      setIsDragging(false);
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  }, [onResize, minLeftWidth, maxLeftWidth]);
-
-  return (
-    <div
-      onMouseDown={handleMouseDown}
-      className="w-1 cursor-col-resize flex-shrink-0 group"
-    >
-      {/* Indicador visual */}
-      <div className="absolute inset-y-0 -left-1 -right-1 flex items-center justify-center">
-        <div className="w-1 h-16 rounded-full bg-transparent group-hover:bg-[var(--appsheet-text-tertiary)]" />
-      </div>
-    </div>
-  );
-};
+/* Panel derecho */
+.dual-view-detail {
+  flex: 1; /* Crece para ocupar el resto */
+  min-width: 0;
+  overflow: hidden;
+}
 ```
-
-### Características
-- Cursor `col-resize` al pasar
-- Indicador visual con hover (barra gris)
-- Indicador azul cuando está arrastrando
-- Límites configurables (min/max porcentaje)
 
 ---
 
