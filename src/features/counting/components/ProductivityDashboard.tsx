@@ -6,10 +6,12 @@
  * - Tendencia (↑↓→)
  * - Duración de sesión
  * - Tiempo promedio por item
+ * - Mejor ritmo (bestPace)
+ * - Nivel de fatiga
  */
 
 import React from 'react';
-import { Zap, TrendingUp, TrendingDown, Minus, Clock, Timer } from 'lucide-react';
+import { Zap, TrendingUp, TrendingDown, Minus, Clock, Timer, Trophy, Battery } from 'lucide-react';
 import { ProductivityStats } from '../hooks/useProductivity';
 
 interface ProductivityDashboardProps {
@@ -25,6 +27,14 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
   isVisible,
   onToggle,
 }) => {
+  // Fatigue color and label
+  const fatigueConfig = {
+    fresh: { color: 'text-emerald-400', bg: 'bg-emerald-500/10', label: 'Energizado', icon: '⚡' },
+    normal: { color: 'text-blue-400', bg: 'bg-blue-500/10', label: 'Normal', icon: '💪' },
+    tired: { color: 'text-amber-400', bg: 'bg-amber-500/10', label: 'Descanso', icon: '☕' }
+  };
+  const fatigue = fatigueConfig[stats.fatigueLevel];
+
   if (!isVisible) {
     return (
       <button
@@ -155,6 +165,31 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
               width: `${Math.min(100, Math.max(10, 50 + (stats.trendPercent || 0)))}%` 
             }}
           />
+        </div>
+      </div>
+
+      {/* Best pace & Fatigue row */}
+      <div className="mt-3 pt-3 border-t border-white/5 flex gap-2">
+        {/* Best pace */}
+        <div className={`flex-1 ${fatigue.bg} rounded-xl p-2`}>
+          <div className="flex items-center gap-1 mb-0.5">
+            <Trophy className="w-3 h-3 text-amber-400" />
+            <span className="text-[9px] font-bold text-slate-500 uppercase">Récord</span>
+          </div>
+          <div className="text-sm font-black text-white">
+            {stats.bestPace > 0 ? `${stats.bestPace}/min` : '--'}
+          </div>
+        </div>
+
+        {/* Fatigue level */}
+        <div className={`flex-1 ${fatigue.bg} rounded-xl p-2`}>
+          <div className="flex items-center gap-1 mb-0.5">
+            <Battery className={`w-3 h-3 ${fatigue.color}`} />
+            <span className="text-[9px] font-bold text-slate-500 uppercase">Estado</span>
+          </div>
+          <div className={`text-sm font-black ${fatigue.color}`}>
+            {fatigue.label}
+          </div>
         </div>
       </div>
     </div>

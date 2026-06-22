@@ -6,6 +6,7 @@
  * - Tiempo promedio por item
  * - Tendencia (¿va más rápido o más lento?)
  * - Duración de la sesión
+ * - Mejor ritmo (bestPace)
  */
 
 import { useState, useEffect, useRef, useMemo } from 'react';
@@ -19,6 +20,8 @@ export interface ProductivityStats {
   trend: 'increasing' | 'stable' | 'decreasing';
   trendPercent: number; // % de cambio vs promedio
   lastScanTime: number | null;
+  bestPace: number; // Mejor items/min registrado
+  fatigueLevel: 'fresh' | 'normal' | 'tired'; // Nivel de fatiga estimado
 }
 
 interface ScanEvent {
@@ -26,10 +29,18 @@ interface ScanEvent {
   quantity: number;
 }
 
+// Thresholds para fatiga
+const FATIGUE_THRESHOLDS = {
+  DECELERATING_FOR_MINUTES: 2, // Minutos antes de marcar cansancio
+  TREND_DECLINE_FOR_FATIGUE: -15 // % de caída para marcar cansancio
+};
+
 export const useProductivity = (items: { barcode: string; totalQuantity: number }[]) => {
   const [scanHistory, setScanHistory] = useState<ScanEvent[]>([]);
   const sessionStartRef = useRef<number>(Date.now());
   const lastItemsCountRef = useRef<number>(0);
+  const bestPaceRef = useRef<number>(0);
+  const fatigueStartRef = useRef<number | null>(null);
 
   // Track new items added
   useEffect(() => {
@@ -95,6 +106,26 @@ export const useProductivity = (items: { barcode: string; totalQuantity: number 
       }
     }
 
+    // Update best pace
+    if (itemsPerMinute > bestPaceRef.current) {
+      bestPaceRef.current = itemsPerMinute;
+    }
+
+    // Calculate fatigue level
+    let fatigueLevel: 'fresh' | 'normal' | 'tired' = 'normal';
+    if (trend === 'decreasing' && trendPercent < FATIGUE_THRESHOLDS.TREND_DECLINE_FOR_FATIGUE) {
+      if (fatigueStartRef.current === null) {
+        fatigueStartRef.current = now;
+      } else if ((now - fatigueStartRef.current) / 60000 >= FATIGUE_THRESHOLDS.DECELERATING_FOR_MINUTES) {
+        fatigueLevel = 'tired';
+      }
+    } else {
+      fatigueStartRef.current = null;
+      if (trend === 'increasing' && trendPercent > 10) {
+        fatigueLevel = 'fresh';
+      }
+    }
+
     const totalQuantity = items.reduce((acc, item) => acc + item.totalQuantity, 0);
 
     return {
@@ -106,6 +137,8 @@ export const useProductivity = (items: { barcode: string; totalQuantity: number 
       trend,
       trendPercent,
       lastScanTime: scanHistory.length > 0 ? scanHistory[scanHistory.length - 1].timestamp : null,
+      bestPace: Math.round(bestPaceRef.current * 10) / 10,
+      fatigueLevel,
     };
   }, [items, scanHistory]);
 
@@ -113,6 +146,8 @@ export const useProductivity = (items: { barcode: string; totalQuantity: number 
   const resetSession = () => {
     sessionStartRef.current = Date.now();
     lastItemsCountRef.current = 0;
+    bestPaceRef.current = 0;
+    fatigueStartRef.current = null;
     setScanHistory([]);
   };
 
