@@ -1159,10 +1159,11 @@ const {
 
 ### Commits:
 - `xxxxxxx` - refactor: Reescribir módulo Expiry con arquitectura simplificada v2
+- `707c7f92` - test: Agregar tests para expiryDomain (27 tests)
 
 ### Pendientes:
 - [x] ~~Limpiar código legacy~~ (Parcialmente - mantenido expiryUtils y expiryProcessor por servicios críticos)
-- [ ] Agregar tests para expiryDomain
+- [x] ~~Agregar tests para expiryDomain~~ ✅ (27 tests)
 - [ ] Integrar con scanner para captura rápida
 
 ---
@@ -1275,8 +1276,9 @@ sortProducts(products, field, order): Product[]
 
 ### Commits:
 - `1c532a07` - feat: Agregar domain y componentes para Products
+- `707c7f92` - test: Agregar tests para expiryDomain
 
 ### Pendientes:
 - [ ] Integrar ProductStatsBar y ProductCard en InventoryPage
 - [ ] Refactorizar InventoryMetricsCards a usar ProductStats
-- [ ] Agregar tests para ProductCard y ProductStatsBar
+- [x] ~~Agregar tests para productsDomain~~ ✅ (34 tests)
