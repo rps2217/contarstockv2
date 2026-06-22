@@ -94,6 +94,8 @@ Este documento contiene todos los patrones de UI/UX implementados para replicar 
 10. [Action Menu (3 puntos)](#action-menu-3-puntos)
 11. [FAB (Floating Action Button)](#fab-floating-action-button)
 12. [Tipografías](#tipografías)
+13. [Refactoring Expiry v2](#refactoring-módulo-expiry-v2-2026-06-21)
+14. [Refactoring Events v2](#refactoring-módulo-events-v2-2026-06-22) 🆕
 
 ---
 
@@ -1159,3 +1161,70 @@ const {
 - Limpiar código legacy (hooks/, utils/ القديمة)
 - Agregar tests para expiryDomain
 - Integrar con scanner para captura rápida
+
+---
+
+## Refactoring Módulo Events v2 (2026-06-22)
+
+### Arquitectura Simplificada (Patrón Expiry)
+
+```
+src/features/events/
+├── EventsPage.tsx           # Componente principal (simplificado)
+├── domain/
+│   └── eventsDomain.ts      # Lógica de negocio pura (evaluación, helpers)
+├── hooks/
+│   ├── index.ts             # Exports centralizados
+│   └── useEvents.ts        # Hook centralizado (estado unificado)
+├── components/
+│   ├── EventCard.tsx        # Card de evento
+│   ├── EventStatsBar.tsx    # Barra de estadísticas
+│   └── (CreateEventModal, etc.)
+└── (legacy hooks/ components/ utils/)  # Pendiente cleanup
+```
+
+### Hook Centralizado: useEvents
+
+```typescript
+const {
+  filteredEvents,
+  stats,
+  filters,
+  isLoading,
+  isSyncing,
+  selectedIds,
+  selectedEvent,
+  actions
+} = useEvents();
+```
+
+### Estados de Evento
+
+| Estado | Descripción | Color |
+|--------|-------------|-------|
+| PENDING | Sin destino, sin ajustar | 🔵 Azul |
+| DESTINED | Con destino asignado | 🟡 Amarillo |
+| ADJUSTED | Marcado como ajustado | 🟢 Verde |
+
+### Componentes UI
+
+| Componente | Descripción |
+|------------|-------------|
+| `EventSection` | Sección colapsable con header e icono |
+| `EventCard` | Card individual con estado, metadata y acciones |
+| `EventStatsBar` | Barra de estadísticas con chips de filtro |
+| `ModuleHeader` | Header reusable con título y acciones |
+
+### Commits:
+- `xxxxxxx` - feat: Crear eventsDomain.ts con lógica de negocio pura
+- `xxxxxxx` - feat: Refactorizar useEvents con estadísticas y estados
+- `xxxxxxx` - feat: Crear EventStatsBar y EventCard
+- `xxxxxxx` - refactor: Reescribir EventsPage siguiendo patrón ExpiryPage
+
+### Patrones Implementados
+- Secciones colapsables con animación (motion)
+- Cards con estado visual (color del borde, badge)
+- Barra de estadísticas con chips de filtro
+- Búsqueda con normalización de texto
+- Soporte multi-tema (dark/light/high-contrast)
+- Atajos de teclado (Alt+N para nuevo, / para buscar)

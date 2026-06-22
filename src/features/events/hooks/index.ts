@@ -4,12 +4,24 @@
  * Patrón Lego: Hooks especializados divididos por responsabilidad
  */
 
-// Hooks especializados (nuevos)
+// Hook centralizado principal
+export { useEvents } from './useEvents';
+export type { EventRecord, EventFilters } from './useEvents';
+export { 
+  EventStatus,
+  evaluateEventStatus,
+  getEventStatusLabel,
+  getEventStatusConfig,
+  formatEventDate,
+  formatEventDateShort,
+  calculateEventStats,
+  normalizeText
+} from './useEvents';
+
+// Hooks especializados (legacy)
 export { useEventQueries } from './useEventQueries';
 export { useEventMutations } from './useEventMutations';
 export { useEventFilters } from './useEventFilters';
-
-// Hook original (compatibilidad)
 export { useEventForm } from './useEventForm';
 export { useEventDatabase } from './useEventDatabase';
 export { useEventUI } from './useEventUI';

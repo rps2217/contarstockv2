@@ -4,13 +4,37 @@
  * Arquitectura simplificada v2.0 - Un solo hook, una sola responsabilidad
  */
 
+// Re-exportar desde domain
+export { EventStatus } from '../domain/eventsDomain';
+export type { EventStats } from '../domain/eventsDomain';
+export { 
+  evaluateEventStatus, 
+  getEventStatusLabel, 
+  getEventStatusConfig,
+  formatEventDate,
+  formatEventDateShort,
+  eventMatchesSearch,
+  calculateEventStats,
+  normalizeText
+} from '../domain/eventsDomain';
+
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { toast } from 'sonner';
 import { db } from '@/db';
 import { useAppStore } from '@/stores';
 import { genericSyncEngine } from '@/services/cloud/GenericSyncEngine';
+import { 
+  EventStatus, 
+  EventStats, 
+  evaluateEventStatus,
+  calculateEventStats,
+  normalizeText 
+} from '../domain/eventsDomain';
 
-// Tipos
+// ============================================================================
+// TIPOS
+// ============================================================================
+
 export interface EventRecord {
   id: string;
   barcode: string;
@@ -22,11 +46,12 @@ export interface EventRecord {
   isAdjusted: boolean;
   timestamp: number;
   syncStatus?: 'synced' | 'pending' | 'error';
+  status?: EventStatus; // Estado calculado (opcional para entrada)
 }
 
 export interface EventFilters {
   searchQuery: string;
-  selectedEvents: string[];
+  selectedStatuses: EventStatus[];
   dateRange: { start: Date | null; end: Date | null };
 }
 
@@ -36,6 +61,7 @@ interface UseEventsReturn {
   pendingEvents: EventRecord[];
   destinedEvents: EventRecord[];
   adjustedEvents: EventRecord[];
+  stats: EventStats;
   filters: EventFilters;
   isLoading: boolean;
   isSyncing: boolean;
@@ -46,7 +72,7 @@ interface UseEventsReturn {
   selectedEvent: EventRecord | null;
   actions: {
     setSearchQuery: (query: string) => void;
-    setSelectedEvents: (events: string[]) => void;
+    setSelectedStatuses: (statuses: EventStatus[]) => void;
     setDateRange: (range: { start: Date | null; end: Date | null }) => void;
     toggleSelection: (id: string) => void;
     selectAll: () => void;
@@ -60,6 +86,7 @@ interface UseEventsReturn {
     setIsCreateModalOpen: (open: boolean) => void;
     setIsEditModalOpen: (open: boolean) => void;
     setSelectedEvent: (event: EventRecord | null) => void;
+    clearFilters: () => void;
   };
 }
 
@@ -78,9 +105,13 @@ export const useEvents = (): UseEventsReturn => {
 
   const [filters, setFilters] = useState<EventFilters>({
     searchQuery: '',
-    selectedEvents: [],
+    selectedStatuses: [],
     dateRange: { start: null, end: null }
   });
+
+  // ============================================================================
+  // CARGA DE DATOS
+  // ============================================================================
 
   const loadEvents = useCallback(async () => {
     try {
@@ -90,18 +121,26 @@ export const useEvents = (): UseEventsReturn => {
         .equals(tableName)
         .toArray();
       
-      const mapped: EventRecord[] = stored.map(item => ({
-        id: item.id as string,
-        barcode: (item.data as any)?.barcode || '',
-        productName: (item.data as any)?.productName || '',
-        destino: (item.data as any)?.destino || '',
-        traspaso: (item.data as any)?.traspaso || '',
-        observaciones: (item.data as any)?.observaciones || '',
-        frc: (item.data as any)?.frc || '',
-        isAdjusted: (item.data as any)?.isAdjusted || false,
-        timestamp: (item.data as any)?.timestamp || Date.now(),
-        syncStatus: item.syncStatus as 'synced' | 'pending' | 'error' || 'synced'
-      }));
+      const mapped: EventRecord[] = stored.map(item => {
+        const eventData = {
+          isAdjusted: (item.data as any)?.isAdjusted || false,
+          destino: (item.data as any)?.destino || ''
+        };
+        
+        return {
+          id: item.id as string,
+          barcode: (item.data as any)?.barcode || '',
+          productName: (item.data as any)?.productName || '',
+          destino: eventData.destino,
+          traspaso: (item.data as any)?.traspaso || '',
+          observaciones: (item.data as any)?.observaciones || '',
+          frc: (item.data as any)?.frc || '',
+          isAdjusted: eventData.isAdjusted,
+          timestamp: (item.data as any)?.timestamp || Date.now(),
+          syncStatus: item.syncStatus as 'synced' | 'pending' | 'error' || 'synced',
+          status: evaluateEventStatus(eventData) // Calcular estado
+        };
+      });
 
       setEvents(mapped);
     } catch (error) {
@@ -116,24 +155,28 @@ export const useEvents = (): UseEventsReturn => {
     loadEvents();
   }, [loadEvents]);
 
+  // ============================================================================
+  // COMPUTED: FILTRADO Y ESTADÍSTICAS
+  // ============================================================================
+
   const filteredEvents = useMemo(() => {
     return events.filter(event => {
+      // Filtro de búsqueda
       if (filters.searchQuery) {
-        const query = filters.searchQuery.toLowerCase();
-        const matchesSearch = 
-          event.barcode?.toLowerCase().includes(query) ||
-          event.productName?.toLowerCase().includes(query) ||
-          event.destino?.toLowerCase().includes(query) ||
-          event.frc?.toLowerCase().includes(query);
-        if (!matchesSearch) return false;
+        const normalizedQuery = normalizeText(filters.searchQuery);
+        const terms = normalizedQuery.split(/\s+/).filter(Boolean);
+        const searchIndex = normalizeText(
+          `${event.barcode} ${event.productName} ${event.destino} ${event.frc} ${event.traspaso}`
+        );
+        if (!terms.every(term => searchIndex.includes(term))) return false;
       }
 
-      if (filters.selectedEvents.length > 0) {
-        const eventType = event.isAdjusted ? 'adjusted' : 
-                         event.destino ? 'destined' : 'pending';
-        if (!filters.selectedEvents.includes(eventType)) return false;
+      // Filtro por estado
+      if (filters.selectedStatuses.length > 0) {
+        if (!filters.selectedStatuses.includes(event.status)) return false;
       }
 
+      // Filtro por rango de fechas
       if (filters.dateRange.start || filters.dateRange.end) {
         const eventDate = new Date(event.timestamp);
         if (filters.dateRange.start && eventDate < filters.dateRange.start) return false;
@@ -144,18 +187,22 @@ export const useEvents = (): UseEventsReturn => {
     });
   }, [events, filters]);
 
+  const stats = useMemo((): EventStats => {
+    return calculateEventStats(events);
+  }, [events]);
+
   const pendingEvents = useMemo(() => 
-    filteredEvents.filter(e => !e.isAdjusted && !e.destino),
+    filteredEvents.filter(e => e.status === EventStatus.PENDING),
     [filteredEvents]
   );
 
   const destinedEvents = useMemo(() => 
-    filteredEvents.filter(e => !e.isAdjusted && !!e.destino),
+    filteredEvents.filter(e => e.status === EventStatus.DESTINED),
     [filteredEvents]
   );
 
   const adjustedEvents = useMemo(() => 
-    filteredEvents.filter(e => e.isAdjusted),
+    filteredEvents.filter(e => e.status === EventStatus.ADJUSTED),
     [filteredEvents]
   );
 
@@ -163,12 +210,20 @@ export const useEvents = (): UseEventsReturn => {
     setFilters(prev => ({ ...prev, searchQuery: query }));
   }, []);
 
-  const setSelectedEvents = useCallback((selected: string[]) => {
-    setFilters(prev => ({ ...prev, selectedEvents: selected }));
+  const setSelectedStatuses = useCallback((statuses: EventStatus[]) => {
+    setFilters(prev => ({ ...prev, selectedStatuses: statuses }));
   }, []);
 
   const setDateRange = useCallback((range: { start: Date | null; end: Date | null }) => {
     setFilters(prev => ({ ...prev, dateRange: range }));
+  }, []);
+
+  const clearFilters = useCallback(() => {
+    setFilters({
+      searchQuery: '',
+      selectedStatuses: [],
+      dateRange: { start: null, end: null }
+    });
   }, []);
 
   const toggleSelection = useCallback((id: string) => {
@@ -280,6 +335,7 @@ export const useEvents = (): UseEventsReturn => {
     pendingEvents,
     destinedEvents,
     adjustedEvents,
+    stats,
     filters,
     isLoading,
     isSyncing,
@@ -290,7 +346,7 @@ export const useEvents = (): UseEventsReturn => {
     selectedEvent,
     actions: {
       setSearchQuery,
-      setSelectedEvents,
+      setSelectedStatuses,
       setDateRange,
       toggleSelection,
       selectAll,
@@ -303,7 +359,8 @@ export const useEvents = (): UseEventsReturn => {
       setIsDetailModalOpen,
       setIsCreateModalOpen,
       setIsEditModalOpen,
-      setSelectedEvent
+      setSelectedEvent,
+      clearFilters
     }
   };
 };
