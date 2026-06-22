@@ -285,10 +285,11 @@ interface ListItemProps {
   status?: { label: string; variant: 'success' | 'warning' | 'error' | 'info' };
   meta?: Array<{ label: string; value: string }>;
   onClick?: () => void;
+  isSelected?: boolean;
   actions?: ActionMenuProps['actions'];
 }
 
-const ListItem: React.FC<ListItemProps> = ({ title, subtitle, status, meta, onClick, actions }) => {
+const ListItem: React.FC<ListItemProps> = ({ title, subtitle, status, meta, onClick, isSelected, actions }) => {
   const statusBg = {
     success: 'bg-[var(--appsheet-success)]',
     warning: 'bg-[var(--appsheet-warning)]',
@@ -306,7 +307,12 @@ const ListItem: React.FC<ListItemProps> = ({ title, subtitle, status, meta, onCl
   return (
     <div 
       onClick={onClick}
-      className="list-item bg-[var(--appsheet-bg-surface)] border-b border-[var(--appsheet-border-subtle)] last:border-b-0 cursor-pointer transition-colors duration-150"
+      className={cn(
+        'list-item border-b border-[var(--appsheet-border-subtle)] last:border-b-0 cursor-pointer transition-colors duration-150',
+        isSelected 
+          ? 'bg-[var(--appsheet-primary-subtle)] border-l-4 border-l-[var(--appsheet-primary)]' 
+          : 'bg-[var(--appsheet-bg-surface)] hover:bg-[var(--appsheet-bg-elevated)]'
+      )}
     >
       <div className="flex items-center min-h-[76px] px-4 py-3">
         {/* Status dot */}
@@ -315,7 +321,7 @@ const ListItem: React.FC<ListItemProps> = ({ title, subtitle, status, meta, onCl
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <p className="text-base font-medium truncate">{title}</p>
+            <p className={cn('text-base font-medium truncate', isSelected && 'text-[var(--appsheet-primary)]')}>{title}</p>
             {status && (
               <span className={cn('px-2.5 py-1 text-xs font-semibold rounded-full shrink-0', statusBadge[status.variant])}>
                 {status.label}
@@ -344,10 +350,9 @@ const ListItem: React.FC<ListItemProps> = ({ title, subtitle, status, meta, onCl
 };
 
 // ============================================================================
+// DETAIL VIEW PANEL - Panel lateral estilo AppSheet (sin overlay)
 // ============================================================================
-// DETAIL VIEW - Vista de detalle con animaciones Material Design
-// ============================================================================
-interface DetailViewProps {
+interface DetailViewPanelProps {
   title: string;
   subtitle?: string;
   icon?: React.ReactNode;
@@ -365,7 +370,7 @@ interface DetailViewProps {
   }>;
 }
 
-const DetailView: React.FC<DetailViewProps> = ({ title, subtitle, icon, status, sections, onClose, actions }) => {
+const DetailViewPanel: React.FC<DetailViewPanelProps> = ({ title, subtitle, icon, status, sections, onClose, actions }) => {
   const statusBadge = {
     success: 'bg-[var(--appsheet-success-subtle)] text-[var(--appsheet-success)] border-[var(--appsheet-success)]',
     warning: 'bg-[var(--appsheet-warning-subtle)] text-[var(--appsheet-warning)] border-[var(--appsheet-warning)]',
@@ -374,135 +379,91 @@ const DetailView: React.FC<DetailViewProps> = ({ title, subtitle, icon, status, 
   };
 
   return (
-    <>
-      {/* Backdrop con fade */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.2 }}
-        className="fixed inset-0 bg-black/50 z-50"
-        onClick={onClose}
-      />
-      
-      {/* Panel deslizante desde la derecha */}
-      <motion.div
-        initial={{ x: '100%' }}
-        animate={{ x: 0 }}
-        exit={{ x: '100%' }}
-        transition={{
-          type: 'spring',
-          damping: 30,
-          stiffness: 350,
-          mass: 0.8
-        }}
-        className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-[var(--appsheet-bg-surface)] z-50 flex flex-col"
-      >
-        {/* AppBar */}
-        <div className="flex items-center h-14 px-4 gap-3 border-b border-[var(--appsheet-border-subtle)]">
-          <motion.button 
-            whileTap={{ scale: 0.9 }}
-            onClick={onClose}
-            className="p-2 -ml-2 rounded-full hover:bg-[var(--appsheet-bg-hover)] active:bg-[var(--appsheet-bg-active)]"
-          >
-            <X className="w-6 h-6" />
-          </motion.button>
-          <motion.div 
-            className="flex-1 min-w-0"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 }}
-          >
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              {icon}
-              <span className="truncate">{title}</span>
-            </h2>
-            {subtitle && (
-              <p className="text-sm text-[var(--appsheet-text-tertiary)]">{subtitle}</p>
-            )}
-          </motion.div>
-          {status && (
-            <motion.span 
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.15 }}
-              className={cn('px-3 py-1 text-sm font-semibold rounded-full border', statusBadge[status.variant])}
-            >
-              {status.label}
-            </motion.span>
+    <motion.div
+      initial={{ x: '100%' }}
+      animate={{ x: 0 }}
+      exit={{ x: '100%' }}
+      transition={{
+        type: 'spring',
+        damping: 30,
+        stiffness: 350,
+        mass: 0.8
+      }}
+      className="h-full w-full max-w-md bg-[var(--appsheet-bg-surface)] border-l border-[var(--appsheet-border-subtle)] flex flex-col"
+    >
+      {/* Header */}
+      <div className="flex items-center h-14 px-4 gap-3 border-b border-[var(--appsheet-border-subtle)]">
+        <button 
+          onClick={onClose}
+          className="p-2 -ml-2 rounded-full hover:bg-[var(--appsheet-bg-hover)] active:bg-[var(--appsheet-bg-active)]"
+        >
+          <X className="w-5 h-5" />
+        </button>
+        <div className="flex-1 min-w-0">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            {icon}
+            <span className="truncate">{title}</span>
+          </h2>
+          {subtitle && (
+            <p className="text-sm text-[var(--appsheet-text-tertiary)] truncate">{subtitle}</p>
           )}
         </div>
-
-        {/* Content con scroll */}
-        <motion.div 
-          className="flex-1 overflow-y-auto"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.15 }}
-        >
-          {sections.map((section, i) => (
-            <motion.div 
-              key={i} 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 + i * 0.05 }}
-              className="border-b border-[var(--appsheet-border-subtle)]"
-            >
-              {section.title && (
-                <div className="flex items-center gap-2 px-4 py-3 bg-[var(--appsheet-bg-elevated)]">
-                  {section.icon && <span className="text-[var(--appsheet-primary)]">{section.icon}</span>}
-                  <span className="text-sm font-semibold uppercase tracking-wider text-[var(--appsheet-text-secondary)]">
-                    {section.title}
-                  </span>
-                </div>
-              )}
-              {section.rows.map((row, j) => (
-                <div 
-                  key={j} 
-                  className="detail-row flex items-center gap-3 px-4 py-4 cursor-pointer transition-colors duration-150"
-                >
-                  <div className="flex-1">
-                    <p className="text-sm text-[var(--appsheet-text-tertiary)] uppercase tracking-wider">{row.label}</p>
-                    <p className="text-base font-medium mt-0.5">{row.value}</p>
-                  </div>
-                </div>
-              ))}
-            </motion.div>
-          ))}
-        </motion.div>
-
-        {/* Actions con botones animados */}
-        {actions && actions.length > 0 && (
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="p-4 border-t border-[var(--appsheet-border-subtle)] flex gap-3"
-          >
-            {actions.map((action, i) => (
-              <motion.button
-                key={i}
-                whileTap={{ scale: 0.97 }}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.25 + i * 0.05 }}
-                onClick={action.onClick}
-                className={cn(
-                  'flex-1 h-12 rounded-xl text-base font-semibold transition-all',
-                  action.variant === 'primary'
-                    ? 'bg-[var(--appsheet-primary)] text-black hover:brightness-110'
-                    : action.variant === 'danger'
-                    ? 'bg-[var(--appsheet-error-subtle)] text-[var(--appsheet-error)] hover:bg-[var(--appsheet-error)] hover:text-white'
-                    : 'bg-[var(--appsheet-bg-elevated)] hover:bg-[var(--appsheet-bg-hover)]'
-                )}
-              >
-                {action.label}
-              </motion.button>
-            ))}
-          </motion.div>
+        {status && (
+          <span className={cn('px-3 py-1 text-xs font-semibold rounded-full border shrink-0', statusBadge[status.variant])}>
+            {status.label}
+          </span>
         )}
-      </motion.div>
-    </>
+      </div>
+
+      {/* Content con scroll */}
+      <div className="flex-1 overflow-y-auto">
+        {sections.map((section, i) => (
+          <div key={i} className="border-b border-[var(--appsheet-border-subtle)]">
+            {section.title && (
+              <div className="flex items-center gap-2 px-4 py-3 bg-[var(--appsheet-bg-elevated)]">
+                {section.icon && <span className="text-[var(--appsheet-primary)]">{section.icon}</span>}
+                <span className="text-sm font-semibold uppercase tracking-wider text-[var(--appsheet-text-secondary)]">
+                  {section.title}
+                </span>
+              </div>
+            )}
+            {section.rows.map((row, j) => (
+              <div 
+                key={j} 
+                className="detail-row flex items-center gap-3 px-4 py-4 transition-colors duration-150"
+              >
+                <div className="flex-1">
+                  <p className="text-sm text-[var(--appsheet-text-tertiary)] uppercase tracking-wider">{row.label}</p>
+                  <p className="text-base font-medium mt-0.5">{row.value}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+
+      {/* Actions */}
+      {actions && actions.length > 0 && (
+        <div className="p-4 border-t border-[var(--appsheet-border-subtle)] flex gap-3">
+          {actions.map((action, i) => (
+            <button
+              key={i}
+              onClick={action.onClick}
+              className={cn(
+                'flex-1 h-12 rounded-xl text-base font-semibold transition-all',
+                action.variant === 'primary'
+                  ? 'bg-[var(--appsheet-primary)] text-black hover:brightness-110'
+                  : action.variant === 'danger'
+                  ? 'bg-[var(--appsheet-error-subtle)] text-[var(--appsheet-error)] hover:bg-[var(--appsheet-error)] hover:text-white'
+                  : 'bg-[var(--appsheet-bg-elevated)] hover:bg-[var(--appsheet-bg-hover)]'
+              )}
+            >
+              {action.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </motion.div>
   );
 };
 
@@ -554,7 +515,7 @@ const FAB: React.FC<FABProps> = ({ onClick, icon }) => (
 );
 
 // ============================================================================
-// COMPONENTE PRINCIPAL
+// COMPONENTE PRINCIPAL - Vista Dual (Lista + Panel Detalle) estilo AppSheet
 // ============================================================================
 export const EventsPage: React.FC = () => {
   const settings = useAppStore(state => state.settings);
@@ -587,7 +548,6 @@ export const EventsPage: React.FC = () => {
     }
   }, [actions, detailEvent]);
 
-  // Handle editar - usa el CreateEventModal existente con lógica de negocio
   const handleEdit = useCallback((event: EventRecord) => {
     actions.setSelectedEvent(event);
     actions.setIsEditModalOpen(true);
@@ -637,99 +597,105 @@ export const EventsPage: React.FC = () => {
         onChange={actions.setSelectedEvents}
       />
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-16">
-            <RefreshCw className="w-8 h-8 animate-spin text-[var(--appsheet-text-tertiary)]" />
-          </div>
-        ) : filteredEvents.length === 0 ? (
-          <EmptyState
-            icon={<Package className="w-16 h-16" />}
-            title="No hay eventos"
-            description="Crea un nuevo evento para comenzar"
-            action={{ label: '+ Crear Evento', onClick: () => actions.setIsCreateModalOpen(true) }}
-          />
-        ) : (
-          filteredEvents.map(event => (
-            <ListItem
-              key={event.id}
-              title={event.productName || 'Sin producto'}
-              subtitle={event.barcode}
-              status={getStatus(event)}
-              meta={[
-                { label: 'FRC', value: event.frc || 'N/A' },
-                { label: 'Destino', value: event.destino || 'N/A' },
-                { label: 'Fecha', value: formatDate(event.timestamp) }
+      {/* Content - Vista Dual: Lista + Panel Detalle */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Lista de eventos (panel izquierdo) */}
+        <div className={`flex-1 overflow-y-auto transition-all duration-300 ${detailEvent ? 'max-w-[60%]' : 'max-w-full'}`}>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <RefreshCw className="w-8 h-8 animate-spin text-[var(--appsheet-text-tertiary)]" />
+            </div>
+          ) : filteredEvents.length === 0 ? (
+            <EmptyState
+              icon={<Package className="w-16 h-16" />}
+              title="No hay eventos"
+              description="Crea un nuevo evento para comenzar"
+              action={{ label: '+ Crear Evento', onClick: () => actions.setIsCreateModalOpen(true) }}
+            />
+          ) : (
+            filteredEvents.map(event => (
+              <ListItem
+                key={event.id}
+                title={event.productName || 'Sin producto'}
+                subtitle={event.barcode}
+                status={getStatus(event)}
+                meta={[
+                  { label: 'FRC', value: event.frc || 'N/A' },
+                  { label: 'Destino', value: event.destino || 'N/A' },
+                  { label: 'Fecha', value: formatDate(event.timestamp) }
+                ]}
+                onClick={() => handleViewDetail(event)}
+                isSelected={detailEvent?.id === event.id}
+                actions={[
+                  { label: 'Ver detalle', icon: <Eye className="w-4 h-4" />, onClick: () => handleViewDetail(event) },
+                  { label: 'Editar', icon: <Edit2 className="w-4 h-4" />, onClick: () => handleEdit(event) },
+                  { label: 'Eliminar', icon: <Trash2 className="w-4 h-4" />, onClick: () => handleDelete(event.id), danger: true }
+                ]}
+              />
+            ))
+          )}
+        </div>
+
+        {/* Panel de Detalle (panel derecho) - estilo AppSheet */}
+        <AnimatePresence>
+          {detailEvent && (
+            <DetailViewPanel
+              title={detailEvent.productName || 'Evento'}
+              subtitle={detailEvent.barcode}
+              icon={<Package className="w-5 h-5" />}
+              status={getStatus(detailEvent)}
+              sections={[
+                {
+                  title: 'Producto',
+                  icon: <Package className="w-4 h-4" />,
+                  rows: [
+                    { label: 'Nombre', value: detailEvent.productName || 'N/A' },
+                    { label: 'Barcode', value: detailEvent.barcode },
+                    { label: 'Cantidad', value: '1 unidad' }
+                  ]
+                },
+                {
+                  title: 'Documento',
+                  icon: <FileText className="w-4 h-4" />,
+                  rows: [
+                    { label: 'FRC', value: detailEvent.frc || 'Sin FRC' },
+                    { label: 'Traspaso', value: detailEvent.traspaso || 'N/A' }
+                  ]
+                },
+                {
+                  title: 'Ubicación',
+                  icon: <MapPin className="w-4 h-4" />,
+                  rows: [
+                    { label: 'Destino', value: detailEvent.destino || 'Sin destino' }
+                  ]
+                },
+                {
+                  title: 'Tiempo',
+                  icon: <Clock className="w-4 h-4" />,
+                  rows: [
+                    { label: 'Creado', value: formatDate(detailEvent.timestamp) }
+                  ]
+                },
+                ...(detailEvent.observaciones ? [{
+                  title: 'Notas',
+                  icon: <FileText className="w-4 h-4" />,
+                  rows: [{ label: 'Observaciones', value: detailEvent.observaciones }]
+                }] : [])
               ]}
-              onClick={() => handleViewDetail(event)}
+              onClose={handleCloseDetail}
               actions={[
-                { label: 'Ver detalle', icon: <Eye className="w-4 h-4" />, onClick: () => handleViewDetail(event) },
-                { label: 'Editar', icon: <Edit2 className="w-4 h-4" />, onClick: () => handleEdit(event) },
-                { label: 'Eliminar', icon: <Trash2 className="w-4 h-4" />, onClick: () => handleDelete(event.id), danger: true }
+                { label: 'Editar', onClick: () => handleEdit(detailEvent), variant: 'primary' },
+                { label: 'Eliminar', onClick: () => handleDelete(detailEvent.id), variant: 'danger' }
               ]}
             />
-          ))
-        )}
+          )}
+        </AnimatePresence>
       </div>
 
-      {/* FAB */}
-      <FAB onClick={() => actions.setIsCreateModalOpen(true)} />
-
-      {/* Detail View */}
-      <AnimatePresence>
-        {detailEvent && (
-          <DetailView
-            title={detailEvent.productName || 'Evento'}
-            subtitle={detailEvent.barcode}
-            icon={<Package className="w-5 h-5" />}
-            status={getStatus(detailEvent)}
-            sections={[
-              {
-                title: 'Producto',
-                icon: <Package className="w-4 h-4" />,
-                rows: [
-                  { label: 'Nombre', value: detailEvent.productName || 'N/A' },
-                  { label: 'Barcode', value: detailEvent.barcode },
-                  { label: 'Cantidad', value: '1 unidad' }
-                ]
-              },
-              {
-                title: 'Documento',
-                icon: <FileText className="w-4 h-4" />,
-                rows: [
-                  { label: 'FRC', value: detailEvent.frc || 'Sin FRC' },
-                  { label: 'Traspaso', value: detailEvent.traspaso || 'N/A' }
-                ]
-              },
-              {
-                title: 'Ubicación',
-                icon: <MapPin className="w-4 h-4" />,
-                rows: [
-                  { label: 'Destino', value: detailEvent.destino || 'Sin destino' }
-                ]
-              },
-              {
-                title: 'Tiempo',
-                icon: <Clock className="w-4 h-4" />,
-                rows: [
-                  { label: 'Creado', value: formatDate(detailEvent.timestamp) }
-                ]
-              },
-              ...(detailEvent.observaciones ? [{
-                title: 'Notas',
-                icon: <FileText className="w-4 h-4" />,
-                rows: [{ label: 'Observaciones', value: detailEvent.observaciones }]
-              }] : [])
-            ]}
-            onClose={handleCloseDetail}
-            actions={[
-              { label: 'Editar', onClick: () => { handleCloseDetail(); handleEdit(detailEvent); }, variant: 'primary' },
-              { label: 'Eliminar', onClick: () => { handleCloseDetail(); handleDelete(detailEvent.id); }, variant: 'danger' }
-            ]}
-          />
-        )}
-      </AnimatePresence>
+      {/* FAB - Solo visible cuando no hay detalle abierto */}
+      {!detailEvent && (
+        <FAB onClick={() => actions.setIsCreateModalOpen(true)} />
+      )}
 
       {/* Create Event Modal */}
       <CreateEventModal
@@ -753,11 +719,7 @@ export const EventsPage: React.FC = () => {
         theme={theme}
       />
 
-      {/* Edit Event Modal - usa el mismo CreateEventModal con editingItem */}
-      {/* La lógica de negocio ya está en useEventForm: */}
-      {/* - SKU editable → busca producto en BD */}
-      {/* - productName auto-rellenado desde BD (no editable) */}
-      {/* - Si producto no existe, usa el nombre original del evento */}
+      {/* Edit Event Modal - supersede el panel de detalle */}
       <CreateEventModal
         isOpen={isEditModalOpen}
         onClose={() => actions.setIsEditModalOpen(false)}
