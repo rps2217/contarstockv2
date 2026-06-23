@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useHammerLogic } from './hooks/useHammerLogic';
 import { useLocationManager } from '../../shared/hooks/useLocationManager';
-import { migrateMassiveToMaster, importManifestFromCloud, importExpectedOrderFromCloud, importLocalExpectedOrderToHammer } from '../../services/massiveSync';
+import { migrateMassiveToMaster, importManifestFromCloud, importExpectedOrderFromCloud, importLocalExpectedOrderToHammer, migrateHammerManifestToExpectedOrders } from '../../services/massiveSync';
 import { MassiveToolsSheet } from './components/MassiveToolsSheet';
 import { LoadTheoreticalModal } from './components/LoadTheoreticalModal';
 import { BarcodeLabelModal } from '../../shared/components/ui/BarcodeLabelModal';
@@ -94,6 +94,20 @@ export const HammerPage: React.FC = () => {
     await importLocalExpectedOrderToHammer(batchId, orderId);
   };
 
+  const handleStartTestCounting = async () => {
+    if (state.items.length === 0) {
+      alert('Primero importa una carga teórica antes de iniciar el conteo de prueba');
+      return;
+    }
+    try {
+      const { sessionId } = await migrateHammerManifestToExpectedOrders(batchId);
+      navigate(`/counting/${sessionId}`);
+    } catch (err) {
+      console.error('Error al iniciar conteo de prueba:', err);
+      alert('Error al iniciar el conteo de prueba');
+    }
+  };
+
   const activeItem = state.items.find(i => i.barcode === state.activeBarcode);
 
   return (
@@ -130,6 +144,8 @@ export const HammerPage: React.FC = () => {
         autoSyncEnabled={state.autoSyncEnabled}
         onToggleAutoSync={actions.toggleAutoSync}
         onDownloadExcel={() => exportHammerToExcel(batchId, state.items)}
+        onStartTestCounting={handleStartTestCounting}
+        hasManifestItems={state.items.some(i => i.expectedQty !== undefined)}
       />
 
       <LocationSelectorModal 

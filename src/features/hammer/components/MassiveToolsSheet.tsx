@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Barcode, RotateCcw, Download, X, MapPin, Printer, Camera, Volume2, VolumeX, Cloud, FileSpreadsheet } from 'lucide-react';
+import { Barcode, RotateCcw, Download, X, MapPin, Printer, Camera, Volume2, VolumeX, Cloud, FileSpreadsheet, FlaskConical } from 'lucide-react';
 import { Modal } from '../../../shared/components/ui/Modal';
 
  interface Props {
@@ -22,11 +22,13 @@ import { Modal } from '../../../shared/components/ui/Modal';
  autoSyncEnabled?: boolean;
  onToggleAutoSync?: () => void;
  onDownloadExcel?: () => void;
+ onStartTestCounting?: () => void;
+ hasManifestItems?: boolean;
 }
 
 export const MassiveToolsSheet: React.FC<Props> = ({ 
  isOpen, onClose, hasActiveItem, location, onChangeLocation, onShowLabel, onReset, onImport, onSync, isSyncing, onPrintSummary, onToggleCameraMode, isVoiceEnabled, onToggleVoice,
- autoSyncEnabled = true, onToggleAutoSync, onDownloadExcel
+ autoSyncEnabled = true, onToggleAutoSync, onDownloadExcel, onStartTestCounting, hasManifestItems = false
 }) => {
  
  const ToolButton = ({ onClick, icon: Icon, label, color, disabled = false, sublabel, loading = false }: any) => (
@@ -75,6 +77,36 @@ export const MassiveToolsSheet: React.FC<Props> = ({
  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${autoSyncEnabled ? 'bg-indigo-500' : 'bg-slate-700'}`}
  >
  <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${autoSyncEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+ </button>
+ </div>
+ )}
+
+ {/* BOTÓN MODO PRUEBA */}
+ {onStartTestCounting && (
+ <div className="mb-4">
+ <button
+ onClick={() => { onStartTestCounting(); onClose(); }}
+ disabled={!hasManifestItems}
+ className={`w-full p-4 rounded-2xl flex items-center gap-4 transition-all active:scale-[0.98] disabled:opacity-30 ${
+ hasManifestItems 
+ ? 'bg-purple-600/20 border-2 border-purple-500/40 hover:bg-purple-600/30' 
+ : 'bg-slate-900 border border-white/5'
+ }`}
+ >
+ <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
+ hasManifestItems ? 'bg-purple-500/20' : 'bg-slate-800'
+ }`}>
+ <FlaskConical className={`w-6 h-6 ${hasManifestItems ? 'text-purple-400' : 'text-slate-600'}`} />
+ </div>
+ <div className="flex-1 text-left">
+ <h4 className={`text-sm font-black uppercase tracking-wider ${hasManifestItems ? 'text-purple-400' : 'text-slate-500'}`}>
+ Iniciar Conteo de Prueba
+ </h4>
+ <p className="text-[9px] font-bold uppercase mt-0.5 text-slate-500">
+ {hasManifestItems ? 'Usar carga teórica como guía' : 'Primero carga una teórico'}
+ </p>
+ </div>
+ <span className="text-[9px] font-black uppercase text-slate-600">→</span>
  </button>
  </div>
  )}

@@ -1,13 +1,14 @@
 # ContarStock v2 - Agente de Desarrollo
 
 > **Última actualización:** 2026-06-23
-> **Estado:** Fases 1-5 completadas (FASE 6+ en progreso)
+> **Estado:** FASE 6+ completada (QA Events + Integración Hammer/Counting)
 
 ## Resumen Ejecutivo
-- **391 tests pasando** ✅
-- **Build PWA exitoso** (68 entries, ~4.4 MB)
+- **524 tests pasando** ✅ (+133 nuevos)
+- **Build PWA exitoso** (69 entries, ~4.4 MB)
 - **Arquitectura modular** "Lego" implementada
 - **Exports centralizados** en todos los módulos core
+- **Integración Hammer → Counting** (modo prueba funcional)
 
 ## Estructura del Proyecto
 
@@ -1329,7 +1330,66 @@ docs/
 ```
 
 ### Métricas del Repositorio
-- **Commits totales:** 1,291
-- **Contributors:** rps2217 (1,061), openhands (111+)
-- **Tests:** 391 passing
-- **Build:** PWA con 68 precache entries (~4.4 MB)
+- **Commits totales:** 1,291+
+- **Contributors:** rps2217 (1,061), openhands (120+)
+- **Tests:** 524 passing ✅ (+133 nuevos)
+- **Build:** PWA con 69 precache entries (~4.4 MB)
+
+---
+
+## Integración Hammer → Counting (2026-06-23) 🆕
+
+### Problema Detectado
+El módulo "modo prueba" (StartSessionModal) y el módulo de cargas teóricas (Hammer) estaban **desconectados**:
+- Hammer guarda en `massiveDb.blindManifests`
+- StartSessionModal busca en `db.expectedOrders`
+
+### Solución Implementada
+
+#### 1. Función de Migración (`src/services/massiveSync.ts`)
+```typescript
+export const migrateHammerManifestToExpectedOrders = async (
+  batchId: string, 
+  orderId?: string
+): Promise<string>
+```
+- Lee manifests de `massiveDb.blindManifests`
+- Convierte al formato `ExpectedOrder`
+- Guarda en `db.expectedOrders`
+- Retorna ID de orden migrada
+
+#### 2. Botón "Iniciar Conteo de Prueba" (`MassiveToolsSheet.tsx`)
+- Visible cuando hay carga teórica cargada
+- Al hacer clic, migra y navega a CountingPage
+
+#### 3. Flujo de Usuario
+```
+1. Hammer: Importar carga teórica → massiveDb.blindManifests
+2. Hammer: "Iniciar Conteo de Prueba" → migrateHammerManifestToExpectedOrders()
+3. CountingPage: Muestra esperado vs escaneado
+```
+
+### Tests Creados
+- `src/features/hammer/hooks/useHammerLogic.test.ts` (25 tests)
+- `src/services/massiveSync.test.ts` (20 tests)
+
+### Archivos Modificados
+- `src/services/massiveSync.ts` - Funciones de migración
+- `src/features/hammer/HammerPage.tsx` - Handler de navegación
+- `src/features/hammer/components/MassiveToolsSheet.tsx` - Botón UI
+
+---
+
+## Roadmap Pendiente
+
+### Prioridad Alta
+- [ ] Coverage de tests a 60%+ (actual ~40%)
+- [ ] Lazy loading de páginas (optimizar bundle)
+
+### Prioridad Media
+- [ ] Cola de sync offline con retry
+- [ ] Documentación de atajos de teclado
+
+### Prioridad Baja
+- [ ] Onboarding flow para nuevos usuarios
+- [ ] Dashboard de métricas de productividad
