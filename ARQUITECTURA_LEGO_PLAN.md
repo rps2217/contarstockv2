@@ -283,37 +283,42 @@ src/types/                         # Re-exports globales
 
 ### Fase 2: Refactorizar Módulos (5-7 días)
 
-#### Counting Module ❌
-**Estado:** Necesita domain + estructura
+#### Counting Module ✅ (COMPLETADO 2026-06-23)
+**Estado:** Domain creado + arquitectura Lego
 
 **Estructura actual:**
 ```
 counting/
-├── CountingPage.tsx          # 201 líneas ✅ (OK)
+├── CountingPage.tsx          # ✅ 201 líneas (OK)
 ├── components/               # ✅ (ya existe)
 │   ├── CountingCameraView.tsx
 │   ├── CountingKanbanView.tsx
 │   ├── CountingMetricsCards.tsx
 │   └── ...
-├── hooks/                    # ⚠️ Mezclado
-│   ├── useCountingLogic.ts   # 500+ líneas - MUY GRANDE
-│   ├── useCountingAI.ts      # Lógica AI
-│   ├── useCountingQueries.ts # Queries
-│   ├── useCountingSync.ts   # Sync
-│   └── ...
-└── domain/                   # ❌ NO EXISTE
+├── hooks/                    # ✅ Refactorizado
+│   ├── index.ts             # ✅ Exports centralizados
+│   ├── useCountingLogic.ts   # ✅ Composición
+│   ├── useCountingAI.ts      # ✅
+│   ├── useCountingQueries.ts # ✅
+│   ├── useCountingSync.ts   # ✅
+│   ├── useProductivity.ts   # ✅ (9 tests)
+│   └── useTurboMode.ts      # ✅ (9 tests)
+└── domain/                   # ✅ CREADO
+    ├── index.ts             # ✅ Exports
+    ├── countingDomain.ts    # ✅ Lógica pura (37 tests)
+    └── countingDomain.test.ts
 ```
 
-**Acciones requeridas:**
-1. [ ] Crear `domain/countingDomain.ts` extrayendo:
-   - Evaluación de productos
-   - Normalización de barcode
-   - Lógica de evaluación (pharma, batch, etc.)
-2. [ ] Dividir `useCountingLogic.ts` en hooks más pequeños:
-   - `useCountingScanner.ts` - Solo lógica de escaneo
-   - `useCountingSession.ts` - Solo gestión de sesión
-   - `useCountingHistory.ts` - Solo historial
-3. [ ] Agregar tests para `countingDomain.ts`
+**Implementado:**
+1. [x] Crear `domain/countingDomain.ts` con:
+   - Evaluación de productos (isPharmaBarcode, evaluateProduct)
+   - Normalización de barcode (findItemByBarcode, isSameProduct)
+   - Lógica de evaluación (shouldPromptBatch)
+   - Métricas (calculateCountingMetrics, calculateProgress)
+   - Validación (isValidBarcode, isValidQuantity, isValidExpiryDate)
+   - Formateo (formatBarcode, getCountingSummary)
+2. [x] Tests: 37 tests para countingDomain
+3. [x] Exports centralizados en `hooks/index.ts` y `domain/index.ts`
 
 #### Inventory Module ✅ (Parcial)
 **Estado:** Domain existe, necesita consolidación
