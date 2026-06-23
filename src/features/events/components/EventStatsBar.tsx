@@ -2,7 +2,7 @@
  * EventStatsBar - Barra de estadísticas para eventos
  */
 
-import React from 'react';
+import React, { memo } from 'react';
 import { Package, Clock, MapPin, CheckCircle2 } from 'lucide-react';
 import { EventStats, EventStatus } from '../hooks/useEvents';
 
@@ -39,7 +39,7 @@ const statusConfig = [
   }
 ];
 
-export const EventStatsBar: React.FC<EventStatsBarProps> = ({
+export const EventStatsBar = memo<EventStatsBarProps>(({
   stats,
   selectedStatuses,
   onStatusFilter
@@ -100,6 +100,6 @@ export const EventStatsBar: React.FC<EventStatsBarProps> = ({
       })}
     </div>
   );
-};
+});
 
 export default EventStatsBar;

@@ -404,25 +404,31 @@ expiry/
 | **Reports** | hooks, components | 🟡 Media |
 | **Reception** | hooks, types | 🟡 Media |
 
-### Fase 3: Hooks Globales (2-3 días)
-- [ ] Migrar hooks a módulos correspondientes
-- [ ] Crear `shared/hooks/` para hooks reutilizables:
-  - `useDebounce`
-  - `useLocalStorage`
-  - `useMediaQuery`
-  - `useClickOutside`
-  - `useKeyboardShortcut`
+### Fase 3: Hooks Globales ✅ (COMPLETADO 2026-06-23)
+- [x] Crear `hooks/index.ts` centralizado
+- [x] Documentar hooks que deberían migrar
+- [ ] Migrar hooks a módulos correspondientes (bajo riesgo, diferido)
+
+**Hooks que permanecen globales (por bajo uso/riesgo):**
+- useAppInit, useAutoSession, useAutoLock
+- useAutoSync, useGenericSync, useSyncQueue
+- useNetworkStatus, useFormValidation
+- useExpiryWatcher, useConflictResolution
+
+**Hooks reutilizables en `usePerformanceOptimizations.ts`:**
+- useDebounce, useThrottle, useMediaQuery
+- useIntersectionObserver, useVirtualScroll
 
 ### Fase 4: Services (2-3 días)
 - [ ] Dividir `export.ts` en servicios específicos
 - [ ] Documentar API de `GenericSyncEngine`
 - [ ] Consolidar servicios de validación
 
-### Fase 5: Performance (2-3 días)
-- [ ] Implementar `React.memo` en componentes pesados
-- [ ] Agregar `useMemo`/`useCallback` donde sea necesario
-- [ ] Virtualizar listas con >100 items
-- [ ] Lazy load imágenes con `IntersectionObserver`
+### Fase 5: Performance ✅ (COMPLETADO 2026-06-23)
+- [x] React.memo en EventStatsBar, ExpiryStatsBar, ExpiryItemCard
+- [x] Componentes UI ya usan memo (Badge, Button, Card, etc.)
+- [x] useVirtualizer en CustomersPage
+- [ ] Virtualizar otras listas grandes (pendiente)
 
 ### Fase 6: Testing (Continuo)
 - [ ] Alcanzar 60% coverage

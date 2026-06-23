@@ -2,7 +2,7 @@
  * ExpiryItemCard - Card de vencimiento simplificado
  */
 
-import React from 'react';
+import React, { memo } from 'react';
 import { Package, Trash2, Calendar, AlertTriangle, CheckCircle2, RefreshCw } from 'lucide-react';
 import { ExpiryRecord, ExpiryStatus, formatExpiryDate, getStatusLabel } from '../hooks/useExpiry';
 
@@ -152,4 +152,4 @@ export const ExpiryItemCard: React.FC<ExpiryItemCardProps> = ({
   );
 };
 
-export default ExpiryItemCard;
+export default memo(ExpiryItemCard);

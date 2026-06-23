@@ -2,7 +2,7 @@
  * ExpiryStatsBar - Barra de estadísticas simplificada
  */
 
-import React from 'react';
+import React, { memo } from 'react';
 import { AlertTriangle, AlertCircle, Clock, CheckCircle2, Package } from 'lucide-react';
 import { ExpiryStats, ExpiryStatus } from '../hooks/useExpiry';
 
@@ -55,7 +55,7 @@ const statusConfig = [
   }
 ];
 
-export const ExpiryStatsBar: React.FC<ExpiryStatsBarProps> = ({
+export const ExpiryStatsBar = memo<ExpiryStatsBarProps>(({
   stats,
   selectedStatuses,
   onStatusFilter
@@ -117,6 +117,6 @@ export const ExpiryStatsBar: React.FC<ExpiryStatsBarProps> = ({
       })}
     </div>
   );
-};
+});
 
 export default ExpiryStatsBar;
