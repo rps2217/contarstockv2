@@ -320,26 +320,36 @@ counting/
 2. [x] Tests: 37 tests para countingDomain
 3. [x] Exports centralizados en `hooks/index.ts` y `domain/index.ts`
 
-#### Inventory Module ✅ (Parcial)
-**Estado:** Domain existe, necesita consolidación
+#### Inventory Module ✅ (COMPLETADO 2026-06-23)
+**Estado:** Exports centralizados
 
 **Estructura actual:**
 ```
 inventory/
 ├── domain/                   # ✅ EXISTS
+│   ├── index.ts             # ✅ EXPORTS CREADOS
 │   ├── productsDomain.ts     # ✅ (34 tests)
 │   └── productsDomain.test.ts
 ├── hooks/                    # ✅ EXISTS
+│   ├── index.ts             # ✅ EXPORTS CREADOS
+│   ├── useProductDatabase.ts
+│   ├── useProductForm.ts
+│   ├── useProductQuery.ts
+│   ├── useProductSync.ts
+│   ├── useProductsStats.ts  # ✅ (6 tests)
+│   └── ...
 ├── components/              # ✅ EXISTS
+│   ├── index.ts             # ✅ EXPORTS CREADOS
 │   ├── ProductCard.tsx
 │   ├── ProductStatsBar.tsx
 │   └── ...
-└── inventoryPage.tsx        # ⚠️ Legacy
+└── InventoryPage.tsx        # ✅ Refactorizado
 ```
 
-**Acciones requeridas:**
-1. [ ] Consolidar exports en `index.ts`
-2. [ ] Verificar que todos usan domain
+**Implementado:**
+1. [x] Exports centralizados en `domain/index.ts`
+2. [x] Exports centralizados en `hooks/index.ts`
+3. [x] Exports centralizados en `components/index.ts`
 
 #### Events Module ✅
 **Estado:** Arquitectura v2 implementada
