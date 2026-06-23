@@ -396,13 +396,13 @@ expiry/
 
 ### Módulos Pendientes de Consolidar
 
-| Módulo | Estructura | Prioridad |
-|--------|------------|-----------|
-| **Suppliers** | components, hooks, pages | 🟡 Media |
-| **Customers** | Components simples | 🟢 Baja |
-| **Slices** | domain, hooks, types | 🟡 Media |
-| **Reports** | hooks, components | 🟡 Media |
-| **Reception** | hooks, types | 🟡 Media |
+| Módulo | Estructura | Prioridad | Estado |
+|--------|------------|-----------|--------|
+| **Suppliers** | components, hooks, pages | 🟡 Media | ✅ Exports OK |
+| **Customers** | Components simples | 🟢 Baja | ✅ Exports OK |
+| **Slices** | domain, hooks, types | 🟡 Media | ✅ Exports OK + Tests |
+| **Reports** | hooks, components | 🟡 Media | ✅ Exports OK |
+| **Reception** | hooks, types | 🟡 Media | ✅ Exports OK |
 
 ### Fase 3: Hooks Globales ✅ (COMPLETADO 2026-06-23)
 - [x] Crear `hooks/index.ts` centralizado
@@ -441,11 +441,28 @@ expiry/
 
 | Métrica | Actual | Target |
 |---------|--------|--------|
-| Tests | 354 | 500+ |
+| Tests | 445 ✅ | 500+ |
 | Coverage | ~40% | 60%+ |
 | Bundle size | 4.4 MB | <4 MB |
 | LCP | ? | <2.5s |
-| Module cohesion | Mezclado | Arquitectura Lego |
+| Module cohesion | Arquitectura Lego ✅ | Arquitectura Lego |
+
+### Tests por Módulo (2026-06-23)
+
+| Módulo | Tests | Coverage |
+|--------|-------|----------|
+| countingDomain | 37 | ✅ |
+| eventsDomain | 26 | ✅ |
+| expiryDomain | 27 | ✅ |
+| productsDomain | 34 | ✅ |
+| counting hooks | 18 | ✅ |
+| BaseRepository | 14 | ✅ |
+| SyncFSM | 11 | ✅ |
+| UploadGroupBuilder | 14 | ✅ |
+| slices/constants | 18 | ✅ |
+| services/constants | 14 | ✅ |
+| emailConstants | 8 | ✅ |
+| **Total** | **445** | **40%** |
 
 ---
 
