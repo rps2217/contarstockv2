@@ -351,45 +351,58 @@ inventory/
 2. [x] Exports centralizados en `hooks/index.ts`
 3. [x] Exports centralizados en `components/index.ts`
 
-#### Events Module ✅
-**Estado:** Arquitectura v2 implementada
+#### Events Module ✅ (COMPLETADO 2026-06-23)
+**Estado:** Arquitectura v2 implementada + exports centralizados
 
 **Estructura actual:**
 ```
 events/
 ├── domain/                   # ✅ EXISTS
-│   ├── eventsDomain.ts
-│   └── eventsDomain.test.ts  # ✅ (26 tests)
+│   ├── eventsDomain.ts       # ✅
+│   ├── eventsDomain.test.ts  # ✅ (26 tests)
+│   └── index.ts             # ✅ EXPORTS CREADOS
 ├── hooks/                    # ✅ EXISTS
+│   ├── index.ts             # ✅ (ya existía)
+│   └── ...
 ├── components/               # ✅ EXISTS
-│   ├── EventCard.tsx
-│   ├── EventStatsBar.tsx
+│   ├── index.ts             # ✅ (ya existía)
 │   └── ...
 └── EventsPage.tsx
 ```
 
-**Acciones requeridas:**
-1. [ ] Verificar exports centralizados
-
-#### Expiry Module ✅
-**Estado:** Arquitectura v2 implementada
+#### Expiry Module ✅ (COMPLETADO 2026-06-23)
+**Estado:** Arquitectura v2 implementada + exports centralizados
 
 **Estructura actual:**
 ```
 expiry/
 ├── domain/                   # ✅ EXISTS
 │   ├── expiryDomain.ts
-│   └── expiryDomain.test.ts  # ✅ (27 tests)
+│   ├── expiryDomain.test.ts  # ✅ (27 tests)
+│   ├── expiryEngine.ts
+│   └── index.ts             # ✅ EXPORTS CREADOS
 ├── hooks/                    # ✅ EXISTS
-├── components/               # ✅ EXISTS
-│   ├── ExpiryCard.tsx
+│   ├── useExpiry.ts
+│   └── index.ts             # ✅ EXPORTS CREADOS
+├── components/              # ✅ EXISTS
+│   ├── ExpiryItemCard.tsx
 │   ├── ExpiryStatsBar.tsx
-│   └── ...
+│   ├── ExpiryDetailModal.tsx
+│   ├── ExpiryCaptureModal.tsx
+│   ├── ExpirationModal.tsx
+│   └── index.ts             # ✅ EXPORTS CREADOS
 └── ExpiryPage.tsx
 ```
 
-**Acciones requeridas:**
-1. [ ] Mantener - Es referencia para otros módulos
+### Módulos Pendientes de Consolidar
+
+| Módulo | Estructura | Prioridad |
+|--------|------------|-----------|
+| **Suppliers** | components, hooks, pages | 🟡 Media |
+| **Customers** | Components simples | 🟢 Baja |
+| **Slices** | domain, hooks, types | 🟡 Media |
+| **Reports** | hooks, components | 🟡 Media |
+| **Reception** | hooks, types | 🟡 Media |
 
 ### Fase 3: Hooks Globales (2-3 días)
 - [ ] Migrar hooks a módulos correspondientes
