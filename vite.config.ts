@@ -35,7 +35,9 @@ export default defineConfig(({ mode }) => {
             'vendor-db': ['dexie', 'dexie-react-hooks'],
             'vendor-utils': ['xlsx', 'jspdf', 'papaparse', 'date-fns', 'jszip'],
             'vendor-scanner': ['html5-qrcode', 'qrcode.react'],
-            'vendor-ai': ['@google/genai', '@xenova/transformers']
+            // AI chunks - cargados lazily
+            'vendor-gemini': ['@google/genai'],
+            'vendor-transformers': ['@xenova/transformers']
           }
         }
       },

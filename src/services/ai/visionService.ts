@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { VisualGuide } from "../types";
+import { VisualGuide } from "../../types";
 
 // Inicialización diferida para evitar errores si la API KEY no está lista al cargar el módulo
 let aiInstance: GoogleGenAI | null = null;
