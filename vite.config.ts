@@ -44,9 +44,7 @@ export default defineConfig(({ mode }) => {
       tailwindcss(),
       react(),
       VitePWA({
-        strategies: 'injectManifest',
-        srcDir: 'src', 
-        filename: 'sw.ts',
+        strategies: 'generateSW',
         registerType: 'autoUpdate',
         devOptions: {
           enabled: false,
@@ -97,6 +95,39 @@ export default defineConfig(({ mode }) => {
               description: "Ir a Conteo a Ciegas",
               url: "/#/counting",
               icons: [{ src: "pwa-icon.svg", sizes: "192x192" }]
+            }
+          ]
+        },
+        workbox: {
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+          runtimeCaching: [
+            {
+              urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'google-fonts-cache',
+                expiration: {
+                  maxEntries: 10,
+                  maxAgeSeconds: 60 * 60 * 24 * 365
+                },
+                cacheableResponse: {
+                  statuses: [0, 200]
+                }
+              }
+            },
+            {
+              urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'gstatic-fonts-cache',
+                expiration: {
+                  maxEntries: 10,
+                  maxAgeSeconds: 60 * 60 * 24 * 365
+                },
+                cacheableResponse: {
+                  statuses: [0, 200]
+                }
+              }
             }
           ]
         }
