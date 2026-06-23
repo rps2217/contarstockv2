@@ -271,32 +271,110 @@ src/types/                         # Re-exports globales
 - [x] Domain modules (completado)
 - [x] Shared components (DualView, DetailPanel)
 
-### Fase 1: Componentes UI Compartidos (3-5 días)
-- [ ] Crear `shared/ui/` con primitivos:
-  - [ ] `Button` (variants: primary, secondary, danger)
-  - [ ] `Input` (con label, error, helperText)
-  - [ ] `Badge` (variants: success, warning, error, info)
-  - [ ] `Card` (base para todos los cards)
-  - [ ] `Modal` (usando `<dialog>`)
-  - [ ] `ConfirmDialog` (Modal especializado)
-- [ ] Migrar estilos del tema a componentes
+### Fase 1: Componentes UI Compartidos (3-5 días) ✅
+- [x] `shared/ui/` ya existe con primitivos:
+  - [x] `Button` (variants: primary, secondary, danger, ghost, outline)
+  - [x] `Input` (con label, error, helperText)
+  - [x] `Badge` (variants: success, warning, error, info, muted)
+  - [x] `Card` (base para todos los cards)
+  - [x] `Modal` (usando `<dialog>`)
+  - [x] `Spinner`, `Skeleton`, `VirtualList`
+- [ ] Mejorar: Migrar de Tailwind puro a tokens CSS del tema AppSheet
 
 ### Fase 2: Refactorizar Módulos (5-7 días)
 
-#### Counting Module
-- [ ] Extraer `countingDomain.ts`
-- [ ] Dividir `CountingPage.tsx`
-- [ ] Agregar `VirtualList` para grids grandes
-- [ ] Agregar tests
+#### Counting Module ❌
+**Estado:** Necesita domain + estructura
 
-#### Inventory Module  
-- [ ] Consolidar `ProductCard`, `ProductStatsBar`
-- [ ] Resolver dynamic imports
-- [ ] Agregar tests
+**Estructura actual:**
+```
+counting/
+├── CountingPage.tsx          # 201 líneas ✅ (OK)
+├── components/               # ✅ (ya existe)
+│   ├── CountingCameraView.tsx
+│   ├── CountingKanbanView.tsx
+│   ├── CountingMetricsCards.tsx
+│   └── ...
+├── hooks/                    # ⚠️ Mezclado
+│   ├── useCountingLogic.ts   # 500+ líneas - MUY GRANDE
+│   ├── useCountingAI.ts      # Lógica AI
+│   ├── useCountingQueries.ts # Queries
+│   ├── useCountingSync.ts   # Sync
+│   └── ...
+└── domain/                   # ❌ NO EXISTE
+```
 
-#### Events Module
-- [ ] Verificar estructura en `modules/`
-- [ ] Consolidar exports
+**Acciones requeridas:**
+1. [ ] Crear `domain/countingDomain.ts` extrayendo:
+   - Evaluación de productos
+   - Normalización de barcode
+   - Lógica de evaluación (pharma, batch, etc.)
+2. [ ] Dividir `useCountingLogic.ts` en hooks más pequeños:
+   - `useCountingScanner.ts` - Solo lógica de escaneo
+   - `useCountingSession.ts` - Solo gestión de sesión
+   - `useCountingHistory.ts` - Solo historial
+3. [ ] Agregar tests para `countingDomain.ts`
+
+#### Inventory Module ✅ (Parcial)
+**Estado:** Domain existe, necesita consolidación
+
+**Estructura actual:**
+```
+inventory/
+├── domain/                   # ✅ EXISTS
+│   ├── productsDomain.ts     # ✅ (34 tests)
+│   └── productsDomain.test.ts
+├── hooks/                    # ✅ EXISTS
+├── components/              # ✅ EXISTS
+│   ├── ProductCard.tsx
+│   ├── ProductStatsBar.tsx
+│   └── ...
+└── inventoryPage.tsx        # ⚠️ Legacy
+```
+
+**Acciones requeridas:**
+1. [ ] Consolidar exports en `index.ts`
+2. [ ] Verificar que todos usan domain
+
+#### Events Module ✅
+**Estado:** Arquitectura v2 implementada
+
+**Estructura actual:**
+```
+events/
+├── domain/                   # ✅ EXISTS
+│   ├── eventsDomain.ts
+│   └── eventsDomain.test.ts  # ✅ (26 tests)
+├── hooks/                    # ✅ EXISTS
+├── components/               # ✅ EXISTS
+│   ├── EventCard.tsx
+│   ├── EventStatsBar.tsx
+│   └── ...
+└── EventsPage.tsx
+```
+
+**Acciones requeridas:**
+1. [ ] Verificar exports centralizados
+
+#### Expiry Module ✅
+**Estado:** Arquitectura v2 implementada
+
+**Estructura actual:**
+```
+expiry/
+├── domain/                   # ✅ EXISTS
+│   ├── expiryDomain.ts
+│   └── expiryDomain.test.ts  # ✅ (27 tests)
+├── hooks/                    # ✅ EXISTS
+├── components/               # ✅ EXISTS
+│   ├── ExpiryCard.tsx
+│   ├── ExpiryStatsBar.tsx
+│   └── ...
+└── ExpiryPage.tsx
+```
+
+**Acciones requeridas:**
+1. [ ] Mantener - Es referencia para otros módulos
 
 ### Fase 3: Hooks Globales (2-3 días)
 - [ ] Migrar hooks a módulos correspondientes
