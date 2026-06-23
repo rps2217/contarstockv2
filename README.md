@@ -1,20 +1,32 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# ContarStock v2
 
-# Run and deploy your AI Studio app.....mmm
+**Sistema de gestión de inventario y conteo para retail.**
 
-This contains everything you need to run your app locally
+## Tech Stack
+- **Frontend**: React 18 + TypeScript + Vite
+- **State**: Zustand + TanStack Query
+- **Styling**: Tailwind CSS + CSS Variables
+- **Database**: Dexie.js (IndexedDB) + Supabase
+- **PWA**: Vite PWA Plugin
 
-View your app in AI Studio: https://ai.studio/apps/cdbcc55f-33e7-4cd9-81a6-7bcc8a4ca2e9
+## Módulos Principales
+- **Counting**: Conteo de inventario en tiempo real
+- **Events**: Registro de eventos y ajustes
+- **Expiry**: Control de vencimientos
+- **Inventory**: Gestión de productos
+- **Reports**: Reportes y métricas
+- **Suppliers**: Gestión de proveedores
 
-## Run Locally.
+## Scripts
+```bash
+npm install        # Instalar dependencias
+npm run dev        # Desarrollo
+npm run build      # Producción
+npm run test:run   # Tests (single run)
+npm run lint       # Linting
+```
 
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Documentación
+- [ARQUITECTURA_LEGO_PLAN.md](./ARQUITECTURA_LEGO_PLAN.md) - Plan de arquitectura modular
+- [AGENTS.md](./AGENTS.md) - Guía para agentes de IA
+- [docs/archive/](./docs/archive/) - Documentación histórica

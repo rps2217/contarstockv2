@@ -1,4 +1,13 @@
-# ContarStock v2 - Agente de Desarrollo......
+# ContarStock v2 - Agente de Desarrollo
+
+> **Última actualización:** 2026-06-23
+> **Estado:** Fases 1-5 completadas (FASE 6+ en progreso)
+
+## Resumen Ejecutivo
+- **391 tests pasando** ✅
+- **Build PWA exitoso** (68 entries, ~4.4 MB)
+- **Arquitectura modular** "Lego" implementada
+- **Exports centralizados** en todos los módulos core
 
 ## Estructura del Proyecto
 
@@ -1294,3 +1303,33 @@ sortProducts(products, field, order): Product[]
 - [x] ~~Agregar tests para productsDomain~~ ✅ (34 tests)
 - [x] ~~Crear useProductsStats hook~~ ✅ (6 tests)
 - [x] ~~Refactorizar InventoryMetricsCards~~ ✅
+
+---
+
+## Estado del Repositorio (2026-06-23)
+
+### Archivos Históricos Movidos a `docs/archive/`
+- ACTION_PLAN.md
+- AUDIT_LOG_DATABASE.md
+- AUDITORIA_2026-06-23.md
+- BITACORA_ARQUITECTURA_LEGO.md
+- CHANGELOG-REFACTORING.md
+- CODE_ANALYSIS.md
+- CODE_REVIEW_ANALISIS.md
+
+### Estructura de Raíz Actual
+```
+README.md                    # Información del proyecto
+AGENTS.md                    # Guía para agentes de IA
+ARQUITECTURA_LEGO_PLAN.md   # Plan de refactorización
+docs/
+├── archive/                 # Documentación histórica
+├── migrations/              # Scripts SQL de migración
+└── ...
+```
+
+### Métricas del Repositorio
+- **Commits totales:** 1,291
+- **Contributors:** rps2217 (1,061), openhands (111+)
+- **Tests:** 391 passing
+- **Build:** PWA con 68 precache entries (~4.4 MB)
