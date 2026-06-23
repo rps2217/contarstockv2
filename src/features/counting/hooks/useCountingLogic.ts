@@ -10,6 +10,9 @@ import * as productService from '../../../services/productService';
 import { normalizeSku } from '../../../services/utils';
 import { shouldPromptForBatch } from '../../../services/uiLogic';
 
+// Domain (Lego Architecture)
+import { shouldPromptBatch, findItemByBarcode, evaluateProduct } from '../domain/countingDomain';
+
 // Lego Hooks
 import { useCountingSync } from './useCountingSync';
 import { useCountingQueries } from './useCountingQueries';
