@@ -159,11 +159,12 @@ Warning: @import rules must precede all rules aside from @charset and @layer sta
 - [x] Eliminar `workbox-*` dependencies ✅
 - [x] Eliminar `src/services/tests/legacyTests.ts` ✅
 - [x] Limpiar console.log en producción ✅
+- [x] Agregar tests para stores ✅ (330 tests)
 - [ ] Mantener `supabaseSyncService.ts` (30+ archivos lo usan)
 
 ### Fase 3: Refactoring (Próxima semana)
-- [ ] Unificar dynamic imports problemáticos
-- [ ] Dividir `useBulkActionsAdvanced.tsx`
+- [ ] Unificar dynamic imports problemáticos (no crítico)
+- [ ] Dividir `useBulkActionsAdvanced.tsx` (funcionalidad cohesiva)
 - [ ] Dividir `ThermalPrinterEngine.ts`
 - [ ] Agregar tests faltantes
 
