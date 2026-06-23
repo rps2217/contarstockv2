@@ -25,7 +25,7 @@ describe('useToastStore', () => {
     it('should add a toast message', () => {
       const { addToast } = useToastStore.getState();
 
-      addToast('Test message');
+      addToast('Test message', 'info');
       
       const state = useToastStore.getState();
       expect(state.toasts.length).toBe(1);
@@ -71,9 +71,9 @@ describe('useToastStore', () => {
     it('should add multiple toasts', () => {
       const { addToast } = useToastStore.getState();
 
-      addToast('Message 1');
-      addToast('Message 2');
-      addToast('Message 3');
+      addToast('Message 1', 'info');
+      addToast('Message 2', 'info');
+      addToast('Message 3', 'info');
       
       const state = useToastStore.getState();
       expect(state.toasts.length).toBe(3);
@@ -82,8 +82,8 @@ describe('useToastStore', () => {
     it('should generate unique ids for each toast', () => {
       const { addToast } = useToastStore.getState();
 
-      addToast('Message 1');
-      addToast('Message 2');
+      addToast('Message 1', 'info');
+      addToast('Message 2', 'info');
       
       const state = useToastStore.getState();
       expect(state.toasts[0].id).not.toBe(state.toasts[1].id);
@@ -94,8 +94,8 @@ describe('useToastStore', () => {
     it('should remove a toast by id', () => {
       const { addToast, removeToast } = useToastStore.getState();
 
-      addToast('Message 1');
-      addToast('Message 2');
+      addToast('Message 1', 'info');
+      addToast('Message 2', 'info');
       
       const state1 = useToastStore.getState();
       const toastId = state1.toasts[0].id;
@@ -110,7 +110,7 @@ describe('useToastStore', () => {
     it('should do nothing when removing non-existent toast', () => {
       const { addToast, removeToast } = useToastStore.getState();
 
-      addToast('Message 1');
+      addToast('Message 1', 'info');
       removeToast('non-existent-id');
       
       const state = useToastStore.getState();
@@ -122,7 +122,7 @@ describe('useToastStore', () => {
     it('should have default duration of 3000ms', () => {
       const { addToast } = useToastStore.getState();
 
-      addToast('Test message');
+      addToast('Test message', 'info');
       
       const state = useToastStore.getState();
       expect(state.toasts[0].duration).toBe(3000);

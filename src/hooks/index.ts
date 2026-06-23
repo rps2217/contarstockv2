@@ -33,7 +33,6 @@ export { useNetworkStatus } from './useNetworkStatus';
 export { useFormValidation } from './useFormValidation';
 
 // Performance
-export { usePerformanceOptimizations } from './usePerformanceOptimizations';
 export { useDebounce, useThrottle, useMediaQuery, useIntersectionObserver, useVirtualScroll } from './usePerformanceOptimizations';
 
 // Module-specific (consider moving to module hooks/)
