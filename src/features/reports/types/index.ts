@@ -1,3 +1,5 @@
 /**
- * Reports Types
+ * Reports Types - Exports centralizados
  */
+
+export * from './Report';
