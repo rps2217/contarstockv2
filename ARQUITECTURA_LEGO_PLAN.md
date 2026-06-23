@@ -441,8 +441,8 @@ expiry/
 
 | Métrica | Actual | Target |
 |---------|--------|--------|
-| Tests | 445 ✅ | 500+ |
-| Coverage | ~40% | 60%+ |
+| Tests | 479 ✅ | 500+ |
+| Coverage | ~42% | 60%+ |
 | Bundle size | 4.4 MB | <4 MB |
 | LCP | ? | <2.5s |
 | Module cohesion | Arquitectura Lego ✅ | Arquitectura Lego |
@@ -457,12 +457,13 @@ expiry/
 | productsDomain | 34 | ✅ |
 | counting hooks | 18 | ✅ |
 | BaseRepository | 14 | ✅ |
-| SyncFSM | 11 | ✅ |
+| SyncFSM | 31 | ✅ |
+| SyncMetrics | 14 | ✅ |
 | UploadGroupBuilder | 14 | ✅ |
 | slices/constants | 18 | ✅ |
 | services/constants | 14 | ✅ |
 | emailConstants | 8 | ✅ |
-| **Total** | **445** | **40%** |
+| **Total** | **479** | **~42%** |
 
 ---
 
