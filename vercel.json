@@ -5,8 +5,8 @@
       "destination": "/index.html"
     }
   ],
-  "installOptions": {
-    "cleanPackageJson": true
-  },
-  "framework": "vite"
+  "framework": "vite",
+  "github": {
+    "autoJobCancelation": true
+  }
 }
