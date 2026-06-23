@@ -34,9 +34,8 @@ export class DbMigrator {
       expirations: '++id, &claveUnica, barcode, mm, yyyy, status, timestamp, syncStatus, [mm+yyyy], [barcode+mm+yyyy]',
       // Audit Log - Sistema de trazabilidad estilo AppSheet
       audit_logs: '++id, tableName, recordId, action, userId, timestamp, synced, [tableName+recordId], [userId+timestamp]'
-    }).upgrade(tx => {
-      // Enterprise migration log
-      console.log('Database migrated to v51 - Added Expirations table');
+    }).upgrade(_tx => {
+      // Migration completed successfully
     });
   }
 }

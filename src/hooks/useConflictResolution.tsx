@@ -5,6 +5,7 @@
 import { useState, useCallback } from 'react';
 import { ConflictResolutionModal, ConflictData } from '@/shared/components/ui/ConflictResolutionModal';
 import { db } from '../db';
+import { logger } from '../services/logger';
 
 interface Conflict<T = any> {
   id: string;
@@ -56,9 +57,9 @@ export const useConflictResolution = () => {
       setCurrentConflict(null);
       setIsModalOpen(false);
 
-      console.log(`[ConflictResolver] Resuelto con ${resolution}:`, id);
+      logger.info('ConflictResolver', `Resuelto con ${resolution}: ${id}`);
     } catch (error) {
-      console.error('[ConflictResolver] Error resolviendo conflicto:', error);
+      logger.error('ConflictResolver', `Error resolviendo conflicto: ${error}`);
     }
   }, [currentConflict]);
 

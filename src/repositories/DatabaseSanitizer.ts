@@ -1,16 +1,17 @@
 import { db } from '../db';
 import { normalizeIdentity, normalizeSku } from '../services/utils';
+import { logger } from '../services/logger';
 
 export class DatabaseSanitizer {
   static async runAuditAndSanitize() {
-    console.log("Iniciando auditoria y sanitizacion de DB...");
+    logger.info('DatabaseSanitizer', 'Iniciando auditoria y sanitizacion de DB...');
     
     // 1. Sanitizar Proveedores
     const providers = await db.providers.toArray();
     for (const p of providers) {
       const cleanRut = normalizeIdentity(p.rut);
       if (p.rut !== cleanRut) {
-        console.log(`Sanitizando RUT proveedor: ${p.rut} -> ${cleanRut}`);
+        logger.info('DatabaseSanitizer', `Sanitizando RUT proveedor: ${p.rut} -> ${cleanRut}`);
         await db.providers.delete(p.rut);
         p.rut = cleanRut;
         await db.providers.put(p);
@@ -95,6 +96,6 @@ export class DatabaseSanitizer {
       }
     }
     
-    console.log("Sanitizacion completada.");
+    logger.info('DatabaseSanitizer', 'Sanitizacion completada.');
   }
 }

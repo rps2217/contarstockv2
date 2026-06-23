@@ -6,6 +6,7 @@ import { useSyncStore } from '@/stores';
 import { erpService } from '../services/erpService';
 import { ExpectedOrderRepository } from '../repositories/ExpectedOrderRepository';
 import { genericSyncEngine } from '../services/cloud/GenericSyncEngine';
+import { logger } from '../services/logger';
 
 export const useAutoSync = () => {
   const addToast = useToastStore(state => state.addToast);
@@ -98,9 +99,9 @@ export const useAutoSync = () => {
       if (isNetworkError) {
         // Suppress network error in dev preview
       } else if (isMissingTable) {
-        console.warn('Auto-sync table not provisioned on remote:', errorMsg);
+        logger.warn('AutoSync', `Tabla no provista en remoto: ${errorMsg}`);
       } else {
-        console.error('Auto-sync failed:', error);
+        logger.error('AutoSync', `Sincronizacion fallida: ${error}`);
       }
       
       setSyncError(errorMsg);
@@ -113,7 +114,7 @@ export const useAutoSync = () => {
       if (retryCount.current < MAX_RETRIES) {
         retryCount.current++;
         const delay = Math.pow(2, retryCount.current) * 1000;
-        console.log(`[AutoSync] Reintentando en ${delay}ms... (Intento ${retryCount.current})`);
+        logger.info('AutoSync', `Reintentando en ${delay}ms... (Intento ${retryCount.current})`);
         setTimeout(triggerSync, delay);
       } else {
         addToast('Error persistente en sincronización automática', 'error');
@@ -136,7 +137,7 @@ export const useAutoSync = () => {
       if (navigator.onLine) {
         const pendingCount = useSyncStore.getState().pendingItems;
         if (pendingCount > 0) {
-          console.log(`[AutoSync] Datos pendientes (${pendingCount}). Disparando sync...`);
+          logger.info('AutoSync', `Datos pendientes (${pendingCount}). Disparando sync...`);
           triggerSync();
         }
       }

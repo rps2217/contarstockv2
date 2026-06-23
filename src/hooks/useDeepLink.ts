@@ -39,10 +39,6 @@ export const useDeepLink = () => {
     });
     
     setDeepLinkData(parsed);
-    
-    if (Object.keys(parsed).length > 0) {
-      console.log('[DeepLink] Navegación con datos:', parsed);
-    }
   }, [params, searchParams, location.pathname]);
 
   return {

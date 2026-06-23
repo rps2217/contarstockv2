@@ -8,6 +8,7 @@ import { processExpiryItem } from '../features/expiry/utils/expiryProcessor';
 import { productRepository } from '../repositories/DexieProductRepository';
 import { normalizeSku } from '../services/utils';
 import { db as dexieDb } from '../db';
+import { logger } from '../services/logger';
 
 /**
  * useExpiryWatcher: Background service that monitors the expiry table in Supabase
@@ -36,7 +37,6 @@ export const useExpiryWatcher = () => {
     const runAnalysis = async () => {
       try {
         if (!navigator.onLine) {
-          console.info("[ExpiryWatcher] Running offline. Skipping remote analysis.");
           return;
         }
         // 1. Get remote data from Supabase
@@ -48,7 +48,6 @@ export const useExpiryWatcher = () => {
 
         if (error) {
           if (error.message === 'Failed to fetch' || error.message?.includes('NetworkError') || error.message?.includes('net::ERR')) {
-            console.info("[ExpiryWatcher] Running offline. Skipping remote analysis.");
             return;
           }
           throw error;
