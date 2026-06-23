@@ -156,10 +156,10 @@ Warning: @import rules must precede all rules aside from @charset and @layer sta
 - [ ] Push y verificar deployment
 
 ### Fase 2: Limpieza de Código (Esta semana)
-- [ ] Eliminar `workbox-*` dependencies
-- [ ] Eliminar `src/services/supabaseSyncService.ts`
-- [ ] Eliminar `src/services/tests/legacyTests.ts`
-- [ ] Limpiar console.log en producción
+- [x] Eliminar `workbox-*` dependencies ✅
+- [x] Eliminar `src/services/tests/legacyTests.ts` ✅
+- [x] Limpiar console.log en producción ✅
+- [ ] Mantener `supabaseSyncService.ts` (30+ archivos lo usan)
 
 ### Fase 3: Refactoring (Próxima semana)
 - [ ] Unificar dynamic imports problemáticos
