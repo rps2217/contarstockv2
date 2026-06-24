@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Scan, Database, History, Cloud, Settings } from 'lucide-react';
 import { AppSettings } from '../types';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ScanRepository } from '../repositories/ScanRepository';
@@ -9,16 +8,7 @@ import { db } from '../db';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { useSyncStore } from '@/stores';
 import { SmartDock, SmartDockItem } from './SmartDock';
-
-// Navegación simplificada estilo AppSheet (5 items para móvil)
-const MOBILE_NAV = [
-  { id: 'dashboard', label: 'Panel', icon: Home, path: '/' },
-  { id: 'capture', label: 'Capturar', icon: Scan, path: '/capture' },
-  { id: 'data', label: 'Datos', icon: Database, path: '/data' },
-  { id: 'reports', label: 'Reportes', icon: History, path: '/reports' },
-  { id: 'sync', label: 'Sync', icon: Cloud, path: '/sync' },
-  { id: 'settings', label: 'Ajustes', icon: Settings, path: '/settings' },
-];
+import { MAIN_NAV, getActiveNavKey } from '@/config/navigation';
 
 interface Props {
   currentView: string;
@@ -37,33 +27,22 @@ export const BottomDock: React.FC<Props> = ({ currentView, settings }) => {
   const pendingDynamic = useLiveQuery(() => db.dynamic_data.where('syncStatus').anyOf(['pending', 'error']).count(), [], 0);
   const totalPending = pendingScans + pendingSessions + pendingDynamic;
 
-  // Determinar qué item está activo basándose en la ruta actual
-  const getActiveId = () => {
-    const path = location.pathname;
-    if (path === '/' || path === '/dashboard') return 'dashboard';
-    if (path.startsWith('/capture')) return 'capture';
-    if (path.startsWith('/data')) return 'data';
-    if (path.startsWith('/reports')) return 'reports';
-    if (path.startsWith('/sync')) return 'sync';
-    if (path.startsWith('/settings')) return 'settings';
-    return 'dashboard';
-  };
+  // Item activo resuelto con la lógica compartida (coincide con el Sidebar)
+  const activeId = getActiveNavKey(location.pathname);
 
-  const activeId = getActiveId();
-
-  const dockItems: SmartDockItem[] = MOBILE_NAV.map(item => {
-    const isActive = activeId === item.id;
+  const dockItems: SmartDockItem[] = MAIN_NAV.map(item => {
+    const isActive = activeId === item.key;
 
     // Badge para sync
     let badge = 0;
     let badgeStyle: 'default' | 'error' | 'warning' = 'default';
-    if (item.id === 'sync' && totalPending > 0) {
+    if (item.key === 'sync' && totalPending > 0) {
       badge = totalPending;
       badgeStyle = 'warning';
     }
 
     return {
-      id: item.id,
+      id: item.key,
       label: item.label,
       icon: item.icon,
       onClick: () => navigate(item.path),
