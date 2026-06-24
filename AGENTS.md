@@ -1,14 +1,15 @@
 # ContarStock v2 - Agente de Desarrollo
 
 > **Última actualización:** 2026-06-23
-> **Estado:** FASE 6+ completada (QA Events + Integración Hammer/Counting)
+> **Estado:** FASE 7 completada (Tests + Sync Queue + Docs)
 
 ## Resumen Ejecutivo
-- **524 tests pasando** ✅ (+133 nuevos)
+- **571 tests pasando** ✅ (+47 nuevos)
 - **Build PWA exitoso** (69 entries, ~4.4 MB)
 - **Arquitectura modular** "Lego" implementada
-- **Exports centralizados** en todos los módulos core
-- **Integración Hammer → Counting** (modo prueba funcional)
+- **Lazy Loading** implementado con `lazyWithRetry`
+- **SyncQueueService** con retry y backoff exponencial
+- **Documentación de atajos** en `docs/keyboard-shortcuts.md`
 
 ## Estructura del Proyecto
 
@@ -1380,16 +1381,60 @@ export const migrateHammerManifestToExpectedOrders = async (
 
 ---
 
-## Roadmap Pendiente
+## Roadmap Pendiente (Actualizado 2026-06-23)
+
+### ✅ Completado en esta sesión
+- [x] Coverage de tests (~571 tests)
+- [x] Lazy loading de páginas (lazyWithRetry)
+- [x] Cola de sync offline con retry (SyncQueueService)
+- [x] Documentación de atajos de teclado
 
 ### Prioridad Alta
-- [ ] Coverage de tests a 60%+ (actual ~40%)
-- [ ] Lazy loading de páginas (optimizar bundle)
+- [ ] Coverage de tests a 60%+ (coverage report no instalado)
+- [ ] Onboarding flow para nuevos usuarios
 
 ### Prioridad Media
-- [ ] Cola de sync offline con retry
-- [ ] Documentación de atajos de teclado
+- [ ] Dashboard de métricas de productividad
+- [ ] Conflict resolution strategy para sync
 
 ### Prioridad Baja
-- [ ] Onboarding flow para nuevos usuarios
-- [ ] Dashboard de métricas de productividad
+- [ ] Storybook para componentes UI
+- [ ] Video tutorial integrado
+
+---
+
+## SyncQueueService (2026-06-23) 🆕
+
+### Descripción
+Servicio de cola de sincronización offline con retry automático y backoff exponencial.
+
+### Características
+- **Persistencia**: Usa IndexedDB (Dexie) para guardar cola
+- **Retry automático**: Hasta 5 intentos con backoff exponencial
+- **Desduplicación**: Operaciones similares se consolidan
+- **Eventos**: API de listeners para UI reactiva
+
+### API
+```typescript
+import { syncQueueService } from '@/services/sync/SyncQueueService';
+
+// Encolar operación
+await syncQueueService.enqueue({
+  tableName: 'events',
+  operation: 'create',
+  recordId: 'evt-123',
+  data: { name: 'Test', status: 'PENDING' }
+});
+
+// Procesar cola
+const result = await syncQueueService.processQueue(async (item) => {
+  // Lógica de sync
+  await pushToCloud(item);
+});
+
+console.log(result); // { processed: 1, failed: 0, remaining: 0 }
+```
+
+### Archivos
+- `src/services/sync/SyncQueueService.ts` - Servicio principal
+- `src/services/sync/SyncQueue.test.ts` - Tests unitarios
