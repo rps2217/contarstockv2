@@ -20,6 +20,20 @@
   --color-brand-danger: #dc2626;
   --color-brand-info: #0284c7;
 
+  /* AppSheet Grayscale Palette for "Noche" Theme */
+  /* Base backgrounds - Material Design 3 elevation system */
+  --color-noche-base: #121212;        /* Surface container lowest - más oscuro */
+  --color-noche-elevated: #1e1e1e;    /* Surface container low */
+  --color-noche-surface: #252525;     /* Surface container - para cards */
+  --color-noche-card: #2d2d2d;       /* Surface container high - para elementos elevados */
+  --color-noche-hover: rgba(255, 255, 255, 0.06);
+  --color-noche-active: rgba(255, 255, 255, 0.10);
+
+  /* Text hierarchy - Alta legibilidad */
+  --color-noche-text-primary: #e8eaed;    /* Texto principal - alto contraste */
+  --color-noche-text-secondary: #9aa0a6;  /* Texto secundario */
+  --color-noche-text-tertiary: #5f6368;   /* Texto terciario/disabled */
+
   /* Dark Theme (Default) */
   --color-black: #0b0f19;
   --color-slate-950: #0f1423;
@@ -77,6 +91,35 @@
     --color-slate-300: #44403c;
     --color-slate-200: #292524;
     --color-slate-100: #1c1917;
+  }
+
+  /* Noche Theme - AppSheet Grayscale */
+  body.noche-theme {
+    @apply text-gray-200;
+    background-color: var(--color-noche-base);
+  }
+
+  .noche-theme {
+    /* Override slate colors for noche theme */
+    --color-slate-950: var(--color-noche-base);
+    --color-slate-900: var(--color-noche-elevated);
+    --color-slate-800: var(--color-noche-surface);
+    --color-slate-700: var(--color-noche-card);
+    --color-slate-600: #3a3a3a;
+    --color-slate-500: #5a5a5a;
+    --color-slate-400: var(--color-noche-text-secondary);
+    --color-slate-300: var(--color-noche-text-primary);
+    --color-slate-200: var(--color-noche-text-primary);
+    
+    /* Brand colors adjusted for noche */
+    --color-brand-surface: var(--color-noche-surface);
+    --color-brand-dark: var(--color-noche-base);
+  }
+
+  .noche-theme .border-white\/5,
+  .noche-theme .border-white\/10,
+  .noche-theme .border-white\/20 {
+    border-color: rgba(255, 255, 255, 0.06) !important;
   }
 
   .high-contrast {
@@ -228,6 +271,17 @@
     @apply bg-stone-100 text-stone-800 border-stone-300 hover:bg-stone-200;
   }
 
+  /* Noche Theme Button Styles */
+  .noche-theme .btn-secondary {
+    background-color: var(--color-noche-surface);
+    color: var(--color-noche-text-primary);
+    border-color: rgba(255, 255, 255, 0.10);
+  }
+
+  .noche-theme .btn-secondary:hover {
+    background-color: var(--color-noche-card);
+  }
+
   /* Input Base */
   .input {
     @apply w-full px-3 py-2 rounded-lg border bg-slate-900 border-slate-700 text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-colors;
@@ -235,6 +289,22 @@
 
   .light-theme .input {
     @apply bg-white border-stone-300 text-stone-800 placeholder-stone-400 focus:ring-blue-500/30 focus:border-blue-400;
+  }
+
+  /* Noche Theme Input */
+  .noche-theme .input {
+    background-color: var(--color-noche-elevated);
+    border-color: rgba(255, 255, 255, 0.10);
+    color: var(--color-noche-text-primary);
+  }
+
+  .noche-theme .input::placeholder {
+    color: var(--color-noche-text-tertiary);
+  }
+
+  .noche-theme .input:focus {
+    border-color: rgba(138, 180, 248, 0.50);
+    box-shadow: 0 0 0 2px rgba(138, 180, 248, 0.20);
   }
 
   /* Badge */
@@ -264,6 +334,57 @@
 
   .light-theme .badge-danger {
     @apply bg-rose-100 text-rose-700;
+  }
+
+  /* Noche Theme Badge */
+  .noche-theme .badge-success {
+    background-color: rgba(129, 199, 132, 0.15);
+    color: #81c784;
+  }
+
+  .noche-theme .badge-warning {
+    background-color: rgba(255, 183, 77, 0.15);
+    color: #ffb74d;
+  }
+
+  .noche-theme .badge-danger {
+    background-color: rgba(242, 184, 181, 0.15);
+    color: #f2b8b5;
+  }
+
+  /* Surface Card for Noche Theme */
+  .noche-theme .surface-card,
+  .noche-theme .card {
+    background-color: var(--color-noche-surface);
+    border-color: rgba(255, 255, 255, 0.06);
+  }
+
+  .noche-theme .surface-glass {
+    background-color: rgba(30, 30, 30, 0.80);
+    backdrop-filter: blur(16px);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  /* Interactive Hover for Noche Theme */
+  .noche-theme .interactive-hover:hover {
+    background-color: var(--color-noche-hover);
+    border-color: rgba(138, 180, 248, 0.30);
+  }
+
+  /* Skeleton for Noche Theme */
+  .noche-theme .skeleton {
+    background-color: var(--color-noche-card);
+  }
+
+  .noche-theme .skeleton-text,
+  .noche-theme .skeleton-title,
+  .noche-theme .skeleton-avatar {
+    background-color: var(--color-noche-card);
+  }
+
+  .noche-theme .skeleton-card {
+    background-color: var(--color-noche-surface);
+    border-color: rgba(255, 255, 255, 0.06);
   }
 }
 

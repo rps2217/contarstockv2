@@ -41,10 +41,10 @@ export const ThemeSection: React.FC<Props> = ({ settings, updateSetting, theme =
     },
     { 
       id: 'appsheet-dark', 
-      label: 'AppSheet', 
-      bg: 'bg-[#0f0f1a]', 
-      accent: 'bg-[#818cf8]', 
-      text: 'text-white', 
+      label: 'Noche Gray', 
+      bg: 'bg-[#121212]', 
+      accent: 'bg-[#8AB4F8]', 
+      text: 'text-[#e8eaed]', 
       icon: Sparkles 
     },
   ];
@@ -57,10 +57,12 @@ export const ThemeSection: React.FC<Props> = ({ settings, updateSetting, theme =
     if (navigator.vibrate) navigator.vibrate(15);
     updateSetting('theme', themeId);
     
+    // Aplicar clases de tema al body
+    document.body.classList.remove('appsheet-dark', 'noche-theme');
     if (themeId === 'appsheet-dark') {
       document.body.classList.add('appsheet-dark');
-    } else {
-      document.body.classList.remove('appsheet-dark');
+    } else if (themeId === 'dark') {
+      document.body.classList.add('noche-theme');
     }
   };
 
@@ -107,7 +109,7 @@ export const ThemeSection: React.FC<Props> = ({ settings, updateSetting, theme =
       <div className={`border-4 rounded-[2rem] p-4 md:p-6 flex gap-3 md:gap-4 ${infoBg}`}>
         <Palette className={`w-5 h-5 md:w-7 md:h-7 shrink-0 ${infoIcon}`} />
         <p className={`text-[9px] md:text-[10px] font-bold uppercase leading-relaxed ${infoText}`}>
-          Cambiar el tema afecta a toda la aplicación de inmediato. AppSheet ofrece un estilo sobrio con colores azulados fácil de leer.
+          Cambiar el tema afecta a toda la aplicación de inmediato. <strong>Noche</strong> usa escala de grises de alto contraste. <strong>Noche Gray</strong> usa los grises característicos de AppSheet para máxima legibilidad.
         </p>
       </div>
     </section>
