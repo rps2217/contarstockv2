@@ -33,10 +33,13 @@ import { ThemeScheme, ThemeColors } from '../ThemeManager';
 // TIPOS
 // ============================================================================
 
+// Colores ajustables en el customizer
+export type AdjustableColorKey = 'primary' | 'success' | 'warning' | 'error' | 'info' | 'expired' | 'critical';
+
 interface ColorAdjustment {
-  hue: number;      // 0-360
-  saturation: number; // 0-100
-  lightness: number; // 0-100
+  hue: number;      // -180 a +180
+  saturation: number; // -100 a +100
+  lightness: number; // -100 a +100
 }
 
 interface CustomScheme {
@@ -44,12 +47,7 @@ interface CustomScheme {
   name: string;
   isBuiltIn: boolean;
   colors: Partial<ThemeColors>;
-  adjustments?: {
-    primary?: ColorAdjustment;
-    success?: ColorAdjustment;
-    warning?: ColorAdjustment;
-    error?: ColorAdjustment;
-  };
+  adjustments?: Record<AdjustableColorKey, ColorAdjustment>;
   createdAt?: number;
   updatedAt?: number;
 }
@@ -117,6 +115,22 @@ function adjustColor(baseColor: string, adjustment: ColorAdjustment): string {
 // CONSTANTES
 // ============================================================================
 
+// Colores ajustables disponibles en el customizer
+export const ADJUSTABLE_COLORS: AdjustableColorKey[] = [
+  'primary', 'success', 'warning', 'error', 'info', 'expired', 'critical'
+];
+
+// Nombres amigables para los colores
+export const COLOR_LABELS: Record<AdjustableColorKey, string> = {
+  primary: 'Acento Principal',
+  success: 'Éxito',
+  warning: 'Advertencia',
+  error: 'Error',
+  info: 'Información',
+  expired: 'Vencido',
+  critical: 'Crítico'
+};
+
 const PRESET_SCHEMES: Record<ThemeScheme, CustomScheme> = {
   appsheet: {
     id: 'appsheet',
@@ -124,10 +138,20 @@ const PRESET_SCHEMES: Record<ThemeScheme, CustomScheme> = {
     isBuiltIn: true,
     colors: {
       primary: '#8AB4F8',
-      bgBase: '#121212',
+      primaryHover: '#AECBFA',
+      primaryPressed: '#669DF6',
+      primarySubtle: 'rgba(138, 180, 248, 0.12)',
       success: '#4ADE80',
+      successSubtle: 'rgba(74, 222, 128, 0.12)',
       warning: '#FBBF24',
+      warningSubtle: 'rgba(251, 191, 36, 0.12)',
       error: '#F87171',
+      errorSubtle: 'rgba(248, 113, 113, 0.12)',
+      info: '#60A5FA',
+      infoSubtle: 'rgba(96, 165, 250, 0.12)',
+      expired: '#ef4444',
+      critical: '#f97316',
+      bgBase: '#121212',
     }
   },
   'noche-gray': {
@@ -136,10 +160,20 @@ const PRESET_SCHEMES: Record<ThemeScheme, CustomScheme> = {
     isBuiltIn: true,
     colors: {
       primary: '#6B7280',
-      bgBase: '#141414',
+      primaryHover: '#9CA3AF',
+      primaryPressed: '#4B5563',
+      primarySubtle: 'rgba(107, 114, 128, 0.12)',
       success: '#6B7280',
+      successSubtle: 'rgba(107, 114, 128, 0.12)',
       warning: '#9CA3AF',
+      warningSubtle: 'rgba(156, 163, 175, 0.12)',
       error: '#A1A1AA',
+      errorSubtle: 'rgba(161, 161, 170, 0.12)',
+      info: '#71717a',
+      infoSubtle: 'rgba(113, 113, 122, 0.12)',
+      expired: '#a1a1aa',
+      critical: '#9ca3af',
+      bgBase: '#141414',
     }
   },
   industrial: {
@@ -148,10 +182,20 @@ const PRESET_SCHEMES: Record<ThemeScheme, CustomScheme> = {
     isBuiltIn: true,
     colors: {
       primary: '#3B82F6',
-      bgBase: '#0F172A',
+      primaryHover: '#60A5FA',
+      primaryPressed: '#2563EB',
+      primarySubtle: 'rgba(59, 130, 246, 0.12)',
       success: '#22C55E',
+      successSubtle: 'rgba(34, 197, 94, 0.12)',
       warning: '#F59E0B',
+      warningSubtle: 'rgba(245, 158, 11, 0.12)',
       error: '#EF4444',
+      errorSubtle: 'rgba(239, 68, 68, 0.12)',
+      info: '#3B82F6',
+      infoSubtle: 'rgba(59, 130, 246, 0.12)',
+      expired: '#ef4444',
+      critical: '#f97316',
+      bgBase: '#0F172A',
     }
   }
 };
@@ -171,7 +215,7 @@ export const ThemeCustomizer: React.FC<ThemeCustomizerProps> = ({
   
   // Estado de personalización
   const [customColors, setCustomColors] = useState<Partial<ThemeColors>>({});
-  const [adjustments, setAdjustments] = useState<Record<string, ColorAdjustment>>({});
+  const [adjustments, setAdjustments] = useState<Record<AdjustableColorKey, ColorAdjustment>>({});
   
   // Estado de esquemas guardados
   const [savedSchemes, setSavedSchemes] = useState<CustomScheme[]>([]);
@@ -191,17 +235,71 @@ export const ThemeCustomizer: React.FC<ThemeCustomizerProps> = ({
     } catch {}
   }, []);
 
-  // Obtener color efectivo
-  const getEffectiveColor = useCallback((key: keyof ThemeColors): string => {
-    if (customColors[key]) return customColors[key]!;
+  // ============================================================================
+  // HELPERS DE COLOR
+  // ============================================================================
+
+  // Obtener color efectivo (con soporte para todos los colores ajustables)
+  const getEffectiveColor = (key: AdjustableColorKey): string => {
+    // Primero verificar si hay color personalizado directo
+    if (customColors[key]) return customColors[key] as string;
+    
+    // Luego verificar si hay ajustes HSL
     if (adjustments[key]) {
       const base = colors[key];
       if (typeof base === 'string' && base.startsWith('#')) {
-        return adjustColor(base, adjustments[key]!);
+        return adjustColor(base, adjustments[key]);
       }
     }
-    return colors[key] as string;
-  }, [colors, customColors, adjustments]);
+    
+    // Finalmente usar el color base del tema
+    return (colors[key] as string) || '#8AB4F8';
+  };
+
+  // ============================================================================
+  // INYECCIÓN DE CSS VARIABLES
+  // ============================================================================
+  
+  const applyCSSVariables = useCallback((colorKey: AdjustableColorKey, color: string) => {
+    const root = document.documentElement;
+    
+    // Mapear colores a variables CSS
+    const cssVarMap: Record<AdjustableColorKey, string[]> = {
+      primary: ['--color-primary', '--color-primary-hover', '--color-primary-pressed', '--color-primary-subtle'],
+      success: ['--color-success', '--color-success-subtle'],
+      warning: ['--color-warning', '--color-warning-subtle'],
+      error: ['--color-error', '--color-error-subtle'],
+      info: ['--color-info', '--color-info-subtle'],
+      expired: ['--color-expired'],
+      critical: ['--color-critical'],
+    };
+    
+    const vars = cssVarMap[colorKey];
+    if (vars && vars.length > 0) {
+      root.style.setProperty(vars[0], color);
+      
+      // Generar variaciones para hover/pressed/subtle si es primary
+      if (colorKey === 'primary') {
+        const hsl = hexToHsl(color);
+        // Hover: más brillante
+        root.style.setProperty(vars[1], hslToHex(hsl.hue, hsl.saturation, Math.min(60, hsl.lightness + 15)));
+        // Pressed: más oscuro
+        root.style.setProperty(vars[2], hslToHex(hsl.hue, hsl.saturation, Math.max(30, hsl.lightness - 15)));
+        // Subtle: versión translúcida
+        root.style.setProperty(vars[3], adjustColor(color, { hue: 0, saturation: 0, lightness: 0 }) + '1a');
+      }
+    }
+  }, []);
+
+  // Aplicar todos los colores ajustados a CSS
+  useEffect(() => {
+    ADJUSTABLE_COLORS.forEach(key => {
+      const effectiveColor = getEffectiveColor(key);
+      if (effectiveColor) {
+        applyCSSVariables(key, effectiveColor);
+      }
+    });
+  }, [customColors, adjustments, applyCSSVariables]);
 
   // Ajustar un color
   const handleAdjust = (key: string, adjustment: Partial<ColorAdjustment>) => {
@@ -395,19 +493,19 @@ export const ThemeCustomizer: React.FC<ThemeCustomizerProps> = ({
               {/* TAB: Colores */}
               {activeTab === 'colors' && (
                 <div className="space-y-4">
-                  {['primary', 'success', 'warning', 'error'].map(colorKey => (
+                  {ADJUSTABLE_COLORS.map(colorKey => (
                     <div key={colorKey} className={`p-3 rounded-lg ${isDark ? 'bg-[#2d2d2d]' : 'bg-zinc-50'}`}>
                       <div className="flex items-center justify-between mb-3">
                         <span className={`text-sm font-medium capitalize ${textClass}`}>
-                          {colorKey === 'primary' ? 'Acento Principal' : colorKey}
+                          {COLOR_LABELS[colorKey]}
                         </span>
                         <div className="flex items-center gap-2">
                           <div 
                             className="w-6 h-6 rounded-full border border-black/20"
-                            style={{ backgroundColor: getEffectiveColor(colorKey as keyof ThemeColors) }}
+                            style={{ backgroundColor: getEffectiveColor(colorKey) }}
                           />
                           <span className={`text-xs font-mono ${mutedClass}`}>
-                            {getEffectiveColor(colorKey as keyof ThemeColors)}
+                            {getEffectiveColor(colorKey)}
                           </span>
                         </div>
                       </div>

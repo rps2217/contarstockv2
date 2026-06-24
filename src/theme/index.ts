@@ -149,3 +149,5 @@ export {
 export { useThemeManager } from './useThemeManager';
 export { ThemeSwitcher } from './components/ThemeSwitcher';
 export { ThemeCustomizer } from './components/ThemeCustomizer';
+export { ADJUSTABLE_COLORS, COLOR_LABELS } from './components/ThemeCustomizer';
+export type { AdjustableColorKey, CustomScheme } from './components/ThemeCustomizer';
