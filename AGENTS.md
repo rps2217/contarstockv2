@@ -1,4 +1,4 @@
-# ContarStock v2 - Agente de Desarrollo
+# ContarStock v2 - Agente de Desarrollo..
 
 > **Última actualización:** 2026-06-24
 > **Estado:** Módulos refactorizados (Events, Expiry, Inventory, Suppliers) ✅
