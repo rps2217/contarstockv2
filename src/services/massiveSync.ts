@@ -305,3 +305,121 @@ export const importLocalExpectedOrderToHammer = async (batchId: string, orderId:
   }
 };
 
+/**
+ * MIGRAR MANIFEST DE HAMMER A EXPECTED ORDERS (PARA MODO PRUEBA)
+ * 
+ * Esta función permite que el "modo prueba" (StartSessionModal) pueda ver
+ * las cargas teóricas que se importaron en Hammer (massiveDb).
+ * 
+ * Sin esta migración, Hammer guarda en massiveDb.blindManifests y 
+ * StartSessionModal busca en db.expectedOrders, causando desconexión.
+ */
+export const migrateHammerManifestToExpectedOrders = async (batchId: string, orderId?: string): Promise<string> => {
+  const startTime = performance.now();
+  try {
+    logger.info('MANIFEST_MIGRATION', `Migrando manifest de Hammer a ExpectedOrders para lote: ${batchId}`);
+
+    // Obtener los manifests del batch
+    const manifests = await massiveDb.blindManifests.where('batchId').equals(batchId).toArray();
+
+    if (manifests.length === 0) {
+      throw new Error(`No hay manifests en el lote ${batchId} para migrar.`);
+    }
+
+    // Generar ID de orden basado en batch o usar el proveído
+    const targetOrderId = orderId || `HM-${batchId.substring(0, 8).toUpperCase()}`;
+
+    // Verificar si ya existe la orden en expectedOrders
+    const existingOrder = await db.expectedOrders.get(targetOrderId);
+    
+    if (existingOrder) {
+      logger.info('MANIFEST_MIGRATION', `La orden ${targetOrderId} ya existe, actualizando...`);
+    }
+
+    // Convertir manifests a formato ExpectedOrder
+    const items = manifests.map(m => ({
+      barcode: sanitizeBarcode(m.barcode),
+      name: m.name || `SKU ${m.barcode}`,
+      expectedQty: m.expectedQty
+    }));
+
+    // Crear la orden esperada
+    const expectedOrder = {
+      id: targetOrderId,
+      internalId: targetOrderId,
+      items,
+      totalExpectedUnits: items.reduce((acc, i) => acc + i.expectedQty, 0),
+      totalExpectedSKUs: items.length,
+      importedAt: Date.now(),
+      metadata: {
+        documentType: 'Hammer Manifest',
+        date: new Date().toLocaleDateString(),
+        orderNote: `Migrado desde Hammer batch: ${batchId}`
+      },
+      // Marcar que viene de hammer para diferenciarlo
+      _fromHammer: true
+    };
+
+    // Guardar en db.expectedOrders
+    await db.expectedOrders.put(expectedOrder);
+
+    const duration = performance.now() - startTime;
+    telemetry.track('MANIFEST', 'MIGRATION_SUCCESS', { batchId, orderId: targetOrderId, itemCount: items.length }, duration, batchId);
+
+    logger.success('MANIFEST_MIGRATION', `Manifest migrado: ${targetOrderId} con ${items.length} SKUs`);
+    return targetOrderId;
+
+  } catch (err: unknown) {
+    const error = handleError(err);
+    const duration = performance.now() - startTime;
+    telemetry.track('MANIFEST', 'MIGRATION_FAIL', { batchId, error: error.message }, duration, batchId);
+    logger.error('MANIFEST_MIGRATION_FAIL', error.message);
+    throw err;
+  }
+};
+
+/**
+ * CARGAR MANIFEST COMO EXPECTED ORDER Y CREAR SESIÓN (COMBINADO)
+ * 
+ * Función utility que:
+ * 1. Migra el manifest de Hammer a ExpectedOrders
+ * 2. Crea una sesión lista para usar en modo prueba
+ * 3. Retorna el ID de sesión para navegar directamente
+ */
+export const loadHammerManifestAsTestSession = async (batchId: string, orderId?: string): Promise<{ sessionId: string; orderId: string }> => {
+  const startTime = performance.now();
+  try {
+    logger.info('HAMMER_TEST_SESSION', `Creando sesión de prueba desde Hammer batch: ${batchId}`);
+
+    // 1. Migrar manifest a ExpectedOrder
+    const migratedOrderId = await migrateHammerManifestToExpectedOrders(batchId, orderId);
+    const expectedOrder = await db.expectedOrders.get(migratedOrderId);
+
+    if (!expectedOrder) {
+      throw new Error('Error al recuperar la orden migrada');
+    }
+
+    // 2. Crear sesión de conteo
+    const sessionLabel = `TEST_${batchId.substring(0, 8)}`;
+    const session = await createSession(
+      migratedOrderId,
+      sessionLabel,
+      'standard',
+      expectedOrder
+    );
+
+    const duration = performance.now() - startTime;
+    telemetry.track('HAMMER', 'TEST_SESSION_CREATED', { batchId, orderId: migratedOrderId, sessionId: session.id }, duration, batchId);
+
+    logger.success('HAMMER_TEST_SESSION', `Sesión de prueba creada: ${session.id}`);
+    return { sessionId: session.id, orderId: migratedOrderId };
+
+  } catch (err: unknown) {
+    const error = handleError(err);
+    const duration = performance.now() - startTime;
+    telemetry.track('HAMMER', 'TEST_SESSION_FAIL', { batchId, error: error.message }, duration, batchId);
+    logger.error('HAMMER_TEST_SESSION_FAIL', error.message);
+    throw err;
+  }
+};
+
