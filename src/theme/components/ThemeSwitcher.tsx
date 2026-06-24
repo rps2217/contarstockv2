@@ -10,6 +10,7 @@ import { ThemeMode, ThemeScheme } from '../ThemeManager';
 const THEME_OPTIONS = [
   { mode: 'dark' as ThemeMode, label: 'Oscuro', icon: <Moon className="w-4 h-4" />, desc: 'Uso nocturno' },
   { mode: 'light' as ThemeMode, label: 'Claro', icon: <Sun className="w-4 h-4" />, desc: 'Mucha luz' },
+  { mode: 'night-steel' as ThemeMode, label: 'Night Steel', icon: <Moon className="w-4 h-4" />, desc: 'Grises profesionales' },
   { mode: 'high-contrast' as ThemeMode, label: 'Alto Contraste', icon: <Zap className="w-4 h-4" />, desc: 'Accesibilidad' }
 ];
 

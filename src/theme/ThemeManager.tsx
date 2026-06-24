@@ -15,7 +15,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect, Rea
 // TIPOS
 // ============================================================================
 
-export type ThemeMode = 'dark' | 'light' | 'high-contrast';
+export type ThemeMode = 'dark' | 'light' | 'night-steel' | 'high-contrast';
 export type ThemeScheme = 'appsheet' | 'noche-gray' | 'industrial';
 
 interface ThemeColors {

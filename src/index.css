@@ -6,6 +6,9 @@
 /* AppSheet Dark Theme - Importar después de Tailwind */
 @import './styles/appsheet-theme.css';
 
+/* Night Steel Theme - Professional Grayscale */
+@import './styles/night-steel-theme.css';
+
 @theme {
   --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
