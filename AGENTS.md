@@ -1250,6 +1250,74 @@ const {
 
 ---
 
+## ThemeManager - Sistema Centralizado de Temas (2026-06-24) ✅
+
+### Arquitectura
+
+```
+src/theme/
+├── ThemeManager.tsx         # Provider + Sistema de temas
+├── useThemeManager.ts       # Hooks especializados
+├── components/
+│   └── ThemeSwitcher.tsx   # Selector visual de temas
+├── ThemeManager.test.tsx    # Tests
+└── index.ts                 # Exports centralizados
+```
+
+### Modos y Esquemas
+
+| Modo | Descripción | Uso |
+|------|-------------|-----|
+| `dark` | Tema oscuro profesional | Uso nocturno |
+| `light` | Tema claro | Ambientes luminosos |
+| `high-contrast` | Alto contraste | Accesibilidad |
+
+| Esquema | Primary | Background |
+|---------|---------|------------|
+| `appsheet` | #8AB4F8 | #121212 |
+| `noche-gray` | #6B7280 | #141414 |
+| `industrial` | #3B82F6 | #0F172A |
+
+### Paleta de Colores
+
+- **Backgrounds**: base, elevated, surface, card, hover, active, search
+- **Borders**: subtle, default, strong, focus
+- **Text**: primary, secondary, tertiary, disabled, inverse
+- **Primary**: default, hover, pressed, subtle
+- **Semantic**: success, warning, error, info + variantes subtle
+- **Expiry**: expired, critical, withdrawal, nextExpiry, safe
+
+### Hooks Disponibles
+
+```typescript
+// Hook principal
+const { mode, colors, setMode, toggleMode, getClass } = useThemeManager();
+
+// Hooks especializados
+useThemeColors()     // Solo colores
+useThemeMode()       // Solo modo actual
+useThemeBackground() // Helpers backgrounds
+useThemeText()       // Helpers textos
+useThemeBorder()     // Helpers bordes
+useThemeSemantic()   // Helpers estados
+useThemeExpiry()     // Helpers vencimientos
+```
+
+### Componentes Base
+
+| Componente | Props | Descripción |
+|------------|-------|-------------|
+| `ThemedSurface` | className | Superficie con tema |
+| `ThemedCard` | className, hoverable | Card con tema |
+| `ThemedButton` | variant, size, disabled | Botón temático |
+| `ThemedInput` | type, placeholder, error | Input temático |
+| `ThemeSwitcher` | - | Selector de tema visual |
+
+### Commits:
+- `e954b839` - feat: ThemeManager - Sistema centralizado de gestión de temas
+
+---
+
 ## Refactoring Módulo Events v2 (2026-06-22)
 
 ### Arquitectura Simplificada (Patrón Expiry)
