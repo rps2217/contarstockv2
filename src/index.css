@@ -20,21 +20,7 @@
   --color-brand-danger: #dc2626;
   --color-brand-info: #0284c7;
 
-  /* AppSheet Grayscale Palette for "Noche" Theme */
-  /* Base backgrounds - Material Design 3 elevation system */
-  --color-noche-base: #121212;        /* Surface container lowest - más oscuro */
-  --color-noche-elevated: #1e1e1e;    /* Surface container low */
-  --color-noche-surface: #252525;     /* Surface container - para cards */
-  --color-noche-card: #2d2d2d;       /* Surface container high - para elementos elevados */
-  --color-noche-hover: rgba(255, 255, 255, 0.06);
-  --color-noche-active: rgba(255, 255, 255, 0.10);
-
-  /* Text hierarchy - Alta legibilidad */
-  --color-noche-text-primary: #e8eaed;    /* Texto principal - alto contraste */
-  --color-noche-text-secondary: #9aa0a6;  /* Texto secundario */
-  --color-noche-text-tertiary: #5f6368;   /* Texto terciario/disabled */
-
-  /* Dark Theme (Default) */
+  /* Dark Theme (Default) - Azul Marino Original */
   --color-black: #0b0f19;
   --color-slate-950: #0f1423;
   --color-slate-900: #182035;
@@ -57,6 +43,9 @@
   --color-light-text-secondary: #57534e;
   --color-light-text-muted: #a8a29e;
 
+  /* Noche Gray - Escala de Grises Premium */
+  /* Usamos CSS custom properties para el tema de grises */
+  
   --animate-in: animate-in;
   --animate-out: animate-out;
 }
@@ -74,7 +63,9 @@
     padding: 0;
   }
 
-  /* Light Theme */
+  /* ================================================
+   * LIGHT THEME
+   * ================================================ */
   body.light-theme {
     @apply text-stone-800;
     background-color: var(--color-light-bg);
@@ -93,35 +84,9 @@
     --color-slate-100: #1c1917;
   }
 
-  /* Noche Theme - AppSheet Grayscale */
-  body.noche-theme {
-    @apply text-gray-200;
-    background-color: var(--color-noche-base);
-  }
-
-  .noche-theme {
-    /* Override slate colors for noche theme */
-    --color-slate-950: var(--color-noche-base);
-    --color-slate-900: var(--color-noche-elevated);
-    --color-slate-800: var(--color-noche-surface);
-    --color-slate-700: var(--color-noche-card);
-    --color-slate-600: #3a3a3a;
-    --color-slate-500: #5a5a5a;
-    --color-slate-400: var(--color-noche-text-secondary);
-    --color-slate-300: var(--color-noche-text-primary);
-    --color-slate-200: var(--color-noche-text-primary);
-    
-    /* Brand colors adjusted for noche */
-    --color-brand-surface: var(--color-noche-surface);
-    --color-brand-dark: var(--color-noche-base);
-  }
-
-  .noche-theme .border-white\/5,
-  .noche-theme .border-white\/10,
-  .noche-theme .border-white\/20 {
-    border-color: rgba(255, 255, 255, 0.06) !important;
-  }
-
+  /* ================================================
+   * HIGH CONTRAST THEME
+   * ================================================ */
   .high-contrast {
     --color-slate-950: #000000;
     --color-slate-900: #1a1a1a;
@@ -141,10 +106,169 @@
   .high-contrast .border-white\/10 {
     border-color: rgba(255, 255, 255, 0.3) !important;
   }
+
+  /* ================================================
+   * NOCHE GRAY THEME - Sistema Completo de Grises
+   * Escala premium inspirada en AppSheet con variaciones
+   * de intensidad para diferentes niveles de jerarquía
+   * ================================================ */
+  
+  /* Cuerpo del tema */
+  body.noche-gray-theme {
+    background-color: #0d0d0d;
+    color: #e6e6e6;
+  }
+
+  /* Override completo de la escala slate para Noche Gray */
+  .noche-gray-theme {
+    --color-slate-950: #0d0d0d;   /* Fondo base - casi negro */
+    --color-slate-900: #141414;   /* Fondo secundario */
+    --color-slate-800: #1a1a1a;   /* Superficies elevadas */
+    --color-slate-700: #242424;   /* Cards y componentes */
+    --color-slate-600: #2e2e2e;   /* Elementos más elevados */
+    --color-slate-500: #3d3d3d;   /* Bordes y separadores */
+    --color-slate-400: #525252;   /* Texto terciario */
+    --color-slate-300: #737373;   /* Texto secundario */
+    --color-slate-200: #a3a3a3;   /* Texto principal */
+    --color-slate-100: #d4d4d4;   /* Texto destacado */
+    --color-slate-50: #f5f5f5;    /* Texto máximo contraste */
+    
+    /* Brand colors adaptadas para Noche Gray */
+    --color-brand-surface: #1a1a1a;
+    --color-brand-dark: #0d0d0d;
+    
+    /* Fondos con transparencia */
+    --noche-bg-subtle: rgba(255, 255, 255, 0.02);
+    --noche-bg-muted: rgba(255, 255, 255, 0.04);
+    --noche-bg-elevated: rgba(255, 255, 255, 0.06);
+    --noche-bg-active: rgba(255, 255, 255, 0.08);
+    --noche-bg-hover: rgba(255, 255, 255, 0.05);
+    
+    /* Bordes específicos */
+    --noche-border-subtle: rgba(255, 255, 255, 0.04);
+    --noche-border-default: rgba(255, 255, 255, 0.08);
+    --noche-border-strong: rgba(255, 255, 255, 0.12);
+    --noche-border-focus: rgba(138, 180, 248, 0.5);
+    
+    /* Sombras para Noche Gray */
+    --noche-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --noche-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+    --noche-shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.4);
+    --noche-shadow-glow: 0 0 20px rgba(138, 180, 248, 0.1);
+  }
+
+  /* ================================================
+   * NOCHE GRAY - Fondos y Superficies
+   * ================================================ */
+  .noche-gray-theme body {
+    background-color: #0d0d0d;
+  }
+
+  .noche-gray-theme {
+    /* Fondos básicos */
+    .bg-slate-950 { background-color: #0d0d0d !important; }
+    .bg-slate-900 { background-color: #141414 !important; }
+    .bg-slate-800 { background-color: #1a1a1a !important; }
+    .bg-slate-700 { background-color: #242424 !important; }
+    .bg-slate-600 { background-color: #2e2e2e !important; }
+    .bg-slate-500 { background-color: #3d3d3d !important; }
+    
+    /* Fondos con transparencias */
+    .bg-white\/5, .bg-white\/\[0\.05\], .bg-white\/\[0\.02\] { background-color: rgba(255, 255, 255, 0.02) !important; }
+    .bg-white\/10 { background-color: rgba(255, 255, 255, 0.04) !important; }
+    .bg-white\/15 { background-color: rgba(255, 255, 255, 0.06) !important; }
+    .bg-white\/20 { background-color: rgba(255, 255, 255, 0.08) !important; }
+    .bg-white\/30 { background-color: rgba(255, 255, 255, 0.12) !important; }
+    
+    /* Fondos negros con transparencias */
+    .bg-black\/20, .bg-black\/30, .bg-black\/40, .bg-black\/50 { background-color: rgba(0, 0, 0, 0.3) !important; }
+    .bg-black\/60, .bg-black\/70, .bg-black\/80, .bg-black\/90 { background-color: rgba(0, 0, 0, 0.5) !important; }
+    
+    /* Fondos azulados sutiles */
+    .bg-blue-900\/20, .bg-blue-900\/30, .bg-blue-950\/20, .bg-blue-950\/30 { background-color: rgba(30, 41, 59, 0.3) !important; }
+    .bg-indigo-900\/20, .bg-indigo-950\/20 { background-color: rgba(30, 30, 60, 0.3) !important; }
+  }
+
+  /* ================================================
+   * NOCHE GRAY - Textos
+   * ================================================ */
+  .noche-gray-theme {
+    .text-slate-950 { color: #f5f5f5 !important; }
+    .text-slate-900 { color: #f5f5f5 !important; }
+    .text-slate-800 { color: #e6e6e6 !important; }
+    .text-slate-700 { color: #d4d4d4 !important; }
+    .text-slate-600 { color: #a3a3a3 !important; }
+    .text-slate-500 { color: #737373 !important; }
+    .text-slate-400 { color: #525252 !important; }
+    .text-slate-300 { color: #737373 !important; }
+    .text-slate-200 { color: #a3a3a3 !important; }
+    .text-slate-100 { color: #d4d4d4 !important; }
+    
+    /* Texto blanco */
+    .text-white { color: #e6e6e6 !important; }
+    .text-white\/50 { color: rgba(230, 230, 230, 0.5) !important; }
+    .text-white\/60 { color: rgba(230, 230, 230, 0.6) !important; }
+    .text-white\/70 { color: rgba(230, 230, 230, 0.7) !important; }
+    .text-white\/80 { color: rgba(230, 230, 230, 0.8) !important; }
+    .text-white\/90 { color: rgba(230, 230, 230, 0.9) !important; }
+    
+    /* Placeholder */
+    .placeholder-slate-500::placeholder { color: #525252 !important; }
+    .placeholder-white\/50::placeholder { color: rgba(255, 255, 255, 0.3) !important; }
+  }
+
+  /* ================================================
+   * NOCHE GRAY - Bordes
+   * ================================================ */
+  .noche-gray-theme {
+    .border-white\/5, .border-white\/\[0\.05\] { border-color: rgba(255, 255, 255, 0.04) !important; }
+    .border-white\/10 { border-color: rgba(255, 255, 255, 0.08) !important; }
+    .border-white\/15 { border-color: rgba(255, 255, 255, 0.1) !important; }
+    .border-white\/20 { border-color: rgba(255, 255, 255, 0.12) !important; }
+    .border-white\/30 { border-color: rgba(255, 255, 255, 0.15) !important; }
+    .border-white\/40 { border-color: rgba(255, 255, 255, 0.2) !important; }
+    
+    .border-slate-700 { border-color: #2e2e2e !important; }
+    .border-slate-600 { border-color: #3d3d3d !important; }
+    .border-slate-500 { border-color: #525252 !important; }
+    
+    .border-black\/20, .border-black\/30 { border-color: rgba(0, 0, 0, 0.2) !important; }
+  }
+
+  /* ================================================
+   * NOCHE GRAY - Ring y Focus
+   * ================================================ */
+  .noche-gray-theme {
+    .ring-white\/10, .ring-white\/20 { --tw-ring-color: rgba(255, 255, 255, 0.1); }
+    .focus\:ring-white\/10:focus { --tw-ring-color: rgba(255, 255, 255, 0.1); }
+    .focus\:ring-white\/20:focus { --tw-ring-color: rgba(255, 255, 255, 0.15); }
+    
+    .ring-slate-700 { --tw-ring-color: #2e2e2e; }
+    .ring-slate-600 { --tw-ring-color: #3d3d3d; }
+  }
+
+  /* ================================================
+   * NOCHE GRAY - Degradados
+   * ================================================ */
+  .noche-gray-theme {
+    .from-slate-900 { --tw-gradient-from: #141414; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(20, 20, 20, 0)); }
+    .from-slate-800 { --tw-gradient-from: #1a1a1a; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(26, 26, 26, 0)); }
+    .from-slate-700 { --tw-gradient-from: #242424; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(36, 36, 36, 0)); }
+    .from-slate-950 { --tw-gradient-from: #0d0d0d; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(13, 13, 13, 0)); }
+    .from-black { --tw-gradient-from: #0d0d0d; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(13, 13, 13, 0)); }
+    
+    .to-slate-900 { --tw-gradient-to: #141414; }
+    .to-slate-800 { --tw-gradient-to: #1a1a1a; }
+    .to-slate-700 { --tw-gradient-to: #242424; }
+    .to-slate-950 { --tw-gradient-to: #0d0d0d; }
+    .to-black { --tw-gradient-to: #0d0d0d; }
+  }
 }
 
 @layer components {
-  /* Surface System */
+  /* ================================================
+   * SURFACE SYSTEM
+   * ================================================ */
   .surface-glass {
     @apply bg-white/[0.03] backdrop-blur-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)];
   }
@@ -163,7 +287,26 @@
     @apply bg-white/80 backdrop-blur-xl border-stone-200/50 shadow-sm;
   }
 
-  /* Text Gradients */
+  /* ================================================
+   * NOCHE GRAY - Surface Components
+   * ================================================ */
+  .noche-gray-theme .surface-glass {
+    background-color: rgba(20, 20, 20, 0.85) !important;
+    backdrop-filter: blur(20px);
+    border-color: rgba(255, 255, 255, 0.06) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+  }
+
+  .noche-gray-theme .surface-card,
+  .noche-gray-theme .card {
+    background-color: #1a1a1a !important;
+    border-color: rgba(255, 255, 255, 0.05) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+  }
+
+  /* ================================================
+   * TEXT GRADIENTS
+   * ================================================ */
   .text-gradient {
     @apply bg-clip-text text-transparent bg-gradient-to-br from-white to-slate-400;
   }
@@ -172,7 +315,9 @@
     @apply bg-clip-text text-transparent bg-gradient-to-br from-blue-400 to-blue-600;
   }
 
-  /* Interactive States */
+  /* ================================================
+   * INTERACTIVE STATES
+   * ================================================ */
   .interactive-hover {
     @apply transition-all duration-200 active:scale-[0.98] hover:border-blue-500/50 hover:bg-white/[0.05];
   }
@@ -181,7 +326,20 @@
     @apply hover:border-blue-400 hover:bg-blue-50;
   }
 
-  /* Scrollbar */
+  /* Noche Gray Interactive */
+  .noche-gray-theme .interactive-hover {
+    background-color: transparent;
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .noche-gray-theme .interactive-hover:hover {
+    background-color: rgba(255, 255, 255, 0.04) !important;
+    border-color: rgba(138, 180, 248, 0.3) !important;
+  }
+
+  /* ================================================
+   * SCROLLBAR
+   * ================================================ */
   .custom-scrollbar::-webkit-scrollbar {
     width: 5px;
   }
@@ -202,7 +360,17 @@
     @apply bg-stone-400;
   }
 
-  /* Skeleton Loading - Pure CSS */
+  /* Noche Gray Scrollbar */
+  .noche-gray-theme .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+  }
+  .noche-gray-theme .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.15) !important;
+  }
+
+  /* ================================================
+   * SKELETON LOADING
+   * ================================================ */
   .skeleton {
     background-color: #25314e;
     animation: skeleton-pulse 1.5s ease-in-out infinite;
@@ -254,7 +422,23 @@
     border-color: #e7e5e4;
   }
 
-  /* Button Base Styles */
+  /* Noche Gray Skeleton */
+  .noche-gray-theme .skeleton {
+    background-color: #242424 !important;
+  }
+  .noche-gray-theme .skeleton-text,
+  .noche-gray-theme .skeleton-title,
+  .noche-gray-theme .skeleton-avatar {
+    background-color: #242424 !important;
+  }
+  .noche-gray-theme .skeleton-card {
+    background-color: #1a1a1a !important;
+    border-color: rgba(255, 255, 255, 0.04) !important;
+  }
+
+  /* ================================================
+   * BUTTON BASE STYLES
+   * ================================================ */
   .btn {
     @apply px-4 py-2 rounded-lg font-medium text-sm transition-colors duration-150;
   }
@@ -271,18 +455,26 @@
     @apply bg-stone-100 text-stone-800 border-stone-300 hover:bg-stone-200;
   }
 
-  /* Noche Theme Button Styles */
-  .noche-theme .btn-secondary {
-    background-color: var(--color-noche-surface);
-    color: var(--color-noche-text-primary);
-    border-color: rgba(255, 255, 255, 0.10);
+  /* Noche Gray Button Styles */
+  .noche-gray-theme .btn-secondary {
+    background-color: #1a1a1a !important;
+    color: #a3a3a3 !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
   }
 
-  .noche-theme .btn-secondary:hover {
-    background-color: var(--color-noche-card);
+  .noche-gray-theme .btn-secondary:hover {
+    background-color: #242424 !important;
+    color: #e6e6e6 !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
   }
 
-  /* Input Base */
+  .noche-gray-theme .btn-secondary:active {
+    background-color: #2e2e2e !important;
+  }
+
+  /* ================================================
+   * INPUT BASE
+   * ================================================ */
   .input {
     @apply w-full px-3 py-2 rounded-lg border bg-slate-900 border-slate-700 text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-colors;
   }
@@ -291,23 +483,35 @@
     @apply bg-white border-stone-300 text-stone-800 placeholder-stone-400 focus:ring-blue-500/30 focus:border-blue-400;
   }
 
-  /* Noche Theme Input */
-  .noche-theme .input {
-    background-color: var(--color-noche-elevated);
-    border-color: rgba(255, 255, 255, 0.10);
-    color: var(--color-noche-text-primary);
+  /* Noche Gray Input */
+  .noche-gray-theme .input,
+  .noche-gray-theme input[type="text"],
+  .noche-gray-theme input[type="email"],
+  .noche-gray-theme input[type="password"],
+  .noche-gray-theme input[type="number"],
+  .noche-gray-theme input[type="search"],
+  .noche-gray-theme textarea,
+  .noche-gray-theme select {
+    background-color: #141414 !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    color: #e6e6e6 !important;
   }
 
-  .noche-theme .input::placeholder {
-    color: var(--color-noche-text-tertiary);
+  .noche-gray-theme .input::placeholder,
+  .noche-gray-theme input::placeholder {
+    color: #525252 !important;
   }
 
-  .noche-theme .input:focus {
-    border-color: rgba(138, 180, 248, 0.50);
-    box-shadow: 0 0 0 2px rgba(138, 180, 248, 0.20);
+  .noche-gray-theme .input:focus,
+  .noche-gray-theme input:focus {
+    border-color: rgba(138, 180, 248, 0.5) !important;
+    box-shadow: 0 0 0 3px rgba(138, 180, 248, 0.15) !important;
+    outline: none !important;
   }
 
-  /* Badge */
+  /* ================================================
+   * BADGE
+   * ================================================ */
   .badge {
     @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
   }
@@ -336,55 +540,208 @@
     @apply bg-rose-100 text-rose-700;
   }
 
-  /* Noche Theme Badge */
-  .noche-theme .badge-success {
-    background-color: rgba(129, 199, 132, 0.15);
-    color: #81c784;
+  /* Noche Gray Badge */
+  .noche-gray-theme .badge-success {
+    background-color: rgba(129, 199, 132, 0.12) !important;
+    color: #81c784 !important;
   }
 
-  .noche-theme .badge-warning {
-    background-color: rgba(255, 183, 77, 0.15);
-    color: #ffb74d;
+  .noche-gray-theme .badge-warning {
+    background-color: rgba(255, 183, 77, 0.12) !important;
+    color: #ffb74d !important;
   }
 
-  .noche-theme .badge-danger {
-    background-color: rgba(242, 184, 181, 0.15);
-    color: #f2b8b5;
+  .noche-gray-theme .badge-danger {
+    background-color: rgba(242, 184, 181, 0.12) !important;
+    color: #f2b8b5 !important;
   }
 
-  /* Surface Card for Noche Theme */
-  .noche-theme .surface-card,
-  .noche-theme .card {
-    background-color: var(--color-noche-surface);
-    border-color: rgba(255, 255, 255, 0.06);
+  /* ================================================
+   * NOCHE GRAY - Divisores y Separadores
+   * ================================================ */
+  .noche-gray-theme hr,
+  .noche-gray-theme .divider {
+    border-color: rgba(255, 255, 255, 0.04) !important;
   }
 
-  .noche-theme .surface-glass {
-    background-color: rgba(30, 30, 30, 0.80);
-    backdrop-filter: blur(16px);
-    border-color: rgba(255, 255, 255, 0.08);
+  .noche-gray-theme .border-b {
+    border-bottom-color: rgba(255, 255, 255, 0.04) !important;
   }
 
-  /* Interactive Hover for Noche Theme */
-  .noche-theme .interactive-hover:hover {
-    background-color: var(--color-noche-hover);
-    border-color: rgba(138, 180, 248, 0.30);
+  .noche-gray-theme .border-t {
+    border-top-color: rgba(255, 255, 255, 0.04) !important;
   }
 
-  /* Skeleton for Noche Theme */
-  .noche-theme .skeleton {
-    background-color: var(--color-noche-card);
+  .noche-gray-theme .border-l {
+    border-left-color: rgba(255, 255, 255, 0.04) !important;
   }
 
-  .noche-theme .skeleton-text,
-  .noche-theme .skeleton-title,
-  .noche-theme .skeleton-avatar {
-    background-color: var(--color-noche-card);
+  .noche-gray-theme .border-r {
+    border-right-color: rgba(255, 255, 255, 0.04) !important;
   }
 
-  .noche-theme .skeleton-card {
-    background-color: var(--color-noche-surface);
-    border-color: rgba(255, 255, 255, 0.06);
+  /* ================================================
+   * NOCHE GRAY - Elementos Específicos
+   * ================================================ */
+  
+  /* Dropdown / Menu */
+  .noche-gray-theme .dropdown-menu,
+  .noche-gray-theme [role="menu"],
+  .noche-gray-theme [role="listbox"],
+  .noche-gray-theme .select-dropdown {
+    background-color: #1a1a1a !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6) !important;
+  }
+
+  .noche-gray-theme [role="menuitem"]:hover,
+  .noche-gray-theme [role="option"]:hover {
+    background-color: rgba(255, 255, 255, 0.04) !important;
+  }
+
+  /* Modal / Dialog */
+  .noche-gray-theme .modal,
+  .noche-gray-theme [role="dialog"],
+  .noche-gray-theme .dialog {
+    background-color: #141414 !important;
+  }
+
+  /* Tooltip */
+  .noche-gray-theme [data-tooltip]::after,
+  .noche-gray-theme .tooltip {
+    background-color: #242424 !important;
+    color: #e6e6e6 !important;
+  }
+
+  /* Toast / Notification */
+  .noche-gray-theme .toast,
+  .noche-gray-theme .notification {
+    background-color: #1a1a1a !important;
+    border-color: rgba(255, 255, 255, 0.06) !important;
+  }
+
+  /* Tab / Navigation */
+  .noche-gray-theme .tab,
+  .noche-gray-theme .nav-item {
+    color: #737373 !important;
+  }
+
+  .noche-gray-theme .tab:hover,
+  .noche-gray-theme .nav-item:hover {
+    color: #a3a3a3 !important;
+    background-color: rgba(255, 255, 255, 0.02) !important;
+  }
+
+  .noche-gray-theme .tab.active,
+  .noche-gray-theme .nav-item.active {
+    color: #e6e6e6 !important;
+    background-color: rgba(255, 255, 255, 0.04) !important;
+  }
+
+  /* Progress Bar */
+  .noche-gray-theme .progress,
+  .noche-gray-theme progress {
+    background-color: #242424 !important;
+  }
+
+  /* Checkbox / Radio */
+  .noche-gray-theme input[type="checkbox"],
+  .noche-gray-theme input[type="radio"] {
+    background-color: #141414 !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+  }
+
+  .noche-gray-theme input[type="checkbox"]:checked,
+  .noche-gray-theme input[type="radio"]:checked {
+    background-color: rgba(138, 180, 248, 0.8) !important;
+    border-color: rgba(138, 180, 248, 0.8) !important;
+  }
+
+  /* Switch / Toggle */
+  .noche-gray-theme .switch,
+  .noche-gray-theme input[type="range"] {
+    background-color: #2e2e2e !important;
+  }
+
+  .noche-gray-theme .switch.checked,
+  .noche-gray-theme input[type="range"]:checked {
+    background-color: rgba(138, 180, 248, 0.6) !important;
+  }
+
+  /* ================================================
+   * NOCHE GRAY - Animaciones y Transiciones
+   * ================================================ */
+  .noche-gray-theme * {
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+  }
+
+  .noche-gray-theme .animate-in,
+  .noche-gray-theme .animate-out {
+    --tw-enter-opacity: initial;
+    --tw-enter-scale: initial;
+    --tw-enter-rotate: initial;
+    --tw-enter-translate-x: initial;
+    --tw-enter-translate-y: initial;
+  }
+
+  /* ================================================
+   * NOCHE GRAY - Ajustes Finales de Jerarquía
+   * ================================================ */
+  
+  /* Overlay oscuro */
+  .noche-gray-theme .overlay,
+  .noche-gray-theme .backdrop {
+    background-color: rgba(0, 0, 0, 0.7) !important;
+  }
+
+  /* Safe area para móviles */
+  .noche-gray-theme .safe-area-top,
+  .noche-gray-theme .safe-area-bottom {
+    background-color: #0d0d0d !important;
+  }
+
+  /* Sidebar */
+  .noche-gray-theme .sidebar,
+  .noche-gray-theme aside {
+    background-color: #0d0d0d !important;
+    border-color: rgba(255, 255, 255, 0.04) !important;
+  }
+
+  /* Header / AppBar */
+  .noche-gray-theme header,
+  .noche-gray-theme .appbar,
+  .noche-gray-theme .navbar {
+    background-color: #0d0d0d !important;
+    border-bottom-color: rgba(255, 255, 255, 0.04) !important;
+  }
+
+  /* Footer */
+  .noche-gray-theme footer,
+  .noche-gray-theme .footer {
+    background-color: #0d0d0d !important;
+    border-top-color: rgba(255, 255, 255, 0.04) !important;
+  }
+
+  /* List items */
+  .noche-gray-theme li,
+  .noche-gray-theme .list-item {
+    border-bottom-color: rgba(255, 255, 255, 0.03) !important;
+  }
+
+  .noche-gray-theme li:hover,
+  .noche-gray-theme .list-item:hover {
+    background-color: rgba(255, 255, 255, 0.02) !important;
+  }
+
+  /* Code / Monospace */
+  .noche-gray-theme code,
+  .noche-gray-theme pre,
+  .noche-gray-theme .mono {
+    background-color: #141414 !important;
+    border-color: rgba(255, 255, 255, 0.04) !important;
+    color: #a3a3a3 !important;
   }
 }
 
