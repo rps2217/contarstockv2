@@ -35,6 +35,9 @@ export const HammerPage: React.FC = () => {
   const [isTheoreticalModalOpen, setIsTheoreticalModalOpen] = useState(false);
   const [isMigrating, setIsMigrating] = useState(false);
 
+  // Destructure new sync states
+  const { pendingWrites, syncError } = state;
+
   // ESCUCHA DE HARDWARE (HID LASER)
   useHIDScanner({
     onScan: (barcode) => {
@@ -128,6 +131,16 @@ export const HammerPage: React.FC = () => {
         onSync={actions.syncToCloud}
         isSyncing={state.isSyncing}
         autoSyncEnabled={state.autoSyncEnabled}
+        pendingWrites={pendingWrites}
+        syncError={syncError}
+        onRetrySync={actions.syncToCloud}
+        stats={{
+          itemsPerMinute: stats.itemsPerMinute,
+          totalItems: state.items.length,
+          lastScanTime: stats.lastScanTime,
+          expectedItems: state.items.some(i => i.expectedQty !== undefined) ? state.items.reduce((acc, i) => acc + (i.expectedQty || 0), 0) : undefined
+        }}
+        formattedDuration={formattedDuration}
       />
 
       <MassiveToolsSheet 

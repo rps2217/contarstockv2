@@ -3,7 +3,14 @@ import { HammerItem } from '../hooks/useHammerLogic';
 import { Product } from '../../../types';
 import { FeedbackStatus } from '../../../hooks/useFeedbackSystem';
 import { ScannerContainer, ScannerCameraSection } from '../../../shared/components/scanner/layouts';
-import { Edit3 } from 'lucide-react';
+import { Edit3, Zap, Clock, Target, TrendingUp } from 'lucide-react';
+
+interface ProductivityStats {
+ itemsPerMinute: number;
+ totalItems: number;
+ lastScanTime: number | null;
+ expectedItems?: number;
+}
 
 interface HammerCameraViewProps {
  onBack: () => void;
@@ -22,6 +29,12 @@ interface HammerCameraViewProps {
  onSync?: () => void;
  isSyncing?: boolean;
  autoSyncEnabled?: boolean;
+ pendingWrites?: number;
+ syncError?: string | null;
+ onRetrySync?: () => void;
+ // Productivity stats
+ stats?: ProductivityStats;
+ formattedDuration?: string;
 }
 
 export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
@@ -40,9 +53,47 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
  isVoiceEnabled = false,
  onSync,
  isSyncing = false,
- autoSyncEnabled = false
+ autoSyncEnabled = false,
+ pendingWrites = 0,
+ syncError = null,
+ onRetrySync,
+ stats,
+ formattedDuration
 }) => {
  const activeItemName = activeProduct?.name || items.find(i => i.barcode === activeBarcode)?.name;
+ const hasSyncError = !!syncError;
+ 
+ // Mini productivity bar
+ const productivityBar = stats ? (
+   <div className="h-12 bg-slate-900/90 border-b border-white/10 flex items-center px-4 gap-4">
+     <div className="flex items-center gap-1.5">
+       <Zap className="w-3.5 h-3.5 text-emerald-400" />
+       <span className="text-xs font-bold text-emerald-400">{stats.itemsPerMinute.toFixed(1)}</span>
+       <span className="text-[10px] text-slate-500">/min</span>
+     </div>
+     <div className="w-px h-6 bg-white/10" />
+     <div className="flex items-center gap-1.5">
+       <Target className="w-3.5 h-3.5 text-blue-400" />
+       <span className="text-xs font-bold text-blue-400">{stats.totalItems}</span>
+       <span className="text-[10px] text-slate-500">items</span>
+     </div>
+     <div className="w-px h-6 bg-white/10" />
+     <div className="flex items-center gap-1.5">
+       <Clock className="w-3.5 h-3.5 text-slate-400" />
+       <span className="text-xs font-bold text-slate-300">{formattedDuration || '00:00'}</span>
+     </div>
+     {stats.expectedItems !== undefined && (
+       <>
+         <div className="w-px h-6 bg-white/10" />
+         <div className="flex items-center gap-1.5">
+           <TrendingUp className="w-3.5 h-3.5 text-amber-400" />
+           <span className="text-xs font-bold text-amber-400">{stats.expectedItems}</span>
+           <span className="text-[10px] text-slate-500">esperados</span>
+         </div>
+       </>
+     )}
+   </div>
+ ) : null;
 
  // Map HammerItem to ScannedItemProps
  const mappedItems = items.map(item => ({
@@ -51,9 +102,36 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
    totalQuantity: item.totalQuantity,
  }));
 
- // Footer with edit mode indicator
+ // Footer with edit mode indicator + sync status
  const bottomContent = (
    <div className="absolute bottom-0 left-0 right-0 bg-slate-900 border-t border-white/10 flex flex-col z-50">
+     {/* Sync Status Bar */}
+     {(pendingWrites > 0 || hasSyncError) && (
+       <div className={`h-10 flex items-center px-4 justify-between ${hasSyncError ? 'bg-red-900/30 border-b border-red-500/30' : 'border-b border-white/5'}`}>
+         <div className="flex items-center gap-2">
+           {hasSyncError ? (
+             <>
+               <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+               <span className="text-xs text-red-400">Error de sincronización</span>
+             </>
+           ) : pendingWrites > 0 ? (
+             <>
+               <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+               <span className="text-xs text-amber-400">Guardando {pendingWrites} cambios...</span>
+             </>
+           ) : null}
+         </div>
+         {hasSyncError && onRetrySync && (
+           <button 
+             onClick={onRetrySync}
+             className="text-xs text-red-400 hover:text-red-300 font-bold underline"
+           >
+             Reintentar
+           </button>
+         )}
+       </div>
+     )}
+     
      <div className="h-14 flex items-center px-4 justify-between border-b border-white/5">
        <div className="flex items-center gap-2">
          <Edit3 className="w-4 h-4 text-blue-400" />
@@ -74,6 +152,7 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
 
  return (
    <div className="relative h-full w-full">
+     {productivityBar}
      <ScannerContainer
        location={location}
        onChangeLocation={onChangeLocation}

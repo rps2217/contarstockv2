@@ -21,12 +21,16 @@ export const useHammerLogic = (batchId: string) => {
   const { engine, processScan } = useScanPipeline(1);
   const [currentLocation, setCurrentLocation] = useState(() => localStorage.getItem('hammer_loc') || 'ZONA-A');
   const [isSyncing, setIsSyncing] = useState(false);
+  const [pendingWrites, setPendingWrites] = useState(0); // Contador de writes pendientes
+  const [syncError, setSyncError] = useState<string | null>(null); // Último error de sync
   
   // Real-time Cloud Sync setting, defaults to true
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(() => {
     return localStorage.getItem('hammer_auto_sync') !== 'false';
   });
   const autoSyncRef = useRef(autoSyncEnabled);
+  const retryCountRef = useRef(0);
+  const MAX_RETRIES = 3;
 
   useEffect(() => {
     autoSyncRef.current = autoSyncEnabled;
@@ -110,8 +114,11 @@ export const useHammerLogic = (batchId: string) => {
   useEffect(() => {
     const timer = setInterval(async () => {
       if (writeQueue.current.length === 0) return;
+      
       const batch = [...writeQueue.current];
       writeQueue.current = [];
+      setPendingWrites(prev => prev + batch.length);
+      
       try {
         const aggregatedBatch = batch.reduce((acc, curr) => {
           const key = `${curr.barcode}_${curr.loc}`;
@@ -130,10 +137,16 @@ export const useHammerLogic = (batchId: string) => {
           await MassiveDbRepository.bulkAddBlindScans(mergedScans.map(b => ({
             batchId, barcode: b.barcode, quantity: b.qty, location: b.loc, timestamp: b.ts
           })));
+          
+          // Actualizar contador de writes completados
+          setPendingWrites(prev => Math.max(0, prev - mergedScans.length));
+          setSyncError(null);
+          retryCountRef.current = 0;
 
-          // Trigger zero-latency cloud push if enabled
+          // Trigger zero-latency cloud push if enabled with retry
           if (autoSyncRef.current) {
-            pushScansToCloud(batchId).catch((err) => {
+            pushWithRetry(batchId).catch((err) => {
+              setSyncError('Error de sincronización');
               console.warn('[HammerLogic] AutoSync background push failed:', err);
             });
           }
@@ -141,14 +154,36 @@ export const useHammerLogic = (batchId: string) => {
       } catch (e) {
         console.error('[HammerLogic] Write failed, returning to queue', e);
         writeQueue.current = [...batch, ...writeQueue.current];
+        setSyncError('Error de escritura local');
       }
     }, 400);
     return () => clearInterval(timer);
   }, [batchId]);
 
+  // Función de retry con exponential backoff
+  const pushWithRetry = async (batchId: string, attempt = 0): Promise<void> => {
+    try {
+      await pushScansToCloud(batchId);
+      retryCountRef.current = 0;
+      setSyncError(null);
+    } catch (err) {
+      if (attempt < MAX_RETRIES) {
+        const delay = Math.min(1000 * Math.pow(2, attempt), 8000);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return pushWithRetry(batchId, attempt + 1);
+      }
+      throw err;
+    }
+  };
+
   const registerScan = useCallback(async (code: string, qtyOverride?: number) => {
     const clean = sanitizeBarcode(code);
     if (!clean) return;
+    
+    // Feedback táctil inmediato (si disponible)
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate(10);
+    }
     
     const delta = qtyOverride ?? multiplierRef.current;
     const isManualEdit = qtyOverride !== undefined;
@@ -281,7 +316,9 @@ export const useHammerLogic = (batchId: string) => {
       optimisticQty: engine.optimisticQty,
       currentLocation,
       isSyncing,
-      autoSyncEnabled
+      autoSyncEnabled,
+      pendingWrites, // Writes pendientes de guardar en BD
+      syncError // Error de sync si existe
     },
     actions: { 
       setMultiplier: engine.setMultiplier,

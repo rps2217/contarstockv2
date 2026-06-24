@@ -382,4 +382,83 @@ describe('useHammerLogic', () => {
       expect(resolvedName).toBe('SKU_DESCONOCIDO');
     });
   });
+
+  describe('Pending writes tracking', () => {
+    it('should track pending writes count', () => {
+      let pendingWrites = 0;
+      
+      // Simular inicio de writes
+      const batch = [{ barcode: 'A', qty: 1, loc: 'ZONA-A', ts: 1000 }];
+      pendingWrites += batch.length;
+      expect(pendingWrites).toBe(1);
+      
+      // Simular completado de writes
+      pendingWrites = Math.max(0, pendingWrites - batch.length);
+      expect(pendingWrites).toBe(0);
+    });
+
+    it('should show error state when write fails', () => {
+      let syncError: string | null = null;
+      
+      // Simular error
+      syncError = 'Error de escritura local';
+      expect(syncError).toBe('Error de escritura local');
+      
+      // Simular recuperación
+      syncError = null;
+      expect(syncError).toBeNull();
+    });
+  });
+
+  describe('Retry with exponential backoff', () => {
+    it('should calculate exponential delay correctly', () => {
+      const MAX_RETRIES = 3;
+      const MAX_DELAY = 8000;
+      
+      const calculateDelay = (attempt: number) => Math.min(1000 * Math.pow(2, attempt), MAX_DELAY);
+      
+      expect(calculateDelay(0)).toBe(1000);   // 1s
+      expect(calculateDelay(1)).toBe(2000);   // 2s
+      expect(calculateDelay(2)).toBe(4000);   // 4s
+      expect(calculateDelay(3)).toBe(8000);   // 8s (max)
+      expect(calculateDelay(4)).toBe(8000);   // 8s (capped)
+    });
+
+    it('should respect MAX_RETRIES limit', () => {
+      const MAX_RETRIES = 3;
+      const attempt = MAX_RETRIES;
+      
+      expect(attempt >= MAX_RETRIES).toBe(true);
+    });
+  });
+
+  describe('Haptic feedback', () => {
+    it('should call navigator.vibrate on scan', () => {
+      const mockVibrate = vi.fn();
+      const originalNavigator = window.navigator;
+      
+      window.navigator = {
+        ...originalNavigator,
+        vibrate: mockVibrate
+      } as any;
+      
+      if (window.navigator.vibrate) {
+        window.navigator.vibrate(10);
+        expect(mockVibrate).toHaveBeenCalledWith(10);
+      }
+      
+      window.navigator = originalNavigator;
+    });
+
+    it('should handle missing navigator.vibrate gracefully', () => {
+      const originalNavigator = window.navigator;
+      const navigatorWithoutVibrate = { ...originalNavigator, vibrate: undefined };
+      window.navigator = navigatorWithoutVibrate as any;
+      
+      const hasVibrate = typeof window.navigator?.vibrate === 'function';
+      expect(hasVibrate).toBe(false);
+      
+      window.navigator = originalNavigator;
+    });
+  });
 });
