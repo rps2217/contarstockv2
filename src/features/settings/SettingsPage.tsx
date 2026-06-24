@@ -18,6 +18,9 @@ import { ThemeSection } from './components/ThemeSection';
 import { PrinterSection } from './components/PrinterSection';
 import { PreferencesSection } from './components/PreferencesSection';
 
+// Theme Customizer - Componente Lego para personalización de temas
+import { ThemeCustomizer } from '@/theme';
+
 type TabId = 'general' | 'nube' | 'sistema';
 
 export const Settings: React.FC = () => {
@@ -124,6 +127,17 @@ export const Settings: React.FC = () => {
      <PreferencesSection settings={settings} updateSetting={updateSetting} />
      <OperationalSection settings={settings} updateSetting={updateSetting} />
      <ThemeSection settings={settings} updateSetting={updateSetting} />
+     
+     {/* Personalizador de Temas - Componente Lego */}
+     <section className="space-y-2">
+       <div className="flex items-center gap-2 px-1">
+	         <Palette className="w-4 h-4 text-indigo-500" />
+	         <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+	           Personalizacion Avanzada
+	         </h3>
+       </div>
+       <ThemeCustomizer />
+     </section>
      <NavigationSection settings={settings} updateSetting={updateSetting} />
      <PrinterSection settings={settings} updateSetting={updateSetting} />
    </>
