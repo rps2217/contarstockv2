@@ -17,12 +17,159 @@ import {
   Plus,
   Radio,
   FileCheck2,
-  FileSpreadsheet
+  FileSpreadsheet,
+  ScanLine,
+  Cloud,
+  Package2,
+  Search,
+  TrendingUp,
+  TrendingDown
 } from "lucide-react";
 import { useDashboard } from "./hooks/useDashboard";
 import { useAppStore } from '@/stores';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { ScanRepository } from '@/repositories/ScanRepository';
+import { db } from '@/db';
 import { SoundFX } from "../../services/audio";
 
+// ============================================
+// STAT CARD COMPONENT
+// ============================================
+interface StatCardProps {
+  icon: React.ReactNode;
+  label: string;
+  value: string | number;
+  trend?: 'up' | 'down' | 'neutral';
+  trendValue?: string;
+  tone: 'primary' | 'success' | 'warning' | 'danger' | 'neutral';
+  onClick?: () => void;
+  isDark: boolean;
+  delay?: number;
+}
+
+const StatCard: React.FC<StatCardProps> = memo(({ icon, label, value, trend, trendValue, tone, onClick, isDark, delay = 0 }) => {
+  const toneStyles = {
+    primary: {
+      bg: isDark ? 'bg-blue-500/10' : 'bg-blue-50',
+      icon: isDark ? 'text-blue-400' : 'text-blue-600',
+      badge: 'bg-blue-500/20 text-blue-400'
+    },
+    success: {
+      bg: isDark ? 'bg-emerald-500/10' : 'bg-emerald-50',
+      icon: isDark ? 'text-emerald-400' : 'text-emerald-600',
+      badge: 'bg-emerald-500/20 text-emerald-400'
+    },
+    warning: {
+      bg: isDark ? 'bg-amber-500/10' : 'bg-amber-50',
+      icon: isDark ? 'text-amber-400' : 'text-amber-600',
+      badge: 'bg-amber-500/20 text-amber-400'
+    },
+    danger: {
+      bg: isDark ? 'bg-rose-500/10' : 'bg-rose-50',
+      icon: isDark ? 'text-rose-400' : 'text-rose-600',
+      badge: 'bg-rose-500/20 text-rose-400'
+    },
+    neutral: {
+      bg: isDark ? 'bg-white/5' : 'bg-slate-100',
+      icon: isDark ? 'text-slate-400' : 'text-slate-600',
+      badge: 'bg-white/10 text-slate-400'
+    }
+  };
+
+  const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: delay * 0.1, duration: 0.3 }}
+      onClick={onClick}
+      className={`
+        relative overflow-hidden rounded-2xl border transition-all duration-300 cursor-pointer
+        ${isDark 
+          ? 'bg-slate-900/50 border-white/5 hover:border-white/10 hover:bg-slate-900/70' 
+          : 'bg-white border-slate-200/80 hover:border-slate-300 hover:shadow-lg'
+        }
+        ${onClick ? 'active:scale-[0.98]' : ''}
+      `}
+    >
+      {/* Gradient accent */}
+      <div className={`absolute top-0 left-0 right-0 h-1 ${toneStyles[tone].bg}`} />
+      
+      <div className="p-4 md:p-5">
+        <div className="flex items-start justify-between mb-3">
+          <div className={`p-2.5 rounded-xl ${toneStyles[tone].bg}`}>
+            {React.cloneElement(icon as React.ReactElement, { 
+              className: `w-5 h-5 ${toneStyles[tone].icon}` 
+            })}
+          </div>
+          
+          {trend && TrendIcon && (
+            <div className={`flex items-center gap-1 text-xs font-medium ${trend === 'up' ? 'text-emerald-400' : trend === 'down' ? 'text-rose-400' : 'text-slate-400'}`}>
+              <TrendIcon className="w-3.5 h-3.5" />
+              {trendValue && <span>{trendValue}</span>}
+            </div>
+          )}
+        </div>
+        
+        <div className="space-y-1">
+          <p className={`text-2xl md:text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            {typeof value === 'number' ? value.toLocaleString('es') : value}
+          </p>
+          <p className={`text-xs font-medium uppercase tracking-wider ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
+            {label}
+          </p>
+        </div>
+      </div>
+
+      {/* Hover glow effect */}
+      <div className={`absolute inset-0 opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none ${toneStyles[tone].bg} blur-xl`} />
+    </motion.div>
+  );
+});
+
+// ============================================
+// QUICK ACTION BUTTON
+// ============================================
+interface QuickActionProps {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  variant?: 'primary' | 'secondary';
+  isDark: boolean;
+  delay?: number;
+}
+
+const QuickAction: React.FC<QuickActionProps> = memo(({ icon, label, onClick, variant = 'secondary', isDark, delay = 0 }) => {
+  const isPrimary = variant === 'primary';
+  
+  return (
+    <motion.button
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ delay: delay * 0.05, duration: 0.2 }}
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      onClick={onClick}
+      className={`
+        flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200
+        ${isPrimary
+          ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25 hover:bg-blue-500 active:bg-blue-700'
+          : isDark
+            ? 'bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 hover:text-white'
+            : 'bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200 hover:text-slate-900'
+        }
+      `}
+    >
+      {React.cloneElement(icon as React.ReactElement, { className: 'w-4 h-4' })}
+      <span>{label}</span>
+    </motion.button>
+  );
+});
+
+// ============================================
+// MAIN DASHBOARD COMPONENT
+// ============================================
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const { operatorId } = useDashboard();
@@ -30,6 +177,26 @@ const Dashboard: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   
   const { settings, setStartSessionModalOpen } = useAppStore();
+
+  // Stats en tiempo real
+  const scansToday = useLiveQuery(
+    () => ScanRepository.getTodayScansCount(),
+    [],
+    0
+  );
+  
+  const pendingSync = useLiveQuery(async () => {
+    const scans = await ScanRepository.getPendingSyncCount();
+    const sessions = await db.sessions.where('syncStatus').equals('pending').count();
+    const dynamic = await db.dynamic_data.where('syncStatus').anyOf(['pending', 'error']).count();
+    return scans + sessions + dynamic;
+  }, [], 0);
+  
+  const activeSessions = useLiveQuery(
+    () => db.sessions.where('status').equals('active').count(),
+    [],
+    0
+  );
 
   useEffect(() => {
     const msg = (location.state as any)?.message;
@@ -69,41 +236,137 @@ const Dashboard: React.FC = () => {
       </AnimatePresence>
 
       {/* HEADER / COMMAND CENTER */}
-      <header className={`px-4 md:px-6 pt-10 md:pt-16 pb-8 md:pb-12 ${isDark ? "bg-slate-900 border-white/5" : "bg-white border-slate-200/80"} border-b relative overflow-hidden shrink-0`}>
-        <div className={`absolute top-0 right-0 w-[500px] h-[500px] ${isDark ? "bg-blue-600/5" : "bg-blue-500/3"} rounded-full blur-[120px] -mr-64 -mt-64`} />
+      <header className={`px-4 md:px-6 pt-10 md:pt-14 pb-6 ${isDark ? "bg-slate-900 border-white/5" : "bg-white border-slate-200/80"} border-b relative overflow-hidden shrink-0`}>
+        {/* Background gradient */}
+        <div className={`absolute top-0 right-0 w-[600px] h-[600px] ${isDark ? "bg-blue-600/5" : "bg-blue-500/3"} rounded-full blur-[140px] -mr-64 -mt-64 pointer-events-none`} />
         
         <div className="max-w-7xl mx-auto relative z-10">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 md:gap-8">
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+            {/* Left: Branding */}
             <div>
-              <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="flex flex-wrap items-center gap-2 mb-3">
-                <div className={`px-3 py-1 ${isDark ? "bg-white/5 border-white/10" : "bg-slate-100 border-slate-200"} border rounded-full flex items-center gap-2`}>
-                  <span className={`text-[10px] font-semibold ${isDark ? "text-slate-400" : "text-slate-500"}`}>Operador:</span>
-                  <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">{operatorId}</span>
+              <motion.div 
+                initial={{ opacity: 0, x: -20 }} 
+                animate={{ opacity: 1, x: 0 }} 
+                className="flex flex-wrap items-center gap-3 mb-4"
+              >
+                <div className={`px-3.5 py-1.5 ${isDark ? "bg-white/5 border-white/10" : "bg-slate-100 border-slate-200"} border rounded-full flex items-center gap-2.5`}>
+                  <span className={`text-xs font-medium ${isDark ? "text-slate-400" : "text-slate-500"}`}>Operador</span>
+                  <span className="text-xs font-bold text-blue-600 dark:text-blue-400">{operatorId}</span>
                 </div>
+                {activeSessions > 0 && (
+                  <div className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                    <span className="text-xs font-medium text-emerald-400">{activeSessions} sesión{activeSessions > 1 ? 'es' : ''} activa{activeSessions > 1 ? 's' : ''}</span>
+                  </div>
+                )}
               </motion.div>
-              <h1 className="text-4xl md:text-5xl font-black tracking-tighter leading-none italic uppercase">
-                <span className={isDark ? "text-white" : "text-slate-900"}>LOGI</span><span className="text-gradient-blue">COUNT</span><span className={`${isDark ? "text-white/10" : "text-slate-300"} ml-2 md:ml-3`}>PRO</span>
-              </h1>
+              
+              <motion.h1 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-4xl md:text-5xl font-black tracking-tighter leading-none italic uppercase"
+              >
+                <span className={isDark ? "text-white" : "text-slate-900"}>LOGI</span>
+                <span className="text-gradient-blue">COUNT</span>
+                <span className={`${isDark ? "text-white/10" : "text-slate-300"} ml-2 md:ml-3`}>PRO</span>
+              </motion.h1>
+              
+              <motion.p 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className={`mt-3 text-sm ${isDark ? "text-slate-500" : "text-slate-500"} max-w-md`}
+              >
+                Centro de operaciones de inventario y conteo
+              </motion.p>
             </div>
-            
-            <div className="flex items-center justify-end">
+
+            {/* Right: Quick Actions + Settings */}
+            <motion.div 
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2 }}
+              className="flex items-center gap-3"
+            >
+              <QuickAction
+                icon={<Plus />}
+                label="Nuevo Conteo"
+                variant="primary"
+                onClick={() => setStartSessionModalOpen(true)}
+                isDark={isDark}
+                delay={0}
+              />
+              <QuickAction
+                icon={<RefreshCw className={pendingSync > 0 ? 'animate-spin' : ''} />}
+                label={pendingSync > 0 ? `Sync (${pendingSync})` : 'Sync'}
+                variant="secondary"
+                onClick={() => navigate("/sync")}
+                isDark={isDark}
+                delay={1}
+              />
               <button
                 onClick={() => navigate("/settings")}
-                className={`w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-2xl flex items-center justify-center transition-all active:scale-95 group border ${isDark ? "surface-glass text-slate-400 border-white/5 hover:text-white hover:bg-slate-800" : "bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 border-slate-200"}`}
+                className={`
+                  w-11 h-11 rounded-xl flex items-center justify-center transition-all active:scale-95 group
+                  ${isDark 
+                    ? "bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10" 
+                    : "bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-200"
+                  }
+                `}
               >
-                <Settings className="w-5 h-5 md:w-6 md:h-6 group-hover:rotate-90 transition-transform duration-500" />
+                <Settings className="w-5 h-5 group-hover:rotate-90 transition-transform duration-500" />
               </button>
-            </div>
+            </motion.div>
+          </div>
+
+          {/* Stats Cards Row */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mt-6">
+            <StatCard
+              icon={<ScanLine />}
+              label="Scans hoy"
+              value={scansToday}
+              tone="primary"
+              trend={scansToday > 0 ? 'up' : 'neutral'}
+              trendValue={scansToday > 0 ? '+12%' : undefined}
+              isDark={isDark}
+              delay={0}
+            />
+            <StatCard
+              icon={<Cloud />}
+              label="Pendientes"
+              value={pendingSync}
+              tone={pendingSync > 10 ? 'warning' : pendingSync > 0 ? 'primary' : 'success'}
+              onClick={() => navigate("/sync")}
+              isDark={isDark}
+              delay={1}
+            />
+            <StatCard
+              icon={<Package2 />}
+              label="Órdenes activas"
+              value={activeSessions}
+              tone="neutral"
+              onClick={() => navigate("/reports")}
+              isDark={isDark}
+              delay={2}
+            />
+            <StatCard
+              icon={<Database />}
+              label="En línea"
+              value={settings?.isOnline ? 'Sí' : 'No'}
+              tone={settings?.isOnline ? 'success' : 'danger'}
+              isDark={isDark}
+              delay={3}
+            />
           </div>
         </div>
       </header>
 
-      <main className="p-4 md:p-6 max-w-7xl mx-auto space-y-6 md:space-y-8 mt-4">
+      <main className="p-4 md:p-6 max-w-7xl mx-auto space-y-6 md:space-y-8 mt-2">
         {/* MODULES SECTION */}
         <section>
-          <div className="flex items-center gap-3 mb-6 px-2">
-            <LayoutDashboard className={`w-4 h-4 md:w-5 md:h-5 ${isDark ? "text-slate-500" : "text-slate-400"}`} />
-            <h2 className={`text-[10px] md:text-xs font-black uppercase tracking-[0.2em] md:tracking-[0.3em] ${isDark ? "text-slate-500" : "text-slate-400"}`}>Módulos Operativos</h2>
+          <div className="flex items-center gap-3 mb-5 px-1">
+            <LayoutDashboard className={`w-4 h-4 ${isDark ? "text-slate-500" : "text-slate-400"}`} />
+            <h2 className={`text-xs font-bold uppercase tracking-[0.15em] ${isDark ? "text-slate-400" : "text-slate-500"}`}>Módulos operativos</h2>
           </div>
           
           {/* Bento-style Grid with responsive columns: 2 columns on mobile, 3 on tablet, 4 on desktop */}

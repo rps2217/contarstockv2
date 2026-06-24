@@ -74,6 +74,16 @@ export class ScanRepository {
     return await db.scans.where('syncStatus').equals('pending').count();
   }
 
+  static async getTodayScansCount(): Promise<number> {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const startTimestamp = startOfDay.getTime();
+    return await db.scans
+      .where('timestamp')
+      .aboveOrEqual(startTimestamp)
+      .count();
+  }
+
   static async countBySession(sessionId: string): Promise<number> {
     return await db.scans.where('sessionId').equals(sessionId).count();
   }
