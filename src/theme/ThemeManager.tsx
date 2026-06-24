@@ -257,7 +257,7 @@ const THEME_PALETTES: Record<ThemeMode, ThemeColors> = {
 // CONTEXTO
 // ============================================================================
 
-const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
+export const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
 export const useTheme = () => {
   const context = useContext(ThemeContext);
