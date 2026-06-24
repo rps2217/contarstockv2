@@ -1,6 +1,6 @@
 # ContarStock v2 ......
 
-**Sistema de gestión de inventario y conteo para retail.**
+**Sistema de gestión de inventario y conteo para retail.**..
 
 ## Tech Stack
 - **Frontend**: React 18 + TypeScript + Vite
