@@ -1226,6 +1226,30 @@ const {
 
 ---
 
+## Módulo de Vencimientos - Mejoras (2026-06-24) ✅
+
+### Nuevos Componentes
+
+| Componente | Descripción |
+|------------|-------------|
+| `ExpiryIndustrialLayout` | Layout profesional completo con stats |
+| `ExpiryCaptureModalWithScanner` | Modal con scanner HID integrado |
+| `useExpiryScanner` | Hook para integración con scanner |
+| `services/expiryExport` | Exportación PDF/Excel/CSV |
+
+### Características Implementadas
+
+- Scanner HID para captura rápida
+- Exportación PDF/Excel/CSV de reportes
+- UI industrial con stats en tiempo real
+- Badges animados para alertas críticas
+- Lista ordenada: vencidos primero
+
+### Commits:
+- `8d0d20b3` - feat: Mejoras completas al módulo de Vencimientos
+
+---
+
 ## Refactoring Módulo Events v2 (2026-06-22)
 
 ### Arquitectura Simplificada (Patrón Expiry)
