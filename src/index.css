@@ -108,160 +108,145 @@
   }
 
   /* ================================================
-   * NOCHE GRAY THEME - Sistema Completo de Grises
-   * Escala premium inspirada en AppSheet con variaciones
-   * de intensidad para diferentes niveles de jerarquía
+   * NOCHE GRAY THEME - Sistema de Grises Balanceado
+   * Paleta optimizada con buen contraste para máxima legibilidad
    * ================================================ */
   
-  /* Cuerpo del tema */
+  /* Cuerpo del tema - Fondo oscuro medio */
   body.noche-gray-theme {
-    background-color: #0d0d0d;
-    color: #e6e6e6;
+    background-color: #1a1a1a;
+    color: #e5e5e5;
   }
 
-  /* Override completo de la escala slate para Noche Gray */
+  /* Override completo de la escala slate para Noche Gray - Balanceado */
   .noche-gray-theme {
-    --color-slate-950: #0d0d0d;   /* Fondo base - casi negro */
-    --color-slate-900: #141414;   /* Fondo secundario */
-    --color-slate-800: #1a1a1a;   /* Superficies elevadas */
-    --color-slate-700: #242424;   /* Cards y componentes */
-    --color-slate-600: #2e2e2e;   /* Elementos más elevados */
-    --color-slate-500: #3d3d3d;   /* Bordes y separadores */
-    --color-slate-400: #525252;   /* Texto terciario */
-    --color-slate-300: #737373;   /* Texto secundario */
-    --color-slate-200: #a3a3a3;   /* Texto principal */
-    --color-slate-100: #d4d4d4;   /* Texto destacado */
-    --color-slate-50: #f5f5f5;    /* Texto máximo contraste */
+    --color-slate-950: #141414;   /* Fondo base oscuro */
+    --color-slate-900: #1a1a1a;   /* Fondo secundario */
+    --color-slate-800: #222222;   /* Superficies elevadas */
+    --color-slate-700: #2d2d2d;   /* Cards y componentes */
+    --color-slate-600: #3a3a3a;   /* Elementos más elevados */
+    --color-slate-500: #4a4a4a;   /* Bordes y separadores */
+    --color-slate-400: #6a6a6a;   /* Texto terciario */
+    --color-slate-300: #8a8a8a;   /* Texto secundario */
+    --color-slate-200: #b0b0b0;   /* Texto principal */
+    --color-slate-100: #d5d5d5;   /* Texto destacado */
+    --color-slate-50: #f0f0f0;    /* Texto máximo contraste */
     
     /* Brand colors adaptadas para Noche Gray */
     --color-brand-surface: #1a1a1a;
-    --color-brand-dark: #0d0d0d;
-    
-    /* Fondos con transparencia */
-    --noche-bg-subtle: rgba(255, 255, 255, 0.02);
-    --noche-bg-muted: rgba(255, 255, 255, 0.04);
-    --noche-bg-elevated: rgba(255, 255, 255, 0.06);
-    --noche-bg-active: rgba(255, 255, 255, 0.08);
-    --noche-bg-hover: rgba(255, 255, 255, 0.05);
-    
-    /* Bordes específicos */
-    --noche-border-subtle: rgba(255, 255, 255, 0.04);
-    --noche-border-default: rgba(255, 255, 255, 0.08);
-    --noche-border-strong: rgba(255, 255, 255, 0.12);
-    --noche-border-focus: rgba(138, 180, 248, 0.5);
-    
-    /* Sombras para Noche Gray */
-    --noche-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --noche-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
-    --noche-shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.4);
-    --noche-shadow-glow: 0 0 20px rgba(138, 180, 248, 0.1);
+    --color-brand-dark: #141414;
   }
 
   /* ================================================
-   * NOCHE GRAY - Fondos y Superficies
+   * NOCHE GRAY - Fondos y Superficies (Balanceados)
    * ================================================ */
   .noche-gray-theme body {
-    background-color: #0d0d0d;
+    background-color: #1a1a1a;
   }
 
   .noche-gray-theme {
-    /* Fondos básicos */
-    .bg-slate-950 { background-color: #0d0d0d !important; }
-    .bg-slate-900 { background-color: #141414 !important; }
-    .bg-slate-800 { background-color: #1a1a1a !important; }
-    .bg-slate-700 { background-color: #242424 !important; }
-    .bg-slate-600 { background-color: #2e2e2e !important; }
-    .bg-slate-500 { background-color: #3d3d3d !important; }
+    /* Fondos básicos - Progresión clara */
+    .bg-slate-950 { background-color: #141414 !important; }
+    .bg-slate-900 { background-color: #1a1a1a !important; }
+    .bg-slate-800 { background-color: #222222 !important; }
+    .bg-slate-700 { background-color: #2d2d2d !important; }
+    .bg-slate-600 { background-color: #3a3a3a !important; }
+    .bg-slate-500 { background-color: #4a4a4a !important; }
+    .bg-slate-400 { background-color: #5a5a5a !important; }
+    .bg-slate-300 { background-color: #6a6a6a !important; }
     
-    /* Fondos con transparencias */
-    .bg-white\/5, .bg-white\/\[0\.05\], .bg-white\/\[0\.02\] { background-color: rgba(255, 255, 255, 0.02) !important; }
-    .bg-white\/10 { background-color: rgba(255, 255, 255, 0.04) !important; }
-    .bg-white\/15 { background-color: rgba(255, 255, 255, 0.06) !important; }
-    .bg-white\/20 { background-color: rgba(255, 255, 255, 0.08) !important; }
-    .bg-white\/30 { background-color: rgba(255, 255, 255, 0.12) !important; }
+    /* Fondos con transparencias - Más visibles */
+    .bg-white\/5, .bg-white\/\[0\.05\], .bg-white\/\[0\.02\] { background-color: rgba(255, 255, 255, 0.05) !important; }
+    .bg-white\/10 { background-color: rgba(255, 255, 255, 0.1) !important; }
+    .bg-white\/15 { background-color: rgba(255, 255, 255, 0.15) !important; }
+    .bg-white\/20 { background-color: rgba(255, 255, 255, 0.2) !important; }
+    .bg-white\/30 { background-color: rgba(255, 255, 255, 0.3) !important; }
+    .bg-white\/40 { background-color: rgba(255, 255, 255, 0.4) !important; }
     
-    /* Fondos negros con transparencias */
-    .bg-black\/20, .bg-black\/30, .bg-black\/40, .bg-black\/50 { background-color: rgba(0, 0, 0, 0.3) !important; }
-    .bg-black\/60, .bg-black\/70, .bg-black\/80, .bg-black\/90 { background-color: rgba(0, 0, 0, 0.5) !important; }
-    
-    /* Fondos azulados sutiles */
-    .bg-blue-900\/20, .bg-blue-900\/30, .bg-blue-950\/20, .bg-blue-950\/30 { background-color: rgba(30, 41, 59, 0.3) !important; }
-    .bg-indigo-900\/20, .bg-indigo-950\/20 { background-color: rgba(30, 30, 60, 0.3) !important; }
-  }
-
-  /* ================================================
-   * NOCHE GRAY - Textos
-   * ================================================ */
-  .noche-gray-theme {
-    .text-slate-950 { color: #f5f5f5 !important; }
-    .text-slate-900 { color: #f5f5f5 !important; }
-    .text-slate-800 { color: #e6e6e6 !important; }
-    .text-slate-700 { color: #d4d4d4 !important; }
-    .text-slate-600 { color: #a3a3a3 !important; }
-    .text-slate-500 { color: #737373 !important; }
-    .text-slate-400 { color: #525252 !important; }
-    .text-slate-300 { color: #737373 !important; }
-    .text-slate-200 { color: #a3a3a3 !important; }
-    .text-slate-100 { color: #d4d4d4 !important; }
-    
-    /* Texto blanco */
-    .text-white { color: #e6e6e6 !important; }
-    .text-white\/50 { color: rgba(230, 230, 230, 0.5) !important; }
-    .text-white\/60 { color: rgba(230, 230, 230, 0.6) !important; }
-    .text-white\/70 { color: rgba(230, 230, 230, 0.7) !important; }
-    .text-white\/80 { color: rgba(230, 230, 230, 0.8) !important; }
-    .text-white\/90 { color: rgba(230, 230, 230, 0.9) !important; }
-    
-    /* Placeholder */
-    .placeholder-slate-500::placeholder { color: #525252 !important; }
-    .placeholder-white\/50::placeholder { color: rgba(255, 255, 255, 0.3) !important; }
+    /* Fondos negros con transparencias - Más sutiles */
+    .bg-black\/20 { background-color: rgba(0, 0, 0, 0.15) !important; }
+    .bg-black\/30 { background-color: rgba(0, 0, 0, 0.2) !important; }
+    .bg-black\/40 { background-color: rgba(0, 0, 0, 0.25) !important; }
+    .bg-black\/50 { background-color: rgba(0, 0, 0, 0.3) !important; }
+    .bg-black\/60 { background-color: rgba(0, 0, 0, 0.35) !important; }
+    .bg-black\/70 { background-color: rgba(0, 0, 0, 0.4) !important; }
+    .bg-black\/80 { background-color: rgba(0, 0, 0, 0.5) !important; }
+    .bg-black\/90 { background-color: rgba(0, 0, 0, 0.6) !important; }
   }
 
   /* ================================================
-   * NOCHE GRAY - Bordes
+   * NOCHE GRAY - Textos (Alto Contraste)
    * ================================================ */
   .noche-gray-theme {
-    .border-white\/5, .border-white\/\[0\.05\] { border-color: rgba(255, 255, 255, 0.04) !important; }
-    .border-white\/10 { border-color: rgba(255, 255, 255, 0.08) !important; }
-    .border-white\/15 { border-color: rgba(255, 255, 255, 0.1) !important; }
-    .border-white\/20 { border-color: rgba(255, 255, 255, 0.12) !important; }
-    .border-white\/30 { border-color: rgba(255, 255, 255, 0.15) !important; }
-    .border-white\/40 { border-color: rgba(255, 255, 255, 0.2) !important; }
+    .text-slate-950 { color: #f0f0f0 !important; }
+    .text-slate-900 { color: #f0f0f0 !important; }
+    .text-slate-800 { color: #e5e5e5 !important; }
+    .text-slate-700 { color: #d5d5d5 !important; }
+    .text-slate-600 { color: #b0b0b0 !important; }
+    .text-slate-500 { color: #8a8a8a !important; }
+    .text-slate-400 { color: #6a6a6a !important; }
+    .text-slate-300 { color: #8a8a8a !important; }
+    .text-slate-200 { color: #b0b0b0 !important; }
+    .text-slate-100 { color: #d5d5d5 !important; }
     
-    .border-slate-700 { border-color: #2e2e2e !important; }
-    .border-slate-600 { border-color: #3d3d3d !important; }
-    .border-slate-500 { border-color: #525252 !important; }
+    /* Texto blanco - Máximo contraste */
+    .text-white { color: #ffffff !important; }
+    .text-white\/50 { color: rgba(255, 255, 255, 0.7) !important; }
+    .text-white\/60 { color: rgba(255, 255, 255, 0.8) !important; }
+    .text-white\/70 { color: rgba(255, 255, 255, 0.85) !important; }
+    .text-white\/80 { color: rgba(255, 255, 255, 0.9) !important; }
+    .text-white\/90 { color: rgba(255, 255, 255, 0.95) !important; }
     
-    .border-black\/20, .border-black\/30 { border-color: rgba(0, 0, 0, 0.2) !important; }
+    /* Placeholder - Visible pero sutil */
+    .placeholder-slate-500::placeholder { color: #6a6a6a !important; }
+    .placeholder-white\/50::placeholder { color: rgba(255, 255, 255, 0.4) !important; }
   }
 
   /* ================================================
-   * NOCHE GRAY - Ring y Focus
+   * NOCHE GRAY - Bordes (Visibles)
    * ================================================ */
   .noche-gray-theme {
-    .ring-white\/10, .ring-white\/20 { --tw-ring-color: rgba(255, 255, 255, 0.1); }
-    .focus\:ring-white\/10:focus { --tw-ring-color: rgba(255, 255, 255, 0.1); }
-    .focus\:ring-white\/20:focus { --tw-ring-color: rgba(255, 255, 255, 0.15); }
+    .border-white\/5, .border-white\/\[0\.05\] { border-color: rgba(255, 255, 255, 0.08) !important; }
+    .border-white\/10 { border-color: rgba(255, 255, 255, 0.12) !important; }
+    .border-white\/15 { border-color: rgba(255, 255, 255, 0.15) !important; }
+    .border-white\/20 { border-color: rgba(255, 255, 255, 0.2) !important; }
+    .border-white\/30 { border-color: rgba(255, 255, 255, 0.25) !important; }
+    .border-white\/40 { border-color: rgba(255, 255, 255, 0.3) !important; }
     
-    .ring-slate-700 { --tw-ring-color: #2e2e2e; }
-    .ring-slate-600 { --tw-ring-color: #3d3d3d; }
+    .border-slate-700 { border-color: #3a3a3a !important; }
+    .border-slate-600 { border-color: #4a4a4a !important; }
+    .border-slate-500 { border-color: #5a5a5a !important; }
+    
+    .border-black\/20, .border-black\/30 { border-color: rgba(0, 0, 0, 0.25) !important; }
   }
 
   /* ================================================
-   * NOCHE GRAY - Degradados
+   * NOCHE GRAY - Ring y Focus (Visibles)
    * ================================================ */
   .noche-gray-theme {
-    .from-slate-900 { --tw-gradient-from: #141414; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(20, 20, 20, 0)); }
-    .from-slate-800 { --tw-gradient-from: #1a1a1a; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(26, 26, 26, 0)); }
-    .from-slate-700 { --tw-gradient-from: #242424; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(36, 36, 36, 0)); }
-    .from-slate-950 { --tw-gradient-from: #0d0d0d; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(13, 13, 13, 0)); }
-    .from-black { --tw-gradient-from: #0d0d0d; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(13, 13, 13, 0)); }
+    .ring-white\/10, .ring-white\/20 { --tw-ring-color: rgba(255, 255, 255, 0.2); }
+    .focus\:ring-white\/10:focus { --tw-ring-color: rgba(255, 255, 255, 0.2); }
+    .focus\:ring-white\/20:focus { --tw-ring-color: rgba(255, 255, 255, 0.3); }
     
-    .to-slate-900 { --tw-gradient-to: #141414; }
-    .to-slate-800 { --tw-gradient-to: #1a1a1a; }
-    .to-slate-700 { --tw-gradient-to: #242424; }
-    .to-slate-950 { --tw-gradient-to: #0d0d0d; }
-    .to-black { --tw-gradient-to: #0d0d0d; }
+    .ring-slate-700 { --tw-ring-color: #3a3a3a; }
+    .ring-slate-600 { --tw-ring-color: #4a4a4a; }
+  }
+
+  /* ================================================
+   * NOCHE GRAY - Degradados (Balanceados)
+   * ================================================ */
+  .noche-gray-theme {
+    .from-slate-900 { --tw-gradient-from: #1a1a1a; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(26, 26, 26, 0)); }
+    .from-slate-800 { --tw-gradient-from: #222222; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(34, 34, 34, 0)); }
+    .from-slate-700 { --tw-gradient-from: #2d2d2d; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(45, 45, 45, 0)); }
+    .from-slate-950 { --tw-gradient-from: #141414; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(20, 20, 20, 0)); }
+    .from-black { --tw-gradient-from: #141414; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(20, 20, 20, 0)); }
+    
+    .to-slate-900 { --tw-gradient-to: #1a1a1a; }
+    .to-slate-800 { --tw-gradient-to: #222222; }
+    .to-slate-700 { --tw-gradient-to: #2d2d2d; }
+    .to-slate-950 { --tw-gradient-to: #141414; }
+    .to-black { --tw-gradient-to: #141414; }
   }
 }
 
