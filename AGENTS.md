@@ -1,10 +1,10 @@
 # ContarStock v2 - Agente de Desarrollo
 
 > **Última actualización:** 2026-06-24
-> **Estado:** Módulos refactorizados (Events, Expiry, Inventory) ✅
+> **Estado:** Módulos refactorizados (Events, Expiry, Inventory, Suppliers) ✅
 
 ## Resumen Ejecutivo
-- **497 tests pasando** ✅
+- **594 tests pasando** ✅
 - **Build PWA exitoso** (68 entries, ~4.4 MB)
 - **Arquitectura modular** "Lego" implementada
 - **Exports centralizados** en todos los módulos core
@@ -1344,9 +1344,9 @@ docs/
 ```
 
 ### Métricas del Repositorio
-- **Commits totales:** 1,294+
+- **Commits totales:** 1,300+
 - **Contributors:** rps2217, openhands
-- **Tests:** 497 passing ✅ (+18 tests para useInventory)
+- **Tests:** 594 passing ✅ (+25 tests para receptionDomain)
 - **Build:** PWA con 68 precache entries (~4.4 MB)
 
 ### Módulos Refactorizados
@@ -1355,4 +1355,8 @@ docs/
 | Events | ✅ Completado | useEvents |
 | Expiry | ✅ Completado | useExpiry |
 | Inventory | ✅ Completado | useInventory |
+| Suppliers | ✅ Completado | useSuppliers |
+| Expected Orders | ✅ Completado | useExpectedOrdersV2 |
+| Customers | ✅ Completado | useCustomers |
+| Reception | ✅ Completado | useReception |
 | Counting | ✅ Productividad | useProductivity |
