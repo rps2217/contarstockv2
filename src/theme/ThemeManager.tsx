@@ -86,6 +86,12 @@ interface ThemeContextValue {
   // Tokens
   colors: ThemeColors;
   
+  // Esquemas personalizados
+  customColors: Partial<ThemeColors>;
+  setCustomColors: (colors: Partial<ThemeColors>) => void;
+  updateCustomColor: (key: keyof ThemeColors, value: string) => void;
+  resetCustomColors: () => void;
+  
   // Acciones
   setMode: (mode: ThemeMode) => void;
   setScheme: (scheme: ThemeScheme) => void;

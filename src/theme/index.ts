@@ -148,3 +148,4 @@ export {
 
 export { useThemeManager } from './useThemeManager';
 export { ThemeSwitcher } from './components/ThemeSwitcher';
+export { ThemeCustomizer } from './components/ThemeCustomizer';
