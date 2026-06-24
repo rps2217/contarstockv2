@@ -1,4 +1,4 @@
-# ContarStock v2 - Agente de Desarrollo
+# ContarStock v2 - Agente de Desarrollo..
 
 > **Última actualización:** 2026-06-23
 > **Estado:** FASE 7 completada (Tests + Sync Queue + Docs)
