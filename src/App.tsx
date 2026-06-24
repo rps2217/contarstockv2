@@ -68,7 +68,7 @@ const AppContent = () => {
   const setStartSessionModalOpen = useAppStore(state => state.setStartSessionModalOpen);
   const { bootState, initStep, isAuthenticated, handleLoginSuccess } = useAppInit();
   
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [hasInitialRedirected, setHasInitialRedirected] = useState(false);
   const navigate = useNavigate();
   

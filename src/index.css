@@ -45,12 +45,7 @@
 
   /* Noche Gray - Escala de Grises Premium */
   /* Usamos CSS custom properties para el tema de grises */
-
-  /* Escala de radios consistente (corner rounding) */
-  --radius-card: 1.25rem;     /* tarjetas / módulos */
-  --radius-control: 0.875rem; /* botones / chips */
-  --radius-pill: 9999px;      /* badges / pastillas */
-
+  
   --animate-in: animate-in;
   --animate-out: animate-out;
 }
@@ -66,13 +61,6 @@
     user-select: none;
     margin: 0;
     padding: 0;
-  }
-
-  /* Foco accesible y consistente para teclado en toda la app */
-  :where(button, a, [role="button"], input, select, textarea, [tabindex]):focus-visible {
-    outline: 2px solid var(--color-brand-primary, #2563eb);
-    outline-offset: 2px;
-    border-radius: var(--radius-control, 0.875rem);
   }
 
   /* ================================================
