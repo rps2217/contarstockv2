@@ -1,10 +1,10 @@
 # ContarStock v2 - Agente de Desarrollo
 
-> **Última actualización:** 2026-06-23
-> **Estado:** Fases 1-5 completadas (FASE 6+ en progreso)
+> **Última actualización:** 2026-06-24
+> **Estado:** Módulos refactorizados (Events, Expiry, Inventory) ✅
 
 ## Resumen Ejecutivo
-- **391 tests pasando** ✅
+- **497 tests pasando** ✅
 - **Build PWA exitoso** (68 entries, ~4.4 MB)
 - **Arquitectura modular** "Lego" implementada
 - **Exports centralizados** en todos los módulos core
@@ -1252,27 +1252,44 @@ const {
 
 ---
 
-## Refactoring Módulo Inventory/Products (2026-06-22)
+## Refactoring Módulo Inventory/Products (2026-06-24) ✅
 
-### Arquitectura Simplificada
+### Arquitectura Simplificada (COMPLETADO)
 
 ```
 src/features/inventory/
-├── InventoryPage.tsx         # Página principal (legacy - en refactor)
+├── InventoryPage.tsx         # ✅ Componente principal refactorizado
 ├── domain/
 │   ├── productsDomain.ts     # ✅ Lógica de negocio pura
 │   └── productsDomain.test.ts # ✅ Tests (34 tests)
 ├── hooks/
-│   └── useProductDatabase.ts  # Hook centralizado existente
+│   ├── useProductDatabase.ts  # Hook base
+│   └── useInventory.ts       # ✅ Hook centralizado nuevo
 ├── components/
 │   ├── ProductStatsBar.tsx   # ✅ Barra de estadísticas
 │   ├── ProductCard.tsx       # ✅ Card de producto
-│   ├── ProductList.tsx        # Lista legacy
+│   ├── ProductList.tsx        # Legacy - lista original
 │   ├── ProductForm.tsx        # Formulario legacy
 │   ├── ProductDetailModal.tsx
-│   ├── InventoryMetricsCards.tsx  # Legacy - métricas
-│   └── InventoryKanbanView.tsx    # Legacy - vista kanban
+│   ├── InventoryMetricsCards.tsx
+│   └── InventoryKanbanView.tsx
 └── (legacy hooks/)           # Mantenidos por compatibilidad
+```
+
+### Hook Centralizado: useInventory
+
+```typescript
+const {
+  filteredProducts,
+  allProducts,
+  stats,
+  filters,
+  isLoading,
+  isSyncing,
+  selectedIds,
+  actions,
+  ui
+} = useInventory();
 ```
 
 ### Domain: productsDomain.ts
@@ -1291,22 +1308,20 @@ filterByPolicy(products, filter): Product[]
 sortProducts(products, field, order): Product[]
 ```
 
-### Commits:
-- `1c532a07` - feat: Agregar domain y componentes para Products
-- `707c7f92` - test: Agregar tests para expiryDomain
-- `b9f37b09` - feat: useProductsStats hook para estadísticas centralizadas
-- `b165e0bb` - refactor: InventoryMetricsCards usa useProductsStats
+### Commits (2026-06-24):
+- `xxxxxxx` - feat: Crear useInventory hook centralizado
+- `xxxxxxx` - refactor: Reescribir InventoryPage con arquitectura v2
 
-### Pendientes:
-- [ ] Integrar ProductStatsBar y ProductCard en InventoryPage
-- [ ] Integrar InventoryMetricsCards en InventoryPage (ya refactorizado)
+### Pendientes (COMPLETADO):
+- [x] ~~Integrar ProductStatsBar y ProductCard en InventoryPage~~ ✅
+- [x] ~~Crear hook useInventory~~ ✅
 - [x] ~~Agregar tests para productsDomain~~ ✅ (34 tests)
 - [x] ~~Crear useProductsStats hook~~ ✅ (6 tests)
 - [x] ~~Refactorizar InventoryMetricsCards~~ ✅
 
 ---
 
-## Estado del Repositorio (2026-06-23)
+## Estado del Repositorio (2026-06-24)
 
 ### Archivos Históricos Movidos a `docs/archive/`
 - ACTION_PLAN.md
@@ -1329,7 +1344,15 @@ docs/
 ```
 
 ### Métricas del Repositorio
-- **Commits totales:** 1,291
-- **Contributors:** rps2217 (1,061), openhands (111+)
-- **Tests:** 391 passing
+- **Commits totales:** 1,294+
+- **Contributors:** rps2217, openhands
+- **Tests:** 497 passing ✅ (+18 tests para useInventory)
 - **Build:** PWA con 68 precache entries (~4.4 MB)
+
+### Módulos Refactorizados
+| Módulo | Estado | Hook Centralizado |
+|--------|--------|-------------------|
+| Events | ✅ Completado | useEvents |
+| Expiry | ✅ Completado | useExpiry |
+| Inventory | ✅ Completado | useInventory |
+| Counting | ✅ Productividad | useProductivity |
