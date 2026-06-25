@@ -61,20 +61,15 @@ export const SavedOrdersList: React.FC<SavedOrdersListProps> = ({ state, actions
       setStartingSession(order.id);
       SoundFX.play('success');
       
-      // Create session in test mode with the expected order
+      // Create session in test mode with the expected order items
       const session = await sessionService.createSession(
         order.internalId || order.id,
         `TEST_${Date.now()}`,
         'standard',
-        order, // Pass full order as expectedItems (will extract .items)
+        { items: order.items }, // Pass as { items: [...] } so createSession can extract
         undefined, // No photo for test mode
         true // Auto-lock enabled by default
       );
-      
-      // Mark as verified mode (test mode with expected items)
-      await sessionService.updateSessionMetadata(session.id, {
-        isVerifiedMode: true
-      });
       
       // Navigate to counting page
       navigate(`/counting/${session.id}`);

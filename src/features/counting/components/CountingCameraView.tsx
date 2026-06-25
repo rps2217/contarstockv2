@@ -301,9 +301,18 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = memo(({
         )}
       </div>
 
+      {/* ==================== SEARCH BAR ==================== */}
+      <div className="px-4 py-2 bg-slate-900/50 border-b border-slate-800 shrink-0">
+        <input
+          type="text"
+          placeholder="Buscar producto..."
+          className="w-full h-10 px-4 bg-slate-800 rounded-xl border border-slate-700 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+        />
+      </div>
+
       {/* ==================== EXPECTED ORDER LIST (ONLY IN TEST MODE) ==================== */}
       {isTestMode && expectedOrder && (
-        <div className="shrink-0 max-h-[25%] overflow-hidden flex flex-col bg-slate-900 border-b border-amber-500/20">
+        <div className="shrink-0 max-h-[40%] overflow-hidden flex flex-col bg-slate-900 border-b border-amber-500/20">
           <div className="h-10 px-4 flex items-center justify-between shrink-0 bg-slate-950/80 border-b border-white/5">
             <div className="flex items-center gap-2">
               <List className="w-4 h-4 text-amber-400" />
@@ -317,35 +326,37 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = memo(({
           <div className="flex-1 overflow-y-auto">
             {expectedOrder.items.map((item) => {
               const normBarcode = normalizeSku(item.barcode);
-              const isScanned = scannedBarcodes?.has(normBarcode) || items.some(i => normalizeSku(i.barcode) === normBarcode);
-              const scannedQty = items.find(i => normalizeSku(i.barcode) === normBarcode)?.totalQuantity || 0;
+              const scannedItem = items.find(i => normalizeSku(i.barcode) === normBarcode);
+              const scannedQty = scannedItem?.totalQuantity || 0;
+              const isScanned = scannedQty > 0;
               
               return (
                 <div 
                   key={item.barcode}
-                  className={`flex items-center gap-3 px-4 py-2.5 border-b border-white/5 ${
-                    isScanned ? 'bg-emerald-500/5' : 'hover:bg-white/5'
+                  className={`flex items-center gap-3 px-4 py-3 border-b border-white/5 ${
+                    isScanned ? 'bg-emerald-500/10' : 'hover:bg-white/5'
                   }`}
                 >
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
                     isScanned ? 'bg-emerald-500/20' : 'bg-slate-800'
                   }`}>
                     {isScanned ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      <CheckCircle2 className="w-5 h-5 text-emerald-400" />
                     ) : (
-                      <Barcode className="w-4 h-4 text-slate-500" />
+                      <Barcode className="w-5 h-5 text-slate-500" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className={`text-xs font-bold truncate ${isScanned ? 'text-emerald-400' : 'text-white'}`}>
+                    <div className={`text-sm font-bold truncate ${isScanned ? 'text-emerald-400' : 'text-white'}`}>
                       {item.name || item.barcode}
                     </div>
                     <div className="text-[9px] text-slate-500 font-mono">{item.barcode}</div>
                   </div>
                   <div className="text-right shrink-0">
-                    <div className={`text-sm font-black ${isScanned ? 'text-emerald-400' : 'text-slate-400'}`}>
-                      {isScanned ? `${scannedQty}/${item.expectedQty}` : item.expectedQty}
+                    <div className={`text-lg font-black ${isScanned ? 'text-emerald-400' : 'text-slate-400'}`}>
+                      {scannedQty > 0 ? scannedQty : 0} / {item.expectedQty}
                     </div>
+                    <div className="text-[8px] text-slate-500 uppercase">pisteado / esperado</div>
                   </div>
                 </div>
               );
@@ -354,51 +365,46 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = memo(({
         </div>
       )}
 
-      {/* ==================== SCANNED ITEMS LIST ==================== */}
-      <div className="flex-1 min-h-0 flex flex-col">
-        <div className="px-4 py-2 bg-slate-900/30">
-          <input
-            type="text"
-            placeholder="Buscar..."
-            className="w-full h-9 px-3 bg-slate-800 rounded-lg border border-slate-700 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
-          />
-        </div>
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          {mappedItems.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full py-12">
-              <Barcode className="w-16 h-16 text-slate-700 mb-4" />
-              <span className="text-sm font-bold text-slate-500 uppercase tracking-widest">
-                {isTestMode ? 'Pistea productos de la lista' : 'Escanea para comenzar'}
-              </span>
-            </div>
-          ) : (
-            mappedItems.map((item) => (
-              <div 
-                key={item.barcode}
-                className={`flex items-center gap-3 px-4 py-3 border-b border-white/5 ${
-                  item.barcode === activeBarcode ? 'bg-blue-500/10' : ''
-                }`}
-              >
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                  item.barcode === activeBarcode ? 'bg-blue-500/20' : 'bg-slate-800'
-                }`}>
-                  <Barcode className={`w-5 h-5 ${item.barcode === activeBarcode ? 'text-blue-400' : 'text-slate-500'}`} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-bold text-white truncate">{item.name || item.barcode}</div>
-                  <div className="text-[10px] text-slate-500 font-mono">{item.barcode}</div>
-                </div>
-                <div className="text-right shrink-0">
-                  <div className="text-lg font-black text-white">{item.totalQuantity}</div>
-                  {item.expectedQty && (
-                    <div className="text-[9px] text-amber-500">/ {item.expectedQty}</div>
-                  )}
-                </div>
+      {/* ==================== SCANNED ITEMS LIST (ONLY IN NON-TEST MODE) ==================== */}
+      {!isTestMode && (
+        <div className="flex-1 min-h-0 flex flex-col">
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            {mappedItems.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full py-12">
+                <Barcode className="w-16 h-16 text-slate-700 mb-4" />
+                <span className="text-sm font-bold text-slate-500 uppercase tracking-widest">
+                  Escanea para comenzar
+                </span>
               </div>
-            ))
-          )}
+            ) : (
+              mappedItems.map((item) => (
+                <div 
+                  key={item.barcode}
+                  className={`flex items-center gap-3 px-4 py-3 border-b border-white/5 ${
+                    item.barcode === activeBarcode ? 'bg-blue-500/10' : ''
+                  }`}
+                >
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                    item.barcode === activeBarcode ? 'bg-blue-500/20' : 'bg-slate-800'
+                  }`}>
+                    <Barcode className={`w-5 h-5 ${item.barcode === activeBarcode ? 'text-blue-400' : 'text-slate-500'}`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-bold text-white truncate">{item.name || item.barcode}</div>
+                    <div className="text-[10px] text-slate-500 font-mono">{item.barcode}</div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="text-lg font-black text-white">{item.totalQuantity}</div>
+                    {item.expectedQty && (
+                      <div className="text-[9px] text-amber-500">/ {item.expectedQty}</div>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ==================== FOOTER ==================== */}
       <footer className="shrink-0 bg-slate-900 border-t border-slate-800">
