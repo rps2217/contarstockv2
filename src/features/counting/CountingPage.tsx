@@ -65,10 +65,17 @@ export const CountingPage: React.FC = () => {
   // Check if session is in test mode with expected order
   const isTestMode = !!expectedOrder;
   
-  // Debug: log to console if expected order is detected
-  if (expectedOrder) {
-    console.log('[TEST MODE] Expected order detected:', expectedOrder.items.length, 'items');
-  }
+  // Debug logging
+  useEffect(() => {
+    if (sessionData.session) {
+      console.log('[COUNTING PAGE] Session loaded:', {
+        id: sessionData.session.id,
+        erpOrder: sessionData.session.erpOrder,
+        expectedItemsCount: sessionData.session.expectedItems?.length || 0,
+        hasExpectedItems: !!sessionData.session.expectedItems
+      });
+    }
+  }, [sessionData.session]);
   
   // Handle scan in test mode - detect first-time scans from expected order
   const handleScanInTestMode = useCallback((barcode: string) => {

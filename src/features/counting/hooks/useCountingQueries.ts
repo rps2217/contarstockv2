@@ -24,6 +24,7 @@ export const useCountingQueries = (sessionId: string | undefined, activeBarcode:
     if (!rawHistory) return [];
     
     const expectedItems = session?.expectedItems || [];
+    const hasExpectedItems = expectedItems.length > 0;
     const expectedMap = new Map<string, number>(expectedItems.map(ei => [normalizeSku(ei.barcode), ei.expectedQty]));
 
     const finalItems = rawHistory.map(pi => ({
@@ -31,7 +32,8 @@ export const useCountingQueries = (sessionId: string | undefined, activeBarcode:
       expectedQuantity: expectedMap.get(normalizeSku(pi.barcode)) || 0
     }));
 
-    if (session?.isVerifiedMode) {
+    // Show expected items even if not isVerifiedMode - this is for test mode
+    if (hasExpectedItems) {
       const scannedBarcodes = new Set(rawHistory.map(pi => normalizeSku(pi.barcode)));
       expectedItems.forEach(exp => {
         if (!scannedBarcodes.has(normalizeSku(exp.barcode))) {
@@ -49,6 +51,11 @@ export const useCountingQueries = (sessionId: string | undefined, activeBarcode:
 
     const sorted = finalItems.sort((a, b) => {
       if (normalizeSku(a.barcode) === activeBarcode) return -1;
+      // In test mode, put expected items first (with 0 qty), then scanned items
+      if (hasExpectedItems) {
+        if (a.totalQuantity === 0 && b.totalQuantity > 0) return -1;
+        if (a.totalQuantity > 0 && b.totalQuantity === 0) return 1;
+      }
       return b.totalQuantity - a.totalQuantity;
     });
 
