@@ -229,8 +229,8 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = memo(({
         </div>
       </div>
 
-      {/* ==================== SCAN AREA (40%) ==================== */}
-      <div className="h-[40%] shrink-0 flex flex-col bg-black relative">
+      {/* ==================== SCAN AREA (30%) ==================== */}
+      <div className="h-[30%] shrink-0 flex flex-col bg-black relative">
         {/* Mode Toggle */}
         <div className="absolute top-2 right-2 z-30">
           <button
