@@ -49,17 +49,30 @@ export const CountingPage: React.FC = () => {
   // Track scanned expected items (for first-time detection in test mode)
   const scannedExpectedItems = useRef<Set<string>>(new Set());
   
+  // Build expected order from session data (test mode detection)
+  // Test mode is detected when session has expected items (from cloud order)
+  const expectedOrder = sessionData.session?.expectedItems && sessionData.session.expectedItems.length > 0
+    ? {
+        id: sessionData.session.erpOrder || 'local',
+        internalId: sessionData.session.erpOrder || 'ORDEN LOCAL',
+        items: sessionData.session.expectedItems,
+        totalExpectedUnits: sessionData.session.expectedItems.reduce((acc, i) => acc + i.expectedQty, 0),
+        totalExpectedSKUs: sessionData.session.expectedItems.length,
+        importedAt: Date.now()
+      }
+    : null;
+  
   // Check if session is in test mode with expected order
-  const isTestMode = !!sessionData.expectedOrder;
+  const isTestMode = !!expectedOrder;
   
   // Handle scan in test mode - detect first-time scans from expected order
   const handleScanInTestMode = useCallback((barcode: string) => {
-    if (!isTestMode || !sessionData.expectedOrder) return false;
+    if (!isTestMode || !expectedOrder) return false;
     
     const normBarcode = normalizeSku(barcode);
     
     // Check if this barcode is in the expected order
-    const isExpectedItem = sessionData.expectedOrder.items.some(
+    const isExpectedItem = expectedOrder.items.some(
       item => normalizeSku(item.barcode) === normBarcode
     );
     
@@ -71,7 +84,7 @@ export const CountingPage: React.FC = () => {
     }
     
     return false;
-  }, [isTestMode, sessionData.expectedOrder]);
+  }, [isTestMode, expectedOrder]);
   
   // Override handleExternalScan to detect first-time expected item scans
   const originalHandleScan = actions.handleExternalScan;
@@ -198,7 +211,7 @@ export const CountingPage: React.FC = () => {
  onDismissMatch={actions.dismissPotentialMatch}
  isManualMode={isManualMode}
  onToggleManualMode={() => setIsManualMode(!isManualMode)}
- expectedOrder={sessionData.expectedOrder}
+ expectedOrder={expectedOrder}
  scannedBarcodes={scannedExpectedItems.current}
  />
 
@@ -227,7 +240,7 @@ export const CountingPage: React.FC = () => {
  
  {/* Expiry Modal for Test Mode - First scan of expected items */}
  {pendingExpiryBarcode && (() => {
- const expectedItem = sessionData.expectedOrder?.items.find(
+ const expectedItem = expectedOrder?.items.find(
  item => normalizeSku(item.barcode) === normalizeSku(pendingExpiryBarcode)
  );
  return (
