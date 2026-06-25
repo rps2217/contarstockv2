@@ -534,13 +534,15 @@ export class ThermalPrinterEngine {
     const isGuiaDespacho = docType === 'Remisión' || docType.toLowerCase().includes('guía') || docType.toLowerCase().includes('guia') || docType.toLowerCase().includes('despacho');
 
     const userDocType = order.metadata?.documentType || "CARGA TEÓRICA";
+    const isPickingList = userDocType.toLowerCase().includes('picking');
+    
     let mainHeading = "CARGA TEÓRICA";
     
     if (userDocType.toLowerCase().includes('factura')) {
       mainHeading = "FACTURA";
     } else if (userDocType.toLowerCase().includes('remisión') || userDocType.toLowerCase().includes('remision') || userDocType.toLowerCase().includes('guía') || userDocType.toLowerCase().includes('guia') || userDocType.toLowerCase().includes('despacho')) {
       mainHeading = "GUÍA DE DESPACHO";
-    } else if (userDocType.toLowerCase().includes('picking')) {
+    } else if (isPickingList) {
       mainHeading = "PICKING LIST";
     } else if (userDocType.toLowerCase().includes('manifiesto')) {
       mainHeading = "MANIFIESTO DE CARGA";
@@ -556,11 +558,11 @@ export class ThermalPrinterEngine {
         ? `${item.expectedQty || 0}\t\t\t\t\t\t\t` 
         : item.barcode;
 
-      // Generate barcode without text underneath (displayValue: false) and shorter height (28px)
-      const barcodeUrl = this.getBarcodeDataUrl(barcodeValue, false, 28);
+      // For picking list, skip barcode generation to save paper
+      const barcodeUrl = isPickingList ? '' : this.getBarcodeDataUrl(barcodeValue, false, 28);
       
       return `
-        <div class="item-block">
+        <div class="item-block ${isPickingList ? 'picking-item' : ''}">
           <div class="item-title">${item.name || 'SIN DESCRIPCIÓN'}</div>
           
           <div class="item-meta">
@@ -581,11 +583,7 @@ export class ThermalPrinterEngine {
                 [TECLADO RÁPIDO: CANT + 7 TABS]
               </div>
             ` : ''}
-          ` : `
-            <div style="text-align: center; font-size: 8px; font-family: monospace; color: #666; margin-top: 4px;">
-              [${item.barcode}]
-            </div>
-          `}
+          ` : ''}
           
           <div class="item-divider"></div>
         </div>
@@ -708,6 +706,29 @@ export class ThermalPrinterEngine {
               margin-top: 10px;
               height: 0;
             }
+            /* Estilos para orden de compra ampliada */
+            .purchase-order-large {
+              font-size: 14px;
+              font-weight: 900;
+              letter-spacing: 0.5px;
+            }
+            /* Estilos para Picking List - reduce alto para ahorrar papel */
+            .picking-item {
+              margin-bottom: 6px;
+            }
+            .picking-item .item-title {
+              font-size: 11px;
+              margin-bottom: 2px;
+            }
+            .picking-item .item-meta {
+              margin-bottom: 3px;
+            }
+            .picking-item .item-divider {
+              margin-top: 5px;
+            }
+            .meta-info-picking {
+              font-size: 11px;
+            }
             .bottom-summary {
               text-align: center;
               margin-top: 20px;
@@ -745,8 +766,8 @@ export class ThermalPrinterEngine {
           
           <div class="header-line"></div>
 
-          <div class="meta-info" style="font-size: 10px; font-weight: bold; margin-bottom: 12px; font-family: monospace; text-transform: uppercase; line-height: 1.4;">
-            ${order.metadata?.purchaseOrder ? `OC: ${order.metadata.purchaseOrder}<br/>` : ''}
+          <div class="meta-info ${isPickingList ? 'meta-info-picking' : ''}" style="${isPickingList ? '' : 'font-size: 10px;'} font-weight: bold; margin-bottom: 12px; font-family: monospace; text-transform: uppercase; line-height: 1.4;">
+            ${order.metadata?.purchaseOrder ? `<div class="purchase-order-large">OC: ${order.metadata.purchaseOrder}</div>` : ''}
             ${order.metadata?.orderNote ? `NOTA: ${order.metadata.orderNote}<br/>` : ''}
           </div>
 
