@@ -44,7 +44,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
   }, []);
 
   useEffect(() => {
-    if (isOpen && (step === 'enter_erp' || step === 'select_order')) {
+    if (isOpen && (step === 'enter_erp' || step === 'select_order' || step === 'select_test_order')) {
       loadSavedOrders();
     }
   }, [step, isOpen, loadSavedOrders]);
@@ -87,7 +87,7 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
       setStep('enter_erp');
     } else if (mode === 'test') {
       // Modo prueba: ir directo a seleccionar orden guardada
-      setStep('select_order');
+      setStep('select_test_order');
     } else {
       setStep('confirm');
     }
