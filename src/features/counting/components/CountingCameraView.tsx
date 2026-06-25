@@ -1,12 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, memo } from 'react';
 import { Product, ConsolidatedItem, MatchResult, ExpectedOrder } from '../../../types';
 import { FeedbackStatus } from '../../../hooks/useFeedbackSystem';
 import { ScannerCameraSection } from '../../../shared/components/scanner/layouts';
-import { ManualEntryForm } from '../../../shared/components/scanner/ManualEntryForm';
-import { ScannerHeader } from '../../../shared/components/scanner/ScannerHeader';
 import { VirtualList } from '../../../shared/components/ui/VirtualList';
 import { ScannerFeedbackOverlay } from '../../../shared/components/scanner/layouts/ScannerFeedbackOverlay';
-import { Zap, X, Check, Barcode, List, Camera, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, MapPin, Lock, Unlock, Cloud, CloudOff, Settings, Zap, Barcode, Check, X, Camera, Edit3, List, CheckCircle2 } from 'lucide-react';
 import { normalizeSku } from '../../../services/utils';
 
 interface CountingCameraViewProps {
@@ -37,7 +35,7 @@ interface CountingCameraViewProps {
   scannedBarcodes?: Set<string>;
 }
 
-export const CountingCameraView: React.FC<CountingCameraViewProps> = ({
+export const CountingCameraView: React.FC<CountingCameraViewProps> = memo(({
   onBack,
   onScan,
   onFinalize,
@@ -54,27 +52,29 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = ({
   items,
   multiplier,
   onMultiplierChange,
-  labelPhoto,
   potentialMatch,
   onApplyMatch,
   onDismissMatch,
-  isManualMode,
+  isManualMode = false,
   onToggleManualMode,
   expectedOrder,
   scannedBarcodes
 }) => {
-  // Safe defaults
-  const safePotentialMatch = potentialMatch ?? null;
-  const safeOnApplyMatch = onApplyMatch ?? (() => {});
-  const safeOnDismissMatch = onDismissMatch ?? (() => {});
   const [manualInput, setManualInput] = useState('');
   const manualInputRef = useRef<HTMLInputElement>(null);
   
   // Check if we're in test mode (has expected order)
   const isTestMode = !!expectedOrder;
 
+  // Safe defaults
+  const safePotentialMatch = potentialMatch ?? null;
+  const safeOnApplyMatch = onApplyMatch ?? (() => {});
+  const safeOnDismissMatch = onDismissMatch ?? (() => {});
+  const safeOnLock = onLock ?? (() => {});
+  const safeOnSync = onSync ?? (() => {});
+
   // Auto-focus manual input
-  React.useEffect(() => {
+  useEffect(() => {
     if (isManualMode) {
       const timer = setTimeout(() => manualInputRef.current?.focus(), 150);
       return () => clearTimeout(timer);
@@ -89,7 +89,7 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = ({
     }
   };
 
-  // Map ConsolidatedItem to ScannedItemProps
+  // Map ConsolidatedItem
   const mappedItems = items.map(item => ({
     barcode: item.barcode,
     name: item.productName,
@@ -97,13 +97,10 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = ({
     expectedQty: item.expectedQuantity && item.expectedQuantity > 0 ? item.expectedQuantity : undefined
   }));
 
-  // Calculate stats
+  // Stats
   const totalQuantity = items.reduce((acc, item) => acc + item.totalQuantity, 0);
-  const expectedTotalQuantity = items.some(i => i.expectedQuantity) 
-    ? items.reduce((acc, item) => acc + (item.expectedQuantity || 0), 0)
-    : undefined;
-
-  // Totals for expected order
+  
+  // Expected order stats
   const expectedStats = isTestMode ? {
     total: expectedOrder?.items.length || 0,
     scanned: expectedOrder?.items.filter(item => 
@@ -114,40 +111,140 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = ({
   } : null;
 
   return (
-    <div className="relative h-full w-full flex flex-col bg-black">
+    <div className="fixed inset-0 flex flex-col bg-slate-950 font-sans overflow-hidden">
       {/* FEEDBACK OVERLAY */}
       <ScannerFeedbackOverlay feedback={feedback} />
 
-      {/* HEADER */}
-      <ScannerHeader 
-        onBack={onBack}
-        location={location}
-        onChangeLocation={onChangeLocation}
-        isManualMode={isManualMode}
-        onToggleManualMode={onToggleManualMode}
-        onFinalize={onFinalize}
-        onLock={onLock}
-        onOpenTools={onOpenTools}
-        onSync={onSync}
-        isSyncing={isSyncing}
-      />
+      {/* ==================== TOP HEADER ==================== */}
+      <header className="h-14 px-4 flex items-center justify-between shrink-0 bg-slate-900 border-b border-slate-800">
+        {/* LEFT: Back + Title */}
+        <div className="flex items-center gap-4">
+          <button
+            onClick={onBack}
+            className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-all"
+          >
+            <ArrowLeft className="w-5 h-5 text-slate-400" />
+          </button>
+          
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${
+              isTestMode 
+                ? 'bg-amber-500/10 border-amber-500/20' 
+                : 'bg-blue-500/10 border-blue-500/20'
+            }`}>
+              {isTestMode ? (
+                <List className="w-5 h-5 text-amber-400" />
+              ) : (
+                <Edit3 className="w-5 h-5 text-blue-400" />
+              )}
+            </div>
+            <div>
+              <h1 className="text-sm font-bold text-white tracking-wide uppercase">
+                {isTestMode ? 'PRUEBA' : 'CONTEO'}
+              </h1>
+              <p className="text-[10px] text-slate-500 font-mono uppercase">
+                {isTestMode ? 'Picking Mode' : 'Conteo Manual'}
+              </p>
+            </div>
+          </div>
+        </div>
 
-      {/* UNIFIED SCAN AREA (40% height) */}
-      <div className="h-[40%] shrink-0 bg-slate-950 border-b border-white/10 flex flex-col relative">
-        {/* Mode toggle */}
+        {/* CENTER: Location */}
+        <button
+          onClick={onChangeLocation}
+          className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl border border-slate-700 transition-all"
+        >
+          <MapPin className="w-4 h-4 text-emerald-400" />
+          <span className="text-sm font-bold text-white font-mono">{location}</span>
+        </button>
+
+        {/* RIGHT: Actions */}
+        <div className="flex items-center gap-2">
+          {/* Sync */}
+          <button
+            onClick={safeOnSync}
+            className={`w-10 h-10 flex items-center justify-center rounded-xl border transition-all ${
+              isSyncing 
+                ? 'bg-blue-500/10 border-blue-500/30' 
+                : 'bg-slate-800 border-slate-700 hover:bg-slate-700'
+            }`}
+          >
+            {isSyncing ? (
+              <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Cloud className="w-4 h-4 text-slate-400" />
+            )}
+          </button>
+
+          {/* Lock */}
+          <button
+            onClick={safeOnLock}
+            className="w-10 h-10 flex items-center justify-center bg-slate-800 hover:bg-slate-700 rounded-xl border border-slate-700 transition-all"
+          >
+            <Unlock className="w-4 h-4 text-slate-400" />
+          </button>
+
+          {/* Settings */}
+          <button
+            onClick={onOpenTools}
+            className="w-10 h-10 flex items-center justify-center bg-slate-800 hover:bg-slate-700 rounded-xl border border-slate-700 transition-all"
+          >
+            <Settings className="w-4 h-4 text-slate-400" />
+          </button>
+        </div>
+      </header>
+
+      {/* ==================== STATS BAR ==================== */}
+      <div className="h-12 px-4 flex items-center justify-between shrink-0 bg-slate-900/50 border-b border-slate-800">
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 bg-blue-500/10 rounded-lg flex items-center justify-center">
+              <Barcode className="w-3 h-3 text-blue-400" />
+            </div>
+            <span className="text-sm font-bold text-white">{items.length}</span>
+            <span className="text-xs text-slate-500">items</span>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 bg-violet-500/10 rounded-lg flex items-center justify-center">
+              <Check className="w-3 h-3 text-violet-400" />
+            </div>
+            <span className="text-sm font-bold text-violet-400">{totalQuantity}</span>
+            <span className="text-xs text-slate-500">unidades</span>
+          </div>
+
+          {isTestMode && expectedStats && (
+            <>
+              <div className="w-px h-5 bg-slate-700" />
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500">Esperados:</span>
+                <span className="text-sm font-bold text-amber-400">{expectedStats.totalUnits}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500">SKUs:</span>
+                <span className="text-sm font-bold text-emerald-400">{expectedStats.scanned}/{expectedStats.total}</span>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* ==================== SCAN AREA (40%) ==================== */}
+      <div className="h-[40%] shrink-0 flex flex-col bg-black relative">
+        {/* Mode Toggle */}
         <div className="absolute top-2 right-2 z-30">
           <button
             onClick={onToggleManualMode}
-            className="flex items-center gap-2 bg-black/70 backdrop-blur-sm text-white px-4 py-2 rounded-full border border-white/20 active:scale-95 transition-all"
+            className="flex items-center gap-2 bg-slate-900/90 backdrop-blur-sm text-white px-4 py-2 rounded-full border border-slate-700 active:scale-95 transition-all"
           >
             {isManualMode ? (
               <>
-                <Camera className="w-4 h-4" />
+                <Camera className="w-4 h-4 text-blue-400" />
                 <span className="text-xs font-bold">Cámara</span>
               </>
             ) : (
               <>
-                <Barcode className="w-4 h-4" />
+                <Barcode className="w-4 h-4 text-emerald-400" />
                 <span className="text-xs font-bold">Manual</span>
               </>
             )}
@@ -156,12 +253,11 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = ({
 
         {/* Camera or Manual Input */}
         {isManualMode ? (
-          // Manual Input Mode
           <div className="flex-1 flex flex-col items-center justify-center p-4">
-            <div className="w-full max-w-md">
+            <div className="w-full max-w-lg">
               <div className="relative mb-4">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2">
-                  <Barcode className={`w-8 h-8 transition-colors ${manualInput ? 'text-blue-500' : 'text-slate-700'}`} />
+                  <Barcode className={`w-8 h-8 ${manualInput ? 'text-blue-500' : 'text-slate-600'}`} />
                 </div>
                 <input
                   ref={manualInputRef}
@@ -173,9 +269,11 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = ({
                       handleManualSubmit(manualInput);
                     }
                   }}
-                  className="w-full bg-black border-2 border-white/20 rounded-2xl py-5 pl-16 pr-6 text-2xl font-black focus:outline-none focus:border-blue-500 text-white tracking-wider"
-                  placeholder="ESCANEAR / INGRESAR SKU"
+                  className="w-full bg-black border-2 border-slate-700 rounded-2xl py-5 pl-14 pr-6 text-2xl font-black focus:outline-none focus:border-blue-500 text-white tracking-wider"
+                  placeholder="INGRESAR SKU"
                   autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
                 />
               </div>
               <button
@@ -190,16 +288,12 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = ({
                 <Check className="w-5 h-5" />
                 REGISTRAR
               </button>
-              <p className="text-center text-[9px] text-slate-600 mt-2 uppercase tracking-widest">
-                Presiona ENTER o toca REGISTRAR
-              </p>
             </div>
           </div>
         ) : (
-          // Camera Mode
-          <div className="flex-1 relative">
+          <div className="flex-1 relative overflow-hidden">
             <ScannerCameraSection 
-              onScan={onScan}
+              onScan={(code) => onScan(code, multiplier)}
               feedback={feedback}
               onCloseCamera={onToggleManualMode}
             />
@@ -207,33 +301,19 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = ({
         )}
       </div>
 
-      {/* TEST MODE: Expected Order List (scrollable) */}
+      {/* ==================== EXPECTED ORDER LIST (ONLY IN TEST MODE) ==================== */}
       {isTestMode && expectedOrder && (
-        <div className="shrink-0 bg-slate-900 border-b border-amber-500/20 max-h-[25%] overflow-hidden flex flex-col">
-          {/* Header with stats */}
-          <div className="h-12 bg-slate-950/80 border-b border-white/5 flex items-center px-4 justify-between shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <List className="w-4 h-4 text-amber-400" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-amber-400">CARGA TEÓRICA</span>
-              </div>
-              <div className="flex items-center gap-2 text-[9px]">
-                <span className="text-slate-500">SKU:</span>
-                <span className="font-bold text-emerald-400">{expectedStats?.scanned}/{expectedStats?.total}</span>
-                <span className="text-slate-600">|</span>
-                <span className="text-slate-500">Uds:</span>
-                <span className="font-bold text-white">{totalQuantity}/{expectedStats?.totalUnits}</span>
-              </div>
+        <div className="shrink-0 max-h-[25%] overflow-hidden flex flex-col bg-slate-900 border-b border-amber-500/20">
+          <div className="h-10 px-4 flex items-center justify-between shrink-0 bg-slate-950/80 border-b border-white/5">
+            <div className="flex items-center gap-2">
+              <List className="w-4 h-4 text-amber-400" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-amber-400">CARGA TEÓRICA</span>
             </div>
-            {/* Progress bar */}
-            <div className="w-20 h-2 bg-slate-800 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-emerald-500 transition-all"
-                style={{ width: `${expectedStats && expectedStats.total > 0 ? (expectedStats.scanned / expectedStats.total) * 100 : 0}%` }}
-              />
+            <div className="flex items-center gap-4 text-[10px]">
+              <span className="text-slate-500">Progreso:</span>
+              <span className="font-bold text-emerald-400">{expectedStats?.scanned}/{expectedStats?.total} SKUs</span>
             </div>
           </div>
-          {/* Scrollable list */}
           <div className="flex-1 overflow-y-auto">
             {expectedOrder.items.map((item) => {
               const normBarcode = normalizeSku(item.barcode);
@@ -243,7 +323,7 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = ({
               return (
                 <div 
                   key={item.barcode}
-                  className={`flex items-center gap-3 px-4 py-2.5 border-b border-white/5 transition-colors ${
+                  className={`flex items-center gap-3 px-4 py-2.5 border-b border-white/5 ${
                     isScanned ? 'bg-emerald-500/5' : 'hover:bg-white/5'
                   }`}
                 >
@@ -257,17 +337,13 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = ({
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className={`text-xs font-bold truncate ${
-                      isScanned ? 'text-emerald-400' : 'text-white'
-                    }`}>
+                    <div className={`text-xs font-bold truncate ${isScanned ? 'text-emerald-400' : 'text-white'}`}>
                       {item.name || item.barcode}
                     </div>
                     <div className="text-[9px] text-slate-500 font-mono">{item.barcode}</div>
                   </div>
                   <div className="text-right shrink-0">
-                    <div className={`text-sm font-black ${
-                      isScanned ? 'text-emerald-400' : 'text-slate-400'
-                    }`}>
+                    <div className={`text-sm font-black ${isScanned ? 'text-emerald-400' : 'text-slate-400'}`}>
                       {isScanned ? `${scannedQty}/${item.expectedQty}` : item.expectedQty}
                     </div>
                   </div>
@@ -278,26 +354,31 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = ({
         </div>
       )}
 
-      {/* SCANNED ITEMS LIST */}
-      <div className="flex-1 min-h-0 bg-slate-950 flex flex-col relative z-10">
-        {/* Stats bar */}
-        <div className="h-10 bg-slate-900/50 border-b border-white/5 flex items-center px-4 justify-between shrink-0">
-          <div className="flex items-center gap-4 text-[10px]">
-            <span className="text-slate-500">Items: <span className="font-bold text-white">{items.length}</span></span>
-            <span className="text-slate-500">Total: <span className="font-bold text-white">{totalQuantity}</span></span>
-            {expectedTotalQuantity && (
-              <span className="text-amber-500">Meta: <span className="font-bold">{expectedTotalQuantity}</span></span>
-            )}
-          </div>
+      {/* ==================== SCANNED ITEMS LIST ==================== */}
+      <div className="flex-1 min-h-0 flex flex-col">
+        <div className="px-4 py-2 bg-slate-900/30">
+          <input
+            type="text"
+            placeholder="Buscar..."
+            className="w-full h-9 px-3 bg-slate-800 rounded-lg border border-slate-700 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+          />
         </div>
-        
-        {/* Virtual list */}
-        <div className="flex-1 min-h-0">
-          <VirtualList
-            items={mappedItems}
-            itemHeight={80}
-            renderRow={({ item }) => (
-              <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5 bg-slate-950">
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          {mappedItems.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full py-12">
+              <Barcode className="w-16 h-16 text-slate-700 mb-4" />
+              <span className="text-sm font-bold text-slate-500 uppercase tracking-widest">
+                {isTestMode ? 'Pistea productos de la lista' : 'Escanea para comenzar'}
+              </span>
+            </div>
+          ) : (
+            mappedItems.map((item) => (
+              <div 
+                key={item.barcode}
+                className={`flex items-center gap-3 px-4 py-3 border-b border-white/5 ${
+                  item.barcode === activeBarcode ? 'bg-blue-500/10' : ''
+                }`}
+              >
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
                   item.barcode === activeBarcode ? 'bg-blue-500/20' : 'bg-slate-800'
                 }`}>
@@ -310,28 +391,18 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = ({
                 <div className="text-right shrink-0">
                   <div className="text-lg font-black text-white">{item.totalQuantity}</div>
                   {item.expectedQty && (
-                    <div className="text-[9px] text-slate-500">
-                      / {item.expectedQty} esperado
-                    </div>
+                    <div className="text-[9px] text-amber-500">/ {item.expectedQty}</div>
                   )}
                 </div>
               </div>
-            )}
-            emptyState={
-              <div className="flex flex-col items-center justify-center h-full py-12">
-                <Barcode className="w-16 h-16 text-slate-600 mb-4" />
-                <span className="text-sm font-bold text-slate-500 uppercase tracking-widest">
-                  {isTestMode ? 'Pistea productos de la lista' : 'Escanea para comenzar'}
-                </span>
-              </div>
-            }
-          />
+            ))
+          )}
         </div>
       </div>
 
-      {/* FOOTER */}
-      <div className="shrink-0 bg-slate-900 border-t border-white/10">
-        <div className="h-14 flex items-center px-4 justify-between">
+      {/* ==================== FOOTER ==================== */}
+      <footer className="shrink-0 bg-slate-900 border-t border-slate-800">
+        <div className="h-14 px-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Multiplicador</span>
           </div>
@@ -343,7 +414,7 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = ({
                 className={`w-12 h-10 rounded-xl font-black text-sm transition-all ${
                   multiplier === m 
                     ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' 
-                    : 'bg-white/5 text-slate-400 active:bg-white/10'
+                    : 'bg-slate-800 text-slate-400 active:bg-slate-700'
                 }`}
               >
                 x{m}
@@ -360,45 +431,41 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = ({
             Finalizar y Enviar
           </button>
         </div>
-      </div>
+      </footer>
 
-      {/* OVERLAY DE INTELIGENCIA PREDICTIVA */}
+      {/* ==================== AI OVERLAY ==================== */}
       {safePotentialMatch && (
-        <div className="absolute top-24 left-4 right-4 z-[120] animate-in slide-in-from-top duration-500">
-          <div className="bg-indigo-600/90 backdrop-blur-md border-2 border-indigo-400 rounded-3xl p-4 shadow-2xl shadow-indigo-900/50">
+        <div className="absolute top-20 left-4 right-4 z-[120] animate-in slide-in-from-top duration-300">
+          <div className="bg-indigo-600/95 backdrop-blur-md border-2 border-indigo-400 rounded-3xl p-4 shadow-2xl">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <div className="bg-white/20 p-1.5 rounded-lg">
                   <Zap className="w-4 h-4 text-white animate-pulse" />
                 </div>
-                <span className="text-[10px] font-black text-indigo-100 uppercase tracking-widest">Inferencia IA</span>
+                <span className="text-[10px] font-black text-white uppercase tracking-widest">Inferencia IA</span>
               </div>
               <button onClick={safeOnDismissMatch} className="text-white/60 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            
-            <div className="mb-4">
-              <h3 className="text-white font-black text-lg leading-tight uppercase tracking-tighter">
-                ¿Es la Orden {safePotentialMatch.expectedOrder.internalId}?
-              </h3>
-              <p className="text-indigo-200 text-[10px] font-bold uppercase mt-1">
-                {safePotentialMatch.matchScore.toFixed(0)}% de coincidencia detectada
-              </p>
-            </div>
-
-            <div className="flex gap-2">
-              <button 
-                onClick={safeOnApplyMatch}
-                className="flex-1 bg-white text-indigo-600 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-transform"
-              >
-                <Check className="w-4 h-4" /> Vincular Ahora
-              </button>
-            </div>
+            <h3 className="text-white font-black text-lg uppercase">
+              ¿Es la Orden {safePotentialMatch.expectedOrder.internalId}?
+            </h3>
+            <p className="text-indigo-200 text-[10px] font-bold uppercase mt-1">
+              {safePotentialMatch.matchScore.toFixed(0)}% de coincidencia
+            </p>
+            <button 
+              onClick={safeOnApplyMatch}
+              className="w-full mt-4 bg-white text-indigo-600 py-3 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-transform"
+            >
+              Vincular Ahora
+            </button>
           </div>
         </div>
       )}
     </div>
   );
-};
+});
+
+CountingCameraView.displayName = 'CountingCameraView';
 
