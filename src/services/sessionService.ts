@@ -19,6 +19,10 @@ export const createSession = async (
   photoUrl?: string,
   isAutoLockEnabled?: boolean
 ): Promise<CountingSession> => {
+  const itemsToSave = expectedItems?.items || [];
+  console.log('[createSession] expectedItems input:', expectedItems);
+  console.log('[createSession] itemsToSave:', itemsToSave);
+  
   const session: CountingSession = {
     id: crypto.randomUUID(),
     erpOrder: erpOrder.toUpperCase(),
@@ -26,13 +30,16 @@ export const createSession = async (
     sessionType,
     status: 'active',
     createdAt: Date.now(),
-    expectedItems: expectedItems?.items || [],
+    expectedItems: itemsToSave,
     photoUrl,
     isAutoLockEnabled,
     totalUnits: 0,
     totalSKUs: 0
   };
+  
+  console.log('[createSession] session.expectedItems BEFORE save:', session.expectedItems);
   await SessionRepository.save(session);
+  console.log('[createSession] session saved with expectedItems:', session.expectedItems?.length);
   logger.info('SESSION', `Sesión creada: ${session.id}`);
   return session;
 };

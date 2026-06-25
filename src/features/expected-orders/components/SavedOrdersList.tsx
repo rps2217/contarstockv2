@@ -61,6 +61,9 @@ export const SavedOrdersList: React.FC<SavedOrdersListProps> = ({ state, actions
       setStartingSession(order.id);
       SoundFX.play('success');
       
+      console.log('[SavedOrdersList] order:', order);
+      console.log('[SavedOrdersList] order.items:', order.items);
+      
       // Create session in test mode with the expected order items
       const session = await sessionService.createSession(
         order.internalId || order.id,
