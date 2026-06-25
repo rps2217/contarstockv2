@@ -2,7 +2,7 @@
 
 ---
 
-## ThemeCustomizer - Personalizacion Avanzada (2026-06-24).
+## ThemeCustomizer - Personalizacion Avanzada (2026-06-24)...
 
 ### Componente
 - ThemeCustomizer - Personalizador completo de temas
