@@ -54,11 +54,19 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = ({
   items,
   multiplier,
   onMultiplierChange,
+  labelPhoto,
+  potentialMatch,
+  onApplyMatch,
+  onDismissMatch,
   isManualMode,
   onToggleManualMode,
   expectedOrder,
   scannedBarcodes
 }) => {
+  // Safe defaults
+  const safePotentialMatch = potentialMatch ?? null;
+  const safeOnApplyMatch = onApplyMatch ?? (() => {});
+  const safeOnDismissMatch = onDismissMatch ?? (() => {});
   const [manualInput, setManualInput] = useState('');
   const manualInputRef = useRef<HTMLInputElement>(null);
   
@@ -355,7 +363,7 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = ({
       </div>
 
       {/* OVERLAY DE INTELIGENCIA PREDICTIVA */}
-      {potentialMatch && (
+      {safePotentialMatch && (
         <div className="absolute top-24 left-4 right-4 z-[120] animate-in slide-in-from-top duration-500">
           <div className="bg-indigo-600/90 backdrop-blur-md border-2 border-indigo-400 rounded-3xl p-4 shadow-2xl shadow-indigo-900/50">
             <div className="flex items-center justify-between mb-3">
@@ -365,23 +373,23 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = ({
                 </div>
                 <span className="text-[10px] font-black text-indigo-100 uppercase tracking-widest">Inferencia IA</span>
               </div>
-              <button onClick={onDismissMatch} className="text-white/60 hover:text-white">
+              <button onClick={safeOnDismissMatch} className="text-white/60 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
             
             <div className="mb-4">
               <h3 className="text-white font-black text-lg leading-tight uppercase tracking-tighter">
-                ¿Es la Orden {potentialMatch.expectedOrder.internalId}?
+                ¿Es la Orden {safePotentialMatch.expectedOrder.internalId}?
               </h3>
               <p className="text-indigo-200 text-[10px] font-bold uppercase mt-1">
-                {potentialMatch.matchScore.toFixed(0)}% de coincidencia detectada
+                {safePotentialMatch.matchScore.toFixed(0)}% de coincidencia detectada
               </p>
             </div>
 
             <div className="flex gap-2">
               <button 
-                onClick={onApplyMatch}
+                onClick={safeOnApplyMatch}
                 className="flex-1 bg-white text-indigo-600 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-transform"
               >
                 <Check className="w-4 h-4" /> Vincular Ahora
