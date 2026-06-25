@@ -50,6 +50,9 @@ export const CountingPage: React.FC = () => {
   const expectedItems = sessionData.session?.expectedItems || [];
   const isTestMode = expectedItems.length > 0;
   
+  console.log('[COUNTING PAGE] expectedItems from session:', expectedItems?.slice(0, 2));
+  console.log('[COUNTING PAGE] sessionData.session?.expectedItems:', sessionData.session?.expectedItems);
+  
   // Debug logging
   useEffect(() => {
     if (sessionData.session) {

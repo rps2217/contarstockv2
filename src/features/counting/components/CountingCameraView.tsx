@@ -63,8 +63,17 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = memo(({
   const [manualInput, setManualInput] = useState('');
   const manualInputRef = useRef<HTMLInputElement>(null);
   
+  // DEBUG: Log all incoming props
+  console.log('[CountingCameraView] Props:', {
+    expectedItemsCount: expectedItems?.length || 0,
+    itemsCount: items?.length || 0,
+    isManualMode
+  });
+  
   // Check if we're in test mode (has expected items)
   const isTestMode = expectedItems.length > 0;
+  
+  console.log('[CountingCameraView] isTestMode:', isTestMode, '| expectedItems:', expectedItems?.slice(0, 2));
 
   // Safe defaults
   const safePotentialMatch = potentialMatch ?? null;
