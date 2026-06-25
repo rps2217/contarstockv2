@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, memo } from 'react';
-import { Product, ConsolidatedItem, MatchResult, ExpectedOrder } from '../../../types';
+import { Product, ConsolidatedItem, MatchResult, ExpectedOrder, ExpectedItem } from '../../../types';
 import { FeedbackStatus } from '../../../hooks/useFeedbackSystem';
 import { ScannerCameraSection } from '../../../shared/components/scanner/layouts';
 import { VirtualList } from '../../../shared/components/ui/VirtualList';
@@ -31,7 +31,7 @@ interface CountingCameraViewProps {
   isManualMode?: boolean;
   onToggleManualMode?: () => void;
   // Test mode props
-  expectedOrder?: ExpectedOrder | null;
+  expectedItems?: ExpectedItem[];
   scannedBarcodes?: Set<string>;
 }
 
@@ -57,14 +57,14 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = memo(({
   onDismissMatch,
   isManualMode = false,
   onToggleManualMode,
-  expectedOrder,
+  expectedItems = [],
   scannedBarcodes
 }) => {
   const [manualInput, setManualInput] = useState('');
   const manualInputRef = useRef<HTMLInputElement>(null);
   
-  // Check if we're in test mode (has expected order)
-  const isTestMode = !!expectedOrder;
+  // Check if we're in test mode (has expected items)
+  const isTestMode = expectedItems.length > 0;
 
   // Safe defaults
   const safePotentialMatch = potentialMatch ?? null;
@@ -102,12 +102,12 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = memo(({
   
   // Expected order stats
   const expectedStats = isTestMode ? {
-    total: expectedOrder?.items.length || 0,
-    scanned: expectedOrder?.items.filter(item => 
+    total: expectedItems.length,
+    scanned: expectedItems.filter(item => 
       scannedBarcodes?.has(normalizeSku(item.barcode)) || 
       items.some(i => normalizeSku(i.barcode) === normalizeSku(item.barcode))
     ).length || 0,
-    totalUnits: expectedOrder?.items.reduce((acc, i) => acc + i.expectedQty, 0) || 0
+    totalUnits: expectedItems.reduce((acc, i) => acc + i.expectedQty, 0) || 0
   } : null;
 
   return (
@@ -311,7 +311,7 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = memo(({
       </div>
 
       {/* ==================== EXPECTED ORDER LIST (ONLY IN TEST MODE) ==================== */}
-      {isTestMode && expectedOrder && (
+      {isTestMode && expectedItems.length > 0 && (
         <div className="shrink-0 max-h-[40%] overflow-hidden flex flex-col bg-slate-900 border-b border-amber-500/20">
           <div className="h-10 px-4 flex items-center justify-between shrink-0 bg-slate-950/80 border-b border-white/5">
             <div className="flex items-center gap-2">
@@ -324,7 +324,7 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = memo(({
             </div>
           </div>
           <div className="flex-1 overflow-y-auto">
-            {expectedOrder.items.map((item) => {
+            {expectedItems.map((item) => {
               const normBarcode = normalizeSku(item.barcode);
               const scannedItem = items.find(i => normalizeSku(i.barcode) === normBarcode);
               const scannedQty = scannedItem?.totalQuantity || 0;

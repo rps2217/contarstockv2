@@ -28,7 +28,6 @@ export const CountingPage: React.FC = () => {
   const location = useLocation();
   const { isSyncing } = useSyncStore();
   const { state, actions, sessionData } = useCountingLogic(id, () => navigate('/reports'));
-  const { isLocked, unlock, lock } = useAutoLock(4000, sessionData.session?.isAutoLockEnabled ?? true);
 
   // Productivity tracking
   const [isProductivityVisible, setIsProductivityVisible] = useState(false);
@@ -49,21 +48,9 @@ export const CountingPage: React.FC = () => {
   // Track scanned expected items (for first-time detection in test mode)
   const scannedExpectedItems = useRef<Set<string>>(new Set());
   
-  // Build expected order from session data (test mode detection)
-  // Test mode is detected when session has expected items
-  const expectedOrder = sessionData.session?.expectedItems && sessionData.session.expectedItems.length > 0
-    ? {
-        id: sessionData.session.erpOrder || 'local',
-        internalId: sessionData.session.erpOrder || 'ORDEN LOCAL',
-        items: sessionData.session.expectedItems,
-        totalExpectedUnits: sessionData.session.expectedItems.reduce((acc, i) => acc + i.expectedQty, 0),
-        totalExpectedSKUs: sessionData.session.expectedItems.length,
-        importedAt: Date.now()
-      }
-    : null;
-  
-  // Check if session is in test mode with expected order
-  const isTestMode = !!expectedOrder;
+  // Get expected items directly from session
+  const expectedItems = sessionData.session?.expectedItems || [];
+  const isTestMode = expectedItems.length > 0;
   
   // Debug logging
   useEffect(() => {
@@ -71,20 +58,20 @@ export const CountingPage: React.FC = () => {
       console.log('[COUNTING PAGE] Session loaded:', {
         id: sessionData.session.id,
         erpOrder: sessionData.session.erpOrder,
-        expectedItemsCount: sessionData.session.expectedItems?.length || 0,
-        hasExpectedItems: !!sessionData.session.expectedItems
+        expectedItemsCount: expectedItems.length,
+        hasExpectedItems: expectedItems.length > 0
       });
     }
-  }, [sessionData.session]);
+  }, [sessionData.session, expectedItems.length]);
   
   // Handle scan in test mode - detect first-time scans from expected order
   const handleScanInTestMode = useCallback((barcode: string) => {
-    if (!isTestMode || !expectedOrder) return false;
+    if (!isTestMode) return false;
     
     const normBarcode = normalizeSku(barcode);
     
     // Check if this barcode is in the expected order
-    const isExpectedItem = expectedOrder.items.some(
+    const isExpectedItem = expectedItems.some(
       item => normalizeSku(item.barcode) === normBarcode
     );
     
@@ -96,7 +83,7 @@ export const CountingPage: React.FC = () => {
     }
     
     return false;
-  }, [isTestMode, expectedOrder]);
+  }, [isTestMode, expectedItems]);
   
   // Override handleExternalScan to detect first-time expected item scans
   const originalHandleScan = actions.handleExternalScan;
@@ -205,7 +192,6 @@ export const CountingPage: React.FC = () => {
  onScan={(code, qty) => actions.handleExternalScan(code, qty ?? state.multiplier)}
  onFinalize={handleFinalize}
  onOpenTools={() => setIsToolsOpen(true)}
- onLock={lock}
  onSync={handleManualSync}
  isSyncing={isSyncing}
  location={state.currentLocation}
@@ -223,7 +209,7 @@ export const CountingPage: React.FC = () => {
  onDismissMatch={actions.dismissPotentialMatch}
  isManualMode={isManualMode}
  onToggleManualMode={() => setIsManualMode(!isManualMode)}
- expectedOrder={expectedOrder}
+ expectedItems={expectedItems}
  scannedBarcodes={scannedExpectedItems.current}
  />
 
@@ -231,9 +217,6 @@ export const CountingPage: React.FC = () => {
  isOpen={isToolsOpen} onClose={() => setIsToolsOpen(false)}
  hasActiveItem={!!state.activeBarcode} location={state.currentLocation}
  label={sessionData.session.logisticsLabel} onChangeLocation={() => setIsLocationModalOpen(true)}
- isAutoLockEnabled={sessionData.session.isAutoLockEnabled ?? true}
- onToggleAutoLock={actions.toggleAutoLock}
- onChangeLabel={() => {}} onShowLabel={() => {}}
  onReset={async () => { if(confirm("¿Vaciar bulto?")) actions.undoLastScan(); }} onPrintSummary={() => {}}
  />
 
