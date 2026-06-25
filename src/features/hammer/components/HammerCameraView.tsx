@@ -35,6 +35,9 @@ interface HammerCameraViewProps {
  // Productivity stats
  stats?: ProductivityStats;
  formattedDuration?: string;
+ // Manual mode
+ isManualMode?: boolean;
+ onToggleManualMode?: () => void;
 }
 
 export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
@@ -58,7 +61,9 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
  syncError = null,
  onRetrySync,
  stats,
- formattedDuration
+ formattedDuration,
+ isManualMode = false,
+ onToggleManualMode
 }) => {
  const activeItemName = activeProduct?.name || items.find(i => i.barcode === activeBarcode)?.name;
  const hasSyncError = !!syncError;
@@ -150,6 +155,15 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
    </div>
  );
 
+ // Camera section - solo mostrar si NO está en modo manual
+ const cameraSection = !isManualMode ? (
+   <ScannerCameraSection 
+     onScan={onScan} 
+     feedback={feedback}
+     onCloseCamera={onToggleManualMode}
+   />
+ ) : null;
+
  return (
    <div className="relative h-full w-full">
      {productivityBar}
@@ -157,8 +171,8 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
        location={location}
        onChangeLocation={onChangeLocation}
        onBack={onBack}
-       isManualMode={false}
-       onToggleManualMode={() => {}}
+       isManualMode={isManualMode}
+       onToggleManualMode={onToggleManualMode || (() => {})}
        onFinalize={onFinalize}
        onLock={onLock}
        onOpenTools={onOpenTools}
@@ -170,7 +184,7 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
        feedback={feedback}
        allowEditQuantity={true}
        onScan={onScan}
-       cameraSection={<ScannerCameraSection onScan={onScan} feedback={feedback} />}
+       cameraSection={cameraSection}
        bottomContent={bottomContent}
      />
    </div>

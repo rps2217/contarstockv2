@@ -34,6 +34,9 @@ export const HammerPage: React.FC = () => {
   const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
   const [isTheoreticalModalOpen, setIsTheoreticalModalOpen] = useState(false);
   const [isMigrating, setIsMigrating] = useState(false);
+  
+  // Manual mode (sin cámara)
+  const [isManualMode, setIsManualMode] = useState(false);
 
   // Destructure new sync states
   const { pendingWrites, syncError } = state;
@@ -141,6 +144,8 @@ export const HammerPage: React.FC = () => {
           expectedItems: state.items.some(i => i.expectedQty !== undefined) ? state.items.reduce((acc, i) => acc + (i.expectedQty || 0), 0) : undefined
         }}
         formattedDuration={formattedDuration}
+        isManualMode={isManualMode}
+        onToggleManualMode={() => setIsManualMode(!isManualMode)}
       />
 
       <MassiveToolsSheet 
