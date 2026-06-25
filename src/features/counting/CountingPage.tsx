@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, Navigate, useLocation } from 'react-router-dom';
 import { useCountingLogic } from './hooks/useCountingLogic';
 import { useProductivity } from './hooks/useProductivity';
@@ -10,12 +10,14 @@ import { ProductivityDashboard } from './components/ProductivityDashboard';
 import { TurboModeOverlay } from './components/TurboModeOverlay';
 import { ScreenLockOverlay } from '../../shared/components/ui/ScreenLockOverlay';
 import { ExpirationModal } from '../expiry/components/ExpirationModal';
+import { TestModeExpiryModal } from './components/TestModeExpiryModal';
 import { Loader2 } from 'lucide-react';
 import { useAutoLock } from '../../hooks/useAutoLock';
 import { useHIDScanner } from '../../hooks/useHIDScanner';
 import { useSyncStore } from '@/stores';
 import { LocationSelectorModal } from '../../shared/components/ui/LocationSelectorModal';
 import { SoundFX } from '../../services/audio';
+import { normalizeSku } from '../../services/utils';
 import * as sessionService from '../../services/sessionService';
 import * as syncManager from '../../services/syncManager';
 import { logger } from '../../services/logger';
@@ -40,6 +42,47 @@ export const CountingPage: React.FC = () => {
   
   // Manual mode (sin cámara)
   const [isManualMode, setIsManualMode] = useState(false);
+  
+  // Expiry modal for test mode - when scanning expected items for the first time
+  const [pendingExpiryBarcode, setPendingExpiryBarcode] = useState<string | null>(null);
+  
+  // Track scanned expected items (for first-time detection in test mode)
+  const scannedExpectedItems = useRef<Set<string>>(new Set());
+  
+  // Check if session is in test mode with expected order
+  const isTestMode = !!sessionData.expectedOrder;
+  
+  // Handle scan in test mode - detect first-time scans from expected order
+  const handleScanInTestMode = useCallback((barcode: string) => {
+    if (!isTestMode || !sessionData.expectedOrder) return false;
+    
+    const normBarcode = normalizeSku(barcode);
+    
+    // Check if this barcode is in the expected order
+    const isExpectedItem = sessionData.expectedOrder.items.some(
+      item => normalizeSku(item.barcode) === normBarcode
+    );
+    
+    if (isExpectedItem && !scannedExpectedItems.current.has(normBarcode)) {
+      // First time scanning this expected item - trigger expiry modal
+      scannedExpectedItems.current.add(normBarcode);
+      setPendingExpiryBarcode(barcode);
+      return true;
+    }
+    
+    return false;
+  }, [isTestMode, sessionData.expectedOrder]);
+  
+  // Override handleExternalScan to detect first-time expected item scans
+  const originalHandleScan = actions.handleExternalScan;
+  actions.handleExternalScan = useCallback(async (barcode: string, qty?: number) => {
+    // Try test mode detection first
+    const handledByTestMode = handleScanInTestMode(barcode);
+    if (handledByTestMode) return;
+    
+    // Fall back to normal scan
+    originalHandleScan(barcode, qty);
+  }, [handleScanInTestMode, originalHandleScan]);
 
   // Atajos de teclado para agilizar conteo en escritorio o terminales PDA con teclado físico grande
   useEffect(() => {
@@ -155,6 +198,8 @@ export const CountingPage: React.FC = () => {
  onDismissMatch={actions.dismissPotentialMatch}
  isManualMode={isManualMode}
  onToggleManualMode={() => setIsManualMode(!isManualMode)}
+ expectedOrder={sessionData.expectedOrder}
+ scannedBarcodes={scannedExpectedItems.current}
  />
 
  <ScannerToolsSheet 
@@ -179,6 +224,26 @@ export const CountingPage: React.FC = () => {
  onCancel={actions.cancelPharma}
  />
  )}
+ 
+ {/* Expiry Modal for Test Mode - First scan of expected items */}
+ {pendingExpiryBarcode && (() => {
+ const expectedItem = sessionData.expectedOrder?.items.find(
+ item => normalizeSku(item.barcode) === normalizeSku(pendingExpiryBarcode)
+ );
+ return (
+ <TestModeExpiryModal
+ barcode={pendingExpiryBarcode}
+ productName={expectedItem?.name || 'Producto'}
+ onComplete={async (data) => {
+ // Complete the scan with expiry date
+ await actions.handleExternalScan(pendingExpiryBarcode, state.multiplier);
+ // Store expiry info if needed
+ setPendingExpiryBarcode(null);
+ }}
+ onCancel={() => setPendingExpiryBarcode(null)}
+ />
+ );
+ })()}
  
  <ScreenLockOverlay isLocked={isLocked} onUnlock={unlock} />
 
