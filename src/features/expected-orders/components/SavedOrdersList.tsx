@@ -1,10 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { FileText, Calendar, Trash2, Printer, Search, ArrowRight, Expand, ChevronDown, ChevronUp, Package, Layers, Info, Filter, RefreshCw, Download, Upload, Cloud } from 'lucide-react';
+import { FileText, Calendar, Trash2, Printer, Search, ArrowRight, Expand, ChevronDown, ChevronUp, Package, Layers, Info, Filter, RefreshCw, Download, Upload, Cloud, Play, ClipboardList } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { ExpectedOrder, ExpectedItem } from '../../../types';
 import { VirtualList } from '../../../shared/components/ui/VirtualList';
 import { thermalPrinter } from '../../../core/hardware/ThermalPrinterEngine';
 import { SoundFX } from '../../../services/audio';
+import * as sessionService from '../../../services/sessionService';
 
 interface SavedOrdersListProps {
   state: any;
@@ -46,10 +48,44 @@ const ExpandedItemRow: React.FC<{ index: number; item: ExpectedItem; data: any; 
 ExpandedItemRow.displayName = 'SavedOrderExpandedItemRow';
 
 export const SavedOrdersList: React.FC<SavedOrdersListProps> = ({ state, actions, isDark, theme = 'dark', onViewDetail }) => {
+  const navigate = useNavigate();
   const { savedOrders, isSyncing, lastSyncTime } = state;
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [itemQuery, setItemQuery] = useState('');
+  const [startingSession, setStartingSession] = useState<string | null>(null);
+
+  // Handle start counting session from expected order
+  const handleStartCounting = async (order: ExpectedOrder) => {
+    try {
+      setStartingSession(order.id);
+      SoundFX.play('success');
+      
+      // Create session in test mode with the expected order
+      const session = await sessionService.createSession(
+        order.internalId || order.id,
+        `TEST_${Date.now()}`,
+        'standard',
+        order, // Pass full order as expectedItems (will extract .items)
+        undefined, // No photo for test mode
+        true // Auto-lock enabled by default
+      );
+      
+      // Mark as verified mode (test mode with expected items)
+      await sessionService.updateSessionMetadata(session.id, {
+        isVerifiedMode: true
+      });
+      
+      // Navigate to counting page
+      navigate(`/counting/${session.id}`);
+    } catch (err) {
+      console.error('Error starting counting session:', err);
+      SoundFX.play('error');
+      alert('Error al iniciar el conteo. Por favor intenta de nuevo.');
+    } finally {
+      setStartingSession(null);
+    }
+  };
 
   const isHighContrast = theme === 'high-contrast';
   const isLight = theme === 'light';
@@ -295,6 +331,27 @@ export const SavedOrdersList: React.FC<SavedOrdersListProps> = ({ state, actions
                           <Expand className="w-4 h-4" />
                         </button>
                       )}
+
+                      {/* Iniciar Conteo Button */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStartCounting(order);
+                        }}
+                        disabled={startingSession === order.id}
+                        title="Iniciar conteo de prueba"
+                        className={`p-3 rounded-xl border transition-all hover:scale-105 active:scale-95 disabled:opacity-50 ${
+                          isDark 
+                            ? 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10' 
+                            : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'
+                        }`}
+                      >
+                        {startingSession === order.id ? (
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Play className="w-4 h-4" />
+                        )}
+                      </button>
 
                       <button
                         onClick={(e) => {
