@@ -164,7 +164,7 @@ export function useGenericSync(config: GenericSyncConfig): GenericSyncReturn {
         localStorage.removeItem(`last_sync_${tableName}`);
       }
 
-      const result = await genericSyncEngine.pullRemoteChanges(registryKey);
+      const result = await genericSyncEngine.pullRemoteChanges(registryKey, forceFullRefresh);
       const total = result.added + result.updated;
       
       if (total > 0) {

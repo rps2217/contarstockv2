@@ -29,7 +29,7 @@ export { erpService } from './erpService';
 export { exportData } from './export';
 export { gemini } from './gemini';
 export { hydrationService } from './hydrationService';
-export { initializationService } from './initializationService';
+export { InitializationService, initializationService } from './initializationService';
 export { integrity } from './integrity';
 export { integrityGuard } from './integrityGuard';
 export { lazyLoad } from './lazyLoad';

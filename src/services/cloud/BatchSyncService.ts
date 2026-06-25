@@ -264,63 +264,123 @@ export async function queryTable(
 }
 
 /**
- * Pull de lote con paginación
+ * Pull de lote con paginación robusta para grandes volúmenes de datos.
+ * 
+ * Supabase tiene un límite por defecto de 1000 filas por запрос.
+ * Esta función maneja la paginación correctamente para descargar todos los registros.
+ * 
+ * @param tableName - Nombre de la tabla en Supabase
+ * @param lastSyncDate - Fecha de última sincronización (opcional, para sync incremental)
+ * @param timestampColumn - Columna de timestamp para filtros incrementales (default: updated_at)
+ * @param pageSize - Tamaño de cada página (default: 1000, máximo recomendado para Supabase)
  */
 export async function pullBatch(
   tableName: string, 
   lastSyncDate?: string, 
-  timestampColumn: string = 'updated_at'
-): Promise<{ success: boolean; rows?: SupabaseRow[]; error?: string; isOffline?: boolean; isMissing?: boolean }> {
+  timestampColumn: string = 'updated_at',
+  pageSize: number = 1000
+): Promise<{ success: boolean; rows?: SupabaseRow[]; error?: string; isOffline?: boolean; isMissing?: boolean; totalDownloaded?: number }> {
   if (!navigator.onLine) {
     return { success: false, error: 'Offline', isOffline: true };
   }
   
+  const MAX_PAGES = 100; // Máximo de páginas para evitar loops infinitos (100 * 1000 = 100,000 registros)
+  
   const fetchWithPagination = async (fromDate?: string) => {
     let allData: SupabaseRow[] = [];
     let from = 0;
-    const step = 1000;
+    let page = 1;
     let hasMore = true;
+    let lastError: Error | null = null;
 
-    while (hasMore) {
-      let query = supabase.from(tableName).select('*');
-      
-      if (fromDate) {
-        query = query.gte(timestampColumn, fromDate);
-      }
-      
-      const { data, error } = await query.range(from, from + step - 1);
-      
-      if (error) {
-        const errMsg = error.message || '';
-        const errCode = error.code || '';
+    logger.info('SYNC_PAGINATION', `Iniciando descarga de ${tableName} (pageSize: ${pageSize})`);
+
+    while (hasMore && page <= MAX_PAGES) {
+      try {
+        let query = supabase.from(tableName).select('*', { count: 'exact' });
         
-        // Check for table not found (various formats)
-        if (errMsg.includes("not find") && errMsg.includes("table") ||
-            errMsg.includes("does not exist") ||
-            errCode === '42P01') {
-          return { isMissing: true, error: errMsg };
+        if (fromDate) {
+          query = query.gte(timestampColumn, fromDate);
         }
-        throw error;
-      }
-      
-      if (data && data.length > 0) {
-        allData = [...allData, ...data];
-        from += step;
-        if (data.length < step) hasMore = false;
-      } else {
+        
+        const { data, error, count } = await query.range(from, from + pageSize - 1);
+        
+        if (error) {
+          const errMsg = error.message || '';
+          const errCode = error.code || '';
+          
+          // Check for table not found (various formats)
+          if (errMsg.includes("not find") && errMsg.includes("table") ||
+              errMsg.includes("does not exist") ||
+              errCode === '42P01') {
+            logger.error('SYNC_PAGINATION', `Tabla ${tableName} no encontrada`);
+            return { isMissing: true, error: errMsg };
+          }
+          
+          // Error de red - reintentar
+          if (errMsg.includes('Failed to fetch') || errMsg.includes('NetworkError')) {
+            logger.warn('SYNC_PAGINATION', `Error de red en página ${page}, reintentando...`);
+            await new Promise(r => setTimeout(r, 1000 * page)); // Backoff exponencial
+            continue;
+          }
+          
+          // Otros errores - registrar y continuar con lo que tenemos
+          logger.error('SYNC_PAGINATION', `Error en página ${page}: ${errMsg}`);
+          lastError = new Error(errMsg);
+          hasMore = false;
+          continue;
+        }
+        
+        if (data && data.length > 0) {
+          allData = [...allData, ...data];
+          logger.info('SYNC_PAGINATION', `Página ${page}: +${data.length} registros (total: ${allData.length})` + (count !== null ? ` / ~${count} estimados` : ''));
+          from += pageSize;
+          page++;
+          
+          // Si recibimos menos del pageSize, hemos terminado
+          if (data.length < pageSize) {
+            hasMore = false;
+            logger.info('SYNC_PAGINATION', `Descarga completa de ${tableName}: ${allData.length} registros`);
+          }
+        } else {
+          hasMore = false;
+          logger.info('SYNC_PAGINATION', `Tabla ${tableName} vacía o fin de datos`);
+        }
+      } catch (err: any) {
+        const errMsg = err.message || String(err);
+        logger.error('SYNC_PAGINATION', `Excepción en página ${page}: ${errMsg}`);
+        lastError = err;
         hasMore = false;
       }
     }
+    
+    if (page > MAX_PAGES) {
+      logger.warn('SYNC_PAGINATION', `Límite de ${MAX_PAGES} páginas alcanzado para ${tableName}. Pueden quedar registros sin descargar.`);
+    }
+    
+    if (lastError && allData.length === 0) {
+      throw lastError;
+    }
+    
     return allData;
   };
 
   try {
+    logger.info('SYNC_PULL', `Iniciando pullBatch para ${tableName}${lastSyncDate ? ` (desde ${lastSyncDate})` : ' (sync completo)'}`);
+    const startTime = performance.now();
+    
     const result = await fetchWithPagination(lastSyncDate);
+    const duration = performance.now() - startTime;
+    
     if (typeof result === 'object' && 'isMissing' in result) {
       logger.info('SYNC', `Tabla ${tableName} no encontrada. Omitiendo descarga.`);
       return { success: false, rows: [], error: 'Table not found', isMissing: true };
     }
-    return { success: true, rows: result as SupabaseRow[] };
+    
+    const rows = result as SupabaseRow[];
+    logger.info('SYNC_PULL_SUCCESS', `Descargados ${rows.length} registros de ${tableName} en ${duration.toFixed(0)}ms`);
+    
+    return { success: true, rows, totalDownloaded: rows.length };
   } catch (err: unknown) {
     const errMsg = (err as Error).message || String(err);
     

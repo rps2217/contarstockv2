@@ -10,10 +10,12 @@ import { toast } from 'sonner';
 
 /**
  * Importa productos desde la nube usando GenericSyncEngine
+ * 
+ * @param forceFullSync - Si es true, fuerza una descarga completa ignorando checkpoints
  */
-export const importProductsFromCloud = async (): Promise<number> => {
+export const importProductsFromCloud = async (forceFullSync: boolean = false): Promise<number> => {
   try {
-    const result = await genericSyncEngine.pullRemoteChanges('products');
+    const result = await genericSyncEngine.pullRemoteChanges('products', forceFullSync);
     logger.info("FETCH_PRODUCTS", `Descargados ${result.added + result.updated} productos`);
     return result.added + result.updated;
   } catch (err: unknown) {
@@ -25,10 +27,12 @@ export const importProductsFromCloud = async (): Promise<number> => {
 
 /**
  * Importa proveedores desde la nube usando GenericSyncEngine
+ * 
+ * @param forceFullSync - Si es true, fuerza una descarga completa ignorando checkpoints
  */
-export const importProvidersFromCloud = async (): Promise<number> => {
+export const importProvidersFromCloud = async (forceFullSync: boolean = false): Promise<number> => {
   try {
-    const result = await genericSyncEngine.pullRemoteChanges('providers');
+    const result = await genericSyncEngine.pullRemoteChanges('providers', forceFullSync);
     logger.info("FETCH_PROVIDERS", `Descargados ${result.added + result.updated} proveedores`);
     return result.added + result.updated;
   } catch (err: unknown) {
@@ -40,14 +44,20 @@ export const importProvidersFromCloud = async (): Promise<number> => {
 
 /**
  * Sincroniza ambos catálogos (productos y proveedores) usando GenericSyncEngine
+ * 
+ * @param onProgress - Callback para reportar progreso
+ * @param forceFullSync - Si es true, fuerza descargas completas
  */
-export const syncCatalogs = async (onProgress?: (msg: string) => void): Promise<{ products: number; providers: number }> => {
+export const syncCatalogs = async (
+  onProgress?: (msg: string) => void,
+  forceFullSync: boolean = false
+): Promise<{ products: number; providers: number }> => {
   if (onProgress) onProgress("Sincronizando catálogos maestros...");
   
   try {
     const [productsResult, providersResult] = await Promise.all([
-      genericSyncEngine.pullRemoteChanges('products'),
-      genericSyncEngine.pullRemoteChanges('providers')
+      genericSyncEngine.pullRemoteChanges('products', forceFullSync),
+      genericSyncEngine.pullRemoteChanges('providers', forceFullSync)
     ]);
     
     const productsCount = productsResult.added + productsResult.updated;

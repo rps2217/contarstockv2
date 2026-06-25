@@ -13,6 +13,10 @@ export type InitStep = 'idle' | 'version_check' | 'config' | 'database' | 'ready
 
 const CURRENT_APP_VERSION = "5.8.1"; 
 
+// Umbral mínimo de productos para considerar que el catálogo está "completo"
+// Si hay menos de este número, se fuerza un sync completo
+const MIN_PRODUCTS_THRESHOLD = 300;
+
 export const InitializationService = {
   /**
   * Secuencia de Arranque Maestra
@@ -54,12 +58,32 @@ export const InitializationService = {
       };
 
       const productCount = await db.products.count();
-      if (productCount >= 10) {
+      logger.info('INIT', `Productos en IndexedDB: ${productCount}`);
+      
+      // Si hay suficientes productos, hacer sync incremental
+      if (productCount >= MIN_PRODUCTS_THRESHOLD) {
+        logger.info('INIT', `Catálogo de productos parece completo (${productCount} items), usando sync incremental`);
         onStep('ready');
         InitializationService.backgroundRefresh();
         return;
       }
 
+      // Si hay pocos productos o threshold no alcanzado, hacer sync completo
+      if (productCount >= 10) {
+        logger.info('INIT', `Catálogo incompleto (${productCount} items < ${MIN_PRODUCTS_THRESHOLD}), forzando sync completo`);
+        onStep('database');
+        await Promise.all([
+          importProductsFromCloud(true), // forceFullSync = true
+          importProvidersFromCloud(true),
+          importCustomersAndTemplatesFromCloud(),
+          sanitizeTask()
+        ]);
+        onStep('ready');
+        await HydrationService.persist();
+        return;
+      }
+
+      // Primera vez o sin productos: descarga inicial completa
       if (!navigator.onLine) {
         onStep('offline');
         setTimeout(() => onStep('ready'), 2000);
@@ -71,8 +95,8 @@ export const InitializationService = {
       
       onStep('database');
       await Promise.all([
-        importProductsFromCloud(),
-        importProvidersFromCloud(),
+        importProductsFromCloud(true), // forceFullSync = true en primera carga
+        importProvidersFromCloud(true),
         importCustomersAndTemplatesFromCloud(),
         sanitizeTask()
       ]);
@@ -83,6 +107,33 @@ export const InitializationService = {
       logger.error('INIT_CRITICAL', 'Fallo arranque', error.message);
       onStep('ready');
     }
+  },
+
+  /**
+   * Fuerza una resincronización completa del catálogo de productos
+   * Útil cuando se sospecha que los datos están incompletos
+   */
+  forceFullProductSync: async (): Promise<{ products: number; providers: number }> => {
+    logger.info('INIT', 'Forzando resincronización completa del catálogo');
+    
+    // Limpiar checkpoints
+    try {
+      await db.settings.delete('lastSync_PRODUCTOS');
+      await db.settings.delete('lastSync_PROVEEDORES');
+      localStorage.removeItem('last_sync_PRODUCTOS');
+      localStorage.removeItem('last_sync_PROVEEDORES');
+    } catch (e) {
+      logger.warn('INIT', 'Error limpiando checkpoints', e);
+    }
+    
+    // Descargar todo nuevamente
+    const [products, providers] = await Promise.all([
+      importProductsFromCloud(true),
+      importProvidersFromCloud(true)
+    ]);
+    
+    logger.info('INIT', `Resincronización completa: ${products} productos, ${providers} proveedores`);
+    return { products, providers };
   },
 
   syncConfig: async () => {
@@ -126,4 +177,7 @@ export const InitializationService = {
     }
   }
 };
+
+// Alias para compatibilidad con código existente que usa initializationService
+export const initializationService = InitializationService;
 

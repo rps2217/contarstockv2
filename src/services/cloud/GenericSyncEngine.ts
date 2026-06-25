@@ -115,8 +115,11 @@ export class GenericSyncEngine {
 
   /**
    * Pulls remote changes and merges them locally.
+   * 
+   * @param registryKey - Clave del registry (ej: 'products', 'providers')
+   * @param forceFullSync - Si es true, ignora el checkpoint y descarga todo
    */
-  async pullRemoteChanges(registryKey: string): Promise<{ added: number; updated: number }> {
+  async pullRemoteChanges(registryKey: string, forceFullSync: boolean = false): Promise<{ added: number; updated: number }> {
     const meta = syncRegistry[registryKey];
     if (!meta) throw new Error(`Registry key ${registryKey} not found`);
 
@@ -128,20 +131,38 @@ export class GenericSyncEngine {
 
     const lastSyncKey = `lastSync_${meta.remoteTable}`;
     let lastSyncDate: string | undefined;
-    try {
+    
+    // Solo buscar checkpoint si NO es sync completo forzado
+    if (!forceFullSync) {
+      try {
         const setting = await db.settings.get(lastSyncKey);
         if (setting && setting.value) lastSyncDate = setting.value;
-    } catch {
-       // db.settings might not exist or be accessible, fallback
+      } catch {
+        // db.settings might not exist or be accessible, fallback
+      }
+    } else {
+      logger.info('SYNC_ENGINE', `Forzando sync completo para ${meta.remoteTable}, ignorando checkpoint`);
     }
 
+    logger.info('SYNC_ENGINE', `Descargando desde ${meta.remoteTable}${lastSyncDate ? ` (desde ${lastSyncDate})` : ' (completo)'}`);
+    const startTime = performance.now();
+
     const result = await supabaseSyncService.pullBatch(meta.remoteTable, lastSyncDate);
-    if (!result.success) return { added: 0, updated: 0 };
+    const duration = performance.now() - startTime;
+    
+    if (!result.success) {
+      logger.error('SYNC_ENGINE', `Error en pullBatch para ${meta.remoteTable}: ${result.error}`);
+      return { added: 0, updated: 0 };
+    }
 
     const remoteRows = result.rows || [];
+    const totalDownloaded = result.totalDownloaded || remoteRows.length;
+    
+    logger.info('SYNC_ENGINE', `Descargados ${totalDownloaded} registros de ${meta.remoteTable} en ${duration.toFixed(0)}ms`);
     
     // Si es una sincronización incremental y no hay registros nuevos, salimos temprano
     if (remoteRows.length === 0 && lastSyncDate) {
+      logger.info('SYNC_ENGINE', `No hay cambios nuevos para ${meta.remoteTable}`);
       return { added: 0, updated: 0 };
     }
 
