@@ -7,6 +7,7 @@ import { VirtualList } from '../../../shared/components/ui/VirtualList';
 import { thermalPrinter } from '../../../core/hardware/ThermalPrinterEngine';
 import { SoundFX } from '../../../services/audio';
 import * as sessionService from '../../../services/sessionService';
+import { ExpectedOrderRepository } from '../../../repositories/ExpectedOrderRepository';
 
 interface SavedOrdersListProps {
   state: any;
@@ -61,15 +62,23 @@ export const SavedOrdersList: React.FC<SavedOrdersListProps> = ({ state, actions
       setStartingSession(order.id);
       SoundFX.play('success');
       
-      console.log('[SavedOrdersList] order:', order);
-      console.log('[SavedOrdersList] order.items:', order.items);
+      console.log('[SavedOrdersList] order.id:', order.id);
+      
+      // IMPORTANT: Read order directly from database to ensure we have fresh data
+      const freshOrder = await ExpectedOrderRepository.getById(order.id);
+      
+      if (!freshOrder) {
+        throw new Error('No se encontró la orden en la base de datos');
+      }
+      
+      console.log('[SavedOrdersList] freshOrder.items:', freshOrder.items);
       
       // Create session in test mode with the expected order items
       const session = await sessionService.createSession(
-        order.internalId || order.id,
+        freshOrder.internalId || freshOrder.id,
         `TEST_${Date.now()}`,
         'standard',
-        { items: order.items }, // Pass as { items: [...] } so createSession can extract
+        freshOrder.items, // Pass items directly
         undefined, // No photo for test mode
         true // Auto-lock enabled by default
       );

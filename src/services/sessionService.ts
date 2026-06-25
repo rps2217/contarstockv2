@@ -15,13 +15,18 @@ export const createSession = async (
   erpOrder: string, 
   logisticsLabel: string, 
   sessionType: 'standard' | 'hammer' | 'reception', 
-  expectedItems?: any,
+  expectedItems?: ExpectedItem[] | { items: ExpectedItem[] },
   photoUrl?: string,
   isAutoLockEnabled?: boolean
 ): Promise<CountingSession> => {
-  const itemsToSave = expectedItems?.items || [];
+  // Support both direct array or { items: [] } format
+  const itemsToSave: ExpectedItem[] = Array.isArray(expectedItems) 
+    ? expectedItems 
+    : (expectedItems?.items || []);
+    
   console.log('[createSession] expectedItems input:', expectedItems);
-  console.log('[createSession] itemsToSave:', itemsToSave);
+  console.log('[createSession] itemsToSave count:', itemsToSave.length);
+  console.log('[createSession] itemsToSave sample:', itemsToSave.slice(0, 2));
   
   const session: CountingSession = {
     id: crypto.randomUUID(),
