@@ -32,7 +32,26 @@ export const CountingSessionSchema = z.object({
   lastSyncTimestamp: z.number().optional(),
   mm: z.number().min(1).max(12).optional(),
   yyyy: z.number().min(2020).max(2100).optional(),
-  syncStatus: SyncStatusSchema.default('pending').optional()
+  syncStatus: SyncStatusSchema.default('pending').optional(),
+  // Test mode / expected order items
+  expectedItems: z.array(z.object({
+    barcode: z.string(),
+    name: z.string(),
+    expectedQty: z.number(),
+    quantity: z.number().optional(),
+    batch: z.string().optional(),
+    expiry: z.string().optional(),
+    location: z.string().optional(),
+  })).optional().default([]),
+  // New fields
+  isAutoLockEnabled: z.boolean().optional(),
+  isVerifiedMode: z.boolean().optional(),
+  labelPhoto: z.string().optional(),
+  photoUrl: z.string().optional(),
+  auditStatus: z.enum(['verified', 'warning', 'failed', 'pending']).optional(),
+  auditScore: z.number().optional(),
+  auditTimestamp: z.number().optional(),
+  batch: z.string().optional(),
 });
 
 export const ScanRecordSchema = z.object({
