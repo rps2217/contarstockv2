@@ -8,11 +8,9 @@ import { CountingCameraView } from './components/CountingCameraView';
 import { ScannerToolsSheet } from './components/ScannerToolsSheet';
 import { ProductivityDashboard } from './components/ProductivityDashboard';
 import { TurboModeOverlay } from './components/TurboModeOverlay';
-import { ScreenLockOverlay } from '../../shared/components/ui/ScreenLockOverlay';
 import { ExpirationModal } from '../expiry/components/ExpirationModal';
 import { TestModeExpiryModal } from './components/TestModeExpiryModal';
 import { Loader2 } from 'lucide-react';
-import { useAutoLock } from '../../hooks/useAutoLock';
 import { useHIDScanner } from '../../hooks/useHIDScanner';
 import { useSyncStore } from '@/stores';
 import { LocationSelectorModal } from '../../shared/components/ui/LocationSelectorModal';
@@ -98,7 +96,7 @@ export const CountingPage: React.FC = () => {
 
   // Atajos de teclado para agilizar conteo en escritorio o terminales PDA con teclado físico grande
   useEffect(() => {
-    if (isLocked || state.status === 'awaiting_pharma' || state.isLoading) return;
+    if (state.status === 'awaiting_pharma' || state.isLoading) return;
 
     const handleShortcuts = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
@@ -120,9 +118,6 @@ export const CountingPage: React.FC = () => {
         e.preventDefault();
         actions.setMultiplier(24);
         SoundFX.play('increment');
-      } else if (e.key.toLowerCase() === 'l' && e.altKey) {
-        e.preventDefault();
-        lock();
       } else if (e.key.toLowerCase() === 't' && e.altKey) {
         e.preventDefault();
         setIsToolsOpen(prev => !prev);
@@ -137,7 +132,7 @@ export const CountingPage: React.FC = () => {
 
     window.addEventListener('keydown', handleShortcuts);
     return () => window.removeEventListener('keydown', handleShortcuts);
-  }, [isLocked, state.status, state.isLoading, actions, lock, turbo]);
+  });
 
   // Procesar escaneo inicial si viene de una redirección automática
   useEffect(() => {
@@ -150,7 +145,7 @@ export const CountingPage: React.FC = () => {
   }, [location.state, state.isLoading, sessionData.session, actions, navigate, location.pathname, state.multiplier]);
 
   useHIDScanner({
-    onScan: (barcode) => !isLocked && state.status !== 'awaiting_pharma' && actions.handleExternalScan(barcode, state.multiplier),
+    onScan: (barcode) => state.status !== 'awaiting_pharma' && actions.handleExternalScan(barcode, state.multiplier),
     isEnabled: !isToolsOpen,
   });
 
@@ -253,7 +248,6 @@ export const CountingPage: React.FC = () => {
  );
  })()}
  
- <ScreenLockOverlay isLocked={isLocked} onUnlock={unlock} />
 
  {/* PRODUCTIVITY DASHBOARD */}
  <ProductivityDashboard 
