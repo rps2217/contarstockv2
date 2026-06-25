@@ -37,6 +37,9 @@ export const CountingPage: React.FC = () => {
 
   const [isToolsOpen, setIsToolsOpen] = useState(false);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  
+  // Manual mode (sin cámara)
+  const [isManualMode, setIsManualMode] = useState(false);
 
   // Atajos de teclado para agilizar conteo en escritorio o terminales PDA con teclado físico grande
   useEffect(() => {
@@ -150,6 +153,8 @@ export const CountingPage: React.FC = () => {
  potentialMatch={state.potentialMatch}
  onApplyMatch={actions.applyPotentialMatch}
  onDismissMatch={actions.dismissPotentialMatch}
+ isManualMode={isManualMode}
+ onToggleManualMode={() => setIsManualMode(!isManualMode)}
  />
 
  <ScannerToolsSheet 

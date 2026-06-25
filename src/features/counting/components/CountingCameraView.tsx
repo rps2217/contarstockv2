@@ -26,6 +26,8 @@ interface CountingCameraViewProps {
   potentialMatch?: MatchResult | null;
   onApplyMatch?: () => void;
   onDismissMatch?: () => void;
+  isManualMode?: boolean;
+  onToggleManualMode?: () => void;
 }
 
 export const CountingCameraView: React.FC<CountingCameraViewProps> = ({
@@ -48,7 +50,9 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = ({
   labelPhoto,
   potentialMatch,
   onApplyMatch,
-  onDismissMatch
+  onDismissMatch,
+  isManualMode = false,
+  onToggleManualMode
 }) => {
   const activeItemName = activeProduct?.name || items.find(i => i.barcode === activeBarcode)?.productName;
 
@@ -60,10 +64,14 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = ({
     expectedQty: item.expectedQuantity && item.expectedQuantity > 0 ? item.expectedQuantity : undefined
   }));
 
-  // Camera section content
-  const cameraSection = (
-    <ScannerCameraSection onScan={onScan} feedback={feedback} />
-  );
+  // Camera section content - solo mostrar si NO está en modo manual
+  const cameraSection = !isManualMode ? (
+    <ScannerCameraSection 
+      onScan={onScan} 
+      feedback={feedback}
+      onCloseCamera={onToggleManualMode}
+    />
+  ) : null;
 
   // Footer with multiplier
   const bottomContent = (
@@ -102,8 +110,8 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = ({
         location={location}
         onChangeLocation={onChangeLocation}
         onBack={onBack}
-        isManualMode={false}
-        onToggleManualMode={() => {}}
+        isManualMode={isManualMode}
+        onToggleManualMode={onToggleManualMode || (() => {})}
         onFinalize={onFinalize}
         onLock={onLock}
         onOpenTools={onOpenTools}
