@@ -321,7 +321,8 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = memo(({
 
       {/* ==================== EXPECTED ORDER LIST (ONLY IN TEST MODE) ==================== */}
       {isTestMode && expectedItems.length > 0 && (
-        <div className="shrink-0 max-h-[40%] overflow-hidden flex flex-col bg-slate-900 border-b border-amber-500/20">
+        <div className="shrink-0 max-h-[35vh] md:max-h-[30vh] flex flex-col bg-slate-900 border-b border-amber-500/20 overflow-hidden">
+          {/* Header */}
           <div className="h-10 px-4 flex items-center justify-between shrink-0 bg-slate-950/80 border-b border-white/5">
             <div className="flex items-center gap-2">
               <List className="w-4 h-4 text-amber-400" />
@@ -332,44 +333,49 @@ export const CountingCameraView: React.FC<CountingCameraViewProps> = memo(({
               <span className="font-bold text-emerald-400">{expectedStats?.scanned}/{expectedStats?.total} SKUs</span>
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto">
-            {expectedItems.map((item) => {
-              const normBarcode = normalizeSku(item.barcode);
-              const scannedItem = items.find(i => normalizeSku(i.barcode) === normBarcode);
-              const scannedQty = scannedItem?.totalQuantity || 0;
-              const isScanned = scannedQty > 0;
-              
-              return (
-                <div 
-                  key={item.barcode}
-                  className={`flex items-center gap-3 px-4 py-3 border-b border-white/5 ${
-                    isScanned ? 'bg-emerald-500/10' : 'hover:bg-white/5'
-                  }`}
-                >
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                    isScanned ? 'bg-emerald-500/20' : 'bg-slate-800'
-                  }`}>
-                    {isScanned ? (
-                      <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                    ) : (
-                      <Barcode className="w-5 h-5 text-slate-500" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className={`text-sm font-bold truncate ${isScanned ? 'text-emerald-400' : 'text-white'}`}>
-                      {item.name || item.barcode}
+          
+          {/* Mobile: Vertical scrollable list | Desktop: Horizontal scroll */}
+          <div className="flex-1 overflow-y-auto md:overflow-x-auto">
+            <div className="flex flex-col md:flex-row gap-2 p-3 min-w-max md:min-w-0">
+              {expectedItems.map((item) => {
+                const normBarcode = normalizeSku(item.barcode);
+                const scannedItem = items.find(i => normalizeSku(i.barcode) === normBarcode);
+                const scannedQty = scannedItem?.totalQuantity || 0;
+                const isScanned = scannedQty > 0;
+                
+                return (
+                  <div 
+                    key={item.barcode}
+                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl border shrink-0 md:w-72 ${
+                      isScanned 
+                        ? 'bg-emerald-500/10 border-emerald-500/20' 
+                        : 'bg-slate-800/50 border-white/5 hover:bg-slate-800'
+                    }`}
+                  >
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                      isScanned ? 'bg-emerald-500/20' : 'bg-slate-700'
+                    }`}>
+                      {isScanned ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      ) : (
+                        <Barcode className="w-4 h-4 text-slate-500" />
+                      )}
                     </div>
-                    <div className="text-[9px] text-slate-500 font-mono">{item.barcode}</div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <div className={`text-lg font-black ${isScanned ? 'text-emerald-400' : 'text-slate-400'}`}>
-                      {scannedQty > 0 ? scannedQty : 0} / {item.expectedQty}
+                    <div className="flex-1 min-w-0">
+                      <div className={`text-xs font-bold truncate ${isScanned ? 'text-emerald-400' : 'text-white'}`}>
+                        {item.name || item.barcode}
+                      </div>
+                      <div className="text-[9px] text-slate-500 font-mono truncate">{item.barcode}</div>
                     </div>
-                    <div className="text-[8px] text-slate-500 uppercase">pisteado / esperado</div>
+                    <div className="text-right shrink-0">
+                      <div className={`text-sm font-black ${isScanned ? 'text-emerald-400' : 'text-slate-400'}`}>
+                        {scannedQty > 0 ? scannedQty : 0} / {item.expectedQty}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       )}

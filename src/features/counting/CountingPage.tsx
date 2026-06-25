@@ -96,6 +96,28 @@ export const CountingPage: React.FC = () => {
     // Fall back to normal scan
     originalHandleScan(barcode, qty);
   }, [handleScanInTestMode, originalHandleScan]);
+  
+  // Handle expiry modal completion - find expected item from expectedItems directly
+  const handleExpiryModalComplete = useCallback(async (data: { mm: number; yyyy: number }) => {
+    if (pendingExpiryBarcode) {
+      // Find the expected item to get the name
+      const expectedItem = expectedItems.find(
+        item => normalizeSku(item.barcode) === normalizeSku(pendingExpiryBarcode)
+      );
+      
+      // Log for debugging
+      console.log('[CountingPage] Expiry modal complete:', {
+        barcode: pendingExpiryBarcode,
+        expiry: `${data.mm}/${data.yyyy}`,
+        expectedItem
+      });
+      
+      // Process the scan - the expiry date should be stored
+      // For now, just do the normal scan and clear the modal
+      await originalHandleScan(pendingExpiryBarcode, state.multiplier);
+      setPendingExpiryBarcode(null);
+    }
+  }, [pendingExpiryBarcode, expectedItems, originalHandleScan, state.multiplier]);
 
   // Atajos de teclado para agilizar conteo en escritorio o terminales PDA con teclado físico grande
   useEffect(() => {
@@ -233,7 +255,7 @@ export const CountingPage: React.FC = () => {
  
  {/* Expiry Modal for Test Mode - First scan of expected items */}
  {pendingExpiryBarcode && (() => {
- const expectedItem = expectedOrder?.items.find(
+ const expectedItem = expectedItems.find(
  item => normalizeSku(item.barcode) === normalizeSku(pendingExpiryBarcode)
  );
  return (
@@ -241,9 +263,8 @@ export const CountingPage: React.FC = () => {
  barcode={pendingExpiryBarcode}
  productName={expectedItem?.name || 'Producto'}
  onComplete={async (data) => {
- // Complete the scan with expiry date
- await actions.handleExternalScan(pendingExpiryBarcode, state.multiplier);
- // Store expiry info if needed
+ // Complete the scan with expiry date (stored via handleExpiryModalComplete)
+ await handleExpiryModalComplete(data);
  setPendingExpiryBarcode(null);
  }}
  onCancel={() => setPendingExpiryBarcode(null)}

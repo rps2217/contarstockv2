@@ -26,14 +26,16 @@ export const ScannerCameraSection: React.FC<ScannerCameraSectionProps> = ({
   onCloseCamera,
 }) => {
   return (
-    <div className="h-full relative">
-      <CameraScanner 
-        onScan={onScan} 
-        onClose={() => {}} 
-        inline={true}
-        isTriggered={true}
-      />
-      <ScannerTargetOverlay feedback={feedback} />
+    <div className="h-full min-h-0 relative flex flex-col">
+      <div className="flex-1 min-h-0 relative overflow-hidden">
+        <CameraScanner 
+          onScan={onScan} 
+          onClose={() => {}} 
+          inline={true}
+          isTriggered={true}
+        />
+        <ScannerTargetOverlay feedback={feedback} />
+      </div>
       
       {/* Botón para cerrar cámara y pasar a modo manual */}
       {onCloseCamera && (
