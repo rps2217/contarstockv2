@@ -539,64 +539,78 @@ export const StartSessionModal: React.FC<StartSessionModalProps> = ({ isOpen, on
               <div className="w-20 h-20 bg-indigo-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-indigo-500/30">
                 <Box className="w-10 h-10 text-indigo-400" />
               </div>
-              <h4 className="text-white font-black uppercase tracking-wider">Resumen de Inicio</h4>
+              <h4 className="text-white font-black uppercase tracking-wider">
+                {mode === 'test' ? 'Iniciar Conteo de Prueba' : 'Resumen de Inicio'}
+              </h4>
               <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Verifica los datos antes de comenzar</p>
             </div>
 
             <div className="bg-white/5 rounded-2xl p-4 space-y-3 border border-white/10">
+              {/* Solo mostrar ID Bulto si no es modo prueba */}
+              {mode !== 'test' && (
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-black text-slate-500 uppercase">ID Bulto</span>
+                  <span className="text-xs font-mono font-bold text-white">{labelId}</span>
+                </div>
+              )}
               <div className="flex justify-between items-center">
-                <span className="text-[10px] font-black text-slate-500 uppercase">ID Bulto</span>
-                <span className="text-xs font-mono font-bold text-white">{labelId}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-black text-slate-500 uppercase">ERP / Orden</span>
-                <span className="text-xs font-mono font-bold text-white">{erpOrder || 'CONTEO CIEGO'}</span>
+                <span className="text-[10px] font-black text-slate-500 uppercase">
+                  {mode === 'test' ? 'Carga Teórica' : 'ERP / Orden'}
+                </span>
+                <span className="text-xs font-mono font-bold text-white">{erpOrder || cloudOrder?.id || 'CONTEO CIEGO'}</span>
               </div>
               {cloudOrder && (
                 <div className="flex justify-between items-center">
-                  <span className="text-[10px] font-black text-emerald-500 uppercase">Items Cloud</span>
-                  <span className="text-xs font-bold text-emerald-400">{cloudOrder.items.length} detectados</span>
+                  <span className="text-[10px] font-black text-emerald-500 uppercase">SKUs en Lista</span>
+                  <span className="text-xs font-bold text-emerald-400">{cloudOrder.items.length} productos</span>
                 </div>
               )}
-              <div className="pt-2">
-                <div className="text-[10px] font-black text-slate-500 uppercase mb-2">Foto de Etiqueta</div>
-                <div className="aspect-video rounded-xl overflow-hidden bg-black/20">
-                  <img src={labelPhoto || ''} alt="Label" className="w-full h-full object-cover" />
+              
+              {/* Solo mostrar foto de etiqueta si no es modo prueba */}
+              {mode !== 'test' && labelPhoto && (
+                <div className="pt-2">
+                  <div className="text-[10px] font-black text-slate-500 uppercase mb-2">Foto de Etiqueta</div>
+                  <div className="aspect-video rounded-xl overflow-hidden bg-black/20">
+                    <img src={labelPhoto} alt="Label" className="w-full h-full object-cover" />
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div className="pt-2 border-t border-white/5">
-                <button
-                  onClick={() => setIsAutoLockEnabled(!isAutoLockEnabled)}
-                  className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all ${
-                    isAutoLockEnabled 
-                      ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' 
-                      : 'bg-slate-800/50 border-white/5 text-slate-400'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${isAutoLockEnabled ? 'bg-blue-500/20' : 'bg-slate-700/50'}`}>
-                      {isAutoLockEnabled ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
-                    </div>
-                    <div className="text-left">
-                      <div className="text-[10px] font-black uppercase tracking-wider">Auto-Bloqueo</div>
-                      <div className="text-[8px] font-bold opacity-60 uppercase">
-                        {isAutoLockEnabled ? 'Activado (Seguridad)' : 'Desactivado (Continuo)'}
+              {/* Solo mostrar Auto-Bloqueo si no es modo prueba */}
+              {mode !== 'test' && (
+                <div className="pt-2 border-t border-white/5">
+                  <button
+                    onClick={() => setIsAutoLockEnabled(!isAutoLockEnabled)}
+                    className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all ${
+                      isAutoLockEnabled 
+                        ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' 
+                        : 'bg-slate-800/50 border-white/5 text-slate-400'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${isAutoLockEnabled ? 'bg-blue-500/20' : 'bg-slate-700/50'}`}>
+                        {isAutoLockEnabled ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+                      </div>
+                      <div className="text-left">
+                        <div className="text-[10px] font-black uppercase tracking-wider">Auto-Bloqueo</div>
+                        <div className="text-[8px] font-bold opacity-60 uppercase">
+                          {isAutoLockEnabled ? 'Activado (Seguridad)' : 'Desactivado (Continuo)'}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className={`w-10 h-5 rounded-full relative transition-colors ${isAutoLockEnabled ? 'bg-blue-500' : 'bg-slate-700'}`}>
-                    <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${isAutoLockEnabled ? 'right-1' : 'left-1'}`} />
-                  </div>
-                </button>
-              </div>
+                    <div className={`w-10 h-5 rounded-full relative transition-colors ${isAutoLockEnabled ? 'bg-blue-500' : 'bg-slate-700'}`}>
+                      <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${isAutoLockEnabled ? 'right-1' : 'left-1'}`} />
+                    </div>
+                  </button>
+                </div>
+              )}
             </div>
 
             <button 
               onClick={handleStart}
               className="w-full h-16 bg-indigo-600 text-white font-black rounded-2xl uppercase tracking-[0.2em] shadow-lg shadow-indigo-500/20 active:scale-95 transition-all"
             >
-              Comenzar Conteo
+              {mode === 'test' ? 'Comenzar Conteo de Prueba' : 'Comenzar Conteo'}
             </button>
 
             <button 
