@@ -105,6 +105,7 @@ export const HammerCameraView: React.FC<HammerCameraViewProps> = ({
    barcode: item.barcode,
    name: item.name,
    totalQuantity: item.totalQuantity,
+   expectedQty: item.expectedQty,
  }));
 
  // Footer with edit mode indicator + sync status
