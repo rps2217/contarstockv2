@@ -10,7 +10,7 @@ interface ManagementSearchBarProps {
   onClearFilters: () => void;
   activeFiltersCount: number;
   placeholder?: string;
-  accentColor?: 'amber' | 'blue' | 'emerald' | 'rose' | 'indigo';
+  accentColor?: 'amber' | 'blue' | 'emerald' | 'rose' | 'indigo' | 'gray';
   theme?: 'dark' | 'light' | 'high-contrast';
   extraActions?: React.ReactNode;
 }
@@ -23,7 +23,7 @@ export const ManagementSearchBar: React.FC<ManagementSearchBarProps> = ({
   onClearFilters,
   activeFiltersCount,
   placeholder = "BUSCAR...",
-  accentColor = 'amber',
+  accentColor = 'gray',
   theme = 'dark',
   extraActions
 }) => {
@@ -91,10 +91,19 @@ export const ManagementSearchBar: React.FC<ManagementSearchBarProps> = ({
       fabBg: 'bg-indigo-650 hover:bg-indigo-600 text-white shadow-lg shadow-indigo-600/25 focus:ring-indigo-400/50',
       iconColor: 'text-indigo-500 hover:bg-indigo-500/10',
       shimmer: 'from-indigo-400/20 to-indigo-500/30'
+    },
+    gray: {
+      border: 'border-neutral-500/10 focus-within:border-neutral-500/40 focus-within:ring-neutral-500/5',
+      text: 'text-neutral-500',
+      badge: 'bg-neutral-500 text-white',
+      glow: 'shadow-[0_0_25px_rgba(0,0,0,0.06)]',
+      fabBg: 'bg-neutral-600 hover:bg-neutral-500 text-white shadow-lg shadow-black/25 focus:ring-neutral-400/50',
+      iconColor: 'text-neutral-500 hover:bg-neutral-500/10',
+      shimmer: 'from-neutral-400/20 to-neutral-500/30'
     }
   };
 
-  const colors = colorClasses[accentColor];
+  const colors = colorClasses[accentColor] || colorClasses.gray;
 
   return (
     <>
