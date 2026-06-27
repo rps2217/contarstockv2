@@ -40,7 +40,6 @@ const HammerLegacy = lazyWithRetry(() => import('@/features/hammer/HammerPage'))
 const ExpiryLegacy = lazyWithRetry(() => import('@/features/expiry/ExpiryPage'));
 const EventsLegacy = lazyWithRetry(() => import('@/features/events/EventsPage'));
 const InventoryLegacy = lazyWithRetry(() => import('@/features/inventory/InventoryPage'));
-const ComplianceLegacy = lazyWithRetry(() => import('@/features/compliance/ComplianceDashboardPage'));
 const DynamicLegacy = lazyWithRetry(() => import('@/features/dynamic/DynamicManagementPage').then(m => ({ default: m.DynamicManagementPage })));
 const SlicesLegacy = lazyWithRetry(() => import('@/features/slices/SlicesPage').then(m => ({ default: m.SlicesPage })));
 const ProvidersLegacy = lazyWithRetry(() => import('@/features/suppliers/pages/ProvidersPage').then(m => ({ default: m.ProvidersPage })));
@@ -244,7 +243,6 @@ const AppContent = () => {
                     <Route path="/customers" element={<CustomersLegacy />} />
                     <Route path="/providers" element={<ProvidersLegacy />} />
                     <Route path="/expected-orders" element={<ExpectedOrdersLegacy />} />
-                    <Route path="/compliance" element={<ComplianceLegacy />} />
                     <Route path="/slices" element={<SlicesLegacy />} />
                     <Route path="/dynamic/:tableKey" element={<DynamicLegacy />} />
 

@@ -1,7 +1,7 @@
 /**
  * ReportsPage - Página unificada de reportes estilo AppSheet
  * 
- * Agrupa: Auditoría, Compliance, Slices
+ * Agrupa: Auditoría, Slices
  * en una sola vista con tabs para alternar entre tipos de reportes.
  */
 
@@ -9,20 +9,15 @@ import React, { useState, Suspense, lazy } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   History,
-  Shield,
   Layers,
   Loader2
 } from 'lucide-react';
 
 // Lazy imports de las páginas existentes
 const AuditPage = lazy(() => import('./AuditPage').then(m => ({ default: m.AuditPage })));
-const CompliancePage = lazy(() => import('../compliance/ComplianceDashboardPage').then(m => ({ default: m.ComplianceDashboardPage })));
 const SlicesPage = lazy(() => import('../slices/SlicesPage').then(m => ({ default: m.SlicesPage })));
 
-// Hook para obtener count de compliance
-import { useComplianceData } from '../compliance/hooks/useComplianceData';
-
-type ReportTab = 'audit' | 'compliance' | 'slices';
+type ReportTab = 'audit' | 'slices';
 
 interface TabConfig {
   key: ReportTab;
@@ -31,8 +26,6 @@ interface TabConfig {
   icon: React.ElementType;
   color: string;
   activeBg: string;
-  badge?: number;
-  badgeStyle?: 'error' | 'warning';
 }
 
 const TABS: TabConfig[] = [
@@ -43,14 +36,6 @@ const TABS: TabConfig[] = [
     icon: History, 
     color: 'text-blue-400',
     activeBg: 'bg-blue-500/20'
-  },
-  { 
-    key: 'compliance', 
-    label: 'Compliance', 
-    shortLabel: 'Comp.',
-    icon: Shield, 
-    color: 'text-emerald-400',
-    activeBg: 'bg-emerald-500/20'
   },
   { 
     key: 'slices', 
@@ -93,23 +78,6 @@ class TabErrorBoundary extends React.Component<
 
 export const ReportsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ReportTab>('audit');
-  
-  // Obtener stats de compliance para el badge
-  const complianceStats = useComplianceData();
-  
-  // Construir tabs con badges
-  const tabsWithBadges = TABS.map(tab => {
-    if (tab.key === 'compliance') {
-      const criticalCount = complianceStats?.criticalCount || 0;
-      const warningCount = complianceStats?.warningCount || 0;
-      return {
-        ...tab,
-        badge: criticalCount > 0 ? criticalCount : warningCount > 0 ? warningCount : undefined,
-        badgeStyle: criticalCount > 0 ? 'error' as const : 'warning' as const
-      };
-    }
-    return tab;
-  });
 
   const handleTabChange = (tab: ReportTab) => {
     setActiveTab(tab);
@@ -132,7 +100,6 @@ export const ReportsPage: React.FC = () => {
       <TabErrorBoundary fallback={fallback}>
         <Suspense fallback={<TabLoader />}>
           {activeTab === 'audit' && <AuditPage />}
-          {activeTab === 'compliance' && <CompliancePage />}
           {activeTab === 'slices' && <SlicesPage />}
         </Suspense>
       </TabErrorBoundary>
@@ -149,9 +116,9 @@ export const ReportsPage: React.FC = () => {
         </h1>
       </div>
 
-      {/* Tabs con badges */}
+      {/* Tabs */}
       <div className="flex gap-1 px-2 py-2 overflow-x-auto no-scrollbar bg-slate-900/30 border-b border-white/5 shrink-0">
-        {tabsWithBadges.map((tab) => {
+        {TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.key;
           
@@ -168,17 +135,6 @@ export const ReportsPage: React.FC = () => {
               <Icon className="w-3 h-3" />
               <span className="hidden sm:inline">{tab.label}</span>
               <span className="sm:hidden">{tab.shortLabel}</span>
-              
-              {/* Badge */}
-              {tab.badge !== undefined && tab.badge > 0 && (
-                <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[9px] font-black ${
-                  tab.badgeStyle === 'error' 
-                    ? 'bg-rose-500 text-white' 
-                    : 'bg-amber-500 text-black'
-                }`}>
-                  {tab.badge}
-                </span>
-              )}
             </button>
           );
         })}
