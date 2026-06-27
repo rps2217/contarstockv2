@@ -40,6 +40,9 @@ export const useReports = () => {
   const [filterType, setFilterType] = useState<'all' | 'standard' | 'hammer' | 'reception'>(initialFilterType);
 
   const [limit, setLimit] = useState(50);
+  const [cursor, setCursor] = useState<string | undefined>(undefined);
+  const [hasMore, setHasMore] = useState(true);
+  const [sessions, setSessions] = useState<any[]>([]);
   const [liveConsolidated, setLiveConsolidated] = useState<ConsolidatedItem[]>([]);
   const [isLiveLoading, setIsLiveLoading] = useState(false);
   const [isLiveStale, setIsLiveStale] = useState(false);
@@ -294,17 +297,22 @@ export const useReports = () => {
     return counts;
   }, []);
 
-  const sessions = useLiveQuery(
-    async () => {
+  // Carga de sesiones con paginación
+  useEffect(() => {
+    const loadSessions = async () => {
       const q = searchQuery.trim().toLowerCase();
-      let results: any[];
-      if (filterType === 'all') {
-        results = await SessionRepository.getAll();
-        results.sort((a, b) => b.createdAt - a.createdAt);
-      } else {
-        results = await SessionRepository.getSessionsByType(filterType);
-      }
       
+      // Usar paginación con cursor para mejor performance
+      const result = await SessionRepository.getPaginated({
+        cursor: undefined,
+        limit: limit,
+        sortBy: 'createdAt',
+        filter: filterType !== 'all' ? { sessionType: filterType } : undefined,
+      });
+      
+      let results = result.items;
+      
+      // Filtrado local (para búsqueda)
       if (q) {
         results = results.filter((s) => 
           s.id.toLowerCase().includes(q) || 
@@ -312,17 +320,42 @@ export const useReports = () => {
           (s.logisticsLabel?.toLowerCase().includes(q) || false)
         );
       }
-      return results.slice(0, limit);
-    },
-    [searchQuery, limit, filterType],
-    undefined,
-  );
+      
+      setSessions(results);
+      setHasMore(result.hasMore);
+      setCursor(result.nextCursor);
+    };
+    
+    loadSessions();
+  }, [searchQuery, limit, filterType]);
 
-  const isLoading = sessions === undefined;
+  const isLoading = sessions.length === 0;
 
-  const loadMore = useCallback(() => {
-    setLimit((prev) => prev + 50);
-  }, []);
+  const loadMore = useCallback(async () => {
+    if (!hasMore || !cursor) return;
+    
+    const q = searchQuery.trim().toLowerCase();
+    const result = await SessionRepository.getPaginated({
+      cursor,
+      limit: 50,
+      sortBy: 'createdAt',
+      filter: filterType !== 'all' ? { sessionType: filterType } : undefined,
+    });
+    
+    let newItems = result.items;
+    if (q) {
+      newItems = newItems.filter((s) => 
+        s.id.toLowerCase().includes(q) || 
+        (s.erpOrder?.toLowerCase().includes(q) || false) || 
+        (s.logisticsLabel?.toLowerCase().includes(q) || false)
+      );
+    }
+    
+    // Agregar a las existentes
+    setSessions(prev => [...prev, ...newItems]);
+    setHasMore(result.hasMore);
+    setCursor(result.nextCursor);
+  }, [hasMore, cursor, searchQuery, filterType]);
 
   const syncedCount = useLiveQuery(
     () => SessionRepository.getSyncedCount(),

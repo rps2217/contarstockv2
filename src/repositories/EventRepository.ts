@@ -86,6 +86,25 @@ export class EventRepository {
     await dynamicDataService.deleteRecord(id);
   }
 
+  // Soft delete - marca como pending_delete
+  async softDelete(id: string): Promise<EventRecord | null> {
+    const record = await db.dynamic_data.get(id);
+    if (!record) return null;
+    
+    await db.dynamic_data.update(id, { syncStatus: 'pending_delete' as any });
+    return this.mapToEvent(record);
+  }
+
+  // Restore desde soft delete
+  async restore(id: string): Promise<void> {
+    await db.dynamic_data.update(id, { syncStatus: 'synced' as any });
+  }
+
+  // Eliminación permanente
+  async permanentDelete(id: string): Promise<void> {
+    await dynamicDataService.deleteRecord(id);
+  }
+
   async clear() {
     const records = await this.getAll();
     for (const record of records) {
@@ -103,4 +122,17 @@ export class EventRepository {
   }
 }
 
-export const eventRepository = new EventRepository();
+// Singleton
+const _eventRepository = new EventRepository();
+export const eventRepository = {
+  getAll: () => _eventRepository.getAll(),
+  liveAll: () => _eventRepository.liveAll(),
+  put: (data: any, tableName?: string) => _eventRepository.put(data, tableName),
+  save: (event: Partial<EventRecord> & { id: string }) => _eventRepository.save(event),
+  bulkSave: (events: EventRecord[]) => _eventRepository.bulkSave(events),
+  delete: (id: string) => _eventRepository.delete(id),
+  softDelete: (id: string) => _eventRepository.softDelete(id),
+  restore: (id: string) => _eventRepository.restore(id),
+  permanentDelete: (id: string) => _eventRepository.permanentDelete(id),
+  clear: () => _eventRepository.clear(),
+};

@@ -2,7 +2,7 @@
  * useCloudCache - Hook para cachear datos de la nube con TTL
  * 
  * Evita recargas innecesarias de datos que ya tenemos.
- * Útil para datos que no cambian frecuentemente.
+ * Usa cache global compartido para poder invalidar desde cualquier lugar.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -11,6 +11,23 @@ interface CacheEntry<T> {
   data: T;
   timestamp: number;
   loading: boolean;
+}
+
+// Cache global compartido
+const globalCache = new Map<string, CacheEntry<unknown>>();
+
+// Clear cache global
+export function clearCache(key?: string): void {
+  if (key) {
+    globalCache.delete(key);
+  } else {
+    globalCache.clear();
+  }
+}
+
+// Get cache entry
+export function getCacheEntry<T>(key: string): CacheEntry<T> | undefined {
+  return globalCache.get(key) as CacheEntry<T> | undefined;
 }
 
 interface UseCloudCacheOptions {
@@ -36,8 +53,6 @@ export function useCloudCache<T>(
     onStale 
   } = options;
 
-  const cacheRef = useRef<Map<string, CacheEntry<T>>>(new Map());
-  
   const [state, setState] = useState<{
     data: T | null;
     isLoading: boolean;
@@ -55,7 +70,7 @@ export function useCloudCache<T>(
   const fetchData = useCallback(async (forceRefresh = false) => {
     if (!enabled) return;
 
-    const cached = cacheRef.current.get(key);
+    const cached = globalCache.get(key) as CacheEntry<T> | undefined;
     
     // Si hay cache válido y no forzamos refresh, usar cache
     if (cached && !forceRefresh && !isExpired(cached)) {
@@ -89,7 +104,7 @@ export function useCloudCache<T>(
         timestamp: Date.now(),
         loading: false,
       };
-      cacheRef.current.set(key, entry);
+      globalCache.set(key, entry as CacheEntry<unknown>);
       
       setState({
         data: freshData,
@@ -121,7 +136,7 @@ export function useCloudCache<T>(
 
   // Invalidar cache
   const invalidate = useCallback(() => {
-    cacheRef.current.delete(key);
+    globalCache.delete(key);
     setState({
       data: null,
       isLoading: false,
@@ -136,12 +151,6 @@ export function useCloudCache<T>(
     refresh,
     invalidate,
   };
-}
-
-// Helper para limpiar todo el cache
-export function clearAllCache(): void {
-  // Necesitamos acceso al cache global - por ahora solo método vacío
-  // En producción podrías usar un módulo singleton
 }
 
 export default useCloudCache;

@@ -2,13 +2,18 @@
  * useEventMutations - Hook para mutaciones (CRUD) de eventos
  * 
  * Maneja todas las operaciones de creación, actualización y eliminación.
+ * Incluye soft delete con undo.
  */
 
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
+import { toast } from 'sonner';
 import { supabaseSyncService } from '../../../services/supabaseSyncService';
 import { eventRepository } from '../../../repositories/EventRepository';
 import { useToastStore } from '@/stores';
 import { normalizeSku } from '../../../services/utils';
+
+// Timeout para undo (5 segundos)
+const UNDO_TIMEOUT = 5000;
 
 interface EventData {
   id?: string;
@@ -192,12 +197,47 @@ export function useEventMutations({
     }
   }, [tableName, unmapData, baseProcessedData, addToast]);
 
-  // Eliminar item
+  // Eliminar item con soft delete y undo
+  const pendingDeletes = useRef<Map<string, NodeJS.Timeout>>(new Map());
+
   const handleDeleteItem = useCallback(async (id: string) => {
     try {
-      await eventRepository.delete(id);
-      await supabaseSyncService.deleteRemote(tableName, id);
-      addToast('Evento eliminado', 'success');
+      // Soft delete
+      const backup = await eventRepository.softDelete(id);
+      if (!backup) {
+        toast.error('Evento no encontrado');
+        return;
+      }
+
+      // Toast con undo
+      toast.success('Evento eliminado', {
+        duration: UNDO_TIMEOUT,
+        action: {
+          label: 'Deshacer',
+          onClick: async () => {
+            const timeout = pendingDeletes.current.get(id);
+            if (timeout) {
+              clearTimeout(timeout);
+              pendingDeletes.current.delete(id);
+            }
+            await eventRepository.restore(id);
+            toast.info('Eliminación cancelada');
+          },
+        },
+      });
+
+      // Programar eliminación permanente
+      const timeout = setTimeout(async () => {
+        try {
+          await eventRepository.permanentDelete(id);
+          await supabaseSyncService.deleteRemote(tableName, id);
+        } catch (e) {
+          console.error('Error en eliminación permanente:', e);
+        }
+        pendingDeletes.current.delete(id);
+      }, UNDO_TIMEOUT);
+
+      pendingDeletes.current.set(id, timeout);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Error desconocido';
       addToast(`Error al eliminar evento: ${message}`, 'error');
