@@ -4,14 +4,11 @@ import { logger } from '../services/logger';
 
 export class DatabaseSanitizer {
   static async runAuditAndSanitize() {
-    logger.info('DatabaseSanitizer', 'Iniciando auditoria y sanitizacion de DB...');
-    
     // 1. Sanitizar Proveedores
     const providers = await db.providers.toArray();
     for (const p of providers) {
       const cleanRut = normalizeIdentity(p.rut);
       if (p.rut !== cleanRut) {
-        logger.info('DatabaseSanitizer', `Sanitizando RUT proveedor: ${p.rut} -> ${cleanRut}`);
         await db.providers.delete(p.rut);
         p.rut = cleanRut;
         await db.providers.put(p);
@@ -95,7 +92,5 @@ export class DatabaseSanitizer {
         await db.dynamic_data.put(r);
       }
     }
-    
-    logger.info('DatabaseSanitizer', 'Sanitizacion completada.');
   }
 }

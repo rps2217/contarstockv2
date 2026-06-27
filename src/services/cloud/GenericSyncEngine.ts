@@ -24,7 +24,6 @@ export class GenericSyncEngine {
 
     // Skip optional tables that don't exist
     if (meta.optional) {
-      logger.info('SYNC_ENGINE', `Skipping optional table ${meta.remoteTable} (table may not exist)`);
       return { success: 0, failed: 0 };
     }
 
@@ -122,7 +121,6 @@ export class GenericSyncEngine {
 
     // Skip optional tables that don't exist
     if (meta.optional) {
-      logger.info('SYNC_ENGINE', `Skipping optional table ${meta.remoteTable} (table may not exist)`);
       return { added: 0, updated: 0 };
     }
 

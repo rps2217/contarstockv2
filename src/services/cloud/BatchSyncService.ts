@@ -317,7 +317,7 @@ export async function pullBatch(
   try {
     const result = await fetchWithPagination(lastSyncDate);
     if (typeof result === 'object' && 'isMissing' in result) {
-      logger.info('SYNC', `Tabla ${tableName} no encontrada. Omitiendo descarga.`);
+      // Tabla no existe - silencioso, es normal
       return { success: false, rows: [], error: 'Table not found', isMissing: true };
     }
     return { success: true, rows: result as SupabaseRow[] };
@@ -333,9 +333,8 @@ export async function pullBatch(
       return { success: false, rows: [], error: 'Table not found', isMissing: true };
     }
 
-    // PostgreSQL error code 42P01 = "relation does not exist"
+    // PostgreSQL error code 42P01 = "relation does not exist" - silencioso
     if ((err as any).code === '42P01' || errMsg.includes('42P01') || errMsg.includes('does not exist')) {
-      logger.info('SYNC', `Tabla ${tableName} no existe en Supabase (código 42P01). Omitiendo descarga.`);
       return { success: false, rows: [], error: 'Table not found', isMissing: true };
     }
     
