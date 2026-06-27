@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from "react";
+import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { toast } from "sonner";
 import * as sessionService from "../../../services/sessionService";
@@ -20,6 +20,10 @@ export interface ConsolidatedItem {
   lastUpdated: number;
 }
 
+// Cache para consolidación en vivo (TTL: 2 minutos)
+const LIVE_CACHE_TTL = 2 * 60 * 1000;
+let liveCache: { data: ConsolidatedItem[]; timestamp: number } | null = null;
+
 export const useReports = () => {
   const location = useLocation();
   const { isStartSessionModalOpen, setStartSessionModalOpen } = useAppStore();
@@ -38,6 +42,7 @@ export const useReports = () => {
   const [limit, setLimit] = useState(50);
   const [liveConsolidated, setLiveConsolidated] = useState<ConsolidatedItem[]>([]);
   const [isLiveLoading, setIsLiveLoading] = useState(false);
+  const [isLiveStale, setIsLiveStale] = useState(false);
 
   // Descarga y sincroniza del historial de cabeceras de bultos/sesiones
   const pullCloudData = useCallback(async () => {
@@ -155,7 +160,24 @@ export const useReports = () => {
   }, [isPulling]);
 
   // Consolidación en tiempo real: lee las lecturas brutas de las tablas de la nube
-  const fetchLiveConsolidatedData = useCallback(async () => {
+  // CON CACHE: evita recargas innecesarias
+  const fetchLiveConsolidatedData = useCallback(async (forceRefresh = false) => {
+    const now = Date.now();
+    
+    // Si hay cache válido y no forzamos refresh, usar cache
+    if (!forceRefresh && liveCache && (now - liveCache.timestamp) < LIVE_CACHE_TTL) {
+      setLiveConsolidated(liveCache.data);
+      setIsLiveLoading(false);
+      setIsLiveStale(false);
+      return;
+    }
+
+    // Si hay cache pero está expirado, mostrar datos stale
+    if (liveCache && (now - liveCache.timestamp) >= LIVE_CACHE_TTL) {
+      setLiveConsolidated(liveCache.data);
+      setIsLiveStale(true);
+    }
+
     setIsLiveLoading(true);
     try {
       const config = (await import("../../../services/settings")).getSettings().cloudConfig;
@@ -231,20 +253,29 @@ export const useReports = () => {
 
       // Sort by quantity desc
       resolvedList.sort((a, b) => b.totalQuantity - a.totalQuantity);
+      
+      // Guardar en cache
+      liveCache = { data: resolvedList, timestamp: now };
+      
       setLiveConsolidated(resolvedList);
+      setIsLiveStale(false);
     } catch (err) {
       console.error("Error cargando consolidación:", err);
-      toast.error("No se pudo regenerar la consolidación de la nube");
+      // Mantener cache anterior si existe
+      if (!liveCache) {
+        toast.error("No se pudo regenerar la consolidación de la nube");
+      }
     } finally {
       setIsLiveLoading(false);
     }
   }, []);
 
-  // Sync data initially
+  // Sync data initially (con cache)
   useEffect(() => {
+    // pullCloudData se ejecuta siempre para mantener sincronía
     pullCloudData();
-    fetchLiveConsolidatedData();
-  }, []);
+    // fetchLiveConsolidatedData ahora usa cache interno
+  }, [pullCloudData]);
 
   const pendingSyncCount = useLiveQuery(
     () => ScanRepository.getPendingSyncCount(),
@@ -369,6 +400,7 @@ export const useReports = () => {
       isPulling,
       liveConsolidated,
       isLiveLoading,
+      isLiveStale,
       erpCounts: erpCounts || {},
       pendingSyncCount,
       syncedCount: syncedCount || 0,
