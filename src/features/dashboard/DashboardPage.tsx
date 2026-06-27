@@ -1,13 +1,6 @@
 /**
  * Dashboard - Página principal con diseño inspirado en Magic Patterns
- * 
- * Características:
- * - Header con saludo personalizado y estado del sistema
- * - Grid de métricas (total items, sync pendiente, por vencer, alertas)
- * - Resumen del día con gráficos de tendencia
- * - Acciones rápidas
- * - Actividad reciente
- * - Atajos de teclado
+ * Estilo limpio slate con gradientes sutiles y animaciones fluidas
  */
 
 import React, { useState, useEffect, memo } from "react";
@@ -23,6 +16,8 @@ import {
   Cloud,
   Clock,
   PackageSearch,
+  RefreshCw,
+  BoxIcon,
 } from "lucide-react";
 import { useAppStore } from '@/stores';
 import { SoundFX } from "../../services/audio";
@@ -31,7 +26,6 @@ import {
   MetricCard, 
   QuickAction, 
   RecentActivity,
-  SparklineChart,
   TodaySummary,
   KeyboardShortcuts
 } from "./components";
@@ -68,37 +62,43 @@ const Dashboard: React.FC = () => {
     }
   }, [location, navigate]);
 
-  const isDark = settings?.theme !== 'light';
-
   // Acciones rápidas disponibles
   const quickActions = [
     {
       id: 'new-count',
-      icon: <Plus className="w-6 h-6" />,
+      icon: <Plus className="w-5 h-5" />,
       title: 'Nuevo conteo',
       description: 'Inicia una nueva sesión de conteo de inventario.',
       onClick: () => setStartSessionModalOpen(true),
+      primary: true,
+      delay: 0.1,
     },
     {
       id: 'receive',
-      icon: <Package className="w-6 h-6" />,
+      icon: <Package className="w-5 h-5" />,
       title: 'Recibir stock',
       description: 'Registra envíos y órdenes entrantes.',
       onClick: () => navigate('/capture/reception'),
+      primary: false,
+      delay: 0.15,
     },
     {
       id: 'burst',
-      icon: <Zap className="w-6 h-6" />,
+      icon: <Zap className="w-5 h-5" />,
       title: 'Modo ráfaga',
       description: 'Escaneo continuo de códigos a alta velocidad.',
       onClick: () => navigate('/massive/BURST-MODE'),
+      primary: false,
+      delay: 0.2,
     },
     {
       id: 'inventory',
-      icon: <PackageSearch className="w-6 h-6" />,
+      icon: <PackageSearch className="w-5 h-5" />,
       title: 'Ver inventario',
       description: 'Busca y verifica productos específicos.',
       onClick: () => navigate('/data'),
+      primary: false,
+      delay: 0.25,
     },
   ];
 
@@ -115,122 +115,114 @@ const Dashboard: React.FC = () => {
   }));
 
   return (
-    <div className={`h-full w-full ${isDark ? "bg-neutral-950" : "bg-neutral-50"} overflow-y-auto no-scrollbar pb-32 font-sans relative`}>
-      <AnimatePresence>
-        {successMessage && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[200] bg-neutral-900/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center"
-          >
+    <div className="h-full overflow-y-auto no-scrollbar bg-slate-950 pb-24 md:pb-8">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <AnimatePresence>
+          {successMessage && (
             <motion.div 
-              initial={{ scale: 0.5, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              className="bg-neutral-800 rounded-full p-8 mb-8"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[200] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center"
             >
-              <CheckCircle2 className="w-24 h-24 text-neutral-300" />
+              <motion.div 
+                initial={{ scale: 0.5, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                className="bg-slate-800 rounded-full p-8 mb-8"
+              >
+                <CheckCircle2 className="w-24 h-24 text-slate-300" />
+              </motion.div>
+              <h2 className="text-4xl font-bold tracking-tight max-w-2xl text-slate-100">
+                {successMessage}
+              </h2>
             </motion.div>
-            <h2 className={`text-4xl font-bold tracking-tight max-w-2xl ${isDark ? "text-neutral-100" : "text-neutral-900"}`}>
-              {successMessage}
-            </h2>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>
 
-      {/* Header con saludo */}
-      <DashboardHeader 
-        userName={operatorId || 'Usuario'}
-        isOnline={isOnline}
-        isDark={isDark}
-      />
+        {/* Header con saludo */}
+        <DashboardHeader 
+          userName={operatorId || 'Usuario'}
+          isOnline={isOnline}
+          isDark={true}
+        />
 
-      {/* Contenido principal */}
-      <main className="px-4 pb-4 space-y-6">
-        {/* Resumen de hoy con gráfico de tendencia */}
-        <section>
+        {/* Resumen de hoy */}
+        <div className="mb-10">
           <TodaySummary
             sessionsCompleted={todayStats?.sessionsCompleted || 0}
             totalScanned={todayStats?.totalScanned || 0}
             totalUnits={todayStats?.totalUnits || 0}
             trend={todayStats?.trend || 0}
-            isDark={isDark}
+            isDark={true}
           />
-        </section>
+        </div>
 
-        {/* Métricas con sparklines */}
-        <section>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <MetricCard
-              label="Total de ítems"
-              value={totalItems || 0}
-              icon={<Database className="w-4 h-4" />}
-              change={2.4}
-              sparklineData={weeklyTrend}
-              isDark={isDark}
-            />
-            <MetricCard
-              label="Sync pendiente"
-              value={pendingSyncCount || 0}
-              icon={<Cloud className="w-4 h-4" />}
-              variant={(pendingSyncCount || 0) > 0 ? 'warning' : 'default'}
-              isDark={isDark}
-            />
-            <MetricCard
-              label="Por vencer"
-              value={expiringItems || 0}
-              icon={<Clock className="w-4 h-4" />}
-              variant={(expiringItems || 0) > 0 ? 'error' : 'default'}
-              isDark={isDark}
-            />
-            <MetricCard
-              label="Escaneos hoy"
-              value={todayStats?.totalScanned || 0}
-              icon={<Package className="w-4 h-4" />}
-              change={todayStats?.trend || 0}
-              isDark={isDark}
-            />
-          </div>
-        </section>
+        {/* Key Metrics */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+          <MetricCard
+            title="Total de ítems"
+            value={totalItems || 0}
+            change={2.4}
+            icon={<Database className="w-5 h-5" />}
+            sparklineData={weeklyTrend}
+            isDark={true}
+          />
+          <MetricCard
+            title="Sync pendiente"
+            value={pendingSyncCount || 0}
+            icon={<RefreshCw className="w-5 h-5" />}
+            variant={(pendingSyncCount || 0) > 0 ? 'warning' : 'default'}
+            isDark={true}
+          />
+          <MetricCard
+            title="Por vencer"
+            value={expiringItems || 0}
+            icon={<Clock className="w-5 h-5" />}
+            variant={(expiringItems || 0) > 0 ? 'error' : 'default'}
+            isDark={true}
+          />
+          <MetricCard
+            title="Alertas recientes"
+            value={0}
+            icon={<AlertCircle className="w-5 h-5" />}
+            isDark={true}
+          />
+        </div>
 
-        {/* Acciones rápidas */}
-        <section>
-          <h2 className={`text-sm font-semibold mb-3 ${isDark ? 'text-white' : 'text-neutral-900'}`}>
+        {/* Quick Actions Grid */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-slate-200 mb-4">
             Acciones rápidas
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {quickActions.map((action, index) => (
-              <motion.div
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+            {quickActions.map((action) => (
+              <QuickAction
                 key={action.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-              >
-                <QuickAction
-                  icon={action.icon}
-                  title={action.title}
-                  description={action.description}
-                  onClick={action.onClick}
-                  isDark={isDark}
-                />
-              </motion.div>
+                icon={action.icon}
+                title={action.title}
+                description={action.description}
+                onClick={action.onClick}
+                isDark={true}
+                primary={action.primary}
+                delay={action.delay}
+              />
             ))}
           </div>
-        </section>
+        </div>
 
         {/* Actividad reciente */}
-        <section>
+        <div>
           <RecentActivity
             title="Actividad reciente"
             items={mappedActivity}
-            isDark={isDark}
+            isDark={true}
             maxItems={5}
           />
-        </section>
-      </main>
+        </div>
+      </div>
 
       {/* Atajos de teclado */}
-      <KeyboardShortcuts isDark={isDark} />
+      <KeyboardShortcuts isDark={true} />
     </div>
   );
 };

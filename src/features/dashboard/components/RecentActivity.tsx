@@ -1,20 +1,22 @@
 /**
  * RecentActivity - Componente de actividad reciente para el dashboard
- * Muestra una lista de actividades con icono, título, tiempo y cantidad
+ * Estilo inspirado en Magic Patterns con avatares circulares
  */
 
 import React, { memo } from 'react';
 import { motion } from 'motion/react';
+import { cn } from '@/lib/utils';
 
 interface ActivityItem {
   id: string;
-  icon: React.ReactNode;
+  icon: string;
   iconColor?: string;
   title: string;
   time: string;
   user?: string;
   count?: number;
   countLabel?: string;
+  onClick?: () => void;
 }
 
 interface RecentActivityProps {
@@ -24,6 +26,28 @@ interface RecentActivityProps {
   isDark?: boolean;
   maxItems?: number;
 }
+
+const getUserInitial = (title: string, user?: string): string => {
+  if (user) {
+    return user.charAt(0).toUpperCase();
+  }
+  return title.charAt(0).toUpperCase();
+};
+
+const getIconColorClass = (iconColor?: string, isDark?: boolean): string => {
+  switch (iconColor) {
+    case 'emerald':
+      return 'text-emerald-400';
+    case 'amber':
+      return 'text-amber-400';
+    case 'purple':
+      return 'text-purple-400';
+    case 'rose':
+      return 'text-rose-400';
+    default:
+      return isDark ? 'text-slate-400' : 'text-slate-500';
+  }
+};
 
 export const RecentActivity: React.FC<RecentActivityProps> = memo(({
   title,
@@ -35,76 +59,61 @@ export const RecentActivity: React.FC<RecentActivityProps> = memo(({
   const displayItems = items.slice(0, maxItems);
 
   return (
-    <div className={`rounded-xl border ${isDark ? 'bg-neutral-900/50 border-neutral-800' : 'bg-white border-neutral-200'}`}>
+    <div className="bg-slate-900/30 border border-slate-800/60 rounded-2xl overflow-hidden">
       {/* Header */}
-      <div className={`px-4 py-3 border-b ${isDark ? 'border-neutral-800' : 'border-neutral-200'}`}>
-        <h3 className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-neutral-900'}`}>
+      <div className="px-4 py-4 border-b border-slate-800/60">
+        <h2 className="text-lg font-semibold text-slate-200">
           {title}
-        </h3>
+        </h2>
       </div>
 
       {/* Activity List */}
-      <div className="divide-y divide-neutral-800/50">
+      <div>
         {displayItems.length === 0 ? (
-          <div className={`px-4 py-8 text-center ${isDark ? 'text-neutral-500' : 'text-neutral-400'}`}>
+          <div className="px-4 py-8 text-center text-slate-500">
             <p className="text-sm">No hay actividad reciente</p>
           </div>
         ) : (
           displayItems.map((item, index) => (
-            <motion.button
+            <motion.div
               key={item.id}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.05 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => onItemClick?.(item)}
-              className={`
-                w-full px-4 py-3 flex items-center gap-3 text-left transition-all
-                ${isDark 
-                  ? 'hover:bg-neutral-800/50' 
-                  : 'hover:bg-neutral-50'
-                }
-              `}
+              className="flex items-center justify-between p-4 border-b border-slate-800/60 last:border-0 hover:bg-slate-800/20 transition-colors"
             >
-              {/* Icon */}
-              <div className={`
-                w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-sm font-bold
-                ${item.iconColor 
-                  ? isDark 
-                    ? `bg-${item.iconColor}/20 text-${item.iconColor}`
-                    : `bg-${item.iconColor}/10 text-${item.iconColor}`
-                  : isDark 
-                    ? 'bg-blue-600/20 text-blue-400' 
-                    : 'bg-blue-50 text-blue-600'
-                }
-                ${isDark ? 'bg-blue-600/20' : 'bg-blue-50'}
-                ${isDark ? 'text-blue-400' : 'text-blue-600'}
-              `}>
-                {item.icon}
-              </div>
+              <div className="flex items-center gap-4">
+                {/* Avatar circular */}
+                <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center">
+                  <span className={cn(
+                    "text-xs font-bold",
+                    getIconColorClass(item.iconColor, isDark)
+                  )}>
+                    {getUserInitial(item.title, item.user)}
+                  </span>
+                </div>
 
-              {/* Content */}
-              <div className="flex-1 min-w-0">
-                <p className={`text-sm font-medium truncate ${isDark ? 'text-white' : 'text-neutral-900'}`}>
-                  {item.title}
-                </p>
-                <p className={`text-xs mt-0.5 ${isDark ? 'text-neutral-500' : 'text-neutral-500'}`}>
-                  {item.time}
-                  {item.user && ` • ${item.user}`}
-                </p>
+                {/* Content */}
+                <div>
+                  <p className="text-sm font-medium text-slate-200">
+                    {item.title}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {item.time}
+                    {item.user && ` • ${item.user}`}
+                  </p>
+                </div>
               </div>
 
               {/* Count Badge */}
               {item.count !== undefined && (
-                <div className={`
-                  px-2 py-1 rounded-lg text-xs font-bold
-                  ${isDark ? 'bg-neutral-800 text-neutral-300' : 'bg-neutral-100 text-neutral-600'}
-                `}>
-                  <span className={isDark ? 'text-white' : 'text-neutral-900'}>{item.count}</span>
-                  <span className="ml-1">{item.countLabel || 'Ítems'}</span>
+                <div className="text-right">
+                  <p className="text-sm font-semibold text-slate-300">
+                    {item.count}
+                  </p>
+                  <p className="text-[10px] text-slate-500 uppercase tracking-wider">
+                    {item.countLabel || 'Ítems'}
+                  </p>
                 </div>
               )}
-            </motion.button>
+            </motion.div>
           ))
         )}
       </div>

@@ -1,11 +1,11 @@
 /**
  * QuickAction - Tarjeta de acción rápida para el dashboard
- * Enlace directo a funciones comunes
+ * Estilo inspirado en Magic Patterns con soporte primary/secondary
  */
 
 import React, { memo } from 'react';
 import { motion } from 'motion/react';
-import { ChevronRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface QuickActionProps {
   icon: React.ReactNode;
@@ -13,6 +13,8 @@ interface QuickActionProps {
   description: string;
   onClick: () => void;
   isDark?: boolean;
+  primary?: boolean;
+  delay?: number;
 }
 
 export const QuickAction: React.FC<QuickActionProps> = memo(({
@@ -20,44 +22,54 @@ export const QuickAction: React.FC<QuickActionProps> = memo(({
   title,
   description,
   onClick,
-  isDark = true
+  isDark = true,
+  primary = false,
+  delay = 0
 }) => {
   return (
     <motion.button
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay }}
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
-      className={`
-        w-full p-4 rounded-xl border text-left transition-all
-        flex items-center gap-4
-        ${isDark 
-          ? 'bg-neutral-900/50 border-neutral-800 hover:bg-neutral-800/70 hover:border-neutral-700' 
-          : 'bg-white border-neutral-200 hover:bg-neutral-50 hover:border-neutral-300'
-        }
-      `}
+      className={cn(
+        'text-left p-5 rounded-2xl border transition-all duration-200 flex flex-col gap-3 h-full',
+        primary
+          ? 'bg-blue-600 hover:bg-blue-500 border-blue-500 shadow-lg shadow-blue-900/20'
+          : 'bg-slate-900/40 hover:bg-slate-800/60 border-slate-800/60 hover:border-slate-700'
+      )}
     >
       {/* Icon */}
-      <div className={`
-        w-12 h-12 rounded-xl flex items-center justify-center shrink-0
-        ${isDark ? 'bg-blue-600/20' : 'bg-blue-50'}
-      `}>
-        <div className={isDark ? 'text-blue-400' : 'text-blue-600'}>
-          {icon}
-        </div>
+      <div
+        className={cn(
+          'w-10 h-10 rounded-xl flex items-center justify-center',
+          primary ? 'bg-white/20 text-white' : 'bg-slate-800 text-blue-400'
+        )}
+      >
+        {icon}
       </div>
 
       {/* Content */}
-      <div className="flex-1 min-w-0">
-        <h3 className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-neutral-900'}`}>
+      <div>
+        <h4
+          className={cn(
+            'font-semibold mb-1',
+            primary ? 'text-white' : 'text-slate-200'
+          )}
+        >
           {title}
-        </h3>
-        <p className={`text-xs mt-0.5 ${isDark ? 'text-neutral-500' : 'text-neutral-500'}`}>
+        </h4>
+        <p
+          className={cn(
+            'text-xs leading-relaxed',
+            primary ? 'text-blue-100' : 'text-slate-500'
+          )}
+        >
           {description}
         </p>
       </div>
-
-      {/* Arrow */}
-      <ChevronRight className={`w-5 h-5 shrink-0 ${isDark ? 'text-neutral-600' : 'text-neutral-400'}`} />
     </motion.button>
   );
 });
