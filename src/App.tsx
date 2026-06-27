@@ -237,7 +237,9 @@ const AppContent = () => {
                     <Route path="/events/capture" element={<Navigate to="/capture" replace />} />
                     <Route path="/expiry" element={<ExpiryLegacy />} />
                     <Route path="/expiry/capture" element={<Navigate to="/capture" replace />} />
+                    <Route path="/counting" element={<Navigate to="/reports" replace />} />
                     <Route path="/counting/:id" element={<CountingLegacy />} />
+                    <Route path="/massive" element={<Navigate to="/reports" replace />} />
                     <Route path="/massive/:batchId" element={<HammerLegacy />} />
                     <Route path="/database" element={<Navigate to="/data" replace />} />
                     <Route path="/customers" element={<CustomersLegacy />} />
