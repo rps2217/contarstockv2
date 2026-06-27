@@ -1,15 +1,14 @@
 /**
  * ExpiryPage - Módulo de Vencimientos v2
  * 
- * Arquitectura simplificada - Un solo hook centralizado
+ * Diseño monocromático de grises, estructura unificada.
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { 
   RefreshCw, 
   Trash2, 
-  Search, 
   ChevronDown,
   ChevronUp,
   Plus,
@@ -17,16 +16,19 @@ import {
   AlertTriangle,
   Clock,
   CheckCircle2,
-  X
+  Calendar,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAppStore } from '@/stores';
 import { useExpiry, ExpiryRecord, ExpiryStatus } from './hooks/useExpiry';
-import { ModuleHeader } from '@/shared/components/layout/ModuleHeader';
-import { ExpiryItemCard } from './components/ExpiryItemCard';
-import { ExpiryStatsBar } from './components/ExpiryStatsBar';
 import { ExpiryDetailModal } from './components/ExpiryDetailModal';
 import { ExpiryCaptureModal } from './components/ExpiryCaptureModal';
+import { ModulePage } from '@/shared/components/ui/design-system/ModulePage';
+import { ModuleCard } from '@/shared/components/ui/design-system/ModuleCard';
+import { FilterSearch } from '@/shared/components/ui/design-system/FilterSearch';
+import { ActionFAB } from '@/shared/components/ui/design-system/ActionFAB';
+import { EmptyState } from '@/shared/components/ui/design-system/EmptyState';
+import { StatusBadge } from '@/shared/components/ui/design-system/StatusBadge';
 
 // ============================================================================
 // COMPONENTE: ExpirySection
@@ -41,8 +43,7 @@ interface ExpirySectionProps {
   onSelect: (id: string) => void;
   onViewDetail: (record: ExpiryRecord) => void;
   selectedIds: Set<string>;
-  theme: 'dark' | 'light' | 'high-contrast';
-  colorClass: string;
+  isDark: boolean;
 }
 
 const ExpirySection: React.FC<ExpirySectionProps> = ({
@@ -55,71 +56,75 @@ const ExpirySection: React.FC<ExpirySectionProps> = ({
   onSelect,
   onViewDetail,
   selectedIds,
-  theme,
-  colorClass
+  isDark,
 }) => {
-  const isDark = theme === 'dark';
-  
   return (
-    <div className={`rounded-2xl border overflow-hidden ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
+    <div className={`rounded-2xl border overflow-hidden ${isDark ? 'border-neutral-800' : 'border-neutral-200'}`}>
       {/* Section Header */}
       <button
         onClick={onToggle}
         className={`
           w-full px-4 py-3 flex items-center justify-between
-          ${isDark ? 'bg-white/5' : 'bg-slate-100'}
+          ${isDark ? 'bg-neutral-900' : 'bg-neutral-100'}
         `}
       >
         <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-lg ${colorClass}`}>
-            <Icon className="w-4 h-4" />
+          <div className={`p-2 rounded-lg ${isDark ? 'bg-neutral-800' : 'bg-neutral-200'}`}>
+            <Icon className={`w-4 h-4 ${isDark ? 'text-neutral-400' : 'text-neutral-600'}`} />
           </div>
           <div className="text-left">
-            <span className={`text-xs font-black uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}`}>{title}</span>
-            <span className="ml-2 text-[10px] font-mono text-slate-400">
+            <span className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-neutral-900'}`}>
+              {title}
+            </span>
+            <span className={`ml-2 text-[10px] font-mono ${isDark ? 'text-neutral-500' : 'text-neutral-500'}`}>
               {records.length} registros
             </span>
           </div>
         </div>
         {isExpanded ? (
-          <ChevronUp className="w-4 h-4 text-slate-400" />
+          <ChevronUp className={`w-4 h-4 ${isDark ? 'text-neutral-500' : 'text-neutral-400'}`} />
         ) : (
-          <ChevronDown className="w-4 h-4 text-slate-400" />
+          <ChevronDown className={`w-4 h-4 ${isDark ? 'text-neutral-500' : 'text-neutral-400'}`} />
         )}
       </button>
 
       {/* Section Content */}
-      <AnimatePresence>
-        {isExpanded && (
-          <motion.div
-            initial={{ height: 0 }}
-            animate={{ height: 'auto' }}
-            exit={{ height: 0 }}
-            className="overflow-hidden"
-          >
-            <div className="p-4 space-y-3 max-h-[500px] overflow-y-auto">
-              {records.length === 0 ? (
-                <div className="text-center py-8 text-slate-500">
-                  <p className="text-xs font-bold uppercase tracking-widest">
-                    No hay registros
-                  </p>
-                </div>
-              ) : (
-                records.map(record => (
-                  <ExpiryItemCard
-                    key={record.id}
-                    record={record}
-                    onDelete={onDelete}
-                    onSelect={onSelect}
-                    onViewDetail={onViewDetail}
-                    isSelected={selectedIds.has(record.id)}
-                  />
-                ))
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <motion.div
+        initial={false}
+        animate={{ height: isExpanded ? 'auto' : 0 }}
+        className="overflow-hidden"
+      >
+        <div className="p-3 space-y-2 max-h-[400px] overflow-y-auto">
+          {records.length === 0 ? (
+            <p className={`text-center py-4 text-xs ${isDark ? 'text-neutral-500' : 'text-neutral-500'}`}>
+              Sin registros
+            </p>
+          ) : (
+            records.map(record => (
+              <ModuleCard
+                key={record.id}
+                id={record.id}
+                title={record.productName || record.barcode}
+                subtitle={record.location || ''}
+                meta={`${record.mm}/${record.yyyy} • ${record.quantity} unidades`}
+                selected={selectedIds.has(record.id)}
+                onClick={() => onViewDetail(record)}
+                onSelect={onSelect}
+                showCheckbox
+                isDark={isDark}
+                children={
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onDelete(record.id); }}
+                    className={`p-1.5 rounded-lg ${isDark ? 'hover:bg-neutral-700' : 'hover:bg-neutral-100'}`}
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-neutral-500" />
+                  </button>
+                }
+              />
+            ))
+          )}
+        </div>
+      </motion.div>
     </div>
   );
 };
@@ -127,14 +132,12 @@ const ExpirySection: React.FC<ExpirySectionProps> = ({
 // ============================================================================
 // COMPONENTE PRINCIPAL: ExpiryPage
 // ============================================================================
-export const ExpiryPage: React.FC = () => {
+const ExpiryPage: React.FC = () => {
   const settings = useAppStore(state => state.settings);
-  const theme = (settings?.theme as 'dark' | 'light' | 'high-contrast') || 'dark';
-  const isDark = theme === 'dark';
+  const isDark = settings?.theme !== 'light';
 
   const {
     filteredRecords,
-    stats,
     filters,
     isLoading,
     isSyncing,
@@ -153,6 +156,16 @@ export const ExpiryPage: React.FC = () => {
   });
 
   const [showCaptureModal, setShowCaptureModal] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Filtros
+  const filterOptions = [
+    { value: 'all', label: 'Todos' },
+    { value: 'expired', label: 'Vencidos' },
+    { value: 'critical', label: 'Críticos' },
+    { value: 'next', label: 'Próximos' },
+    { value: 'safe', label: 'Vigentes' },
+  ];
 
   // Atajos de teclado
   useEffect(() => {
@@ -160,43 +173,11 @@ export const ExpiryPage: React.FC = () => {
       const target = e.target as HTMLElement;
       const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
       
-      // Escape: Limpiar búsqueda
       if (e.key === 'Escape' && isInput) {
         target.blur();
         actions.setSearchQuery('');
-        return;
-      }
-
-      // Alt + N: Nuevo registro
-      if (e.altKey && e.key.toLowerCase() === 'n') {
-        e.preventDefault();
-        setShowCaptureModal(true);
-        return;
       }
       
-      // Alt + C: Críticos
-      if (e.altKey && e.key.toLowerCase() === 'c') {
-        e.preventDefault();
-        actions.setSelectedStatuses(
-          filters.selectedStatuses.includes(ExpiryStatus.CRITICAL)
-            ? filters.selectedStatuses.filter(s => s !== ExpiryStatus.CRITICAL)
-            : [...filters.selectedStatuses, ExpiryStatus.CRITICAL]
-        );
-        return;
-      }
-      
-      // Alt + V: Vencidos
-      if (e.altKey && e.key.toLowerCase() === 'v') {
-        e.preventDefault();
-        actions.setSelectedStatuses(
-          filters.selectedStatuses.includes(ExpiryStatus.EXPIRED)
-            ? filters.selectedStatuses.filter(s => s !== ExpiryStatus.EXPIRED)
-            : [...filters.selectedStatuses, ExpiryStatus.EXPIRED]
-        );
-        return;
-      }
-      
-      // /
       if (e.key === '/' && !isInput) {
         e.preventDefault();
         document.querySelector<HTMLInputElement>('input[type="text"]')?.focus();
@@ -205,33 +186,26 @@ export const ExpiryPage: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [filters.selectedStatuses, actions]);
+  }, [actions]);
 
   const toggleSection = (section: keyof typeof expandedSections) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
 
   const handleDelete = useCallback(async (id: string) => {
-    if (window.confirm('¿Eliminar este registro de vencimiento?')) {
-      try {
-        await actions.deleteRecord(id);
-      } catch {
-        toast.error('Error al eliminar');
-      }
+    try {
+      await actions.deleteRecord(id);
+    } catch {
+      toast.error('Error al eliminar');
     }
   }, [actions]);
 
   const handleBulkDelete = useCallback(async () => {
     if (selectedIds.size === 0) return;
-    if (window.confirm(`¿Eliminar ${selectedIds.size} registros?`)) {
-      try {
-        await actions.bulkDelete(Array.from(selectedIds));
-      } catch {
-        toast.error('Error al eliminar');
-      }
+    try {
+      await actions.bulkDelete(Array.from(selectedIds));
+    } catch {
+      toast.error('Error al eliminar');
     }
   }, [selectedIds, actions]);
 
@@ -246,104 +220,78 @@ export const ExpiryPage: React.FC = () => {
   const withdrawalRecords = filteredRecords.filter(r => r.status === ExpiryStatus.WITHDRAWAL);
   const nextExpiryRecords = filteredRecords.filter(r => r.status === ExpiryStatus.NEXT_EXPIRY);
   const safeRecords = filteredRecords.filter(r => r.status === ExpiryStatus.SAFE);
-
   const totalCount = filteredRecords.length;
 
   return (
-    <div className={`h-full flex flex-col overflow-hidden ${isDark ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'}`}>
-      {/* Header */}
-      <ModuleHeader
-        title="Vencimientos"
-        subtitle={`${totalCount} registros`}
-        hideTitleOnMobile={false}
-        hideBackButtonOnMobile={true}
-        actions={
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowCaptureModal(true)}
-              className="w-10 h-10 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 flex items-center justify-center transition-colors"
-              title="Nuevo vencimiento (Alt+N)"
-            >
-              <Plus className="w-5 h-5 text-emerald-400" />
-            </button>
-            <button
-              onClick={() => actions.syncRecords()}
-              disabled={isSyncing}
-              className="w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors disabled:opacity-50"
-              title="Sincronizar"
-            >
-              <RefreshCw className={`w-5 h-5 ${isSyncing ? 'animate-spin' : ''}`} />
-            </button>
-            <button
-              onClick={handleBulkDelete}
-              disabled={selectedIds.size === 0}
-              className="w-10 h-10 rounded-xl bg-red-500/10 hover:bg-red-500/20 flex items-center justify-center transition-colors disabled:opacity-50"
-              title="Eliminar seleccionados"
-            >
-              <Trash2 className="w-5 h-5 text-red-400" />
-            </button>
-          </div>
-        }
-      />
-
-      {/* Search & Filters */}
-      <div className="px-4 py-3 space-y-3">
-        <div className={`
-          flex items-center gap-3 px-4 py-3 rounded-2xl border
-          ${isDark ? 'bg-white/5 border-white/10' : 'bg-white border-slate-200'}
-        `}>
-          <Search className="w-5 h-5 text-slate-400 shrink-0" />
-          <input
-            type="text"
-            placeholder="Buscar por producto, barcode, ubicación... (presiona /)"
-            value={filters.searchQuery}
-            onChange={(e) => actions.setSearchQuery(e.target.value)}
-            className={`
-              flex-1 bg-transparent outline-none text-sm font-medium
-              ${isDark ? 'placeholder:text-slate-500 text-white' : 'placeholder:text-slate-400 text-slate-900'}
-            `}
-          />
-          {filters.searchQuery && (
-            <button
-              onClick={() => actions.setSearchQuery('')}
-              className="text-slate-400 hover:text-white"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-
-        {/* Stats Bar */}
-        <ExpiryStatsBar
-          stats={stats}
-          selectedStatuses={filters.selectedStatuses}
-          onStatusFilter={actions.setSelectedStatuses}
+    <ModulePage
+      title="Vencimientos"
+      subtitle={`${totalCount} registros`}
+      icon={<Calendar className={`w-5 h-5 ${isDark ? 'text-neutral-400' : 'text-neutral-600'}`} />}
+      isDark={isDark}
+      isLoading={isLoading}
+      onRefresh={actions.syncRecords}
+      actions={
+        <>
+          <button
+            onClick={handleBulkDelete}
+            disabled={selectedIds.size === 0}
+            className={`p-2.5 rounded-xl transition-colors ${isDark ? 'bg-neutral-900 text-neutral-400 hover:text-neutral-200' : 'bg-neutral-100 text-neutral-600 hover:text-neutral-900'} disabled:opacity-30`}
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </>
+      }
+      fab={
+        <ActionFAB
+          onClick={() => setShowCaptureModal(true)}
+          icon={<Plus className="w-5 h-5" />}
+          isDark={isDark}
         />
-      </div>
+      }
+    >
+      {/* Search & Filters */}
+      <FilterSearch
+        placeholder="Buscar vencimientos..."
+        value={filters.searchQuery}
+        onChange={actions.setSearchQuery}
+        filters={filterOptions}
+        selectedFilter="all"
+        onFilterChange={() => {}}
+        isDark={isDark}
+        showFilters={showFilters}
+        onToggleFilters={() => setShowFilters(!showFilters)}
+      />
 
       {/* Selection info */}
       {selectedIds.size > 0 && (
-        <div className="px-4 py-2 bg-blue-500/10 border-y border-blue-500/20">
+        <div className={`mt-3 p-3 rounded-xl ${isDark ? 'bg-neutral-900 border border-neutral-800' : 'bg-neutral-100 border border-neutral-200'}`}>
           <div className="flex items-center justify-between">
-            <p className="text-xs font-bold text-blue-400">
+            <p className={`text-xs font-medium ${isDark ? 'text-neutral-300' : 'text-neutral-700'}`}>
               {selectedIds.size} seleccionado(s)
             </p>
             <button
               onClick={actions.clearSelection}
-              className="text-xs text-blue-400 hover:text-blue-300"
+              className={`text-xs ${isDark ? 'text-neutral-500 hover:text-neutral-300' : 'text-neutral-500 hover:text-neutral-700'}`}
             >
-              Limpiar selección
+              Limpiar
             </button>
           </div>
         </div>
       )}
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="mt-4 space-y-3">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
-            <RefreshCw className="w-8 h-8 animate-spin text-slate-400" />
+            <RefreshCw className={`w-6 h-6 animate-spin ${isDark ? 'text-neutral-500' : 'text-neutral-400'}`} />
           </div>
+        ) : filteredRecords.length === 0 ? (
+          <EmptyState
+            title="Sin vencimientos"
+            description="No hay vencimientos registrados aún"
+            icon={<Calendar className="w-8 h-8" />}
+            isDark={isDark}
+          />
         ) : (
           <>
             <ExpirySection
@@ -356,8 +304,7 @@ export const ExpiryPage: React.FC = () => {
               onSelect={actions.toggleSelection}
               onViewDetail={handleViewDetail}
               selectedIds={selectedIds}
-              theme={theme}
-              colorClass="bg-red-500/20 text-red-400"
+              isDark={isDark}
             />
 
             <ExpirySection
@@ -370,8 +317,7 @@ export const ExpiryPage: React.FC = () => {
               onSelect={actions.toggleSelection}
               onViewDetail={handleViewDetail}
               selectedIds={selectedIds}
-              theme={theme}
-              colorClass="bg-amber-500/20 text-amber-400"
+              isDark={isDark}
             />
 
             <ExpirySection
@@ -384,8 +330,7 @@ export const ExpiryPage: React.FC = () => {
               onSelect={actions.toggleSelection}
               onViewDetail={handleViewDetail}
               selectedIds={selectedIds}
-              theme={theme}
-              colorClass="bg-orange-500/20 text-orange-400"
+              isDark={isDark}
             />
 
             <ExpirySection
@@ -398,8 +343,7 @@ export const ExpiryPage: React.FC = () => {
               onSelect={actions.toggleSelection}
               onViewDetail={handleViewDetail}
               selectedIds={selectedIds}
-              theme={theme}
-              colorClass="bg-yellow-500/20 text-yellow-400"
+              isDark={isDark}
             />
 
             <ExpirySection
@@ -412,8 +356,7 @@ export const ExpiryPage: React.FC = () => {
               onSelect={actions.toggleSelection}
               onViewDetail={handleViewDetail}
               selectedIds={selectedIds}
-              theme={theme}
-              colorClass="bg-emerald-500/20 text-emerald-400"
+              isDark={isDark}
             />
           </>
         )}
@@ -426,10 +369,8 @@ export const ExpiryPage: React.FC = () => {
         onClose={() => actions.setIsDetailModalOpen(false)}
         onDelete={async () => {
           if (selectedRecord) {
-            if (window.confirm('¿Eliminar este registro de vencimiento?')) {
-              await actions.deleteRecord(selectedRecord.id);
-              actions.setIsDetailModalOpen(false);
-            }
+            await actions.deleteRecord(selectedRecord.id);
+            actions.setIsDetailModalOpen(false);
           }
         }}
         onSync={() => actions.syncRecords()}
@@ -441,7 +382,6 @@ export const ExpiryPage: React.FC = () => {
         onClose={() => setShowCaptureModal(false)}
         onSubmit={async (data) => {
           try {
-            // Crear registro usando el hook con políticas del proveedor
             await actions.createRecord({
               barcode: data.barcode,
               productName: data.productName,
@@ -455,17 +395,17 @@ export const ExpiryPage: React.FC = () => {
               hasCanje: data.hasCanje,
               withdrawalDays: data.withdrawalDays,
             });
-            toast.success('Vencimiento registrado exitosamente');
+            toast.success('Vencimiento registrado');
             setShowCaptureModal(false);
             actions.clearFilters();
           } catch (error) {
-            toast.error('Error al registrar vencimiento');
+            toast.error('Error al registrar');
             throw error;
           }
         }}
-        theme={theme}
+        theme={isDark ? 'dark' : 'light'}
       />
-    </div>
+    </ModulePage>
   );
 };
 

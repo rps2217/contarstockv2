@@ -1,21 +1,25 @@
+/**
+ * Dashboard - Página principal con módulos de navegación
+ * 
+ * Diseño monocromático de grises, sin estadísticas.
+ */
+
 import React, { useState, useEffect, memo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
-  Database,
   Settings,
-  FileText,
-  Package,
-  CheckCircle2,
-  AlertCircle,
-  Zap,
-  History,
-  Users,
-  Calendar,
-  Plus,
-  FileSpreadsheet,
-  RefreshCw,
   ClipboardList,
+  History,
+  Zap,
+  Database,
+  FileSpreadsheet,
+  Calendar,
+  AlertCircle,
+  RefreshCw,
+  FileText,
+  Plus,
+  CheckCircle2,
 } from "lucide-react";
 import { useAppStore } from '@/stores';
 import { SoundFX } from "../../services/audio";
@@ -43,170 +47,126 @@ const Dashboard: React.FC = () => {
 
   const isDark = settings?.theme !== 'light';
 
+  // Módulos principales
+  const modules = [
+    { icon: <Plus />, label: "Nuevo Conteo", path: "new", primary: true },
+    { icon: <ClipboardList />, label: "Conteo", path: "/counting" },
+    { icon: <History />, label: "Recepción", path: "/reception" },
+    { icon: <Zap />, label: "Ráfaga", path: "/massive/BURST-MODE" },
+    { icon: <FileSpreadsheet />, label: "Carga", path: "/expected-orders" },
+    { icon: <Calendar />, label: "Vencimientos", path: "/expiry" },
+    { icon: <AlertCircle />, label: "Eventos", path: "/events" },
+    { icon: <FileText />, label: "Reportes", path: "/reports" },
+    { icon: <Database />, label: "Inventario", path: "/database" },
+    { icon: <RefreshCw />, label: "Sincronizar", path: "/sync" },
+    { icon: <Settings />, label: "Ajustes", path: "/settings" },
+  ];
+
+  const handleModuleClick = (path: string) => {
+    if (path === "new") {
+      setStartSessionModalOpen(true);
+    } else {
+      navigate(path);
+    }
+  };
+
   return (
-    <div className={`h-full w-full ${isDark ? "bg-slate-950 selection:bg-blue-500/30" : "bg-slate-50 selection:bg-blue-500/20"} overflow-y-auto no-scrollbar pb-32 font-sans relative`}>
+    <div className={`h-full w-full ${isDark ? "bg-neutral-950" : "bg-neutral-50"} overflow-y-auto no-scrollbar pb-32 font-sans relative`}>
       <AnimatePresence>
         {successMessage && (
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[200] bg-emerald-600/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center"
+            className="fixed inset-0 z-[200] bg-neutral-900/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center"
           >
             <motion.div 
               initial={{ scale: 0.5, y: 20 }}
               animate={{ scale: 1, y: 0 }}
-              className="bg-white rounded-full p-8 mb-8 shadow-2xl"
+              className="bg-neutral-800 rounded-full p-8 mb-8"
             >
-              <CheckCircle2 className="w-24 h-24 text-emerald-600" />
+              <CheckCircle2 className="w-24 h-24 text-neutral-300" />
             </motion.div>
-            <h2 className="text-5xl font-black text-white tracking-tighter uppercase italic leading-tight max-w-2xl">
+            <h2 className={`text-4xl font-bold tracking-tight max-w-2xl ${isDark ? "text-neutral-100" : "text-neutral-900"}`}>
               {successMessage}
             </h2>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* HEADER */}
-      <header className={`px-4 py-4 ${isDark ? "bg-slate-900 border-white/5" : "bg-white border-slate-200/80"} border-b shrink-0`}>
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <h1 className="text-xl md:text-2xl font-bold">
-            <span className={isDark ? "text-white" : "text-slate-900"}>COUNT</span>
-            <span className="text-blue-600 dark:text-blue-400">PRO</span>
-          </h1>
+      {/* Header */}
+      <header className={`px-4 py-6 ${isDark ? "bg-neutral-950 border-neutral-800" : "bg-white border-neutral-200"} border-b shrink-0`}>
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
+          <div>
+            <h1 className={`text-xl font-bold tracking-tight ${isDark ? "text-white" : "text-neutral-900"}`}>
+              CountPro
+            </h1>
+            <p className={`text-xs mt-0.5 ${isDark ? "text-neutral-500" : "text-neutral-500"}`}>
+              Gestión de inventario
+            </p>
+          </div>
           <button
             onClick={() => navigate("/settings")}
-            className={`p-2 rounded-lg transition-colors ${isDark ? "hover:bg-white/10" : "hover:bg-slate-100"}`}
+            className={`p-2.5 rounded-xl transition-colors ${isDark ? "bg-neutral-900 hover:bg-neutral-800 text-neutral-400" : "bg-neutral-100 hover:bg-neutral-200 text-neutral-600"}`}
           >
-            <Settings className="w-5 h-5 text-slate-500" />
+            <Settings className="w-5 h-5" />
           </button>
         </div>
       </header>
 
-      <main className="p-4 md:p-6 max-w-7xl mx-auto">
-        {/* Grid de módulos */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-            
-            <SimpleModule 
-              icon={<Plus />} 
-              label="Nuevo Conteo" 
-              color="bg-blue-600" 
-              onClick={() => setStartSessionModalOpen(true)}
-              className="col-span-2"
-            />
+      {/* Módulos */}
+      <main className="p-4 max-w-4xl mx-auto">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
+          {modules.map((module, index) => (
+            <motion.button
+              key={module.path}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => handleModuleClick(module.path)}
+              className={`
+                relative flex flex-col items-center justify-center gap-2 p-5 rounded-2xl
+                border transition-all duration-150
+                ${module.primary 
+                  ? isDark 
+                    ? "bg-neutral-100 text-neutral-900 border-neutral-200" 
+                    : "bg-neutral-900 text-white border-neutral-800"
+                  : isDark 
+                    ? "bg-neutral-900 border-neutral-800 hover:bg-neutral-800/80 hover:border-neutral-700" 
+                    : "bg-white border-neutral-200 hover:bg-neutral-50 hover:border-neutral-300"
+                }
+              `}
+            >
+              <div className={`
+                p-2.5 rounded-xl
+                ${module.primary 
+                  ? isDark ? "bg-neutral-800 text-white" : "bg-neutral-700 text-white"
+                  : isDark ? "bg-neutral-800 text-neutral-400" : "bg-neutral-100 text-neutral-600"
+                }
+              `}>
+                {React.cloneElement(module.icon as React.ReactElement, { className: 'w-5 h-5' })}
+              </div>
+              <span className={`text-xs font-medium ${module.primary ? (isDark ? "text-neutral-900" : "text-white") : (isDark ? "text-neutral-300" : "text-neutral-700")}`}>
+                {module.label}
+              </span>
+            </motion.button>
+          ))}
+        </div>
 
-            <SimpleModule 
-              icon={<ClipboardList />} 
-              label="Conteo" 
-              color="bg-blue-500" 
-              onClick={() => navigate("/counting")}
-            />
-
-            <SimpleModule 
-              icon={<History />} 
-              label="Recepción" 
-              color="bg-emerald-500" 
-              onClick={() => navigate("/reception")} 
-            />
-
-            <SimpleModule 
-              icon={<Zap />} 
-              label="Ráfaga" 
-              color="bg-rose-500" 
-              onClick={() => navigate("/massive/BURST-MODE")} 
-            />
-
-            <SimpleModule 
-              icon={<Database />} 
-              label="Inventario" 
-              color="bg-amber-500" 
-              onClick={() => navigate("/database")} 
-            />
-
-            <SimpleModule 
-              icon={<FileSpreadsheet />} 
-              label="Carga" 
-              color="bg-cyan-500" 
-              onClick={() => navigate("/expected-orders")} 
-            />
-
-            <SimpleModule 
-              icon={<Calendar />} 
-              label="Vencim." 
-              color="bg-orange-500" 
-              onClick={() => navigate("/expiry")} 
-            />
-
-            <SimpleModule 
-              icon={<Users />} 
-              label="Clientes" 
-              color="bg-violet-500" 
-              onClick={() => navigate("/customers")} 
-            />
-
-            <SimpleModule 
-              icon={<AlertCircle />} 
-              label="Eventos" 
-              color="bg-purple-500" 
-              onClick={() => navigate("/events")} 
-            />
-
-            <SimpleModule 
-              icon={<Package />} 
-              label="Proveed." 
-              color="bg-teal-500" 
-              onClick={() => navigate("/providers")} 
-            />
-
-            <SimpleModule 
-              icon={<RefreshCw />} 
-              label="Sync" 
-              color="bg-slate-500" 
-              onClick={() => navigate("/sync")} 
-            />
-
-            <SimpleModule 
-              icon={<FileText />} 
-              label="Reportes" 
-              color="bg-indigo-500" 
-              onClick={() => navigate("/reports")} 
-            />
-
-          </div>
+        {/* Info adicional */}
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className={`mt-8 p-4 rounded-xl ${isDark ? "bg-neutral-900 border border-neutral-800" : "bg-white border border-neutral-200"}`}
+        >
+          <p className={`text-xs text-center ${isDark ? "text-neutral-500" : "text-neutral-500"}`}>
+            Sincronización automática activada • Última sync hace 2 min
+          </p>
+        </motion.div>
       </main>
     </div>
-  );
-};
-
-// ============================================
-// SIMPLE MODULE BUTTON
-// ============================================
-interface SimpleModuleProps {
-  icon: React.ReactNode;
-  label: string;
-  color: string;
-  onClick: () => void;
-  className?: string;
-}
-
-const SimpleModule: React.FC<SimpleModuleProps> = ({ icon, label, color, onClick, className = "" }) => {
-  return (
-    <motion.button
-      whileTap={{ scale: 0.95 }}
-      onClick={onClick}
-      className={`
-        p-4 rounded-xl border border-slate-200/50 dark:border-white/10 
-        bg-white dark:bg-slate-900/50 
-        hover:shadow-md hover:border-slate-300 dark:hover:border-white/20
-        transition-all flex flex-col items-center gap-2
-        ${className}
-      `}
-    >
-      <div className={`p-2 rounded-lg ${color} text-white`}>
-        {React.cloneElement(icon as React.ReactElement, { className: 'w-5 h-5' })}
-      </div>
-      <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{label}</span>
-    </motion.button>
   );
 };
 

@@ -1,46 +1,102 @@
 /**
  * Design Tokens - Sistema de diseno unificado
- * Centraliza colores, espaciado, tipografia y sombras
+ * Paleta monocromática de grises inspirada en ChatGPT/OpenHands
  */
 
+import { CSSProperties } from 'react';
+
 // ============================================
-// COLORES
+// GRISES - Paleta monocromática
+// ============================================
+export const grays = {
+  // Fondos claros (Light mode)
+  light: {
+    bg: '#ffffff',
+    bgSecondary: '#f6f6f6',
+    bgTertiary: '#ebebeb',
+    surface: '#ffffff',
+    surfaceHover: '#f0f0f0',
+  },
+  
+  // Fondos oscuros (Dark mode)
+  dark: {
+    bg: '#212121',
+    bgSecondary: '#2d2d2d',
+    bgTertiary: '#383838',
+    surface: '#2d2d2d',
+    surfaceHover: '#383838',
+  },
+  
+  // Bordes
+  border: {
+    light: '#e5e5e5',
+    dark: '#404040',
+    subtle: '#3a3a3a',
+  },
+  
+  // Textos
+  text: {
+    primary: {
+      light: '#1a1a1a',
+      dark: '#f5f5f5',
+    },
+    secondary: {
+      light: '#6b6b6b',
+      dark: '#a3a3a3',
+    },
+    tertiary: {
+      light: '#999999',
+      dark: '#737373',
+    },
+    inverse: {
+      light: '#ffffff',
+      dark: '#1a1a1a',
+    },
+  },
+  
+  // Status con grises
+  status: {
+    success: { light: '#22c55e', dark: '#4ade80' },
+    warning: { light: '#f59e0b', dark: '#fbbf24' },
+    error: { light: '#ef4444', dark: '#f87171' },
+    info: { light: '#6b7280', dark: '#9ca3af' }, // Gris para info
+  },
+  
+  // Accent (minimalista, solo para acciones importantes)
+  accent: {
+    light: '#404040',
+    dark: '#525252',
+  },
+} as const;
+
+// ============================================
+// COLORES (compatibilidad hacia atrás)
 // ============================================
 export const colors = {
-  // Primarios
   primary: {
     DEFAULT: 'hsl(var(--color-primary))',
     foreground: 'hsl(var(--color-primary-foreground))',
-    50: '#eff6ff',
-    100: '#dbeafe',
-    500: '#3b82f6',
-    600: '#2563eb',
-    700: '#1d4ed8',
   },
   
-  // Secundarios
   secondary: {
     DEFAULT: 'hsl(var(--color-secondary))',
     foreground: 'hsl(var(--color-secondary-foreground))',
   },
   
-  // Brand colors (usados en la app)
+  // Status usando la nueva paleta de grises
   brand: {
-    info: '#3b82f6',      // Azul
-    success: '#22c55e',   // Verde
-    warning: '#f59e0b',   // Amber
-    danger: '#ef4444',    // Rojo
-    purple: '#8b5cf6',    // Violeta
+    info: grays.status.info.light,
+    success: grays.status.success.light,
+    warning: grays.status.warning.light,
+    danger: grays.status.error.light,
   },
   
-  // Status
   status: {
-    synced: '#22c55e',
-    pending: '#f59e0b',
-    error: '#ef4444',
+    synced: grays.status.success.light,
+    pending: grays.status.warning.light,
+    error: grays.status.error.light,
   },
   
-  // Neutros
   neutral: {
     50: '#fafafa',
     100: '#f4f4f5',
@@ -55,7 +111,7 @@ export const colors = {
     950: '#09090b',
   },
   
-  // Expiry status
+  // Expiry status con colores significativos
   expiry: {
     expired: '#ef4444',
     critical: '#f97316',

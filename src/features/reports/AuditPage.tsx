@@ -1,17 +1,12 @@
 /**
  * ReportsPage - Página de Consolidación e Historial
  * 
- * Arquitectura Lego: Este componente es un orquestador puro que delega toda la lógica
- * al hook useReports y rendering a componentes especializados.
- * 
- * Antes: 463 líneas
- * Después: ~150 líneas
+ * Diseño monocromático de grises.
  */
 
 import React, { useCallback, useMemo, useState } from "react";
 import { 
   RefreshCw, 
-  Boxes, 
   FileSpreadsheet,
   TrendingUp,
   History,
@@ -22,7 +17,7 @@ import {
   ChevronLeft,
   Plus,
   Eraser,
-  CheckCircle2
+  FileText,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ReportDetail } from "./components/ReportDetail";
@@ -126,93 +121,78 @@ export const AuditPage: React.FC = () => {
   }
 
   return (
-    <div className={`flex flex-col h-full w-full page-transition px-4 pt-6 pb-24 md:pb-6 overflow-y-auto ${
-      isDark ? 'bg-brand-dark text-white' : 'bg-slate-50 text-slate-800'
+    <div className={`flex flex-col h-full w-full px-4 pt-4 pb-24 md:pb-6 overflow-y-auto ${
+      isDark ? 'bg-neutral-950 text-white' : 'bg-neutral-50 text-neutral-900'
     }`}>
-      {/* CABECERA PRINCIPAL */}
-      <div className="flex items-center justify-between mb-2">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <Boxes className={`w-8 h-8 ${isDark ? 'text-brand-info animate-pulse' : 'text-indigo-600'}`} />
+          <div className={`p-2.5 rounded-xl ${isDark ? 'bg-neutral-900' : 'bg-neutral-100'}`}>
+            <FileText className={`w-5 h-5 ${isDark ? 'text-neutral-400' : 'text-neutral-600'}`} />
+          </div>
           <div>
-            <h1 className={`text-2xl md:text-3xl font-black tracking-tighter uppercase italic leading-none ${
-              isDark ? 'text-white' : 'text-slate-900'
+            <h1 className={`text-lg font-bold tracking-tight ${
+              isDark ? 'text-white' : 'text-neutral-900'
             }`}>
-              Consolidación e Historial
+              Reportes
             </h1>
-            <p className={`text-[10px] uppercase font-bold tracking-widest mt-1 flex items-center gap-1.5 ${
-              isDark ? 'text-slate-400' : 'text-slate-500'
+            <p className={`text-xs ${
+              isDark ? 'text-neutral-500' : 'text-neutral-500'
             }`}>
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Sincronización Bidireccional de Auditorías Realizadas
+              Consolidación e historial
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
+          <NetworkStatus />
           {activeTab === 'live' && (
             <button
               onClick={() => handleExportLiveToExcel(filteredLiveConsolidated)}
               disabled={filteredLiveConsolidated.length === 0}
-              className={`p-2.5 rounded-xl transition-all duration-300 flex items-center justify-center gap-1.5 border text-xs font-black uppercase tracking-wider ${
+              className={`p-2.5 rounded-xl border text-xs font-medium ${
                 isDark 
-                  ? "text-emerald-400 border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/20" 
-                  : "text-emerald-700 border-emerald-200 bg-emerald-50 hover:bg-emerald-100"
-              }`}
-              title="Descargar consola de consolidación en formato Excel"
+                  ? "border-neutral-800 bg-neutral-900 hover:bg-neutral-800 text-neutral-300" 
+                  : "border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-700"
+              } disabled:opacity-50`}
             >
-              <FileSpreadsheet className="w-5 h-5 animate-pulse" />
-              <span className="hidden sm:inline">Exportar Excel</span>
+              <FileSpreadsheet className="w-4 h-4" />
             </button>
           )}
 
           <button
             onClick={handleRefreshAll}
             disabled={state.isPulling || state.isLiveLoading}
-            className={`p-2.5 rounded-xl transition-all duration-300 flex items-center justify-center border ${
-              state.isPulling || state.isLiveLoading 
-                ? "animate-spin opacity-50" 
-                : "hover:scale-105 active:scale-95"
-            } ${
+            className={`p-2.5 rounded-xl border ${
               isDark 
-                ? "text-brand-info border-white/5 bg-white/5 hover:bg-white/10" 
-                : "text-indigo-600 border-indigo-200 bg-white shadow-sm hover:bg-indigo-50"
-            }`}
-            title="Refrescar datos de la nube en tiempo real"
+                ? "border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-neutral-200" 
+                : "border-neutral-200 bg-white text-neutral-600 hover:text-neutral-900"
+            } ${state.isPulling || state.isLiveLoading ? "animate-spin opacity-50" : ""}`}
           >
-            <RefreshCw className="w-5 h-5" />
+            <RefreshCw className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* ReportsHeader */}
-      <div className="flex items-center justify-between mb-4">
-        <button
-          onClick={() => navigate("/dashboard")}
-          className={`p-2 rounded-full ${isDark ? 'hover:bg-white/5' : 'hover:bg-slate-100'}`}
-        >
-          <ChevronLeft className="w-6 h-6" />
-        </button>
-        <NetworkStatus />
-      </div>
-
+      {/* Action buttons */}
       <div className="grid grid-cols-2 gap-3 mb-4">
         <button
           onClick={actions.handleCleanSynced}
           disabled={state.isCleaning}
-          className={`border font-black py-3 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 ${
-            isDark ? 'bg-white/5 border-white/10' : 'bg-white border-slate-200'
+          className={`border font-medium py-3 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 ${
+            isDark ? 'bg-neutral-900 border-neutral-800 text-neutral-300' : 'bg-white border-neutral-200 text-neutral-700'
           }`}
         >
           <Eraser className="w-4 h-4" />
           <span className="text-xs">Limpiar</span>
           {state.syncedCount > 0 && (
-            <span className="text-[10px] text-slate-400">({state.syncedCount})</span>
+            <span className="text-[10px] text-neutral-500">({state.syncedCount})</span>
           )}
         </button>
         <button
           onClick={() => actions.setIsStartModalOpen(true)}
-          className={`font-black py-3 rounded-xl transition-all flex items-center justify-center gap-2 active:scale-95 ${
-            isDark ? 'bg-brand-warning text-black' : 'bg-blue-600 text-white'
+          className={`font-medium py-3 rounded-xl transition-all flex items-center justify-center gap-2 active:scale-95 ${
+            isDark ? 'bg-neutral-100 text-neutral-900' : 'bg-neutral-900 text-white'
           }`}
         >
           <Plus className="w-4 h-4" />
@@ -220,64 +200,61 @@ export const AuditPage: React.FC = () => {
         </button>
       </div>
 
-      {/* SELECTOR DE PESTAÑAS */}
-      <div className={`mt-2 p-1.5 rounded-2xl flex items-center gap-2 border ${
-        isDark ? 'bg-brand-surface border-white/5' : 'bg-slate-100 border-slate-200'
+      {/* Tabs */}
+      <div className={`p-1 rounded-xl flex items-center gap-1 border mb-4 ${
+        isDark ? 'bg-neutral-900 border-neutral-800' : 'bg-neutral-100 border-neutral-200'
       }`}>
         <button
           onClick={() => {
             setActiveTab('live');
             actions.fetchLiveConsolidatedData();
           }}
-          className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
+          className={`flex-1 py-2.5 px-3 rounded-lg text-xs font-medium flex items-center justify-center gap-2 transition-all ${
             activeTab === 'live'
               ? isDark 
-                ? 'bg-brand-warning text-black shadow-lg shadow-brand-warning/10 scale-100'
-                : 'bg-white text-indigo-700 shadow border border-indigo-100 scale-100'
-              : 'text-slate-400 hover:text-slate-300'
+                ? 'bg-neutral-800 text-white' 
+                : 'bg-white text-neutral-900 shadow-sm'
+              : isDark ? 'text-neutral-500 hover:text-neutral-300' : 'text-neutral-500 hover:text-neutral-700'
           }`}
         >
           <TrendingUp className="w-4 h-4" />
-          Consolidación en Vivo (Nube)
+          Consolidación
         </button>
         <button
           onClick={() => setActiveTab('sessions')}
-          className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
+          className={`flex-1 py-2.5 px-3 rounded-lg text-xs font-medium flex items-center justify-center gap-2 transition-all ${
             activeTab === 'sessions'
               ? isDark 
-                ? 'bg-brand-warning text-black shadow-lg shadow-brand-warning/10 scale-100'
-                : 'bg-white text-indigo-700 shadow border border-indigo-100 scale-100'
-              : 'text-slate-400 hover:text-slate-300'
+                ? 'bg-neutral-800 text-white' 
+                : 'bg-white text-neutral-900 shadow-sm'
+              : isDark ? 'text-neutral-500 hover:text-neutral-300' : 'text-neutral-500 hover:text-neutral-700'
           }`}
         >
           <History className="w-4 h-4" />
-          Historial de Carga / Bultos
+          Historial
         </button>
       </div>
 
-      {/* ALERTA DE SINCRONIZACIÓN PENDIENTE */}
+      {/* Sync Alert */}
       {state.pendingSyncCount > 0 && (
         <button
           onClick={() => navigate("/sync")}
-          className="w-full mt-4 bg-brand-warning p-4 rounded-2xl flex items-center justify-between shadow-lg shadow-brand-warning/20 animate-pulse group border-b-4 border-brand-warning/80 shrink-0"
+          className={`w-full mb-4 p-3 rounded-xl flex items-center justify-between border transition-colors ${
+            isDark ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-neutral-200'
+          }`}
         >
           <div className="flex items-center gap-3">
-            <WifiOff className="w-5 h-5 text-black" />
-            <div className="text-left">
-              <div className="text-[10px] font-black text-black uppercase tracking-widest">
-                Sincronización Pendiente
-              </div>
-              <div className="text-[9px] text-black/60 font-bold uppercase">
-                Hay {state.pendingSyncCount} registros creados offline esperando ser subidos.
-              </div>
-            </div>
+            <WifiOff className={`w-4 h-4 ${isDark ? 'text-neutral-400' : 'text-neutral-600'}`} />
+            <span className={`text-xs ${isDark ? 'text-neutral-300' : 'text-neutral-700'}`}>
+              {state.pendingSyncCount} registros pendientes de sync
+            </span>
           </div>
-          <ArrowRight className="w-4 h-4 text-black group-hover:translate-x-1 transition-transform" />
+          <ArrowRight className={`w-4 h-4 ${isDark ? 'text-neutral-500' : 'text-neutral-400'}`} />
         </button>
       )}
 
-      {/* FILTRO DE BÚSQUEDA */}
-      <div className="mt-4 mb-4 shrink-0">
+      {/* Search */}
+      <div className="mb-4">
         <ManagementSearchBar
           searchQuery={state.searchQuery}
           setSearchQuery={actions.setSearchQuery}
@@ -285,13 +262,13 @@ export const AuditPage: React.FC = () => {
           onOpenAdd={() => actions.setIsStartModalOpen(true)}
           onClearFilters={() => actions.setSearchQuery('')}
           activeFiltersCount={0}
-          placeholder={activeTab === 'live' ? "Filtrar consolidado por SKU o descripción..." : "Filtrar bultos por etiqueta o ERP..."}
-          accentColor={activeTab === 'live' ? "blue" : "indigo"}
+          placeholder={activeTab === 'live' ? "Filtrar por SKU o descripción..." : "Filtrar bultos..."}
+          accentColor="gray"
           theme={theme}
         />
       </div>
 
-      {/* TAB 1: CONSOLIDACIÓN EN VIVO */}
+      {/* Tab Content */}
       {activeTab === 'live' && (
         <LiveConsolidationGrid
           items={filteredLiveConsolidated}
@@ -302,37 +279,31 @@ export const AuditPage: React.FC = () => {
         />
       )}
 
-      {/* TAB 2: HISTORIAL DE SESIONES */}
       {activeTab === 'sessions' && (
         <>
-          {/* Metrics Cards */}
           <CountingMetricsCards sessions={state.sessions || []} theme={theme} />
           
-          {/* View Toggle */}
-          <div className="flex justify-end">
-            <div className={`flex gap-1 p-1 rounded-xl ${isDark ? 'bg-white/5' : 'bg-slate-100'}`}>
+          <div className="flex justify-end mb-3">
+            <div className={`flex gap-1 p-1 rounded-lg ${isDark ? 'bg-neutral-900' : 'bg-neutral-100'}`}>
               <button
                 onClick={() => setViewMode('list')}
-                className={`p-2 rounded-lg transition-colors ${
-                  viewMode === 'list' ? 'bg-white text-black' : isDark ? 'text-slate-400 hover:bg-white/10' : 'text-slate-600 hover:bg-white'
+                className={`p-2 rounded-md transition-colors ${
+                  viewMode === 'list' ? (isDark ? 'bg-neutral-800 text-white' : 'bg-white text-neutral-900') : isDark ? 'text-neutral-500 hover:text-neutral-300' : 'text-neutral-500 hover:text-neutral-700'
                 }`}
-                title="Vista Lista"
               >
                 <List className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setViewMode('kanban')}
-                className={`p-2 rounded-lg transition-colors ${
-                  viewMode === 'kanban' ? 'bg-white text-black' : isDark ? 'text-slate-400 hover:bg-white/10' : 'text-slate-600 hover:bg-white'
+                className={`p-2 rounded-md transition-colors ${
+                  viewMode === 'kanban' ? (isDark ? 'bg-neutral-800 text-white' : 'bg-white text-neutral-900') : isDark ? 'text-neutral-500 hover:text-neutral-300' : 'text-neutral-500 hover:text-neutral-700'
                 }`}
-                title="Vista Kanban"
               >
                 <LayoutGrid className="w-4 h-4" />
               </button>
             </div>
           </div>
           
-          {/* List or Kanban View */}
           {viewMode === 'kanban' ? (
             <CountingKanbanView 
               sessions={state.sessions || []} 
