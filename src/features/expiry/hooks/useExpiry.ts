@@ -2,10 +2,10 @@
  * useExpiry - Hook centralizado para gestión de vencimientos
  * 
  * Arquitectura simplificada v2.0 - Un solo hook, una sola responsabilidad
- * Incluye cache simple para evitar recargas excesivas
+ * Usa cache centralizado para evitar recargas excesivas
  */
 
-import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { toast } from 'sonner';
 import { db } from '@/db';
 import { useAppStore } from '@/stores';
@@ -13,12 +13,10 @@ import { genericSyncEngine } from '@/services/cloud/GenericSyncEngine';
 import { logger } from '@/services/logger';
 import { ExpiryStatus, evaluateExpiry } from '../domain/expiryDomain';
 import { formatExpiryDate, getStatusLabel } from '../domain/expiryDomain';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { useCloudCache, clearCache } from '@/shared/hooks/useCloudCache';
 
-// Cache para loadRecords (TTL: 2 minutos)
-const LOAD_CACHE_TTL = 2 * 60 * 1000;
-let loadCache: { data: ExpiryRecord[]; timestamp: number } | null = null;
+// Cache key para vencimientos
+const EXPIRY_CACHE_KEY = 'expiry-records';
 
 // ============================================================================
 // TIPOS
@@ -153,77 +151,74 @@ export const useExpiry = (): UseExpiryReturn => {
   });
 
   // ============================================================================
-  // CARGA DE DATOS CON CACHE
+  // CARGA DE DATOS CON CACHE CENTRALIZADO
   // ============================================================================
 
-  const loadRecords = useCallback(async (forceRefresh = false) => {
-    const now = Date.now();
+  // Fetcher para cache
+  const fetchExpiryRecords = useCallback(async () => {
+    const stored = await db.table('expirations').toArray();
+    const nowDate = new Date();
     
-    // Verificar cache válido
-    if (!forceRefresh && loadCache && (now - loadCache.timestamp) < LOAD_CACHE_TTL) {
-      setRecords(loadCache.data);
-      setIsLoading(false);
-      return;
-    }
+    const processed: ExpiryRecord[] = stored.map(item => {
+      const expiryDate = new Date(Number(item.yyyy), Number(item.mm) - 1, 1);
+      expiryDate.setMonth(expiryDate.getMonth() + 1);
+      expiryDate.setDate(0);
 
-    try {
-      setIsLoading(true);
-      const stored = await db.table('expirations')
-        .toArray();
+      const evaluation = evaluateExpiry(
+        expiryDate,
+        { withdrawalDays: item.withdrawalDays ?? DEFAULT_WITHDRAWAL_DAYS, hasCanje: item.hasCanje ?? false },
+        nowDate,
+        item.quantity || 1
+      );
 
-      const nowDate = new Date();
-      const processed: ExpiryRecord[] = stored.map(item => {
-        const expiryDate = new Date(Number(item.yyyy), Number(item.mm) - 1, 1);
-        expiryDate.setMonth(expiryDate.getMonth() + 1);
-        expiryDate.setDate(0);
+      return {
+        id: item.id as string,
+        barcode: item.barcode as string || '',
+        productName: (item.productName as string || '').toUpperCase(),
+        providerName: (item.providerName as string || 'N/A').toUpperCase(),
+        providerRut: item.providerRut as string | undefined,
+        mm: Number(item.mm) || 1,
+        yyyy: Number(item.yyyy) || new Date().getFullYear(),
+        quantity: Number(item.quantity) || 1,
+        location: (item.location as string || 'N/A').toUpperCase(),
+        observaciones: item.observaciones as string || '',
+        claveUnica: item.claveUnica as string || item.id as string,
+        withdrawalDays: item.withdrawalDays as number ?? DEFAULT_WITHDRAWAL_DAYS,
+        hasCanje: item.hasCanje as boolean ?? false,
+        timestamp: Number(item.timestamp) || Date.now(),
+        syncStatus: (item.syncStatus as 'synced' | 'pending' | 'error') || 'synced',
+        status: evaluation.status,
+        daysLeft: evaluation.daysLeft,
+        expiryDate: expiryDate.toISOString(),
+        expiryDateObj: expiryDate,
+        withdrawalDate: evaluation.withdrawalDate ?? new Date(),
+        category: (item.category as string) || 'GENERAL',
+        estado: evaluation.label,
+        type: (item.type as ExpiryType) || 'Individual'
+      };
+    });
 
-        const evaluation = evaluateExpiry(
-          expiryDate,
-          { withdrawalDays: item.withdrawalDays ?? DEFAULT_WITHDRAWAL_DAYS, hasCanje: item.hasCanje ?? false },
-          nowDate,
-          item.quantity || 1
-        );
-
-        return {
-          id: item.id as string,
-          barcode: item.barcode as string || '',
-          productName: (item.productName as string || '').toUpperCase(),
-          providerName: (item.providerName as string || 'N/A').toUpperCase(),
-          providerRut: item.providerRut as string | undefined,
-          mm: Number(item.mm) || 1,
-          yyyy: Number(item.yyyy) || new Date().getFullYear(),
-          quantity: Number(item.quantity) || 1,
-          location: (item.location as string || 'N/A').toUpperCase(),
-          observaciones: item.observaciones as string || '',
-          claveUnica: item.claveUnica as string || item.id as string,
-          withdrawalDays: item.withdrawalDays as number ?? DEFAULT_WITHDRAWAL_DAYS,
-          hasCanje: item.hasCanje as boolean ?? false,
-          timestamp: Number(item.timestamp) || Date.now(),
-          syncStatus: (item.syncStatus as 'synced' | 'pending' | 'error') || 'synced',
-          status: evaluation.status,
-          daysLeft: evaluation.daysLeft,
-          expiryDate: expiryDate.toISOString(),
-          expiryDateObj: expiryDate,
-          withdrawalDate: evaluation.withdrawalDate ?? new Date(),
-          category: (item.category as string) || 'GENERAL',
-          estado: evaluation.label,
-          type: (item.type as ExpiryType) || 'Individual'
-        };
-      });
-
-      // Guardar en cache
-      loadCache = { data: processed, timestamp: now };
-      setRecords(processed);
-    } catch (error) {
-      toast.error('Error al cargar vencimientos');
-    } finally {
-      setIsLoading(false);
-    }
+    return processed;
   }, []);
 
+  // Usar cache centralizado
+  const { data: cachedRecords, isLoading: isCacheLoading, invalidate } = useCloudCache(
+    EXPIRY_CACHE_KEY,
+    fetchExpiryRecords,
+    { ttl: 2 * 60 * 1000 } // 2 minutos
+  );
+
+  // Sincronizar cache con estado local
   useEffect(() => {
-    loadRecords();
-  }, [loadRecords]);
+    if (cachedRecords) {
+      setRecords(cachedRecords);
+    }
+  }, [cachedRecords]);
+
+  // Refrescar manualmente
+  const refreshRecords = useCallback(() => {
+    invalidate();
+  }, [invalidate]);
 
   // ============================================================================
   // COMPUTED: FILTRADO Y ESTADÍSTICAS
@@ -337,32 +332,60 @@ export const useExpiry = (): UseExpiryReturn => {
 
   const deleteRecord = useCallback(async (id: string) => {
     try {
-      await db.table('expirations').delete(id);
-      // Invalidar cache
-      loadCache = null;
+      // Soft delete: marcar como pending_delete
+      await db.table('expirations').update(id, { 
+        syncStatus: 'pending_delete' as any,
+        timestamp: Date.now()
+      });
+      clearCache(EXPIRY_CACHE_KEY);
       setRecords(prev => prev.filter(r => r.id !== id));
-      toast.success('Registro eliminado');
+      toast.success('Registro eliminado', {
+        duration: 5000,
+        action: {
+          label: 'Deshacer',
+          onClick: async () => {
+            await db.table('expirations').update(id, { syncStatus: 'synced' as any });
+            refreshRecords();
+          },
+        },
+      });
     } catch (error) {
       logger.error('useExpiry', 'Error deleting record', String(error));
       toast.error('Error al eliminar registro');
       throw error;
     }
-  }, []);
+  }, [refreshRecords]);
 
   const bulkDelete = useCallback(async (ids: string[]) => {
     try {
-      await db.table('expirations').bulkDelete(ids);
+      // Soft delete en masa
+      await Promise.all(
+        ids.map(id => db.table('expirations').update(id, { 
+          syncStatus: 'pending_delete' as any,
+          timestamp: Date.now()
+        }))
+      );
+      clearCache(EXPIRY_CACHE_KEY);
       setRecords(prev => prev.filter(r => !ids.includes(r.id)));
-      // Invalidar cache
-      loadCache = null;
       setSelectedIds(new Set());
-      toast.success(`${ids.length} registros eliminados`);
+      toast.success(`${ids.length} registros eliminados`, {
+        duration: 5000,
+        action: {
+          label: 'Deshacer',
+          onClick: async () => {
+            await Promise.all(
+              ids.map(id => db.table('expirations').update(id, { syncStatus: 'synced' as any }))
+            );
+            refreshRecords();
+          },
+        },
+      });
     } catch (error) {
       logger.error('useExpiry', 'Error bulk deleting', String(error));
       toast.error('Error al eliminar registros');
       throw error;
     }
-  }, []);
+  }, [refreshRecords]);
 
   const createRecord = useCallback(async (data: CreateExpiryData): Promise<string | null> => {
     try {
@@ -421,10 +444,7 @@ export const useExpiry = (): UseExpiryReturn => {
       };
       
       await db.table('expirations').add(record);
-      
-      // Invalidar cache
-      loadCache = null;
-      
+      clearCache(EXPIRY_CACHE_KEY);
       setRecords(prev => [...prev, record]);
       toast.success('Vencimiento registrado');
       return id;
@@ -448,8 +468,7 @@ export const useExpiry = (): UseExpiryReturn => {
       };
 
       await db.table('expirations').put(updated as any);
-      // Invalidar cache
-      loadCache = null;
+      clearCache(EXPIRY_CACHE_KEY);
       setRecords(prev => prev.map(r => r.id === id ? { ...r, ...data } : r));
       toast.success('Registro actualizado');
     } catch (error) {
@@ -463,7 +482,7 @@ export const useExpiry = (): UseExpiryReturn => {
     try {
       setIsSyncing(true);
       await genericSyncEngine.sync('expirations');
-      await loadRecords();
+      refreshRecords(); // Refresca el cache
       toast.success('Sincronización completada');
     } catch (error: any) {
       logger.error('useExpiry', 'Sync error', error.message || String(error));
