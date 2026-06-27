@@ -141,6 +141,66 @@ export const useDashboard = () => {
     }).slice(0, 5);
   }, [], []);
 
+  // Sesiones completadas hoy
+  const todayStats = useLiveQuery(async () => {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const startTimestamp = startOfDay.getTime();
+    
+    const [sessions, scans] = await Promise.all([
+      SessionRepository.getByDateRange(startTimestamp, Date.now()),
+      ScanRepository.getByDateRange(startTimestamp, Date.now())
+    ]);
+    
+    const completedSessions = sessions.filter(s => s.status === 'completed');
+    const totalScanned = scans.length;
+    const totalUnits = scans.reduce((sum, scan) => sum + (scan.quantity || 0), 0);
+    
+    // Calcular tendencia vs ayer
+    const startOfYesterday = new Date(startOfDay);
+    startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+    const yesterdaySessions = await SessionRepository.getByDateRange(
+      startOfYesterday.getTime(),
+      startOfDay.getTime()
+    );
+    const yesterdayCompleted = yesterdaySessions.filter(s => s.status === 'completed').length;
+    
+    let trend = 0;
+    if (yesterdayCompleted > 0) {
+      trend = Math.round(((completedSessions.length - yesterdayCompleted) / yesterdayCompleted) * 100);
+    } else if (completedSessions.length > 0) {
+      trend = 100; // Primera sesión del día
+    }
+    
+    return {
+      sessionsCompleted: completedSessions.length,
+      totalScanned,
+      totalUnits,
+      trend
+    };
+  }, [], { sessionsCompleted: 0, totalScanned: 0, totalUnits: 0, trend: 0 });
+
+  // Datos para gráficos de tendencia (últimos 7 días)
+  const weeklyTrend = useLiveQuery(async () => {
+    const data: number[] = [];
+    const now = new Date();
+    
+    for (let i = 6; i >= 0; i--) {
+      const dayStart = new Date(now);
+      dayStart.setDate(dayStart.getDate() - i);
+      dayStart.setHours(0, 0, 0, 0);
+      
+      const dayEnd = new Date(dayStart);
+      dayEnd.setHours(23, 59, 59, 999);
+      
+      const sessions = await SessionRepository.getByDateRange(dayStart.getTime(), dayEnd.getTime());
+      const completedSessions = sessions.filter(s => s.status === 'completed');
+      data.push(completedSessions.reduce((sum, s) => sum + (s.totalUnits || 0), 0));
+    }
+    
+    return data;
+  }, [], [0, 0, 0, 0, 0, 0, 0]);
+
   return {
     stats,
     dynamicStats,
@@ -153,7 +213,9 @@ export const useDashboard = () => {
     recentActivity,
     pendingSyncCount: pendingItems,
     isOnline: isSupabaseConnected,
-    triggerSync: () => legacySyncWrapper.runSync()
+    triggerSync: () => legacySyncWrapper.runSync(),
+    todayStats,
+    weeklyTrend
   };
 };
 

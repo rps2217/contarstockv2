@@ -1,11 +1,12 @@
 /**
  * MetricCard - Tarjeta de métrica para el dashboard
- * Muestra un valor principal con cambio porcentual opcional
+ * Muestra un valor principal con cambio porcentual opcional y gráfico de tendencia
  */
 
 import React, { memo } from 'react';
 import { motion } from 'motion/react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { SparklineChart } from './SparklineChart';
 
 interface MetricCardProps {
   label: string;
@@ -14,6 +15,8 @@ interface MetricCardProps {
   icon?: React.ReactNode;
   variant?: 'default' | 'warning' | 'error' | 'success';
   isDark?: boolean;
+  sparklineData?: number[];
+  sparklineColor?: string;
 }
 
 export const MetricCard: React.FC<MetricCardProps> = memo(({
@@ -22,7 +25,9 @@ export const MetricCard: React.FC<MetricCardProps> = memo(({
   change,
   icon,
   variant = 'default',
-  isDark = true
+  isDark = true,
+  sparklineData,
+  sparklineColor = '#3b82f6'
 }) => {
   const getTrendIcon = () => {
     if (change === undefined || change === 0) {
@@ -49,6 +54,14 @@ export const MetricCard: React.FC<MetricCardProps> = memo(({
       default:
         return isDark ? 'border-neutral-800 bg-neutral-900/50' : 'border-neutral-200 bg-white';
     }
+  };
+
+  // Determinar color del sparkline basado en la tendencia
+  const getSparklineColor = () => {
+    if (change !== undefined && change !== 0) {
+      return change > 0 ? '#10b981' : '#ef4444'; // emerald o rose
+    }
+    return sparklineColor;
   };
 
   return (
@@ -85,6 +98,18 @@ export const MetricCard: React.FC<MetricCardProps> = memo(({
           </div>
         )}
       </div>
+
+      {/* Sparkline chart */}
+      {sparklineData && sparklineData.length > 0 && (
+        <div className="mt-3">
+          <SparklineChart 
+            data={sparklineData} 
+            color={getSparklineColor()}
+            height={28}
+            isDark={isDark}
+          />
+        </div>
+      )}
     </motion.div>
   );
 });

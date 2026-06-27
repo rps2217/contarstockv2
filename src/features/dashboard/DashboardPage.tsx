@@ -4,36 +4,37 @@
  * Características:
  * - Header con saludo personalizado y estado del sistema
  * - Grid de métricas (total items, sync pendiente, por vencer, alertas)
+ * - Resumen del día con gráficos de tendencia
  * - Acciones rápidas
  * - Actividad reciente
+ * - Atajos de teclado
  */
 
 import React, { useState, useEffect, memo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
-  Settings,
-  ClipboardList,
-  History,
   Zap,
   Database,
-  FileSpreadsheet,
-  Calendar,
   AlertCircle,
-  RefreshCw,
-  FileText,
   Plus,
   CheckCircle2,
   Package,
   Cloud,
   Clock,
-  ListPlus,
   PackageSearch,
 } from "lucide-react";
 import { useAppStore } from '@/stores';
 import { SoundFX } from "../../services/audio";
-import { ModuleCard } from "@/shared/components/ui/design-system";
-import { DashboardHeader, MetricCard, QuickAction, RecentActivity } from "./components";
+import { 
+  DashboardHeader, 
+  MetricCard, 
+  QuickAction, 
+  RecentActivity,
+  SparklineChart,
+  TodaySummary,
+  KeyboardShortcuts
+} from "./components";
 import { useDashboard } from "./hooks/useDashboard";
 
 // ============================================
@@ -51,7 +52,9 @@ const Dashboard: React.FC = () => {
     expiringItems,
     recentActivity,
     isOnline,
-    operatorId
+    operatorId,
+    todayStats,
+    weeklyTrend
   } = useDashboard();
 
   useEffect(() => {
@@ -144,7 +147,18 @@ const Dashboard: React.FC = () => {
 
       {/* Contenido principal */}
       <main className="px-4 pb-4 space-y-6">
-        {/* Métricas */}
+        {/* Resumen de hoy con gráfico de tendencia */}
+        <section>
+          <TodaySummary
+            sessionsCompleted={todayStats?.sessionsCompleted || 0}
+            totalScanned={todayStats?.totalScanned || 0}
+            totalUnits={todayStats?.totalUnits || 0}
+            trend={todayStats?.trend || 0}
+            isDark={isDark}
+          />
+        </section>
+
+        {/* Métricas con sparklines */}
         <section>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <MetricCard
@@ -152,6 +166,7 @@ const Dashboard: React.FC = () => {
               value={totalItems || 0}
               icon={<Database className="w-4 h-4" />}
               change={2.4}
+              sparklineData={weeklyTrend}
               isDark={isDark}
             />
             <MetricCard
@@ -169,10 +184,10 @@ const Dashboard: React.FC = () => {
               isDark={isDark}
             />
             <MetricCard
-              label="Alertas recientes"
-              value={0}
-              icon={<AlertCircle className="w-4 h-4" />}
-              variant="default"
+              label="Escaneos hoy"
+              value={todayStats?.totalScanned || 0}
+              icon={<Package className="w-4 h-4" />}
+              change={todayStats?.trend || 0}
               isDark={isDark}
             />
           </div>
@@ -213,6 +228,9 @@ const Dashboard: React.FC = () => {
           />
         </section>
       </main>
+
+      {/* Atajos de teclado */}
+      <KeyboardShortcuts isDark={isDark} />
     </div>
   );
 };
