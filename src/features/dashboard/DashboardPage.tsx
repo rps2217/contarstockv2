@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { useAppStore } from '@/stores';
 import { SoundFX } from "../../services/audio";
+import { ModuleCard } from "@/shared/components/ui/design-system";
 
 // ============================================
 // MAIN DASHBOARD COMPONENT
