@@ -1,8 +1,11 @@
 /**
- * Dashboard - Página principal con módulos de navegación
+ * Dashboard - Página principal con diseño inspirado en Magic Patterns
  * 
- * Diseño monocromático de grises, sin estadísticas.
- * Usa componentes del design system.
+ * Características:
+ * - Header con saludo personalizado y estado del sistema
+ * - Grid de métricas (total items, sync pendiente, por vencer, alertas)
+ * - Acciones rápidas
+ * - Actividad reciente
  */
 
 import React, { useState, useEffect, memo } from "react";
@@ -21,10 +24,17 @@ import {
   FileText,
   Plus,
   CheckCircle2,
+  Package,
+  Cloud,
+  Clock,
+  ListPlus,
+  PackageSearch,
 } from "lucide-react";
 import { useAppStore } from '@/stores';
 import { SoundFX } from "../../services/audio";
 import { ModuleCard } from "@/shared/components/ui/design-system";
+import { DashboardHeader, MetricCard, QuickAction, RecentActivity } from "./components";
+import { useDashboard } from "./hooks/useDashboard";
 
 // ============================================
 // MAIN DASHBOARD COMPONENT
@@ -35,6 +45,14 @@ const Dashboard: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   
   const { settings, setStartSessionModalOpen } = useAppStore();
+  const {
+    totalItems,
+    pendingSyncCount,
+    expiringItems,
+    recentActivity,
+    isOnline,
+    operatorId
+  } = useDashboard();
 
   useEffect(() => {
     const msg = (location.state as any)?.message;
@@ -49,28 +67,49 @@ const Dashboard: React.FC = () => {
 
   const isDark = settings?.theme !== 'light';
 
-  // Módulos principales
-  const modules = [
-    { icon: <Plus />, label: "Nuevo Conteo", path: "new", primary: true },
-    { icon: <ClipboardList />, label: "Conteo", path: "/counting" },
-    { icon: <History />, label: "Recepción", path: "/reception" },
-    { icon: <Zap />, label: "Ráfaga", path: "/massive/BURST-MODE" },
-    { icon: <FileSpreadsheet />, label: "Carga", path: "/expected-orders" },
-    { icon: <Calendar />, label: "Vencimientos", path: "/expiry" },
-    { icon: <AlertCircle />, label: "Eventos", path: "/events" },
-    { icon: <FileText />, label: "Reportes", path: "/reports" },
-    { icon: <Database />, label: "Inventario", path: "/database" },
-    { icon: <RefreshCw />, label: "Sincronizar", path: "/sync" },
-    { icon: <Settings />, label: "Ajustes", path: "/settings" },
+  // Acciones rápidas disponibles
+  const quickActions = [
+    {
+      id: 'new-count',
+      icon: <Plus className="w-6 h-6" />,
+      title: 'Nuevo conteo',
+      description: 'Inicia una nueva sesión de conteo de inventario.',
+      onClick: () => setStartSessionModalOpen(true),
+    },
+    {
+      id: 'receive',
+      icon: <Package className="w-6 h-6" />,
+      title: 'Recibir stock',
+      description: 'Registra envíos y órdenes entrantes.',
+      onClick: () => navigate('/capture/reception'),
+    },
+    {
+      id: 'burst',
+      icon: <Zap className="w-6 h-6" />,
+      title: 'Modo ráfaga',
+      description: 'Escaneo continuo de códigos a alta velocidad.',
+      onClick: () => navigate('/massive/BURST-MODE'),
+    },
+    {
+      id: 'inventory',
+      icon: <PackageSearch className="w-6 h-6" />,
+      title: 'Ver inventario',
+      description: 'Busca y verifica productos específicos.',
+      onClick: () => navigate('/data'),
+    },
   ];
 
-  const handleModuleClick = (path: string) => {
-    if (path === "new") {
-      setStartSessionModalOpen(true);
-    } else {
-      navigate(path);
-    }
-  };
+  // Mapear actividad reciente al formato del componente
+  const mappedActivity = recentActivity.map((item) => ({
+    id: item.id,
+    icon: item.icon,
+    iconColor: item.iconColor,
+    title: item.title,
+    time: item.time,
+    user: item.user,
+    count: item.count,
+    countLabel: item.countLabel,
+  }));
 
   return (
     <div className={`h-full w-full ${isDark ? "bg-neutral-950" : "bg-neutral-50"} overflow-y-auto no-scrollbar pb-32 font-sans relative`}>
@@ -96,58 +135,83 @@ const Dashboard: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Header */}
-      <header className={`px-4 py-4 ${isDark ? "bg-neutral-950" : "bg-white"}`}>
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className={`text-xl font-bold ${isDark ? "text-white" : "text-neutral-900"}`}>
-              CountPro
-            </h1>
-            <p className={`text-xs ${isDark ? "text-neutral-500" : "text-neutral-500"}`}>
-              Gestión de inventario
-            </p>
+      {/* Header con saludo */}
+      <DashboardHeader 
+        userName={operatorId || 'Usuario'}
+        isOnline={isOnline}
+        isDark={isDark}
+      />
+
+      {/* Contenido principal */}
+      <main className="px-4 pb-4 space-y-6">
+        {/* Métricas */}
+        <section>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <MetricCard
+              label="Total de ítems"
+              value={totalItems || 0}
+              icon={<Database className="w-4 h-4" />}
+              change={2.4}
+              isDark={isDark}
+            />
+            <MetricCard
+              label="Sync pendiente"
+              value={pendingSyncCount || 0}
+              icon={<Cloud className="w-4 h-4" />}
+              variant={(pendingSyncCount || 0) > 0 ? 'warning' : 'default'}
+              isDark={isDark}
+            />
+            <MetricCard
+              label="Por vencer"
+              value={expiringItems || 0}
+              icon={<Clock className="w-4 h-4" />}
+              variant={(expiringItems || 0) > 0 ? 'error' : 'default'}
+              isDark={isDark}
+            />
+            <MetricCard
+              label="Alertas recientes"
+              value={0}
+              icon={<AlertCircle className="w-4 h-4" />}
+              variant="default"
+              isDark={isDark}
+            />
           </div>
-          <button
-            onClick={() => navigate("/settings")}
-            className={`p-2.5 rounded-xl transition-colors ${isDark ? "bg-neutral-900 hover:bg-neutral-800 text-neutral-400" : "bg-neutral-100 hover:bg-neutral-200 text-neutral-600"}`}
-          >
-            <Settings className="w-5 h-5" />
-          </button>
-        </div>
-      </header>
+        </section>
 
-      {/* Módulos usando ModuleCard */}
-      <main className="p-4 max-w-4xl mx-auto">
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
-          {modules.map((module, index) => (
-            <motion.div
-              key={module.path}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.03 }}
-            >
-              <ModuleCard
-                icon={module.icon}
-                label={module.label}
-                onClick={() => handleModuleClick(module.path)}
-                isDark={isDark}
-                variant={module.primary ? 'primary' : 'default'}
-              />
-            </motion.div>
-          ))}
-        </div>
+        {/* Acciones rápidas */}
+        <section>
+          <h2 className={`text-sm font-semibold mb-3 ${isDark ? 'text-white' : 'text-neutral-900'}`}>
+            Acciones rápidas
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {quickActions.map((action, index) => (
+              <motion.div
+                key={action.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+              >
+                <QuickAction
+                  icon={action.icon}
+                  title={action.title}
+                  description={action.description}
+                  onClick={action.onClick}
+                  isDark={isDark}
+                />
+              </motion.div>
+            ))}
+          </div>
+        </section>
 
-        {/* Info adicional */}
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          className={`mt-8 p-4 rounded-xl ${isDark ? "bg-neutral-900 border border-neutral-800" : "bg-white border border-neutral-200"}`}
-        >
-          <p className={`text-xs text-center ${isDark ? "text-neutral-500" : "text-neutral-500"}`}>
-            Sincronización automática activada
-          </p>
-        </motion.div>
+        {/* Actividad reciente */}
+        <section>
+          <RecentActivity
+            title="Actividad reciente"
+            items={mappedActivity}
+            isDark={isDark}
+            maxItems={5}
+          />
+        </section>
       </main>
     </div>
   );
