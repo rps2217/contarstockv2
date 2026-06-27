@@ -24,8 +24,6 @@ import {
 } from "lucide-react";
 import { useAppStore } from '@/stores';
 import { SoundFX } from "../../services/audio";
-import { CompactHeader } from "@/shared/design-system/components/PageHeader";
-import { ModuleCard } from "@/shared/design-system/components/ModuleCard";
 
 // ============================================
 // MAIN DASHBOARD COMPONENT
@@ -97,20 +95,25 @@ const Dashboard: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Header usando componente reutilizable */}
-      <CompactHeader
-        title="CountPro"
-        subtitle="Gestión de inventario"
-        isDark={isDark}
-        action={
+      {/* Header */}
+      <header className={`px-4 py-4 ${isDark ? "bg-neutral-950" : "bg-white"}`}>
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
+          <div>
+            <h1 className={`text-xl font-bold ${isDark ? "text-white" : "text-neutral-900"}`}>
+              CountPro
+            </h1>
+            <p className={`text-xs ${isDark ? "text-neutral-500" : "text-neutral-500"}`}>
+              Gestión de inventario
+            </p>
+          </div>
           <button
             onClick={() => navigate("/settings")}
             className={`p-2.5 rounded-xl transition-colors ${isDark ? "bg-neutral-900 hover:bg-neutral-800 text-neutral-400" : "bg-neutral-100 hover:bg-neutral-200 text-neutral-600"}`}
           >
             <Settings className="w-5 h-5" />
           </button>
-        }
-      />
+        </div>
+      </header>
 
       {/* Módulos usando ModuleCard */}
       <main className="p-4 max-w-4xl mx-auto">

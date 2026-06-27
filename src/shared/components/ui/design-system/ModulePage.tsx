@@ -138,4 +138,40 @@ export const ModulePage: React.FC<ModulePageProps> = ({
   );
 };
 
+// ============================================
+// SimpleHeader - Header simple para dashboard
+// ============================================
+
+interface SimpleHeaderProps {
+  title: string;
+  subtitle?: string;
+  action?: React.ReactNode;
+  isDark?: boolean;
+}
+
+export const SimpleHeader: React.FC<SimpleHeaderProps> = ({
+  title,
+  subtitle,
+  action,
+  isDark = true,
+}) => {
+  return (
+    <header className={`px-4 py-4 ${isDark ? 'bg-neutral-950' : 'bg-white'}`}>
+      <div className="max-w-4xl mx-auto flex items-center justify-between">
+        <div>
+          <h1 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-neutral-900'}`}>
+            {title}
+          </h1>
+          {subtitle && (
+            <p className={`text-xs ${isDark ? 'text-neutral-500' : 'text-neutral-500'}`}>
+              {subtitle}
+            </p>
+          )}
+        </div>
+        {action}
+      </div>
+    </header>
+  );
+};
+
 export default ModulePage;
