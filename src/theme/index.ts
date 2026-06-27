@@ -127,27 +127,3 @@ export function getStatusIcon(status: 'synced' | 'pending' | 'error'): string {
 // RE-EXPORT
 // ============================================
 export { designTokens, colors, spacing, typography, shadows, borders, animations, zIndex };
-
-// ============================================
-// THEME MANAGER ( NUEVO SISTEMA)
-// ============================================
-export {
-  ThemeProvider,
-  useTheme,
-  getThemeClasses,
-  cnTheme,
-  ThemedSurface,
-  ThemedCard,
-  ThemedButton,
-  ThemedInput,
-  type ThemeMode,
-  type ThemeScheme,
-  type ThemeColors,
-  type ThemeTokens
-} from './ThemeManager';
-
-export { useThemeManager } from './useThemeManager';
-export { ThemeSwitcher } from './components/ThemeSwitcher';
-export { ThemeCustomizer } from './components/ThemeCustomizer';
-export { ADJUSTABLE_COLORS, COLOR_LABELS } from './components/ThemeCustomizer';
-export type { AdjustableColorKey, CustomScheme } from './components/ThemeCustomizer';
