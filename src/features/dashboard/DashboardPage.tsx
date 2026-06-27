@@ -2,6 +2,7 @@
  * Dashboard - Página principal con módulos de navegación
  * 
  * Diseño monocromático de grises, sin estadísticas.
+ * Usa componentes del design system.
  */
 
 import React, { useState, useEffect, memo } from "react";
@@ -23,6 +24,8 @@ import {
 } from "lucide-react";
 import { useAppStore } from '@/stores';
 import { SoundFX } from "../../services/audio";
+import { CompactHeader } from "@/shared/design-system/components/PageHeader";
+import { ModuleCard } from "@/shared/design-system/components/ModuleCard";
 
 // ============================================
 // MAIN DASHBOARD COMPONENT
@@ -94,63 +97,39 @@ const Dashboard: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Header */}
-      <header className={`px-4 py-6 ${isDark ? "bg-neutral-950 border-neutral-800" : "bg-white border-neutral-200"} border-b shrink-0`}>
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className={`text-xl font-bold tracking-tight ${isDark ? "text-white" : "text-neutral-900"}`}>
-              CountPro
-            </h1>
-            <p className={`text-xs mt-0.5 ${isDark ? "text-neutral-500" : "text-neutral-500"}`}>
-              Gestión de inventario
-            </p>
-          </div>
+      {/* Header usando componente reutilizable */}
+      <CompactHeader
+        title="CountPro"
+        subtitle="Gestión de inventario"
+        isDark={isDark}
+        action={
           <button
             onClick={() => navigate("/settings")}
             className={`p-2.5 rounded-xl transition-colors ${isDark ? "bg-neutral-900 hover:bg-neutral-800 text-neutral-400" : "bg-neutral-100 hover:bg-neutral-200 text-neutral-600"}`}
           >
             <Settings className="w-5 h-5" />
           </button>
-        </div>
-      </header>
+        }
+      />
 
-      {/* Módulos */}
+      {/* Módulos usando ModuleCard */}
       <main className="p-4 max-w-4xl mx-auto">
         <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
           {modules.map((module, index) => (
-            <motion.button
+            <motion.div
               key={module.path}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.03 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => handleModuleClick(module.path)}
-              className={`
-                relative flex flex-col items-center justify-center gap-2 p-5 rounded-2xl
-                border transition-all duration-150
-                ${module.primary 
-                  ? isDark 
-                    ? "bg-neutral-100 text-neutral-900 border-neutral-200" 
-                    : "bg-neutral-900 text-white border-neutral-800"
-                  : isDark 
-                    ? "bg-neutral-900 border-neutral-800 hover:bg-neutral-800/80 hover:border-neutral-700" 
-                    : "bg-white border-neutral-200 hover:bg-neutral-50 hover:border-neutral-300"
-                }
-              `}
             >
-              <div className={`
-                p-2.5 rounded-xl
-                ${module.primary 
-                  ? isDark ? "bg-neutral-800 text-white" : "bg-neutral-700 text-white"
-                  : isDark ? "bg-neutral-800 text-neutral-400" : "bg-neutral-100 text-neutral-600"
-                }
-              `}>
-                {React.cloneElement(module.icon as React.ReactElement, { className: 'w-5 h-5' })}
-              </div>
-              <span className={`text-xs font-medium ${module.primary ? (isDark ? "text-neutral-900" : "text-white") : (isDark ? "text-neutral-300" : "text-neutral-700")}`}>
-                {module.label}
-              </span>
-            </motion.button>
+              <ModuleCard
+                icon={module.icon}
+                label={module.label}
+                onClick={() => handleModuleClick(module.path)}
+                isDark={isDark}
+                variant={module.primary ? 'primary' : 'default'}
+              />
+            </motion.div>
           ))}
         </div>
 
@@ -162,7 +141,7 @@ const Dashboard: React.FC = () => {
           className={`mt-8 p-4 rounded-xl ${isDark ? "bg-neutral-900 border border-neutral-800" : "bg-white border border-neutral-200"}`}
         >
           <p className={`text-xs text-center ${isDark ? "text-neutral-500" : "text-neutral-500"}`}>
-            Sincronización automática activada • Última sync hace 2 min
+            Sincronización automática activada
           </p>
         </motion.div>
       </main>
