@@ -490,7 +490,7 @@ export const useExpiry = (): UseExpiryReturn => {
     } finally {
       setIsSyncing(false);
     }
-  }, [loadRecords]);
+  }, [refreshRecords]);
 
   return {
     records,
