@@ -50,21 +50,6 @@ export const CountingPage: React.FC = () => {
   const expectedItems = sessionData.session?.expectedItems || [];
   const isTestMode = expectedItems.length > 0;
   
-  console.log('[COUNTING PAGE] expectedItems from session:', expectedItems?.slice(0, 2));
-  console.log('[COUNTING PAGE] sessionData.session?.expectedItems:', sessionData.session?.expectedItems);
-  
-  // Debug logging
-  useEffect(() => {
-    if (sessionData.session) {
-      console.log('[COUNTING PAGE] Session loaded:', {
-        id: sessionData.session.id,
-        erpOrder: sessionData.session.erpOrder,
-        expectedItemsCount: expectedItems.length,
-        hasExpectedItems: expectedItems.length > 0
-      });
-    }
-  }, [sessionData.session, expectedItems.length]);
-  
   // Handle scan in test mode - detect first-time scans from expected order
   const handleScanInTestMode = useCallback((barcode: string) => {
     if (!isTestMode) return false;
