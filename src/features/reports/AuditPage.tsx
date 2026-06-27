@@ -18,11 +18,14 @@ import {
   WifiOff,
   ArrowRight,
   LayoutGrid,
-  List
+  List,
+  ChevronLeft,
+  Plus,
+  Eraser,
+  CheckCircle2
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ReportDetail } from "./components/ReportDetail";
-import { ReportsHeader } from "./components/ReportsHeader";
 import { LiveConsolidationGrid } from "./components/LiveConsolidationGrid";
 import { SessionHistoryList } from "./components/SessionHistoryList";
 import { ManagementSearchBar } from "../../shared/components/core/ManagementSearchBar";
@@ -30,6 +33,7 @@ import { useReports } from "./hooks/useReports";
 import { useAppStore } from '@/stores';
 import { CountingMetricsCards } from "../counting/components/CountingMetricsCards";
 import { CountingKanbanView } from "../counting/components/CountingKanbanView";
+import { NetworkStatus } from "@/shared/components/ui/NetworkStatus";
 
 // Re-export types and constants
 export * from './types/Report';
@@ -181,13 +185,40 @@ export const AuditPage: React.FC = () => {
       </div>
 
       {/* ReportsHeader */}
-      <ReportsHeader
-        isCleaning={state.isCleaning}
-        onClean={actions.handleCleanSynced}
-        onStartNew={() => actions.setIsStartModalOpen(true)}
-        syncedCount={state.syncedCount}
-        theme={theme}
-      />
+      <div className="flex items-center justify-between mb-4">
+        <button
+          onClick={() => navigate("/dashboard")}
+          className={`p-2 rounded-full ${isDark ? 'hover:bg-white/5' : 'hover:bg-slate-100'}`}
+        >
+          <ChevronLeft className="w-6 h-6" />
+        </button>
+        <NetworkStatus />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <button
+          onClick={actions.handleCleanSynced}
+          disabled={state.isCleaning}
+          className={`border font-black py-3 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 ${
+            isDark ? 'bg-white/5 border-white/10' : 'bg-white border-slate-200'
+          }`}
+        >
+          <Eraser className="w-4 h-4" />
+          <span className="text-xs">Limpiar</span>
+          {state.syncedCount > 0 && (
+            <span className="text-[10px] text-slate-400">({state.syncedCount})</span>
+          )}
+        </button>
+        <button
+          onClick={() => actions.setIsStartModalOpen(true)}
+          className={`font-black py-3 rounded-xl transition-all flex items-center justify-center gap-2 active:scale-95 ${
+            isDark ? 'bg-brand-warning text-black' : 'bg-blue-600 text-white'
+          }`}
+        >
+          <Plus className="w-4 h-4" />
+          <span className="text-xs">Nueva Carga</span>
+        </button>
+      </div>
 
       {/* SELECTOR DE PESTAÑAS */}
       <div className={`mt-2 p-1.5 rounded-2xl flex items-center gap-2 border ${
