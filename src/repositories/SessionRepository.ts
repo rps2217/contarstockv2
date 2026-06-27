@@ -117,6 +117,23 @@ export class SessionRepository {
     }
   }
 
+  static async softDelete(id: string): Promise<CountingSession | null> {
+    // Guarda una copia antes de marcar para eliminar
+    const session = await db.sessions.get(id);
+    if (!session) return null;
+    
+    await db.sessions.update(id, { syncStatus: 'pending_delete' });
+    return session;
+  }
+
+  static async restore(id: string): Promise<void> {
+    await db.sessions.update(id, { syncStatus: 'synced' });
+  }
+
+  static async permanentDelete(id: string): Promise<void> {
+    await db.sessions.delete(id);
+  }
+
   static async deleteMany(ids: string[]): Promise<void> {
     for (const id of ids) {
       await this.delete(id);
@@ -182,6 +199,48 @@ export class SessionRepository {
     return await db.sessions.orderBy('createdAt').reverse().limit(limit).toArray();
   }
 
+  // Paginación con cursor para mejor performance
+  static async getPaginated(options: {
+    cursor?: string;
+    limit: number;
+    sortBy?: 'createdAt' | 'erpOrder';
+    filter?: { sessionType?: string; status?: string };
+  }): Promise<{
+    items: CountingSession[];
+    nextCursor?: string;
+    hasMore: boolean;
+  }> {
+    const { cursor, limit, sortBy = 'createdAt', filter } = options;
+    
+    let query = db.sessions.orderBy(sortBy);
+    let results = await query.reverse().toArray();
+
+    // Aplicar filtros
+    if (filter?.sessionType) {
+      results = results.filter(s => s.sessionType === filter.sessionType);
+    }
+    if (filter?.status) {
+      results = results.filter(s => s.status === filter.status);
+    }
+
+    // Cursor-based pagination
+    if (cursor) {
+      const cursorIndex = results.findIndex(s => s.id === cursor);
+      if (cursorIndex !== -1) {
+        results = results.slice(cursorIndex + 1);
+      }
+    }
+
+    const hasMore = results.length > limit;
+    const items = results.slice(0, limit);
+    
+    return {
+      items,
+      nextCursor: hasMore && items.length > 0 ? items[items.length - 1].id : undefined,
+      hasMore,
+    };
+  }
+
   static async getByDateRange(startDate: number, endDate: number): Promise<CountingSession[]> {
     return await db.sessions
       .filter(s => s.createdAt >= startDate && s.createdAt <= endDate)
@@ -217,6 +276,9 @@ export const sessionRepository = {
   updateSyncTimestamp: SessionRepository.updateSyncTimestamp,
   delete: SessionRepository.delete,
   deleteMany: SessionRepository.deleteMany,
+  softDelete: SessionRepository.softDelete,
+  restore: SessionRepository.restore,
+  permanentDelete: SessionRepository.permanentDelete,
   deleteDraftReceptionSessions: SessionRepository.deleteDraftReceptionSessions,
   getDraftReceptionSessions: SessionRepository.getDraftReceptionSessions,
   markAsCompleted: SessionRepository.markAsCompleted,
@@ -227,6 +289,7 @@ export const sessionRepository = {
   getByOperator: SessionRepository.getByOperator,
   getRecent: SessionRepository.getRecent,
   getByDateRange: SessionRepository.getByDateRange,
+  getPaginated: SessionRepository.getPaginated,
   updateAudit: SessionRepository.updateAudit,
   markSynced: SessionRepository.markSynced,
 };
