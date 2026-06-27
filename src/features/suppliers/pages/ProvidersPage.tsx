@@ -44,11 +44,11 @@ export const ProvidersPage: React.FC = () => {
 
   return (
     <div className={`h-full flex flex-col transition-colors duration-500 ${
-      theme === 'dark' ? 'bg-brand-dark text-white' : 'bg-slate-50 text-slate-900'
+      theme === 'dark' ? 'bg-brand-dark text-white' : 'bg-neutral-50 text-slate-900'
     }`}>
       {/* Header */}
       <div className={`border-b px-6 py-4 shrink-0 transition-colors ${
-        theme === 'dark' ? 'bg-brand-surface/50 border-white/5' : 'bg-white border-slate-200'
+        theme === 'dark' ? 'bg-brand-surface/50 border-neutral-800' : 'bg-white border-neutral-200'
       }`}>
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -59,7 +59,7 @@ export const ProvidersPage: React.FC = () => {
               {settings.pharmacyName || 'Proveedores'}
             </h1>
             <p className={`text-[10px] font-bold uppercase tracking-widest mt-1.5 flex items-center gap-2 ${
-              theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
+              theme === 'dark' ? 'text-neutral-500' : 'text-neutral-400'
             }`}>
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse shrink-0" />
               Políticas de Logística Inversa y Canjes
@@ -88,7 +88,7 @@ export const ProvidersPage: React.FC = () => {
               transition={{ duration: 0.22, ease: 'easeOut' }}
               className="overflow-hidden"
             >
-              <div className="pt-4 flex flex-col gap-4 border-t border-slate-100 dark:border-white/5 mt-4">
+              <div className="pt-4 flex flex-col gap-4 border-t border-slate-100 dark:border-neutral-800 mt-4">
                 
                 {/* 1. Categorías de Filtro */}
                 <div className="flex flex-col gap-2">
@@ -101,7 +101,7 @@ export const ProvidersPage: React.FC = () => {
                       className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
                         state.filterMode === 'all'
                           ? theme === 'dark' ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
-                          : theme === 'dark' ? 'bg-white/5 text-slate-400 hover:bg-white/10' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          : theme === 'dark' ? 'bg-white/5 text-neutral-400 hover:bg-white/10' : 'bg-neutral-100 text-slate-600 hover:bg-neutral-200'
                       }`}
                     >
                       Todos
@@ -111,7 +111,7 @@ export const ProvidersPage: React.FC = () => {
                       className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
                         state.filterMode === 'withExchange'
                           ? theme === 'dark' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 hover:bg-emerald-500/30' : 'bg-emerald-100 text-emerald-700 border border-emerald-200 hover:bg-emerald-200'
-                          : theme === 'dark' ? 'bg-white/5 text-slate-400 hover:bg-white/10' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          : theme === 'dark' ? 'bg-white/5 text-neutral-400 hover:bg-white/10' : 'bg-neutral-100 text-slate-600 hover:bg-neutral-200'
                       }`}
                     >
                       Con Canje
@@ -121,7 +121,7 @@ export const ProvidersPage: React.FC = () => {
                       className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
                         state.filterMode === 'withoutExchange'
                           ? theme === 'dark' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/50 hover:bg-rose-500/30' : 'bg-rose-100 text-rose-700 border border-rose-200 hover:bg-rose-200'
-                          : theme === 'dark' ? 'bg-white/5 text-slate-400 hover:bg-white/10' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          : theme === 'dark' ? 'bg-white/5 text-neutral-400 hover:bg-white/10' : 'bg-neutral-100 text-slate-600 hover:bg-neutral-200'
                       }`}
                     >
                       Sin Canje
@@ -130,7 +130,7 @@ export const ProvidersPage: React.FC = () => {
                 </div>
 
                 {/* 2. Operaciones Especiales y Nube */}
-                <div className="flex flex-col gap-2 border-t border-slate-100 dark:border-white/5 pt-4">
+                <div className="flex flex-col gap-2 border-t border-slate-100 dark:border-neutral-800 pt-4">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500 dark:text-indigo-400">
                       Operaciones Especiales & Nube
@@ -197,12 +197,12 @@ export const ProvidersPage: React.FC = () => {
                       onClick={actions.handleAutoFill}
                       className={`flex items-center justify-center gap-2 px-3.5 py-3 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all ${
                         theme === 'dark' 
-                          ? 'bg-white/5 border-white/10 text-slate-350 hover:bg-white/10' 
-                          : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
+                          ? 'bg-white/5 border-neutral-800 text-slate-350 hover:bg-white/10' 
+                          : 'bg-neutral-100 border-neutral-200 text-slate-600 hover:bg-neutral-200'
                       }`}
                       title="Autocompletar desde Catálogo"
                     >
-                      <Wand2 className="w-4 h-4 shrink-0 text-slate-400 dark:text-slate-500" />
+                      <Wand2 className="w-4 h-4 shrink-0 text-neutral-400 dark:text-neutral-500" />
                       <span className="truncate">Autocompletar</span>
                     </button>
                   </div>

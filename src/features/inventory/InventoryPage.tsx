@@ -1,24 +1,19 @@
 /**
  * InventoryPage.tsx - Módulo de Gestión de Inventario v2
  * 
- * Arquitectura simplificada - Siguiendo patrón EventsPage/ExpiryPage
+ * Diseño monocromático de grises, estructura unificada.
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'motion/react';
 import { 
   RefreshCw, 
   Trash2, 
-  Search, 
   Plus,
   Package,
   ArrowUpRight,
   ArrowDownRight,
   Minus,
-  X,
-  MoreVertical,
-  Barcode,
-  MapPin,
   Printer,
   LayoutGrid,
   List
@@ -28,8 +23,6 @@ import { useAppStore } from '@/stores';
 import { Product } from '@/types';
 import { ProductWithPolicy } from '@/features/product/types';
 import { useInventory } from './hooks/useInventory';
-import { ModuleHeader } from '@/shared/components/layout/ModuleHeader';
-import { ProductStatsBar } from './components/ProductStatsBar';
 import { ProductCard } from './components/ProductCard';
 import { ProductForm } from './components/ProductForm';
 import { ImportTools } from './components/ImportTools';
@@ -40,6 +33,10 @@ import { handlePrintLabels } from '../expiry/utils/expiryUtils';
 import { MassActionsPanel } from '@/shared/components/ui/MassActionsPanel';
 import { InventoryKanbanView } from './components/InventoryKanbanView';
 import { ProductPolicyStatus } from './domain/productsDomain';
+import { ModulePage } from '@/shared/components/ui/design-system/ModulePage';
+import { FilterSearch } from '@/shared/components/ui/design-system/FilterSearch';
+import { ActionFAB } from '@/shared/components/ui/design-system/ActionFAB';
+import { EmptyState } from '@/shared/components/ui/design-system/EmptyState';
 
 // ============================================================================
 // COMPONENTE: ProductSection
@@ -50,11 +47,9 @@ interface ProductSectionProps {
   products: Product[];
   isExpanded: boolean;
   onToggle: () => void;
-  onSelect: (product: Product) => void;
   onViewDetail: (product: Product) => void;
   selectedIds: Set<string>;
-  theme: 'dark' | 'light' | 'high-contrast';
-  colorClass: string;
+  isDark: boolean;
 }
 
 const ProductSection: React.FC<ProductSectionProps> = ({
@@ -63,72 +58,58 @@ const ProductSection: React.FC<ProductSectionProps> = ({
   products,
   isExpanded,
   onToggle,
-  onSelect,
   onViewDetail,
   selectedIds,
-  theme,
-  colorClass
+  isDark,
 }) => {
-  const isDark = theme === 'dark';
-  
   return (
-    <div className={`rounded-2xl border overflow-hidden ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
+    <div className={`rounded-2xl border overflow-hidden ${isDark ? 'border-neutral-800' : 'border-neutral-200'}`}>
       {/* Section Header */}
       <button
         onClick={onToggle}
-        className={`
-          w-full px-4 py-3 flex items-center justify-between
-          ${isDark ? 'bg-white/5' : 'bg-slate-100'}
-        `}
+        className={`w-full px-4 py-3 flex items-center justify-between ${isDark ? 'bg-neutral-900' : 'bg-neutral-100'}`}
       >
         <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-lg ${colorClass}`}>
-            <Icon className="w-4 h-4" />
+          <div className={`p-2 rounded-lg ${isDark ? 'bg-neutral-800' : 'bg-neutral-200'}`}>
+            <Icon className={`w-4 h-4 ${isDark ? 'text-neutral-400' : 'text-neutral-600'}`} />
           </div>
           <div className="text-left">
-            <span className={`text-xs font-black uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}`}>{title}</span>
-            <span className="ml-2 text-[10px] font-mono text-slate-400">
+            <span className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-neutral-900'}`}>{title}</span>
+            <span className={`ml-2 text-[10px] font-mono ${isDark ? 'text-neutral-500' : 'text-neutral-500'}`}>
               {products.length} productos
             </span>
           </div>
         </div>
         {isExpanded ? (
-          <ArrowUpRight className="w-4 h-4 text-slate-400" />
+          <ArrowUpRight className={`w-4 h-4 ${isDark ? 'text-neutral-500' : 'text-neutral-400'}`} />
         ) : (
-          <Minus className="w-4 h-4 text-slate-400" />
+          <Minus className={`w-4 h-4 ${isDark ? 'text-neutral-500' : 'text-neutral-400'}`} />
         )}
       </button>
 
       {/* Section Content */}
-      <AnimatePresence>
-        {isExpanded && (
-          <motion.div
-            initial={{ height: 0 }}
-            animate={{ height: 'auto' }}
-            exit={{ height: 0 }}
-            className="overflow-hidden"
-          >
-            <div className="p-2 space-y-1 max-h-[400px] overflow-y-auto">
-              {products.length === 0 ? (
-                <div className="text-center py-8 text-slate-500">
-                  <p className="text-xs font-bold uppercase tracking-widest">
-                    No hay productos
-                  </p>
-                </div>
-              ) : (
-                products.map(product => (
-                  <ProductCard
-                    key={product.barcode}
-                    product={product}
-                    onClick={() => onViewDetail(product)}
-                    isSelected={selectedIds.has(product.barcode)}
-                  />
-                ))
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <motion.div
+        initial={false}
+        animate={{ height: isExpanded ? 'auto' : 0 }}
+        className="overflow-hidden"
+      >
+        <div className="p-2 space-y-1 max-h-[400px] overflow-y-auto">
+          {products.length === 0 ? (
+            <p className={`text-center py-4 text-xs ${isDark ? 'text-neutral-500' : 'text-neutral-500'}`}>
+              Sin productos
+            </p>
+          ) : (
+            products.map(product => (
+              <ProductCard
+                key={product.barcode}
+                product={product}
+                onClick={() => onViewDetail(product)}
+                isSelected={selectedIds.has(product.barcode)}
+              />
+            ))
+          )}
+        </div>
+      </motion.div>
     </div>
   );
 };
@@ -136,14 +117,12 @@ const ProductSection: React.FC<ProductSectionProps> = ({
 // ============================================================================
 // COMPONENTE PRINCIPAL: InventoryPage
 // ============================================================================
-export const InventoryPage: React.FC = () => {
+const InventoryPage: React.FC = () => {
   const settings = useAppStore(state => state.settings);
-  const theme = (settings?.theme as 'dark' | 'light' | 'high-contrast') || 'dark';
-  const isDark = theme === 'dark';
+  const isDark = settings?.theme !== 'light';
 
   const {
     filteredProducts,
-    stats,
     filters,
     isLoading,
     isSyncing,
@@ -163,6 +142,15 @@ export const InventoryPage: React.FC = () => {
   const [printingProduct, setPrintingProduct] = useState<Product | null>(null);
   const [isPrinting, setIsPrinting] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Filtros
+  const filterOptions = [
+    { value: 'all', label: 'Todos' },
+    { value: 'exchange', label: 'Canje' },
+    { value: 'loss', label: 'Merma' },
+    { value: 'noInfo', label: 'Sin Info' },
+  ];
 
   // Atajos de teclado
   useEffect(() => {
@@ -170,21 +158,11 @@ export const InventoryPage: React.FC = () => {
       const target = e.target as HTMLElement;
       const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
       
-      // Escape: Limpiar búsqueda
       if (e.key === 'Escape' && isInput) {
         target.blur();
         actions.setSearchQuery('');
-        return;
-      }
-
-      // Alt + N: Nuevo producto
-      if (e.altKey && e.key.toLowerCase() === 'n') {
-        e.preventDefault();
-        actions.openCreate();
-        return;
       }
       
-      // /
       if (e.key === '/' && !isInput) {
         e.preventDefault();
         document.querySelector<HTMLInputElement>('input[type="text"]')?.focus();
@@ -196,10 +174,7 @@ export const InventoryPage: React.FC = () => {
   }, [actions]);
 
   const toggleSection = (section: keyof typeof expandedSections) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
 
   const handleOpenPrint = useCallback((product: Product) => {
@@ -212,13 +187,13 @@ export const InventoryPage: React.FC = () => {
     setIsPrinting(true);
     try {
       if (!thermalPrinter.isConnected()) {
-        toast.error('Impresora no conectada. Conéctala en Configuración.');
+        toast.error('Impresora no conectada');
         return;
       }
       await thermalPrinter.printLabel(printingProduct.barcode, printingProduct.name, 1);
-      toast.success('Etiqueta enviada a impresora');
+      toast.success('Etiqueta enviada');
     } catch (error: unknown) {
-      toast.error(`Error de impresión: ${String(error)}`);
+      toast.error(`Error: ${String(error)}`);
     } finally {
       setIsPrinting(false);
     }
@@ -234,13 +209,8 @@ export const InventoryPage: React.FC = () => {
       toast.error('Selecciona al menos un producto');
       return;
     }
-    
     const selectedProducts = filteredProducts.filter(p => selectedIds.has(p.barcode));
-    const printItems = selectedProducts.map(p => ({
-      barcode: p.barcode,
-      productName: p.name
-    }));
-    
+    const printItems = selectedProducts.map(p => ({ barcode: p.barcode, productName: p.name }));
     handlePrintLabels(printItems);
     toast.success(`Generando ${printItems.length} etiquetas`);
     actions.clearSelection();
@@ -248,8 +218,6 @@ export const InventoryPage: React.FC = () => {
 
   const handleMassDelete = async () => {
     if (selectedIds.size === 0) return;
-    if (!window.confirm(`¿Eliminar ${selectedIds.size} productos?`)) return;
-    
     try {
       await actions.bulkDelete(Array.from(selectedIds));
       toast.success('Productos eliminados');
@@ -281,124 +249,78 @@ export const InventoryPage: React.FC = () => {
   const totalCount = filteredProducts.length;
 
   return (
-    <div className={`h-full flex flex-col overflow-hidden ${isDark ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'}`}>
-      {/* Header */}
-      <ModuleHeader
-        title="Inventario"
-        subtitle={`${totalCount} productos`}
-        hideTitleOnMobile={false}
-        hideBackButtonOnMobile={true}
-        actions={
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setViewMode(v => v === 'list' ? 'kanban' : 'list')}
-              className="w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
-              title="Cambiar vista"
-            >
-              {viewMode === 'list' ? (
-                <LayoutGrid className="w-5 h-5" />
-              ) : (
-                <List className="w-5 h-5" />
-              )}
-            </button>
-            <button
-              onClick={actions.openCreate}
-              className="w-10 h-10 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 flex items-center justify-center transition-colors"
-              title="Nuevo producto (Alt+N)"
-            >
-              <Plus className="w-5 h-5 text-blue-400" />
-            </button>
-            <button
-              onClick={() => actions.syncProducts()}
-              disabled={isSyncing}
-              className="w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors disabled:opacity-50"
-              title="Sincronizar"
-            >
-              <RefreshCw className={`w-5 h-5 ${isSyncing ? 'animate-spin' : ''}`} />
-            </button>
-            <button
-              onClick={handleMassDelete}
-              disabled={selectedIds.size === 0}
-              className="w-10 h-10 rounded-xl bg-red-500/10 hover:bg-red-500/20 flex items-center justify-center transition-colors disabled:opacity-50"
-              title="Eliminar seleccionados"
-            >
-              <Trash2 className="w-5 h-5 text-red-400" />
-            </button>
-          </div>
-        }
-      />
-
-      {/* Search & Filters */}
-      <div className="px-4 py-3 space-y-3">
-        <div className={`
-          flex items-center gap-3 px-4 py-3 rounded-2xl border
-          ${isDark ? 'bg-white/5 border-white/10' : 'bg-white border-slate-200'}
-        `}>
-          <Search className="w-5 h-5 text-slate-400 shrink-0" />
-          <input
-            type="text"
-            placeholder="Buscar por nombre, barcode, categoría... (presiona /)"
-            value={filters.searchQuery}
-            onChange={(e) => actions.setSearchQuery(e.target.value)}
-            className={`
-              flex-1 bg-transparent outline-none text-sm font-medium
-              ${isDark ? 'placeholder:text-slate-500 text-white' : 'placeholder:text-slate-400 text-slate-900'}
-            `}
-          />
-          {filters.searchQuery && (
-            <button
-              onClick={() => actions.setSearchQuery('')}
-              className="text-slate-400 hover:text-white"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-
-        {/* Stats Bar */}
-        <ProductStatsBar
-          stats={{
-            total: stats.total,
-            byPolicy: {
-              [ProductPolicyStatus.EXCHANGE]: stats.byPolicy.EXCHANGE,
-              [ProductPolicyStatus.LOSS]: stats.byPolicy.LOSS,
-              [ProductPolicyStatus.NO_INFO]: stats.byPolicy.NO_INFO,
-              [ProductPolicyStatus.ALL]: stats.total
-            },
-            byStock: { NORMAL: 0, LOW: 0, CRITICAL: 0, EXCESS: 0 },
-            lowStock: stats.lowStock,
-            missingPolicy: stats.missingPolicy,
-            syncing: 0,
-            pendingChanges: stats.pendingChanges
-          }}
-          onPolicyFilter={actions.setSelectedPolicy}
-          selectedFilter={filters.selectedPolicy}
+    <ModulePage
+      title="Inventario"
+      subtitle={`${totalCount} productos`}
+      icon={<Package className={`w-5 h-5 ${isDark ? 'text-neutral-400' : 'text-neutral-600'}`} />}
+      isDark={isDark}
+      isLoading={isLoading}
+      onRefresh={actions.syncProducts}
+      actions={
+        <>
+          <button
+            onClick={() => setViewMode(v => v === 'list' ? 'kanban' : 'list')}
+            className={`p-2.5 rounded-xl ${isDark ? 'bg-neutral-900 text-neutral-400 hover:text-neutral-200' : 'bg-neutral-100 text-neutral-600 hover:text-neutral-900'}`}
+          >
+            {viewMode === 'list' ? <LayoutGrid className="w-4 h-4" /> : <List className="w-4 h-4" />}
+          </button>
+          <button
+            onClick={handleMassDelete}
+            disabled={selectedIds.size === 0}
+            className={`p-2.5 rounded-xl ${isDark ? 'bg-neutral-900 text-neutral-400 hover:text-neutral-200' : 'bg-neutral-100 text-neutral-600 hover:text-neutral-900'} disabled:opacity-30`}
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </>
+      }
+      fab={
+        <ActionFAB
+          onClick={actions.openCreate}
+          icon={<Plus className="w-5 h-5" />}
+          isDark={isDark}
         />
-      </div>
+      }
+    >
+      {/* Search & Filters */}
+      <FilterSearch
+        placeholder="Buscar productos..."
+        value={filters.searchQuery}
+        onChange={actions.setSearchQuery}
+        filters={filterOptions}
+        selectedFilter="all"
+        onFilterChange={() => {}}
+        isDark={isDark}
+        showFilters={showFilters}
+        onToggleFilters={() => setShowFilters(!showFilters)}
+      />
 
       {/* Selection info */}
       {selectedIds.size > 0 && (
-        <div className="px-4 py-2 bg-blue-500/10 border-y border-blue-500/20">
+        <div className={`mt-3 p-3 rounded-xl ${isDark ? 'bg-neutral-900 border border-neutral-800' : 'bg-neutral-100 border border-neutral-200'}`}>
           <div className="flex items-center justify-between">
-            <p className="text-xs font-bold text-blue-400">
+            <p className={`text-xs font-medium ${isDark ? 'text-neutral-300' : 'text-neutral-700'}`}>
               {selectedIds.size} seleccionado(s)
             </p>
-            <button
-              onClick={actions.clearSelection}
-              className="text-xs text-blue-400 hover:text-blue-300"
-            >
-              Limpiar selección
+            <button onClick={actions.clearSelection} className={`text-xs ${isDark ? 'text-neutral-500 hover:text-neutral-300' : 'text-neutral-500 hover:text-neutral-700'}`}>
+              Limpiar
             </button>
           </div>
         </div>
       )}
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="mt-4 space-y-3">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
-            <RefreshCw className="w-8 h-8 animate-spin text-slate-400" />
+            <RefreshCw className={`w-6 h-6 animate-spin ${isDark ? 'text-neutral-500' : 'text-neutral-400'}`} />
           </div>
+        ) : filteredProducts.length === 0 ? (
+          <EmptyState
+            title="Sin productos"
+            description="No hay productos registrados"
+            icon={<Package className="w-8 h-8" />}
+            isDark={isDark}
+          />
         ) : viewMode === 'kanban' ? (
           <InventoryKanbanView 
             products={filteredProducts as ProductWithPolicy[]}
@@ -412,11 +334,9 @@ export const InventoryPage: React.FC = () => {
               products={exchangeProducts}
               isExpanded={expandedSections.exchange}
               onToggle={() => toggleSection('exchange')}
-              onSelect={actions.openEdit}
               onViewDetail={actions.openDetail}
               selectedIds={selectedIds}
-              theme={theme}
-              colorClass="bg-emerald-500/20 text-emerald-400"
+              isDark={isDark}
             />
 
             <ProductSection
@@ -425,11 +345,9 @@ export const InventoryPage: React.FC = () => {
               products={lossProducts}
               isExpanded={expandedSections.loss}
               onToggle={() => toggleSection('loss')}
-              onSelect={actions.openEdit}
               onViewDetail={actions.openDetail}
               selectedIds={selectedIds}
-              theme={theme}
-              colorClass="bg-rose-500/20 text-rose-400"
+              isDark={isDark}
             />
 
             <ProductSection
@@ -438,11 +356,9 @@ export const InventoryPage: React.FC = () => {
               products={noInfoProducts}
               isExpanded={expandedSections.noInfo}
               onToggle={() => toggleSection('noInfo')}
-              onSelect={actions.openEdit}
               onViewDetail={actions.openDetail}
               selectedIds={selectedIds}
-              theme={theme}
-              colorClass="bg-slate-500/20 text-slate-400"
+              isDark={isDark}
             />
           </>
         )}
@@ -511,7 +427,7 @@ export const InventoryPage: React.FC = () => {
           }
         }}
       />
-    </div>
+    </ModulePage>
   );
 };
 

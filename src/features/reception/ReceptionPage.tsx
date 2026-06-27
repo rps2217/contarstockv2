@@ -179,25 +179,25 @@ export const ReceptionPage: React.FC<ReceptionPageProps> = ({ initialMode = 'man
             placeholder="Buscar por bulto u orden..."
             value={historyState.searchQuery}
             onChange={(e) => historyActions.setSearchQuery(e.target.value)}
-            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm focus:outline-none focus:border-blue-500/50"
+            className="w-full px-4 py-3 bg-white/5 border border-neutral-800 rounded-xl text-sm focus:outline-none focus:border-blue-500/50"
           />
         </div>
         <button
           onClick={() => setIsFiltersOpen(true)}
-          className="px-4 py-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors"
+          className="px-4 py-3 bg-white/5 border border-neutral-800 rounded-xl hover:bg-white/10 transition-colors"
         >
           <List className="w-5 h-5" />
         </button>
-        <div className="flex bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+        <div className="flex bg-white/5 border border-neutral-800 rounded-xl overflow-hidden">
           <button
             onClick={() => setViewMode('grid')}
-            className={`p-3 ${viewMode === 'grid' ? 'bg-blue-500/20 text-blue-400' : 'text-slate-400'}`}
+            className={`p-3 ${viewMode === 'grid' ? 'bg-blue-500/20 text-blue-400' : 'text-neutral-400'}`}
           >
             <Grid className="w-5 h-5" />
           </button>
           <button
             onClick={() => setViewMode('list')}
-            className={`p-3 ${viewMode === 'list' ? 'bg-blue-500/20 text-blue-400' : 'text-slate-400'}`}
+            className={`p-3 ${viewMode === 'list' ? 'bg-blue-500/20 text-blue-400' : 'text-neutral-400'}`}
           >
             <List className="w-5 h-5" />
           </button>
@@ -222,7 +222,7 @@ export const ReceptionPage: React.FC<ReceptionPageProps> = ({ initialMode = 'man
           className={`w-12 h-12 flex items-center justify-center rounded-2xl border transition-all ${
             logicState.isSyncing
               ? 'bg-blue-500/20 border-blue-500/40 text-blue-400'
-              : 'bg-white/5 border-white/10 text-slate-400 active:bg-white/10'
+              : 'bg-white/5 border-neutral-800 text-neutral-400 active:bg-white/10'
           }`}
         >
           {logicState.isSyncing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Cloud className="w-5 h-5" />}
@@ -270,7 +270,7 @@ export const ReceptionPage: React.FC<ReceptionPageProps> = ({ initialMode = 'man
   return (
     <div className="h-full flex flex-col">
       {/* Page Header */}
-      <div className="p-4 border-b border-white/5">
+      <div className="p-4 border-b border-neutral-800">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">
             {pageMode === 'management' ? 'Recepciones' : 'Captura'}
@@ -293,7 +293,7 @@ export const ReceptionPage: React.FC<ReceptionPageProps> = ({ initialMode = 'man
             className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
               pageMode === 'management'
                 ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                : 'bg-white/5 text-slate-400 border border-white/10'
+                : 'bg-white/5 text-neutral-400 border border-neutral-800'
             }`}
           >
             Historial
@@ -303,7 +303,7 @@ export const ReceptionPage: React.FC<ReceptionPageProps> = ({ initialMode = 'man
             className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
               pageMode === 'capture'
                 ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                : 'bg-white/5 text-slate-400 border border-white/10'
+                : 'bg-white/5 text-neutral-400 border border-neutral-800'
             }`}
           >
             Captura
@@ -326,7 +326,7 @@ export const ReceptionPage: React.FC<ReceptionPageProps> = ({ initialMode = 'man
 
               {/* Items Grid/List */}
               {filteredItems.length === 0 ? (
-                <div className="text-center py-12 text-slate-500">
+                <div className="text-center py-12 text-neutral-500">
                   No hay recepciones
                 </div>
               ) : viewMode === 'grid' ? (
@@ -387,7 +387,7 @@ export const ReceptionPage: React.FC<ReceptionPageProps> = ({ initialMode = 'man
                 }
                 emptyState={
                   sortedDrafts.length === 0 && (
-                    <div className="text-center py-12 text-slate-500 font-bold text-sm uppercase tracking-widest">
+                    <div className="text-center py-12 text-neutral-500 font-bold text-sm uppercase tracking-widest">
                       No hay bultos en esta sesión
                     </div>
                   )

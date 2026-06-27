@@ -99,7 +99,7 @@ export const SlicesPage: React.FC = () => {
 
         {/* Content Panel: Display Selected Slice */}
         <div className="lg:col-span-3 space-y-4">
-          <div className={`${tc.isLight ? 'bg-white border-slate-200' : 'bg-slate-950/40 border-slate-900'} border p-5 rounded-3xl space-y-4`}>
+          <div className={`${tc.isLight ? 'bg-white border-neutral-200' : 'bg-neutral-950/40 border-slate-900'} border p-5 rounded-3xl space-y-4`}>
             {/* Filters & Info */}
             <SliceFilters
               activeSlice={activeSlice}

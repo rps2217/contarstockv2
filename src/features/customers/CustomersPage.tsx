@@ -90,14 +90,14 @@ export const CustomersPage: React.FC = () => {
     }`}>
       {/* HEADER */}
       <div className={`p-4 md:p-6 pb-4 backdrop-blur-xl border-b shrink-0 transition-colors ${
-        theme === 'dark' ? 'bg-slate-950/40 border-white/5' : 'bg-stone-50/80 border-stone-200 shadow-sm'
+        theme === 'dark' ? 'bg-neutral-950/40 border-neutral-800' : 'bg-stone-50/80 border-stone-200 shadow-sm'
       }`}>
         <div className="flex items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-4">
             <button 
               onClick={() => navigate('/dashboard')}
               className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-colors ${
-                theme === 'dark' ? 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10' : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
+                theme === 'dark' ? 'bg-white/5 border-neutral-800 text-neutral-400 hover:bg-white/10' : 'bg-neutral-100 border-neutral-200 text-slate-600 hover:bg-neutral-200'
               }`}
             >
               <ChevronLeft className="w-6 h-6" />
@@ -108,7 +108,7 @@ export const CustomersPage: React.FC = () => {
                 Directorio de Clientes
               </h1>
               <p className={`text-[10px] font-bold uppercase tracking-widest mt-1.5 flex items-center gap-2 ${
-                theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
+                theme === 'dark' ? 'text-neutral-500' : 'text-neutral-400'
               }`}>
                 Gestión de contactos y notificaciones
               </p>
@@ -119,8 +119,8 @@ export const CustomersPage: React.FC = () => {
             onClick={() => setIsTemplateManagerOpen(true)}
             className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center gap-2 transition-colors border ${
               theme === 'dark' 
-                ? 'bg-white/5 border-white/10 hover:bg-white/10 text-slate-300' 
-                : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-600 shadow-sm'
+                ? 'bg-white/5 border-neutral-800 hover:bg-white/10 text-neutral-300' 
+                : 'bg-white border-neutral-200 hover:bg-neutral-50 text-slate-600 shadow-sm'
             }`}
           >
             <FileText className="w-4 h-4" />
@@ -170,8 +170,8 @@ export const CustomersPage: React.FC = () => {
                   animate={{ opacity: 1, y: 0 }}
                   className={`p-5 rounded-2xl border transition-all relative overflow-hidden h-full ${
                     theme === 'dark' 
-                      ? 'bg-slate-900/50 border-white/10 hover:border-blue-500/50' 
-                      : 'bg-white border-slate-200 hover:border-blue-500/50 shadow-sm'
+                      ? 'bg-neutral-900/50 border-neutral-800 hover:border-blue-500/50' 
+                      : 'bg-white border-neutral-200 hover:border-blue-500/50 shadow-sm'
                   }`}
                 >
                   {/* Sync Indicator */}
@@ -194,14 +194,14 @@ export const CustomersPage: React.FC = () => {
                         <h3 className="font-bold text-lg leading-tight">
                           {customer.firstName} {customer.lastName}
                         </h3>
-                        <p className={`text-xs font-mono mt-0.5 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
+                        <p className={`text-xs font-mono mt-0.5 ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-500'}`}>
                           {customer.phone}
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 mt-4 pt-4 border-t border-white/5">
+                  <div className="flex items-center gap-2 mt-4 pt-4 border-t border-neutral-800">
                     <button
                       onClick={() => handleOpenSendMessage(customer)}
                       className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-colors"
@@ -212,7 +212,7 @@ export const CustomersPage: React.FC = () => {
                     <button
                       onClick={() => handleEdit(customer)}
                       className={`p-2 rounded-xl transition-colors ${
-                        theme === 'dark' ? 'bg-white/5 hover:bg-white/10 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                        theme === 'dark' ? 'bg-white/5 hover:bg-white/10 text-neutral-300' : 'bg-neutral-100 hover:bg-neutral-200 text-slate-600'
                       }`}
                       title="Editar"
                     >
@@ -236,12 +236,12 @@ export const CustomersPage: React.FC = () => {
           {filteredCustomers.length === 0 && (
             <div className="py-12 flex flex-col items-center justify-center text-center">
               <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${
-                theme === 'dark' ? 'bg-white/5' : 'bg-slate-100'
+                theme === 'dark' ? 'bg-white/5' : 'bg-neutral-100'
               }`}>
-                <Users className={`w-8 h-8 ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`} />
+                <Users className={`w-8 h-8 ${theme === 'dark' ? 'text-neutral-500' : 'text-neutral-400'}`} />
               </div>
               <h3 className="text-lg font-bold mb-1">No hay clientes</h3>
-              <p className={`text-sm max-w-sm ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
+              <p className={`text-sm max-w-sm ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-500'}`}>
                 {searchQuery ? 'No se encontraron clientes que coincidan con tu búsqueda.' : 'Agrega tu primer cliente para comenzar a enviar notificaciones de retiro.'}
               </p>
               {!searchQuery && (

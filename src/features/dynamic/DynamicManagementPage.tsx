@@ -239,7 +239,7 @@ export const DynamicManagementPage: React.FC<DynamicManagementPageProps> = ({
             <button
               onClick={handlePullSync}
               disabled={isPulling}
-              className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl text-slate-400 active:bg-white/10 transition-colors"
+              className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl text-neutral-400 active:bg-white/10 transition-colors"
             >
               <RefreshCw className={`w-5 h-5 ${isPulling ? 'animate-spin' : ''}`} />
             </button>
@@ -292,9 +292,9 @@ export const DynamicManagementPage: React.FC<DynamicManagementPageProps> = ({
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border shadow-2xl relative bg-slate-900 border-white/10"
+              className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border shadow-2xl relative bg-neutral-900 border-neutral-800"
             >
-              <div className="sticky top-0 z-10 p-6 flex items-center justify-between border-b border-white/5 bg-slate-900">
+              <div className="sticky top-0 z-10 p-6 flex items-center justify-between border-b border-neutral-800 bg-neutral-900">
                 <div className="flex flex-col">
                   <h3 className="text-xl font-black uppercase tracking-tighter italic text-white">
                     {isAdding ? `Nuevo: ${schema.tableName}` : isEditing ? `Editar: ${schema.tableName}` : 'Detalles'}
@@ -330,7 +330,7 @@ export const DynamicManagementPage: React.FC<DynamicManagementPageProps> = ({
                       {Object.entries(schema.columns).map(([key, col]) => {
                         const column = col as ColumnSchema;
                         return (
-                          <div key={key} className="flex flex-col gap-1 p-3 rounded-xl bg-white/5 border border-white/5">
+                          <div key={key} className="flex flex-col gap-1 p-3 rounded-xl bg-white/5 border border-neutral-800">
                             <span className="text-[10px] font-black text-stone-500 uppercase tracking-widest">{column.label}</span>
                             <span className="text-sm font-bold text-white">{String(selectedItem?.[key] || 'N/A')}</span>
                           </div>
@@ -367,7 +367,7 @@ export const DynamicManagementPage: React.FC<DynamicManagementPageProps> = ({
                           <button onClick={() => handleRetrySync(selectedItem)} className="flex-1 flex items-center justify-center gap-2 py-2 bg-rose-600 text-white text-[10px] font-black uppercase rounded-xl">
                             <RefreshCw className={`w-3 h-3 ${isRetrying ? 'animate-spin' : ''}`} /> Reintentar
                           </button>
-                          <button onClick={() => setIsEditing(true)} className="flex-1 flex items-center justify-center gap-2 py-2 bg-white/10 text-white text-[10px] font-black uppercase rounded-xl border border-white/10">
+                          <button onClick={() => setIsEditing(true)} className="flex-1 flex items-center justify-center gap-2 py-2 bg-white/10 text-white text-[10px] font-black uppercase rounded-xl border border-neutral-800">
                             <Edit3 className="w-3 h-3" /> Editar
                           </button>
                         </div>
@@ -381,7 +381,7 @@ export const DynamicManagementPage: React.FC<DynamicManagementPageProps> = ({
                       >
                         <Printer className="w-5 h-5" /> Imprimir Etiqueta
                       </button>
-                      <button onClick={() => setSelectedItem(null)} className="py-4 bg-white/5 text-white font-black uppercase tracking-widest rounded-2xl border border-white/10">
+                      <button onClick={() => setSelectedItem(null)} className="py-4 bg-white/5 text-white font-black uppercase tracking-widest rounded-2xl border border-neutral-800">
                         Cerrar
                       </button>
                     </div>
