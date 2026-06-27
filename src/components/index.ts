@@ -7,7 +7,6 @@ export * from './ui';
 
 // Components
 export { CameraScanner } from './CameraScanner';
-export { NumericKeypad } from './NumericKeypad';
 export { BottomDock } from './BottomDock';
 export { CsvImporter } from './CsvImporter';
 export { DynamicCard } from './DynamicCard';
