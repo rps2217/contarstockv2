@@ -29,6 +29,24 @@ export class ProductRepository {
     await this.table.delete(barcode);
   }
 
+  // Soft delete - marca como pending_delete
+  async softDelete(barcode: string): Promise<Product | null> {
+    const product = await this.table.get(barcode);
+    if (!product) return null;
+    await this.table.update(barcode, { syncStatus: 'pending_delete' });
+    return product;
+  }
+
+  // Restore desde soft delete
+  async restore(barcode: string): Promise<void> {
+    await this.table.update(barcode, { syncStatus: 'synced' });
+  }
+
+  // Eliminación permanente
+  async permanentDelete(barcode: string): Promise<void> {
+    await this.table.delete(barcode);
+  }
+
   async count(): Promise<number> {
     return await this.table.count();
   }
@@ -67,6 +85,46 @@ export class ProductRepository {
   async getSuppliers(): Promise<string[]> {
     const products = await this.table.toArray();
     return [...new Set(products.map(p => p.supplier).filter(Boolean))];
+  }
+
+  // Paginación con cursor
+  async getPaginated(options: {
+    cursor?: string;
+    limit: number;
+    filter?: { category?: string; supplier?: string };
+  }): Promise<{
+    items: Product[];
+    nextCursor?: string;
+    hasMore: boolean;
+  }> {
+    const { cursor, limit, filter } = options;
+    
+    let results = await this.table.toArray();
+
+    // Aplicar filtros
+    if (filter?.category) {
+      results = results.filter(p => p.category === filter.category);
+    }
+    if (filter?.supplier) {
+      results = results.filter(p => p.supplier === filter.supplier);
+    }
+
+    // Cursor-based pagination
+    if (cursor) {
+      const cursorIndex = results.findIndex(p => p.barcode === cursor);
+      if (cursorIndex !== -1) {
+        results = results.slice(cursorIndex + 1);
+      }
+    }
+
+    const hasMore = results.length > limit;
+    const items = results.slice(0, limit);
+    
+    return {
+      items,
+      nextCursor: hasMore && items.length > 0 ? items[items.length - 1].barcode : undefined,
+      hasMore,
+    };
   }
 }
 

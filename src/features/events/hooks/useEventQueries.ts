@@ -2,9 +2,10 @@
  * useEventQueries - Hook para consulta de datos de eventos
  * 
  * Maneja la obtención inicial de datos y suscripción en tiempo real.
+ * Incluye cache simple para evitar recargas excesivas.
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { supabaseSyncService } from '../../../services/supabaseSyncService';
 import { useAppStore } from '@/stores';
@@ -13,6 +14,10 @@ import { eventRepository } from '../../../repositories/EventRepository';
 import { normalizeSku } from '../../../services/utils';
 import { Product } from '../../../types';
 import { logger } from '../../../services/logger';
+
+// Cache para sync inicial (TTL: 3 minutos)
+const SYNC_CACHE_TTL = 3 * 60 * 1000;
+let syncCache: { timestamp: number } | null = null;
 
 interface ProcessedEvent {
   id: string;
@@ -90,7 +95,13 @@ export function useEventQueries(): UseEventQueriesReturn {
   }, [allProducts]);
 
   // Sincronización inicial y suscripción en tiempo real
+  // CON CACHE: evita recargas excesivas
   useEffect(() => {
+    const now = Date.now();
+    
+    // Verificar si hay cache válido
+    const shouldSkipFetch = syncCache && (now - syncCache.timestamp) < SYNC_CACHE_TTL;
+    
     const fetchInitialData = async () => {
       try {
         setIsSyncing(true);
@@ -103,6 +114,8 @@ export function useEventQueries(): UseEventQueriesReturn {
           }) as any));
           logger.info('SYNC_INITIAL_EVENTS', `Cargados ${rows.length} eventos desde Supabase`);
         }
+        // Actualizar cache
+        syncCache = { timestamp: now };
       } catch (err) {
         logger.error('SYNC_INITIAL_EVENTS_FAIL', err);
       } finally {
@@ -110,7 +123,9 @@ export function useEventQueries(): UseEventQueriesReturn {
       }
     };
 
-    fetchInitialData();
+    if (!shouldSkipFetch) {
+      fetchInitialData();
+    }
 
     const unsubscribe = supabaseSyncService.startSync(tableName, eventRepository);
     return () => {

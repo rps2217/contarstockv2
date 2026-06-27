@@ -2,9 +2,10 @@
  * useExpiry - Hook centralizado para gestión de vencimientos
  * 
  * Arquitectura simplificada v2.0 - Un solo hook, una sola responsabilidad
+ * Incluye cache simple para evitar recargas excesivas
  */
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { db } from '@/db';
 import { useAppStore } from '@/stores';
@@ -14,6 +15,10 @@ import { ExpiryStatus, evaluateExpiry } from '../domain/expiryDomain';
 import { formatExpiryDate, getStatusLabel } from '../domain/expiryDomain';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+
+// Cache para loadRecords (TTL: 2 minutos)
+const LOAD_CACHE_TTL = 2 * 60 * 1000;
+let loadCache: { data: ExpiryRecord[]; timestamp: number } | null = null;
 
 // ============================================================================
 // TIPOS
@@ -148,16 +153,25 @@ export const useExpiry = (): UseExpiryReturn => {
   });
 
   // ============================================================================
-  // CARGA DE DATOS
+  // CARGA DE DATOS CON CACHE
   // ============================================================================
 
-  const loadRecords = useCallback(async () => {
+  const loadRecords = useCallback(async (forceRefresh = false) => {
+    const now = Date.now();
+    
+    // Verificar cache válido
+    if (!forceRefresh && loadCache && (now - loadCache.timestamp) < LOAD_CACHE_TTL) {
+      setRecords(loadCache.data);
+      setIsLoading(false);
+      return;
+    }
+
     try {
       setIsLoading(true);
       const stored = await db.table('expirations')
         .toArray();
 
-      const now = new Date();
+      const nowDate = new Date();
       const processed: ExpiryRecord[] = stored.map(item => {
         const expiryDate = new Date(Number(item.yyyy), Number(item.mm) - 1, 1);
         expiryDate.setMonth(expiryDate.getMonth() + 1);
@@ -166,7 +180,7 @@ export const useExpiry = (): UseExpiryReturn => {
         const evaluation = evaluateExpiry(
           expiryDate,
           { withdrawalDays: item.withdrawalDays ?? DEFAULT_WITHDRAWAL_DAYS, hasCanje: item.hasCanje ?? false },
-          now,
+          nowDate,
           item.quantity || 1
         );
 
@@ -197,6 +211,8 @@ export const useExpiry = (): UseExpiryReturn => {
         };
       });
 
+      // Guardar en cache
+      loadCache = { data: processed, timestamp: now };
       setRecords(processed);
     } catch (error) {
       toast.error('Error al cargar vencimientos');
@@ -322,6 +338,8 @@ export const useExpiry = (): UseExpiryReturn => {
   const deleteRecord = useCallback(async (id: string) => {
     try {
       await db.table('expirations').delete(id);
+      // Invalidar cache
+      loadCache = null;
       setRecords(prev => prev.filter(r => r.id !== id));
       toast.success('Registro eliminado');
     } catch (error) {
@@ -335,6 +353,8 @@ export const useExpiry = (): UseExpiryReturn => {
     try {
       await db.table('expirations').bulkDelete(ids);
       setRecords(prev => prev.filter(r => !ids.includes(r.id)));
+      // Invalidar cache
+      loadCache = null;
       setSelectedIds(new Set());
       toast.success(`${ids.length} registros eliminados`);
     } catch (error) {
@@ -349,7 +369,7 @@ export const useExpiry = (): UseExpiryReturn => {
       const lastDay = new Date(data.yyyy, data.mm, 0).getDate();
       const claveUnica = `${data.barcode}${data.yyyy}${String(data.mm).padStart(2, '0')}${String(lastDay).padStart(2, '0')}`;
       
-      // Verificar si ya existe un registro con la misma clave única
+      // Verificar duplicado
       const existingRecord = await db.table('expirations')
         .where('claveUnica')
         .equals(claveUnica)
@@ -362,30 +382,18 @@ export const useExpiry = (): UseExpiryReturn => {
       
       const id = crypto.randomUUID();
       const timestamp = Date.now();
-      
-      // Crear fecha de vencimiento
       const expiryDateObj = new Date(data.yyyy, data.mm - 1, lastDay);
       const daysLeft = Math.ceil((expiryDateObj.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-      
-      // Usar políticas del proveedor o valores por defecto
       const withdrawalDays = data.withdrawalDays ?? 30;
       const hasCanje = data.hasCanje ?? false;
       
-      // Calcular estado basado en días restantes y días de retiro
       let status: ExpiryStatus;
-      if (daysLeft < 0) {
-        status = ExpiryStatus.EXPIRED;
-      } else if (daysLeft <= 15) {
-        status = ExpiryStatus.CRITICAL;
-      } else if (daysLeft <= withdrawalDays) {
-        status = ExpiryStatus.WITHDRAWAL;
-      } else if (daysLeft <= 90) {
-        status = ExpiryStatus.NEXT_EXPIRY;
-      } else {
-        status = ExpiryStatus.SAFE;
-      }
+      if (daysLeft < 0) status = ExpiryStatus.EXPIRED;
+      else if (daysLeft <= 15) status = ExpiryStatus.CRITICAL;
+      else if (daysLeft <= withdrawalDays) status = ExpiryStatus.WITHDRAWAL;
+      else if (daysLeft <= 90) status = ExpiryStatus.NEXT_EXPIRY;
+      else status = ExpiryStatus.SAFE;
       
-      // Valores por defecto
       const record: ExpiryRecord = {
         id,
         barcode: data.barcode,
@@ -404,21 +412,25 @@ export const useExpiry = (): UseExpiryReturn => {
         syncStatus: 'pending',
         status,
         daysLeft,
-        expiryDate: format(expiryDateObj, 'yyyy-MM-dd'),
+        expiryDate: expiryDateObj.toISOString(),
         expiryDateObj,
         withdrawalDate: new Date(expiryDateObj.getTime() - withdrawalDays * 24 * 60 * 60 * 1000),
-        category: 'OTRO',
-        estado: status,
-        type: 'Individual',
+        category: 'GENERAL',
+        estado: getStatusLabel(status),
+        type: 'Individual'
       };
-
+      
       await db.table('expirations').add(record);
+      
+      // Invalidar cache
+      loadCache = null;
+      
       setRecords(prev => [...prev, record]);
       toast.success('Vencimiento registrado');
       return id;
     } catch (error) {
       logger.error('useExpiry', 'Error creating record', String(error));
-      toast.error('Error al crear registro');
+      toast.error('Error al crear vencimiento');
       return null;
     }
   }, []);
@@ -436,6 +448,8 @@ export const useExpiry = (): UseExpiryReturn => {
       };
 
       await db.table('expirations').put(updated as any);
+      // Invalidar cache
+      loadCache = null;
       setRecords(prev => prev.map(r => r.id === id ? { ...r, ...data } : r));
       toast.success('Registro actualizado');
     } catch (error) {
