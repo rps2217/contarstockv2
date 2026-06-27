@@ -154,18 +154,24 @@ Cambiar `console.error` por notificaciones toast para errores operativos.
 
 ### Prioridad Alta
 1. ✅ ~~Corregir ThemeProvider error~~ 
-2. 🔲 Verificar cleanup en `usePerformanceOptimizations`
+2. ✅ ~~Eliminar código muerto~~ 
+   - ThemeManager.tsx eliminado
+   - useThemeManager.ts eliminado
+   - ThemeSwitcher.tsx eliminado
+   - ThemeCustomizer.tsx eliminado
+   - NumericKeypad.tsx eliminado
 3. 🔲 Documentar tablas opcionales de Supabase
 
 ### Prioridad Media
-4. 🔲 Unificar sistemas de ThemeProvider
-5. 🔲 Eliminar código muerto
+4. ✅ ~~Limpiar exports no utilizados del theme/index.ts~~
+5. 🔲 Verificar cleanup en `usePerformanceOptimizations`
 6. 🔲 Implementar retry limitado en lazyLoad
 
 ### Prioridad Baja
 7. 🔲 Optimizar useAutoSession
 8. 🔲 Consolidar Error Boundaries
 9. 🔲 Reemplazar console.error por toasts
+10. 🔲 Agregar más tests unitarios
 
 ---
 
