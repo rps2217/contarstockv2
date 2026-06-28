@@ -16,7 +16,7 @@ import {
   Clock,
   Database
 } from 'lucide-react';
-import { formatSyncDate } from '@/lib/date';
+import { formatSyncDate, formatTimeHHMMSS, formatTimeWithDate } from '@/lib/date';
 
 interface SyncIncident {
   table: string;
@@ -138,7 +138,7 @@ export const SyncActivity: React.FC<SyncActivityProps> = ({
                         {log.status === 'error' && <AlertCircle className="w-4 h-4 text-rose-500" />}
                         {log.status === 'syncing' && <RefreshCw className="w-4 h-4 text-blue-500 animate-spin" />}
                         <span className="text-[10px] text-slate-500 font-mono">
-                          {log.timestamp ? format(new Date(log.timestamp), 'HH:mm:ss') : ''}
+                          {formatTimeHHMMSS(log.timestamp)}
                         </span>
                       </div>
                     </div>
@@ -177,7 +177,7 @@ export const SyncActivity: React.FC<SyncActivityProps> = ({
                   )}
                   <div className="bg-slate-950 rounded-2xl border border-slate-900 overflow-hidden divide-y divide-slate-900">
                     {incidents.map((inc, index) => {
-                      const dateStr = format(new Date(inc.time || Date.now()), 'HH:mm:ss (dd/MM)', { locale: es });
+                      const dateStr = formatTimeWithDate(inc.time);
                       return (
                         <div key={index} className="p-4 flex items-start gap-3">
                           <div className="p-2 bg-rose-500/10 rounded-xl text-rose-500 mt-0.5">

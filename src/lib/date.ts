@@ -64,6 +64,22 @@ export function formatDetailDateTime(timestamp?: number | null): string {
 }
 
 /**
+ * Formatea timestamp a hora HH:mm:ss
+ */
+export function formatTimeHHMMSS(timestamp?: number | null): string {
+  if (!timestamp) return '';
+  return format(new Date(timestamp), 'HH:mm:ss');
+}
+
+/**
+ * Formatea timestamp a hora con fecha: "HH:mm:ss (dd/MM)"
+ */
+export function formatTimeWithDate(timestamp?: number | null): string {
+  if (!timestamp) return '';
+  return format(new Date(timestamp), 'HH:mm:ss (dd/MM)', { locale: es });
+}
+
+/**
  * Formatea segundos a texto legible
  * Ejemplos: "30s", "5m", "2h", "1d"
  */

@@ -5,7 +5,7 @@
 import React from 'react';
 import { Clock, Database } from 'lucide-react';
 import { SyncStatusBadge } from './SyncStatusBadge';
-import { formatSyncDate } from '@/lib/date';
+import { formatSyncDate, formatTimeAgo } from '@/lib/date';
 
 interface TableSyncInfo {
   tableName: string;

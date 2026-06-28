@@ -162,7 +162,6 @@ export function getStatusColor(
     critical: { text: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/30' },
     never: { text: 'text-slate-400', bg: 'bg-slate-500/10', border: 'border-slate-500/30' },
     info: { text: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/30' },
-    synced: { text: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/30' },
   };
   
   return colors[status]?.[mode] || colors.never[mode];

@@ -136,8 +136,8 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
       icon: <Clock className="w-4 h-4" />,
       rows: [
         { label: 'Mes/Año', value: `${event.mm || '?'}/${event.yyyy || '?'}` },
-        { label: 'Fecha creación', value: formatDate(event.timestamp) },
-        { label: 'Última sync', value: formatDate(event.lastSyncTimestamp) },
+        { label: 'Fecha creación', value: formatDetailDate(event.timestamp) },
+        { label: 'Última sync', value: formatDetailDate(event.lastSyncTimestamp) },
       ]
     }
   ];
@@ -169,7 +169,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
 
   // Metadata
   const metadata = [
-    { label: 'Creado', value: formatDate(event.timestamp), icon: <Clock className="w-3 h-3" /> },
+    { label: 'Creado', value: formatDetailDate(event.timestamp), icon: <Clock className="w-3 h-3" /> },
     { label: 'Sync', value: event.syncStatus === 'synced' ? 'Sincronizado' : event.syncStatus === 'pending' ? 'Pendiente' : 'Error', icon: event.syncStatus === 'synced' ? <Cloud className="w-3 h-3" /> : event.syncStatus === 'pending' ? <RefreshCw className="w-3 h-3" /> : <CloudOff className="w-3 h-3" /> },
   ];
 
