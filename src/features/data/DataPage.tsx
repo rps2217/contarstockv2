@@ -17,7 +17,7 @@ import {
 // Lazy imports de las páginas existentes
 const InventoryPage = lazy(() => import('../inventory/InventoryPage') as unknown as Promise<{ default: React.ComponentType<any> }>);
 const CustomersPage = lazy(() => import('../customers/CustomersPage') as unknown as Promise<{ default: React.ComponentType<any> }>);
-const ProvidersPage = lazy(() => import('../suppliers/pages/ProvidersPage') as unknown as Promise<{ default: React.ComponentType<any> }>);
+const ProvidersPage = lazy(() => import('../suppliers/pages/SuppliersPage') as unknown as Promise<{ default: React.ComponentType<any> }>);
 const ExpectedOrdersPage = lazy(() => import('../expected-orders/ExpectedOrdersPage') as unknown as Promise<{ default: React.ComponentType<any> }>);
 
 type DataTab = 'inventory' | 'customers' | 'providers' | 'orders';

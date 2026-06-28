@@ -40,7 +40,7 @@ const EventsLegacy = lazyWithRetry(() => import('@/features/events/EventsPage'))
 const ExpiryLegacy = lazyWithRetry(() => import('@/features/expiry/ExpiryPage'));
 const CountingLegacy = lazyWithRetry(() => import('@/features/counting/CountingPage'));
 const CustomersLegacy = lazyWithRetry(() => import('@/features/customers/CustomersPage').then(m => ({ default: m.CustomersPage })));
-const ProvidersLegacy = lazyWithRetry(() => import('@/features/suppliers/pages/ProvidersPage').then(m => ({ default: m.ProvidersPage })));
+const ProvidersLegacy = lazyWithRetry(() => import('@/features/suppliers/pages/SuppliersPage').then(m => ({ default: m.SuppliersPage })));
 const ExpectedOrdersLegacy = lazyWithRetry(() => import('@/features/expected-orders/ExpectedOrdersPage').then(m => ({ default: m.ExpectedOrdersPage })));
 const DynamicLegacy = lazyWithRetry(() => import('@/features/dynamic/DynamicManagementPage').then(m => ({ default: m.DynamicManagementPage })));
 const SlicesLegacy = lazyWithRetry(() => import('@/features/slices/SlicesPage').then(m => ({ default: m.SlicesPage })));
