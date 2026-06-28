@@ -122,11 +122,10 @@ export const pushScansToCloud = async (batchId: string): Promise<void> => {
       const uniqueId = `HM_ACTIVE_${batchId}_${locPart}_${s.barcode}`;
       return {
         id: uniqueId,
-        batchId: s.batchId,
         barcode: s.barcode,
         quantity: s.quantity,
         location: s.location || '',
-        timestamp: new Date(s.timestamp).toISOString()
+        timestamp: s.timestamp  // Ya es número epoch en massiveDb
       };
     });
 
