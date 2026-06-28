@@ -25,6 +25,7 @@ import {
   ArrowDownCircle
 } from 'lucide-react';
 import { syncMetrics, SyncHealth, SyncStats } from '@/services/cloud/SyncMetrics';
+import { formatDuration, formatTimeAgo } from '@/lib/date';
 
 interface SyncMetricsDashboardProps {
   isOpen: boolean;
@@ -76,21 +77,10 @@ export const SyncMetricsDashboard: React.FC<SyncMetricsDashboardProps> = ({
 
   if (!isOpen) return null;
 
-  const formatDuration = (ms: number) => {
-    if (ms < 1000) return `${Math.round(ms)}ms`;
-    if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
-    return `${Math.round(ms / 60000)}m`;
-  };
-
-  const formatRelativeTime = (timestamp: number | null) => {
+  // Helper para formatear tiempo relativo con mensaje personalizado
+  const formatLastSync = (timestamp: number | null): string => {
     if (!timestamp) return 'Nunca';
-    const diff = Date.now() - timestamp;
-    const minutes = Math.floor(diff / 60000);
-    if (minutes < 1) return 'Hace menos de 1m';
-    if (minutes < 60) return `Hace ${minutes}m`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `Hace ${hours}h`;
-    return `Hace ${Math.floor(hours / 24)}d`;
+    return formatTimeAgo(timestamp, { lessThanOneMinute: 'Hace menos de 1m' });
   };
 
   const getHealthColor = (score: number) => {

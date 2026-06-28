@@ -21,11 +21,7 @@
  */
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-
-// Utility Function for conditional classes
-function cn(...classes: (string | boolean | undefined | null)[]): string {
-  return classes.filter(Boolean).join(' ');
-}
+import { cn } from '@/lib/utils';
 
 interface DualViewProps {
   /** Panel izquierdo - Lista */
