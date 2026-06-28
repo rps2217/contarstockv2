@@ -80,6 +80,14 @@ export function formatTimeWithDate(timestamp?: number | null): string {
 }
 
 /**
+ * Formatea timestamp a fecha sin hora: "27 jun 2026"
+ */
+export function formatDateShort(timestamp?: number | null): string {
+  if (!timestamp) return '';
+  return format(new Date(timestamp), 'dd MMM yyyy', { locale: es });
+}
+
+/**
  * Formatea segundos a texto legible
  * Ejemplos: "30s", "5m", "2h", "1d"
  */

@@ -4,8 +4,7 @@
 
 import React from 'react';
 import { AlertTriangle, Clock, XCircle } from 'lucide-react';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { formatTimeHHMMSS, formatDateShort } from '@/lib/date';
 
 interface Incident {
   table: string;
@@ -24,14 +23,6 @@ export const SyncIncidents: React.FC<SyncIncidentsProps> = ({
   onClear,
   className = '',
 }) => {
-  // Formateadores específicos para incidentes
-  const formatTime = (timestamp: number): string => {
-    return format(new Date(timestamp), 'HH:mm:ss', { locale: es });
-  };
-
-  const formatIncidentDate = (timestamp: number): string => {
-    return format(new Date(timestamp), 'dd MMM yyyy', { locale: es });
-  };
 
   if (incidents.length === 0) {
     return (
@@ -73,14 +64,14 @@ export const SyncIncidents: React.FC<SyncIncidentsProps> = ({
                   </p>
                   <div className="flex items-center gap-1 text-xs text-red-500/70">
                     <Clock className="w-3 h-3" />
-                    <span>{formatTime(incident.time)}</span>
+                    <span>{formatTimeHHMMSS(incident.time)}</span>
                   </div>
                 </div>
                 <p className="text-sm text-red-600 dark:text-red-300 mt-1 break-words">
                   {incident.error}
                 </p>
                 <p className="text-xs text-red-400/60 mt-1">
-                  {formatIncidentDate(incident.time)}
+                  {formatDateShort(incident.time)}
                 </p>
               </div>
             </div>
