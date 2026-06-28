@@ -8,7 +8,7 @@
 ```
 src/lib/
 ├── ui.tsx       # Helpers UI: getSessionStatusBadge, getSyncLogStatusBadge, getStatusColor
-├── date.ts      # Helpers fecha: formatTimeAgo, formatSyncDate, formatDuration
+├── date.ts      # Helpers fecha: formatTimeAgo, formatSyncDate, formatTimeWithDate, formatDuration
 └── utils.ts     # cn() - combinación de clases
 ```
 
@@ -16,11 +16,16 @@ src/lib/
 | Función | Ubicación | Uso |
 |---------|-----------|-----|
 | `formatSyncDate()` | `lib/date.ts` | SyncHistory, SyncActivity |
+| `formatTimeWithDate()` | `lib/date.ts` | SyncQueuePanel, SyncQueueList, SyncActivity |
+| `formatTimeHHMMSS()` | `lib/date.ts` | SyncActivity |
+| `formatDetailDateTime()` | `lib/date.ts` | Uso general |
 | `getSessionStatusBadge()` | `lib/ui.tsx` | CountingKanbanView |
 | `getSyncLogStatusBadge()` | `lib/ui.tsx` | SyncLogsModal |
 | `DesignStatusBadge` | `design-system/StatusBadge.tsx` | RecordDetailView |
 
 ### Commits de Refactorización:
+- `cbe587c0` - refactor: Unificar formateo de fechas en componentes sync
+- `d3b22dc9` - fix: Corregir errores de compilación por refs faltantes
 - `2dc2793c` - refactor: Unificar funciones duplicadas de status y fechas
 - `249d6505` - refactor: Eliminar formatEventDate duplicado
 - `214e78e6` - refactor: Usar cn() centralizado y mejorar formatTimeAgo
