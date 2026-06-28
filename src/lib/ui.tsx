@@ -234,3 +234,45 @@ export function getStatusStyle(status: string): { color: string; bg: string } {
   
   return styles[status] || styles.never;
 }
+
+// ============================================
+// HELPERS PARA MÉTRICAS
+// ============================================
+
+export type MetricVariant = 'default' | 'warning' | 'error' | 'success';
+
+export interface MetricColorClasses {
+  bg: string;
+  text: string;
+  border: string;
+}
+
+/**
+ * Obtiene las clases de color para tarjetas de métricas según variante
+ */
+export function getMetricColorClasses(variant: MetricVariant = 'default'): MetricColorClasses {
+  const colorMap: Record<MetricVariant, MetricColorClasses> = {
+    default: {
+      bg: 'bg-blue-500/10',
+      text: 'text-blue-400',
+      border: 'border-slate-800/60'
+    },
+    warning: {
+      bg: 'bg-amber-500/10',
+      text: 'text-amber-400',
+      border: 'border-amber-500/20'
+    },
+    error: {
+      bg: 'bg-rose-500/10',
+      text: 'text-rose-400',
+      border: 'border-rose-500/20'
+    },
+    success: {
+      bg: 'bg-emerald-500/10',
+      text: 'text-emerald-400',
+      border: 'border-emerald-500/20'
+    }
+  };
+  
+  return colorMap[variant];
+}

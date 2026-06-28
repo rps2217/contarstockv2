@@ -8,6 +8,7 @@ import { motion } from 'motion/react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { SparklineChart } from './SparklineChart';
 import { cn } from '@/lib/utils';
+import { getMetricColorClasses, type MetricVariant } from '@/lib/ui';
 
 interface MetricCardProps {
   label?: string;
@@ -15,7 +16,7 @@ interface MetricCardProps {
   value: string | number;
   change?: number;
   icon?: React.ReactNode;
-  variant?: 'default' | 'warning' | 'error' | 'success';
+  variant?: MetricVariant;
   isDark?: boolean;
   sparklineData?: number[];
   sparklineColor?: string;
@@ -38,37 +39,7 @@ export const MetricCard: React.FC<MetricCardProps> = memo(({
     return change > 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />;
   };
 
-  // Colores según variante
-  const getColorClasses = () => {
-    switch (variant) {
-      case 'warning':
-        return {
-          bg: 'bg-amber-500/10',
-          text: 'text-amber-400',
-          border: 'border-amber-500/20'
-        };
-      case 'error':
-        return {
-          bg: 'bg-rose-500/10',
-          text: 'text-rose-400',
-          border: 'border-rose-500/20'
-        };
-      case 'success':
-        return {
-          bg: 'bg-emerald-500/10',
-          text: 'text-emerald-400',
-          border: 'border-emerald-500/20'
-        };
-      default:
-        return {
-          bg: 'bg-blue-500/10',
-          text: 'text-blue-400',
-          border: 'border-slate-800/60'
-        };
-    }
-  };
-
-  const colors = getColorClasses();
+  const colors = getMetricColorClasses(variant);
 
   // Determinar color del sparkline basado en la tendencia
   const getSparklineColor = () => {
