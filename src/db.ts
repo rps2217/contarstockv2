@@ -146,6 +146,17 @@ export class LogiCountDB extends Dexie {
   audit_logs!: Table<AuditLogEntry>;
   viewPreferences!: Table<ViewPreferences>;
   bulkHistory!: Table<BulkHistoryEntry>;
+  syncMetrics!: Table<{
+    id?: number;
+    timestamp: number;
+    operation: string;
+    tableName: string;
+    duration: number;
+    success: boolean;
+    recordsAffected: number;
+    error?: string;
+    metadata?: Record<string, unknown>;
+  }>;
 
   constructor() {
     super('LogiCountDB');

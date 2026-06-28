@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { syncOrchestrator, getPendingGroups, uploadGroupCompat, resetSyncLock } from '@/services/sync';
+import { unifiedSyncEngine, getPendingGroups, uploadGroupCompat, resetSyncLock } from '@/services/sync';
 import { erpService } from '@/services/erpService';
 import { ExpectedOrderRepository } from '@/repositories/ExpectedOrderRepository';
 import { supabaseSyncService } from '@/services/supabaseSyncService';

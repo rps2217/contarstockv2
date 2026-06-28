@@ -50,7 +50,7 @@ export {
   uploadBatch,
   resetSyncLock,
   // Legacy compatibility
-  syncOrchestrator,
+  unifiedSyncEngine as syncOrchestrator,
 } from './sync';
 
 export type {

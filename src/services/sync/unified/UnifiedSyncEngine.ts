@@ -38,6 +38,7 @@ import {
   type ConflictResolution,
 } from './types';
 import { syncRegistry } from './registry';
+import { syncMetricsService } from './SyncMetricsService';
 
 // =============================================================================
 // HELPERS UTILITARIOS
@@ -167,6 +168,15 @@ export class UnifiedSyncEngine {
     
     if (!navigator.onLine) {
       this.setState('offline');
+      // @ts-ignore
+      syncMetricsService.recordMetric({
+        operation: 'conflict_check',
+        tableName: '_system',
+        duration: 0,
+        success: false,
+        recordsAffected: 0,
+        error: 'Offline',
+      });
       return { success: false, errors: ['Offline'] };
     }
 
@@ -183,7 +193,17 @@ export class UnifiedSyncEngine {
 
       // 3. Check conflicts
       this.setState('checking_conflicts');
+      const conflictStart = performance.now();
       const conflicts = await this.checkConflicts();
+      // @ts-ignore
+      syncMetricsService.recordMetric({
+        operation: 'conflict_check',
+        tableName: '_all',
+        duration: performance.now() - conflictStart,
+        success: true,
+        recordsAffected: conflicts.length,
+      });
+      
       if (conflicts.length > 0) {
         this.setState('resolving_conflicts');
         await this.resolveConflicts(conflicts);
@@ -215,6 +235,17 @@ export class UnifiedSyncEngine {
       const errorMsg = formatError(error);
       this.emit({ type: 'sync_error', error: errorMsg, timestamp: Date.now() });
       telemetry.track('ERROR', 'SYNC_FAILED', { error: errorMsg });
+      
+      // @ts-ignore
+      syncMetricsService.recordMetric({
+        operation: 'conflict_check',
+        tableName: '_system',
+        duration: performance.now() - startTime,
+        success: false,
+        recordsAffected: 0,
+        error: errorMsg,
+      });
+      
       return { success: false, errors: [errorMsg] };
     }
   }
@@ -376,7 +407,18 @@ export class UnifiedSyncEngine {
    * Push de un lote de registros
    */
   async pushBatch(tableName: string, rows: Record<string, unknown>[]): Promise<SyncResult> {
+    const startTime = performance.now();
+    
     if (!navigator.onLine) {
+      // @ts-ignore
+      syncMetricsService.recordMetric({
+        operation: 'batch_push',
+        tableName,
+        duration: 0,
+        success: false,
+        recordsAffected: rows.length,
+        error: 'Offline',
+      });
       return { success: false, errors: ['Offline'] };
     }
 
@@ -417,15 +459,51 @@ export class UnifiedSyncEngine {
             attempts++;
             continue;
           }
+          
+          // @ts-ignore
+      syncMetricsService.recordMetric({
+            operation: 'batch_push',
+            tableName,
+            duration: performance.now() - startTime,
+            success: false,
+            recordsAffected: rows.length,
+            error: errMsg,
+          });
           return { success: false, errors: [errMsg] };
         }
 
+        // @ts-ignore
+      syncMetricsService.recordMetric({
+          operation: 'batch_push',
+          tableName,
+          duration: performance.now() - startTime,
+          success: true,
+          recordsAffected: count || rows.length,
+        });
         return { success: true, uploaded: count || rows.length };
       } catch (error) {
+        // @ts-ignore
+      syncMetricsService.recordMetric({
+          operation: 'batch_push',
+          tableName,
+          duration: performance.now() - startTime,
+          success: false,
+          recordsAffected: rows.length,
+          error: formatError(error),
+        });
         return { success: false, errors: [formatError(error)] };
       }
     }
 
+    // @ts-ignore
+      syncMetricsService.recordMetric({
+      operation: 'batch_push',
+      tableName,
+      duration: performance.now() - startTime,
+      success: false,
+      recordsAffected: rows.length,
+      error: 'Max retries exceeded',
+    });
     return { success: false, errors: ['Max retries exceeded'] };
   }
 
@@ -441,6 +519,15 @@ export class UnifiedSyncEngine {
     const meta = syncRegistry[tableName];
     
     if (!meta) {
+      // @ts-ignore
+      syncMetricsService.recordMetric({
+        operation: 'batch_pull',
+        tableName,
+        duration: performance.now() - startTime,
+        success: false,
+        recordsAffected: 0,
+        error: 'Unknown table',
+      });
       return { tableName, added: 0, updated: 0, deleted: 0, errors: ['Unknown table'], duration: 0 };
     }
 
@@ -452,6 +539,15 @@ export class UnifiedSyncEngine {
     const { data, error } = await query;
     
     if (error) {
+      // @ts-ignore
+      syncMetricsService.recordMetric({
+        operation: 'batch_pull',
+        tableName,
+        duration: performance.now() - startTime,
+        success: false,
+        recordsAffected: 0,
+        error: error.message,
+      });
       return { tableName, added: 0, updated: 0, deleted: 0, errors: [error.message], duration: performance.now() - startTime };
     }
 
@@ -477,6 +573,15 @@ export class UnifiedSyncEngine {
         }
       }
     }
+
+    // @ts-ignore
+      syncMetricsService.recordMetric({
+      operation: 'batch_pull',
+      tableName,
+      duration: performance.now() - startTime,
+      success: true,
+      recordsAffected: added + updated,
+    });
 
     return {
       tableName,
@@ -613,65 +718,506 @@ export class UnifiedSyncEngine {
   }
 
   private async checkConflicts(): Promise<SyncConflict[]> {
-    // Simplified conflict detection
-    return [];
+    const conflicts: SyncConflict[] = [];
+    const now = Date.now();
+    
+    // Check conflicts for each registered table
+    for (const [tableName, meta] of Object.entries(syncRegistry)) {
+      if (meta.optional) continue;
+      
+      try {
+        const localTable = (db as any)[meta.localTable];
+        if (!localTable) continue;
+        
+        // Get items that have been modified both locally and remotely
+        // A conflict exists if: local has pending changes AND remote has newer updates
+        const localItems = await localTable
+          .where('syncStatus')
+          .equals('pending')
+          .toArray();
+        
+        for (const localItem of localItems) {
+          const recordId = localItem[meta.primaryKey] || localItem.id;
+          
+          // Fetch the remote version
+          const { data: remoteItem, error } = await supabase
+            .from(meta.remoteTable)
+            .select('*')
+            .eq(meta.primaryKey, recordId)
+            .single();
+          
+          if (!error && remoteItem) {
+            // Check if remote was updated after local was modified
+            const remoteUpdated = new Date(remoteItem.updated_at).getTime();
+            const localModified = localItem.lastSyncTimestamp || 0;
+            
+            // Conflict if remote is newer AND local has changes
+            if (remoteUpdated > localModified) {
+              conflicts.push({
+                tableName,
+                recordId: String(recordId),
+                localValue: localItem,
+                remoteValue: remoteItem,
+                field: 'multiple',
+                detectedAt: now,
+                resolved: false,
+              });
+            }
+          }
+        }
+      } catch (e) {
+        logger.error('CONFLICT_CHECK', `Error checking conflicts for ${tableName}`, formatError(e));
+      }
+    }
+    
+    // Emit conflict detection events
+    for (const conflict of conflicts) {
+      this.emit({ 
+        type: 'conflict_detected', 
+        conflict, 
+        tableName: conflict.tableName,
+        recordId: conflict.recordId,
+        timestamp: now 
+      });
+    }
+    
+    telemetry.track('SYNC', 'CONFLICTS_DETECTED', { count: conflicts.length });
+    
+    return conflicts;
   }
 
-  private async resolveConflicts(conflicts: SyncConflict[]): Promise<void> {
+  /**
+   * Resuelve conflictos usando la estrategia configurada
+   */
+  private async resolveConflicts(
+    conflicts: SyncConflict[],
+    strategy: ConflictStrategy = { type: this.config.autoResolveConflicts ? 'local_wins' : 'manual' }
+  ): Promise<{ resolved: number; failed: number }> {
+    let resolved = 0;
+    let failed = 0;
+    
     for (const conflict of conflicts) {
-      this.emit({ type: 'conflict_resolved', conflict, timestamp: Date.now() });
+      try {
+        const resolution = await this.resolveSingleConflict(conflict, strategy);
+        
+        if (resolution) {
+          conflict.resolved = true;
+          conflict.resolution = strategy.type;
+          resolved++;
+          
+          this.emit({
+            type: 'conflict_resolved',
+            conflict,
+            tableName: conflict.tableName,
+            recordId: conflict.recordId,
+            timestamp: Date.now(),
+            metadata: { resolution: strategy.type },
+          });
+        }
+      } catch (e) {
+        failed++;
+        logger.error('CONFLICT_RESOLVE', `Failed to resolve conflict for ${conflict.tableName}/${conflict.recordId}`, formatError(e));
+      }
+    }
+    
+    telemetry.track('SYNC', 'CONFLICTS_RESOLVED', { resolved, failed, strategy: strategy.type });
+    
+    return { resolved, failed };
+  }
+
+  /**
+   * Resuelve un conflicto individual
+   */
+  private async resolveSingleConflict(
+    conflict: SyncConflict,
+    strategy: ConflictStrategy
+  ): Promise<boolean> {
+    const meta = syncRegistry[conflict.tableName];
+    if (!meta) return false;
+    
+    const localTable = (db as any)[meta.localTable];
+    if (!localTable) return false;
+    
+    const recordId = conflict.recordId;
+    
+    switch (strategy.type) {
+      case 'local_wins':
+        // Force push local version to remote
+        const localRecord = await localTable.get(recordId);
+        if (localRecord) {
+          const remoteData = meta.mapToRemote ? meta.mapToRemote(localRecord) : localRecord;
+          const { error } = await supabase
+            .from(meta.remoteTable)
+            .upsert(sanitizeData(remoteData), { onConflict: meta.primaryKey });
+          
+          if (!error) {
+            await localTable.update(recordId, { syncStatus: 'synced' });
+            return true;
+          }
+        }
+        break;
+        
+      case 'remote_wins':
+        // Accept remote version, discard local changes
+        await this.pullTable(conflict.tableName);
+        await localTable.update(recordId, { syncStatus: 'synced' });
+        return true;
+        
+      case 'merge':
+        // Deep merge: remote fields + local fields not in remote
+        const merged = this.mergeConflictRecords(conflict.localValue, conflict.remoteValue);
+        const mergedRemote = meta.mapToRemote ? meta.mapToRemote(merged) : merged;
+        const { error: mergeError } = await supabase
+          .from(meta.remoteTable)
+          .upsert(sanitizeData(mergedRemote), { onConflict: meta.primaryKey });
+        
+        if (!mergeError) {
+          await localTable.put({ ...merged, syncStatus: 'synced' });
+          return true;
+        }
+        break;
+        
+      case 'manual':
+      default:
+        // Don't auto-resolve, emit event for UI handling
+        return false;
+    }
+    
+    return false;
+  }
+
+  /**
+   * Merge dos registros en conflicto (estrategia merge)
+   */
+  private mergeConflictRecords(
+    local: unknown,
+    remote: unknown
+  ): Record<string, unknown> {
+    if (!local || !remote) return (local || remote) as Record<string, unknown>;
+    
+    const localObj = local as Record<string, unknown>;
+    const remoteObj = remote as Record<string, unknown>;
+    const merged: Record<string, unknown> = {};
+    
+    // Get all unique keys from both records
+    const allKeys = new Set([...Object.keys(localObj), ...Object.keys(remoteObj)]);
+    
+    for (const key of allKeys) {
+      // Skip internal/sync fields
+      if (['syncStatus', 'syncError', 'lastSyncTimestamp', 'id'].includes(key)) continue;
+      
+      const localVal = localObj[key];
+      const remoteVal = remoteObj[key];
+      
+      if (localVal === undefined) {
+        merged[key] = remoteVal;
+      } else if (remoteVal === undefined) {
+        merged[key] = localVal;
+      } else if (typeof localVal === 'object' && typeof remoteVal === 'object') {
+        // Recursively merge nested objects
+        merged[key] = this.mergeConflictRecords(localVal, remoteVal);
+      } else {
+        // Remote wins for primitives (más reciente)
+        merged[key] = remoteVal;
+      }
+    }
+    
+    return merged;
+  }
+
+  /**
+   * Resuelve un conflicto manualmente (para uso desde UI)
+   */
+  async resolveConflictManually(
+    tableName: string,
+    recordId: string,
+    resolution: ConflictResolution,
+    mergedData?: Record<string, unknown>
+  ): Promise<boolean> {
+    const conflict: SyncConflict = {
+      tableName,
+      recordId,
+      localValue: null,
+      remoteValue: null,
+      field: 'manual',
+      detectedAt: Date.now(),
+    };
+    
+    const strategy: ConflictStrategy = { type: resolution };
+    
+    if (mergedData) {
+      // Use provided merged data
+      const meta = syncRegistry[tableName];
+      if (!meta) return false;
+      
+      const localTable = (db as any)[meta.localTable];
+      if (!localTable) return false;
+      
+      const mergedRemote = meta.mapToRemote ? meta.mapToRemote(mergedData) : mergedData;
+      const { error } = await supabase
+        .from(meta.remoteTable)
+        .upsert(sanitizeData(mergedRemote), { onConflict: meta.primaryKey });
+      
+      if (!error) {
+        await localTable.put({ ...mergedData, syncStatus: 'synced' });
+        conflict.resolved = true;
+        conflict.resolution = resolution;
+        
+        this.emit({
+          type: 'conflict_resolved',
+          conflict,
+          tableName,
+          recordId,
+          timestamp: Date.now(),
+        });
+        
+        return true;
+      }
+    }
+    
+    return this.resolveSingleConflict(conflict, strategy);
+  }
+
+  /**
+   * Obtiene conflictos pendientes
+   */
+  async getPendingConflicts(): Promise<SyncConflict[]> {
+    return this.checkConflicts();
+  }
+
+  // ===========================================================================
+  // REAL-TIME SYNC OPTIMIZADO
+  // ===========================================================================
+
+  private realtimeState: {
+    isConnected: boolean;
+    lastHeartbeat: number;
+    reconnectAttempts: number;
+    pendingChanges: Map<string, any[]>;
+    debounceTimers: Map<string, NodeJS.Timeout>;
+  } = {
+    isConnected: false,
+    lastHeartbeat: 0,
+    reconnectAttempts: 0,
+    pendingChanges: new Map(),
+    debounceTimers: new Map(),
+  };
+
+  private readonly RECONNECT_BASE_DELAY = 1000;
+  private readonly RECONNECT_MAX_DELAY = 30000;
+  private readonly DEBOUNCE_DELAY = 500;
+
+  /**
+   * Inicia sincronización en tiempo real con reconexión automática
+   */
+  startRealtimeSync(): void {
+    if (!this.config.enableRealtime) {
+      logger.info('REALTIME', 'Realtime sync disabled in config');
+      return;
+    }
+
+    if (this.realtimeSubscription) {
+      logger.info('REALTIME', 'Already subscribed');
+      return;
+    }
+
+    this.connectRealtime();
+  }
+
+  private connectRealtime(): void {
+    const channelName = `sync-realtime-${Date.now()}`;
+
+    try {
+      this.realtimeSubscription = supabase
+        .channel(channelName)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public' },
+          this.handleRealtimeChange.bind(this)
+        )
+        .on('system', { event: 'sync' }, () => {
+          this.realtimeState.lastHeartbeat = Date.now();
+        })
+        .subscribe((status) => {
+          this.handleRealtimeStatus(status);
+        });
+
+      logger.info('REALTIME', `Connecting to channel: ${channelName}`);
+    } catch (error) {
+      logger.error('REALTIME', 'Failed to connect', formatError(error));
+      this.scheduleReconnect();
     }
   }
 
-  // ===========================================================================
-  // REAL-TIME SYNC
-  // ===========================================================================
+  private handleRealtimeStatus(status: string): void {
+    switch (status) {
+      case 'SUBSCRIBED':
+        this.realtimeState.isConnected = true;
+        this.realtimeState.reconnectAttempts = 0;
+        this.realtimeState.lastHeartbeat = Date.now();
+        logger.success('REALTIME', 'Connected successfully');
+        telemetry.track('SYNC', 'REALTIME_CONNECTED');
+        this.emit({
+          type: 'sync_complete',
+          timestamp: Date.now(),
+          metadata: { eventType: 'realtime_connected' },
+        });
+        break;
 
-  /**
-   * Inicia sincronización en tiempo real
-   */
-  startRealtimeSync(): void {
-    if (!this.config.enableRealtime || this.realtimeSubscription) return;
+      case 'CLOSED':
+      case 'CHANNEL_ERROR':
+        this.realtimeState.isConnected = false;
+        logger.warn('REALTIME', `Connection status: ${status}`);
+        this.scheduleReconnect();
+        break;
 
-    this.realtimeSubscription = supabase
-      .channel('sync-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
-        logger.info('REALTIME', `Change detected: ${payload.table}`, payload.eventType);
-        this.handleRealtimeChange(payload);
-      })
-      .subscribe();
+      case 'TIMED_OUT':
+        this.realtimeState.isConnected = false;
+        logger.warn('REALTIME', 'Connection timed out');
+        this.scheduleReconnect();
+        break;
+    }
+  }
+
+  private scheduleReconnect(): void {
+    if (!this.config.enableRealtime) return;
+
+    const attempts = this.realtimeState.reconnectAttempts;
+    const delay = Math.min(
+      this.RECONNECT_BASE_DELAY * Math.pow(2, attempts),
+      this.RECONNECT_MAX_DELAY
+    );
+
+    logger.info('REALTIME', `Scheduling reconnect in ${delay}ms (attempt ${attempts + 1})`);
+
+    setTimeout(() => {
+      this.realtimeState.reconnectAttempts++;
+      this.stopRealtimeSync();
+      this.connectRealtime();
+    }, delay);
   }
 
   /**
    * Detiene sincronización en tiempo real
    */
   stopRealtimeSync(): void {
-    this.realtimeSubscription?.unsubscribe();
-    this.realtimeSubscription = null;
+    // Clear all pending timers
+    this.realtimeState.debounceTimers.forEach(timer => clearTimeout(timer));
+    this.realtimeState.debounceTimers.clear();
+    this.realtimeState.pendingChanges.clear();
+
+    if (this.realtimeSubscription) {
+      this.realtimeSubscription.unsubscribe();
+      this.realtimeSubscription = null;
+    }
+
+    this.realtimeState.isConnected = false;
+    logger.info('REALTIME', 'Disconnected');
+    telemetry.track('SYNC', 'REALTIME_DISCONNECTED');
   }
 
-  private async handleRealtimeChange(payload: any): Promise<void> {
+  private handleRealtimeChange = async (payload: any): Promise<void> => {
     const tableName = payload.table;
     const eventType = payload.eventType;
     const newRecord = payload.new;
     const oldRecord = payload.old;
 
-    if (['INSERT', 'UPDATE'].includes(eventType) && newRecord) {
-      await this.pullTable(tableName);
-    } else if (eventType === 'DELETE' && oldRecord) {
-      const meta = syncRegistry[tableName];
-      if (meta) {
-        const localTable = (db as any)[meta.localTable];
-        await localTable?.delete(oldRecord[meta.primaryKey]);
-      }
+    if (!tableName) return;
+
+    logger.info('REALTIME', `${eventType} on ${tableName}`);
+
+    // Debounce changes for the same table
+    this.debounceRealtimeChange(tableName, { eventType, newRecord, oldRecord });
+  };
+
+  private debounceRealtimeChange(
+    tableName: string,
+    change: { eventType: string; newRecord?: any; oldRecord?: any }
+  ): void {
+    // Clear existing timer for this table
+    const existingTimer = this.realtimeState.debounceTimers.get(tableName);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
     }
 
-    this.emit({
-      type: 'sync_complete',
-      tableName,
-      timestamp: Date.now(),
-      metadata: { eventType },
-    });
+    // Add to pending changes
+    if (!this.realtimeState.pendingChanges.has(tableName)) {
+      this.realtimeState.pendingChanges.set(tableName, []);
+    }
+    this.realtimeState.pendingChanges.get(tableName)!.push(change);
+
+    // Set new debounce timer
+    const timer = setTimeout(() => {
+      this.processPendingChanges(tableName);
+    }, this.DEBOUNCE_DELAY);
+
+    this.realtimeState.debounceTimers.set(tableName, timer);
+  }
+
+  private async processPendingChanges(tableName: string): Promise<void> {
+    const changes = this.realtimeState.pendingChanges.get(tableName) || [];
+    this.realtimeState.pendingChanges.delete(tableName);
+    this.realtimeState.debounceTimers.delete(tableName);
+
+    if (changes.length === 0) return;
+
+    const lastChange = changes[changes.length - 1]; // Use latest state
+    const eventType = lastChange.eventType;
+
+    try {
+      if (['INSERT', 'UPDATE'].includes(eventType) && lastChange.newRecord) {
+        await this.pullTable(tableName);
+        telemetry.track('SYNC', 'REALTIME_PULL', { table: tableName, changes: changes.length });
+      } else if (eventType === 'DELETE' && lastChange.oldRecord) {
+        const meta = syncRegistry[tableName];
+        if (meta) {
+          const localTable = (db as any)[meta.localTable];
+          await localTable?.delete(lastChange.oldRecord[meta.primaryKey]);
+          telemetry.track('SYNC', 'REALTIME_DELETE', { table: tableName });
+        }
+      }
+
+      this.emit({
+        type: 'sync_complete',
+        tableName,
+        timestamp: Date.now(),
+        metadata: { eventType, changesCount: changes.length },
+      });
+    } catch (error) {
+      logger.error('REALTIME', `Error processing changes for ${tableName}`, formatError(error));
+      telemetry.track('ERROR', 'REALTIME_PROCESS_ERROR', { table: tableName, error: formatError(error) });
+    }
+  }
+
+  /**
+   * Obtiene el estado de la conexión realtime
+   */
+  getRealtimeStatus(): { isConnected: boolean; lastHeartbeat: number; pendingChanges: number } {
+    return {
+      isConnected: this.realtimeState.isConnected,
+      lastHeartbeat: this.realtimeState.lastHeartbeat,
+      pendingChanges: Array.from(this.realtimeState.pendingChanges.values()).reduce(
+        (sum, arr) => sum + arr.length,
+        0
+      ),
+    };
+  }
+
+  /**
+   * Suscribe a cambios de una tabla específica
+   */
+  async subscribeToTable(tableName: string): Promise<boolean> {
+    const meta = syncRegistry[tableName];
+    if (!meta) return false;
+
+    try {
+      await this.pullTable(tableName);
+      logger.info('REALTIME', `Subscribed to table: ${tableName}`);
+      return true;
+    } catch (error) {
+      logger.error('REALTIME', `Failed to subscribe to ${tableName}`, formatError(error));
+      return false;
+    }
   }
 
   // ===========================================================================

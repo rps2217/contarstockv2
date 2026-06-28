@@ -18,14 +18,14 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { syncOrchestrator } from '@/services/sync/SyncOrchestrator';
+import { unifiedSyncEngine } from '@/services/sync/unified';
 import { useSyncStore } from '@/store/useSyncStore';
 import { useToastStore } from '@/store/useToastStore';
 import { logger } from '@/services/logger';
 import { SyncError } from '@/lib/errors';
 import { withRetry } from '@/lib/errors/retry';
 import { getCircuitBreaker } from '@/lib/errors/circuitBreaker';
-import type { SyncResult } from '@/services/sync/SyncOrchestrator';
+import type { SyncResult } from '@/services/sync/unified';
 
 // ============================================================================
 // TIPOS
@@ -132,10 +132,8 @@ export function useSync(options: UseSyncOptions = {}): UseSyncReturn {
     try {
       // Construir función de sync con opciones
       const syncFn = async () => {
-        const result = await syncOrchestrator.syncAll((msg) => {
-          logger.info('useSync', msg);
-          onProgress?.(msg);
-        });
+        const result = await unifiedSyncEngine.syncAll();
+          
         return result;
       };
       

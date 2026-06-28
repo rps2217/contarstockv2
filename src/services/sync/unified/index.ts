@@ -136,3 +136,22 @@ export const getSyncState = () => unifiedSyncEngine.getState();
 
 // Legacy compatibility exports
 export { uploadBatch, resetSyncLock };
+
+// Conflict resolution exports
+export {
+  CONFLICT_RESOLUTIONS,
+  getConflictResolutionLabel,
+} from './ConflictResolutionHelper';
+
+
+// Metrics service export
+export {
+  syncMetricsService,
+  default as SyncMetricsService,
+} from './SyncMetricsService';
+export type {
+  MetricRecord,
+  MetricOperation,
+  TableMetrics,
+  SyncTrend,
+} from './SyncMetricsService';

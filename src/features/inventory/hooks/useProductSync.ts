@@ -24,9 +24,9 @@ export const useProductSync = (showFeedback: (type: 'success' | 'error', msg: st
     mode: 'manual',
     autoRetry: false,
     onSuccess: (result) => {
-      const pushed = result.catalogSync?.products || 0;
+      const pushed = result.uploaded || 0;
       if (pushed > 0) {
-        showFeedback('success', `${pushed} productos sincronizados`);
+        showFeedback('success', `${pushed} registros sincronizados`);
       }
     },
     onError: (error) => {
