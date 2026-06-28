@@ -9,18 +9,18 @@ interface Props {
  hasActiveItem: boolean;
  location: string;
  label: string;
- isAutoLockEnabled: boolean;
- onToggleAutoLock: () => void;
- onChangeLocation: () => void;
- onChangeLabel: () => void;
- onShowLabel: () => void;
- onReset: () => void;
- onPrintSummary: () => void;
+ isAutoLockEnabled?: boolean;
+ onToggleAutoLock?: () => void;
+ onChangeLocation?: () => void;
+ onChangeLabel?: () => void;
+ onShowLabel?: () => void;
+ onReset?: () => void;
+ onPrintSummary?: () => void;
 }
 
 export const ScannerToolsSheet: React.FC<Props> = ({ 
  isOpen, onClose, hasActiveItem, location, label, 
- isAutoLockEnabled, onToggleAutoLock,
+ isAutoLockEnabled = false, onToggleAutoLock,
  onChangeLocation, onChangeLabel, onShowLabel, onReset, onPrintSummary
 }) => {
  
